@@ -171,14 +171,15 @@ export function tuneAvatarV2Materials(
 
       if (role === 'cornea') {
         material = promotePhysical(source, true);
-        changed = material !== source;
-        if (changed) report.corneaPromoted += 1;
+        const promoted = material !== source;
+        changed = changed || promoted;
+        if (promoted) report.corneaPromoted += 1;
       } else if (
         usesCloseUpPhysicalShading(quality)
         && (role === 'skin' || role === 'hair' || role === 'teeth' || role === 'tongue')
       ) {
         material = promotePhysical(source);
-        changed = material !== source;
+        changed = changed || material !== source;
       }
 
       if (role === 'skin') {
