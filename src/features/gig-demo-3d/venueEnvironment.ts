@@ -5,6 +5,7 @@ import { box, cylinder, rod, matte, metal, batchStaticMeshes } from './stage';
 import { seededRandom } from './config';
 import type { VenueProfile } from './venueProfile';
 import { buildVenueSurfaceMaterials } from './venueSurfaceMaterials';
+import { buildVenueDressing } from './venueDressing';
 
 /** Architecture surrounds the human-scale performance area. Detail is batched
  * by material; distant spectators use bounded instance batches for standing and seated people. */
@@ -146,6 +147,7 @@ export function buildVenueEnvironment(scene: T.Scene, p: VenueProfile, seed: num
     if(p.kind==='stadium') { for(const side of [-1,1]) for(let z=0;z<p.roomDepth;z+=8) { rod(root,[side*half,4,z],[side*half,9,z],.055,steel); box(root,[1.4,.8,.03],[side*half+.7,8.5,z],accent); } screen(0,11,p.crowdDepth+10,8,3); }
   }
   venueArchitecture(root,p,wood);
+  buildVenueDressing(root,p,seed,surfaces);
   batchStaticMeshes(root);
   buildVenueAudience(root,p,seed,places);
   return root;
