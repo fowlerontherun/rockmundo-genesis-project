@@ -215,7 +215,7 @@ export class AvatarV2ExpressionController {
       'mouthSmile',
       vocalActive
         ? T.MathUtils.clamp(.045 + phrasePulse * .10 + state.energy * .05 - vocal * .035 + micro * .22, 0, .22)
-        : .012 + micro * .28,
+        : 0,
     );
 
     const squint = vocal * (.08 + state.energy * .22) + phrasePulse * state.energy * .08 + micro;
