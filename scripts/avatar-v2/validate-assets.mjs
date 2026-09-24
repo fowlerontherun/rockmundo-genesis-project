@@ -108,7 +108,25 @@ const expressionAliases = {
 };
 
 const clean = value => String(value ?? '').replace(/[^a-z0-9]/gi, '').toLowerCase();
-const skinMaterialPattern = /rmv2[_-]?skin|(^|[_-])(skin|body|face)($|[_-])/i;
+const MATERIAL_ROLE_PATTERNS = {
+  skin: /rmv2[_-]?skin|(^|[_-])(skin|body|face)($|[_-])/i,
+  eyes: /rmv2[_-]?eyes|(^|[_-])(eye|eyes|iris|sclera|cornea)($|[_-])/i,
+  iris: /rmv2[_-]?iris|(^|[_-])iris($|[_-])/i,
+  sclera: /rmv2[_-]?sclera|(^|[_-])sclera($|[_-])/i,
+  cornea: /rmv2[_-]?cornea|cornea|eye[_-]?(shell|surface)|ocular[_-]?shell/i,
+  teeth: /rmv2[_-]?teeth|teeth/i,
+  tongue: /rmv2[_-]?tongue|tongue/i,
+  mouthInterior: /rmv2[_-]?mouth[_-]?(interior|cavity)|oral[_-]?cavity|inner[_-]?mouth/i,
+};
+const skinMaterialPattern = MATERIAL_ROLE_PATTERNS.skin;
+const SURFACE_NODE_PATTERNS = {
+  iris: /rmv2[_-]?(iris|eye[_-]?iris)|(^|[_-])iris($|[_-])/i,
+  sclera: /rmv2[_-]?(sclera|eye[_-]?white)|(^|[_-])sclera($|[_-])/i,
+  cornea: /rmv2[_-]?(cornea|eye[_-]?(shell|surface))|ocular[_-]?shell/i,
+  teeth: /rmv2[_-]?(teeth|tooth)|(^|[_-])teeth($|[_-])/i,
+  tongue: /rmv2[_-]?tongue|(^|[_-])tongue($|[_-])/i,
+  mouthInterior: /rmv2[_-]?mouth[_-]?(interior|cavity)|oral[_-]?cavity|inner[_-]?mouth/i,
+};
 
 function materialBodyRegion(material) {
   if (!material) return null;
@@ -226,6 +244,7 @@ function inspect(gltf) {
   const bodyRegions = new Set();
   const unskinnedBodyRegions = new Set();
   const bareSkinBodyRegions = new Set();
+  const dedicatedSurfaceRoles = new Set();
   for (const node of gltf.nodes ?? []) {
     if (node.mesh == null) continue;
     const matched = new Set();
@@ -241,6 +260,17 @@ function inspect(gltf) {
     const usedMaterials = (mesh?.primitives ?? [])
       .map(primitive => gltf.materials?.[primitive.material])
       .filter(Boolean);
+
+    for (const [role, pattern] of Object.entries(SURFACE_NODE_PATTERNS)) {
+      const explicitRole = clean(node.extras?.rockmundoSurfaceRole ?? '');
+      const namedForRole = explicitRole === clean(role) || pattern.test(node.name ?? '');
+      if (
+        namedForRole
+        && usedMaterials.some(material => MATERIAL_ROLE_PATTERNS[role].test(material.name ?? ''))
+        && (mesh?.primitives ?? []).some(primitive => accessorCount(gltf, primitive.attributes?.POSITION) > 0)
+      ) dedicatedSurfaceRoles.add(role);
+    }
+
     for (const material of usedMaterials) {
       const region = materialBodyRegion(material);
       if (region) {
@@ -278,6 +308,7 @@ function inspect(gltf) {
     bodyRegions: [...bodyRegions],
     unskinnedBodyRegions: [...unskinnedBodyRegions],
     bareSkinBodyRegions: [...bareSkinBodyRegions],
+    dedicatedSurfaceRoles: [...dedicatedSurfaceRoles],
   };
 }
 
@@ -421,20 +452,18 @@ function validateAsset(gltf, entry) {
     }
   }
 
-  const materialRoles = {
-    skin: /rmv2[_-]?skin|(^|[_-])(skin|body|face)($|[_-])/i,
-    eyes: /rmv2[_-]?eyes|(^|[_-])(eye|eyes|iris|sclera|cornea)($|[_-])/i,
-    cornea: /rmv2[_-]?cornea|cornea|eye[_-]?(shell|surface)|ocular[_-]?shell/i,
-    teeth: /rmv2[_-]?teeth|teeth/i,
-    tongue: /rmv2[_-]?tongue|tongue/i,
-    mouthInterior: /rmv2[_-]?mouth[_-]?(interior|cavity)|oral[_-]?cavity|inner[_-]?mouth/i,
-  };
+  const materialRoles = MATERIAL_ROLE_PATTERNS;
   if (entry.lod <= 1) {
     for (const role of ['skin','eyes']) {
       if (!report.materialNames.some(name => materialRoles[role].test(name))) errors.push(`Missing named close-up material role: ${role}`);
     }
   }
   if (entry.lod === 0) {
+    for (const role of ['iris','sclera','cornea','teeth','tongue','mouthInterior']) {
+      if (!report.dedicatedSurfaceRoles.includes(role)) {
+        errors.push(`LOD0 missing dedicated ${role} geometry using its matching material role; extra material slots do not count`);
+      }
+    }
     for (const role of ['cornea','teeth','tongue','mouthInterior']) {
       if (!report.materialNames.some(name => materialRoles[role].test(name))) errors.push(`LOD0 missing separate ${role} material/mesh role`);
     }
