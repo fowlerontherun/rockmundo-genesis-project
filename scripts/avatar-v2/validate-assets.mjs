@@ -39,6 +39,7 @@ const closeupBoneAliases = {
   rightToes: ['rightToes','toe_r','toebase_r','mixamorigRightToeBase'],
   leftEye: ['Eye.L','leftEye','eye_l','mixamorigLeftEye','j_bip_l_eye'],
   rightEye: ['Eye.R','rightEye','eye_r','mixamorigRightEye','j_bip_r_eye'],
+  jaw: ['Jaw','jaw','jaw_bone','mixamorigJaw','j_bip_c_jaw'],
   leftEarAnchor: ['EarAnchor.L','leftEarAnchor','ear_anchor_l','earring_anchor_l'],
   rightEarAnchor: ['EarAnchor.R','rightEarAnchor','ear_anchor_r','earring_anchor_r'],
   leftUpperArmTwist: ['UpperArmTwist.L','upperarm_twist_l','upper_arm_twist_l','leftUpperArmTwist'],
@@ -362,6 +363,10 @@ function validateAsset(gltf, entry) {
       if (headName && eyeName && !containsAlias(report.jointAncestors[eyeName] ?? [], [headName])) {
         errors.push(`${semantic} must inherit from the head bone.`);
       }
+    }
+    const jawName = matchingAlias(report.jointNames, closeupBoneAliases.jaw);
+    if (headName && jawName && !containsAlias(report.jointAncestors[jawName] ?? [], [headName])) {
+      errors.push('Jaw must inherit from the head bone.');
     }
     for (const semantic of ['leftEarAnchor', 'rightEarAnchor']) {
       const anchorName = matchingAlias(report.jointNames, closeupBoneAliases[semantic]);
