@@ -276,8 +276,10 @@ Next production steps:
    ThighTwist influence for LOD0/LOD1, then split/mark all eight garment-occlusion
    body regions.
 5. Author separate iris/sclera/cornea surfaces for each eye and bind them to
-   Eye.L/Eye.R. Split upper/lower teeth, bind upper teeth/mouth interior to Head
-   and lower teeth/tongue to Jaw, then set rockmundoBoneBinding on each surface.
+   Eye.L/Eye.R. Add RMV2_Wetline.L/R, keep them Head-skinned and copy the matching
+   blink deformation. Split upper/lower teeth, bind upper teeth/mouth interior to
+   Head and lower teeth/tongue to Jaw, keep the mouth cavity at least 25mm deep,
+   then set rockmundoBoneBinding on each surface.
 6. Author the required close-up morphs listed below. Do not add zero-delta
    placeholders simply to satisfy naming checks.
 7. Build LOD0 first, validate it, then derive LOD1/2/3 without destroying UVs.
