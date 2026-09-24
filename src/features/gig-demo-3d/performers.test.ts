@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import * as T from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { DemoCrowd, Musician } from './performers';
+import { avatarBandVisualQuality, DemoCrowd, Musician } from './performers';
 
 const models: T.Object3D[] = [];
 beforeAll(async () => {
@@ -13,6 +13,18 @@ beforeAll(async () => {
     const gltf = await new GLTFLoader().parseAsync(file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength) as ArrayBuffer, '');
     models.push(gltf.scene);
   }
+});
+
+describe('Avatar V2 performer quality routing', () => {
+  it('uses LOD0-capable quality for high television close-ups without raising ordinary gigs', () => {
+    expect(avatarBandVisualQuality('high', true)).toBe('ultra');
+    expect(avatarBandVisualQuality('balanced', true)).toBe('high');
+    expect(avatarBandVisualQuality('low', true)).toBe('balanced');
+
+    expect(avatarBandVisualQuality('high', false)).toBe('high');
+    expect(avatarBandVisualQuality('balanced', false)).toBe('high');
+    expect(avatarBandVisualQuality('low', false)).toBe('balanced');
+  });
 });
 
 describe('performance poses using the shipped rigs', () => {
