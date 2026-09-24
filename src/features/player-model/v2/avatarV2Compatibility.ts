@@ -3,6 +3,7 @@ import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equip
 import { richGarmentSlot } from '@/features/clothing-preview/richGarmentVisuals';
 import type { PlayerAppearance } from '../appearance';
 import { addAccessories } from '../accessories';
+import type { HeadAccessoryFit } from '../accessoryGeometry';
 import { createAvatarHairTextureCache } from '../avatarMaterialQuality';
 import type { AvatarVisualQuality } from '../avatarVisualQuality';
 import { addHair } from '../hair';
@@ -43,6 +44,20 @@ function hasHeadCompatibility(
   return cut !== 'original' || facial !== 'none' || starterAccessory || authoredHeadwear;
 }
 
+export function avatarV2HeadAccessoryFit(root: T.Object3D): HeadAccessoryFit {
+  root.updateMatrixWorld(true);
+  const point = (name: string) => {
+    const bone = root.getObjectByName(name);
+    return bone instanceof T.Bone ? bone.getWorldPosition(new T.Vector3()) : null;
+  };
+  return {
+    leftEye: point('Eye.L'),
+    rightEye: point('Eye.R'),
+    leftEar: point('EarAnchor.L'),
+    rightEar: point('EarAnchor.R'),
+  };
+}
+
 function suppressAuthoredHair(root: T.Object3D, appearance: PlayerAppearance) {
   const cut = appearance.head.hairStyle ?? 'original';
   if (cut === 'original') return;
@@ -80,12 +95,15 @@ export function applyAvatarV2Compatibility(
     if (!head) throw new Error('Avatar V2 is missing its normalized Head bone for hair/accessories.');
     suppressAuthoredHair(root, appearance);
     addHair(root, appearance, head, quality, createAvatarHairTextureCache(quality));
-    addAccessories(root, appearance, head, clothing, quality);
+    addAccessories(root, appearance, head, clothing, quality, avatarV2HeadAccessoryFit(root));
   }
 
   addTattoos(root, tattoos, bones);
   root.userData.rockmundoAvatarV2Compatibility = {
     hairAndAccessories: hasHeadCompatibility(appearance, clothing),
+    accessoryAnchors: hasHeadCompatibility(appearance, clothing)
+      ? ['Eye.L', 'Eye.R', 'EarAnchor.L', 'EarAnchor.R']
+      : [],
     tattoos: tattoos.length,
     clothing: clothing.length,
   };
