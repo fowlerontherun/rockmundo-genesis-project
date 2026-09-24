@@ -30,12 +30,15 @@ describe('Avatar V2 material quality', () => {
     const authoredRoughness = new T.Texture();
     skin.normalMap = authoredNormal;
     skin.roughnessMap = authoredRoughness;
-    root.add(new T.Mesh(new T.BoxGeometry(1, 1, 1), skin));
+    const mesh = new T.Mesh(new T.BoxGeometry(1, 1, 1), skin);
+    root.add(mesh);
 
     tuneAvatarV2Materials(root, defaultAppearance('v2-authored-skin-test'), 'ultra');
 
-    expect(skin.normalMap).toBe(authoredNormal);
-    expect(skin.roughnessMap).toBe(authoredRoughness);
+    const tuned = mesh.material as T.MeshPhysicalMaterial;
+    expect(tuned).toBeInstanceOf(T.MeshPhysicalMaterial);
+    expect(tuned.normalMap).toBe(authoredNormal);
+    expect(tuned.roughnessMap).toBe(authoredRoughness);
   });
 
   it('uses a V2-specific texture-detail uplift without increasing balanced or crowd budgets', () => {
