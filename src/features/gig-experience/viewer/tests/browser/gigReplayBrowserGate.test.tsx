@@ -13,7 +13,7 @@ import { LiveGigStageView } from "../../LiveGigStageView";
 
 vi.mock("@/features/gig-demo-3d/ConcertScene", () => ({ ConcertScene: class {
   constructor(_canvas: unknown, _settings: unknown, _stats: unknown, state: (value: string) => void) { state("ready"); }
-  setSettings() {} setFrame() {} setEffects() {} setCrowdTuning() {} destroy() {}
+  setSettings() {} setFrame() {} setEffects() {} setCrowdTuning() {} setTelevisionMonitorContent() {} destroy() {}
 } }));
 vi.mock("@/features/player-model/usePlayerModel", () => ({ useGigPlayerModels: () => ({ data: undefined, isFetching: false, isError: false }) }));
 
