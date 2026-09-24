@@ -80,6 +80,12 @@ const recommendedExpressions = [
   'mouthStretchLeft','mouthStretchRight',
 ];
 const customizationMorphs = ['bodySlim','bodyBroad','faceOval','faceAngular','faceSoft','faceWide'];
+const poseCorrectives = [
+  'poseShoulderLeft','poseShoulderRight',
+  'poseElbowLeft','poseElbowRight',
+  'poseHipLeft','poseHipRight',
+  'poseKneeLeft','poseKneeRight',
+];
 const requiredBodyRegions = ['torso','upper-arms','lower-arms','hands','hips','upper-legs','lower-legs','feet'];
 
 const expressionAliases = {
@@ -233,6 +239,9 @@ function validateAsset(gltf, entry) {
     }
     for (const morph of customizationMorphs) {
       if (!containsAlias(report.morphTargets, [morph])) warnings.push(`Missing Avatar Designer customization morph: ${morph}`);
+    }
+    for (const corrective of poseCorrectives) {
+      if (!containsAlias(report.morphTargets, [corrective])) warnings.push(`Missing recommended pose corrective: ${corrective}`);
     }
   }
 
