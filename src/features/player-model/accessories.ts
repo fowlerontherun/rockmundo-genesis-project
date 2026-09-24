@@ -1,6 +1,6 @@
 import * as T from 'three';
 import type { PlayerAppearance } from './appearance';
-import { buildHeadAccessory, tuckHair } from './accessoryGeometry';
+import { buildHeadAccessory, clearHairForHeadAccessories, tuckHair } from './accessoryGeometry';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import { richGarmentSlot } from '@/features/clothing-preview/richGarmentVisuals';
 import { avatarQualityProfile, type AvatarVisualQuality } from './avatarVisualQuality';
@@ -142,7 +142,7 @@ export function addAccessories(
   const storeSlots = new Set(richClothing.map(row => richGarmentSlot(row.item)));
   if (storeSlots.has('headwear')) accessories.hat = 'none';
   if (storeSlots.has('eyewear')) accessories.glasses = 'none';
-  if (accessories.hat === 'none' && accessories.glasses === 'none' && (accessories.leftEarring ?? accessories.earrings) === 'none' && (accessories.rightEarring ?? accessories.earrings) === 'none' && !storeSlots.has('headwear')) return;
+  if (accessories.hat === 'none' && accessories.glasses === 'none' && (accessories.leftEarring ?? accessories.earrings) === 'none' && (accessories.rightEarring ?? accessories.earrings) === 'none' && !storeSlots.has('headwear') && !storeSlots.has('eyewear')) return;
 
   const headSurface = headSkinSurface(root);
   const bounds = headSurface.bounds;
@@ -152,10 +152,27 @@ export function addAccessories(
   const leftEarFit = fittedEarPoint(headSurface.points, bounds, -1);
   const rightEarFit = fittedEarPoint(headSurface.points, bounds, 1);
   const eyeFit = fittedEyeCenters(root, bounds, appearance.body.frame);
+  const leftStyle = accessories.leftEarring ?? accessories.earrings;
+  const rightStyle = accessories.rightEarring ?? accessories.earrings;
   const anchor = new T.Group();
   anchor.name = 'avatar-accessories';
 
   if (accessories.hat !== 'none' || storeSlots.has('headwear')) tuckHair(root, bounds, appearance.body.frame);
+  const hairClearance = clearHairForHeadAccessories(
+    root,
+    bounds,
+    {
+      ...eyeFit,
+      leftEar: leftEarFit,
+      rightEar: rightEarFit,
+    },
+    {
+      glasses: accessories.glasses !== 'none' || storeSlots.has('eyewear'),
+      leftEarring: leftStyle !== 'none',
+      rightEarring: rightStyle !== 'none',
+    },
+  );
+  anchor.userData.rockmundoAccessoryHairClearance = hairClearance;
   if (accessories.hat !== 'none') {
     const style = accessories.hat === 'baseball_cap' ? 'cap' : accessories.hat === 'bucket_hat' ? 'bucket' : accessories.hat;
     const hat = buildHeadAccessory({ slot: 'headwear', style, color: accessories.hatColor }, bounds, quality);
@@ -177,8 +194,6 @@ export function addAccessories(
     anchor.add(glasses);
   }
 
-  const leftStyle = accessories.leftEarring ?? accessories.earrings;
-  const rightStyle = accessories.rightEarring ?? accessories.earrings;
   if (leftStyle !== 'none' || rightStyle !== 'none') {
     const earrings = new T.Group();
     earrings.name = 'avatar-earrings';
