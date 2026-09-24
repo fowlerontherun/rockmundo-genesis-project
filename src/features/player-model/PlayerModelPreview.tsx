@@ -14,7 +14,16 @@ import { requiredAvatarV2GarmentFiles } from './v2/avatarV2Garments';
 import { visibleTattoosForPresentation, type ResolvedTattooVisual } from './tattoos';
 import { avatarQualityProfile, recommendedAvatarPreviewQuality, type AvatarVisualQuality } from './avatarVisualQuality';
 
-interface PreviewApi { replace: (appearance: PlayerAppearance, role: StageRole, instrument?: InstrumentId, richClothing?: ResolvedEquippedClothing[], tattoos?: ResolvedTattooVisual[], presentation?: PlayerModelPresentation) => void; rotate: (angle: number) => void; zoom: (factor: number) => void; reset: () => void; focusHead: () => void }
+type TattooCameraPreset = 'neck' | 'torsoFront' | 'torsoBack' | 'leftArm' | 'rightArm' | 'legs';
+
+interface PreviewApi {
+  replace: (appearance: PlayerAppearance, role: StageRole, instrument?: InstrumentId, richClothing?: ResolvedEquippedClothing[], tattoos?: ResolvedTattooVisual[], presentation?: PlayerModelPresentation) => void;
+  rotate: (angle: number) => void;
+  zoom: (factor: number) => void;
+  reset: () => void;
+  focusHead: () => void;
+  focusTattoo: (preset: TattooCameraPreset) => void;
+}
 export function PlayerModelPreview({ appearance, role = 'other', instrument, richClothing = [], tattoos = [], presentation = 'stage' }: { appearance: PlayerAppearance; role?: StageRole; instrument?: InstrumentId; richClothing?: ResolvedEquippedClothing[]; tattoos?: ResolvedTattooVisual[]; presentation?: PlayerModelPresentation }) {
   const canvas = useRef<HTMLCanvasElement>(null), api = useRef<PreviewApi | null>(null), latest = useRef({ appearance, role, instrument, richClothing, tattoos, presentation }); latest.current = { appearance, role, instrument, richClothing, tattoos, presentation };
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading'), [attempt, setAttempt] = useState(0);
@@ -121,6 +130,26 @@ export function PlayerModelPreview({ appearance, role = 'other', instrument, ric
             faceFill.intensity = visualQuality === 'ultra' ? 1.42 : 1.12;
             controls!.update();
           },
+          focusTattoo: preset => {
+            const height = latest.current.appearance.body.height;
+            const views: Record<TattooCameraPreset, { target: T.Vector3; offset: T.Vector3; minDistance: number; fov: number }> = {
+              neck: { target: new T.Vector3(0, 1.46 * height, 0), offset: new T.Vector3(.08, .02, 1.02), minDistance: .7, fov: 29 },
+              torsoFront: { target: new T.Vector3(0, 1.05 * height, 0), offset: new T.Vector3(0, .02, 1.48), minDistance: 1.0, fov: 30 },
+              torsoBack: { target: new T.Vector3(0, 1.05 * height, 0), offset: new T.Vector3(0, .02, -1.48), minDistance: 1.0, fov: 30 },
+              leftArm: { target: new T.Vector3(-.34, 1.03 * height, 0), offset: new T.Vector3(-1.34, .02, 1.18), minDistance: 1.0, fov: 29 },
+              rightArm: { target: new T.Vector3(.34, 1.03 * height, 0), offset: new T.Vector3(1.34, .02, 1.18), minDistance: 1.0, fov: 29 },
+              legs: { target: new T.Vector3(0, .53 * height, 0), offset: new T.Vector3(0, .02, 1.72), minDistance: 1.15, fov: 31 },
+            };
+            const view = views[preset];
+            controls!.minDistance = view.minDistance;
+            controls!.target.copy(view.target);
+            camera.fov = view.fov;
+            camera.updateProjectionMatrix();
+            camera.position.copy(view.target).add(view.offset);
+            if (renderer) renderer.toneMappingExposure = 1.22;
+            faceFill.intensity = visualQuality === 'ultra' ? 1.3 : 1.02;
+            controls!.update();
+          },
         };
         api.current.replace(latest.current.appearance, latest.current.role, latest.current.instrument, latest.current.richClothing, latest.current.tattoos, latest.current.presentation); setStatus('ready');
       }).catch(() => { if (alive) setStatus('error'); });
@@ -137,6 +166,20 @@ export function PlayerModelPreview({ appearance, role = 'other', instrument, ric
     <canvas ref={canvas} tabIndex={0} role="img" aria-label="Your animated 3D stage model. Drag to rotate, scroll to zoom, or use the buttons below." onKeyDown={event => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); api.current?.rotate(event.key === 'ArrowLeft' ? -.25 : .25); } if (event.key === '+' || event.key === '-') { event.preventDefault(); api.current?.zoom(event.key === '+' ? .9 : 1.1); } }} />
     <div className="player-model-preview__label" aria-hidden="true">ROCKMUNDO <span>{presentation === 'tattoo' ? 'TATTOO PARLOUR / UNCLOTHED PREVIEW' : 'BACKSTAGE / FITTING ROOM'}</span></div>
     {status !== 'ready' && <div className="player-model-preview__overlay" role={status === 'error' ? 'alert' : 'status'}><strong>{status === 'error' ? 'The model could not load' : 'Preparing your fitting room…'}</strong>{status === 'error' && <><p>Check your connection and try again.</p><button type="button" onClick={() => setAttempt(value => value + 1)}>Retry preview</button></>}</div>}
-    <div className="player-model-preview__controls" aria-label="Model camera"><button type="button" onClick={() => api.current?.rotate(-Math.PI / 4)} aria-label="Rotate model left">↶</button><button type="button" onClick={() => api.current?.rotate(Math.PI / 4)} aria-label="Rotate model right">↷</button><button type="button" onClick={() => api.current?.zoom(.85)} aria-label="Zoom in">＋</button><button type="button" onClick={() => api.current?.zoom(1.15)} aria-label="Zoom out">−</button><button type="button" onClick={() => api.current?.focusHead()}>Face close-up</button><button type="button" onClick={() => api.current?.reset()}>Full body</button></div>
+    <div className="player-model-preview__controls" aria-label={presentation === 'tattoo' ? 'Tattoo inspection camera' : 'Model camera'}>
+      <button type="button" onClick={() => api.current?.rotate(-Math.PI / 4)} aria-label="Rotate model left">↶</button>
+      <button type="button" onClick={() => api.current?.rotate(Math.PI / 4)} aria-label="Rotate model right">↷</button>
+      <button type="button" onClick={() => api.current?.zoom(.85)} aria-label="Zoom in">＋</button>
+      <button type="button" onClick={() => api.current?.zoom(1.15)} aria-label="Zoom out">−</button>
+      {presentation === 'tattoo' ? <>
+        <button type="button" onClick={() => api.current?.focusTattoo('neck')}>Neck</button>
+        <button type="button" onClick={() => api.current?.focusTattoo('torsoFront')}>Front torso</button>
+        <button type="button" onClick={() => api.current?.focusTattoo('torsoBack')}>Back</button>
+        <button type="button" onClick={() => api.current?.focusTattoo('leftArm')}>Left arm</button>
+        <button type="button" onClick={() => api.current?.focusTattoo('rightArm')}>Right arm</button>
+        <button type="button" onClick={() => api.current?.focusTattoo('legs')}>Legs</button>
+      </> : <button type="button" onClick={() => api.current?.focusHead()}>Face close-up</button>}
+      <button type="button" onClick={() => api.current?.reset()}>Full body</button>
+    </div>
   </div>;
 }
