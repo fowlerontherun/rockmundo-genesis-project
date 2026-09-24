@@ -188,7 +188,7 @@ export const AVATAR_V2_CLOSEUP_RUNTIME_BONE_NAMES: Record<keyof typeof AVATAR_V2
   rightLittle3: 'Pinky3.R',
 };
 
-export const AVATAR_V2_RECOMMENDED_EXPRESSIONS = [
+export const AVATAR_V2_CLOSEUP_REQUIRED_EXPRESSIONS = [
   'visemeAA', 'visemeEE', 'visemeIH', 'visemeOH', 'visemeOU',
   'mouthFunnel', 'mouthPucker',
   'eyeSquintLeft', 'eyeSquintRight',
@@ -670,18 +670,18 @@ export function validateAvatarV2Scene(
 
   if (lod <= 1) {
     const available = new Set(morphTargets.map(clean));
-    for (const expression of AVATAR_V2_RECOMMENDED_EXPRESSIONS) {
+    for (const expression of AVATAR_V2_CLOSEUP_REQUIRED_EXPRESSIONS) {
       if (![expression].map(clean).some(name => available.has(name))) {
         issues.push({
-          level: 'warning',
+          level: 'error',
           code: `missing-performance-expression:${expression}`,
-          message: `Recommended singing expression target is missing: ${expression}.`,
+          message: `LOD${lod} requires the close-up singing expression target: ${expression}.`,
         });
       } else if (morphDelta(morphDeltas, [expression]) < MORPH_MIN_DELTA_METRES) {
         issues.push({
-          level: 'warning',
+          level: 'error',
           code: `empty-performance-expression:${expression}`,
-          message: `Singing expression ${expression} is named but has no meaningful vertex deformation.`,
+          message: `LOD${lod} singing expression ${expression} must visibly deform the face; zero-delta placeholders are rejected.`,
         });
       }
     }
