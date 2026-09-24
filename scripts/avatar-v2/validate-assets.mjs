@@ -79,7 +79,7 @@ const closeupBoneAliases = {
   rightLittle3: ['Pinky3.R','rightLittleDistal','rightHandPinky3','pinky_03_r','mixamorigRightHandPinky3'],
 };
 
-const recommendedExpressions = [
+const closeupRequiredExpressions = [
   'visemeAA','visemeEE','visemeIH','visemeOH','visemeOU',
   'mouthFunnel','mouthPucker',
   'eyeSquintLeft','eyeSquintRight',
@@ -399,9 +399,9 @@ function validateAsset(gltf, entry) {
   }
 
   if (entry.lod <= 1) {
-    for (const expression of recommendedExpressions) {
-      if (!containsAlias(report.morphTargets, [expression])) warnings.push(`Missing recommended singing expression: ${expression}`);
-      else rejectEmptyMorph(report, errors, warnings, `Singing target ${expression}`, [expression], false);
+    for (const expression of closeupRequiredExpressions) {
+      if (!containsAlias(report.morphTargets, [expression])) errors.push(`Missing required close-up singing expression: ${expression}`);
+      else rejectEmptyMorph(report, errors, warnings, `Singing target ${expression}`, [expression], true);
     }
     for (const morph of customizationMorphs) {
       if (!containsAlias(report.morphTargets, [morph])) warnings.push(`Missing Avatar Designer customization morph: ${morph}`);
