@@ -598,6 +598,52 @@ export class ConcertScene {
       operator.rotation.y = desired + (reduced ? 0 : Math.sin(t * .19 + index) * .025);
       operator.rotation.z = reduced ? 0 : Math.sin(t * .65 + index * 1.7) * .01;
     });
+
+    const idleCrewNames = [
+      'totp-camera-assistant-left',
+      'totp-camera-assistant-right',
+      'totp-floor-manager',
+      'totp-floor-assistant',
+      'totp-boom-operator',
+      'totp-producer',
+      'totp-lighting-tech',
+      'totp-sound-tech',
+      'totp-runner',
+      'totp-stagehand',
+    ];
+    idleCrewNames.forEach((name, index) => {
+      const crew = this.scene.getObjectByName(name);
+      if (!crew) return;
+      const baseYaw = Number(crew.userData.baseYaw ?? crew.rotation.y);
+      crew.rotation.y = baseYaw + (reduced ? 0 : Math.sin(t * (.16 + index * .004) + index * .74) * .055);
+      crew.rotation.z = reduced ? 0 : Math.sin(t * .52 + index * 1.13) * .008;
+      crew.position.y = reduced ? 0 : Math.max(0, Math.sin(t * .9 + index * .66)) * .006;
+      const head = crew.getObjectByName('totp-camera-operator-head');
+      if (head) {
+        head.rotation.y = reduced ? 0 : Math.sin(t * .24 + index * .81) * .06;
+        head.rotation.x = reduced ? 0 : Math.sin(t * .31 + index * .47) * .018;
+      }
+    });
+
+    const boomRig = this.scene.getObjectByName('totp-boom-rig');
+    if (boomRig) {
+      const baseYaw = Number(boomRig.userData.baseYaw ?? 0);
+      boomRig.rotation.y = baseYaw + (reduced ? 0 : Math.sin(t * .18) * .025);
+      boomRig.rotation.z = reduced ? 0 : Math.sin(t * .23 + .7) * .008;
+    }
+
+    const controlArea = this.scene.getObjectByName('totp-production-control-area');
+    if (controlArea) {
+      let screenIndex = 0;
+      controlArea.traverse(object => {
+        if (!(object instanceof T.Mesh) || object.name !== 'totp-control-monitor-screen') return;
+        const material = object.material;
+        if (material instanceof T.MeshStandardMaterial) {
+          material.emissiveIntensity = reduced ? .72 : .62 + (Math.sin(t * .7 + screenIndex * 1.4) * .5 + .5) * .28;
+        }
+        screenIndex += 1;
+      });
+    }
   }
 
   private updateEffects() {
