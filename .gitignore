@@ -24,3 +24,11 @@ dist-ssr
 *.sw?
 
 tmp/progression-simulations/
+
+# Local Avatar V2 Blender authoring work (runtime GLBs live under public/avatar-v2)
+work/avatar-v2-*.blend
+work/avatar-v2-*/
+
+# Python helper bytecode
+__pycache__/
+*.pyc
