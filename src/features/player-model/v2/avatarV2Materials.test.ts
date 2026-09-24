@@ -167,5 +167,6 @@ describe('Avatar V2 material quality', () => {
     expect(report.eyes).toBe(4);
     expect(report.mouth).toBe(3);
     expect(report.corneaPromoted).toBe(1);
+    expect(report.wetlinePromoted).toBe(1);
   });
 });
