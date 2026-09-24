@@ -210,13 +210,31 @@ def create_rig(frame: str, minimum: Vector, maximum: Vector) -> bpy.types.Object
         spine2,
         connected=True,
     )
-    add_bone(
+    head = add_bone(
         armature, "Head",
         neck.tail.copy(),
         Vector((centre_x, centre_y, z(0.97))),
         neck,
         connected=True,
     )
+
+    # Eye bones are authored as direct head children so runtime gaze remains
+    # independent from blink/squint morphs while still following head motion.
+    # These are proportion guides only; fit them to the actual eyeball centres.
+    for side in ("L", "R"):
+        direction = 1.0 if side == "L" else -1.0
+        eye_head = Vector((
+            x(direction * 0.018),
+            centre_y - height * 0.035,
+            z(0.905),
+        ))
+        add_bone(
+            armature,
+            f"Eye.{side}",
+            eye_head,
+            eye_head + Vector((0.0, -height * 0.018, 0.0)),
+            head,
+        )
 
     for side in ("L", "R"):
         direction = 1.0 if side == "L" else -1.0
@@ -305,6 +323,7 @@ The generated RMV2_Armature is a naming/proportion GUIDE, not a finished rig.
 
 Before binding:
 - move hips/spine/neck/head joints into the actual mesh centres;
+- fit Eye.L/Eye.R to the actual eyeball centres and keep them parented to Head;
 - fit shoulder roots to the clavicle topology;
 - place elbow/knee joints on the deformation loops, not the visual surface edge;
 - fit wrist/ankle/toe pivots;
@@ -315,7 +334,8 @@ After fitting:
 - bind with normalized weights;
 - keep no more than four influences per vertex;
 - manually clean shoulders, elbows, hips, knees, wrists and fingers;
-- test guitar, bass, drumstick and microphone poses;
+- bind each eyeball to its matching eye bone and verify gaze pivots cleanly;
+- test singing gaze plus guitar, bass, drumstick and microphone poses;
 - sculpt the required pose-space correctives after skinning quality is stable.
 
 Do not export the untouched guide as a validated runtime asset.
