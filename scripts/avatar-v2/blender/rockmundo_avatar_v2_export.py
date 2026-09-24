@@ -145,6 +145,7 @@ MATERIAL_ROLES = {
     "cornea": re.compile(r"rmv2[_-]?cornea|cornea|eye[_-]?(shell|surface)|ocular[_-]?shell", re.I),
     "wetline": re.compile(r"rmv2[_-]?(wetline|tearline|waterline)|(^|[_-])(wetline|tearline|waterline)($|[_-])", re.I),
     "lips": re.compile(r"rmv2[_-]?lips|(^|[_-])lips?($|[_-])", re.I),
+    "eyebrows": re.compile(r"rmv2[_-]?eyebrows?|(^|[_-])(brow|eyebrow)($|[_-])", re.I),
     "eyelashes": re.compile(r"rmv2[_-]?(eyelash|lashes?)|(^|[_-])(eyelash|lashes?)($|[_-])", re.I),
     "teeth": re.compile(r"rmv2[_-]?teeth|teeth", re.I),
     "tongue": re.compile(r"rmv2[_-]?tongue|tongue", re.I),
@@ -681,6 +682,10 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
                 )
 
     if args.lod <= 1:
+        if not any(MATERIAL_ROLES["eyebrows"].search(name) for name in head_material_names):
+            errors.append(
+                "LOD0/1 head/face surface needs a used RMV2_Eyebrows material region."
+            )
         for role in ("skin", "eyes"):
             if not any(MATERIAL_ROLES[role].search(name) for name in materials):
                 errors.append(f"Missing named close-up material role: {role}.")
