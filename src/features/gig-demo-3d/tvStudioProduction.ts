@@ -196,15 +196,15 @@ function buildOperator(root: T.Group, x: number, z: number, yaw = 0, name = 'tot
   hairCap.position.set(0, 1.66, -.01);
   operator.add(hairCap);
 
-  box(operator, [.34, .055, .23], [0, .86, .015], dark).name = 'totp-camera-crew-utility-belt';
-  box(operator, [.105, .17, .07], [.18, .91, .11], dark).name = 'totp-camera-crew-radio';
-  box(operator, [.038, .13, .055], [-.145, 1.59, 0], dark).name = 'totp-camera-crew-headset-left';
-  box(operator, [.038, .13, .055], [.145, 1.59, 0], dark).name = 'totp-camera-crew-headset-right';
-  const headband = new T.Mesh(new T.TorusGeometry(.15, .013, 6, 18, Math.PI), dark);
+  box(operator, [.34, .055, .23], [0, .86, .015], blackTop).name = 'totp-camera-crew-utility-belt';
+  box(operator, [.105, .17, .07], [.18, .91, .11], blackTop).name = 'totp-camera-crew-radio';
+  box(operator, [.038, .13, .055], [-.145, 1.59, 0], blackTop).name = 'totp-camera-crew-headset-left';
+  box(operator, [.038, .13, .055], [.145, 1.59, 0], blackTop).name = 'totp-camera-crew-headset-right';
+  const headband = new T.Mesh(new T.TorusGeometry(.15, .013, 6, 18, Math.PI), blackTop);
   headband.position.set(0, 1.59, 0);
   headband.name = 'totp-camera-crew-headset-band';
   operator.add(headband);
-  rod(operator, [.145, 1.57, -.01], [.18, 1.49, -.12], .012, dark).name = 'totp-camera-crew-headset-mic';
+  rod(operator, [.145, 1.57, -.01], [.18, 1.49, -.12], .012, blackTop).name = 'totp-camera-crew-headset-mic';
 
   root.add(operator);
   return operator;
