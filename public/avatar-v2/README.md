@@ -70,12 +70,16 @@ For expressive close-ups, also author `eyeSquintLeft/Right`, `browInnerUp`,
 `browDownLeft/Right`, `cheekSquintLeft/Right` and
 `mouthStretchLeft/Right`. These are driven from vocal opening and performance
 energy so strong choruses engage the cheeks/eyes/brows as well as the jaw while
-quieter passages remain subtle. Additional frown and eye-look targets are still
-encouraged. Teeth and tongue must be separate at LOD0 so close-up vocals never
-expose a hollow mouth.
+quieter passages remain subtle. Additional frown targets are still encouraged.
+Eye direction is handled by the dedicated eye bones, keeping gaze independent from
+blink/squint facial morphs. Teeth and tongue must be separate at LOD0 so close-up
+vocals never expose a hollow mouth.
 
-LOD0/LOD1 also require shoulder and toe-base articulation plus complete
-three-joint thumb/index/middle/ring/little chains on both hands. They also require
+LOD0/LOD1 also require shoulder and toe-base articulation, dedicated `Eye.L` /
+`Eye.R` bones, plus complete three-joint thumb/index/middle/ring/little chains
+on both hands. The eye bones are driven at runtime for deterministic micro-saccades
+and interaction-aware gaze; do not bake a permanently offset stare into the mesh.
+They also require
 the eight pose-space joint deformation targets `poseShoulderLeft/Right`,
 `poseElbowLeft/Right`, `poseHipLeft/Right` and `poseKneeLeft/Right`.
 These preserve joint volume after the final live IK pose rather than relying on
