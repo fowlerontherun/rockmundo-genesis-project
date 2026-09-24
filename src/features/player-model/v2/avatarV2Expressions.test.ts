@@ -4,6 +4,7 @@ import {
   AvatarV2ExpressionController,
   collectAvatarV2ExpressionBindings,
   createAvatarV2ExpressionController,
+  sampleAvatarV2VocalArticulation,
 } from './avatarV2Expressions';
 
 function face() {
@@ -57,6 +58,33 @@ describe('Avatar V2 facial expressions', () => {
     expect(bindings.browInnerUp).toHaveLength(1);
     expect(bindings.cheekSquintRight).toHaveLength(1);
     expect(bindings.mouthStretchLeft).toHaveLength(1);
+  });
+
+  it('reconstructs the same vocal articulation exactly after a seek', () => {
+    const first = sampleAvatarV2VocalArticulation(12.345, .37, .84, .9);
+    const replayed = sampleAvatarV2VocalArticulation(12.345, .37, .84, .9);
+    expect(replayed).toEqual(first);
+  });
+
+  it('uses a varied deterministic syllable plan instead of cycling vowels in order', () => {
+    const dominant = Array.from({ length: 12 }, (_, index) => {
+      const sample = sampleAvatarV2VocalArticulation(index * .31, .23, .9, .82);
+      return Object.entries(sample.visemes)
+        .sort((a, b) => b[1] - a[1])[0]?.[0];
+    }).filter(Boolean);
+
+    expect(new Set(dominant).size).toBeGreaterThanOrEqual(3);
+    const canonicalCycle = ['visemeAA', 'visemeEE', 'visemeIH', 'visemeOH', 'visemeOU'];
+    expect(dominant.slice(0, 5)).not.toEqual(canonicalCycle);
+  });
+
+  it('introduces brief consonant-like closures without making the jaw non-finite', () => {
+    const samples = Array.from({ length: 80 }, (_, index) =>
+      sampleAvatarV2VocalArticulation(index * .04, .61, .92, 1),
+    );
+    expect(samples.every(sample => Number.isFinite(sample.jawScale))).toBe(true);
+    expect(Math.min(...samples.map(sample => sample.jawScale))).toBeLessThan(.7);
+    expect(Math.max(...samples.map(sample => sample.jawScale))).toBeLessThanOrEqual(1);
   });
 
   it('drives jaw and smoothly blends adjacent visemes while a performer is singing', () => {
