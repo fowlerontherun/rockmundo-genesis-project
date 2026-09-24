@@ -52,6 +52,8 @@ CLOSEUP_BONES = {
       "rightShoulder": ["rightShoulder","shoulder_r","clavicle_r","mixamorigRightShoulder"],
       "leftToes": ["leftToes","toe_l","toebase_l","mixamorigLeftToeBase"],
       "rightToes": ["rightToes","toe_r","toebase_r","mixamorigRightToeBase"],
+      "leftEye": ["Eye.L","leftEye","eye_l","mixamorigLeftEye","j_bip_l_eye"],
+      "rightEye": ["Eye.R","rightEye","eye_r","mixamorigRightEye","j_bip_r_eye"],
 
       "leftThumb1": ["Thumb1.L","leftThumbProximal","leftHandThumb1","thumb_01_l","mixamorigLeftHandThumb1"],
       "leftThumb2": ["Thumb2.L","leftThumbIntermediate","leftHandThumb2","thumb_02_l","mixamorigLeftHandThumb2"],
