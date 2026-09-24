@@ -152,7 +152,7 @@ SURFACE_NODE_PATTERNS = {
     "iris": re.compile(r"rmv2[_-]?(iris|eye[_-]?iris)|(^|[_-])iris($|[_-])", re.I),
     "sclera": re.compile(r"rmv2[_-]?(sclera|eye[_-]?white)|(^|[_-])sclera($|[_-])", re.I),
     "cornea": re.compile(r"rmv2[_-]?(cornea|eye[_-]?(shell|surface))|ocular[_-]?shell", re.I),
-    "teeth": re.compile(r"rmv2[_-]?(teeth|tooth)|(^|[_-])teeth($|[_-])", re.I),
+    "teeth": re.compile(r"rmv2[_-]?(?:(?:upper|lower)[_-]?)?(teeth|tooth)|(^|[_-])teeth($|[_-])", re.I),
     "tongue": re.compile(r"rmv2[_-]?tongue|(^|[_-])tongue($|[_-])", re.I),
     "mouthInterior": re.compile(r"rmv2[_-]?mouth[_-]?(interior|cavity)|oral[_-]?cavity|inner[_-]?mouth", re.I),
 }
