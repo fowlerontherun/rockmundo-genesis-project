@@ -16,7 +16,7 @@ import { createAvatarV2PoseCorrectiveController, type AvatarV2PoseCorrectiveCont
 import { createAvatarV2TwistController, type AvatarV2TwistController } from '@/features/player-model/v2/avatarV2TwistBones';
 import { createAvatarV2ShoulderController, type AvatarV2ShoulderController } from '@/features/player-model/v2/avatarV2Shoulder';
 import { createAvatarV2ToeController, type AvatarV2ToeController } from '@/features/player-model/v2/avatarV2Toe';
-import { seededRandom, type DemoQuality } from './config';
+import { seededRandom } from './config';
 import { visibleTattoosForPresentation } from '@/features/player-model/tattoos';
 import { assemblePlayerModel, disposeModel, loadModelLibrary, requiredModelFiles } from '@/features/player-model/model';
 import { assembleAvatarMesh } from '@/features/player-model/v2/avatarMeshEngine';
@@ -34,18 +34,6 @@ import type { CrowdTuningOptions } from '@/features/gig-experience/viewer/engine
 import type { VenueProfile } from './venueProfile';
 import type { ConcertPerformer, PerformanceSection, StageRole } from './liveTypes';
 type Role = StageRole;
-
-export function avatarBandVisualQuality(
-    quality: DemoQuality,
-    television = false,
-): AvatarVisualQuality {
-    if (television) {
-        if (quality === 'high') return 'ultra';
-        if (quality === 'balanced') return 'high';
-        return 'balanced';
-    }
-    return quality === 'low' ? 'balanced' : 'high';
-}
 
 interface RestBone {
     bone: T.Bone;
