@@ -191,7 +191,12 @@ Starter accessories still save with the whole appearance and its revision.
 
 Starter glasses have shaped frames, lenses, bridges, side arms and ear hooks.
 Caps have a curved visor and seams; fedora/cowboy crowns have a crease. Hats tuck
-procedural hair above the brim, keeping lower long hair. Imported scalp hair is
+procedural hair above the brim, keeping lower long hair, and now pull the narrow
+hair band immediately beneath the brim clear so side panels, locs and braids are
+not cut by the hat edge. Glasses and earrings use the actual generated hairstyle
+vertices to open small local clearance channels around temple arms, ear hooks and
+ear jewellery while keeping the accessories fitted to the measured face/ear
+surface. Owned eyewear uses the same hair-clearance pass. Imported scalp hair is
 hidden while hatted; eyebrows, face details and facial hair remain visible. Removing
 the hat rebuilds the unchanged saved haircut. This is stylised geometry, not hair
 simulation. The shared fitting-room/performer assembly suppresses starter headwear
