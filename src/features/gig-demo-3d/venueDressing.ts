@@ -98,7 +98,8 @@ function addNoticeBoard(parent: T.Object3D, x: number, y: number, z: number, onS
       onSideWall ? [x - .045, py, z + lateral] : [x + lateral, py, z - .045],
       paper[i % paper.length],
     );
-    flyer.rotation[onSideWall ? 'x' : 'z'] = (random() - .5) * .08;
+    if (onSideWall) flyer.rotation.x = (random() - .5) * .08;
+    else flyer.rotation.z = (random() - .5) * .08;
   }
 }
 
@@ -121,9 +122,8 @@ function addCableCoil(parent: T.Object3D, x: number, z: number, scale = 1) {
   }
 }
 
-function buildCafe(root: T.Group, p: VenueProfile, random: () => number, surfaces: VenueSurfaceMaterials) {
+function buildCafe(root: T.Group, p: VenueProfile, surfaces: VenueSurfaceMaterials) {
   const half = p.roomWidth / 2;
-  const back = .65 - p.stageDepth - 1.4;
   const coffee = feature(root, 'venue-cafe-coffee-bar');
   box(coffee, [1.45, 1.02, 4.7], [-half + 1.35, .51, 8], matte('#4b3427', .66));
   box(coffee, [1.65, .11, 4.9], [-half + 1.35, 1.08, 8], surfaces.detail);
@@ -158,7 +158,7 @@ function buildCafe(root: T.Group, p: VenueProfile, random: () => number, surface
   root.userData.identityFeatures.push('coffee-bar', 'window-front', 'plants', 'warm-pendants');
 }
 
-function buildJazz(root: T.Group, p: VenueProfile, random: () => number, surfaces: VenueSurfaceMaterials) {
+function buildJazz(root: T.Group, p: VenueProfile, surfaces: VenueSurfaceMaterials) {
   const half = p.roomWidth / 2;
   const lounge = feature(root, 'venue-jazz-banquettes');
   for (const side of [-1, 1] as const) {
@@ -188,7 +188,7 @@ function buildJazz(root: T.Group, p: VenueProfile, random: () => number, surface
   root.userData.identityFeatures.push('banquettes', 'brass-sconces', 'framed-art', 'cocktail-service');
 }
 
-function buildDiveBar(root: T.Group, p: VenueProfile, random: () => number, surfaces: VenueSurfaceMaterials) {
+function buildDiveBar(root: T.Group, p: VenueProfile, surfaces: VenueSurfaceMaterials) {
   const half = p.roomWidth / 2;
   const backBar = feature(root, 'venue-dive-back-bar');
   addBottleShelf(backBar, -half + .25, 1.5, 7.8, true, 5.2);
@@ -218,7 +218,7 @@ function buildDiveBar(root: T.Group, p: VenueProfile, random: () => number, surf
   root.userData.identityFeatures.push('bottle-backbar', 'dartboard', 'low-beams', 'edge-clutter', 'neon-sign');
 }
 
-function buildRockClub(root: T.Group, p: VenueProfile, random: () => number, surfaces: VenueSurfaceMaterials) {
+function buildRockClub(root: T.Group, p: VenueProfile, surfaces: VenueSurfaceMaterials) {
   const half = p.roomWidth / 2;
   const barrier = feature(root, 'venue-rock-front-barrier');
   const steel = metal('#59616a', .56);
@@ -246,7 +246,7 @@ function buildRockClub(root: T.Group, p: VenueProfile, random: () => number, sur
   root.userData.identityFeatures.push('front-barrier', 'road-cases', 'cable-coils', 'acoustic-wall', 'industrial-practicals');
 }
 
-function buildLiveHouse(root: T.Group, p: VenueProfile, random: () => number, surfaces: VenueSurfaceMaterials) {
+function buildLiveHouse(root: T.Group, p: VenueProfile, surfaces: VenueSurfaceMaterials) {
   const half = p.roomWidth / 2;
   const foh = feature(root, 'venue-live-house-foh');
   const z = Math.min(p.roomDepth - 3.2, p.crowdDepth + 3.2);
@@ -338,11 +338,11 @@ export function buildVenueDressing(
 
   const random = seededRandom(seed + 911);
 
-  if (p.kind === 'cafe_stage') buildCafe(root, p, random, surfaces);
-  if (p.kind === 'jazz_lounge') buildJazz(root, p, random, surfaces);
-  if (p.kind === 'dive_bar') buildDiveBar(root, p, random, surfaces);
-  if (p.kind === 'rock_club') buildRockClub(root, p, random, surfaces);
-  if (p.kind === 'live_house') buildLiveHouse(root, p, random, surfaces);
+  if (p.kind === 'cafe_stage') buildCafe(root, p, surfaces);
+  if (p.kind === 'jazz_lounge') buildJazz(root, p, surfaces);
+  if (p.kind === 'dive_bar') buildDiveBar(root, p, surfaces);
+  if (p.kind === 'rock_club') buildRockClub(root, p, surfaces);
+  if (p.kind === 'live_house') buildLiveHouse(root, p, surfaces);
   if (p.kind === 'university_union') buildUniversityUnion(root, p, random, surfaces);
 
   return root;
