@@ -384,8 +384,10 @@ After fitting:
 - keep no more than four influences per vertex;
 - manually clean shoulders, elbows, hips, knees, wrists and fingers;
 - paint meaningful weights onto all six twist helpers so axial roll is distributed;
-- weight the lower jaw/lower teeth/tongue appropriately to Jaw and verify open-mouth singing;
-- bind each eyeball to its matching eye bone and verify gaze pivots cleanly;
+- split upper/lower teeth: upper teeth use Head, lower teeth and tongue use Jaw;
+- set rockmundoBoneBinding on every close-up surface (Eye.L/Eye.R/Head/Jaw);
+- bind iris/sclera/cornea to their matching eye bone and verify gaze pivots cleanly;
+- verify lower teeth/tongue follow Jaw during open-mouth singing;
 - leave EarAnchor.L/R unweighted; verify earrings and glasses sit correctly on both anchors;
 - test singing gaze plus guitar, bass, drumstick and microphone poses;
 - sculpt the required pose-space correctives after skinning quality is stable.
