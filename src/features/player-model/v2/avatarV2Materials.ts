@@ -160,8 +160,16 @@ export function tuneAvatarV2Materials(
       if (role === 'skin') {
         material.color.set(appearance.body.skin);
         material.roughness = Math.min(.72, material.roughness || .72);
-        skinCache ??= createAvatarSkinTextureCache(appearance, quality);
-        applyAvatarSkinQuality(material, appearance, quality, skinCache);
+        const authoredNormal = material.normalMap;
+        const authoredRoughness = material.roughnessMap;
+        if (!authoredNormal || !authoredRoughness) {
+          skinCache ??= createAvatarSkinTextureCache(appearance, quality);
+          applyAvatarSkinQuality(material, appearance, quality, skinCache);
+          if (authoredNormal) material.normalMap = authoredNormal;
+          if (authoredRoughness) material.roughnessMap = authoredRoughness;
+        } else {
+          material.envMapIntensity = quality === 'cinematic' ? .96 : quality === 'ultra' ? .9 : .82;
+        }
         if (material instanceof T.MeshPhysicalMaterial) {
           material.sheen = quality === 'cinematic' ? .14 : quality === 'ultra' ? .1 : .06;
           material.sheenRoughness = .82;
