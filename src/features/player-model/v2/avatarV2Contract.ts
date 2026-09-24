@@ -567,6 +567,33 @@ export function validateAvatarV2Scene(
       }
     }
 
+    const chestName = boneMap.chest;
+    const chestBone = chestName ? scene.getObjectByName(chestName) : null;
+    const shoulderHierarchy = [
+      { shoulder: 'leftShoulder', arm: 'leftUpperArm' },
+      { shoulder: 'rightShoulder', arm: 'rightUpperArm' },
+    ] as const;
+    for (const { shoulder: shoulderSemantic, arm: armSemantic } of shoulderHierarchy) {
+      const shoulder = boneByAliases(scene, AVATAR_V2_CLOSEUP_BONE_ALIASES[shoulderSemantic]);
+      const armName = boneMap[armSemantic];
+      const arm = armName ? scene.getObjectByName(armName) : null;
+
+      if (shoulder && chestBone instanceof T.Bone && !inheritsFrom(shoulder, chestBone)) {
+        issues.push({
+          level: 'error',
+          code: `invalid-shoulder-parent:${shoulderSemantic}`,
+          message: `LOD${lod} ${shoulderSemantic} must inherit from the chest so clavicle motion follows the torso.`,
+        });
+      }
+      if (shoulder && arm instanceof T.Bone && !inheritsFrom(arm, shoulder)) {
+        issues.push({
+          level: 'error',
+          code: `invalid-upper-arm-parent:${armSemantic}`,
+          message: `LOD${lod} ${armSemantic} must inherit from ${shoulderSemantic} so live shoulder-girdle reach deforms the arm chain.`,
+        });
+      }
+    }
+
     const twistParents: Record<AvatarV2TwistSemantic, AvatarV2Bone> = {
       leftUpperArmTwist: 'leftUpperArm',
       rightUpperArmTwist: 'rightUpperArm',
