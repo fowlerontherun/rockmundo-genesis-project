@@ -100,9 +100,11 @@ Priority topology areas:
 ## Shoulder girdle participation
 
 LOD0/LOD1 shoulder bones are part of the live performance solve, not decorative
-rig entries. Before each V2 arm IK pass, the matching `Shoulder.L/R` receives a
-small bounded share of the hand reach direction; the upper/lower arm then finishes
-the exact target solve. This gives raised microphones, guitar grips, drum reaches
+rig entries. Each `Shoulder.L/R` must inherit from the chest and its matching
+`UpperArm.L/R` must inherit from that shoulder; browser validation, exported-GLB
+validation and the Blender export gate all reject a disconnected shoulder chain.
+Before each V2 arm IK pass, the matching shoulder receives a small bounded share
+of the hand reach direction; the upper/lower arm then finishes the exact target solve. This gives raised microphones, guitar grips, drum reaches
 and crowd gestures visible clavicle/scapular participation without moving the
 authoritative hand contact point.
 
