@@ -130,8 +130,12 @@ function buildWarehouse(root: T.Group, p: VenueProfile, random: () => number, su
     const x = side * (half - 2.15);
     for (let z = back + 4; z < p.roomDepth - 2; z += 6.2) {
       cylinder(ducting, .34, .34, 5.2, [x, p.roofHeight - 1.25, z], palette.steel, 14).rotation.x = Math.PI / 2;
-      for (const dz of [-2.55, 2.55])
-        new T.Mesh(new T.TorusGeometry(.35, .028, 6, 18), palette.dark).position.set(x, p.roofHeight - 1.25, z + dz);
+      for (const dz of [-2.55, 2.55]) {
+        const ring = new T.Mesh(new T.TorusGeometry(.35, .028, 6, 18), palette.dark);
+        ring.rotation.x = Math.PI / 2;
+        ring.position.set(x, p.roofHeight - 1.25, z + dz);
+        ducting.add(ring);
+      }
     }
   }
 
