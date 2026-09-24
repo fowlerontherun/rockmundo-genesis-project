@@ -56,7 +56,7 @@ describe('dense anatomical audiences', () => {
         expect(isTvStudioAudienceBlocked(-4.5, 4.05, studio)).toBe(true);
         expect(isTvStudioAudienceBlocked(1.4, 5.65, studio)).toBe(true);
         expect(isTvStudioAudienceBlocked(studio.stageWidth * .24, 2.55, studio)).toBe(true);
-        expect(isTvStudioAudienceBlocked(-2.85, 2.05, studio)).toBe(true);
+        expect(isTvStudioAudienceBlocked(-.9, 1.75, studio)).toBe(true);
         expect(isTvStudioAudienceBlocked(0, 3.55, studio)).toBe(true);
         expect(isTvStudioAudienceBlocked(-studio.crowdWidth * .32, 4.7, studio)).toBe(true);
         expect(isTvStudioAudienceBlocked(studio.crowdWidth * .32, 5.1, studio)).toBe(true);
