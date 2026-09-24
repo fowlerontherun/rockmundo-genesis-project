@@ -61,9 +61,6 @@ export function inspectAvatarV2Performance(
   const twists = AVATAR_V2_TWIST_RUNTIME_BONES
     .map(name => actor.bones.get(name))
     .filter((bone): bone is T.Bone => !!bone);
-  const twistBaseline = new Map<T.Bone, T.Quaternion>(
-    twists.map(bone => [bone, bone.quaternion.clone()] as const),
-  );
   const rig = actor.instrumentRig;
 
   if (!rig) {
@@ -123,9 +120,7 @@ export function inspectAvatarV2Performance(
     }
 
     for (const twist of twists) {
-      const baseline = twistBaseline.get(twist);
-      if (!baseline) continue;
-      const motion = baseline.angleTo(twist.quaternion);
+      const motion = Math.abs(Number(twist.userData.rockmundoAvatarV2TwistAngle ?? 0));
       if (Number.isFinite(motion)) maxTwistMotion = Math.max(maxTwistMotion, motion);
       else issues.push({ code: 'invalid-twist-deformation', message: twist.name + ' produced a non-finite twist rotation.' });
     }
