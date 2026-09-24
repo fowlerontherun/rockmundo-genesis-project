@@ -189,7 +189,7 @@ export class AvatarV2ExpressionController {
       .15,
     );
     for (const eye of this.eyes) {
-      const convergence = eye.side === 'L' ? -.008 : .008;
+      const convergence = state.reducedMotion ? 0 : eye.side === 'L' ? -.008 : .008;
       eye.bone.quaternion.copy(eye.rest).multiply(
         new T.Quaternion().setFromEuler(new T.Euler(gazePitch, gazeYaw + convergence, 0, 'XYZ')),
       );
