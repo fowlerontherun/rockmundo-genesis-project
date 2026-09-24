@@ -86,10 +86,10 @@ function CandidateCanvas({
     scene.background = new T.Color('#101823');
     const view = CANDIDATE_VIEW[viewPreset];
     const camera = new T.PerspectiveCamera(view.fov, 1, .05, 30);
-    camera.position.set(...view.position);
+    camera.position.set(view.position[0], view.position[1], view.position[2]);
 
     const controls = new OrbitControls(camera, element);
-    controls.target.set(...view.target);
+    controls.target.set(view.target[0], view.target[1], view.target[2]);
     controls.enableDamping = true;
     controls.enablePan = false;
     controls.minDistance = view.minDistance;
