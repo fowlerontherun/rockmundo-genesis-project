@@ -95,7 +95,14 @@ function baseAvatar() {
   return { root, hips, torso };
 }
 
-function garmentSource(boneName = 'hips', includeUnskinned = false, morphs: string[] = []) {
+const POSE_CORRECTIVES = [
+  'poseShoulderLeft', 'poseShoulderRight',
+  'poseElbowLeft', 'poseElbowRight',
+  'poseHipLeft', 'poseHipRight',
+  'poseKneeLeft', 'poseKneeRight',
+];
+
+function garmentSource(boneName = 'hips', includeUnskinned = false, morphs: string[] = POSE_CORRECTIVES) {
   const root = new T.Group();
   const bone = new T.Bone();
   bone.name = boneName;
@@ -181,7 +188,7 @@ describe('Avatar V2 garments', () => {
     const file = avatarV2GarmentFile(clothing.item, 'masculine', 1)!;
     const library = new Map<string, T.Object3D>([[
       file,
-      garmentSource('hips', false, ['bodyBroad', 'muscleMuscular']),
+      garmentSource('hips', false, ['bodyBroad', 'muscleMuscular', ...POSE_CORRECTIVES]),
     ]]);
     const selected = appearance({ build: 1.15, muscle: 'muscular' });
 
@@ -196,11 +203,28 @@ describe('Avatar V2 garments', () => {
     expect(garment.parent?.userData.rockmundoAvatarV2Muscle).toBe('muscular');
   });
 
+  it('fails closed when a close-up body garment omits joint deformation correctives', () => {
+    const { root, torso } = baseAvatar();
+    const clothing = row();
+    const file = avatarV2GarmentFile(clothing.item, 'masculine', 1)!;
+    const library = new Map<string, T.Object3D>([[
+      file,
+      garmentSource('hips', false, ['poseShoulderLeft']),
+    ]]);
+
+    expect(() => buildAvatarV2Garments(library, root, [clothing], appearance(), 1))
+      .toThrow(/pose corrective morph/);
+    expect(torso.visible).toBe(true);
+  });
+
   it('fails closed instead of clipping a shaped body through an incompatible V2 garment', () => {
     const { root, torso } = baseAvatar();
     const clothing = row();
     const file = avatarV2GarmentFile(clothing.item, 'masculine', 1)!;
-    const library = new Map<string, T.Object3D>([[file, garmentSource('hips')]]);
+    const library = new Map<string, T.Object3D>([[
+      file,
+      garmentSource('hips', false, POSE_CORRECTIVES),
+    ]]);
 
     expect(() => buildAvatarV2Garments(
       library,
