@@ -5,6 +5,7 @@ import { buildVenueDressing } from './venueDressing';
 import { buildVenueSurfaceMaterials } from './venueSurfaceMaterials';
 import { resolveVenueProfile } from './venueProfile';
 import { disposeModel } from '@/features/player-model/model';
+import { batchStaticMeshes } from './stage';
 
 const venueCases = [
   ['cafe_stage', ['venue-cafe-coffee-bar', 'venue-cafe-window-front', 'venue-cafe-warm-practicals']],
@@ -42,6 +43,13 @@ describe('small venue identity dressing', () => {
     expect(bounds.max.y).toBeLessThanOrEqual(profile.roofHeight + .6);
     expect(Math.abs(bounds.min.x)).toBeLessThanOrEqual(profile.roomWidth / 2 + .6);
     expect(Math.abs(bounds.max.x)).toBeLessThanOrEqual(profile.roomWidth / 2 + .6);
+
+    batchStaticMeshes(dressing!);
+    let staticDraws = 0;
+    dressing?.traverse(node => {
+      if (node instanceof T.Mesh) staticDraws += 1;
+    });
+    expect(staticDraws).toBeLessThanOrEqual(14);
 
     disposeModel(scene);
   });
