@@ -148,3 +148,10 @@ The first V2 clothing proof set and per-garment budgets are defined in
 `public/avatar-v2/clothing/manifest.json`. Garment hardware and prints must be
 part of a skinned mesh or be rigidly weighted to the appropriate bone; loose
 unskinned detail objects fail validation.
+
+Every validated body-worn garment must also export the same fitting morph names as
+the base body: `bodySlim`, `bodyBroad`, `muscleToned`, `muscleAthletic`,
+`muscleMuscular` and `muscleBodybuilder`. The runtime copies the selected body
+build and muscle weights onto the garment after rebinding it to the avatar
+skeleton. If a selected shaped body requires a morph that a garment does not
+provide, Avatar V2 fails closed to V1 instead of rendering clipping/intersection.
