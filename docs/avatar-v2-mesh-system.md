@@ -75,8 +75,14 @@ the matching corrective automatically. This preserves shoulder volume and preven
 elbows, hips and knees from collapsing during guitar, bass, drum and vocal poses.
 
 Correctives are additive to skinning and do not alter the skeleton or saved appearance.
-They remain warnings rather than rollout blockers while the first authored meshes are
-being produced, but every close-up candidate should ship them before production QA.
+They remain warnings on the base mesh while the first authored characters are being
+produced, but every close-up candidate should ship them before production QA.
+
+Body-worn LOD0/LOD1 garments must carry the matching correctives for the regions
+they cover. Tops/upper-body garments require shoulder and elbow targets; trousers
+and other lower-body garments require hip and knee targets. Garment assembly fails
+closed to V1 if these are absent, avoiding a corrected body deforming through a
+rigid-looking garment during the same pose.
 
 ## Facial animation
 
