@@ -393,6 +393,7 @@ export const FM_MODULES: FMModule[] = [
       "/media/self-promotion",
       "/media/pr-history",
       "/media/acting",
+      "/broadcast-consent",
     ],
     subTabs: [
       { label: "Hub", path: "/media", icon: Newspaper },
