@@ -61,6 +61,8 @@ export interface AvatarV2FaceState {
   opening: number;
   energy: number;
   reducedMotion: boolean;
+  gazeYaw?: number;
+  gazePitch?: number;
 }
 
 export function collectAvatarV2ExpressionBindings(root: T.Object3D): BindingMap {
@@ -97,6 +99,22 @@ function clearVisemes(bindings: BindingMap) {
   }
 }
 
+interface EyeBinding {
+  bone: T.Bone;
+  rest: T.Quaternion;
+  side: 'L' | 'R';
+}
+
+function deterministicUnit(seed: number) {
+  const value = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
+  return value - Math.floor(value);
+}
+
+function blinkPulse(clock: number, start: number, closed: number, opening: number, end: number) {
+  return T.MathUtils.smoothstep(clock, start, closed)
+    * (1 - T.MathUtils.smoothstep(clock, opening, end));
+}
+
 /**
  * Drives authored V2 facial blendshapes from the existing deterministic stage
  * performance clock. It is intentionally provider-agnostic: later real audio
@@ -104,12 +122,22 @@ function clearVisemes(bindings: BindingMap) {
  */
 export class AvatarV2ExpressionController {
   private readonly bindings: BindingMap;
+  private readonly eyes: EyeBinding[];
   readonly supported: AvatarV2Expression[];
 
   constructor(root: T.Object3D) {
     this.bindings = collectAvatarV2ExpressionBindings(root);
     this.supported = (Object.keys(this.bindings) as AvatarV2Expression[])
       .filter(key => (this.bindings[key]?.length ?? 0) > 0);
+
+    this.eyes = (['L', 'R'] as const)
+      .map(side => {
+        const bone = root.getObjectByName(`Eye.${side}`);
+        return bone instanceof T.Bone
+          ? { bone, rest: bone.quaternion.clone(), side }
+          : null;
+      })
+      .filter((eye): eye is EyeBinding => !!eye);
   }
 
   get hasCloseUpFace() {
@@ -120,14 +148,52 @@ export class AvatarV2ExpressionController {
   update(state: AvatarV2FaceState) {
     const t = state.reducedMotion ? 0 : state.seconds + state.phase * .41;
 
-    // Non-random deterministic blink rhythm: stable in replays and TOTP renders.
-    const blinkClock = ((t % 4.85) + 4.85) % 4.85;
-    const blink = state.reducedMotion
+    // Deterministic but non-mechanical blinking: tiny left/right timing variation
+    // and an occasional double blink stop close-up faces feeling synchronised or
+    // mannequin-like while remaining replay-safe.
+    const blinkCycle = 4.72;
+    const blinkClock = ((t % blinkCycle) + blinkCycle) % blinkCycle;
+    const blinkIndex = Math.floor((t + 0.0001) / blinkCycle);
+    const mainLeft = state.reducedMotion ? 0 : blinkPulse(blinkClock, 4.28, 4.37, 4.43, 4.54);
+    const mainRight = state.reducedMotion ? 0 : blinkPulse(blinkClock, 4.292, 4.382, 4.438, 4.548) * .985;
+    const doubleBlink = !state.reducedMotion && Math.abs(blinkIndex % 5) === 3
+      ? blinkPulse(blinkClock, 3.54, 3.62, 3.68, 3.79)
+      : 0;
+    setWeight(this.bindings, 'blinkLeft', Math.max(mainLeft, doubleBlink));
+    setWeight(this.bindings, 'blinkRight', Math.max(mainRight, doubleBlink * .97));
+
+    // Eyes use authored bones instead of shifting an iris texture. The saccade
+    // targets are deterministic, held briefly, and smoothly transitioned. A
+    // caller-supplied gaze offset (bandmate/audience/fretboard) is layered on top.
+    const saccadeClock = Math.max(0, t + state.phase * .23) / 1.65;
+    const saccadeSlot = Math.floor(saccadeClock);
+    const saccadeProgress = saccadeClock - saccadeSlot;
+    const saccadeBlend = T.MathUtils.smoothstep(saccadeProgress, 0, .16);
+    const saccade = (slot: number, axis: number) =>
+      (deterministicUnit(slot * 2.17 + state.phase * 3.11 + axis * 19.37) * 2 - 1)
+      * (axis === 0 ? .046 : .027);
+    const naturalYaw = state.reducedMotion
       ? 0
-      : T.MathUtils.smoothstep(blinkClock, 4.54, 4.64)
-        * (1 - T.MathUtils.smoothstep(blinkClock, 4.70, 4.80));
-    setWeight(this.bindings, 'blinkLeft', blink);
-    setWeight(this.bindings, 'blinkRight', blink * .97);
+      : T.MathUtils.lerp(saccade(saccadeSlot - 1, 0), saccade(saccadeSlot, 0), saccadeBlend);
+    const naturalPitch = state.reducedMotion
+      ? 0
+      : T.MathUtils.lerp(saccade(saccadeSlot - 1, 1), saccade(saccadeSlot, 1), saccadeBlend);
+    const gazeYaw = T.MathUtils.clamp(
+      (state.reducedMotion ? 0 : state.gazeYaw ?? 0) + naturalYaw,
+      -.24,
+      .24,
+    );
+    const gazePitch = T.MathUtils.clamp(
+      (state.reducedMotion ? 0 : state.gazePitch ?? 0) + naturalPitch,
+      -.15,
+      .15,
+    );
+    for (const eye of this.eyes) {
+      const convergence = eye.side === 'L' ? -.008 : .008;
+      eye.bone.quaternion.copy(eye.rest).multiply(
+        new T.Quaternion().setFromEuler(new T.Euler(gazePitch, gazeYaw + convergence, 0, 'XYZ')),
+      );
+    }
 
     const vocalActive = state.vocalActive && !state.reducedMotion;
     const vocal = vocalActive
@@ -141,21 +207,24 @@ export class AvatarV2ExpressionController {
       : 0;
 
     setWeight(this.bindings, 'jawOpen', vocal);
+    const micro = state.reducedMotion
+      ? 0
+      : (.5 + Math.sin(t * .43 + state.phase * 1.91) * .5) * .018;
     setWeight(
       this.bindings,
       'mouthSmile',
       vocalActive
-        ? T.MathUtils.clamp(.045 + phrasePulse * .10 + state.energy * .05 - vocal * .035, 0, .22)
-        : .025,
+        ? T.MathUtils.clamp(.045 + phrasePulse * .10 + state.energy * .05 - vocal * .035 + micro * .22, 0, .22)
+        : .012 + micro * .28,
     );
 
-    const squint = vocal * (.08 + state.energy * .22) + phrasePulse * state.energy * .08;
+    const squint = vocal * (.08 + state.energy * .22) + phrasePulse * state.energy * .08 + micro;
     setWeight(this.bindings, 'eyeSquintLeft', squint * .96);
     setWeight(this.bindings, 'eyeSquintRight', squint);
-    setWeight(this.bindings, 'cheekSquintLeft', faceEnergy * (.08 + phrasePulse * .12));
-    setWeight(this.bindings, 'cheekSquintRight', faceEnergy * (.075 + phrasePulse * .115));
+    setWeight(this.bindings, 'cheekSquintLeft', faceEnergy * (.08 + phrasePulse * .12) + micro * .42);
+    setWeight(this.bindings, 'cheekSquintRight', faceEnergy * (.075 + phrasePulse * .115) + micro * .39);
 
-    const browLift = vocal * (.04 + state.opening * .15) * (1 - state.energy * .28);
+    const browLift = vocal * (.04 + state.opening * .15) * (1 - state.energy * .28) + micro * .32;
     const browDrive = vocal * state.energy * (.055 + phrasePulse * .09);
     setWeight(this.bindings, 'browInnerUp', browLift);
     setWeight(this.bindings, 'browDownLeft', browDrive * .94);
@@ -200,6 +269,7 @@ export class AvatarV2ExpressionController {
     for (const expression of Object.keys(ALIASES) as AvatarV2Expression[]) {
       setWeight(this.bindings, expression, 0);
     }
+    for (const eye of this.eyes) eye.bone.quaternion.copy(eye.rest);
   }
 }
 
