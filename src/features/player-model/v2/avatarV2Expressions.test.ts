@@ -153,6 +153,41 @@ describe('Avatar V2 facial expressions', () => {
     expect(mesh.morphTargetInfluences![17]).toBeGreaterThan(0);
   });
 
+  it('moves rebuilt custom eyebrows with V2 brow expression motion and restores them', () => {
+    const { root } = face();
+    const left = new T.Group();
+    left.name = 'avatar-eyebrow-left';
+    left.position.set(.08, .12, 0);
+    const right = new T.Group();
+    right.name = 'avatar-eyebrow-right';
+    right.position.set(-.08, .12, 0);
+    root.add(left, right);
+
+    const controller = new AvatarV2ExpressionController(root);
+    const leftRest = left.position.clone();
+    const rightRest = right.position.clone();
+
+    controller.update({
+      seconds: .9,
+      phase: .15,
+      vocalActive: true,
+      opening: .9,
+      energy: 1,
+      reducedMotion: false,
+    });
+
+    expect(left.position.distanceTo(leftRest)).toBeGreaterThan(0);
+    expect(right.position.distanceTo(rightRest)).toBeGreaterThan(0);
+    expect(Number(left.userData.rockmundoAvatarV2BrowMotion)).toBeGreaterThan(0);
+    expect(Number(right.userData.rockmundoAvatarV2BrowMotion)).toBeGreaterThan(0);
+
+    controller.reset();
+    expect(left.position.toArray()).toEqual(leftRest.toArray());
+    expect(right.position.toArray()).toEqual(rightRest.toArray());
+    expect(left.userData.rockmundoAvatarV2BrowMotion).toBe(0);
+    expect(right.userData.rockmundoAvatarV2BrowMotion).toBe(0);
+  });
+
   it('moves authored eye bones with deterministic gaze and restores them on reset', () => {
     const { root, leftEye, rightEye } = face();
     const controller = new AvatarV2ExpressionController(root);
