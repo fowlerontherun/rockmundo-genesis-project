@@ -75,7 +75,11 @@ encouraged. Teeth and tongue must be separate at LOD0 so close-up vocals never
 expose a hollow mouth.
 
 LOD0/LOD1 also require shoulder and toe-base articulation plus complete
-three-joint thumb/index/middle/ring/little chains on both hands. Common Blender,
+three-joint thumb/index/middle/ring/little chains on both hands. They also require
+the eight pose-space joint deformation targets `poseShoulderLeft/Right`,
+`poseElbowLeft/Right`, `poseHipLeft/Right` and `poseKneeLeft/Right`.
+These preserve joint volume after the final live IK pose rather than relying on
+linear skinning alone. Common Blender,
 Mixamo and VRM-style names are normalized to RockMundo's runtime finger names.
 This is deliberate: the new mesh system must improve guitar fretting, pick/pluck
 shapes, microphone wrap and drumstick fulcrum contact rather than only increasing
@@ -188,3 +192,8 @@ the base body: `bodySlim`, `bodyBroad`, `muscleToned`, `muscleAthletic`,
 build and muscle weights onto the garment after rebinding it to the avatar
 skeleton. If a selected shaped body requires a morph that a garment does not
 provide, Avatar V2 fails closed to V1 instead of rendering clipping/intersection.
+
+LOD0/LOD1 body-worn garments must also include the pose-space correctives for the
+regions they cover: shoulder/elbow targets for upper-body coverage and hip/knee
+targets for lower-body coverage. These morphs are driven together with the base
+body by the same V2 performance controller.
