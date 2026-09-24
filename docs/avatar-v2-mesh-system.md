@@ -97,13 +97,14 @@ Priority topology areas:
 
 - eyelids and lips with deformation loops;
 - nose/nostril definition;
-- separate eye/cornea geometry with dedicated `Eye.L` / `Eye.R` gaze bones;
+- separate iris, sclera and cornea geometry with dedicated `Eye.L` / `Eye.R` gaze bones;
 - ears capable of accurate jewellery attachment, with authored `EarAnchor.L/R` earlobe markers;
 - five-finger hands suitable for instrument grips;
 - shoulders/elbows/knees with animation-friendly loops;
 - shaped feet/toes for real footwear;
 - clean neck/head transition for hairstyles;
-- stable UVs for tattoos and skin detail.
+- stable UVs for tattoos and skin detail;
+- dedicated teeth, tongue and mouth-cavity surfaces for open-mouth singing close-ups.
 
 ## Foot and toe-base articulation
 
