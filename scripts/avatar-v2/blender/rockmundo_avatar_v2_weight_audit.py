@@ -24,7 +24,22 @@ DEFAULT_ARMATURE = "RMV2_Armature"
 WEIGHT_EPSILON = 0.0001
 NORMALIZATION_TOLERANCE = 0.02
 
-REQUIRED_DEFORM_BONES = [
+REQUIRED_RIG_BONES = [
+    "Hips", "Spine1", "Spine2", "Neck", "Head", "Eye.L", "Eye.R",
+    "Shoulder.L", "Shoulder.R",
+    "UpperArm.L", "LowerArm.L", "Hand.L",
+    "UpperArm.R", "LowerArm.R", "Hand.R",
+    "UpperLeg.L", "LowerLeg.L", "Foot.L", "Toe.L",
+    "UpperLeg.R", "LowerLeg.R", "Foot.R", "Toe.R",
+    *[
+        f"{digit}{joint}.{side}"
+        for side in ("L", "R")
+        for digit in ("Thumb", "Index", "Middle", "Ring", "Pinky")
+        for joint in (1, 2, 3)
+    ],
+]
+
+REQUIRED_BODY_DEFORM_BONES = [
     "Hips", "Spine1", "Spine2", "Neck", "Head",
     "Shoulder.L", "Shoulder.R",
     "UpperArm.L", "LowerArm.L", "Hand.L",
@@ -143,9 +158,20 @@ def main() -> None:
         raise SystemExit(f'Armature "{args.armature}" was not found.')
 
     rig_bones = {bone.name: bone for bone in rig.data.bones}
-    missing_bones = [name for name in REQUIRED_DEFORM_BONES if name not in rig_bones]
+    missing_bones = [name for name in REQUIRED_RIG_BONES if name not in rig_bones]
     if missing_bones:
         errors.append("Missing required rig bones: " + ", ".join(missing_bones))
+
+    head = rig_bones.get("Head")
+    for eye_name in ("Eye.L", "Eye.R"):
+        eye = rig_bones.get(eye_name)
+        if not head or not eye:
+            continue
+        parent = eye.parent
+        while parent and parent != head:
+            parent = parent.parent
+        if parent != head:
+            errors.append(f"{eye_name} must inherit from Head.")
 
     meshes = visible_body_meshes(rig, args.objects)
     if not meshes:
@@ -216,7 +242,7 @@ def main() -> None:
 
     unused_required = [
         name
-        for name in REQUIRED_DEFORM_BONES
+        for name in REQUIRED_BODY_DEFORM_BONES
         if name in rig_bones and weighted_vertices_by_bone[name] == 0
     ]
     if unused_required:
