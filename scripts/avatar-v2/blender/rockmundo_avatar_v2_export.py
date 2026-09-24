@@ -112,6 +112,13 @@ CUSTOMIZATION_MORPHS = [
     "faceOval", "faceAngular", "faceSoft", "faceWide",
 ]
 
+POSE_CORRECTIVE_MORPHS = [
+    "poseShoulderLeft", "poseShoulderRight",
+    "poseElbowLeft", "poseElbowRight",
+    "poseHipLeft", "poseHipRight",
+    "poseKneeLeft", "poseKneeRight",
+]
+
 BODY_REGIONS = [
     "torso", "upper-arms", "lower-arms", "hands",
     "hips", "upper-legs", "lower-legs", "feet",
@@ -283,6 +290,9 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
                 continue
             if not has_alias(morphs, [morph]):
                 warnings.append(f"Missing Avatar Designer shape target: {morph}.")
+        for corrective in POSE_CORRECTIVE_MORPHS:
+            if not has_alias(morphs, [corrective]):
+                warnings.append(f"Missing recommended pose corrective: {corrective}.")
 
     if args.lod <= 1:
         for role in ("skin", "eyes"):
