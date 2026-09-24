@@ -247,7 +247,9 @@ iris/sclera/cornea, teeth, tongue and mouth interior as distinct close-up surfac
 LOD0/LOD1 now require complete three-joint finger chains on both hands. Those bones
 are normalized into the live performer rig and receive instrument-specific poses:
 fretting/chord shapes, guitar pick pinch, alternating bass plucks, microphone wrap
-and drumstick fulcrum grip.
+and drumstick fulcrum grip. Close-up V2 meshes can also provide eight pose-space
+corrective morphs for shoulders, elbows, hips and knees; the performer drives them
+from the final IK pose to preserve joint volume under aggressive stage animation.
 The close-up expression controller now blends adjacent singing visemes and can
 drive jaw, mouth stretch/funnel/pucker, cheek squint, eye squint and brow tension
 from the deterministic performance clock.

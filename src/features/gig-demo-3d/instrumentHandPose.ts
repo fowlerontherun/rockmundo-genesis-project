@@ -106,7 +106,7 @@ export function applyInstrumentFingerPose(
         splay = (digit === 'Index' ? -.018 : digit === 'Pinky' ? .025 : 0) * (side === 'L' ? 1 : -1);
       } else if (family === 'voice' && side === 'R') {
         curl = digit === 'Index' ? .64 : digit === 'Middle' ? .72 : digit === 'Ring' ? .75 : .66;
-        splay = (digit === 'Index' ? -.02 : digit === 'Pinky' ? .018 : 0) * (side === 'L' ? 1 : -1);
+        splay = (digit === 'Index' ? -.02 : digit === 'Pinky' ? .018 : 0) * -1;
       } else if (family === 'keys') {
         const offset = digit.charCodeAt(0) * .17 + (side === 'L' ? 0 : 1.1);
         curl = .12 + Math.max(0, Math.sin(seconds * 10.5 + offset)) * .22 * motion;

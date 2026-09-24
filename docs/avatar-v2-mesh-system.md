@@ -65,6 +65,27 @@ Priority topology areas:
 - clean neck/head transition for hairstyles;
 - stable UVs for tattoos and skin detail.
 
+## Pose-space joint deformation
+
+LOD0/LOD1 should include authored deformation correctives for both shoulders, elbows,
+hips and knees: `poseShoulderLeft/Right`, `poseElbowLeft/Right`,
+`poseHipLeft/Right` and `poseKneeLeft/Right`. The runtime measures the final local
+joint rotation after stage IK, finger articulation and instrument posing, then blends
+the matching corrective automatically. This preserves shoulder volume and prevents
+elbows, hips and knees from collapsing during guitar, bass, drum and vocal poses.
+
+Correctives are additive to skinning and do not alter the skeleton or saved appearance.
+All eight are required for LOD0/LOD1 validation, so a close-up candidate cannot be
+marked production-ready with collapsing joint deformation. LOD2/LOD3 do not carry
+this requirement because their distance and topology budgets make the extra shapes
+unnecessary.
+
+Body-worn LOD0/LOD1 garments must carry the matching correctives for the regions
+they cover. Tops/upper-body garments require shoulder and elbow targets; trousers
+and other lower-body garments require hip and knee targets. Garment assembly fails
+closed to V1 if these are absent, avoiding a corrected body deforming through a
+rigid-looking garment during the same pose.
+
 ## Facial animation
 
 The initial hard gate requires blink left/right, jaw open and smile. The next
@@ -150,7 +171,8 @@ Crowds never need the same topology or 2K textures as a singer in a close-up.
 - hats/glasses/earrings;
 - tattoo projection;
 - first V2 tee, jeans and boots;
-- guitar/bass/drum grip certification.
+- guitar/bass/drum grip certification;
+- pose-space shoulder/elbow/hip/knee deformation certification.
 
 #### Phase C1 — shared appearance bridge
 
