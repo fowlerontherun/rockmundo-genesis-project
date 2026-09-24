@@ -6,6 +6,7 @@ const ASSET_ROOT = path.join(ROOT, 'public');
 const MANIFEST = path.join(ROOT, 'public', 'avatar-v2', 'clothing', 'manifest.json');
 const VALID_STATUSES = new Set(['planned', 'asset_ready', 'validated', 'blocked']);
 const VALID_REGIONS = new Set(['torso','upper-arms','lower-arms','hands','hips','upper-legs','lower-legs','feet']);
+const REQUIRED_FIT_MORPHS = ['bodySlim','bodyBroad','muscleToned','muscleAthletic','muscleMuscular','muscleBodybuilder'];
 
 let failed = false;
 const fail = message => {
@@ -65,6 +66,13 @@ function inspect(gltf) {
     node => Array.isArray(node.scale) && node.scale.some(value => Number(value) <= 0),
   );
 
+  const morphNames = new Set();
+  for (const mesh of gltf.meshes ?? []) {
+    for (const name of mesh.extras?.targetNames ?? []) {
+      if (typeof name === 'string' && name.trim()) morphNames.add(name.trim());
+    }
+  }
+
   return {
     triangles,
     vertices,
@@ -72,6 +80,7 @@ function inspect(gltf) {
     unskinnedMeshNodes,
     negativeScaleNodes,
     materialNames: (gltf.materials ?? []).map(material => material?.name).filter(Boolean),
+    morphNames,
   };
 }
 
@@ -140,6 +149,12 @@ function validateAsset(gltf, item, frame, lod, budget) {
   const skinCount = (gltf.skins ?? []).length;
   if (!skinCount) errors.push('No glTF skin is present.');
   if (skinCount > 1) warnings.push(`Garment exports ${skinCount} skins; one shared humanoid skin is preferred.`);
+
+  for (const morph of REQUIRED_FIT_MORPHS) {
+    if (!report.morphNames.has(morph)) {
+      errors.push(`Required body-fit morph is missing: ${morph}.`);
+    }
+  }
 
   return { ...report, errors, warnings, frame, lod };
 }
