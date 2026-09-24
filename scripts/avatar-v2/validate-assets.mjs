@@ -117,6 +117,7 @@ const MATERIAL_ROLE_PATTERNS = {
   cornea: /rmv2[_-]?cornea|cornea|eye[_-]?(shell|surface)|ocular[_-]?shell/i,
   wetline: /rmv2[_-]?(wetline|tearline|waterline)|(^|[_-])(wetline|tearline|waterline)($|[_-])/i,
   lips: /rmv2[_-]?lips|(^|[_-])lips?($|[_-])/i,
+  eyebrows: /rmv2[_-]?eyebrows?|(^|[_-])(brow|eyebrow)($|[_-])/i,
   eyelashes: /rmv2[_-]?(eyelash|lashes?)|(^|[_-])(eyelash|lashes?)($|[_-])/i,
   teeth: /rmv2[_-]?teeth|teeth/i,
   tongue: /rmv2[_-]?tongue|tongue/i,
@@ -569,6 +570,9 @@ function validateAsset(gltf, entry) {
 
   const materialRoles = MATERIAL_ROLE_PATTERNS;
   if (entry.lod <= 1) {
+    if (!report.headMaterialNames.some(name => materialRoles.eyebrows.test(name))) {
+      errors.push('LOD0/1 head/face surface is missing a used RMV2_Eyebrows material region');
+    }
     for (const role of ['skin','eyes']) {
       if (!report.materialNames.some(name => materialRoles[role].test(name))) errors.push(`Missing named close-up material role: ${role}`);
     }
