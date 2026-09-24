@@ -653,7 +653,7 @@ function buildDrapePanel(root: T.Group, name: string, position: [number, number,
   root.add(drape);
 }
 
-function buildStudioShell(root: T.Group, p: VenueProfile) {
+function buildStudioShell(root: T.Group) {
   const shell = new T.Group();
   shell.name = 'totp-studio-shell';
   const wallY = 3.15;
@@ -701,9 +701,9 @@ function buildProductionControlArea(root: T.Group) {
   box(control, [3.0, .72, .72], [0, .39, .1], desk);
   box(control, [3.18, .045, 1.08], [0, .9, 0], edge);
 
-  for (const [index, hue] of (['blue', 'magenta', 'blue', 'amber'] as const).entries()) {
+  (['blue', 'magenta', 'blue', 'amber'] as const).forEach((hue, index) => {
     buildControlMonitor(control, -1.08 + index * .72, 1.24, -.12, hue, 'totp-control-monitor-screen');
-  }
+  });
 
   const consoleTop = box(control, [2.2, .055, .6], [0, .96, .29], matte('#0d1116'));
   consoleTop.rotation.x = -.16;
@@ -828,7 +828,7 @@ export function buildTvStudioProduction(root: T.Group, p: VenueProfile) {
   const accent = new T.MeshStandardMaterial({ color: '#b41945', emissive: '#7a0d2d', emissiveIntensity: .55, roughness: .55 });
   const floor = texturedMaterial('totp-presenter-rostrum-material', '#20262d', '#3b4550', 'brushed', 5, 4, .08, .65);
 
-  buildStudioShell(root, p);
+  buildStudioShell(root);
   buildStudioInfrastructure(root, p);
   buildPerformanceZones(root, p);
   buildStudioSetVariant(root, p);
