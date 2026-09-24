@@ -594,6 +594,23 @@ export function validateAvatarV2Scene(
       }
     }
 
+    const toeHierarchy = [
+      { toe: 'leftToes', foot: 'leftFoot' },
+      { toe: 'rightToes', foot: 'rightFoot' },
+    ] as const;
+    for (const { toe: toeSemantic, foot: footSemantic } of toeHierarchy) {
+      const toe = boneByAliases(scene, AVATAR_V2_CLOSEUP_BONE_ALIASES[toeSemantic]);
+      const footName = boneMap[footSemantic];
+      const foot = footName ? scene.getObjectByName(footName) : null;
+      if (toe && foot instanceof T.Bone && !inheritsFrom(toe, foot)) {
+        issues.push({
+          level: 'error',
+          code: `invalid-toe-parent:${toeSemantic}`,
+          message: `LOD${lod} ${toeSemantic} must inherit from ${footSemantic} so forefoot articulation follows ankle IK.`,
+        });
+      }
+    }
+
     const twistParents: Record<AvatarV2TwistSemantic, AvatarV2Bone> = {
       leftUpperArmTwist: 'leftUpperArm',
       rightUpperArmTwist: 'rightUpperArm',
