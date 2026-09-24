@@ -74,6 +74,10 @@ REQUIRED_EXPRESSIONS = {
 RECOMMENDED_EXPRESSIONS = [
     "visemeAA", "visemeEE", "visemeIH", "visemeOH", "visemeOU",
     "mouthFunnel", "mouthPucker",
+    "eyeSquintLeft", "eyeSquintRight",
+    "browInnerUp", "browDownLeft", "browDownRight",
+    "cheekSquintLeft", "cheekSquintRight",
+    "mouthStretchLeft", "mouthStretchRight",
 ]
 
 REQUIRED_MUSCLE_MORPHS = [
