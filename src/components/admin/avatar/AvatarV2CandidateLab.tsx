@@ -466,7 +466,10 @@ export function AvatarV2CandidateLab() {
                 <>
                   <Badge variant="outline">{performanceReport.activeVocalVisemes}/5 active visemes</Badge>
                   {performanceReport.maxJawWeight != null && (
-                    <Badge variant="outline">jaw {(performanceReport.maxJawWeight * 100).toFixed(0)}% max</Badge>
+                    <Badge variant="outline">jaw morph {(performanceReport.maxJawWeight * 100).toFixed(0)}% max</Badge>
+                  )}
+                  {performanceReport.maxJawBoneMotion != null && (
+                    <Badge variant="outline">jaw bone {T.MathUtils.radToDeg(performanceReport.maxJawBoneMotion).toFixed(1)}° max</Badge>
                   )}
                   {performanceReport.maxVocalShapeWeight != null && (
                     <Badge variant="outline">lip shape {(performanceReport.maxVocalShapeWeight * 100).toFixed(0)}% max</Badge>
