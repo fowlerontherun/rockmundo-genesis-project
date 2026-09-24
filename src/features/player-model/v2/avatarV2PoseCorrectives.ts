@@ -70,6 +70,11 @@ function collectBindings(root: T.Object3D): BindingMap {
   return result;
 }
 
+export function supportedAvatarV2PoseCorrectives(root: T.Object3D) {
+  const bindings = collectBindings(root);
+  return AVATAR_V2_POSE_CORRECTIVES.filter(key => (bindings[key]?.length ?? 0) > 0);
+}
+
 function setWeight(bindings: BindingMap, corrective: AvatarV2PoseCorrective, value: number) {
   const next = T.MathUtils.clamp(value, 0, 1);
   for (const binding of bindings[corrective] ?? []) {
