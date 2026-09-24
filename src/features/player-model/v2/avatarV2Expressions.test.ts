@@ -40,8 +40,10 @@ function face() {
   leftEye.name = 'Eye.L';
   const rightEye = new T.Bone();
   rightEye.name = 'Eye.R';
-  root.add(leftEye, rightEye);
-  return { root, mesh, leftEye, rightEye };
+  const jaw = new T.Bone();
+  jaw.name = 'Jaw';
+  root.add(leftEye, rightEye, jaw);
+  return { root, mesh, leftEye, rightEye, jaw };
 }
 
 describe('Avatar V2 facial expressions', () => {
@@ -107,6 +109,28 @@ describe('Avatar V2 facial expressions', () => {
     expect(activeVisemes.length).toBeGreaterThanOrEqual(1);
     expect(activeVisemes.length).toBeLessThanOrEqual(2);
     expect(activeVisemes.reduce((sum, value) => sum + value, 0)).toBeGreaterThan(.4);
+  });
+
+  it('drives the authored jaw bone with vocal opening and restores it on reset', () => {
+    const { root, jaw } = face();
+    const controller = new AvatarV2ExpressionController(root);
+    const rest = jaw.quaternion.clone();
+
+    controller.update({
+      seconds: 1.35,
+      phase: .22,
+      vocalActive: true,
+      opening: .9,
+      energy: .9,
+      reducedMotion: false,
+    });
+
+    expect(jaw.quaternion.angleTo(rest)).toBeGreaterThan(.04);
+    expect(Number(jaw.userData.rockmundoAvatarV2JawAngle)).toBeGreaterThan(.04);
+
+    controller.reset();
+    expect(jaw.quaternion.equals(rest)).toBe(true);
+    expect(jaw.userData.rockmundoAvatarV2JawAngle).toBe(0);
   });
 
   it('adds cheek, eye and brow tension during energetic vocals', () => {
