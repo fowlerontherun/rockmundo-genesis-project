@@ -31,6 +31,12 @@ jobs:
         run: npm run verify:dependencies
       - name: Verify Top of the Pops migration timestamps
         run: npm run verify:totp-migration-timestamps
+      - name: Verify Avatar V2 Blender helpers
+        run: npm run verify:avatar-v2-blender-scripts
+      - name: Verify Avatar V2 asset contract
+        run: npm run validate:avatar-v2
+      - name: Avatar V2 regression tests
+        run: npm run test:avatar-v2
       - name: Typecheck
         run: npm run typecheck
       - name: Lint
