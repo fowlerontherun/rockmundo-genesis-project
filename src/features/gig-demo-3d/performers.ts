@@ -12,6 +12,7 @@ import { singerGesture, smoothMotion, vocalPhrase } from './performanceMotion';
 import { createVocalMouth } from './vocalFace';
 import { applyInstrumentFingerPose, fingerEnvelopeBones, handContactPoint } from './instrumentHandPose';
 import { createAvatarV2ExpressionController, type AvatarV2ExpressionController } from '@/features/player-model/v2/avatarV2Expressions';
+import { createAvatarV2PoseCorrectiveController, type AvatarV2PoseCorrectiveController } from '@/features/player-model/v2/avatarV2PoseCorrectives';
 import { seededRandom } from './config';
 import { visibleTattoosForPresentation } from '@/features/player-model/tattoos';
 import { assemblePlayerModel, disposeModel, loadModelLibrary, requiredModelFiles } from '@/features/player-model/model';
@@ -96,6 +97,7 @@ export class Musician {
     private mouth: T.Mesh | null = null;
     private guitarPick: T.Mesh | null = null;
     private faceExpressions: AvatarV2ExpressionController | null = null;
+    private poseCorrectives: AvatarV2PoseCorrectiveController | null = null;
     constructor(source: T.Object3D, public role: Role, position: [
         number,
         number,
@@ -191,6 +193,7 @@ export class Musician {
             }
         }
         this.faceExpressions = createAvatarV2ExpressionController(this.model);
+        this.poseCorrectives = createAvatarV2PoseCorrectiveController(this.model);
         if (this.hasVocals() && this.bones.has('Head') && !this.faceExpressions) {
             this.mouth = createVocalMouth(this.root, this.model, this.bones.get('Head')!);
         }
@@ -771,6 +774,11 @@ export class Musician {
                 aimAttachedTool(stick, shaftAxis, rig.root.localToWorld(target.clone()));
             }
         }
+
+        // Apply pose-space deformation after all body IK, wrist/finger articulation
+        // and instrument-specific adjustments so authored V2 shoulders/elbows/hips/
+        // knees correct the final visible pose rather than an intermediate frame.
+        this.poseCorrectives?.update();
     }
 }
 /** Bake a posed rig once; the audience then uses inexpensive GPU instances. */
