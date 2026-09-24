@@ -241,9 +241,12 @@ RockMundo-authored humanoid mesh system is developed. The new foundation lives i
 `src/features/player-model/v2` and is deliberately fail-closed.
 
 Avatar V2 defines semantic humanoid bones, facial-expression requirements, LOD
-budgets and a GLB import contract. The close-up expression controller now blends
-adjacent singing visemes and can drive jaw, mouth stretch/funnel/pucker, cheek
-squint, eye squint and brow tension from the deterministic performance clock.
+budgets and a GLB import contract. The V2 material pass now uses quality-scaled
+skin pore/roughness fallback maps only when authored maps are absent, and treats
+iris/sclera/cornea, teeth, tongue and mouth interior as distinct close-up surfaces.
+The close-up expression controller now blends adjacent singing visemes and can
+drive jaw, mouth stretch/funnel/pucker, cheek squint, eye squint and brow tension
+from the deterministic performance clock.
 This gives gigs and Top of the Pops replay-safe facial motion without depending on
 random animation; later audio-timed phonemes can feed the same morph interface.
 `npm run validate:avatar-v2` validates candidate GLBs before they can be marked
