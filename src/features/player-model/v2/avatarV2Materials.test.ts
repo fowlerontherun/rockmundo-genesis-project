@@ -3,6 +3,7 @@ import * as T from 'three';
 import { defaultAppearance } from '../appearance';
 import {
   avatarV2MaterialRole,
+  avatarV2TextureDetailQuality,
   tuneAvatarV2Materials,
 } from './avatarV2Materials';
 
@@ -35,6 +36,27 @@ describe('Avatar V2 material quality', () => {
 
     expect(skin.normalMap).toBe(authoredNormal);
     expect(skin.roughnessMap).toBe(authoredRoughness);
+  });
+
+  it('uses a V2-specific texture-detail uplift without increasing balanced or crowd budgets', () => {
+    expect(avatarV2TextureDetailQuality('crowd')).toBe('crowd');
+    expect(avatarV2TextureDetailQuality('balanced')).toBe('balanced');
+    expect(avatarV2TextureDetailQuality('high')).toBe('ultra');
+    expect(avatarV2TextureDetailQuality('ultra')).toBe('cinematic');
+    expect(avatarV2TextureDetailQuality('cinematic')).toBe('cinematic');
+
+    const root = new T.Group();
+    const skin = material('RMV2_Skin');
+    const hair = material('RMV2_Hair');
+    root.add(new T.Mesh(new T.BoxGeometry(1, 1, 1), [skin, hair]));
+
+    tuneAvatarV2Materials(root, defaultAppearance('v2-texture-detail-test'), 'high');
+
+    const tuned = (root.children[0] as T.Mesh).material as T.MeshStandardMaterial[];
+    expect(tuned[0].normalMap).toBeInstanceOf(T.DataTexture);
+    expect(tuned[1].normalMap).toBeInstanceOf(T.DataTexture);
+    expect((tuned[0].normalMap as T.DataTexture).image.width).toBe(1024);
+    expect((tuned[1].normalMap as T.DataTexture).image.width).toBe(512);
   });
 
   it('promotes close-up skin and hair to physical materials while preserving authored maps', () => {
