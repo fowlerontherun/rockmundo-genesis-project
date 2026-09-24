@@ -34,6 +34,27 @@ export function requiredAvatarV2ModelFiles(
   return [...new Set(appearances.map(appearance => validatedAvatarV2Asset(appearance.body.frame, lod)?.file).filter(Boolean) as string[])];
 }
 
+function ownV2MeshResources(root: T.Object3D) {
+  root.traverse(node => {
+    if (!(node instanceof T.Mesh)) return;
+    // SkeletonUtils shares geometry, materials and textures. The assembled model
+    // is disposed after the stage performer clones it, so it must own every
+    // disposable GPU resource rather than invalidating the cached source GLB.
+    node.geometry = node.geometry.clone();
+    const ownMaterial = (source: T.Material) => {
+      const material = source.clone();
+      for (const key of ['map','normalMap','roughnessMap','bumpMap','metalnessMap','alphaMap','aoMap','emissiveMap'] as const) {
+        const value = (material as T.MeshStandardMaterial)[key];
+        if (value instanceof T.Texture) (material as T.MeshStandardMaterial)[key] = value.clone();
+      }
+      return material;
+    };
+    node.material = Array.isArray(node.material)
+      ? node.material.map(ownMaterial)
+      : ownMaterial(node.material);
+  });
+}
+
 function normalizeRigNames(root: T.Object3D, report: AvatarV2ValidationReport) {
   const byOriginal = new Map<string, T.Bone>();
   root.traverse(node => {
