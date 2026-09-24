@@ -4,6 +4,7 @@ import { handContactPoint } from '@/features/gig-demo-3d/instrumentHandPose';
 import { AVATAR_V2_TWIST_RUNTIME_BONES } from './avatarV2TwistBones';
 import { AVATAR_V2_SHOULDER_MAX_ANGLE, AVATAR_V2_SHOULDER_RUNTIME_BONES } from './avatarV2Shoulder';
 import { AVATAR_V2_TOE_MAX_LIFT_ANGLE, AVATAR_V2_TOE_RUNTIME_BONES } from './avatarV2Toe';
+import { readAvatarV2ExpressionWeights, type AvatarV2Expression } from './avatarV2Expressions';
 
 export type AvatarV2PerformancePreset =
   | 'backstage'
@@ -28,6 +29,11 @@ export interface AvatarV2PerformanceQaReport {
   maxTwistMotion: number | null;
   maxShoulderMotion: number | null;
   maxToeMotion: number | null;
+  maxJawWeight: number | null;
+  maxVocalShapeWeight: number | null;
+  maxExpressiveFaceWeight: number | null;
+  activeVocalVisemes: number;
+  faceMorphs: number;
   eyeBones: number;
   twistBones: number;
   shoulderBones: number;
@@ -47,6 +53,16 @@ const TWIST_MOTION_MIN = .004;
 const TWIST_MOTION_MAX = .90;
 const SHOULDER_MOTION_MIN = .004;
 const TOE_MOTION_MIN = .004;
+const JAW_WEIGHT_MIN = .08;
+const VOCAL_SHAPE_WEIGHT_MIN = .02;
+const EXPRESSIVE_FACE_WEIGHT_MIN = .01;
+const VOCAL_VISEMES = ['visemeAA', 'visemeEE', 'visemeIH', 'visemeOH', 'visemeOU'] as const satisfies readonly AvatarV2Expression[];
+const VOCAL_SHAPES = ['mouthFunnel', 'mouthPucker', 'mouthStretchLeft', 'mouthStretchRight'] as const satisfies readonly AvatarV2Expression[];
+const EXPRESSIVE_FACE = [
+  'eyeSquintLeft', 'eyeSquintRight',
+  'browInnerUp', 'browDownLeft', 'browDownRight',
+  'cheekSquintLeft', 'cheekSquintRight',
+] as const satisfies readonly AvatarV2Expression[];
 
 const finiteWorldMatrix = (object: T.Object3D) =>
   object.matrixWorld.elements.every(Number.isFinite);
@@ -76,6 +92,8 @@ export function inspectAvatarV2Performance(
     .map(name => actor.bones.get(name))
     .filter((bone): bone is T.Bone => !!bone);
   const rig = actor.instrumentRig;
+  const initialFaceWeights = readAvatarV2ExpressionWeights(actor.model);
+  const faceMorphs = Object.keys(initialFaceWeights).length;
 
   if (!rig) {
     return {
@@ -89,6 +107,11 @@ export function inspectAvatarV2Performance(
       maxTwistMotion: null,
       maxShoulderMotion: null,
       maxToeMotion: null,
+      maxJawWeight: null,
+      maxVocalShapeWeight: null,
+      maxExpressiveFaceWeight: null,
+      activeVocalVisemes: 0,
+      faceMorphs,
       eyeBones: eyes.length,
       twistBones: twists.length,
       shoulderBones: shoulders.length,
@@ -112,6 +135,10 @@ export function inspectAvatarV2Performance(
   let maxTwistMotion = 0;
   let maxShoulderMotion = 0;
   let maxToeMotion = 0;
+  let maxJawWeight = 0;
+  let maxVocalShapeWeight = 0;
+  let maxExpressiveFaceWeight = 0;
+  const activeVocalVisemes = new Set<AvatarV2Expression>();
   const sticks = preset === 'rock_drums'
     ? rig.tools.filter(tool => /^playing-stick(?:-|$)/.test(tool.name))
     : [];
@@ -129,6 +156,30 @@ export function inspectAvatarV2Performance(
         issues.push({ code: `non-finite-bone:${name}`, message: `${name} produced an invalid world transform during the performance test.` });
         break;
       }
+    }
+
+    const faceWeights = readAvatarV2ExpressionWeights(actor.model);
+    const jawWeight = faceWeights.jawOpen ?? 0;
+    if (Number.isFinite(jawWeight)) maxJawWeight = Math.max(maxJawWeight, jawWeight);
+    else issues.push({ code: 'invalid-face-jaw', message: 'The jawOpen morph produced a non-finite weight.' });
+
+    for (const viseme of VOCAL_VISEMES) {
+      const weight = faceWeights[viseme] ?? 0;
+      if (!Number.isFinite(weight)) {
+        issues.push({ code: `invalid-face-viseme:${viseme}`, message: `${viseme} produced a non-finite weight.` });
+      } else if (weight > .05) {
+        activeVocalVisemes.add(viseme);
+      }
+    }
+    for (const expression of VOCAL_SHAPES) {
+      const weight = faceWeights[expression] ?? 0;
+      if (Number.isFinite(weight)) maxVocalShapeWeight = Math.max(maxVocalShapeWeight, weight);
+      else issues.push({ code: `invalid-face-shape:${expression}`, message: `${expression} produced a non-finite weight.` });
+    }
+    for (const expression of EXPRESSIVE_FACE) {
+      const weight = faceWeights[expression] ?? 0;
+      if (Number.isFinite(weight)) maxExpressiveFaceWeight = Math.max(maxExpressiveFaceWeight, weight);
+      else issues.push({ code: `invalid-face-expression:${expression}`, message: `${expression} produced a non-finite weight.` });
     }
 
     for (const eye of eyes) {
@@ -212,6 +263,33 @@ export function inspectAvatarV2Performance(
           }
         }
       }
+    }
+  }
+
+  if (preset === 'vocals') {
+    if (maxJawWeight < JAW_WEIGHT_MIN) {
+      issues.push({
+        code: 'vocal-jaw-static',
+        message: 'The certified jawOpen morph did not produce enough visible motion during the sampled vocal performance.',
+      });
+    }
+    if (activeVocalVisemes.size < 3) {
+      issues.push({
+        code: 'vocal-viseme-variety',
+        message: `Only ${activeVocalVisemes.size}/5 singing visemes became visibly active; close-up vocals require at least three distinct mouth shapes in the sample.`,
+      });
+    }
+    if (maxVocalShapeWeight < VOCAL_SHAPE_WEIGHT_MIN) {
+      issues.push({
+        code: 'vocal-lip-shape-static',
+        message: 'Mouth funnel/pucker/stretch targets were present but did not visibly contribute to the sampled vocal articulation.',
+      });
+    }
+    if (maxExpressiveFaceWeight < EXPRESSIVE_FACE_WEIGHT_MIN) {
+      issues.push({
+        code: 'vocal-expression-static',
+        message: 'Brow, cheek and eye-squint targets were present but remained visually static during the sampled vocal performance.',
+      });
     }
   }
 
@@ -328,6 +406,11 @@ export function inspectAvatarV2Performance(
     maxTwistMotion: twists.length ? maxTwistMotion : null,
     maxShoulderMotion: shoulders.length ? maxShoulderMotion : null,
     maxToeMotion: toes.length ? maxToeMotion : null,
+    maxJawWeight: preset === 'vocals' ? maxJawWeight : null,
+    maxVocalShapeWeight: preset === 'vocals' ? maxVocalShapeWeight : null,
+    maxExpressiveFaceWeight: preset === 'vocals' ? maxExpressiveFaceWeight : null,
+    activeVocalVisemes: preset === 'vocals' ? activeVocalVisemes.size : 0,
+    faceMorphs,
     eyeBones: eyes.length,
     twistBones: twists.length,
     shoulderBones: shoulders.length,

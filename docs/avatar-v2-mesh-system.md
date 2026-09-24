@@ -72,7 +72,15 @@ the character.
 
 Those working files still require the complete RockMundo facial/shape-key set,
 body-region split, PBR surfaces, performance deformation and LOD authoring before
-the normal export gate will accept them. Shape-key names alone are not sufficient: required muscle, facial
+the normal export gate will accept them. At high/ultra/cinematic quality, standard
+glTF skin, hair, teeth and tongue surfaces are promoted to the physical shader path
+without replacing authored maps: skin gains controlled specular/sheen response,
+hair gains directional anisotropy and sheen, and teeth/tongue gain distinct
+close-up moisture/specular behaviour. V2 also raises fallback texture detail one
+tier above the shared V1 profile: High uses Ultra detail (1024px skin normal,
+512px hair detail) and Ultra uses Cinematic detail (2048px skin normal, 1024px
+hair detail). Balanced/crowd rendering keeps the cheaper standard path and normal
+texture budgets. Shape-key names alone are not sufficient: required muscle, facial
 and pose-corrective targets must produce measurable vertex deformation, preventing
 placeholder morphs from passing certification.
 
@@ -186,10 +194,17 @@ eye squint left/right, brow inner-up/down left/right, cheek squint left/right an
 mouth stretch left/right. These targets must contain measurable vertex movement,
 so a mesh cannot pass by carrying empty shape-key names.
 
-The remaining facial-animation step is timing rather than topology: broadcast/gig
-audio can later feed real phoneme timing into the same expression controller
-instead of relying only on the deterministic performance clock. Additional
-mouth-frown/asymmetry targets can still be layered on after the required set.
+The fallback facial timing is now syllable-based rather than a repeating
+AA→EE→IH→OH→OU loop. It deterministically varies vowel order, emphasis, lip
+rounding/stretch and short consonant-like closures, so seeking or replaying the
+same timestamp reconstructs the same face while close-ups read less mechanically.
+Actual broadcast/gig phoneme timing can later feed the same expression controller
+when a canonical audio-analysis track is available. Admin performance QA now also
+samples the live vocalist path and verifies visible jaw motion, at least three
+distinct active visemes, lip funnel/pucker/stretch contribution and brow/cheek
+activity. This catches assets whose shape keys pass static validation but fail to
+participate in the real performance controller. Additional mouth-frown targets can
+still be layered on after the required set.
 
 ## Clothing
 
@@ -221,6 +236,13 @@ principle is selective quality:
 - LOD3: distant/crowd fallback
 
 Crowds never need the same topology or 2K textures as a singer in a close-up.
+The live loader now routes scene quality into both the V2 base mesh and matching
+garments. High-quality Top of the Pops television scenes request `ultra`, which
+selects V2 LOD0; balanced television scenes keep LOD1, and low-quality television
+steps down to LOD2. Ordinary high/balanced gig performers retain the existing
+LOD1 target, while low-quality gigs may use LOD2. This fixes the previous hard
+coded `high` path that prevented TOTP from ever loading its documented LOD0
+close-up avatar.
 
 ## Asset workflow
 

@@ -84,13 +84,78 @@ function simpleRiggedModel() {
     blinkRight: 1,
     jawOpen: 2,
     mouthSmile: 3,
+    mouthFunnel: 4,
+    mouthPucker: 5,
+    eyeSquintLeft: 6,
+    eyeSquintRight: 7,
+    browInnerUp: 8,
+    browDownLeft: 9,
+    browDownRight: 10,
+    cheekSquintLeft: 11,
+    cheekSquintRight: 12,
+    mouthStretchLeft: 13,
+    mouthStretchRight: 14,
+    visemeAA: 15,
+    visemeEE: 16,
+    visemeIH: 17,
+    visemeOH: 18,
+    visemeOU: 19,
   };
-  mesh.morphTargetInfluences = Array(4).fill(0);
+  mesh.morphTargetInfluences = Array(20).fill(0);
   root.add(mesh);
   return root;
 }
 
 describe('Avatar V2 performance QA', () => {
+  it('certifies visible facial articulation during a live vocal performance', () => {
+    const actor = new Musician(
+      simpleRiggedModel(),
+      'vocals',
+      [0, 0, 0],
+      .25,
+      undefined,
+      defaultAppearance('v2-vocal-face-qa'),
+      'vocal_performance',
+      'lead',
+    );
+
+    const report = inspectAvatarV2Performance(actor, 'vocals');
+    expect(report).not.toBeNull();
+    expect(report!.faceMorphs).toBeGreaterThanOrEqual(20);
+    expect(report!.activeVocalVisemes).toBeGreaterThanOrEqual(3);
+    expect(report!.maxJawWeight).toBeGreaterThan(.08);
+    expect(report!.maxVocalShapeWeight).toBeGreaterThan(.02);
+    expect(report!.maxExpressiveFaceWeight).toBeGreaterThan(.01);
+    expect(report!.issues).toEqual([]);
+    expect(report!.valid).toBe(true);
+  });
+
+  it('rejects a vocal candidate whose certified visemes never become varied in motion', () => {
+    const model = simpleRiggedModel();
+    const mesh = model.children.find(child => child instanceof T.Mesh) as T.Mesh;
+    delete mesh.morphTargetDictionary!.visemeEE;
+    delete mesh.morphTargetDictionary!.visemeIH;
+    delete mesh.morphTargetDictionary!.visemeOH;
+    delete mesh.morphTargetDictionary!.visemeOU;
+
+    const actor = new Musician(
+      model,
+      'vocals',
+      [0, 0, 0],
+      .25,
+      undefined,
+      defaultAppearance('v2-vocal-static-qa'),
+      'vocal_performance',
+      'lead',
+    );
+
+    const report = inspectAvatarV2Performance(actor, 'vocals');
+    expect(report).not.toBeNull();
+    expect(report!.valid).toBe(false);
+    expect(report!.activeVocalVisemes).toBeLessThan(3);
+    expect(report!.issues.some(issue => issue.code === 'vocal-viseme-variety')).toBe(true);
+  });
+
   it('certifies both guitar hands against the live instrument grip targets', () => {
     const actor = new Musician(
       simpleRiggedModel(),

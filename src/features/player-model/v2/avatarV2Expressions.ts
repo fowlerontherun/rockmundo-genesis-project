@@ -85,6 +85,20 @@ export function collectAvatarV2ExpressionBindings(root: T.Object3D): BindingMap 
   return result;
 }
 
+export function readAvatarV2ExpressionWeights(root: T.Object3D) {
+  const bindings = collectAvatarV2ExpressionBindings(root);
+  const result: Partial<Record<AvatarV2Expression, number>> = {};
+  for (const expression of Object.keys(bindings) as AvatarV2Expression[]) {
+    let maximum = 0;
+    for (const binding of bindings[expression] ?? []) {
+      const value = binding.mesh.morphTargetInfluences?.[binding.index] ?? 0;
+      if (Number.isFinite(value)) maximum = Math.max(maximum, value);
+    }
+    result[expression] = maximum;
+  }
+  return result;
+}
+
 function setWeight(bindings: BindingMap, expression: AvatarV2Expression, weight: number) {
   const clamped = T.MathUtils.clamp(weight, 0, 1);
   for (const binding of bindings[expression] ?? []) {
@@ -113,6 +127,83 @@ function deterministicUnit(seed: number) {
 function blinkPulse(clock: number, start: number, closed: number, opening: number, end: number) {
   return T.MathUtils.smoothstep(clock, start, closed)
     * (1 - T.MathUtils.smoothstep(clock, opening, end));
+}
+
+const VOCAL_VISEMES = ['visemeAA', 'visemeEE', 'visemeIH', 'visemeOH', 'visemeOU'] as const;
+type VocalViseme = typeof VOCAL_VISEMES[number];
+
+export interface AvatarV2VocalArticulation {
+  visemes: Record<VocalViseme, number>;
+  jawScale: number;
+  funnel: number;
+  pucker: number;
+  stretchLeft: number;
+  stretchRight: number;
+}
+
+/**
+ * Stateless pseudo-phoneme sampler used when a replay has no authored phoneme
+ * timeline. Unlike the old AA→EE→IH→OH→OU loop, this picks deterministic,
+ * non-sequential syllable shapes with variable emphasis and brief consonant-like
+ * closures. The result is seek/replay safe and can later be replaced by real
+ * audio/phoneme timings without changing the facial rig.
+ */
+export function sampleAvatarV2VocalArticulation(
+  seconds: number,
+  phase: number,
+  vocal: number,
+  energy: number,
+): AvatarV2VocalArticulation {
+  const weights = Object.fromEntries(VOCAL_VISEMES.map(name => [name, 0])) as Record<VocalViseme, number>;
+  if (vocal <= .02) {
+    return { visemes: weights, jawScale: 0, funnel: 0, pucker: 0, stretchLeft: 0, stretchRight: 0 };
+  }
+
+  const rate = 3.05 + T.MathUtils.clamp(energy, 0, 1.25) * .72;
+  const syllableClock = Math.max(0, seconds + phase * .19) * rate;
+  const slot = Math.floor(syllableClock);
+  const local = syllableClock - slot;
+  const visemeIndex = (sampleSlot: number) =>
+    Math.min(VOCAL_VISEMES.length - 1, Math.floor(deterministicUnit(
+      sampleSlot * 5.173 + phase * 11.71 + 2.31,
+    ) * VOCAL_VISEMES.length));
+
+  const currentIndex = visemeIndex(slot);
+  let nextIndex = visemeIndex(slot + 1);
+  if (nextIndex === currentIndex) {
+    nextIndex = (nextIndex + 1 + Math.floor(deterministicUnit(slot * 3.91 + phase * 7.7) * 3))
+      % VOCAL_VISEMES.length;
+  }
+
+  // Most of a syllable holds one readable mouth shape; the final third eases
+  // toward the next. Some slots get a short closed-lip onset to suggest consonants
+  // without inventing extra blendshape requirements.
+  const transition = T.MathUtils.smoothstep(local, .58, .94);
+  const consonantSeed = deterministicUnit(slot * 7.13 + phase * 17.17);
+  const closureStrength = consonantSeed > .61
+    ? (.28 + (consonantSeed - .61) / .39 * .34) * (1 - T.MathUtils.smoothstep(local, .04, .24))
+    : 0;
+  const syllableAccent = .78 + deterministicUnit(slot * 2.47 + phase * 13.3) * .22;
+  const amplitude = Math.min(.84, vocal * .92) * syllableAccent * (1 - closureStrength);
+
+  weights[VOCAL_VISEMES[currentIndex]] = amplitude * (1 - transition);
+  weights[VOCAL_VISEMES[nextIndex]] += amplitude * transition;
+
+  const contribution = (index: number) => weights[VOCAL_VISEMES[index]];
+  const rounded = contribution(3);
+  const puckered = contribution(4);
+  const stretched = contribution(1) + contribution(2);
+  const asymmetry = (deterministicUnit(slot * 4.31 + phase * 5.9) * 2 - 1) * .035;
+  const openBias = contribution(0) * .18 + rounded * .10 - puckered * .05;
+
+  return {
+    visemes: weights,
+    jawScale: T.MathUtils.clamp(.72 + openBias - closureStrength * .42, .36, 1),
+    funnel: rounded * .40 + puckered * .08,
+    pucker: puckered * .44 + rounded * .06,
+    stretchLeft: stretched * (.245 + asymmetry),
+    stretchRight: stretched * (.245 - asymmetry),
+  };
 }
 
 /**
@@ -206,7 +297,8 @@ export class AvatarV2ExpressionController {
       ? T.MathUtils.clamp(.10 + state.energy * .58 + vocal * .24, 0, 1)
       : 0;
 
-    setWeight(this.bindings, 'jawOpen', vocal);
+    const articulation = sampleAvatarV2VocalArticulation(t, state.phase, vocal, state.energy);
+    setWeight(this.bindings, 'jawOpen', vocal * articulation.jawScale);
     const micro = state.reducedMotion
       ? 0
       : (.5 + Math.sin(t * .43 + state.phase * 1.91) * .5) * .018;
@@ -238,31 +330,16 @@ export class AvatarV2ExpressionController {
 
     if (vocal <= .02) return;
 
-    // Blend between neighbouring pseudo-phonemes instead of snapping one viseme
-    // on/off every beat. This stays deterministic for replay/TOTP rendering while
-    // producing much smoother lips, cheeks and jaw motion. Real audio timings can
-    // later feed the same expression weights without changing the mesh contract.
-    const visemes = ['visemeAA', 'visemeEE', 'visemeIH', 'visemeOH', 'visemeOU'] as const;
-    const cycle = ((t * 3.4) % visemes.length + visemes.length) % visemes.length;
-    const slot = Math.floor(cycle);
-    const nextSlot = (slot + 1) % visemes.length;
-    const local = cycle - slot;
-    const blend = T.MathUtils.smoothstep(local, .12, .88);
-    const amplitude = Math.min(.82, vocal * .9);
-    const currentWeight = amplitude * (1 - blend);
-    const nextWeight = amplitude * blend;
-    setWeight(this.bindings, visemes[slot], currentWeight);
-    setWeight(this.bindings, visemes[nextSlot], nextWeight);
-
-    const contribution = (index: number) =>
-      (slot === index ? currentWeight : 0) + (nextSlot === index ? nextWeight : 0);
-    const rounded = contribution(3);
-    const puckered = contribution(4);
-    const stretched = contribution(1) + contribution(2);
-    setWeight(this.bindings, 'mouthFunnel', rounded * .38);
-    setWeight(this.bindings, 'mouthPucker', puckered * .42);
-    setWeight(this.bindings, 'mouthStretchLeft', stretched * .24);
-    setWeight(this.bindings, 'mouthStretchRight', stretched * .245);
+    // Use a deterministic syllable plan rather than cycling through vowels in a
+    // fixed order. This reads less mechanically in close-up while preserving exact
+    // seek/replay reconstruction for gigs and television archives.
+    for (const viseme of VOCAL_VISEMES) {
+      setWeight(this.bindings, viseme, articulation.visemes[viseme]);
+    }
+    setWeight(this.bindings, 'mouthFunnel', articulation.funnel);
+    setWeight(this.bindings, 'mouthPucker', articulation.pucker);
+    setWeight(this.bindings, 'mouthStretchLeft', articulation.stretchLeft);
+    setWeight(this.bindings, 'mouthStretchRight', articulation.stretchRight);
   }
 
   reset() {

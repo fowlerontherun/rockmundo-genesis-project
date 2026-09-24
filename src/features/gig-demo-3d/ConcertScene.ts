@@ -9,7 +9,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { buildVenue, cylinder, rod, matte } from './stage';
-import { loadBand, type Musician, type DemoCrowd } from './performers';
+import { avatarBandVisualQuality, loadBand, type Musician, type DemoCrowd } from './performers';
 import { smoothMotion } from './performanceMotion';
 import type { CrowdTuningOptions } from '@/features/gig-experience/viewer/engine/CrowdTuning';
 import { resolveVenueProfile, stageTransform, type VenueProfile } from './venueProfile';
@@ -116,7 +116,16 @@ export class ConcertScene {
   }
   private async load() {
     try {
-      const [band] = await Promise.all([loadBand(this.scene, this.assetManager, this.options?.performers, this.options?.venue.seed, this.venueProfile ?? undefined), this.assetsReady]);
+      const television = !!this.options?.television && this.venueProfile?.kind === 'tv_studio';
+      const avatarQuality = avatarBandVisualQuality(this.settings.quality, television);
+      const [band] = await Promise.all([loadBand(
+        this.scene,
+        this.assetManager,
+        this.options?.performers,
+        this.options?.venue.seed,
+        this.venueProfile ?? undefined,
+        avatarQuality,
+      ), this.assetsReady]);
       if (this.disposed) { this.disposeScene(); return; }
       if (this.assetsFailed) throw new Error('Missing demo material');
       this.actors = band.actors; if (this.options && !this.options.externalClock) this.actors.forEach(actor => { actor.root.visible = true; }); this.crowd = band.crowd; this.cymbals.push(...band.cymbals); this.loaded = true;

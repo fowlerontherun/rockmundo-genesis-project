@@ -16,14 +16,15 @@ import { createAvatarV2PoseCorrectiveController, type AvatarV2PoseCorrectiveCont
 import { createAvatarV2TwistController, type AvatarV2TwistController } from '@/features/player-model/v2/avatarV2TwistBones';
 import { createAvatarV2ShoulderController, type AvatarV2ShoulderController } from '@/features/player-model/v2/avatarV2Shoulder';
 import { createAvatarV2ToeController, type AvatarV2ToeController } from '@/features/player-model/v2/avatarV2Toe';
-import { seededRandom } from './config';
+import { seededRandom, type DemoQuality } from './config';
 import { visibleTattoosForPresentation } from '@/features/player-model/tattoos';
 import { assemblePlayerModel, disposeModel, loadModelLibrary, requiredModelFiles } from '@/features/player-model/model';
 import { assembleAvatarMesh } from '@/features/player-model/v2/avatarMeshEngine';
-import { requiredAvatarV2ModelFiles } from '@/features/player-model/v2/avatarV2Model';
+import { avatarV2LodForQuality, requiredAvatarV2ModelFiles } from '@/features/player-model/v2/avatarV2Model';
 import { requiredAvatarV2GarmentFiles } from '@/features/player-model/v2/avatarV2Garments';
 import type { ModelLibrary } from '@/features/player-model/model';
 import type { PlayerAppearance } from '@/features/player-model/appearance';
+import type { AvatarVisualQuality } from '@/features/player-model/avatarVisualQuality';
 import { buildProceduralGarment, type GarmentRigAnchor } from '@/features/clothing-preview/proceduralGarmentRenderer';
 import { buildCuratedGarment, isCuratedClothing, isCuratedClothingRenderable, loadOptionalCuratedGarments, requiredCuratedGarmentFiles } from '@/features/clothing-preview/curatedGarmentAssets';
 import { curatedDonorSource, requiredCuratedDonorModelFiles } from '@/features/clothing-preview/curatedDonorGarments';
@@ -33,6 +34,19 @@ import type { CrowdTuningOptions } from '@/features/gig-experience/viewer/engine
 import type { VenueProfile } from './venueProfile';
 import type { ConcertPerformer, PerformanceSection, StageRole } from './liveTypes';
 type Role = StageRole;
+
+export function avatarBandVisualQuality(
+    quality: DemoQuality,
+    television = false,
+): AvatarVisualQuality {
+    if (television) {
+        if (quality === 'high') return 'ultra';
+        if (quality === 'balanced') return 'high';
+        return 'balanced';
+    }
+    return quality === 'low' ? 'balanced' : 'high';
+}
+
 interface RestBone {
     bone: T.Bone;
     quaternion: T.Quaternion;
@@ -1060,19 +1074,27 @@ export class DemoCrowd {
     // Geometry/material ownership remains with the scene disposer (including shader pose attributes).
     dispose() { this.batches = []; this.allFans = []; }
 }
-export async function loadBand(scene: T.Scene, manager: T.LoadingManager, lineup?: ConcertPerformer[], seed?: number, venue?: VenueProfile) {
+export async function loadBand(
+    scene: T.Scene,
+    manager: T.LoadingManager,
+    lineup?: ConcertPerformer[],
+    seed?: number,
+    venue?: VenueProfile,
+    avatarQuality: AvatarVisualQuality = 'high',
+) {
     const curatedFiles = lineup?.flatMap(p => requiredCuratedGarmentFiles(p.richClothing ?? [], p.appearance.body.frame)) ?? [];
     const donorFiles = lineup?.flatMap(p => requiredCuratedDonorModelFiles(p.richClothing ?? [], p.appearance.body.frame)) ?? [];
     const lineupAppearances = lineup?.map(p => p.appearance) ?? [];
+    const avatarV2Lod = avatarV2LodForQuality(avatarQuality);
     const v2GarmentFiles = lineup?.flatMap(p =>
-        requiredAvatarV2GarmentFiles(p.richClothing ?? [], p.appearance.body.frame, 1)
+        requiredAvatarV2GarmentFiles(p.richClothing ?? [], p.appearance.body.frame, avatarV2Lod)
     ) ?? [];
     const library = await loadModelLibrary([
         'casual.glb',
         'punk.glb',
         'suit.glb',
         ...requiredModelFiles([...lineupAppearances, ...crowdAppearances(seed ?? 85043)]),
-        ...requiredAvatarV2ModelFiles(lineupAppearances, 'high'),
+        ...requiredAvatarV2ModelFiles(lineupAppearances, avatarQuality),
         ...v2GarmentFiles,
         ...donorFiles,
     ], manager);
@@ -1086,7 +1108,7 @@ export async function loadBand(scene: T.Scene, manager: T.LoadingManager, lineup
                 p.appearance,
                 visibleTattoosForPresentation(p.tattoos ?? [], { appearance: p.appearance, clothing: p.richClothing ?? [], presentation: 'stage' }),
                 p.richClothing,
-                'high',
+                avatarQuality,
             );
             const actor = new Musician(assembled, p.role, p.position, p.phase, undefined, p.appearance, p.instrument, p.vocal, p.richClothing, p.instrumentSkin, library);
             disposeModel(assembled);
