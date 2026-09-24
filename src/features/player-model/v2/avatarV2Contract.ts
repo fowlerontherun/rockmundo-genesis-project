@@ -1,6 +1,7 @@
 import * as T from 'three';
 import type { PlayerAppearance } from '../appearance';
 import { AVATAR_V2_CUSTOMIZATION_MORPHS } from './avatarV2Customization';
+import { AVATAR_V2_POSE_CORRECTIVES } from './avatarV2PoseCorrectives';
 
 export type AvatarV2Frame = PlayerAppearance['body']['frame'];
 export type AvatarV2Lod = 0 | 1 | 2 | 3;
@@ -476,6 +477,15 @@ export function validateAvatarV2Scene(
           level: 'warning',
           code: `missing-customization-morph:${morph}`,
           message: `Recommended Avatar Designer shape target is missing: ${morph}.`,
+        });
+      }
+    }
+    for (const corrective of AVATAR_V2_POSE_CORRECTIVES) {
+      if (!available.has(clean(corrective))) {
+        issues.push({
+          level: 'warning',
+          code: `missing-pose-corrective:${corrective}`,
+          message: `LOD${lod} should include joint deformation target: ${corrective}.`,
         });
       }
     }
