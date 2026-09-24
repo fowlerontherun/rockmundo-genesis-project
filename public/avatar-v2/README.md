@@ -124,7 +124,11 @@ bone names. The required semantic bones are defined in
 ## Head surface contract
 
 Saved hairstyles, hats, glasses and earrings need a stable authored head/face
-surface for fitting. At least one close-up skinned head/face mesh should either:
+surface for fitting. LOD0/LOD1 also require non-deforming `EarAnchor.L` and
+`EarAnchor.R` bones parented under `Head`; place them at the actual earlobe /
+piercing attachment points. The runtime uses those anchors for earrings, glasses
+temples and local hair-clearance instead of guessing the ear from the outermost
+head vertex. At least one close-up skinned head/face mesh should either:
 
 - use a name beginning with `RMV2_Head` or `RMV2_Face`; or
 - set `rockmundoHeadSurface=true` in node extras/userData.
@@ -177,10 +181,11 @@ blink/squint facial morphs. Teeth and tongue must be separate at LOD0 so close-u
 vocals never expose a hollow mouth.
 
 LOD0/LOD1 also require shoulder and toe-base articulation, dedicated `Eye.L` /
-`Eye.R` bones, six deform-only twist helpers
+`Eye.R` gaze bones, non-deforming `EarAnchor.L/R` attachment bones, six deform-only twist helpers
 (`UpperArmTwist.L/R`, `ForearmTwist.L/R`, `ThighTwist.L/R`), plus complete
-three-joint thumb/index/middle/ring/little chains on both hands. `Toe.L/R` must be descendants of their matching `Foot.L/R` bones; the live performer uses them for walking push-off, drum-pedal press and standing weight-transfer flex instead of leaving the forefoot rigid. Both eye bones must be descendants of the authored head bone so
-head turns carry the eyes with them. They are driven at runtime for deterministic
+three-joint thumb/index/middle/ring/little chains on both hands. `Toe.L/R` must be descendants of their matching `Foot.L/R` bones; the live performer uses them for walking push-off, drum-pedal press and standing weight-transfer flex instead of leaving the forefoot rigid. Both eye bones and both ear attachment anchors must be descendants of the
+authored head bone so head turns carry gaze and accessories together. Ear anchors
+must remain unweighted/non-deforming. They are driven at runtime for deterministic
 micro-saccades and interaction-aware gaze; do not bake a permanently offset stare
 into the mesh. They also require
 the eight pose-space joint deformation targets `poseShoulderLeft/Right`,
