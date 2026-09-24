@@ -27,6 +27,9 @@ NORMALIZATION_TOLERANCE = 0.02
 REQUIRED_RIG_BONES = [
     "Hips", "Spine1", "Spine2", "Neck", "Head", "Eye.L", "Eye.R",
     "Shoulder.L", "Shoulder.R",
+    "UpperArmTwist.L", "UpperArmTwist.R",
+    "ForearmTwist.L", "ForearmTwist.R",
+    "ThighTwist.L", "ThighTwist.R",
     "UpperArm.L", "LowerArm.L", "Hand.L",
     "UpperArm.R", "LowerArm.R", "Hand.R",
     "UpperLeg.L", "LowerLeg.L", "Foot.L", "Toe.L",
@@ -42,6 +45,9 @@ REQUIRED_RIG_BONES = [
 REQUIRED_BODY_DEFORM_BONES = [
     "Hips", "Spine1", "Spine2", "Neck", "Head",
     "Shoulder.L", "Shoulder.R",
+    "UpperArmTwist.L", "UpperArmTwist.R",
+    "ForearmTwist.L", "ForearmTwist.R",
+    "ThighTwist.L", "ThighTwist.R",
     "UpperArm.L", "LowerArm.L", "Hand.L",
     "UpperArm.R", "LowerArm.R", "Hand.R",
     "UpperLeg.L", "LowerLeg.L", "Foot.L", "Toe.L",
