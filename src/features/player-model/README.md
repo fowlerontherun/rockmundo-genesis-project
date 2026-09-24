@@ -253,7 +253,9 @@ from the final IK pose to preserve joint volume under aggressive stage animation
 The close-up expression controller now blends adjacent singing visemes and can
 drive jaw, mouth stretch/funnel/pucker, cheek squint, eye squint and brow tension
 from the deterministic performance clock. LOD0/LOD1 also use dedicated normalized
-`Eye.L`/`Eye.R` bones for replay-safe micro-saccades and deliberate gaze toward
+`Eye.L`/`Eye.R` bones for replay-safe micro-saccades plus non-deforming
+`EarAnchor.L/R` attachment bones for precise earrings/glasses/hair clearance.
+The eyes support deliberate gaze toward
 bandmates, audience cues and the fretboard, with slightly asymmetric/double blinks
 and subtle idle facial motion so close-ups do not freeze between vocal phrases.
 This gives gigs and Top of the Pops replay-safe facial motion without depending on
