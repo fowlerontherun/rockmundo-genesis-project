@@ -242,6 +242,23 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
             if not has_alias(bone_names, aliases):
                 errors.append(f"Missing close-up articulation bone: {semantic}.")
 
+        if len(rigs) == 1:
+            rig_bones = rigs[0].data.bones
+            def find_bone(aliases):
+                wanted = {clean(alias) for alias in aliases}
+                return next((bone for bone in rig_bones if clean(bone.name) in wanted), None)
+
+            head_bone = find_bone(["head", *REQUIRED_BONES["head"]])
+            for semantic in ("leftEye", "rightEye"):
+                eye_bone = find_bone(CLOSEUP_BONES[semantic])
+                if not head_bone or not eye_bone:
+                    continue
+                parent = eye_bone.parent
+                while parent and parent != head_bone:
+                    parent = parent.parent
+                if parent != head_bone:
+                    errors.append(f"{semantic} must inherit from the head bone.")
+
     # Topless and Tattoo Parlour can select any LOD, so every export must remain a
     # complete skinned bare body. Close-up-only articulation stays gated above.
     authored_regions = set()
