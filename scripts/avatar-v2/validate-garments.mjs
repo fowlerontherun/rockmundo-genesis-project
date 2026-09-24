@@ -8,6 +8,20 @@ const VALID_STATUSES = new Set(['planned', 'asset_ready', 'validated', 'blocked'
 const VALID_REGIONS = new Set(['torso','upper-arms','lower-arms','hands','hips','upper-legs','lower-legs','feet']);
 const REQUIRED_FIT_MORPHS = ['bodySlim','bodyBroad','muscleToned','muscleAthletic','muscleMuscular','muscleBodybuilder'];
 const SHAPED_BODY_REGIONS = new Set(['torso','upper-arms','lower-arms','hips','upper-legs','lower-legs']);
+const TWIST_BONE_ALIASES = {
+  leftUpperArmTwist: ['UpperArmTwist.L','upperarm_twist_l','upper_arm_twist_l','leftUpperArmTwist'],
+  rightUpperArmTwist: ['UpperArmTwist.R','upperarm_twist_r','upper_arm_twist_r','rightUpperArmTwist'],
+  leftForearmTwist: ['ForearmTwist.L','forearm_twist_l','lowerarm_twist_l','leftForearmTwist'],
+  rightForearmTwist: ['ForearmTwist.R','forearm_twist_r','lowerarm_twist_r','rightForearmTwist'],
+  leftThighTwist: ['ThighTwist.L','thigh_twist_l','upperleg_twist_l','leftThighTwist'],
+  rightThighTwist: ['ThighTwist.R','thigh_twist_r','upperleg_twist_r','rightThighTwist'],
+};
+const TWIST_BY_REGION = {
+  'upper-arms': ['leftUpperArmTwist','rightUpperArmTwist'],
+  'lower-arms': ['leftForearmTwist','rightForearmTwist'],
+  'upper-legs': ['leftThighTwist','rightThighTwist'],
+};
+const clean = value => String(value ?? '').replace(/[^a-z0-9]/gi, '').toLowerCase();
 
 let failed = false;
 const fail = message => {
@@ -74,6 +88,14 @@ function inspect(gltf) {
     }
   }
 
+  const jointIndexes = new Set();
+  for (const skin of gltf.skins ?? []) {
+    for (const joint of skin.joints ?? []) jointIndexes.add(joint);
+  }
+  const jointNames = [...jointIndexes]
+    .map(index => gltf.nodes?.[index]?.name)
+    .filter(Boolean);
+
   return {
     triangles,
     vertices,
@@ -82,7 +104,17 @@ function inspect(gltf) {
     negativeScaleNodes,
     materialNames: (gltf.materials ?? []).map(material => material?.name).filter(Boolean),
     morphNames,
+    jointNames,
   };
+}
+
+function containsAlias(names, aliases) {
+  const available = new Set(names.map(clean));
+  return aliases.some(alias => available.has(clean(alias)));
+}
+
+function requiredTwists(regions) {
+  return [...new Set((regions ?? []).flatMap(region => TWIST_BY_REGION[region] ?? []))];
 }
 
 function validateManifestItem(item) {
@@ -150,6 +182,14 @@ function validateAsset(gltf, item, frame, lod, budget) {
   const skinCount = (gltf.skins ?? []).length;
   if (!skinCount) errors.push('No glTF skin is present.');
   if (skinCount > 1) warnings.push(`Garment exports ${skinCount} skins; one shared humanoid skin is preferred.`);
+
+  if (lod <= 1) {
+    for (const semantic of requiredTwists(item.occludeBodyRegions)) {
+      if (!containsAlias(report.jointNames, TWIST_BONE_ALIASES[semantic])) {
+        errors.push(`Required close-up garment twist bone is missing: ${semantic}.`);
+      }
+    }
+  }
 
   const needsBodyFitMorphs = (item.occludeBodyRegions ?? []).some(region => SHAPED_BODY_REGIONS.has(region));
   if (needsBodyFitMorphs) {
