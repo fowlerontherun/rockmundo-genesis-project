@@ -692,7 +692,7 @@ function buildControlMonitor(group: T.Group, x: number, y: number, z: number, hu
 function buildProductionControlArea(root: T.Group) {
   const control = new T.Group();
   control.name = 'totp-production-control-area';
-  control.position.set(9.55, 0, -3.25);
+  control.position.set(8.85, 0, -3.25);
   control.rotation.y = -.18;
 
   const desk = texturedMaterial('totp-control-desk-material', '#20272e', '#4a5662', 'brushed', 5, 3, .22, .58);
