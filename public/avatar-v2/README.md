@@ -299,6 +299,14 @@ The first V2 clothing proof set and per-garment budgets are defined in
 part of a skinned mesh or be rigidly weighted to the appropriate bone; loose
 unskinned detail objects fail validation.
 
+Close-up garment materials also consume the existing Skin Store material metadata.
+Export authored PBR maps whenever possible: those maps always win. For LOD0/LOD1,
+RockMundo promotes eligible garment surfaces to physical shading and can supply a
+quality-scaled textile normal only when no authored normal exists. Smooth
+materials such as leather/vinyl/latex/silk/satin keep smooth/reflective response
+rather than receiving generic cloth weave, and named hardware surfaces are left
+out of the fabric fallback. LOD2/LOD3 retain the lower-cost standard material path.
+
 Every validated body-worn garment must also export the same fitting morph names as
 the base body: `bodySlim`, `bodyBroad`, `muscleToned`, `muscleAthletic`,
 `muscleMuscular` and `muscleBodybuilder`. The runtime copies the selected body

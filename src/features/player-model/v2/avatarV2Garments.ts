@@ -2,8 +2,10 @@ import * as T from 'three';
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import type { ClothingItem } from '@/hooks/useSkinStore';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
-import { richGarmentSlot } from '@/features/clothing-preview/richGarmentVisuals';
-import type { PlayerAppearance } from '../appearance';
+import { buildRichGarmentVisualSpec, richGarmentSlot } from '@/features/clothing-preview/richGarmentVisuals';
+import type { Fabric, PlayerAppearance } from '../appearance';
+import { fabricNormalTexture } from '../fabrics';
+import type { AvatarVisualQuality } from '../avatarVisualQuality';
 import { disposeModel, type ModelLibrary } from '../model';
 import type { AvatarV2BodyRegion, AvatarV2Frame, AvatarV2Lod } from './avatarV2Contract';
 import {
@@ -23,6 +25,7 @@ import {
   type AvatarV2PoseCorrective,
 } from './avatarV2PoseCorrectives';
 import { AVATAR_V2_TWIST_RUNTIME_NAMES } from './avatarV2TwistBones';
+import { avatarV2TextureDetailQuality } from './avatarV2Materials';
 
 export type AvatarV2GarmentStatus = 'planned' | 'asset_ready' | 'validated' | 'blocked';
 
@@ -292,6 +295,158 @@ function applyVariant(
   });
 }
 
+const GARMENT_HARDWARE = /zip|stud|button|buckle|eyelet|chain|hardware|metal|rivet|snap|hook/i;
+
+function closeUpGarmentQuality(lod: AvatarV2Lod, quality: AvatarVisualQuality) {
+  return lod <= 1 && (quality === 'high' || quality === 'ultra' || quality === 'cinematic');
+}
+
+function fabricFallback(material: string): Fabric | null {
+  const value = material.toLowerCase();
+  if (/denim|jean/.test(value)) return 'denim';
+  if (/canvas/.test(value)) return 'canvas';
+  if (/plaid|tartan/.test(value)) return 'plaid';
+  if (/pinstripe/.test(value)) return 'pinstripe';
+  if (/stripe/.test(value)) return 'stripe';
+  if (/patent/.test(value)) return 'patent';
+  if (/two[-_ ]?tone/.test(value)) return 'two-tone';
+  if (/cotton|jersey|wool|knit|fleece|suede|velvet|nylon/.test(value)) return 'plain';
+  return null;
+}
+
+function garmentSurfaceMaterial(material: T.Material, config: AvatarV2GarmentConfig) {
+  if (GARMENT_HARDWARE.test(material.name)) return false;
+  const zones = [...config.materialZones.main, ...config.materialZones.trim].map(clean);
+  return !zones.length || zones.includes(clean(material.name));
+}
+
+function copyGarmentSurface(source: T.MeshStandardMaterial) {
+  if (source instanceof T.MeshPhysicalMaterial) return source;
+  const material = new T.MeshPhysicalMaterial({
+    color: source.color.clone(),
+    map: source.map,
+    lightMap: source.lightMap,
+    lightMapIntensity: source.lightMapIntensity,
+    aoMap: source.aoMap,
+    aoMapIntensity: source.aoMapIntensity,
+    emissive: source.emissive.clone(),
+    emissiveIntensity: source.emissiveIntensity,
+    emissiveMap: source.emissiveMap,
+    bumpMap: source.bumpMap,
+    bumpScale: source.bumpScale,
+    normalMap: source.normalMap,
+    normalMapType: source.normalMapType,
+    normalScale: source.normalScale.clone(),
+    displacementMap: source.displacementMap,
+    displacementScale: source.displacementScale,
+    displacementBias: source.displacementBias,
+    roughness: source.roughness,
+    roughnessMap: source.roughnessMap,
+    metalness: source.metalness,
+    metalnessMap: source.metalnessMap,
+    alphaMap: source.alphaMap,
+    envMap: source.envMap,
+    envMapIntensity: source.envMapIntensity,
+    opacity: source.opacity,
+    transparent: source.transparent,
+    alphaTest: source.alphaTest,
+    alphaHash: source.alphaHash,
+    side: source.side,
+    shadowSide: source.shadowSide,
+    vertexColors: source.vertexColors,
+    depthTest: source.depthTest,
+    depthWrite: source.depthWrite,
+    colorWrite: source.colorWrite,
+    blending: source.blending,
+    blendSrc: source.blendSrc,
+    blendDst: source.blendDst,
+    blendEquation: source.blendEquation,
+    polygonOffset: source.polygonOffset,
+    polygonOffsetFactor: source.polygonOffsetFactor,
+    polygonOffsetUnits: source.polygonOffsetUnits,
+    dithering: source.dithering,
+    toneMapped: source.toneMapped,
+    visible: source.visible,
+    flatShading: source.flatShading,
+    wireframe: source.wireframe,
+    wireframeLinewidth: source.wireframeLinewidth,
+  });
+  material.name = source.name;
+  material.userData = { ...source.userData };
+  source.dispose();
+  return material;
+}
+
+function tuneAvatarV2GarmentMaterials(
+  mesh: T.SkinnedMesh,
+  row: ResolvedEquippedClothing,
+  config: AvatarV2GarmentConfig,
+  lod: AvatarV2Lod,
+  quality: AvatarVisualQuality,
+) {
+  if (!closeUpGarmentQuality(lod, quality)) return;
+
+  const spec = buildRichGarmentVisualSpec(row.item, row.variant);
+  const fallback = fabricFallback(spec.material);
+  const detailQuality = avatarV2TextureDetailQuality(quality);
+  const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+  let changed = false;
+  let sharedNormal: T.DataTexture | null | undefined;
+
+  const tuned = materials.map(source => {
+    if (!(source instanceof T.MeshStandardMaterial) || !garmentSurfaceMaterial(source, config)) return source;
+    const material = copyGarmentSurface(source);
+    changed = changed || material !== source;
+
+    material.roughness = spec.roughness;
+    material.metalness = spec.metalness;
+    material.envMapIntensity = Math.max(material.envMapIntensity, .9);
+
+    if (material instanceof T.MeshPhysicalMaterial) {
+      const kind = spec.material.toLowerCase();
+      material.ior = 1.46;
+      material.sheen = spec.sheen;
+      material.sheenRoughness = /silk|satin/.test(kind) ? .34 : /velvet|suede/.test(kind) ? .72 : .64;
+      material.sheenColor.copy(material.color.clone().lerp(new T.Color('#ffffff'), .12));
+
+      if (/leather|vinyl|latex|patent/.test(kind)) {
+        material.clearcoat = /latex|patent/.test(kind) ? .82 : /vinyl/.test(kind) ? .62 : .28;
+        material.clearcoatRoughness = /latex|patent/.test(kind) ? .07 : /vinyl/.test(kind) ? .13 : .26;
+      } else {
+        material.clearcoat = Math.min(.12, spec.sheen * .12);
+        material.clearcoatRoughness = .5;
+      }
+
+      if (/silk|satin/.test(kind)) {
+        material.anisotropy = .42;
+        material.anisotropyRotation = 0;
+      }
+    }
+
+    if (!material.normalMap && fallback) {
+      sharedNormal ??= fabricNormalTexture(fallback, detailQuality);
+      material.normalMap = sharedNormal;
+      const strength = fallback === 'canvas' ? .38
+        : fallback === 'denim' ? .34
+        : fallback === 'patent' ? .08
+        : .20;
+      material.normalScale.set(strength, strength);
+    }
+
+    material.userData.rockmundoAvatarV2GarmentMaterial = {
+      material: spec.material,
+      quality,
+      detailQuality,
+      authoredNormal: !!source.normalMap,
+      authoredRoughness: !!source.roughnessMap,
+    };
+    material.needsUpdate = true;
+    return material;
+  });
+
+  if (changed) mesh.material = Array.isArray(mesh.material) ? tuned : tuned[0];
+}
+
 function garmentMeshCount(root: T.Object3D) {
   let skinned = 0;
   let unskinned = 0;
@@ -318,6 +473,7 @@ export function buildAvatarV2Garments(
   clothing: ResolvedEquippedClothing[],
   appearance: PlayerAppearance,
   lod: AvatarV2Lod,
+  quality: AvatarVisualQuality = 'balanced',
 ): AvatarV2GarmentBuildResult {
   const frame = appearance.body.frame;
   const compatibility = avatarV2ClothingCompatibilityReason(clothing, frame, lod);
@@ -398,6 +554,7 @@ export function buildAvatarV2Garments(
         mesh.frustumCulled = false;
         mesh.userData.rockmundoAvatarV2Garment = true;
         applyVariant(mesh, row, config);
+        tuneAvatarV2GarmentMaterials(mesh, row, config, lod, quality);
         itemGroup.add(mesh);
       });
 

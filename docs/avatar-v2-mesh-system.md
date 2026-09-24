@@ -225,6 +225,17 @@ Every V2 garment will require:
 - no detached detail meshes;
 - store turntable certification.
 
+LOD0/LOD1 garment assembly now carries the Skin Store material profile into the
+authored V2 mesh instead of leaving every GLB on a generic standard shader.
+Cotton/denim/canvas and similar fabric surfaces receive bounded physical
+roughness/sheen plus a high-resolution textile normal only when the artist did not
+export one. Leather, vinyl, latex, silk and satin use their appropriate
+clearcoat/sheen/anisotropy response without fabric-weave being forced onto smooth
+surfaces. Authored color, normal, roughness, metalness, AO, emissive and
+transparency/render flags are preserved. Hardware materials such as zips, studs,
+buckles and eyelets are excluded from fabric fallback. LOD2/LOD3 stay on the
+cheaper standard shader path.
+
 ## Performance budgets
 
 The base budgets live in `avatarV2Contract.ts` and the asset README. The key
