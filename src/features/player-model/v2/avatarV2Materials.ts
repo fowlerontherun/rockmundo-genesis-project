@@ -76,6 +76,12 @@ function promotePhysical(source: T.MeshStandardMaterial, transparent = source.tr
 const usesCloseUpPhysicalShading = (quality: AvatarVisualQuality) =>
   quality === 'high' || quality === 'ultra' || quality === 'cinematic';
 
+export function avatarV2TextureDetailQuality(quality: AvatarVisualQuality): AvatarVisualQuality {
+  if (quality === 'high') return 'ultra';
+  if (quality === 'ultra') return 'cinematic';
+  return quality;
+}
+
 function tuneEyeSurface(
   material: T.MeshStandardMaterial,
   role: 'iris' | 'sclera' | 'cornea',
@@ -158,6 +164,7 @@ export function tuneAvatarV2Materials(
   };
   let skinCache: ReturnType<typeof createAvatarSkinTextureCache> | undefined;
   let hairCache: ReturnType<typeof createAvatarHairTextureCache> | undefined;
+  const textureDetailQuality = avatarV2TextureDetailQuality(quality);
 
   root.traverse(node => {
     if (!(node instanceof T.Mesh)) return;
@@ -188,7 +195,7 @@ export function tuneAvatarV2Materials(
         const authoredNormal = material.normalMap;
         const authoredRoughness = material.roughnessMap;
         if (!authoredNormal || !authoredRoughness) {
-          skinCache ??= createAvatarSkinTextureCache(appearance, quality);
+          skinCache ??= createAvatarSkinTextureCache(appearance, textureDetailQuality);
           applyAvatarSkinQuality(material, appearance, quality, skinCache);
           if (authoredNormal) material.normalMap = authoredNormal;
           if (authoredRoughness) material.roughnessMap = authoredRoughness;
@@ -208,7 +215,7 @@ export function tuneAvatarV2Materials(
         report.skin += 1;
       } else if (role === 'hair') {
         material.color.set(appearance.head.hair);
-        hairCache ??= createAvatarHairTextureCache(quality);
+        hairCache ??= createAvatarHairTextureCache(textureDetailQuality);
         applyAvatarHairQuality(material, quality, hairCache);
         if (material instanceof T.MeshPhysicalMaterial) {
           material.anisotropy = quality === 'cinematic' ? .86 : quality === 'ultra' ? .74 : .56;
