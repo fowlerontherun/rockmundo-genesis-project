@@ -83,6 +83,7 @@ export function assembleAvatarMesh(
             visibleClothing,
             appearance,
             avatarV2LodForQuality(quality),
+            quality,
           );
           result.model.add(garments.group);
           result.model.userData.rockmundoAvatarV2OccludedBodyRegions = garments.hiddenBodyRegions;
