@@ -14,6 +14,11 @@ import {
 } from './avatarV2Contract';
 import { AVATAR_V2_ROLLOUT } from './avatarV2Registry';
 import { applyAvatarV2Customization } from './avatarV2Customization';
+import {
+  AVATAR_V2_POSE_CORRECTIVES,
+  supportedAvatarV2PoseCorrectives,
+  type AvatarV2PoseCorrective,
+} from './avatarV2PoseCorrectives';
 
 export type AvatarV2GarmentStatus = 'planned' | 'asset_ready' | 'validated' | 'blocked';
 
@@ -41,7 +46,18 @@ const STATUSES = new Set<AvatarV2GarmentStatus>(['planned','asset_ready','valida
 const SUPPORTED_SLOTS = new Set(['top', 'bottom', 'footwear', 'headwear', 'eyewear', 'accessory']);
 const BODY_OCCLUSION_SLOTS = new Set(['top', 'bottom', 'footwear']);
 const BODY_FIT_REGIONS = new Set<AvatarV2BodyRegion>(['torso', 'upper-arms', 'lower-arms', 'hips', 'upper-legs', 'lower-legs']);
+const UPPER_BODY_REGIONS = new Set<AvatarV2BodyRegion>(['torso', 'upper-arms', 'lower-arms']);
+const LOWER_BODY_REGIONS = new Set<AvatarV2BodyRegion>(['hips', 'upper-legs', 'lower-legs']);
+const UPPER_BODY_CORRECTIVES = AVATAR_V2_POSE_CORRECTIVES.filter(name => /Shoulder|Elbow/.test(name));
+const LOWER_BODY_CORRECTIVES = AVATAR_V2_POSE_CORRECTIVES.filter(name => /Hip|Knee/.test(name));
 const clean = cleanAvatarV2Name;
+
+function requiredPoseCorrectives(regions: AvatarV2BodyRegion[]): AvatarV2PoseCorrective[] {
+  const required = new Set<AvatarV2PoseCorrective>();
+  if (regions.some(region => UPPER_BODY_REGIONS.has(region))) UPPER_BODY_CORRECTIVES.forEach(name => required.add(name));
+  if (regions.some(region => LOWER_BODY_REGIONS.has(region))) LOWER_BODY_CORRECTIVES.forEach(name => required.add(name));
+  return [...required];
+}
 
 function record(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value)
@@ -322,6 +338,15 @@ export function buildAvatarV2Garments(
         const muscle = appearance.body.muscle ?? 'natural';
         if (muscle !== 'natural' && !customization.muscleApplied) {
           throw new Error(`${row.item.name} V2 garment has no matching ${muscle} muscle morph.`);
+        }
+
+        if (lod <= 1) {
+          const supported = new Set(supportedAvatarV2PoseCorrectives(itemGroup));
+          const missing = requiredPoseCorrectives(config.occludeBodyRegions)
+            .filter(corrective => !supported.has(corrective));
+          if (missing.length) {
+            throw new Error(`${row.item.name} V2 garment is missing close-up pose corrective morph(s): ${missing.join(', ')}.`);
+          }
         }
       }
       itemGroup.userData.rockmundoAvatarV2BodyBuild = appearance.body.build;
