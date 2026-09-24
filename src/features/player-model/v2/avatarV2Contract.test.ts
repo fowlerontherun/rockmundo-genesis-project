@@ -92,10 +92,26 @@ function validScene() {
     poseHipRight: 13,
     poseKneeLeft: 14,
     poseKneeRight: 15,
+    visemeAA: 16,
+    visemeEE: 17,
+    visemeIH: 18,
+    visemeOH: 19,
+    visemeOU: 20,
+    mouthFunnel: 21,
+    mouthPucker: 22,
+    eyeSquintLeft: 23,
+    eyeSquintRight: 24,
+    browInnerUp: 25,
+    browDownLeft: 26,
+    browDownRight: 27,
+    cheekSquintLeft: 28,
+    cheekSquintRight: 29,
+    mouthStretchLeft: 30,
+    mouthStretchRight: 31,
   };
-  mesh.morphTargetInfluences = Array(16).fill(0);
+  mesh.morphTargetInfluences = Array(32).fill(0);
   geometry.morphTargetsRelative = true;
-  geometry.morphAttributes.position = Array.from({ length: 16 }, (_, morphIndex) => {
+  geometry.morphAttributes.position = Array.from({ length: 32 }, (_, morphIndex) => {
     const delta = new Float32Array(count * 3);
     delta[(morphIndex % count) * 3] = .002 + morphIndex * .00001;
     return new T.Float32BufferAttribute(delta, 3);
@@ -368,6 +384,29 @@ describe('Avatar V2 mesh contract', () => {
     const report = validateAvatarV2Scene(scene, 'masculine', 0);
     expect(report.valid).toBe(false);
     expect(report.issues.some(issue => issue.code === 'missing-expression:jawOpen' && issue.level === 'error')).toBe(true);
+  });
+
+  it('fails close-up assets that omit a full singing expression target', () => {
+    const scene = validScene();
+    const mesh = scene.getObjectByName('RMV2_Body') as T.SkinnedMesh;
+    delete mesh.morphTargetDictionary!.visemeOH;
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue =>
+      issue.code === 'missing-performance-expression:visemeOH' && issue.level === 'error'
+    )).toBe(true);
+  });
+
+  it('rejects zero-delta close-up singing expressions', () => {
+    const scene = validScene();
+    const mesh = scene.getObjectByName('RMV2_Body') as T.SkinnedMesh;
+    const index = mesh.morphTargetDictionary!.browInnerUp;
+    (mesh.geometry.morphAttributes.position[index] as T.BufferAttribute).array.fill(0);
+    const report = validateAvatarV2Scene(scene, 'masculine', 1);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue =>
+      issue.code === 'empty-performance-expression:browInnerUp' && issue.level === 'error'
+    )).toBe(true);
   });
 
   it('fails LOD0 close-ups without cornea or mouth-interior materials', () => {

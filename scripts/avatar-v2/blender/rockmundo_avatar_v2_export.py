@@ -101,7 +101,7 @@ REQUIRED_EXPRESSIONS = {
     "mouthSmile": ["mouthSmile", "mouth_smile", "smile"],
 }
 
-RECOMMENDED_EXPRESSIONS = [
+CLOSEUP_REQUIRED_EXPRESSIONS = [
     "visemeAA", "visemeEE", "visemeIH", "visemeOH", "visemeOU",
     "mouthFunnel", "mouthPucker",
     "eyeSquintLeft", "eyeSquintRight",
@@ -457,13 +457,13 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
             )
 
     if args.lod <= 1:
-        for expression in RECOMMENDED_EXPRESSIONS:
+        for expression in CLOSEUP_REQUIRED_EXPRESSIONS:
             aliases = [expression]
             if not has_alias(morphs, aliases):
-                warnings.append(f"Missing recommended singing target: {expression}.")
+                errors.append(f"Missing required close-up singing target: {expression}.")
             else:
                 require_shape_key_deformation(
-                    errors, warnings, meshes, f"Singing target {expression}", aliases, error=False,
+                    errors, warnings, meshes, f"Singing target {expression}", aliases, error=True,
                 )
         for morph in CUSTOMIZATION_MORPHS:
             if morph in REQUIRED_MUSCLE_MORPHS:

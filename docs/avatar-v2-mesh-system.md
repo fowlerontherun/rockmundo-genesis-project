@@ -180,18 +180,16 @@ The eye bones own gaze; eye-look shape keys are not required. Blink, squint and
 cheek morphs remain independent so the eyelids can animate naturally around a
 moving eyeball.
 
-The next authoring pass should continue expanding phoneme/viseme targets so singer
-mouth motion can later be driven by broadcast/gig audio rather than only the
-deterministic performance clock.
+Close-up certification now requires the full singing deformation set already
+driven by the V2 runtime: mouth funnel/pucker, AA/EE/IH/OH/OU visemes,
+eye squint left/right, brow inner-up/down left/right, cheek squint left/right and
+mouth stretch left/right. These targets must contain measurable vertex movement,
+so a mesh cannot pass by carrying empty shape-key names.
 
-Suggested follow-up targets:
-
-- mouthFrown
-- mouthPucker
-- mouthFunnel
-- browInnerUp
-- browDownLeft / browDownRight
-- AA / EE / IH / OH / OU visemes
+The remaining facial-animation step is timing rather than topology: broadcast/gig
+audio can later feed real phoneme timing into the same expression controller
+instead of relying only on the deterministic performance clock. Additional
+mouth-frown/asymmetry targets can still be layered on after the required set.
 
 ## Clothing
 
