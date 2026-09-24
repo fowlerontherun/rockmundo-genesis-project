@@ -61,10 +61,77 @@ function namedMat(name: string, color: string) {
   return material;
 }
 
+type StudioTexturePattern = 'grid' | 'brushed' | 'rubber' | 'perforated';
+
+function studioTexture(base: string, accent: string, pattern: StudioTexturePattern, repeatX: number, repeatY: number) {
+  const size = 64;
+  const data = new Uint8Array(size * size * 4);
+  const rgb = (hex: string) => {
+    const value = Number.parseInt(hex.replace('#', ''), 16);
+    return [(value >> 16) & 255, (value >> 8) & 255, value & 255] as const;
+  };
+  const primary = rgb(base);
+  const detail = rgb(accent);
+
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      let mix = 0;
+      if (pattern === 'grid') mix = x % 16 < 2 || y % 16 < 2 ? .58 : ((x * 11 + y * 17) % 19 === 0 ? .16 : 0);
+      if (pattern === 'brushed') mix = y % 5 === 0 ? .22 : ((x + y * 7) % 23 === 0 ? .12 : 0);
+      if (pattern === 'rubber') mix = (x + y) % 18 < 2 ? .2 : ((x * 5 + y * 13) % 29 === 0 ? .12 : 0);
+      if (pattern === 'perforated') {
+        const dx = x % 8 - 4;
+        const dy = y % 8 - 4;
+        mix = dx * dx + dy * dy < 4 ? .72 : .05;
+      }
+      const offset = (y * size + x) * 4;
+      data[offset] = Math.round(primary[0] + (detail[0] - primary[0]) * mix);
+      data[offset + 1] = Math.round(primary[1] + (detail[1] - primary[1]) * mix);
+      data[offset + 2] = Math.round(primary[2] + (detail[2] - primary[2]) * mix);
+      data[offset + 3] = 255;
+    }
+  }
+
+  const texture = new T.DataTexture(data, size, size, T.RGBAFormat);
+  texture.name = `totp-${pattern}-surface-texture`;
+  texture.wrapS = T.RepeatWrapping;
+  texture.wrapT = T.RepeatWrapping;
+  texture.repeat.set(repeatX, repeatY);
+  texture.magFilter = T.LinearFilter;
+  texture.minFilter = T.LinearMipmapLinearFilter;
+  texture.generateMipmaps = true;
+  texture.colorSpace = T.SRGBColorSpace;
+  texture.anisotropy = 4;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function texturedMaterial(
+  name: string,
+  base: string,
+  accent: string,
+  pattern: StudioTexturePattern,
+  repeatX: number,
+  repeatY: number,
+  metalness = 0,
+  roughness = .72,
+) {
+  const material = new T.MeshStandardMaterial({
+    color: '#ffffff',
+    map: studioTexture(base, accent, pattern, repeatX, repeatY),
+    metalness,
+    roughness,
+  });
+  material.name = name;
+  return material;
+}
+
 function buildCameraBody(root: T.Group, x: number, z: number, yaw = 0, handheld = false) {
   const dark = matte('#151a20');
   const steel = metal('#5f6b76');
   const glass = new T.MeshStandardMaterial({ color: '#263645', metalness: .3, roughness: .2 });
+  const lensBlack = new T.MeshStandardMaterial({ color: '#05070a', metalness: .45, roughness: .18 });
+  const tally = new T.MeshStandardMaterial({ color: '#8f1021', emissive: '#ff2a42', emissiveIntensity: 2.1, roughness: .28 });
   const camera = new T.Group();
   camera.position.set(x, 0, z);
   camera.rotation.y = yaw;
@@ -84,7 +151,13 @@ function buildCameraBody(root: T.Group, x: number, z: number, yaw = 0, handheld 
   head.name = handheld ? 'totp-handheld-camera-head' : 'totp-pedestal-camera-head';
   box(head, [.58, .38, .66], [0, bodyY, 0], dark);
   cylinder(head, .12, .16, .38, [0, bodyY, -.48], glass, 18).rotation.x = Math.PI / 2;
+  cylinder(head, .145, .145, .055, [0, bodyY, -.69], lensBlack, 20).rotation.x = Math.PI / 2;
+  cylinder(head, .105, .105, .035, [0, bodyY, -.735], glass, 20).rotation.x = Math.PI / 2;
   box(head, [.34, .22, .05], [.34, bodyY + .08, .05], glass);
+  box(head, [.22, .12, .18], [-.35, bodyY + .1, .04], dark).name = 'totp-camera-viewfinder';
+  box(head, [.16, .045, .09], [0, bodyY + .245, -.18], tally).name = 'totp-camera-tally';
+  rod(head, [-.22, bodyY + .26, .08], [.22, bodyY + .26, .08], .026, steel).name = 'totp-camera-top-handle';
+  box(head, [.12, .08, .04], [-.2, bodyY - .19, .22], steel).name = 'totp-camera-connector-panel';
   camera.add(head);
   root.add(camera);
   return camera;
@@ -99,6 +172,7 @@ function buildOperator(root: T.Group, x: number, z: number, yaw = 0, name = 'tot
   const operator = new T.Group();
   operator.name = name;
   operator.userData.crew = true;
+  operator.userData.department = 'camera';
   operator.position.set(x, 0, z);
   operator.rotation.y = yaw;
 
@@ -121,6 +195,16 @@ function buildOperator(root: T.Group, x: number, z: number, yaw = 0, name = 'tot
   const hairCap = new T.Mesh(new T.SphereGeometry(.154, 10, 5, 0, Math.PI * 2, 0, Math.PI * .52), hair);
   hairCap.position.set(0, 1.66, -.01);
   operator.add(hairCap);
+
+  box(operator, [.34, .055, .23], [0, .86, .015], dark).name = 'totp-camera-crew-utility-belt';
+  box(operator, [.105, .17, .07], [.18, .91, .11], dark).name = 'totp-camera-crew-radio';
+  box(operator, [.038, .13, .055], [-.145, 1.59, 0], dark).name = 'totp-camera-crew-headset-left';
+  box(operator, [.038, .13, .055], [.145, 1.59, 0], dark).name = 'totp-camera-crew-headset-right';
+  const headband = new T.Mesh(new T.TorusGeometry(.15, .013, 6, 18, Math.PI), dark);
+  headband.position.set(0, 1.59, 0);
+  headband.name = 'totp-camera-crew-headset-band';
+  operator.add(headband);
+  rod(operator, [.145, 1.57, -.01], [.18, 1.49, -.12], .012, dark).name = 'totp-camera-crew-headset-mic';
 
   root.add(operator);
   return operator;
@@ -247,12 +331,18 @@ function buildStudioSetVariant(root: T.Group, p: VenueProfile) {
 }
 
 function buildPerformanceZones(root: T.Group, p: VenueProfile) {
-  const dark = matte('#12161c');
-  const black = matte('#080a0e');
+  const dark = texturedMaterial('totp-main-stage-deck-material', '#10151c', '#2c3540', 'rubber', 8, 5, .08, .68);
+  const black = texturedMaterial('totp-rock-stage-deck-material', '#080a0e', '#242a31', 'rubber', 7, 5, .12, .7);
   const steel = metal('#46505b');
-  const magenta = new T.MeshStandardMaterial({ color: '#9a164f', emissive: '#5a0a2b', emissiveIntensity: .7, roughness: .5 });
-  const blue = new T.MeshStandardMaterial({ color: '#233f69', emissive: '#142c51', emissiveIntensity: .55, roughness: .5 });
-  const amber = new T.MeshStandardMaterial({ color: '#7c3f1f', emissive: '#4b2411', emissiveIntensity: .45, roughness: .55 });
+  const magenta = texturedMaterial('totp-magenta-led-wall-material', '#76123d', '#c02972', 'grid', 9, 4, .05, .48);
+  magenta.emissive.set('#4d0826');
+  magenta.emissiveIntensity = .65;
+  const blue = texturedMaterial('totp-blue-led-wall-material', '#1b3559', '#376b9f', 'grid', 7, 4, .05, .5);
+  blue.emissive.set('#112a4b');
+  blue.emissiveIntensity = .58;
+  const amber = texturedMaterial('totp-amber-led-wall-material', '#6a351b', '#bd7041', 'grid', 7, 4, .04, .54);
+  amber.emissive.set('#40200f');
+  amber.emissiveIntensity = .5;
   const main = resolveTotpStudioStageGeometry('main_stage', p);
   const stageBGeometry = resolveTotpStudioStageGeometry('stage_b', p);
   const rockGeometry = resolveTotpStudioStageGeometry('rock_stage', p);
@@ -260,12 +350,14 @@ function buildPerformanceZones(root: T.Group, p: VenueProfile) {
 
   const mainDeck = box(root, [main.deckWidth, .12, main.deckDepth], [main.centerX, p.stageHeight - .06, main.centerZ], dark);
   mainDeck.name = 'totp-zone-main-stage';
+  box(root, [main.deckWidth, .12, .08], [main.centerX, p.stageHeight - .01, main.centerZ + main.deckDepth / 2 - .035], steel).name = 'totp-main-stage-front-trim';
   box(root, [p.stageWidth * .82, 2.4, .12], [0, p.stageHeight + 2.0, .65 - p.stageDepth - .32], magenta).name = 'totp-main-stage-backdrop';
   for (const x of [-p.stageWidth * .38, 0, p.stageWidth * .38]) rod(root, [x, p.stageHeight, .5 - p.stageDepth], [x, p.rigHeight - .7, .5 - p.stageDepth], .04, steel);
 
   const stageBRear = stageBGeometry.centerZ - stageBGeometry.deckDepth / 2;
   const stageB = box(root, [stageBGeometry.deckWidth, .22, stageBGeometry.deckDepth], [stageBGeometry.centerX, .11, stageBGeometry.centerZ], blue);
   stageB.name = 'totp-zone-stage-b';
+  box(root, [stageBGeometry.deckWidth, .09, .07], [stageBGeometry.centerX, .22, stageBGeometry.centerZ + stageBGeometry.deckDepth / 2 - .03], steel).name = 'totp-stage-b-front-trim';
   box(root, [4.4, 1.7, .12], [stageBGeometry.centerX, 1.45, stageBRear + .08], blue).name = 'totp-stage-b-backdrop';
   for (const x of [stageBGeometry.centerX - 1.85, stageBGeometry.centerX - .95, stageBGeometry.centerX - .05, stageBGeometry.centerX + .85, stageBGeometry.centerX + 1.75]) {
     const strip = box(root, [.055, 2.25, .07], [x, 1.65, stageBRear + .18], Math.abs(x - stageBGeometry.centerX) < .1 ? magenta : blue);
@@ -279,6 +371,7 @@ function buildPerformanceZones(root: T.Group, p: VenueProfile) {
   const rockRear = rockGeometry.centerZ - rockGeometry.deckDepth / 2;
   const rock = box(root, [rockGeometry.deckWidth, .28, rockGeometry.deckDepth], [rockGeometry.centerX, .14, rockGeometry.centerZ], black);
   rock.name = 'totp-zone-rock-stage';
+  box(root, [rockGeometry.deckWidth, .1, .075], [rockGeometry.centerX, .27, rockGeometry.centerZ + rockGeometry.deckDepth / 2 - .035], steel).name = 'totp-rock-stage-front-trim';
   for (const x of [rockGeometry.centerX - 1.9, rockGeometry.centerX, rockGeometry.centerX + 1.9]) rod(root, [x, .28, rockRear + .5], [x, 4.5, rockRear + .5], .055, steel);
   box(root, [5.8, 1.5, .14], [rockGeometry.centerX, 2.0, rockRear + .02], amber).name = 'totp-rock-stage-backdrop';
   for (const side of [-1, 1]) {
@@ -395,6 +488,129 @@ function buildAnniversarySpecialDecor(root: T.Group, p: VenueProfile) {
   root.add(group);
 }
 
+
+function buildSoftbox(root: T.Group, x: number, y: number, z: number, name: string) {
+  const group = new T.Group();
+  group.name = name;
+  group.position.set(x, y, z);
+  const frame = metal('#333b45');
+  const diffuser = new T.MeshStandardMaterial({ color: '#fff7df', emissive: '#fff1bc', emissiveIntensity: 1.75, roughness: .24 });
+  box(group, [1.5, .09, .92], [0, 0, 0], frame);
+  box(group, [1.28, .025, .72], [0, -.058, 0], diffuser).name = 'totp-softbox-diffuser';
+  rod(group, [0, .05, 0], [0, .35, 0], .022, frame);
+  root.add(group);
+}
+
+function buildRoadCase(root: T.Group, x: number, z: number, width: number, name: string) {
+  const group = new T.Group();
+  group.name = name;
+  group.position.set(x, 0, z);
+  const shell = texturedMaterial(`${name}-material`, '#181d23', '#3b444f', 'grid', 4, 3, .35, .55);
+  const edge = metal('#717b84');
+  box(group, [width, .72, .62], [0, .38, 0], shell);
+  box(group, [width + .035, .035, .65], [0, .73, 0], edge);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    box(group, [.055, .76, .055], [sx * width * .48, .38, sz * .29], edge);
+  }
+  for (const sx of [-1, 1]) cylinder(group, .055, .055, .045, [sx * width * .32, .035, .22], edge, 10).rotation.z = Math.PI / 2;
+  root.add(group);
+}
+
+function buildStudioInfrastructure(root: T.Group, p: VenueProfile) {
+  const group = new T.Group();
+  group.name = 'totp-studio-infrastructure';
+  const truss = metal('#56616b');
+  const cable = matte('#090b0e');
+  const tape = new T.MeshStandardMaterial({ color: '#d2b24c', emissive: '#4a3a09', emissiveIntensity: .18, roughness: .7 });
+  const productionFloor = texturedMaterial('totp-production-floor-material', '#20252b', '#313942', 'rubber', 12, 8, .04, .78);
+
+  const floor = box(group, [p.roomWidth * .84, .025, 11.6], [0, .012, 4.25], productionFloor);
+  floor.name = 'totp-studio-floor-texture';
+
+  const gridY = p.rigHeight - .28;
+  for (const x of [-8.6, -2.9, 2.9, 8.6]) rod(group, [x, gridY, -5.2], [x, gridY, 9.1], .052, truss);
+  for (const z of [-4.7, -.6, 3.5, 7.8]) rod(group, [-9.5, gridY, z], [9.5, gridY, z], .052, truss);
+  group.children[group.children.length - 1].name = 'totp-studio-lighting-grid';
+
+  buildSoftbox(group, -5.4, gridY - .18, -1.1, 'totp-softbox-key-left');
+  buildSoftbox(group, 5.3, gridY - .2, -.4, 'totp-softbox-key-right');
+  buildSoftbox(group, -2.2, gridY - .15, 5.8, 'totp-softbox-floor-left');
+  buildSoftbox(group, 4.5, gridY - .16, 5.2, 'totp-softbox-floor-right');
+
+  for (const x of [-5.8, 0, 5.8]) {
+    const lamp = new T.Group();
+    lamp.position.set(x, gridY - .55, 2.2 + Math.abs(x) * .12);
+    lamp.name = 'totp-fresnel-lamp';
+    cylinder(lamp, .19, .26, .4, [0, 0, 0], truss, 16).rotation.x = Math.PI / 2;
+    cylinder(lamp, .14, .18, .05, [0, 0, -.23], new T.MeshStandardMaterial({ color: '#fff0c6', emissive: '#ffc75b', emissiveIntensity: 1.45, roughness: .22 }), 16).rotation.x = Math.PI / 2;
+    for (const side of [-1, 1]) box(lamp, [.18, .28, .025], [side * .19, 0, -.25], truss).rotation.y = side * .3;
+    group.add(lamp);
+  }
+
+  for (const z of [2.0, 4.9, 7.5]) {
+    const channel = box(group, [p.roomWidth * .72, .035, .15], [0, .035, z], cable);
+    channel.name = 'totp-floor-cable-ramp';
+  }
+  for (const x of [-6.3, -2.8, 2.8, 6.3]) {
+    box(group, [.55, .018, .055], [x, .034, 1.35], tape).name = 'totp-camera-floor-mark';
+    box(group, [.055, .018, .55], [x, .034, 1.35], tape).name = 'totp-camera-floor-mark';
+  }
+
+  const railsX = -2.85;
+  for (const x of [railsX - .31, railsX + .31]) rod(group, [x, .07, 1.25], [x, .07, 4.55], .028, truss);
+  for (let z = 1.35; z <= 4.45; z += .45) box(group, [.82, .045, .065], [railsX, .045, z], truss);
+  box(group, [.92, .12, .72], [railsX, .13, 2.0], metal('#3e4852')).name = 'totp-dolly-track';
+
+  buildRoadCase(group, -9.1, 6.6, 1.25, 'totp-road-case-left');
+  buildRoadCase(group, 9.0, 6.2, 1.1, 'totp-road-case-right');
+  buildRoadCase(group, -9.2, 8.0, .95, 'totp-road-case-lighting');
+
+  const reel = new T.Group();
+  reel.name = 'totp-cable-reel';
+  reel.position.set(9.1, 7.5, 0);
+  cylinder(reel, .31, .31, .18, [0, .34, 0], metal('#4a535d'), 20).rotation.z = Math.PI / 2;
+  cylinder(reel, .18, .18, .24, [0, .34, 0], cable, 18).rotation.z = Math.PI / 2;
+  rod(reel, [0, .12, 0], [0, .68, 0], .025, metal('#4a535d'));
+  group.add(reel);
+
+  const onAir = new T.MeshStandardMaterial({ color: '#7f101e', emissive: '#ff253e', emissiveIntensity: 1.85, roughness: .32 });
+  box(group, [1.55, .42, .08], [-8.6, 4.55, -5.65], onAir).name = 'totp-on-air-lightbox';
+
+  root.add(group);
+}
+
+function buildBoomRig(root: T.Group, x: number, z: number) {
+  const boom = new T.Group();
+  boom.name = 'totp-boom-rig';
+  const pole = metal('#3f4852');
+  rod(boom, [x, 1.45, z], [x + 3.8, 3.25, z - 1.9], .028, pole);
+  const mic = cylinder(boom, .045, .055, .32, [x + 3.84, 3.27, z - 1.95], matte('#101317'), 12);
+  mic.rotation.x = Math.PI / 2.45;
+  mic.name = 'totp-boom-microphone';
+  root.add(boom);
+}
+
+function buildAdditionalCameraDepartment(root: T.Group, p: VenueProfile) {
+  const shoulderLeft = buildCameraBody(root, -2.85, 1.95, -.08, true);
+  shoulderLeft.name = 'totp-camera-shoulder-left';
+  buildOperator(root, -3.15, 2.28, -.08, 'totp-operator-shoulder-left');
+
+  const stageBCamera = buildCameraBody(root, 8.45, 4.25, .42, true);
+  stageBCamera.name = 'totp-camera-stage-b';
+  buildOperator(root, 8.78, 4.62, .42, 'totp-operator-stage-b');
+
+  buildOperator(root, p.crowdWidth * .58 + .58, 7.72, -.48, 'totp-operator-jib');
+  buildOperator(root, -p.crowdWidth * .42 - 1.05, 5.18, -.12, 'totp-camera-assistant-left');
+
+  const floorManager = buildOperator(root, -8.35, 2.0, .4, 'totp-floor-manager');
+  floorManager.userData.department = 'floor';
+  box(floorManager, [.28, .36, .025], [.33, 1.03, -.18], matte('#d9d9d3')).name = 'totp-floor-manager-clipboard';
+
+  const boomOperator = buildOperator(root, -8.55, -.15, .35, 'totp-boom-operator');
+  boomOperator.userData.department = 'sound';
+  buildBoomRig(root, -8.55, -.15);
+}
+
 function buildSpecialEditionDecor(root: T.Group, p: VenueProfile) {
   if (p.showVariant === 'christmas') buildChristmasSpecialDecor(root, p);
   if (p.showVariant === 'anniversary') buildAnniversarySpecialDecor(root, p);
@@ -406,8 +622,9 @@ export function buildTvStudioProduction(root: T.Group, p: VenueProfile) {
   const dark = matte('#11151c');
   const steel = metal('#4f5965');
   const accent = new T.MeshStandardMaterial({ color: '#b41945', emissive: '#7a0d2d', emissiveIntensity: .55, roughness: .55 });
-  const floor = matte('#242830');
+  const floor = texturedMaterial('totp-presenter-rostrum-material', '#20262d', '#3b4550', 'brushed', 5, 4, .08, .65);
 
+  buildStudioInfrastructure(root, p);
   buildPerformanceZones(root, p);
   buildStudioSetVariant(root, p);
   buildSpecialEditionDecor(root, p);
@@ -446,6 +663,8 @@ export function buildTvStudioProduction(root: T.Group, p: VenueProfile) {
   cylinder(head, .11, .14, .32, [0, 0, -.39], matte('#203447'), 16).rotation.x = Math.PI / 2;
   jib.add(head);
   root.add(jib);
+
+  buildAdditionalCameraDepartment(root, p);
 
   for (const x of [-p.stageWidth * .46, 0, p.stageWidth * .46]) {
     const tower = new T.Group();
