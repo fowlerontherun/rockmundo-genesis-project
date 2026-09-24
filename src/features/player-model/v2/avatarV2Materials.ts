@@ -138,8 +138,8 @@ export function tuneAvatarV2Materials(
     mouth: 0,
     corneaPromoted: 0,
   };
-  const skinCache = createAvatarSkinTextureCache(appearance, quality);
-  const hairCache = createAvatarHairTextureCache(quality);
+  let skinCache: ReturnType<typeof createAvatarSkinTextureCache> | undefined;
+  let hairCache: ReturnType<typeof createAvatarHairTextureCache> | undefined;
 
   root.traverse(node => {
     if (!(node instanceof T.Mesh)) return;
@@ -160,6 +160,7 @@ export function tuneAvatarV2Materials(
       if (role === 'skin') {
         material.color.set(appearance.body.skin);
         material.roughness = Math.min(.72, material.roughness || .72);
+        skinCache ??= createAvatarSkinTextureCache(appearance, quality);
         applyAvatarSkinQuality(material, appearance, quality, skinCache);
         if (material instanceof T.MeshPhysicalMaterial) {
           material.sheen = quality === 'cinematic' ? .14 : quality === 'ultra' ? .1 : .06;
@@ -169,6 +170,7 @@ export function tuneAvatarV2Materials(
         report.skin += 1;
       } else if (role === 'hair') {
         material.color.set(appearance.head.hair);
+        hairCache ??= createAvatarHairTextureCache(quality);
         applyAvatarHairQuality(material, quality, hairCache);
         report.hair += 1;
       } else if (role === 'iris' || role === 'sclera' || role === 'cornea') {
