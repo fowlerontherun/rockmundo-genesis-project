@@ -1,6 +1,7 @@
 import * as T from 'three';
 import type { Musician } from '@/features/gig-demo-3d/performers';
 import { handContactPoint } from '@/features/gig-demo-3d/instrumentHandPose';
+import { AVATAR_V2_TWIST_RUNTIME_BONES } from './avatarV2TwistBones';
 
 export type AvatarV2PerformancePreset =
   | 'backstage'
@@ -22,7 +23,9 @@ export interface AvatarV2PerformanceQaReport {
   maxDrumstickError: number | null;
   maxFingerContactError: number | null;
   maxEyeMotion: number | null;
+  maxTwistMotion: number | null;
   eyeBones: number;
+  twistBones: number;
   drumsticks: number;
   guitarPicks: number;
   issues: AvatarV2PerformanceQaIssue[];
@@ -34,6 +37,8 @@ const STICK_LIMIT = .14;
 const FINGER_CONTACT_LIMIT = .20;
 const EYE_MOTION_MIN = .004;
 const EYE_MOTION_MAX = .35;
+const TWIST_MOTION_MIN = .004;
+const TWIST_MOTION_MAX = .90;
 
 const finiteWorldMatrix = (object: T.Object3D) =>
   object.matrixWorld.elements.every(Number.isFinite);
@@ -53,6 +58,12 @@ export function inspectAvatarV2Performance(
   const eyeBaseline = new Map<T.Bone, T.Quaternion>(
     eyes.map(eye => [eye, eye.quaternion.clone()] as const),
   );
+  const twists = AVATAR_V2_TWIST_RUNTIME_BONES
+    .map(name => actor.bones.get(name))
+    .filter((bone): bone is T.Bone => !!bone);
+  const twistBaseline = new Map<T.Bone, T.Quaternion>(
+    twists.map(bone => [bone, bone.quaternion.clone()] as const),
+  );
   const rig = actor.instrumentRig;
 
   if (!rig) {
@@ -64,7 +75,9 @@ export function inspectAvatarV2Performance(
       maxDrumstickError: null,
       maxFingerContactError: null,
       maxEyeMotion: null,
+      maxTwistMotion: null,
       eyeBones: eyes.length,
+      twistBones: twists.length,
       drumsticks: 0,
       guitarPicks: 0,
       issues: [{ code: 'missing-instrument-rig', message: 'The performance preset did not create an instrument rig.' }],
@@ -81,6 +94,7 @@ export function inspectAvatarV2Performance(
   let maxFinger = 0;
   let fingerSamples = 0;
   let maxEyeMotion = 0;
+  let maxTwistMotion = 0;
   const sticks = preset === 'rock_drums'
     ? rig.tools.filter(tool => /^playing-stick(?:-|$)/.test(tool.name))
     : [];
@@ -106,6 +120,14 @@ export function inspectAvatarV2Performance(
       const motion = baseline.angleTo(eye.quaternion);
       if (Number.isFinite(motion)) maxEyeMotion = Math.max(maxEyeMotion, motion);
       else issues.push({ code: 'invalid-eye-gaze', message: 'An eye bone produced a non-finite gaze rotation.' });
+    }
+
+    for (const twist of twists) {
+      const baseline = twistBaseline.get(twist);
+      if (!baseline) continue;
+      const motion = baseline.angleTo(twist.quaternion);
+      if (Number.isFinite(motion)) maxTwistMotion = Math.max(maxTwistMotion, motion);
+      else issues.push({ code: 'invalid-twist-deformation', message: twist.name + ' produced a non-finite twist rotation.' });
     }
 
     if (needsLeft && left) {
@@ -177,6 +199,26 @@ export function inspectAvatarV2Performance(
     });
   }
 
+  if (twists.length < AVATAR_V2_TWIST_RUNTIME_BONES.length) {
+    issues.push({
+      code: 'missing-twist-bones',
+      message: 'Close-up performance QA requires all ' + AVATAR_V2_TWIST_RUNTIME_BONES.length + ' limb twist helpers.',
+    });
+  } else {
+    const instrumentTwistExpected = preset === 'electric_guitar' || preset === 'bass_guitar' || preset === 'rock_drums';
+    if (instrumentTwistExpected && maxTwistMotion < TWIST_MOTION_MIN) {
+      issues.push({
+        code: 'twist-deformation-static',
+        message: 'Twist helper bones were present but did not produce visible axial deformation across the sampled instrument performance.',
+      });
+    } else if (maxTwistMotion > TWIST_MOTION_MAX) {
+      issues.push({
+        code: 'twist-deformation-range',
+        message: 'Twist helper rotation reached ' + T.MathUtils.radToDeg(maxTwistMotion).toFixed(1) + '°; target is ≤ ' + T.MathUtils.radToDeg(TWIST_MOTION_MAX).toFixed(0) + '°.',
+      });
+    }
+  }
+
   if (needsLeft && left && maxLeft > HAND_LIMIT) {
     issues.push({
       code: 'left-grip-clearance',
@@ -222,7 +264,9 @@ export function inspectAvatarV2Performance(
     maxDrumstickError: preset === 'rock_drums' && sticks.length >= 2 && left && right ? maxStick : null,
     maxFingerContactError: fingerSamples ? maxFinger : null,
     maxEyeMotion: eyes.length ? maxEyeMotion : null,
+    maxTwistMotion: twists.length ? maxTwistMotion : null,
     eyeBones: eyes.length,
+    twistBones: twists.length,
     drumsticks: sticks.length,
     guitarPicks,
     issues: uniqueIssues,
