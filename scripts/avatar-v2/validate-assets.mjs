@@ -49,7 +49,14 @@ const closeupBoneAliases = {
   rightLittle: ['rightLittleProximal','rightHandPinky1','pinky_01_r','mixamorigRightHandPinky1'],
 };
 
-const recommendedExpressions = ['visemeAA','visemeEE','visemeIH','visemeOH','visemeOU','mouthFunnel','mouthPucker'];
+const recommendedExpressions = [
+  'visemeAA','visemeEE','visemeIH','visemeOH','visemeOU',
+  'mouthFunnel','mouthPucker',
+  'eyeSquintLeft','eyeSquintRight',
+  'browInnerUp','browDownLeft','browDownRight',
+  'cheekSquintLeft','cheekSquintRight',
+  'mouthStretchLeft','mouthStretchRight',
+];
 const customizationMorphs = ['bodySlim','bodyBroad','faceOval','faceAngular','faceSoft','faceWide'];
 const requiredBodyRegions = ['torso','upper-arms','lower-arms','hands','hips','upper-legs','lower-legs','feet'];
 
