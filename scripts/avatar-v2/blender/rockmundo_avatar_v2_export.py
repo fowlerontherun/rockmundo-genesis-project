@@ -139,9 +139,20 @@ BODY_REGIONS = [
 MATERIAL_ROLES = {
     "skin": re.compile(r"rmv2[_-]?skin|(^|[_-])(skin|body|face)($|[_-])", re.I),
     "eyes": re.compile(r"rmv2[_-]?eyes|(^|[_-])(eye|eyes|iris|sclera|cornea)($|[_-])", re.I),
+    "iris": re.compile(r"rmv2[_-]?iris|(^|[_-])iris($|[_-])", re.I),
+    "sclera": re.compile(r"rmv2[_-]?sclera|(^|[_-])sclera($|[_-])", re.I),
     "cornea": re.compile(r"rmv2[_-]?cornea|cornea|eye[_-]?(shell|surface)|ocular[_-]?shell", re.I),
     "teeth": re.compile(r"rmv2[_-]?teeth|teeth", re.I),
     "tongue": re.compile(r"rmv2[_-]?tongue|tongue", re.I),
+    "mouthInterior": re.compile(r"rmv2[_-]?mouth[_-]?(interior|cavity)|oral[_-]?cavity|inner[_-]?mouth", re.I),
+}
+
+SURFACE_NODE_PATTERNS = {
+    "iris": re.compile(r"rmv2[_-]?(iris|eye[_-]?iris)|(^|[_-])iris($|[_-])", re.I),
+    "sclera": re.compile(r"rmv2[_-]?(sclera|eye[_-]?white)|(^|[_-])sclera($|[_-])", re.I),
+    "cornea": re.compile(r"rmv2[_-]?(cornea|eye[_-]?(shell|surface))|ocular[_-]?shell", re.I),
+    "teeth": re.compile(r"rmv2[_-]?(teeth|tooth)|(^|[_-])teeth($|[_-])", re.I),
+    "tongue": re.compile(r"rmv2[_-]?tongue|(^|[_-])tongue($|[_-])", re.I),
     "mouthInterior": re.compile(r"rmv2[_-]?mouth[_-]?(interior|cavity)|oral[_-]?cavity|inner[_-]?mouth", re.I),
 }
 
@@ -290,6 +301,21 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
     bone_names = [bone.name for bone in rigs[0].data.bones] if len(rigs) == 1 else []
     morphs = shape_key_names(meshes)
     materials = material_names(meshes)
+    dedicated_surface_roles = set()
+    for obj in meshes:
+        used_material_indices = {polygon.material_index for polygon in obj.data.polygons}
+        used_materials = [
+            obj.material_slots[index].material
+            for index in used_material_indices
+            if index < len(obj.material_slots) and obj.material_slots[index].material
+        ]
+        explicit_role = clean(str(obj.get("rockmundoSurfaceRole", "")))
+        for role, pattern in SURFACE_NODE_PATTERNS.items():
+            named_for_role = explicit_role == clean(role) or pattern.search(obj.name)
+            if named_for_role and len(obj.data.vertices) > 0 and any(
+                MATERIAL_ROLES[role].search(material.name) for material in used_materials
+            ):
+                dedicated_surface_roles.add(role)
     budget = BUDGETS[args.lod]
 
     if triangles > budget["triangles"]:
@@ -501,6 +527,12 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
             if not any(MATERIAL_ROLES[role].search(name) for name in materials):
                 errors.append(f"Missing named close-up material role: {role}.")
     if args.lod == 0:
+        for role in ("iris", "sclera", "cornea", "teeth", "tongue", "mouthInterior"):
+            if role not in dedicated_surface_roles:
+                errors.append(
+                    f"LOD0 needs dedicated {role} geometry using its matching material role; "
+                    "an extra material slot on another mesh is not sufficient."
+                )
         for role in ("cornea", "teeth", "tongue", "mouthInterior"):
             if not any(MATERIAL_ROLES[role].search(name) for name in materials):
                 errors.append(f"LOD0 needs separate {role} geometry/material.")
