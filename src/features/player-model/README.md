@@ -241,8 +241,13 @@ RockMundo-authored humanoid mesh system is developed. The new foundation lives i
 `src/features/player-model/v2` and is deliberately fail-closed.
 
 Avatar V2 defines semantic humanoid bones, facial-expression requirements, LOD
-budgets and a GLB import contract. `npm run validate:avatar-v2` validates candidate
-GLBs before they can be marked validated. Body-worn V2 garments must carry the same
+budgets and a GLB import contract. The close-up expression controller now blends
+adjacent singing visemes and can drive jaw, mouth stretch/funnel/pucker, cheek
+squint, eye squint and brow tension from the deterministic performance clock.
+This gives gigs and Top of the Pops replay-safe facial motion without depending on
+random animation; later audio-timed phonemes can feed the same morph interface.
+`npm run validate:avatar-v2` validates candidate GLBs before they can be marked
+validated. Body-worn V2 garments must carry the same
 body-width and muscle morph targets as the base avatar; the selected weights are
 copied onto each garment after skeleton rebinding. A shaped body paired with a
 garment missing its required fit morph fails closed to V1 instead of rendering

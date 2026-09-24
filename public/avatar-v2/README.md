@@ -64,10 +64,15 @@ LOD0/LOD1 require morph targets equivalent to:
 - jawOpen
 - mouthSmile
 
-Additional expressions are encouraged: frown, brow up/down and eye look directions.
 LOD0/LOD1 should include mouth funnel/pucker plus AA, EE, IH, OH and OU visemes;
-the stage renderer already drives those targets during singing. Teeth and tongue
-must be separate at LOD0 so close-up vocals never expose a hollow mouth.
+the stage renderer blends neighbouring visemes rather than snapping between them.
+For expressive close-ups, also author `eyeSquintLeft/Right`, `browInnerUp`,
+`browDownLeft/Right`, `cheekSquintLeft/Right` and
+`mouthStretchLeft/Right`. These are driven from vocal opening and performance
+energy so strong choruses engage the cheeks/eyes/brows as well as the jaw while
+quieter passages remain subtle. Additional frown and eye-look targets are still
+encouraged. Teeth and tongue must be separate at LOD0 so close-up vocals never
+expose a hollow mouth.
 
 LOD0/LOD1 also require shoulder, toe-base and all five proximal finger bones on
 both hands. This is deliberate: the new mesh system must improve guitar, bass,
