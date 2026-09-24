@@ -191,8 +191,12 @@ AA→EE→IH→OH→OU loop. It deterministically varies vowel order, emphasis, 
 rounding/stretch and short consonant-like closures, so seeking or replaying the
 same timestamp reconstructs the same face while close-ups read less mechanically.
 Actual broadcast/gig phoneme timing can later feed the same expression controller
-when a canonical audio-analysis track is available. Additional mouth-frown targets
-can still be layered on after the required set.
+when a canonical audio-analysis track is available. Admin performance QA now also
+samples the live vocalist path and verifies visible jaw motion, at least three
+distinct active visemes, lip funnel/pucker/stretch contribution and brow/cheek
+activity. This catches assets whose shape keys pass static validation but fail to
+participate in the real performance controller. Additional mouth-frown targets can
+still be layered on after the required set.
 
 ## Clothing
 
