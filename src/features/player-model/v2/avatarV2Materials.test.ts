@@ -18,6 +18,7 @@ describe('Avatar V2 material quality', () => {
     expect(avatarV2MaterialRole('RMV2_Skin')).toBe('skin');
     expect(avatarV2MaterialRole('RMV2_Iris')).toBe('iris');
     expect(avatarV2MaterialRole('RMV2_Cornea')).toBe('cornea');
+    expect(avatarV2MaterialRole('RMV2_Wetline')).toBe('wetline');
     expect(avatarV2MaterialRole('RMV2_Teeth')).toBe('teeth');
     expect(avatarV2MaterialRole('RMV2_Tongue')).toBe('tongue');
     expect(avatarV2MaterialRole('RMV2_MouthInterior')).toBe('mouthInterior');
@@ -119,6 +120,7 @@ describe('Avatar V2 material quality', () => {
       material('RMV2_Iris'),
       material('RMV2_Sclera'),
       material('RMV2_Cornea'),
+      material('RMV2_Wetline'),
       material('RMV2_Teeth'),
       material('RMV2_Tongue'),
       material('RMV2_MouthInterior'),
@@ -135,9 +137,10 @@ describe('Avatar V2 material quality', () => {
     const iris = tuned[1] as T.MeshStandardMaterial;
     const sclera = tuned[2] as T.MeshStandardMaterial;
     const cornea = tuned[3] as T.MeshPhysicalMaterial;
-    const teeth = tuned[4] as T.MeshStandardMaterial;
-    const tongue = tuned[5] as T.MeshStandardMaterial;
-    const mouth = tuned[6] as T.MeshStandardMaterial;
+    const wetline = tuned[4] as T.MeshPhysicalMaterial;
+    const teeth = tuned[5] as T.MeshStandardMaterial;
+    const tongue = tuned[6] as T.MeshStandardMaterial;
+    const mouth = tuned[7] as T.MeshStandardMaterial;
 
     expect(skin).toBeInstanceOf(T.MeshPhysicalMaterial);
     expect(skin.normalMap).toBeInstanceOf(T.Texture);
@@ -148,6 +151,11 @@ describe('Avatar V2 material quality', () => {
     expect(cornea).toBeInstanceOf(T.MeshPhysicalMaterial);
     expect(cornea.clearcoat).toBe(1);
     expect(cornea.ior).toBeCloseTo(1.376);
+    expect(wetline).toBeInstanceOf(T.MeshPhysicalMaterial);
+    expect(wetline.transparent).toBe(true);
+    expect(wetline.opacity).toBeGreaterThan(.4);
+    expect(wetline.ior).toBeCloseTo(1.336);
+    expect(wetline.depthWrite).toBe(false);
     expect(teeth).toBeInstanceOf(T.MeshPhysicalMaterial);
     expect(tongue).toBeInstanceOf(T.MeshPhysicalMaterial);
     expect(teeth.color.getHexString()).toBe('f3eadc');
@@ -156,7 +164,7 @@ describe('Avatar V2 material quality', () => {
     expect((tongue as T.MeshPhysicalMaterial).clearcoat).toBeGreaterThan(.1);
     expect(mouth.color.getHexString()).toBe('35171c');
     expect(report.skin).toBe(1);
-    expect(report.eyes).toBe(3);
+    expect(report.eyes).toBe(4);
     expect(report.mouth).toBe(3);
     expect(report.corneaPromoted).toBe(1);
   });
