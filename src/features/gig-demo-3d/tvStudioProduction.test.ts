@@ -18,12 +18,20 @@ describe('Top of the Pops TV studio production', () => {
     expect(root.getObjectByName('totp-camera-handheld')).toBeTruthy();
     expect(root.getObjectByName('totp-camera-jib')).toBeTruthy();
     expect(root.getObjectByName('totp-camera-jib-head')).toBeTruthy();
+    expect(root.getObjectByName('totp-camera-shoulder-left')).toBeTruthy();
+    expect(root.getObjectByName('totp-camera-stage-b')).toBeTruthy();
     expect(root.getObjectByName('totp-camera-pedestal-left')?.getObjectByName('totp-pedestal-camera-head')).toBeTruthy();
     expect(root.getObjectByName('totp-camera-pedestal-right')?.getObjectByName('totp-pedestal-camera-head')).toBeTruthy();
     expect(root.getObjectByName('totp-camera-handheld')?.getObjectByName('totp-handheld-camera-head')).toBeTruthy();
     expect(root.getObjectByName('totp-operator-left')).toBeTruthy();
     expect(root.getObjectByName('totp-operator-right')).toBeTruthy();
     expect(root.getObjectByName('totp-operator-handheld')).toBeTruthy();
+    expect(root.getObjectByName('totp-operator-shoulder-left')).toBeTruthy();
+    expect(root.getObjectByName('totp-operator-stage-b')).toBeTruthy();
+    expect(root.getObjectByName('totp-operator-jib')).toBeTruthy();
+    expect(root.getObjectByName('totp-camera-assistant-left')).toBeTruthy();
+    expect(root.getObjectByName('totp-floor-manager')).toBeTruthy();
+    expect(root.getObjectByName('totp-boom-operator')).toBeTruthy();
     expect(root.getObjectByName('totp-operator-left')?.getObjectByName('totp-camera-operator-head')).toBeTruthy();
     expect(root.getObjectByName('totp-operator-right')?.getObjectByName('totp-camera-operator-head')).toBeTruthy();
     expect(root.getObjectByName('totp-operator-handheld')?.getObjectByName('totp-camera-operator-head')).toBeTruthy();
@@ -34,6 +42,17 @@ describe('Top of the Pops TV studio production', () => {
     expect(root.getObjectByName('totp-stage-b-ring')).toBeTruthy();
     expect(root.getObjectByName('totp-rock-amp-stack')).toBeTruthy();
     expect(root.getObjectByName('totp-studio-floor-ring-outer')).toBeTruthy();
+    expect(root.getObjectByName('totp-studio-infrastructure')).toBeTruthy();
+    expect(root.getObjectByName('totp-studio-floor-texture')).toBeTruthy();
+    expect(root.getObjectByName('totp-softbox-key-left')).toBeTruthy();
+    expect(root.getObjectByName('totp-dolly-track')).toBeTruthy();
+    expect(root.getObjectByName('totp-road-case-left')).toBeTruthy();
+    expect(root.getObjectByName('totp-cable-reel')).toBeTruthy();
+    expect(root.getObjectByName('totp-boom-microphone')).toBeTruthy();
+    expect(root.getObjectByName('totp-on-air-lightbox')).toBeTruthy();
+
+    const mainStage = root.getObjectByName('totp-zone-main-stage') as T.Mesh;
+    expect((mainStage.material as T.MeshStandardMaterial).map).toBeInstanceOf(T.DataTexture);
     expect(root.getObjectByName('totp-special-christmas')).toBeFalsy();
     expect(root.getObjectByName('totp-special-anniversary')).toBeFalsy();
 

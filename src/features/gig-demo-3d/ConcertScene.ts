@@ -562,6 +562,8 @@ export class ConcertScene {
     panHead('totp-camera-pedestal-left', 0);
     panHead('totp-camera-pedestal-right', 1.8);
     panHead('totp-camera-handheld', 3.3);
+    panHead('totp-camera-shoulder-left', 4.6);
+    panHead('totp-camera-stage-b', 5.7);
 
     const handheld = this.scene.getObjectByName('totp-camera-handheld');
     if (handheld) {
@@ -583,6 +585,9 @@ export class ConcertScene {
       this.scene.getObjectByName('totp-operator-left'),
       this.scene.getObjectByName('totp-operator-right'),
       this.scene.getObjectByName('totp-operator-handheld'),
+      this.scene.getObjectByName('totp-operator-shoulder-left'),
+      this.scene.getObjectByName('totp-operator-stage-b'),
+      this.scene.getObjectByName('totp-operator-jib'),
     ].filter(Boolean) as T.Object3D[];
 
     operators.forEach((operator, index) => {
