@@ -38,6 +38,12 @@ describe('built venue architecture', () => {
       expect(dressing).toBeDefined();
       expect((dressing?.userData.identityFeatures ?? []).length).toBeGreaterThanOrEqual(4);
     }
+    if (p.kind !== 'tv_studio') {
+      const detail = root.getObjectByName(`venue-microdetail-${p.kind}`);
+      expect(detail).toBeDefined();
+      expect(detail?.userData.variationSignature).toBeTruthy();
+      expect((detail?.userData.identityFeatures ?? []).length).toBeGreaterThanOrEqual(7);
+    }
     expect(new T.Box3().setFromObject(root).max.y).toBeLessThanOrEqual(201);
     disposeModel(scene);
   });

@@ -8,6 +8,7 @@ import { buildVenueSurfaceMaterials } from './venueSurfaceMaterials';
 import { buildVenueDressing } from './venueDressing';
 import { buildVenueDetailDressing } from './venueDetailDressing';
 import { buildLargeVenueDressing } from './largeVenueDressing';
+import { buildVenueMicroDetail } from './venueMicroDetail';
 
 /** Architecture surrounds the human-scale performance area. Detail is batched
  * by material; distant spectators use bounded instance batches for standing and seated people. */
@@ -152,6 +153,7 @@ export function buildVenueEnvironment(scene: T.Scene, p: VenueProfile, seed: num
   buildVenueDressing(root,p,seed,surfaces);
   buildVenueDetailDressing(root,p,seed,surfaces);
   buildLargeVenueDressing(root,p,surfaces);
+  buildVenueMicroDetail(root,p,seed,surfaces);
   batchStaticMeshes(root);
   buildVenueAudience(root,p,seed,places);
   return root;
