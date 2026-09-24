@@ -99,9 +99,9 @@ The eye bones own gaze; eye-look shape keys are not required. Blink, squint and
 cheek morphs remain independent so the eyelids can animate naturally around a
 moving eyeball.
 
-The initial hard gate requires blink left/right, jaw open and smile. The next
-authoring pass should add phoneme/viseme targets so singer mouth motion can be
-driven by broadcast/gig audio rather than only jaw rotation.
+The next authoring pass should continue expanding phoneme/viseme targets so singer
+mouth motion can later be driven by broadcast/gig audio rather than only the
+deterministic performance clock.
 
 Suggested follow-up targets:
 
@@ -110,7 +110,6 @@ Suggested follow-up targets:
 - mouthFunnel
 - browInnerUp
 - browDownLeft / browDownRight
-- eyeLookUp/Down/In/Out
 - AA / EE / IH / OH / OU visemes
 
 ## Clothing
