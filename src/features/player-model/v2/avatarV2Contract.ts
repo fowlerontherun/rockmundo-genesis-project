@@ -457,17 +457,81 @@ function hasMaterialRole(names: string[], role: keyof typeof MATERIAL_ROLE_PATTE
   return names.some(name => MATERIAL_ROLE_PATTERNS[role].test(name));
 }
 
-function hasDedicatedSurfaceRole(scene: T.Object3D, role: AvatarV2SurfaceRole) {
-  let found = false;
+function dedicatedSurfaceNodes(scene: T.Object3D, role: AvatarV2SurfaceRole) {
+  const result: T.Mesh[] = [];
   scene.traverse(node => {
-    if (found || !(node instanceof T.Mesh)) return;
+    if (!(node instanceof T.Mesh)) return;
     const explicit = String(node.userData?.rockmundoSurfaceRole ?? '');
     const namedForRole = clean(explicit) === clean(role) || SURFACE_NODE_PATTERNS[role].test(node.name);
     if (!namedForRole || !(node.geometry.getAttribute('position')?.count > 0)) return;
     const materialNames = avatarV2UsedMaterials(node).map(material => material.name);
-    if (hasMaterialRole(materialNames, role)) found = true;
+    if (hasMaterialRole(materialNames, role)) result.push(node);
   });
-  return found;
+  return result;
+}
+
+function hasDedicatedSurfaceRole(scene: T.Object3D, role: AvatarV2SurfaceRole) {
+  return dedicatedSurfaceNodes(scene, role).length > 0;
+}
+
+const SURFACE_BINDING_ALIASES = {
+  'Head': ['Head', 'head', ...AVATAR_V2_BONE_ALIASES.head],
+  'Jaw': AVATAR_V2_CLOSEUP_BONE_ALIASES.jaw,
+  'Eye.L': AVATAR_V2_CLOSEUP_BONE_ALIASES.leftEye,
+  'Eye.R': AVATAR_V2_CLOSEUP_BONE_ALIASES.rightEye,
+} as const;
+
+type AvatarV2SurfaceBinding = keyof typeof SURFACE_BINDING_ALIASES;
+
+const REQUIRED_SURFACE_BINDINGS: Record<AvatarV2SurfaceRole, readonly AvatarV2SurfaceBinding[]> = {
+  iris: ['Eye.L', 'Eye.R'],
+  sclera: ['Eye.L', 'Eye.R'],
+  cornea: ['Eye.L', 'Eye.R'],
+  teeth: ['Head', 'Jaw'],
+  tongue: ['Jaw'],
+  mouthInterior: ['Head'],
+};
+
+function declaredSurfaceBinding(node: T.Object3D): AvatarV2SurfaceBinding | null {
+  const declared = clean(String(node.userData?.rockmundoBoneBinding ?? ''));
+  for (const binding of Object.keys(SURFACE_BINDING_ALIASES) as AvatarV2SurfaceBinding[]) {
+    if ([binding, ...SURFACE_BINDING_ALIASES[binding]].some(alias => clean(alias) === declared)) return binding;
+  }
+  return null;
+}
+
+function meshHasBoneInfluence(mesh: T.Mesh, aliases: readonly string[]) {
+  const wanted = new Set(aliases.map(clean));
+  let parent: T.Object3D | null = mesh.parent;
+  while (parent) {
+    if (parent instanceof T.Bone && wanted.has(clean(parent.name))) return true;
+    parent = parent.parent;
+  }
+
+  if (!(mesh instanceof T.SkinnedMesh)) return false;
+  const matchingIndexes = new Set<number>();
+  mesh.skeleton.bones.forEach((bone, index) => {
+    if (wanted.has(clean(bone.name))) matchingIndexes.add(index);
+  });
+  if (!matchingIndexes.size) return false;
+
+  const skinIndex = mesh.geometry.getAttribute('skinIndex');
+  const skinWeight = mesh.geometry.getAttribute('skinWeight');
+  if (!skinIndex || !skinWeight || skinIndex.count !== skinWeight.count) return false;
+
+  for (let vertex = 0; vertex < skinIndex.count; vertex++) {
+    const indexes = [skinIndex.getX(vertex), skinIndex.getY(vertex), skinIndex.getZ(vertex), skinIndex.getW(vertex)];
+    const weights = [skinWeight.getX(vertex), skinWeight.getY(vertex), skinWeight.getZ(vertex), skinWeight.getW(vertex)];
+    if (indexes.some((index, slot) => matchingIndexes.has(index) && weights[slot] > .01)) return true;
+  }
+  return false;
+}
+
+function surfaceHasBinding(scene: T.Object3D, role: AvatarV2SurfaceRole, binding: AvatarV2SurfaceBinding) {
+  const aliases = SURFACE_BINDING_ALIASES[binding];
+  return dedicatedSurfaceNodes(scene, role).some(node =>
+    declaredSurfaceBinding(node) === binding && meshHasBoneInfluence(node, aliases)
+  );
 }
 
 function hasExpression(names: string[], expression: keyof typeof EXPRESSION_ALIASES) {
@@ -790,6 +854,16 @@ export function validateAvatarV2Scene(
           code: `missing-dedicated-surface:${role}`,
           message: `LOD0 needs real dedicated ${role} geometry using its matching material role; an extra material slot on the body/face is not sufficient.`,
         });
+        continue;
+      }
+      for (const binding of REQUIRED_SURFACE_BINDINGS[role]) {
+        if (!surfaceHasBinding(scene, role, binding)) {
+          issues.push({
+            level: 'error',
+            code: `missing-surface-binding:${role}:${binding}`,
+            message: `LOD0 ${role} geometry must declare rockmundoBoneBinding=${binding} and contain real skin influence from that bone.`,
+          });
+        }
       }
     }
     for (const role of ['cornea', 'teeth', 'tongue', 'mouthInterior'] as const) {
