@@ -551,6 +551,7 @@ def export_glb(args: argparse.Namespace) -> None:
         export_format="GLB",
         use_selection=True,
         export_skins=True,
+        export_def_bones=False,
         export_morph=True,
         export_yup=True,
     )
