@@ -62,6 +62,20 @@ describe('Avatar V2 material quality', () => {
     expect(tunedHair.sheen).toBeGreaterThan(.1);
   });
 
+  it('keeps promoted materials when a mixed mesh already contains physical surfaces', () => {
+    const root = new T.Group();
+    const skin = material('RMV2_Skin');
+    const hair = new T.MeshPhysicalMaterial({ color: '#333333' });
+    hair.name = 'RMV2_Hair';
+    root.add(new T.Mesh(new T.BoxGeometry(1, 1, 1), [skin, hair]));
+
+    tuneAvatarV2Materials(root, defaultAppearance('v2-mixed-material-test'), 'high');
+
+    const tuned = (root.children[0] as T.Mesh).material as T.Material[];
+    expect(tuned[0]).toBeInstanceOf(T.MeshPhysicalMaterial);
+    expect(tuned[1]).toBe(hair);
+  });
+
   it('keeps balanced-distance skin on the cheaper standard shader path', () => {
     const root = new T.Group();
     const skin = material('RMV2_Skin');
