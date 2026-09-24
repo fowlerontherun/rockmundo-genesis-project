@@ -537,6 +537,13 @@ function surfaceHasBinding(scene: T.Object3D, role: AvatarV2SurfaceRole, binding
   );
 }
 
+function boundSurfaceNodes(scene: T.Object3D, role: AvatarV2SurfaceRole, binding: AvatarV2SurfaceBinding) {
+  const aliases = SURFACE_BINDING_ALIASES[binding];
+  return dedicatedSurfaceNodes(scene, role).filter(node =>
+    declaredSurfaceBinding(node) === binding && meshHasBoneInfluence(node, aliases)
+  );
+}
+
 const AVATAR_V2_WETLINE_MIN_DELTA_METRES = .00015;
 const AVATAR_V2_MOUTH_CAVITY_MIN_DEPTH_METRES = .025;
 
@@ -955,6 +962,50 @@ export function validateAvatarV2Scene(
         code: 'shallow-mouth-cavity',
         message: `LOD0 mouth interior depth is ${(mouthDepth * 1000).toFixed(1)}mm; singing close-ups require at least ${(AVATAR_V2_MOUTH_CAVITY_MIN_DEPTH_METRES * 1000).toFixed(0)}mm of real cavity depth.`,
       });
+    }
+
+    for (const binding of ['Eye.L', 'Eye.R'] as const) {
+      const scleraBounds = combinedSurfaceBounds(boundSurfaceNodes(scene, 'sclera', binding));
+      if (!scleraBounds) continue;
+      const scleraCenter = scleraBounds.getCenter(new T.Vector3());
+      for (const role of ['iris', 'cornea'] as const) {
+        const roleBounds = combinedSurfaceBounds(boundSurfaceNodes(scene, role, binding));
+        if (!roleBounds) continue;
+        const distance = roleBounds.getCenter(new T.Vector3()).distanceTo(scleraCenter);
+        if (distance > .018) {
+          issues.push({
+            level: 'error',
+            code: `misaligned-eye-surface:${binding}:${role}`,
+            message: `LOD0 ${binding} ${role} centre is ${(distance * 1000).toFixed(1)}mm from its sclera; close-up eye layers must share the same fitted eyeball centre.`,
+          });
+        }
+        if (role === 'cornea' && roleBounds.max.z < scleraBounds.max.z - .001) {
+          issues.push({
+            level: 'error',
+            code: `recessed-cornea:${binding}`,
+            message: `LOD0 ${binding} cornea sits behind the visible sclera envelope instead of forming the outer reflective eye shell.`,
+          });
+        }
+      }
+    }
+
+    if (mouthBounds) {
+      const oralEnvelope = mouthBounds.clone().expandByScalar(.015);
+      for (const role of ['teeth', 'tongue'] as const) {
+        for (const node of dedicatedSurfaceNodes(scene, role)) {
+          const bounds = combinedSurfaceBounds([node]);
+          if (!bounds) continue;
+          const centre = bounds.getCenter(new T.Vector3());
+          if (!oralEnvelope.containsPoint(centre)) {
+            issues.push({
+              level: 'error',
+              code: `oral-surface-outside-cavity:${role}`,
+              message: `LOD0 ${role} geometry is centred outside the mouth cavity envelope; close-up oral surfaces must remain physically contained by the authored mouth interior.`,
+            });
+            break;
+          }
+        }
+      }
     }
     for (const role of ['cornea', 'wetline', 'teeth', 'tongue', 'mouthInterior'] as const) {
       if (!hasMaterialRole(materials, role)) {
