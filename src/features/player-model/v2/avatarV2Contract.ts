@@ -243,6 +243,41 @@ export function avatarV2BodyRegion(node: T.Object3D): AvatarV2BodyRegion | null 
   ) ?? null;
 }
 
+export function avatarV2MaterialBodyRegion(material: T.Material): AvatarV2BodyRegion | null {
+  const explicit = String(material.userData?.rockmundoBodyRegion || '').toLowerCase();
+  if ((AVATAR_V2_BODY_REGIONS as readonly string[]).includes(explicit)) {
+    return explicit as AvatarV2BodyRegion;
+  }
+  const name = clean(material.name);
+  return AVATAR_V2_BODY_REGIONS.find(region => {
+    const token = clean(region);
+    return name.includes(`rmv2skin${token}`)
+      || name.includes(`rmv2bodyregion${token}`)
+      || name === `skin${token}`;
+  }) ?? null;
+}
+
+export function avatarV2UsedMaterials(mesh: T.Mesh): T.Material[] {
+  const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+  if (materials.length <= 1) return materials;
+  const groups = mesh.geometry.groups.filter(group => group.count > 0);
+  if (!groups.length) return materials.slice(0, 1);
+  const used = new Set(groups.map(group => group.materialIndex ?? 0));
+  return [...used].map(index => materials[index]).filter((material): material is T.Material => !!material);
+}
+
+export function avatarV2BodyRegions(node: T.Object3D): AvatarV2BodyRegion[] {
+  if (!(node instanceof T.Mesh)) return [];
+  const regions = new Set<AvatarV2BodyRegion>();
+  const objectRegion = avatarV2BodyRegion(node);
+  if (objectRegion) regions.add(objectRegion);
+  for (const material of avatarV2UsedMaterials(node)) {
+    const materialRegion = avatarV2MaterialBodyRegion(material);
+    if (materialRegion) regions.add(materialRegion);
+  }
+  return [...regions];
+}
+
 export function avatarV2BoneSemantic(name: string): AvatarV2Bone | null {
   const wanted = clean(name);
   for (const semantic of AVATAR_V2_REQUIRED_BONES) {
@@ -291,6 +326,8 @@ function resolveBoneMap(scene: T.Object3D) {
   return map;
 }
 
+const MORPH_MIN_DELTA_METRES = .0005;
+
 function collectMorphTargets(scene: T.Object3D) {
   const result = new Set<string>();
   scene.traverse(node => {
@@ -298,6 +335,35 @@ function collectMorphTargets(scene: T.Object3D) {
     Object.keys(node.morphTargetDictionary).forEach(name => result.add(name));
   });
   return [...result].sort();
+}
+
+function collectMorphTargetDeltas(scene: T.Object3D) {
+  const result = new Map<string, number>();
+  scene.traverse(node => {
+    if (!(node instanceof T.Mesh) || !node.morphTargetDictionary) return;
+    const base = node.geometry.getAttribute('position') as T.BufferAttribute | undefined;
+    const targets = node.geometry.morphAttributes.position as T.BufferAttribute[] | undefined;
+    if (!base || !targets) return;
+
+    for (const [name, index] of Object.entries(node.morphTargetDictionary)) {
+      const target = targets[index];
+      if (!target || target.count !== base.count) continue;
+      let maximum = 0;
+      for (let vertex = 0; vertex < target.count; vertex++) {
+        const dx = node.geometry.morphTargetsRelative ? target.getX(vertex) : target.getX(vertex) - base.getX(vertex);
+        const dy = node.geometry.morphTargetsRelative ? target.getY(vertex) : target.getY(vertex) - base.getY(vertex);
+        const dz = node.geometry.morphTargetsRelative ? target.getZ(vertex) : target.getZ(vertex) - base.getZ(vertex);
+        maximum = Math.max(maximum, Math.hypot(dx, dy, dz));
+      }
+      const key = clean(name);
+      result.set(key, Math.max(result.get(key) ?? 0, maximum));
+    }
+  });
+  return result;
+}
+
+function morphDelta(deltas: Map<string, number>, aliases: readonly string[]) {
+  return Math.max(0, ...aliases.map(alias => deltas.get(clean(alias)) ?? 0));
 }
 
 function collectBoneNames(scene: T.Object3D) {
@@ -401,12 +467,23 @@ export function validateAvatarV2Scene(
   const bareSkinRegions = new Set<AvatarV2BodyRegion>();
   scene.traverse(node => {
     if (!(node instanceof T.Mesh)) return;
-    const region = avatarV2BodyRegion(node);
-    if (!region) return;
-    regions.add(region);
-    if (!(node instanceof T.SkinnedMesh)) unskinnedRegions.add(region);
-    const materials = Array.isArray(node.material) ? node.material : [node.material];
-    if (materials.some(material => hasMaterialRole([material.name], 'skin'))) bareSkinRegions.add(region);
+    const objectRegion = avatarV2BodyRegion(node);
+    const usedMaterials = avatarV2UsedMaterials(node);
+    const materialRegions = usedMaterials
+      .map(material => [avatarV2MaterialBodyRegion(material), material] as const)
+      .filter((entry): entry is readonly [AvatarV2BodyRegion, T.Material] => !!entry[0]);
+
+    if (objectRegion) {
+      regions.add(objectRegion);
+      if (!(node instanceof T.SkinnedMesh)) unskinnedRegions.add(objectRegion);
+      if (usedMaterials.some(material => hasMaterialRole([material.name], 'skin'))) bareSkinRegions.add(objectRegion);
+    }
+
+    for (const [region, material] of materialRegions) {
+      regions.add(region);
+      if (!(node instanceof T.SkinnedMesh)) unskinnedRegions.add(region);
+      if (hasMaterialRole([material.name], 'skin')) bareSkinRegions.add(region);
+    }
   });
   for (const region of AVATAR_V2_BODY_REGIONS) {
     if (!regions.has(region)) {
@@ -476,6 +553,7 @@ export function validateAvatarV2Scene(
 
   const morphTargets = collectMorphTargets(scene);
   const morphTargetNames = new Set(morphTargets.map(clean));
+  const morphDeltas = collectMorphTargetDeltas(scene);
   for (const muscleMorph of AVATAR_V2_REQUIRED_MUSCLE_MORPHS) {
     if (!morphTargetNames.has(clean(muscleMorph))) {
       issues.push({
@@ -483,14 +561,27 @@ export function validateAvatarV2Scene(
         code: `missing-muscle-morph:${muscleMorph}`,
         message: `Avatar V2 must include the authored muscle definition target: ${muscleMorph}.`,
       });
+    } else if (morphDelta(morphDeltas, [muscleMorph]) < MORPH_MIN_DELTA_METRES) {
+      issues.push({
+        level: 'error',
+        code: `empty-muscle-morph:${muscleMorph}`,
+        message: `Avatar V2 muscle target ${muscleMorph} must visibly deform the mesh; named zero-delta placeholders are rejected.`,
+      });
     }
   }
   for (const expression of AVATAR_V2_REQUIRED_EXPRESSIONS) {
+    const aliases = [expression, ...EXPRESSION_ALIASES[expression]];
     if (!hasExpression(morphTargets, expression)) {
       issues.push({
         level: lod <= 1 ? 'error' : 'warning',
         code: `missing-expression:${expression}`,
         message: `Facial expression target is missing: ${expression}.`,
+      });
+    } else if (morphDelta(morphDeltas, aliases) < MORPH_MIN_DELTA_METRES) {
+      issues.push({
+        level: lod <= 1 ? 'error' : 'warning',
+        code: `empty-expression:${expression}`,
+        message: `Facial expression ${expression} exists but does not meaningfully deform the mesh.`,
       });
     }
   }
@@ -504,6 +595,12 @@ export function validateAvatarV2Scene(
           code: `missing-performance-expression:${expression}`,
           message: `Recommended singing expression target is missing: ${expression}.`,
         });
+      } else if (morphDelta(morphDeltas, [expression]) < MORPH_MIN_DELTA_METRES) {
+        issues.push({
+          level: 'warning',
+          code: `empty-performance-expression:${expression}`,
+          message: `Singing expression ${expression} is named but has no meaningful vertex deformation.`,
+        });
       }
     }
     const requiredMuscles = new Set(AVATAR_V2_REQUIRED_MUSCLE_MORPHS.map(clean));
@@ -515,6 +612,12 @@ export function validateAvatarV2Scene(
           code: `missing-customization-morph:${morph}`,
           message: `Recommended Avatar Designer shape target is missing: ${morph}.`,
         });
+      } else if (morphDelta(morphDeltas, [morph]) < MORPH_MIN_DELTA_METRES) {
+        issues.push({
+          level: 'warning',
+          code: `empty-customization-morph:${morph}`,
+          message: `Avatar Designer target ${morph} is named but does not meaningfully change the mesh.`,
+        });
       }
     }
     for (const corrective of AVATAR_V2_POSE_CORRECTIVES) {
@@ -523,6 +626,12 @@ export function validateAvatarV2Scene(
           level: 'error',
           code: `missing-pose-corrective:${corrective}`,
           message: `LOD${lod} requires close-up joint deformation target: ${corrective}.`,
+        });
+      } else if (morphDelta(morphDeltas, [corrective]) < MORPH_MIN_DELTA_METRES) {
+        issues.push({
+          level: 'error',
+          code: `empty-pose-corrective:${corrective}`,
+          message: `LOD${lod} joint corrective ${corrective} exists but has no meaningful deformation.`,
         });
       }
     }
