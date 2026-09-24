@@ -611,9 +611,10 @@ export class ConcertScene {
       'totp-runner',
       'totp-stagehand',
     ];
-    idleCrewNames.forEach((name, index) => {
-      const crew = this.scene.getObjectByName(name);
-      if (!crew) return;
+    this.scene.traverse(crew => {
+      if (!crew.userData.crew) return;
+      const index = idleCrewNames.indexOf(crew.name);
+      if (index < 0) return;
       const baseYaw = Number(crew.userData.baseYaw ?? crew.rotation.y);
       crew.rotation.y = baseYaw + (reduced ? 0 : Math.sin(t * (.16 + index * .004) + index * .74) * .055);
       crew.rotation.z = reduced ? 0 : Math.sin(t * .52 + index * 1.13) * .008;
