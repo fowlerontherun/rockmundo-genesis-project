@@ -2,6 +2,7 @@ import * as T from 'three';
 import type { Musician } from '@/features/gig-demo-3d/performers';
 import { handContactPoint } from '@/features/gig-demo-3d/instrumentHandPose';
 import { AVATAR_V2_TWIST_RUNTIME_BONES } from './avatarV2TwistBones';
+import { AVATAR_V2_SHOULDER_MAX_ANGLE, AVATAR_V2_SHOULDER_RUNTIME_BONES } from './avatarV2Shoulder';
 
 export type AvatarV2PerformancePreset =
   | 'backstage'
@@ -24,8 +25,10 @@ export interface AvatarV2PerformanceQaReport {
   maxFingerContactError: number | null;
   maxEyeMotion: number | null;
   maxTwistMotion: number | null;
+  maxShoulderMotion: number | null;
   eyeBones: number;
   twistBones: number;
+  shoulderBones: number;
   drumsticks: number;
   guitarPicks: number;
   issues: AvatarV2PerformanceQaIssue[];
@@ -39,6 +42,7 @@ const EYE_MOTION_MIN = .004;
 const EYE_MOTION_MAX = .35;
 const TWIST_MOTION_MIN = .004;
 const TWIST_MOTION_MAX = .90;
+const SHOULDER_MOTION_MIN = .004;
 
 const finiteWorldMatrix = (object: T.Object3D) =>
   object.matrixWorld.elements.every(Number.isFinite);
@@ -61,6 +65,9 @@ export function inspectAvatarV2Performance(
   const twists = AVATAR_V2_TWIST_RUNTIME_BONES
     .map(name => actor.bones.get(name))
     .filter((bone): bone is T.Bone => !!bone);
+  const shoulders = AVATAR_V2_SHOULDER_RUNTIME_BONES
+    .map(name => actor.bones.get(name))
+    .filter((bone): bone is T.Bone => !!bone);
   const rig = actor.instrumentRig;
 
   if (!rig) {
@@ -73,8 +80,10 @@ export function inspectAvatarV2Performance(
       maxFingerContactError: null,
       maxEyeMotion: null,
       maxTwistMotion: null,
+      maxShoulderMotion: null,
       eyeBones: eyes.length,
       twistBones: twists.length,
+      shoulderBones: shoulders.length,
       drumsticks: 0,
       guitarPicks: 0,
       issues: [{ code: 'missing-instrument-rig', message: 'The performance preset did not create an instrument rig.' }],
@@ -92,6 +101,7 @@ export function inspectAvatarV2Performance(
   let fingerSamples = 0;
   let maxEyeMotion = 0;
   let maxTwistMotion = 0;
+  let maxShoulderMotion = 0;
   const sticks = preset === 'rock_drums'
     ? rig.tools.filter(tool => /^playing-stick(?:-|$)/.test(tool.name))
     : [];
@@ -123,6 +133,12 @@ export function inspectAvatarV2Performance(
       const motion = Math.abs(Number(twist.userData.rockmundoAvatarV2TwistAngle ?? 0));
       if (Number.isFinite(motion)) maxTwistMotion = Math.max(maxTwistMotion, motion);
       else issues.push({ code: 'invalid-twist-deformation', message: twist.name + ' produced a non-finite twist rotation.' });
+    }
+
+    for (const shoulder of shoulders) {
+      const motion = Math.abs(Number(shoulder.userData.rockmundoAvatarV2ShoulderAngle ?? 0));
+      if (Number.isFinite(motion)) maxShoulderMotion = Math.max(maxShoulderMotion, motion);
+      else issues.push({ code: 'invalid-shoulder-deformation', message: shoulder.name + ' produced a non-finite clavicle rotation.' });
     }
 
     if (needsLeft && left) {
@@ -194,6 +210,23 @@ export function inspectAvatarV2Performance(
     });
   }
 
+  if (shoulders.length < AVATAR_V2_SHOULDER_RUNTIME_BONES.length) {
+    issues.push({
+      code: 'missing-shoulder-bones',
+      message: 'Close-up performance QA requires both Shoulder.L and Shoulder.R so arm IK can move the clavicles.',
+    });
+  } else if (maxShoulderMotion < SHOULDER_MOTION_MIN) {
+    issues.push({
+      code: 'shoulder-deformation-static',
+      message: 'Shoulder bones were present but stayed static across the sampled performance reaches.',
+    });
+  } else if (maxShoulderMotion > AVATAR_V2_SHOULDER_MAX_ANGLE + .001) {
+    issues.push({
+      code: 'shoulder-deformation-range',
+      message: 'Shoulder rotation reached ' + T.MathUtils.radToDeg(maxShoulderMotion).toFixed(1) + '°; target is ≤ ' + T.MathUtils.radToDeg(AVATAR_V2_SHOULDER_MAX_ANGLE).toFixed(0) + '°.',
+    });
+  }
+
   if (twists.length < AVATAR_V2_TWIST_RUNTIME_BONES.length) {
     issues.push({
       code: 'missing-twist-bones',
@@ -260,8 +293,10 @@ export function inspectAvatarV2Performance(
     maxFingerContactError: fingerSamples ? maxFinger : null,
     maxEyeMotion: eyes.length ? maxEyeMotion : null,
     maxTwistMotion: twists.length ? maxTwistMotion : null,
+    maxShoulderMotion: shoulders.length ? maxShoulderMotion : null,
     eyeBones: eyes.length,
     twistBones: twists.length,
+    shoulderBones: shoulders.length,
     drumsticks: sticks.length,
     guitarPicks,
     issues: uniqueIssues,

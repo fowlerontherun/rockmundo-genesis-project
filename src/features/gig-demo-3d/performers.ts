@@ -14,6 +14,7 @@ import { applyInstrumentFingerPose, fingerEnvelopeBones, handContactPoint } from
 import { createAvatarV2ExpressionController, type AvatarV2ExpressionController } from '@/features/player-model/v2/avatarV2Expressions';
 import { createAvatarV2PoseCorrectiveController, type AvatarV2PoseCorrectiveController } from '@/features/player-model/v2/avatarV2PoseCorrectives';
 import { createAvatarV2TwistController, type AvatarV2TwistController } from '@/features/player-model/v2/avatarV2TwistBones';
+import { createAvatarV2ShoulderController, type AvatarV2ShoulderController } from '@/features/player-model/v2/avatarV2Shoulder';
 import { seededRandom } from './config';
 import { visibleTattoosForPresentation } from '@/features/player-model/tattoos';
 import { assemblePlayerModel, disposeModel, loadModelLibrary, requiredModelFiles } from '@/features/player-model/model';
@@ -100,6 +101,7 @@ export class Musician {
     private faceExpressions: AvatarV2ExpressionController | null = null;
     private poseCorrectives: AvatarV2PoseCorrectiveController | null = null;
     private twistDeformation: AvatarV2TwistController | null = null;
+    private shoulderGirdle: AvatarV2ShoulderController | null = null;
     constructor(source: T.Object3D, public role: Role, position: [
         number,
         number,
@@ -197,6 +199,7 @@ export class Musician {
         this.faceExpressions = createAvatarV2ExpressionController(this.model);
         this.poseCorrectives = createAvatarV2PoseCorrectiveController(this.model);
         this.twistDeformation = createAvatarV2TwistController(this.model);
+        this.shoulderGirdle = createAvatarV2ShoulderController(this.model);
         if (this.hasVocals() && this.bones.has('Head') && !this.faceExpressions) {
             this.mouth = createVocalMouth(this.root, this.model, this.bones.get('Head')!);
         }
@@ -296,6 +299,10 @@ export class Musician {
         this.equipment.updateMatrixWorld(true);
     }
     private hand(side: 'L' | 'R', target: T.Vector3, pole: T.Vector3) {
+        // V2 clavicles take a bounded share of the reach before the legacy arm IK
+        // finishes the solve. This keeps hands on their exact targets while letting
+        // shoulder volume and silhouette follow guitar, drum and vocal gestures.
+        this.shoulderGirdle?.aim(side, target);
         reach(this.bones.get(`UpperArm.${side}`), this.bones.get(`LowerArm.${side}`), this.bones.get(`Hand.${side}`), target, pole);
     }
     update(seconds: number, energy: number, reduced: boolean) {

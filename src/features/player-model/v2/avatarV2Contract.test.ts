@@ -41,6 +41,17 @@ function validScene() {
     bones.push(bone);
   }
 
+  const chestBone = bones.find(bone => bone.name === 'chest')!;
+  for (const [shoulderSemantic, armSemantic] of [
+    ['leftShoulder', 'leftUpperArm'],
+    ['rightShoulder', 'rightUpperArm'],
+  ] as const) {
+    const shoulder = bones.find(bone => bone.name === AVATAR_V2_CLOSEUP_BONE_ALIASES[shoulderSemantic][0])!;
+    const arm = bones.find(bone => bone.name === armSemantic)!;
+    chestBone.add(shoulder);
+    shoulder.add(arm);
+  }
+
   const geometry = new T.BoxGeometry(.5, 1.7, .25, 2, 4, 2);
   const count = geometry.getAttribute('position').count;
   geometry.setAttribute('skinIndex', new T.Uint16BufferAttribute(new Uint16Array(count * 4), 4));
@@ -287,6 +298,24 @@ describe('Avatar V2 mesh contract', () => {
     const report = validateAvatarV2Scene(scene, 'masculine', 0);
     expect(report.valid).toBe(false);
     expect(report.issues.some(issue => issue.code === 'missing-closeup-bone:leftEye')).toBe(true);
+  });
+
+  it('fails close-up assets whose shoulder is detached from the chest hierarchy', () => {
+    const scene = validScene();
+    const shoulder = scene.getObjectByName('leftShoulder') as T.Bone;
+    scene.attach(shoulder);
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'invalid-shoulder-parent:leftShoulder')).toBe(true);
+  });
+
+  it('fails close-up assets whose upper arm bypasses the shoulder bone', () => {
+    const scene = validScene();
+    const arm = scene.getObjectByName('leftUpperArm') as T.Bone;
+    scene.attach(arm);
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'invalid-upper-arm-parent:leftUpperArm')).toBe(true);
   });
 
   it('fails close-up assets that omit an authored limb twist bone', () => {

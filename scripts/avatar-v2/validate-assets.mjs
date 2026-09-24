@@ -331,6 +331,21 @@ function validateAsset(gltf, entry) {
       }
     }
 
+    const chestName = matchingAlias(report.jointNames, ['chest', ...requiredBoneAliases.chest]);
+    for (const [shoulderSemantic, armSemantic] of [
+      ['leftShoulder', 'leftUpperArm'],
+      ['rightShoulder', 'rightUpperArm'],
+    ]) {
+      const shoulderName = matchingAlias(report.jointNames, closeupBoneAliases[shoulderSemantic]);
+      const armName = matchingAlias(report.jointNames, [armSemantic, ...requiredBoneAliases[armSemantic]]);
+      if (shoulderName && chestName && !containsAlias(report.jointAncestors[shoulderName] ?? [], [chestName])) {
+        errors.push(`${shoulderSemantic} must inherit from the chest bone.`);
+      }
+      if (shoulderName && armName && !containsAlias(report.jointAncestors[armName] ?? [], [shoulderName])) {
+        errors.push(`${armSemantic} must inherit from ${shoulderSemantic}.`);
+      }
+    }
+
     const twistParents = {
       leftUpperArmTwist: 'leftUpperArm',
       rightUpperArmTwist: 'rightUpperArm',

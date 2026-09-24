@@ -97,6 +97,23 @@ Priority topology areas:
 - clean neck/head transition for hairstyles;
 - stable UVs for tattoos and skin detail.
 
+## Shoulder girdle participation
+
+LOD0/LOD1 shoulder bones are part of the live performance solve, not decorative
+rig entries. Each `Shoulder.L/R` must inherit from the chest and its matching
+`UpperArm.L/R` must inherit from that shoulder; browser validation, exported-GLB
+validation and the Blender export gate all reject a disconnected shoulder chain.
+Before each V2 arm IK pass, the matching shoulder receives a small bounded share
+of the hand reach direction; the upper/lower arm then finishes the exact target solve. This gives raised microphones, guitar grips, drum reaches
+and crowd gestures visible clavicle/scapular participation without moving the
+authoritative hand contact point.
+
+The controller always re-solves from the authored shoulder rest rotation. Guitar
+collision correction can therefore retry an arm target without accumulating extra
+clavicle rotation. Runtime motion is capped at roughly 14 degrees and Admin V2
+performance QA checks for both shoulder bones, finite motion, visible activity and
+the same range bound.
+
 ## Limb twist distribution
 
 LOD0/LOD1 use six deform-only helper bones:
