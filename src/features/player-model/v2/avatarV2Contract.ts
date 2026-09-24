@@ -120,6 +120,10 @@ export const AVATAR_V2_CLOSEUP_BONE_ALIASES = {
 export const AVATAR_V2_RECOMMENDED_EXPRESSIONS = [
   'visemeAA', 'visemeEE', 'visemeIH', 'visemeOH', 'visemeOU',
   'mouthFunnel', 'mouthPucker',
+  'eyeSquintLeft', 'eyeSquintRight',
+  'browInnerUp', 'browDownLeft', 'browDownRight',
+  'cheekSquintLeft', 'cheekSquintRight',
+  'mouthStretchLeft', 'mouthStretchRight',
 ] as const;
 
 export const AVATAR_V2_REQUIRED_MUSCLE_MORPHS = [
