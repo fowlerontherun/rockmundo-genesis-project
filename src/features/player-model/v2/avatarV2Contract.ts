@@ -2,6 +2,11 @@ import * as T from 'three';
 import type { PlayerAppearance } from '../appearance';
 import { AVATAR_V2_CUSTOMIZATION_MORPHS } from './avatarV2Customization';
 import { AVATAR_V2_POSE_CORRECTIVES } from './avatarV2PoseCorrectives';
+import {
+  AVATAR_V2_TWIST_BONE_ALIASES,
+  AVATAR_V2_TWIST_RUNTIME_NAMES,
+  type AvatarV2TwistSemantic,
+} from './avatarV2TwistBones';
 
 export type AvatarV2Frame = PlayerAppearance['body']['frame'];
 export type AvatarV2Lod = 0 | 1 | 2 | 3;
@@ -108,6 +113,7 @@ export const AVATAR_V2_CLOSEUP_BONE_ALIASES = {
   rightToes: ['rightToes', 'toe_r', 'toebase_r', 'mixamorigRightToeBase'],
   leftEye: ['Eye.L', 'leftEye', 'eye_l', 'mixamorigLeftEye', 'j_bip_l_eye'],
   rightEye: ['Eye.R', 'rightEye', 'eye_r', 'mixamorigRightEye', 'j_bip_r_eye'],
+  ...AVATAR_V2_TWIST_BONE_ALIASES,
 
   leftThumb1: ['Thumb1.L', 'leftThumbProximal', 'leftHandThumb1', 'thumb_01_l', 'mixamorigLeftHandThumb1'],
   leftThumb2: ['Thumb2.L', 'leftThumbIntermediate', 'leftHandThumb2', 'thumb_02_l', 'mixamorigLeftHandThumb2'],
@@ -149,6 +155,7 @@ export const AVATAR_V2_CLOSEUP_RUNTIME_BONE_NAMES: Record<keyof typeof AVATAR_V2
   rightToes: 'Toe.R',
   leftEye: 'Eye.L',
   rightEye: 'Eye.R',
+  ...AVATAR_V2_TWIST_RUNTIME_NAMES,
   leftThumb1: 'Thumb1.L',
   leftThumb2: 'Thumb2.L',
   leftThumb3: 'Thumb3.L',
@@ -289,7 +296,17 @@ export function avatarV2BoneSemantic(name: string): AvatarV2Bone | null {
 
 export function avatarV2RuntimeBoneName(name: string) {
   const semantic = avatarV2BoneSemantic(name);
-  return semantic ? AVATAR_V2_RUNTIME_BONE_NAMES[semantic] : name;
+  if (semantic) return AVATAR_V2_RUNTIME_BONE_NAMES[semantic];
+
+  const wanted = clean(name);
+  for (const [closeup, aliases] of Object.entries(AVATAR_V2_CLOSEUP_BONE_ALIASES) as [
+    keyof typeof AVATAR_V2_CLOSEUP_BONE_ALIASES,
+    readonly string[],
+  ][]) {
+    const runtime = AVATAR_V2_CLOSEUP_RUNTIME_BONE_NAMES[closeup];
+    if ([runtime, ...aliases].some(alias => clean(alias) === wanted)) return runtime;
+  }
+  return name;
 }
 
 export interface AvatarV2ValidationIssue {
@@ -547,6 +564,27 @@ export function validateAvatarV2Scene(
             message: `LOD${lod} ${semantic} must inherit from the head bone so gaze follows head animation.`,
           });
         }
+      }
+    }
+
+    const twistParents: Record<AvatarV2TwistSemantic, AvatarV2Bone> = {
+      leftUpperArmTwist: 'leftUpperArm',
+      rightUpperArmTwist: 'rightUpperArm',
+      leftForearmTwist: 'leftLowerArm',
+      rightForearmTwist: 'rightLowerArm',
+      leftThighTwist: 'leftUpperLeg',
+      rightThighTwist: 'rightUpperLeg',
+    };
+    for (const [semantic, parentSemantic] of Object.entries(twistParents) as [AvatarV2TwistSemantic, AvatarV2Bone][]) {
+      const helper = boneByAliases(scene, AVATAR_V2_TWIST_BONE_ALIASES[semantic]);
+      const parentName = boneMap[parentSemantic];
+      const parent = parentName ? scene.getObjectByName(parentName) : null;
+      if (helper && parent instanceof T.Bone && !inheritsFrom(helper, parent)) {
+        issues.push({
+          level: 'error',
+          code: `invalid-twist-parent:${semantic}`,
+          message: `LOD${lod} ${semantic} must inherit from ${parentSemantic} so axial deformation follows the limb.`,
+        });
       }
     }
   }

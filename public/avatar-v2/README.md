@@ -175,15 +175,20 @@ blink/squint facial morphs. Teeth and tongue must be separate at LOD0 so close-u
 vocals never expose a hollow mouth.
 
 LOD0/LOD1 also require shoulder and toe-base articulation, dedicated `Eye.L` /
-`Eye.R` bones, plus complete three-joint thumb/index/middle/ring/little chains
-on both hands. Both eye bones must be descendants of the authored head bone so
+`Eye.R` bones, six deform-only twist helpers
+(`UpperArmTwist.L/R`, `ForearmTwist.L/R`, `ThighTwist.L/R`), plus complete
+three-joint thumb/index/middle/ring/little chains on both hands. Both eye bones must be descendants of the authored head bone so
 head turns carry the eyes with them. They are driven at runtime for deterministic
 micro-saccades and interaction-aware gaze; do not bake a permanently offset stare
 into the mesh. They also require
 the eight pose-space joint deformation targets `poseShoulderLeft/Right`,
 `poseElbowLeft/Right`, `poseHipLeft/Right` and `poseKneeLeft/Right`.
 These preserve joint volume after the final live IK pose rather than relying on
-linear skinning alone. Common Blender,
+linear skinning alone. The twist helpers distribute only axial roll from the final
+elbow/wrist/knee chain; they do not replace the control bones or double-apply limb
+swing. LOD2/LOD3 may omit the twist helpers.
+
+Common Blender,
 Mixamo and VRM-style names are normalized to RockMundo's runtime finger names.
 This is deliberate: the new mesh system must improve guitar fretting, pick/pluck
 shapes, microphone wrap and drumstick fulcrum contact rather than only increasing
@@ -301,5 +306,9 @@ provide, Avatar V2 fails closed to V1 instead of rendering clipping/intersection
 
 LOD0/LOD1 body-worn garments must also include the pose-space correctives for the
 regions they cover: shoulder/elbow targets for upper-body coverage and hip/knee
-targets for lower-body coverage. These morphs are driven together with the base
-body by the same V2 performance controller.
+targets for lower-body coverage. Sleeves covering `upper-arms` must carry real
+vertex weights for both upper-arm twist helpers; `lower-arms` coverage requires
+both forearm twist helpers; `upper-legs` coverage requires both thigh twist
+helpers. Skeleton names without meaningful vertex influence do not count. These
+deformations are driven together with the base body by the same V2 performance
+path.

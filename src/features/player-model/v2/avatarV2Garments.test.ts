@@ -81,6 +81,15 @@ function baseAvatar() {
   const hips = new T.Bone();
   hips.name = 'Hips';
   root.add(hips);
+  for (const name of [
+    'UpperArmTwist.L', 'UpperArmTwist.R',
+    'ForearmTwist.L', 'ForearmTwist.R',
+    'ThighTwist.L', 'ThighTwist.R',
+  ]) {
+    const bone = new T.Bone();
+    bone.name = name;
+    root.add(bone);
+  }
 
   const torso = new T.Mesh(
     new T.BoxGeometry(.45, .65, .24),
@@ -123,24 +132,45 @@ const POSE_CORRECTIVES = [
   'poseKneeLeft', 'poseKneeRight',
 ];
 
-function garmentSource(boneName = 'hips', includeUnskinned = false, morphs: string[] = POSE_CORRECTIVES) {
+function garmentSource(
+  boneName = 'hips',
+  includeUnskinned = false,
+  morphs: string[] = POSE_CORRECTIVES,
+  extraWeightedBones: string[] = [],
+) {
   const root = new T.Group();
   const bone = new T.Bone();
   bone.name = boneName;
   root.add(bone);
+  const bones = [bone];
+  const weightedExtras = extraWeightedBones.slice(0, 3);
+  for (const name of weightedExtras) {
+    const extra = new T.Bone();
+    extra.name = name;
+    root.add(extra);
+    bones.push(extra);
+  }
 
   const geometry = new T.BoxGeometry(.48, .62, .27, 2, 2, 2);
   const count = geometry.attributes.position.count;
-  geometry.setAttribute('skinIndex', new T.Uint16BufferAttribute(new Uint16Array(count * 4), 4));
+  const indices = new Uint16Array(count * 4);
   const weights = new Float32Array(count * 4);
-  for (let index = 0; index < count; index++) weights[index * 4] = 1;
+  for (let index = 0; index < count; index++) {
+    const extraShare = weightedExtras.length ? .5 / weightedExtras.length : 0;
+    weights[index * 4] = weightedExtras.length ? .5 : 1;
+    for (let extraIndex = 0; extraIndex < weightedExtras.length; extraIndex++) {
+      indices[index * 4 + extraIndex + 1] = extraIndex + 1;
+      weights[index * 4 + extraIndex + 1] = extraShare;
+    }
+  }
+  geometry.setAttribute('skinIndex', new T.Uint16BufferAttribute(indices, 4));
   geometry.setAttribute('skinWeight', new T.Float32BufferAttribute(weights, 4));
 
   const material = new T.MeshStandardMaterial({ color: '#ffffff' });
   material.name = 'RMV2_Garment_Main';
   const mesh = new T.SkinnedMesh(geometry, material);
   mesh.name = 'RMV2_Test_Tee';
-  mesh.bind(new T.Skeleton([bone]));
+  mesh.bind(new T.Skeleton(bones));
   if (morphs.length) {
     mesh.morphTargetDictionary = Object.fromEntries(morphs.map((name, index) => [name, index]));
     mesh.morphTargetInfluences = morphs.map(() => 0);
@@ -236,6 +266,56 @@ describe('Avatar V2 garments', () => {
     expect(influences[dictionary.muscleMuscular]).toBeCloseTo(1);
     expect(garment.parent?.userData.rockmundoAvatarV2BodyBuild).toBe(1.15);
     expect(garment.parent?.userData.rockmundoAvatarV2Muscle).toBe('muscular');
+  });
+
+  it('fails closed when sleeves omit actual close-up twist weights', () => {
+    const { root } = baseAvatar();
+    const upperArms = new T.Mesh(
+      new T.BoxGeometry(.04, .04, .04),
+      new T.MeshStandardMaterial({ color: '#c58c63' }),
+    );
+    upperArms.name = 'RMV2_Body_UpperArms';
+    upperArms.userData.rockmundoBodyRegion = 'upper-arms';
+    root.add(upperArms);
+
+    const clothingItem = item();
+    const config = clothingItem.garment_config as unknown as { avatarV2: { occludeBodyRegions: string[] } };
+    config.avatarV2.occludeBodyRegions = ['upper-arms'];
+    const clothing = row(clothingItem);
+    const file = avatarV2GarmentFile(clothing.item, 'masculine', 1)!;
+    const library = new Map<string, T.Object3D>([[file, garmentSource('hips')]]);
+
+    expect(() => buildAvatarV2Garments(library, root, [clothing], appearance(), 1))
+      .toThrow(/twist bone weight/);
+  });
+
+  it('rebinds sleeves that carry meaningful upper-arm twist weights', () => {
+    const { root } = baseAvatar();
+    const upperArms = new T.Mesh(
+      new T.BoxGeometry(.04, .04, .04),
+      new T.MeshStandardMaterial({ color: '#c58c63' }),
+    );
+    upperArms.name = 'RMV2_Body_UpperArms';
+    upperArms.userData.rockmundoBodyRegion = 'upper-arms';
+    root.add(upperArms);
+
+    const clothingItem = item();
+    const config = clothingItem.garment_config as unknown as { avatarV2: { occludeBodyRegions: string[] } };
+    config.avatarV2.occludeBodyRegions = ['upper-arms'];
+    const clothing = row(clothingItem);
+    const file = avatarV2GarmentFile(clothing.item, 'masculine', 1)!;
+    const library = new Map<string, T.Object3D>([[
+      file,
+      garmentSource(
+        'hips',
+        false,
+        POSE_CORRECTIVES,
+        ['UpperArmTwist.L', 'UpperArmTwist.R'],
+      ),
+    ]]);
+
+    expect(() => buildAvatarV2Garments(library, root, [clothing], appearance(), 1))
+      .not.toThrow();
   });
 
   it('fails closed when a close-up body garment omits joint deformation correctives', () => {

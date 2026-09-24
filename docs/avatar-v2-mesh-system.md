@@ -97,6 +97,20 @@ Priority topology areas:
 - clean neck/head transition for hairstyles;
 - stable UVs for tattoos and skin detail.
 
+## Limb twist distribution
+
+LOD0/LOD1 use six deform-only helper bones:
+`UpperArmTwist.L/R`, `ForearmTwist.L/R` and `ThighTwist.L/R`. The runtime
+extracts the axial component of the final live child-joint rotation after IK and
+wrist articulation, then distributes a bounded share of that roll onto the helper.
+This reduces candy-wrapper collapse around shoulders, forearms and thighs without
+changing hand/foot target positions or double-bending the control chain.
+
+The helpers must inherit from their matching `UpperArm`, `LowerArm` or
+`UpperLeg` control bone and must carry meaningful body weights. LOD2/LOD3 can
+drop them for budget. Close-up garments must also weight the helpers for the limb
+regions they cover; merely exporting the helper names is insufficient at runtime.
+
 ## Pose-space joint deformation
 
 LOD0/LOD1 should include authored deformation correctives for both shoulders, elbows,
@@ -112,8 +126,8 @@ marked production-ready with collapsing joint deformation. LOD2/LOD3 do not carr
 this requirement because their distance and topology budgets make the extra shapes
 unnecessary.
 
-Body-worn LOD0/LOD1 garments must carry the matching correctives for the regions
-they cover. Tops/upper-body garments require shoulder and elbow targets; trousers
+Body-worn LOD0/LOD1 garments must carry the matching twist weights and pose-space
+correctives for the regions they cover. Tops/upper-body garments require shoulder and elbow targets; trousers
 and other lower-body garments require hip and knee targets. Garment assembly fails
 closed to V1 if these are absent, avoiding a corrected body deforming through a
 rigid-looking garment during the same pose.

@@ -24,6 +24,12 @@ DEFAULT_ARMATURE = "RMV2_Armature"
 WEIGHT_EPSILON = 0.0001
 NORMALIZATION_TOLERANCE = 0.02
 
+CLOSEUP_TWIST_BONES = [
+    "UpperArmTwist.L", "UpperArmTwist.R",
+    "ForearmTwist.L", "ForearmTwist.R",
+    "ThighTwist.L", "ThighTwist.R",
+]
+
 REQUIRED_RIG_BONES = [
     "Hips", "Spine1", "Spine2", "Neck", "Head", "Eye.L", "Eye.R",
     "Shoulder.L", "Shoulder.R",
@@ -58,6 +64,7 @@ REQUIRED_BODY_DEFORM_BONES = [
 def cli_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--armature", default=DEFAULT_ARMATURE)
+    parser.add_argument("--lod", type=int, choices=(0, 1, 2, 3), default=0)
     parser.add_argument("--object", action="append", dest="objects", default=[], help="Explicit body/head mesh to audit. Repeat as needed.")
     parser.add_argument(
         "--normalization-tolerance",
@@ -158,7 +165,15 @@ def main() -> None:
         raise SystemExit(f'Armature "{args.armature}" was not found.')
 
     rig_bones = {bone.name: bone for bone in rig.data.bones}
-    missing_bones = [name for name in REQUIRED_RIG_BONES if name not in rig_bones]
+    required_rig_bones = [
+        *REQUIRED_RIG_BONES,
+        *(CLOSEUP_TWIST_BONES if args.lod <= 1 else []),
+    ]
+    required_body_deform_bones = [
+        *REQUIRED_BODY_DEFORM_BONES,
+        *(CLOSEUP_TWIST_BONES if args.lod <= 1 else []),
+    ]
+    missing_bones = [name for name in required_rig_bones if name not in rig_bones]
     if missing_bones:
         errors.append("Missing required rig bones: " + ", ".join(missing_bones))
 
@@ -242,7 +257,7 @@ def main() -> None:
 
     unused_required = [
         name
-        for name in REQUIRED_BODY_DEFORM_BONES
+        for name in required_body_deform_bones
         if name in rig_bones and weighted_vertices_by_bone[name] == 0
     ]
     if unused_required:
@@ -263,7 +278,7 @@ def main() -> None:
 
     print(
         "[avatar-v2-weight-audit] "
-        f"{len(meshes)} mesh(es), {total_vertices:,} vertices, "
+        f"LOD{args.lod}; {len(meshes)} mesh(es), {total_vertices:,} vertices, "
         f"{len(weighted_vertices_by_bone)} weighted deform bones."
     )
     print(

@@ -24,10 +24,19 @@ function validScene() {
     return bone;
   });
   const headBone = bones.find(bone => bone.name === 'head')!;
+  const twistParents: Record<string, string> = {
+    leftUpperArmTwist: 'leftUpperArm',
+    rightUpperArmTwist: 'rightUpperArm',
+    leftForearmTwist: 'leftLowerArm',
+    rightForearmTwist: 'rightLowerArm',
+    leftThighTwist: 'leftUpperLeg',
+    rightThighTwist: 'rightUpperLeg',
+  };
   for (const [semantic, aliases] of Object.entries(AVATAR_V2_CLOSEUP_BONE_ALIASES)) {
     const bone = new T.Bone();
     bone.name = aliases[0];
     if (semantic === 'leftEye' || semantic === 'rightEye') headBone.add(bone);
+    else if (twistParents[semantic]) bones.find(candidate => candidate.name === twistParents[semantic])!.add(bone);
     else root.add(bone);
     bones.push(bone);
   }
@@ -278,6 +287,23 @@ describe('Avatar V2 mesh contract', () => {
     const report = validateAvatarV2Scene(scene, 'masculine', 0);
     expect(report.valid).toBe(false);
     expect(report.issues.some(issue => issue.code === 'missing-closeup-bone:leftEye')).toBe(true);
+  });
+
+  it('fails close-up assets that omit an authored limb twist bone', () => {
+    const scene = validScene();
+    scene.getObjectByName('ForearmTwist.L')!.removeFromParent();
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'missing-closeup-bone:leftForearmTwist')).toBe(true);
+  });
+
+  it('fails close-up assets whose twist helper is detached from its limb', () => {
+    const scene = validScene();
+    const twist = scene.getObjectByName('ThighTwist.R') as T.Bone;
+    scene.attach(twist);
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'invalid-twist-parent:rightThighTwist')).toBe(true);
   });
 
   it('fails close-up assets that omit a distal finger joint', () => {

@@ -39,6 +39,12 @@ const closeupBoneAliases = {
   rightToes: ['rightToes','toe_r','toebase_r','mixamorigRightToeBase'],
   leftEye: ['Eye.L','leftEye','eye_l','mixamorigLeftEye','j_bip_l_eye'],
   rightEye: ['Eye.R','rightEye','eye_r','mixamorigRightEye','j_bip_r_eye'],
+  leftUpperArmTwist: ['UpperArmTwist.L','upperarm_twist_l','upper_arm_twist_l','leftUpperArmTwist'],
+  rightUpperArmTwist: ['UpperArmTwist.R','upperarm_twist_r','upper_arm_twist_r','rightUpperArmTwist'],
+  leftForearmTwist: ['ForearmTwist.L','forearm_twist_l','lowerarm_twist_l','leftForearmTwist'],
+  rightForearmTwist: ['ForearmTwist.R','forearm_twist_r','lowerarm_twist_r','rightForearmTwist'],
+  leftThighTwist: ['ThighTwist.L','thigh_twist_l','upperleg_twist_l','leftThighTwist'],
+  rightThighTwist: ['ThighTwist.R','thigh_twist_r','upperleg_twist_r','rightThighTwist'],
 
   leftThumb1: ['Thumb1.L','leftThumbProximal','leftHandThumb1','thumb_01_l','mixamorigLeftHandThumb1'],
   leftThumb2: ['Thumb2.L','leftThumbIntermediate','leftHandThumb2','thumb_02_l','mixamorigLeftHandThumb2'],
@@ -322,6 +328,22 @@ function validateAsset(gltf, entry) {
       const eyeName = matchingAlias(report.jointNames, closeupBoneAliases[semantic]);
       if (headName && eyeName && !containsAlias(report.jointAncestors[eyeName] ?? [], [headName])) {
         errors.push(`${semantic} must inherit from the head bone.`);
+      }
+    }
+
+    const twistParents = {
+      leftUpperArmTwist: 'leftUpperArm',
+      rightUpperArmTwist: 'rightUpperArm',
+      leftForearmTwist: 'leftLowerArm',
+      rightForearmTwist: 'rightLowerArm',
+      leftThighTwist: 'leftUpperLeg',
+      rightThighTwist: 'rightUpperLeg',
+    };
+    for (const [semantic, parentSemantic] of Object.entries(twistParents)) {
+      const helperName = matchingAlias(report.jointNames, closeupBoneAliases[semantic]);
+      const parentName = matchingAlias(report.jointNames, [parentSemantic, ...requiredBoneAliases[parentSemantic]]);
+      if (helperName && parentName && !containsAlias(report.jointAncestors[helperName] ?? [], [parentName])) {
+        errors.push(`${semantic} must inherit from ${parentSemantic}.`);
       }
     }
     for (const region of requiredBodyRegions) {

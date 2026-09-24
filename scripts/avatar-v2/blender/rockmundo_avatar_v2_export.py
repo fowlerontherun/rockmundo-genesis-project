@@ -54,6 +54,12 @@ CLOSEUP_BONES = {
       "rightToes": ["rightToes","toe_r","toebase_r","mixamorigRightToeBase"],
       "leftEye": ["Eye.L","leftEye","eye_l","mixamorigLeftEye","j_bip_l_eye"],
       "rightEye": ["Eye.R","rightEye","eye_r","mixamorigRightEye","j_bip_r_eye"],
+      "leftUpperArmTwist": ["UpperArmTwist.L","upperarm_twist_l","upper_arm_twist_l","leftUpperArmTwist"],
+      "rightUpperArmTwist": ["UpperArmTwist.R","upperarm_twist_r","upper_arm_twist_r","rightUpperArmTwist"],
+      "leftForearmTwist": ["ForearmTwist.L","forearm_twist_l","lowerarm_twist_l","leftForearmTwist"],
+      "rightForearmTwist": ["ForearmTwist.R","forearm_twist_r","lowerarm_twist_r","rightForearmTwist"],
+      "leftThighTwist": ["ThighTwist.L","thigh_twist_l","upperleg_twist_l","leftThighTwist"],
+      "rightThighTwist": ["ThighTwist.R","thigh_twist_r","upperleg_twist_r","rightThighTwist"],
 
       "leftThumb1": ["Thumb1.L","leftThumbProximal","leftHandThumb1","thumb_01_l","mixamorigLeftHandThumb1"],
       "leftThumb2": ["Thumb2.L","leftThumbIntermediate","leftHandThumb2","thumb_02_l","mixamorigLeftHandThumb2"],
@@ -317,6 +323,25 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
                     parent = parent.parent
                 if parent != head_bone:
                     errors.append(f"{semantic} must inherit from the head bone.")
+
+            twist_parents = {
+                "leftUpperArmTwist": "leftUpperArm",
+                "rightUpperArmTwist": "rightUpperArm",
+                "leftForearmTwist": "leftLowerArm",
+                "rightForearmTwist": "rightLowerArm",
+                "leftThighTwist": "leftUpperLeg",
+                "rightThighTwist": "rightUpperLeg",
+            }
+            for semantic, parent_semantic in twist_parents.items():
+                helper = find_bone(CLOSEUP_BONES[semantic])
+                parent_bone = find_bone([parent_semantic, *REQUIRED_BONES[parent_semantic]])
+                if not helper or not parent_bone:
+                    continue
+                parent = helper.parent
+                while parent and parent != parent_bone:
+                    parent = parent.parent
+                if parent != parent_bone:
+                    errors.append(f"{semantic} must inherit from {parent_semantic}.")
 
     # Topless and Tattoo Parlour can select any LOD, so every export must remain a
     # complete skinned bare body. Close-up-only articulation stays gated above.

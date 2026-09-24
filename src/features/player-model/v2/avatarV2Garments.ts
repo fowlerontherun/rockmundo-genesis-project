@@ -22,6 +22,7 @@ import {
   supportedAvatarV2PoseCorrectives,
   type AvatarV2PoseCorrective,
 } from './avatarV2PoseCorrectives';
+import { AVATAR_V2_TWIST_RUNTIME_NAMES } from './avatarV2TwistBones';
 
 export type AvatarV2GarmentStatus = 'planned' | 'asset_ready' | 'validated' | 'blocked';
 
@@ -53,7 +54,53 @@ const UPPER_BODY_REGIONS = new Set<AvatarV2BodyRegion>(['torso', 'upper-arms', '
 const LOWER_BODY_REGIONS = new Set<AvatarV2BodyRegion>(['hips', 'upper-legs', 'lower-legs']);
 const UPPER_BODY_CORRECTIVES = AVATAR_V2_POSE_CORRECTIVES.filter(name => /Shoulder|Elbow/.test(name));
 const LOWER_BODY_CORRECTIVES = AVATAR_V2_POSE_CORRECTIVES.filter(name => /Hip|Knee/.test(name));
+const TWIST_BONES_BY_REGION: Partial<Record<AvatarV2BodyRegion, string[]>> = {
+  'upper-arms': [
+    AVATAR_V2_TWIST_RUNTIME_NAMES.leftUpperArmTwist,
+    AVATAR_V2_TWIST_RUNTIME_NAMES.rightUpperArmTwist,
+  ],
+  'lower-arms': [
+    AVATAR_V2_TWIST_RUNTIME_NAMES.leftForearmTwist,
+    AVATAR_V2_TWIST_RUNTIME_NAMES.rightForearmTwist,
+  ],
+  'upper-legs': [
+    AVATAR_V2_TWIST_RUNTIME_NAMES.leftThighTwist,
+    AVATAR_V2_TWIST_RUNTIME_NAMES.rightThighTwist,
+  ],
+};
 const clean = cleanAvatarV2Name;
+
+function requiredTwistBones(regions: AvatarV2BodyRegion[]) {
+  return [...new Set(regions.flatMap(region => TWIST_BONES_BY_REGION[region] ?? []))];
+}
+
+function sourceRuntimeWeightedBoneNames(root: T.Object3D) {
+  const names = new Set<string>();
+  root.traverse(node => {
+    if (!(node instanceof T.SkinnedMesh)) return;
+    const joints = node.geometry.getAttribute('skinIndex');
+    const weights = node.geometry.getAttribute('skinWeight');
+    if (!joints || !weights) return;
+
+    const component = (attribute: T.BufferAttribute | T.InterleavedBufferAttribute, vertex: number, slot: number) => {
+      if (slot === 0) return attribute.getX(vertex);
+      if (slot === 1) return attribute.getY(vertex);
+      if (slot === 2) return attribute.getZ(vertex);
+      return attribute.getW(vertex);
+    };
+
+    for (let vertex = 0; vertex < Math.min(joints.count, weights.count); vertex++) {
+      for (let slot = 0; slot < 4; slot++) {
+        const weight = component(weights, vertex, slot);
+        if (weight <= .0001) continue;
+        const index = Math.round(component(joints, vertex, slot));
+        const bone = node.skeleton.bones[index];
+        if (bone) names.add(avatarV2RuntimeBoneName(bone.name));
+      }
+    }
+  });
+  return names;
+}
 
 function requiredPoseCorrectives(regions: AvatarV2BodyRegion[]): AvatarV2PoseCorrective[] {
   const required = new Set<AvatarV2PoseCorrective>();
@@ -302,6 +349,15 @@ export function buildAvatarV2Garments(
       if (!counts.skinned) throw new Error(`${row.item.name} V2 garment has no skinned mesh.`);
       if (counts.unskinned) {
         throw new Error(`${row.item.name} V2 garment contains ${counts.unskinned} unskinned mesh(es); rigid details must be bone weighted.`);
+      }
+
+      if (lod <= 1) {
+        const sourceBones = sourceRuntimeWeightedBoneNames(source);
+        const missingTwistBones = requiredTwistBones(config.occludeBodyRegions)
+          .filter(name => !sourceBones.has(name));
+        if (missingTwistBones.length) {
+          throw new Error(`${row.item.name} V2 garment is missing close-up twist bone weight(s): ${missingTwistBones.join(', ')}.`);
+        }
       }
 
       source.updateMatrixWorld(true);
