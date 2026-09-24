@@ -37,7 +37,7 @@ function validScene() {
   for (let i = 0; i < count; i++) weights[i * 4] = 1;
   geometry.setAttribute('skinWeight', new T.Float32BufferAttribute(weights, 4));
 
-  const materials = ['RMV2_Skin', 'RMV2_Eyes', 'RMV2_Teeth', 'RMV2_Tongue'].map(name => {
+  const materials = ['RMV2_Skin', 'RMV2_Eyes', 'RMV2_Cornea', 'RMV2_Teeth', 'RMV2_Tongue', 'RMV2_MouthInterior'].map(name => {
     const material = new T.MeshStandardMaterial({ color: '#cccccc' });
     material.name = name;
     return material;
@@ -154,6 +154,18 @@ describe('Avatar V2 mesh contract', () => {
     const report = validateAvatarV2Scene(scene, 'masculine', 0);
     expect(report.valid).toBe(false);
     expect(report.issues.some(issue => issue.code === 'missing-expression:jawOpen' && issue.level === 'error')).toBe(true);
+  });
+
+  it('fails LOD0 close-ups without cornea or mouth-interior materials', () => {
+    const scene = validScene();
+    const mesh = scene.getObjectByName('RMV2_Body') as T.SkinnedMesh;
+    mesh.material = (mesh.material as T.Material[]).filter(material =>
+      material.name !== 'RMV2_Cornea' && material.name !== 'RMV2_MouthInterior'
+    );
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'missing-material-role:cornea')).toBe(true);
+    expect(report.issues.some(issue => issue.code === 'missing-material-role:mouthInterior')).toBe(true);
   });
 
   it('treats missing facial targets as warnings on distant LODs', () => {
