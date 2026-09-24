@@ -175,6 +175,16 @@ function proceduralTexture(
   return texture;
 }
 
+function cloneMappedTexture(texture: T.Texture | null, repeat: [number, number]) {
+  if (!texture) return null;
+  const clone = texture.clone();
+  clone.wrapS = T.RepeatWrapping;
+  clone.wrapT = T.RepeatWrapping;
+  clone.repeat.set(...repeat);
+  clone.needsUpdate = true;
+  return clone;
+}
+
 function materialFor(
   p: VenueProfile,
   role: string,
@@ -184,14 +194,24 @@ function materialFor(
 ) {
   const name = `venue-${p.kind}-${role}-${specValue.pattern}`;
   const fallback = specValue.pattern === 'wood' ? fallbackWood : specValue.pattern === 'brick' ? fallbackBrick : null;
-  const material = fallback instanceof T.MeshStandardMaterial
+  const usesMappedFallback = fallback instanceof T.MeshStandardMaterial;
+  const material = usesMappedFallback
     ? fallback.clone()
     : new T.MeshStandardMaterial();
 
   material.name = name;
-  material.color.set(specValue.pattern === 'wood' || specValue.pattern === 'brick' ? specValue.base : '#ffffff');
+  material.color.set(usesMappedFallback && material.map ? '#ffffff' : specValue.pattern === 'wood' || specValue.pattern === 'brick' ? specValue.base : '#ffffff');
   material.roughness = specValue.roughness;
   material.metalness = specValue.metalness ?? 0;
+
+  if (usesMappedFallback) {
+    material.map = cloneMappedTexture(material.map, specValue.repeat);
+    material.normalMap = cloneMappedTexture(material.normalMap, specValue.repeat);
+    material.roughnessMap = cloneMappedTexture(material.roughnessMap, specValue.repeat);
+    material.aoMap = cloneMappedTexture(material.aoMap, specValue.repeat);
+    material.bumpMap = cloneMappedTexture(material.bumpMap, specValue.repeat);
+  }
+
   if (!material.map) material.map = proceduralTexture(specValue, name);
   if (!material.normalMap && !material.bumpMap) {
     material.bumpMap = proceduralTexture(specValue, name, true);
