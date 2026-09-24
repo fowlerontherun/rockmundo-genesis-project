@@ -3,6 +3,7 @@ import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import type { ClothingItem } from '@/hooks/useSkinStore';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import { richGarmentSlot } from '@/features/clothing-preview/richGarmentVisuals';
+import type { PlayerAppearance } from '../appearance';
 import { disposeModel, type ModelLibrary } from '../model';
 import type { AvatarV2BodyRegion, AvatarV2Frame, AvatarV2Lod } from './avatarV2Contract';
 import {
@@ -12,6 +13,7 @@ import {
   cleanAvatarV2Name,
 } from './avatarV2Contract';
 import { AVATAR_V2_ROLLOUT } from './avatarV2Registry';
+import { applyAvatarV2Customization } from './avatarV2Customization';
 
 export type AvatarV2GarmentStatus = 'planned' | 'asset_ready' | 'validated' | 'blocked';
 
@@ -38,6 +40,7 @@ const BODY_REGIONS = new Set<AvatarV2BodyRegion>(AVATAR_V2_BODY_REGIONS);
 const STATUSES = new Set<AvatarV2GarmentStatus>(['planned','asset_ready','validated','blocked']);
 const SUPPORTED_SLOTS = new Set(['top', 'bottom', 'footwear', 'headwear', 'eyewear', 'accessory']);
 const BODY_OCCLUSION_SLOTS = new Set(['top', 'bottom', 'footwear']);
+const BODY_FIT_REGIONS = new Set<AvatarV2BodyRegion>(['torso', 'upper-arms', 'lower-arms', 'hips', 'upper-legs', 'lower-legs']);
 const clean = cleanAvatarV2Name;
 
 function record(value: unknown): Record<string, unknown> {
@@ -233,9 +236,10 @@ export function buildAvatarV2Garments(
   library: ModelLibrary,
   avatarRoot: T.Object3D,
   clothing: ResolvedEquippedClothing[],
-  frame: AvatarV2Frame,
+  appearance: PlayerAppearance,
   lod: AvatarV2Lod,
 ): AvatarV2GarmentBuildResult {
+  const frame = appearance.body.frame;
   const compatibility = avatarV2ClothingCompatibilityReason(clothing, frame, lod);
   if (compatibility) throw new Error(compatibility);
 
@@ -275,6 +279,12 @@ export function buildAvatarV2Garments(
         if (!(node instanceof T.SkinnedMesh)) return;
         const mesh = clone(node) as T.SkinnedMesh;
         mesh.geometry = node.geometry.clone();
+        mesh.morphTargetDictionary = node.morphTargetDictionary
+          ? { ...node.morphTargetDictionary }
+          : undefined;
+        mesh.morphTargetInfluences = node.morphTargetInfluences
+          ? [...node.morphTargetInfluences]
+          : undefined;
         mesh.material = Array.isArray(node.material)
           ? node.material.map(ownMaterial)
           : ownMaterial(node.material);
@@ -301,6 +311,21 @@ export function buildAvatarV2Garments(
         applyVariant(mesh, row, config);
         itemGroup.add(mesh);
       });
+
+      const customization = applyAvatarV2Customization(itemGroup, appearance);
+      const bodyFitRequired = config.occludeBodyRegions.some(region => BODY_FIT_REGIONS.has(region));
+      if (bodyFitRequired) {
+        const buildRequested = Math.abs(appearance.body.build - 1) > .001;
+        if (buildRequested && !customization.bodyBuildApplied) {
+          throw new Error(`${row.item.name} V2 garment has no matching body-build morph for ${Math.round(appearance.body.build * 100)}% build.`);
+        }
+        const muscle = appearance.body.muscle ?? 'natural';
+        if (muscle !== 'natural' && !customization.muscleApplied) {
+          throw new Error(`${row.item.name} V2 garment has no matching ${muscle} muscle morph.`);
+        }
+      }
+      itemGroup.userData.rockmundoAvatarV2BodyBuild = appearance.body.build;
+      itemGroup.userData.rockmundoAvatarV2Muscle = appearance.body.muscle ?? 'natural';
 
       group.add(itemGroup);
     }

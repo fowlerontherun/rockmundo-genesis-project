@@ -81,7 +81,7 @@ export function assembleAvatarMesh(
             library,
             result.model,
             visibleClothing,
-            appearance.body.frame,
+            appearance,
             avatarV2LodForQuality(quality),
           );
           result.model.add(garments.group);

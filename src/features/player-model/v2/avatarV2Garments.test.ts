@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as T from 'three';
 import type { ClothingItem } from '@/hooks/useSkinStore';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
+import { defaultAppearance, type PlayerAppearance } from '../appearance';
 import {
   avatarV2ClothingCompatibilityReason,
   avatarV2GarmentConfig,
@@ -66,6 +67,14 @@ function row(clothing = item()): ResolvedEquippedClothing {
   };
 }
 
+function appearance(body: Partial<PlayerAppearance['body']> = {}) {
+  const value = defaultAppearance('avatar-v2-garment-test');
+  return {
+    ...value,
+    body: { ...value.body, ...body },
+  };
+}
+
 function baseAvatar() {
   const root = new T.Group();
 
@@ -86,7 +95,7 @@ function baseAvatar() {
   return { root, hips, torso };
 }
 
-function garmentSource(boneName = 'hips', includeUnskinned = false) {
+function garmentSource(boneName = 'hips', includeUnskinned = false, morphs: string[] = []) {
   const root = new T.Group();
   const bone = new T.Bone();
   bone.name = boneName;
@@ -104,6 +113,10 @@ function garmentSource(boneName = 'hips', includeUnskinned = false) {
   const mesh = new T.SkinnedMesh(geometry, material);
   mesh.name = 'RMV2_Test_Tee';
   mesh.bind(new T.Skeleton([bone]));
+  if (morphs.length) {
+    mesh.morphTargetDictionary = Object.fromEntries(morphs.map((name, index) => [name, index]));
+    mesh.morphTargetInfluences = morphs.map(() => 0);
+  }
   root.add(mesh);
 
   if (includeUnskinned) {
@@ -150,7 +163,7 @@ describe('Avatar V2 garments', () => {
     const file = avatarV2GarmentFile(clothing.item, 'masculine', 1)!;
     const library = new Map<string, T.Object3D>([[file, garmentSource('hips')]]);
 
-    const result = buildAvatarV2Garments(library, root, [clothing], 'masculine', 1);
+    const result = buildAvatarV2Garments(library, root, [clothing], appearance(), 1);
     expect(result.hiddenBodyRegions).toEqual(['torso']);
     expect(torso.visible).toBe(false);
 
@@ -162,13 +175,50 @@ describe('Avatar V2 garments', () => {
     expect(material.color.getHexString()).toBe('bd3548');
   });
 
+  it('applies the same build and muscle morphs to V2 body-worn garments', () => {
+    const { root } = baseAvatar();
+    const clothing = row();
+    const file = avatarV2GarmentFile(clothing.item, 'masculine', 1)!;
+    const library = new Map<string, T.Object3D>([[
+      file,
+      garmentSource('hips', false, ['bodyBroad', 'muscleMuscular']),
+    ]]);
+    const selected = appearance({ build: 1.15, muscle: 'muscular' });
+
+    const result = buildAvatarV2Garments(library, root, [clothing], selected, 1);
+    const garment = result.group.getObjectByName('RMV2_Test_Tee') as T.SkinnedMesh;
+    const dictionary = garment.morphTargetDictionary!;
+    const influences = garment.morphTargetInfluences!;
+
+    expect(influences[dictionary.bodyBroad]).toBeCloseTo(1);
+    expect(influences[dictionary.muscleMuscular]).toBeCloseTo(1);
+    expect(garment.parent?.userData.rockmundoAvatarV2BodyBuild).toBe(1.15);
+    expect(garment.parent?.userData.rockmundoAvatarV2Muscle).toBe('muscular');
+  });
+
+  it('fails closed instead of clipping a shaped body through an incompatible V2 garment', () => {
+    const { root, torso } = baseAvatar();
+    const clothing = row();
+    const file = avatarV2GarmentFile(clothing.item, 'masculine', 1)!;
+    const library = new Map<string, T.Object3D>([[file, garmentSource('hips')]]);
+
+    expect(() => buildAvatarV2Garments(
+      library,
+      root,
+      [clothing],
+      appearance({ build: 1.15, muscle: 'muscular' }),
+      1,
+    )).toThrow(/body-build morph/);
+    expect(torso.visible).toBe(true);
+  });
+
   it('rejects detached rigid garment details instead of allowing them to float', () => {
     const { root, torso } = baseAvatar();
     const clothing = row();
     const file = avatarV2GarmentFile(clothing.item, 'masculine', 1)!;
     const library = new Map<string, T.Object3D>([[file, garmentSource('hips', true)]]);
 
-    expect(() => buildAvatarV2Garments(library, root, [clothing], 'masculine', 1))
+    expect(() => buildAvatarV2Garments(library, root, [clothing], appearance(), 1))
       .toThrow(/unskinned mesh/);
     expect(torso.visible).toBe(true);
   });
@@ -180,7 +230,7 @@ describe('Avatar V2 garments', () => {
     const file = avatarV2GarmentFile(clothing.item, 'masculine', 1)!;
     const library = new Map<string, T.Object3D>([[file, garmentSource('hips')]]);
 
-    expect(() => buildAvatarV2Garments(library, root, [clothing], 'masculine', 1))
+    expect(() => buildAvatarV2Garments(library, root, [clothing], appearance(), 1))
       .toThrow(/body region/);
   });
 
