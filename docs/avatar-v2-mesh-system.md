@@ -76,8 +76,11 @@ the normal export gate will accept them. At high/ultra/cinematic quality, standa
 glTF skin, hair, teeth and tongue surfaces are promoted to the physical shader path
 without replacing authored maps: skin gains controlled specular/sheen response,
 hair gains directional anisotropy and sheen, and teeth/tongue gain distinct
-close-up moisture/specular behaviour. Balanced/crowd rendering keeps the cheaper
-standard path. Shape-key names alone are not sufficient: required muscle, facial
+close-up moisture/specular behaviour. V2 also raises fallback texture detail one
+tier above the shared V1 profile: High uses Ultra detail (1024px skin normal,
+512px hair detail) and Ultra uses Cinematic detail (2048px skin normal, 1024px
+hair detail). Balanced/crowd rendering keeps the cheaper standard path and normal
+texture budgets. Shape-key names alone are not sufficient: required muscle, facial
 and pose-corrective targets must produce measurable vertex deformation, preventing
 placeholder morphs from passing certification.
 
