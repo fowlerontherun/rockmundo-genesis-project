@@ -85,6 +85,20 @@ export function collectAvatarV2ExpressionBindings(root: T.Object3D): BindingMap 
   return result;
 }
 
+export function readAvatarV2ExpressionWeights(root: T.Object3D) {
+  const bindings = collectAvatarV2ExpressionBindings(root);
+  const result: Partial<Record<AvatarV2Expression, number>> = {};
+  for (const expression of Object.keys(bindings) as AvatarV2Expression[]) {
+    let maximum = 0;
+    for (const binding of bindings[expression] ?? []) {
+      const value = binding.mesh.morphTargetInfluences?.[binding.index] ?? 0;
+      if (Number.isFinite(value)) maximum = Math.max(maximum, value);
+    }
+    result[expression] = maximum;
+  }
+  return result;
+}
+
 function setWeight(bindings: BindingMap, expression: AvatarV2Expression, weight: number) {
   const clamped = T.MathUtils.clamp(weight, 0, 1);
   for (const binding of bindings[expression] ?? []) {
