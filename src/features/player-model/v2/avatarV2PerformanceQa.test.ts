@@ -69,6 +69,7 @@ describe('Avatar V2 performance QA', () => {
 
     const report = inspectAvatarV2Performance(actor, 'electric_guitar');
     expect(report).not.toBeNull();
+    expect(report!.issues).toEqual([]);
     expect(report!.valid).toBe(true);
     expect(report!.maxLeftGripError).toBeLessThan(.14);
     expect(report!.maxRightGripError).toBeLessThan(.14);
@@ -96,6 +97,7 @@ describe('Avatar V2 performance QA', () => {
     expect(report!.maxFingerContactError).toBeLessThan(.20);
     expect(report!.eyeBones).toBe(2);
     expect(report!.maxEyeMotion).toBeGreaterThan(.004);
+    expect(report!.issues).toEqual([]);
     expect(report!.valid).toBe(true);
   });
 
