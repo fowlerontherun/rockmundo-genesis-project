@@ -22,6 +22,31 @@ describe('venue surface materials', () => {
     }
   });
 
+  it('clones mapped PBR fallbacks and applies the venue-specific texture scale without double tinting', () => {
+    const woodMap = new T.Texture();
+    const woodNormal = new T.Texture();
+    const woodRough = new T.Texture();
+    const woodAo = new T.Texture();
+    const wood = new T.MeshStandardMaterial({
+      map: woodMap,
+      normalMap: woodNormal,
+      roughnessMap: woodRough,
+      aoMap: woodAo,
+      color: '#8b7768',
+    });
+    const brick = new T.MeshStandardMaterial();
+    const surfaces = buildVenueSurfaceMaterials(resolveVenueProfile({ type: 'cafe_stage' }), wood, brick);
+
+    expect(surfaces.floor.map).not.toBe(woodMap);
+    expect(surfaces.floor.normalMap).not.toBe(woodNormal);
+    expect(surfaces.floor.roughnessMap).not.toBe(woodRough);
+    expect(surfaces.floor.aoMap).not.toBe(woodAo);
+    expect(surfaces.floor.map?.repeat.toArray()).toEqual([6, 3]);
+    expect(surfaces.floor.normalMap?.repeat.toArray()).toEqual([6, 3]);
+    expect(surfaces.floor.color.getHexString()).toBe('ffffff');
+    expect(woodMap.repeat.toArray()).toEqual([1, 1]);
+  });
+
   it('gives representative venue families visibly different floor and wall treatments', () => {
     const wood = new T.MeshStandardMaterial();
     const brick = new T.MeshStandardMaterial();
