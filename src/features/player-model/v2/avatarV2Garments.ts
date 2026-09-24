@@ -40,7 +40,7 @@ const BODY_REGIONS = new Set<AvatarV2BodyRegion>(AVATAR_V2_BODY_REGIONS);
 const STATUSES = new Set<AvatarV2GarmentStatus>(['planned','asset_ready','validated','blocked']);
 const SUPPORTED_SLOTS = new Set(['top', 'bottom', 'footwear', 'headwear', 'eyewear', 'accessory']);
 const BODY_OCCLUSION_SLOTS = new Set(['top', 'bottom', 'footwear']);
-const BODY_FIT_SLOTS = new Set(['top', 'bottom', 'footwear', 'accessory']);
+const BODY_FIT_REGIONS = new Set<AvatarV2BodyRegion>(['torso', 'upper-arms', 'lower-arms', 'hips', 'upper-legs', 'lower-legs']);
 const clean = cleanAvatarV2Name;
 
 function record(value: unknown): Record<string, unknown> {
@@ -313,8 +313,8 @@ export function buildAvatarV2Garments(
       });
 
       const customization = applyAvatarV2Customization(itemGroup, appearance);
-      const slot = richGarmentSlot(row.item);
-      if (BODY_FIT_SLOTS.has(slot)) {
+      const bodyFitRequired = config.occludeBodyRegions.some(region => BODY_FIT_REGIONS.has(region));
+      if (bodyFitRequired) {
         const buildRequested = Math.abs(appearance.body.build - 1) > .001;
         if (buildRequested && !customization.bodyBuildApplied) {
           throw new Error(`${row.item.name} V2 garment has no matching body-build morph for ${Math.round(appearance.body.build * 100)}% build.`);
