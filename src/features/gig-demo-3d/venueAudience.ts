@@ -35,10 +35,10 @@ export function isTvStudioAudienceBlocked(x: number, z: number, p: VenueProfile)
     }
 
     // Camera/operator pockets and clear tracking lanes.
-    if (inCircle(-p.crowdWidth * .42, 4.7, 1.1)) return true;
+    if (inCircle(-p.crowdWidth * .58, 4.9, 1.1)) return true;
     if (inCircle(p.crowdWidth * .42, 5.3, 1.1)) return true;
     if (inCircle(p.stageWidth * .24, 2.55, .9)) return true;
-    if (inCircle(-2.85, 2.05, .9)) return true; // additional shoulder-camera lane
+    if (inCircle(-.9, 1.75, .82)) return true; // additional shoulder-camera lane
     if (inCircle(p.crowdWidth * .58, 7.4, 1.25)) return true;
     if (inRect(0, 3.55, .58, 2.4)) return true; // central camera/tracking aisle
     if (inRect(-p.crowdWidth * .32, 4.7, .44, 1.8)) return true;
