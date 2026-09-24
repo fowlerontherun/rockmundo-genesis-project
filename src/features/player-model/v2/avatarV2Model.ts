@@ -27,6 +27,20 @@ export function avatarV2LodForQuality(quality: AvatarVisualQuality): AvatarV2Lod
   return 3;
 }
 
+export type AvatarV2SceneQuality = 'low' | 'balanced' | 'high';
+
+export function avatarV2QualityForScene(
+  quality: AvatarV2SceneQuality,
+  television = false,
+): AvatarVisualQuality {
+  if (television) {
+    if (quality === 'high') return 'ultra';
+    if (quality === 'balanced') return 'high';
+    return 'balanced';
+  }
+  return quality === 'low' ? 'balanced' : 'high';
+}
+
 export function requiredAvatarV2ModelFiles(
   appearances: PlayerAppearance[],
   quality: AvatarVisualQuality,
