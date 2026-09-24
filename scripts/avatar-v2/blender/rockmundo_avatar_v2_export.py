@@ -157,9 +157,53 @@ SURFACE_NODE_PATTERNS = {
     "mouthInterior": re.compile(r"rmv2[_-]?mouth[_-]?(interior|cavity)|oral[_-]?cavity|inner[_-]?mouth", re.I),
 }
 
+SURFACE_BINDING_ALIASES = {
+    "Head": ["Head", "head", *REQUIRED_BONES["head"]],
+    "Jaw": CLOSEUP_BONES["jaw"],
+    "Eye.L": CLOSEUP_BONES["leftEye"],
+    "Eye.R": CLOSEUP_BONES["rightEye"],
+}
+
+REQUIRED_SURFACE_BINDINGS = {
+    "iris": ("Eye.L", "Eye.R"),
+    "sclera": ("Eye.L", "Eye.R"),
+    "cornea": ("Eye.L", "Eye.R"),
+    "teeth": ("Head", "Jaw"),
+    "tongue": ("Jaw",),
+    "mouthInterior": ("Head",),
+}
+
 
 def clean(value: str) -> str:
     return re.sub(r"[^a-z0-9]", "", value.lower())
+
+
+def canonical_surface_binding(value: str) -> str | None:
+    wanted = clean(str(value))
+    for binding, aliases in SURFACE_BINDING_ALIASES.items():
+        if any(clean(alias) == wanted for alias in aliases):
+            return binding
+    return None
+
+
+def object_has_bone_influence(obj: bpy.types.Object, aliases: list[str]) -> bool:
+    if not any(
+        modifier.type == "ARMATURE" and modifier.object is not None
+        for modifier in obj.modifiers
+    ):
+        return False
+    wanted = {clean(alias) for alias in aliases}
+    group_indexes = {
+        group.index for group in obj.vertex_groups
+        if clean(group.name) in wanted
+    }
+    if not group_indexes:
+        return False
+    return any(
+        assignment.group in group_indexes and assignment.weight > 0.01
+        for vertex in obj.data.vertices
+        for assignment in vertex.groups
+    )
 
 
 def has_alias(names: list[str], aliases: list[str]) -> bool:
@@ -303,6 +347,9 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
     morphs = shape_key_names(meshes)
     materials = material_names(meshes)
     dedicated_surface_roles = set()
+    dedicated_surface_bindings = {
+        role: set() for role in SURFACE_NODE_PATTERNS
+    }
     for obj in meshes:
         used_material_indices = {polygon.material_index for polygon in obj.data.polygons}
         used_materials = [
@@ -317,6 +364,9 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
                 MATERIAL_ROLES[role].search(material.name) for material in used_materials
             ):
                 dedicated_surface_roles.add(role)
+                binding = canonical_surface_binding(obj.get("rockmundoBoneBinding", ""))
+                if binding and object_has_bone_influence(obj, SURFACE_BINDING_ALIASES[binding]):
+                    dedicated_surface_bindings[role].add(binding)
     budget = BUDGETS[args.lod]
 
     if triangles > budget["triangles"]:
@@ -542,6 +592,13 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
                     f"LOD0 needs dedicated {role} geometry using its matching material role; "
                     "an extra material slot on another mesh is not sufficient."
                 )
+                continue
+            for binding in REQUIRED_SURFACE_BINDINGS[role]:
+                if binding not in dedicated_surface_bindings[role]:
+                    errors.append(
+                        f"LOD0 {role} needs rockmundoBoneBinding={binding} plus real "
+                        f"{binding} vertex-group influence."
+                    )
         for role in ("cornea", "teeth", "tongue", "mouthInterior"):
             if not any(MATERIAL_ROLES[role].search(name) for name in materials):
                 errors.append(f"LOD0 needs separate {role} geometry/material.")
@@ -594,6 +651,7 @@ def export_glb(args: argparse.Namespace) -> None:
         export_skins=True,
         export_def_bones=False,
         export_morph=True,
+        export_extras=True,
         export_yup=True,
     )
     print(f"[avatar-v2/blender] Exported {output}")
