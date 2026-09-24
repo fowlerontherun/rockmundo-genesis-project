@@ -228,13 +228,16 @@ Use stable names where possible:
 - `RMV2_Eyes` / `RMV2_Iris` / `RMV2_Sclera`
 - `RMV2_Cornea` for the transparent/reflective eye shell
 - `RMV2_Wetline` for the eyelid tear/wetline highlight
+- `RMV2_Eyelashes` for authored lash cards/strips
+- `RMV2_Lips` for the used lip region on the skinned head
 - `RMV2_Hair`
 - `RMV2_Teeth`
 - `RMV2_Tongue`
 - `RMV2_MouthInterior`
 
-LOD0 now requires dedicated iris, sclera, cornea, left/right wetline, teeth,
-tongue and mouth-interior geometry using matching material roles; extra unused/material slots on the body or
+LOD0 now requires dedicated iris, sclera, cornea, left/right wetline, left/right
+eyelash, teeth, tongue and mouth-interior geometry using matching material roles;
+the skinned head/face must also contain a genuinely used `RMV2_Lips` material region; extra unused/material slots on the body or
 face do not count. The eye surfaces must be split or skinned so both `Eye.L` and
 `Eye.R` have real influence. Teeth must include both Head-driven upper teeth and
 Jaw-driven lower teeth, the tongue must carry real Jaw influence, and the mouth
@@ -253,13 +256,18 @@ Recommended LOD0 surface layout:
 - `RMV2_Sclera.L/R` → matching eye bone
 - `RMV2_Cornea.L/R` → matching eye bone
 - `RMV2_Wetline.L/R` → `Head`, with `rockmundoEyeSide=L/R` and the matching blink morph
+- `RMV2_Eyelashes.L/R` → `Head`, with `rockmundoEyeSide=L/R` and the matching blink morph
+- `RMV2_Lips` → used material region on the skinned `RMV2_Head`/`RMV2_Face` surface
 - `RMV2_UpperTeeth` → `Head`
 - `RMV2_LowerTeeth` → `Jaw`
 - `RMV2_Tongue` → `Jaw`
 - `RMV2_MouthInterior` → `Head`
 
 The browser gate verifies actual skin weights against the declared binding, so the
-metadata cannot be used as a substitute for real deformation.
+metadata cannot be used as a substitute for real deformation. Eyelashes must also
+remain spatially fitted to the corresponding eye and visibly follow the matching
+blink. The lip region receives a skin-relative colour plus controlled moisture/
+specular response instead of inheriting the generic face shader.
 
 PBR maps should use glTF metallic/roughness convention. Authored skin normal and
 roughness maps always win. When either is missing, RockMundo supplies its
