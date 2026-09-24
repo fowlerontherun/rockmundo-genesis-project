@@ -36,7 +36,10 @@ function validScene() {
   for (const [semantic, aliases] of Object.entries(AVATAR_V2_CLOSEUP_BONE_ALIASES)) {
     const bone = new T.Bone();
     bone.name = aliases[0];
-    if (semantic === 'leftEye' || semantic === 'rightEye') headBone.add(bone);
+    if (
+      semantic === 'leftEye' || semantic === 'rightEye'
+      || semantic === 'leftEarAnchor' || semantic === 'rightEarAnchor'
+    ) headBone.add(bone);
     else if (twistParents[semantic]) bones.find(candidate => candidate.name === twistParents[semantic])!.add(bone);
     else root.add(bone);
     bones.push(bone);
@@ -316,6 +319,23 @@ describe('Avatar V2 mesh contract', () => {
     const report = validateAvatarV2Scene(scene, 'masculine', 0);
     expect(report.valid).toBe(false);
     expect(report.issues.some(issue => issue.code === 'invalid-eye-parent:leftEye')).toBe(true);
+  });
+
+  it('fails close-up assets that omit an authored ear attachment anchor', () => {
+    const scene = validScene();
+    scene.getObjectByName('EarAnchor.L')!.removeFromParent();
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'missing-closeup-bone:leftEarAnchor')).toBe(true);
+  });
+
+  it('fails close-up assets whose ear attachment anchor is detached from the head', () => {
+    const scene = validScene();
+    const anchor = scene.getObjectByName('EarAnchor.R') as T.Bone;
+    scene.attach(anchor);
+    const report = validateAvatarV2Scene(scene, 'masculine', 1);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'invalid-ear-anchor-parent:rightEarAnchor')).toBe(true);
   });
 
   it('fails close-up assets that omit an authored eye bone', () => {

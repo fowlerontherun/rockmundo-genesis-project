@@ -98,7 +98,7 @@ Priority topology areas:
 - eyelids and lips with deformation loops;
 - nose/nostril definition;
 - separate eye/cornea geometry with dedicated `Eye.L` / `Eye.R` gaze bones;
-- ears capable of accurate jewellery attachment;
+- ears capable of accurate jewellery attachment, with authored `EarAnchor.L/R` earlobe markers;
 - five-finger hands suitable for instrument grips;
 - shoulders/elbows/knees with animation-friendly loops;
 - shaped feet/toes for real footwear;
@@ -178,7 +178,10 @@ rigid-looking garment during the same pose.
 ## Facial animation and gaze
 
 The initial hard gate requires blink left/right, jaw open and smile. Close-up V2
-rigs also require `Eye.L` and `Eye.R` bones. The runtime layers deterministic
+rigs also require `Eye.L` and `Eye.R` gaze bones plus non-deforming
+`EarAnchor.L` and `EarAnchor.R` markers parented to `Head`. The eye bones
+provide exact lens/gaze centres; the ear anchors provide exact earring/temple-arm
+attachment points and replace the old outer-head-vertex ear guess for V2. The runtime layers deterministic
 micro-saccades over deliberate performer gaze, so eye direction follows bandmate,
 audience and fretboard cues while Top of the Pops/gig replays remain deterministic.
 Blink timing is slightly asymmetric with occasional deterministic double blinks,
@@ -306,8 +309,10 @@ the legacy V1 body mesh back into the scene:
   head/face surface and remain attached to the normalized `Head` bone. LOD0/LOD1
   certification now fails if that skinned head surface (and a skin material) is
   missing, so a candidate cannot pass QA and then lose fitted cosmetics at runtime;
-- hats, glasses and left/right earrings use the same measured face/ear fitting
-  logic as V1, but V2 head meshes are recognised through explicit
+- hats retain measured head-surface fitting, while V2 glasses and left/right
+  earrings prefer the authored `Eye.L/R` and `EarAnchor.L/R` rig markers.
+  Hair-clearance uses the same anchors, preventing the old case where a stylised
+  temple/cheek vertex was mistaken for the earlobe. V2 head meshes are recognised through explicit
   `RMV2_Head...` / `RMV2_Face...` naming or
   `rockmundoHeadSurface=true` metadata;
 - Tattoo Parlour visuals attach to the normalized V2 skeleton instead of forcing

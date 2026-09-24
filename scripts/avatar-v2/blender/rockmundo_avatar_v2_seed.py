@@ -269,7 +269,9 @@ Next production steps:
    knee, hand and foot deformation loops.
 3. Generate the RockMundo skeleton guide with
    scripts/avatar-v2/blender/rockmundo_avatar_v2_rig_guide.py, then manually fit
-   every joint, finger pivot and Eye.L/Eye.R gaze pivot to this mesh's topology.
+   every joint, finger pivot and Eye.L/Eye.R gaze pivot to this mesh's topology;
+   fit EarAnchor.L/EarAnchor.R to the real earlobe/piercing points and leave them
+   parented to Head as non-deforming attachment markers.
 4. Weight the body manually, including meaningful UpperArmTwist/ForearmTwist/
    ThighTwist influence for LOD0/LOD1, then split/mark all eight garment-occlusion
    body regions.

@@ -29,6 +29,7 @@ CLOSEUP_TWIST_BONES = [
     "ForearmTwist.L", "ForearmTwist.R",
     "ThighTwist.L", "ThighTwist.R",
 ]
+CLOSEUP_ATTACHMENT_BONES = ["EarAnchor.L", "EarAnchor.R"]
 
 REQUIRED_RIG_BONES = [
     "Hips", "Spine1", "Spine2", "Neck", "Head", "Eye.L", "Eye.R",
@@ -168,6 +169,7 @@ def main() -> None:
     required_rig_bones = [
         *REQUIRED_RIG_BONES,
         *(CLOSEUP_TWIST_BONES if args.lod <= 1 else []),
+        *(CLOSEUP_ATTACHMENT_BONES if args.lod <= 1 else []),
     ]
     required_body_deform_bones = [
         *REQUIRED_BODY_DEFORM_BONES,
@@ -187,6 +189,18 @@ def main() -> None:
             parent = parent.parent
         if parent != head:
             errors.append(f"{eye_name} must inherit from Head.")
+
+    for anchor_name in CLOSEUP_ATTACHMENT_BONES if args.lod <= 1 else []:
+        anchor = rig_bones.get(anchor_name)
+        if not head or not anchor:
+            continue
+        parent = anchor.parent
+        while parent and parent != head:
+            parent = parent.parent
+        if parent != head:
+            errors.append(f"{anchor_name} must inherit from Head.")
+        if anchor.use_deform:
+            errors.append(f"{anchor_name} must be a non-deforming attachment bone.")
 
     meshes = visible_body_meshes(rig, args.objects)
     if not meshes:
