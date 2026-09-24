@@ -54,6 +54,7 @@ CLOSEUP_BONES = {
       "rightToes": ["rightToes","toe_r","toebase_r","mixamorigRightToeBase"],
       "leftEye": ["Eye.L","leftEye","eye_l","mixamorigLeftEye","j_bip_l_eye"],
       "rightEye": ["Eye.R","rightEye","eye_r","mixamorigRightEye","j_bip_r_eye"],
+      "jaw": ["Jaw","jaw","jaw_bone","mixamorigJaw","j_bip_c_jaw"],
       "leftEarAnchor": ["EarAnchor.L","leftEarAnchor","ear_anchor_l","earring_anchor_l"],
       "rightEarAnchor": ["EarAnchor.R","rightEarAnchor","ear_anchor_r","earring_anchor_r"],
       "leftUpperArmTwist": ["UpperArmTwist.L","upperarm_twist_l","upper_arm_twist_l","leftUpperArmTwist"],
@@ -351,6 +352,14 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
                     parent = parent.parent
                 if parent != head_bone:
                     errors.append(f"{semantic} must inherit from the head bone.")
+
+            jaw_bone = find_bone(CLOSEUP_BONES["jaw"])
+            if head_bone and jaw_bone:
+                parent = jaw_bone.parent
+                while parent and parent != head_bone:
+                    parent = parent.parent
+                if parent != head_bone:
+                    errors.append("Jaw must inherit from the head bone.")
 
             for semantic in ("leftEarAnchor", "rightEarAnchor"):
                 anchor_bone = find_bone(CLOSEUP_BONES[semantic])
