@@ -292,7 +292,7 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
                 warnings.append(f"Missing Avatar Designer shape target: {morph}.")
         for corrective in POSE_CORRECTIVE_MORPHS:
             if not has_alias(morphs, [corrective]):
-                warnings.append(f"Missing recommended pose corrective: {corrective}.")
+                errors.append(f"Missing required close-up pose corrective: {corrective}.")
 
     if args.lod <= 1:
         for role in ("skin", "eyes"):
