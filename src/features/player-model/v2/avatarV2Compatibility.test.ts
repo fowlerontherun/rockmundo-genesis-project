@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as T from 'three';
 import { defaultAppearance } from '../appearance';
 import type { ResolvedTattooVisual } from '../tattoos';
-import { applyAvatarV2Compatibility, avatarV2BoneMap } from './avatarV2Compatibility';
+import { applyAvatarV2Compatibility, avatarV2BoneMap, avatarV2HeadAccessoryFit } from './avatarV2Compatibility';
 
 function rig() {
   const root = new T.Group();
@@ -11,6 +11,18 @@ function rig() {
     const bone = new T.Bone();
     bone.name = name;
     root.add(bone);
+  }
+  const head = root.getObjectByName('Head') as T.Bone;
+  for (const [name, position] of [
+    ['Eye.L', [.07, 1.63, .17]],
+    ['Eye.R', [-.07, 1.63, .17]],
+    ['EarAnchor.L', [.19, 1.51, .015]],
+    ['EarAnchor.R', [-.19, 1.51, .015]],
+  ] as const) {
+    const bone = new T.Bone();
+    bone.name = name;
+    bone.position.set(...position);
+    head.add(bone);
   }
   root.updateMatrixWorld(true);
   return root;
@@ -42,6 +54,40 @@ describe('Avatar V2 compatibility layer', () => {
     const bones = avatarV2BoneMap(root);
     expect(bones.get('Head')).toBeInstanceOf(T.Bone);
     expect(bones.get('Hand.L')).toBeInstanceOf(T.Bone);
+  });
+
+  it('resolves authored eye and ear attachment points from the normalized V2 rig', () => {
+    const root = rig();
+    const fit = avatarV2HeadAccessoryFit(root);
+
+    expect(fit.leftEye?.distanceTo((root.getObjectByName('Eye.L') as T.Bone).getWorldPosition(new T.Vector3()))).toBeLessThan(1e-6);
+    expect(fit.rightEye?.distanceTo((root.getObjectByName('Eye.R') as T.Bone).getWorldPosition(new T.Vector3()))).toBeLessThan(1e-6);
+    expect(fit.leftEar?.distanceTo((root.getObjectByName('EarAnchor.L') as T.Bone).getWorldPosition(new T.Vector3()))).toBeLessThan(1e-6);
+    expect(fit.rightEar?.distanceTo((root.getObjectByName('EarAnchor.R') as T.Bone).getWorldPosition(new T.Vector3()))).toBeLessThan(1e-6);
+  });
+
+  it('places V2 stud earrings on the authored ear anchors', () => {
+    const root = rig();
+    addHeadSurface(root);
+    const appearance = defaultAppearance('avatar-v2-ear-anchor-fit');
+    appearance.head.hairStyle = 'quiff';
+    appearance.accessories!.leftEarring = 'studs';
+    appearance.accessories!.rightEarring = 'studs';
+
+    applyAvatarV2Compatibility(root, appearance, [], [], 'high');
+    root.updateMatrixWorld(true);
+
+    const leftAnchor = (root.getObjectByName('EarAnchor.L') as T.Bone).getWorldPosition(new T.Vector3());
+    const rightAnchor = (root.getObjectByName('EarAnchor.R') as T.Bone).getWorldPosition(new T.Vector3());
+    const leftStud = root.getObjectByName('avatar-earring-left-studs')!.getObjectByName('earring-stud')!;
+    const rightStud = root.getObjectByName('avatar-earring-right-studs')!.getObjectByName('earring-stud')!;
+
+    expect(leftStud.getWorldPosition(new T.Vector3()).distanceTo(leftAnchor)).toBeLessThan(1e-5);
+    expect(rightStud.getWorldPosition(new T.Vector3()).distanceTo(rightAnchor)).toBeLessThan(1e-5);
+    expect(root.getObjectByName('avatar-accessories')?.userData.rockmundoAccessoryFit).toEqual({
+      eyeSource: 'authored-anchor',
+      earSource: 'authored-anchor',
+    });
   });
 
   it('rebuilds saved hair, glasses and independent earrings against a V2 head surface', () => {
