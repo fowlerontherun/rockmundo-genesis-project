@@ -42,13 +42,14 @@ const report = {
   updated_at: "2026-08-30T08:00:00.000Z",
 };
 
-const createQueryBuilder = () => {
+const createQueryBuilder = (table: string) => {
   let operation: "select" | "update" = "select";
   let updatePatch: Record<string, unknown> | null = null;
   const builder: any = {
     select: vi.fn(() => builder),
     order: vi.fn(() => builder),
     limit: vi.fn(() => builder),
+    in: vi.fn(() => builder),
     eq: vi.fn((column: string, value: unknown) => {
       mocks.filters.push([column, value]);
       return builder;
@@ -60,7 +61,9 @@ const createQueryBuilder = () => {
     }),
     then: (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) => {
       if (operation === "update" && updatePatch) mocks.updates.push(updatePatch);
-      const response = operation === "select" ? { data: [report], error: null } : { data: null, error: null };
+      const response = operation === "select"
+        ? { data: table === "bug_report_responses" ? [] : [report], error: null }
+        : { data: null, error: null };
       return Promise.resolve(response).then(resolve, reject);
     },
   };
@@ -71,7 +74,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.updates.length = 0;
   mocks.filters.length = 0;
-  mocks.from.mockImplementation(() => createQueryBuilder());
+  mocks.from.mockImplementation((table: string) => createQueryBuilder(table));
   const realtimeChannel = {
     on: vi.fn().mockReturnThis(),
     subscribe: vi.fn().mockReturnThis(),
@@ -93,7 +96,7 @@ describe("AdminBugReportsPanel", () => {
 
   it("persists investigation notes without hiding the report", async () => {
     render(<AdminBugReportsPanel />);
-    const notes = await screen.findByPlaceholderText("Add investigation notes, fix reference, PR number, etc.");
+    const notes = await screen.findByPlaceholderText("Private investigation notes, fix reference, PR number, etc.");
 
     fireEvent.change(notes, { target: { value: "Fixed by PR #999" } });
     fireEvent.blur(notes);
