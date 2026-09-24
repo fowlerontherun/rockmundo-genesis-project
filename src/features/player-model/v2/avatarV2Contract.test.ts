@@ -72,12 +72,9 @@ function validScene() {
   for (let i = 0; i < count; i++) weights[i * 4] = 1;
   geometry.setAttribute('skinWeight', new T.Float32BufferAttribute(weights, 4));
 
-  const materials = ['RMV2_Skin', 'RMV2_Eyes', 'RMV2_Cornea', 'RMV2_Teeth', 'RMV2_Tongue', 'RMV2_MouthInterior'].map(name => {
-    const material = new T.MeshStandardMaterial({ color: '#cccccc' });
-    material.name = name;
-    return material;
-  });
-  const mesh = new T.SkinnedMesh(geometry, materials);
+  const bodyMaterial = new T.MeshStandardMaterial({ color: '#cccccc' });
+  bodyMaterial.name = 'RMV2_Skin';
+  const mesh = new T.SkinnedMesh(geometry, bodyMaterial);
   mesh.name = 'RMV2_Body';
   mesh.morphTargetDictionary = {
     blinkLeft: 0,
@@ -138,21 +135,43 @@ function validScene() {
   root.add(headSurface);
 
   const surfaceRoles = [
-    ['Iris', 'RMV2_Iris'],
-    ['Sclera', 'RMV2_Sclera'],
-    ['Cornea', 'RMV2_Cornea'],
-    ['Teeth', 'RMV2_Teeth'],
-    ['Tongue', 'RMV2_Tongue'],
-    ['MouthInterior', 'RMV2_MouthInterior'],
+    ['Iris.L', 'iris', 'RMV2_Iris', 'Eye.L'],
+    ['Iris.R', 'iris', 'RMV2_Iris', 'Eye.R'],
+    ['Sclera.L', 'sclera', 'RMV2_Sclera', 'Eye.L'],
+    ['Sclera.R', 'sclera', 'RMV2_Sclera', 'Eye.R'],
+    ['Cornea.L', 'cornea', 'RMV2_Cornea', 'Eye.L'],
+    ['Cornea.R', 'cornea', 'RMV2_Cornea', 'Eye.R'],
+    ['UpperTeeth', 'teeth', 'RMV2_Teeth', 'Head'],
+    ['LowerTeeth', 'teeth', 'RMV2_Teeth', 'Jaw'],
+    ['Tongue', 'tongue', 'RMV2_Tongue', 'Jaw'],
+    ['MouthInterior', 'mouthInterior', 'RMV2_MouthInterior', 'Head'],
   ] as const;
-  for (const [surface, materialName] of surfaceRoles) {
+  const surfaceSkeleton = new T.Skeleton(bones);
+  for (const [surface, role, materialName, binding] of surfaceRoles) {
+    const targetBone = binding === 'Head'
+      ? headBone
+      : binding === 'Jaw'
+        ? bones.find(bone => bone.name === 'Jaw')!
+        : bones.find(bone => bone.name === binding)!;
+    const targetIndex = bones.indexOf(targetBone);
+    const surfaceGeometry = new T.BoxGeometry(.02, .02, .02);
+    const surfaceCount = surfaceGeometry.getAttribute('position').count;
+    const surfaceIndices = new Uint16Array(surfaceCount * 4);
+    const surfaceWeights = new Float32Array(surfaceCount * 4);
+    for (let index = 0; index < surfaceCount; index++) {
+      surfaceIndices[index * 4] = targetIndex;
+      surfaceWeights[index * 4] = 1;
+    }
+    surfaceGeometry.setAttribute('skinIndex', new T.Uint16BufferAttribute(surfaceIndices, 4));
+    surfaceGeometry.setAttribute('skinWeight', new T.Float32BufferAttribute(surfaceWeights, 4));
+
     const surfaceMaterial = new T.MeshStandardMaterial({ color: '#cccccc' });
     surfaceMaterial.name = materialName;
-    const surfaceMesh = new T.Mesh(new T.BoxGeometry(.02, .02, .02), surfaceMaterial);
-    surfaceMesh.name = `RMV2_${surface}Surface`;
-    surfaceMesh.userData.rockmundoSurfaceRole = surface === 'MouthInterior'
-      ? 'mouthInterior'
-      : surface.toLowerCase();
+    const surfaceMesh = new T.SkinnedMesh(surfaceGeometry, surfaceMaterial);
+    surfaceMesh.name = `RMV2_${surface}`;
+    surfaceMesh.userData.rockmundoSurfaceRole = role;
+    surfaceMesh.userData.rockmundoBoneBinding = binding;
+    surfaceMesh.bind(surfaceSkeleton);
     root.add(surfaceMesh);
   }
 
@@ -225,7 +244,9 @@ describe('Avatar V2 mesh contract', () => {
   it('accepts a compact skinned humanoid with the required rig and facial targets', () => {
     const report = validateAvatarV2Scene(validScene(), 'masculine', 0);
     expect(report.valid).toBe(true);
-    expect(report.skinnedMeshes).toBe(2 + AVATAR_V2_BODY_REGIONS.length);
+    // Base body + head surface + eight body-region proof meshes + ten
+    // dedicated close-up anatomy surfaces (bilateral eyes, split teeth, tongue, mouth).
+    expect(report.skinnedMeshes).toBe(2 + AVATAR_V2_BODY_REGIONS.length + 10);
     expect(report.issues.filter(issue => issue.level === 'error')).toEqual([]);
     expect(Object.keys(report.boneMap)).toHaveLength(AVATAR_V2_REQUIRED_BONES.length);
   });
@@ -460,7 +481,8 @@ describe('Avatar V2 mesh contract', () => {
 
   it('rejects LOD0 candidates that fake close-up anatomy with material slots but no dedicated surface', () => {
     const scene = validScene();
-    scene.getObjectByName('RMV2_CorneaSurface')!.removeFromParent();
+    scene.getObjectByName('RMV2_Cornea.L')!.removeFromParent();
+    scene.getObjectByName('RMV2_Cornea.R')!.removeFromParent();
     const report = validateAvatarV2Scene(scene, 'masculine', 0);
     expect(report.valid).toBe(false);
     expect(report.issues.some(issue => issue.code === 'missing-dedicated-surface:cornea')).toBe(true);
@@ -468,23 +490,36 @@ describe('Avatar V2 mesh contract', () => {
 
   it('rejects a named close-up surface when its material role does not match', () => {
     const scene = validScene();
-    const iris = scene.getObjectByName('RMV2_IrisSurface') as T.Mesh;
+    const iris = scene.getObjectByName('RMV2_Iris.L') as T.Mesh;
     (iris.material as T.Material).name = 'RMV2_Skin';
     const report = validateAvatarV2Scene(scene, 'masculine', 0);
     expect(report.valid).toBe(false);
-    expect(report.issues.some(issue => issue.code === 'missing-dedicated-surface:iris')).toBe(true);
+    expect(report.issues.some(issue => issue.code === 'missing-surface-binding:iris:Eye.L')).toBe(true);
   });
 
   it('fails LOD0 close-ups without cornea or mouth-interior materials', () => {
     const scene = validScene();
-    const mesh = scene.getObjectByName('RMV2_Body') as T.SkinnedMesh;
-    mesh.material = (mesh.material as T.Material[]).filter(material =>
-      material.name !== 'RMV2_Cornea' && material.name !== 'RMV2_MouthInterior'
-    );
+    for (const name of ['RMV2_Cornea.L', 'RMV2_Cornea.R', 'RMV2_MouthInterior']) {
+      const surface = scene.getObjectByName(name) as T.Mesh;
+      (surface.material as T.Material).name = 'RMV2_Unclassified';
+    }
     const report = validateAvatarV2Scene(scene, 'masculine', 0);
     expect(report.valid).toBe(false);
     expect(report.issues.some(issue => issue.code === 'missing-material-role:cornea')).toBe(true);
     expect(report.issues.some(issue => issue.code === 'missing-material-role:mouthInterior')).toBe(true);
+  });
+
+  it('rejects close-up oral geometry that declares Jaw binding without real Jaw skin influence', () => {
+    const scene = validScene();
+    const tongue = scene.getObjectByName('RMV2_Tongue') as T.SkinnedMesh;
+    const headIndex = tongue.skeleton.bones.findIndex(bone => bone.name === 'head');
+    const skinIndex = tongue.geometry.getAttribute('skinIndex') as T.BufferAttribute;
+    for (let vertex = 0; vertex < skinIndex.count; vertex++) skinIndex.setX(vertex, headIndex);
+    skinIndex.needsUpdate = true;
+
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'missing-surface-binding:tongue:Jaw')).toBe(true);
   });
 
   it('treats missing facial targets as warnings on distant LODs', () => {

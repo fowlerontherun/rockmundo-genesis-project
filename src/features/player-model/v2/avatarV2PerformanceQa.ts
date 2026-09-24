@@ -30,6 +30,7 @@ export interface AvatarV2PerformanceQaReport {
   maxShoulderMotion: number | null;
   maxToeMotion: number | null;
   maxJawWeight: number | null;
+  maxJawBoneMotion: number | null;
   maxVocalShapeWeight: number | null;
   maxExpressiveFaceWeight: number | null;
   activeVocalVisemes: number;
@@ -54,6 +55,8 @@ const TWIST_MOTION_MAX = .90;
 const SHOULDER_MOTION_MIN = .004;
 const TOE_MOTION_MIN = .004;
 const JAW_WEIGHT_MIN = .08;
+const JAW_BONE_MOTION_MIN = .02;
+const JAW_BONE_MOTION_MAX = .22;
 const VOCAL_SHAPE_WEIGHT_MIN = .02;
 const EXPRESSIVE_FACE_WEIGHT_MIN = .01;
 const VOCAL_VISEMES = ['visemeAA', 'visemeEE', 'visemeIH', 'visemeOH', 'visemeOU'] as const satisfies readonly AvatarV2Expression[];
@@ -79,6 +82,8 @@ export function inspectAvatarV2Performance(
   const eyes = ['Eye.L', 'Eye.R']
     .map(name => actor.bones.get(name))
     .filter((bone): bone is T.Bone => !!bone);
+  const jaw = actor.bones.get('Jaw');
+  const jawBaseline = jaw?.quaternion.clone() ?? null;
   const eyeBaseline = new Map<T.Bone, T.Quaternion>(
     eyes.map(eye => [eye, eye.quaternion.clone()] as const),
   );
@@ -108,6 +113,7 @@ export function inspectAvatarV2Performance(
       maxShoulderMotion: null,
       maxToeMotion: null,
       maxJawWeight: null,
+      maxJawBoneMotion: null,
       maxVocalShapeWeight: null,
       maxExpressiveFaceWeight: null,
       activeVocalVisemes: 0,
@@ -136,6 +142,7 @@ export function inspectAvatarV2Performance(
   let maxShoulderMotion = 0;
   let maxToeMotion = 0;
   let maxJawWeight = 0;
+  let maxJawBoneMotion = 0;
   let maxVocalShapeWeight = 0;
   let maxExpressiveFaceWeight = 0;
   const activeVocalVisemes = new Set<AvatarV2Expression>();
@@ -180,6 +187,12 @@ export function inspectAvatarV2Performance(
       const weight = faceWeights[expression] ?? 0;
       if (Number.isFinite(weight)) maxExpressiveFaceWeight = Math.max(maxExpressiveFaceWeight, weight);
       else issues.push({ code: `invalid-face-expression:${expression}`, message: `${expression} produced a non-finite weight.` });
+    }
+
+    if (jaw && jawBaseline) {
+      const motion = jawBaseline.angleTo(jaw.quaternion);
+      if (Number.isFinite(motion)) maxJawBoneMotion = Math.max(maxJawBoneMotion, motion);
+      else issues.push({ code: 'invalid-jaw-bone-motion', message: 'Jaw produced a non-finite rotation during vocal QA.' });
     }
 
     for (const eye of eyes) {
@@ -267,6 +280,22 @@ export function inspectAvatarV2Performance(
   }
 
   if (preset === 'vocals') {
+    if (!jaw) {
+      issues.push({
+        code: 'missing-jaw-bone',
+        message: 'Close-up vocal QA requires the normalized Jaw bone so lower teeth and tongue can follow the mouth opening.',
+      });
+    } else if (maxJawBoneMotion < JAW_BONE_MOTION_MIN) {
+      issues.push({
+        code: 'vocal-jaw-bone-static',
+        message: 'Jaw exists but did not rotate enough during the sampled vocal performance.',
+      });
+    } else if (maxJawBoneMotion > JAW_BONE_MOTION_MAX) {
+      issues.push({
+        code: 'vocal-jaw-bone-range',
+        message: `Jaw rotation reached ${T.MathUtils.radToDeg(maxJawBoneMotion).toFixed(1)}°; target is ≤ ${T.MathUtils.radToDeg(JAW_BONE_MOTION_MAX).toFixed(0)}°.`,
+      });
+    }
     if (maxJawWeight < JAW_WEIGHT_MIN) {
       issues.push({
         code: 'vocal-jaw-static',
@@ -407,6 +436,7 @@ export function inspectAvatarV2Performance(
     maxShoulderMotion: shoulders.length ? maxShoulderMotion : null,
     maxToeMotion: toes.length ? maxToeMotion : null,
     maxJawWeight: preset === 'vocals' ? maxJawWeight : null,
+    maxJawBoneMotion: preset === 'vocals' && jaw ? maxJawBoneMotion : null,
     maxVocalShapeWeight: preset === 'vocals' ? maxVocalShapeWeight : null,
     maxExpressiveFaceWeight: preset === 'vocals' ? maxExpressiveFaceWeight : null,
     activeVocalVisemes: preset === 'vocals' ? activeVocalVisemes.size : 0,

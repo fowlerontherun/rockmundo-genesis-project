@@ -125,10 +125,33 @@ describe('Avatar V2 performance QA', () => {
     expect(report!.faceMorphs).toBeGreaterThanOrEqual(20);
     expect(report!.activeVocalVisemes).toBeGreaterThanOrEqual(3);
     expect(report!.maxJawWeight).toBeGreaterThan(.08);
+    expect(report!.maxJawBoneMotion).toBeGreaterThan(.02);
     expect(report!.maxVocalShapeWeight).toBeGreaterThan(.02);
     expect(report!.maxExpressiveFaceWeight).toBeGreaterThan(.01);
     expect(report!.issues).toEqual([]);
     expect(report!.valid).toBe(true);
+  });
+
+  it('rejects vocals when the authored Jaw bone is missing from the live rig', () => {
+    const model = simpleRiggedModel();
+    model.getObjectByName('Jaw')!.removeFromParent();
+
+    const actor = new Musician(
+      model,
+      'vocals',
+      [0, 0, 0],
+      .25,
+      undefined,
+      defaultAppearance('v2-vocal-missing-jaw-qa'),
+      'vocal_performance',
+      'lead',
+    );
+
+    const report = inspectAvatarV2Performance(actor, 'vocals');
+    expect(report).not.toBeNull();
+    expect(report!.valid).toBe(false);
+    expect(report!.maxJawBoneMotion).toBeNull();
+    expect(report!.issues.some(issue => issue.code === 'missing-jaw-bone')).toBe(true);
   });
 
   it('rejects a vocal candidate whose certified visemes never become varied in motion', () => {

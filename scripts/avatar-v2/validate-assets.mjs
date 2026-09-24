@@ -124,10 +124,30 @@ const SURFACE_NODE_PATTERNS = {
   iris: /rmv2[_-]?(iris|eye[_-]?iris)|(^|[_-])iris($|[_-])/i,
   sclera: /rmv2[_-]?(sclera|eye[_-]?white)|(^|[_-])sclera($|[_-])/i,
   cornea: /rmv2[_-]?(cornea|eye[_-]?(shell|surface))|ocular[_-]?shell/i,
-  teeth: /rmv2[_-]?(teeth|tooth)|(^|[_-])teeth($|[_-])/i,
+  teeth: /rmv2[_-]?(?:(?:upper|lower)[_-]?)?(teeth|tooth)|(^|[_-])teeth($|[_-])/i,
   tongue: /rmv2[_-]?tongue|(^|[_-])tongue($|[_-])/i,
   mouthInterior: /rmv2[_-]?mouth[_-]?(interior|cavity)|oral[_-]?cavity|inner[_-]?mouth/i,
 };
+const SURFACE_BINDING_ALIASES = {
+  Head: ['Head','head',...(requiredBoneAliases.head ?? [])],
+  Jaw: closeupBoneAliases.jaw,
+  'Eye.L': closeupBoneAliases.leftEye,
+  'Eye.R': closeupBoneAliases.rightEye,
+};
+const REQUIRED_SURFACE_BINDINGS = {
+  iris: ['Eye.L','Eye.R'],
+  sclera: ['Eye.L','Eye.R'],
+  cornea: ['Eye.L','Eye.R'],
+  teeth: ['Head','Jaw'],
+  tongue: ['Jaw'],
+  mouthInterior: ['Head'],
+};
+
+function canonicalSurfaceBinding(value) {
+  const wanted = clean(value);
+  return Object.entries(SURFACE_BINDING_ALIASES)
+    .find(([, aliases]) => aliases.some(alias => clean(alias) === wanted))?.[0] ?? null;
+}
 
 function materialBodyRegion(material) {
   if (!material) return null;
@@ -246,6 +266,10 @@ function inspect(gltf) {
   const unskinnedBodyRegions = new Set();
   const bareSkinBodyRegions = new Set();
   const dedicatedSurfaceRoles = new Set();
+  const dedicatedSurfaceBindings = Object.fromEntries(
+    Object.keys(SURFACE_NODE_PATTERNS).map(role => [role, new Set()]),
+  );
+  const usedMaterialNames = new Set();
   for (const node of gltf.nodes ?? []) {
     if (node.mesh == null) continue;
     const matched = new Set();
@@ -261,6 +285,9 @@ function inspect(gltf) {
     const usedMaterials = (mesh?.primitives ?? [])
       .map(primitive => gltf.materials?.[primitive.material])
       .filter(Boolean);
+    usedMaterials.forEach(material => {
+      if (material?.name) usedMaterialNames.add(material.name);
+    });
 
     for (const [role, pattern] of Object.entries(SURFACE_NODE_PATTERNS)) {
       const explicitRole = clean(node.extras?.rockmundoSurfaceRole ?? '');
@@ -269,7 +296,18 @@ function inspect(gltf) {
         namedForRole
         && usedMaterials.some(material => MATERIAL_ROLE_PATTERNS[role].test(material.name ?? ''))
         && (mesh?.primitives ?? []).some(primitive => accessorCount(gltf, primitive.attributes?.POSITION) > 0)
-      ) dedicatedSurfaceRoles.add(role);
+      ) {
+        dedicatedSurfaceRoles.add(role);
+        const binding = canonicalSurfaceBinding(node.extras?.rockmundoBoneBinding);
+        if (binding && node.skin != null) {
+          const skinJointNames = (gltf.skins?.[node.skin]?.joints ?? [])
+            .map(index => gltf.nodes?.[index]?.name)
+            .filter(Boolean);
+          if (containsAlias(skinJointNames, SURFACE_BINDING_ALIASES[binding])) {
+            dedicatedSurfaceBindings[role].add(binding);
+          }
+        }
+      }
     }
 
     for (const material of usedMaterials) {
@@ -305,11 +343,14 @@ function inspect(gltf) {
     jointAncestors,
     morphTargets: [...morphTargets],
     morphTargetDeltas,
-    materialNames: (gltf.materials ?? []).map(material => material?.name).filter(Boolean),
+    materialNames: [...usedMaterialNames],
     bodyRegions: [...bodyRegions],
     unskinnedBodyRegions: [...unskinnedBodyRegions],
     bareSkinBodyRegions: [...bareSkinBodyRegions],
     dedicatedSurfaceRoles: [...dedicatedSurfaceRoles],
+    dedicatedSurfaceBindings: Object.fromEntries(
+      Object.entries(dedicatedSurfaceBindings).map(([role, bindings]) => [role, [...bindings]]),
+    ),
   };
 }
 
@@ -467,6 +508,12 @@ function validateAsset(gltf, entry) {
     for (const role of ['iris','sclera','cornea','teeth','tongue','mouthInterior']) {
       if (!report.dedicatedSurfaceRoles.includes(role)) {
         errors.push(`LOD0 missing dedicated ${role} geometry using its matching material role; extra material slots do not count`);
+        continue;
+      }
+      for (const binding of REQUIRED_SURFACE_BINDINGS[role]) {
+        if (!(report.dedicatedSurfaceBindings?.[role] ?? []).includes(binding)) {
+          errors.push(`LOD0 ${role} surface missing valid rockmundoBoneBinding=${binding} on a skinned node`);
+        }
       }
     }
     for (const role of ['cornea','teeth','tongue','mouthInterior']) {
