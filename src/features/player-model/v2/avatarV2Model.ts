@@ -15,6 +15,7 @@ import {
   validatedAvatarV2Asset,
 } from './avatarV2Registry';
 import { applyAvatarV2Customization } from './avatarV2Customization';
+import { tuneAvatarV2Materials } from './avatarV2Materials';
 
 
 export function avatarV2LodForQuality(quality: AvatarVisualQuality): AvatarV2Lod {
@@ -31,53 +32,6 @@ export function requiredAvatarV2ModelFiles(
   if (!AVATAR_V2_ROLLOUT.enabled) return [];
   const lod = avatarV2LodForQuality(quality);
   return [...new Set(appearances.map(appearance => validatedAvatarV2Asset(appearance.body.frame, lod)?.file).filter(Boolean) as string[])];
-}
-
-function materialName(material: T.Material) {
-  return material.name.toLowerCase();
-}
-
-function ownV2MeshResources(root: T.Object3D) {
-  root.traverse(node => {
-    if (!(node instanceof T.Mesh)) return;
-    // SkeletonUtils shares geometry, materials and textures. The assembled model
-    // is disposed after the stage performer clones it, so it must own every
-    // disposable GPU resource rather than invalidating the cached source GLB.
-    node.geometry = node.geometry.clone();
-    const ownMaterial = (source: T.Material) => {
-      const material = source.clone();
-      for (const key of ['map','normalMap','roughnessMap','bumpMap','metalnessMap','alphaMap','aoMap','emissiveMap'] as const) {
-        const value = (material as T.MeshStandardMaterial)[key];
-        if (value instanceof T.Texture) (material as T.MeshStandardMaterial)[key] = value.clone();
-      }
-      return material;
-    };
-    node.material = Array.isArray(node.material)
-      ? node.material.map(ownMaterial)
-      : ownMaterial(node.material);
-  });
-}
-
-function tuneV2Materials(root: T.Object3D, appearance: PlayerAppearance) {
-  root.traverse(node => {
-    if (!(node instanceof T.Mesh)) return;
-    const materials = Array.isArray(node.material) ? node.material : [node.material];
-    for (const material of materials) {
-      if (!(material instanceof T.MeshStandardMaterial)) continue;
-      const name = materialName(material);
-      if (/skin|body|face/.test(name)) {
-        material.color.set(appearance.body.skin);
-        material.roughness = Math.min(.72, material.roughness || .72);
-      } else if (/hair|brow/.test(name)) {
-        material.color.set(appearance.head.hair);
-        material.roughness = Math.min(.58, material.roughness || .58);
-      } else if (/iris/.test(name)) {
-        material.color.set(appearance.head.eyeColor ?? '#65442d');
-        material.roughness = .22;
-      }
-      material.needsUpdate = true;
-    }
-  });
 }
 
 function normalizeRigNames(root: T.Object3D, report: AvatarV2ValidationReport) {
@@ -120,10 +74,18 @@ export interface AvatarV2AssemblyResult {
   reason?: string;
 }
 
+function avatarV2DefaultQualityForLod(lod: AvatarV2Lod): AvatarVisualQuality {
+  if (lod === 0) return 'ultra';
+  if (lod === 1) return 'high';
+  if (lod === 2) return 'balanced';
+  return 'crowd';
+}
+
 export function prepareAvatarV2CandidateModel(
   source: T.Object3D,
   appearance: PlayerAppearance,
   lod: AvatarV2Lod,
+  quality: AvatarVisualQuality = avatarV2DefaultQualityForLod(lod),
 ): AvatarV2AssemblyResult {
   const model = clone(source);
   const report = validateAvatarV2Scene(model, appearance.body.frame, lod);
@@ -133,7 +95,7 @@ export function prepareAvatarV2CandidateModel(
 
   ownV2MeshResources(model);
   normalizeRigNames(model, report);
-  tuneV2Materials(model, appearance);
+  tuneAvatarV2Materials(model, appearance, quality);
   applyAvatarV2Customization(model, appearance);
   normalizeScale(model, appearance);
   model.name = `rockmundo-avatar-v2-${appearance.body.frame}-lod${lod}`;
@@ -167,5 +129,5 @@ export function tryAssembleAvatarV2Model(
   const source = library.get(asset.file);
   if (!source) return { model: null, report: null, reason: `Avatar V2 asset was not preloaded: ${asset.file}` };
 
-  return prepareAvatarV2CandidateModel(source, appearance, lod);
+  return prepareAvatarV2CandidateModel(source, appearance, lod, quality);
 }
