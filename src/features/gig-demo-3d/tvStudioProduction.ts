@@ -158,6 +158,23 @@ function buildCameraBody(root: T.Group, x: number, z: number, yaw = 0, handheld 
   box(head, [.16, .045, .09], [0, bodyY + .245, -.18], tally).name = 'totp-camera-tally';
   rod(head, [-.22, bodyY + .26, .08], [.22, bodyY + .26, .08], .026, steel).name = 'totp-camera-top-handle';
   box(head, [.12, .08, .04], [-.2, bodyY - .19, .22], steel).name = 'totp-camera-connector-panel';
+  if (!handheld) {
+    const prompter = new T.Group();
+    prompter.name = 'totp-camera-teleprompter';
+    box(prompter, [.52, .38, .28], [0, bodyY + .02, -.78], matte('#0a0d11'));
+    const prompterGlass = box(prompter, [.42, .27, .018], [0, bodyY + .08, -.94], new T.MeshStandardMaterial({
+      color: '#26384d',
+      emissive: '#10253c',
+      emissiveIntensity: .35,
+      metalness: .1,
+      roughness: .12,
+      transparent: true,
+      opacity: .72,
+    }));
+    prompterGlass.rotation.x = -.18;
+    box(prompter, [.38, .055, .12], [0, bodyY - .24, -.66], dark).name = 'totp-camera-prompter-monitor';
+    head.add(prompter);
+  }
   camera.add(head);
   root.add(camera);
   return camera;
@@ -173,6 +190,9 @@ function buildOperator(root: T.Group, x: number, z: number, yaw = 0, name = 'tot
   operator.name = name;
   operator.userData.crew = true;
   operator.userData.department = 'camera';
+  operator.userData.baseYaw = yaw;
+  operator.userData.baseX = x;
+  operator.userData.baseZ = z;
   operator.position.set(x, 0, z);
   operator.rotation.y = yaw;
 
@@ -582,9 +602,11 @@ function buildStudioInfrastructure(root: T.Group, p: VenueProfile) {
 function buildBoomRig(root: T.Group, x: number, z: number) {
   const boom = new T.Group();
   boom.name = 'totp-boom-rig';
+  boom.position.set(x, 0, z);
+  boom.userData.baseYaw = 0;
   const pole = metal('#3f4852');
-  rod(boom, [x, 1.45, z], [x + 3.8, 3.25, z - 1.9], .028, pole);
-  const mic = cylinder(boom, .045, .055, .32, [x + 3.84, 3.27, z - 1.95], matte('#101317'), 12);
+  rod(boom, [0, 1.45, 0], [3.8, 3.25, -1.9], .028, pole);
+  const mic = cylinder(boom, .045, .055, .32, [3.84, 3.27, -1.95], matte('#101317'), 12);
   mic.rotation.x = Math.PI / 2.45;
   mic.name = 'totp-boom-microphone';
   root.add(boom);
@@ -601,6 +623,7 @@ function buildAdditionalCameraDepartment(root: T.Group, p: VenueProfile) {
 
   buildOperator(root, p.crowdWidth * .58 + .58, 7.72, -.48, 'totp-operator-jib');
   buildOperator(root, -9.72, 5.35, -.12, 'totp-camera-assistant-left');
+  buildOperator(root, 9.45, 5.72, .14, 'totp-camera-assistant-right');
 
   const floorManager = buildOperator(root, -9.85, 1.6, .4, 'totp-floor-manager');
   floorManager.userData.department = 'floor';
@@ -609,6 +632,187 @@ function buildAdditionalCameraDepartment(root: T.Group, p: VenueProfile) {
   const boomOperator = buildOperator(root, -8.55, -.15, .35, 'totp-boom-operator');
   boomOperator.userData.department = 'sound';
   buildBoomRig(root, -8.55, -.15);
+}
+
+
+function buildDrapePanel(root: T.Group, name: string, position: [number, number, number], size: [number, number, number], vertical = true) {
+  const drape = new T.Group();
+  drape.name = name;
+  drape.position.set(...position);
+  const cloth = new T.MeshStandardMaterial({ color: '#07090c', roughness: .98, metalness: 0 });
+  box(drape, size, [0, 0, 0], cloth);
+  const folds = vertical ? Math.max(4, Math.round(size[0] / .55)) : Math.max(4, Math.round(size[2] / .55));
+  for (let index = 0; index < folds; index += 1) {
+    const fraction = folds === 1 ? .5 : index / (folds - 1);
+    if (vertical) {
+      box(drape, [.055, size[1] * .96, size[2] + .025], [(fraction - .5) * size[0] * .94, 0, .012], matte(index % 2 ? '#11151a' : '#05070a'));
+    } else {
+      box(drape, [size[0] + .025, size[1] * .96, .055], [.012, 0, (fraction - .5) * size[2] * .94], matte(index % 2 ? '#11151a' : '#05070a'));
+    }
+  }
+  root.add(drape);
+}
+
+function buildStudioShell(root: T.Group, p: VenueProfile) {
+  const shell = new T.Group();
+  shell.name = 'totp-studio-shell';
+  const wallY = 3.15;
+  buildDrapePanel(shell, 'totp-studio-drape-rear', [0, wallY, -6.72], [21.8, 5.9, .16], true);
+  buildDrapePanel(shell, 'totp-studio-drape-left', [-11.55, wallY, .25], [.16, 5.9, 13.8], false);
+  buildDrapePanel(shell, 'totp-studio-drape-right', [11.55, wallY, .25], [.16, 5.9, 13.8], false);
+
+  const flat = texturedMaterial('totp-masking-flat-material', '#11161c', '#27313b', 'brushed', 3, 5, .12, .76);
+  box(shell, [2.2, 5.2, .18], [-9.65, 2.6, -5.72], flat).name = 'totp-backstage-flat-left';
+  box(shell, [2.2, 5.2, .18], [9.65, 2.6, -5.72], flat).name = 'totp-backstage-flat-right';
+
+  const header = metal('#444e58');
+  rod(shell, [-10.6, 5.95, -5.95], [10.6, 5.95, -5.95], .055, header);
+  for (const x of [-10.6, 10.6]) rod(shell, [x, .25, -5.95], [x, 5.95, -5.95], .04, header);
+
+  root.add(shell);
+}
+
+function buildControlMonitor(group: T.Group, x: number, y: number, z: number, hue: 'blue' | 'magenta' | 'amber', name: string) {
+  const frame = matte('#11151a');
+  const palette = hue === 'magenta'
+    ? { color: '#551839', emissive: '#ff3ca8' }
+    : hue === 'amber'
+      ? { color: '#5a3b12', emissive: '#ffb12e' }
+      : { color: '#11304b', emissive: '#26bfff' };
+  box(group, [.72, .46, .075], [x, y, z], frame);
+  const screen = box(group, [.64, .37, .022], [x, y, z - .049], new T.MeshStandardMaterial({
+    color: palette.color,
+    emissive: palette.emissive,
+    emissiveIntensity: .72,
+    roughness: .25,
+  }));
+  screen.name = name;
+}
+
+function buildProductionControlArea(root: T.Group) {
+  const control = new T.Group();
+  control.name = 'totp-production-control-area';
+  control.position.set(9.55, 0, -3.25);
+  control.rotation.y = -.18;
+
+  const desk = texturedMaterial('totp-control-desk-material', '#20272e', '#4a5662', 'brushed', 5, 3, .22, .58);
+  const edge = metal('#66727d');
+  box(control, [3.15, .16, 1.05], [0, .79, 0], desk).name = 'totp-vision-mix-desk';
+  box(control, [3.0, .72, .72], [0, .39, .1], desk);
+  box(control, [3.18, .045, 1.08], [0, .9, 0], edge);
+
+  for (const [index, hue] of (['blue', 'magenta', 'blue', 'amber'] as const).entries()) {
+    buildControlMonitor(control, -1.08 + index * .72, 1.24, -.12, hue, 'totp-control-monitor-screen');
+  }
+
+  const consoleTop = box(control, [2.2, .055, .6], [0, .96, .29], matte('#0d1116'));
+  consoleTop.rotation.x = -.16;
+  for (let row = 0; row < 3; row += 1) {
+    for (let column = 0; column < 9; column += 1) {
+      const key = cylinder(control, .024, .024, .018, [-.84 + column * .21, 1.005 + row * .025, .1 + row * .13], column % 3 === 0 ? matte('#b3315b') : matte('#48535e'), 8);
+      key.rotation.x = Math.PI / 2;
+    }
+  }
+
+  const rack = new T.Group();
+  rack.name = 'totp-audio-rack';
+  rack.position.set(1.95, 0, .15);
+  box(rack, [.82, 1.7, .72], [0, .85, 0], matte('#151a20'));
+  for (let level = 0; level < 7; level += 1) {
+    box(rack, [.7, .14, .035], [0, .23 + level * .2, -.38], matte('#252d35'));
+    for (let lamp = 0; lamp < 3; lamp += 1) {
+      cylinder(rack, .018, .018, .012, [-.22 + lamp * .22, .23 + level * .2, -.405], level % 2 ? matte('#55d98c') : matte('#f4b64a'), 8).rotation.x = Math.PI / 2;
+    }
+  }
+  control.add(rack);
+
+  box(control, [1.15, .78, .82], [-2.02, .39, .15], texturedMaterial('totp-lighting-console-material', '#1b2229', '#37434e', 'grid', 4, 3, .12, .62)).name = 'totp-lighting-console';
+  for (let index = 0; index < 5; index += 1) rod(control, [-2.36 + index * .17, .83, -.06], [-2.36 + index * .17, 1.03, .12], .012, metal('#87929b'));
+
+  root.add(control);
+}
+
+function buildCableCoil(root: T.Group, x: number, z: number, name: string) {
+  const group = new T.Group();
+  group.name = name;
+  group.position.set(x, .09, z);
+  const cable = matte('#0a0d10');
+  for (let index = 0; index < 4; index += 1) {
+    const coil = new T.Mesh(new T.TorusGeometry(.28 + index * .018, .022, 6, 24), cable);
+    coil.rotation.x = Math.PI / 2;
+    coil.position.y = index * .035;
+    group.add(coil);
+  }
+  root.add(group);
+}
+
+function buildSpeakerWedge(root: T.Group, x: number, z: number, yaw: number, name: string) {
+  const wedge = new T.Group();
+  wedge.name = name;
+  wedge.position.set(x, 0, z);
+  wedge.rotation.y = yaw;
+  const body = texturedMaterial(`${name}-material`, '#11161b', '#333c45', 'perforated', 5, 4, .08, .78);
+  const cabinet = box(wedge, [.76, .32, .6], [0, .18, 0], body);
+  cabinet.rotation.x = -.22;
+  box(wedge, [.62, .2, .025], [0, .27, -.31], matte('#262e35'));
+  root.add(wedge);
+}
+
+function buildSpareTripod(root: T.Group, x: number, z: number) {
+  const tripod = new T.Group();
+  tripod.name = 'totp-spare-camera-tripod';
+  tripod.position.set(x, 0, z);
+  const steel = metal('#4c5660');
+  rod(tripod, [0, .95, 0], [-.38, .04, .28], .025, steel);
+  rod(tripod, [0, .95, 0], [.38, .04, .28], .025, steel);
+  rod(tripod, [0, .95, 0], [0, .04, -.44], .025, steel);
+  box(tripod, [.44, .14, .34], [0, 1.03, 0], matte('#171c22'));
+  root.add(tripod);
+}
+
+function buildUtilityCart(root: T.Group, x: number, z: number) {
+  const cart = new T.Group();
+  cart.name = 'totp-utility-cart';
+  cart.position.set(x, 0, z);
+  const frame = metal('#56616c');
+  for (const y of [.35, .85, 1.35]) box(cart, [1.05, .065, .58], [0, y, 0], frame);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) rod(cart, [sx * .48, .18, sz * .25], [sx * .48, 1.42, sz * .25], .022, frame);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) cylinder(cart, .065, .065, .04, [sx * .43, .06, sz * .2], matte('#101317'), 10).rotation.z = Math.PI / 2;
+  box(cart, [.34, .22, .26], [-.26, .49, 0], matte('#181d23'));
+  box(cart, [.28, .16, .24], [.28, .46, 0], matte('#242b32'));
+  root.add(cart);
+}
+
+function buildAdditionalStudioCrew(root: T.Group) {
+  const producer = buildOperator(root, 10.15, -1.82, -1.2, 'totp-producer');
+  producer.userData.department = 'production';
+  box(producer, [.25, .34, .028], [.34, 1.02, -.17], matte('#b8c8d8')).name = 'totp-producer-tablet';
+
+  const lightingTech = buildOperator(root, 9.35, -4.78, -.92, 'totp-lighting-tech');
+  lightingTech.userData.department = 'lighting';
+
+  const soundTech = buildOperator(root, 10.55, -4.45, -1.05, 'totp-sound-tech');
+  soundTech.userData.department = 'sound';
+
+  const runner = buildOperator(root, -10.25, 7.25, .35, 'totp-runner');
+  runner.userData.department = 'production';
+  box(runner, [.2, .28, .025], [.32, 1.0, -.17], matte('#d7d1b7')).name = 'totp-runner-cue-card';
+
+  const stagehand = buildOperator(root, -10.4, 6.1, .25, 'totp-stagehand');
+  stagehand.userData.department = 'stage';
+
+  const floorAssistant = buildOperator(root, 9.7, .55, -1.1, 'totp-floor-assistant');
+  floorAssistant.userData.department = 'floor';
+  box(floorAssistant, [.24, .32, .025], [.33, 1.02, -.18], matte('#e0e0db')).name = 'totp-floor-assistant-clipboard';
+}
+
+function buildStudioProps(root: T.Group) {
+  buildCableCoil(root, -10.2, 8.1, 'totp-coiled-cable-left');
+  buildCableCoil(root, 10.15, 7.9, 'totp-coiled-cable-right');
+  buildSpeakerWedge(root, -5.25, .78, .08, 'totp-speaker-wedge-left');
+  buildSpeakerWedge(root, 5.1, .72, -.08, 'totp-speaker-wedge-right');
+  buildSpareTripod(root, 10.35, 8.55);
+  buildUtilityCart(root, -10.35, 8.85);
 }
 
 function buildSpecialEditionDecor(root: T.Group, p: VenueProfile) {
@@ -624,10 +828,13 @@ export function buildTvStudioProduction(root: T.Group, p: VenueProfile) {
   const accent = new T.MeshStandardMaterial({ color: '#b41945', emissive: '#7a0d2d', emissiveIntensity: .55, roughness: .55 });
   const floor = texturedMaterial('totp-presenter-rostrum-material', '#20262d', '#3b4550', 'brushed', 5, 4, .08, .65);
 
+  buildStudioShell(root, p);
   buildStudioInfrastructure(root, p);
   buildPerformanceZones(root, p);
   buildStudioSetVariant(root, p);
   buildSpecialEditionDecor(root, p);
+  buildProductionControlArea(root);
+  buildStudioProps(root);
 
   const presenterX = -p.stageWidth * .66;
   const presenterZ = -.35;
@@ -665,6 +872,7 @@ export function buildTvStudioProduction(root: T.Group, p: VenueProfile) {
   root.add(jib);
 
   buildAdditionalCameraDepartment(root, p);
+  buildAdditionalStudioCrew(root);
 
   for (const x of [-p.stageWidth * .46, 0, p.stageWidth * .46]) {
     const tower = new T.Group();
