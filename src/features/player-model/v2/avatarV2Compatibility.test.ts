@@ -70,16 +70,25 @@ describe('Avatar V2 compatibility layer', () => {
   });
 
   it('uses denser V2 hair geometry and fibre detail at high quality', () => {
+    const balancedRoot = rig();
+    addHeadSurface(balancedRoot);
+    const balancedAppearance = defaultAppearance('avatar-v2-hair-balanced');
+    balancedAppearance.head.hairStyle = 'quiff';
+    applyAvatarV2Compatibility(balancedRoot, balancedAppearance, [], [], 'balanced');
+    const balancedHair = balancedRoot.getObjectByName('avatar-hairstyle') as T.Mesh;
+
     const root = rig();
     addHeadSurface(root);
     const appearance = defaultAppearance('avatar-v2-hair-quality');
     appearance.head.hairStyle = 'quiff';
-
     applyAvatarV2Compatibility(root, appearance, [], [], 'high');
 
     const hair = root.getObjectByName('avatar-hairstyle') as T.Mesh;
     const material = hair.material as T.MeshPhysicalMaterial;
     expect(hair).toBeTruthy();
+    expect(hair.geometry.attributes.position.count).toBeGreaterThan(
+      balancedHair.geometry.attributes.position.count,
+    );
     expect(material).toBeInstanceOf(T.MeshPhysicalMaterial);
     expect(material.normalMap).toBeInstanceOf(T.DataTexture);
     expect((material.normalMap as T.DataTexture).image.width).toBe(512);
