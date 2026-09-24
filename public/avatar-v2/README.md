@@ -229,6 +229,7 @@ Use stable names where possible:
 - `RMV2_Cornea` for the transparent/reflective eye shell
 - `RMV2_Wetline` for the eyelid tear/wetline highlight
 - `RMV2_Eyelashes` for authored lash cards/strips
+- `RMV2_Eyebrows` for the authored natural-brow region on the skinned head
 - `RMV2_Lips` for the used lip region on the skinned head
 - `RMV2_Hair`
 - `RMV2_Teeth`
@@ -237,7 +238,8 @@ Use stable names where possible:
 
 LOD0 now requires dedicated iris, sclera, cornea, left/right wetline, left/right
 eyelash, teeth, tongue and mouth-interior geometry using matching material roles;
-the skinned head/face must also contain a genuinely used `RMV2_Lips` material region; extra unused/material slots on the body or
+the skinned head/face must also contain genuinely used `RMV2_Lips` and
+`RMV2_Eyebrows` material regions; extra unused/material slots on the body or
 face do not count. The eye surfaces must be split or skinned so both `Eye.L` and
 `Eye.R` have real influence. Teeth must include both Head-driven upper teeth and
 Jaw-driven lower teeth, the tongue must carry real Jaw influence, and the mouth
@@ -258,6 +260,7 @@ Recommended LOD0 surface layout:
 - `RMV2_Wetline.L/R` → `Head`, with `rockmundoEyeSide=L/R` and the matching blink morph
 - `RMV2_Eyelashes.L/R` → `Head`, with `rockmundoEyeSide=L/R` and the matching blink morph
 - `RMV2_Lips` → used material region on the skinned `RMV2_Head`/`RMV2_Face` surface
+- `RMV2_Eyebrows` → used natural-brow region on the same head/face surface
 - `RMV2_UpperTeeth` → `Head`
 - `RMV2_LowerTeeth` → `Jaw`
 - `RMV2_Tongue` → `Jaw`
@@ -267,7 +270,12 @@ The browser gate verifies actual skin weights against the declared binding, so t
 metadata cannot be used as a substitute for real deformation. Eyelashes must also
 remain spatially fitted to the corresponding eye and visibly follow the matching
 blink. The lip region receives a skin-relative colour plus controlled moisture/
-specular response instead of inheriting the generic face shader.
+specular response instead of inheriting the generic face shader. Natural eyebrows
+receive the saved eyebrow colour independently from hairstyle colour. When a player
+selects a non-natural eyebrow style, V2 suppresses the authored natural-brow region
+and rebuilds the saved brow style on the Head bone. Existing freckles, beauty marks
+and weathering are also rebuilt on V2 without reapplying V1 face scaling, so V2
+face-shape morphs remain authoritative.
 
 PBR maps should use glTF metallic/roughness convention. Authored skin normal and
 roughness maps always win. When either is missing, RockMundo supplies its
