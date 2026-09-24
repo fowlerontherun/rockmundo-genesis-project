@@ -1,7 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { AlertTriangle, CheckCircle2, Cuboid, Gauge, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Cuboid, ExternalLink, Gauge, ShieldCheck } from 'lucide-react';
 import { AvatarV2CandidateLab } from '@/components/admin/avatar/AvatarV2CandidateLab';
 import { AVATAR_V2_BUDGETS } from '@/features/player-model/v2/avatarV2Contract';
 import {
@@ -37,7 +37,7 @@ export default function AvatarV2Admin() {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base"><Cuboid className="h-4 w-4" /> Base meshes</CardTitle>
@@ -69,6 +69,30 @@ export default function AvatarV2Admin() {
               V2 is already wired behind a fail-closed engine adapter. Missing or invalid
               assets continue rendering Avatar V1 instead of breaking the player.
             </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base"><Cuboid className="h-4 w-4" /> Authoring source</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="font-semibold">Blender Human Base Meshes v1.4.1</div>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="outline">CC0</Badge>
+              <Badge variant="secondary">authoring only</Badge>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Clean topology/sculpt starting point. RockMundo still authors the final rig,
+              morphs, materials, LODs and visual style before any asset can validate.
+            </p>
+            <a
+              className="inline-flex items-center gap-1 text-sm font-medium underline underline-offset-4"
+              href="https://download.blender.org/demo/asset-bundles/human-base-meshes/human-base-meshes-bundle-v1.4.1.zip"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Official source bundle <ExternalLink className="h-3.5 w-3.5" />
+            </a>
           </CardContent>
         </Card>
       </div>
@@ -117,12 +141,13 @@ export default function AvatarV2Admin() {
           <CardDescription>What must happen before an authored mesh can replace V1.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
-          <p><strong>1.</strong> Export GLB 2.0 in metres, +Y up, +Z forward, A-pose.</p>
-          <p><strong>2.</strong> Include the required humanoid bones and close-up facial morphs.</p>
-          <p><strong>3.</strong> Put it at the path listed above and change its manifest state to <code>asset_ready</code>.</p>
-          <p><strong>4.</strong> Run <code>npm run validate:avatar-v2</code>. Automated rig, morph, triangle, vertex and bone-budget checks must pass.</p>
-          <p><strong>5.</strong> Complete visual QA for singing, guitar, bass, drums, hair/accessories and garment fit before changing state to <code>validated</code>.</p>
-          <p><strong>6.</strong> Rollout stays locked until V2 clothing and tattoo projection are compatible; V1 remains the fallback throughout.</p>
+          <p><strong>1.</strong> Start from the pinned CC0 Blender base source, then author the RockMundo silhouette, rig, face and deformation set.</p>
+          <p><strong>2.</strong> Export GLB 2.0 in metres, +Y up, +Z forward, A-pose.</p>
+          <p><strong>3.</strong> Include the required humanoid bones, fingers, body regions, facial morphs and joint correctives.</p>
+          <p><strong>4.</strong> Put it at the path listed above and change its manifest state to <code>asset_ready</code>.</p>
+          <p><strong>5.</strong> Run <code>npm run validate:avatar-v2</code>. Source provenance, rig, morph, triangle, vertex and bone-budget checks must pass.</p>
+          <p><strong>6.</strong> Complete visual QA for singing, guitar, bass, drums, hair/accessories and garment fit before changing state to <code>validated</code>.</p>
+          <p><strong>7.</strong> Rollout stays locked until V2 clothing and tattoo projection are compatible; V1 remains the fallback throughout.</p>
         </CardContent>
       </Card>
     </main>
