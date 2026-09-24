@@ -23,7 +23,7 @@ function validScene() {
     root.add(bone);
     return bone;
   });
-  const headBone = bones[AVATAR_V2_REQUIRED_BONES.indexOf('head')];
+  const headBone = bones.find(bone => bone.name === 'head')!;
   for (const [semantic, aliases] of Object.entries(AVATAR_V2_CLOSEUP_BONE_ALIASES)) {
     const bone = new T.Bone();
     bone.name = aliases[0];
