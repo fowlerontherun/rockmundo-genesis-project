@@ -147,13 +147,13 @@ describe('Avatar V2 mesh contract', () => {
     expect(report.issues.some(issue => issue.code === 'missing-muscle-morph:muscleAthletic')).toBe(true);
   });
 
-  it('warns when a close-up joint deformation corrective is missing', () => {
+  it('fails close-up assets when a required joint deformation corrective is missing', () => {
     const scene = validScene();
     const mesh = scene.getObjectByName('RMV2_Body') as T.SkinnedMesh;
     delete mesh.morphTargetDictionary!.poseElbowLeft;
     const report = validateAvatarV2Scene(scene, 'masculine', 0);
-    expect(report.valid).toBe(true);
-    expect(report.issues.some(issue => issue.code === 'missing-pose-corrective:poseElbowLeft' && issue.level === 'warning')).toBe(true);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'missing-pose-corrective:poseElbowLeft' && issue.level === 'error')).toBe(true);
   });
 
   it('fails close-up assets without an authored skinned head surface', () => {
