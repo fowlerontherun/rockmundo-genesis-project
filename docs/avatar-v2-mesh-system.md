@@ -97,6 +97,24 @@ Priority topology areas:
 - clean neck/head transition for hairstyles;
 - stable UVs for tattoos and skin detail.
 
+## Foot and toe-base articulation
+
+LOD0/LOD1 use `Toe.L/R` as live deformation bones rather than contract-only
+markers. Each toe base must inherit from its matching `Foot.L/R`; browser
+candidate validation, the exported-GLB validator and the Blender export gate all
+reject disconnected forefoot chains.
+
+The live performer solves leg/ankle placement first, then applies toe flex around
+a hinge axis derived from the authored ankle-to-toe direction. This avoids
+assuming imported local bone axes and means toe motion cannot move the ankle IK
+target. Walking uses stronger swing/push-off flex, drum performers press the
+forefoot during pedal cycles, standing performers alternate subtle load between
+feet, and running crowd poses retain visible toe articulation.
+
+The runtime clamps toe lift to about 24 degrees and downward pedal/load press to
+about 11 degrees. Admin performance QA checks for both toe bones, finite motion,
+visible movement and the same upper range bound.
+
 ## Shoulder girdle participation
 
 LOD0/LOD1 shoulder bones are part of the live performance solve, not decorative

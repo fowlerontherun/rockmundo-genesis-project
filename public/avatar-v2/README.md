@@ -177,7 +177,7 @@ vocals never expose a hollow mouth.
 LOD0/LOD1 also require shoulder and toe-base articulation, dedicated `Eye.L` /
 `Eye.R` bones, six deform-only twist helpers
 (`UpperArmTwist.L/R`, `ForearmTwist.L/R`, `ThighTwist.L/R`), plus complete
-three-joint thumb/index/middle/ring/little chains on both hands. Both eye bones must be descendants of the authored head bone so
+three-joint thumb/index/middle/ring/little chains on both hands. `Toe.L/R` must be descendants of their matching `Foot.L/R` bones; the live performer uses them for walking push-off, drum-pedal press and standing weight-transfer flex instead of leaving the forefoot rigid. Both eye bones must be descendants of the authored head bone so
 head turns carry the eyes with them. They are driven at runtime for deterministic
 micro-saccades and interaction-aware gaze; do not bake a permanently offset stare
 into the mesh. They also require

@@ -3,6 +3,7 @@ import type { Musician } from '@/features/gig-demo-3d/performers';
 import { handContactPoint } from '@/features/gig-demo-3d/instrumentHandPose';
 import { AVATAR_V2_TWIST_RUNTIME_BONES } from './avatarV2TwistBones';
 import { AVATAR_V2_SHOULDER_MAX_ANGLE, AVATAR_V2_SHOULDER_RUNTIME_BONES } from './avatarV2Shoulder';
+import { AVATAR_V2_TOE_MAX_LIFT_ANGLE, AVATAR_V2_TOE_RUNTIME_BONES } from './avatarV2Toe';
 
 export type AvatarV2PerformancePreset =
   | 'backstage'
@@ -26,9 +27,11 @@ export interface AvatarV2PerformanceQaReport {
   maxEyeMotion: number | null;
   maxTwistMotion: number | null;
   maxShoulderMotion: number | null;
+  maxToeMotion: number | null;
   eyeBones: number;
   twistBones: number;
   shoulderBones: number;
+  toeBones: number;
   drumsticks: number;
   guitarPicks: number;
   issues: AvatarV2PerformanceQaIssue[];
@@ -43,6 +46,7 @@ const EYE_MOTION_MAX = .35;
 const TWIST_MOTION_MIN = .004;
 const TWIST_MOTION_MAX = .90;
 const SHOULDER_MOTION_MIN = .004;
+const TOE_MOTION_MIN = .004;
 
 const finiteWorldMatrix = (object: T.Object3D) =>
   object.matrixWorld.elements.every(Number.isFinite);
@@ -68,6 +72,9 @@ export function inspectAvatarV2Performance(
   const shoulders = AVATAR_V2_SHOULDER_RUNTIME_BONES
     .map(name => actor.bones.get(name))
     .filter((bone): bone is T.Bone => !!bone);
+  const toes = AVATAR_V2_TOE_RUNTIME_BONES
+    .map(name => actor.bones.get(name))
+    .filter((bone): bone is T.Bone => !!bone);
   const rig = actor.instrumentRig;
 
   if (!rig) {
@@ -81,9 +88,11 @@ export function inspectAvatarV2Performance(
       maxEyeMotion: null,
       maxTwistMotion: null,
       maxShoulderMotion: null,
+      maxToeMotion: null,
       eyeBones: eyes.length,
       twistBones: twists.length,
       shoulderBones: shoulders.length,
+      toeBones: toes.length,
       drumsticks: 0,
       guitarPicks: 0,
       issues: [{ code: 'missing-instrument-rig', message: 'The performance preset did not create an instrument rig.' }],
@@ -102,6 +111,7 @@ export function inspectAvatarV2Performance(
   let maxEyeMotion = 0;
   let maxTwistMotion = 0;
   let maxShoulderMotion = 0;
+  let maxToeMotion = 0;
   const sticks = preset === 'rock_drums'
     ? rig.tools.filter(tool => /^playing-stick(?:-|$)/.test(tool.name))
     : [];
@@ -139,6 +149,12 @@ export function inspectAvatarV2Performance(
       const motion = Math.abs(Number(shoulder.userData.rockmundoAvatarV2ShoulderAngle ?? 0));
       if (Number.isFinite(motion)) maxShoulderMotion = Math.max(maxShoulderMotion, motion);
       else issues.push({ code: 'invalid-shoulder-deformation', message: shoulder.name + ' produced a non-finite clavicle rotation.' });
+    }
+
+    for (const toe of toes) {
+      const motion = Math.abs(Number(toe.userData.rockmundoAvatarV2ToeAngle ?? 0));
+      if (Number.isFinite(motion)) maxToeMotion = Math.max(maxToeMotion, motion);
+      else issues.push({ code: 'invalid-toe-deformation', message: toe.name + ' produced a non-finite toe-base rotation.' });
     }
 
     if (needsLeft && left) {
@@ -227,6 +243,23 @@ export function inspectAvatarV2Performance(
     });
   }
 
+  if (toes.length < AVATAR_V2_TOE_RUNTIME_BONES.length) {
+    issues.push({
+      code: 'missing-toe-bones',
+      message: 'Close-up performance QA requires both Toe.L and Toe.R so the forefoot can articulate during live movement.',
+    });
+  } else if (maxToeMotion < TOE_MOTION_MIN) {
+    issues.push({
+      code: 'toe-deformation-static',
+      message: 'Toe-base bones were present but stayed static across the sampled performance movement.',
+    });
+  } else if (maxToeMotion > AVATAR_V2_TOE_MAX_LIFT_ANGLE + .001) {
+    issues.push({
+      code: 'toe-deformation-range',
+      message: 'Toe-base rotation reached ' + T.MathUtils.radToDeg(maxToeMotion).toFixed(1) + '°; target is ≤ ' + T.MathUtils.radToDeg(AVATAR_V2_TOE_MAX_LIFT_ANGLE).toFixed(0) + '°.',
+    });
+  }
+
   if (twists.length < AVATAR_V2_TWIST_RUNTIME_BONES.length) {
     issues.push({
       code: 'missing-twist-bones',
@@ -294,9 +327,11 @@ export function inspectAvatarV2Performance(
     maxEyeMotion: eyes.length ? maxEyeMotion : null,
     maxTwistMotion: twists.length ? maxTwistMotion : null,
     maxShoulderMotion: shoulders.length ? maxShoulderMotion : null,
+    maxToeMotion: toes.length ? maxToeMotion : null,
     eyeBones: eyes.length,
     twistBones: twists.length,
     shoulderBones: shoulders.length,
+    toeBones: toes.length,
     drumsticks: sticks.length,
     guitarPicks,
     issues: uniqueIssues,

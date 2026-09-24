@@ -346,6 +346,17 @@ function validateAsset(gltf, entry) {
       }
     }
 
+    for (const [toeSemantic, footSemantic] of [
+      ['leftToes', 'leftFoot'],
+      ['rightToes', 'rightFoot'],
+    ]) {
+      const toeName = matchingAlias(report.jointNames, closeupBoneAliases[toeSemantic]);
+      const footName = matchingAlias(report.jointNames, [footSemantic, ...requiredBoneAliases[footSemantic]]);
+      if (toeName && footName && !containsAlias(report.jointAncestors[toeName] ?? [], [footName])) {
+        errors.push(`${toeSemantic} must inherit from ${footSemantic}.`);
+      }
+    }
+
     const twistParents = {
       leftUpperArmTwist: 'leftUpperArm',
       rightUpperArmTwist: 'rightUpperArm',

@@ -52,6 +52,15 @@ function validScene() {
     shoulder.add(arm);
   }
 
+  for (const [toeSemantic, footSemantic] of [
+    ['leftToes', 'leftFoot'],
+    ['rightToes', 'rightFoot'],
+  ] as const) {
+    const toe = bones.find(bone => bone.name === AVATAR_V2_CLOSEUP_BONE_ALIASES[toeSemantic][0])!;
+    const foot = bones.find(bone => bone.name === footSemantic)!;
+    foot.add(toe);
+  }
+
   const geometry = new T.BoxGeometry(.5, 1.7, .25, 2, 4, 2);
   const count = geometry.getAttribute('position').count;
   geometry.setAttribute('skinIndex', new T.Uint16BufferAttribute(new Uint16Array(count * 4), 4));
@@ -316,6 +325,15 @@ describe('Avatar V2 mesh contract', () => {
     const report = validateAvatarV2Scene(scene, 'masculine', 0);
     expect(report.valid).toBe(false);
     expect(report.issues.some(issue => issue.code === 'invalid-upper-arm-parent:leftUpperArm')).toBe(true);
+  });
+
+  it('fails close-up assets whose toe base bypasses the foot hierarchy', () => {
+    const scene = validScene();
+    const toe = scene.getObjectByName('leftToes') as T.Bone;
+    scene.attach(toe);
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'invalid-toe-parent:leftToes')).toBe(true);
   });
 
   it('fails close-up assets that omit an authored limb twist bone', () => {
