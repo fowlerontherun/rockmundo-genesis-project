@@ -460,7 +460,7 @@ export function buildAvatarV2Garments(
   clothing: ResolvedEquippedClothing[],
   appearance: PlayerAppearance,
   lod: AvatarV2Lod,
-  quality: AvatarVisualQuality = lod === 0 ? 'ultra' : lod === 1 ? 'high' : lod === 2 ? 'balanced' : 'crowd',
+  quality: AvatarVisualQuality = 'balanced',
 ): AvatarV2GarmentBuildResult {
   const frame = appearance.body.frame;
   const compatibility = avatarV2ClothingCompatibilityReason(clothing, frame, lod);
