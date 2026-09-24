@@ -63,7 +63,9 @@ describe('Avatar V2 shoulder girdle follow', () => {
     const controller = createAvatarV2ShoulderController(root)!;
     const shoulder = root.getObjectByName('Shoulder.R') as T.Bone;
     const upper = root.getObjectByName('UpperArm.R') as T.Bone;
-    const target = upper.getWorldPosition(new T.Vector3()).multiplyScalar(2);
+    const shoulderWorld = shoulder.getWorldPosition(new T.Vector3());
+    const restDirection = upper.getWorldPosition(new T.Vector3()).sub(shoulderWorld).normalize();
+    const target = shoulderWorld.clone().addScaledVector(restDirection, .8);
 
     controller.aim('R', target);
 
