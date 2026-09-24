@@ -137,11 +137,15 @@ export class AvatarV2TwistController {
 
       distributed.setFromAxisAngle(binding.axis, angle);
       binding.helper.quaternion.copy(distributed).multiply(binding.helperRest);
+      binding.helper.userData.rockmundoAvatarV2TwistAngle = angle;
     }
   }
 
   reset() {
-    for (const binding of this.bindings) binding.helper.quaternion.copy(binding.helperRest);
+    for (const binding of this.bindings) {
+      binding.helper.quaternion.copy(binding.helperRest);
+      binding.helper.userData.rockmundoAvatarV2TwistAngle = 0;
+    }
   }
 }
 

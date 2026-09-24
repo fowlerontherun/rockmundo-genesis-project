@@ -24,8 +24,10 @@ function simpleRiggedModel() {
     // never reach the live guitar/drum grip markers, so the test was measuring an
     // impossible fixture rather than the production IK/clearance rules.
     const lower = new T.Bone(); lower.name = `LowerArm.${side}`; lower.position.set(side === 'L' ? .41 : -.41, -.025, .015);
+    const upperTwist = new T.Bone(); upperTwist.name = `UpperArmTwist.${side}`; upperTwist.position.set(side === 'L' ? .2 : -.2, 0, 0);
     const hand = new T.Bone(); hand.name = `Hand.${side}`; hand.position.set(side === 'L' ? .41 : -.41, -.015, .015);
-    torso.add(upper); upper.add(lower); lower.add(hand);
+    const forearmTwist = new T.Bone(); forearmTwist.name = `ForearmTwist.${side}`; forearmTwist.position.set(side === 'L' ? .2 : -.2, 0, 0);
+    torso.add(upper); upper.add(lower, upperTwist); lower.add(hand, forearmTwist);
     for (const digit of ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky'] as const) {
       let parent: T.Bone = hand;
       for (const joint of [1, 2, 3] as const) {
@@ -40,6 +42,23 @@ function simpleRiggedModel() {
         parent = finger;
       }
     }
+  }
+
+  for (const side of ['L', 'R'] as const) {
+    const upperLeg = new T.Bone();
+    upperLeg.name = `UpperLeg.${side}`;
+    upperLeg.position.set(side === 'L' ? .08 : -.08, -.08, 0);
+    hips.add(upperLeg);
+
+    const lowerLeg = new T.Bone();
+    lowerLeg.name = `LowerLeg.${side}`;
+    lowerLeg.position.set(0, -.45, 0);
+    upperLeg.add(lowerLeg);
+
+    const thighTwist = new T.Bone();
+    thighTwist.name = `ThighTwist.${side}`;
+    thighTwist.position.set(0, -.22, 0);
+    upperLeg.add(thighTwist);
   }
   root.add(hips);
 
@@ -80,6 +99,9 @@ describe('Avatar V2 performance QA', () => {
     expect(report!.maxFingerContactError).toBeLessThan(.20);
     expect(report!.eyeBones).toBe(2);
     expect(report!.maxEyeMotion).toBeGreaterThan(.004);
+    expect(report!.twistBones).toBe(6);
+    expect(report!.maxTwistMotion).toBeGreaterThan(.004);
+    expect(report!.maxTwistMotion).toBeLessThan(.90);
     expect(report!.guitarPicks).toBe(1);
   });
 
@@ -101,8 +123,31 @@ describe('Avatar V2 performance QA', () => {
     expect(report!.maxFingerContactError).toBeLessThan(.20);
     expect(report!.eyeBones).toBe(2);
     expect(report!.maxEyeMotion).toBeGreaterThan(.004);
+    expect(report!.twistBones).toBe(6);
+    expect(report!.maxTwistMotion).toBeGreaterThan(.004);
+    expect(report!.maxTwistMotion).toBeLessThan(.90);
     expect(report!.issues).toEqual([]);
     expect(report!.valid).toBe(true);
+  });
+
+  it('rejects an instrument candidate that drops a required twist helper', () => {
+    const model = simpleRiggedModel();
+    model.getObjectByName('ForearmTwist.R')!.removeFromParent();
+    const actor = new Musician(
+      model,
+      'guitar',
+      [0, 0, 0],
+      0,
+      undefined,
+      defaultAppearance('v2-twist-missing-qa'),
+      'electric_guitar',
+    );
+
+    const report = inspectAvatarV2Performance(actor, 'electric_guitar');
+    expect(report).not.toBeNull();
+    expect(report!.valid).toBe(false);
+    expect(report!.twistBones).toBe(5);
+    expect(report!.issues.some(issue => issue.code === 'missing-twist-bones')).toBe(true);
   });
 
   it('does not invent a grip result for the backstage A-pose', () => {

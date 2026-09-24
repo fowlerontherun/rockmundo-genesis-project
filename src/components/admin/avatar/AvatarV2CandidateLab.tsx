@@ -433,6 +433,10 @@ export function AvatarV2CandidateLab() {
               {performanceReport.maxEyeMotion != null && (
                 <Badge variant="outline">eye motion {T.MathUtils.radToDeg(performanceReport.maxEyeMotion).toFixed(1)}°</Badge>
               )}
+              <Badge variant="outline">{performanceReport.twistBones}/6 twist bones</Badge>
+              {performanceReport.maxTwistMotion != null && (
+                <Badge variant="outline">twist {T.MathUtils.radToDeg(performanceReport.maxTwistMotion).toFixed(1)}° max</Badge>
+              )}
               {performanceReport.preset === 'electric_guitar' && (
                 <Badge variant="outline">{performanceReport.guitarPicks}/1 pick</Badge>
               )}
@@ -445,7 +449,7 @@ export function AvatarV2CandidateLab() {
             </div>
             {performanceReport.issues.length === 0 ? (
               <p className="text-sm text-emerald-600">
-                The candidate stayed within the automated hand/grip and eye-gaze limits across the sampled performance motion.
+                The candidate stayed within the automated hand/grip, eye-gaze and limb-twist limits across the sampled performance motion.
               </p>
             ) : (
               <div className="grid gap-2 md:grid-cols-2">
