@@ -26,7 +26,7 @@ function rig() {
   ] as const) {
     const bone = new T.Bone();
     bone.name = name;
-    bone.position.set(...position);
+    bone.position.set(position[0], position[1], position[2]);
     head.add(bone);
   }
   root.updateMatrixWorld(true);
