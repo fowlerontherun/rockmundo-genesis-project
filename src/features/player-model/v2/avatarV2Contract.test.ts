@@ -65,6 +65,12 @@ function validScene() {
     poseKneeRight: 15,
   };
   mesh.morphTargetInfluences = Array(16).fill(0);
+  geometry.morphTargetsRelative = true;
+  geometry.morphAttributes.position = Array.from({ length: 16 }, (_, morphIndex) => {
+    const delta = new Float32Array(count * 3);
+    delta[(morphIndex % count) * 3] = .002 + morphIndex * .00001;
+    return new T.Float32BufferAttribute(delta, 3);
+  });
   mesh.bind(new T.Skeleton(bones));
   root.add(mesh);
 
@@ -105,6 +111,48 @@ function validScene() {
   return root;
 }
 
+function continuousRegionScene() {
+  const root = validScene();
+  for (const region of AVATAR_V2_BODY_REGIONS) {
+    root.getObjectByName(`RMV2_Body_${region}`)?.removeFromParent();
+  }
+
+  const geometry = new T.BoxGeometry(.48, 1.55, .25, 2, 4, 2);
+  const count = geometry.getAttribute('position').count;
+  geometry.setAttribute('skinIndex', new T.Uint16BufferAttribute(new Uint16Array(count * 4), 4));
+  const weights = new Float32Array(count * 4);
+  for (let index = 0; index < count; index++) weights[index * 4] = 1;
+  geometry.setAttribute('skinWeight', new T.Float32BufferAttribute(weights, 4));
+
+  const materials = AVATAR_V2_BODY_REGIONS.map(region => {
+    const material = new T.MeshStandardMaterial({ color: '#cccccc' });
+    material.name = `RMV2_Skin_${region}`;
+    return material;
+  });
+
+  geometry.clearGroups();
+  const indexCount = geometry.index!.count;
+  let start = 0;
+  AVATAR_V2_BODY_REGIONS.forEach((region, materialIndex) => {
+    const remainingRegions = AVATAR_V2_BODY_REGIONS.length - materialIndex;
+    const remaining = indexCount - start;
+    const countForRegion = materialIndex === AVATAR_V2_BODY_REGIONS.length - 1
+      ? remaining
+      : Math.max(3, Math.floor(remaining / remainingRegions / 3) * 3);
+    geometry.addGroup(start, countForRegion, materialIndex);
+    start += countForRegion;
+  });
+
+  const bones: T.Bone[] = [];
+  root.traverse(node => { if (node instanceof T.Bone) bones.push(node); });
+  const mesh = new T.SkinnedMesh(geometry, materials);
+  mesh.name = 'RMV2_ContinuousBody';
+  mesh.bind(new T.Skeleton(bones));
+  root.add(mesh);
+  root.updateMatrixWorld(true);
+  return { root, mesh, materials };
+}
+
 describe('Avatar V2 mesh contract', () => {
   it('accepts a compact skinned humanoid with the required rig and facial targets', () => {
     const report = validateAvatarV2Scene(validScene(), 'masculine', 0);
@@ -112,6 +160,25 @@ describe('Avatar V2 mesh contract', () => {
     expect(report.skinnedMeshes).toBe(2 + AVATAR_V2_BODY_REGIONS.length);
     expect(report.issues.filter(issue => issue.level === 'error')).toEqual([]);
     expect(Object.keys(report.boneMap)).toHaveLength(AVATAR_V2_REQUIRED_BONES.length);
+  });
+
+  it('accepts body-region materials on one continuous skinned body mesh', () => {
+    const { root } = continuousRegionScene();
+    const report = validateAvatarV2Scene(root, 'masculine', 0);
+    expect(report.valid).toBe(true);
+    expect(report.issues.filter(issue => issue.code.startsWith('missing-body-region:'))).toEqual([]);
+  });
+
+  it('does not count an unused region material as authored body coverage', () => {
+    const { root, mesh, materials } = continuousRegionScene();
+    const feetIndex = AVATAR_V2_BODY_REGIONS.indexOf('feet');
+    const retainedGroups = mesh.geometry.groups.filter(group => group.materialIndex !== feetIndex);
+    mesh.geometry.clearGroups();
+    retainedGroups.forEach(group => mesh.geometry.addGroup(group.start, group.count, group.materialIndex));
+    materials[feetIndex].name = 'RMV2_Skin_feet';
+    const report = validateAvatarV2Scene(root, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'missing-body-region:feet')).toBe(true);
   });
 
   it('fails a body region that cannot render as bare skin', () => {
@@ -149,6 +216,36 @@ describe('Avatar V2 mesh contract', () => {
     expect(report.issues.some(issue => issue.code === 'missing-muscle-morph:muscleAthletic')).toBe(true);
   });
 
+  it('rejects named muscle morphs that contain no vertex deformation', () => {
+    const scene = validScene();
+    const mesh = scene.getObjectByName('RMV2_Body') as T.SkinnedMesh;
+    const index = mesh.morphTargetDictionary!.muscleAthletic;
+    (mesh.geometry.morphAttributes.position[index] as T.BufferAttribute).array.fill(0);
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'empty-muscle-morph:muscleAthletic')).toBe(true);
+  });
+
+  it('rejects named facial targets that contain no vertex deformation', () => {
+    const scene = validScene();
+    const mesh = scene.getObjectByName('RMV2_Body') as T.SkinnedMesh;
+    const index = mesh.morphTargetDictionary!.jawOpen;
+    (mesh.geometry.morphAttributes.position[index] as T.BufferAttribute).array.fill(0);
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'empty-expression:jawOpen')).toBe(true);
+  });
+
+  it('rejects named joint correctives that contain no vertex deformation', () => {
+    const scene = validScene();
+    const mesh = scene.getObjectByName('RMV2_Body') as T.SkinnedMesh;
+    const index = mesh.morphTargetDictionary!.poseElbowLeft;
+    (mesh.geometry.morphAttributes.position[index] as T.BufferAttribute).array.fill(0);
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'empty-pose-corrective:poseElbowLeft')).toBe(true);
+  });
+
   it('fails close-up assets when a required joint deformation corrective is missing', () => {
     const scene = validScene();
     const mesh = scene.getObjectByName('RMV2_Body') as T.SkinnedMesh;
@@ -177,7 +274,7 @@ describe('Avatar V2 mesh contract', () => {
 
   it('fails close-up assets that omit an authored eye bone', () => {
     const scene = validScene();
-    scene.remove(scene.getObjectByName('Eye.L')!);
+    scene.getObjectByName('Eye.L')!.removeFromParent();
     const report = validateAvatarV2Scene(scene, 'masculine', 0);
     expect(report.valid).toBe(false);
     expect(report.issues.some(issue => issue.code === 'missing-closeup-bone:leftEye')).toBe(true);

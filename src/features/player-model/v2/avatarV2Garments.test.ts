@@ -95,6 +95,27 @@ function baseAvatar() {
   return { root, hips, torso };
 }
 
+function continuousMaterialAvatar() {
+  const root = new T.Group();
+  const hips = new T.Bone();
+  hips.name = 'Hips';
+  root.add(hips);
+
+  const geometry = new T.BoxGeometry(.45, .65, .24);
+  const torsoMaterial = new T.MeshStandardMaterial({ color: '#c58c63' });
+  torsoMaterial.name = 'RMV2_Skin_Torso';
+  const uncoveredMaterial = new T.MeshStandardMaterial({ color: '#c58c63' });
+  uncoveredMaterial.name = 'RMV2_Skin';
+  const mesh = new T.Mesh(geometry, [torsoMaterial, uncoveredMaterial]);
+  mesh.name = 'RMV2_ContinuousBody';
+  geometry.clearGroups();
+  geometry.addGroup(0, 6, 0);
+  geometry.addGroup(6, Math.max(3, (geometry.index?.count ?? 9) - 6), 1);
+  root.add(mesh);
+  root.updateMatrixWorld(true);
+  return { root, mesh, torsoMaterial, uncoveredMaterial };
+}
+
 const POSE_CORRECTIVES = [
   'poseShoulderLeft', 'poseShoulderRight',
   'poseElbowLeft', 'poseElbowRight',
@@ -180,6 +201,20 @@ describe('Avatar V2 garments', () => {
     expect(garment.userData.rockmundoAvatarV2Garment).toBe(true);
     const material = garment.material as T.MeshStandardMaterial;
     expect(material.color.getHexString()).toBe('bd3548');
+  });
+
+  it('occludes a continuous body region by material without hiding the whole mesh', () => {
+    const { root, mesh, torsoMaterial, uncoveredMaterial } = continuousMaterialAvatar();
+    const clothing = row();
+    const file = avatarV2GarmentFile(clothing.item, 'masculine', 1)!;
+    const library = new Map<string, T.Object3D>([[file, garmentSource('hips')]]);
+
+    const result = buildAvatarV2Garments(library, root, [clothing], appearance(), 1);
+    expect(result.hiddenBodyRegions).toEqual(['torso']);
+    expect(mesh.visible).toBe(true);
+    expect(torsoMaterial.visible).toBe(false);
+    expect(uncoveredMaterial.visible).toBe(true);
+    expect(mesh.userData.rockmundoV2OccludedMaterialRegions).toEqual(['torso']);
   });
 
   it('applies the same build and muscle morphs to V2 body-worn garments', () => {

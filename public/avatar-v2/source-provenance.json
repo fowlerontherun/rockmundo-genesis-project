@@ -1,0 +1,23 @@
+{
+  "schema": "rockmundo.avatar-v2-source-provenance",
+  "version": 1,
+  "sourceId": "blender-human-base-meshes-v1.4.1",
+  "name": "Blender Human Base Meshes",
+  "publisher": "Blender Studio and community contributors",
+  "bundleVersion": "1.4.1",
+  "publishedDate": "2026-01-20",
+  "license": "CC0-1.0",
+  "downloadUrl": "https://download.blender.org/demo/asset-bundles/human-base-meshes/human-base-meshes-bundle-v1.4.1.zip",
+  "expectedArchiveBytes": 50643039,
+  "minimumBlenderVersion": "4.2",
+  "usage": "authoring-source-only",
+  "notes": [
+    "Use the bundle as topology/sculpt source material, not as a runtime dependency.",
+    "Final RockMundo Avatar V2 GLBs must use the RockMundo rig, morph, material, body-region and LOD contracts.",
+    "Do not mark any manifest row asset_ready or validated until the derived GLB passes the repository validators and visual performance QA."
+  ],
+  "recommendedCollections": {
+    "masculine": "Body Male - Stylized",
+    "feminine": "Body Female - Stylized"
+  }
+}

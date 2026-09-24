@@ -6,6 +6,103 @@ Do **not** put experimental meshes into the live `gig-demo-3d` asset family. V2
 assets must pass the repository contract before their manifest status can move to
 `validated`.
 
+## Official authoring source
+
+RockMundo Avatar V2 now uses **Blender Human Base Meshes v1.4.1** as the pinned
+topology/sculpt starting point. The bundle is CC0 and is recorded in
+`source-provenance.json`. It is an authoring dependency only: the game never
+downloads it at runtime and no stock bundle asset may be marked as a RockMundo
+validated avatar without completing the RockMundo rig, morph, materials, body
+regions, LOD and visual-QA work.
+
+Fetch and safely extract the pinned bundle with:
+
+```bash
+npm run fetch:avatar-v2-source
+```
+
+The helper refuses an unexpected archive size, validates ZIP magic and blocks
+archive path traversal. It writes only under the ignored local
+`work/avatar-v2-source` authoring directory.
+
+Then use Blender to discover the object/collection names in the extracted .blend
+file:
+
+```bash
+blender --background \
+  --python scripts/avatar-v2/blender/rockmundo_avatar_v2_seed.py -- \
+  --source /path/to/extracted/<bundle-file>.blend --list
+```
+
+Create a clean working file. The default `stylized` preset automatically selects
+`Body Male - Stylized` for the masculine frame and `Body Female - Stylized`
+for the feminine frame:
+
+```bash
+blender --background \
+  --python scripts/avatar-v2/blender/rockmundo_avatar_v2_seed.py -- \
+  --source /path/to/extracted/<bundle-file>.blend \
+  --frame masculine \
+  --preset stylized \
+  --output work/avatar-v2-masculine-source.blend
+```
+
+Repeat with `--frame feminine`. Use `--preset realistic` or explicit
+`--object`/`--collection` only when deliberately evaluating an alternative
+source.
+
+Next create the correctly named RockMundo deform-rig guide:
+
+```bash
+blender work/avatar-v2-masculine-source.blend --background \
+  --python scripts/avatar-v2/blender/rockmundo_avatar_v2_rig_guide.py -- \
+  --frame masculine \
+  --output work/avatar-v2-masculine-rigged-source.blend
+```
+
+The guide creates the production bone names, shoulders, toes and complete
+three-joint finger chains, but deliberately does **not** auto-bind the body.
+Open the generated file and fit every joint to the actual topology before
+weighting. Automatic envelope weighting here would recreate the shoulder, hand,
+elbow and hip deformation problems V2 is intended to remove.
+
+After manual binding/weight cleanup, run the structural weight audit:
+
+```bash
+blender work/avatar-v2-masculine-rigged-source.blend --background \
+  --python scripts/avatar-v2/blender/rockmundo_avatar_v2_weight_audit.py -- \
+  --armature RMV2_Armature
+```
+
+It rejects unweighted body/head vertices, more than four meaningful influences,
+poorly normalised weights, incorrect armature modifiers and required deform bones
+that never influence the body. Eyes, teeth, tongue and other separate close-up
+surfaces are not incorrectly treated as body-region weight targets.
+
+After the audit passes, assign the eight garment-occlusion regions **without
+splitting the mesh**:
+
+```bash
+blender work/avatar-v2-masculine-rigged-source.blend --background \
+  --python scripts/avatar-v2/blender/rockmundo_avatar_v2_body_regions.py -- \
+  --armature RMV2_Armature \
+  --output work/avatar-v2-masculine-regions.blend
+```
+
+The helper duplicates the existing skin shader into region-tagged materials and
+classifies polygons from the fitted RockMundo bone weights. Geometry remains
+continuous, so region boundaries do not introduce cracks. Head/face/neck polygons
+that are not garment-occlusion regions retain their original skin material. Review
+the boundary assignments visually before export.
+
+The seed helper stamps source provenance, normalises the source to a sensible
+authoring height and embeds a RockMundo authoring checklist inside the .blend. It
+does **not** fabricate a finished rig or empty shape keys and it does not export a
+runtime GLB.
+
+Run `npm run verify:avatar-v2-source` to ensure the repository remains pinned to
+the reviewed source/version.
+
 ## Coordinate and export contract
 
 - GLB 2.0
@@ -52,8 +149,10 @@ All LODs require these muscle-definition targets:
 
 Natural uses the basis shape. Body width is controlled separately by
 `bodySlim`/`bodyBroad`; do not use bone or whole-skeleton scaling to fake muscle
-definition. This separation is required so Topless, Tattoo Parlour close-ups and
-garment fitting all share the same body.
+definition. Required shape keys must contain real vertex deformation: the Blender,
+GLB and browser gates reject named zero-effect placeholders. This separation is
+required so Topless, Tattoo Parlour close-ups and garment fitting all share the
+same body.
 
 ## Facial contract
 
@@ -71,16 +170,16 @@ For expressive close-ups, also author `eyeSquintLeft/Right`, `browInnerUp`,
 `mouthStretchLeft/Right`. These are driven from vocal opening and performance
 energy so strong choruses engage the cheeks/eyes/brows as well as the jaw while
 quieter passages remain subtle. Additional frown targets are still encouraged.
-Eye direction is handled by the dedicated eye bones, keeping gaze independent from
+Eye direction is handled by dedicated eye bones, keeping gaze independent from
 blink/squint facial morphs. Teeth and tongue must be separate at LOD0 so close-up
 vocals never expose a hollow mouth.
 
 LOD0/LOD1 also require shoulder and toe-base articulation, dedicated `Eye.L` /
 `Eye.R` bones, plus complete three-joint thumb/index/middle/ring/little chains
-on both hands. Both eye bones must be children/descendants of the authored head bone so head turns
-carry the eyes with them. They are driven at runtime for deterministic micro-saccades
-and interaction-aware gaze; do not bake a permanently offset stare into the mesh.
-They also require
+on both hands. Both eye bones must be descendants of the authored head bone so
+head turns carry the eyes with them. They are driven at runtime for deterministic
+micro-saccades and interaction-aware gaze; do not bake a permanently offset stare
+into the mesh. They also require
 the eight pose-space joint deformation targets `poseShoulderLeft/Right`,
 `poseElbowLeft/Right`, `poseHipLeft/Right` and `poseKneeLeft/Right`.
 These preserve joint volume after the final live IK pose rather than relying on

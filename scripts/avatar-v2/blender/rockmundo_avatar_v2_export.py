@@ -121,6 +121,8 @@ POSE_CORRECTIVE_MORPHS = [
     "poseKneeLeft", "poseKneeRight",
 ]
 
+MORPH_MIN_DELTA_METRES = 0.0005
+
 BODY_REGIONS = [
     "torso", "upper-arms", "lower-arms", "hands",
     "hips", "upper-legs", "lower-legs", "feet",
@@ -143,6 +145,24 @@ def clean(value: str) -> str:
 def has_alias(names: list[str], aliases: list[str]) -> bool:
     available = {clean(name) for name in names}
     return any(clean(alias) in available for alias in aliases)
+
+
+def body_region_from_material(material: bpy.types.Material | None) -> str | None:
+    if material is None:
+        return None
+    explicit = str(material.get("rockmundoBodyRegion", "")).lower()
+    if explicit in BODY_REGIONS:
+        return explicit
+    name = clean(material.name)
+    for region in BODY_REGIONS:
+        token = clean(region)
+        if (
+            f"rmv2skin{token}" in name
+            or f"rmv2bodyregion{token}" in name
+            or name == f"skin{token}"
+        ):
+            return region
+    return None
 
 
 def cli_args() -> argparse.Namespace:
@@ -186,6 +206,44 @@ def shape_key_names(meshes: list[bpy.types.Object]) -> list[str]:
             continue
         result.extend(key.name for key in keys.key_blocks if key.name != "Basis")
     return result
+
+
+def shape_key_max_delta(meshes: list[bpy.types.Object], aliases: list[str]) -> float:
+    wanted = {clean(alias) for alias in aliases}
+    maximum = 0.0
+    for obj in meshes:
+        keys = obj.data.shape_keys
+        if not keys:
+            continue
+        basis = keys.key_blocks.get("Basis")
+        if basis is None:
+            continue
+        for key in keys.key_blocks:
+            if key.name == "Basis" or clean(key.name) not in wanted:
+                continue
+            count = min(len(basis.data), len(key.data))
+            for index in range(count):
+                maximum = max(maximum, (key.data[index].co - basis.data[index].co).length)
+    return maximum
+
+
+def require_shape_key_deformation(
+    errors: list[str],
+    warnings: list[str],
+    meshes: list[bpy.types.Object],
+    label: str,
+    aliases: list[str],
+    *,
+    error: bool,
+) -> None:
+    delta = shape_key_max_delta(meshes, aliases)
+    if delta >= MORPH_MIN_DELTA_METRES:
+        return
+    message = (
+        f"{label} exists but deforms by only {delta * 1000:.3f}mm; "
+        f"minimum meaningful delta is {MORPH_MIN_DELTA_METRES * 1000:.1f}mm."
+    )
+    (errors if error else warnings).append(message)
 
 
 def material_names(meshes: list[bpy.types.Object]) -> list[str]:
@@ -244,6 +302,7 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
 
         if len(rigs) == 1:
             rig_bones = rigs[0].data.bones
+
             def find_bone(aliases):
                 wanted = {clean(alias) for alias in aliases}
                 return next((bone for bone in rig_bones if clean(bone.name) in wanted), None)
@@ -274,44 +333,95 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
             cleaned_region = clean(region)
             if f"rmv2body{cleaned_region}" in cleaned_name or f"body{cleaned_region}" in cleaned_name:
                 matched_regions.add(region)
-        object_materials = [slot.material.name for slot in obj.material_slots if slot.material]
+        used_material_indices = {polygon.material_index for polygon in obj.data.polygons}
+        used_materials = [
+            obj.material_slots[index].material
+            for index in used_material_indices
+            if index < len(obj.material_slots) and obj.material_slots[index].material
+        ]
+        object_materials = [material.name for material in used_materials]
+
+        for material in used_materials:
+            material_region = body_region_from_material(material)
+            if material_region:
+                matched_regions.add(material_region)
+                if MATERIAL_ROLES["skin"].search(material.name):
+                    bare_skin_regions.add(material_region)
+
         for region in matched_regions:
             authored_regions.add(region)
-            if not any(modifier.type == "ARMATURE" for modifier in obj.modifiers):
+            if not any(
+                modifier.type == "ARMATURE" and modifier.object is not None
+                for modifier in obj.modifiers
+            ):
                 unskinned_regions.add(region)
             if any(MATERIAL_ROLES["skin"].search(name) for name in object_materials):
-                bare_skin_regions.add(region)
+                if region == str(obj.get("rockmundoBodyRegion", "")).lower() or (
+                    f"rmv2body{clean(region)}" in cleaned_name
+                    or f"body{clean(region)}" in cleaned_name
+                ):
+                    bare_skin_regions.add(region)
     for region in BODY_REGIONS:
         if region not in authored_regions:
-            errors.append(f"Missing garment-occlusion body region mesh: {region}.")
+            errors.append(f"Missing garment-occlusion body region: {region}.")
         elif region in unskinned_regions:
             errors.append(f"Garment-occlusion body region has no Armature modifier: {region}.")
         elif region not in bare_skin_regions:
             errors.append(f"Body region has no skin material for topless/tattoo preview: {region}.")
 
     for morph in REQUIRED_MUSCLE_MORPHS:
-        if not has_alias(morphs, [morph]):
+        aliases = [morph]
+        if not has_alias(morphs, aliases):
             errors.append(f"Missing required muscle definition target: {morph}.")
+        else:
+            require_shape_key_deformation(
+                errors, warnings, meshes, f"Muscle target {morph}", aliases, error=True,
+            )
 
     for expression, aliases in REQUIRED_EXPRESSIONS.items():
-        if not has_alias(morphs, [expression, *aliases]):
+        candidates = [expression, *aliases]
+        if not has_alias(morphs, candidates):
             if args.lod <= 1:
                 errors.append(f"Missing required facial target: {expression}.")
             else:
                 warnings.append(f"Missing distant-LOD facial target: {expression}.")
+        else:
+            require_shape_key_deformation(
+                errors,
+                warnings,
+                meshes,
+                f"Facial target {expression}",
+                candidates,
+                error=args.lod <= 1,
+            )
 
     if args.lod <= 1:
         for expression in RECOMMENDED_EXPRESSIONS:
-            if not has_alias(morphs, [expression]):
+            aliases = [expression]
+            if not has_alias(morphs, aliases):
                 warnings.append(f"Missing recommended singing target: {expression}.")
+            else:
+                require_shape_key_deformation(
+                    errors, warnings, meshes, f"Singing target {expression}", aliases, error=False,
+                )
         for morph in CUSTOMIZATION_MORPHS:
             if morph in REQUIRED_MUSCLE_MORPHS:
                 continue
-            if not has_alias(morphs, [morph]):
+            aliases = [morph]
+            if not has_alias(morphs, aliases):
                 warnings.append(f"Missing Avatar Designer shape target: {morph}.")
+            else:
+                require_shape_key_deformation(
+                    errors, warnings, meshes, f"Avatar Designer target {morph}", aliases, error=False,
+                )
         for corrective in POSE_CORRECTIVE_MORPHS:
-            if not has_alias(morphs, [corrective]):
+            aliases = [corrective]
+            if not has_alias(morphs, aliases):
                 errors.append(f"Missing required close-up pose corrective: {corrective}.")
+            else:
+                require_shape_key_deformation(
+                    errors, warnings, meshes, f"Pose corrective {corrective}", aliases, error=True,
+                )
 
     if args.lod <= 1:
         for role in ("skin", "eyes"):

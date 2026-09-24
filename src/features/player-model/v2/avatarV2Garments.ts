@@ -9,7 +9,10 @@ import type { AvatarV2BodyRegion, AvatarV2Frame, AvatarV2Lod } from './avatarV2C
 import {
   AVATAR_V2_BODY_REGIONS,
   avatarV2BodyRegion,
+  avatarV2BodyRegions,
+  avatarV2MaterialBodyRegion,
   avatarV2RuntimeBoneName,
+  avatarV2UsedMaterials,
   cleanAvatarV2Name,
 } from './avatarV2Contract';
 import { AVATAR_V2_ROLLOUT } from './avatarV2Registry';
@@ -183,8 +186,7 @@ function availableBodyRegions(root: T.Object3D) {
   const found = new Set<AvatarV2BodyRegion>();
   root.traverse(node => {
     if (!(node instanceof T.Mesh)) return;
-    const region = avatarV2BodyRegion(node);
-    if (region) found.add(region);
+    avatarV2BodyRegions(node).forEach(region => found.add(region));
   });
   return found;
 }
@@ -193,10 +195,25 @@ function applyBodyOcclusion(root: T.Object3D, regions: AvatarV2BodyRegion[]) {
   const wanted = new Set(regions);
   root.traverse(node => {
     if (!(node instanceof T.Mesh)) return;
-    const region = avatarV2BodyRegion(node);
-    if (!region || !wanted.has(region)) return;
-    node.visible = false;
-    node.userData.rockmundoV2OccludedByGarment = true;
+
+    const objectRegion = avatarV2BodyRegion(node);
+    if (objectRegion && wanted.has(objectRegion)) {
+      node.visible = false;
+      node.userData.rockmundoV2OccludedByGarment = true;
+      return;
+    }
+
+    const hiddenMaterials: string[] = [];
+    for (const material of avatarV2UsedMaterials(node)) {
+      const region = avatarV2MaterialBodyRegion(material);
+      if (!region || !wanted.has(region)) continue;
+      material.visible = false;
+      material.userData.rockmundoV2OccludedByGarment = true;
+      hiddenMaterials.push(region);
+    }
+    if (hiddenMaterials.length) {
+      node.userData.rockmundoV2OccludedMaterialRegions = hiddenMaterials;
+    }
   });
 }
 

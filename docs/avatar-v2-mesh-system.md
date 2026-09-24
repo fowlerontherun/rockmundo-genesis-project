@@ -48,6 +48,38 @@ performance code (`Hips`, `Spine1`, `Spine2`, `UpperArm.L`, `Hand.R`,
 etc.). That lets the existing singing, guitar, bass and drum animation systems be
 reused while the visible character mesh is replaced.
 
+## Base topology source
+
+The production base-mesh workflow is now pinned to Blender Studio/community
+**Human Base Meshes v1.4.1 (CC0)**. The source is used only as clean topology and
+sculpt material; it is not a runtime dependency and is never shipped unchanged as
+the RockMundo player avatar. Provenance is locked in
+`public/avatar-v2/source-provenance.json`.
+
+The source helper
+`scripts/avatar-v2/blender/rockmundo_avatar_v2_seed.py` can list the source
+objects/collections in the extracted Blender bundle and create separate masculine
+or feminine working .blend files. The follow-up
+`scripts/avatar-v2/blender/rockmundo_avatar_v2_rig_guide.py` creates the exact
+RockMundo semantic bone names, shoulder/toe articulation and complete three-joint
+finger chains over the source proportions. It intentionally stops before binding:
+joint centres and weights must be fitted to the actual topology so V2 does not
+inherit generic auto-weight deformation. After manual binding,
+`rockmundo_avatar_v2_weight_audit.py` checks that body/head surfaces are bound to
+the intended armature, every vertex is weighted, no vertex exceeds four meaningful
+influences, weights are normalised and every required deform bone actually affects
+the character.
+
+Those working files still require the complete RockMundo facial/shape-key set,
+body-region split, PBR surfaces, performance deformation and LOD authoring before
+the normal export gate will accept them. Shape-key names alone are not sufficient: required muscle, facial
+and pose-corrective targets must produce measurable vertex deformation, preventing
+placeholder morphs from passing certification.
+
+This gives Phase B a real high-quality topology starting point without weakening
+the fail-closed production contract or tying the game to an external avatar
+provider.
+
 ## Mesh quality target
 
 LOD0 is intended for the Avatar Designer, Skin Store and TOTP close-ups. The
@@ -168,6 +200,7 @@ Crowds never need the same topology or 2K textures as a singer in a close-up.
 
 ### Phase B — base meshes
 
+- pin and prepare the CC0 Blender Human Base Meshes source;
 - masculine LOD0/1;
 - feminine LOD0/1;
 - face/eyes/teeth/tongue;
@@ -294,7 +327,7 @@ bone) rather than being loose scene objects. The runtime and offline validator
 reject unskinned garment details so the V2 pipeline cannot reintroduce floating
 logos/hardware.
 
-The base body is divided into skinned garment-occlusion regions:
+The base body exposes eight skinned garment-occlusion regions:
 
 - torso
 - upper arms
@@ -305,10 +338,17 @@ The base body is divided into skinned garment-occlusion regions:
 - lower legs
 - feet
 
-LOD0/LOD1 cannot pass the base contract without all eight regions. Garments
-declare which regions they cover; those body meshes are hidden before rendering,
-preventing skin from clipping through shirts, jeans and boots during performance
-animation.
+The preferred V2 authoring method keeps one continuous body mesh and assigns
+region-tagged skin materials such as `RMV2_Skin_Torso` and
+`RMV2_Skin_UpperArms`. The runtime hides only the material groups covered by a
+garment, avoiding visible geometry seams between body chunks. Existing
+region-specific skinned objects remain supported for compatibility.
+
+`rockmundo_avatar_v2_body_regions.py` can seed these material assignments from
+the manually fitted skin weights without splitting topology. Every V2 LOD keeps all eight used body regions because
+Topless and Tattoo Parlour presentations can expose the bare body regardless of
+render quality. Garments declare which regions they cover, preventing skin from
+clipping through shirts, jeans and boots during performance animation.
 
 The first authored proof set is reserved in
 `public/avatar-v2/clothing/manifest.json`:

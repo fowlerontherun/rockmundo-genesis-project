@@ -81,6 +81,7 @@ const recommendedExpressions = [
   'cheekSquintLeft','cheekSquintRight',
   'mouthStretchLeft','mouthStretchRight',
 ];
+const requiredMuscleMorphs = ['muscleToned','muscleAthletic','muscleMuscular','muscleBodybuilder'];
 const customizationMorphs = ['bodySlim','bodyBroad','faceOval','faceAngular','faceSoft','faceWide'];
 const poseCorrectives = [
   'poseShoulderLeft','poseShoulderRight',
@@ -88,6 +89,7 @@ const poseCorrectives = [
   'poseHipLeft','poseHipRight',
   'poseKneeLeft','poseKneeRight',
 ];
+const MORPH_MIN_DELTA_METRES = 0.0005;
 const requiredBodyRegions = ['torso','upper-arms','lower-arms','hands','hips','upper-legs','lower-legs','feet'];
 
 const expressionAliases = {
@@ -98,6 +100,20 @@ const expressionAliases = {
 };
 
 const clean = value => String(value ?? '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+const skinMaterialPattern = /rmv2[_-]?skin|(^|[_-])(skin|body|face)($|[_-])/i;
+
+function materialBodyRegion(material) {
+  if (!material) return null;
+  const explicit = String(material.extras?.rockmundoBodyRegion ?? '').toLowerCase();
+  if (requiredBodyRegions.includes(explicit)) return explicit;
+  const name = clean(material.name ?? '');
+  return requiredBodyRegions.find(region => {
+    const token = clean(region);
+    return name.includes(`rmv2skin${token}`)
+      || name.includes(`rmv2bodyregion${token}`)
+      || name === `skin${token}`;
+  }) ?? null;
+}
 
 function fail(message) {
   console.error(`[avatar-v2] ERROR: ${message}`);
@@ -132,6 +148,13 @@ function accessorCount(gltf, accessorIndex) {
   return Number(gltf.accessors?.[accessorIndex]?.count ?? 0);
 }
 
+function accessorMaxAbs(gltf, accessorIndex) {
+  if (accessorIndex === undefined || accessorIndex === null) return null;
+  const accessor = gltf.accessors?.[accessorIndex];
+  const values = [...(accessor?.min ?? []), ...(accessor?.max ?? [])].map(Number).filter(Number.isFinite);
+  return values.length ? Math.max(...values.map(Math.abs)) : null;
+}
+
 function primitiveTriangles(gltf, primitive) {
   const count = primitive.indices !== undefined
     ? accessorCount(gltf, primitive.indices)
@@ -147,13 +170,23 @@ function inspect(gltf) {
   let vertices = 0;
   let skinnedMeshes = 0;
   const morphTargets = new Set();
+  const morphTargetDeltas = {};
 
   for (const mesh of gltf.meshes ?? []) {
+    const targetNames = mesh.extras?.targetNames ?? [];
     for (const primitive of mesh.primitives ?? []) {
       triangles += primitiveTriangles(gltf, primitive);
       vertices += accessorCount(gltf, primitive.attributes?.POSITION);
+      for (const [targetIndex, target] of (primitive.targets ?? []).entries()) {
+        const name = targetNames[targetIndex];
+        if (!name || target?.POSITION == null) continue;
+        const delta = accessorMaxAbs(gltf, target.POSITION);
+        if (delta == null) continue;
+        const key = clean(name);
+        morphTargetDeltas[key] = Math.max(morphTargetDeltas[key] ?? 0, delta);
+      }
     }
-    for (const name of mesh.extras?.targetNames ?? []) morphTargets.add(name);
+    for (const name of targetNames) morphTargets.add(name);
   }
 
   const skinnedMeshIndexes = new Set(
@@ -184,6 +217,7 @@ function inspect(gltf) {
 
   const bodyRegions = new Set();
   const unskinnedBodyRegions = new Set();
+  const bareSkinBodyRegions = new Set();
   for (const node of gltf.nodes ?? []) {
     if (node.mesh == null) continue;
     const matched = new Set();
@@ -194,9 +228,32 @@ function inspect(gltf) {
       const cleanedRegion = clean(region);
       if (cleanedName.includes(`rmv2body${cleanedRegion}`) || cleanedName.includes(`body${cleanedRegion}`)) matched.add(region);
     }
+
+    const mesh = gltf.meshes?.[node.mesh];
+    const usedMaterials = (mesh?.primitives ?? [])
+      .map(primitive => gltf.materials?.[primitive.material])
+      .filter(Boolean);
+    for (const material of usedMaterials) {
+      const region = materialBodyRegion(material);
+      if (region) {
+        matched.add(region);
+        if (skinMaterialPattern.test(material.name ?? '')) bareSkinBodyRegions.add(region);
+      }
+    }
+
     for (const region of matched) {
       bodyRegions.add(region);
       if (node.skin == null) unskinnedBodyRegions.add(region);
+      if (
+        usedMaterials.some(material => skinMaterialPattern.test(material.name ?? ''))
+        && (
+          explicit === region
+          || cleanedName.includes(`rmv2body${clean(region)}`)
+          || cleanedName.includes(`body${clean(region)}`)
+        )
+      ) {
+        bareSkinBodyRegions.add(region);
+      }
     }
   }
 
@@ -208,9 +265,11 @@ function inspect(gltf) {
     jointNames,
     jointAncestors,
     morphTargets: [...morphTargets],
+    morphTargetDeltas,
     materialNames: (gltf.materials ?? []).map(material => material?.name).filter(Boolean),
     bodyRegions: [...bodyRegions],
     unskinnedBodyRegions: [...unskinnedBodyRegions],
+    bareSkinBodyRegions: [...bareSkinBodyRegions],
   };
 }
 
@@ -222,6 +281,20 @@ function containsAlias(names, aliases) {
 function matchingAlias(names, aliases) {
   const wanted = new Set(aliases.map(clean));
   return names.find(name => wanted.has(clean(name)));
+}
+
+function morphDelta(report, aliases) {
+  const values = aliases
+    .map(alias => report.morphTargetDeltas?.[clean(alias)])
+    .filter(value => Number.isFinite(value));
+  return values.length ? Math.max(...values) : null;
+}
+
+function rejectEmptyMorph(report, errors, warnings, label, aliases, isError) {
+  const delta = morphDelta(report, aliases);
+  if (delta == null || delta >= MORPH_MIN_DELTA_METRES) return;
+  const message = `${label} exists but its exported POSITION delta is only ${(delta * 1000).toFixed(3)}mm; zero-effect placeholders are rejected.`;
+  (isError ? errors : warnings).push(message);
 }
 
 function validateAsset(gltf, entry) {
@@ -254,26 +327,41 @@ function validateAsset(gltf, entry) {
     for (const region of requiredBodyRegions) {
       if (!report.bodyRegions.includes(region)) errors.push(`Missing garment-occlusion body region: ${region}`);
       else if (report.unskinnedBodyRegions.includes(region)) errors.push(`Garment-occlusion body region is not skinned: ${region}`);
+      else if (!report.bareSkinBodyRegions.includes(region)) errors.push(`Body region has no skin material: ${region}`);
+    }
+  }
+
+  for (const morph of requiredMuscleMorphs) {
+    if (!containsAlias(report.morphTargets, [morph])) {
+      errors.push(`Missing required muscle definition target: ${morph}`);
+    } else {
+      rejectEmptyMorph(report, errors, warnings, `Muscle target ${morph}`, [morph], true);
     }
   }
 
   for (const [expression, aliases] of Object.entries(expressionAliases)) {
-    if (!containsAlias(report.morphTargets, [expression, ...aliases])) {
+    const candidates = [expression, ...aliases];
+    if (!containsAlias(report.morphTargets, candidates)) {
       const message = `Missing expression target: ${expression}`;
       if (entry.lod <= 1) errors.push(message);
       else warnings.push(message);
+    } else {
+      rejectEmptyMorph(report, errors, warnings, `Expression ${expression}`, candidates, entry.lod <= 1);
     }
   }
 
   if (entry.lod <= 1) {
     for (const expression of recommendedExpressions) {
       if (!containsAlias(report.morphTargets, [expression])) warnings.push(`Missing recommended singing expression: ${expression}`);
+      else rejectEmptyMorph(report, errors, warnings, `Singing target ${expression}`, [expression], false);
     }
     for (const morph of customizationMorphs) {
       if (!containsAlias(report.morphTargets, [morph])) warnings.push(`Missing Avatar Designer customization morph: ${morph}`);
+      else rejectEmptyMorph(report, errors, warnings, `Avatar Designer target ${morph}`, [morph], false);
     }
     for (const corrective of poseCorrectives) {
       if (!containsAlias(report.morphTargets, [corrective])) errors.push(`Missing required close-up pose corrective: ${corrective}`);
+      else rejectEmptyMorph(report, errors, warnings, `Pose corrective ${corrective}`, [corrective], true);
     }
   }
 
