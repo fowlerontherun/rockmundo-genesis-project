@@ -34,7 +34,13 @@ function face() {
   };
   mesh.morphTargetInfluences = Array(20).fill(0);
   root.add(mesh);
-  return { root, mesh };
+
+  const leftEye = new T.Bone();
+  leftEye.name = 'Eye.L';
+  const rightEye = new T.Bone();
+  rightEye.name = 'Eye.R';
+  root.add(leftEye, rightEye);
+  return { root, mesh, leftEye, rightEye };
 }
 
 describe('Avatar V2 facial expressions', () => {
@@ -95,7 +101,33 @@ describe('Avatar V2 facial expressions', () => {
     expect(mesh.morphTargetInfluences![17]).toBeGreaterThan(0);
   });
 
-  it('keeps singing mouth closed when vocals are inactive', () => {
+  it('moves authored eye bones with deterministic gaze and restores them on reset', () => {
+    const { root, leftEye, rightEye } = face();
+    const controller = new AvatarV2ExpressionController(root);
+    const leftRest = leftEye.quaternion.clone();
+    const rightRest = rightEye.quaternion.clone();
+
+    controller.update({
+      seconds: 3.1,
+      phase: .4,
+      vocalActive: false,
+      opening: 0,
+      energy: .7,
+      reducedMotion: false,
+      gazeYaw: .14,
+      gazePitch: -.06,
+    });
+
+    expect(leftEye.quaternion.equals(leftRest)).toBe(false);
+    expect(rightEye.quaternion.equals(rightRest)).toBe(false);
+    expect(leftEye.quaternion.angleTo(rightEye.quaternion)).toBeGreaterThan(0);
+
+    controller.reset();
+    expect(leftEye.quaternion.equals(leftRest)).toBe(true);
+    expect(rightEye.quaternion.equals(rightRest)).toBe(true);
+  });
+
+  it('keeps singing mouth closed while idle micro-expressions stay subtle', () => {
     const { root, mesh } = face();
     const controller = new AvatarV2ExpressionController(root);
     controller.update({
@@ -108,7 +140,28 @@ describe('Avatar V2 facial expressions', () => {
     });
     expect(mesh.morphTargetInfluences![2]).toBe(0);
     expect(mesh.morphTargetInfluences!.slice(4, 9).every(value => value === 0)).toBe(true);
-    expect(mesh.morphTargetInfluences!.slice(11, 20).every(value => value === 0)).toBe(true);
+    expect(Math.max(...mesh.morphTargetInfluences!.slice(11, 20))).toBeLessThan(.04);
+  });
+
+  it('keeps eye bones at rest when reduced motion is requested', () => {
+    const { root, leftEye, rightEye } = face();
+    const controller = new AvatarV2ExpressionController(root);
+    const leftRest = leftEye.quaternion.clone();
+    const rightRest = rightEye.quaternion.clone();
+
+    controller.update({
+      seconds: 10,
+      phase: .7,
+      vocalActive: false,
+      opening: 0,
+      energy: 1,
+      reducedMotion: true,
+      gazeYaw: .2,
+      gazePitch: .1,
+    });
+
+    expect(leftEye.quaternion.equals(leftRest)).toBe(true);
+    expect(rightEye.quaternion.equals(rightRest)).toBe(true);
   });
 
   it('only creates the V2 controller for certified V2 model roots', () => {

@@ -9,6 +9,13 @@ function simpleRiggedModel() {
   root.userData.rockmundoAvatarEngine = 'rockmundo-v2';
   const hips = new T.Bone(); hips.name = 'Hips'; hips.position.y = .9;
   const torso = new T.Bone(); torso.name = 'Spine2'; torso.position.y = .45; hips.add(torso);
+  const head = new T.Bone(); head.name = 'Head'; head.position.y = .38; torso.add(head);
+  for (const side of ['L', 'R'] as const) {
+    const eye = new T.Bone();
+    eye.name = `Eye.${side}`;
+    eye.position.set(side === 'L' ? .035 : -.035, .04, .08);
+    head.add(eye);
+  }
 
   for (const side of ['L', 'R'] as const) {
     const upper = new T.Bone(); upper.name = `UpperArm.${side}`; upper.position.set(side === 'L' ? .18 : -.18, .28, 0);
@@ -37,6 +44,13 @@ function simpleRiggedModel() {
     new T.MeshStandardMaterial({ color: '#888' }),
   );
   mesh.position.y = .9;
+  mesh.morphTargetDictionary = {
+    blinkLeft: 0,
+    blinkRight: 1,
+    jawOpen: 2,
+    mouthSmile: 3,
+  };
+  mesh.morphTargetInfluences = Array(4).fill(0);
   root.add(mesh);
   return root;
 }
@@ -59,6 +73,8 @@ describe('Avatar V2 performance QA', () => {
     expect(report!.maxLeftGripError).toBeLessThan(.14);
     expect(report!.maxRightGripError).toBeLessThan(.14);
     expect(report!.maxFingerContactError).toBeLessThan(.20);
+    expect(report!.eyeBones).toBe(2);
+    expect(report!.maxEyeMotion).toBeGreaterThan(.004);
     expect(report!.guitarPicks).toBe(1);
   });
 
@@ -78,6 +94,8 @@ describe('Avatar V2 performance QA', () => {
     expect(report!.drumsticks).toBe(2);
     expect(report!.maxDrumstickError).toBeLessThan(.14);
     expect(report!.maxFingerContactError).toBeLessThan(.20);
+    expect(report!.eyeBones).toBe(2);
+    expect(report!.maxEyeMotion).toBeGreaterThan(.004);
     expect(report!.valid).toBe(true);
   });
 

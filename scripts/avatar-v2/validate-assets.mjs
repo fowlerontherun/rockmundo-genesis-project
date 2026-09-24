@@ -37,6 +37,8 @@ const closeupBoneAliases = {
   rightShoulder: ['rightShoulder','shoulder_r','clavicle_r','mixamorigRightShoulder'],
   leftToes: ['leftToes','toe_l','toebase_l','mixamorigLeftToeBase'],
   rightToes: ['rightToes','toe_r','toebase_r','mixamorigRightToeBase'],
+  leftEye: ['Eye.L','leftEye','eye_l','mixamorigLeftEye','j_bip_l_eye'],
+  rightEye: ['Eye.R','rightEye','eye_r','mixamorigRightEye','j_bip_r_eye'],
 
   leftThumb1: ['Thumb1.L','leftThumbProximal','leftHandThumb1','thumb_01_l','mixamorigLeftHandThumb1'],
   leftThumb2: ['Thumb2.L','leftThumbIntermediate','leftHandThumb2','thumb_02_l','mixamorigLeftHandThumb2'],
@@ -162,6 +164,23 @@ function inspect(gltf) {
   const jointIndexes = new Set();
   for (const skin of gltf.skins ?? []) for (const joint of skin.joints ?? []) jointIndexes.add(joint);
   const jointNames = [...jointIndexes].map(index => gltf.nodes?.[index]?.name).filter(Boolean);
+  const parentByNode = new Map();
+  (gltf.nodes ?? []).forEach((node, parentIndex) => {
+    for (const child of node.children ?? []) parentByNode.set(child, parentIndex);
+  });
+  const jointAncestors = {};
+  for (const index of jointIndexes) {
+    const name = gltf.nodes?.[index]?.name;
+    if (!name) continue;
+    const ancestors = [];
+    let parent = parentByNode.get(index);
+    while (parent !== undefined) {
+      const parentName = gltf.nodes?.[parent]?.name;
+      if (parentName) ancestors.push(parentName);
+      parent = parentByNode.get(parent);
+    }
+    jointAncestors[name] = ancestors;
+  }
 
   const bodyRegions = new Set();
   const unskinnedBodyRegions = new Set();
@@ -187,6 +206,7 @@ function inspect(gltf) {
     bones: jointIndexes.size,
     skinnedMeshes,
     jointNames,
+    jointAncestors,
     morphTargets: [...morphTargets],
     materialNames: (gltf.materials ?? []).map(material => material?.name).filter(Boolean),
     bodyRegions: [...bodyRegions],
@@ -197,6 +217,11 @@ function inspect(gltf) {
 function containsAlias(names, aliases) {
   const available = new Set(names.map(clean));
   return aliases.map(clean).some(alias => available.has(alias));
+}
+
+function matchingAlias(names, aliases) {
+  const wanted = new Set(aliases.map(clean));
+  return names.find(name => wanted.has(clean(name)));
 }
 
 function validateAsset(gltf, entry) {
@@ -218,6 +243,13 @@ function validateAsset(gltf, entry) {
   if (entry.lod <= 1) {
     for (const [semantic, aliases] of Object.entries(closeupBoneAliases)) {
       if (!containsAlias(report.jointNames, aliases)) errors.push(`Missing close-up articulation bone: ${semantic}`);
+    }
+    const headName = matchingAlias(report.jointNames, ['head', ...requiredBoneAliases.head]);
+    for (const semantic of ['leftEye', 'rightEye']) {
+      const eyeName = matchingAlias(report.jointNames, closeupBoneAliases[semantic]);
+      if (headName && eyeName && !containsAlias(report.jointAncestors[eyeName] ?? [], [headName])) {
+        errors.push(`${semantic} must inherit from the head bone.`);
+      }
     }
     for (const region of requiredBodyRegions) {
       if (!report.bodyRegions.includes(region)) errors.push(`Missing garment-occlusion body region: ${region}`);

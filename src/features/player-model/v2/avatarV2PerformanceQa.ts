@@ -21,6 +21,8 @@ export interface AvatarV2PerformanceQaReport {
   maxRightGripError: number | null;
   maxDrumstickError: number | null;
   maxFingerContactError: number | null;
+  maxEyeMotion: number | null;
+  eyeBones: number;
   drumsticks: number;
   guitarPicks: number;
   issues: AvatarV2PerformanceQaIssue[];
@@ -30,6 +32,8 @@ const SAMPLE_TIMES = [0, .35, .8, 1.4, 2.2, 3.1];
 const HAND_LIMIT = .14;
 const STICK_LIMIT = .14;
 const FINGER_CONTACT_LIMIT = .20;
+const EYE_MOTION_MIN = .004;
+const EYE_MOTION_MAX = .35;
 
 const finiteWorldMatrix = (object: T.Object3D) =>
   object.matrixWorld.elements.every(Number.isFinite);
@@ -43,6 +47,12 @@ export function inspectAvatarV2Performance(
   const issues: AvatarV2PerformanceQaIssue[] = [];
   const left = actor.bones.get('Hand.L');
   const right = actor.bones.get('Hand.R');
+  const eyes = ['Eye.L', 'Eye.R']
+    .map(name => actor.bones.get(name))
+    .filter((bone): bone is T.Bone => !!bone);
+  const eyeBaseline = new Map<T.Bone, T.Quaternion>(
+    eyes.map(eye => [eye, eye.quaternion.clone()] as const),
+  );
   const rig = actor.instrumentRig;
 
   if (!rig) {
@@ -53,6 +63,8 @@ export function inspectAvatarV2Performance(
       maxRightGripError: null,
       maxDrumstickError: null,
       maxFingerContactError: null,
+      maxEyeMotion: null,
+      eyeBones: eyes.length,
       drumsticks: 0,
       guitarPicks: 0,
       issues: [{ code: 'missing-instrument-rig', message: 'The performance preset did not create an instrument rig.' }],
@@ -68,6 +80,7 @@ export function inspectAvatarV2Performance(
   let maxStick = 0;
   let maxFinger = 0;
   let fingerSamples = 0;
+  let maxEyeMotion = 0;
   const sticks = preset === 'rock_drums'
     ? rig.tools.filter(tool => /^playing-stick(?:-|$)/.test(tool.name))
     : [];
@@ -85,6 +98,14 @@ export function inspectAvatarV2Performance(
         issues.push({ code: `non-finite-bone:${name}`, message: `${name} produced an invalid world transform during the performance test.` });
         break;
       }
+    }
+
+    for (const eye of eyes) {
+      const baseline = eyeBaseline.get(eye);
+      if (!baseline) continue;
+      const motion = baseline.angleTo(eye.quaternion);
+      if (Number.isFinite(motion)) maxEyeMotion = Math.max(maxEyeMotion, motion);
+      else issues.push({ code: 'invalid-eye-gaze', message: 'An eye bone produced a non-finite gaze rotation.' });
     }
 
     if (needsLeft && left) {
@@ -145,6 +166,17 @@ export function inspectAvatarV2Performance(
     }
   }
 
+  if (eyes.length < 2) {
+    issues.push({ code: 'missing-eye-gaze-bones', message: 'Close-up performance QA requires both Eye.L and Eye.R.' });
+  } else if (maxEyeMotion < EYE_MOTION_MIN) {
+    issues.push({ code: 'eye-gaze-static', message: 'Eye bones were present but did not produce visible gaze motion across the sampled performance.' });
+  } else if (maxEyeMotion > EYE_MOTION_MAX) {
+    issues.push({
+      code: 'eye-gaze-range',
+      message: `Eye rotation reached ${T.MathUtils.radToDeg(maxEyeMotion).toFixed(1)}°; target is ≤ ${T.MathUtils.radToDeg(EYE_MOTION_MAX).toFixed(0)}°.`,
+    });
+  }
+
   if (needsLeft && left && maxLeft > HAND_LIMIT) {
     issues.push({
       code: 'left-grip-clearance',
@@ -189,6 +221,8 @@ export function inspectAvatarV2Performance(
     maxRightGripError: right ? maxRight : null,
     maxDrumstickError: preset === 'rock_drums' && sticks.length >= 2 && left && right ? maxStick : null,
     maxFingerContactError: fingerSamples ? maxFinger : null,
+    maxEyeMotion: eyes.length ? maxEyeMotion : null,
+    eyeBones: eyes.length,
     drumsticks: sticks.length,
     guitarPicks,
     issues: uniqueIssues,

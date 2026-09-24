@@ -418,7 +418,7 @@ export function AvatarV2CandidateLab() {
           <div className="space-y-3 rounded-lg border p-4">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant={performanceReport.valid ? 'default' : 'destructive'}>
-                {performanceReport.valid ? 'Performance grip pass' : 'Performance grip needs fixes'}
+                {performanceReport.valid ? 'Performance QA pass' : 'Performance QA needs fixes'}
               </Badge>
               {performanceReport.maxLeftGripError != null && (
                 <Badge variant="outline">left hand {(performanceReport.maxLeftGripError * 100).toFixed(1)}cm max drift</Badge>
@@ -428,6 +428,10 @@ export function AvatarV2CandidateLab() {
               )}
               {performanceReport.maxFingerContactError != null && (
                 <Badge variant="outline">finger contact {(performanceReport.maxFingerContactError * 100).toFixed(1)}cm max drift</Badge>
+              )}
+              <Badge variant="outline">{performanceReport.eyeBones}/2 eye bones</Badge>
+              {performanceReport.maxEyeMotion != null && (
+                <Badge variant="outline">eye motion {T.MathUtils.radToDeg(performanceReport.maxEyeMotion).toFixed(1)}°</Badge>
               )}
               {performanceReport.preset === 'electric_guitar' && (
                 <Badge variant="outline">{performanceReport.guitarPicks}/1 pick</Badge>
@@ -441,7 +445,7 @@ export function AvatarV2CandidateLab() {
             </div>
             {performanceReport.issues.length === 0 ? (
               <p className="text-sm text-emerald-600">
-                The candidate stayed within the automated hand/grip clearance limits across the sampled performance motion.
+                The candidate stayed within the automated hand/grip and eye-gaze limits across the sampled performance motion.
               </p>
             ) : (
               <div className="grid gap-2 md:grid-cols-2">

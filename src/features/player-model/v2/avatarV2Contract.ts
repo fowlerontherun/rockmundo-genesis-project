@@ -106,6 +106,8 @@ export const AVATAR_V2_CLOSEUP_BONE_ALIASES = {
   rightShoulder: ['rightShoulder', 'shoulder_r', 'clavicle_r', 'mixamorigRightShoulder'],
   leftToes: ['leftToes', 'toe_l', 'toebase_l', 'mixamorigLeftToeBase'],
   rightToes: ['rightToes', 'toe_r', 'toebase_r', 'mixamorigRightToeBase'],
+  leftEye: ['Eye.L', 'leftEye', 'eye_l', 'mixamorigLeftEye', 'j_bip_l_eye'],
+  rightEye: ['Eye.R', 'rightEye', 'eye_r', 'mixamorigRightEye', 'j_bip_r_eye'],
 
   leftThumb1: ['Thumb1.L', 'leftThumbProximal', 'leftHandThumb1', 'thumb_01_l', 'mixamorigLeftHandThumb1'],
   leftThumb2: ['Thumb2.L', 'leftThumbIntermediate', 'leftHandThumb2', 'thumb_02_l', 'mixamorigLeftHandThumb2'],
@@ -145,6 +147,8 @@ export const AVATAR_V2_CLOSEUP_RUNTIME_BONE_NAMES: Record<keyof typeof AVATAR_V2
   rightShoulder: 'Shoulder.R',
   leftToes: 'Toe.L',
   rightToes: 'Toe.R',
+  leftEye: 'Eye.L',
+  rightEye: 'Eye.R',
   leftThumb1: 'Thumb1.L',
   leftThumb2: 'Thumb2.L',
   leftThumb3: 'Thumb3.L',
@@ -309,6 +313,24 @@ function hasAnyAlias(names: string[], aliases: readonly string[]) {
   return aliases.map(clean).some(alias => available.has(alias));
 }
 
+function boneByAliases(scene: T.Object3D, aliases: readonly string[]) {
+  const wanted = new Set(aliases.map(clean));
+  let match: T.Bone | null = null;
+  scene.traverse(node => {
+    if (!match && node instanceof T.Bone && wanted.has(clean(node.name))) match = node;
+  });
+  return match;
+}
+
+function inheritsFrom(bone: T.Bone, ancestor: T.Bone) {
+  let current: T.Object3D | null = bone.parent;
+  while (current) {
+    if (current === ancestor) return true;
+    current = current.parent;
+  }
+  return false;
+}
+
 function collectMaterialNames(scene: T.Object3D) {
   const names = new Set<string>();
   scene.traverse(node => {
@@ -433,6 +455,21 @@ export function validateAvatarV2Scene(
           code: `missing-closeup-bone:${semantic}`,
           message: `LOD${lod} is missing close-up articulation bone: ${semantic}.`,
         });
+      }
+    }
+
+    const headName = boneMap.head;
+    const headBone = headName ? scene.getObjectByName(headName) : null;
+    if (headBone instanceof T.Bone) {
+      for (const semantic of ['leftEye', 'rightEye'] as const) {
+        const eye = boneByAliases(scene, AVATAR_V2_CLOSEUP_BONE_ALIASES[semantic]);
+        if (eye && !inheritsFrom(eye, headBone)) {
+          issues.push({
+            level: 'error',
+            code: `invalid-eye-parent:${semantic}`,
+            message: `LOD${lod} ${semantic} must inherit from the head bone so gaze follows head animation.`,
+          });
+        }
       }
     }
   }

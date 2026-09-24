@@ -23,10 +23,12 @@ function validScene() {
     root.add(bone);
     return bone;
   });
-  for (const aliases of Object.values(AVATAR_V2_CLOSEUP_BONE_ALIASES)) {
+  const headBone = bones.find(bone => bone.name === 'head')!;
+  for (const [semantic, aliases] of Object.entries(AVATAR_V2_CLOSEUP_BONE_ALIASES)) {
     const bone = new T.Bone();
     bone.name = aliases[0];
-    root.add(bone);
+    if (semantic === 'leftEye' || semantic === 'rightEye') headBone.add(bone);
+    else root.add(bone);
     bones.push(bone);
   }
 
@@ -162,6 +164,23 @@ describe('Avatar V2 mesh contract', () => {
     const report = validateAvatarV2Scene(scene, 'masculine', 0);
     expect(report.valid).toBe(false);
     expect(report.issues.some(issue => issue.code === 'missing-head-surface' && issue.level === 'error')).toBe(true);
+  });
+
+  it('fails close-up assets whose eye bones are detached from the head hierarchy', () => {
+    const scene = validScene();
+    const leftEye = scene.getObjectByName('Eye.L') as T.Bone;
+    scene.attach(leftEye);
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'invalid-eye-parent:leftEye')).toBe(true);
+  });
+
+  it('fails close-up assets that omit an authored eye bone', () => {
+    const scene = validScene();
+    scene.remove(scene.getObjectByName('Eye.L')!);
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'missing-closeup-bone:leftEye')).toBe(true);
   });
 
   it('fails close-up assets that omit a distal finger joint', () => {

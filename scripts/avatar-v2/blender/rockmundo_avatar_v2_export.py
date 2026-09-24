@@ -52,6 +52,8 @@ CLOSEUP_BONES = {
       "rightShoulder": ["rightShoulder","shoulder_r","clavicle_r","mixamorigRightShoulder"],
       "leftToes": ["leftToes","toe_l","toebase_l","mixamorigLeftToeBase"],
       "rightToes": ["rightToes","toe_r","toebase_r","mixamorigRightToeBase"],
+      "leftEye": ["Eye.L","leftEye","eye_l","mixamorigLeftEye","j_bip_l_eye"],
+      "rightEye": ["Eye.R","rightEye","eye_r","mixamorigRightEye","j_bip_r_eye"],
 
       "leftThumb1": ["Thumb1.L","leftThumbProximal","leftHandThumb1","thumb_01_l","mixamorigLeftHandThumb1"],
       "leftThumb2": ["Thumb2.L","leftThumbIntermediate","leftHandThumb2","thumb_02_l","mixamorigLeftHandThumb2"],
@@ -239,6 +241,23 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
         for semantic, aliases in CLOSEUP_BONES.items():
             if not has_alias(bone_names, aliases):
                 errors.append(f"Missing close-up articulation bone: {semantic}.")
+
+        if len(rigs) == 1:
+            rig_bones = rigs[0].data.bones
+            def find_bone(aliases):
+                wanted = {clean(alias) for alias in aliases}
+                return next((bone for bone in rig_bones if clean(bone.name) in wanted), None)
+
+            head_bone = find_bone(["head", *REQUIRED_BONES["head"]])
+            for semantic in ("leftEye", "rightEye"):
+                eye_bone = find_bone(CLOSEUP_BONES[semantic])
+                if not head_bone or not eye_bone:
+                    continue
+                parent = eye_bone.parent
+                while parent and parent != head_bone:
+                    parent = parent.parent
+                if parent != head_bone:
+                    errors.append(f"{semantic} must inherit from the head bone.")
 
     # Topless and Tattoo Parlour can select any LOD, so every export must remain a
     # complete skinned bare body. Close-up-only articulation stays gated above.
