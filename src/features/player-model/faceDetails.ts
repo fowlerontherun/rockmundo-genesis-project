@@ -1,6 +1,7 @@
 import * as T from 'three';
 import type { PlayerAppearance } from './appearance';
 import { avatarQualityProfile, type AvatarVisualQuality } from './avatarVisualQuality';
+import { isAvatarV2HeadSurfaceNode } from './v2/avatarV2Contract';
 
 type FaceShape = NonNullable<PlayerAppearance['head']['faceShape']>;
 type SkinDetail = NonNullable<PlayerAppearance['head']['skinDetail']>;
