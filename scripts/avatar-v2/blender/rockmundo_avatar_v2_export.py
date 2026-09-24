@@ -97,9 +97,11 @@ BODY_REGIONS = [
 
 MATERIAL_ROLES = {
     "skin": re.compile(r"rmv2[_-]?skin|(^|[_-])(skin|body|face)($|[_-])", re.I),
-    "eyes": re.compile(r"rmv2[_-]?eyes|(^|[_-])(eye|eyes|iris|cornea)($|[_-])", re.I),
+    "eyes": re.compile(r"rmv2[_-]?eyes|(^|[_-])(eye|eyes|iris|sclera|cornea)($|[_-])", re.I),
+    "cornea": re.compile(r"rmv2[_-]?cornea|cornea|eye[_-]?(shell|surface)|ocular[_-]?shell", re.I),
     "teeth": re.compile(r"rmv2[_-]?teeth|teeth", re.I),
     "tongue": re.compile(r"rmv2[_-]?tongue|tongue", re.I),
+    "mouthInterior": re.compile(r"rmv2[_-]?mouth[_-]?(interior|cavity)|oral[_-]?cavity|inner[_-]?mouth", re.I),
 }
 
 
@@ -265,11 +267,11 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
             if not any(MATERIAL_ROLES[role].search(name) for name in materials):
                 errors.append(f"Missing named close-up material role: {role}.")
     if args.lod == 0:
-        for role in ("teeth", "tongue"):
+        for role in ("cornea", "teeth", "tongue", "mouthInterior"):
             if not any(MATERIAL_ROLES[role].search(name) for name in materials):
                 errors.append(f"LOD0 needs separate {role} geometry/material.")
     elif args.lod == 1:
-        for role in ("teeth", "tongue"):
+        for role in ("cornea", "teeth", "tongue", "mouthInterior"):
             if not any(MATERIAL_ROLES[role].search(name) for name in materials):
                 warnings.append(f"LOD1 should retain separate {role} geometry/material.")
 

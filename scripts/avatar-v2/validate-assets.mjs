@@ -216,9 +216,11 @@ function validateAsset(gltf, entry) {
 
   const materialRoles = {
     skin: /rmv2[_-]?skin|(^|[_-])(skin|body|face)($|[_-])/i,
-    eyes: /rmv2[_-]?eyes|(^|[_-])(eye|eyes|iris|cornea)($|[_-])/i,
+    eyes: /rmv2[_-]?eyes|(^|[_-])(eye|eyes|iris|sclera|cornea)($|[_-])/i,
+    cornea: /rmv2[_-]?cornea|cornea|eye[_-]?(shell|surface)|ocular[_-]?shell/i,
     teeth: /rmv2[_-]?teeth|teeth/i,
     tongue: /rmv2[_-]?tongue|tongue/i,
+    mouthInterior: /rmv2[_-]?mouth[_-]?(interior|cavity)|oral[_-]?cavity|inner[_-]?mouth/i,
   };
   if (entry.lod <= 1) {
     for (const role of ['skin','eyes']) {
@@ -226,11 +228,11 @@ function validateAsset(gltf, entry) {
     }
   }
   if (entry.lod === 0) {
-    for (const role of ['teeth','tongue']) {
+    for (const role of ['cornea','teeth','tongue','mouthInterior']) {
       if (!report.materialNames.some(name => materialRoles[role].test(name))) errors.push(`LOD0 missing separate ${role} material/mesh role`);
     }
   } else if (entry.lod === 1) {
-    for (const role of ['teeth','tongue']) {
+    for (const role of ['cornea','teeth','tongue','mouthInterior']) {
       if (!report.materialNames.some(name => materialRoles[role].test(name))) warnings.push(`LOD1 should retain separate ${role} material/mesh role`);
     }
   }

@@ -95,13 +95,23 @@ have separate budgets and will be introduced after the base rig passes.
 Use stable names where possible:
 
 - `RMV2_Skin`
-- `RMV2_Eyes`
+- `RMV2_Eyes` / `RMV2_Iris` / `RMV2_Sclera`
+- `RMV2_Cornea` for the transparent/reflective eye shell
 - `RMV2_Hair`
 - `RMV2_Teeth`
 - `RMV2_Tongue`
+- `RMV2_MouthInterior`
 
-PBR maps should use glTF metallic/roughness convention. Skin/hair/eyes receive
-additional runtime physical-material treatment.
+LOD0 now requires separate cornea, teeth, tongue and mouth-interior roles; LOD1
+warns when they are missing. This prevents close-up singing from showing flat
+painted eyes or a hollow mouth cavity. The runtime promotes cornea surfaces to a
+physical material where needed, uses a realistic eye IOR/clearcoat response, gives
+sclera a slightly warm white, and treats teeth/tongue/interior separately.
+
+PBR maps should use glTF metallic/roughness convention. Authored skin normal and
+roughness maps always win. When either is missing, RockMundo supplies its
+quality-scaled procedural pore/roughness fallback instead of replacing better
+artist-authored detail.
 
 ## Rollout
 

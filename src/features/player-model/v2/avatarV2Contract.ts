@@ -261,12 +261,14 @@ function collectMaterialNames(scene: T.Object3D) {
   return [...names];
 }
 
-function hasMaterialRole(names: string[], role: 'skin' | 'eyes' | 'teeth' | 'tongue') {
+function hasMaterialRole(names: string[], role: 'skin' | 'eyes' | 'cornea' | 'teeth' | 'tongue' | 'mouthInterior') {
   const patterns = {
     skin: /rmv2[_-]?skin|(^|[_-])(skin|body|face)($|[_-])/i,
-    eyes: /rmv2[_-]?eyes|(^|[_-])(eye|eyes|iris|cornea)($|[_-])/i,
+    eyes: /rmv2[_-]?eyes|(^|[_-])(eye|eyes|iris|sclera|cornea)($|[_-])/i,
+    cornea: /rmv2[_-]?cornea|cornea|eye[_-]?(shell|surface)|ocular[_-]?shell/i,
     teeth: /rmv2[_-]?teeth|teeth/i,
     tongue: /rmv2[_-]?tongue|tongue/i,
+    mouthInterior: /rmv2[_-]?mouth[_-]?(interior|cavity)|oral[_-]?cavity|inner[_-]?mouth/i,
   } as const;
   return names.some(name => patterns[role].test(name));
 }
@@ -433,22 +435,26 @@ export function validateAvatarV2Scene(
     }
   }
   if (lod === 0) {
-    for (const role of ['teeth', 'tongue'] as const) {
+    for (const role of ['cornea', 'teeth', 'tongue', 'mouthInterior'] as const) {
       if (!hasMaterialRole(materials, role)) {
         issues.push({
           level: 'error',
           code: `missing-material-role:${role}`,
-          message: `LOD0 needs a separate ${role} material/mesh for singing close-ups.`,
+          message: role === 'cornea'
+            ? 'LOD0 needs a separate cornea/eye-shell material for reflective eye depth in close-ups.'
+            : role === 'mouthInterior'
+              ? 'LOD0 needs a separate mouth-interior material so open-mouth singing never exposes a hollow head.'
+              : `LOD0 needs a separate ${role} material/mesh for singing close-ups.`,
         });
       }
     }
   } else if (lod === 1) {
-    for (const role of ['teeth', 'tongue'] as const) {
+    for (const role of ['cornea', 'teeth', 'tongue', 'mouthInterior'] as const) {
       if (!hasMaterialRole(materials, role)) {
         issues.push({
           level: 'warning',
           code: `missing-material-role:${role}`,
-          message: `LOD1 should retain separate ${role} geometry for close stage shots.`,
+          message: `LOD1 should retain separate ${role} geometry/material for close stage shots.`,
         });
       }
     }
