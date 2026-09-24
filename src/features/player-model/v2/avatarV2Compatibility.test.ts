@@ -33,6 +33,15 @@ function rig() {
   return root;
 }
 
+function addAuthoredBrows(root: T.Group) {
+  const material = new T.MeshStandardMaterial({ color: '#54372a' });
+  material.name = 'RMV2_Eyebrows';
+  const brows = new T.Mesh(new T.BoxGeometry(.12, .015, .01), material);
+  brows.name = 'RMV2_AuthoredEyebrows';
+  root.add(brows);
+  return material;
+}
+
 function addHeadSurface(root: T.Group) {
   const head = root.getObjectByName('Head') as T.Bone;
   const geometry = new T.BoxGeometry(.38, .5, .34, 3, 4, 3);
@@ -144,6 +153,48 @@ describe('Avatar V2 compatibility layer', () => {
     expect(root.getObjectByName('avatar-glasses-square')).toBeTruthy();
     expect(root.getObjectByName('avatar-earring-left-hoops')).toBeTruthy();
     expect(root.getObjectByName('avatar-earring-right-studs')).toBeTruthy();
+  });
+
+  it('reapplies saved eyebrow style and skin detail without double-scaling the V2 head', () => {
+    const root = rig();
+    addHeadSurface(root);
+    const authoredBrows = addAuthoredBrows(root);
+    const head = root.getObjectByName('Head') as T.Bone;
+    const restScale = head.scale.clone();
+
+    const appearance = defaultAppearance('avatar-v2-face-cosmetics');
+    appearance.head.faceShape = 'wide';
+    appearance.head.eyebrowStyle = 'arched';
+    appearance.head.eyebrowColor = '#854b32';
+    appearance.head.skinDetail = 'freckles';
+
+    applyAvatarV2Compatibility(root, appearance, [], [], 'high');
+
+    expect(head.scale.toArray()).toEqual(restScale.toArray());
+    expect(head.userData.avatarFaceShape).toBe('wide');
+    expect(root.getObjectByName('avatar-face-details')).toBeTruthy();
+    expect(root.getObjectByName('avatar-eyebrow-left')).toBeTruthy();
+    expect(root.getObjectByName('avatar-eyebrow-right')).toBeTruthy();
+    expect(root.getObjectByName('avatar-freckle-0')).toBeTruthy();
+    expect(authoredBrows.visible).toBe(false);
+    expect(root.userData.rockmundoAvatarV2Compatibility).toMatchObject({
+      faceDetails: true,
+      eyebrowStyle: 'arched',
+      skinDetail: 'freckles',
+    });
+  });
+
+  it('keeps authored natural V2 eyebrows when no replacement brow style is selected', () => {
+    const root = rig();
+    addHeadSurface(root);
+    const authoredBrows = addAuthoredBrows(root);
+    const appearance = defaultAppearance('avatar-v2-natural-brows');
+
+    applyAvatarV2Compatibility(root, appearance, [], [], 'high');
+
+    expect(authoredBrows.visible).toBe(true);
+    expect(root.getObjectByName('avatar-eyebrow-left')).toBeFalsy();
+    expect(root.userData.rockmundoAvatarV2Compatibility.faceDetails).toBe(false);
   });
 
   it('renders Tattoo Parlour visuals on the normalized V2 skeleton', () => {
