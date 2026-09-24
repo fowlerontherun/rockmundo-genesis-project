@@ -164,6 +164,120 @@ export function buildHeadAccessory(
   return group;
 }
 
+export interface HeadAccessoryHairClearanceOptions {
+  glasses?: boolean;
+  leftEarring?: boolean;
+  rightEarring?: boolean;
+}
+
+export interface HeadAccessoryHairClearanceResult {
+  adjustedVertices: number;
+  glassesVertices: number;
+  earringVertices: number;
+}
+
+/**
+ * Procedural hairstyles are built before accessories, so use their real rendered
+ * vertices to cut narrow clearance channels around glasses temples and earrings.
+ * This keeps accessories fitted to the measured face/ears instead of solving
+ * clipping by making them float farther away from the character.
+ */
+export function clearHairForHeadAccessories(
+  root: T.Object3D,
+  bounds: T.Box3,
+  fit: HeadAccessoryFit = {},
+  options: HeadAccessoryHairClearanceOptions = {},
+): HeadAccessoryHairClearanceResult {
+  const result: HeadAccessoryHairClearanceResult = {
+    adjustedVertices: 0,
+    glassesVertices: 0,
+    earringVertices: 0,
+  };
+  if (bounds.isEmpty() || (!options.glasses && !options.leftEarring && !options.rightEarring)) return result;
+
+  const center = bounds.getCenter(new T.Vector3());
+  const size = bounds.getSize(new T.Vector3());
+  const fallbackEyeY = bounds.max.y - size.y * .405;
+  const fallbackEyeZ = bounds.max.z + size.z * .012;
+  const fallbackEarY = center.y - size.y * .055;
+  const fallbackEarZ = center.z + size.z * .05;
+
+  const fittedPoint = (side: -1 | 1, kind: 'eye' | 'ear') => {
+    const supplied = kind === 'eye'
+      ? (side < 0 ? fit.leftEye : fit.rightEye)
+      : (side < 0 ? fit.leftEar : fit.rightEar);
+    if (supplied) return supplied;
+    return new T.Vector3(
+      center.x + side * size.x * (kind === 'eye' ? .235 : .49),
+      kind === 'eye' ? fallbackEyeY : fallbackEarY,
+      kind === 'eye' ? fallbackEyeZ : fallbackEarZ,
+    );
+  };
+
+  root.updateMatrixWorld(true);
+  root.traverse(node => {
+    if (!(node instanceof T.Mesh) || node.name !== 'avatar-hairstyle') return;
+    const vertices = node.geometry.attributes.position;
+    const inverse = node.matrixWorld.clone().invert();
+
+    for (let index = 0; index < vertices.count; index++) {
+      const point = new T.Vector3().fromBufferAttribute(vertices, index).applyMatrix4(node.matrixWorld);
+      const originalX = point.x;
+      let glassesAdjusted = false;
+      let earringAdjusted = false;
+
+      if (options.glasses) {
+        for (const side of [-1, 1] as const) {
+          const eye = fittedPoint(side, 'eye');
+          const ear = fittedPoint(side, 'ear');
+          const templeX = ear.x - side * size.x * .035;
+          const yMin = Math.min(eye.y, ear.y) - size.y * .08;
+          const yMax = Math.max(eye.y, ear.y) + size.y * .08;
+          const zMin = Math.min(eye.z, ear.z) - size.z * .10;
+          const zMax = Math.max(eye.z, ear.z) + size.z * .12;
+          const sameSide = side * (point.x - center.x) > 0;
+          if (!sameSide || point.y < yMin || point.y > yMax || point.z < zMin || point.z > zMax) continue;
+          if (Math.abs(point.x - templeX) > size.x * .075) continue;
+
+          const targetX = templeX + side * size.x * .08;
+          point.x = side < 0 ? Math.min(point.x, targetX) : Math.max(point.x, targetX);
+          glassesAdjusted = glassesAdjusted || Math.abs(point.x - originalX) > 1e-6;
+        }
+      }
+
+      for (const side of [-1, 1] as const) {
+        const enabled = side < 0 ? options.leftEarring : options.rightEarring;
+        if (!enabled) continue;
+        const ear = fittedPoint(side, 'ear');
+        const sameSide = side * (point.x - center.x) > 0;
+        if (!sameSide) continue;
+        if (Math.abs(point.y - ear.y) > size.y * .16 || Math.abs(point.z - ear.z) > size.z * .20) continue;
+        if (side * (point.x - ear.x) >= size.x * .10) continue;
+
+        const targetX = ear.x + side * size.x * .095;
+        const before = point.x;
+        point.x = side < 0 ? Math.min(point.x, targetX) : Math.max(point.x, targetX);
+        earringAdjusted = earringAdjusted || Math.abs(point.x - before) > 1e-6;
+      }
+
+      if (Math.abs(point.x - originalX) <= 1e-6) continue;
+      const local = point.applyMatrix4(inverse);
+      vertices.setXYZ(index, local.x, local.y, local.z);
+      result.adjustedVertices += 1;
+      if (glassesAdjusted) result.glassesVertices += 1;
+      if (earringAdjusted) result.earringVertices += 1;
+    }
+
+    vertices.needsUpdate = true;
+    node.geometry.computeVertexNormals();
+    node.geometry.computeBoundingBox();
+    node.geometry.computeBoundingSphere();
+  });
+
+  root.userData.rockmundoAccessoryHairClearance = result;
+  return result;
+}
+
 export function tuckHair(root: T.Object3D, bounds: T.Box3, frame: PlayerAppearance['body']['frame']) {
   const c = bounds.getCenter(new T.Vector3()), size = bounds.getSize(new T.Vector3());
   const brim = bounds.max.y - size.y * .20;
@@ -177,12 +291,22 @@ export function tuckHair(root: T.Object3D, bounds: T.Box3, frame: PlayerAppearan
     const inverse = node.matrixWorld.clone().invert(), vertices = node.geometry.attributes.position;
     for (let i = 0; i < vertices.count; i++) {
       const p = new T.Vector3().fromBufferAttribute(vertices, i).applyMatrix4(node.matrixWorld);
-      if (p.y <= brim) continue; // retain long hair below the hat
-      p.y = brim + Math.min(size.y * .10, (p.y - brim) * .25);
-      p.x = c.x + T.MathUtils.clamp(p.x - c.x, -size.x * .47, size.x * .47);
-      p.z = c.z + T.MathUtils.clamp(p.z - c.z, -size.z * .47, size.z * .47);
+      if (p.y <= brim) {
+        // Keep long hair, but pull the narrow band immediately beneath the brim
+        // down so the brim does not slice through side panels/locs/braids.
+        if (p.y >= brim - size.y * .055) {
+          p.y = Math.min(p.y, brim - size.y * .018);
+          p.x = c.x + T.MathUtils.clamp(p.x - c.x, -size.x * .50, size.x * .50);
+          p.z = c.z + T.MathUtils.clamp(p.z - c.z, -size.z * .50, size.z * .50);
+          p.applyMatrix4(inverse); vertices.setXYZ(i, p.x, p.y, p.z);
+        }
+        continue;
+      }
+      p.y = brim + Math.min(size.y * .085, (p.y - brim) * .22);
+      p.x = c.x + T.MathUtils.clamp(p.x - c.x, -size.x * .455, size.x * .455);
+      p.z = c.z + T.MathUtils.clamp(p.z - c.z, -size.z * .455, size.z * .455);
       p.applyMatrix4(inverse); vertices.setXYZ(i, p.x, p.y, p.z);
     }
-    vertices.needsUpdate = true; node.geometry.computeVertexNormals(); node.geometry.computeBoundingSphere();
+    vertices.needsUpdate = true; node.geometry.computeVertexNormals(); node.geometry.computeBoundingBox(); node.geometry.computeBoundingSphere();
   });
 }
