@@ -28,6 +28,11 @@ describe('built venue architecture', () => {
       expect(dressing).toBeDefined();
       expect((dressing?.userData.identityFeatures ?? []).length).toBeGreaterThanOrEqual(4);
     }
+    if (['warehouse','theatre','concert_hall','church_hall','street_corner','city_square','rooftop_terrace'].includes(p.kind)) {
+      const dressing = root.getObjectByName(`venue-detail-dressing-${p.kind}`);
+      expect(dressing).toBeDefined();
+      expect((dressing?.userData.identityFeatures ?? []).length).toBeGreaterThanOrEqual(4);
+    }
     expect(new T.Box3().setFromObject(root).max.y).toBeLessThanOrEqual(201);
     disposeModel(scene);
   });
