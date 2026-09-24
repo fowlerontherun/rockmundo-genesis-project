@@ -46,7 +46,7 @@ function addMountedLabel(
   const frame = matte('#161b21', .72);
   box(parent, [size[0] + .24, size[1] + .18, .09], position, frame).rotation.y = rotationY;
   const label = makeLabel(text, size[0], size[1], color, background);
-  label.position.set(position[0], position[1], position[2] - .055);
+  label.position.set(position[0], position[1], position[2] + .055);
   label.rotation.y = rotationY;
   if (name) label.name = name;
   parent.add(label);
@@ -135,7 +135,7 @@ export function buildVenueIdentitySignage(
     );
     if (location) {
       const sub = makeLabel(location, Math.min(width * .72, 5.4), .34, '#9cb8c2', '#141a20');
-      sub.position.set(0, Math.min(p.roofHeight - 1.48, 3.92), back + .155);
+      sub.position.set(0, Math.min(p.roofHeight - 1.48, 3.92), back + .285);
       sub.name = 'venue-identity-location';
       identity.add(sub);
     }
@@ -168,7 +168,7 @@ export function buildVenueIdentitySignage(
   const stageBranding = feature(root, 'venue-identity-stage-nameplate');
   const plateWidth = Math.min(5.4, Math.max(2.8, venueName.length * .19));
   const plate = makeLabel(venueName, plateWidth, .42, '#d9d0c2', '#12171d');
-  plate.position.set(0, p.stageHeight + .34, .69);
+  plate.position.set(0, p.stageHeight + .34, .785);
   plate.name = 'venue-stage-nameplate';
   stageBranding.add(plate);
   box(stageBranding, [plateWidth + .18, .52, .08], [0, p.stageHeight + .34, .73], accent);
