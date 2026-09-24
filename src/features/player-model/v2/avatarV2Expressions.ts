@@ -7,6 +7,15 @@ export type AvatarV2Expression =
   | 'mouthSmile'
   | 'mouthFunnel'
   | 'mouthPucker'
+  | 'eyeSquintLeft'
+  | 'eyeSquintRight'
+  | 'browInnerUp'
+  | 'browDownLeft'
+  | 'browDownRight'
+  | 'cheekSquintLeft'
+  | 'cheekSquintRight'
+  | 'mouthStretchLeft'
+  | 'mouthStretchRight'
   | 'visemeAA'
   | 'visemeEE'
   | 'visemeIH'
@@ -20,6 +29,15 @@ const ALIASES: Record<AvatarV2Expression, string[]> = {
   mouthSmile: ['mouthSmile', 'mouth_smile', 'smile'],
   mouthFunnel: ['mouthFunnel', 'mouth_funnel', 'funnel'],
   mouthPucker: ['mouthPucker', 'mouth_pucker', 'pucker'],
+  eyeSquintLeft: ['eyeSquintLeft', 'eye_squint_l', 'squintLeft', 'squint_l'],
+  eyeSquintRight: ['eyeSquintRight', 'eye_squint_r', 'squintRight', 'squint_r'],
+  browInnerUp: ['browInnerUp', 'brow_inner_up', 'innerBrowRaise', 'browRaiseInner'],
+  browDownLeft: ['browDownLeft', 'brow_down_l', 'browLowerLeft', 'browLower_l'],
+  browDownRight: ['browDownRight', 'brow_down_r', 'browLowerRight', 'browLower_r'],
+  cheekSquintLeft: ['cheekSquintLeft', 'cheek_squint_l', 'cheekRaiseLeft', 'cheekRaise_l'],
+  cheekSquintRight: ['cheekSquintRight', 'cheek_squint_r', 'cheekRaiseRight', 'cheekRaise_r'],
+  mouthStretchLeft: ['mouthStretchLeft', 'mouth_stretch_l', 'mouthWideLeft', 'mouth_wide_l'],
+  mouthStretchRight: ['mouthStretchRight', 'mouth_stretch_r', 'mouthWideRight', 'mouth_wide_r'],
   visemeAA: ['visemeAA', 'viseme_aa', 'aa', 'A'],
   visemeEE: ['visemeEE', 'viseme_ee', 'ee', 'E'],
   visemeIH: ['visemeIH', 'viseme_ih', 'ih', 'I'],
@@ -111,28 +129,71 @@ export class AvatarV2ExpressionController {
     setWeight(this.bindings, 'blinkLeft', blink);
     setWeight(this.bindings, 'blinkRight', blink * .97);
 
-    const vocal = state.vocalActive && !state.reducedMotion
+    const vocalActive = state.vocalActive && !state.reducedMotion;
+    const vocal = vocalActive
       ? T.MathUtils.clamp(state.opening * (.72 + state.energy * .36), 0, 1)
+      : 0;
+    const phrasePulse = vocalActive
+      ? Math.pow(Math.max(0, Math.sin(t * 1.18 + state.phase * .73)), 1.35)
+      : 0;
+    const faceEnergy = vocalActive
+      ? T.MathUtils.clamp(.10 + state.energy * .58 + vocal * .24, 0, 1)
       : 0;
 
     setWeight(this.bindings, 'jawOpen', vocal);
-    setWeight(this.bindings, 'mouthSmile', state.vocalActive ? .08 + Math.max(0, Math.sin(t * .63)) * .12 : .035);
+    setWeight(
+      this.bindings,
+      'mouthSmile',
+      vocalActive
+        ? T.MathUtils.clamp(.045 + phrasePulse * .10 + state.energy * .05 - vocal * .035, 0, .22)
+        : .025,
+    );
+
+    const squint = vocal * (.08 + state.energy * .22) + phrasePulse * state.energy * .08;
+    setWeight(this.bindings, 'eyeSquintLeft', squint * .96);
+    setWeight(this.bindings, 'eyeSquintRight', squint);
+    setWeight(this.bindings, 'cheekSquintLeft', faceEnergy * (.08 + phrasePulse * .12));
+    setWeight(this.bindings, 'cheekSquintRight', faceEnergy * (.075 + phrasePulse * .115));
+
+    const browLift = vocal * (.04 + state.opening * .15) * (1 - state.energy * .28);
+    const browDrive = vocal * state.energy * (.055 + phrasePulse * .09);
+    setWeight(this.bindings, 'browInnerUp', browLift);
+    setWeight(this.bindings, 'browDownLeft', browDrive * .94);
+    setWeight(this.bindings, 'browDownRight', browDrive);
 
     clearVisemes(this.bindings);
     setWeight(this.bindings, 'mouthFunnel', 0);
     setWeight(this.bindings, 'mouthPucker', 0);
+    setWeight(this.bindings, 'mouthStretchLeft', 0);
+    setWeight(this.bindings, 'mouthStretchRight', 0);
 
     if (vocal <= .02) return;
 
-    // A deterministic pseudo-phoneme sequence is better than a generic hinged
-    // jaw and remains replay-safe. Real audio-driven visemes can replace the
-    // sequence later without changing the mesh contract.
-    const slot = Math.floor((t * 3.7) % 5 + 5) % 5;
-    const viseme = (['visemeAA', 'visemeEE', 'visemeIH', 'visemeOH', 'visemeOU'] as const)[slot];
-    setWeight(this.bindings, viseme, Math.min(.82, vocal * .9));
+    // Blend between neighbouring pseudo-phonemes instead of snapping one viseme
+    // on/off every beat. This stays deterministic for replay/TOTP rendering while
+    // producing much smoother lips, cheeks and jaw motion. Real audio timings can
+    // later feed the same expression weights without changing the mesh contract.
+    const visemes = ['visemeAA', 'visemeEE', 'visemeIH', 'visemeOH', 'visemeOU'] as const;
+    const cycle = ((t * 3.4) % visemes.length + visemes.length) % visemes.length;
+    const slot = Math.floor(cycle);
+    const nextSlot = (slot + 1) % visemes.length;
+    const local = cycle - slot;
+    const blend = T.MathUtils.smoothstep(local, .12, .88);
+    const amplitude = Math.min(.82, vocal * .9);
+    const currentWeight = amplitude * (1 - blend);
+    const nextWeight = amplitude * blend;
+    setWeight(this.bindings, visemes[slot], currentWeight);
+    setWeight(this.bindings, visemes[nextSlot], nextWeight);
 
-    if (slot === 3) setWeight(this.bindings, 'mouthFunnel', vocal * .34);
-    if (slot === 4) setWeight(this.bindings, 'mouthPucker', vocal * .38);
+    const contribution = (index: number) =>
+      (slot === index ? currentWeight : 0) + (nextSlot === index ? nextWeight : 0);
+    const rounded = contribution(3);
+    const puckered = contribution(4);
+    const stretched = contribution(1) + contribution(2);
+    setWeight(this.bindings, 'mouthFunnel', rounded * .38);
+    setWeight(this.bindings, 'mouthPucker', puckered * .42);
+    setWeight(this.bindings, 'mouthStretchLeft', stretched * .24);
+    setWeight(this.bindings, 'mouthStretchRight', stretched * .245);
   }
 
   reset() {
