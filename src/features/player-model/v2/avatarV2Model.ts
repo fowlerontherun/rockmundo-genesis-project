@@ -40,31 +40,14 @@ function ownV2MeshResources(root: T.Object3D) {
   root.traverse(node => {
     if (!(node instanceof T.Mesh)) return;
     // SkeletonUtils shares geometry, materials and textures. The assembled model
-    // is disposed after the stage performer clones it, so the candidate must own
-    // every disposable GPU resource instead of invalidating the cached source GLB.
+    // is disposed after the stage performer clones it, so it must own every
+    // disposable GPU resource rather than invalidating the cached source GLB.
     node.geometry = node.geometry.clone();
     const ownMaterial = (source: T.Material) => {
       const material = source.clone();
-      const textureMaterial = material as T.MeshPhysicalMaterial;
-      for (const key of [
-        'map',
-        'normalMap',
-        'roughnessMap',
-        'bumpMap',
-        'metalnessMap',
-        'alphaMap',
-        'aoMap',
-        'emissiveMap',
-        'clearcoatMap',
-        'clearcoatNormalMap',
-        'clearcoatRoughnessMap',
-        'transmissionMap',
-        'thicknessMap',
-        'sheenColorMap',
-        'sheenRoughnessMap',
-      ] as const) {
-        const value = textureMaterial[key];
-        if (value instanceof T.Texture) textureMaterial[key] = value.clone() as never;
+      for (const key of ['map','normalMap','roughnessMap','bumpMap','metalnessMap','alphaMap','aoMap','emissiveMap'] as const) {
+        const value = (material as T.MeshStandardMaterial)[key];
+        if (value instanceof T.Texture) (material as T.MeshStandardMaterial)[key] = value.clone();
       }
       return material;
     };
