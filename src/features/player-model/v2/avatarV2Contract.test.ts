@@ -524,6 +524,22 @@ describe('Avatar V2 mesh contract', () => {
     expect(report.issues.some(issue => issue.code === 'missing-wetline-blink:L')).toBe(true);
   });
 
+  it('rejects eye layers that are spatially detached from their sclera', () => {
+    const scene = validScene();
+    scene.getObjectByName('RMV2_Cornea.R')!.position.x = .12;
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'misaligned-eye-surface:Eye.R:cornea')).toBe(true);
+  });
+
+  it('rejects oral surfaces that sit outside the authored mouth cavity', () => {
+    const scene = validScene();
+    scene.getObjectByName('RMV2_Tongue')!.position.z = .2;
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'oral-surface-outside-cavity:tongue')).toBe(true);
+  });
+
   it('rejects a paper-thin mouth interior in LOD0 singing close-ups', () => {
     const scene = validScene();
     const mouth = scene.getObjectByName('RMV2_MouthInterior') as T.SkinnedMesh;
