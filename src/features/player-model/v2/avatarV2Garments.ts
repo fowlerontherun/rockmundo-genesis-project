@@ -74,11 +74,30 @@ function requiredTwistBones(regions: AvatarV2BodyRegion[]) {
   return [...new Set(regions.flatMap(region => TWIST_BONES_BY_REGION[region] ?? []))];
 }
 
-function sourceRuntimeBoneNames(root: T.Object3D) {
+function sourceRuntimeWeightedBoneNames(root: T.Object3D) {
   const names = new Set<string>();
   root.traverse(node => {
     if (!(node instanceof T.SkinnedMesh)) return;
-    node.skeleton.bones.forEach(bone => names.add(avatarV2RuntimeBoneName(bone.name)));
+    const joints = node.geometry.getAttribute('skinIndex');
+    const weights = node.geometry.getAttribute('skinWeight');
+    if (!joints || !weights) return;
+
+    const component = (attribute: T.BufferAttribute | T.InterleavedBufferAttribute, vertex: number, slot: number) => {
+      if (slot === 0) return attribute.getX(vertex);
+      if (slot === 1) return attribute.getY(vertex);
+      if (slot === 2) return attribute.getZ(vertex);
+      return attribute.getW(vertex);
+    };
+
+    for (let vertex = 0; vertex < Math.min(joints.count, weights.count); vertex++) {
+      for (let slot = 0; slot < 4; slot++) {
+        const weight = component(weights, vertex, slot);
+        if (weight <= .0001) continue;
+        const index = Math.round(component(joints, vertex, slot));
+        const bone = node.skeleton.bones[index];
+        if (bone) names.add(avatarV2RuntimeBoneName(bone.name));
+      }
+    }
   });
   return names;
 }
@@ -333,7 +352,7 @@ export function buildAvatarV2Garments(
       }
 
       if (lod <= 1) {
-        const sourceBones = sourceRuntimeBoneNames(source);
+        const sourceBones = sourceRuntimeWeightedBoneNames(source);
         const missingTwistBones = requiredTwistBones(config.occludeBodyRegions)
           .filter(name => !sourceBones.has(name));
         if (missingTwistBones.length) {
