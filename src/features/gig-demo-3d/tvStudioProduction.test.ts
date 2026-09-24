@@ -30,8 +30,15 @@ describe('Top of the Pops TV studio production', () => {
     expect(root.getObjectByName('totp-operator-stage-b')).toBeTruthy();
     expect(root.getObjectByName('totp-operator-jib')).toBeTruthy();
     expect(root.getObjectByName('totp-camera-assistant-left')).toBeTruthy();
+    expect(root.getObjectByName('totp-camera-assistant-right')).toBeTruthy();
     expect(root.getObjectByName('totp-floor-manager')).toBeTruthy();
+    expect(root.getObjectByName('totp-floor-assistant')).toBeTruthy();
     expect(root.getObjectByName('totp-boom-operator')).toBeTruthy();
+    expect(root.getObjectByName('totp-producer')).toBeTruthy();
+    expect(root.getObjectByName('totp-lighting-tech')).toBeTruthy();
+    expect(root.getObjectByName('totp-sound-tech')).toBeTruthy();
+    expect(root.getObjectByName('totp-runner')).toBeTruthy();
+    expect(root.getObjectByName('totp-stagehand')).toBeTruthy();
     expect(root.getObjectByName('totp-operator-left')?.getObjectByName('totp-camera-operator-head')).toBeTruthy();
     expect(root.getObjectByName('totp-operator-right')?.getObjectByName('totp-camera-operator-head')).toBeTruthy();
     expect(root.getObjectByName('totp-operator-handheld')?.getObjectByName('totp-camera-operator-head')).toBeTruthy();
@@ -50,6 +57,31 @@ describe('Top of the Pops TV studio production', () => {
     expect(root.getObjectByName('totp-cable-reel')).toBeTruthy();
     expect(root.getObjectByName('totp-boom-microphone')).toBeTruthy();
     expect(root.getObjectByName('totp-on-air-lightbox')).toBeTruthy();
+    expect(root.getObjectByName('totp-studio-shell')).toBeTruthy();
+    expect(root.getObjectByName('totp-studio-drape-rear')).toBeTruthy();
+    expect(root.getObjectByName('totp-studio-drape-left')).toBeTruthy();
+    expect(root.getObjectByName('totp-studio-drape-right')).toBeTruthy();
+    expect(root.getObjectByName('totp-backstage-flat-left')).toBeTruthy();
+    expect(root.getObjectByName('totp-production-control-area')).toBeTruthy();
+    expect(root.getObjectByName('totp-vision-mix-desk')).toBeTruthy();
+    expect(root.getObjectByName('totp-audio-rack')).toBeTruthy();
+    expect(root.getObjectByName('totp-lighting-console')).toBeTruthy();
+    expect(root.getObjectByName('totp-coiled-cable-left')).toBeTruthy();
+    expect(root.getObjectByName('totp-speaker-wedge-left')).toBeTruthy();
+    expect(root.getObjectByName('totp-spare-camera-tripod')).toBeTruthy();
+    expect(root.getObjectByName('totp-utility-cart')).toBeTruthy();
+
+    const teleprompters: T.Object3D[] = [];
+    root.traverse(object => {
+      if (object.name === 'totp-camera-teleprompter') teleprompters.push(object);
+    });
+    expect(teleprompters).toHaveLength(2);
+
+    const controlScreens: T.Object3D[] = [];
+    root.traverse(object => {
+      if (object.name === 'totp-control-monitor-screen') controlScreens.push(object);
+    });
+    expect(controlScreens).toHaveLength(4);
 
     const mainStage = root.getObjectByName('totp-zone-main-stage') as T.Mesh;
     expect((mainStage.material as T.MeshStandardMaterial).map).toBeInstanceOf(T.DataTexture);
