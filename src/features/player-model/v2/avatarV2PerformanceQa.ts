@@ -50,7 +50,9 @@ export function inspectAvatarV2Performance(
   const eyes = ['Eye.L', 'Eye.R']
     .map(name => actor.bones.get(name))
     .filter((bone): bone is T.Bone => !!bone);
-  const eyeBaseline = new Map(eyes.map(eye => [eye, eye.quaternion.clone()]));
+  const eyeBaseline = new Map<T.Bone, T.Quaternion>(
+    eyes.map(eye => [eye, eye.quaternion.clone()] as const),
+  );
   const rig = actor.instrumentRig;
 
   if (!rig) {
