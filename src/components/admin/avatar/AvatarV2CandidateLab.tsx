@@ -164,9 +164,9 @@ function CandidateCanvas({
           onReport(report);
 
           if (report.valid) {
-            const prepared = prepareAvatarV2CandidateModel(source, appearance, lod);
+            const compatibilityQuality = lod === 0 ? 'cinematic' : lod === 1 ? 'high' : lod === 2 ? 'balanced' : 'crowd';
+            const prepared = prepareAvatarV2CandidateModel(source, appearance, lod, compatibilityQuality);
             if (prepared.model) {
-              const compatibilityQuality = lod === 0 ? 'cinematic' : lod === 1 ? 'high' : lod === 2 ? 'balanced' : 'crowd';
               applyAvatarV2Compatibility(prepared.model, appearance, [], [], compatibilityQuality);
               const assignment = performancePreset === 'backstage'
                 ? stageAssignment(null, 'other')
