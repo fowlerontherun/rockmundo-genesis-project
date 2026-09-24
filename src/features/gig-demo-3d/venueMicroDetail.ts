@@ -35,6 +35,7 @@ interface MicroPalette {
   grime: T.MeshStandardMaterial;
   pale: T.MeshStandardMaterial;
   accent: T.MeshStandardMaterial;
+  red: T.MeshStandardMaterial;
 }
 
 function paletteFor(p: VenueProfile): MicroPalette {
@@ -45,6 +46,7 @@ function paletteFor(p: VenueProfile): MicroPalette {
     grime: new T.MeshStandardMaterial({ color: '#272521', transparent: true, opacity: .72, roughness: .98, depthWrite: false }),
     pale: matte('#c7c1b3', .86),
     accent: new T.MeshStandardMaterial({ color: p.accent, emissive: p.accent, emissiveIntensity: .28, roughness: .7 }),
+    red: new T.MeshStandardMaterial({ color: '#9b2f31', roughness: .62, metalness: .12 }),
   };
 }
 
@@ -70,8 +72,7 @@ function addCase(parent: T.Object3D, x: number, z: number, shell: T.Material, ed
     box(parent, [w + .04, .035, d + .04], [x, h / 2 + sy * h * .48, z], edge);
 }
 
-function addExtinguisher(parent: T.Object3D, x: number, z: number, side: -1 | 1, dark: T.Material) {
-  const red = new T.MeshStandardMaterial({ color: '#9b2f31', roughness: .62, metalness: .12 });
+function addExtinguisher(parent: T.Object3D, x: number, z: number, side: -1 | 1, dark: T.Material, red: T.Material) {
   cylinder(parent, .1, .12, .52, [x, .42, z], red, 12);
   cylinder(parent, .045, .07, .12, [x, .74, z], dark, 10);
   rod(parent, [x, .72, z], [x + side * .18, .82, z], .018, dark);
@@ -180,6 +181,17 @@ function addServiceTable(
     box(parent, [.34, .12, .34], [x - .75 + i * .5, .97, z], i % 2 ? palette.pale : palette.accent);
 }
 
+function mixedVenueSeed(seed: number, kind: string) {
+  let value = (seed ^ 0x9e3779b9) >>> 0;
+  for (let i = 0; i < kind.length; i += 1) {
+    value ^= kind.charCodeAt(i);
+    value = Math.imul(value ^ (value >>> 16), 0x45d9f3b) >>> 0;
+    value ^= value >>> 13;
+  }
+  value = Math.imul(value ^ (value >>> 16), 0x45d9f3b) >>> 0;
+  return (value ^ (value >>> 16)) >>> 0;
+}
+
 function familyFeatures(p: VenueProfile) {
   const rough = ['dive_bar', 'rock_club', 'warehouse', 'street_corner', 'festival_stage'].includes(p.kind);
   const formal = ['jazz_lounge', 'theatre', 'concert_hall', 'church_hall'].includes(p.kind);
@@ -200,7 +212,7 @@ export function buildVenueMicroDetail(
   root.name = `venue-microdetail-${p.kind}`;
   parent.add(root);
 
-  const random = seededRandom(seed + 4099);
+  const random = seededRandom(mixedVenueSeed(seed + 4099, p.kind));
   const palette = paletteFor(p);
   const family = familyFeatures(p);
   const variant = Math.floor(random() * 4);
@@ -224,6 +236,7 @@ export function buildVenueMicroDetail(
       Math.min(p.roomDepth - 2.4, 8.2 + variant),
       -fixtureSide as -1 | 1,
       palette.dark,
+      palette.red,
     );
   } else {
     addCase(utility, fixtureSide * (half - 1.4), backServiceZ, palette.dark, palette.steel, .82);
@@ -238,7 +251,9 @@ export function buildVenueMicroDetail(
   root.userData.identityFeatures.push('waste-stations');
 
   const wear = feature(root, 'venue-micro-wear');
-  addWearPatches(wear, p, random, palette.grime, family.formal ? 2 : family.rough ? 6 : 4);
+  const wearMaterial = family.outdoor ? surfaces.detail : palette.grime;
+  const wearCount = family.outdoor ? 3 : family.formal ? 2 : family.rough ? 6 : 4;
+  addWearPatches(wear, p, random, wearMaterial, wearCount);
   root.userData.identityFeatures.push('wear');
 
   const safety = feature(root, 'venue-micro-safety-markings');
