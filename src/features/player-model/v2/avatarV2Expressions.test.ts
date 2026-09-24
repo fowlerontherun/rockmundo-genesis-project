@@ -22,8 +22,17 @@ function face() {
     viseme_ou: 8,
     mouth_funnel: 9,
     mouth_pucker: 10,
+    eyeSquintLeft: 11,
+    eyeSquintRight: 12,
+    browInnerUp: 13,
+    browDownLeft: 14,
+    browDownRight: 15,
+    cheekSquintLeft: 16,
+    cheekSquintRight: 17,
+    mouthStretchLeft: 18,
+    mouthStretchRight: 19,
   };
-  mesh.morphTargetInfluences = Array(11).fill(0);
+  mesh.morphTargetInfluences = Array(20).fill(0);
   root.add(mesh);
   return { root, mesh };
 }
@@ -38,9 +47,13 @@ describe('Avatar V2 facial expressions', () => {
     expect(bindings.mouthSmile).toHaveLength(1);
     expect(bindings.visemeAA).toHaveLength(1);
     expect(bindings.visemeOU).toHaveLength(1);
+    expect(bindings.eyeSquintLeft).toHaveLength(1);
+    expect(bindings.browInnerUp).toHaveLength(1);
+    expect(bindings.cheekSquintRight).toHaveLength(1);
+    expect(bindings.mouthStretchLeft).toHaveLength(1);
   });
 
-  it('drives jaw and one viseme while a performer is singing', () => {
+  it('drives jaw and smoothly blends adjacent visemes while a performer is singing', () => {
     const { root, mesh } = face();
     const controller = new AvatarV2ExpressionController(root);
     expect(controller.hasCloseUpFace).toBe(true);
@@ -56,7 +69,30 @@ describe('Avatar V2 facial expressions', () => {
 
     expect(mesh.morphTargetInfluences![2]).toBeGreaterThan(.5);
     const visemeWeights = mesh.morphTargetInfluences!.slice(4, 9);
-    expect(visemeWeights.filter(value => value > 0)).toHaveLength(1);
+    const activeVisemes = visemeWeights.filter(value => value > 0);
+    expect(activeVisemes.length).toBeGreaterThanOrEqual(1);
+    expect(activeVisemes.length).toBeLessThanOrEqual(2);
+    expect(activeVisemes.reduce((sum, value) => sum + value, 0)).toBeGreaterThan(.4);
+  });
+
+  it('adds cheek, eye and brow tension during energetic vocals', () => {
+    const { root, mesh } = face();
+    const controller = new AvatarV2ExpressionController(root);
+    controller.update({
+      seconds: .9,
+      phase: .15,
+      vocalActive: true,
+      opening: .9,
+      energy: 1,
+      reducedMotion: false,
+    });
+
+    expect(mesh.morphTargetInfluences![11]).toBeGreaterThan(0);
+    expect(mesh.morphTargetInfluences![12]).toBeGreaterThan(0);
+    expect(mesh.morphTargetInfluences![14]).toBeGreaterThan(0);
+    expect(mesh.morphTargetInfluences![15]).toBeGreaterThan(0);
+    expect(mesh.morphTargetInfluences![16]).toBeGreaterThan(0);
+    expect(mesh.morphTargetInfluences![17]).toBeGreaterThan(0);
   });
 
   it('keeps singing mouth closed when vocals are inactive', () => {
@@ -72,6 +108,7 @@ describe('Avatar V2 facial expressions', () => {
     });
     expect(mesh.morphTargetInfluences![2]).toBe(0);
     expect(mesh.morphTargetInfluences!.slice(4, 9).every(value => value === 0)).toBe(true);
+    expect(mesh.morphTargetInfluences!.slice(11, 20).every(value => value === 0)).toBe(true);
   });
 
   it('only creates the V2 controller for certified V2 model roots', () => {
