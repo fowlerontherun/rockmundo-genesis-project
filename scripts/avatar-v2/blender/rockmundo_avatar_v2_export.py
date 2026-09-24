@@ -345,6 +345,21 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
                     if parent != shoulder_bone:
                         errors.append(f"{arm_semantic} must inherit from {shoulder_semantic}.")
 
+            toe_hierarchy = (
+                ("leftToes", "leftFoot"),
+                ("rightToes", "rightFoot"),
+            )
+            for toe_semantic, foot_semantic in toe_hierarchy:
+                toe_bone = find_bone(CLOSEUP_BONES[toe_semantic])
+                foot_bone = find_bone([foot_semantic, *REQUIRED_BONES[foot_semantic]])
+                if not toe_bone or not foot_bone:
+                    continue
+                parent = toe_bone.parent
+                while parent and parent != foot_bone:
+                    parent = parent.parent
+                if parent != foot_bone:
+                    errors.append(f"{toe_semantic} must inherit from {foot_semantic}.")
+
             twist_parents = {
                 "leftUpperArmTwist": "leftUpperArm",
                 "rightUpperArmTwist": "rightUpperArm",
