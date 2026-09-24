@@ -27,6 +27,21 @@ import {
 } from '@/features/player-model/v2/avatarV2Contract';
 import '@/features/player-model/player-model.css';
 
+type CandidateViewPreset = 'full' | 'face' | 'hands' | 'feet';
+
+const CANDIDATE_VIEW = {
+  full: { position: [2.05, 1.5, 4.25], target: [0, .92, 0], fov: 32, minDistance: 1.2, maxDistance: 7 },
+  face: { position: [0, 1.56, 1.18], target: [0, 1.56, 0], fov: 27, minDistance: .45, maxDistance: 2.2 },
+  hands: { position: [0, 1.02, 2.35], target: [0, 1.02, 0], fov: 29, minDistance: .8, maxDistance: 4 },
+  feet: { position: [0, .18, 1.35], target: [0, .18, 0], fov: 28, minDistance: .45, maxDistance: 2.6 },
+} as const satisfies Record<CandidateViewPreset, {
+  position: readonly [number, number, number];
+  target: readonly [number, number, number];
+  fov: number;
+  minDistance: number;
+  maxDistance: number;
+}>;
+
 function CandidateCanvas({
   file,
   frame,
@@ -37,6 +52,7 @@ function CandidateCanvas({
   animateFace,
   appearance,
   performancePreset,
+  viewPreset,
 }: {
   file: File | null;
   frame: AvatarV2Frame;
@@ -47,6 +63,7 @@ function CandidateCanvas({
   animateFace: boolean;
   appearance: ReturnType<typeof defaultAppearance>;
   performancePreset: AvatarV2PerformancePreset;
+  viewPreset: CandidateViewPreset;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
 
@@ -67,15 +84,16 @@ function CandidateCanvas({
 
     const scene = new T.Scene();
     scene.background = new T.Color('#101823');
-    const camera = new T.PerspectiveCamera(32, 1, .05, 30);
-    camera.position.set(2.05, 1.5, 4.25);
+    const view = CANDIDATE_VIEW[viewPreset];
+    const camera = new T.PerspectiveCamera(view.fov, 1, .05, 30);
+    camera.position.set(...view.position);
 
     const controls = new OrbitControls(camera, element);
-    controls.target.set(0, .92, 0);
+    controls.target.set(...view.target);
     controls.enableDamping = true;
     controls.enablePan = false;
-    controls.minDistance = 1.2;
-    controls.maxDistance = 7;
+    controls.minDistance = view.minDistance;
+    controls.maxDistance = view.maxDistance;
 
     const render = (now = performance.now()) => {
       if (!alive) return;
@@ -247,7 +265,7 @@ function CandidateCanvas({
         cancelAnimationFrame(raf);
       };
     }
-  }, [file, frame, lod, onError, onPerformanceReport, onReport, animateFace, appearance, performancePreset]);
+  }, [file, frame, lod, onError, onPerformanceReport, onReport, animateFace, appearance, performancePreset, viewPreset]);
 
   return (
     <canvas
@@ -267,6 +285,7 @@ export function AvatarV2CandidateLab() {
   const [error, setError] = useState('');
   const [animateFace, setAnimateFace] = useState(true);
   const [performance, setPerformance] = useState<AvatarV2PerformancePreset>('vocals');
+  const [viewPreset, setViewPreset] = useState<CandidateViewPreset>('full');
   const [performanceReport, setPerformanceReport] = useState<AvatarV2PerformanceQaReport | null>(null);
 
   const appearance = useMemo(() => {
@@ -357,6 +376,19 @@ export function AvatarV2CandidateLab() {
               <option value="rock_drums">Rock drums</option>
             </select>
           </label>
+          <label className="space-y-1 text-sm">
+            <span className="font-medium">QA camera</span>
+            <select
+              className="block rounded-md border bg-background px-3 py-2"
+              value={viewPreset}
+              onChange={event => setViewPreset(event.target.value as CandidateViewPreset)}
+            >
+              <option value="full">Full body</option>
+              <option value="face">Face close-up</option>
+              <option value="hands">Hands / instruments</option>
+              <option value="feet">Feet / footwear</option>
+            </select>
+          </label>
           <Button
             type="button"
             variant={animateFace ? 'default' : 'outline'}
@@ -408,6 +440,7 @@ export function AvatarV2CandidateLab() {
               animateFace={animateFace}
               appearance={appearance}
               performancePreset={performance}
+              viewPreset={viewPreset}
             />
           </div>
         </div>
@@ -496,6 +529,21 @@ export function AvatarV2CandidateLab() {
               <Badge variant="outline">{report.bones} bones</Badge>
               <Badge variant="outline">{report.skinnedMeshes} skinned mesh{report.skinnedMeshes === 1 ? '' : 'es'}</Badge>
               <Badge variant="outline">{report.morphTargets.length} morph targets</Badge>
+              {lod === 0 && [
+                ['iris pair', ['missing-dedicated-surface:iris', 'missing-surface-binding:iris:Eye.L', 'missing-surface-binding:iris:Eye.R']],
+                ['sclera pair', ['missing-dedicated-surface:sclera', 'missing-surface-binding:sclera:Eye.L', 'missing-surface-binding:sclera:Eye.R']],
+                ['cornea pair', ['missing-dedicated-surface:cornea', 'missing-surface-binding:cornea:Eye.L', 'missing-surface-binding:cornea:Eye.R']],
+                ['upper/lower teeth', ['missing-dedicated-surface:teeth', 'missing-surface-binding:teeth:Head', 'missing-surface-binding:teeth:Jaw']],
+                ['tongue→Jaw', ['missing-dedicated-surface:tongue', 'missing-surface-binding:tongue:Jaw']],
+                ['mouth interior→Head', ['missing-dedicated-surface:mouthInterior', 'missing-surface-binding:mouthInterior:Head']],
+              ].map(([label, codes]) => {
+                const failed = (codes as string[]).some(code => report.issues.some(issue => issue.code === code));
+                return (
+                  <Badge key={label as string} variant={failed ? 'destructive' : 'outline'}>
+                    {failed ? 'fix ' : '✓ '}{label as string}
+                  </Badge>
+                );
+              })}
             </div>
             {report.issues.length === 0 ? (
               <p className="text-sm text-emerald-600">No automated contract issues. Visual and performance-pose QA is still required.</p>
