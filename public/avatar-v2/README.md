@@ -230,11 +230,30 @@ Use stable names where possible:
 
 LOD0 now requires dedicated iris, sclera, cornea, teeth, tongue and mouth-interior
 geometry using matching material roles; extra unused/material slots on the body or
-face do not count. LOD1 retains the lighter material-role checks. This prevents
-close-up singing from passing certification with painted-on eyes, fake material
-slots or a hollow mouth cavity. The runtime promotes cornea surfaces to a
+face do not count. The eye surfaces must be split or skinned so both `Eye.L` and
+`Eye.R` have real influence. Teeth must include both Head-driven upper teeth and
+Jaw-driven lower teeth, the tongue must carry real Jaw influence, and the mouth
+interior must remain Head-driven. Each surface sets `rockmundoBoneBinding` to the
+bone it is authored for; Blender exports these custom properties into GLB extras.
+LOD1 retains the lighter material-role checks. This prevents close-up singing from
+passing certification with painted-on eyes, fake material slots, floating oral
+geometry or a hollow mouth cavity. The runtime promotes cornea surfaces to a
 physical material where needed, uses a realistic eye IOR/clearcoat response, gives
 sclera a slightly warm white, and treats teeth/tongue/interior separately.
+
+Recommended LOD0 surface layout:
+
+- `RMV2_Iris.L` → `rockmundoBoneBinding=Eye.L`
+- `RMV2_Iris.R` → `rockmundoBoneBinding=Eye.R`
+- `RMV2_Sclera.L/R` → matching eye bone
+- `RMV2_Cornea.L/R` → matching eye bone
+- `RMV2_UpperTeeth` → `Head`
+- `RMV2_LowerTeeth` → `Jaw`
+- `RMV2_Tongue` → `Jaw`
+- `RMV2_MouthInterior` → `Head`
+
+The browser gate verifies actual skin weights against the declared binding, so the
+metadata cannot be used as a substitute for real deformation.
 
 PBR maps should use glTF metallic/roughness convention. Authored skin normal and
 roughness maps always win. When either is missing, RockMundo supplies its
