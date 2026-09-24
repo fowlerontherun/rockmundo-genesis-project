@@ -57,6 +57,16 @@ function simpleRiggedModel() {
     lowerLeg.position.set(0, -.45, 0);
     upperLeg.add(lowerLeg);
 
+    const foot = new T.Bone();
+    foot.name = `Foot.${side}`;
+    foot.position.set(0, -.42, .02);
+    lowerLeg.add(foot);
+
+    const toe = new T.Bone();
+    toe.name = `Toe.${side}`;
+    toe.position.set(0, -.03, .18);
+    foot.add(toe);
+
     const thighTwist = new T.Bone();
     thighTwist.name = `ThighTwist.${side}`;
     thighTwist.position.set(0, -.22, 0);
@@ -106,6 +116,9 @@ describe('Avatar V2 performance QA', () => {
     expect(report!.shoulderBones).toBe(2);
     expect(report!.maxShoulderMotion).toBeGreaterThan(.004);
     expect(report!.maxShoulderMotion).toBeLessThan(.25);
+    expect(report!.toeBones).toBe(2);
+    expect(report!.maxToeMotion).toBeGreaterThan(.004);
+    expect(report!.maxToeMotion).toBeLessThan(.43);
     expect(report!.maxTwistMotion).toBeLessThan(.90);
     expect(report!.guitarPicks).toBe(1);
   });
@@ -133,6 +146,9 @@ describe('Avatar V2 performance QA', () => {
     expect(report!.shoulderBones).toBe(2);
     expect(report!.maxShoulderMotion).toBeGreaterThan(.004);
     expect(report!.maxShoulderMotion).toBeLessThan(.25);
+    expect(report!.toeBones).toBe(2);
+    expect(report!.maxToeMotion).toBeGreaterThan(.004);
+    expect(report!.maxToeMotion).toBeLessThan(.43);
     expect(report!.maxTwistMotion).toBeLessThan(.90);
     expect(report!.issues).toEqual([]);
     expect(report!.valid).toBe(true);
@@ -180,6 +196,27 @@ describe('Avatar V2 performance QA', () => {
     expect(report!.valid).toBe(false);
     expect(report!.shoulderBones).toBe(1);
     expect(report!.issues.some(issue => issue.code === 'missing-shoulder-bones')).toBe(true);
+  });
+
+  it('rejects a performance candidate that drops a toe articulation bone', () => {
+    const model = simpleRiggedModel();
+    model.getObjectByName('Toe.R')!.removeFromParent();
+
+    const actor = new Musician(
+      model,
+      'guitar',
+      [0, 0, 0],
+      0,
+      undefined,
+      defaultAppearance('v2-toe-missing-qa'),
+      'electric_guitar',
+    );
+
+    const report = inspectAvatarV2Performance(actor, 'electric_guitar');
+    expect(report).not.toBeNull();
+    expect(report!.valid).toBe(false);
+    expect(report!.toeBones).toBe(1);
+    expect(report!.issues.some(issue => issue.code === 'missing-toe-bones')).toBe(true);
   });
 
   it('does not invent a grip result for the backstage A-pose', () => {
