@@ -141,6 +141,8 @@ function validScene() {
     ['Sclera.R', 'sclera', 'RMV2_Sclera', 'Eye.R'],
     ['Cornea.L', 'cornea', 'RMV2_Cornea', 'Eye.L'],
     ['Cornea.R', 'cornea', 'RMV2_Cornea', 'Eye.R'],
+    ['Wetline.L', 'wetline', 'RMV2_Wetline', 'Head'],
+    ['Wetline.R', 'wetline', 'RMV2_Wetline', 'Head'],
     ['UpperTeeth', 'teeth', 'RMV2_Teeth', 'Head'],
     ['LowerTeeth', 'teeth', 'RMV2_Teeth', 'Jaw'],
     ['Tongue', 'tongue', 'RMV2_Tongue', 'Jaw'],
@@ -154,7 +156,11 @@ function validScene() {
         ? bones.find(bone => bone.name === 'Jaw')!
         : bones.find(bone => bone.name === binding)!;
     const targetIndex = bones.indexOf(targetBone);
-    const surfaceGeometry = new T.BoxGeometry(.02, .02, .02);
+    const surfaceGeometry = role === 'mouthInterior'
+      ? new T.BoxGeometry(.075, .05, .04)
+      : role === 'wetline'
+        ? new T.BoxGeometry(.03, .004, .008)
+        : new T.BoxGeometry(.02, .02, .02);
     const surfaceCount = surfaceGeometry.getAttribute('position').count;
     const surfaceIndices = new Uint16Array(surfaceCount * 4);
     const surfaceWeights = new Float32Array(surfaceCount * 4);
@@ -171,6 +177,17 @@ function validScene() {
     surfaceMesh.name = `RMV2_${surface}`;
     surfaceMesh.userData.rockmundoSurfaceRole = role;
     surfaceMesh.userData.rockmundoBoneBinding = binding;
+    if (role === 'wetline') {
+      const side = surface.endsWith('.L') ? 'L' : 'R';
+      surfaceMesh.userData.rockmundoEyeSide = side;
+      const blinkName = side === 'L' ? 'blinkLeft' : 'blinkRight';
+      surfaceMesh.morphTargetDictionary = { [blinkName]: 0 };
+      surfaceMesh.morphTargetInfluences = [0];
+      surfaceGeometry.morphTargetsRelative = true;
+      const wetlineDelta = new Float32Array(surfaceCount * 3);
+      wetlineDelta[1] = .0012;
+      surfaceGeometry.morphAttributes.position = [new T.Float32BufferAttribute(wetlineDelta, 3)];
+    }
     surfaceMesh.bind(surfaceSkeleton);
     root.add(surfaceMesh);
   }
@@ -244,9 +261,9 @@ describe('Avatar V2 mesh contract', () => {
   it('accepts a compact skinned humanoid with the required rig and facial targets', () => {
     const report = validateAvatarV2Scene(validScene(), 'masculine', 0);
     expect(report.valid).toBe(true);
-    // Base body + head surface + eight body-region proof meshes + ten
-    // dedicated close-up anatomy surfaces (bilateral eyes, split teeth, tongue, mouth).
-    expect(report.skinnedMeshes).toBe(2 + AVATAR_V2_BODY_REGIONS.length + 10);
+    // Base body + head surface + eight body-region proof meshes + twelve
+    // dedicated close-up anatomy surfaces (bilateral eyes/wetlines, split teeth, tongue, mouth).
+    expect(report.skinnedMeshes).toBe(2 + AVATAR_V2_BODY_REGIONS.length + 12);
     expect(report.issues.filter(issue => issue.level === 'error')).toEqual([]);
     expect(Object.keys(report.boneMap)).toHaveLength(AVATAR_V2_REQUIRED_BONES.length);
   });
@@ -495,6 +512,31 @@ describe('Avatar V2 mesh contract', () => {
     const report = validateAvatarV2Scene(scene, 'masculine', 0);
     expect(report.valid).toBe(false);
     expect(report.issues.some(issue => issue.code === 'missing-surface-binding:iris:Eye.L')).toBe(true);
+  });
+
+  it('rejects a close-up wetline that cannot follow its eyelid blink', () => {
+    const scene = validScene();
+    const wetline = scene.getObjectByName('RMV2_Wetline.L') as T.Mesh;
+    wetline.morphTargetDictionary = {};
+    wetline.geometry.morphAttributes.position = [];
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'missing-wetline-blink:L')).toBe(true);
+  });
+
+  it('rejects a paper-thin mouth interior in LOD0 singing close-ups', () => {
+    const scene = validScene();
+    const mouth = scene.getObjectByName('RMV2_MouthInterior') as T.SkinnedMesh;
+    mouth.geometry.dispose();
+    mouth.geometry = new T.BoxGeometry(.075, .05, .004);
+    const count = mouth.geometry.getAttribute('position').count;
+    mouth.geometry.setAttribute('skinIndex', new T.Uint16BufferAttribute(new Uint16Array(count * 4), 4));
+    const weights = new Float32Array(count * 4);
+    for (let index = 0; index < count; index++) weights[index * 4] = 1;
+    mouth.geometry.setAttribute('skinWeight', new T.Float32BufferAttribute(weights, 4));
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'shallow-mouth-cavity')).toBe(true);
   });
 
   it('fails LOD0 close-ups without cornea or mouth-interior materials', () => {
