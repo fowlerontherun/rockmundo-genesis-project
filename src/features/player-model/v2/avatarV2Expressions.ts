@@ -214,6 +214,7 @@ export function sampleAvatarV2VocalArticulation(
 export class AvatarV2ExpressionController {
   private readonly bindings: BindingMap;
   private readonly eyes: EyeBinding[];
+  private readonly jaw: { bone: T.Bone; rest: T.Quaternion } | null;
   readonly supported: AvatarV2Expression[];
 
   constructor(root: T.Object3D) {
@@ -229,6 +230,9 @@ export class AvatarV2ExpressionController {
           : null;
       })
       .filter((eye): eye is EyeBinding => !!eye);
+
+    const jaw = root.getObjectByName('Jaw');
+    this.jaw = jaw instanceof T.Bone ? { bone: jaw, rest: jaw.quaternion.clone() } : null;
   }
 
   get hasCloseUpFace() {
@@ -298,7 +302,15 @@ export class AvatarV2ExpressionController {
       : 0;
 
     const articulation = sampleAvatarV2VocalArticulation(t, state.phase, vocal, state.energy);
-    setWeight(this.bindings, 'jawOpen', vocal * articulation.jawScale);
+    const jawAmount = vocal * articulation.jawScale;
+    setWeight(this.bindings, 'jawOpen', jawAmount);
+    if (this.jaw) {
+      const angle = state.reducedMotion ? 0 : jawAmount * .16;
+      this.jaw.bone.quaternion.copy(this.jaw.rest).multiply(
+        new T.Quaternion().setFromEuler(new T.Euler(angle, 0, 0, 'XYZ')),
+      );
+      this.jaw.bone.userData.rockmundoAvatarV2JawAngle = angle;
+    }
     const micro = state.reducedMotion
       ? 0
       : (.5 + Math.sin(t * .43 + state.phase * 1.91) * .5) * .018;
@@ -347,6 +359,10 @@ export class AvatarV2ExpressionController {
       setWeight(this.bindings, expression, 0);
     }
     for (const eye of this.eyes) eye.bone.quaternion.copy(eye.rest);
+    if (this.jaw) {
+      this.jaw.bone.quaternion.copy(this.jaw.rest);
+      this.jaw.bone.userData.rockmundoAvatarV2JawAngle = 0;
+    }
   }
 }
 

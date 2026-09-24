@@ -10,6 +10,7 @@ function simpleRiggedModel() {
   const hips = new T.Bone(); hips.name = 'Hips'; hips.position.y = .9;
   const torso = new T.Bone(); torso.name = 'Spine2'; torso.position.y = .45; hips.add(torso);
   const head = new T.Bone(); head.name = 'Head'; head.position.y = .38; torso.add(head);
+  const jaw = new T.Bone(); jaw.name = 'Jaw'; jaw.position.set(0, -.09, .04); head.add(jaw);
   for (const side of ['L', 'R'] as const) {
     const eye = new T.Bone();
     eye.name = `Eye.${side}`;

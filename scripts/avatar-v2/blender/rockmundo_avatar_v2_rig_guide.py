@@ -230,6 +230,18 @@ def create_rig(frame: str, minimum: Vector, maximum: Vector) -> bpy.types.Object
         connected=True,
     )
 
+    # The jaw is a real deform joint so lower teeth/tongue can follow mouth
+    # opening instead of floating inside a morphing face. Fit the hinge to the
+    # final sculpt before skinning.
+    jaw_head = Vector((centre_x, centre_y - height * 0.012, z(0.865)))
+    add_bone(
+        armature,
+        "Jaw",
+        jaw_head,
+        jaw_head + Vector((0.0, -height * 0.035, -height * 0.018)),
+        head,
+    )
+
     # Eye bones are authored as direct head children so runtime gaze remains
     # independent from blink/squint morphs while still following head motion.
     # These are proportion guides only; fit them to the actual eyeball centres.
@@ -357,6 +369,7 @@ The generated RMV2_Armature is a naming/proportion GUIDE, not a finished rig.
 
 Before binding:
 - move hips/spine/neck/head joints into the actual mesh centres;
+- fit Jaw to the real mandibular hinge and keep it parented to Head;
 - fit Eye.L/Eye.R to the actual eyeball centres and keep them parented to Head;
 - fit EarAnchor.L/EarAnchor.R to the real earlobe/piercing points; keep them parented to Head and non-deforming;
 - fit shoulder roots to the clavicle topology;
@@ -371,6 +384,7 @@ After fitting:
 - keep no more than four influences per vertex;
 - manually clean shoulders, elbows, hips, knees, wrists and fingers;
 - paint meaningful weights onto all six twist helpers so axial roll is distributed;
+- weight the lower jaw/lower teeth/tongue appropriately to Jaw and verify open-mouth singing;
 - bind each eyeball to its matching eye bone and verify gaze pivots cleanly;
 - leave EarAnchor.L/R unweighted; verify earrings and glasses sit correctly on both anchors;
 - test singing gaze plus guitar, bass, drumstick and microphone poses;

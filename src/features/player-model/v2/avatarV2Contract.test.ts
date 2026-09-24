@@ -37,7 +37,7 @@ function validScene() {
     const bone = new T.Bone();
     bone.name = aliases[0];
     if (
-      semantic === 'leftEye' || semantic === 'rightEye'
+      semantic === 'leftEye' || semantic === 'rightEye' || semantic === 'jaw'
       || semantic === 'leftEarAnchor' || semantic === 'rightEarAnchor'
     ) headBone.add(bone);
     else if (twistParents[semantic]) bones.find(candidate => candidate.name === twistParents[semantic])!.add(bone);
@@ -136,6 +136,25 @@ function validScene() {
   headSurface.position.y = 1.45;
   headSurface.bind(new T.Skeleton(bones));
   root.add(headSurface);
+
+  const surfaceRoles = [
+    ['Iris', 'RMV2_Iris'],
+    ['Sclera', 'RMV2_Sclera'],
+    ['Cornea', 'RMV2_Cornea'],
+    ['Teeth', 'RMV2_Teeth'],
+    ['Tongue', 'RMV2_Tongue'],
+    ['MouthInterior', 'RMV2_MouthInterior'],
+  ] as const;
+  for (const [surface, materialName] of surfaceRoles) {
+    const surfaceMaterial = new T.MeshStandardMaterial({ color: '#cccccc' });
+    surfaceMaterial.name = materialName;
+    const surfaceMesh = new T.Mesh(new T.BoxGeometry(.02, .02, .02), surfaceMaterial);
+    surfaceMesh.name = `RMV2_${surface}Surface`;
+    surfaceMesh.userData.rockmundoSurfaceRole = surface === 'MouthInterior'
+      ? 'mouthInterior'
+      : surface.toLowerCase();
+    root.add(surfaceMesh);
+  }
 
   for (const region of AVATAR_V2_BODY_REGIONS) {
     const partGeometry = new T.BoxGeometry(.02, .02, .02);
@@ -338,6 +357,15 @@ describe('Avatar V2 mesh contract', () => {
     expect(report.issues.some(issue => issue.code === 'invalid-ear-anchor-parent:rightEarAnchor')).toBe(true);
   });
 
+  it('fails close-up assets whose jaw is detached from the head hierarchy', () => {
+    const scene = validScene();
+    const jaw = scene.getObjectByName('Jaw') as T.Bone;
+    scene.attach(jaw);
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'invalid-jaw-parent')).toBe(true);
+  });
+
   it('fails close-up assets that omit an authored eye bone', () => {
     const scene = validScene();
     scene.getObjectByName('Eye.L')!.removeFromParent();
@@ -428,6 +456,23 @@ describe('Avatar V2 mesh contract', () => {
     expect(report.issues.some(issue =>
       issue.code === 'empty-performance-expression:browInnerUp' && issue.level === 'error'
     )).toBe(true);
+  });
+
+  it('rejects LOD0 candidates that fake close-up anatomy with material slots but no dedicated surface', () => {
+    const scene = validScene();
+    scene.getObjectByName('RMV2_CorneaSurface')!.removeFromParent();
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'missing-dedicated-surface:cornea')).toBe(true);
+  });
+
+  it('rejects a named close-up surface when its material role does not match', () => {
+    const scene = validScene();
+    const iris = scene.getObjectByName('RMV2_IrisSurface') as T.Mesh;
+    (iris.material as T.Material).name = 'RMV2_Skin';
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'missing-dedicated-surface:iris')).toBe(true);
   });
 
   it('fails LOD0 close-ups without cornea or mouth-interior materials', () => {

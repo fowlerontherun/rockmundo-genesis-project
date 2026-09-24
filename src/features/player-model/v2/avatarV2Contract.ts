@@ -113,6 +113,7 @@ export const AVATAR_V2_CLOSEUP_BONE_ALIASES = {
   rightToes: ['rightToes', 'toe_r', 'toebase_r', 'mixamorigRightToeBase'],
   leftEye: ['Eye.L', 'leftEye', 'eye_l', 'mixamorigLeftEye', 'j_bip_l_eye'],
   rightEye: ['Eye.R', 'rightEye', 'eye_r', 'mixamorigRightEye', 'j_bip_r_eye'],
+  jaw: ['Jaw', 'jaw', 'jaw_bone', 'mixamorigJaw', 'j_bip_c_jaw'],
   leftEarAnchor: ['EarAnchor.L', 'leftEarAnchor', 'ear_anchor_l', 'earring_anchor_l'],
   rightEarAnchor: ['EarAnchor.R', 'rightEarAnchor', 'ear_anchor_r', 'earring_anchor_r'],
   ...AVATAR_V2_TWIST_BONE_ALIASES,
@@ -157,6 +158,7 @@ export const AVATAR_V2_CLOSEUP_RUNTIME_BONE_NAMES: Record<keyof typeof AVATAR_V2
   rightToes: 'Toe.R',
   leftEye: 'Eye.L',
   rightEye: 'Eye.R',
+  jaw: 'Jaw',
   leftEarAnchor: 'EarAnchor.L',
   rightEarAnchor: 'EarAnchor.R',
   ...AVATAR_V2_TWIST_RUNTIME_NAMES,
@@ -418,28 +420,54 @@ function inheritsFrom(bone: T.Bone, ancestor: T.Bone) {
   return false;
 }
 
+type AvatarV2SurfaceRole = 'iris' | 'sclera' | 'cornea' | 'teeth' | 'tongue' | 'mouthInterior';
+
+const MATERIAL_ROLE_PATTERNS = {
+  skin: /rmv2[_-]?skin|(^|[_-])(skin|body|face)($|[_-])/i,
+  eyes: /rmv2[_-]?eyes|(^|[_-])(eye|eyes|iris|sclera|cornea)($|[_-])/i,
+  iris: /rmv2[_-]?iris|(^|[_-])iris($|[_-])/i,
+  sclera: /rmv2[_-]?sclera|(^|[_-])sclera($|[_-])/i,
+  cornea: /rmv2[_-]?cornea|cornea|eye[_-]?(shell|surface)|ocular[_-]?shell/i,
+  teeth: /rmv2[_-]?teeth|teeth/i,
+  tongue: /rmv2[_-]?tongue|tongue/i,
+  mouthInterior: /rmv2[_-]?mouth[_-]?(interior|cavity)|oral[_-]?cavity|inner[_-]?mouth/i,
+} as const;
+
+const SURFACE_NODE_PATTERNS: Record<AvatarV2SurfaceRole, RegExp> = {
+  iris: /rmv2[_-]?(iris|eye[_-]?iris)|(^|[_-])iris($|[_-])/i,
+  sclera: /rmv2[_-]?(sclera|eye[_-]?white)|(^|[_-])sclera($|[_-])/i,
+  cornea: /rmv2[_-]?(cornea|eye[_-]?(shell|surface))|ocular[_-]?shell/i,
+  teeth: /rmv2[_-]?(teeth|tooth)|(^|[_-])teeth($|[_-])/i,
+  tongue: /rmv2[_-]?tongue|(^|[_-])tongue($|[_-])/i,
+  mouthInterior: /rmv2[_-]?mouth[_-]?(interior|cavity)|oral[_-]?cavity|inner[_-]?mouth/i,
+};
+
 function collectMaterialNames(scene: T.Object3D) {
   const names = new Set<string>();
   scene.traverse(node => {
     if (!(node instanceof T.Mesh)) return;
-    const materials = Array.isArray(node.material) ? node.material : [node.material];
-    materials.forEach(material => {
+    avatarV2UsedMaterials(node).forEach(material => {
       if (material.name) names.add(material.name);
     });
   });
   return [...names];
 }
 
-function hasMaterialRole(names: string[], role: 'skin' | 'eyes' | 'cornea' | 'teeth' | 'tongue' | 'mouthInterior') {
-  const patterns = {
-    skin: /rmv2[_-]?skin|(^|[_-])(skin|body|face)($|[_-])/i,
-    eyes: /rmv2[_-]?eyes|(^|[_-])(eye|eyes|iris|sclera|cornea)($|[_-])/i,
-    cornea: /rmv2[_-]?cornea|cornea|eye[_-]?(shell|surface)|ocular[_-]?shell/i,
-    teeth: /rmv2[_-]?teeth|teeth/i,
-    tongue: /rmv2[_-]?tongue|tongue/i,
-    mouthInterior: /rmv2[_-]?mouth[_-]?(interior|cavity)|oral[_-]?cavity|inner[_-]?mouth/i,
-  } as const;
-  return names.some(name => patterns[role].test(name));
+function hasMaterialRole(names: string[], role: keyof typeof MATERIAL_ROLE_PATTERNS) {
+  return names.some(name => MATERIAL_ROLE_PATTERNS[role].test(name));
+}
+
+function hasDedicatedSurfaceRole(scene: T.Object3D, role: AvatarV2SurfaceRole) {
+  let found = false;
+  scene.traverse(node => {
+    if (found || !(node instanceof T.Mesh)) return;
+    const explicit = String(node.userData?.rockmundoSurfaceRole ?? '');
+    const namedForRole = clean(explicit) === clean(role) || SURFACE_NODE_PATTERNS[role].test(node.name);
+    if (!namedForRole || !(node.geometry.getAttribute('position')?.count > 0)) return;
+    const materialNames = avatarV2UsedMaterials(node).map(material => material.name);
+    if (hasMaterialRole(materialNames, role)) found = true;
+  });
+  return found;
 }
 
 function hasExpression(names: string[], expression: keyof typeof EXPRESSION_ALIASES) {
@@ -569,6 +597,15 @@ export function validateAvatarV2Scene(
           });
         }
       }
+      const jaw = boneByAliases(scene, AVATAR_V2_CLOSEUP_BONE_ALIASES.jaw);
+      if (jaw && !inheritsFrom(jaw, headBone)) {
+        issues.push({
+          level: 'error',
+          code: 'invalid-jaw-parent',
+          message: `LOD${lod} Jaw must inherit from Head so oral anatomy follows head motion and live jaw articulation.`,
+        });
+      }
+
       for (const semantic of ['leftEarAnchor', 'rightEarAnchor'] as const) {
         const anchor = boneByAliases(scene, AVATAR_V2_CLOSEUP_BONE_ALIASES[semantic]);
         if (anchor && !inheritsFrom(anchor, headBone)) {
@@ -746,6 +783,15 @@ export function validateAvatarV2Scene(
     }
   }
   if (lod === 0) {
+    for (const role of ['iris', 'sclera', 'cornea', 'teeth', 'tongue', 'mouthInterior'] as const) {
+      if (!hasDedicatedSurfaceRole(scene, role)) {
+        issues.push({
+          level: 'error',
+          code: `missing-dedicated-surface:${role}`,
+          message: `LOD0 needs real dedicated ${role} geometry using its matching material role; an extra material slot on the body/face is not sufficient.`,
+        });
+      }
+    }
     for (const role of ['cornea', 'teeth', 'tongue', 'mouthInterior'] as const) {
       if (!hasMaterialRole(materials, role)) {
         issues.push({
