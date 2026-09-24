@@ -26,6 +26,9 @@ export interface ConcertVenue {
   type?: string | null;
   capacity?: number | null;
   id?: string | null;
+  cityName?: string | null;
+  country?: string | null;
+  location?: string | null;
   /** TV-studio-only presentation metadata. Ignored by ordinary venues. */
   presenterKey?: string | null;
   showVariant?: string | null;
