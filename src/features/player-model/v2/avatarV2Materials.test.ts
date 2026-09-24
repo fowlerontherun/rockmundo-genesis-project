@@ -22,6 +22,21 @@ describe('Avatar V2 material quality', () => {
     expect(avatarV2MaterialRole('RMV2_MouthInterior')).toBe('mouthInterior');
   });
 
+  it('preserves authored V2 skin maps instead of replacing them with procedural fallback textures', () => {
+    const root = new T.Group();
+    const skin = material('RMV2_Skin');
+    const authoredNormal = new T.Texture();
+    const authoredRoughness = new T.Texture();
+    skin.normalMap = authoredNormal;
+    skin.roughnessMap = authoredRoughness;
+    root.add(new T.Mesh(new T.BoxGeometry(1, 1, 1), skin));
+
+    tuneAvatarV2Materials(root, defaultAppearance('v2-authored-skin-test'), 'ultra');
+
+    expect(skin.normalMap).toBe(authoredNormal);
+    expect(skin.roughnessMap).toBe(authoredRoughness);
+  });
+
   it('applies skin micro-detail and distinct close-up eye and mouth shading', () => {
     const root = new T.Group();
     const materials = [
