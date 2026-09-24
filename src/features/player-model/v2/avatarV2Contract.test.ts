@@ -244,7 +244,9 @@ describe('Avatar V2 mesh contract', () => {
   it('accepts a compact skinned humanoid with the required rig and facial targets', () => {
     const report = validateAvatarV2Scene(validScene(), 'masculine', 0);
     expect(report.valid).toBe(true);
-    expect(report.skinnedMeshes).toBe(2 + AVATAR_V2_BODY_REGIONS.length);
+    // Base body + head surface + eight body-region proof meshes + ten
+    // dedicated close-up anatomy surfaces (bilateral eyes, split teeth, tongue, mouth).
+    expect(report.skinnedMeshes).toBe(2 + AVATAR_V2_BODY_REGIONS.length + 10);
     expect(report.issues.filter(issue => issue.level === 'error')).toEqual([]);
     expect(Object.keys(report.boneMap)).toHaveLength(AVATAR_V2_REQUIRED_BONES.length);
   });
