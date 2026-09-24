@@ -556,7 +556,7 @@ function buildStudioInfrastructure(root: T.Group, p: VenueProfile) {
     box(group, [.055, .018, .55], [x, .034, 1.35], tape).name = 'totp-camera-floor-mark';
   }
 
-  const railsX = -2.85;
+  const railsX = -8.55;
   for (const x of [railsX - .31, railsX + .31]) rod(group, [x, .07, 1.25], [x, .07, 4.55], .028, truss);
   for (let z = 1.35; z <= 4.45; z += .45) box(group, [.82, .045, .065], [railsX, .045, z], truss);
   box(group, [.92, .12, .72], [railsX, .13, 2.0], metal('#3e4852')).name = 'totp-dolly-track';
@@ -591,18 +591,18 @@ function buildBoomRig(root: T.Group, x: number, z: number) {
 }
 
 function buildAdditionalCameraDepartment(root: T.Group, p: VenueProfile) {
-  const shoulderLeft = buildCameraBody(root, -2.85, 1.95, -.08, true);
+  const shoulderLeft = buildCameraBody(root, -.9, 1.65, -.08, true);
   shoulderLeft.name = 'totp-camera-shoulder-left';
-  buildOperator(root, -3.15, 2.28, -.08, 'totp-operator-shoulder-left');
+  buildOperator(root, -1.16, 1.98, -.08, 'totp-operator-shoulder-left');
 
   const stageBCamera = buildCameraBody(root, 8.45, 4.25, .42, true);
   stageBCamera.name = 'totp-camera-stage-b';
   buildOperator(root, 8.78, 4.62, .42, 'totp-operator-stage-b');
 
   buildOperator(root, p.crowdWidth * .58 + .58, 7.72, -.48, 'totp-operator-jib');
-  buildOperator(root, -p.crowdWidth * .42 - 1.05, 5.18, -.12, 'totp-camera-assistant-left');
+  buildOperator(root, -9.72, 5.35, -.12, 'totp-camera-assistant-left');
 
-  const floorManager = buildOperator(root, -8.35, 2.0, .4, 'totp-floor-manager');
+  const floorManager = buildOperator(root, -9.85, 1.6, .4, 'totp-floor-manager');
   floorManager.userData.department = 'floor';
   box(floorManager, [.28, .36, .025], [.33, 1.03, -.18], matte('#d9d9d3')).name = 'totp-floor-manager-clipboard';
 
@@ -636,9 +636,9 @@ export function buildTvStudioProduction(root: T.Group, p: VenueProfile) {
   box(root, [2.5, 1.25, .12], [presenterX, .9, presenterZ - .95], accent).name = 'totp-presenter-backdrop';
   buildPresenter(root, presenterX, presenterZ - .12, p.presenterKey);
 
-  const pedestalLeft = buildCameraBody(root, -p.crowdWidth * .42, 4.5, -.18);
+  const pedestalLeft = buildCameraBody(root, -p.crowdWidth * .58, 4.75, -.18);
   pedestalLeft.name = 'totp-camera-pedestal-left';
-  buildOperator(root, -p.crowdWidth * .42 - .45, 4.9, -.18, 'totp-operator-left');
+  buildOperator(root, -p.crowdWidth * .58 - .48, 5.12, -.18, 'totp-operator-left');
 
   const pedestalRight = buildCameraBody(root, p.crowdWidth * .42, 5.1, .18);
   pedestalRight.name = 'totp-camera-pedestal-right';
