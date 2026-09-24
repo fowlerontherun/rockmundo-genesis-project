@@ -15,6 +15,7 @@ import { createAvatarV2ExpressionController, type AvatarV2ExpressionController }
 import { createAvatarV2PoseCorrectiveController, type AvatarV2PoseCorrectiveController } from '@/features/player-model/v2/avatarV2PoseCorrectives';
 import { createAvatarV2TwistController, type AvatarV2TwistController } from '@/features/player-model/v2/avatarV2TwistBones';
 import { createAvatarV2ShoulderController, type AvatarV2ShoulderController } from '@/features/player-model/v2/avatarV2Shoulder';
+import { createAvatarV2ToeController, type AvatarV2ToeController } from '@/features/player-model/v2/avatarV2Toe';
 import { seededRandom } from './config';
 import { visibleTattoosForPresentation } from '@/features/player-model/tattoos';
 import { assemblePlayerModel, disposeModel, loadModelLibrary, requiredModelFiles } from '@/features/player-model/model';
@@ -102,6 +103,7 @@ export class Musician {
     private poseCorrectives: AvatarV2PoseCorrectiveController | null = null;
     private twistDeformation: AvatarV2TwistController | null = null;
     private shoulderGirdle: AvatarV2ShoulderController | null = null;
+    private toeArticulation: AvatarV2ToeController | null = null;
     constructor(source: T.Object3D, public role: Role, position: [
         number,
         number,
@@ -200,6 +202,7 @@ export class Musician {
         this.poseCorrectives = createAvatarV2PoseCorrectiveController(this.model);
         this.twistDeformation = createAvatarV2TwistController(this.model);
         this.shoulderGirdle = createAvatarV2ShoulderController(this.model);
+        this.toeArticulation = createAvatarV2ToeController(this.model);
         if (this.hasVocals() && this.bones.has('Head') && !this.faceExpressions) {
             this.mouth = createVocalMouth(this.root, this.model, this.bones.get('Head')!);
         }
@@ -788,6 +791,42 @@ export class Musician {
                 const shaftAxis = (stick.userData.shaftAxis as T.Vector3 | undefined)
                     ?? new T.Vector3(0, 0, 1);
                 aimAttachedTool(stick, shaftAxis, rig.root.localToWorld(target.clone()));
+            }
+        }
+
+        // Use the V2 toe-base bones instead of leaving the forefoot rigid. The
+        // live leg IK still owns ankle placement; toe articulation only shapes the
+        // forefoot after that solve, so planted-foot and instrument targets remain
+        // stable. Walking gets a stronger push/swing roll, drum feet press pedals,
+        // and standing performers alternate subtle load between both feet.
+        if (this.toeArticulation) {
+            for (const side of ['L', 'R'] as const) {
+                const sidePhase = side === 'L' ? 0 : Math.PI;
+                let toeFlex = 0;
+
+                if (this.role === 'fan' && (this.fanPose === 'runLeft' || this.fanPose === 'runRight')) {
+                    const runDirection = this.fanPose === 'runLeft' ? 1 : -1;
+                    const sideSign = side === 'L' ? 1 : -1;
+                    toeFlex = sideSign * runDirection > 0 ? .55 : .28;
+                } else if (this.walking && !reduced) {
+                    const stride = Math.sin(t * 6.2 + sidePhase);
+                    const swing = Math.max(0, stride);
+                    const pushOff = Math.max(0, -stride);
+                    toeFlex = swing * .82 + pushOff * .32;
+                } else if (!reduced && performing && rig?.family === 'kit') {
+                    const pedalCycle = Math.pow(
+                        Math.max(0, Math.sin(t * Math.PI * (side === 'R' ? 4 : 2) + (side === 'L' ? 1.1 : 0))),
+                        2,
+                    );
+                    toeFlex = -.16 - pedalCycle * .72;
+                } else if (!reduced && performing && this.role !== 'fan') {
+                    const rate = this.role === 'vocals' ? .92 : this.role === 'bass' ? .52 : .68;
+                    const load = .5 + .5 * Math.sin(t * rate + this.phase + sidePhase);
+                    const accent = Math.max(0, Math.sin(t * 1.7 + this.phase + sidePhase));
+                    toeFlex = .18 - load * .32 + accent * .06 * motionEnergy;
+                }
+
+                this.toeArticulation.flex(side, toeFlex);
             }
         }
 
