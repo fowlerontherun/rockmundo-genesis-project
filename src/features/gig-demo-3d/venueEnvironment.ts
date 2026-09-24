@@ -6,6 +6,7 @@ import { seededRandom } from './config';
 import type { VenueProfile } from './venueProfile';
 import { buildVenueSurfaceMaterials } from './venueSurfaceMaterials';
 import { buildVenueDressing } from './venueDressing';
+import { buildVenueDetailDressing } from './venueDetailDressing';
 
 /** Architecture surrounds the human-scale performance area. Detail is batched
  * by material; distant spectators use bounded instance batches for standing and seated people. */
@@ -148,6 +149,7 @@ export function buildVenueEnvironment(scene: T.Scene, p: VenueProfile, seed: num
   }
   venueArchitecture(root,p,wood);
   buildVenueDressing(root,p,seed,surfaces);
+  buildVenueDetailDressing(root,p,seed,surfaces);
   batchStaticMeshes(root);
   buildVenueAudience(root,p,seed,places);
   return root;
