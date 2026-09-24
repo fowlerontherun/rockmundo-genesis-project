@@ -15,6 +15,20 @@ function simpleRiggedModel() {
     const lower = new T.Bone(); lower.name = `LowerArm.${side}`; lower.position.set(side === 'L' ? .24 : -.24, -.05, 0);
     const hand = new T.Bone(); hand.name = `Hand.${side}`; hand.position.set(side === 'L' ? .22 : -.22, -.02, .02);
     torso.add(upper); upper.add(lower); lower.add(hand);
+    for (const digit of ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky'] as const) {
+      let parent: T.Bone = hand;
+      for (const joint of [1, 2, 3] as const) {
+        const finger = new T.Bone();
+        finger.name = `${digit}${joint}.${side}`;
+        finger.position.set(
+          digit === 'Thumb' ? (side === 'L' ? -.018 : .018) : 0,
+          .025,
+          .018 + joint * .003,
+        );
+        parent.add(finger);
+        parent = finger;
+      }
+    }
   }
   root.add(hips);
 
@@ -44,6 +58,8 @@ describe('Avatar V2 performance QA', () => {
     expect(report!.valid).toBe(true);
     expect(report!.maxLeftGripError).toBeLessThan(.14);
     expect(report!.maxRightGripError).toBeLessThan(.14);
+    expect(report!.maxFingerContactError).toBeLessThan(.20);
+    expect(report!.guitarPicks).toBe(1);
   });
 
   it('certifies both visible drumsticks and their hand tracking', () => {
@@ -61,6 +77,7 @@ describe('Avatar V2 performance QA', () => {
     expect(report).not.toBeNull();
     expect(report!.drumsticks).toBe(2);
     expect(report!.maxDrumstickError).toBeLessThan(.14);
+    expect(report!.maxFingerContactError).toBeLessThan(.20);
     expect(report!.valid).toBe(true);
   });
 
