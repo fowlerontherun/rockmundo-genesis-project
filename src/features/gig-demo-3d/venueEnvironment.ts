@@ -12,7 +12,7 @@ export function buildVenueEnvironment(scene: T.Scene, p: VenueProfile, seed: num
   const root = new T.Group(); root.name = `environment-${p.kind}`; root.userData.profile = p; scene.add(root);
   const random = seededRandom(seed), half = p.roomWidth / 2, back = .65 - p.stageDepth - 1.4;
   const surfaces = buildVenueSurfaceMaterials(p, wood, brick);
-  const dark = matte('#141b24'), stone = surfaces.stone, concrete = surfaces.concrete, grass = surfaces.grass, sand = surfaces.sand;
+  const dark = matte('#141b24'), stone = surfaces.stone, concrete = surfaces.concrete, grass = surfaces.grass;
   const accent = matte(p.accent), steel = metal('#64717c'), brass = metal('#a88b54'), pale = matte('#c6c1b2'), glass = new T.MeshStandardMaterial({ color: '#83a5ba', metalness: .45, roughness: .24 });
   const glow = new T.MeshStandardMaterial({ color: '#ffd9a4', emissive: '#ffd09b', emissiveIntensity: 1.8 });
   const led = new T.MeshStandardMaterial({ color: p.accent, emissive: p.accent, emissiveIntensity: .7 });
