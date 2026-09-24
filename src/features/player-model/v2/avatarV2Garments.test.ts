@@ -143,7 +143,8 @@ function garmentSource(
   bone.name = boneName;
   root.add(bone);
   const bones = [bone];
-  for (const name of extraWeightedBones) {
+  const weightedExtras = extraWeightedBones.slice(0, 3);
+  for (const name of weightedExtras) {
     const extra = new T.Bone();
     extra.name = name;
     root.add(extra);
@@ -155,9 +156,9 @@ function garmentSource(
   const indices = new Uint16Array(count * 4);
   const weights = new Float32Array(count * 4);
   for (let index = 0; index < count; index++) {
-    const extraShare = extraWeightedBones.length ? .5 / extraWeightedBones.length : 0;
-    weights[index * 4] = extraWeightedBones.length ? .5 : 1;
-    for (let extraIndex = 0; extraIndex < Math.min(3, extraWeightedBones.length); extraIndex++) {
+    const extraShare = weightedExtras.length ? .5 / weightedExtras.length : 0;
+    weights[index * 4] = weightedExtras.length ? .5 : 1;
+    for (let extraIndex = 0; extraIndex < weightedExtras.length; extraIndex++) {
       indices[index * 4 + extraIndex + 1] = extraIndex + 1;
       weights[index * 4 + extraIndex + 1] = extraShare;
     }
@@ -278,7 +279,8 @@ describe('Avatar V2 garments', () => {
     root.add(upperArms);
 
     const clothingItem = item();
-    (clothingItem.garment_config as any).avatarV2.occludeBodyRegions = ['upper-arms'];
+    const config = clothingItem.garment_config as unknown as { avatarV2: { occludeBodyRegions: string[] } };
+    config.avatarV2.occludeBodyRegions = ['upper-arms'];
     const clothing = row(clothingItem);
     const file = avatarV2GarmentFile(clothing.item, 'masculine', 1)!;
     const library = new Map<string, T.Object3D>([[file, garmentSource('hips')]]);
@@ -298,7 +300,8 @@ describe('Avatar V2 garments', () => {
     root.add(upperArms);
 
     const clothingItem = item();
-    (clothingItem.garment_config as any).avatarV2.occludeBodyRegions = ['upper-arms'];
+    const config = clothingItem.garment_config as unknown as { avatarV2: { occludeBodyRegions: string[] } };
+    config.avatarV2.occludeBodyRegions = ['upper-arms'];
     const clothing = row(clothingItem);
     const file = avatarV2GarmentFile(clothing.item, 'masculine', 1)!;
     const library = new Map<string, T.Object3D>([[
