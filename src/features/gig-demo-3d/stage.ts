@@ -6,6 +6,7 @@ import { demoAssetUrl } from './assets';
 import { resolveVenueProfile } from './venueProfile';
 import { buildVenueEnvironment } from './venueEnvironment';
 import type { ConcertVenue } from './liveTypes';
+import { buildVenueIdentitySignage } from './venueIdentitySignage';
 
 export const metal = (color = '#6e7581', roughness = 0.3) => new T.MeshStandardMaterial({ color, metalness: 0.78, roughness });
 export const matte = (color: string, roughness = 0.8) => new T.MeshStandardMaterial({ color, roughness });
@@ -76,6 +77,7 @@ export function buildVenue(scene: T.Scene, manager: T.LoadingManager, venue?: Co
     const grille = new T.MeshStandardMaterial({ map: texture(loader, grilleUrl, [2, 2]), color: '#616774', roughness: .65, metalness: .45 });
     const production = buildVenueProduction(scene, profile, oak, grille, label, venue.bandName || 'ROCKMUNDO');
     buildVenueEnvironment(scene, profile, venue.seed, oak, brick);
+    buildVenueIdentitySignage(scene, profile, venue, label);
     return production;
   }
   if (!venue) {
