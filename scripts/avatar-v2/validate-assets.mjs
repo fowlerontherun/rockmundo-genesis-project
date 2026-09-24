@@ -241,7 +241,7 @@ function validateAsset(gltf, entry) {
       if (!containsAlias(report.morphTargets, [morph])) warnings.push(`Missing Avatar Designer customization morph: ${morph}`);
     }
     for (const corrective of poseCorrectives) {
-      if (!containsAlias(report.morphTargets, [corrective])) warnings.push(`Missing recommended pose corrective: ${corrective}`);
+      if (!containsAlias(report.morphTargets, [corrective])) errors.push(`Missing required close-up pose corrective: ${corrective}`);
     }
   }
 
