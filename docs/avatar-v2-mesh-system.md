@@ -72,7 +72,12 @@ the character.
 
 Those working files still require the complete RockMundo facial/shape-key set,
 body-region split, PBR surfaces, performance deformation and LOD authoring before
-the normal export gate will accept them. Shape-key names alone are not sufficient: required muscle, facial
+the normal export gate will accept them. At high/ultra/cinematic quality, standard
+glTF skin, hair, teeth and tongue surfaces are promoted to the physical shader path
+without replacing authored maps: skin gains controlled specular/sheen response,
+hair gains directional anisotropy and sheen, and teeth/tongue gain distinct
+close-up moisture/specular behaviour. Balanced/crowd rendering keeps the cheaper
+standard path. Shape-key names alone are not sufficient: required muscle, facial
 and pose-corrective targets must produce measurable vertex deformation, preventing
 placeholder morphs from passing certification.
 
