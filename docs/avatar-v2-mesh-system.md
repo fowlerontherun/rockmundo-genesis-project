@@ -186,10 +186,13 @@ eye squint left/right, brow inner-up/down left/right, cheek squint left/right an
 mouth stretch left/right. These targets must contain measurable vertex movement,
 so a mesh cannot pass by carrying empty shape-key names.
 
-The remaining facial-animation step is timing rather than topology: broadcast/gig
-audio can later feed real phoneme timing into the same expression controller
-instead of relying only on the deterministic performance clock. Additional
-mouth-frown/asymmetry targets can still be layered on after the required set.
+The fallback facial timing is now syllable-based rather than a repeating
+AA→EE→IH→OH→OU loop. It deterministically varies vowel order, emphasis, lip
+rounding/stretch and short consonant-like closures, so seeking or replaying the
+same timestamp reconstructs the same face while close-ups read less mechanically.
+Actual broadcast/gig phoneme timing can later feed the same expression controller
+when a canonical audio-analysis track is available. Additional mouth-frown targets
+can still be layered on after the required set.
 
 ## Clothing
 
