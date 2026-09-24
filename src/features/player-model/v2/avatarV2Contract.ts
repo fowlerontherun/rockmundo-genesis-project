@@ -483,9 +483,9 @@ export function validateAvatarV2Scene(
     for (const corrective of AVATAR_V2_POSE_CORRECTIVES) {
       if (!available.has(clean(corrective))) {
         issues.push({
-          level: 'warning',
+          level: 'error',
           code: `missing-pose-corrective:${corrective}`,
-          message: `LOD${lod} should include joint deformation target: ${corrective}.`,
+          message: `LOD${lod} requires close-up joint deformation target: ${corrective}.`,
         });
       }
     }
