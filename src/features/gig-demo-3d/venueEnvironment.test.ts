@@ -23,6 +23,11 @@ describe('built venue architecture', () => {
     });
     expect(draws).toBeLessThan(45);
     if (p.seating || p.capacity > 3000) expect(root.getObjectByName('venue-distant-audience')).toBeDefined();
+    if (['cafe_stage','jazz_lounge','dive_bar','rock_club','live_house','university_union'].includes(p.kind)) {
+      const dressing = root.getObjectByName(`venue-dressing-${p.kind}`);
+      expect(dressing).toBeDefined();
+      expect((dressing?.userData.identityFeatures ?? []).length).toBeGreaterThanOrEqual(4);
+    }
     expect(new T.Box3().setFromObject(root).max.y).toBeLessThanOrEqual(201);
     disposeModel(scene);
   });
