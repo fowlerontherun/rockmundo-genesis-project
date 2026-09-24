@@ -430,6 +430,7 @@ const MATERIAL_ROLE_PATTERNS = {
   cornea: /rmv2[_-]?cornea|cornea|eye[_-]?(shell|surface)|ocular[_-]?shell/i,
   wetline: /rmv2[_-]?(wetline|tearline|waterline)|(^|[_-])(wetline|tearline|waterline)($|[_-])/i,
   lips: /rmv2[_-]?lips|(^|[_-])lips?($|[_-])/i,
+  eyebrows: /rmv2[_-]?eyebrows?|(^|[_-])(brow|eyebrow)($|[_-])/i,
   eyelashes: /rmv2[_-]?(eyelash|lashes?)|(^|[_-])(eyelash|lashes?)($|[_-])/i,
   teeth: /rmv2[_-]?teeth|teeth/i,
   tongue: /rmv2[_-]?tongue|tongue/i,
@@ -904,6 +905,13 @@ export function validateAvatarV2Scene(
 
   const materials = collectMaterialNames(scene);
   if (lod <= 1) {
+    if (!headHasMaterialRole(scene, 'eyebrows')) {
+      issues.push({
+        level: 'error',
+        code: 'missing-head-eyebrow-material',
+        message: `LOD${lod} head/face geometry needs a used RMV2_Eyebrows material region so the natural eyebrow style is present and independently colourable.`,
+      });
+    }
     for (const role of ['skin', 'eyes'] as const) {
       if (!hasMaterialRole(materials, role)) {
         issues.push({
