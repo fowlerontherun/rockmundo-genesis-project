@@ -18,9 +18,13 @@ function simpleRiggedModel() {
   }
 
   for (const side of ['L', 'R'] as const) {
-    const upper = new T.Bone(); upper.name = `UpperArm.${side}`; upper.position.set(side === 'L' ? .18 : -.18, .28, 0);
-    const lower = new T.Bone(); lower.name = `LowerArm.${side}`; lower.position.set(side === 'L' ? .24 : -.24, -.05, 0);
-    const hand = new T.Bone(); hand.name = `Hand.${side}`; hand.position.set(side === 'L' ? .22 : -.22, -.02, .02);
+    const upper = new T.Bone(); upper.name = `UpperArm.${side}`; upper.position.set(side === 'L' ? .18 : -.18, .22, 0);
+    // Keep the synthetic QA performer within the same reach envelope expected of
+    // an authored adult V2 rig. The previous ~0.47m shoulder-to-wrist chain could
+    // never reach the live guitar/drum grip markers, so the test was measuring an
+    // impossible fixture rather than the production IK/clearance rules.
+    const lower = new T.Bone(); lower.name = `LowerArm.${side}`; lower.position.set(side === 'L' ? .41 : -.41, -.025, .015);
+    const hand = new T.Bone(); hand.name = `Hand.${side}`; hand.position.set(side === 'L' ? .41 : -.41, -.015, .015);
     torso.add(upper); upper.add(lower); lower.add(hand);
     for (const digit of ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky'] as const) {
       let parent: T.Bone = hand;
