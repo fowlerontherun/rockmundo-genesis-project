@@ -167,6 +167,7 @@ export interface AvatarV2MaterialTuningReport {
   eyes: number;
   mouth: number;
   corneaPromoted: number;
+  wetlinePromoted: number;
 }
 
 export function tuneAvatarV2Materials(
@@ -180,6 +181,7 @@ export function tuneAvatarV2Materials(
     eyes: 0,
     mouth: 0,
     corneaPromoted: 0,
+    wetlinePromoted: 0,
   };
   let skinCache: ReturnType<typeof createAvatarSkinTextureCache> | undefined;
   let hairCache: ReturnType<typeof createAvatarHairTextureCache> | undefined;
@@ -199,7 +201,10 @@ export function tuneAvatarV2Materials(
         material = promotePhysical(source, true);
         const promoted = material !== source;
         changed = changed || promoted;
-        if (promoted) report.corneaPromoted += 1;
+        if (promoted) {
+          if (role === 'cornea') report.corneaPromoted += 1;
+          else report.wetlinePromoted += 1;
+        }
       } else if (
         usesCloseUpPhysicalShading(quality)
         && (role === 'skin' || role === 'hair' || role === 'teeth' || role === 'tongue')
