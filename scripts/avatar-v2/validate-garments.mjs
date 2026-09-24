@@ -7,6 +7,7 @@ const MANIFEST = path.join(ROOT, 'public', 'avatar-v2', 'clothing', 'manifest.js
 const VALID_STATUSES = new Set(['planned', 'asset_ready', 'validated', 'blocked']);
 const VALID_REGIONS = new Set(['torso','upper-arms','lower-arms','hands','hips','upper-legs','lower-legs','feet']);
 const REQUIRED_FIT_MORPHS = ['bodySlim','bodyBroad','muscleToned','muscleAthletic','muscleMuscular','muscleBodybuilder'];
+const SHAPED_BODY_REGIONS = new Set(['torso','upper-arms','lower-arms','hips','upper-legs','lower-legs']);
 
 let failed = false;
 const fail = message => {
@@ -150,9 +151,12 @@ function validateAsset(gltf, item, frame, lod, budget) {
   if (!skinCount) errors.push('No glTF skin is present.');
   if (skinCount > 1) warnings.push(`Garment exports ${skinCount} skins; one shared humanoid skin is preferred.`);
 
-  for (const morph of REQUIRED_FIT_MORPHS) {
-    if (!report.morphNames.has(morph)) {
-      errors.push(`Required body-fit morph is missing: ${morph}.`);
+  const needsBodyFitMorphs = (item.occludeBodyRegions ?? []).some(region => SHAPED_BODY_REGIONS.has(region));
+  if (needsBodyFitMorphs) {
+    for (const morph of REQUIRED_FIT_MORPHS) {
+      if (!report.morphNames.has(morph)) {
+        errors.push(`Required body-fit morph is missing: ${morph}.`);
+      }
     }
   }
 
