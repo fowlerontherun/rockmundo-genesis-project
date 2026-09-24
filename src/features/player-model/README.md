@@ -244,6 +244,10 @@ Avatar V2 defines semantic humanoid bones, facial-expression requirements, LOD
 budgets and a GLB import contract. The V2 material pass now uses quality-scaled
 skin pore/roughness fallback maps only when authored maps are absent, and treats
 iris/sclera/cornea, teeth, tongue and mouth interior as distinct close-up surfaces.
+LOD0/LOD1 now require complete three-joint finger chains on both hands. Those bones
+are normalized into the live performer rig and receive instrument-specific poses:
+fretting/chord shapes, guitar pick pinch, alternating bass plucks, microphone wrap
+and drumstick fulcrum grip.
 The close-up expression controller now blends adjacent singing visemes and can
 drive jaw, mouth stretch/funnel/pucker, cheek squint, eye squint and brow tension
 from the deterministic performance clock.

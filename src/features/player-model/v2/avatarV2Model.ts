@@ -4,6 +4,8 @@ import type { PlayerAppearance } from '../appearance';
 import type { AvatarVisualQuality } from '../avatarVisualQuality';
 import type { ModelLibrary } from '../model';
 import {
+  AVATAR_V2_CLOSEUP_BONE_ALIASES,
+  AVATAR_V2_CLOSEUP_RUNTIME_BONE_NAMES,
   AVATAR_V2_REQUIRED_BONES,
   AVATAR_V2_RUNTIME_BONE_NAMES,
   validateAvatarV2Scene,
@@ -66,6 +68,19 @@ function normalizeRigNames(root: T.Object3D, report: AvatarV2ValidationReport) {
     if (!sourceName) continue;
     const bone = byOriginal.get(sourceName);
     if (bone) bone.name = AVATAR_V2_RUNTIME_BONE_NAMES[canonical];
+  }
+
+  const clean = (value: string) => value.replace(/[^a-z0-9]/gi, '').toLowerCase();
+  const byClean = new Map<string, T.Bone>();
+  root.traverse(node => {
+    if (node instanceof T.Bone) byClean.set(clean(node.name), node);
+  });
+  for (const [semantic, aliases] of Object.entries(AVATAR_V2_CLOSEUP_BONE_ALIASES) as [
+    keyof typeof AVATAR_V2_CLOSEUP_BONE_ALIASES,
+    readonly string[],
+  ][]) {
+    const match = aliases.map(alias => byClean.get(clean(alias))).find(Boolean);
+    if (match) match.name = AVATAR_V2_CLOSEUP_RUNTIME_BONE_NAMES[semantic];
   }
 }
 

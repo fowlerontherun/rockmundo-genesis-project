@@ -1,5 +1,6 @@
 import * as T from 'three';
 import type { Musician } from '@/features/gig-demo-3d/performers';
+import { handContactPoint } from '@/features/gig-demo-3d/instrumentHandPose';
 
 export type AvatarV2PerformancePreset =
   | 'backstage'
@@ -19,13 +20,16 @@ export interface AvatarV2PerformanceQaReport {
   maxLeftGripError: number | null;
   maxRightGripError: number | null;
   maxDrumstickError: number | null;
+  maxFingerContactError: number | null;
   drumsticks: number;
+  guitarPicks: number;
   issues: AvatarV2PerformanceQaIssue[];
 }
 
 const SAMPLE_TIMES = [0, .35, .8, 1.4, 2.2, 3.1];
 const HAND_LIMIT = .14;
 const STICK_LIMIT = .14;
+const FINGER_CONTACT_LIMIT = .20;
 
 const finiteWorldMatrix = (object: T.Object3D) =>
   object.matrixWorld.elements.every(Number.isFinite);
@@ -48,7 +52,9 @@ export function inspectAvatarV2Performance(
       maxLeftGripError: null,
       maxRightGripError: null,
       maxDrumstickError: null,
+      maxFingerContactError: null,
       drumsticks: 0,
+      guitarPicks: 0,
       issues: [{ code: 'missing-instrument-rig', message: 'The performance preset did not create an instrument rig.' }],
     };
   }
@@ -60,9 +66,14 @@ export function inspectAvatarV2Performance(
   let maxLeft = 0;
   let maxRight = 0;
   let maxStick = 0;
+  let maxFinger = 0;
+  let fingerSamples = 0;
   const sticks = preset === 'rock_drums'
     ? rig.tools.filter(tool => /^playing-stick(?:-|$)/.test(tool.name))
     : [];
+  const guitarPicks = preset === 'electric_guitar'
+    ? actor.root.getObjectsByProperty('name', 'playing-guitar-pick').length
+    : 0;
 
   for (const seconds of SAMPLE_TIMES) {
     actor.update(seconds, .82, false);
@@ -90,13 +101,46 @@ export function inspectAvatarV2Performance(
       else issues.push({ code: 'invalid-right-grip', message: 'Right-hand grip distance became non-finite.' });
     }
 
+    const contactSamples: Array<[T.Vector3 | null, T.Object3D]> = [];
+    if (preset === 'electric_guitar' || preset === 'bass_guitar') {
+      contactSamples.push(
+        [handContactPoint(actor.bones, 'L', ['Index', 'Middle', 'Ring', 'Pinky']), rig.left],
+        [handContactPoint(actor.bones, 'R', preset === 'bass_guitar' ? ['Index', 'Middle'] : ['Thumb', 'Index']), rig.right],
+      );
+    } else if (preset === 'vocals') {
+      contactSamples.push([
+        handContactPoint(actor.bones, 'R', ['Thumb', 'Index', 'Middle', 'Ring']),
+        rig.right,
+      ]);
+    }
+    for (const [contact, target] of contactSamples) {
+      if (!contact) continue;
+      const distance = contact.distanceTo(target.getWorldPosition(new T.Vector3()));
+      if (Number.isFinite(distance)) {
+        maxFinger = Math.max(maxFinger, distance);
+        fingerSamples += 1;
+      } else {
+        issues.push({ code: 'invalid-finger-contact', message: 'Finger contact distance became non-finite.' });
+      }
+    }
+
     if (preset === 'rock_drums' && sticks.length >= 2 && left && right) {
       const hands = [left, right] as const;
       for (let index = 0; index < 2; index++) {
-        const distance = sticks[index].getWorldPosition(new T.Vector3())
-          .distanceTo(hands[index].getWorldPosition(new T.Vector3()));
+        const stickWorld = sticks[index].getWorldPosition(new T.Vector3());
+        const distance = stickWorld.distanceTo(hands[index].getWorldPosition(new T.Vector3()));
         if (Number.isFinite(distance)) maxStick = Math.max(maxStick, distance);
         else issues.push({ code: `invalid-drumstick-${index}`, message: 'A drumstick produced an invalid transform.' });
+
+        const side = index === 0 ? 'L' : 'R';
+        const fingerGrip = handContactPoint(actor.bones, side, ['Thumb', 'Index']);
+        if (fingerGrip) {
+          const fingerDistance = fingerGrip.distanceTo(stickWorld);
+          if (Number.isFinite(fingerDistance)) {
+            maxFinger = Math.max(maxFinger, fingerDistance);
+            fingerSamples += 1;
+          }
+        }
       }
     }
   }
@@ -125,6 +169,18 @@ export function inspectAvatarV2Performance(
     }
   }
 
+  if (preset === 'electric_guitar' && guitarPicks < 1) {
+    issues.push({ code: 'missing-guitar-pick', message: 'Guitar performance should expose a visible pick between the thumb and index finger.' });
+  }
+  if (fingerSamples === 0) {
+    issues.push({ code: 'missing-finger-contact', message: 'No usable finger contact chain was found for this close-up performance.' });
+  } else if (maxFinger > FINGER_CONTACT_LIMIT) {
+    issues.push({
+      code: 'finger-contact-clearance',
+      message: `Finger contact drift reached ${maxFinger.toFixed(3)}m; target is ≤ ${FINGER_CONTACT_LIMIT.toFixed(2)}m.`,
+    });
+  }
+
   const uniqueIssues = [...new Map(issues.map(issue => [issue.code, issue])).values()];
   return {
     valid: uniqueIssues.length === 0,
@@ -132,7 +188,9 @@ export function inspectAvatarV2Performance(
     maxLeftGripError: needsLeft && left ? maxLeft : null,
     maxRightGripError: right ? maxRight : null,
     maxDrumstickError: preset === 'rock_drums' && sticks.length >= 2 && left && right ? maxStick : null,
+    maxFingerContactError: fingerSamples ? maxFinger : null,
     drumsticks: sticks.length,
+    guitarPicks,
     issues: uniqueIssues,
   };
 }

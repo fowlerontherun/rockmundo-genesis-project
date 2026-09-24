@@ -74,9 +74,12 @@ quieter passages remain subtle. Additional frown and eye-look targets are still
 encouraged. Teeth and tongue must be separate at LOD0 so close-up vocals never
 expose a hollow mouth.
 
-LOD0/LOD1 also require shoulder, toe-base and all five proximal finger bones on
-both hands. This is deliberate: the new mesh system must improve guitar, bass,
-drumstick and microphone grips rather than only increasing face resolution.
+LOD0/LOD1 also require shoulder and toe-base articulation plus complete
+three-joint thumb/index/middle/ring/little chains on both hands. Common Blender,
+Mixamo and VRM-style names are normalized to RockMundo's runtime finger names.
+This is deliberate: the new mesh system must improve guitar fretting, pick/pluck
+shapes, microphone wrap and drumstick fulcrum contact rather than only increasing
+face resolution.
 
 ## LOD budgets
 
@@ -158,6 +161,21 @@ garment system hides only the regions declared by a validated garment, which
 prevents body/clothing interpenetration without hiding unrelated skin. The skin
 requirement also guarantees that Topless and the Tattoo Parlour's unclothed
 inspection presentation never reveal a missing-body hole.
+
+## Hand and instrument contact
+
+Close-up V2 performers use all three authored joints per finger. Guitarists receive
+different fretting chord shapes over time; guitar picking uses a thumb/index pinch
+with a visible pick, while bass alternates index/middle plucking. Vocalists wrap
+the microphone with the right-hand finger chain. Drummers use thumb/index as the
+stick fulcrum and the stick origin follows that finger contact rather than only the
+wrist centre.
+
+The performer still retains wrist/arm IK and guitar body clearance. The post-pose
+clearance envelope now includes every finger joint, preventing a distal fingertip
+from passing through the instrument even when the wrist itself is outside the body.
+Admin candidate QA samples the animation and reports finger-contact drift alongside
+wrist grip and drumstick drift.
 
 The first V2 clothing proof set and per-garment budgets are defined in
 `public/avatar-v2/clothing/manifest.json`. Garment hardware and prints must be

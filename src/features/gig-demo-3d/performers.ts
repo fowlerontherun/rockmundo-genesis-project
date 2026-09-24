@@ -10,6 +10,7 @@ import { crowdAppearances, crowdMaterial, crowdMotion, CROWD_LIMIT, CROWD_VARIAN
 import { circlePitPosition, circlePitSlots, crowdEventPlan } from './crowdChoreography';
 import { singerGesture, smoothMotion, vocalPhrase } from './performanceMotion';
 import { createVocalMouth } from './vocalFace';
+import { applyInstrumentFingerPose, fingerEnvelopeBones, handContactPoint } from './instrumentHandPose';
 import { createAvatarV2ExpressionController, type AvatarV2ExpressionController } from '@/features/player-model/v2/avatarV2Expressions';
 import { seededRandom } from './config';
 import { visibleTattoosForPresentation } from '@/features/player-model/tattoos';
@@ -93,6 +94,7 @@ export class Musician {
     private bodyBuild = 1;
     private vocalRole: VocalRole = null;
     private mouth: T.Mesh | null = null;
+    private guitarPick: T.Mesh | null = null;
     private faceExpressions: AvatarV2ExpressionController | null = null;
     constructor(source: T.Object3D, public role: Role, position: [
         number,
@@ -221,6 +223,20 @@ export class Musician {
             if (vocal && assignment.instrument !== 'vocal_performance') {
                 this.equipment ??= new T.Group();
                 microphone(this.equipment, [.02, 0, .44], 1.50 * (appearance?.body.height ?? 1));
+            }
+            if (this.instrumentRig?.family === 'strum' && assignment.instrument !== 'bass_guitar') {
+                const pickMaterial = new T.MeshStandardMaterial({
+                    color: '#d8b45c',
+                    roughness: .46,
+                    metalness: .04,
+                    side: T.DoubleSide,
+                });
+                pickMaterial.name = 'InstrumentPick';
+                this.guitarPick = new T.Mesh(new T.CircleGeometry(.017, 3), pickMaterial);
+                this.guitarPick.name = 'playing-guitar-pick';
+                this.guitarPick.castShadow = true;
+                this.guitarPick.frustumCulled = false;
+                this.root.add(this.guitarPick);
             }
             if (this.instrumentRig?.family === 'voice') {
                 const handheld = this.instrumentRig.root.getObjectByName('playing-handheld-microphone');
@@ -620,57 +636,21 @@ export class Musician {
         }
         if (this.action && !reduced && (!rig || rig.family === 'voice') && /wave|singalong|crowd_interaction|storytelling|mic_trick/.test(this.action))
             this.hand('L', this.point(.3, 1.85, .2), this.point(.65, 1.4, .2));
-        // Shape the hands by playing role rather than applying the same fist pose
-        // to every performer. Small local rotations keep compatibility with the
-        // imported rigs while making fret, pick and stick grips read differently.
+        // Use the complete finger chains when they exist. V2 rigs therefore wrap
+        // around the specific instrument contact while legacy rigs simply use the
+        // joints they already expose.
         const strum = rig?.family === 'strum';
         const kit = rig?.family === 'kit';
         const bass = this.role === 'bass';
-        const fretPulse = reduced ? 0 : Math.max(0, Math.sin(t * (bass ? 4.2 : 6.8) + this.phase)) * motionEnergy;
-        for (const [name, bone] of this.bones) {
-            const finger = /^(Index|Middle|Ring|Pinky)([1234])\.([LR])$/.exec(name);
-            if (finger) {
-                const [, digit, joint, side] = finger;
-                let curl = this.role === 'fan' ? .2 : rig?.family === 'keys' ? .22 : .5;
-                if (strum) {
-                    if (side === 'L') {
-                        // Fretting hand: index/middle do more work, ring/pinky relax
-                        // between chord changes instead of forming one solid fist.
-                        const weight = digit === 'Index' ? .92 : digit === 'Middle' ? .82 : digit === 'Ring' ? .68 : .58;
-                        curl = (.42 + weight * .28 + fretPulse * .08) * (Number(joint) >= 3 ? 1 : .72);
-                    } else {
-                        // Picking hand stays much more open; bass fingers curl farther
-                        // for alternating finger plucks than a guitar pick grip.
-                        const pickWeight = bass
-                            ? (digit === 'Index' || digit === 'Middle' ? .64 : .32)
-                            : (digit === 'Index' ? .38 : digit === 'Middle' ? .32 : .2);
-                        curl = pickWeight + fretPulse * (bass ? .07 : .035);
-                    }
-                } else if (kit) {
-                    // Stick grip: first two fingers secure the fulcrum while the
-                    // remaining fingers wrap more loosely around the shaft.
-                    curl = digit === 'Index' ? .62 : digit === 'Middle' ? .68 : digit === 'Ring' ? .56 : .48;
-                } else if (rig?.family === 'keys') {
-                    curl = .18 + Math.max(0, Math.sin(t * 11 + name.charCodeAt(0))) * .2 * motionEnergy;
-                } else if (rig?.family === 'voice') {
-                    curl = side === 'R' ? .64 : .34;
-                }
-                bone.rotateX(curl);
-            }
-
-            const thumb = /^Thumb([1234])\.([LR])$/.exec(name);
-            if (thumb) {
-                const [, joint, side] = thumb;
-                let thumbCurl = .18;
-                if (strum)
-                    thumbCurl = side === 'L' ? .36 : bass ? .3 : .42;
-                else if (kit)
-                    thumbCurl = .48;
-                else if (rig?.family === 'voice' && side === 'R')
-                    thumbCurl = .5;
-                bone.rotateX(thumbCurl * (Number(joint) >= 2 ? 1 : .65));
-            }
-        }
+        applyInstrumentFingerPose(this.bones, {
+            family: rig?.family,
+            role: this.role,
+            instrumentId: String(rig?.root.userData.instrumentId ?? ''),
+            seconds: t,
+            energy: motionEnergy,
+            reduced,
+            phase: this.phase,
+        });
 
         if (strum && !this.walking) {
             const leftHand = this.bones.get('Hand.L');
@@ -706,14 +686,7 @@ export class Musician {
             const keepVisibleHandOutside = (side: 'L' | 'R', minimumKnuckleZ: number) => {
                 const hand = this.bones.get(`Hand.${side}`);
                 if (!hand) return;
-                const envelopeBones = [
-                    hand,
-                    this.bones.get(`Index1.${side}`),
-                    this.bones.get(`Middle1.${side}`),
-                    this.bones.get(`Ring1.${side}`),
-                    this.bones.get(`Pinky1.${side}`),
-                    this.bones.get(`Thumb1.${side}`),
-                ].filter((bone): bone is T.Bone => !!bone);
+                const envelopeBones = fingerEnvelopeBones(this.bones, side);
 
                 // Wrist-centre checks can pass while the visible palm/knuckles still
                 // cut through the guitar after wrist/finger rotations. Correct against
@@ -742,12 +715,29 @@ export class Musician {
 
             keepVisibleHandOutside('L', acoustic ? .145 : .135);
             keepVisibleHandOutside('R', acoustic ? .255 : instrumentId === 'bass_guitar' ? .215 : .225);
+
+            if (this.guitarPick) {
+                const pickContact = handContactPoint(this.bones, 'R', ['Thumb', 'Index'])
+                    ?? this.bones.get('Hand.R')?.getWorldPosition(new T.Vector3());
+                if (pickContact) {
+                    const pickWorld = pickContact.clone().addScaledVector(faceNormal, .008);
+                    this.guitarPick.position.copy(this.root.worldToLocal(pickWorld));
+                    const pickWorldRotation = instrumentSurface.getWorldQuaternion(new T.Quaternion());
+                    this.guitarPick.quaternion.copy(
+                        this.root.getWorldQuaternion(new T.Quaternion()).invert().multiply(pickWorldRotation),
+                    );
+                    this.guitarPick.visible = performing;
+                }
+            }
         }
         // Imported wrist axes differ between avatars. Keep the grille pointing
         // towards the face instead of inheriting an arbitrary wrist orientation.
         const mic = rig?.family === 'voice' ? this.bones.get('Hand.R')?.getObjectByName('playing-handheld-microphone') : null;
         if (mic?.parent) {
-            mic.position.set(0, 0, 0);
+            const contact = handContactPoint(this.bones, 'R', ['Thumb', 'Index', 'Middle', 'Ring'])
+                ?? this.bones.get('Hand.R')?.getWorldPosition(new T.Vector3())
+                ?? new T.Vector3();
+            mic.position.copy(mic.parent.worldToLocal(contact.clone()));
             mic.quaternion.copy(mic.parent.getWorldQuaternion(new T.Quaternion()).invert().multiply(this.root.getWorldQuaternion(new T.Quaternion())));
             mic.updateWorldMatrix(false, true);
         }
@@ -767,10 +757,12 @@ export class Musician {
                 // Follow the actual hand in world space, then move the grip a few
                 // centimetres toward the kit/camera so the shaft starts visibly
                 // outside the palm instead of being occluded by the hand mesh.
-                const gripWorld = hand.getWorldPosition(new T.Vector3())
-                    .addScaledVector(forward, .045)
-                    .addScaledVector(lateral, side === 'L' ? .012 : -.012)
-                    .addScaledVector(up, .008);
+                const fingerGrip = handContactPoint(this.bones, side, ['Thumb', 'Index'])
+                    ?? hand.getWorldPosition(new T.Vector3());
+                const gripWorld = fingerGrip
+                    .addScaledVector(forward, .025)
+                    .addScaledVector(lateral, side === 'L' ? .008 : -.008)
+                    .addScaledVector(up, .004);
                 stick.position.copy(stick.parent.worldToLocal(gripWorld));
                 stick.updateWorldMatrix(false, true);
 

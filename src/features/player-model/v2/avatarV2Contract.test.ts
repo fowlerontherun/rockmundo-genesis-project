@@ -147,6 +147,14 @@ describe('Avatar V2 mesh contract', () => {
     expect(report.issues.some(issue => issue.code === 'missing-head-surface' && issue.level === 'error')).toBe(true);
   });
 
+  it('fails close-up assets that omit a distal finger joint', () => {
+    const scene = validScene();
+    scene.remove(scene.getObjectByName('Index3.L')!);
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'missing-closeup-bone:leftIndex3')).toBe(true);
+  });
+
   it('fails close-up assets that omit a required facial expression', () => {
     const scene = validScene();
     const mesh = scene.getObjectByName('RMV2_Body') as T.SkinnedMesh;

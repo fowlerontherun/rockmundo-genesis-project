@@ -426,6 +426,12 @@ export function AvatarV2CandidateLab() {
               {performanceReport.maxRightGripError != null && (
                 <Badge variant="outline">right hand {(performanceReport.maxRightGripError * 100).toFixed(1)}cm max drift</Badge>
               )}
+              {performanceReport.maxFingerContactError != null && (
+                <Badge variant="outline">finger contact {(performanceReport.maxFingerContactError * 100).toFixed(1)}cm max drift</Badge>
+              )}
+              {performanceReport.preset === 'electric_guitar' && (
+                <Badge variant="outline">{performanceReport.guitarPicks}/1 pick</Badge>
+              )}
               {performanceReport.preset === 'rock_drums' && (
                 <Badge variant="outline">{performanceReport.drumsticks}/2 drumsticks</Badge>
               )}
