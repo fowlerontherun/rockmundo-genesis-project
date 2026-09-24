@@ -113,6 +113,8 @@ export const AVATAR_V2_CLOSEUP_BONE_ALIASES = {
   rightToes: ['rightToes', 'toe_r', 'toebase_r', 'mixamorigRightToeBase'],
   leftEye: ['Eye.L', 'leftEye', 'eye_l', 'mixamorigLeftEye', 'j_bip_l_eye'],
   rightEye: ['Eye.R', 'rightEye', 'eye_r', 'mixamorigRightEye', 'j_bip_r_eye'],
+  leftEarAnchor: ['EarAnchor.L', 'leftEarAnchor', 'ear_anchor_l', 'earring_anchor_l'],
+  rightEarAnchor: ['EarAnchor.R', 'rightEarAnchor', 'ear_anchor_r', 'earring_anchor_r'],
   ...AVATAR_V2_TWIST_BONE_ALIASES,
 
   leftThumb1: ['Thumb1.L', 'leftThumbProximal', 'leftHandThumb1', 'thumb_01_l', 'mixamorigLeftHandThumb1'],
@@ -155,6 +157,8 @@ export const AVATAR_V2_CLOSEUP_RUNTIME_BONE_NAMES: Record<keyof typeof AVATAR_V2
   rightToes: 'Toe.R',
   leftEye: 'Eye.L',
   rightEye: 'Eye.R',
+  leftEarAnchor: 'EarAnchor.L',
+  rightEarAnchor: 'EarAnchor.R',
   ...AVATAR_V2_TWIST_RUNTIME_NAMES,
   leftThumb1: 'Thumb1.L',
   leftThumb2: 'Thumb2.L',
@@ -562,6 +566,16 @@ export function validateAvatarV2Scene(
             level: 'error',
             code: `invalid-eye-parent:${semantic}`,
             message: `LOD${lod} ${semantic} must inherit from the head bone so gaze follows head animation.`,
+          });
+        }
+      }
+      for (const semantic of ['leftEarAnchor', 'rightEarAnchor'] as const) {
+        const anchor = boneByAliases(scene, AVATAR_V2_CLOSEUP_BONE_ALIASES[semantic]);
+        if (anchor && !inheritsFrom(anchor, headBone)) {
+          issues.push({
+            level: 'error',
+            code: `invalid-ear-anchor-parent:${semantic}`,
+            message: `LOD${lod} ${semantic} must inherit from the head bone so earrings and glasses follow head animation.`,
           });
         }
       }

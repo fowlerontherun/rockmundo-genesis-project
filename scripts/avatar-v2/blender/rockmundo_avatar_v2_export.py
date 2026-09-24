@@ -54,6 +54,8 @@ CLOSEUP_BONES = {
       "rightToes": ["rightToes","toe_r","toebase_r","mixamorigRightToeBase"],
       "leftEye": ["Eye.L","leftEye","eye_l","mixamorigLeftEye","j_bip_l_eye"],
       "rightEye": ["Eye.R","rightEye","eye_r","mixamorigRightEye","j_bip_r_eye"],
+      "leftEarAnchor": ["EarAnchor.L","leftEarAnchor","ear_anchor_l","earring_anchor_l"],
+      "rightEarAnchor": ["EarAnchor.R","rightEarAnchor","ear_anchor_r","earring_anchor_r"],
       "leftUpperArmTwist": ["UpperArmTwist.L","upperarm_twist_l","upper_arm_twist_l","leftUpperArmTwist"],
       "rightUpperArmTwist": ["UpperArmTwist.R","upperarm_twist_r","upper_arm_twist_r","rightUpperArmTwist"],
       "leftForearmTwist": ["ForearmTwist.L","forearm_twist_l","lowerarm_twist_l","leftForearmTwist"],
@@ -324,6 +326,16 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
                 if parent != head_bone:
                     errors.append(f"{semantic} must inherit from the head bone.")
 
+            for semantic in ("leftEarAnchor", "rightEarAnchor"):
+                anchor_bone = find_bone(CLOSEUP_BONES[semantic])
+                if not head_bone or not anchor_bone:
+                    continue
+                parent = anchor_bone.parent
+                while parent and parent != head_bone:
+                    parent = parent.parent
+                if parent != head_bone:
+                    errors.append(f"{semantic} must inherit from the head bone.")
+
             chest_bone = find_bone(["chest", *REQUIRED_BONES["chest"]])
             shoulder_hierarchy = (
                 ("leftShoulder", "leftUpperArm"),
@@ -539,6 +551,7 @@ def export_glb(args: argparse.Namespace) -> None:
         export_format="GLB",
         use_selection=True,
         export_skins=True,
+        export_def_bones=False,
         export_morph=True,
         export_yup=True,
     )

@@ -1,6 +1,6 @@
 import * as T from 'three';
 import type { PlayerAppearance } from './appearance';
-import { buildHeadAccessory, clearHairForHeadAccessories, tuckHair } from './accessoryGeometry';
+import { buildHeadAccessory, clearHairForHeadAccessories, tuckHair, type HeadAccessoryFit } from './accessoryGeometry';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import { richGarmentSlot } from '@/features/clothing-preview/richGarmentVisuals';
 import { avatarQualityProfile, type AvatarVisualQuality } from './avatarVisualQuality';
@@ -136,6 +136,7 @@ export function addAccessories(
   head: T.Bone,
   richClothing: ResolvedEquippedClothing[] = [],
   quality: AvatarVisualQuality = 'balanced',
+  fitOverride: HeadAccessoryFit = {},
 ) {
   const profile = avatarQualityProfile(quality);
   const accessories = { hat: 'none', hatColor: '#20232b', glasses: 'none', glassesColor: '#20232b', earrings: 'none', leftEarring: appearance.accessories?.earrings ?? 'none', rightEarring: appearance.accessories?.earrings ?? 'none', earringColor: '#d8ad49', ...(appearance.accessories ?? {}) };
@@ -149,13 +150,21 @@ export function addAccessories(
   if (bounds.isEmpty()) return;
   const center = bounds.getCenter(new T.Vector3()), size = bounds.getSize(new T.Vector3());
   const rx = size.x * .5, rz = size.z * .5;
-  const leftEarFit = fittedEarPoint(headSurface.points, bounds, -1);
-  const rightEarFit = fittedEarPoint(headSurface.points, bounds, 1);
-  const eyeFit = fittedEyeCenters(root, bounds, appearance.body.frame);
+  const leftEarFit = fitOverride.leftEar ?? fittedEarPoint(headSurface.points, bounds, -1);
+  const rightEarFit = fitOverride.rightEar ?? fittedEarPoint(headSurface.points, bounds, 1);
+  const surfaceEyeFit = fittedEyeCenters(root, bounds, appearance.body.frame);
+  const eyeFit = {
+    leftEye: fitOverride.leftEye ?? surfaceEyeFit.leftEye,
+    rightEye: fitOverride.rightEye ?? surfaceEyeFit.rightEye,
+  };
   const leftStyle = accessories.leftEarring ?? accessories.earrings;
   const rightStyle = accessories.rightEarring ?? accessories.earrings;
   const anchor = new T.Group();
   anchor.name = 'avatar-accessories';
+  anchor.userData.rockmundoAccessoryFit = {
+    eyeSource: fitOverride.leftEye && fitOverride.rightEye ? 'authored-anchor' : 'surface',
+    earSource: fitOverride.leftEar && fitOverride.rightEar ? 'authored-anchor' : 'surface',
+  };
 
   if (accessories.hat !== 'none' || storeSlots.has('headwear')) tuckHair(root, bounds, appearance.body.frame);
   const hairClearance = clearHairForHeadAccessories(

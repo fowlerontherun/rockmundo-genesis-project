@@ -110,13 +110,14 @@ def add_bone(
     parent: bpy.types.EditBone | None = None,
     *,
     connected: bool = False,
+    deform: bool = True,
 ) -> bpy.types.EditBone:
     bone = armature.edit_bones.new(name)
     bone.head = head
     bone.tail = tail
     bone.parent = parent
     bone.use_connect = connected
-    bone.use_deform = True
+    bone.use_deform = deform
     return bone
 
 
@@ -247,6 +248,25 @@ def create_rig(frame: str, minimum: Vector, maximum: Vector) -> bpy.types.Object
             head,
         )
 
+    # Non-deforming earlobe/piercing anchors replace the runtime's old
+    # outer-head-vertex guess for earrings, glasses temples and hair clearance.
+    # Fit each marker to the actual earlobe attachment point in the final sculpt.
+    for side in ("L", "R"):
+        direction = 1.0 if side == "L" else -1.0
+        ear_head = Vector((
+            x(direction * 0.062),
+            centre_y,
+            z(0.865),
+        ))
+        add_bone(
+            armature,
+            f"EarAnchor.{side}",
+            ear_head,
+            ear_head + Vector((0.0, 0.0, height * 0.012)),
+            head,
+            deform=False,
+        )
+
     for side in ("L", "R"):
         direction = 1.0 if side == "L" else -1.0
 
@@ -338,6 +358,7 @@ The generated RMV2_Armature is a naming/proportion GUIDE, not a finished rig.
 Before binding:
 - move hips/spine/neck/head joints into the actual mesh centres;
 - fit Eye.L/Eye.R to the actual eyeball centres and keep them parented to Head;
+- fit EarAnchor.L/EarAnchor.R to the real earlobe/piercing points; keep them parented to Head and non-deforming;
 - fit shoulder roots to the clavicle topology;
 - keep UpperArmTwist/ForearmTwist/ThighTwist inside their source limb segments;
 - place elbow/knee joints on the deformation loops, not the visual surface edge;
@@ -351,6 +372,7 @@ After fitting:
 - manually clean shoulders, elbows, hips, knees, wrists and fingers;
 - paint meaningful weights onto all six twist helpers so axial roll is distributed;
 - bind each eyeball to its matching eye bone and verify gaze pivots cleanly;
+- leave EarAnchor.L/R unweighted; verify earrings and glasses sit correctly on both anchors;
 - test singing gaze plus guitar, bass, drumstick and microphone poses;
 - sculpt the required pose-space correctives after skinning quality is stable.
 
