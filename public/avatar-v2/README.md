@@ -228,9 +228,11 @@ Use stable names where possible:
 - `RMV2_Tongue`
 - `RMV2_MouthInterior`
 
-LOD0 now requires separate cornea, teeth, tongue and mouth-interior roles; LOD1
-warns when they are missing. This prevents close-up singing from showing flat
-painted eyes or a hollow mouth cavity. The runtime promotes cornea surfaces to a
+LOD0 now requires dedicated iris, sclera, cornea, teeth, tongue and mouth-interior
+geometry using matching material roles; extra unused/material slots on the body or
+face do not count. LOD1 retains the lighter material-role checks. This prevents
+close-up singing from passing certification with painted-on eyes, fake material
+slots or a hollow mouth cavity. The runtime promotes cornea surfaces to a
 physical material where needed, uses a realistic eye IOR/clearcoat response, gives
 sclera a slightly warm white, and treats teeth/tongue/interior separately.
 
