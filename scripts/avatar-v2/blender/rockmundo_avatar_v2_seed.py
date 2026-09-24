@@ -269,9 +269,10 @@ Next production steps:
    knee, hand and foot deformation loops.
 3. Generate the RockMundo skeleton guide with
    scripts/avatar-v2/blender/rockmundo_avatar_v2_rig_guide.py, then manually fit
-   every joint and finger pivot to this mesh's topology.
+   every joint, finger pivot and Eye.L/Eye.R gaze pivot to this mesh's topology.
 4. Weight the body manually and split/mark all eight garment-occlusion body regions.
-5. Author separate eyes/cornea, teeth, tongue and mouth-interior surfaces.
+5. Author separate eyes/cornea, bind each eyeball to its matching eye bone, and
+   author teeth, tongue and mouth-interior surfaces.
 6. Author the required close-up morphs listed below. Do not add zero-delta
    placeholders simply to satisfy naming checks.
 7. Build LOD0 first, validate it, then derive LOD1/2/3 without destroying UVs.
