@@ -143,6 +143,7 @@ MATERIAL_ROLES = {
     "iris": re.compile(r"rmv2[_-]?iris|(^|[_-])iris($|[_-])", re.I),
     "sclera": re.compile(r"rmv2[_-]?sclera|(^|[_-])sclera($|[_-])", re.I),
     "cornea": re.compile(r"rmv2[_-]?cornea|cornea|eye[_-]?(shell|surface)|ocular[_-]?shell", re.I),
+    "wetline": re.compile(r"rmv2[_-]?(wetline|tearline|waterline)|(^|[_-])(wetline|tearline|waterline)($|[_-])", re.I),
     "teeth": re.compile(r"rmv2[_-]?teeth|teeth", re.I),
     "tongue": re.compile(r"rmv2[_-]?tongue|tongue", re.I),
     "mouthInterior": re.compile(r"rmv2[_-]?mouth[_-]?(interior|cavity)|oral[_-]?cavity|inner[_-]?mouth", re.I),
@@ -152,6 +153,7 @@ SURFACE_NODE_PATTERNS = {
     "iris": re.compile(r"rmv2[_-]?(iris|eye[_-]?iris)|(^|[_-])iris($|[_-])", re.I),
     "sclera": re.compile(r"rmv2[_-]?(sclera|eye[_-]?white)|(^|[_-])sclera($|[_-])", re.I),
     "cornea": re.compile(r"rmv2[_-]?(cornea|eye[_-]?(shell|surface))|ocular[_-]?shell", re.I),
+    "wetline": re.compile(r"rmv2[_-]?(wetline|tearline|waterline)|(^|[_-])(wetline|tearline|waterline)($|[_-])", re.I),
     "teeth": re.compile(r"rmv2[_-]?(?:(?:upper|lower)[_-]?)?(teeth|tooth)|(^|[_-])teeth($|[_-])", re.I),
     "tongue": re.compile(r"rmv2[_-]?tongue|(^|[_-])tongue($|[_-])", re.I),
     "mouthInterior": re.compile(r"rmv2[_-]?mouth[_-]?(interior|cavity)|oral[_-]?cavity|inner[_-]?mouth", re.I),
@@ -168,6 +170,7 @@ REQUIRED_SURFACE_BINDINGS = {
     "iris": ("Eye.L", "Eye.R"),
     "sclera": ("Eye.L", "Eye.R"),
     "cornea": ("Eye.L", "Eye.R"),
+    "wetline": ("Head",),
     "teeth": ("Head", "Jaw"),
     "tongue": ("Jaw",),
     "mouthInterior": ("Head",),
@@ -204,6 +207,30 @@ def object_has_bone_influence(obj: bpy.types.Object, aliases: list[str]) -> bool
         for vertex in obj.data.vertices
         for assignment in vertex.groups
     )
+
+
+def surface_eye_side(obj: bpy.types.Object) -> str | None:
+    explicit = clean(str(obj.get("rockmundoEyeSide", "")))
+    if explicit in {"l", "left"}:
+        return "L"
+    if explicit in {"r", "right"}:
+        return "R"
+    if re.search(r"(?:[._-]l|left)$", obj.name, re.I):
+        return "L"
+    if re.search(r"(?:[._-]r|right)$", obj.name, re.I):
+        return "R"
+    return None
+
+
+def object_shape_key_max_delta(obj: bpy.types.Object, aliases: list[str]) -> float:
+    return shape_key_max_delta([obj], aliases)
+
+
+def object_axis_span(obj: bpy.types.Object, axis: int) -> float:
+    if not obj.data.vertices:
+        return 0.0
+    values = [vertex.co[axis] for vertex in obj.data.vertices]
+    return max(values) - min(values)
 
 
 def has_alias(names: list[str], aliases: list[str]) -> bool:
@@ -350,6 +377,9 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
     dedicated_surface_bindings = {
         role: set() for role in SURFACE_NODE_PATTERNS
     }
+    wetline_sides = set()
+    wetline_blink_deltas = {"L": 0.0, "R": 0.0}
+    mouth_interior_depth = 0.0
     for obj in meshes:
         used_material_indices = {polygon.material_index for polygon in obj.data.polygons}
         used_materials = [
@@ -367,6 +397,21 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
                 binding = canonical_surface_binding(obj.get("rockmundoBoneBinding", ""))
                 if binding and object_has_bone_influence(obj, SURFACE_BINDING_ALIASES[binding]):
                     dedicated_surface_bindings[role].add(binding)
+
+                if role == "wetline":
+                    side = surface_eye_side(obj)
+                    if side:
+                        wetline_sides.add(side)
+                        blink_name = "blinkLeft" if side == "L" else "blinkRight"
+                        wetline_blink_deltas[side] = max(
+                            wetline_blink_deltas[side],
+                            object_shape_key_max_delta(obj, [blink_name]),
+                        )
+                elif role == "mouthInterior":
+                    mouth_interior_depth = max(
+                        mouth_interior_depth,
+                        object_axis_span(obj, 2),
+                    )
     budget = BUDGETS[args.lod]
 
     if triangles > budget["triangles"]:
@@ -586,7 +631,7 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
             if not any(MATERIAL_ROLES[role].search(name) for name in materials):
                 errors.append(f"Missing named close-up material role: {role}.")
     if args.lod == 0:
-        for role in ("iris", "sclera", "cornea", "teeth", "tongue", "mouthInterior"):
+        for role in ("iris", "sclera", "cornea", "wetline", "teeth", "tongue", "mouthInterior"):
             if role not in dedicated_surface_roles:
                 errors.append(
                     f"LOD0 needs dedicated {role} geometry using its matching material role; "
@@ -599,7 +644,21 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
                         f"LOD0 {role} needs rockmundoBoneBinding={binding} plus real "
                         f"{binding} vertex-group influence."
                     )
-        for role in ("cornea", "teeth", "tongue", "mouthInterior"):
+        for side in ("L", "R"):
+            if side not in wetline_sides:
+                errors.append(f"LOD0 needs a dedicated {side} eyelid wetline surface.")
+            elif wetline_blink_deltas[side] < 0.00015:
+                blink_name = "blinkLeft" if side == "L" else "blinkRight"
+                errors.append(
+                    f"LOD0 wetline {side} must deform with {blink_name}; "
+                    f"measured {wetline_blink_deltas[side] * 1000:.3f}mm."
+                )
+        if mouth_interior_depth < 0.025:
+            errors.append(
+                f"LOD0 mouth interior depth is only {mouth_interior_depth * 1000:.1f}mm; "
+                "minimum close-up cavity depth is 25mm."
+            )
+        for role in ("cornea", "wetline", "teeth", "tongue", "mouthInterior"):
             if not any(MATERIAL_ROLES[role].search(name) for name in materials):
                 errors.append(f"LOD0 needs separate {role} geometry/material.")
     elif args.lod == 1:
