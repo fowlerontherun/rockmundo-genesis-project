@@ -142,7 +142,7 @@ export function addAccessories(
   const storeSlots = new Set(richClothing.map(row => richGarmentSlot(row.item)));
   if (storeSlots.has('headwear')) accessories.hat = 'none';
   if (storeSlots.has('eyewear')) accessories.glasses = 'none';
-  if (accessories.hat === 'none' && accessories.glasses === 'none' && (accessories.leftEarring ?? accessories.earrings) === 'none' && (accessories.rightEarring ?? accessories.earrings) === 'none' && !storeSlots.has('headwear')) return;
+  if (accessories.hat === 'none' && accessories.glasses === 'none' && (accessories.leftEarring ?? accessories.earrings) === 'none' && (accessories.rightEarring ?? accessories.earrings) === 'none' && !storeSlots.has('headwear') && !storeSlots.has('eyewear')) return;
 
   const headSurface = headSkinSurface(root);
   const bounds = headSurface.bounds;
