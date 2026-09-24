@@ -387,6 +387,8 @@ After fitting:
 - split upper/lower teeth: upper teeth use Head, lower teeth and tongue use Jaw;
 - set rockmundoBoneBinding on every close-up surface (Eye.L/Eye.R/Head/Jaw);
 - bind iris/sclera/cornea to their matching eye bone and verify gaze pivots cleanly;
+- author RMV2_Wetline.L/R, set rockmundoEyeSide, keep both Head-skinned, and copy the matching blink deformation;
+- keep the mouth-interior mesh at least 25mm deep in rest pose;
 - verify lower teeth/tongue follow Jaw during open-mouth singing;
 - leave EarAnchor.L/R unweighted; verify earrings and glasses sit correctly on both anchors;
 - test singing gaze plus guitar, bass, drumstick and microphone poses;
