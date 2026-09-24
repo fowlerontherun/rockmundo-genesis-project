@@ -120,6 +120,17 @@ def add_bone(
     return bone
 
 
+def add_twist_helper(
+    armature: bpy.types.Armature,
+    name: str,
+    segment: bpy.types.EditBone,
+) -> bpy.types.EditBone:
+    direction = segment.tail - segment.head
+    head = segment.head + direction * 0.38
+    tail = segment.head + direction * 0.72
+    return add_bone(armature, name, head, tail, segment)
+
+
 def create_digit_chain(
     armature: bpy.types.Armature,
     side: str,
@@ -254,6 +265,7 @@ def create_rig(frame: str, minimum: Vector, maximum: Vector) -> bpy.types.Object
             shoulder,
             connected=True,
         )
+        add_twist_helper(armature, f"UpperArmTwist.{side}", upper_arm)
         lower_arm = add_bone(
             armature,
             f"LowerArm.{side}",
@@ -262,6 +274,7 @@ def create_rig(frame: str, minimum: Vector, maximum: Vector) -> bpy.types.Object
             upper_arm,
             connected=True,
         )
+        add_twist_helper(armature, f"ForearmTwist.{side}", lower_arm)
         hand = add_bone(
             armature,
             f"Hand.{side}",
@@ -279,6 +292,7 @@ def create_rig(frame: str, minimum: Vector, maximum: Vector) -> bpy.types.Object
             Vector((x(direction * 0.060), centre_y, z(0.285))),
             hips,
         )
+        add_twist_helper(armature, f"ThighTwist.{side}", upper_leg)
         lower_leg = add_bone(
             armature,
             f"LowerLeg.{side}",
@@ -325,6 +339,7 @@ Before binding:
 - move hips/spine/neck/head joints into the actual mesh centres;
 - fit Eye.L/Eye.R to the actual eyeball centres and keep them parented to Head;
 - fit shoulder roots to the clavicle topology;
+- keep UpperArmTwist/ForearmTwist/ThighTwist inside their source limb segments;
 - place elbow/knee joints on the deformation loops, not the visual surface edge;
 - fit wrist/ankle/toe pivots;
 - fit every finger joint to the authored knuckle loops;
@@ -334,6 +349,7 @@ After fitting:
 - bind with normalized weights;
 - keep no more than four influences per vertex;
 - manually clean shoulders, elbows, hips, knees, wrists and fingers;
+- paint meaningful weights onto all six twist helpers so axial roll is distributed;
 - bind each eyeball to its matching eye bone and verify gaze pivots cleanly;
 - test singing gaze plus guitar, bass, drumstick and microphone poses;
 - sculpt the required pose-space correctives after skinning quality is stable.
