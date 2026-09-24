@@ -136,7 +136,10 @@ head vertex. At least one close-up skinned head/face mesh should either:
 Keep the visible scalp/face skin in that surface and use a named skin material
 such as `RMV2_Skin`. If a player uses a non-original saved hairstyle, a
 separate authored hair mesh/material such as `RMV2_Hair` can be suppressed
-cleanly before the selected hairstyle is rebuilt.
+cleanly before the selected hairstyle is rebuilt. The compatibility hairstyle
+uses a V2-specific close-up quality uplift: High requests Ultra hair geometry and
+fibre maps; Ultra/TOTP requests Cinematic hair. Balanced/crowd quality is left
+unchanged so distant performers do not pay the close-up geometry/texture cost.
 
 ## Body and muscle contract
 

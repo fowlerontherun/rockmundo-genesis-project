@@ -306,7 +306,10 @@ The V2 body can now use the saved RockMundo appearance systems without bringing
 the legacy V1 body mesh back into the scene:
 
 - saved procedural hairstyles and facial hair are rebuilt around the authored V2
-  head/face surface and remain attached to the normalized `Head` bone. LOD0/LOD1
+  head/face surface and remain attached to the normalized `Head` bone. Close-up
+  V2 hair receives a one-tier quality uplift: High uses Ultra geometry/fibre maps,
+  while Ultra/TOTP uses Cinematic geometry/fibre maps. Balanced/crowd hair keeps
+  its existing cost. LOD0/LOD1
   certification now fails if that skinned head surface (and a skin material) is
   missing, so a candidate cannot pass QA and then lose fitted cosmetics at runtime;
 - hats retain measured head-surface fitting, while V2 glasses and left/right

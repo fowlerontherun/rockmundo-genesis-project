@@ -44,6 +44,14 @@ function hasHeadCompatibility(
   return cut !== 'original' || facial !== 'none' || starterAccessory || authoredHeadwear;
 }
 
+export function avatarV2CompatibilityHairQuality(
+  quality: AvatarVisualQuality,
+): AvatarVisualQuality {
+  if (quality === 'high') return 'ultra';
+  if (quality === 'ultra') return 'cinematic';
+  return quality;
+}
+
 export function avatarV2HeadAccessoryFit(root: T.Object3D): HeadAccessoryFit {
   root.updateMatrixWorld(true);
   const point = (name: string) => {
@@ -94,7 +102,8 @@ export function applyAvatarV2Compatibility(
   if (hasHeadCompatibility(appearance, clothing)) {
     if (!head) throw new Error('Avatar V2 is missing its normalized Head bone for hair/accessories.');
     suppressAuthoredHair(root, appearance);
-    addHair(root, appearance, head, quality, createAvatarHairTextureCache(quality));
+    const hairQuality = avatarV2CompatibilityHairQuality(quality);
+    addHair(root, appearance, head, hairQuality, createAvatarHairTextureCache(hairQuality));
     addAccessories(root, appearance, head, clothing, quality, avatarV2HeadAccessoryFit(root));
   }
 
@@ -104,6 +113,9 @@ export function applyAvatarV2Compatibility(
     accessoryAnchors: hasHeadCompatibility(appearance, clothing)
       ? ['Eye.L', 'Eye.R', 'EarAnchor.L', 'EarAnchor.R']
       : [],
+    hairQuality: hasHeadCompatibility(appearance, clothing)
+      ? avatarV2CompatibilityHairQuality(quality)
+      : null,
     tattoos: tattoos.length,
     clothing: clothing.length,
   };

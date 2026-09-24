@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 import * as T from 'three';
 import { defaultAppearance } from '../appearance';
 import type { ResolvedTattooVisual } from '../tattoos';
-import { applyAvatarV2Compatibility, avatarV2BoneMap, avatarV2HeadAccessoryFit } from './avatarV2Compatibility';
+import {
+  applyAvatarV2Compatibility,
+  avatarV2BoneMap,
+  avatarV2CompatibilityHairQuality,
+  avatarV2HeadAccessoryFit,
+} from './avatarV2Compatibility';
 
 function rig() {
   const root = new T.Group();
@@ -54,6 +59,40 @@ describe('Avatar V2 compatibility layer', () => {
     const bones = avatarV2BoneMap(root);
     expect(bones.get('Head')).toBeInstanceOf(T.Bone);
     expect(bones.get('Hand.L')).toBeInstanceOf(T.Bone);
+  });
+
+  it('raises only close-up V2 hair tiers while keeping balanced and crowd cost unchanged', () => {
+    expect(avatarV2CompatibilityHairQuality('crowd')).toBe('crowd');
+    expect(avatarV2CompatibilityHairQuality('balanced')).toBe('balanced');
+    expect(avatarV2CompatibilityHairQuality('high')).toBe('ultra');
+    expect(avatarV2CompatibilityHairQuality('ultra')).toBe('cinematic');
+    expect(avatarV2CompatibilityHairQuality('cinematic')).toBe('cinematic');
+  });
+
+  it('uses denser V2 hair geometry and fibre detail at high quality', () => {
+    const balancedRoot = rig();
+    addHeadSurface(balancedRoot);
+    const balancedAppearance = defaultAppearance('avatar-v2-hair-balanced');
+    balancedAppearance.head.hairStyle = 'quiff';
+    applyAvatarV2Compatibility(balancedRoot, balancedAppearance, [], [], 'balanced');
+    const balancedHair = balancedRoot.getObjectByName('avatar-hairstyle') as T.Mesh;
+
+    const root = rig();
+    addHeadSurface(root);
+    const appearance = defaultAppearance('avatar-v2-hair-quality');
+    appearance.head.hairStyle = 'quiff';
+    applyAvatarV2Compatibility(root, appearance, [], [], 'high');
+
+    const hair = root.getObjectByName('avatar-hairstyle') as T.Mesh;
+    const material = hair.material as T.MeshPhysicalMaterial;
+    expect(hair).toBeTruthy();
+    expect(hair.geometry.attributes.position.count).toBeGreaterThan(
+      balancedHair.geometry.attributes.position.count,
+    );
+    expect(material).toBeInstanceOf(T.MeshPhysicalMaterial);
+    expect(material.normalMap).toBeInstanceOf(T.DataTexture);
+    expect((material.normalMap as T.DataTexture).image.width).toBe(512);
+    expect(root.userData.rockmundoAvatarV2Compatibility.hairQuality).toBe('ultra');
   });
 
   it('resolves authored eye and ear attachment points from the normalized V2 rig', () => {
