@@ -130,8 +130,13 @@ function validScene() {
   headMaterial.name = 'RMV2_Skin';
   const lipMaterial = new T.MeshStandardMaterial({ color: '#aa6670' });
   lipMaterial.name = 'RMV2_Lips';
-  if (headGeometry.groups.length) headGeometry.groups[0].materialIndex = 1;
-  const headSurface = new T.SkinnedMesh(headGeometry, [headMaterial, lipMaterial]);
+  const eyebrowMaterial = new T.MeshStandardMaterial({ color: '#54372a' });
+  eyebrowMaterial.name = 'RMV2_Eyebrows';
+  if (headGeometry.groups.length) {
+    headGeometry.groups[0].materialIndex = 1;
+    if (headGeometry.groups[1]) headGeometry.groups[1].materialIndex = 2;
+  }
+  const headSurface = new T.SkinnedMesh(headGeometry, [headMaterial, lipMaterial, eyebrowMaterial]);
   headSurface.name = 'RMV2_HeadSurface';
   headSurface.position.y = 1.45;
   headSurface.bind(new T.Skeleton(bones));
@@ -519,6 +524,16 @@ describe('Avatar V2 mesh contract', () => {
     const report = validateAvatarV2Scene(scene, 'masculine', 0);
     expect(report.valid).toBe(false);
     expect(report.issues.some(issue => issue.code === 'missing-surface-binding:iris:Eye.L')).toBe(true);
+  });
+
+  it('rejects close-up heads without a used authored natural eyebrow region', () => {
+    const scene = validScene();
+    const head = scene.getObjectByName('RMV2_HeadSurface') as T.SkinnedMesh;
+    const materials = head.material as T.Material[];
+    materials[2].name = 'RMV2_Hair';
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'missing-head-eyebrow-material')).toBe(true);
   });
 
   it('rejects LOD0 faces without a used authored lip material region', () => {
