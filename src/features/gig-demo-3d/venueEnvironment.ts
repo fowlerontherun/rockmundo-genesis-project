@@ -4,19 +4,20 @@ import { buildVenueAudience } from './venueAudience';
 import { box, cylinder, rod, matte, metal, batchStaticMeshes } from './stage';
 import { seededRandom } from './config';
 import type { VenueProfile } from './venueProfile';
+import { buildVenueSurfaceMaterials } from './venueSurfaceMaterials';
 
 /** Architecture surrounds the human-scale performance area. Detail is batched
  * by material; distant spectators use bounded instance batches for standing and seated people. */
 export function buildVenueEnvironment(scene: T.Scene, p: VenueProfile, seed: number, wood: T.Material, brick: T.Material) {
   const root = new T.Group(); root.name = `environment-${p.kind}`; root.userData.profile = p; scene.add(root);
   const random = seededRandom(seed), half = p.roomWidth / 2, back = .65 - p.stageDepth - 1.4;
-  const dark = matte('#141b24'), stone = matte('#67696b'), concrete = matte('#383e46'), grass = matte('#344c39'), sand = matte('#9d8b68');
+  const surfaces = buildVenueSurfaceMaterials(p, wood, brick);
+  const dark = matte('#141b24'), stone = surfaces.stone, concrete = surfaces.concrete, grass = surfaces.grass;
   const accent = matte(p.accent), steel = metal('#64717c'), brass = metal('#a88b54'), pale = matte('#c6c1b2'), glass = new T.MeshStandardMaterial({ color: '#83a5ba', metalness: .45, roughness: .24 });
   const glow = new T.MeshStandardMaterial({ color: '#ffd9a4', emissive: '#ffd09b', emissiveIntensity: 1.8 });
   const led = new T.MeshStandardMaterial({ color: p.accent, emissive: p.accent, emissiveIntensity: .7 });
-  const outdoorGround = p.kind === 'beach_stage' ? sand : ['festival_stage','amphitheatre','park_bandstand'].includes(p.kind) ? grass : concrete;
-  box(root, [p.roomWidth + 12, .15, p.roomDepth + p.stageDepth + 8], [0, -.12, (p.roomDepth + back) / 2], p.outdoor ? outdoorGround : ['concert_hall','church_hall','jazz_lounge'].includes(p.kind) ? wood : concrete);
-  const wallMat = p.kind === 'concert_hall' || p.kind === 'church_hall' ? wood : p.kind === 'warehouse' ? concrete : brick;
+  box(root, [p.roomWidth + 12, .15, p.roomDepth + p.stageDepth + 8], [0, -.12, (p.roomDepth + back) / 2], surfaces.floor);
+  const wallMat = surfaces.wall;
   if (!p.outdoor && p.kind !== 'festival_tent') {
     box(root, [p.roomWidth, p.roofHeight, .3], [0, p.roofHeight / 2, back], wallMat);
     for (const side of [-1, 1]) box(root, [.25, p.roofHeight, p.roomDepth - back], [side * half, p.roofHeight / 2, (p.roomDepth + back) / 2], wallMat);
@@ -24,6 +25,55 @@ export function buildVenueEnvironment(scene: T.Scene, p: VenueProfile, seed: num
   } else {
     const sky = new T.Mesh(new T.SphereGeometry(180, 24, 12), new T.MeshBasicMaterial({ color: p.kind === 'beach_stage' ? '#1a2c3e' : '#090e18', side: T.BackSide })); sky.position.y = 20; root.add(sky);
   }
+
+  // Small material-aware architectural cues make the room read as its venue
+  // archetype from wide cameras without adding expensive bespoke models.
+  if (!p.outdoor && p.kind !== 'festival_tent') {
+    box(root, [p.roomWidth - .35, .12, .12], [0, .08, back + .18], surfaces.detail);
+    for (const side of [-1, 1])
+      box(root, [.08, .12, Math.max(1, p.roomDepth - back - .6)], [side * (half - .16), .08, (p.roomDepth + back) / 2], surfaces.detail);
+
+    if (['cafe_stage','jazz_lounge','dive_bar','rock_club','live_house','university_union'].includes(p.kind))
+      for (const side of [-1, 1])
+        for (let z = back + 2.2; z < p.roomDepth - 1; z += 3.2)
+          box(root, [.055, 1.08, 2.45], [side * (half - .14), .63, z], surfaces.detail);
+
+    if (['warehouse','rock_club','live_house','university_union'].includes(p.kind)) {
+      for (const side of [-1, 1])
+        rod(root, [side * (half - .8), p.roofHeight - .8, back + .5], [side * (half - .8), p.roofHeight - .8, p.roomDepth - .8], .055, surfaces.detail);
+      for (let z = back + 3; z < p.roomDepth - 1; z += 6)
+        box(root, [2.4, .38, .55], [half - 1.5, p.roofHeight - 1.15, z], surfaces.detail);
+    }
+
+    if (['theatre','concert_hall','church_hall'].includes(p.kind))
+      for (const side of [-1, 1])
+        for (let z = back + 2; z < p.roomDepth - 1; z += 3.8) {
+          box(root, [.07, 2.55, 2.35], [side * (half - .16), 2.05, z], surfaces.detail);
+          rod(root, [side * (half - .22), .78, z - 1.12], [side * (half - .22), 3.32, z - 1.12], .018, brass);
+          rod(root, [side * (half - .22), .78, z + 1.12], [side * (half - .22), 3.32, z + 1.12], .018, brass);
+        }
+  }
+
+  if (['indoor_arena','ice_arena','stadium'].includes(p.kind)) {
+    for (const side of [-1, 1]) {
+      box(root, [.18, .72, p.crowdDepth + 7], [side * (half - .45), 3.2, p.crowdDepth / 2 + 2.4], surfaces.detail);
+      for (let z = 4; z < p.crowdDepth + 4; z += 9)
+        box(root, [.22, 2.1, 2.8], [side * (half - .38), 1.25, z], dark);
+    }
+  }
+
+  if (['street_corner','city_square','rooftop_terrace'].includes(p.kind))
+    for (let z = 1.5; z < p.roomDepth; z += 5.5)
+      box(root, [p.roomWidth * .82, .012, .045], [0, .02, z], surfaces.detail);
+
+  if (p.kind === 'beach_stage')
+    for (const side of [-1, 1])
+      box(root, [1.35, .045, Math.max(5, p.crowdDepth * .72)], [side * (p.crowdWidth * .34), .015, p.crowdDepth * .46], wood);
+
+  if (['festival_stage','festival_tent'].includes(p.kind))
+    for (const side of [-1, 1])
+      for (let z = 4; z < p.crowdDepth; z += 7)
+        box(root, [1.25, .09, .52], [side * (p.crowdWidth / 2 + .8), .045, z], dark);
   const lamp = (x: number, z: number, h = 4) => { rod(root, [x,0,z],[x,h,z],.045,steel); box(root,[.32,.12,.32],[x,h,z],glow); };
   const tree = (x: number, z: number, palm = false) => {
     const h = p.kind === 'cafe_stage' ? 1.2 : palm ? 6 : 4 + random() * 2; cylinder(root,.13,.23,h,[x,h/2,z],wood,8);
@@ -84,7 +134,7 @@ export function buildVenueEnvironment(scene: T.Scene, p: VenueProfile, seed: num
   if (['festival_stage','beach_stage'].includes(p.kind)) { box(root,[p.stageWidth+1.5,.25,p.stageDepth+1],[0,p.rigHeight+.25,.65-p.stageDepth/2],dark); for(const side of [-1,1]) { const tent=new T.Mesh(new T.ConeGeometry(2.5,1.6,4),accent); tent.rotation.y=Math.PI/4; tent.position.set(side*(half-3),3,12); root.add(tent); box(root,[3.5,1,2],[side*(half-3),.5,12],wood); } }
   const places: [number,number,number,number][] = [];
   if (p.seating) {
-    const seat = matte(p.kind === 'theatre' ? '#742f40' : '#344d69');
+    const seat = surfaces.seat;
     if(p.kind==='amphitheatre') {
       for(let row=0;row<p.seatRows;row++) { const radius=p.crowdDepth*.45+row*1.3, y=.35+row*.55; const tier=new T.Mesh(new T.TorusGeometry(radius,.42,4,64,Math.PI*.8),stone); tier.rotation.x=Math.PI/2; tier.rotation.z=Math.PI*.1; tier.position.set(0,y,2); root.add(tier); for(let i=0;i<40;i++){const a=Math.PI*.1+i/39*Math.PI*.8;places.push([Math.cos(a)*radius,y+.35,2+Math.sin(a)*radius,Math.PI-a+Math.PI/2]);} }
     } else for(const side of [-1,1]) for(let row=0;row<p.seatRows;row++) {
