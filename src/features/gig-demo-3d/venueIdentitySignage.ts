@@ -1,7 +1,28 @@
 import * as T from 'three';
-import { box, matte, metal, rod } from './stage';
 import type { ConcertVenue } from './liveTypes';
 import type { VenueProfile } from './venueProfile';
+
+const matte = (color: string, roughness = .8) => new T.MeshStandardMaterial({ color, roughness });
+const metal = (color = '#6e7581', roughness = .3) => new T.MeshStandardMaterial({ color, metalness: .78, roughness });
+function box(parent: T.Object3D, size: number[], pos: number[], material: T.Material) {
+  const mesh = new T.Mesh(new T.BoxGeometry(...size as [number, number, number]), material);
+  mesh.position.set(...pos as [number, number, number]);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  parent.add(mesh);
+  return mesh;
+}
+function rod(parent: T.Object3D, from: number[], to: number[], radius: number, material: T.Material) {
+  const a = new T.Vector3(...from as [number, number, number]);
+  const b = new T.Vector3(...to as [number, number, number]);
+  const mesh = new T.Mesh(new T.CylinderGeometry(radius, radius, a.distanceTo(b), 8), material);
+  mesh.position.copy(a.clone().add(b).multiplyScalar(.5));
+  mesh.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), b.clone().sub(a).normalize());
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  parent.add(mesh);
+  return mesh;
+}
 
 export type VenueLabelFactory = (
   text: string,
