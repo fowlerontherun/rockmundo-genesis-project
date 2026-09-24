@@ -420,7 +420,7 @@ function inheritsFrom(bone: T.Bone, ancestor: T.Bone) {
   return false;
 }
 
-type AvatarV2SurfaceRole = 'iris' | 'sclera' | 'cornea' | 'teeth' | 'tongue' | 'mouthInterior';
+type AvatarV2SurfaceRole = 'iris' | 'sclera' | 'cornea' | 'wetline' | 'teeth' | 'tongue' | 'mouthInterior';
 
 const MATERIAL_ROLE_PATTERNS = {
   skin: /rmv2[_-]?skin|(^|[_-])(skin|body|face)($|[_-])/i,
@@ -428,6 +428,7 @@ const MATERIAL_ROLE_PATTERNS = {
   iris: /rmv2[_-]?iris|(^|[_-])iris($|[_-])/i,
   sclera: /rmv2[_-]?sclera|(^|[_-])sclera($|[_-])/i,
   cornea: /rmv2[_-]?cornea|cornea|eye[_-]?(shell|surface)|ocular[_-]?shell/i,
+  wetline: /rmv2[_-]?(wetline|tearline|waterline)|(^|[_-])(wetline|tearline|waterline)($|[_-])/i,
   teeth: /rmv2[_-]?teeth|teeth/i,
   tongue: /rmv2[_-]?tongue|tongue/i,
   mouthInterior: /rmv2[_-]?mouth[_-]?(interior|cavity)|oral[_-]?cavity|inner[_-]?mouth/i,
@@ -437,6 +438,7 @@ const SURFACE_NODE_PATTERNS: Record<AvatarV2SurfaceRole, RegExp> = {
   iris: /rmv2[_-]?(iris|eye[_-]?iris)|(^|[_-])iris($|[_-])/i,
   sclera: /rmv2[_-]?(sclera|eye[_-]?white)|(^|[_-])sclera($|[_-])/i,
   cornea: /rmv2[_-]?(cornea|eye[_-]?(shell|surface))|ocular[_-]?shell/i,
+  wetline: /rmv2[_-]?(wetline|tearline|waterline)|(^|[_-])(wetline|tearline|waterline)($|[_-])/i,
   teeth: /rmv2[_-]?(?:(?:upper|lower)[_-]?)?(teeth|tooth)|(^|[_-])teeth($|[_-])/i,
   tongue: /rmv2[_-]?tongue|(^|[_-])tongue($|[_-])/i,
   mouthInterior: /rmv2[_-]?mouth[_-]?(interior|cavity)|oral[_-]?cavity|inner[_-]?mouth/i,
@@ -487,6 +489,7 @@ const REQUIRED_SURFACE_BINDINGS: Record<AvatarV2SurfaceRole, readonly AvatarV2Su
   iris: ['Eye.L', 'Eye.R'],
   sclera: ['Eye.L', 'Eye.R'],
   cornea: ['Eye.L', 'Eye.R'],
+  wetline: ['Head'],
   teeth: ['Head', 'Jaw'],
   tongue: ['Jaw'],
   mouthInterior: ['Head'],
@@ -532,6 +535,50 @@ function surfaceHasBinding(scene: T.Object3D, role: AvatarV2SurfaceRole, binding
   return dedicatedSurfaceNodes(scene, role).some(node =>
     declaredSurfaceBinding(node) === binding && meshHasBoneInfluence(node, aliases)
   );
+}
+
+const AVATAR_V2_WETLINE_MIN_DELTA_METRES = .00015;
+const AVATAR_V2_MOUTH_CAVITY_MIN_DEPTH_METRES = .025;
+
+function surfaceEyeSide(node: T.Object3D): 'L' | 'R' | null {
+  const explicit = clean(String(node.userData?.rockmundoEyeSide ?? ''));
+  if (explicit === 'l' || explicit === 'left') return 'L';
+  if (explicit === 'r' || explicit === 'right') return 'R';
+  if (/(?:[._-]l|left)$/i.test(node.name)) return 'L';
+  if (/(?:[._-]r|right)$/i.test(node.name)) return 'R';
+  return null;
+}
+
+function surfaceMorphDelta(mesh: T.Mesh, morphName: string) {
+  const dictionary = mesh.morphTargetDictionary ?? {};
+  const match = Object.entries(dictionary).find(([name]) => clean(name) === clean(morphName));
+  if (!match) return 0;
+  const target = mesh.geometry.morphAttributes.position?.[match[1]];
+  const basis = mesh.geometry.getAttribute('position');
+  if (!target || !basis || target.count !== basis.count) return 0;
+
+  let maximum = 0;
+  for (let index = 0; index < target.count; index++) {
+    const dx = mesh.geometry.morphTargetsRelative ? target.getX(index) : target.getX(index) - basis.getX(index);
+    const dy = mesh.geometry.morphTargetsRelative ? target.getY(index) : target.getY(index) - basis.getY(index);
+    const dz = mesh.geometry.morphTargetsRelative ? target.getZ(index) : target.getZ(index) - basis.getZ(index);
+    maximum = Math.max(maximum, Math.abs(dx), Math.abs(dy), Math.abs(dz));
+  }
+  return maximum;
+}
+
+function combinedSurfaceBounds(nodes: readonly T.Mesh[]) {
+  const combined = new T.Box3();
+  let found = false;
+  for (const node of nodes) {
+    node.geometry.computeBoundingBox();
+    const local = node.geometry.boundingBox;
+    if (!local) continue;
+    node.updateWorldMatrix(true, false);
+    combined.union(local.clone().applyMatrix4(node.matrixWorld));
+    found = true;
+  }
+  return found ? combined : null;
 }
 
 function hasExpression(names: string[], expression: keyof typeof EXPRESSION_ALIASES) {
@@ -847,7 +894,7 @@ export function validateAvatarV2Scene(
     }
   }
   if (lod === 0) {
-    for (const role of ['iris', 'sclera', 'cornea', 'teeth', 'tongue', 'mouthInterior'] as const) {
+    for (const role of ['iris', 'sclera', 'cornea', 'wetline', 'teeth', 'tongue', 'mouthInterior'] as const) {
       if (!hasDedicatedSurfaceRole(scene, role)) {
         issues.push({
           level: 'error',
@@ -866,7 +913,50 @@ export function validateAvatarV2Scene(
         }
       }
     }
-    for (const role of ['cornea', 'teeth', 'tongue', 'mouthInterior'] as const) {
+
+    const wetlines = dedicatedSurfaceNodes(scene, 'wetline');
+    for (const side of ['L', 'R'] as const) {
+      const blink = side === 'L' ? 'blinkLeft' : 'blinkRight';
+      const sideWetlines = wetlines.filter(node => surfaceEyeSide(node) === side);
+      if (!sideWetlines.length) {
+        issues.push({
+          level: 'error',
+          code: `missing-wetline-side:${side}`,
+          message: `LOD0 needs a dedicated ${side === 'L' ? 'left' : 'right'} eyelid wetline surface for close-up eye moisture and lid contact.`,
+        });
+        continue;
+      }
+      const followsHead = sideWetlines.some(node =>
+        declaredSurfaceBinding(node) === 'Head'
+        && meshHasBoneInfluence(node, SURFACE_BINDING_ALIASES.Head)
+      );
+      if (!followsHead) {
+        issues.push({
+          level: 'error',
+          code: `invalid-wetline-binding:${side}`,
+          message: `LOD0 wetline ${side} must be Head-skinned so it follows the face before blink deformation is applied.`,
+        });
+      }
+      const blinkDelta = Math.max(...sideWetlines.map(node => surfaceMorphDelta(node, blink)));
+      if (blinkDelta < AVATAR_V2_WETLINE_MIN_DELTA_METRES) {
+        issues.push({
+          level: 'error',
+          code: `missing-wetline-blink:${side}`,
+          message: `LOD0 wetline ${side} must carry a measurable ${blink} morph so the tear line remains attached to the eyelid during blinking.`,
+        });
+      }
+    }
+
+    const mouthBounds = combinedSurfaceBounds(dedicatedSurfaceNodes(scene, 'mouthInterior'));
+    const mouthDepth = mouthBounds?.getSize(new T.Vector3()).z ?? 0;
+    if (mouthDepth < AVATAR_V2_MOUTH_CAVITY_MIN_DEPTH_METRES) {
+      issues.push({
+        level: 'error',
+        code: 'shallow-mouth-cavity',
+        message: `LOD0 mouth interior depth is ${(mouthDepth * 1000).toFixed(1)}mm; singing close-ups require at least ${(AVATAR_V2_MOUTH_CAVITY_MIN_DEPTH_METRES * 1000).toFixed(0)}mm of real cavity depth.`,
+      });
+    }
+    for (const role of ['cornea', 'wetline', 'teeth', 'tongue', 'mouthInterior'] as const) {
       if (!hasMaterialRole(materials, role)) {
         issues.push({
           level: 'error',
