@@ -9,6 +9,7 @@ import {
 } from './avatarV2Contract';
 import {
   avatarV2LodForQuality,
+  avatarV2QualityForScene,
   tryAssembleAvatarV2Model,
 } from './avatarV2Model';
 import { avatarV2Readiness } from './avatarV2Registry';
@@ -427,6 +428,16 @@ describe('Avatar V2 mesh contract', () => {
     mesh.morphTargetDictionary = {};
     const report = validateAvatarV2Scene(scene, 'masculine', 3);
     expect(report.issues.filter(issue => issue.code.startsWith('missing-expression:')).every(issue => issue.level === 'warning')).toBe(true);
+  });
+
+  it('routes high-quality television scenes to the LOD0-capable V2 profile', () => {
+    expect(avatarV2QualityForScene('high', true)).toBe('ultra');
+    expect(avatarV2QualityForScene('balanced', true)).toBe('high');
+    expect(avatarV2QualityForScene('low', true)).toBe('balanced');
+
+    expect(avatarV2QualityForScene('high', false)).toBe('high');
+    expect(avatarV2QualityForScene('balanced', false)).toBe('high');
+    expect(avatarV2QualityForScene('low', false)).toBe('balanced');
   });
 
   it('maps render quality onto the intended LOD budget', () => {

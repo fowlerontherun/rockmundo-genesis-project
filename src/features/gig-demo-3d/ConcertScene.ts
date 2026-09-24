@@ -9,11 +9,12 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { buildVenue, cylinder, rod, matte } from './stage';
-import { avatarBandVisualQuality, loadBand, type Musician, type DemoCrowd } from './performers';
+import { loadBand, type Musician, type DemoCrowd } from './performers';
 import { smoothMotion } from './performanceMotion';
 import type { CrowdTuningOptions } from '@/features/gig-experience/viewer/engine/CrowdTuning';
 import { resolveVenueProfile, stageTransform, type VenueProfile } from './venueProfile';
 import type { ConcertOptions, ConcertFrame } from './liveTypes';
+import { avatarV2QualityForScene } from '@/features/player-model/v2/avatarV2Model';
 import { DEFAULT_SETTINGS, LOOKS, seededRandom, type DemoSettings, type DemoStats, type CameraShot } from './config';
 
 const CAMERAS = {
@@ -117,7 +118,7 @@ export class ConcertScene {
   private async load() {
     try {
       const television = !!this.options?.television && this.venueProfile?.kind === 'tv_studio';
-      const avatarQuality = avatarBandVisualQuality(this.settings.quality, television);
+      const avatarQuality = avatarV2QualityForScene(this.settings.quality, television);
       const [band] = await Promise.all([loadBand(
         this.scene,
         this.assetManager,
