@@ -184,7 +184,9 @@ The performer still retains wrist/arm IK and guitar body clearance. The post-pos
 clearance envelope now includes every finger joint, preventing a distal fingertip
 from passing through the instrument even when the wrist itself is outside the body.
 Admin candidate QA samples the animation and reports finger-contact drift alongside
-wrist grip and drumstick drift.
+wrist grip and drumstick drift. It also verifies that both normalized eye bones are
+present, produce visible deterministic gaze motion across the sampled performance,
+and stay inside the close-up rotation envelope.
 
 The first V2 clothing proof set and per-garment budgets are defined in
 `public/avatar-v2/clothing/manifest.json`. Garment hardware and prints must be
