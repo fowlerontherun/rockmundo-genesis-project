@@ -233,6 +233,110 @@ describe('Avatar V2 garments', () => {
     expect(material.color.getHexString()).toBe('bd3548');
   });
 
+  it('uses the Skin Store material profile and high-resolution weave fallback for close-up V2 garments', () => {
+    const { root } = baseAvatar();
+    const clothing = row(item({
+      material_config: {
+        fabric: 'denim',
+        roughness: 82,
+        metallic: 0,
+        sheen: 6,
+      },
+    }));
+    const file = avatarV2GarmentFile(clothing.item, 'masculine', 1)!;
+    const library = new Map<string, T.Object3D>([[file, garmentSource('hips')]]);
+
+    const result = buildAvatarV2Garments(library, root, [clothing], appearance(), 1, 'high');
+    const garment = result.group.getObjectByName('RMV2_Test_Tee') as T.SkinnedMesh;
+    const material = garment.material as T.MeshPhysicalMaterial;
+
+    expect(material).toBeInstanceOf(T.MeshPhysicalMaterial);
+    expect(material.roughness).toBeCloseTo(.82);
+    expect(material.metalness).toBe(0);
+    expect(material.sheen).toBeCloseTo(.06);
+    expect(material.normalMap).toBeInstanceOf(T.DataTexture);
+    expect((material.normalMap as T.DataTexture).image.width).toBe(1024);
+    expect(material.userData.rockmundoAvatarV2GarmentMaterial).toMatchObject({
+      material: 'denim',
+      quality: 'high',
+      detailQuality: 'ultra',
+      authoredNormal: false,
+    });
+  });
+
+  it('preserves an authored V2 garment normal map instead of replacing it with fallback weave', () => {
+    const { root } = baseAvatar();
+    const clothing = row(item({ material_config: { fabric: 'cotton' } }));
+    const file = avatarV2GarmentFile(clothing.item, 'masculine', 1)!;
+    const source = garmentSource('hips');
+    const sourceMesh = source.getObjectByName('RMV2_Test_Tee') as T.SkinnedMesh;
+    const authoredNormal = new T.Texture();
+    (sourceMesh.material as T.MeshStandardMaterial).normalMap = authoredNormal;
+    const library = new Map<string, T.Object3D>([[file, source]]);
+
+    const result = buildAvatarV2Garments(library, root, [clothing], appearance(), 1, 'high');
+    const garment = result.group.getObjectByName('RMV2_Test_Tee') as T.SkinnedMesh;
+    const material = garment.material as T.MeshPhysicalMaterial;
+
+    expect(material).toBeInstanceOf(T.MeshPhysicalMaterial);
+    expect(material.normalMap).not.toBe(authoredNormal);
+    expect(material.normalMap).toBeInstanceOf(T.Texture);
+    expect(material.normalMap).not.toBeInstanceOf(T.DataTexture);
+    expect(material.userData.rockmundoAvatarV2GarmentMaterial.authoredNormal).toBe(true);
+  });
+
+  it('keeps medium-distance V2 garments on the standard shader path', () => {
+    const { root } = baseAvatar();
+    const clothingItem = item({
+      material_config: { fabric: 'denim' },
+      garment_config: {
+        avatarV2: {
+          version: 1,
+          status: 'validated',
+          frames: {
+            masculine: { lod2: 'avatar-v2/clothing/masculine/test-tee-lod2.glb' },
+          },
+          occludeBodyRegions: ['torso'],
+          colourMode: 'zones',
+          materialZones: { main: ['RMV2_Garment_Main'], trim: [] },
+        },
+      },
+    });
+    const clothing = row(clothingItem);
+    const file = avatarV2GarmentFile(clothing.item, 'masculine', 2)!;
+    const library = new Map<string, T.Object3D>([[file, garmentSource('hips')]]);
+
+    const result = buildAvatarV2Garments(library, root, [clothing], appearance(), 2, 'balanced');
+    const garment = result.group.getObjectByName('RMV2_Test_Tee') as T.SkinnedMesh;
+
+    expect(garment.material).toBeInstanceOf(T.MeshStandardMaterial);
+    expect(garment.material).not.toBeInstanceOf(T.MeshPhysicalMaterial);
+    expect((garment.material as T.MeshStandardMaterial).normalMap).toBeNull();
+  });
+
+  it('gives reflective clothing materials physical response without fabric-weave fallback', () => {
+    const { root } = baseAvatar();
+    const clothing = row(item({
+      material_config: {
+        fabric: 'latex',
+        roughness: 10,
+        sheen: 85,
+      },
+    }));
+    const file = avatarV2GarmentFile(clothing.item, 'masculine', 1)!;
+    const library = new Map<string, T.Object3D>([[file, garmentSource('hips')]]);
+
+    const result = buildAvatarV2Garments(library, root, [clothing], appearance(), 1, 'high');
+    const garment = result.group.getObjectByName('RMV2_Test_Tee') as T.SkinnedMesh;
+    const material = garment.material as T.MeshPhysicalMaterial;
+
+    expect(material).toBeInstanceOf(T.MeshPhysicalMaterial);
+    expect(material.clearcoat).toBeGreaterThan(.8);
+    expect(material.clearcoatRoughness).toBeLessThan(.1);
+    expect(material.sheen).toBeCloseTo(.85);
+    expect(material.normalMap).toBeNull();
+  });
+
   it('occludes a continuous body region by material without hiding the whole mesh', () => {
     const { root, mesh, torsoMaterial, uncoveredMaterial } = continuousMaterialAvatar();
     const clothing = row();
