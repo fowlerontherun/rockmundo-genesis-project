@@ -429,6 +429,21 @@ export function AvatarV2CandidateLab() {
               {performanceReport.maxFingerContactError != null && (
                 <Badge variant="outline">finger contact {(performanceReport.maxFingerContactError * 100).toFixed(1)}cm max drift</Badge>
               )}
+              {performanceReport.preset === 'vocals' && (
+                <>
+                  <Badge variant="outline">{performanceReport.activeVocalVisemes}/5 active visemes</Badge>
+                  {performanceReport.maxJawWeight != null && (
+                    <Badge variant="outline">jaw {(performanceReport.maxJawWeight * 100).toFixed(0)}% max</Badge>
+                  )}
+                  {performanceReport.maxVocalShapeWeight != null && (
+                    <Badge variant="outline">lip shape {(performanceReport.maxVocalShapeWeight * 100).toFixed(0)}% max</Badge>
+                  )}
+                  {performanceReport.maxExpressiveFaceWeight != null && (
+                    <Badge variant="outline">brow/cheek {(performanceReport.maxExpressiveFaceWeight * 100).toFixed(0)}% max</Badge>
+                  )}
+                </>
+              )}
+              <Badge variant="outline">{performanceReport.faceMorphs} face morphs</Badge>
               <Badge variant="outline">{performanceReport.eyeBones}/2 eye bones</Badge>
               {performanceReport.maxEyeMotion != null && (
                 <Badge variant="outline">eye motion {T.MathUtils.radToDeg(performanceReport.maxEyeMotion).toFixed(1)}°</Badge>
@@ -457,7 +472,7 @@ export function AvatarV2CandidateLab() {
             </div>
             {performanceReport.issues.length === 0 ? (
               <p className="text-sm text-emerald-600">
-                The candidate stayed within the automated hand/grip, eye-gaze, shoulder-girdle, toe/forefoot and limb-twist limits across the sampled performance motion.
+                The candidate stayed within the automated facial-articulation, hand/grip, eye-gaze, shoulder-girdle, toe/forefoot and limb-twist limits across the sampled performance motion.
               </p>
             ) : (
               <div className="grid gap-2 md:grid-cols-2">
