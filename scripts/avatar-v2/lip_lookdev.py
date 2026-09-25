@@ -24,11 +24,11 @@ def classify_lip_polygon(
                 for vec in (centre, normal, eye_midpoint))):
         raise ValueError("Lip source needs valid, finite real-scale eye and polygon geometry.")
     # These are guide proportions ONLY; coverage is evaluated on each REAL
-    # source polygon in frontal world space. Deliberately omit cheek, chin,
+    # source polygon in frontal world space. The 2.50r lip centre and narrow\n    # .28r half-height were visually reviewed against real Blender front/\n    # quarter renders: an earlier 2.90r centre tinted the chin below the lips.\n    # Deliberately omit cheek, chin,
     # philtrum, tongue and the back of the head.
-    lip_z = eye_midpoint[2] - 2.90 * eye_radius
+    lip_z = eye_midpoint[2] - 2.50 * eye_radius
     horiz = (centre[0] - eye_midpoint[0]) / (1.03 * eye_radius)
-    vert = (centre[2] - lip_z) / (.39 * eye_radius)
+    vert = (centre[2] - lip_z) / (.28 * eye_radius)
     ellipse = hypot(horiz, vert)
 
     if (centre[1] > eye_midpoint[1] - .50 * eye_radius

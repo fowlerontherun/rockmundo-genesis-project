@@ -10,7 +10,7 @@ from lip_lookdev import classify_lip_polygon, validate_coverage
 class RealSourceLipTests(unittest.TestCase):
     EYE = (0., -.035, 1.564)
     R = .037
-    Z = 1.564 - 2.9 * R
+    Z = 1.564 - 2.5 * R
     N = (0., -1., 0.)
 
     def role(self, point, normal=None):
@@ -29,13 +29,20 @@ class RealSourceLipTests(unittest.TestCase):
             self.assertEqual(self.role(pos), "skin", pos)
         self.assertEqual(self.role((0., -.09, self.Z), (0, +1, 0)), "skin")
 
+    def test_actual_chin_region_miscoloured_in_earlier_blender_proof_is_excluded(self):
+        # Screenshot QA: the previous elliptical pigment mask was centred
+        # 2.9 eye radii below the eyes, i.e. at the actual source chin.
+        old_chin_z = self.EYE[2] - 2.9 * self.R
+        self.assertEqual(self.role((0., -.09, old_chin_z)), "skin")
+        self.assertEqual(self.role((0., -.09, self.Z)), "upper_lip")
+
     def test_lip_geometry_scales_with_an_actual_measured_eye_radius(self):
         small = classify_lip_polygon(
-            (0., -.11, 1.56 - 2.9 * .024 + .002), self.N,
+            (0., -.11, 1.56 - 2.5 * .024 + .002), self.N,
             (0., -.02, 1.56), .024,
         )
         large = classify_lip_polygon(
-            (0., -.11, 1.65 - 2.9 * .048 - .002), self.N,
+            (0., -.11, 1.65 - 2.5 * .048 - .002), self.N,
             (0., -.02, 1.65), .048,
         )
         self.assertEqual(small, "upper_lip")
