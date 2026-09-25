@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveBandEquipment } from "../_shared/live-setup.ts";
+import { scoreAssignedShowCrew } from "../_shared/crew-score.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -88,13 +89,6 @@ const RARITY_BONUSES: Record<string, number> = {
 
 // Only production-facing staff contribute to the song-performance crew score.
 // Touring, security, merchandise and wardrobe roles have their own gameplay domains.
-const PERFORMANCE_CREW_ROLES = new Set([
-  "Front of House Engineer",
-  "Lighting Director",
-  "Road Crew Chief",
-  "Backline Technician",
-]);
-
 // ── Tiered bonus (matches client-side tieredSkillBonus.ts) ──
 function getTieredBonusPercent(level: number): number {
   if (level <= 0) return 0;
@@ -678,15 +672,18 @@ serve(async (req) => {
     if (!song) throw new Error('Song not found');
 
     // Fetch performance factors in parallel
-    const [equipmentRes, crewRes, rehearsalsRes, liveSkillAvg, stageSkillAvg] = await Promise.all([
+    const [equipmentRes, crewRes, assignmentsRes, rehearsalsRes, liveSkillAvg, stageSkillAvg] = await Promise.all([
       supabaseClient.from('band_stage_equipment').select('*').eq('band_id', bandId),
-      supabaseClient.from('band_crew_members').select('*').eq('band_id', bandId),
+      supabaseClient.from('band_crew_members').select('id,skill_level,cohesion_rating').eq('band_id', bandId),
+      supabaseClient.from('gig_crew_assignments').select('band_crew_member_id,crew_role,assignment_status').eq('gig_id', gigId),
       supabaseClient.from('song_rehearsals').select('*').eq('band_id', bandId).eq('song_id', songId),
       fetchLiveMemberSkillAverage(supabaseClient, members || []),
       fetchStageSkillAverage(supabaseClient, members || [])
     ]);
 
     const equipment = equipmentRes.data || [];
+    if (crewRes.error) throw crewRes.error;
+    if (assignmentsRes.error) throw assignmentsRes.error;
     const crew = crewRes.data || [];
     const rehearsal = rehearsalsRes.data?.[0];
 
@@ -695,11 +692,9 @@ serve(async (req) => {
     const equipmentResolution = resolveBandEquipment(equipment);
     const equipmentQuality = equipmentResolution.score;
 
-    // Only performance-facing Show Crew contributes to the 8% crew score.
-    const showCrew = crew.filter((member: any) => PERFORMANCE_CREW_ROLES.has(String(member.crew_type || '')));
-    const crewSkillLevel = showCrew.length > 0
-      ? showCrew.reduce((sum: number, c: any) => sum + Number(c.skill_level || 0), 0) / showCrew.length
-      : 40;
+    // Only named and accepted crew for THIS gig contribute to the 8% show-crew score.
+    const crewResult = scoreAssignedShowCrew(crew, assignmentsRes.data || []);
+    const crewSkillLevel = crewResult.score;
     const liveSetupScore = Math.round(equipmentQuality * 0.6 + crewSkillLevel * 0.4);
 
     const { data: outcomeData } = await supabaseClient
@@ -721,7 +716,8 @@ serve(async (req) => {
       ownedEquipmentCount: equipmentResolution.ownedCount,
       crewSkillLevel,
       liveSetupScore,
-      showCrewCount: showCrew.length,
+      showCrewCount: crewResult.filledRoles,
+      attendingCrewCount: crewResult.assignedCount,
       totalCrewCount: crew.length,
       songQuality: song.quality_score,
       rehearsalLevel: (rehearsal?.rehearsal_level || 0) * 10
