@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSetlists } from '@/hooks/useSetlists';
 import { SOUNDCHECK_TYPES, validateSoundcheckPlan, type SoundcheckType } from '@/utils/gigStageProduction';
 import { validateGigSetlist } from '@/utils/gigSetlistValidation';
+import { GigCrewAssignmentCard } from './GigCrewAssignmentCard';
 
 interface GigSetlistItem {
   id: string;
@@ -318,6 +319,8 @@ export function GigPreparationPanel({ gigId, bandId, status, scheduledDate, slot
             ) : null}
           </CardContent>
         </Card>
+
+        <GigCrewAssignmentCard gigId={gigId} bandId={bandId} locked={locked} />
 
         {validation.errors.map((message) => (
           <p key={message} className="flex gap-2 text-sm text-destructive"><AlertTriangle className="h-4 w-4" />{message}</p>
