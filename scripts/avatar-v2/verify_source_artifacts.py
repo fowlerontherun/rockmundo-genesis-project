@@ -49,7 +49,7 @@ def verify_artifacts(root: pathlib.Path) -> dict:
     for frame, metadata in by_frame.items():
         if frame not in EXPECTED_FRAMES:
             continue
-        for key in ("sourceBlend", "guideBlend", "fitHandlesBlend", "candidatePreview"):
+        for key in ("sourceBlend", "guideBlend", "fitHandlesBlend", "candidatePreview", "lookdevBlend", "lookdevPreview"):
             filename = metadata.get(key)
             if not isinstance(filename, str) or pathlib.PurePosixPath(filename).name != filename:
                 errors.append(f"{frame} has unsafe or missing {key}.")
@@ -62,6 +62,32 @@ def verify_artifacts(root: pathlib.Path) -> dict:
             errors.append(f"{frame} is missing one of the four real source proof views.")
         else:
             expected_files.update(f"{frame}/{view}" for view in views)
+        styled_views = metadata.get("lookdevViews")
+        if not isinstance(styled_views, list) or {
+            f"{frame}-lookdev-{view}.png" for view in PREVIEW_VIEWS
+        } != set(styled_views):
+            errors.append(f"{frame} is missing its four real improved eye/skin lookdev proof views.")
+        else:
+            expected_files.update(f"{frame}/{view}" for view in styled_views)
+        lookdev = metadata.get("lookdevGeometry")
+        if not isinstance(lookdev, dict):
+            errors.append(f"{frame} is missing actual source eye/skin lookdev geometry metadata.")
+        else:
+            if (lookdev.get("previewOnly") is not True
+                    or lookdev.get("sculptComplete") is not False
+                    or lookdev.get("jointFitComplete") is not False):
+                errors.append(f"{frame} source lookdev must never masquerade as a completed V2 model.")
+            if (lookdev.get("originalBodyVertices", 0) < 1000
+                    or lookdev.get("realEyesRecoloured") != 2
+                    or lookdev.get("realCorneasAdded") != 2):
+                errors.append(f"{frame} did not build genuine full-body eye/cornea lookdev geometry.")
+            eyes = lookdev.get("eyeGeometry")
+            if (not isinstance(eyes, list) or {eye.get("side") for eye in eyes} != {"L", "R"}
+                    or any(eye.get("addedCorneaVertices", 0) < 100
+                           or eye.get("existingEyeMaterialPolygons", {}).get("iris", 0) < 10
+                           or eye.get("existingEyeMaterialPolygons", {}).get("pupil", 0) < 4
+                           for eye in eyes)):
+                errors.append(f"{frame} source eye material/real cornea surface data are incomplete.")
         if (metadata.get("productionValidated") is not False
                 or metadata.get("requiresManualJointFit") is not True):
             errors.append(f"{frame} must retain its unfinished manual-rig gate.")
@@ -104,6 +130,16 @@ def verify_artifacts(root: pathlib.Path) -> dict:
         suffix = candidate.suffix.lower()
         if suffix not in expected_magic or not blob.startswith(expected_magic[suffix]):
             errors.append(f"Invalid artifact type or signature: {name}.")
+
+    if isinstance(frames, list):
+        by_path = {item.get("file"): item.get("sha256") for item in reported}
+        for frame in EXPECTED_FRAMES & set(by_frame):
+            baseline = by_frame[frame].get("candidatePreview")
+            styled = by_frame[frame].get("lookdevPreview")
+            raw_hash = by_path.get(f"{frame}/{baseline}")
+            styled_hash = by_path.get(f"{frame}/{styled}")
+            if raw_hash is not None and raw_hash == styled_hash:
+                errors.append(f"{frame} styled geometry/material GLB is identical to the raw CC0 baseline.")
 
     if actual_files != expected_files:
         errors.append(
