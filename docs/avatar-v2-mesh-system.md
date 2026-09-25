@@ -70,6 +70,15 @@ the intended armature, every vertex is weighted, no vertex exceeds four meaningf
 influences, weights are normalised and every required deform bone actually affects
 the character.
 
+The dedicated **Avatar V2 real source authoring packs** workflow now turns
+the pinned Blender bundle into actual separate masculine and feminine working
+scenes, ready-to-fit full rigs and visible joint handles. It also creates
+four real geometry reference PNGs and an explicitly unvalidated GLB per frame,
+and checks both artifact packs' integrity before upload. These outputs live
+only as temporary GitHub Actions artifacts, never as runtime V2 assets; the
+artist must still fit every joint and complete all model work described here.
+See `public/avatar-v2/README.md` for artifact links and reproduction commands.
+
 Those working files still require the complete RockMundo facial/shape-key set,
 body-region split, PBR surfaces, performance deformation and LOD authoring before
 the normal export gate will accept them. At high/ultra/cinematic quality, standard

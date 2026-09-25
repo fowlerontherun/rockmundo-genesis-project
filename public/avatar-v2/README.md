@@ -25,6 +25,47 @@ The helper refuses an unexpected archive size, validates ZIP magic and blocks
 archive path traversal. It writes only under the ignored local
 `work/avatar-v2-source` authoring directory.
 
+### Download real masculine and feminine working scenes
+
+The [Avatar V2 real source authoring packs](https://github.com/fowlerontherun/rockmundo-genesis-project/actions/workflows/avatar-v2-real-source-seeds.yml)
+GitHub Actions workflow fetches the **actual pinned CC0 bundle**, uses Blender
+4.3.2 to create a separate masculine/feminine authoring scene and uploads two
+temporary downloadable Artifacts. It automatically discovers the official
+stylised male and female collections across the extracted source `.blend`
+files rather than guessing their filenames. Run it via **Run workflow** or use
+the artifact produced by a successful workflow run.
+
+Each frame's artifact includes the real CC0 base source `.blend`, the named
+but **unfitted** RockMundo rig guide `.blend`, a third `.blend` containing
+visible movable joint handles, a reference-only GLB that the Admin V2
+Candidate Lab can open in its A-pose view, and actual Blender-rendered
+front, three-quarter, side and face proof PNGs. The root
+`authoring-artifacts-manifest.json` records source SHA-256, individual
+file SHA-256, mesh/rig/handle counts and non-production status. A separate
+verification step checks both full packs and rejects changed or missing files.
+The two artifacts are retained for **14 days**; rerun the manual workflow
+to produce fresh references when necessary.
+
+These are **genuine starting meshes**, not completed RockMundo characters:
+the skeleton is only a proportion guide, the exported GLB has no production
+rig/weights/visemes or certified facial detail, and nothing is placed in
+`public/avatar-v2` or marked validated. Open the joint-handle `.blend` in
+Blender to fit real anatomical landmarks before skinning, sculpting detailed
+noses/ears, authoring shape keys and making LODs. The preview GLB is
+deliberately named `SOURCE-ONLY-not-validated` to distinguish it from
+any eventual production GLB. Keep the live V1 avatar path enabled.
+
+You can reproduce the working files locally after downloading the bundle:
+
+```bash
+blender --background --factory-startup \
+  --python scripts/avatar-v2/blender/rockmundo_avatar_v2_build_seed_artifacts.py -- \
+  --source-root work/avatar-v2-source \
+  --output-root work/avatar-v2-authoring-artifacts
+python3 scripts/avatar-v2/verify_source_artifacts.py \
+  --root work/avatar-v2-authoring-artifacts
+```
+
 Then use Blender to discover the object/collection names in the extracted .blend
 file:
 

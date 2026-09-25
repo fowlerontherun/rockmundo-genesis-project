@@ -24,6 +24,8 @@ jobs:
         run: |
           python -m py_compile \
             scripts/avatar-v2/facial_topology.py \
+            scripts/avatar-v2/verify_source_artifacts.py \
+            scripts/avatar-v2/blender/rockmundo_avatar_v2_build_seed_artifacts.py \
             scripts/avatar-v2/rig_landmarks.py \
             scripts/avatar-v2/lod_surface_transfer.py \
             scripts/avatar-v2/blender/rockmundo_avatar_v2_retarget_lod.py \
@@ -36,5 +38,7 @@ jobs:
         run: python -m unittest discover -s scripts/avatar-v2/tests -p test_rig_landmarks.py -v
       - name: Test genuine retopology morph and skin weight transfer
         run: python -m unittest discover -s scripts/avatar-v2/tests -p test_lod_surface_transfer.py -v
+      - name: Test real-source artifact integrity and fail-closed release labels
+        run: python -m unittest discover -s scripts/avatar-v2/tests -p test_verify_source_artifacts.py -v
       - name: Check audited export provenance and stale-GLB regression
         run: node --test scripts/avatar-v2/tests/face-topology-provenance.test.mjs
