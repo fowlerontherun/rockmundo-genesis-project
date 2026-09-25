@@ -71,6 +71,7 @@ ALTER TABLE public.gig_crew_settlements ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.gig_crew_settlements FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON public.gig_crew_settlements TO authenticated;
 GRANT ALL ON public.gig_crew_settlements TO service_role;
+DROP POLICY IF EXISTS crew_settlement_band_read ON public.gig_crew_settlements;
 CREATE POLICY crew_settlement_band_read ON public.gig_crew_settlements
   FOR SELECT TO authenticated USING (
     public.caller_in_band(band_id)
@@ -87,6 +88,7 @@ REVOKE UPDATE ON public.crew_catalog FROM authenticated;
 GRANT SELECT ON public.crew_catalog TO authenticated;
 
 DROP POLICY IF EXISTS gig_crew_assignments_band_all ON public.gig_crew_assignments;
+DROP POLICY IF EXISTS gig_crew_assignments_band_read ON public.gig_crew_assignments;
 CREATE POLICY gig_crew_assignments_band_read ON public.gig_crew_assignments
   FOR SELECT TO authenticated USING (public.caller_in_gig_band(gig_id));
 -- Assignments are changed only via server-validated RPCs; no direct row writes.
