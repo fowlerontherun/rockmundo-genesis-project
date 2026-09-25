@@ -54,7 +54,7 @@ def brow_fibre_samples(
     for i in range(count):
         t = .055 + .86 * (i + .5) / count
         centre_z = eye[2] + radius * (.995 + .16 * sin(pi * t) + .04 * (1.-t))
-        half = radius * (.015 + .145 * sin(pi * t) ** .85)
+        half = radius * (.009 + .103 * sin(pi * t) ** .85)
         # Two naturally staggered directions across the breadth of the arch,
         # without randomness, to produce repeatable real Blender meshes.
         offset = (((i * 17) % 13) / 12. - .5) * half * 1.55
