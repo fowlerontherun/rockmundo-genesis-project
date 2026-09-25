@@ -59,6 +59,10 @@ serve(async (req) => {
           .eq('id', gigId);
       }
 
+      // Repair a missed crew settlement on safe, idempotent completion retries.
+      const { error: crewRetryError } = await supabaseClient.rpc('_settle_completed_gig_crew', { p_gig_id: gigId });
+      if (crewRetryError) console.warn('[complete-gig] Crew settlement retry failed:', crewRetryError);
+
       return new Response(
         JSON.stringify({
           success: true,
@@ -294,7 +298,7 @@ serve(async (req) => {
     const contractedBandBarRevenue = Number(commerce?.bar?.bandEntitlement || 0);
 
     // Calculate costs (ensure integers for database)
-    const crewCost = Math.floor(avgCrew * 5) + prepCrewCost; // Crew cost based on skill plus prep ledger
+    const crewCost = prepCrewCost; // Contracted salaries of accepted gig crew, calculated server-side.
     const equipmentCost = Math.floor(avgEquipment * 2) + prepRentalCost + productionCost + soundcheckCost; // Wear, rentals, production and soundcheck
     const totalCosts = crewCost + equipmentCost + merchCost;
 
@@ -1003,6 +1007,11 @@ serve(async (req) => {
       .eq('id', gigId);
 
     if (gigUpdateError) throw gigUpdateError;
+
+    // The completed-status trigger settles crew atomically with the status change.
+    // Retrying this RPC also repairs a failed trigger without double-awarding XP.
+    const { error: crewSettlementError } = await supabaseClient.rpc('_settle_completed_gig_crew', { p_gig_id: gigId });
+    if (crewSettlementError) console.warn('[complete-gig] Crew settlement needs repair:', crewSettlementError);
 
     console.log(`Gig ${gigId} completed successfully. Rating: ${avgRating.toFixed(1)}, Profit: $${netProfit}, New Fans: ${newFansTotal}`);
 
