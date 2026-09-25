@@ -4,6 +4,7 @@ import type { PlayerAppearance } from './appearance';
 import { avatarQualityProfile, type AvatarVisualQuality } from './avatarVisualQuality';
 import { applyAvatarHairQuality, type AvatarHairTextureCache } from './avatarMaterialQuality';
 import { isAvatarV2HeadSurfaceNode } from './v2/avatarV2Contract';
+import { buildEllipsoidStrandDetail, scalpStrandRibbonCount } from './hairStrands';
 
 /** Authored meshes split scalp hair from brows and eyes. New cuts use the
  * complete casual scalp, leaving all skin, eyebrows and facial details intact. */
@@ -51,8 +52,28 @@ export function addHair(
   const anchor = new T.Group(); anchor.name = 'avatar-head-details'; anchor.userData.faceBounds = { min: bounds.min.toArray(), max: bounds.max.toArray() };
   // All additions are built in rest world space before attachment to Head.
   const strands: T.BufferGeometry[] = [], beard: T.BufferGeometry[] = [];
+  let scalpClumps = 0;
+  let scalpRibbons = 0;
   const ellipsoid = (list: T.BufferGeometry[], x: number, y: number, z: number, sx: number, sy: number, sz: number, tilt = 0) => {
-    const g = new T.SphereGeometry(1, profile.hairSphereSegments, profile.hairSphereRings).toNonIndexed(); g.scale(sx,sy,sz); g.rotateZ(tilt); g.translate(x,y,z); list.push(g);
+    const g = new T.SphereGeometry(1, profile.hairSphereSegments, profile.hairSphereRings).toNonIndexed();
+    g.scale(sx, sy, sz); g.rotateZ(tilt); g.translate(x, y, z);
+    list.push(g);
+    if (list === strands) {
+      // Add visible fibre relief to close-up styles without an extra mesh or
+      // material. Beard geometry and distant performers stay on the old budget.
+      const detail = buildEllipsoidStrandDetail({
+        center: new T.Vector3(x, y, z),
+        radius: new T.Vector3(sx, sy, sz),
+        tilt,
+        seed: scalpClumps,
+        quality,
+      });
+      if (detail) {
+        list.push(detail);
+        scalpClumps += 1;
+        scalpRibbons += scalpStrandRibbonCount(quality);
+      }
+    }
   };
   const surfaceZ = (x: number, y: number): number | null => {
     let z = -Infinity;
@@ -283,6 +304,7 @@ export function addHair(
     }
     const mesh=new T.Mesh(geometry,material);mesh.name=name==='Hair'?'avatar-hairstyle':'avatar-facial-hair';mesh.castShadow=true;anchor.add(mesh);
   };
+  anchor.userData.rockmundoScalpStrandDetail = { quality, clumps: scalpClumps, ribbons: scalpRibbons };
   add(strands,'Hair',appearance.head.hair);add(beard,'FacialHair',appearance.head.facialHairColor??appearance.head.hair);
   root.add(anchor); root.updateMatrixWorld(true); head.attach(anchor); root.updateMatrixWorld(true);
 }
