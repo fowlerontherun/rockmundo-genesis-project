@@ -31,8 +31,8 @@ class RealFacialFibresTests(unittest.TestCase):
 
     def test_each_brow_has_physically_staggered_and_tapered_groom(self):
         roots = brow_fibre_samples(self.LEFT, self.RADIUS, "L")
-        self.assertEqual(len(roots), 76)
-        self.assertTrue(all(roots[i][0] < roots[i + 1][0] for i in range(75)))
+        self.assertEqual(len(roots), 112)
+        self.assertTrue(all(roots[i][0] < roots[i + 1][0] for i in range(111)))
         self.assertGreater(len({round(z, 5) for _, z, _, _ in roots}), 40)
         self.assertTrue(all(.002 <= length <= .006 for _, _, length, _ in roots))
 
