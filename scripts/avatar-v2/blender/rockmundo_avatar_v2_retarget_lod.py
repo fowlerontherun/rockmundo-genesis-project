@@ -153,16 +153,15 @@ def transfer_plan(args, source, target, rig):
     report = audit_matches(matches, args.max_distance_mm / 1000.)
     groups = source_vertex_weights(source)
     deform_bones = {bone.name for bone in rig.data.bones if bone.use_deform}
-    all_rig_bones = {bone.name for bone in rig.data.bones}
     # All correspondence and weighting checks happen before Blender writes a
-    # single target vertex group or shape key.
+    # single target vertex group or shape key. Copy only actual deform bones:
+    # soft artist masks may create >4 total groups per vertex and must be
+    # re-authored or represented by the transferred polygon material regions.
     transferred_weights = []
     for match in matches:
         skin = interpolate_weights(groups, match, deform_bones)
-        # A non-deforming armature anchor must never be painted as a mask.
         transferred_weights.append({
-            name: value for name, value in skin.items()
-            if name in deform_bones or name not in all_rig_bones
+            name: value for name, value in skin.items() if name in deform_bones
         })
 
     source_to_target = target.matrix_world.inverted_safe().to_3x3() @ source.matrix_world.to_3x3()
@@ -253,10 +252,6 @@ def apply_transfer(args, source, target, rig, plan):
     by_group: dict[str, list[tuple[int, float]]] = {}
     for index, per_vertex in enumerate(weights):
         for name, value in per_vertex.items():
-            # Non-deform sculpt/painting masks can be transferred for material
-            # authoring but must not be mistaken for real new LOD1 anatomy.
-            if name.startswith("RMV2_") and not args.transfer_materials:
-                continue
             by_group.setdefault(name, []).append((index, value))
     for name, members in by_group.items():
         group = target.vertex_groups.get(name) or target.vertex_groups.new(name=name)
