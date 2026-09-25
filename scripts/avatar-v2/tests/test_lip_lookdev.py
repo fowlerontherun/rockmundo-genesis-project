@@ -60,7 +60,7 @@ class RealSourceLipTests(unittest.TestCase):
             {"skin": 24985, "transition": 5, "upper_lip": 5, "lower_lip": 5},
             {"skin": 20000, "transition": 2000, "upper_lip": 1500, "lower_lip": 1500},
         ]:
-            with self.assertRaisesRegex(ValueError, "lip"):
+            with self.assertRaisesRegex(ValueError, "[Ll]ip"):
                 validate_coverage(counts, 25000)
 
 
