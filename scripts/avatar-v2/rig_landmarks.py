@@ -110,7 +110,7 @@ def fit_bones(
         if not all(isfinite(v) for v in (*head, *tail)):
             raise ValueError(f"{name} has a non-finite sculpt marker.")
         if dist(head, tail) < MIN_BONE_METRES:
-            raise ValueError(f"{name} fitted length is shorter than {MIN_BONE_METRES:.0%}m minimum.")
+            raise ValueError(f"{name} fitted length is shorter than {MIN_BONE_METRES * 1000:.0f}mm minimum.")
         fit = FitBone(head, tail)
         fitted[name] = fit
         visiting.remove(name)
