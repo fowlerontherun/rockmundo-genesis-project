@@ -15,6 +15,8 @@ const launchedStatuses = new Set([
   "sales_closed",
 ]);
 
+type OwnerLaunchPlan = { launch?: { launchStatus?: string; publicSlug?: string | null }; launchStatus?: string; publicSlug?: string | null };
+
 type OwnerSales = {
   ticketsSold?: number;
   grossMinor?: number;
@@ -36,7 +38,8 @@ export function FestivalOwnerSalesPreview({
   festivalDates: string[];
 }) {
   const launch = useFestivalLaunchPlan(festivalCompanyId);
-  const launchInfo = launch.data?.launch ?? launch.data;
+  const launchPayload = launch.data as OwnerLaunchPlan | undefined;
+  const launchInfo = launchPayload?.launch ?? launchPayload;
   const isLaunched = launchedStatuses.has(launchInfo?.launchStatus ?? "");
   const slug = isLaunched ? launchInfo?.publicSlug ?? undefined : undefined;
   const publicFestival = usePublicFestival(slug);
