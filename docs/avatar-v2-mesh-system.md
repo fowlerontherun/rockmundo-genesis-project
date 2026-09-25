@@ -128,6 +128,15 @@ and `facial_topology.py` for testable geometric thresholds. These checks are
 performed before GLB export; they do not claim to create real high-detail
 masculine/feminine assets on their own.
 
+The Blender LOD0/LOD1 exporter now emits a
+base-lod*.glb.face-topology.json sidecar for each successful audited close-up
+export. It binds the authoring audit to the exact GLB SHA-256 and records the
+real head-mesh name and landmark counts. The repository's standalone asset
+validator requires this sidecar and rejects a stale or mismatched GLB. This
+closes the gap where Blender face vertex groups disappeared during normal
+glTF export; the sidecar is provenance/integrity evidence, while geometric
+measurements must still happen against the actual fitted sculpt in Blender.
+
 ## Foot and toe-base articulation
 
 LOD0/LOD1 use `Toe.L/R` as live deformation bones rather than contract-only

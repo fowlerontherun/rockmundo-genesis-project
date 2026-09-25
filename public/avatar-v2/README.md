@@ -142,6 +142,27 @@ The geometry rules have independent Python tests:
 python -m unittest discover -s scripts/avatar-v2/tests -p test_facial_topology.py -v
 ```
 
+### Audited export provenance
+
+The LOD0/LOD1 Blender exporter now writes a companion file beside the GLB:
+for example, base-lod0.glb.face-topology.json. It records the fitted
+head-mesh identity, selected vertex-group counts, frame/LOD and SHA-256 of the
+**exact exported GLB**. Commit both files together. The repository asset
+validator refuses to accept a close-up model when this audit file is missing,
+claims a different frame/LOD, points at a head that is not skinned in the GLB,
+reports missing landmark vertices, or its checksum no longer matches the GLB.
+Re-export both files after modifying a model.
+
+This is integrity and authoring-process evidence, not an independent
+assessment of sculpt quality. Blender must still perform its geometric audit
+before export, and artists must still approve front/side close-ups, nostrils,
+ears, eyebrow fit and expressions before marking an asset validated.
+LOD2/LOD3 retain their lighter geometry and are exempt from close-up proof.
+
+Run the provenance tests locally:
+
+    node --test scripts/avatar-v2/tests/face-topology-provenance.test.mjs
+
 ## Coordinate and export contract
 
 - GLB 2.0

@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { verifyFaceTopologyProvenance } from './verify-face-topology-provenance.mjs';
 
 const ROOT = process.cwd();
 const ASSET_ROOT = path.join(ROOT, 'public', 'avatar-v2');
@@ -645,6 +646,9 @@ if (!fs.existsSync(MANIFEST_PATH)) {
     try {
       const gltf = readGlbJson(file);
       const report = validateAsset(gltf, entry);
+      // Blender landmark groups do not survive glTF export, so require its
+      // SHA-bound authoring proof for every present LOD0/LOD1 candidate.
+      verifyFaceTopologyProvenance(file, entry, gltf);
       console.log(
         `[avatar-v2] ${entry.frame} LOD${entry.lod}: ${report.triangles.toLocaleString()} tris, ` +
         `${report.vertices.toLocaleString()} vertices, ${report.bones} bones, ${report.skinnedMeshes} skinned mesh(es)`,

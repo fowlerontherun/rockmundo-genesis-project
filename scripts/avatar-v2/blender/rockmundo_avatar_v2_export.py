@@ -14,6 +14,8 @@ certifies an authored mesh for the RockMundo V2 import boundary.
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import pathlib
 import re
 import sys
@@ -865,6 +867,43 @@ def export_glb(args: argparse.Namespace) -> None:
         export_extras=True,
         export_yup=True,
     )
+    # glTF omits Blender vertex-group landmark data. Keep a deterministic
+    # provenance sidecar that binds the source audit to these exact GLB bytes.
+    # The repository validator refuses stale/missing sidecars for LOD0/LOD1.
+    if args.lod <= 1:
+        source_heads = [obj for obj in head_candidates(None) if obj in mesh_objects()]
+        if not source_heads:
+            raise RuntimeError("Close-up export has no authored head landmark mesh.")
+        head = source_heads[0]
+        groups = extract_landmarks(head)
+        anchors = {}
+        rig = armatures()[0]
+        for side in ("L", "R"):
+            bone = rig.data.bones.get(f"EarAnchor.{side}")
+            if bone:
+                point = rig.matrix_world @ bone.head_local
+                anchors[f"EarAnchor.{side}"] = (
+                    float(point.x), float(point.y), float(point.z)
+                )
+        issues = audit_face_topology(groups, anchors)
+        if issues:
+            output.unlink(missing_ok=True)
+            raise RuntimeError("Source facial topology failed: " + "; ".join(issues))
+        proof = {
+            "schema": "rockmundo.avatar-v2-face-topology",
+            "version": 1,
+            "frame": args.frame,
+            "lod": args.lod,
+            "file": output.name,
+            "headMesh": head.name,
+            "passed": True,
+            "issues": [],
+            "landmarkVertices": {name: len(points) for name, points in groups.items()},
+            "sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
+        }
+        sidecar = pathlib.Path(str(output) + ".face-topology.json")
+        sidecar.write_text(json.dumps(proof, indent=2, sort_keys=True) + "\n", encoding="utf8")
+        print(f"[avatar-v2/blender] Wrote matching facial-topology proof: {sidecar}")
     print(f"[avatar-v2/blender] Exported {output}")
 
 
