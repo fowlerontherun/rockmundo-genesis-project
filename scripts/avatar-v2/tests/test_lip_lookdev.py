@@ -52,6 +52,12 @@ class RealSourceLipTests(unittest.TestCase):
                 classify_lip_polygon(p, n, self.EYE, radius)
 
     def test_real_bilateral_lip_polygon_evidence_is_mandatory(self):
+        # Real masculine CC0 mesh uses 12,500 source QUADS (not the 25,000
+        # triangulated glTF faces), so evidence thresholds must count quads.
+        validate_coverage({
+            "skin": 12456, "transition": 22,
+            "upper_lip": 12, "lower_lip": 10,
+        }, 12500)
         validate_coverage({
             "skin": 24882, "transition": 50,
             "upper_lip": 28, "lower_lip": 40,
