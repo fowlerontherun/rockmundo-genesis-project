@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
-import { Loader2, Lock, Star, Trash2, UserPlus, Users } from "lucide-react";
+import { BookOpen, Loader2, Lock, Star, Trash2, UserPlus, Users } from "lucide-react";
+import { CrewCareerHistoryDialog } from "@/components/band/CrewCareerHistoryDialog";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { CREW_DEPARTMENTS, getCrewRoleInfo, isPerformanceCrewRole } from "@/utils/liveSetup";
 import { CrewGuide, CREW_ROLE_GUIDES, type CrewCoverageEntry } from "@/components/band/CrewGuide";
@@ -163,10 +164,12 @@ const ROSTER_DEPARTMENTS = ["show", "touring", "commercial"] as const;
 const RosterCrewCard = ({
   crew,
   onRelease,
+  onHistory,
   releasing,
 }: {
   crew: BandCrewMemberRow;
   onRelease: (crew: BandCrewMemberRow) => void;
+  onHistory: (crew: BandCrewMemberRow) => void;
   releasing: boolean;
 }) => {
   const roleInfo = getCrewRoleInfo(crew.crew_type);
@@ -230,20 +233,17 @@ const RosterCrewCard = ({
         <div className="space-y-1" aria-label={`${crew.name} career experience`}>
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">Career XP</span>
-            <span className="font-medium">{crew.career_xp ?? 0} XP · {100 - ((crew.career_xp ?? 0) % 100)} to next skill point</span>
+            <span className="font-medium">{crew.career_xp ?? 0} XP · {crew.skill_level >= 100 ? "Max technical skill" : `${100 - ((crew.career_xp ?? 0) % 100)} to next skill point`}</span>
           </div>
-          <Progress value={(crew.career_xp ?? 0) % 100} className="h-2" />
+          <Progress value={crew.skill_level >= 100 ? 100 : (crew.career_xp ?? 0) % 100} className="h-2" />
           {crew.last_gig_at && <p className="text-xs text-muted-foreground">Last worked: {new Date(crew.last_gig_at).toLocaleDateString()}</p>}
         </div>
       </CardContent>
-      <CardFooter>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full text-destructive hover:text-destructive"
-          onClick={() => onRelease(crew)}
-          disabled={releasing}
-        >
+      <CardFooter className="flex flex-wrap gap-2">
+        <Button variant="outline" size="sm" className="flex-1" onClick={() => onHistory(crew)}>
+          <BookOpen className="mr-2 h-4 w-4" /> Career history
+        </Button>
+        <Button variant="ghost" size="sm" className="flex-1 text-destructive hover:text-destructive" onClick={() => onRelease(crew)} disabled={releasing}>
           <Trash2 className="mr-2 h-4 w-4" /> Release
         </Button>
       </CardFooter>
@@ -264,6 +264,7 @@ const BandCrewManagement = () => {
   const [activeTab, setActiveTab] = useState("roster");
   const [hireDialogOpen, setHireDialogOpen] = useState(false);
   const [selectedCrewMember, setSelectedCrewMember] = useState<CrewCatalogRow | null>(null);
+  const [selectedCareerCrew, setSelectedCareerCrew] = useState<BandCrewMemberRow | null>(null);
 
   const { data: hiredCrew, isLoading: loadingCrew } = useQuery<BandCrewMemberRow[]>({
     queryKey: ["band-crew", bandId],
@@ -404,6 +405,8 @@ const BandCrewManagement = () => {
       const roleInfo = getCrewRoleInfo(crew.role);
       queryClient.invalidateQueries({ queryKey: ["band-crew", bandId] });
       queryClient.invalidateQueries({ queryKey: ["crew-catalog"] });
+      queryClient.invalidateQueries({ queryKey: ["stage-crew-real-catalog"] });
+      queryClient.invalidateQueries({ queryKey: ["gig-crew-roster", bandId] });
       queryClient.invalidateQueries({ queryKey: ["gig-live-setup"] });
       setHireDialogOpen(false);
       setSelectedCrewMember(null);
@@ -429,7 +432,10 @@ const BandCrewManagement = () => {
     onSuccess: (_, crew) => {
       queryClient.invalidateQueries({ queryKey: ["band-crew", bandId] });
       queryClient.invalidateQueries({ queryKey: ["crew-catalog"] });
+      queryClient.invalidateQueries({ queryKey: ["stage-crew-real-catalog"] });
+      queryClient.invalidateQueries({ queryKey: ["gig-crew-roster", bandId] });
       queryClient.invalidateQueries({ queryKey: ["gig-live-setup"] });
+      if (selectedCareerCrew?.id === crew.id) setSelectedCareerCrew(null);
       toast.success(`${crew.name} released from crew`);
     },
     onError: (error: Error) => {
@@ -523,7 +529,7 @@ const BandCrewManagement = () => {
               <div className="rounded-lg border bg-muted/30 p-3">
                 <div className="text-xs text-muted-foreground">Wages per gig</div>
                 <div className="mt-1 text-xl font-bold">${totalPayroll.toLocaleString()}</div>
-                <div className="text-[11px] text-muted-foreground">Paid out of each show</div>
+                <div className="text-[11px] text-muted-foreground">If your full roster attends</div>
               </div>
               <div className="rounded-lg border bg-muted/30 p-3">
                 <div className="text-xs text-muted-foreground">Band fame</div>
@@ -587,6 +593,7 @@ const BandCrewManagement = () => {
                                   key={crew.id}
                                   crew={crew}
                                   onRelease={handleRelease}
+                                  onHistory={setSelectedCareerCrew}
                                   releasing={releaseMutation.isPending}
                                 />
                               ))}
@@ -607,6 +614,7 @@ const BandCrewManagement = () => {
                               key={crew.id}
                               crew={crew}
                               onRelease={handleRelease}
+                              onHistory={setSelectedCareerCrew}
                               releasing={releaseMutation.isPending}
                             />
                           ))}
@@ -769,13 +777,15 @@ const BandCrewManagement = () => {
         </Tabs>
       </div>
 
+      <CrewCareerHistoryDialog crew={selectedCareerCrew} onClose={() => setSelectedCareerCrew(null)} />
+
       <Dialog open={hireDialogOpen} onOpenChange={setHireDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Hire {selectedCrewMember?.name}?</DialogTitle>
             <DialogDescription>
               {selectedCrewMember
-                ? `${getRoleBenefit(selectedCrewMember.role)} Paid $${selectedCrewMember.salary.toLocaleString()} every gig you play.`
+                ? `${getRoleBenefit(selectedCrewMember.role)} Paid ${selectedCrewMember.salary.toLocaleString()} for each gig they attend.`
                 : "This crew member will join your band exclusively."}
             </DialogDescription>
           </DialogHeader>

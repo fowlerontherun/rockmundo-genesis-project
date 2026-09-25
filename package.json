@@ -19,6 +19,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json",
     "test:unit": "vitest run",
+    "test:crew": "vitest run src/utils/__tests__/crewScoring.test.ts src/components/band/CrewCareerHistoryDialog.test.tsx",
+    "test:crew:db": "bash -lc 'test -n \"$SUPABASE_DB_URL\" || { echo SUPABASE_DB_URL is required; exit 2; }; psql \"$SUPABASE_DB_URL\" -X -v ON_ERROR_STOP=1 -f supabase/tests/crew_reconciliation_harness.sql'",
     "test:critical-journeys": "node scripts/run-critical-journeys.mjs",
     "test:smoke": "node scripts/run-critical-journeys.mjs",
     "test:recruitment:db": "bash -lc 'if ! command -v supabase >/dev/null; then echo Supabase CLI is required for recruitment DB tests; exit 127; fi; if [ -z \"$SUPABASE_DB_URL\" ]; then echo SUPABASE_DB_URL is required after supabase start/db reset; exit 2; fi; psql \"$SUPABASE_DB_URL\" -v ON_ERROR_STOP=1 -f supabase/tests/recruitment_rls_harness.sql'",

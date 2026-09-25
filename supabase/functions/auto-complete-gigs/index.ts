@@ -296,6 +296,29 @@ serve(async (req) => {
       console.error("[auto-complete-gigs] Retry pass error:", retryPassError);
     }
 
+    // Recover worker XP after a partial completion failure. The SQL function
+    // only sees accepted crew assignments recorded against completed gigs,
+    // and its per-worker ledger prevents repeated payouts or XP.
+    let crewRecovery = { gigsChecked: 0, crewRewarded: 0, failures: 0 };
+    try {
+      const { data, error } = await supabaseClient.rpc(
+        "reconcile_unsettled_completed_gig_crew", { p_limit: 50 },
+      );
+      if (error) throw error;
+      crewRecovery = {
+        gigsChecked: Number(data?.gigsChecked || 0),
+        crewRewarded: Number(data?.crewRewarded || 0),
+        failures: Number(data?.failures || 0),
+      };
+      if (crewRecovery.crewRewarded > 0 || crewRecovery.failures > 0) {
+        console.log("[auto-complete-gigs] Crew reward reconciliation:", crewRecovery);
+      }
+    } catch (crewError) {
+      // An isolated reward repair cannot stop healthy gigs from completing.
+      crewRecovery.failures += 1;
+      console.error("[auto-complete-gigs] Crew reconciliation failed:", crewError);
+    }
+
     const resultSummary = {
       completedGigs: completedCount,
       totalChecked: inProgressGigs?.length || 0,
@@ -303,6 +326,7 @@ serve(async (req) => {
       repairedStarts: repairedStartCount,
       normalization: normalizationSummary,
       retry: retrySummary,
+      crewRecovery,
     };
 
     await completeJobRun({
@@ -311,7 +335,7 @@ serve(async (req) => {
       supabaseClient,
       durationMs: Date.now() - startedAt,
       processedCount,
-      itemsAffected: completedCount + repairedStartCount,
+      itemsAffected: completedCount + repairedStartCount + crewRecovery.crewRewarded,
       resultSummary,
     });
 
