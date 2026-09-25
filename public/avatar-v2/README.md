@@ -64,6 +64,18 @@ either GLB locally in the Admin V2 Candidate Lab's A-pose view to examine
 the difference. The rig and joint-handle `.blend` files now carry the improved
 source lookdev, while the original saved source remains untouched for comparison.
 
+The artist-editable lookdev files now also contain **separate physical 3D
+eyebrows and upper eyelashes**, fitted to the real masculine/feminine source
+sculpt rather than placed at a fixed depth. Each brow is a continuous,
+UV-unwrapped sculpt-following strip with 112 individual tapered groom fibres.
+Each upper eyelid carries 27 separately modelled curved lashes whose roots
+are ray-projected onto the actual frontal lid rim; projection through the
+eye opening or onto the inside of the head is rejected. The brows are
+independent of scalp-hair colour so the future saved eyebrow-style and colour
+system can replace them without recolouring hair. These preview accessories
+are still **unweighted**; they need actual Head skinning and matching blink
+deformation before any V2 certification.
+
 This is a visible art-direction starting pass, **not** a completed facial
 sculpt, authored skin texture, actual fitted eye rig, blink/wetline deformation
 or a game-ready mesh. An artist must still approve the actual cornea placement,

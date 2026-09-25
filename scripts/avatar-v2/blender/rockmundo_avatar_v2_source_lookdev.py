@@ -5,7 +5,9 @@ Builds artist-editable skinned-look *references*, not skinned character assets:
   blurring the actual rest-pose silhouette;
 - gives body and separate eyeballs distinct physically based preview materials;
 - colours the genuine exposed eye-sphere polygons as sclera, iris and pupil;
-- adds true curved, separate cornea surfaces over the original eyeball geometry.
+- adds true curved, separate cornea surfaces over the original eyeball geometry;
+- anchors two real polygon eyebrows, their separate 3D fibre grooms and bilateral
+  tapered upper lashes onto source skin via per-follicle raycasting.
 
 The original source .blend and unshaded proof images are saved BEFORE this pass.
 This must never count as a manual facial sculpt, fitted rig, finished topology or
@@ -21,6 +23,7 @@ from mathutils import Vector
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from eye_lookdev import choose_eye_material, cornea_dome
+from rockmundo_avatar_v2_face_fibres import add_real_brow_lash_geometry
 
 FRAME_COLOURS = {
     "masculine": {
@@ -182,6 +185,11 @@ def apply_source_lookdev(frame: str, meshes: list[bpy.types.Object]) -> dict:
     eye_reports = [
         lookdev_eye(frame, side, eyes[side][0], collection) for side in ("L", "R")
     ]
+    # Real, individually skin-surface-projected brow and upper-lash meshes,
+    # separate from sculpt and eye bones for later professional rigging.
+    brow_lash_reports = add_real_brow_lash_geometry(
+        frame, body_obj, {side: group[0] for side, group in eyes.items()}, collection,
+    )
     return {
         "frame": frame,
         "originalBodyVertices": len(body_obj.data.vertices),
@@ -189,6 +197,8 @@ def apply_source_lookdev(frame: str, meshes: list[bpy.types.Object]) -> dict:
         "realEyesRecoloured": len(eye_reports),
         "realCorneasAdded": 2,
         "eyeGeometry": eye_reports,
+        "browLashGeometry": brow_lash_reports,
+        "realBrowAndLashMeshes": 6,
         "previewOnly": True,
         "sculptComplete": False,
         "jointFitComplete": False,
