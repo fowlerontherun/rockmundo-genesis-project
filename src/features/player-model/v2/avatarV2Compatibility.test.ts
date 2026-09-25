@@ -101,6 +101,10 @@ describe('Avatar V2 compatibility layer', () => {
     expect(material).toBeInstanceOf(T.MeshPhysicalMaterial);
     expect(material.normalMap).toBeInstanceOf(T.DataTexture);
     expect((material.normalMap as T.DataTexture).image.width).toBe(512);
+    const strandDetail = root.getObjectByName('avatar-head-details')?.userData.rockmundoScalpStrandDetail;
+    expect(strandDetail).toMatchObject({ quality: 'ultra', clumps: 5, ribbons: 25 });
+    expect(balancedRoot.getObjectByName('avatar-head-details')?.userData.rockmundoScalpStrandDetail)
+      .toMatchObject({ quality: 'balanced', clumps: 0, ribbons: 0 });
     expect(root.userData.rockmundoAvatarV2Compatibility.hairQuality).toBe('ultra');
   });
 
