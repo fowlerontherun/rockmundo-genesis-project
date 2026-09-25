@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Users } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { crewDb } from "./crewDb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -21,8 +21,8 @@ export function GigCrewProgressReport({ gigId, visible }: { gigId?: string | nul
     queryKey: ["gig-crew-settlement", gigId],
     enabled: visible && !!gigId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("gig_crew_settlements")
+      const { data, error } = await crewDb
+        .from<CrewSettlement>("gig_crew_settlements")
         .select("id,crew_name,crew_role,salary_paid,xp_awarded,skill_before,skill_after,cohesion_before,cohesion_after")
         .eq("gig_id", gigId)
         .order("crew_role");
