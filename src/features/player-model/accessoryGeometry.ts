@@ -92,16 +92,46 @@ export function buildHeadAccessory(
       add(new T.TubeGeometry(curve, Math.max(48, profile.accessorySegments * 3), w * (spec.style === 'wayfarer' ? .015 : .010), Math.max(6, Math.floor(profile.accessorySegments / 2)), true), `glasses-frame-${side}`, lensX, lensY, front);
       add(new T.ShapeGeometry(shape, curvePoints), `glasses-lens-${side}`, lensX, lensY, front, lensMaterial).castShadow = false;
 
-      const templeX = ear?.x !== undefined ? ear.x - side * w * .035 : c.x + side * w * .43;
-      const earZ = ear?.z ?? c.z;
-      const earY = ear?.y !== undefined ? ear.y + h * .035 : eyeY - h * .025;
-      const length = Math.max(d * .34, Math.abs(front - earZ));
-      const armY = (lensY + earY) * .5;
-      const armZ = (front + earZ) * .5;
-      const arm = add(new T.BoxGeometry(w * .016, h * .020, length), `glasses-arm-${side}`, templeX, armY, armZ);
-      arm.rotation.x = Math.atan2(earY - lensY, Math.max(.001, front - earZ));
-      const hook = add(new T.BoxGeometry(w * .016, h * .075, d * .028), `glasses-ear-hook-${side}`, templeX, earY - h * .025, earZ);
-      hook.rotation.x = side * .04;
+      // V1's left eye is at -X, but the V2 Blender rig's Eye.L is at +X.
+      // Derive the OUTWARD direction from the actual fitted ear/eye instead of
+      // assuming that the saved semantic "left" always has a fixed X sign.
+      const outward = Math.sign((ear?.x ?? eye?.x ?? (c.x + side * w * .235)) - c.x) || side;
+      const rimHinge = new T.Vector3(lensX + outward * lensW * .98, lensY + h * .018, front);
+      const earPoint = ear?.clone() ?? new T.Vector3(c.x + outward * w * .49, lensY - h * .04, c.z);
+      // The spectacle arm rests above the lobe. The short curved hook finishes
+      // just below that point rather than a rectangular block floating by it.
+      const templeRest = earPoint.clone().add(new T.Vector3(0, h * .035, 0));
+      const firstBend = rimHinge.clone().lerp(templeRest, .34);
+      const secondBend = rimHinge.clone().lerp(templeRest, .76);
+      firstBend.x += outward * w * .009;
+      secondBend.x += outward * w * .006;
+      const templePath = new T.CatmullRomCurve3([rimHinge, firstBend, secondBend, templeRest]);
+      const arm = add(
+        new T.TubeGeometry(
+          templePath,
+          Math.max(12, profile.accessorySegments * 2),
+          w * (spec.style === 'wayfarer' ? .011 : .008),
+          Math.max(6, Math.floor(profile.accessorySegments / 2)),
+          false,
+        ),
+        `glasses-arm-${side}`, 0, 0, 0,
+      );
+      arm.userData.rockmundoTempleFit = {
+        hinge: rimHinge.toArray(),
+        rest: templeRest.toArray(),
+        side: side < 0 ? 'L' : 'R',
+        outward,
+      };
+      const hookPath = new T.CatmullRomCurve3([
+        new T.Vector3(),
+        new T.Vector3(outward * w * .002, -h * .025, -d * .004),
+        new T.Vector3(outward * w * .006, -h * .047, -d * .009),
+      ]);
+      const hook = add(
+        new T.TubeGeometry(hookPath, 8, w * .008, 6, false),
+        `glasses-ear-hook-${side}`, templeRest.x, templeRest.y, templeRest.z,
+      );
+      hook.userData.rockmundoEarAnchor = earPoint.toArray();
     }
     add(new T.BoxGeometry(w * .095, h * .019, d * .022), 'glasses-bridge', c.x, eyeY + h * .018, front);
     if (spec.style === 'aviator') add(new T.BoxGeometry(w * .14, h * .015, d * .02), 'glasses-brow-bar', c.x, eyeY + lensH * .75, front);
@@ -214,6 +244,15 @@ export function clearHairForHeadAccessories(
     );
   };
 
+  const leftEye = fittedPoint(-1, 'eye');
+  const rightEye = fittedPoint(1, 'eye');
+  const front = Math.max(leftEye.z, rightEye.z) + size.z * .012;
+  const lensWidth = T.MathUtils.clamp(
+    Math.abs(rightEye.x - leftEye.x) * .40,
+    size.x * .16,
+    size.x * .21,
+  );
+
   root.updateMatrixWorld(true);
   root.traverse(node => {
     if (!(node instanceof T.Mesh) || node.name !== 'avatar-hairstyle') return;
@@ -230,17 +269,21 @@ export function clearHairForHeadAccessories(
         for (const side of [-1, 1] as const) {
           const eye = fittedPoint(side, 'eye');
           const ear = fittedPoint(side, 'ear');
-          const templeX = ear.x - side * size.x * .035;
-          const yMin = Math.min(eye.y, ear.y) - size.y * .08;
-          const yMax = Math.max(eye.y, ear.y) + size.y * .08;
-          const zMin = Math.min(eye.z, ear.z) - size.z * .10;
-          const zMax = Math.max(eye.z, ear.z) + size.z * .12;
-          const sameSide = side * (point.x - center.x) > 0;
-          if (!sameSide || point.y < yMin || point.y > yMax || point.z < zMin || point.z > zMax) continue;
+          const outward = Math.sign(ear.x - center.x) || side;
+          const hingeX = eye.x + outward * lensWidth * .98;
+          const t = T.MathUtils.clamp((front - point.z) / Math.max(.001, front - ear.z), 0, 1);
+          // Clear along the actual lens-rim -> ear route, not a fixed strip by
+          // the ear. This also supports V2's +X left-eye authoring convention.
+          const templeX = T.MathUtils.lerp(hingeX, ear.x, t);
+          const templeY = T.MathUtils.lerp(eye.y + size.y * .018, ear.y + size.y * .035, t);
+          const zMin = Math.min(front, ear.z) - size.z * .10;
+          const zMax = Math.max(front, ear.z) + size.z * .12;
+          const sameSide = outward * (point.x - center.x) > 0;
+          if (!sameSide || Math.abs(point.y - templeY) > size.y * .12 || point.z < zMin || point.z > zMax) continue;
           if (Math.abs(point.x - templeX) > size.x * .075) continue;
 
-          const targetX = templeX + side * size.x * .08;
-          point.x = side < 0 ? Math.min(point.x, targetX) : Math.max(point.x, targetX);
+          const targetX = templeX + outward * size.x * .08;
+          point.x = outward < 0 ? Math.min(point.x, targetX) : Math.max(point.x, targetX);
           glassesAdjusted = glassesAdjusted || Math.abs(point.x - originalX) > 1e-6;
         }
       }
@@ -249,14 +292,15 @@ export function clearHairForHeadAccessories(
         const enabled = side < 0 ? options.leftEarring : options.rightEarring;
         if (!enabled) continue;
         const ear = fittedPoint(side, 'ear');
-        const sameSide = side * (point.x - center.x) > 0;
+        const outward = Math.sign(ear.x - center.x) || side;
+        const sameSide = outward * (point.x - center.x) > 0;
         if (!sameSide) continue;
         if (Math.abs(point.y - ear.y) > size.y * .16 || Math.abs(point.z - ear.z) > size.z * .20) continue;
-        if (side * (point.x - ear.x) >= size.x * .10) continue;
+        if (outward * (point.x - ear.x) >= size.x * .10) continue;
 
-        const targetX = ear.x + side * size.x * .095;
+        const targetX = ear.x + outward * size.x * .095;
         const before = point.x;
-        point.x = side < 0 ? Math.min(point.x, targetX) : Math.max(point.x, targetX);
+        point.x = outward < 0 ? Math.min(point.x, targetX) : Math.max(point.x, targetX);
         earringAdjusted = earringAdjusted || Math.abs(point.x - before) > 1e-6;
       }
 

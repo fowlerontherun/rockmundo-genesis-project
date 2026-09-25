@@ -47,6 +47,40 @@ describe('accessory hair collision fitting', () => {
     expect(root.userData.rockmundoAccessoryHairClearance).toEqual(result);
   });
 
+
+  it('clears both V2 +X-left and -X-right hair along authored glasses arms and earrings', () => {
+    const fittedBounds = new T.Box3(
+      new T.Vector3(-.16, 1.4, -.14),
+      new T.Vector3(.16, 1.78, .16),
+    );
+    const { root, hair } = hairRoot([
+      [.147, 1.60, .09], // V2 semantic left: physically +X
+      [-.148, 1.60, .09], // V2 semantic right: physically -X
+      [.160, 1.575, .02],
+      [-.160, 1.575, .02],
+      [0, 1.50, .02],
+    ]);
+    const result = clearHairForHeadAccessories(
+      root,
+      fittedBounds,
+      {
+        leftEye: new T.Vector3(.075, 1.61, .165),
+        rightEye: new T.Vector3(-.075, 1.61, .165),
+        leftEar: new T.Vector3(.165, 1.575, .02),
+        rightEar: new T.Vector3(-.165, 1.575, .02),
+      },
+      { glasses: true, leftEarring: true, rightEarring: true },
+    );
+    const positions = hair.geometry.attributes.position;
+    expect(positions.getX(0)).toBeGreaterThan(.147);
+    expect(positions.getX(1)).toBeLessThan(-.148);
+    expect(positions.getX(2)).toBeGreaterThan(.160);
+    expect(positions.getX(3)).toBeLessThan(-.160);
+    expect(positions.getX(4)).toBe(0);
+    expect(result.glassesVertices).toBeGreaterThanOrEqual(2);
+    expect(result.earringVertices).toBeGreaterThanOrEqual(2);
+  });
+
   it('tucks crown hair inside hats while retaining long hair beneath the brim', () => {
     const { root, hair } = hairRoot([
       [.49, .92, .20],
