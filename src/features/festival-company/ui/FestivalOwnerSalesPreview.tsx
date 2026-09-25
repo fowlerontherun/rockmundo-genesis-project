@@ -36,8 +36,9 @@ export function FestivalOwnerSalesPreview({
   festivalDates: string[];
 }) {
   const launch = useFestivalLaunchPlan(festivalCompanyId);
-  const isLaunched = launchedStatuses.has(launch.data?.launchStatus ?? "");
-  const slug = isLaunched ? launch.data?.publicSlug ?? undefined : undefined;
+  const launchInfo = launch.data?.launch ?? launch.data;
+  const isLaunched = launchedStatuses.has(launchInfo?.launchStatus ?? "");
+  const slug = isLaunched ? launchInfo?.publicSlug ?? undefined : undefined;
   const publicFestival = usePublicFestival(slug);
   const sales = useFestivalSalesSummary(isLaunched ? festivalCompanyId : undefined);
   const current = publicFestival.data;
