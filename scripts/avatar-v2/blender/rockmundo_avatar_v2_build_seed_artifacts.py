@@ -27,6 +27,7 @@ sys.path.insert(0, str(SCRIPT_DIR.parent))
 import rockmundo_avatar_v2_seed as seed  # noqa: E402
 import rockmundo_avatar_v2_rig_guide as guide  # noqa: E402
 import rockmundo_avatar_v2_fit_rig as fitter  # noqa: E402
+import rockmundo_avatar_v2_source_lookdev as lookdev  # noqa: E402
 from fetch_human_base_meshes import ARCHIVE_NAME, EXPECTED_BYTES, archive_valid  # noqa: E402
 
 SOURCE_COLLECTIONS = {
@@ -103,7 +104,7 @@ def file_manifest(root: pathlib.Path) -> list[dict]:
     return entries
 
 
-def render_contact_views(frame: str, meshes: list[bpy.types.Object], output: pathlib.Path) -> list[str]:
+def render_contact_views(frame: str, meshes: list[bpy.types.Object], output: pathlib.Path, *, styled: bool = False) -> list[str]:
     """Real neutral Workbench renders, not AI-synthesised or retouched art."""
     scene = bpy.context.scene
     saved_engine, saved_camera = scene.render.engine, scene.camera
@@ -137,7 +138,7 @@ def render_contact_views(frame: str, meshes: list[bpy.types.Object], output: pat
             direction = centre - camera.location
             camera.rotation_euler = direction.to_track_quat("-Z", "Y").to_euler()
             camera_data.ortho_scale = .56 if view == "face" else 2.14
-            path = output / f"{frame}-{view}.png"
+            path = output / f"{frame}-{'lookdev-' if styled else ''}{view}.png"
             scene.render.filepath = str(path)
             bpy.ops.render.render(write_still=True)
             if not path.exists() or path.stat().st_size < 1024:
@@ -154,12 +155,12 @@ def render_contact_views(frame: str, meshes: list[bpy.types.Object], output: pat
     return out
 
 
-def export_candidate_preview(frame: str, meshes: list[bpy.types.Object], output: pathlib.Path) -> str:
+def export_candidate_preview(frame: str, meshes: list[bpy.types.Object], output: pathlib.Path, *, styled: bool = False) -> str:
     """Unrigged CC0 sculpt reference usable in the admin A-pose candidate viewer.
 
     This is NOT base-lod0.glb: avoid the production file name and directory.
     """
-    path = output / f"{frame}-SOURCE-ONLY-not-validated.glb"
+    path = output / f"{frame}-{'LOOKDEV-ONLY' if styled else 'SOURCE-ONLY'}-not-validated.glb"
     bpy.ops.object.select_all(action="DESELECT")
     for mesh in meshes:
         mesh.select_set(True)
@@ -172,7 +173,7 @@ def export_candidate_preview(frame: str, meshes: list[bpy.types.Object], output:
             use_selection=True,
             export_skins=False,
             export_animations=False,
-            export_materials="NONE",
+            export_materials="EXPORT" if styled else "NONE",
             export_extras=True,
             export_yup=True,
             export_cameras=False,
@@ -209,6 +210,21 @@ def build_frame(frame: str, source_file: pathlib.Path, root: pathlib.Path) -> di
     proofs = render_contact_views(frame, meshes, frame_dir)
     preview = export_candidate_preview(frame, meshes, frame_dir)
 
+    # Preserve the untouched CC0 source and neutral geometry proofs above.
+    # Artist-editable preview materials and genuinely separate curved cornea
+    # meshes are added only after that immutable baseline has been saved.
+    lookdev_report = lookdev.apply_source_lookdev(frame, meshes)
+    detail_meshes = [
+        obj for obj in bpy.context.scene.objects
+        if obj.type == "MESH" and not obj.hide_render
+    ]
+    lookdev_path = frame_dir / f"{frame}-artist-lookdev.blend"
+    bpy.ops.wm.save_as_mainfile(filepath=str(lookdev_path))
+    lookdev_views = render_contact_views(frame, detail_meshes, frame_dir, styled=True)
+    lookdev_preview = export_candidate_preview(
+        frame, detail_meshes, frame_dir, styled=True,
+    )
+
     min_point, max_point = guide.world_bounds(meshes)
     rig = guide.create_rig(frame, min_point, max_point)
     guide.create_notes(frame)
@@ -227,6 +243,10 @@ def build_frame(frame: str, source_file: pathlib.Path, root: pathlib.Path) -> di
         "fitHandlesBlend": handles_path.name,
         "candidatePreview": preview,
         "contactViews": proofs,
+        "lookdevBlend": lookdev_path.name,
+        "lookdevPreview": lookdev_preview,
+        "lookdevViews": lookdev_views,
+        "lookdevGeometry": lookdev_report,
         "sourceBlendFile": source_file.name,
         "sourceCollection": SOURCE_COLLECTIONS[frame],
         "sourceMeshCount": len(meshes),
