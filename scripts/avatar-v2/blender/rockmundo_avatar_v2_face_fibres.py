@@ -232,8 +232,12 @@ def add_real_brow_lash_geometry(
     colours = FRAME_COLOURS[frame]
     # The dark groom is intentionally independent of scalp colour, because
     # saved eyebrow colour/style must not be fused into a skin tattoo texture.
-    base = (.115, .066, .048, 1.) if frame == "masculine" else (.18, .089, .061, 1.)
-    lighter = (.22, .127, .073, 1.) if frame == "masculine" else (.29, .166, .097, 1.)
+    # The neutral face proof showed that a high-contrast solid dark strip
+    # resembles painted-on brows. Use a lighter groom base and darker,
+    # individually modelled strands; more of the brow's apparent detail now
+    # comes from actual independent 3D hair.
+    base = (.26, .152, .112, 1.) if frame == "masculine" else (.32, .193, .143, 1.)
+    lighter = (.145, .084, .060, 1.) if frame == "masculine" else (.17, .092, .066, 1.)
     brow_mat = preview_material(f"RMV2_PreviewBrow_{frame}", base, .88)
     fibres_mat = preview_material(f"RMV2_PreviewBrowGroom_{frame}", lighter, .76)
     lash_mat = preview_material(f"RMV2_PreviewLashes_{frame}", (.05, .034, .029, 1.), .7)
