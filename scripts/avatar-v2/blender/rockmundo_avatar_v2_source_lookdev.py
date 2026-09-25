@@ -7,7 +7,9 @@ Builds artist-editable skinned-look *references*, not skinned character assets:
 - colours the genuine exposed eye-sphere polygons as sclera, iris and pupil;
 - adds true curved, separate cornea surfaces over the original eyeball geometry;
 - anchors two real polygon eyebrows, their separate 3D fibre grooms and bilateral
-  tapered upper lashes onto source skin via per-follicle raycasting.
+  tapered upper lashes onto source skin via per-follicle raycasting;
+- adds nuanced editable upper/lower lip and edge-transition shading to actual
+  CC0 sculpt polygons, preserving their UVs and real mesh topology.
 
 The original source .blend and unshaded proof images are saved BEFORE this pass.
 This must never count as a manual facial sculpt, fitted rig, finished topology or
@@ -24,6 +26,7 @@ from mathutils import Vector
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from eye_lookdev import choose_eye_material, cornea_dome
 from rockmundo_avatar_v2_face_fibres import add_real_brow_lash_geometry
+from rockmundo_avatar_v2_lips import apply_real_lip_materials
 
 FRAME_COLOURS = {
     "masculine": {
@@ -182,6 +185,12 @@ def apply_source_lookdev(frame: str, meshes: list[bpy.types.Object]) -> dict:
         poly.use_smooth = True
         poly.material_index = 0
     collection = body_obj.users_collection[0] if body_obj.users_collection else bpy.context.scene.collection
+    # Split colour and shading along the genuine CC0 sculpt's existing lip
+    # polygons, never adding floating cosmetic planes over the mouth.
+    lips = apply_real_lip_materials(
+        frame, body_obj, {side: group[0] for side, group in eyes.items()},
+        preview_material,
+    )
     eye_reports = [
         lookdev_eye(frame, side, eyes[side][0], collection) for side in ("L", "R")
     ]
@@ -197,6 +206,7 @@ def apply_source_lookdev(frame: str, meshes: list[bpy.types.Object]) -> dict:
         "realEyesRecoloured": len(eye_reports),
         "realCorneasAdded": 2,
         "eyeGeometry": eye_reports,
+        "realLipMaterials": lips,
         "browLashGeometry": brow_lash_reports,
         "realBrowAndLashMeshes": 6,
         "previewOnly": True,
