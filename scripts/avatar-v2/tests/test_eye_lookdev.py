@@ -34,6 +34,11 @@ class EyeLookdevTests(unittest.TestCase):
         self.assertTrue(all(math.sqrt(dot(v, v)) > radius for v in verts))
         self.assertTrue(all(math.sqrt(v[0] ** 2 + v[2] ** 2) <= .545 * radius + 1e-8 for v in verts))
         self.assertGreater(abs(verts[0][1]), abs(verts[-1][1]))
+        a, b, c, _ = faces[0]
+        edge1 = tuple(verts[b][i] - verts[a][i] for i in range(3))
+        edge2 = tuple(verts[c][i] - verts[a][i] for i in range(3))
+        from eye_lookdev import cross
+        self.assertGreater(dot(cross(edge1, edge2), (0, -1, 0)), 0.)
 
     def test_cornea_handles_rotated_eye_direction(self):
         centre = (.04, .01, 1.61)
