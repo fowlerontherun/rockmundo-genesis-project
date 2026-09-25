@@ -13,6 +13,9 @@ on:
       - 'scripts/avatar-v2/blender/rockmundo_avatar_v2_source_lookdev.py'
       - 'scripts/avatar-v2/facial_fibres.py'
       - 'scripts/avatar-v2/blender/rockmundo_avatar_v2_face_fibres.py'
+      - 'scripts/avatar-v2/lip_lookdev.py'
+      - 'scripts/avatar-v2/blender/rockmundo_avatar_v2_lips.py'
+      - 'scripts/avatar-v2/tests/test_lip_lookdev.py'
       - 'scripts/avatar-v2/tests/test_facial_fibres.py'
       - '.github/workflows/avatar-v2-real-source-seeds.yml'
 
@@ -41,6 +44,8 @@ jobs:
         run: python3 -m unittest discover -s scripts/avatar-v2/tests -p test_eye_lookdev.py -v
       - name: Test real skin-fitted eyebrows and upper-lash tube geometry
         run: python3 -m unittest discover -s scripts/avatar-v2/tests -p test_facial_fibres.py -v
+      - name: Test genuine source upper/lower lip sculpt materials
+        run: python3 -m unittest discover -s scripts/avatar-v2/tests -p test_lip_lookdev.py -v
       - name: Fetch pinned official Blender Human Base Meshes 1.4.1
         run: python3 scripts/avatar-v2/fetch_human_base_meshes.py --output-dir "$SOURCE_ROOT"
       - name: Install pinned Blender and verify official checksum
