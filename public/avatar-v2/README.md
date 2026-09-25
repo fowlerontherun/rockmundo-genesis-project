@@ -64,6 +64,11 @@ either GLB locally in the Admin V2 Candidate Lab's A-pose view to examine
 the difference. The rig and joint-handle `.blend` files now carry the improved
 source lookdev, while the original saved source remains untouched for comparison.
 
+The Blender close-up review also corrected the vertical lip-zone placement
+to follow the **actual existing upper/lower lip sculpt** rather than tinting the
+chin below it. A repeatable regression test prevents the earlier cheek/chin
+material coverage from returning.
+
 The source lookdev also shades the **real, pre-existing sculpted upper and
 lower lips separately** using artist-editable material slots, with a
 softer boundary material rather than a floating makeup plane. The zones
