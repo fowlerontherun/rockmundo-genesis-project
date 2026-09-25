@@ -31,25 +31,47 @@ class AuthoringArtifactIntegrityTests(unittest.TestCase):
                 "guideBlend": f"{frame}-unfitted-rig-guide.blend",
                 "fitHandlesBlend": f"{frame}-joint-handles.blend",
                 "candidatePreview": f"{frame}-SOURCE-ONLY-not-validated.glb",
+                "lookdevBlend": f"{frame}-artist-lookdev.blend",
+                "lookdevPreview": f"{frame}-LOOKDEV-ONLY-not-validated.glb",
             }
             views = [f"{frame}-{angle}.png" for angle in ("front", "quarter", "side", "face")]
+            styled_views = [f"{frame}-lookdev-{angle}.png" for angle in ("front", "quarter", "side", "face")]
             self.data["frames"].append({
                 "frame": frame,
                 **names,
                 "contactViews": views,
+                "lookdevViews": styled_views,
+                "lookdevGeometry": {
+                    "previewOnly": True,
+                    "sculptComplete": False,
+                    "jointFitComplete": False,
+                    "originalBodyVertices": 32000,
+                    "realEyesRecoloured": 2,
+                    "realCorneasAdded": 2,
+                    "eyeGeometry": [
+                        {
+                            "side": side,
+                            "addedCorneaVertices": 240,
+                            "existingEyeMaterialPolygons": {
+                                "sclera": 480, "iris": 120, "pupil": 15,
+                            },
+                        }
+                        for side in ("L", "R")
+                    ],
+                },
                 "sourceVertices": 32000,
                 "guideBones": 72,
                 "fitMarkers": 95,
                 "productionValidated": False,
                 "requiresManualJointFit": True,
             })
-            for name in [*names.values(), *views]:
+            for name in [*names.values(), *views, *styled_views]:
                 path = self.root / frame / name
                 path.parent.mkdir(parents=True, exist_ok=True)
                 header = (b"BLENDER" if path.suffix == ".blend" else
                           b"glTF" if path.suffix == ".glb" else
                           b"\x89PNG\r\n\x1a\n")
-                content = header + b"0" * 1100
+                content = header + name.encode("utf8") + b"0" * 1100
                 path.write_bytes(content)
                 self.data["files"].append({
                     "file": f"{frame}/{name}",
@@ -66,7 +88,7 @@ class AuthoringArtifactIntegrityTests(unittest.TestCase):
     def test_complete_cc0_sources_are_authoring_only(self):
         report = verify_artifacts(self.root)
         self.assertTrue(report["passed"])
-        self.assertEqual(report["verifiedFiles"], 16)
+        self.assertEqual(report["verifiedFiles"], 28)
         self.assertFalse(report["productionValidated"])
 
     def test_never_certify_stock_source_as_production_ready(self):
@@ -106,6 +128,38 @@ class AuthoringArtifactIntegrityTests(unittest.TestCase):
         self.data["frames"][1]["sourceVertices"] = 0
         self.write_manifest()
         with self.assertRaisesRegex(ValueError, "sourceVertices"):
+            verify_artifacts(self.root)
+
+    def test_missing_real_iris_or_cornea_geometry_is_rejected(self):
+        self.data["frames"][0]["lookdevGeometry"]["eyeGeometry"][0]["addedCorneaVertices"] = 0
+        self.write_manifest()
+        with self.assertRaisesRegex(ValueError, "cornea surface data"):
+            verify_artifacts(self.root)
+
+    def test_styled_lookdev_is_not_falsely_labelled_as_complete_sculpt(self):
+        self.data["frames"][1]["lookdevGeometry"]["sculptComplete"] = True
+        self.write_manifest()
+        with self.assertRaisesRegex(ValueError, "completed V2 model"):
+            verify_artifacts(self.root)
+
+    def test_missing_styled_source_proof_views_fail_closed(self):
+        self.data["frames"][0]["lookdevViews"] = ["masculine-lookdev-front.png"]
+        self.write_manifest()
+        with self.assertRaisesRegex(ValueError, "eye/skin lookdev proof views"):
+            verify_artifacts(self.root)
+
+    def test_identical_raw_and_styled_glb_hashes_cannot_pass(self):
+        baseline = self.data["frames"][0]["candidatePreview"]
+        styled = self.data["frames"][0]["lookdevPreview"]
+        raw = next(item for item in self.data["files"] if item["file"] == f"masculine/{baseline}")
+        shaded = next(item for item in self.data["files"] if item["file"] == f"masculine/{styled}")
+        shaded["sha256"] = raw["sha256"]
+        (self.root / "masculine" / styled).write_bytes(
+            (self.root / "masculine" / baseline).read_bytes()
+        )
+        shaded["bytes"] = (self.root / "masculine" / styled).stat().st_size
+        self.write_manifest()
+        with self.assertRaisesRegex(ValueError, "identical"):
             verify_artifacts(self.root)
 
 
