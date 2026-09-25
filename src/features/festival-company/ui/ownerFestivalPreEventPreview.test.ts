@@ -20,7 +20,7 @@ describe("pre-event Festival owner and directory sales preview", () => {
   });
 
   it("reads the nested launch object and never carries last year's sales to a new edition", () => {
-    expect(owner).toContain("launch.data?.launch ?? launch.data");
+    expect(owner).toContain("launchPayload?.launch ?? launchPayload");
     expect(owner).toContain("current.startsAt.slice(0, 10) !== festivalDates[0]");
     expect(owner).toContain("useFestivalSalesSummary");
     expect(owner).toContain("usePublicFestival");
