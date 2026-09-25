@@ -1,0 +1,30 @@
+name: Avatar V2 sculpt topology
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/avatar-v2/**'
+      - 'public/avatar-v2/README.md'
+      - 'docs/avatar-v2-mesh-system.md'
+      - '.github/workflows/avatar-v2-sculpt-topology.yml'
+  push:
+    paths:
+      - 'scripts/avatar-v2/**'
+      - '.github/workflows/avatar-v2-sculpt-topology.yml'
+
+jobs:
+  face-landmark-geometry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile Blender authoring modules
+        run: |
+          python -m py_compile \
+            scripts/avatar-v2/facial_topology.py \
+            scripts/avatar-v2/blender/rockmundo_avatar_v2_topology_audit.py \
+            scripts/avatar-v2/blender/rockmundo_avatar_v2_export.py
+      - name: Test genuine sculpt landmark geometry rules
+        run: python -m unittest discover -s scripts/avatar-v2/tests -p test_facial_topology.py -v
