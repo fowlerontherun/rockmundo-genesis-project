@@ -1,0 +1,81 @@
+name: Avatar V2 real source authoring packs
+
+# Actual downloadable CC0 scenes and visual proof, not production assets.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/avatar-v2/blender/rockmundo_avatar_v2_build_seed_artifacts.py'
+      - 'scripts/avatar-v2/verify_source_artifacts.py'
+      - 'scripts/avatar-v2/tests/test_verify_source_artifacts.py'
+      - '.github/workflows/avatar-v2-real-source-seeds.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-authoring-packs:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      BLENDER_VERSION: '4.3.2'
+      SOURCE_ROOT: work/avatar-v2-source
+      ARTIFACT_ROOT: work/avatar-v2-authoring-artifacts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify immutable CC0 source provenance
+        run: node scripts/avatar-v2/verify-source-provenance.mjs
+      - name: Test artifact integrity and fail-closed release labels
+        run: python3 -m unittest discover -s scripts/avatar-v2/tests -p test_verify_source_artifacts.py -v
+      - name: Fetch pinned official Blender Human Base Meshes 1.4.1
+        run: python3 scripts/avatar-v2/fetch_human_base_meshes.py --output-dir "$SOURCE_ROOT"
+      - name: Install pinned Blender and verify official checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libgl1-mesa-dri libxi6 libxrender1 libxkbcommon0
+          cd "$RUNNER_TEMP"
+          BASE="https://download.blender.org/release/Blender4.3"
+          FILE="blender-$BLENDER_VERSION-linux-x64.tar.xz"
+          curl --fail --location --retry 3 --silent --show-error "$BASE/$FILE" -o "$FILE"
+          curl --fail --location --retry 3 --silent --show-error "$BASE/blender-$BLENDER_VERSION.sha256" -o blender.sha256
+          grep -F " $FILE" blender.sha256 | sha256sum --check --status
+          tar -xf "$FILE"
+          BLENDER="$RUNNER_TEMP/blender-$BLENDER_VERSION-linux-x64/blender"
+          "$BLENDER" --background --version
+          echo "BLENDER_BIN=$BLENDER" >> "$GITHUB_ENV"
+      - name: Build real masculine and feminine authoring sources and visual proofs
+        shell: bash
+        run: |
+          set -euo pipefail
+          xvfb-run -a -s "-screen 0 1920x1080x24" \
+            "$BLENDER_BIN" --background --factory-startup --threads 4 --python \
+            scripts/avatar-v2/blender/rockmundo_avatar_v2_build_seed_artifacts.py -- \
+            --source-root "$SOURCE_ROOT" --output-root "$ARTIFACT_ROOT"
+      - name: Verify geometry, both complete packs and SHA-256 integrity
+        run: python3 scripts/avatar-v2/verify_source_artifacts.py --root "$ARTIFACT_ROOT"
+      - name: Upload real masculine authoring scene, rig handles and visual proofs
+        uses: actions/upload-artifact@v4
+        with:
+          name: avatar-v2-masculine-CC0-authoring-only
+          path: |
+            work/avatar-v2-authoring-artifacts/masculine/**
+            work/avatar-v2-authoring-artifacts/authoring-artifacts-manifest.json
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6
+      - name: Upload real feminine authoring scene, rig handles and visual proofs
+        uses: actions/upload-artifact@v4
+        with:
+          name: avatar-v2-feminine-CC0-authoring-only
+          path: |
+            work/avatar-v2-authoring-artifacts/feminine/**
+            work/avatar-v2-authoring-artifacts/authoring-artifacts-manifest.json
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6
