@@ -209,7 +209,14 @@ serve(async (req) => {
     let merchCost = 0;
 
     // Calculate production/soundcheck preparation costs exactly once through the shared ledger.
-    const { data: prepLedger } = await supabaseClient.rpc('process_gig_preparation_costs_and_rewards', { p_gig_id: gigId });
+    const { data: prepLedger, error: prepLedgerError } = await supabaseClient.rpc(
+      'process_gig_preparation_costs_and_rewards', { p_gig_id: gigId },
+    );
+    if (prepLedgerError || !prepLedger) {
+      // Silent fallback to zero would inflate gig profit and leave booked
+      // staff unpaid. Let the existing gig-completion retry system recover.
+      throw new Error(`Gig preparation costs could not be settled: ${prepLedgerError?.message || 'missing cost breakdown'}`);
+    }
     const productionCost = Math.round(Number((prepLedger as any)?.production_costs || 0));
     const soundcheckCost = Math.round(Number((prepLedger as any)?.soundcheck_costs || 0));
     const prepCrewCost = Math.round(Number((prepLedger as any)?.crew_costs || 0));
