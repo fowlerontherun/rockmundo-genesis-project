@@ -44,7 +44,7 @@ def validate_coverage(counts: dict[str, int], body_polygons: int) -> None:
     if (body_polygons < 1000 or counts.get("upper_lip", 0) < 12
             or counts.get("lower_lip", 0) < 12
             or counts.get("transition", 0) < 20):
-        raise ValueError("Missing separate genuine upper/lower lip polygons and shaded boundary.")
+        raise ValueError(f"Missing separate genuine upper/lower lip polygons and shaded boundary: {counts}, body polygons={body_polygons}.")
     coverage = sum(counts.get(role, 0) for role in LIP_ROLES[1:])
     if coverage > body_polygons * .018:
         raise ValueError("Lip mask covers too much actual head/body geometry.")
