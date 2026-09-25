@@ -104,6 +104,26 @@ export default function PublicFestivalPage() {
     (ticket) => ticket.productClass === "admission" && !["cancelled", "refunded", "transferred"].includes(ticket.status),
   );
 
+  const confirmedLineup = f.lineup ?? f.timetable.map((entry) => ({
+    id: entry.id,
+    artistName: entry.artistName,
+    artistType: entry.artistType,
+    genre: entry.genre,
+    billingPosition: entry.headline ? "headliner" : "support",
+    festivalDate: entry.festivalDate,
+    stageName: null,
+    startsAt: null,
+    endsAt: null,
+  }));
+  const publishedPerformances = confirmedLineup.filter(
+    (entry) => entry.startsAt && entry.endsAt && entry.stageName,
+  );
+  const dayLabel = (festivalDate: string | null) => festivalDate
+    ? new Date(`${festivalDate}T12:00:00Z`).toLocaleDateString("en-GB", {
+        weekday: "long", day: "numeric", month: "long", timeZone: "UTC",
+      })
+    : "Day to be announced";
+
   const confirmLeaveEarly = () => {
     if (!myAttendance || myAttendance.status !== "attending") return;
     const confirmed = window.confirm(
@@ -138,6 +158,26 @@ export default function PublicFestivalPage() {
       </header>
 
       <div className="mx-auto max-w-6xl p-4 md:p-8">
+        {f.ticketSales && (
+          <section aria-label="Festival ticket sales" className="mb-5 rounded-xl border bg-card p-4">
+            <h2 className="mb-3 text-lg font-semibold">Ticket sales so far</h2>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div>
+                <p className="text-sm text-muted-foreground">Admission tickets sold</p>
+                <p className="text-2xl font-bold">{f.ticketSales.admissionTicketsSold.toLocaleString("en-GB")}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Admission tickets available</p>
+                <p className="text-2xl font-bold">{f.ticketSales.admissionTicketsAvailable.toLocaleString("en-GB")}</p>
+              </div>
+              <div className="col-span-2 sm:col-span-1">
+                <p className="text-sm text-muted-foreground">Admission allocation</p>
+                <p className="text-2xl font-bold">{f.ticketSales.admissionTicketAllocation.toLocaleString("en-GB")}</p>
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">Sold counts reflect paid admission sales, not estimated attendance. Availability can change as sales and refunds are processed.</p>
+          </section>
+        )}
         {myAttendance && (
           <Card className="mb-4 border-emerald-500/40 bg-emerald-500/5">
             <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6">
@@ -223,38 +263,82 @@ export default function PublicFestivalPage() {
           </TabsContent>
 
           <TabsContent value="lineup">
-            <section className="grid gap-3 sm:grid-cols-2">
-              {f.timetable.map((x) => (
-                <Card key={x.id}>
-                  <CardHeader>
-                    <CardTitle>{x.artistName} {x.headline && <Badge>Headliner</Badge>}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {x.stageName} · {new Date(x.startsAt).toLocaleString("en-GB", { timeZone: f.timezone })}
-                  </CardContent>
-                </Card>
-              ))}
+            <section aria-label="Confirmed festival line-up" className="space-y-4">
+              <div>
+                <h2 className="text-xl font-bold">Confirmed line-up</h2>
+                <p className="text-sm text-muted-foreground">
+                  {confirmedLineup.length} confirmed act{confirmedLineup.length === 1 ? "" : "s"}.
+                  Stage assignments and performance times appear when published.
+                </p>
+              </div>
+              {confirmedLineup.length === 0 ? (
+                <p className="rounded-lg border p-4 text-sm text-muted-foreground">
+                  No acts have been announced yet.
+                </p>
+              ) : (
+                Array.from(new Set(confirmedLineup.map((entry) => entry.festivalDate ?? "")))
+                  .sort((left, right) => left.localeCompare(right))
+                  .map((day) => (
+                    <div key={day} className="space-y-2">
+                      <h3 className="font-semibold">{dayLabel(day || null)}</h3>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {confirmedLineup.filter((entry) => (entry.festivalDate ?? "") === day).map((entry) => (
+                          <Card key={entry.id}>
+                            <CardHeader>
+                              <CardTitle className="flex flex-wrap items-center gap-2">
+                                {entry.artistName}
+                                {entry.billingPosition === "headliner" && <Badge>Headliner</Badge>}
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-1 text-sm">
+                              {entry.genre && <p className="text-muted-foreground">{entry.genre}</p>}
+                              <p>{entry.stageName ?? "Stage to be announced"}</p>
+                              <p>
+                                {entry.startsAt
+                                  ? new Date(entry.startsAt).toLocaleTimeString("en-GB", {
+                                      hour: "2-digit", minute: "2-digit", timeZone: f.timezone,
+                                    })
+                                  : "Performance time to be announced"}
+                              </p>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+              )}
             </section>
           </TabsContent>
 
           <TabsContent value="timetable">
-            <div className="space-y-2">
-              {f.timetable.map((x) => (
-                <article key={x.id} className="grid grid-cols-[5rem_1fr] rounded-lg border p-3">
-                  <time>
-                    {new Date(x.startsAt).toLocaleTimeString("en-GB", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      timeZone: f.timezone,
-                    })}
-                  </time>
-                  <div>
-                    <strong>{x.artistName}</strong>
-                    <p className="text-sm text-muted-foreground">{x.stageName}</p>
-                  </div>
-                </article>
-              ))}
-            </div>
+            <section aria-label="Published festival performance timetable" className="space-y-3">
+              <h2 className="text-xl font-bold">Published timetable</h2>
+              {publishedPerformances.length === 0 ? (
+                <p className="rounded-lg border p-4 text-sm text-muted-foreground">
+                  Performance times and stages have not been published yet. See the confirmed line-up for announced acts.
+                </p>
+              ) : (
+                publishedPerformances
+                  .slice()
+                  .sort((left, right) => Date.parse(left.startsAt!) - Date.parse(right.startsAt!))
+                  .map((entry) => (
+                    <article key={entry.id} className="grid grid-cols-[7rem_1fr] rounded-lg border p-3">
+                      <time className="text-sm">
+                        {dayLabel(entry.festivalDate)}
+                        <span className="block font-bold">
+                          {new Date(entry.startsAt!).toLocaleTimeString("en-GB", {
+                            hour: "2-digit", minute: "2-digit", timeZone: f.timezone,
+                          })}
+                        </span>
+                      </time>
+                      <div>
+                        <strong>{entry.artistName}</strong>
+                        <p className="text-sm text-muted-foreground">{entry.stageName}</p>
+                      </div>
+                    </article>
+                  ))
+              )}
+            </section>
           </TabsContent>
 
           <TabsContent value="tickets">
