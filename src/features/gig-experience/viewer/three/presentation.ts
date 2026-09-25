@@ -364,7 +364,18 @@ export function concertOptions(
         capacity: 250,
         id: `totp-${replay.id}`,
       }
-    : { name: experience?.gig.venue.name ?? 'Live performance', bandName: 'ROCKMUNDO', archetype, seed, type: experience?.gig.venue.type, capacity: experience?.gig.venue.capacity, id: experience?.gig.venue.id };
+    : {
+        name: experience?.gig.venue.name ?? 'Live performance',
+        bandName: 'ROCKMUNDO',
+        archetype,
+        seed,
+        type: experience?.gig.venue.type,
+        capacity: experience?.gig.venue.capacity,
+        id: experience?.gig.venue.id,
+        cityName: experience?.gig.venue.city?.name ?? null,
+        country: experience?.gig.venue.city?.country ?? null,
+        location: experience?.gig.venue.location ?? null,
+      };
   const profile = resolveVenueProfile(venue);
   return {
     externalClock: true,

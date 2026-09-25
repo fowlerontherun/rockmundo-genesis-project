@@ -10,11 +10,28 @@ import { makeStageReplay, performerId } from './test-fixtures';
 describe('canonical replay to 3D stage', () => {
   it('uses the recorded lineup and saved appearances without inventing the demo band', async () => {
     const replay = await makeStageReplay(['Vocals', 'Keyboard', 'DJ', 'Violin', 'Trumpet', 'Percussion', 'Bass', 'Drums']);
-    const experience = { gig: { venue: { capacity: 200, name: 'Actual theatre' } }, performers: [{ id: 'absent', profileId: 'absent', displayName: 'Absent member', roleOrInstrument: 'Guitar', lineupStatus: 'declined' }] } as GigExperienceDTO;
+    const experience = {
+      gig: {
+        venue: {
+          capacity: 200,
+          name: 'Actual theatre',
+          location: 'Old Town',
+          city: { id: 'city-1', name: 'Portsmouth', country: 'United Kingdom' },
+        },
+      },
+      performers: [{ id: 'absent', profileId: 'absent', displayName: 'Absent member', roleOrInstrument: 'Guitar', lineupStatus: 'declined' }],
+    } as GigExperienceDTO;
     const plan = buildStagePlan(replay, experience), appearance = defaultAppearance(); appearance.body.frame = 'feminine';
     const options = concertOptions(plan, { [performerId(0)]: appearance }, replay, experience, 'theatre');
     expect(options.externalClock).toBe(true); expect(options.performers).toHaveLength(8); expect(options.performers.map(p => p.role)).toEqual(['vocals', 'keyboard', 'dj', 'strings', 'brass', 'percussion', 'bass', 'drums']);
-    expect(options.performers[0].appearance).toEqual(appearance); expect(options.venue).toMatchObject({ name: 'Actual theatre', archetype: 'theatre' });
+    expect(options.performers[0].appearance).toEqual(appearance);
+    expect(options.venue).toMatchObject({
+      name: 'Actual theatre',
+      archetype: 'theatre',
+      cityName: 'Portsmouth',
+      country: 'United Kingdom',
+      location: 'Old Town',
+    });
     expect(options.performers.some(p => p.id === 'absent')).toBe(false);
     const empty = await makeStageReplay([]); expect(concertOptions(buildStagePlan(empty, null), {}, empty, null, 'pub').performers).toEqual([]);
   });
