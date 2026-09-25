@@ -74,6 +74,7 @@ def apply_real_lip_materials(frame, body, eyes, material_factory):
         )
         polygon.material_index = slots[role]
         counts[role] += 1
+    print(f"[avatar-v2/lips] {frame} source lip geometry: {counts}, source eye radius={radius:.4f}m, eye midpoint={tuple(round(x, 4) for x in midpoint)}")
     validate_coverage(counts, len(body.data.polygons))
     if (len(body.data.vertices) != before_vertices
             or len(body.data.polygons) != before_polygons
