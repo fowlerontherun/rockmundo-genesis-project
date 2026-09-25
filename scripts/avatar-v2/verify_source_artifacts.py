@@ -88,6 +88,21 @@ def verify_artifacts(root: pathlib.Path) -> dict:
                            or eye.get("existingEyeMaterialPolygons", {}).get("pupil", 0) < 4
                            for eye in eyes)):
                 errors.append(f"{frame} source eye material/real cornea surface data are incomplete.")
+            grooms = lookdev.get("browLashGeometry")
+            if (lookdev.get("realBrowAndLashMeshes") != 6
+                    or not isinstance(grooms, list)
+                    or len(grooms) != 2
+                    or {entry.get("side") for entry in grooms} != {"L", "R"}
+                    or any(
+                        entry.get("browVertices", 0) < 50
+                        or entry.get("groomFibres", 0) < 60
+                        or entry.get("upperLashFibres", 0) < 20
+                        or entry.get("newGeometryVertices", 0) < 1400
+                        or entry.get("rootProjection") != "actual CC0 continuous frontal skin"
+                        or entry.get("unweightedPreviewOnly") is not True
+                        for entry in grooms
+                    )):
+                errors.append(f"{frame} is missing genuine bilateral, skin-projected eyebrow/upper-lash mesh detail.")
         if (metadata.get("productionValidated") is not False
                 or metadata.get("requiresManualJointFit") is not True):
             errors.append(f"{frame} must retain its unfinished manual-rig gate.")
