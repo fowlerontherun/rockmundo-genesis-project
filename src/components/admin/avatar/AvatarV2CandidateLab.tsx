@@ -537,6 +537,8 @@ export function AvatarV2CandidateLab() {
                 ['sclera pair', ['missing-dedicated-surface:sclera', 'missing-surface-binding:sclera:Eye.L', 'missing-surface-binding:sclera:Eye.R']],
                 ['cornea pair', ['missing-dedicated-surface:cornea', 'missing-surface-binding:cornea:Eye.L', 'missing-surface-binding:cornea:Eye.R']],
                 ['eyelid wetlines', ['missing-dedicated-surface:wetline', 'missing-wetline-side:L', 'missing-wetline-side:R', 'missing-wetline-blink:L', 'missing-wetline-blink:R', 'invalid-wetline-binding:L', 'invalid-wetline-binding:R']],
+                ['eyelashes', ['missing-dedicated-surface:eyelashes', 'missing-eyelashes-side:L', 'missing-eyelashes-side:R', 'missing-eyelashes-blink:L', 'missing-eyelashes-blink:R', 'invalid-eyelashes-binding:L', 'invalid-eyelashes-binding:R', 'misaligned-eyelashes:L', 'misaligned-eyelashes:R']],
+                ['lip material', ['missing-head-lip-material']],
                 ['mouth cavity depth', ['shallow-mouth-cavity']],
                 ['upper/lower teeth', ['missing-dedicated-surface:teeth', 'missing-surface-binding:teeth:Head', 'missing-surface-binding:teeth:Jaw']],
                 ['tongue→Jaw', ['missing-dedicated-surface:tongue', 'missing-surface-binding:tongue:Jaw']],

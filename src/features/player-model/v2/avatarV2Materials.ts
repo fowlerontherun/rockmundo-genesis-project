@@ -16,6 +16,8 @@ export type AvatarV2MaterialRole =
   | 'sclera'
   | 'cornea'
   | 'wetline'
+  | 'lips'
+  | 'eyelashes'
   | 'teeth'
   | 'tongue'
   | 'mouthInterior'
@@ -24,6 +26,8 @@ export type AvatarV2MaterialRole =
 export function avatarV2MaterialRole(name: string): AvatarV2MaterialRole {
   const value = name.toLowerCase();
   if (/wetline|tearline|waterline/.test(value)) return 'wetline';
+  if (/eyelash|(^|[_-])lashes?($|[_-])/.test(value)) return 'eyelashes';
+  if (/rmv2[_-]?lips|(^|[_-])lips?($|[_-])/.test(value)) return 'lips';
   if (/cornea|eye[_-]?(shell|surface)|ocular[_-]?shell/.test(value)) return 'cornea';
   if (/iris/.test(value)) return 'iris';
   if (/teeth|tooth/.test(value)) return 'teeth';
@@ -133,6 +137,38 @@ function tuneEyeSurface(
   material.needsUpdate = true;
 }
 
+function tuneFaceDetailMaterial(
+  material: T.MeshStandardMaterial,
+  role: 'lips' | 'eyelashes',
+  appearance: PlayerAppearance,
+  quality: AvatarVisualQuality,
+) {
+  material.metalness = 0;
+  if (role === 'lips') {
+    const naturalLip = new T.Color(appearance.body.skin).lerp(new T.Color('#a85462'), .28);
+    material.color.copy(naturalLip);
+    material.roughness = quality === 'cinematic' ? .34 : quality === 'ultra' ? .38 : .43;
+    material.envMapIntensity = quality === 'cinematic' ? 1.15 : quality === 'ultra' ? 1.02 : .9;
+    if (material instanceof T.MeshPhysicalMaterial) {
+      material.ior = 1.4;
+      material.specularIntensity = .34;
+      material.clearcoat = quality === 'cinematic' ? .14 : .1;
+      material.clearcoatRoughness = .24;
+      material.sheen = .08;
+      material.sheenRoughness = .7;
+      material.sheenColor.copy(naturalLip).lerp(new T.Color('#ffffff'), .12);
+    }
+  } else {
+    material.color.set(appearance.head.eyebrowColor ?? appearance.head.hair);
+    material.roughness = .52;
+    material.envMapIntensity = .68;
+    material.transparent = true;
+    material.alphaTest = Math.max(material.alphaTest, .18);
+    material.side = T.DoubleSide;
+  }
+  material.needsUpdate = true;
+}
+
 function tuneMouthMaterial(
   material: T.MeshStandardMaterial,
   role: 'teeth' | 'tongue' | 'mouthInterior',
@@ -166,6 +202,8 @@ export interface AvatarV2MaterialTuningReport {
   hair: number;
   eyes: number;
   mouth: number;
+  lips: number;
+  eyelashes: number;
   corneaPromoted: number;
   wetlinePromoted: number;
 }
@@ -180,6 +218,8 @@ export function tuneAvatarV2Materials(
     hair: 0,
     eyes: 0,
     mouth: 0,
+    lips: 0,
+    eyelashes: 0,
     corneaPromoted: 0,
     wetlinePromoted: 0,
   };
@@ -207,7 +247,7 @@ export function tuneAvatarV2Materials(
         }
       } else if (
         usesCloseUpPhysicalShading(quality)
-        && (role === 'skin' || role === 'hair' || role === 'teeth' || role === 'tongue')
+        && (role === 'skin' || role === 'hair' || role === 'lips' || role === 'teeth' || role === 'tongue')
       ) {
         material = promotePhysical(source);
         changed = changed || material !== source;
@@ -254,6 +294,10 @@ export function tuneAvatarV2Materials(
       } else if (role === 'iris' || role === 'sclera' || role === 'cornea' || role === 'wetline') {
         tuneEyeSurface(material, role, appearance, quality);
         report.eyes += 1;
+      } else if (role === 'lips' || role === 'eyelashes') {
+        tuneFaceDetailMaterial(material, role, appearance, quality);
+        if (role === 'lips') report.lips += 1;
+        else report.eyelashes += 1;
       } else if (role === 'teeth' || role === 'tongue' || role === 'mouthInterior') {
         tuneMouthMaterial(material, role, quality);
         report.mouth += 1;

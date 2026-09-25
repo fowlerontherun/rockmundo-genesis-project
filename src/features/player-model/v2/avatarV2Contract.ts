@@ -420,7 +420,7 @@ function inheritsFrom(bone: T.Bone, ancestor: T.Bone) {
   return false;
 }
 
-type AvatarV2SurfaceRole = 'iris' | 'sclera' | 'cornea' | 'wetline' | 'teeth' | 'tongue' | 'mouthInterior';
+type AvatarV2SurfaceRole = 'iris' | 'sclera' | 'cornea' | 'wetline' | 'eyelashes' | 'teeth' | 'tongue' | 'mouthInterior';
 
 const MATERIAL_ROLE_PATTERNS = {
   skin: /rmv2[_-]?skin|(^|[_-])(skin|body|face)($|[_-])/i,
@@ -429,6 +429,8 @@ const MATERIAL_ROLE_PATTERNS = {
   sclera: /rmv2[_-]?sclera|(^|[_-])sclera($|[_-])/i,
   cornea: /rmv2[_-]?cornea|cornea|eye[_-]?(shell|surface)|ocular[_-]?shell/i,
   wetline: /rmv2[_-]?(wetline|tearline|waterline)|(^|[_-])(wetline|tearline|waterline)($|[_-])/i,
+  lips: /rmv2[_-]?lips|(^|[_-])lips?($|[_-])/i,
+  eyelashes: /rmv2[_-]?(eyelash|lashes?)|(^|[_-])(eyelash|lashes?)($|[_-])/i,
   teeth: /rmv2[_-]?teeth|teeth/i,
   tongue: /rmv2[_-]?tongue|tongue/i,
   mouthInterior: /rmv2[_-]?mouth[_-]?(interior|cavity)|oral[_-]?cavity|inner[_-]?mouth/i,
@@ -439,6 +441,7 @@ const SURFACE_NODE_PATTERNS: Record<AvatarV2SurfaceRole, RegExp> = {
   sclera: /rmv2[_-]?(sclera|eye[_-]?white)|(^|[_-])sclera($|[_-])/i,
   cornea: /rmv2[_-]?(cornea|eye[_-]?(shell|surface))|ocular[_-]?shell/i,
   wetline: /rmv2[_-]?(wetline|tearline|waterline)|(^|[_-])(wetline|tearline|waterline)($|[_-])/i,
+  eyelashes: /rmv2[_-]?(eyelash|lashes?)|(^|[_-])(eyelash|lashes?)($|[_-])/i,
   teeth: /rmv2[_-]?(?:(?:upper|lower)[_-]?)?(teeth|tooth)|(^|[_-])teeth($|[_-])/i,
   tongue: /rmv2[_-]?tongue|(^|[_-])tongue($|[_-])/i,
   mouthInterior: /rmv2[_-]?mouth[_-]?(interior|cavity)|oral[_-]?cavity|inner[_-]?mouth/i,
@@ -490,6 +493,7 @@ const REQUIRED_SURFACE_BINDINGS: Record<AvatarV2SurfaceRole, readonly AvatarV2Su
   sclera: ['Eye.L', 'Eye.R'],
   cornea: ['Eye.L', 'Eye.R'],
   wetline: ['Head'],
+  eyelashes: ['Head'],
   teeth: ['Head', 'Jaw'],
   tongue: ['Jaw'],
   mouthInterior: ['Head'],
@@ -545,6 +549,7 @@ function boundSurfaceNodes(scene: T.Object3D, role: AvatarV2SurfaceRole, binding
 }
 
 const AVATAR_V2_WETLINE_MIN_DELTA_METRES = .00015;
+const AVATAR_V2_EYELASH_MIN_DELTA_METRES = .0002;
 const AVATAR_V2_MOUTH_CAVITY_MIN_DEPTH_METRES = .025;
 
 function surfaceEyeSide(node: T.Object3D): 'L' | 'R' | null {
@@ -586,6 +591,15 @@ function combinedSurfaceBounds(nodes: readonly T.Mesh[]) {
     found = true;
   }
   return found ? combined : null;
+}
+
+function headHasMaterialRole(scene: T.Object3D, role: keyof typeof MATERIAL_ROLE_PATTERNS) {
+  let found = false;
+  scene.traverse(node => {
+    if (found || !(node instanceof T.SkinnedMesh) || !isAvatarV2HeadSurfaceNode(node)) return;
+    found = avatarV2UsedMaterials(node).some(material => hasMaterialRole([material.name], role));
+  });
+  return found;
 }
 
 function hasExpression(names: string[], expression: keyof typeof EXPRESSION_ALIASES) {
@@ -901,7 +915,7 @@ export function validateAvatarV2Scene(
     }
   }
   if (lod === 0) {
-    for (const role of ['iris', 'sclera', 'cornea', 'wetline', 'teeth', 'tongue', 'mouthInterior'] as const) {
+    for (const role of ['iris', 'sclera', 'cornea', 'wetline', 'eyelashes', 'teeth', 'tongue', 'mouthInterior'] as const) {
       if (!hasDedicatedSurfaceRole(scene, role)) {
         issues.push({
           level: 'error',
@@ -954,6 +968,47 @@ export function validateAvatarV2Scene(
       }
     }
 
+    const eyelashes = dedicatedSurfaceNodes(scene, 'eyelashes');
+    for (const side of ['L', 'R'] as const) {
+      const blink = side === 'L' ? 'blinkLeft' : 'blinkRight';
+      const sideLashes = eyelashes.filter(node => surfaceEyeSide(node) === side);
+      if (!sideLashes.length) {
+        issues.push({
+          level: 'error',
+          code: `missing-eyelashes-side:${side}`,
+          message: `LOD0 needs authored ${side === 'L' ? 'left' : 'right'} eyelashes for face close-ups.`,
+        });
+        continue;
+      }
+      const followsHead = sideLashes.some(node =>
+        declaredSurfaceBinding(node) === 'Head'
+        && meshHasBoneInfluence(node, SURFACE_BINDING_ALIASES.Head)
+      );
+      if (!followsHead) {
+        issues.push({
+          level: 'error',
+          code: `invalid-eyelashes-binding:${side}`,
+          message: `LOD0 eyelashes ${side} must be Head-skinned before eyelid deformation is applied.`,
+        });
+      }
+      const blinkDelta = Math.max(...sideLashes.map(node => surfaceMorphDelta(node, blink)));
+      if (blinkDelta < AVATAR_V2_EYELASH_MIN_DELTA_METRES) {
+        issues.push({
+          level: 'error',
+          code: `missing-eyelashes-blink:${side}`,
+          message: `LOD0 eyelashes ${side} must carry measurable ${blink} deformation so lashes remain attached during blinks.`,
+        });
+      }
+    }
+
+    if (!headHasMaterialRole(scene, 'lips')) {
+      issues.push({
+        level: 'error',
+        code: 'missing-head-lip-material',
+        message: 'LOD0 head/face geometry needs a used RMV2_Lips material region so close-up lips receive dedicated moisture and colour response.',
+      });
+    }
+
     const mouthBounds = combinedSurfaceBounds(dedicatedSurfaceNodes(scene, 'mouthInterior'));
     const mouthDepth = mouthBounds?.getSize(new T.Vector3()).z ?? 0;
     if (mouthDepth < AVATAR_V2_MOUTH_CAVITY_MIN_DEPTH_METRES) {
@@ -968,6 +1023,20 @@ export function validateAvatarV2Scene(
       const scleraBounds = combinedSurfaceBounds(boundSurfaceNodes(scene, 'sclera', binding));
       if (!scleraBounds) continue;
       const scleraCenter = scleraBounds.getCenter(new T.Vector3());
+      const side = binding === 'Eye.L' ? 'L' : 'R';
+      const lashBounds = combinedSurfaceBounds(
+        dedicatedSurfaceNodes(scene, 'eyelashes').filter(node => surfaceEyeSide(node) === side),
+      );
+      if (lashBounds) {
+        const lashDistance = lashBounds.getCenter(new T.Vector3()).distanceTo(scleraCenter);
+        if (lashDistance > .035) {
+          issues.push({
+            level: 'error',
+            code: `misaligned-eyelashes:${side}`,
+            message: `LOD0 eyelashes ${side} sit ${(lashDistance * 1000).toFixed(1)}mm from the eye centre; lashes must remain fitted to the eyelid rim.`,
+          });
+        }
+      }
       for (const role of ['iris', 'cornea'] as const) {
         const roleBounds = combinedSurfaceBounds(boundSurfaceNodes(scene, role, binding));
         if (!roleBounds) continue;
@@ -1007,7 +1076,7 @@ export function validateAvatarV2Scene(
         }
       }
     }
-    for (const role of ['cornea', 'wetline', 'teeth', 'tongue', 'mouthInterior'] as const) {
+    for (const role of ['cornea', 'wetline', 'lips', 'eyelashes', 'teeth', 'tongue', 'mouthInterior'] as const) {
       if (!hasMaterialRole(materials, role)) {
         issues.push({
           level: 'error',

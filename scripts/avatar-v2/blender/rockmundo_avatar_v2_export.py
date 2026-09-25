@@ -144,6 +144,8 @@ MATERIAL_ROLES = {
     "sclera": re.compile(r"rmv2[_-]?sclera|(^|[_-])sclera($|[_-])", re.I),
     "cornea": re.compile(r"rmv2[_-]?cornea|cornea|eye[_-]?(shell|surface)|ocular[_-]?shell", re.I),
     "wetline": re.compile(r"rmv2[_-]?(wetline|tearline|waterline)|(^|[_-])(wetline|tearline|waterline)($|[_-])", re.I),
+    "lips": re.compile(r"rmv2[_-]?lips|(^|[_-])lips?($|[_-])", re.I),
+    "eyelashes": re.compile(r"rmv2[_-]?(eyelash|lashes?)|(^|[_-])(eyelash|lashes?)($|[_-])", re.I),
     "teeth": re.compile(r"rmv2[_-]?teeth|teeth", re.I),
     "tongue": re.compile(r"rmv2[_-]?tongue|tongue", re.I),
     "mouthInterior": re.compile(r"rmv2[_-]?mouth[_-]?(interior|cavity)|oral[_-]?cavity|inner[_-]?mouth", re.I),
@@ -154,6 +156,7 @@ SURFACE_NODE_PATTERNS = {
     "sclera": re.compile(r"rmv2[_-]?(sclera|eye[_-]?white)|(^|[_-])sclera($|[_-])", re.I),
     "cornea": re.compile(r"rmv2[_-]?(cornea|eye[_-]?(shell|surface))|ocular[_-]?shell", re.I),
     "wetline": re.compile(r"rmv2[_-]?(wetline|tearline|waterline)|(^|[_-])(wetline|tearline|waterline)($|[_-])", re.I),
+    "eyelashes": re.compile(r"rmv2[_-]?(eyelash|lashes?)|(^|[_-])(eyelash|lashes?)($|[_-])", re.I),
     "teeth": re.compile(r"rmv2[_-]?(?:(?:upper|lower)[_-]?)?(teeth|tooth)|(^|[_-])teeth($|[_-])", re.I),
     "tongue": re.compile(r"rmv2[_-]?tongue|(^|[_-])tongue($|[_-])", re.I),
     "mouthInterior": re.compile(r"rmv2[_-]?mouth[_-]?(interior|cavity)|oral[_-]?cavity|inner[_-]?mouth", re.I),
@@ -171,6 +174,7 @@ REQUIRED_SURFACE_BINDINGS = {
     "sclera": ("Eye.L", "Eye.R"),
     "cornea": ("Eye.L", "Eye.R"),
     "wetline": ("Head",),
+    "eyelashes": ("Head",),
     "teeth": ("Head", "Jaw"),
     "tongue": ("Jaw",),
     "mouthInterior": ("Head",),
@@ -418,6 +422,9 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
     }
     wetline_sides = set()
     wetline_blink_deltas = {"L": 0.0, "R": 0.0}
+    eyelash_sides = set()
+    eyelash_blink_deltas = {"L": 0.0, "R": 0.0}
+    head_material_names = set()
     mouth_interior_depth = 0.0
     for obj in meshes:
         used_material_indices = {polygon.material_index for polygon in obj.data.polygons}
@@ -426,6 +433,11 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
             for index in used_material_indices
             if index < len(obj.material_slots) and obj.material_slots[index].material
         ]
+        if (
+            re.match(r"^RMV2_(Head|Face)", obj.name, re.I)
+            or bool(obj.get("rockmundoHeadSurface", False))
+        ):
+            head_material_names.update(material.name for material in used_materials)
         explicit_role = clean(str(obj.get("rockmundoSurfaceRole", "")))
         for role, pattern in SURFACE_NODE_PATTERNS.items():
             named_for_role = explicit_role == clean(role) or pattern.search(obj.name)
@@ -438,13 +450,15 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
                 if binding and object_has_bone_influence(obj, SURFACE_BINDING_ALIASES[binding]):
                     dedicated_surface_bindings[role].add(binding)
 
-                if role == "wetline":
+                if role in {"wetline", "eyelashes"}:
                     side = surface_eye_side(obj)
                     if side:
-                        wetline_sides.add(side)
+                        side_set = wetline_sides if role == "wetline" else eyelash_sides
+                        blink_deltas = wetline_blink_deltas if role == "wetline" else eyelash_blink_deltas
+                        side_set.add(side)
                         blink_name = "blinkLeft" if side == "L" else "blinkRight"
-                        wetline_blink_deltas[side] = max(
-                            wetline_blink_deltas[side],
+                        blink_deltas[side] = max(
+                            blink_deltas[side],
                             object_shape_key_max_delta(obj, [blink_name]),
                         )
                 elif role == "mouthInterior":
@@ -671,7 +685,7 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
             if not any(MATERIAL_ROLES[role].search(name) for name in materials):
                 errors.append(f"Missing named close-up material role: {role}.")
     if args.lod == 0:
-        for role in ("iris", "sclera", "cornea", "wetline", "teeth", "tongue", "mouthInterior"):
+        for role in ("iris", "sclera", "cornea", "wetline", "eyelashes", "teeth", "tongue", "mouthInterior"):
             if role not in dedicated_surface_roles:
                 errors.append(
                     f"LOD0 needs dedicated {role} geometry using its matching material role; "
@@ -693,6 +707,19 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
                     f"LOD0 wetline {side} must deform with {blink_name}; "
                     f"measured {wetline_blink_deltas[side] * 1000:.3f}mm."
                 )
+        for side in ("L", "R"):
+            if side not in eyelash_sides:
+                errors.append(f"LOD0 needs a dedicated {side} eyelash surface.")
+            elif eyelash_blink_deltas[side] < 0.0002:
+                blink_name = "blinkLeft" if side == "L" else "blinkRight"
+                errors.append(
+                    f"LOD0 eyelashes {side} must deform with {blink_name}; "
+                    f"measured {eyelash_blink_deltas[side] * 1000:.3f}mm."
+                )
+        if not any(MATERIAL_ROLES["lips"].search(name) for name in head_material_names):
+            errors.append(
+                "LOD0 head/face surface needs a used RMV2_Lips material region."
+            )
         if mouth_interior_depth < 0.025:
             errors.append(
                 f"LOD0 mouth interior depth is only {mouth_interior_depth * 1000:.1f}mm; "
@@ -708,6 +735,19 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
             if not sclera_bounds:
                 continue
             sclera_centre = bounds_center(sclera_bounds)
+            side = "L" if binding == "Eye.L" else "R"
+            lashes = [
+                obj for obj in dedicated_surface_objects["eyelashes"]
+                if surface_eye_side(obj) == side
+            ]
+            lash_bounds = combined_object_bounds(lashes)
+            if lash_bounds:
+                lash_distance = centre_distance(bounds_center(lash_bounds), sclera_centre)
+                if lash_distance > 0.035:
+                    errors.append(
+                        f"LOD0 eyelashes {side} are {lash_distance * 1000:.1f}mm from the eye centre; "
+                        "lashes must remain fitted to the eyelid rim."
+                    )
             for role in ("iris", "cornea"):
                 surfaces = [
                     obj for obj in dedicated_surface_objects[role]
@@ -740,7 +780,7 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
                         )
                         break
 
-        for role in ("cornea", "wetline", "teeth", "tongue", "mouthInterior"):
+        for role in ("cornea", "wetline", "lips", "eyelashes", "teeth", "tongue", "mouthInterior"):
             if not any(MATERIAL_ROLES[role].search(name) for name in materials):
                 errors.append(f"LOD0 needs separate {role} geometry/material.")
     elif args.lod == 1:
