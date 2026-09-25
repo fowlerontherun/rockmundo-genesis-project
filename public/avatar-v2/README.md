@@ -67,7 +67,7 @@ source lookdev, while the original saved source remains untouched for comparison
 The artist-editable lookdev files now also contain **separate physical 3D
 eyebrows and upper eyelashes**, fitted to the real masculine/feminine source
 sculpt rather than placed at a fixed depth. Each brow is a continuous,
-UV-unwrapped sculpt-following strip with 76 individual tapered groom fibres.
+UV-unwrapped sculpt-following strip with 112 individual tapered groom fibres.
 Each upper eyelid carries 27 separately modelled curved lashes whose roots
 are ray-projected onto the actual frontal lid rim; projection through the
 eye opening or onto the inside of the head is rejected. The brows are
