@@ -5,8 +5,34 @@ ALTER TABLE public.band_crew_members
   ADD COLUMN IF NOT EXISTS career_xp integer NOT NULL DEFAULT 0 CHECK (career_xp >= 0),
   ADD COLUMN IF NOT EXISTS last_gig_at timestamptz;
 
+-- Some installations still have the older July preparation table, whose
+-- schema includes a required band_id but not the August cost/profile fields.
+-- Repair those differences without rebuilding assignments or wiping data.
 ALTER TABLE public.gig_crew_assignments
-  ADD COLUMN IF NOT EXISTS band_crew_member_id uuid;
+  ADD COLUMN IF NOT EXISTS band_crew_member_id uuid,
+  ADD COLUMN IF NOT EXISTS cost integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS profile_id uuid,
+  ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+DO $
+BEGIN
+  IF EXISTS(
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='gig_crew_assignments'
+      AND column_name='band_id' AND is_nullable='NO'
+  ) THEN
+    ALTER TABLE public.gig_crew_assignments ALTER COLUMN band_id DROP NOT NULL;
+  END IF;
+  IF EXISTS(
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid='public.gig_crew_assignments'::regclass
+      AND conname='gig_crew_assignments_crew_role_check'
+  ) THEN
+    -- Role eligibility is now checked against the actual hired member by RPC.
+    -- This also permits Wardrobe Stylist on older schemas.
+    ALTER TABLE public.gig_crew_assignments
+      DROP CONSTRAINT gig_crew_assignments_crew_role_check;
+  END IF;
+END $;
 DO $$
 BEGIN
   IF NOT EXISTS (
