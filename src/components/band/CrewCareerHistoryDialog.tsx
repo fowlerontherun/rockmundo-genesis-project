@@ -71,9 +71,9 @@ export function CrewCareerHistoryDialog({
             <div className="space-y-1">
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>Progress to next technical skill point</span>
-                <span>{100 - ((crew.career_xp ?? 0) % 100)} XP to go</span>
+                <span>{crew.skill_level >= 100 ? "Maximum technical skill" : `${100 - ((crew.career_xp ?? 0) % 100)} XP to go`}</span>
               </div>
-              <Progress value={(crew.career_xp ?? 0) % 100} />
+              <Progress value={crew.skill_level >= 100 ? 100 : (crew.career_xp ?? 0) % 100} />
             </div>
             <div>
               <h3 className="mb-2 text-sm font-semibold">Recent gig experience</h3>
