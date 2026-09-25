@@ -389,7 +389,8 @@ After fitting:
 - bind iris/sclera/cornea to their matching eye bone and verify gaze pivots cleanly;
 - author RMV2_Wetline.L/R, set rockmundoEyeSide, keep both Head-skinned, and copy the matching blink deformation;
 - author RMV2_Eyelashes.L/R at the lid rim, set rockmundoEyeSide, keep both Head-skinned, and copy the matching blink deformation;
-- assign a used RMV2_Lips material region to the skinned head/face instead of painting lips into the generic skin material;
+- assign used RMV2_Lips and RMV2_Eyebrows material regions to the skinned head/face;
+- keep RMV2_Eyebrows separate from hair so saved eyebrow colour and replacement brow styles work independently;
 - keep the mouth-interior mesh at least 25mm deep in rest pose;
 - verify lower teeth/tongue follow Jaw during open-mouth singing;
 - leave EarAnchor.L/R unweighted; verify earrings and glasses sit correctly on both anchors;

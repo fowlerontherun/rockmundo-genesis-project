@@ -5,9 +5,11 @@ import type { PlayerAppearance } from '../appearance';
 import { addAccessories } from '../accessories';
 import type { HeadAccessoryFit } from '../accessoryGeometry';
 import { createAvatarHairTextureCache } from '../avatarMaterialQuality';
+import { addFaceDetails } from '../faceDetails';
 import type { AvatarVisualQuality } from '../avatarVisualQuality';
 import { addHair } from '../hair';
 import { addTattoos, type ResolvedTattooVisual } from '../tattoos';
+import { avatarV2MaterialRole } from './avatarV2Materials';
 
 const clean = (value: string) => value.replace(/[^a-z0-9]/gi, '').toLowerCase();
 
@@ -82,6 +84,26 @@ function suppressAuthoredHair(root: T.Object3D, appearance: PlayerAppearance) {
   });
 }
 
+function suppressAuthoredEyebrows(root: T.Object3D, appearance: PlayerAppearance) {
+  if ((appearance.head.eyebrowStyle ?? 'natural') === 'natural') return;
+  root.traverse(node => {
+    if (!(node instanceof T.Mesh)) return;
+    const materials = Array.isArray(node.material) ? node.material : [node.material];
+    let hidden = 0;
+    for (const material of materials) {
+      if (avatarV2MaterialRole(material.name) !== 'eyebrows') continue;
+      material.visible = false;
+      hidden += 1;
+    }
+    if (hidden) node.userData.rockmundoV2SuppressedAuthoredEyebrows = hidden;
+  });
+}
+
+function hasFaceDetailCompatibility(appearance: PlayerAppearance) {
+  return (appearance.head.eyebrowStyle ?? 'natural') !== 'natural'
+    || (appearance.head.skinDetail ?? 'smooth') !== 'smooth';
+}
+
 /**
  * Applies the shared RockMundo appearance systems after a V2 body and its
  * authored garments have been assembled. Everything is rig-bound to the
@@ -98,6 +120,13 @@ export function applyAvatarV2Compatibility(
 ) {
   const bones = avatarV2BoneMap(root);
   const head = findBone(bones, ['Head']);
+  const faceDetails = hasFaceDetailCompatibility(appearance);
+
+  if (faceDetails) {
+    if (!head) throw new Error('Avatar V2 is missing its normalized Head bone for face detail compatibility.');
+    suppressAuthoredEyebrows(root, appearance);
+    addFaceDetails(root, appearance, head, quality, { applyFaceShape: false });
+  }
 
   if (hasHeadCompatibility(appearance, clothing)) {
     if (!head) throw new Error('Avatar V2 is missing its normalized Head bone for hair/accessories.');
@@ -116,6 +145,9 @@ export function applyAvatarV2Compatibility(
     hairQuality: hasHeadCompatibility(appearance, clothing)
       ? avatarV2CompatibilityHairQuality(quality)
       : null,
+    faceDetails,
+    eyebrowStyle: appearance.head.eyebrowStyle ?? 'natural',
+    skinDetail: appearance.head.skinDetail ?? 'smooth',
     tattoos: tattoos.length,
     clothing: clothing.length,
   };

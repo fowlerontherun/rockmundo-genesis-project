@@ -277,8 +277,10 @@ Next production steps:
    body regions.
 5. Author separate iris/sclera/cornea surfaces for each eye and bind them to
    Eye.L/Eye.R. Add RMV2_Wetline.L/R and RMV2_Eyelashes.L/R, keep them Head-skinned
-   and copy the matching blink deformation. Assign a used RMV2_Lips material region
-   to the skinned head/face. Split upper/lower teeth, bind upper teeth/mouth interior
+   and copy the matching blink deformation. Assign used RMV2_Lips and RMV2_Eyebrows
+   material regions to the skinned head/face. Keep brows independent from hair so
+   saved eyebrow colours/styles can replace them cleanly. Split upper/lower teeth,
+   bind upper teeth/mouth interior
    to Head and lower teeth/tongue to Jaw, keep the mouth cavity at least 25mm deep,
    then set rockmundoBoneBinding on each surface.
 6. Author the required close-up morphs listed below. Do not add zero-delta

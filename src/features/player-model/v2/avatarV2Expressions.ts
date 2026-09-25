@@ -119,6 +119,13 @@ interface EyeBinding {
   side: 'L' | 'R';
 }
 
+interface StyledBrowBinding {
+  object: T.Object3D;
+  restPosition: T.Vector3;
+  restQuaternion: T.Quaternion;
+  side: 'L' | 'R';
+}
+
 function deterministicUnit(seed: number) {
   const value = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
   return value - Math.floor(value);
@@ -215,6 +222,7 @@ export class AvatarV2ExpressionController {
   private readonly bindings: BindingMap;
   private readonly eyes: EyeBinding[];
   private readonly jaw: { bone: T.Bone; rest: T.Quaternion } | null;
+  private readonly styledBrows: StyledBrowBinding[];
   readonly supported: AvatarV2Expression[];
 
   constructor(root: T.Object3D) {
@@ -233,6 +241,23 @@ export class AvatarV2ExpressionController {
 
     const jaw = root.getObjectByName('Jaw');
     this.jaw = jaw instanceof T.Bone ? { bone: jaw, rest: jaw.quaternion.clone() } : null;
+
+    this.styledBrows = ([
+      ['avatar-eyebrow-left', 'L'],
+      ['avatar-eyebrow-right', 'R'],
+    ] as const)
+      .map(([name, side]) => {
+        const object = root.getObjectByName(name);
+        return object
+          ? {
+              object,
+              restPosition: object.position.clone(),
+              restQuaternion: object.quaternion.clone(),
+              side,
+            }
+          : null;
+      })
+      .filter((binding): binding is StyledBrowBinding => !!binding);
   }
 
   get hasCloseUpFace() {
@@ -333,6 +358,18 @@ export class AvatarV2ExpressionController {
     setWeight(this.bindings, 'browInnerUp', browLift);
     setWeight(this.bindings, 'browDownLeft', browDrive * .94);
     setWeight(this.bindings, 'browDownRight', browDrive);
+    for (const brow of this.styledBrows) {
+      const down = browDrive * (brow.side === 'L' ? .94 : 1);
+      const lift = state.reducedMotion ? 0 : browLift;
+      const vertical = lift * .014 - down * .009;
+      const tilt = (lift * .055 + down * .035) * (brow.side === 'L' ? 1 : -1);
+      brow.object.position.copy(brow.restPosition);
+      brow.object.position.y += vertical;
+      brow.object.quaternion.copy(brow.restQuaternion).multiply(
+        new T.Quaternion().setFromEuler(new T.Euler(0, 0, tilt, 'XYZ')),
+      );
+      brow.object.userData.rockmundoAvatarV2BrowMotion = Math.abs(vertical);
+    }
 
     clearVisemes(this.bindings);
     setWeight(this.bindings, 'mouthFunnel', 0);
@@ -362,6 +399,11 @@ export class AvatarV2ExpressionController {
     if (this.jaw) {
       this.jaw.bone.quaternion.copy(this.jaw.rest);
       this.jaw.bone.userData.rockmundoAvatarV2JawAngle = 0;
+    }
+    for (const brow of this.styledBrows) {
+      brow.object.position.copy(brow.restPosition);
+      brow.object.quaternion.copy(brow.restQuaternion);
+      brow.object.userData.rockmundoAvatarV2BrowMotion = 0;
     }
   }
 }

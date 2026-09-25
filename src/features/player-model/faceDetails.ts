@@ -1,6 +1,7 @@
 import * as T from 'three';
 import type { PlayerAppearance } from './appearance';
 import { avatarQualityProfile, type AvatarVisualQuality } from './avatarVisualQuality';
+import { isAvatarV2HeadSurfaceNode } from './v2/avatarV2Contract';
 
 type FaceShape = NonNullable<PlayerAppearance['head']['faceShape']>;
 type SkinDetail = NonNullable<PlayerAppearance['head']['skinDetail']>;
@@ -27,7 +28,7 @@ function faceBounds(root: T.Object3D) {
   root.traverse(node => {
     if (!(node instanceof T.SkinnedMesh)) return;
     let parent: T.Object3D | null = node;
-    while (parent && !/_Head(?:_|$)/i.test(parent.name)) parent = parent.parent;
+    while (parent && !/_Head(?:_|$)/i.test(parent.name) && !isAvatarV2HeadSurfaceNode(parent)) parent = parent.parent;
     if (!parent) return;
     const materials = Array.isArray(node.material) ? node.material : [node.material];
     if (!materials.some(material => /skin/i.test(material.name))) return;
@@ -96,11 +97,14 @@ export function addFaceDetails(
   appearance: PlayerAppearance,
   head: T.Bone,
   quality: AvatarVisualQuality = 'balanced',
+  options: { applyFaceShape?: boolean } = {},
 ) {
   const profile = avatarQualityProfile(quality);
   const faceShape = appearance.head.faceShape ?? 'classic';
   const scale = FACE_SCALE[faceShape];
-  head.scale.multiply(new T.Vector3(...scale));
+  if (options.applyFaceShape !== false) {
+    head.scale.multiply(new T.Vector3(scale[0], scale[1], scale[2]));
+  }
   head.userData.avatarFaceShape = faceShape;
   root.updateMatrixWorld(true);
 
