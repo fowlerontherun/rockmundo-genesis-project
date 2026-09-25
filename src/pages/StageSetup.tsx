@@ -1,4 +1,8 @@
 import { useEffect, useMemo, useState } from'react';
+import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { PERFORMANCE_CREW_ROLES } from '@/utils/liveSetup';
 import { Badge } from'@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from'@/components/ui/card';
 import { Progress } from'@/components/ui/progress';
@@ -27,13 +31,6 @@ import { FMPageScaffold } from'@/components/fm/FMPageScaffold';
 const ITEMS_PER_PAGE = 20;
 
 type StageCrewAbilityLevel ='Novice'|'Skilled'|'Expert'|'Elite';
-
-type StageCrewSpecialtySeed = {
- name: string;
- responsibilities: string[];
- skillRange: [number, number];
- costRange: [number, number];
-};
 
 type StageCrewRecruit = {
  id: string;
@@ -71,216 +68,8 @@ const abilityFilterToLevel: Record<AbilityFilterValue, StageCrewAbilityLevel | n
  elite:'Elite',
 };
 
-const FIRST_NAMES = ['Aiden','Bailey','Callie','Darius','Elena','Felix','Gianna','Holden','Ivy','Jalen','Keira','Luca','Mila','Nolan','Orion','Priya','Quentin','Rowan','Sienna','Theo','Uma','Vivienne','Wesley','Xander','Yara','Zane','Aria','Beckett','Cora','Damon','Esme','Finn','Greta','Hayden','Isla','Jasper','Kian','Leila','Mateo','Noelle','Owen','Piper','Remy','Sloane','Tristan','Valentina','Wyatt','Xavier','Yasmine','Zara','Anders','Briar','Cassian','Delilah','Elias','Freya','Gavin','Harper','Idris','June','Kira','Landon','Maia','Nico','Olive','Porter','Rea','Silas','Tessa','Uri','Vera','Wade','Ximena','Ysabel','Zuri','Amelia','Bodhi','Celeste','Dante','Emery',
-];
-
-const LAST_NAMES = ['Abbott','Barrett','Callahan','Dalton','Ellison','Fairfax','Grayson','Hollis','Iverson','Jennings','Keating','Langley','Mercer','Norwood','Oakley','Prescott','Quimby','Radcliffe','Sterling','Thorne','Underwood','Voss','Whitaker','Xiong','Yardley','Zimmerman','Ashford','Bainbridge','Camden','Drake','Easton','Fenwick','Garrison','Hartwell','Ingram','Jamison','Kingsley','Lockwood','Monroe','Newberry','Orville','Pembroke','Quincy','Rockwell','Stratford','Tolland','Umberto','Valdez','Winslow','Xu','Yanez','Zeller','Albright','Brighton','Corbin','Dempsey','Ellsworth','Fairchild','Gallagher','Hastings','Irving','Jessup','Kessler','Larkin','Maddox','Newsome',"O'Connell",'Paxton','Quinlan','Rutherford','Sinclair','Templeton','Ulrich','Vega','Westbrook','Xuereb','Yarrow','Zane','Archer','Bennett',
-];
-
-const STAGE_CREW_SPECIALTIES: StageCrewSpecialtySeed[] = [
- {
- name:'Stage Manager',
- responsibilities: ['Calls cues, manages load-in/out timelines, and keeps departments aligned','Runs show clocks and coordinates changeovers with venue production','Maintains radio traffic discipline and crisis response plans',
- ],
- skillRange: [82, 98],
- costRange: [680, 1200],
- },
- {
- name:'Front of House Engineer',
- responsibilities: ['Shapes the audience mix and tunes PA coverage for each venue','Walks the room to verify system balance before doors open','Coordinates with broadcast crews on matrix sends and record splits',
- ],
- skillRange: [84, 99],
- costRange: [720, 1320],
- },
- {
- name:'Monitor Engineer',
- responsibilities: ['Builds artist mixes and manages talkback flow on the deck','Optimizes IEM RF coordination and failover plans','Tracks cue sheet adjustments and backup packs during the show',
- ],
- skillRange: [80, 95],
- costRange: [640, 1100],
- },
- {
- name:'Lighting Director',
- responsibilities: ['Programs timecode looks and refines palettes for each set list pivot','Calls follow spot hits and live busking moments from FOH','Maintains fixture health logs and overnight service priorities',
- ],
- skillRange: [78, 96],
- costRange: [620, 1150],
- },
- {
- name:'Lighting Programmer',
- responsibilities: ['Pre-visualizes looks and imports updates into the MA show file','Executes focus presets and overnight data backups','Integrates guest LD notes without breaking base cues',
- ],
- skillRange: [70, 92],
- costRange: [520, 900],
- },
- {
- name:'Backline Technician',
- responsibilities: ['Maintains instruments, strings, and drum tuning across travel days','Executes pedalboard swaps and emergency gear patches mid-set','Stays side-stage for tuning, stick swaps, and playback triggers',
- ],
- skillRange: [65, 88],
- costRange: [400, 760],
- },
- {
- name:'Rigger',
- responsibilities: ['Calculates points, loads, and motor calls for each venue grid','Leads up-rigging teams and verifies trim heights before focus','Documents steel updates and advancing notes for the next stop',
- ],
- skillRange: [60, 90],
- costRange: [380, 720],
- },
- {
- name:'Pyrotechnics Specialist',
- responsibilities: ['Programs pyro cues in sync with the lighting and playback teams','Executes safety lockouts and crowd distance calculations','Maintains consumable inventory and venue permitting paperwork',
- ],
- skillRange: [72, 94],
- costRange: [650, 1250],
- },
- {
- name:'Video Director',
- responsibilities: ['Cuts IMAG and LED wall feeds to match the show storyline','Coordinates camera operators and steadicam sweeps','Executes content roll-ins and redundant playback triggers',
- ],
- skillRange: [75, 95],
- costRange: [600, 1040],
- },
- {
- name:'Stagehand',
- responsibilities: ['Builds risers, runs cabling, and supports quick set turns','Assists departments with lifts, cases, and deck safety','Follows cue sheets for scenic and prop placements',
- ],
- skillRange: [45, 70],
- costRange: [180, 320],
- },
- {
- name:'Production Assistant',
- responsibilities: ['Tracks credentials, hospitality, and runner dispatches','Updates day sheets and keeps departments synced on timing','Wrangles guest artists and media in coordination with security',
- ],
- skillRange: [50, 72],
- costRange: [220, 360],
- },
- {
- name:'Logistics Coordinator',
- responsibilities: ['Advances trucking, bussing, and hotel blocks for the tour','Handles customs paperwork and carnet confirmations','Builds travel day briefs and handles weather contingency plans',
- ],
- skillRange: [68, 90],
- costRange: [480, 820],
- },
- {
- name:'Carpenter',
- responsibilities: ['Maintains scenic builds and automation tracks between cities','Leads deck builds and bolt inspections during load-ins','Handles mid-show repairs on staging and custom elements',
- ],
- skillRange: [55, 80],
- costRange: [320, 580],
- },
- {
- name:'Automation Specialist',
- responsibilities: ['Programs lifts, trolleys, and motion cues with redundancy','Monitors sensors and emergency stops during performances','Performs overnight diagnostics and firmware updates',
- ],
- skillRange: [70, 93],
- costRange: [620, 980],
- },
- {
- name:'Crowd Safety Lead',
- responsibilities: ['Coordinates with venue security on barricade and pit flow','Builds evacuation plans and briefings with local teams','Deploys spotters for crowd-surfing and emergency response',
- ],
- skillRange: [65, 88],
- costRange: [420, 680],
- },
- {
- name:'Runner',
- responsibilities: ['Handles errands, vendor pickups, and last-minute gear runs','Maintains receipts and per-diem reconciliations','Supports hospitality and artist needs throughout the day',
- ],
- skillRange: [40, 65],
- costRange: [150, 260],
- },
- {
- name:'Drone Camera Tech',
- responsibilities: ['Pilots aerial shots and keeps wireless feeds interference-free','Coordinates with safety officers on no-fly zones','Maintains drone batteries, props, and firmware updates',
- ],
- skillRange: [60, 86],
- costRange: [400, 720],
- },
- {
- name:'Lighting Technician',
- responsibilities: ['Preps fixtures, swaps lamps, and handles focus calls','Troubleshoots DMX paths and power distro on load-ins','Supports overnight strikes and pack-outs efficiently',
- ],
- skillRange: [58, 84],
- costRange: [360, 640],
- },
- {
- name:'Audio Systems Tech',
- responsibilities: ['Flies PA hangs and deploys fills according to the rigging plot','Verifies phase alignment and delay tower timing','Maintains racks, power distro, and spare transducers',
- ],
- skillRange: [62, 88],
- costRange: [420, 760],
- },
- {
- name:'Stage Decor Specialist',
- responsibilities: ['Builds immersive scenic layers and branded touchpoints','Coordinates quick-flip scenic changes between acts','Maintains prop inventory and repairs travel wear',
- ],
- skillRange: [55, 82],
- costRange: [340, 590],
- },
-];
-
-const createSeededRandom = (seed: number) => {
- let state = seed;
- return () => {
- state = (state + 0x6d2b79f5) | 0;
- let t = Math.imul(state ^ (state >>> 15), 1 | state);
- t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
- return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
- };
-};
-
 const abilityLevelFromSkill = (skill: number): StageCrewAbilityLevel => {
- for (const level of abilityLevelConfig) {
- if (skill >= level.min && skill <= level.max) {
- return level.label;
- }
- }
-
- return'Elite';
-};
-
-const createCrewName = (index: number) => {
- const first = FIRST_NAMES[index % FIRST_NAMES.length];
- const last = LAST_NAMES[Math.floor(index / FIRST_NAMES.length) % LAST_NAMES.length];
- return `${first} ${last}`;
-};
-
-const generateStageCrewRecruits = (count: number): StageCrewRecruit[] => {
- const random = createSeededRandom(20241205);
- const recruits: StageCrewRecruit[] = [];
-
- for (let index = 0; index < count; index += 1) {
- const specialty = STAGE_CREW_SPECIALTIES[index % STAGE_CREW_SPECIALTIES.length];
- const skillSpan = specialty.skillRange[1] - specialty.skillRange[0];
- const rawSkill = specialty.skillRange[0] + random() * skillSpan;
- const skill = Math.min(100, Math.max(35, Math.round(rawSkill)));
- const abilityLevel = abilityLevelFromSkill(skill);
- const experienceYears = Math.max(1, Math.round(skill / 12 + random() * 4));
- const costSpan = specialty.costRange[1] - specialty.costRange[0];
- const baseCost = specialty.costRange[0] + random() * costSpan;
- const abilityMultiplier =
- abilityLevel ==='Elite'? 1.5
- : abilityLevel ==='Expert'? 1.25
- : abilityLevel ==='Skilled'? 1.1
- : 0.9;
- const demandMultiplier = 0.9 + random() * 0.25;
- const cost = Math.round(baseCost * abilityMultiplier * demandMultiplier);
- const responsibilityIndex = Math.floor(random() * specialty.responsibilities.length);
-
- recruits.push({
- id: `crew-${index + 1}`,
- name: createCrewName(index),
- specialty: specialty.name,
- responsibilities: specialty.responsibilities[responsibilityIndex],
- abilityLevel,
- skill,
- cost,
- experienceYears,
- });
- }
-
- return recruits;
+  return abilityLevelConfig.find((level) => skill >= level.min && skill <= level.max)?.label ?? 'Elite';
 };
 
 const currencyFormatter = new Intl.NumberFormat('en-US', {
@@ -395,7 +184,26 @@ const fullBandRig = [
 ];
 
 const StageSetup = () => {
- const stageCrew = useMemo(() => generateStageCrewRecruits(5000), []);
+ const { data: stageCrew = [], isLoading: loadingStageCrew } = useQuery<StageCrewRecruit[]>({
+    queryKey: ['stage-crew-real-catalog'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('crew_catalog')
+        .select('id,name,role,background,skill,salary,experience,hired_by_band_id')
+        .is('hired_by_band_id', null);
+      if (error) throw error;
+      return (data || []).filter((candidate) => PERFORMANCE_CREW_ROLES.includes(candidate.role as typeof PERFORMANCE_CREW_ROLES[number]))
+        .map((candidate) => ({
+          id: candidate.id,
+          name: candidate.name,
+          specialty: candidate.role,
+          responsibilities: candidate.background || 'Live show production',
+          abilityLevel: abilityLevelFromSkill(Number(candidate.skill || 0)),
+          skill: Number(candidate.skill || 0),
+          cost: Number(candidate.salary || 0),
+          experienceYears: Number(candidate.experience || 0),
+        }));
+    },
+  });
  const costBounds = useMemo(() => {
  if (stageCrew.length === 0) {
  return { min: 0, max: 0 };
@@ -593,7 +401,7 @@ const StageSetup = () => {
  <Card>
  <CardHeader>
  <CardTitle>Stage Crew</CardTitle>
- <CardDescription>Specialists keeping the show running smoothly.</CardDescription>
+ <CardDescription>Real specialists from the shared Crew Catalog. Hire them in Crew Management before assigning them to gigs.</CardDescription>
  </CardHeader>
  <CardContent className="space-y-6">
  <div className="grid gap-4 md:grid-cols-2">
@@ -613,7 +421,7 @@ const StageSetup = () => {
  </Select>
  </div>
  <div className="space-y-2">
- <Label>Daily cost range</Label>
+ <Label>Per-gig salary range</Label>
  <div className="flex items-center justify-between text-xs text-muted-foreground">
  <span>{currencyFormatter.format(costRange[0])}</span>
  <span>{currencyFormatter.format(costRange[1])}</span>
@@ -622,6 +430,7 @@ const StageSetup = () => {
  min={costBounds.min}
  max={costBounds.max}
  step={10}
+ disabled={!stageCrew.length || costBounds.min === costBounds.max}
  value={costRange}
  onValueChange={(value) => {
  if (value.length === 2) {
@@ -635,9 +444,9 @@ const StageSetup = () => {
  <div className="flex flex-col gap-1 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
  <span>
  Showing {visibleRangeStart.toLocaleString()}-
- {visibleRangeEnd.toLocaleString()} of {totalResults.toLocaleString()} recruits
+ {visibleRangeEnd.toLocaleString()} of {totalResults.toLocaleString()} available specialists
  </span>
- <span>Filtered by ability and cost to surface the right crew at a glance.</span>
+ <span><Link className="underline" to="/band-crew">Hire staff in Crew Management</Link></span>
  </div>
 
  <Table>
@@ -647,14 +456,14 @@ const StageSetup = () => {
  <TableHead>Specialty</TableHead>
  <TableHead className="w-32 text-center">Ability</TableHead>
  <TableHead className="w-28 text-right">Skill</TableHead>
- <TableHead className="w-32 text-right">Daily Cost</TableHead>
+ <TableHead className="w-32 text-right">Per Gig</TableHead>
  </TableRow>
  </TableHeader>
  <TableBody>
  {paginatedCrew.length === 0 ? (
  <TableRow>
  <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
- No recruits match the selected filters.
+ {loadingStageCrew ? 'Loading available crew...' : 'No available specialists match these filters.'}
  </TableCell>
  </TableRow>
  ) : (

@@ -143,6 +143,8 @@ interface BandCrewMemberRow {
   cohesion_rating: number;
   gigs_together: number;
   catalog_crew_id: string | null;
+  career_xp?: number;
+  last_gig_at?: string | null;
 }
 
 const CREW_ROLES = [
@@ -224,6 +226,14 @@ const RosterCrewCard = ({
             <span className="text-muted-foreground">Salary:</span>{" "}
             <span className="font-medium">${crew.salary_per_gig}/gig</span>
           </div>
+        </div>
+        <div className="space-y-1" aria-label={`${crew.name} career experience`}>
+          <div className="flex justify-between text-xs">
+            <span className="text-muted-foreground">Career XP</span>
+            <span className="font-medium">{crew.career_xp ?? 0} XP · {100 - ((crew.career_xp ?? 0) % 100)} to next skill point</span>
+          </div>
+          <Progress value={(crew.career_xp ?? 0) % 100} className="h-2" />
+          {crew.last_gig_at && <p className="text-xs text-muted-foreground">Last worked: {new Date(crew.last_gig_at).toLocaleDateString()}</p>}
         </div>
       </CardContent>
       <CardFooter>
@@ -382,38 +392,12 @@ const BandCrewManagement = () => {
         throw new Error(`Need ${crew.min_fame_required.toLocaleString()} fame to hire this crew member`);
       }
 
-      // Claim the catalog slot first so two bands cannot hire the same person.
-      const { data: claimed, error: claimError } = await supabase
-        .from("crew_catalog")
-        .update({ hired_by_band_id: bandId })
-        .eq("id", crew.id)
-        .is("hired_by_band_id", null)
-        .select("id");
-      if (claimError) throw claimError;
-      if (!claimed || claimed.length === 0) {
-        queryClient.invalidateQueries({ queryKey: ["crew-catalog"] });
-        throw new Error(`${crew.name} has just been hired by another band. Pick someone else.`);
-      }
-
-      const { error: insertError } = await supabase.from("band_crew_members").insert({
-        band_id: bandId,
-        name: crew.name,
-        crew_type: crew.role,
-        experience_years: crew.experience,
-        hire_date: new Date().toISOString(),
-        salary_per_gig: crew.salary,
-        skill_level: crew.skill,
-        star_rating: crew.star_rating,
-        cohesion_rating: 0,
-        gigs_together: 0,
-        catalog_crew_id: crew.id,
-        notes: JSON.stringify({ specialties: crew.specialties, traits: crew.traits }),
+      // Server-side transaction validates fame, role and exclusive hiring.
+      const { error } = await (supabase as any).rpc("hire_band_crew", {
+        p_band_id: bandId,
+        p_catalog_crew_id: crew.id,
       });
-      if (insertError) {
-        // Release the claim so the candidate stays hireable.
-        await supabase.from("crew_catalog").update({ hired_by_band_id: null }).eq("id", crew.id);
-        throw insertError;
-      }
+      if (error) throw error;
 
     },
     onSuccess: (_, crew) => {
@@ -436,18 +420,11 @@ const BandCrewManagement = () => {
 
   const releaseMutation = useMutation({
     mutationFn: async (crew: BandCrewMemberRow) => {
-      const { error: deleteError } = await supabase
-        .from("band_crew_members")
-        .delete()
-        .eq("id", crew.id);
-      if (deleteError) throw deleteError;
+      const { error } = await (supabase as any).rpc("release_band_crew", {
+        p_crew_member_id: crew.id,
+      });
+      if (error) throw error;
 
-      if (crew.catalog_crew_id) {
-        await supabase
-          .from("crew_catalog")
-          .update({ hired_by_band_id: null })
-          .eq("id", crew.catalog_crew_id);
-      }
     },
     onSuccess: (_, crew) => {
       queryClient.invalidateQueries({ queryKey: ["band-crew", bandId] });

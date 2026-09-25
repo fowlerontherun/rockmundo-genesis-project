@@ -16,6 +16,7 @@ import { calculateLiveSetup } from "@/utils/liveSetup";
 import type { GigExperienceDTO, GigExperienceSongDTO } from "@/features/gig-experience/types";
 import { metricValue } from "@/features/gig-experience/reportMetric";
 import { LessonsPanel } from "./outcome/LessonsPanel";
+import { GigCrewProgressReport } from "./GigCrewProgressReport";
 import { bestSong, contributionTotal, crowdLabel, headlineFromExperience, money, numberFormat, pct, score, songScore, weakestSong } from "./outcome/reportUtils";
 
 interface LegacyOutcome { overall_rating: number; actual_attendance: number; attendance_percentage: number; ticket_revenue: number; merch_sales: number; total_revenue: number; crew_costs: number; equipment_wear_cost: number; net_profit: number; fame_gained: number; chemistry_impact: number; gig_song_performances?: Array<{ song_id: string; position: number; performance_score: number; song_quality_contrib: number; rehearsal_contrib: number; chemistry_contrib: number; equipment_contrib: number; crew_contrib: number; member_skill_contrib: number; crowd_response: string; song_title?: string | null; performance_item_name?: string | null; }>; equipment_quality_avg?: number | null; crew_skill_avg?: number | null; band_chemistry_level?: number | null; member_skill_avg?: number | null; merch_items_sold?: number | null; }
@@ -37,7 +38,7 @@ const legacyPostConsequences: GigExperienceDTO["postConsequences"] = {
   consequences: [],
 };
 
-export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCapacity, songs = [], experience, xpSummary, fanConversion, momentHighlights, venueRelationship, chemistryMoments, chemistryLevel = 50, chemistryChange = 0, merchItemsSold = 0, ticketPrice = 20, stageBehaviorUsed }: Props) => {
+export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCapacity, songs = [], experience, xpSummary, fanConversion, momentHighlights, venueRelationship, chemistryMoments, chemistryLevel = 50, chemistryChange = 0, merchItemsSold = 0, ticketPrice = 20, stageBehaviorUsed, gigId }: Props) => {
   const report = experience ?? legacyToExperience(outcome, venueName, venueCapacity, songs, merchItemsSold, chemistryChange, stageBehaviorUsed);
   if (!report) return null;
   const processing = report.viewer.ready === false || report.gig.status === "processing";
@@ -52,6 +53,7 @@ export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCap
         {processing ? <EmptyState title="Results processing" body="The authoritative outcome is still being prepared. Rewards and progression will appear when processing finishes." /> : cancelled ? <EmptyState title="Gig did not complete" body="This report is limited because the gig was cancelled or abandoned before a full outcome could be recorded." /> : <>
           <PerformanceStory experience={report} momentHighlights={momentHighlights} />
           <LessonsPanel experience={report} />
+          <GigCrewProgressReport gigId={gigId} visible={isOpen} />
           <DetailedAnalysis experience={report} xpSummary={xpSummary} fanConversion={fanConversion} venueRelationship={venueRelationship} chemistryMoments={chemistryMoments} chemistryLevel={chemistryLevel} ticketPrice={ticketPrice} />
         </>}
       </main>
