@@ -201,6 +201,29 @@ uses a V2-specific close-up quality uplift: High requests Ultra hair geometry an
 fibre maps; Ultra/TOTP requests Cinematic hair. Balanced/crowd quality is left
 unchanged so distant performers do not pay the close-up geometry/texture cost.
 
+## Close-up procedural hair geometry
+
+Saved haircuts rebuilt over a V2 head now get genuine longitudinal
+strand-ribbon relief on their existing sculpted hairstyle clumps. This adds
+real highlights and fine clump separation to quiffs, long cuts, braids, curls,
+locs and other styles rather than relying on smooth ellipsoids and normal
+textures alone. The ribbons are generated in the clump's local orientation,
+sit just above its surface, share the existing Hair material and merge into
+the same draw call. They follow the Head bone with the whole hairstyle.
+
+The V2 quality bridge promotes High to Ultra and Ultra to Cinematic for
+close-up hair. Ultra creates five strand ribbons per hairstyle clump;
+Cinematic seven; High three. Crowd and Balanced add **no** strand geometry,
+so distant gigs remain on the previous budget. This detail improves the
+saved-hair compatibility layer; it does not replace the need for separately
+authored production-grade hair meshes and final V2 GLBs.
+
+Run the targeted procedural-geometry regression with:
+
+```bash
+npx vitest run src/features/player-model/hairStrands.test.ts
+```
+
 ## Body and muscle contract
 
 The base GLB must be a complete skinned body even when no garment is present.
