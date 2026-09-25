@@ -8,6 +8,9 @@ on:
       - 'scripts/avatar-v2/blender/rockmundo_avatar_v2_build_seed_artifacts.py'
       - 'scripts/avatar-v2/verify_source_artifacts.py'
       - 'scripts/avatar-v2/tests/test_verify_source_artifacts.py'
+      - 'scripts/avatar-v2/eye_lookdev.py'
+      - 'scripts/avatar-v2/tests/test_eye_lookdev.py'
+      - 'scripts/avatar-v2/blender/rockmundo_avatar_v2_source_lookdev.py'
       - '.github/workflows/avatar-v2-real-source-seeds.yml'
 
 permissions:
@@ -31,6 +34,8 @@ jobs:
         run: node scripts/avatar-v2/verify-source-provenance.mjs
       - name: Test artifact integrity and fail-closed release labels
         run: python3 -m unittest discover -s scripts/avatar-v2/tests -p test_verify_source_artifacts.py -v
+      - name: Test real sclera/iris/pupil classification and separate curved cornea geometry
+        run: python3 -m unittest discover -s scripts/avatar-v2/tests -p test_eye_lookdev.py -v
       - name: Fetch pinned official Blender Human Base Meshes 1.4.1
         run: python3 scripts/avatar-v2/fetch_human_base_meshes.py --output-dir "$SOURCE_ROOT"
       - name: Install pinned Blender and verify official checksum
@@ -49,7 +54,7 @@ jobs:
           BLENDER="$RUNNER_TEMP/blender-$BLENDER_VERSION-linux-x64/blender"
           "$BLENDER" --background --version
           echo "BLENDER_BIN=$BLENDER" >> "$GITHUB_ENV"
-      - name: Build real masculine and feminine authoring sources and visual proofs
+      - name: Build real masculine and feminine source plus improved eye/skin lookdev comparisons
         shell: bash
         run: |
           set -euo pipefail
