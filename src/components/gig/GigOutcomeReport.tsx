@@ -53,7 +53,7 @@ export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCap
         {processing ? <EmptyState title="Results processing" body="The authoritative outcome is still being prepared. Rewards and progression will appear when processing finishes." /> : cancelled ? <EmptyState title="Gig did not complete" body="This report is limited because the gig was cancelled or abandoned before a full outcome could be recorded." /> : <>
           <PerformanceStory experience={report} momentHighlights={momentHighlights} />
           <LessonsPanel experience={report} />
-          <GigCrewProgressReport gigId={gigId} visible={isOpen} />
+          {gigId ? <GigCrewProgressReport gigId={gigId} visible={isOpen} /> : null}
           <DetailedAnalysis experience={report} xpSummary={xpSummary} fanConversion={fanConversion} venueRelationship={venueRelationship} chemistryMoments={chemistryMoments} chemistryLevel={chemistryLevel} ticketPrice={ticketPrice} />
         </>}
       </main>
