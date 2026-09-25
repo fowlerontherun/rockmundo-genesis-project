@@ -127,6 +127,10 @@ def create_correspondences(source: bpy.types.Object, target: bpy.types.Object, b
 def transfer_plan(args, source, target, rig):
     if source == target:
         raise SystemExit("The artist's LOD target must be a different mesh from the original sculpt.")
+    if len(source.data.vertices) < 3 or not source.data.polygons:
+        raise SystemExit("Source must be an actual continuous authored mesh with polygon surface.")
+    if len(target.data.vertices) < 3 or not target.data.polygons:
+        raise SystemExit("Target needs real artist-retopologised polygon faces, not detached marker points.")
     if len(target.data.vertices) >= len(source.data.vertices):
         raise SystemExit("Target is not lower-poly than its source; retopologise the target first.")
     if len(target.data.vertices) > BUDGETS[args.lod]:
@@ -170,6 +174,8 @@ def transfer_plan(args, source, target, rig):
             tuple(float(shape.data[i].co[axis]) - basis[i][axis] for axis in range(3))
             for i in range(len(basis))
         ]
+        if not all(isfinite(component) for delta in source_deltas for component in delta):
+            raise SystemExit(f"Source morph {name} has non-finite coordinates; repair the authored sculpt.")
         source_peak = max_delta(source_deltas)
         if source_peak < MIN_MORPH_DELTA_METRES:
             lost_keys.append({"name": name, "reason": "source has no measurable sculpt delta"})
