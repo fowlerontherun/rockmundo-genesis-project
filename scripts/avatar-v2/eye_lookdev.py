@@ -90,5 +90,5 @@ def cornea_dome(
             current = ring * segments
             for segment in range(segments):
                 nxt = (segment + 1) % segments
-                quads.append((prev + segment, prev + nxt, current + nxt, current + segment))
+                quads.append((prev + segment, current + segment, current + nxt, prev + nxt))
     return vertices, quads
