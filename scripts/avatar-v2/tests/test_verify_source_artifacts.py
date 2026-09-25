@@ -48,6 +48,16 @@ class AuthoringArtifactIntegrityTests(unittest.TestCase):
                     "originalBodyVertices": 32000,
                     "realEyesRecoloured": 2,
                     "realCorneasAdded": 2,
+                    "realLipMaterials": {
+                        "upperLipPolygons": 28,
+                        "lowerLipPolygons": 40,
+                        "edgeBlendPolygons": 50,
+                        "sourceVertexCountPreserved": True,
+                        "sourceUVCountPreserved": True,
+                        "sourceSculptLipShape": "existing CC0 geometry, unchanged",
+                        "previewOnly": True,
+                        "lipDeformationAuthored": False,
+                    },
                     "realBrowAndLashMeshes": 6,
                     "browLashGeometry": [
                         {
@@ -159,6 +169,24 @@ class AuthoringArtifactIntegrityTests(unittest.TestCase):
         self.data["frames"][0]["lookdevGeometry"]["browLashGeometry"][0]["unweightedPreviewOnly"] = False
         self.write_manifest()
         with self.assertRaisesRegex(ValueError, "skin-projected eyebrow"):
+            verify_artifacts(self.root)
+
+    def test_missing_lip_material_zones_are_rejected(self):
+        self.data["frames"][0]["lookdevGeometry"]["realLipMaterials"]["upperLipPolygons"] = 0
+        self.write_manifest()
+        with self.assertRaisesRegex(ValueError, "upper/lower lip sculpt"):
+            verify_artifacts(self.root)
+
+    def test_lip_shader_must_preserve_real_unmodified_uv_and_sculpt(self):
+        self.data["frames"][1]["lookdevGeometry"]["realLipMaterials"]["sourceUVCountPreserved"] = False
+        self.write_manifest()
+        with self.assertRaisesRegex(ValueError, "upper/lower lip sculpt"):
+            verify_artifacts(self.root)
+
+    def test_unrigged_lip_material_cannot_claim_real_singing_deformation(self):
+        self.data["frames"][0]["lookdevGeometry"]["realLipMaterials"]["lipDeformationAuthored"] = True
+        self.write_manifest()
+        with self.assertRaisesRegex(ValueError, "upper/lower lip sculpt"):
             verify_artifacts(self.root)
 
     def test_missing_real_iris_or_cornea_geometry_is_rejected(self):
