@@ -286,6 +286,7 @@ export function AvatarV2CandidateLab() {
   const [animateFace, setAnimateFace] = useState(true);
   const [performance, setPerformance] = useState<AvatarV2PerformancePreset>('vocals');
   const [viewPreset, setViewPreset] = useState<CandidateViewPreset>('full');
+  const [faceDetailProof, setFaceDetailProof] = useState(false);
   const [performanceReport, setPerformanceReport] = useState<AvatarV2PerformanceQaReport | null>(null);
 
   const appearance = useMemo(() => {
@@ -293,13 +294,18 @@ export function AvatarV2CandidateLab() {
     next.body.frame = frame;
     next.body.muscle = muscle;
     next.head.hairStyle = 'quiff';
+    if (faceDetailProof) {
+      next.head.eyebrowStyle = 'arched';
+      next.head.eyebrowColor = '#854b32';
+      next.head.skinDetail = 'freckles';
+    }
     if (next.accessories) {
       next.accessories.glasses = 'square';
       next.accessories.leftEarring = 'hoops';
       next.accessories.rightEarring = 'studs';
     }
     return next;
-  }, [frame, muscle]);
+  }, [frame, muscle, faceDetailProof]);
 
   const comparisonAssignment = useMemo(
     () => performance === 'backstage' ? stageAssignment(null, 'other') : stageAssignment(performance),
@@ -313,7 +319,8 @@ export function AvatarV2CandidateLab() {
         <CardDescription>
           Load a GLB locally for side-by-side visual inspection. The lab applies the same saved-hair and
           accessory bridge as the live V2 path, using a quiff, square glasses and independent earrings as
-          visible fit checks. The file stays in this browser session and is not published, uploaded or made
+          visible fit checks. Face-detail proof mode additionally checks custom eyebrows and freckles against the V2 head.
+          The file stays in this browser session and is not published, uploaded or made
           available to players.
         </CardDescription>
       </CardHeader>
@@ -395,6 +402,13 @@ export function AvatarV2CandidateLab() {
             onClick={() => setAnimateFace(value => !value)}
           >
             {animateFace ? 'Animation on' : 'Animation off'}
+          </Button>
+          <Button
+            type="button"
+            variant={faceDetailProof ? 'default' : 'outline'}
+            onClick={() => setFaceDetailProof(value => !value)}
+          >
+            {faceDetailProof ? 'Face detail proof on' : 'Face detail proof off'}
           </Button>
           {file && (
             <Button
@@ -537,6 +551,9 @@ export function AvatarV2CandidateLab() {
                 ['sclera pair', ['missing-dedicated-surface:sclera', 'missing-surface-binding:sclera:Eye.L', 'missing-surface-binding:sclera:Eye.R']],
                 ['cornea pair', ['missing-dedicated-surface:cornea', 'missing-surface-binding:cornea:Eye.L', 'missing-surface-binding:cornea:Eye.R']],
                 ['eyelid wetlines', ['missing-dedicated-surface:wetline', 'missing-wetline-side:L', 'missing-wetline-side:R', 'missing-wetline-blink:L', 'missing-wetline-blink:R', 'invalid-wetline-binding:L', 'invalid-wetline-binding:R']],
+                ['eyelashes', ['missing-dedicated-surface:eyelashes', 'missing-eyelashes-side:L', 'missing-eyelashes-side:R', 'missing-eyelashes-blink:L', 'missing-eyelashes-blink:R', 'invalid-eyelashes-binding:L', 'invalid-eyelashes-binding:R', 'misaligned-eyelashes:L', 'misaligned-eyelashes:R']],
+                ['lip material', ['missing-head-lip-material']],
+                ['natural eyebrows', ['missing-head-eyebrow-material']],
                 ['mouth cavity depth', ['shallow-mouth-cavity']],
                 ['upper/lower teeth', ['missing-dedicated-surface:teeth', 'missing-surface-binding:teeth:Head', 'missing-surface-binding:teeth:Jaw']],
                 ['tongue→Jaw', ['missing-dedicated-surface:tongue', 'missing-surface-binding:tongue:Jaw']],

@@ -99,6 +99,10 @@ Priority topology areas:
 - nose/nostril definition;
 - separate iris, sclera and cornea geometry with real `Eye.L` / `Eye.R` skin influence;
 - separate left/right eyelid wetlines with a moist physical shader and side-specific blink deformation;
+- authored left/right eyelash strips/cards fitted to the lid rim and carrying the matching blink deformation;
+- a dedicated used lip material region on the skinned face for natural colour and moisture response;
+- an authored natural-eyebrow material region, independently tintable from hair and replaceable by saved eyebrow styles;
+- V1-compatible freckles, beauty marks and weathering projected onto the V2 head without applying V1 face-scale deformation;
 - ears capable of accurate jewellery attachment, with authored `EarAnchor.L/R` earlobe markers;
 - five-finger hands suitable for instrument grips;
 - shoulders/elbows/knees with animation-friendly loops;

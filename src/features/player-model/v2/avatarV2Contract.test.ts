@@ -128,7 +128,15 @@ function validScene() {
   headGeometry.setAttribute('skinWeight', new T.Float32BufferAttribute(headWeights, 4));
   const headMaterial = new T.MeshStandardMaterial({ color: '#cccccc' });
   headMaterial.name = 'RMV2_Skin';
-  const headSurface = new T.SkinnedMesh(headGeometry, headMaterial);
+  const lipMaterial = new T.MeshStandardMaterial({ color: '#aa6670' });
+  lipMaterial.name = 'RMV2_Lips';
+  const eyebrowMaterial = new T.MeshStandardMaterial({ color: '#54372a' });
+  eyebrowMaterial.name = 'RMV2_Eyebrows';
+  if (headGeometry.groups.length) {
+    headGeometry.groups[0].materialIndex = 1;
+    if (headGeometry.groups[1]) headGeometry.groups[1].materialIndex = 2;
+  }
+  const headSurface = new T.SkinnedMesh(headGeometry, [headMaterial, lipMaterial, eyebrowMaterial]);
   headSurface.name = 'RMV2_HeadSurface';
   headSurface.position.y = 1.45;
   headSurface.bind(new T.Skeleton(bones));
@@ -143,6 +151,8 @@ function validScene() {
     ['Cornea.R', 'cornea', 'RMV2_Cornea', 'Eye.R'],
     ['Wetline.L', 'wetline', 'RMV2_Wetline', 'Head'],
     ['Wetline.R', 'wetline', 'RMV2_Wetline', 'Head'],
+    ['Eyelashes.L', 'eyelashes', 'RMV2_Eyelashes', 'Head'],
+    ['Eyelashes.R', 'eyelashes', 'RMV2_Eyelashes', 'Head'],
     ['UpperTeeth', 'teeth', 'RMV2_Teeth', 'Head'],
     ['LowerTeeth', 'teeth', 'RMV2_Teeth', 'Jaw'],
     ['Tongue', 'tongue', 'RMV2_Tongue', 'Jaw'],
@@ -160,7 +170,9 @@ function validScene() {
       ? new T.BoxGeometry(.075, .05, .04)
       : role === 'wetline'
         ? new T.BoxGeometry(.03, .004, .008)
-        : new T.BoxGeometry(.02, .02, .02);
+        : role === 'eyelashes'
+          ? new T.BoxGeometry(.032, .006, .005)
+          : new T.BoxGeometry(.02, .02, .02);
     const surfaceCount = surfaceGeometry.getAttribute('position').count;
     const surfaceIndices = new Uint16Array(surfaceCount * 4);
     const surfaceWeights = new Float32Array(surfaceCount * 4);
@@ -177,16 +189,16 @@ function validScene() {
     surfaceMesh.name = `RMV2_${surface}`;
     surfaceMesh.userData.rockmundoSurfaceRole = role;
     surfaceMesh.userData.rockmundoBoneBinding = binding;
-    if (role === 'wetline') {
+    if (role === 'wetline' || role === 'eyelashes') {
       const side = surface.endsWith('.L') ? 'L' : 'R';
       surfaceMesh.userData.rockmundoEyeSide = side;
       const blinkName = side === 'L' ? 'blinkLeft' : 'blinkRight';
       surfaceMesh.morphTargetDictionary = { [blinkName]: 0 };
       surfaceMesh.morphTargetInfluences = [0];
       surfaceGeometry.morphTargetsRelative = true;
-      const wetlineDelta = new Float32Array(surfaceCount * 3);
-      wetlineDelta[1] = .0012;
-      surfaceGeometry.morphAttributes.position = [new T.Float32BufferAttribute(wetlineDelta, 3)];
+      const lidDelta = new Float32Array(surfaceCount * 3);
+      lidDelta[1] = role === 'wetline' ? .0012 : .0015;
+      surfaceGeometry.morphAttributes.position = [new T.Float32BufferAttribute(lidDelta, 3)];
     }
     surfaceMesh.bind(surfaceSkeleton);
     root.add(surfaceMesh);
@@ -261,9 +273,9 @@ describe('Avatar V2 mesh contract', () => {
   it('accepts a compact skinned humanoid with the required rig and facial targets', () => {
     const report = validateAvatarV2Scene(validScene(), 'masculine', 0);
     expect(report.valid).toBe(true);
-    // Base body + head surface + eight body-region proof meshes + twelve
-    // dedicated close-up anatomy surfaces (bilateral eyes/wetlines, split teeth, tongue, mouth).
-    expect(report.skinnedMeshes).toBe(2 + AVATAR_V2_BODY_REGIONS.length + 12);
+    // Base body + head surface + eight body-region proof meshes + fourteen
+    // dedicated close-up anatomy surfaces (bilateral eyes/wetlines/lashes, split teeth, tongue, mouth).
+    expect(report.skinnedMeshes).toBe(2 + AVATAR_V2_BODY_REGIONS.length + 14);
     expect(report.issues.filter(issue => issue.level === 'error')).toEqual([]);
     expect(Object.keys(report.boneMap)).toHaveLength(AVATAR_V2_REQUIRED_BONES.length);
   });
@@ -512,6 +524,44 @@ describe('Avatar V2 mesh contract', () => {
     const report = validateAvatarV2Scene(scene, 'masculine', 0);
     expect(report.valid).toBe(false);
     expect(report.issues.some(issue => issue.code === 'missing-surface-binding:iris:Eye.L')).toBe(true);
+  });
+
+  it('rejects close-up heads without a used authored natural eyebrow region', () => {
+    const scene = validScene();
+    const head = scene.getObjectByName('RMV2_HeadSurface') as T.SkinnedMesh;
+    const materials = head.material as T.Material[];
+    materials[2].name = 'RMV2_Hair';
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'missing-head-eyebrow-material')).toBe(true);
+  });
+
+  it('rejects LOD0 faces without a used authored lip material region', () => {
+    const scene = validScene();
+    const head = scene.getObjectByName('RMV2_HeadSurface') as T.SkinnedMesh;
+    const materials = head.material as T.Material[];
+    materials[1].name = 'RMV2_SkinDetail';
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'missing-head-lip-material')).toBe(true);
+  });
+
+  it('rejects eyelashes that do not follow the matching eyelid blink', () => {
+    const scene = validScene();
+    const lashes = scene.getObjectByName('RMV2_Eyelashes.R') as T.Mesh;
+    lashes.morphTargetDictionary = {};
+    lashes.geometry.morphAttributes.position = [];
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'missing-eyelashes-blink:R')).toBe(true);
+  });
+
+  it('rejects eyelashes that are detached from the eye region', () => {
+    const scene = validScene();
+    scene.getObjectByName('RMV2_Eyelashes.L')!.position.x = .12;
+    const report = validateAvatarV2Scene(scene, 'masculine', 0);
+    expect(report.valid).toBe(false);
+    expect(report.issues.some(issue => issue.code === 'misaligned-eyelashes:L')).toBe(true);
   });
 
   it('rejects a close-up wetline that cannot follow its eyelid blink', () => {

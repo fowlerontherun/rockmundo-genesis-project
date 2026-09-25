@@ -116,6 +116,9 @@ const MATERIAL_ROLE_PATTERNS = {
   sclera: /rmv2[_-]?sclera|(^|[_-])sclera($|[_-])/i,
   cornea: /rmv2[_-]?cornea|cornea|eye[_-]?(shell|surface)|ocular[_-]?shell/i,
   wetline: /rmv2[_-]?(wetline|tearline|waterline)|(^|[_-])(wetline|tearline|waterline)($|[_-])/i,
+  lips: /rmv2[_-]?lips|(^|[_-])lips?($|[_-])/i,
+  eyebrows: /rmv2[_-]?eyebrows?|(^|[_-])(brow|eyebrow)($|[_-])/i,
+  eyelashes: /rmv2[_-]?(eyelash|lashes?)|(^|[_-])(eyelash|lashes?)($|[_-])/i,
   teeth: /rmv2[_-]?teeth|teeth/i,
   tongue: /rmv2[_-]?tongue|tongue/i,
   mouthInterior: /rmv2[_-]?mouth[_-]?(interior|cavity)|oral[_-]?cavity|inner[_-]?mouth/i,
@@ -126,6 +129,7 @@ const SURFACE_NODE_PATTERNS = {
   sclera: /rmv2[_-]?(sclera|eye[_-]?white)|(^|[_-])sclera($|[_-])/i,
   cornea: /rmv2[_-]?(cornea|eye[_-]?(shell|surface))|ocular[_-]?shell/i,
   wetline: /rmv2[_-]?(wetline|tearline|waterline)|(^|[_-])(wetline|tearline|waterline)($|[_-])/i,
+  eyelashes: /rmv2[_-]?(eyelash|lashes?)|(^|[_-])(eyelash|lashes?)($|[_-])/i,
   teeth: /rmv2[_-]?(?:(?:upper|lower)[_-]?)?(teeth|tooth)|(^|[_-])teeth($|[_-])/i,
   tongue: /rmv2[_-]?tongue|(^|[_-])tongue($|[_-])/i,
   mouthInterior: /rmv2[_-]?mouth[_-]?(interior|cavity)|oral[_-]?cavity|inner[_-]?mouth/i,
@@ -141,6 +145,7 @@ const REQUIRED_SURFACE_BINDINGS = {
   sclera: ['Eye.L','Eye.R'],
   cornea: ['Eye.L','Eye.R'],
   wetline: ['Head'],
+  eyelashes: ['Head'],
   teeth: ['Head','Jaw'],
   tongue: ['Jaw'],
   mouthInterior: ['Head'],
@@ -291,8 +296,11 @@ function inspect(gltf) {
   );
   const wetlineSides = new Set();
   const wetlineBlinkDeltas = { L: 0, R: 0 };
+  const eyelashSides = new Set();
+  const eyelashBlinkDeltas = { L: 0, R: 0 };
   let mouthInteriorDepth = 0;
   const usedMaterialNames = new Set();
+  const headMaterialNames = new Set();
   for (const node of gltf.nodes ?? []) {
     if (node.mesh == null) continue;
     const matched = new Set();
@@ -311,6 +319,14 @@ function inspect(gltf) {
     usedMaterials.forEach(material => {
       if (material?.name) usedMaterialNames.add(material.name);
     });
+    if (
+      /^RMV2_(?:Head|Face)/i.test(node.name ?? '')
+      || node.extras?.rockmundoHeadSurface === true
+    ) {
+      usedMaterials.forEach(material => {
+        if (material?.name) headMaterialNames.add(material.name);
+      });
+    }
 
     for (const [role, pattern] of Object.entries(SURFACE_NODE_PATTERNS)) {
       const explicitRole = clean(node.extras?.rockmundoSurfaceRole ?? '');
@@ -331,17 +347,19 @@ function inspect(gltf) {
           }
         }
 
-        if (role === 'wetline') {
+        if (role === 'wetline' || role === 'eyelashes') {
           const side = surfaceEyeSide(node);
           if (side) {
-            wetlineSides.add(side);
+            const sideSet = role === 'wetline' ? wetlineSides : eyelashSides;
+            const blinkDeltas = role === 'wetline' ? wetlineBlinkDeltas : eyelashBlinkDeltas;
+            sideSet.add(side);
             const blinkName = side === 'L' ? 'blinkLeft' : 'blinkRight';
             const targetNames = mesh?.extras?.targetNames ?? [];
             for (const primitive of mesh?.primitives ?? []) {
               for (const [targetIndex, target] of (primitive.targets ?? []).entries()) {
                 if (clean(targetNames[targetIndex]) !== clean(blinkName) || target?.POSITION == null) continue;
                 const delta = accessorMaxAbs(gltf, target.POSITION);
-                if (Number.isFinite(delta)) wetlineBlinkDeltas[side] = Math.max(wetlineBlinkDeltas[side], delta);
+                if (Number.isFinite(delta)) blinkDeltas[side] = Math.max(blinkDeltas[side], delta);
               }
             }
           }
@@ -399,6 +417,9 @@ function inspect(gltf) {
     ),
     wetlineSides: [...wetlineSides],
     wetlineBlinkDeltas,
+    eyelashSides: [...eyelashSides],
+    eyelashBlinkDeltas,
+    headMaterialNames: [...headMaterialNames],
     mouthInteriorDepth,
   };
 }
@@ -549,12 +570,15 @@ function validateAsset(gltf, entry) {
 
   const materialRoles = MATERIAL_ROLE_PATTERNS;
   if (entry.lod <= 1) {
+    if (!report.headMaterialNames.some(name => materialRoles.eyebrows.test(name))) {
+      errors.push('LOD0/1 head/face surface is missing a used RMV2_Eyebrows material region');
+    }
     for (const role of ['skin','eyes']) {
       if (!report.materialNames.some(name => materialRoles[role].test(name))) errors.push(`Missing named close-up material role: ${role}`);
     }
   }
   if (entry.lod === 0) {
-    for (const role of ['iris','sclera','cornea','wetline','teeth','tongue','mouthInterior']) {
+    for (const role of ['iris','sclera','cornea','wetline','eyelashes','teeth','tongue','mouthInterior']) {
       if (!report.dedicatedSurfaceRoles.includes(role)) {
         errors.push(`LOD0 missing dedicated ${role} geometry using its matching material role; extra material slots do not count`);
         continue;
@@ -572,10 +596,20 @@ function validateAsset(gltf, entry) {
         errors.push(`LOD0 wetline ${side} missing measurable ${side === 'L' ? 'blinkLeft' : 'blinkRight'} deformation`);
       }
     }
+    for (const side of ['L','R']) {
+      if (!report.eyelashSides.includes(side)) {
+        errors.push(`LOD0 missing ${side} eyelash surface`);
+      } else if ((report.eyelashBlinkDeltas?.[side] ?? 0) < 0.0002) {
+        errors.push(`LOD0 eyelashes ${side} missing measurable ${side === 'L' ? 'blinkLeft' : 'blinkRight'} deformation`);
+      }
+    }
+    if (!report.headMaterialNames.some(name => MATERIAL_ROLE_PATTERNS.lips.test(name))) {
+      errors.push('LOD0 head/face surface is missing a used RMV2_Lips material region');
+    }
     if ((report.mouthInteriorDepth ?? 0) < 0.025) {
       errors.push(`LOD0 mouth interior is too shallow: ${((report.mouthInteriorDepth ?? 0) * 1000).toFixed(1)}mm; minimum is 25mm`);
     }
-    for (const role of ['cornea','wetline','teeth','tongue','mouthInterior']) {
+    for (const role of ['cornea','wetline','lips','eyelashes','teeth','tongue','mouthInterior']) {
       if (!report.materialNames.some(name => materialRoles[role].test(name))) errors.push(`LOD0 missing separate ${role} material/mesh role`);
     }
   } else if (entry.lod === 1) {

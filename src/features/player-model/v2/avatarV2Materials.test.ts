@@ -19,6 +19,9 @@ describe('Avatar V2 material quality', () => {
     expect(avatarV2MaterialRole('RMV2_Iris')).toBe('iris');
     expect(avatarV2MaterialRole('RMV2_Cornea')).toBe('cornea');
     expect(avatarV2MaterialRole('RMV2_Wetline')).toBe('wetline');
+    expect(avatarV2MaterialRole('RMV2_Lips')).toBe('lips');
+    expect(avatarV2MaterialRole('RMV2_Eyelashes')).toBe('eyelashes');
+    expect(avatarV2MaterialRole('RMV2_Eyebrows')).toBe('eyebrows');
     expect(avatarV2MaterialRole('RMV2_Teeth')).toBe('teeth');
     expect(avatarV2MaterialRole('RMV2_Tongue')).toBe('tongue');
     expect(avatarV2MaterialRole('RMV2_MouthInterior')).toBe('mouthInterior');
@@ -100,6 +103,51 @@ describe('Avatar V2 material quality', () => {
     const tuned = (root.children[0] as T.Mesh).material as T.Material[];
     expect(tuned[0]).toBeInstanceOf(T.MeshPhysicalMaterial);
     expect(tuned[1]).toBe(hair);
+  });
+
+  it('gives LOD0 lips natural skin-relative moisture and eyelashes authored hair colour', () => {
+    const root = new T.Group();
+    const lips = material('RMV2_Lips');
+    const lashes = material('RMV2_Eyelashes');
+    root.add(new T.Mesh(new T.BoxGeometry(1, 1, 1), [lips, lashes]));
+
+    const appearance = defaultAppearance('v2-lip-lash-test');
+    appearance.body.skin = '#8d5524';
+    appearance.head.hair = '#54372a';
+    appearance.head.eyebrowColor = '#221f24';
+
+    const report = tuneAvatarV2Materials(root, appearance, 'cinematic');
+    const tuned = (root.children[0] as T.Mesh).material as T.Material[];
+    const tunedLips = tuned[0] as T.MeshPhysicalMaterial;
+    const tunedLashes = tuned[1] as T.MeshStandardMaterial;
+
+    expect(tunedLips).toBeInstanceOf(T.MeshPhysicalMaterial);
+    expect(tunedLips.roughness).toBeLessThan(.4);
+    expect(tunedLips.clearcoat).toBeGreaterThan(.1);
+    expect(tunedLashes.color.getHexString()).toBe('221f24');
+    expect(tunedLashes.transparent).toBe(true);
+    expect(tunedLashes.alphaTest).toBeGreaterThanOrEqual(.18);
+    expect(tunedLashes.side).toBe(T.DoubleSide);
+    expect(report.lips).toBe(1);
+    expect(report.eyelashes).toBe(1);
+  });
+
+  it('uses the saved eyebrow colour independently from hairstyle colour', () => {
+    const root = new T.Group();
+    const brows = material('RMV2_Eyebrows');
+    root.add(new T.Mesh(new T.BoxGeometry(1, 1, 1), brows));
+
+    const appearance = defaultAppearance('v2-brow-material');
+    appearance.head.hair = '#d5b474';
+    appearance.head.eyebrowColor = '#221f24';
+
+    const report = tuneAvatarV2Materials(root, appearance, 'cinematic');
+    const tuned = (root.children[0] as T.Mesh).material as T.MeshPhysicalMaterial;
+
+    expect(tuned).toBeInstanceOf(T.MeshPhysicalMaterial);
+    expect(tuned.color.getHexString()).toBe('221f24');
+    expect(tuned.anisotropy).toBeGreaterThan(.5);
+    expect(report.eyebrows).toBe(1);
   });
 
   it('keeps balanced-distance skin on the cheaper standard shader path', () => {
