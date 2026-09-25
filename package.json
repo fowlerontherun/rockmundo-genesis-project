@@ -61,7 +61,7 @@
     "verify:avatar-v2-source": "node scripts/avatar-v2/verify-source-provenance.mjs",
     "verify:avatar-v2-blender-scripts": "python3 -m py_compile scripts/avatar-v2/fetch_human_base_meshes.py scripts/avatar-v2/blender/rockmundo_avatar_v2_seed.py scripts/avatar-v2/blender/rockmundo_avatar_v2_rig_guide.py scripts/avatar-v2/blender/rockmundo_avatar_v2_weight_audit.py scripts/avatar-v2/blender/rockmundo_avatar_v2_body_regions.py scripts/avatar-v2/blender/rockmundo_avatar_v2_export.py",
     "validate:avatar-v2": "npm run verify:avatar-v2-source && node scripts/avatar-v2/validate-assets.mjs && node scripts/avatar-v2/validate-garments.mjs",
-    "test:avatar-v2": "vitest run src/features/player-model/v2 src/features/player-model/accessoryGeometry.test.ts src/features/player-model/accessoryGeometryQuality.test.ts",
+    "test:avatar-v2": "vitest run src/features/player-model/v2 src/features/player-model/accessoryGeometry.test.ts src/features/player-model/accessoryGeometryQuality.test.ts src/features/player-model/hairStrands.test.ts",
     "verify:dependencies": "npm ls --all",
     "verify:dependency-lock": "node --test scripts/dependency-lock-integrity.test.mjs",
     "verify:migration-timestamps": "node scripts/supabase/verify-migration-timestamps.mjs",
