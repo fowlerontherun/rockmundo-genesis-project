@@ -158,7 +158,7 @@ def fit_from_handles(rig: bpy.types.Object, specs: list[BoneSpec], reviewed: boo
     fitted = fit_bones(specs, placed)
     issues = audit_sculpt_fit(fitted)
     if issues:
-        raise SystemExit("Joint fit rejected:\\n- " + "\\n- ".join(issues))
+        raise SystemExit("Joint fit rejected:\n- " + "\n- ".join(issues))
 
     by_name = {bone.name: bone for bone in specs}
     def depth(name: str) -> int:
@@ -227,7 +227,7 @@ def main() -> None:
     if args.report:
         path = pathlib.Path(args.report).expanduser().resolve()
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(result, indent=2) + "\\n", encoding="utf-8")
+        path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(result, indent=2))
 
 
