@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Users } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { crewDb } from "./crewDb";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,9 +45,9 @@ export function GigCrewAssignmentCard({ gigId, bandId, locked }: {
     queryKey: ["gig-crew-roster", bandId],
     enabled: !!bandId,
     queryFn: async (): Promise<RosterMember[]> => {
-      const { data, error } = await (supabase as any)
-        .from("band_crew_members")
-        .select("id,name,crew_type,skill_level,salary_per_gig,career_xp")
+      const { data, error } = await crewDb
+        .from<RosterMember>("band_crew_members")
+        .select("id,name,crew_type,skill_level,salary_per_gig")
         .eq("band_id", bandId);
       if (error) throw error;
       return (data || []) as RosterMember[];
@@ -58,8 +58,8 @@ export function GigCrewAssignmentCard({ gigId, bandId, locked }: {
     queryKey: ["gig-crew-assignments", gigId],
     enabled: !!gigId,
     queryFn: async (): Promise<Assignment[]> => {
-      const { data, error } = await (supabase as any)
-        .from("gig_crew_assignments")
+      const { data, error } = await crewDb
+        .from<Assignment>("gig_crew_assignments")
         .select("id,crew_role,band_crew_member_id,assignment_status,cost")
         .eq("gig_id", gigId);
       if (error) throw error;
@@ -83,7 +83,7 @@ export function GigCrewAssignmentCard({ gigId, bandId, locked }: {
   const autoAssign = async () => {
     setSavingRole("all");
     try {
-      const { error } = await (supabase as any).rpc("sync_band_crew_for_gig", { p_gig_id: gigId });
+      const { error } = await crewDb.rpc("sync_band_crew_for_gig", { p_gig_id: gigId });
       if (error) throw error;
       await refresh();
       toast({ title: "Crew assigned", description: "Your available band crew are now scheduled for this gig." });
@@ -102,7 +102,7 @@ export function GigCrewAssignmentCard({ gigId, bandId, locked }: {
     if (!selected) return;
     setSavingRole(role);
     try {
-      const { error } = await (supabase as any).rpc("save_gig_crew_assignment", {
+      const { error } = await crewDb.rpc("save_gig_crew_assignment", {
         p_gig_id: gigId,
         p_crew_role: role,
         p_worker_type: "npc_staff",
