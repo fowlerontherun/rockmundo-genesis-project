@@ -70,7 +70,7 @@ beforeEach(() => {
 });
 
 describe("Auth critical journey", () => {
-  it("signs in with Supabase and returns the player to Home", async () => {
+  it("signs in with Supabase and hands the player to onboarding routing", async () => {
     render(<Auth />);
 
     fireEvent.change(screen.getByLabelText("forms.email", { selector: "#login-email" }), {
@@ -85,7 +85,7 @@ describe("Auth critical journey", () => {
       email: "player@example.com",
       password: "Password1",
     }));
-    expect(mocks.navigate).toHaveBeenCalledWith("/home", { replace: true });
+    expect(mocks.navigate).toHaveBeenCalledWith("/onboarding", { replace: true });
   });
 
   it("creates an email account with the canonical confirmation redirect", async () => {

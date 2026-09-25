@@ -15,6 +15,7 @@ export type AvatarV2MaterialRole =
   | 'iris'
   | 'sclera'
   | 'cornea'
+  | 'wetline'
   | 'teeth'
   | 'tongue'
   | 'mouthInterior'
@@ -22,6 +23,7 @@ export type AvatarV2MaterialRole =
 
 export function avatarV2MaterialRole(name: string): AvatarV2MaterialRole {
   const value = name.toLowerCase();
+  if (/wetline|tearline|waterline/.test(value)) return 'wetline';
   if (/cornea|eye[_-]?(shell|surface)|ocular[_-]?shell/.test(value)) return 'cornea';
   if (/iris/.test(value)) return 'iris';
   if (/teeth|tooth/.test(value)) return 'teeth';
@@ -84,7 +86,7 @@ export function avatarV2TextureDetailQuality(quality: AvatarVisualQuality): Avat
 
 function tuneEyeSurface(
   material: T.MeshStandardMaterial,
-  role: 'iris' | 'sclera' | 'cornea',
+  role: 'iris' | 'sclera' | 'cornea' | 'wetline',
   appearance: PlayerAppearance,
   quality: AvatarVisualQuality,
 ) {
@@ -98,6 +100,23 @@ function tuneEyeSurface(
     material.color.set('#f2eee8');
     material.roughness = quality === 'cinematic' ? .24 : quality === 'ultra' ? .28 : .34;
     material.envMapIntensity = quality === 'cinematic' ? 1.45 : quality === 'ultra' ? 1.3 : 1.12;
+  } else if (role === 'wetline') {
+    // A narrow tear/wetline strip around the lid adds the specular break that
+    // stops close-up eyes looking like dry plastic spheres. It remains subtle
+    // and transparent so the authored eyelid/skin remains visually dominant.
+    material.color.set('#eef8fb');
+    material.roughness = quality === 'cinematic' ? .025 : quality === 'ultra' ? .035 : .05;
+    material.envMapIntensity = quality === 'cinematic' ? 2.35 : quality === 'ultra' ? 2.1 : 1.8;
+    material.transparent = true;
+    material.opacity = quality === 'cinematic' ? .62 : quality === 'ultra' ? .56 : .48;
+    material.depthWrite = false;
+    if (material instanceof T.MeshPhysicalMaterial) {
+      material.clearcoat = 1;
+      material.clearcoatRoughness = .01;
+      material.ior = 1.336;
+      material.transmission = quality === 'balanced' || quality === 'crowd' ? 0 : .12;
+      material.thickness = .002;
+    }
   } else {
     material.color.set('#ffffff');
     material.roughness = quality === 'cinematic' ? .035 : quality === 'ultra' ? .05 : .08;
@@ -148,6 +167,7 @@ export interface AvatarV2MaterialTuningReport {
   eyes: number;
   mouth: number;
   corneaPromoted: number;
+  wetlinePromoted: number;
 }
 
 export function tuneAvatarV2Materials(
@@ -161,6 +181,7 @@ export function tuneAvatarV2Materials(
     eyes: 0,
     mouth: 0,
     corneaPromoted: 0,
+    wetlinePromoted: 0,
   };
   let skinCache: ReturnType<typeof createAvatarSkinTextureCache> | undefined;
   let hairCache: ReturnType<typeof createAvatarHairTextureCache> | undefined;
@@ -176,11 +197,14 @@ export function tuneAvatarV2Materials(
       const role = avatarV2MaterialRole(source.name);
       let material = source;
 
-      if (role === 'cornea') {
+      if (role === 'cornea' || role === 'wetline') {
         material = promotePhysical(source, true);
         const promoted = material !== source;
         changed = changed || promoted;
-        if (promoted) report.corneaPromoted += 1;
+        if (promoted) {
+          if (role === 'cornea') report.corneaPromoted += 1;
+          else report.wetlinePromoted += 1;
+        }
       } else if (
         usesCloseUpPhysicalShading(quality)
         && (role === 'skin' || role === 'hair' || role === 'teeth' || role === 'tongue')
@@ -227,7 +251,7 @@ export function tuneAvatarV2Materials(
           material.clearcoatRoughness = .46;
         }
         report.hair += 1;
-      } else if (role === 'iris' || role === 'sclera' || role === 'cornea') {
+      } else if (role === 'iris' || role === 'sclera' || role === 'cornea' || role === 'wetline') {
         tuneEyeSurface(material, role, appearance, quality);
         report.eyes += 1;
       } else if (role === 'teeth' || role === 'tongue' || role === 'mouthInterior') {

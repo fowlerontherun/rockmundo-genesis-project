@@ -143,6 +143,7 @@ MATERIAL_ROLES = {
     "iris": re.compile(r"rmv2[_-]?iris|(^|[_-])iris($|[_-])", re.I),
     "sclera": re.compile(r"rmv2[_-]?sclera|(^|[_-])sclera($|[_-])", re.I),
     "cornea": re.compile(r"rmv2[_-]?cornea|cornea|eye[_-]?(shell|surface)|ocular[_-]?shell", re.I),
+    "wetline": re.compile(r"rmv2[_-]?(wetline|tearline|waterline)|(^|[_-])(wetline|tearline|waterline)($|[_-])", re.I),
     "teeth": re.compile(r"rmv2[_-]?teeth|teeth", re.I),
     "tongue": re.compile(r"rmv2[_-]?tongue|tongue", re.I),
     "mouthInterior": re.compile(r"rmv2[_-]?mouth[_-]?(interior|cavity)|oral[_-]?cavity|inner[_-]?mouth", re.I),
@@ -152,6 +153,7 @@ SURFACE_NODE_PATTERNS = {
     "iris": re.compile(r"rmv2[_-]?(iris|eye[_-]?iris)|(^|[_-])iris($|[_-])", re.I),
     "sclera": re.compile(r"rmv2[_-]?(sclera|eye[_-]?white)|(^|[_-])sclera($|[_-])", re.I),
     "cornea": re.compile(r"rmv2[_-]?(cornea|eye[_-]?(shell|surface))|ocular[_-]?shell", re.I),
+    "wetline": re.compile(r"rmv2[_-]?(wetline|tearline|waterline)|(^|[_-])(wetline|tearline|waterline)($|[_-])", re.I),
     "teeth": re.compile(r"rmv2[_-]?(?:(?:upper|lower)[_-]?)?(teeth|tooth)|(^|[_-])teeth($|[_-])", re.I),
     "tongue": re.compile(r"rmv2[_-]?tongue|(^|[_-])tongue($|[_-])", re.I),
     "mouthInterior": re.compile(r"rmv2[_-]?mouth[_-]?(interior|cavity)|oral[_-]?cavity|inner[_-]?mouth", re.I),
@@ -168,6 +170,7 @@ REQUIRED_SURFACE_BINDINGS = {
     "iris": ("Eye.L", "Eye.R"),
     "sclera": ("Eye.L", "Eye.R"),
     "cornea": ("Eye.L", "Eye.R"),
+    "wetline": ("Head",),
     "teeth": ("Head", "Jaw"),
     "tongue": ("Jaw",),
     "mouthInterior": ("Head",),
@@ -203,6 +206,66 @@ def object_has_bone_influence(obj: bpy.types.Object, aliases: list[str]) -> bool
         assignment.group in group_indexes and assignment.weight > 0.01
         for vertex in obj.data.vertices
         for assignment in vertex.groups
+    )
+
+
+def surface_eye_side(obj: bpy.types.Object) -> str | None:
+    explicit = clean(str(obj.get("rockmundoEyeSide", "")))
+    if explicit in {"l", "left"}:
+        return "L"
+    if explicit in {"r", "right"}:
+        return "R"
+    if re.search(r"(?:[._-]l|left)$", obj.name, re.I):
+        return "L"
+    if re.search(r"(?:[._-]r|right)$", obj.name, re.I):
+        return "R"
+    return None
+
+
+def object_shape_key_max_delta(obj: bpy.types.Object, aliases: list[str]) -> float:
+    return shape_key_max_delta([obj], aliases)
+
+
+def object_axis_span(obj: bpy.types.Object, axis: int) -> float:
+    if not obj.data.vertices:
+        return 0.0
+    values = [vertex.co[axis] for vertex in obj.data.vertices]
+    return max(values) - min(values)
+
+
+def object_world_bounds(obj: bpy.types.Object):
+    if not obj.data.vertices:
+        return None
+    points = [obj.matrix_world @ vertex.co for vertex in obj.data.vertices]
+    return (
+        tuple(min(point[axis] for point in points) for axis in range(3)),
+        tuple(max(point[axis] for point in points) for axis in range(3)),
+    )
+
+
+def combined_object_bounds(objects: list[bpy.types.Object]):
+    bounds = [object_world_bounds(obj) for obj in objects]
+    bounds = [value for value in bounds if value is not None]
+    if not bounds:
+        return None
+    return (
+        tuple(min(value[0][axis] for value in bounds) for axis in range(3)),
+        tuple(max(value[1][axis] for value in bounds) for axis in range(3)),
+    )
+
+
+def bounds_center(bounds):
+    return tuple((bounds[0][axis] + bounds[1][axis]) * 0.5 for axis in range(3))
+
+
+def centre_distance(a, b) -> float:
+    return sum((a[axis] - b[axis]) ** 2 for axis in range(3)) ** 0.5
+
+
+def point_inside_expanded_bounds(point, bounds, margin: float) -> bool:
+    return all(
+        bounds[0][axis] - margin <= point[axis] <= bounds[1][axis] + margin
+        for axis in range(3)
     )
 
 
@@ -350,6 +413,12 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
     dedicated_surface_bindings = {
         role: set() for role in SURFACE_NODE_PATTERNS
     }
+    dedicated_surface_objects = {
+        role: [] for role in SURFACE_NODE_PATTERNS
+    }
+    wetline_sides = set()
+    wetline_blink_deltas = {"L": 0.0, "R": 0.0}
+    mouth_interior_depth = 0.0
     for obj in meshes:
         used_material_indices = {polygon.material_index for polygon in obj.data.polygons}
         used_materials = [
@@ -364,9 +433,25 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
                 MATERIAL_ROLES[role].search(material.name) for material in used_materials
             ):
                 dedicated_surface_roles.add(role)
+                dedicated_surface_objects[role].append(obj)
                 binding = canonical_surface_binding(obj.get("rockmundoBoneBinding", ""))
                 if binding and object_has_bone_influence(obj, SURFACE_BINDING_ALIASES[binding]):
                     dedicated_surface_bindings[role].add(binding)
+
+                if role == "wetline":
+                    side = surface_eye_side(obj)
+                    if side:
+                        wetline_sides.add(side)
+                        blink_name = "blinkLeft" if side == "L" else "blinkRight"
+                        wetline_blink_deltas[side] = max(
+                            wetline_blink_deltas[side],
+                            object_shape_key_max_delta(obj, [blink_name]),
+                        )
+                elif role == "mouthInterior":
+                    mouth_interior_depth = max(
+                        mouth_interior_depth,
+                        object_axis_span(obj, 2),
+                    )
     budget = BUDGETS[args.lod]
 
     if triangles > budget["triangles"]:
@@ -586,7 +671,7 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
             if not any(MATERIAL_ROLES[role].search(name) for name in materials):
                 errors.append(f"Missing named close-up material role: {role}.")
     if args.lod == 0:
-        for role in ("iris", "sclera", "cornea", "teeth", "tongue", "mouthInterior"):
+        for role in ("iris", "sclera", "cornea", "wetline", "teeth", "tongue", "mouthInterior"):
             if role not in dedicated_surface_roles:
                 errors.append(
                     f"LOD0 needs dedicated {role} geometry using its matching material role; "
@@ -599,7 +684,63 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
                         f"LOD0 {role} needs rockmundoBoneBinding={binding} plus real "
                         f"{binding} vertex-group influence."
                     )
-        for role in ("cornea", "teeth", "tongue", "mouthInterior"):
+        for side in ("L", "R"):
+            if side not in wetline_sides:
+                errors.append(f"LOD0 needs a dedicated {side} eyelid wetline surface.")
+            elif wetline_blink_deltas[side] < 0.00015:
+                blink_name = "blinkLeft" if side == "L" else "blinkRight"
+                errors.append(
+                    f"LOD0 wetline {side} must deform with {blink_name}; "
+                    f"measured {wetline_blink_deltas[side] * 1000:.3f}mm."
+                )
+        if mouth_interior_depth < 0.025:
+            errors.append(
+                f"LOD0 mouth interior depth is only {mouth_interior_depth * 1000:.1f}mm; "
+                "minimum close-up cavity depth is 25mm."
+            )
+
+        for binding in ("Eye.L", "Eye.R"):
+            sclera = [
+                obj for obj in dedicated_surface_objects["sclera"]
+                if canonical_surface_binding(obj.get("rockmundoBoneBinding", "")) == binding
+            ]
+            sclera_bounds = combined_object_bounds(sclera)
+            if not sclera_bounds:
+                continue
+            sclera_centre = bounds_center(sclera_bounds)
+            for role in ("iris", "cornea"):
+                surfaces = [
+                    obj for obj in dedicated_surface_objects[role]
+                    if canonical_surface_binding(obj.get("rockmundoBoneBinding", "")) == binding
+                ]
+                role_bounds = combined_object_bounds(surfaces)
+                if not role_bounds:
+                    continue
+                distance = centre_distance(bounds_center(role_bounds), sclera_centre)
+                if distance > 0.018:
+                    errors.append(
+                        f"LOD0 {binding} {role} centre is {distance * 1000:.1f}mm from its sclera; "
+                        "close-up eye layers must share the same eyeball centre."
+                    )
+                if role == "cornea" and role_bounds[1][2] < sclera_bounds[1][2] - 0.001:
+                    errors.append(
+                        f"LOD0 {binding} cornea sits behind the visible sclera envelope."
+                    )
+
+        mouth_bounds = combined_object_bounds(dedicated_surface_objects["mouthInterior"])
+        if mouth_bounds:
+            for role in ("teeth", "tongue"):
+                for obj in dedicated_surface_objects[role]:
+                    obj_bounds = object_world_bounds(obj)
+                    if not obj_bounds:
+                        continue
+                    if not point_inside_expanded_bounds(bounds_center(obj_bounds), mouth_bounds, 0.015):
+                        errors.append(
+                            f"LOD0 {role} object {obj.name} is centred outside the mouth cavity envelope."
+                        )
+                        break
+
+        for role in ("cornea", "wetline", "teeth", "tongue", "mouthInterior"):
             if not any(MATERIAL_ROLES[role].search(name) for name in materials):
                 errors.append(f"LOD0 needs separate {role} geometry/material.")
     elif args.lod == 1:

@@ -86,10 +86,10 @@ function CandidateCanvas({
     scene.background = new T.Color('#101823');
     const view = CANDIDATE_VIEW[viewPreset];
     const camera = new T.PerspectiveCamera(view.fov, 1, .05, 30);
-    camera.position.set(...view.position);
+    camera.position.set(view.position[0], view.position[1], view.position[2]);
 
     const controls = new OrbitControls(camera, element);
-    controls.target.set(...view.target);
+    controls.target.set(view.target[0], view.target[1], view.target[2]);
     controls.enableDamping = true;
     controls.enablePan = false;
     controls.minDistance = view.minDistance;
@@ -536,6 +536,8 @@ export function AvatarV2CandidateLab() {
                 ['iris pair', ['missing-dedicated-surface:iris', 'missing-surface-binding:iris:Eye.L', 'missing-surface-binding:iris:Eye.R']],
                 ['sclera pair', ['missing-dedicated-surface:sclera', 'missing-surface-binding:sclera:Eye.L', 'missing-surface-binding:sclera:Eye.R']],
                 ['cornea pair', ['missing-dedicated-surface:cornea', 'missing-surface-binding:cornea:Eye.L', 'missing-surface-binding:cornea:Eye.R']],
+                ['eyelid wetlines', ['missing-dedicated-surface:wetline', 'missing-wetline-side:L', 'missing-wetline-side:R', 'missing-wetline-blink:L', 'missing-wetline-blink:R', 'invalid-wetline-binding:L', 'invalid-wetline-binding:R']],
+                ['mouth cavity depth', ['shallow-mouth-cavity']],
                 ['upper/lower teeth', ['missing-dedicated-surface:teeth', 'missing-surface-binding:teeth:Head', 'missing-surface-binding:teeth:Jaw']],
                 ['tongue→Jaw', ['missing-dedicated-surface:tongue', 'missing-surface-binding:tongue:Jaw']],
                 ['mouth interior→Head', ['missing-dedicated-surface:mouthInterior', 'missing-surface-binding:mouthInterior:Head']],

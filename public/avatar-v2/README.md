@@ -180,8 +180,12 @@ They are driven from vocal opening and performance energy so strong choruses
 engage the lips, cheeks, eyes and brows as well as the jaw while quieter passages
 remain subtle. Additional frown targets are still encouraged.
 Eye direction is handled by dedicated eye bones, keeping gaze independent from
-blink/squint facial morphs. Teeth and tongue must be separate at LOD0 so close-up
-vocals never expose a hollow mouth.
+blink/squint facial morphs. LOD0 also requires separate left/right eyelid wetline
+surfaces using `RMV2_Wetline`; each wetline stays Head-skinned and carries the
+matching `blinkLeft` or `blinkRight` deformation so the tear line follows the
+eyelid rather than floating across the eye. Teeth and tongue must be separate at
+LOD0, and the mouth-interior mesh needs at least 25mm of real front-to-back depth,
+so close-up vocals never expose a hollow or paper-flat mouth.
 
 LOD0/LOD1 also require shoulder and toe-base articulation, dedicated `Eye.L` /
 `Eye.R` gaze bones, non-deforming `EarAnchor.L/R` attachment bones, six deform-only twist helpers
@@ -223,13 +227,14 @@ Use stable names where possible:
 - `RMV2_Skin`
 - `RMV2_Eyes` / `RMV2_Iris` / `RMV2_Sclera`
 - `RMV2_Cornea` for the transparent/reflective eye shell
+- `RMV2_Wetline` for the eyelid tear/wetline highlight
 - `RMV2_Hair`
 - `RMV2_Teeth`
 - `RMV2_Tongue`
 - `RMV2_MouthInterior`
 
-LOD0 now requires dedicated iris, sclera, cornea, teeth, tongue and mouth-interior
-geometry using matching material roles; extra unused/material slots on the body or
+LOD0 now requires dedicated iris, sclera, cornea, left/right wetline, teeth,
+tongue and mouth-interior geometry using matching material roles; extra unused/material slots on the body or
 face do not count. The eye surfaces must be split or skinned so both `Eye.L` and
 `Eye.R` have real influence. Teeth must include both Head-driven upper teeth and
 Jaw-driven lower teeth, the tongue must carry real Jaw influence, and the mouth
@@ -247,6 +252,7 @@ Recommended LOD0 surface layout:
 - `RMV2_Iris.R` → `rockmundoBoneBinding=Eye.R`
 - `RMV2_Sclera.L/R` → matching eye bone
 - `RMV2_Cornea.L/R` → matching eye bone
+- `RMV2_Wetline.L/R` → `Head`, with `rockmundoEyeSide=L/R` and the matching blink morph
 - `RMV2_UpperTeeth` → `Head`
 - `RMV2_LowerTeeth` → `Jaw`
 - `RMV2_Tongue` → `Jaw`

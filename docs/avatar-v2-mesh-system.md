@@ -98,13 +98,15 @@ Priority topology areas:
 - eyelids and lips with deformation loops;
 - nose/nostril definition;
 - separate iris, sclera and cornea geometry with real `Eye.L` / `Eye.R` skin influence;
+- separate left/right eyelid wetlines with a moist physical shader and side-specific blink deformation;
 - ears capable of accurate jewellery attachment, with authored `EarAnchor.L/R` earlobe markers;
 - five-finger hands suitable for instrument grips;
 - shoulders/elbows/knees with animation-friendly loops;
 - shaped feet/toes for real footwear;
 - clean neck/head transition for hairstyles;
 - stable UVs for tattoos and skin detail;
-- dedicated upper/lower teeth, tongue and mouth-cavity surfaces for open-mouth singing close-ups, with upper teeth on Head and lower teeth/tongue on Jaw.
+- dedicated upper/lower teeth, tongue and mouth-cavity surfaces for open-mouth singing close-ups, with upper teeth on Head and lower teeth/tongue on Jaw;
+- at least 25mm of authored mouth-cavity depth so a fully open jaw never resolves to a flat dark plane.
 
 ## Foot and toe-base articulation
 

@@ -115,6 +115,7 @@ const MATERIAL_ROLE_PATTERNS = {
   iris: /rmv2[_-]?iris|(^|[_-])iris($|[_-])/i,
   sclera: /rmv2[_-]?sclera|(^|[_-])sclera($|[_-])/i,
   cornea: /rmv2[_-]?cornea|cornea|eye[_-]?(shell|surface)|ocular[_-]?shell/i,
+  wetline: /rmv2[_-]?(wetline|tearline|waterline)|(^|[_-])(wetline|tearline|waterline)($|[_-])/i,
   teeth: /rmv2[_-]?teeth|teeth/i,
   tongue: /rmv2[_-]?tongue|tongue/i,
   mouthInterior: /rmv2[_-]?mouth[_-]?(interior|cavity)|oral[_-]?cavity|inner[_-]?mouth/i,
@@ -124,6 +125,7 @@ const SURFACE_NODE_PATTERNS = {
   iris: /rmv2[_-]?(iris|eye[_-]?iris)|(^|[_-])iris($|[_-])/i,
   sclera: /rmv2[_-]?(sclera|eye[_-]?white)|(^|[_-])sclera($|[_-])/i,
   cornea: /rmv2[_-]?(cornea|eye[_-]?(shell|surface))|ocular[_-]?shell/i,
+  wetline: /rmv2[_-]?(wetline|tearline|waterline)|(^|[_-])(wetline|tearline|waterline)($|[_-])/i,
   teeth: /rmv2[_-]?(?:(?:upper|lower)[_-]?)?(teeth|tooth)|(^|[_-])teeth($|[_-])/i,
   tongue: /rmv2[_-]?tongue|(^|[_-])tongue($|[_-])/i,
   mouthInterior: /rmv2[_-]?mouth[_-]?(interior|cavity)|oral[_-]?cavity|inner[_-]?mouth/i,
@@ -138,6 +140,7 @@ const REQUIRED_SURFACE_BINDINGS = {
   iris: ['Eye.L','Eye.R'],
   sclera: ['Eye.L','Eye.R'],
   cornea: ['Eye.L','Eye.R'],
+  wetline: ['Head'],
   teeth: ['Head','Jaw'],
   tongue: ['Jaw'],
   mouthInterior: ['Head'],
@@ -147,6 +150,23 @@ function canonicalSurfaceBinding(value) {
   const wanted = clean(value);
   return Object.entries(SURFACE_BINDING_ALIASES)
     .find(([, aliases]) => aliases.some(alias => clean(alias) === wanted))?.[0] ?? null;
+}
+
+function surfaceEyeSide(node) {
+  const explicit = clean(node?.extras?.rockmundoEyeSide ?? '');
+  if (explicit === 'l' || explicit === 'left') return 'L';
+  if (explicit === 'r' || explicit === 'right') return 'R';
+  const name = String(node?.name ?? '');
+  if (/(?:[._-]l|left)$/i.test(name)) return 'L';
+  if (/(?:[._-]r|right)$/i.test(name)) return 'R';
+  return null;
+}
+
+function accessorAxisSpan(gltf, accessorIndex, axis) {
+  const accessor = gltf.accessors?.[accessorIndex];
+  const min = Number(accessor?.min?.[axis]);
+  const max = Number(accessor?.max?.[axis]);
+  return Number.isFinite(min) && Number.isFinite(max) ? Math.max(0, max - min) : 0;
 }
 
 function materialBodyRegion(material) {
@@ -269,6 +289,9 @@ function inspect(gltf) {
   const dedicatedSurfaceBindings = Object.fromEntries(
     Object.keys(SURFACE_NODE_PATTERNS).map(role => [role, new Set()]),
   );
+  const wetlineSides = new Set();
+  const wetlineBlinkDeltas = { L: 0, R: 0 };
+  let mouthInteriorDepth = 0;
   const usedMaterialNames = new Set();
   for (const node of gltf.nodes ?? []) {
     if (node.mesh == null) continue;
@@ -305,6 +328,29 @@ function inspect(gltf) {
             .filter(Boolean);
           if (containsAlias(skinJointNames, SURFACE_BINDING_ALIASES[binding])) {
             dedicatedSurfaceBindings[role].add(binding);
+          }
+        }
+
+        if (role === 'wetline') {
+          const side = surfaceEyeSide(node);
+          if (side) {
+            wetlineSides.add(side);
+            const blinkName = side === 'L' ? 'blinkLeft' : 'blinkRight';
+            const targetNames = mesh?.extras?.targetNames ?? [];
+            for (const primitive of mesh?.primitives ?? []) {
+              for (const [targetIndex, target] of (primitive.targets ?? []).entries()) {
+                if (clean(targetNames[targetIndex]) !== clean(blinkName) || target?.POSITION == null) continue;
+                const delta = accessorMaxAbs(gltf, target.POSITION);
+                if (Number.isFinite(delta)) wetlineBlinkDeltas[side] = Math.max(wetlineBlinkDeltas[side], delta);
+              }
+            }
+          }
+        } else if (role === 'mouthInterior') {
+          for (const primitive of mesh?.primitives ?? []) {
+            mouthInteriorDepth = Math.max(
+              mouthInteriorDepth,
+              accessorAxisSpan(gltf, primitive.attributes?.POSITION, 2),
+            );
           }
         }
       }
@@ -351,6 +397,9 @@ function inspect(gltf) {
     dedicatedSurfaceBindings: Object.fromEntries(
       Object.entries(dedicatedSurfaceBindings).map(([role, bindings]) => [role, [...bindings]]),
     ),
+    wetlineSides: [...wetlineSides],
+    wetlineBlinkDeltas,
+    mouthInteriorDepth,
   };
 }
 
@@ -505,7 +554,7 @@ function validateAsset(gltf, entry) {
     }
   }
   if (entry.lod === 0) {
-    for (const role of ['iris','sclera','cornea','teeth','tongue','mouthInterior']) {
+    for (const role of ['iris','sclera','cornea','wetline','teeth','tongue','mouthInterior']) {
       if (!report.dedicatedSurfaceRoles.includes(role)) {
         errors.push(`LOD0 missing dedicated ${role} geometry using its matching material role; extra material slots do not count`);
         continue;
@@ -516,7 +565,17 @@ function validateAsset(gltf, entry) {
         }
       }
     }
-    for (const role of ['cornea','teeth','tongue','mouthInterior']) {
+    for (const side of ['L','R']) {
+      if (!report.wetlineSides.includes(side)) {
+        errors.push(`LOD0 missing ${side} eyelid wetline surface`);
+      } else if ((report.wetlineBlinkDeltas?.[side] ?? 0) < 0.00015) {
+        errors.push(`LOD0 wetline ${side} missing measurable ${side === 'L' ? 'blinkLeft' : 'blinkRight'} deformation`);
+      }
+    }
+    if ((report.mouthInteriorDepth ?? 0) < 0.025) {
+      errors.push(`LOD0 mouth interior is too shallow: ${((report.mouthInteriorDepth ?? 0) * 1000).toFixed(1)}mm; minimum is 25mm`);
+    }
+    for (const role of ['cornea','wetline','teeth','tongue','mouthInterior']) {
       if (!report.materialNames.some(name => materialRoles[role].test(name))) errors.push(`LOD0 missing separate ${role} material/mesh role`);
     }
   } else if (entry.lod === 1) {
