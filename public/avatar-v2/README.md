@@ -64,6 +64,15 @@ either GLB locally in the Admin V2 Candidate Lab's A-pose view to examine
 the difference. The rig and joint-handle `.blend` files now carry the improved
 source lookdev, while the original saved source remains untouched for comparison.
 
+The source lookdev also shades the **real, pre-existing sculpted upper and
+lower lips separately** using artist-editable material slots, with a
+softer boundary material rather than a floating makeup plane. The zones
+are derived from actual measured eyeball positions, front-facing lip
+polygons and the existing CC0 face mesh; they deliberately exclude the
+cheeks, nose, chin and head interior. Existing UVs, vertices, and sculpt
+geometry remain untouched. These are material references rather than
+a full lipstick system or authored mouth-opening/singing morphs.
+
 The artist-editable lookdev files now also contain **separate physical 3D
 eyebrows and upper eyelashes**, fitted to the real masculine/feminine source
 sculpt rather than placed at a fixed depth. Each brow is a continuous,
