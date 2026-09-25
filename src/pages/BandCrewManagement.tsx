@@ -233,9 +233,9 @@ const RosterCrewCard = ({
         <div className="space-y-1" aria-label={`${crew.name} career experience`}>
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">Career XP</span>
-            <span className="font-medium">{crew.career_xp ?? 0} XP · {100 - ((crew.career_xp ?? 0) % 100)} to next skill point</span>
+            <span className="font-medium">{crew.career_xp ?? 0} XP · {crew.skill_level >= 100 ? "Max technical skill" : `${100 - ((crew.career_xp ?? 0) % 100)} to next skill point`}</span>
           </div>
-          <Progress value={(crew.career_xp ?? 0) % 100} className="h-2" />
+          <Progress value={crew.skill_level >= 100 ? 100 : (crew.career_xp ?? 0) % 100} className="h-2" />
           {crew.last_gig_at && <p className="text-xs text-muted-foreground">Last worked: {new Date(crew.last_gig_at).toLocaleDateString()}</p>}
         </div>
       </CardContent>
