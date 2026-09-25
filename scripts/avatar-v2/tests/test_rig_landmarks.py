@@ -103,7 +103,7 @@ class SculptJointFitTests(unittest.TestCase):
         markers[marker_name("Eye.L", "head")] = (.052, -.079, 1.598)
         markers[marker_name("EarAnchor.L", "head")] = (.106, -.02, 1.551)
         fitted = fit_bones(bones, markers)
-        self.assertEqual(fitted["Eye.L"].tail, (.052, -.109, 1.598))
+        self.assertAlmostEqual(fitted["Eye.L"].tail[0], .052)\n        self.assertAlmostEqual(fitted["Eye.L"].tail[1], -.109)\n        self.assertAlmostEqual(fitted["Eye.L"].tail[2], 1.598)
         self.assertAlmostEqual(fitted["EarAnchor.L"].tail[2], 1.571, places=6)
 
     def test_missing_hand_tip_does_not_silently_use_proportional_guide(self):
