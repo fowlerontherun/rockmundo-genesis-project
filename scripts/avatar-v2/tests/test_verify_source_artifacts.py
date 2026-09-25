@@ -48,6 +48,19 @@ class AuthoringArtifactIntegrityTests(unittest.TestCase):
                     "originalBodyVertices": 32000,
                     "realEyesRecoloured": 2,
                     "realCorneasAdded": 2,
+                    "realBrowAndLashMeshes": 6,
+                    "browLashGeometry": [
+                        {
+                            "side": side,
+                            "browVertices": 54,
+                            "groomFibres": 76,
+                            "upperLashFibres": 27,
+                            "newGeometryVertices": 2050,
+                            "rootProjection": "actual CC0 continuous frontal skin",
+                            "unweightedPreviewOnly": True,
+                        }
+                        for side in ("L", "R")
+                    ],
                     "eyeGeometry": [
                         {
                             "side": side,
@@ -128,6 +141,24 @@ class AuthoringArtifactIntegrityTests(unittest.TestCase):
         self.data["frames"][1]["sourceVertices"] = 0
         self.write_manifest()
         with self.assertRaisesRegex(ValueError, "sourceVertices"):
+            verify_artifacts(self.root)
+
+    def test_detached_or_absent_lash_groom_is_rejected(self):
+        self.data["frames"][0]["lookdevGeometry"]["browLashGeometry"][0]["rootProjection"] = "guessed"
+        self.write_manifest()
+        with self.assertRaisesRegex(ValueError, "skin-projected eyebrow"):
+            verify_artifacts(self.root)
+
+    def test_missing_eyelid_fibres_are_rejected(self):
+        self.data["frames"][1]["lookdevGeometry"]["browLashGeometry"][1]["upperLashFibres"] = 0
+        self.write_manifest()
+        with self.assertRaisesRegex(ValueError, "skin-projected eyebrow"):
+            verify_artifacts(self.root)
+
+    def test_do_not_certify_unweighted_brows_as_finished(self):
+        self.data["frames"][0]["lookdevGeometry"]["browLashGeometry"][0]["unweightedPreviewOnly"] = False
+        self.write_manifest()
+        with self.assertRaisesRegex(ValueError, "skin-projected eyebrow"):
             verify_artifacts(self.root)
 
     def test_missing_real_iris_or_cornea_geometry_is_rejected(self):
