@@ -33,8 +33,7 @@ from mathutils import Vector
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from rig_landmarks import (  # noqa: E402
-    BoneSpec, audit_sculpt_fit, fit_bones, marker_name, moved_markers,
-    position_markers, is_twist,
+    BoneSpec, audit_sculpt_fit, fit_bones, moved_markers, position_markers,
 )
 
 RIG_NAME = "RMV2_Armature"
@@ -55,6 +54,8 @@ def cli_args() -> argparse.Namespace:
 
 def read_rig(rig: bpy.types.Object) -> list[BoneSpec]:
     """Read authoring rest joints in armature-local coordinates."""
+    if bpy.context.object and bpy.context.object.mode != "OBJECT":
+        bpy.ops.object.mode_set(mode="OBJECT")
     bpy.ops.object.select_all(action="DESELECT")
     rig.hide_set(False)
     rig.select_set(True)
@@ -91,6 +92,13 @@ def create_handles(rig: bpy.types.Object, specs: list[BoneSpec]) -> dict:
     previous = bpy.data.collections.get(COLLECTION_NAME)
     if previous and any(obj.name.startswith("RMV2_FIT__") for obj in previous.objects):
         raise SystemExit("Fit handles already exist. Move these handles instead of replacing their artist edits.")
+    stray = [name for name in expected if bpy.data.objects.get(name)]
+    if stray:
+        raise SystemExit(
+            "Previous fit handles are still in the working file but outside "
+            f"{COLLECTION_NAME}: {', '.join(stray[:8])}. Preserve their artist "
+            "edits by moving them back into the collection before proceeding."
+        )
 
     collection = previous or bpy.data.collections.new(COLLECTION_NAME)
     if not previous:
@@ -112,7 +120,6 @@ def create_handles(rig: bpy.types.Object, specs: list[BoneSpec]) -> dict:
         # move/scale of the armature object or of the whole working .blend.
         obj["rockmundoFitGuideRest"] = list(armature_local)
         obj["rockmundoFitRig"] = rig.name
-        obj["rockmundoFitArtistPlaced"] = False
 
     return {
         "action": "handles-created",
