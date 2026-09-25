@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { calculateLiveSetup, isPerformanceCrewRole, resolveBandEquipment } from '../_shared/live-setup.ts';
+import { calculateLiveSetup, resolveBandEquipment } from '../_shared/live-setup.ts';
+import { scoreAssignedShowCrew } from '../_shared/crew-score.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -47,26 +48,28 @@ serve(async (req) => {
     if (membershipError) throw membershipError;
     if (!membership) throw new Error('You are not a member of this band');
 
-    const [equipmentRes, crewRes] = await Promise.all([
+    const [equipmentRes, crewRes, assignmentsRes] = await Promise.all([
       supabase
         .from('band_stage_equipment')
         .select('id,equipment_type,quality_rating,condition_rating,is_active')
         .eq('band_id', gig.band_id),
       supabase
         .from('band_crew_members')
-        .select('id,crew_type,skill_level')
+        .select('id,crew_type,skill_level,cohesion_rating')
         .eq('band_id', gig.band_id),
+      supabase
+        .from('gig_crew_assignments')
+        .select('band_crew_member_id,crew_role,assignment_status')
+        .eq('gig_id', gigId),
     ]);
 
     if (equipmentRes.error) throw equipmentRes.error;
     if (crewRes.error) throw crewRes.error;
+    if (assignmentsRes.error) throw assignmentsRes.error;
 
     const equipmentResolution = resolveBandEquipment(equipmentRes.data || []);
-    const showCrew = (crewRes.data || []).filter((member) => isPerformanceCrewRole(member.crew_type));
-
-    const crewSkill = showCrew.length > 0
-      ? showCrew.reduce((sum, member) => sum + Number(member.skill_level || 0), 0) / showCrew.length
-      : 40;
+    const assignedCrew = scoreAssignedShowCrew(crewRes.data || [], assignmentsRes.data || []);
+    const crewSkill = assignedCrew.score;
 
     const venueCapacity = Number((gig.venues as { capacity?: number } | null)?.capacity || 0);
     const result = calculateLiveSetup({
@@ -82,7 +85,8 @@ serve(async (req) => {
         ownedEquipmentCount: equipmentResolution.ownedCount,
         equipmentSelectionMode: equipmentResolution.selectionMode,
         selectedEquipmentIds: equipmentResolution.selectedIds,
-        showCrewCount: showCrew.length,
+        showCrewCount: assignedCrew.filledRoles,
+        attendingCrewCount: assignedCrew.assignedCount,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
     );
