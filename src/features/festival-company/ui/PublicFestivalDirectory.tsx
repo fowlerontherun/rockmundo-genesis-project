@@ -158,7 +158,7 @@ export default function PublicFestivalDirectory() {
             Math.ceil((Date.parse(festival.startsAt) - Date.now()) / 86_400_000),
           );
           const announcedArtists = Array.from(
-            new Set(festival.timetable.map((entry) => entry.artistName).filter(Boolean)),
+            new Set((festival.lineup ?? festival.timetable).map((entry) => entry.artistName).filter(Boolean)),
           );
           const lineupPreview = announcedArtists.slice(0, 3);
           const remainingArtists = Math.max(0, announcedArtists.length - lineupPreview.length);
@@ -231,6 +231,12 @@ export default function PublicFestivalDirectory() {
                         ? "Admission sold out"
                         : "Sales opening soon"}
                   </p>
+                  {festival.ticketSales && (
+                    <p className="flex items-center gap-2 text-sm font-medium">
+                      <Ticket size={16} />
+                      {festival.ticketSales.admissionTicketsSold.toLocaleString("en-GB")} tickets sold · {festival.ticketSales.admissionTicketsAvailable.toLocaleString("en-GB")} available
+                    </p>
+                  )}
                   <p className="text-xs text-muted-foreground">
                     {announcedArtists.length} announced act{announcedArtists.length === 1 ? "" : "s"} · {festival.stages.length} stage{festival.stages.length === 1 ? "" : "s"}
                   </p>
