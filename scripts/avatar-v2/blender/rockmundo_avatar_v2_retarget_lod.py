@@ -193,6 +193,21 @@ def transfer_plan(args, source, target, rig):
             continue
         key_transfer[name] = target_deltas
 
+    material_mapping = []
+    if args.transfer_materials:
+        if not source.data.materials or any(material is None for material in source.data.materials):
+            raise SystemExit("Source has missing material slots. Repair the authored materials before transferring regions.")
+        target_to_source = source.matrix_world.inverted_safe() @ target.matrix_world
+        for polygon in target.data.polygons:
+            nearest, _normal, triangle_index, _distance = tree.find_nearest(
+                target_to_source @ polygon.center
+            )
+            if nearest is None or triangle_index is None:
+                raise SystemExit(f"Cannot project {target.name} polygon {polygon.index} onto its source material region.")
+            material_mapping.append(source.data.polygons[
+                source_triangles[triangle_index].polygon_index
+            ].material_index)
+
     details = {
         "schema": "rockmundo.avatar-v2-retopo-preview",
         "version": 1,
@@ -216,11 +231,11 @@ def transfer_plan(args, source, target, rig):
             "Complete rig and GLB validators still determine whether this LOD is usable.",
         ],
     }
-    return details, (matches, transferred_weights, key_transfer, tree, source_triangles)
+    return details, (transferred_weights, key_transfer, material_mapping)
 
 
 def apply_transfer(args, source, target, rig, plan):
-    matches, weights, key_deltas, tree, source_triangles = plan
+    weights, key_deltas, material_mapping = plan
     bpy.context.view_layer.objects.active = target
     if not target.data.shape_keys:
         target.shape_key_add(name="Basis", from_mix=False)
@@ -247,25 +262,19 @@ def apply_transfer(args, source, target, rig, plan):
         modifier.object = rig
         modifier.use_vertex_groups = True
     if args.transfer_materials:
-        if any(material is None for material in source.data.materials):
-            raise RuntimeError("Source contains empty material slots; repair them before copying material regions.")
         target.data.materials.clear()
         for material in source.data.materials:
             target.data.materials.append(material)
-        target_to_source = source.matrix_world.inverted_safe() @ target.matrix_world
-        for polygon in target.data.polygons:
-            nearest, _normal, triangle_index, _distance = tree.find_nearest(
-                target_to_source @ polygon.center
-            )
-            if nearest is None or triangle_index is None:
-                raise RuntimeError("LOD material-region projection failed on a target polygon.")
-            polygon.material_index = source.data.polygons[
-                source_triangles[triangle_index].polygon_index
-            ].material_index
+        for polygon, source_material in zip(target.data.polygons, material_mapping):
+            polygon.material_index = source_material
 
     for property_name in ("rockmundoHeadSurface", "rockmundoSurfaceRole", "rockmundoBodyRegion"):
         if property_name in source:
             target[property_name] = source[property_name]
+    # Export sees only the new LOD surface, never the overlapping original.
+    # The authored source remains available in the working file for inspection.
+    source.hide_render = True
+    target.hide_render = False
     target["rockmundoRetopoLOD"] = args.lod
     target["rockmundoRetopoSource"] = source.name
     target["rockmundoRetopoReviewed"] = True
