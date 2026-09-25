@@ -355,6 +355,61 @@ face resolution.
 These are whole-character base budgets before optional held instruments. Garments
 have separate budgets and will be introduced after the base rig passes.
 
+### Transfer real sculpt details onto lower-poly LODs
+
+After the authored LOD0 model is **fully sculpted, weighted and UV-unwrapped**,
+create separate artist-retopologised meshes for LOD1, LOD2 and LOD3 in the same
+rest pose. The new Blender retopology helper transfers actual authored skin
+weights, existing shape-key displacements and (optionally) material regions
+from each original body, continuous head or separate surface to its smaller
+version. It uses closest-source-triangle interpolation instead of creating
+empty morph placeholders or blindly applying Decimate, which damages facial
+loops and skinned joint silhouettes.
+
+Always preview an aligned body or head first (example for a **body** mesh):
+
+```bash
+blender work/avatar-v2-retopo-lod1.blend --background   --python scripts/avatar-v2/blender/rockmundo_avatar_v2_retarget_lod.py --   --source RMV2_Body --target RMV2_Body_LOD1 --kind body --lod 1   --report work/avatar-v2-body-lod1-preview.json
+```
+
+The report includes the maximum and RMS distance to the original sculpt,
+source/target vertex counts, transferred morph names and shapes lost by
+retopology. By default, every target vertex must lie within **25mm** of the
+original authored surface, or transfer is refused. The target must have
+artist-authored UVs, genuinely fewer vertices, no existing paint or morphs,
+and a source bound to the fitted RockMundo rig. This prevents overwriting
+manually produced work or silently copying a stock base-mesh silhouette.
+
+After visually reviewing the preview and correcting any lost deformation
+loops, write a **new** working file:
+
+```bash
+blender work/avatar-v2-retopo-lod1.blend --background   --python scripts/avatar-v2/blender/rockmundo_avatar_v2_retarget_lod.py --   --source RMV2_Body --target RMV2_Body_LOD1 --kind body --lod 1   --mode apply --reviewed --transfer-materials   --output work/avatar-v2-lod1-weighted.blend   --report work/avatar-v2-body-lod1-transfer.json
+```
+
+Repeat separately for the continuous head and any separately retopologised
+eyelid or eye surfaces. Use `--kind head` or `--kind surface` as appropriate.
+The tool leaves the original sculpt in the file, but marks it non-renderable
+when it transfers a replacement so the export cannot accidentally contain
+two overlapping bodies. If you copy material regions, inspect the target's
+new UV seams and all region boundaries: nearest-polygon correspondence is
+an **authoring starting point**, not approved final texturing.
+
+LOD1 retains every **genuinely authored** source morph; LOD2/3 retain muscle
+and common appearance/blink/jaw controls at reduced cost. Every LOD still needs
+four nonzero muscle shape keys. Vertex skin influences are capped at four and
+normalised. Close-up nose, nostril and ear **sculpt landmark groups are
+intentionally not copied**: artists must reselect the actual retopologised
+LOD1 head vertices and pass its independent geometry audit. Completing
+this transfer does not validate the GLB, certify visual quality or enable
+Avatar V2; export each full assembled LOD through the existing strict gate.
+
+Run the independent geometry test suite:
+
+```bash
+python -m unittest discover -s scripts/avatar-v2/tests -p test_lod_surface_transfer.py -v
+```
+
 ## Material naming
 
 Use stable names where possible:
