@@ -13,7 +13,7 @@ ALTER TABLE public.gig_crew_assignments
   ADD COLUMN IF NOT EXISTS cost integer NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS profile_id uuid,
   ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
-DO $
+DO $$
 BEGIN
   IF EXISTS(
     SELECT 1 FROM information_schema.columns
@@ -32,7 +32,7 @@ BEGIN
     ALTER TABLE public.gig_crew_assignments
       DROP CONSTRAINT gig_crew_assignments_crew_role_check;
   END IF;
-END $;
+END $$;
 DO $$
 BEGIN
   IF NOT EXISTS (
