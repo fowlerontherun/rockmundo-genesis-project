@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FestivalBudgetForecast } from "@/features/festivals/budget/FestivalBudgetForecast";
+import { FestivalOwnerSalesPreview } from "./FestivalOwnerSalesPreview";
 import { festivalRoutes } from "@/features/festivals/routes";
 import { useFestivalSitePlan } from "../application/useFestivalSitePlan";
 import {
@@ -305,6 +306,13 @@ export function FestivalTicketPlanner({
           </div>
         </CardContent>
       </Card>
+
+      {festivalEditionId ? (
+        <FestivalOwnerSalesPreview
+          festivalCompanyId={festivalCompanyId}
+          festivalDates={data.festivalDates}
+        />
+      ) : null}
 
       {festivalEditionId ? (
         <FestivalBudgetForecast
