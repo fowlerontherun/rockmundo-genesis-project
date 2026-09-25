@@ -9,7 +9,8 @@ type CrewResponse<T> = { data: T[] | null; error: CrewError | null };
  */
 interface CrewQuery<T> extends PromiseLike<CrewResponse<T>> {
   eq(column: string, value: string): CrewQuery<T>;
-  order(column: string): CrewQuery<T>;
+  order(column: string, options?: { ascending?: boolean }): CrewQuery<T>;
+  limit(count: number): CrewQuery<T>;
 }
 
 interface CrewDatabase {
