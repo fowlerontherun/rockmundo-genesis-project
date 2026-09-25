@@ -368,6 +368,10 @@ Frame: {frame}
 The generated RMV2_Armature is a naming/proportion GUIDE, not a finished rig.
 
 Before binding:
+- run rockmundo_avatar_v2_fit_rig.py --mode create to place RMV2_FitHandles;
+- in Blender, use front/side views and vertex snapping to drag each handle onto the actual sculpt joint;
+- run the fit helper with --mode apply --reviewed to transfer the artist positions;
+- inspect all fitted joints before binding and keep this guide marked as requiring manual work;
 - move hips/spine/neck/head joints into the actual mesh centres;
 - fit Jaw to the real mandibular hinge and keep it parented to Head;
 - fit Eye.L/Eye.R to the actual eyeball centres and keep them parented to Head;
