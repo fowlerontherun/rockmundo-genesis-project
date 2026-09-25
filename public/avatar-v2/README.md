@@ -46,6 +46,30 @@ verification step checks both full packs and rejects changed or missing files.
 The two artifacts are retained for **14 days**; rerun the manual workflow
 to produce fresh references when necessary.
 
+### Improved real-geometry eye and skin references
+
+The source workflow now retains the untouched CC0 baseline **and also** creates
+an editable look-development version for each body type. The new
+`masculine-artist-lookdev.blend` and `feminine-artist-lookdev.blend` begin
+with the actual source mesh rather than a browser-generated character.
+They smooth the original sculpt's polygon normals without changing the
+underlying anatomy, use editable skin micro-bump/roughness shading, recolour
+actual forward-facing eyeball polygons into sclera, iris and pupil regions,
+and add truly separate, curved cornea shells over both eyes.
+
+The downloadable packs contain matching original and
+`LOOKDEV-ONLY-not-validated.glb` previews, plus four Blender-rendered
+front, three-quarter, side and face PNGs **before and after** lookdev. Import
+either GLB locally in the Admin V2 Candidate Lab's A-pose view to examine
+the difference. The rig and joint-handle `.blend` files now carry the improved
+source lookdev, while the original saved source remains untouched for comparison.
+
+This is a visible art-direction starting pass, **not** a completed facial
+sculpt, authored skin texture, actual fitted eye rig, blink/wetline deformation
+or a game-ready mesh. An artist must still approve the actual cornea placement,
+fit the eye and jaw bones, author/bake production maps and complete all the
+existing V2 anatomy, weight, morph and LOD audits.
+
 These are **genuine starting meshes**, not completed RockMundo characters:
 the skeleton is only a proportion guide, the exported GLB has no production
 rig/weights/visemes or certified facial detail, and nothing is placed in
