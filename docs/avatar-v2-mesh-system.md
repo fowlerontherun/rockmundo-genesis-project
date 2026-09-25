@@ -112,6 +112,22 @@ Priority topology areas:
 - dedicated upper/lower teeth, tongue and mouth-cavity surfaces for open-mouth singing close-ups, with upper teeth on Head and lower teeth/tongue on Jaw;
 - at least 25mm of authored mouth-cavity depth so a fully open jaw never resolves to a flat dark plane.
 
+### Close-up facial sculpt landmarks and anatomy gate
+
+LOD0/LOD1 now require **real selected vertices on the same continuous skinned
+head mesh** for the nose bridge, tip, bilateral recessed nostril rims, bilateral
+helix/antihelix and earlobes. The Blender authoring pass uses
+`RMV2_NoseBridge`, `RMV2_NoseTip`, `RMV2_NostrilRim.L/R`,
+`RMV2_EarHelix.L/R`, `RMV2_EarAntihelix.L/R` and
+`RMV2_EarLobe.L/R` vertex groups. It measures depth/contour/side placement
+in metres and checks that each `EarAnchor.L/R` falls near its real sculpted
+lobe. Export rejects a face that is only textured to resemble these shapes or
+uses a copied/flat group to satisfy the checklist. See
+`rockmundo_avatar_v2_topology_audit.py` for the interactive authoring report
+and `facial_topology.py` for testable geometric thresholds. These checks are
+performed before GLB export; they do not claim to create real high-detail
+masculine/feminine assets on their own.
+
 ## Foot and toe-base articulation
 
 LOD0/LOD1 use `Toe.L/R` as live deformation bones rather than contract-only

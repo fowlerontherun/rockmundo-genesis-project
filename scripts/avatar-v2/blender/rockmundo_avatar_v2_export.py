@@ -20,6 +20,13 @@ import sys
 
 import bpy
 
+# Sculpt topology lives on continuous head vertex groups; the standalone
+# geometry rules are shared with the artist-facing Blender topology audit.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from facial_topology import audit_face_topology
+from rockmundo_avatar_v2_topology_audit import extract_landmarks, head_candidates
+
 BUDGETS = {
     0: {"triangles": 55_000, "vertices": 65_000, "bones": 96},
     1: {"triangles": 30_000, "vertices": 38_000, "bones": 96},
@@ -409,6 +416,24 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
         errors.append("No renderable mesh objects found.")
     if len(rigs) != 1:
         errors.append(f"Expected exactly one visible armature, found {len(rigs)}.")
+
+    # An ear anchor and named material are insufficient if the close-up head is
+    # still a flat or low-resolution source sculpt. Check REAL vertex-group
+    # samples on one continuous head surface before any GLB export.
+    if args.lod <= 1 and len(rigs) == 1:
+        candidates = [obj for obj in head_candidates(None) if obj in meshes]
+        if not candidates:
+            errors.append("LOD0/1 head needs real RMV2 nose/nostril and bilateral ear topology vertex groups.")
+        else:
+            head = candidates[0]
+            groups = extract_landmarks(head)
+            anchors = {}
+            for side in ("L", "R"):
+                bone = rigs[0].data.bones.get(f"EarAnchor.{side}")
+                if bone:
+                    point = rigs[0].matrix_world @ bone.head_local
+                    anchors[f"EarAnchor.{side}"] = (float(point.x), float(point.y), float(point.z))
+            errors.extend(f"Close-up face sculpt: {problem}" for problem in audit_face_topology(groups, anchors))
 
     triangles, vertices = count_geometry(meshes) if meshes else (0, 0)
     bone_names = [bone.name for bone in rigs[0].data.bones] if len(rigs) == 1 else []

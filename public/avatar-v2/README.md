@@ -103,6 +103,45 @@ runtime GLB.
 Run `npm run verify:avatar-v2-source` to ensure the repository remains pinned to
 the reviewed source/version.
 
+## Close-up nose and ear sculpt audit
+
+Before exporting **either LOD0 or LOD1**, mark actual vertices on **one continuous
+head/face skin mesh** with these Blender vertex groups (do not detach new
+placeholder nose/ear meshes or use empty material slots):
+
+- `RMV2_NoseBridge`, `RMV2_NoseTip`, `RMV2_NostrilRim.L/R`
+- `RMV2_EarHelix.L/R`, `RMV2_EarAntihelix.L/R`, `RMV2_EarLobe.L/R`
+
+Keep the face pointing toward **-Y in Blender** (+X = left) as used by the rig
+guide. Give the nose tip visible forward projection, recess both nostril rims,
+and sculpt distinct outer/inner ear contours and earlobes. Move
+`EarAnchor.L/R` to the real piercing points, not just an estimated head width.
+Groups are artist-selected on the original fitted topology so UV seams, tattoo
+mapping and skin deformation are preserved.
+
+Run the authoring audit before export:
+
+```bash
+blender work/avatar-v2-masculine-regions.blend --background \
+  --python scripts/avatar-v2/blender/rockmundo_avatar_v2_topology_audit.py -- \
+  --armature RMV2_Armature \
+  --json work/avatar-v2-masculine-face-topology.json
+```
+
+The audit reports missing or too-small vertex groups, a flat nose bridge/tip,
+painted-on nostrils, collapsed/duplicated ear contours, left/right placement and
+earring anchors more than 25mm from their sculpted lobes. It reads actual mesh
+coordinates in metres and requires an armature-bound continuous head with a
+used skin material. LOD0/LOD1 Blender export now runs the same landmark geometry
+checks before generating a GLB. A source seed without manually authored face
+detail intentionally fails. Repeat for the feminine frame and each close-up LOD.
+
+The geometry rules have independent Python tests:
+
+```bash
+python -m unittest discover -s scripts/avatar-v2/tests -p test_facial_topology.py -v
+```
+
 ## Coordinate and export contract
 
 - GLB 2.0
