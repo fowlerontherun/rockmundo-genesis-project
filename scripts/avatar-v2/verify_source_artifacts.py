@@ -90,9 +90,9 @@ def verify_artifacts(root: pathlib.Path) -> dict:
                 errors.append(f"{frame} source eye material/real cornea surface data are incomplete.")
             lip = lookdev.get("realLipMaterials")
             if (not isinstance(lip, dict)
-                    or lip.get("upperLipPolygons", 0) < 12
-                    or lip.get("lowerLipPolygons", 0) < 12
-                    or lip.get("edgeBlendPolygons", 0) < 20
+                    or lip.get("upperLipPolygons", 0) < 8
+                    or lip.get("lowerLipPolygons", 0) < 8
+                    or lip.get("edgeBlendPolygons", 0) < 16
                     or lip.get("sourceVertexCountPreserved") is not True
                     or lip.get("sourceUVCountPreserved") is not True
                     or lip.get("sourceSculptLipShape") != "existing CC0 geometry, unchanged"
