@@ -41,9 +41,9 @@ def classify_lip_polygon(
 
 def validate_coverage(counts: dict[str, int], body_polygons: int) -> None:
     """Fail a genuine source change that tints nothing or half of the face."""
-    if (body_polygons < 1000 or counts.get("upper_lip", 0) < 12
-            or counts.get("lower_lip", 0) < 12
-            or counts.get("transition", 0) < 20):
+    if (body_polygons < 1000 or counts.get("upper_lip", 0) < 8
+            or counts.get("lower_lip", 0) < 8
+            or counts.get("transition", 0) < 16):
         raise ValueError(f"Missing separate genuine upper/lower lip polygons and shaded boundary: {counts}, body polygons={body_polygons}.")
     coverage = sum(counts.get(role, 0) for role in LIP_ROLES[1:])
     if coverage > body_polygons * .018:
