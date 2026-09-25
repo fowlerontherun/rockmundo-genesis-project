@@ -36,15 +36,15 @@ def brow_profile(
     for i in range(samples):
         t = i / (samples - 1)
         x = eye[0] + sign * radius * (-.91 + 2.02 * t)
-        z = eye[2] + radius * (1.16 + .24 * sin(pi * t) + .035 * (1. - t))
+        z = eye[2] + radius * (.995 + .16 * sin(pi * t) + .04 * (1. - t))
         # Narrow on both ends; broadest above the central/outer eye.
-        half_width = radius * (.015 + .145 * sin(pi * t) ** .85)
+        half_width = radius * (.009 + .103 * sin(pi * t) ** .85)
         result.append((x, z, half_width))
     return result
 
 
 def brow_fibre_samples(
-    eye: Vec3, radius: float, side: str, count: int = 76,
+    eye: Vec3, radius: float, side: str, count: int = 112,
 ) -> list[tuple[float, float, float, float]]:
     """Deterministic hair-root arc coordinates: x,z,length and forward offset."""
     sign = validate_eye(eye, radius, side)
@@ -53,7 +53,7 @@ def brow_fibre_samples(
     result = []
     for i in range(count):
         t = .055 + .86 * (i + .5) / count
-        centre_z = eye[2] + radius * (1.16 + .24 * sin(pi * t) + .035 * (1.-t))
+        centre_z = eye[2] + radius * (.995 + .16 * sin(pi * t) + .04 * (1.-t))
         half = radius * (.015 + .145 * sin(pi * t) ** .85)
         # Two naturally staggered directions across the breadth of the arch,
         # without randomness, to produce repeatable real Blender meshes.
