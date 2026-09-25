@@ -137,6 +137,20 @@ closes the gap where Blender face vertex groups disappeared during normal
 glTF export; the sidecar is provenance/integrity evidence, while geometric
 measurements must still happen against the actual fitted sculpt in Blender.
 
+### Author lower-resolution models from the real sculpt
+
+Artist-retopologised LOD1–LOD3 meshes can now inherit actual shape-key
+deformation, four-bone skin weights and optionally material-region assignments
+from the corresponding fitted LOD0 surface using
+`rockmundo_avatar_v2_retarget_lod.py`. It previews correspondence distances,
+rejects overly distant topology or lost required morphs, and never invents
+facial anatomy or decimates the source in place. Its standalone interpolation
+tests are included in the Avatar V2 sculpt CI gate. The authored LOD1 head
+still needs **new** real nose/ear landmark vertex groups, independently
+audited before export; the artist must also verify UVs, silhouette, joint
+deformation and all remaining separate surfaces. Full usage is in
+`public/avatar-v2/README.md`.
+
 ## Foot and toe-base articulation
 
 LOD0/LOD1 use `Toe.L/R` as live deformation bones rather than contract-only
