@@ -160,6 +160,10 @@ export default function PublicFestivalDirectory() {
           const announcedArtists = Array.from(
             new Set((festival.lineup ?? festival.timetable).map((entry) => entry.artistName).filter(Boolean)),
           );
+          // Admission sell-outs must not be masked by unsold add-ons or VIP upgrades.
+          const soldOut = festival.ticketSales && festival.ticketSales.admissionTicketAllocation > 0
+            ? festival.ticketSales.admissionTicketsAvailable === 0
+            : festival.soldOut;
           const lineupPreview = announcedArtists.slice(0, 3);
           const remainingArtists = Math.max(0, announcedArtists.length - lineupPreview.length);
 
@@ -182,8 +186,8 @@ export default function PublicFestivalDirectory() {
                         <p className="mt-1 text-sm text-muted-foreground">{festival.tagline}</p>
                       ) : null}
                     </div>
-                    <Badge variant={festival.soldOut ? "destructive" : "secondary"}>
-                      {festival.soldOut ? "Sold out" : festival.launchStatus.replaceAll("_", " ")}
+                    <Badge variant={soldOut ? "destructive" : "secondary"}>
+                      {soldOut ? "Sold out" : festival.launchStatus.replaceAll("_", " ")}
                     </Badge>
                   </div>
                 </CardHeader>
@@ -227,7 +231,7 @@ export default function PublicFestivalDirectory() {
                     <Ticket size={16} />
                     {lowest
                       ? `From ${formatFestivalLaunchMoney(lowest.totalMinor, lowest.currency)}`
-                      : festival.soldOut
+                      : soldOut
                         ? "Admission sold out"
                         : "Sales opening soon"}
                   </p>
