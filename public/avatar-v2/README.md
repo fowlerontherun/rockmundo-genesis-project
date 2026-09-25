@@ -117,10 +117,11 @@ Run the new rig-fitting geometry regression with:
 python -m unittest discover -s scripts/avatar-v2/tests -p test_rig_landmarks.py -v
 ```
 
-After manual binding/weight cleanup, run the structural weight audit:
+After manually binding the body and cleaning its weights in the fitted working file,
+run the structural weight audit:
 
 ```bash
-blender work/avatar-v2-masculine-rigged-source.blend --background \
+blender work/avatar-v2-masculine-fitted-guide.blend --background \
   --python scripts/avatar-v2/blender/rockmundo_avatar_v2_weight_audit.py -- \
   --armature RMV2_Armature
 ```
