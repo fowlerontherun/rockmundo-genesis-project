@@ -66,6 +66,57 @@ Open the generated file and fit every joint to the actual topology before
 weighting. Automatic envelope weighting here would recreate the shoulder, hand,
 elbow and hip deformation problems V2 is intended to remove.
 
+### Fit the guide to actual sculpt joints
+
+The generated skeleton has production bone names but only **estimated
+proportions**. To fit it to the real masculine or feminine sculpt more quickly,
+create an artist-movable set of joint handles:
+
+```bash
+blender work/avatar-v2-masculine-rigged-source.blend --background \
+  --python scripts/avatar-v2/blender/rockmundo_avatar_v2_fit_rig.py -- \
+  --mode create --output work/avatar-v2-masculine-handles.blend
+```
+
+Open that working file in Blender and enable the **RMV2_FitHandles** collection
+in the viewport. It contains individually named, coloured handles for the
+jaw, both eyes, ear piercing anchors, spine, shoulder/elbow/wrist joints,
+each finger's three bones, hips, knees, ankles and toe tips. With vertex
+snapping and front/side views, drag each handle onto its **real anatomical
+pivot**. Connected bones share the parent's end marker; eye and ear anchor
+tips retain their original direction. The six twist-helper bones follow
+their fitted parent segments automatically.
+
+After placing and visually reviewing the handles, transfer them:
+
+```bash
+blender work/avatar-v2-masculine-handles.blend --background \
+  --python scripts/avatar-v2/blender/rockmundo_avatar_v2_fit_rig.py -- \
+  --mode apply --reviewed \
+  --report work/avatar-v2-masculine-fit-report.json \
+  --output work/avatar-v2-masculine-fitted-guide.blend
+```
+
+The transfer runs checks **before changing the armature**. Missing
+handles, collapsed bones, swapped left/right joints, inside-out ear
+anchors, arms pointing inward, legs pointing upward or an untouched
+proportional guide are refused. The `--reviewed` flag is a deliberate artist
+acknowledgement, not automated certification. Handle transforms are
+read in armature-local space, so repositioning the entire authoring
+scene does not silently reverse the fit.
+
+Repeat for the feminine frame. This tool only positions the rig: after
+transfer, inspect connected joints on the actual topology, manually
+paint/clean all skin weights and corrective morphs, then run the existing
+weight, nose/ear topology and GLB validation gates. **Do not export or
+publish the fitted guide as a finished avatar.**
+
+Run the new rig-fitting geometry regression with:
+
+```bash
+python -m unittest discover -s scripts/avatar-v2/tests -p test_rig_landmarks.py -v
+```
+
 After manual binding/weight cleanup, run the structural weight audit:
 
 ```bash
