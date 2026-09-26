@@ -83,8 +83,10 @@ describe("band festival appearances", () => {
 
   it("shows previous festivals as history without dropping today's appearance", () => {
     const [appearance] = parseBandFestivalAppearances([fixture]);
-    expect(isFutureFestivalAppearance(appearance, new Date(2026, 8, 26, 23))).toBe(true);
-    expect(isFutureFestivalAppearance(appearance, new Date(2026, 8, 27))).toBe(false);
+    // Assertions use UTC instants; local JS constructors would inherit the
+    // CI runner's timezone and flip the expectation during BST.
+    expect(isFutureFestivalAppearance(appearance, new Date("2026-09-26T12:00:00Z"))).toBe(true);
+    expect(isFutureFestivalAppearance(appearance, new Date("2026-09-26T23:30:00Z"))).toBe(false);
   });
 
   it("does not turn an early annual-result posting into a completed band performance", () => {
