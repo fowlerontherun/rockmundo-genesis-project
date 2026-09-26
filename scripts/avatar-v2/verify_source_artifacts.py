@@ -10,6 +10,7 @@ import argparse
 import hashlib
 import json
 import pathlib
+from math import isfinite
 
 EXPECTED_FRAMES = {"masculine", "feminine"}
 PREVIEW_VIEWS = {"front", "quarter", "side", "face"}
@@ -114,6 +115,50 @@ def verify_artifacts(root: pathlib.Path) -> dict:
                         for entry in grooms
                     )):
                 errors.append(f"{frame} is missing genuine bilateral, skin-projected eyebrow/upper-lash mesh detail.")
+        joints = metadata.get("sourceJointSuggestions")
+        if (not isinstance(joints, dict)
+                or joints.get("schema") != "rockmundo.avatar-v2-source-joint-suggestions"
+                or joints.get("version") != 1
+                or joints.get("frame") != frame
+                or joints.get("source") != "actual CC0 eyeball and continuous body vertices"
+                or joints.get("artistReviewed") is not False
+                or joints.get("rigFitted") is not False
+                or joints.get("skinWeightsAuthored") is not False):
+            errors.append(f"{frame} has missing, false or already-certified real source joint suggestions.")
+        else:
+            suggestions = joints.get("suggestions")
+            radii = joints.get("eyeRadiiMm")
+            if (not isinstance(radii, dict)
+                    or set(radii) != {"L", "R"}
+                    or any(not isinstance(value, (int, float))
+                           or not isfinite(value)
+                           or not 22 <= value <= 50
+                           for value in radii.values())):
+                errors.append(f"{frame} has implausible real source eye-radius evidence.")
+            if (not isinstance(suggestions, list)
+                    or len(suggestions) != 4
+                    or {entry.get("bone") for entry in suggestions if isinstance(entry, dict)}
+                    != {"Eye.L", "Eye.R", "EarAnchor.L", "EarAnchor.R"}):
+                errors.append(f"{frame} needs four distinct measured eye and ear authoring suggestions.")
+            else:
+                for item in suggestions:
+                    bone = item["bone"]
+                    points = (item.get("position"), item.get("armatureLocal"))
+                    count = item.get("sourceSamples")
+                    required = 50 if bone.startswith("Eye.") else 6
+                    if (item.get("realSourceGeometry") is not True
+                            or item.get("artistReviewed") is not False
+                            or not isinstance(item.get("sourceMesh"), str)
+                            or not item["sourceMesh"]
+                            or not isinstance(count, int)
+                            or count < required
+                            or any(not isinstance(point, list) or len(point) != 3
+                                   or any(not isinstance(value, (int, float))
+                                          or not isfinite(value)
+                                          for value in point)
+                                   for point in points)):
+                        errors.append(f"{frame} {bone} has no valid unreviewed real-geometry joint measurement.")
+
         if (metadata.get("productionValidated") is not False
                 or metadata.get("requiresManualJointFit") is not True):
             errors.append(f"{frame} must retain its unfinished manual-rig gate.")
