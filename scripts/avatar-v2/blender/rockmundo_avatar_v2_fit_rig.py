@@ -46,6 +46,7 @@ def cli_args() -> argparse.Namespace:
     parser.add_argument("--mode", choices=("create", "apply"), required=True)
     parser.add_argument("--armature", default=RIG_NAME)
     parser.add_argument("--reviewed", action="store_true", help="Confirm the joint markers were inspected and repositioned against the actual sculpt.")
+    parser.add_argument("--review-face", action="store_true", help="Explicitly confirm untouched eye, ear and jaw landmarks were individually checked against the sculpt.")
     parser.add_argument("--output", help="Save the modified working .blend here. By default, overwrite the opened .blend.")
     parser.add_argument("--report", help="Optional local JSON fit report for the asset artist.")
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
@@ -129,7 +130,7 @@ def create_handles(rig: bpy.types.Object, specs: list[BoneSpec]) -> dict:
     }
 
 
-def fit_from_handles(rig: bpy.types.Object, specs: list[BoneSpec], reviewed: bool) -> dict:
+def fit_from_handles(rig: bpy.types.Object, specs: list[BoneSpec], reviewed: bool, review_face: bool = False) -> dict:
     if not reviewed:
         raise SystemExit("Refusing to modify rig before explicit --reviewed artist confirmation.")
     expected = position_markers(specs)
@@ -172,6 +173,13 @@ def fit_from_handles(rig: bpy.types.Object, specs: list[BoneSpec], reviewed: boo
     ]
     untouched_critical = sorted(set(critical) - set(changed))
 
+    if untouched_critical and not review_face:
+        raise SystemExit(
+            "Face landmarks remain at generic guide positions: "
+            + ", ".join(untouched_critical)
+            + ". Fit these to the sculpt or explicitly confirm each with --review-face."
+        )
+
     fitted = fit_bones(specs, placed)
     issues = audit_sculpt_fit(fitted)
     if issues:
@@ -206,6 +214,7 @@ def fit_from_handles(rig: bpy.types.Object, specs: list[BoneSpec], reviewed: boo
         "reviewed": reviewed,
         "jointCount": len(fitted),
         "untouchedFaceLandmarks": untouched_critical,
+        "untouchedFaceLandmarksReviewed": review_face,
         "issues": [],
         "remaining": [
             "Review deforming and connected joints against real topology.",
@@ -241,7 +250,7 @@ def main() -> None:
     if args.mode == "create":
         result = create_handles(rig, specs)
     else:
-        result = fit_from_handles(rig, specs, args.reviewed)
+        result = fit_from_handles(rig, specs, args.reviewed, args.review_face)
     save(args.output)
     if args.report:
         path = pathlib.Path(args.report).expanduser().resolve()
