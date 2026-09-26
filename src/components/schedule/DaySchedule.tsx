@@ -8,6 +8,7 @@ import {
   BookOpen, Users, Video, Heart, MapPin, Target, Mic, Star, Clapperboard, Trophy
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FESTIVAL_APPEARANCE_HIGHLIGHT } from "@/features/festivals/appearances/bandFestivalAppearances";
 import { useScheduledActivities, type ActivityType, type ScheduledActivity } from "@/hooks/useScheduledActivities";
 import { PageEmptyState, PageErrorState, PageLoadingState } from "@/components/ui/page-state";
 import { formatDurationMinutes, getDisplayDurationMinutes } from "@/utils/activityBookingTime";
@@ -62,7 +63,7 @@ const ACTIVITY_COLORS: Record<ActivityType, string> = {
   pr_appearance: "bg-fuchsia-500/10 border-fuchsia-500/30 text-fuchsia-700 dark:text-fuchsia-300",
   film_production: "bg-teal-500/10 border-teal-500/30 text-teal-700 dark:text-teal-300",
   festival_attendance: "bg-lime-500/10 border-lime-500/30 text-lime-700 dark:text-lime-300",
-  festival_performance: "bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-300",
+  festival_performance: FESTIVAL_APPEARANCE_HIGHLIGHT,
   release_manufacturing: "bg-sky-500/10 border-sky-500/30 text-sky-700 dark:text-sky-300",
   release_promo: "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300",
   teaching: "bg-indigo-500/10 border-indigo-500/30 text-indigo-700 dark:text-indigo-300",
@@ -80,6 +81,11 @@ const TYPE_LABELS: Record<ActivityType, string> = {
 };
 
 function getDetailHref(activity: ScheduledActivity) {
+  if (activity.activity_type === "festival_performance") {
+    const target = activity.metadata?.detail_href;
+    return typeof target === "string" && target.startsWith("/world/festivals/")
+      ? target : "/festival-opportunities";
+  }
   if (activity.linked_gig_id) return `/gigs/perform/${activity.linked_gig_id}`;
   if (activity.linked_rehearsal_id) return "/rehearsals";
   if (activity.linked_recording_id) return "/recording-studio";
@@ -114,7 +120,8 @@ export function DaySchedule({ date, userId }: DayScheduleProps) {
             {activities.map((activity) => {
               const Icon = ACTIVITY_ICONS[activity.activity_type] ?? Clock;
               const href = getDetailHref(activity);
-              const duration = formatDuration(activity);
+              const isFestival = activity.activity_type === "festival_performance";
+              const duration = activity.metadata?.date_only ? "" : formatDuration(activity);
               return (
                 <div key={activity.id} className={cn("rounded-lg border p-3", ACTIVITY_COLORS[activity.activity_type])}>
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -123,12 +130,22 @@ export function DaySchedule({ date, userId }: DayScheduleProps) {
                       <div className="min-w-0 space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <h3 className="truncate text-sm font-semibold md:text-base">{activity.title}</h3>
-                          <Badge variant="outline" className="bg-background/50 text-xs">{TYPE_LABELS[activity.activity_type] ?? activity.activity_type}</Badge>
+                          <Badge variant="outline" className={cn("bg-background/50 text-xs", isFestival && "border-fuchsia-400/60 bg-fuchsia-500/20 font-semibold text-fuchsia-700 dark:text-fuchsia-200")}>
+                            {isFestival ? "✦ FESTIVAL" : TYPE_LABELS[activity.activity_type] ?? activity.activity_type}
+                          </Badge>
                           {activity.status && <Badge variant="secondary" className="text-xs capitalize">{activity.status.replace('_', ' ')}</Badge>}
                         </div>
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                          <span><Clock className="mr-1 inline h-3 w-3" />{format(new Date(activity.scheduled_start), 'h:mm a')}</span>
-                          {activity.scheduled_end && <span>Ends {format(new Date(activity.scheduled_end), 'h:mm a')}{duration ? ` · ${duration}` : ''}</span>}
+                          {activity.metadata?.date_only ? (
+                            <span className="font-medium text-fuchsia-700 dark:text-fuchsia-200">
+                              <Clock className="mr-1 inline h-3 w-3" />Set time TBA
+                            </span>
+                          ) : (
+                            <>
+                              <span><Clock className="mr-1 inline h-3 w-3" />{format(new Date(activity.scheduled_start), 'h:mm a')}</span>
+                              {activity.scheduled_end && <span>Ends {format(new Date(activity.scheduled_end), 'h:mm a')}{duration ? ` · ${duration}` : ''}</span>}
+                            </>
+                          )}
                           {activity.location && <span><MapPin className="mr-1 inline h-3 w-3" />{activity.location}</span>}
                         </div>
                         {activity.description && <p className="text-xs text-muted-foreground">{activity.description}</p>}
