@@ -38,6 +38,7 @@ export function AvatarV2ReferenceGallery({
 }) {
   const [availability, setAvailability] = useState<'loading' | 'available' | 'missing'>('loading');
   const [view, setView] = useState<AvatarV2ReferenceView>('front');
+  const [refresh, setRefresh] = useState(0);
   const [manifest, setManifest] = useState<AvatarV2ReferenceManifest | null>(null);
   const selectedFrame = manifest?.frames.find(item => item.frame === frame);
   const evidence = selectedFrame?.sourceJointSuggestions;
@@ -47,12 +48,13 @@ export function AvatarV2ReferenceGallery({
     const controller = new AbortController();
     setAvailability('loading');
     setManifest(null);
-    void fetch(avatarV2ReferenceManifestUrl, { signal: controller.signal })
+    void fetch(avatarV2ReferenceManifestUrl, { signal: controller.signal, cache: 'no-cache' })
       .then(async response => {
         if (!response.ok) throw new Error(`Source gallery HTTP ${response.status}`);
         const raw: unknown = await response.json();
         const validated = parseAvatarV2ReferenceManifest(raw);
         if (!validated) throw new Error('Unverified V2 source gallery manifest');
+        if (controller.signal.aborted) return;
         setManifest(validated);
         setAvailability('available');
       })
@@ -60,7 +62,7 @@ export function AvatarV2ReferenceGallery({
         if (!controller.signal.aborted) setAvailability('missing');
       });
     return () => controller.abort();
-  }, []);
+  }, [refresh]);
 
   useEffect(() => {
     onLandmarks(evidence?.suggestions ?? []);
@@ -72,6 +74,10 @@ export function AvatarV2ReferenceGallery({
         <div className="flex flex-wrap items-center gap-2">
           <CardTitle>See the actual Avatar V2 work in progress</CardTitle>
           <Badge variant="outline">artist reference only</Badge>
+          <Button type="button" size="sm" variant="outline" disabled={availability === 'loading'}
+            onClick={() => setRefresh(value => value + 1)}>
+            Refresh published proofs
+          </Button>
         </div>
         <CardDescription>
           These are real masculine/feminine Blender source meshes and the improved physical
