@@ -133,6 +133,10 @@ def publish_references(source_root: pathlib.Path, output_root: pathlib.Path) -> 
                     or detail.get("productionValidated") is not False
                     or detail.get("realGarmentArtistApproved") is not False
                     or surface.get("originalSurfaceConforming") is not True
+                    or surface.get("smoothingReprojectedOnOriginalCC0") is not True
+                    or surface.get("boundarySmoothingIterations") != 10
+                    or surface.get("smoothedRealBoundaryVertices", 0) < 40
+                    or surface.get("postSmoothingBoundaryClearanceMm") != 14
                     or surface.get("productionValidated") is not False
                     or (target["style"] == "logo-tee") != bool(
                         brand and brand.get("usesExistingBrandArtwork") is True
@@ -143,6 +147,9 @@ def publish_references(source_root: pathlib.Path, output_root: pathlib.Path) -> 
                 "sourceSurfaceVertices": surface["sourceSurfaceVertices"],
                 "sourceSelectedFaces": surface["sourceSelectedFaces"],
                 "averageOffsetMm": surface["averageOffsetMm"],
+                "smoothedRealBoundaryVertices": surface["smoothedRealBoundaryVertices"],
+                "smoothingReprojectedOnOriginalCC0": True,
+                "postSmoothingBoundaryClearanceMm": surface["postSmoothingBoundaryClearanceMm"],
                 "actualOriginalCC0SourceSurface": True,
                 "gltfConformingOriginalLogo": detail["gltfConformingOriginalLogo"],
                 "gltfRealSurfaceHems": True,
