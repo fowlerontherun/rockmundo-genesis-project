@@ -54,8 +54,9 @@ export function avatarV2Readiness() {
       ready: assets.filter(asset => asset.status === 'asset_ready').length,
       validated: assets.filter(asset => asset.status === 'validated').length,
       blocked: assets.filter(asset => asset.status === 'blocked').length,
-      productionReady: assets.some(asset => asset.lod === 0 && asset.status === 'validated')
-        && assets.some(asset => asset.lod === 1 && asset.status === 'validated'),
+      productionReady: avatarV2MinimumRolloutBlockers(assets.concat(
+        AVATAR_V2_BASE_ASSETS.filter(candidate => candidate.frame !== frame)
+      )).filter(reason => reason.startsWith(`${frame} `)).length === 0,
     };
   });
 
@@ -63,7 +64,7 @@ export function avatarV2Readiness() {
     assetVersion: AVATAR_V2_ASSET_VERSION,
     rolloutEnabled: AVATAR_V2_ROLLOUT.enabled,
     frames,
-    productionReady: frames.every(frame => frame.productionReady),
+    productionReady: avatarV2MinimumRolloutBlockers().length === 0,
   };
 }
 
