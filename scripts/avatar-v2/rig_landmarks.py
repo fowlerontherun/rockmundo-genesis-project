@@ -67,6 +67,20 @@ def moved_markers(
     ]
 
 
+def untouched_face_markers(
+    bones: Sequence[BoneSpec],
+    placed: Mapping[str, Vec3],
+    reference: Mapping[str, Vec3],
+) -> list[str]:
+    """Identify sculpt-specific face handles still at their generic guide positions."""
+    critical = {
+        name for name in position_markers(bones)
+        if name.startswith(("RMV2_FIT__Eye.", "RMV2_FIT__EarAnchor.", "RMV2_FIT__Jaw__"))
+    }
+    moved = set(moved_markers(placed, reference))
+    return sorted(critical - moved)
+
+
 def fit_bones(
     bones: Sequence[BoneSpec],
     markers: Mapping[str, Vec3],
