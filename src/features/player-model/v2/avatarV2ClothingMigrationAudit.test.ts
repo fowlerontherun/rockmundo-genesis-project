@@ -169,4 +169,16 @@ describe('existing owned clothing -> Avatar V2 migration audit', () => {
     }
   });
 
+  it('does not certify a V2 mapping without its original stable curated key', () => {
+    const existing = garment({
+      curated_asset_key: null, garment_config: fullV2, preview_status: 'ready',
+    });
+    const snapshot = JSON.stringify(existing);
+    const result = auditAvatarV2ClothingCatalog([existing], packs);
+    expect(result.rows[0].issues).toContain('missing-stable-key');
+    expect(result.rows[0].v2MappingComplete).toBe(false);
+    expect(result.publishedMissingV2).toBe(1);
+    expect(JSON.stringify(existing)).toBe(snapshot);
+  });
+
 });
