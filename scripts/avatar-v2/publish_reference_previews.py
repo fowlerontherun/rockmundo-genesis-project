@@ -16,6 +16,12 @@ from verify_source_artifacts import verify_artifacts
 
 FRAMES = ("masculine", "feminine")
 VIEWS = ("front", "quarter", "side", "face")
+STARTER_STYLES = {
+    "logo-tee": "clothing.starter.logo-tee",
+    "plain-black-tee": "clothing.starter.plain-black-tee",
+    "plain-white-tee": "clothing.starter.plain-white-tee",
+    "vintage-charcoal-tee": "clothing.starter.vintage-charcoal-tee",
+}
 
 
 def preview_names(frame: str) -> dict:
@@ -27,6 +33,15 @@ def preview_names(frame: str) -> dict:
         "headMotionViews": {
             view: f"{frame}/{frame}-head-rig-experiment-{view}.png" for view in VIEWS
         },
+        "starterTees": [{
+            "style": style,
+            "catalogueKey": key,
+            "preview": f"{frame}/{frame}-starter-{style}-LOOKDEV-ONLY-not-validated.glb",
+            "views": {
+                view: f"{frame}/{frame}-starter-{style}-{view}.png"
+                for view in ("front", "quarter")
+            },
+        } for style, key in STARTER_STYLES.items()],
         "sourceViews": {view: f"{frame}/{frame}-{view}.png" for view in VIEWS},
         "lookdevViews": {view: f"{frame}/{frame}-lookdev-{view}.png" for view in VIEWS},
     }
@@ -87,6 +102,54 @@ def publish_references(source_root: pathlib.Path, output_root: pathlib.Path) -> 
                 "fullBodySkinned", "faceMorphsAuthored", "productionValidated",
             )
         }
+        tee_pack = source_frames[entry["frame"]].get("starterTeePrototypes")
+        if (not isinstance(tee_pack, dict)
+                or tee_pack.get("schema") != "rockmundo.avatar-v2-starter-tee-authoring-proofs"
+                or tee_pack.get("frame") != entry["frame"]
+                or tee_pack.get("noDatabaseItemsCreated") is not True
+                or tee_pack.get("oldCatalogueKeysUnchanged") is not True
+                or tee_pack.get("artistApproved") is not False
+                or tee_pack.get("productionValidated") is not False
+                or not isinstance(tee_pack.get("variants"), list)
+                or len(tee_pack["variants"]) != 4):
+            raise ValueError("Incomplete original catalogue Starter Wardrobe authoring evidence.")
+        variants = {item["style"]: item for item in tee_pack["variants"]}
+        if set(variants) != set(STARTER_STYLES):
+            raise ValueError("The physical Starter Wardrobe proof must preserve all four already sold styles.")
+        for target in entry["starterTees"]:
+            detail = variants[target["style"]]
+            surface = detail.get("sourceSurface") or {}
+            brand = detail.get("brand")
+            if (detail.get("catalogueKey") != target["catalogueKey"]
+                    or detail.get("preview") != pathlib.PurePosixPath(target["preview"]).name
+                    or detail.get("views") != {
+                        key: pathlib.PurePosixPath(value).name
+                        for key, value in target["views"].items()
+                    }
+                    or detail.get("gltfSourceMappedShirt") is not True
+                    or detail.get("gltfRealSurfaceHems") is not True
+                    or detail.get("gltfHasSkinning") is not False
+                    or detail.get("gltfHasAnimations") is not False
+                    or detail.get("productionValidated") is not False
+                    or detail.get("realGarmentArtistApproved") is not False
+                    or surface.get("originalSurfaceConforming") is not True
+                    or surface.get("productionValidated") is not False
+                    or (target["style"] == "logo-tee") != bool(
+                        brand and brand.get("usesExistingBrandArtwork") is True
+                        and detail.get("gltfConformingOriginalLogo") is True
+                    )):
+                raise ValueError("A Starter clothing proof is unverified, incorrectly branded or falsely certified.")
+            target["evidence"] = {
+                "sourceSurfaceVertices": surface["sourceSurfaceVertices"],
+                "sourceSelectedFaces": surface["sourceSelectedFaces"],
+                "averageOffsetMm": surface["averageOffsetMm"],
+                "actualOriginalCC0SourceSurface": True,
+                "gltfConformingOriginalLogo": detail["gltfConformingOriginalLogo"],
+                "gltfRealSurfaceHems": True,
+                "realGarmentArtistApproved": False,
+                "requiresManualFullBodyRigAndGarmentWeighting": True,
+                "productionValidated": False,
+            }
     inventory = []
     for entry in frames:
         names = [
@@ -94,6 +157,8 @@ def publish_references(source_root: pathlib.Path, output_root: pathlib.Path) -> 
             entry["lookdev"],
             entry["headMotion"],
             *entry["headMotionViews"].values(),
+            *(asset for item in entry["starterTees"]
+              for asset in (item["preview"], *item["views"].values())),
             *entry["sourceViews"].values(),
             *entry["lookdevViews"].values(),
         ]
@@ -132,7 +197,7 @@ def main() -> None:
     parser.add_argument("--output", type=pathlib.Path, required=True)
     args = parser.parse_args()
     result = publish_references(args.root, args.output)
-    print(f"Published {len(result['files'])} source and experimental rig proof files for both frames; "
+    print(f"Published {len(result['files'])} source, head motion and real existing Starter tee proof files for both frames; "
           "production validation remains false.")
 
 
