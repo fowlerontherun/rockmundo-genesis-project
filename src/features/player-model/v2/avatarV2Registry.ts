@@ -54,9 +54,11 @@ export function avatarV2Readiness() {
       ready: assets.filter(asset => asset.status === 'asset_ready').length,
       validated: assets.filter(asset => asset.status === 'validated').length,
       blocked: assets.filter(asset => asset.status === 'blocked').length,
-      productionReady: avatarV2MinimumRolloutBlockers(assets.concat(
-        AVATAR_V2_BASE_ASSETS.filter(candidate => candidate.frame !== frame)
-      )).filter(reason => reason.startsWith(`${frame} `)).length === 0,
+      productionReady: ([0, 1] as const).every(lod => {
+        const matches = assets.filter(asset => asset.lod === lod);
+        return matches.length === 1 && matches[0].status === 'validated'
+          && matches[0].file === `avatar-v2/${frame}/base-lod${lod}.glb`;
+      }),
     };
   });
 
