@@ -39,6 +39,7 @@ BEGIN
       edition.ends_on AS festival_ends_on,
       city.name AS city_name,
       city.country AS country_name,
+      city.timezone AS venue_timezone,
       booking.status AS booking_status,
       booking.billing_position,
       booking.set_minutes,
@@ -75,7 +76,7 @@ BEGIN
     LEFT JOIN public.festival_performance_sessions session
       ON session.contract_id=contract.id
       AND session.status NOT IN ('cancelled')
-    LEFT JOIN public.festival_stages stage ON stage.id=slot.stage_id
+    LEFT JOIN public.festival_stages stage ON stage.id=coalesce(slot.stage_id, session.stage_id)
     WHERE booking.artist_type='band'
       AND booking.status IN ('confirmed','awaiting_schedule','scheduled')
       AND edition.status<>'cancelled'
