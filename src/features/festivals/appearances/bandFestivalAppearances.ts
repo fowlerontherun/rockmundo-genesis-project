@@ -123,9 +123,17 @@ export function appearanceDetailHref(appearance: BandFestivalAppearance): string
   );
 }
 
+export function festivalLocalDateKey(now: Date, venueTimezone: string | null): string {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: venueTimezone || "UTC",
+    year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(now);
+  const part = (type: string) => parts.find((value) => value.type === type)?.value || "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
 export function isFutureFestivalAppearance(appearance: BandFestivalAppearance, today = new Date()): boolean {
-  const midnight = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-  return localFestivalDate(appearance.festivalDate).getTime() >= midnight;
+  return appearance.festivalDate >= festivalLocalDateKey(today, appearance.venueTimezone);
 }
 
 export function festivalAppearanceAsActivity(
@@ -141,10 +149,7 @@ export function festivalAppearanceAsActivity(
     ? new Date(appearance.confirmedEndAt)
     : new Date(start.getTime() + 60 * 1000);
 
-  const localToday = [
-    today.getFullYear(), String(today.getMonth() + 1).padStart(2, "0"),
-    String(today.getDate()).padStart(2, "0"),
-  ].join("-");
+  const localToday = festivalLocalDateKey(today, appearance.venueTimezone);
   // A premature annual result cannot mark a still-running Festival as played.
   const datesFinished = appearance.festivalEndsOn < localToday;
   const status: ScheduledActivity["status"] =
