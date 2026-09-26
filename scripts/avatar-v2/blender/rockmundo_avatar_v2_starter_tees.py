@@ -232,14 +232,16 @@ def _inspect_preview_glb(path: pathlib.Path, slug: str, want_logo: bool) -> dict
             raise RuntimeError("Real starter tee proof has no glTF JSON payload.")
         scene = json.loads(stream.read(size))
     meshes = [mesh.get("name", "") for mesh in scene.get("meshes", [])]
-    if not any(f"StarterTee" in name and slug in name for name in meshes):
+    if not any(("OriginalSourceMappedTee" in name or "StarterTee" in name) and slug in name
+               for name in meshes):
         raise RuntimeError("The real lifted CC0 source tee is absent from the exported proof.")
-    logo = any("OriginalBrand_ConformingInk" in name for name in meshes)
+    logo = any("RealChestPrintGeometry" in name or "OriginalBrand_ConformingInk" in name
+               for name in meshes)
     if logo != want_logo:
         raise RuntimeError("Existing brand art attachment missing or incorrectly added to an unbranded tee.")
     if scene.get("animations") or scene.get("skins"):
         raise RuntimeError("This unweighted surface-fit prototype must never imply certified skinning or performance.")
-    if not any("StarterHems" in name for name in meshes):
+    if not any("StarterSurfaceSeams" in name or "StarterHems" in name for name in meshes):
         raise RuntimeError("The extracted source tee has no real hem geometry.")
     return {
         "gltfMeshCount": len(meshes),
