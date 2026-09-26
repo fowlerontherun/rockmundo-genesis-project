@@ -401,6 +401,13 @@ After fitting:
 - test singing gaze plus guitar, bass, drumstick and microphone poses;
 - sculpt the required pose-space correctives after skinning quality is stable.
 
+For LOD0/1 production promotion, an artist must finish the rig and explicitly
+set rockmundoAvatarV2JointFitApproved, rockmundoAvatarV2WeightsApproved and
+rockmundoAvatarV2StagePoseApproved to True on the armature after separate
+joint-placement, weight-paint and instrument/singing pose inspections. Remove
+the guide and manual-fit flags only after that work is complete. These flags
+record human review; they do not replace the independent GLB validators.
+
 Do not export the untouched guide as a validated runtime asset.
 """
     )
