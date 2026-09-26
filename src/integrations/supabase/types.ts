@@ -467,6 +467,50 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_clothing_transfer_audit: {
+        Row: {
+          action_type: string
+          batch_id: string
+          collection_id: string | null
+          created_at: string
+          id: string
+          item_count: number
+          performed_by: string
+          result_summary: Json
+          source_filename: string | null
+        }
+        Insert: {
+          action_type: string
+          batch_id?: string
+          collection_id?: string | null
+          created_at?: string
+          id?: string
+          item_count?: number
+          performed_by?: string
+          result_summary?: Json
+          source_filename?: string | null
+        }
+        Update: {
+          action_type?: string
+          batch_id?: string
+          collection_id?: string | null
+          created_at?: string
+          id?: string
+          item_count?: number
+          performed_by?: string
+          result_summary?: Json
+          source_filename?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_clothing_transfer_audit_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "skin_collections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_festival_creation_requests: {
         Row: {
           actor_profile_id: string | null
@@ -1284,58 +1328,130 @@ export type Database = {
       }
       avatar_clothing_items: {
         Row: {
+          bonus_config: Json
+          bonus_enabled: boolean
           category: string
           collection_id: string | null
           color_variants: Json | null
           created_at: string | null
+          curated_asset_key: string | null
+          curated_asset_status: string
+          customization_zones: Json
           description: string | null
+          detail_layers: Json
           expiry_date: string | null
+          external_key: string | null
           featured: boolean | null
+          fit_config: Json
+          garment_config: Json
           id: string
+          import_batch_id: string | null
+          import_source: string | null
           is_limited_edition: boolean | null
           is_premium: boolean | null
+          last_preview_error: string | null
+          material_config: Json
           name: string
+          pattern_config: Json
+          preview_generated_at: string | null
+          preview_manifest: Json
+          preview_status: string
           price: number | null
           rarity: string | null
           release_date: string | null
+          render_config: Json
           rpm_asset_id: string | null
+          schema_version: number
           shape_config: Json | null
+          supported_frames: string[]
+          validation_notes: Json
+          variant_matrix: Json
+          wear_config: Json
+          wearable_slot: string | null
         }
         Insert: {
+          bonus_config?: Json
+          bonus_enabled?: boolean
           category: string
           collection_id?: string | null
           color_variants?: Json | null
           created_at?: string | null
+          curated_asset_key?: string | null
+          curated_asset_status?: string
+          customization_zones?: Json
           description?: string | null
+          detail_layers?: Json
           expiry_date?: string | null
+          external_key?: string | null
           featured?: boolean | null
+          fit_config?: Json
+          garment_config?: Json
           id?: string
+          import_batch_id?: string | null
+          import_source?: string | null
           is_limited_edition?: boolean | null
           is_premium?: boolean | null
+          last_preview_error?: string | null
+          material_config?: Json
           name: string
+          pattern_config?: Json
+          preview_generated_at?: string | null
+          preview_manifest?: Json
+          preview_status?: string
           price?: number | null
           rarity?: string | null
           release_date?: string | null
+          render_config?: Json
           rpm_asset_id?: string | null
+          schema_version?: number
           shape_config?: Json | null
+          supported_frames?: string[]
+          validation_notes?: Json
+          variant_matrix?: Json
+          wear_config?: Json
+          wearable_slot?: string | null
         }
         Update: {
+          bonus_config?: Json
+          bonus_enabled?: boolean
           category?: string
           collection_id?: string | null
           color_variants?: Json | null
           created_at?: string | null
+          curated_asset_key?: string | null
+          curated_asset_status?: string
+          customization_zones?: Json
           description?: string | null
+          detail_layers?: Json
           expiry_date?: string | null
+          external_key?: string | null
           featured?: boolean | null
+          fit_config?: Json
+          garment_config?: Json
           id?: string
+          import_batch_id?: string | null
+          import_source?: string | null
           is_limited_edition?: boolean | null
           is_premium?: boolean | null
+          last_preview_error?: string | null
+          material_config?: Json
           name?: string
+          pattern_config?: Json
+          preview_generated_at?: string | null
+          preview_manifest?: Json
+          preview_status?: string
           price?: number | null
           rarity?: string | null
           release_date?: string | null
+          render_config?: Json
           rpm_asset_id?: string | null
+          schema_version?: number
           shape_config?: Json | null
+          supported_frames?: string[]
+          validation_notes?: Json
+          variant_matrix?: Json
+          wear_config?: Json
+          wearable_slot?: string | null
         }
         Relationships: [
           {
@@ -1415,6 +1531,72 @@ export type Database = {
           style_key?: string
         }
         Relationships: []
+      }
+      avatar_item_preview_jobs: {
+        Row: {
+          attempt_count: number
+          clothing_item_id: string
+          collection_id: string | null
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          job_type: string
+          output_manifest: Json
+          requested_by: string | null
+          requested_views: Json
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          clothing_item_id: string
+          collection_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          job_type?: string
+          output_manifest?: Json
+          requested_by?: string | null
+          requested_views?: Json
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          clothing_item_id?: string
+          collection_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          job_type?: string
+          output_manifest?: Json
+          requested_by?: string | null
+          requested_views?: Json
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avatar_item_preview_jobs_clothing_item_id_fkey"
+            columns: ["clothing_item_id"]
+            isOneToOne: false
+            referencedRelation: "avatar_clothing_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avatar_item_preview_jobs_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "skin_collections"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       award_nominations: {
         Row: {
@@ -2341,6 +2523,7 @@ export type Database = {
       band_crew_members: {
         Row: {
           band_id: string
+          career_xp: number
           catalog_crew_id: string | null
           cohesion_rating: number
           created_at: string
@@ -2349,6 +2532,7 @@ export type Database = {
           gigs_together: number
           hire_date: string
           id: string
+          last_gig_at: string | null
           name: string
           notes: string | null
           salary_per_gig: number
@@ -2358,6 +2542,7 @@ export type Database = {
         }
         Insert: {
           band_id: string
+          career_xp?: number
           catalog_crew_id?: string | null
           cohesion_rating?: number
           created_at?: string
@@ -2366,6 +2551,7 @@ export type Database = {
           gigs_together?: number
           hire_date?: string
           id?: string
+          last_gig_at?: string | null
           name: string
           notes?: string | null
           salary_per_gig?: number
@@ -2375,6 +2561,7 @@ export type Database = {
         }
         Update: {
           band_id?: string
+          career_xp?: number
           catalog_crew_id?: string | null
           cohesion_rating?: number
           created_at?: string
@@ -2383,6 +2570,7 @@ export type Database = {
           gigs_together?: number
           hire_date?: string
           id?: string
+          last_gig_at?: string | null
           name?: string
           notes?: string | null
           salary_per_gig?: number
@@ -8458,6 +8646,74 @@ export type Database = {
             columns: ["city_id"]
             isOneToOne: true
             referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clothing_skin_purchases: {
+        Row: {
+          amount: number
+          clothing_item_id: string
+          created_at: string
+          customization_config: Json
+          id: string
+          idempotency_key: string
+          ownership_id: string
+          profile_id: string
+          selected_variant_key: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          clothing_item_id: string
+          created_at?: string
+          customization_config?: Json
+          id?: string
+          idempotency_key: string
+          ownership_id: string
+          profile_id: string
+          selected_variant_key?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          clothing_item_id?: string
+          created_at?: string
+          customization_config?: Json
+          id?: string
+          idempotency_key?: string
+          ownership_id?: string
+          profile_id?: string
+          selected_variant_key?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clothing_skin_purchases_clothing_item_id_fkey"
+            columns: ["clothing_item_id"]
+            isOneToOne: false
+            referencedRelation: "avatar_clothing_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clothing_skin_purchases_ownership_id_fkey"
+            columns: ["ownership_id"]
+            isOneToOne: false
+            referencedRelation: "player_owned_skins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clothing_skin_purchases_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clothing_skin_purchases_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -29389,7 +29645,84 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "gig_crew_assignments_band_crew_member_id_fkey"
+            columns: ["band_crew_member_id"]
+            isOneToOne: false
+            referencedRelation: "band_crew_members"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "gig_crew_assignments_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gig_crew_settlements: {
+        Row: {
+          band_id: string
+          cohesion_after: number
+          cohesion_before: number
+          crew_member_id: string | null
+          crew_name: string
+          crew_role: string
+          gig_id: string
+          id: string
+          salary_paid: number
+          settled_at: string
+          skill_after: number
+          skill_before: number
+          xp_awarded: number
+        }
+        Insert: {
+          band_id: string
+          cohesion_after: number
+          cohesion_before: number
+          crew_member_id?: string | null
+          crew_name: string
+          crew_role: string
+          gig_id: string
+          id?: string
+          salary_paid: number
+          settled_at?: string
+          skill_after: number
+          skill_before: number
+          xp_awarded: number
+        }
+        Update: {
+          band_id?: string
+          cohesion_after?: number
+          cohesion_before?: number
+          crew_member_id?: string | null
+          crew_name?: string
+          crew_role?: string
+          gig_id?: string
+          id?: string
+          salary_paid?: number
+          settled_at?: string
+          skill_after?: number
+          skill_before?: number
+          xp_awarded?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gig_crew_settlements_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gig_crew_settlements_crew_member_id_fkey"
+            columns: ["crew_member_id"]
+            isOneToOne: false
+            referencedRelation: "band_crew_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gig_crew_settlements_gig_id_fkey"
             columns: ["gig_id"]
             isOneToOne: false
             referencedRelation: "gigs"
@@ -31349,6 +31682,163 @@ export type Database = {
           tier?: number
         }
         Relationships: []
+      }
+      instrument_skin_items: {
+        Row: {
+          body_color: string
+          collection_id: string | null
+          color_variants: Json
+          created_at: string
+          customization_zones: Json
+          description: string | null
+          design_key: string
+          expiry_date: string | null
+          external_key: string
+          featured: boolean
+          hardware_color: string
+          id: string
+          is_active: boolean
+          is_limited_edition: boolean
+          is_premium: boolean
+          name: string
+          pickguard_color: string
+          price: number
+          rarity: string
+          release_date: string | null
+          secondary_color: string
+          target_instrument: string
+          updated_at: string
+          variant_matrix: Json
+        }
+        Insert: {
+          body_color?: string
+          collection_id?: string | null
+          color_variants?: Json
+          created_at?: string
+          customization_zones?: Json
+          description?: string | null
+          design_key?: string
+          expiry_date?: string | null
+          external_key: string
+          featured?: boolean
+          hardware_color?: string
+          id?: string
+          is_active?: boolean
+          is_limited_edition?: boolean
+          is_premium?: boolean
+          name: string
+          pickguard_color?: string
+          price?: number
+          rarity?: string
+          release_date?: string | null
+          secondary_color?: string
+          target_instrument: string
+          updated_at?: string
+          variant_matrix?: Json
+        }
+        Update: {
+          body_color?: string
+          collection_id?: string | null
+          color_variants?: Json
+          created_at?: string
+          customization_zones?: Json
+          description?: string | null
+          design_key?: string
+          expiry_date?: string | null
+          external_key?: string
+          featured?: boolean
+          hardware_color?: string
+          id?: string
+          is_active?: boolean
+          is_limited_edition?: boolean
+          is_premium?: boolean
+          name?: string
+          pickguard_color?: string
+          price?: number
+          rarity?: string
+          release_date?: string | null
+          secondary_color?: string
+          target_instrument?: string
+          updated_at?: string
+          variant_matrix?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instrument_skin_items_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "skin_collections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instrument_skin_purchases: {
+        Row: {
+          amount: number
+          created_at: string
+          customization_config: Json
+          id: string
+          idempotency_key: string
+          instrument_skin_item_id: string
+          ownership_id: string
+          profile_id: string
+          selected_variant_key: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          customization_config?: Json
+          id?: string
+          idempotency_key: string
+          instrument_skin_item_id: string
+          ownership_id: string
+          profile_id: string
+          selected_variant_key?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          customization_config?: Json
+          id?: string
+          idempotency_key?: string
+          instrument_skin_item_id?: string
+          ownership_id?: string
+          profile_id?: string
+          selected_variant_key?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instrument_skin_purchases_instrument_skin_item_id_fkey"
+            columns: ["instrument_skin_item_id"]
+            isOneToOne: false
+            referencedRelation: "instrument_skin_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instrument_skin_purchases_ownership_id_fkey"
+            columns: ["ownership_id"]
+            isOneToOne: false
+            referencedRelation: "player_owned_skins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instrument_skin_purchases_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instrument_skin_purchases_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       interview_questions: {
         Row: {
@@ -33591,11 +34081,14 @@ export type Database = {
           logo_url: string | null
           market_share: number | null
           marketing_budget: number | null
+          marketing_focus: string
           marketing_level: number
+          marketing_regions: string[]
           monthly_overhead: number | null
           name: string
           operating_budget: number | null
           owner_id: string | null
+          priority_release_id: string | null
           reputation_score: number | null
           roster_slot_capacity: number | null
           royalty_default_pct: number | null
@@ -33603,6 +34096,7 @@ export type Database = {
           total_expenses_lifetime: number | null
           total_revenue_lifetime: number | null
           updated_at: string | null
+          upgrade_cooldowns: Json
           weekly_marketing_budget: number | null
         }
         Insert: {
@@ -33629,11 +34123,14 @@ export type Database = {
           logo_url?: string | null
           market_share?: number | null
           marketing_budget?: number | null
+          marketing_focus?: string
           marketing_level?: number
+          marketing_regions?: string[]
           monthly_overhead?: number | null
           name: string
           operating_budget?: number | null
           owner_id?: string | null
+          priority_release_id?: string | null
           reputation_score?: number | null
           roster_slot_capacity?: number | null
           royalty_default_pct?: number | null
@@ -33641,6 +34138,7 @@ export type Database = {
           total_expenses_lifetime?: number | null
           total_revenue_lifetime?: number | null
           updated_at?: string | null
+          upgrade_cooldowns?: Json
           weekly_marketing_budget?: number | null
         }
         Update: {
@@ -33667,11 +34165,14 @@ export type Database = {
           logo_url?: string | null
           market_share?: number | null
           marketing_budget?: number | null
+          marketing_focus?: string
           marketing_level?: number
+          marketing_regions?: string[]
           monthly_overhead?: number | null
           name?: string
           operating_budget?: number | null
           owner_id?: string | null
+          priority_release_id?: string | null
           reputation_score?: number | null
           roster_slot_capacity?: number | null
           royalty_default_pct?: number | null
@@ -33679,6 +34180,7 @@ export type Database = {
           total_expenses_lifetime?: number | null
           total_revenue_lifetime?: number | null
           updated_at?: string | null
+          upgrade_cooldowns?: Json
           weekly_marketing_budget?: number | null
         }
         Relationships: [
@@ -33708,6 +34210,20 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "labels_priority_release_id_fkey"
+            columns: ["priority_release_id"]
+            isOneToOne: false
+            referencedRelation: "chart_albums"
+            referencedColumns: ["release_id"]
+          },
+          {
+            foreignKeyName: "labels_priority_release_id_fkey"
+            columns: ["priority_release_id"]
+            isOneToOne: false
+            referencedRelation: "releases"
             referencedColumns: ["id"]
           },
         ]
@@ -43142,28 +43658,34 @@ export type Database = {
       }
       player_owned_skins: {
         Row: {
+          customization_config: Json
           id: string
           is_equipped: boolean | null
           item_id: string
           item_type: string
           profile_id: string
           purchased_at: string | null
+          selected_variant_key: string | null
         }
         Insert: {
+          customization_config?: Json
           id?: string
           is_equipped?: boolean | null
           item_id: string
           item_type: string
           profile_id: string
           purchased_at?: string | null
+          selected_variant_key?: string | null
         }
         Update: {
+          customization_config?: Json
           id?: string
           is_equipped?: boolean | null
           item_id?: string
           item_type?: string
           profile_id?: string
           purchased_at?: string | null
+          selected_variant_key?: string | null
         }
         Relationships: [
           {
@@ -49267,6 +49789,51 @@ export type Database = {
           },
         ]
       }
+      release_pr_events: {
+        Row: {
+          channel: string
+          created_at: string
+          hype_delta: number
+          id: string
+          reach_delta: number
+          release_id: string
+          source_ref: string | null
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          hype_delta?: number
+          id?: string
+          reach_delta?: number
+          release_id: string
+          source_ref?: string | null
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          hype_delta?: number
+          id?: string
+          reach_delta?: number
+          release_id?: string
+          source_ref?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "release_pr_events_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "chart_albums"
+            referencedColumns: ["release_id"]
+          },
+          {
+            foreignKeyName: "release_pr_events_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       release_sales: {
         Row: {
           allocation_is_reconstructed: boolean
@@ -49503,12 +50070,17 @@ export type Database = {
           id: string
           is_greatest_hits: boolean | null
           label_contract_id: string | null
+          label_marketing_focus: string
           label_marketing_power: number
+          label_marketing_regions: string[]
+          label_marketing_saturation: number
           label_revenue_share_pct: number | null
           last_greatest_hits_date: string | null
           manufacturing_complete_at: string | null
           manufacturing_discount_percentage: number | null
           manufacturing_paid_by_label: boolean | null
+          pr_reach_power: number
+          pr_reach_updated_at: string | null
           pre_order_count: number | null
           pre_order_start_date: string | null
           promotion_budget: number | null
@@ -49543,12 +50115,17 @@ export type Database = {
           id?: string
           is_greatest_hits?: boolean | null
           label_contract_id?: string | null
+          label_marketing_focus?: string
           label_marketing_power?: number
+          label_marketing_regions?: string[]
+          label_marketing_saturation?: number
           label_revenue_share_pct?: number | null
           last_greatest_hits_date?: string | null
           manufacturing_complete_at?: string | null
           manufacturing_discount_percentage?: number | null
           manufacturing_paid_by_label?: boolean | null
+          pr_reach_power?: number
+          pr_reach_updated_at?: string | null
           pre_order_count?: number | null
           pre_order_start_date?: string | null
           promotion_budget?: number | null
@@ -49583,12 +50160,17 @@ export type Database = {
           id?: string
           is_greatest_hits?: boolean | null
           label_contract_id?: string | null
+          label_marketing_focus?: string
           label_marketing_power?: number
+          label_marketing_regions?: string[]
+          label_marketing_saturation?: number
           label_revenue_share_pct?: number | null
           last_greatest_hits_date?: string | null
           manufacturing_complete_at?: string | null
           manufacturing_discount_percentage?: number | null
           manufacturing_paid_by_label?: boolean | null
+          pr_reach_power?: number
+          pr_reach_updated_at?: string | null
           pre_order_count?: number | null
           pre_order_start_date?: string | null
           promotion_budget?: number | null
@@ -54716,6 +55298,7 @@ export type Database = {
           exclusivity_pref: boolean | null
           id: string
           is_active: boolean
+          last_offer_at: string | null
           logo_url: string | null
           min_fame_required: number
           min_fame_threshold: number | null
@@ -54735,6 +55318,7 @@ export type Database = {
           exclusivity_pref?: boolean | null
           id?: string
           is_active?: boolean
+          last_offer_at?: string | null
           logo_url?: string | null
           min_fame_required?: number
           min_fame_threshold?: number | null
@@ -54754,6 +55338,7 @@ export type Database = {
           exclusivity_pref?: boolean | null
           id?: string
           is_active?: boolean
+          last_offer_at?: string | null
           logo_url?: string | null
           min_fame_required?: number
           min_fame_threshold?: number | null
@@ -62583,6 +63168,7 @@ export type Database = {
         Returns: boolean
       }
       _caller_profile_id: { Args: never; Returns: string }
+      _can_manage_label: { Args: { p_label_id: string }; Returns: boolean }
       _claim_player_banking_operation: {
         Args: {
           p_idempotency_key: string
@@ -63399,6 +63985,10 @@ export type Database = {
         }
         Returns: Json
       }
+      _settle_completed_gig_crew: {
+        Args: { p_gig_id: string }
+        Returns: number
+      }
       _settle_social_contract: {
         Args: {
           p_contract_id: string
@@ -63420,6 +64010,7 @@ export type Database = {
         Args: { p_conversation_id: string }
         Returns: number
       }
+      _sync_band_crew_for_gig: { Args: { p_gig_id: string }; Returns: number }
       _tour_operation_cached_request: {
         Args: {
           p_action: string
@@ -63490,6 +64081,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      activate_label_contract_atomic: {
+        Args: { p_contract_id: string }
+        Returns: Json
       }
       add_band_country_fame:
         | {
@@ -64210,6 +64805,16 @@ export type Database = {
           p_profile_id: string
           p_source_id: string
           p_source_type: string
+        }
+        Returns: Json
+      }
+      apply_release_pr_reach: {
+        Args: {
+          p_channel: string
+          p_hype_delta?: number
+          p_reach_delta: number
+          p_release_id: string
+          p_source_ref?: string
         }
         Returns: Json
       }
@@ -65246,6 +65851,16 @@ export type Database = {
         }
         Returns: Json
       }
+      claim_clothing_preview_job_for_collection: {
+        Args: { p_collection_id: string }
+        Returns: {
+          attempt_count: number
+          clothing_item_id: string
+          job_id: string
+          job_type: string
+          requested_views: Json
+        }[]
+      }
       claim_company_shift: { Args: { p_shift_id: string }; Returns: string }
       claim_gig_completion: { Args: { p_gig_id: string }; Returns: Json }
       claim_gig_completion_attempt: {
@@ -65263,6 +65878,16 @@ export type Database = {
           p_viewer_version: string
         }
         Returns: Json
+      }
+      claim_next_clothing_preview_job: {
+        Args: never
+        Returns: {
+          attempt_count: number
+          clothing_item_id: string
+          job_id: string
+          job_type: string
+          requested_views: Json
+        }[]
       }
       claim_referral_rewards: { Args: { p_profile_id: string }; Returns: Json }
       claim_release_inventory: {
@@ -65290,6 +65915,14 @@ export type Database = {
           p_idempotency_key: string
         }
         Returns: Json
+      }
+      clothing_equip_slot: {
+        Args: { p_category: string; p_wearable_slot: string }
+        Returns: string
+      }
+      clothing_slots_conflict: {
+        Args: { p_first: string; p_second: string }
+        Returns: boolean
       }
       complete_child_birth_authoritative: {
         Args: { p_name: string; p_request_id: string }
@@ -65330,6 +65963,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      complete_clothing_preview_job: {
+        Args: { p_job_id: string; p_manifest: Json }
+        Returns: undefined
       }
       complete_company_shift: { Args: { p_claim_id: string }; Returns: Json }
       complete_due_city_projects: { Args: never; Returns: number }
@@ -66201,6 +66838,17 @@ export type Database = {
         }
         Returns: Json
       }
+      credit_label_revenue_atomic: {
+        Args: {
+          p_amount: number
+          p_contract_id?: string
+          p_description: string
+          p_label_id: string
+          p_recoup_amount?: number
+        }
+        Returns: number
+      }
+      crew_role_key: { Args: { p_role: string }; Returns: string }
       current_active_player_profile_id: { Args: never; Returns: string }
       current_player_profile_id: { Args: never; Returns: string }
       current_profile_id: { Args: never; Returns: string }
@@ -66453,6 +67101,10 @@ export type Database = {
       }
       expire_old_gig_offers: { Args: never; Returns: undefined }
       expire_stale_pr_offers: { Args: never; Returns: number }
+      fail_clothing_preview_job: {
+        Args: { p_error: string; p_job_id: string; p_retry?: boolean }
+        Returns: undefined
+      }
       festival_application_eligibility: {
         Args: { p_band_id: string; p_edition_id: string }
         Returns: Json
@@ -67396,6 +68048,43 @@ export type Database = {
         }[]
       }
       get_current_city_scene: { Args: { p_profile_id: string }; Returns: Json }
+      get_equipped_clothing_bonuses: {
+        Args: { p_profile_id: string }
+        Returns: {
+          daily_ap: number
+          daily_xp: number
+          equipped_bonus_items: number
+          performance_pct: number
+          recording_pct: number
+          songwriting_pct: number
+        }[]
+      }
+      get_equipped_stage_clothing: {
+        Args: { p_profile_ids: string[] }
+        Returns: {
+          customization_config: Json
+          item_id: string
+          profile_id: string
+          selected_variant_key: string
+        }[]
+      }
+      get_equipped_stage_instrument_skins: {
+        Args: { p_profile_ids: string[] }
+        Returns: {
+          body_color: string
+          customization_config: Json
+          customization_zones: Json
+          design_key: string
+          hardware_color: string
+          instrument_id: string
+          item_id: string
+          pickguard_color: string
+          profile_id: string
+          secondary_color: string
+          selected_variant_key: string
+          variant_matrix: Json
+        }[]
+      }
       get_fame_fans_attribution: {
         Args: { p_day: string; p_profile_id: string }
         Returns: {
@@ -67615,6 +68304,11 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: Json
       }
+      get_label_management_stats: {
+        Args: { p_label_id: string }
+        Returns: Json
+      }
+      get_label_upgrade_state: { Args: { p_label_id: string }; Returns: Json }
       get_media_market_benchmarks: { Args: never; Returns: Json }
       get_moderation_report_queue: {
         Args: { p_limit?: number; p_status?: string }
@@ -68443,6 +69137,10 @@ export type Database = {
       }
       label_marketing_budget_cap: { Args: { p_level: number }; Returns: number }
       label_marketing_multiplier: { Args: { p_level: number }; Returns: number }
+      label_marketing_upgrade_cost: {
+        Args: { p_next_level: number }
+        Returns: number
+      }
       launch_festival: {
         Args: {
           p_expected_version: number
@@ -68918,6 +69616,16 @@ export type Database = {
         }
         Returns: Json
       }
+      post_label_financial_transaction: {
+        Args: {
+          p_amount: number
+          p_description: string
+          p_label_id: string
+          p_related_contract_id?: string
+          p_transaction_type: string
+        }
+        Returns: number
+      }
       post_next_festival_edition_settlement_item: {
         Args: { p_idempotency_key: string; p_settlement_id: string }
         Returns: Json
@@ -69072,6 +69780,7 @@ export type Database = {
       }
       process_inactive_character_comas: { Args: never; Returns: Json }
       process_jam_session_v2: { Args: { p_session_id: string }; Returns: Json }
+      process_label_daily_finance: { Args: never; Returns: Json }
       process_label_marketing_daily: { Args: never; Returns: Json }
       process_media_submission_reviews: {
         Args: { p_limit?: number }
@@ -69262,6 +69971,16 @@ export type Database = {
         Args: { p_band_id: string; p_catalog_item_id: string }
         Returns: Json
       }
+      purchase_clothing_item_atomic: {
+        Args: {
+          p_idempotency_key: string
+          p_item_id: string
+          p_profile_id: string
+          p_variant_key?: string
+          p_zone_colors?: Json
+        }
+        Returns: Json
+      }
       purchase_equipment_atomic: {
         Args: {
           p_equipment_id: string
@@ -69309,6 +70028,20 @@ export type Database = {
         }
         Returns: Json
       }
+      purchase_instrument_skin_atomic: {
+        Args: {
+          p_idempotency_key: string
+          p_item_id: string
+          p_profile_id: string
+          p_variant_key?: string
+          p_zone_colors?: Json
+        }
+        Returns: Json
+      }
+      purchase_label_upgrade: {
+        Args: { p_label_id: string; p_upgrade_type: string }
+        Returns: Json
+      }
       purchase_release_format: {
         Args: {
           p_format_type: string
@@ -69335,6 +70068,14 @@ export type Database = {
           p_profile_id: string
         }
         Returns: Json
+      }
+      queue_clothing_preview_job: {
+        Args: { p_clothing_item_id: string; p_job_type?: string }
+        Returns: string
+      }
+      queue_skin_collection_previews: {
+        Args: { p_collection_id: string; p_job_type?: string }
+        Returns: number
       }
       quit_job: { Args: { p_employment_id: string }; Returns: undefined }
       quote_festival_edition_insurance: {
@@ -69369,6 +70110,10 @@ export type Database = {
       reconcile_profile_achievements: {
         Args: { p_profile_id: string }
         Returns: number
+      }
+      reconcile_unsettled_completed_gig_crew: {
+        Args: { p_limit?: number }
+        Returns: Json
       }
       record_addiction_exposure: {
         Args: {
@@ -70969,6 +71714,45 @@ export type Database = {
           weekly_budget: number
         }[]
       }
+      set_label_marketing_strategy: {
+        Args: {
+          p_focus?: string
+          p_label_id: string
+          p_priority_release_id?: string
+          p_regions?: string[]
+        }
+        Returns: undefined
+      }
+      set_owned_clothing_customization: {
+        Args: {
+          p_equipped?: boolean
+          p_item_id: string
+          p_profile_id: string
+          p_variant_key?: string
+          p_zone_colors?: Json
+        }
+        Returns: {
+          customization_config: Json
+          is_equipped: boolean
+          ownership_id: string
+          selected_variant_key: string
+        }[]
+      }
+      set_owned_instrument_customization: {
+        Args: {
+          p_equipped?: boolean
+          p_item_id: string
+          p_profile_id: string
+          p_variant_key?: string
+          p_zone_colors?: Json
+        }
+        Returns: {
+          customization_config: Json
+          is_equipped: boolean
+          ownership_id: string
+          selected_variant_key: string
+        }[]
+      }
       set_university_course_fee: {
         Args: {
           p_fee_modifier: number
@@ -71067,6 +71851,10 @@ export type Database = {
         }
       }
       simulate_ticket_sales: { Args: never; Returns: undefined }
+      skill_progress_level_for_slug: {
+        Args: { p_profile_id: string; p_slug: string }
+        Returns: number
+      }
       skill_tier_unlocked: {
         Args: { p_profile_id: string; p_slug: string }
         Returns: boolean
@@ -71537,6 +72325,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      sync_band_crew_for_gig: { Args: { p_gig_id: string }; Returns: number }
       sync_band_fame_from_members: {
         Args: { p_band_id: string }
         Returns: undefined
@@ -72596,6 +73385,10 @@ export type Database = {
         Returns: Json
       }
       totp_raw_fame_for_rank: { Args: { p_rank: number }; Returns: number }
+      totp_refresh_provisional_running_order: {
+        Args: { p_episode_id: string }
+        Returns: number
+      }
       totp_refresh_uk_chart_snapshot: {
         Args: { p_chart_date?: string }
         Returns: Json
@@ -72679,6 +73472,10 @@ export type Database = {
           p_idempotency_key?: string
           p_transfer_kind: string
         }
+        Returns: Json
+      }
+      transfer_label_owner_funds: {
+        Args: { p_amount: number; p_direction: string; p_label_id: string }
         Returns: Json
       }
       transition_festival_edition: {

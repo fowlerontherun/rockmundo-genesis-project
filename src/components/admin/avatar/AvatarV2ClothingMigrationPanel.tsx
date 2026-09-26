@@ -27,7 +27,7 @@ async function allExistingItems(): Promise<ClothingItem[]> {
     const { data, error } = await supabase.from('avatar_clothing_items')
       .select('*').order('id').range(start, start + 499);
     if (error) throw error;
-    result.push(...(data as ClothingItem[] ?? []));
+    result.push(...((data ?? []) as unknown as ClothingItem[]));
     if (!data || data.length < 500) return result;
   }
   throw new Error('Clothing audit exceeded 20,000 rows. Narrow the audit safely before continuing.');

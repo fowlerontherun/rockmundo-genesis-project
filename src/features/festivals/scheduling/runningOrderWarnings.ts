@@ -27,7 +27,7 @@ export function previewRunningOrderMove(
   direction: -1 | 1,
   defaultChangeoverMinutes = 30,
 ) {
-  const ordered = [...items].sort((a, b) => String(a.starts_at ?? "").localeCompare(String(b.starts_at ?? ""));
+  const ordered = [...items].sort((a, b) => String(a.starts_at ?? "").localeCompare(String(b.starts_at ?? "")));
   const from = ordered.findIndex(item => item.id === itemId);
   const to = from + direction;
   if (from < 0 || to < 0 || to >= ordered.length || ordered.some(item => item.locked || !item.starts_at || !item.ends_at)) return null;
