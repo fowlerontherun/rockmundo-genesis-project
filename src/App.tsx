@@ -348,6 +348,7 @@ const MyCharacterEdit = lazyWithRetry(() => import("./pages/MyCharacterEdit"));
 const TodaysNewsPage = lazyWithRetry(() => import("./pages/TodaysNews"));
 const Gear = lazyWithRetry(() => import("./pages/Gear"));
 const AvatarDesigner = lazyWithRetry(() => import("./pages/AvatarDesigner"));
+const AvatarV2PreviewPage = lazyWithRetry(() => import("./pages/AvatarV2PreviewPage"));
 const BandRiders = lazyWithRetry(() => import("./pages/BandRiders"));
 const BandVehicles = lazyWithRetry(() => import("./pages/BandVehicles"));
 const SkinStore = lazyWithRetry(() => import("./pages/SkinStore"));
@@ -845,6 +846,7 @@ function App() {
                     <Route path="band/:bandId" element={<BandProfile />} />
                     <Route path="merchandise" element={<Merchandise />} />
                     <Route path="avatar-designer" element={<AvatarDesigner />} />
+                    <Route path="avatar-v2-preview" element={<AvatarV2PreviewPage />} />
                     <Route path="skin-store" element={<SkinStore />} />
                     <Route path="labels" element={<RecordLabel />} />
                     <Route path="labels/:labelId/manage" element={<LabelManagement />} />
