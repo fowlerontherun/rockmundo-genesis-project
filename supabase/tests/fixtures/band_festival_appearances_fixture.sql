@@ -69,6 +69,9 @@ INSERT INTO public.festival_artist_bookings VALUES
 GRANT USAGE ON SCHEMA auth TO authenticated;
 GRANT EXECUTE ON FUNCTION auth.uid() TO authenticated;
 
+\i supabase/migrations/20291220110000_member_festival_appearances.sql
+\i supabase/tests/band_festival_appearances_regression.sql
+
 -- At first, both confirmed bookings have a provisional date but no stage time.
 -- The first two tests prove that all members, not just leaders, see the
 -- correct band booking and that another user's data does not leak.
