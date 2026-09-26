@@ -174,6 +174,10 @@ describe('player-visible real Avatar V2 preview', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Inspect real dressed source in 3D' })[0]);
     expect(await screen.findByTestId('v2-preview-3d'))
       .toHaveAttribute('data-url', expect.stringContaining('feminine-starter-logo-tee-LOOKDEV-ONLY-not-validated.glb'));
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect actual V2 in interactive 3D' }));
+    expect(screen.getAllByTestId('v2-preview-3d')).toHaveLength(1);
+    expect(screen.getByTestId('v2-preview-3d'))
+      .toHaveAttribute('data-url', expect.stringContaining('feminine-LOOKDEV-ONLY-not-validated.glb'));
     expect(screen.getByText(/purchased V1 clothing and item boosts are unchanged/)).toBeInTheDocument();
   });
 
