@@ -35,12 +35,68 @@ class AuthoringArtifactIntegrityTests(unittest.TestCase):
                 "lookdevPreview": f"{frame}-LOOKDEV-ONLY-not-validated.glb",
                 "headRigScene": f"{frame}-head-rig-experiment-UNAPPROVED.blend",
                 "headRigPreview": f"{frame}-HEAD-RIG-EXPERIMENT-not-validated.glb",
+                "starterBlend": f"{frame}-starter-four-tee-prototypes-UNAPPROVED.blend",
             }
             views = [f"{frame}-{angle}.png" for angle in ("front", "quarter", "side", "face")]
             styled_views = [f"{frame}-lookdev-{angle}.png" for angle in ("front", "quarter", "side", "face")]
             head_motion_views = [
                 f"{frame}-head-rig-experiment-{angle}.png"
                 for angle in ("front", "quarter", "side", "face")
+            ]
+            starter_styles = {
+                "logo-tee": "clothing.starter.logo-tee",
+                "plain-black-tee": "clothing.starter.plain-black-tee",
+                "plain-white-tee": "clothing.starter.plain-white-tee",
+                "vintage-charcoal-tee": "clothing.starter.vintage-charcoal-tee",
+            }
+            starter_variants = [
+                {
+                    "catalogueKey": key,
+                    "name": style,
+                    "style": style,
+                    "preview": f"{frame}-starter-{style}-LOOKDEV-ONLY-not-validated.glb",
+                    "views": {
+                        angle: f"{frame}-starter-{style}-{angle}.png"
+                        for angle in ("front", "quarter")
+                    },
+                    "actualOriginalCC0SourceSurface": True,
+                    "sourceSurface": {
+                        "sourceBody": "genuineOriginalCC0",
+                        "sourceTotalVertices": 34000,
+                        "sourceSelectedFaces": 1850,
+                        "sourceSurfaceVertices": 1780,
+                        "originalSurfaceConforming": True,
+                        "largestConnectedOriginalComponent": True,
+                        "sculptDerivedShortSleeves": True,
+                        "sculptDerivedNeckCut": True,
+                        "manualGarmentFitRequired": True,
+                        "productionValidated": False,
+                        "minimumOffsetMm": 14., "maximumOffsetMm": 14.,
+                        "averageOffsetMm": 14.,
+                    },
+                    "authoringBoundaryEdges": 230,
+                    "brand": {
+                        "realCurvedPrintFaces": 42,
+                        "actualOriginalBrandImage": "src/assets/rockmundo-logo.png",
+                        "printOffsetMm": .65,
+                        "usesExistingBrandArtwork": True,
+                        "previewOnly": True,
+                    } if style == "logo-tee" else None,
+                    "requiresManualFullBodyRigAndGarmentWeighting": True,
+                    "realGarmentArtistApproved": False,
+                    "productionValidated": False,
+                    "gltfMeshCount": 15,
+                    "gltfSourceMappedShirt": True,
+                    "gltfRealSurfaceHems": True,
+                    "gltfConformingOriginalLogo": style == "logo-tee",
+                    "gltfHasSkinning": False,
+                    "gltfHasAnimations": False,
+                }
+                for style, key in starter_styles.items()
+            ]
+            starter_files = [
+                name for item in starter_variants
+                for name in [item["preview"], *item["views"].values()]
             ]
             self.data["frames"].append({
                 "frame": frame,
@@ -87,6 +143,18 @@ class AuthoringArtifactIntegrityTests(unittest.TestCase):
                         }
                         for side in ("L", "R")
                     ],
+                },
+                "starterTeePrototypes": {
+                    "schema": "rockmundo.avatar-v2-starter-tee-authoring-proofs",
+                    "version": 1, "frame": frame,
+                    "scene": names["starterBlend"],
+                    "realCC0Body": "genuineOriginalCC0",
+                    "variants": starter_variants,
+                    "oldCatalogueKeysUnchanged": True,
+                    "noDatabaseItemsCreated": True,
+                    "fullRigValidated": False,
+                    "artistApproved": False,
+                    "productionValidated": False,
                 },
                 "headMotionExperiment": {
                     "schema": "rockmundo.avatar-v2-head-rig-experiment",
@@ -154,7 +222,7 @@ class AuthoringArtifactIntegrityTests(unittest.TestCase):
                 "productionValidated": False,
                 "requiresManualJointFit": True,
             })
-            for name in [*names.values(), *views, *styled_views, *head_motion_views]:
+            for name in [*names.values(), *views, *styled_views, *head_motion_views, *starter_files]:
                 path = self.root / frame / name
                 path.parent.mkdir(parents=True, exist_ok=True)
                 header = (b"BLENDER" if path.suffix == ".blend" else
@@ -177,7 +245,7 @@ class AuthoringArtifactIntegrityTests(unittest.TestCase):
     def test_complete_cc0_sources_are_authoring_only(self):
         report = verify_artifacts(self.root)
         self.assertTrue(report["passed"])
-        self.assertEqual(report["verifiedFiles"], 40)
+        self.assertEqual(report["verifiedFiles"], 66)
         self.assertFalse(report["productionValidated"])
 
     def test_never_certify_stock_source_as_production_ready(self):
@@ -211,6 +279,24 @@ class AuthoringArtifactIntegrityTests(unittest.TestCase):
         self.data["frames"][1]["requiresManualJointFit"] = False
         self.write_manifest()
         with self.assertRaisesRegex(ValueError, "fitMarkers"):
+            verify_artifacts(self.root)
+
+    def test_missing_real_starter_chest_artwork_is_rejected(self):
+        self.data["frames"][0]["starterTeePrototypes"]["variants"][0]["brand"] = None
+        self.write_manifest()
+        with self.assertRaisesRegex(ValueError, "logo art must be UV-fitted"):
+            verify_artifacts(self.root)
+
+    def test_false_certification_of_an_existing_starter_garment_is_rejected(self):
+        self.data["frames"][1]["starterTeePrototypes"]["variants"][0]["productionValidated"] = True
+        self.write_manifest()
+        with self.assertRaisesRegex(ValueError, "unverified CC0-derived garment"):
+            verify_artifacts(self.root)
+
+    def test_starter_tee_proofs_reject_fake_or_missing_item_variants(self):
+        self.data["frames"][1]["starterTeePrototypes"]["variants"].pop()
+        self.write_manifest()
+        with self.assertRaisesRegex(ValueError, "four exact existing"):
             verify_artifacts(self.root)
 
     def test_missing_original_source_geometry_is_rejected(self):
