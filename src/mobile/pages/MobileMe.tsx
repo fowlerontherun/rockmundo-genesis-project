@@ -37,6 +37,8 @@ function Overview() {
   const wellness = useWellnessState(profileId ?? null);
   const now = Date.now();
   const current = today.data.find((a) => {
+    // A provisional Festival day is a calendar reminder, not a timed commitment.
+    if (a.activity_type === "festival_performance" && a.metadata?.date_only) return false;
     const start = new Date(a.scheduled_start).getTime();
     const end = new Date(a.scheduled_end).getTime();
     return start <= now && end > now && !["completed", "cancelled", "missed"].includes(a.status);
