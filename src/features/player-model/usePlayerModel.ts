@@ -95,7 +95,7 @@ async function resolveRichClothingRows(rows: EquippedClothingRow[]) {
   if (!itemIds.length) return {} as Record<string, ResolvedEquippedClothing[]>;
   const { data, error } = await supabase.from('avatar_clothing_items').select('*').in('id', itemIds);
   if (error) throw error;
-  const items = (data || []) as ClothingItem[];
+  const items = (data || []) as unknown as ClothingItem[];
   const itemById = new Map(items.map(item => [item.id, item]));
   const result: Record<string, ResolvedEquippedClothing[]> = {};
   for (const row of rows) {

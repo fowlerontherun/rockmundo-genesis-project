@@ -114,7 +114,7 @@ export const useClothingItems = (collectionId?: string) => useQuery({
     if (collectionId) query = query.eq("collection_id", collectionId);
     const { data, error } = await query.order("category").order("name");
     if (error) throw error;
-    return data as ClothingItem[];
+    return data as unknown as ClothingItem[];
   },
   staleTime: 5 * 60 * 1000,
 });
