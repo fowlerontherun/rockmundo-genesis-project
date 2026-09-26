@@ -174,4 +174,23 @@ def audit_sculpt_fit(fitted: Mapping[str, FitBone]) -> list[str]:
     jaw = fitted.get("Jaw")
     if jaw and abs(jaw.head[0] - midline) > .035:
         errors.append("Jaw hinge is more than 35mm from the body midline.")
+    # Stage-performance poses expose disconnected wrists, ankles and finger
+    # chains as floating hands, feet or misplaced instrument grips. The fitted
+    # armature must retain exact shared pivots for all connected bones.
+    for child_name, parent_name in (
+        ("LowerArm", "UpperArm"), ("Hand", "LowerArm"),
+        ("LowerLeg", "UpperLeg"), ("Foot", "LowerLeg"), ("Toe", "Foot"),
+    ):
+        for side in ("L", "R"):
+            child = fitted.get(f"{child_name}.{side}")
+            parent = fitted.get(f"{parent_name}.{side}")
+            if child and parent and dist(child.head, parent.tail) > .001:
+                errors.append(f"{child_name}.{side} is disconnected from {parent_name}.{side}; check stage-pose deformation.")
+    for digit in ("Thumb", "Index", "Middle", "Ring", "Pinky"):
+        for side in ("L", "R"):
+            for joint in (2, 3):
+                child = fitted.get(f"{digit}{joint}.{side}")
+                parent = fitted.get(f"{digit}{joint - 1}.{side}")
+                if child and parent and dist(child.head, parent.tail) > .001:
+                    errors.append(f"{digit}{joint}.{side} is disconnected from its preceding finger joint.")
     return errors
