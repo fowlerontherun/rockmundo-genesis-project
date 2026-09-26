@@ -7,7 +7,7 @@ import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from rig_landmarks import (  # noqa: E402
-    BoneSpec, audit_sculpt_fit, fit_bones, marker_name, moved_markers,
+    BoneSpec, FitBone, audit_sculpt_fit, fit_bones, marker_name, moved_markers,
     position_markers,
 )
 
@@ -138,6 +138,17 @@ class SculptJointFitTests(unittest.TestCase):
         issues = audit_sculpt_fit(fit_bones(bones, markers))
         self.assertTrue(any("Eye.L" in issue for issue in issues))
         self.assertTrue(any("EarAnchor.R" in issue for issue in issues))
+
+    def test_stage_pose_joint_continuity_detects_disconnected_wrist_and_finger(self):
+        bones = example_rig()
+        fitted = fit_bones(bones, position_markers(bones))
+        hand = fitted["Hand.L"]
+        finger = fitted["Index2.R"]
+        fitted["Hand.L"] = FitBone((hand.head[0] + .012, *hand.head[1:]), hand.tail)
+        fitted["Index2.R"] = FitBone((finger.head[0] - .009, *finger.head[1:]), finger.tail)
+        issues = audit_sculpt_fit(fitted)
+        self.assertTrue(any("Hand.L is disconnected" in issue for issue in issues))
+        self.assertTrue(any("Index2.R is disconnected" in issue for issue in issues))
 
     def test_eye_socket_spacing_mismatch_fails_review(self):
         bones = example_rig()
