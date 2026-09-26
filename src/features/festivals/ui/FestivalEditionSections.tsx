@@ -351,6 +351,9 @@ export function FestivalEditionHistory({ editionId }: { editionId: string }) {
   });
 
   const result = query.data;
+  const appearsEarlyFinalised = Boolean(
+    result?.dates?.endsOn && result.completedAt.slice(0, 10) <= result.dates.endsOn,
+  );
 
   return (
     <SectionShell
@@ -380,13 +383,23 @@ export function FestivalEditionHistory({ editionId }: { editionId: string }) {
         </Card>
       ) : (
         <div className="space-y-4">
+          {appearsEarlyFinalised ? (
+            <Card className="border-amber-500/50 bg-amber-500/5" role="alert">
+              <CardHeader><CardTitle>Early simulated Festival result</CardTitle></CardHeader>
+              <CardContent className="text-sm">
+                This Festival was simulated before its final scheduled day had ended.
+                The displayed attendance is an estimate, not verified admission sales or check-ins.
+                Existing financial postings are preserved; do not run this edition again.
+              </CardContent>
+            </Card>
+          ) : null}
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <HistoryStat
               label="Dates"
               value={`${result.dates?.startsOn ?? "—"} – ${result.dates?.endsOn ?? "—"}`}
             />
             <HistoryStat
-              label="Attendance"
+              label="Simulated attendance"
               value={result.attendance.toLocaleString("en-GB")}
             />
             <HistoryStat
