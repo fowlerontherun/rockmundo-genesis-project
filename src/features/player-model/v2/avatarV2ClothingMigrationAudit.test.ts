@@ -141,4 +141,18 @@ describe('existing owned clothing -> Avatar V2 migration audit', () => {
     expect(JSON.stringify(existing)).toBe(before);
   });
 
+  it('does not count duplicate existing identities or curated keys as complete mappings', () => {
+    const result = auditAvatarV2ClothingCatalog([
+      garment({ garment_config: fullV2, preview_status: 'ready' }),
+      garment({ garment_config: fullV2, preview_status: 'ready' }),
+    ], packs);
+    expect(result.v2MappingComplete).toBe(0);
+    expect(result.publishedMissingV2).toBe(2);
+    for (const row of result.rows) {
+      expect(row.issues).toContain('duplicate-item-id');
+      expect(row.issues).toContain('duplicate-stable-key');
+      expect(row.v2MappingComplete).toBe(false);
+    }
+  });
+
 });
