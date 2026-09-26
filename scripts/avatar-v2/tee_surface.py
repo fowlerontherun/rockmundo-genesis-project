@@ -140,11 +140,11 @@ def source_boundary_edges(polygons: Sequence[Sequence[int]]) -> list[tuple[int, 
             raise ValueError("Cannot sew invalid original CC0 source garment polygons.")
         for a, b in zip(polygon, (*polygon[1:], polygon[0])):
             edge_faces[tuple(sorted((a, b)))] += 1
+    if any(count > 2 for count in edge_faces.values()):
+        raise ValueError("Non-manifold prototype seam: clean original selected polygons first.")
     borders = sorted(edge for edge, count in edge_faces.items() if count == 1)
     if len(borders) < 20:
         raise ValueError("A real tee shell requires continuous neck, hem and armhole edges.")
-    if any(count > 2 for count in edge_faces.values()):
-        raise ValueError("Non-manifold prototype seam: clean original selected polygons first.")
     return borders
 
 
