@@ -52,6 +52,11 @@ export interface AvatarV2ReferenceManifest {
   files: Array<{ file: string; bytes: number; sha256: string }>;
 }
 
+/** Blender uses Z-up and -Y forward. The authored GLB contract is +Y-up and +Z forward. */
+export function avatarV2SourceWorldToGltf(point: readonly [number, number, number]): [number, number, number] {
+  return [point[0], point[2], -point[1]];
+}
+
 export const avatarV2ReferenceManifestUrl = `${REFERENCE_BASE}/preview-manifest.json`;
 
 export function avatarV2ReferenceModelUrl(frame: AvatarV2Frame, variant: AvatarV2ReferenceVariant) {
