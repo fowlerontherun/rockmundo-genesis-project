@@ -33,24 +33,17 @@ export function previewRunningOrderMove(
   if (from < 0 || to < 0 || to >= ordered.length || ordered.some(item => item.locked || !item.starts_at || !item.ends_at)) return null;
   const [moved] = ordered.splice(from, 1);
   ordered.splice(to, 0, moved);
-  let cursor = Date.parse(String(items.reduce((earliest, item) =>
-    String(item.starts_at) < String(earliest.starts_at) ? item : earliest, items[0]).starts_at));
-  if (!Number.isFinite(cursor)) return null;
+  let cursor = Math.min(...ordered.map(item => Date.parse(String(item.starts_at))));
+  if (!Number.isFinite(cursor) || ordered.some(item =>
+    !Number.isInteger(item.duration_minutes) || item.duration_minutes <= 0 ||
+    !Number.isFinite(item.changeover_minutes ?? defaultChangeoverMinutes) ||
+    (item.changeover_minutes ?? defaultChangeoverMinutes) < 0
+  )) return null;
   return ordered.map((item, index) => {
     const startsAt = new Date(cursor).toISOString();
-    const duration = item.duration_minutes;
-    if (!Number.isInteger(duration) || duration <= 0) return null;
-    const end = cursor + duration * 60000;
+    const end = cursor + item.duration_minutes * 60000;
     const endsAt = new Date(end).toISOString();
-    cursor = end + (index < ordered.length - 1 ? Math.max(0, item.changeover_minutes ?? defaultChangeoverMinutes) * 60000 : 0);
-    return { id: item.id, title: item.title, startsAt, endsAt, durationMinutes: duration };
-  }).every(Boolean) ? (() => {
-    let start = Math.min(...items.map(item => Date.parse(String(item.starts_at))));
-    return ordered.map((item, index) => {
-      const startsAt = new Date(start).toISOString();
-      const endsAt = new Date(start + item.duration_minutes * 60000).toISOString();
-      start += (item.duration_minutes + (index < ordered.length - 1 ? Math.max(0, item.changeover_minutes ?? defaultChangeoverMinutes) : 0)) * 60000;
-      return { id: item.id, title: item.title, startsAt, endsAt, durationMinutes: item.duration_minutes };
-    });
-  })() : null;
+    cursor = end + (index < ordered.length - 1 ? (item.changeover_minutes ?? defaultChangeoverMinutes) * 60000 : 0);
+    return { id: item.id, title: item.title, startsAt, endsAt, durationMinutes: item.duration_minutes };
+  });
 }
