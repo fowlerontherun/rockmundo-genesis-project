@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   avatarV2ReferenceImageUrl,
   avatarV2ReferenceModelUrl,
+  avatarV2StarterTeeImageUrl,
+  avatarV2StarterTeeModelUrl,
   avatarV2SourceWorldToGltf,
   parseAvatarV2ReferenceManifest,
 } from './avatarV2ReferencePreview';
@@ -91,6 +93,43 @@ function manifestWithRealHeadMotion() {
   };
 }
 
+function withActualStarterProof() {
+  const manifest = validManifest();
+  const styles = {
+    'logo-tee': 'clothing.starter.logo-tee',
+    'plain-black-tee': 'clothing.starter.plain-black-tee',
+    'plain-white-tee': 'clothing.starter.plain-white-tee',
+    'vintage-charcoal-tee': 'clothing.starter.vintage-charcoal-tee',
+  } as const;
+  return {
+    ...manifest,
+    frames: manifest.frames.map(frame => ({
+      ...frame,
+      starterTees: Object.entries(styles).map(([style, catalogueKey]) => {
+        const preview = `${frame.frame}/${frame.frame}-starter-${style}-LOOKDEV-ONLY-not-validated.glb`;
+        const views = {
+          front: `${frame.frame}/${frame.frame}-starter-${style}-front.png`,
+          quarter: `${frame.frame}/${frame.frame}-starter-${style}-quarter.png`,
+        };
+        [preview, ...Object.values(views)].forEach(file =>
+          manifest.files.push({ file, bytes: 4096, sha256: 'c'.repeat(64) }));
+        return {
+          style, catalogueKey, preview, views,
+          evidence: {
+            sourceSurfaceVertices: 1450, sourceSelectedFaces: 1600, averageOffsetMm: 14,
+            actualOriginalCC0SourceSurface: true,
+            gltfConformingOriginalLogo: style === 'logo-tee',
+            gltfRealSurfaceHems: true,
+            realGarmentArtistApproved: false,
+            requiresManualFullBodyRigAndGarmentWeighting: true,
+            productionValidated: false,
+          },
+        };
+      }),
+    })),
+  };
+}
+
 describe('Avatar V2 real-source gallery boundary', () => {
   it('accepts a complete source-verified, explicitly preview-only pair', () => {
     expect(parseAvatarV2ReferenceManifest(validManifest())).not.toBeNull();
@@ -122,6 +161,34 @@ describe('Avatar V2 real-source gallery boundary', () => {
     expect(parseAvatarV2ReferenceManifest(wrong)).toBeNull();
     const missing = manifestWithMeasuredAnatomy();
     missing.frames[1].sourceJointSuggestions.suggestions.pop();
+    expect(parseAvatarV2ReferenceManifest(missing)).toBeNull();
+  });
+
+  it('accepts only all four existing Starter wardrobe keys on BOTH genuine CC0 frames', () => {
+    const parsed = parseAvatarV2ReferenceManifest(withActualStarterProof());
+    expect(parsed?.frames.map(frame => frame.starterTees?.length)).toEqual([4, 4]);
+    expect(parsed?.frames[0].starterTees?.[0].catalogueKey).toBe('clothing.starter.logo-tee');
+    expect(parsed?.frames[0].starterTees?.[0].evidence.productionValidated).toBe(false);
+    expect(avatarV2StarterTeeImageUrl('feminine', 'logo-tee', 'quarter'))
+      .toContain('feminine-starter-logo-tee-quarter.png');
+    expect(avatarV2StarterTeeModelUrl('masculine', 'plain-white-tee'))
+      .toContain('masculine-starter-plain-white-tee-LOOKDEV-ONLY-not-validated.glb');
+  });
+  it('rejects invented new shop SKUs, fake approved weights, floating logo and one-frame prototypes', () => {
+    const sku = withActualStarterProof();
+    sku.frames[0].starterTees[1].catalogueKey = 'clothing.new.repurchase-black-tee';
+    expect(parseAvatarV2ReferenceManifest(sku)).toBeNull();
+    const published = withActualStarterProof();
+    published.frames[1].starterTees[1].evidence.productionValidated = true;
+    expect(parseAvatarV2ReferenceManifest(published)).toBeNull();
+    const logo = withActualStarterProof();
+    logo.frames[0].starterTees[0].evidence.gltfConformingOriginalLogo = false;
+    expect(parseAvatarV2ReferenceManifest(logo)).toBeNull();
+    const oneFrame = withActualStarterProof();
+    delete (oneFrame.frames[1] as Partial<typeof oneFrame.frames[number]>).starterTees;
+    expect(parseAvatarV2ReferenceManifest(oneFrame)).toBeNull();
+    const missing = withActualStarterProof();
+    missing.files.pop();
     expect(parseAvatarV2ReferenceManifest(missing)).toBeNull();
   });
 
