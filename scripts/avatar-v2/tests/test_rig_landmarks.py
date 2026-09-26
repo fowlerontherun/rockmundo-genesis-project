@@ -139,6 +139,17 @@ class SculptJointFitTests(unittest.TestCase):
         self.assertTrue(any("Eye.L" in issue for issue in issues))
         self.assertTrue(any("EarAnchor.R" in issue for issue in issues))
 
+    def test_misaligned_eye_and_ear_heights_and_offcentre_jaw_fail_review(self):
+        bones = example_rig()
+        markers = position_markers(bones)
+        markers[marker_name("Eye.L", "head")] = (.04, -.07, 1.64)
+        markers[marker_name("EarAnchor.R", "head")] = (-.095, -.01, 1.61)
+        markers[marker_name("Jaw", "head")] = (.045, -.03, 1.53)
+        issues = audit_sculpt_fit(fit_bones(bones, markers))
+        self.assertTrue(any("Eye left/right" in issue for issue in issues))
+        self.assertTrue(any("EarAnchor left/right" in issue for issue in issues))
+        self.assertTrue(any("Jaw hinge" in issue for issue in issues))
+
     def test_artist_modified_guide_threshold_ignores_submillimetre_noise(self):
         base = position_markers(example_rig())
         moved = dict(base)
