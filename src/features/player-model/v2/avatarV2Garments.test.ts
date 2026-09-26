@@ -224,6 +224,26 @@ describe('Avatar V2 garments', () => {
       .toContain('no validated');
   });
 
+  it('rejects shared assets across different equipped garments', () => {
+    const first = item();
+    const second = item({ id: 'other', name: 'Other Tee',
+      curated_asset_key: 'clothing.test.other-tee' });
+    expect(avatarV2ClothingCompatibilityReason([row(first), row(second)], 'masculine', 0))
+      .toContain('share a garment asset path');
+  });
+
+  it('does not load a validated garment with missing body coverage or colour zones', () => {
+    const complete = avatarV2GarmentConfig(item())!;
+    const uncovered = item({ garment_config: { avatarV2: {
+      ...complete, occludeBodyRegions: [],
+    } } });
+    expect(avatarV2GarmentFile(uncovered, 'masculine', 0)).toBeNull();
+    const uncoloured = item({ garment_config: { avatarV2: {
+      ...complete, materialZones: { main: [], trim: [] },
+    } } });
+    expect(avatarV2GarmentFile(uncoloured, 'masculine', 0)).toBeNull();
+  });
+
   it('keeps an item incompatible until its exact frame and LOD is validated', () => {
     const clothing = item({
       garment_config: {
