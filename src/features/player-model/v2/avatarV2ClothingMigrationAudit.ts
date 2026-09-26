@@ -145,7 +145,8 @@ export function auditAvatarV2ClothingCatalog(
     if (status === 'legacy') issues.push('legacy-review');
 
     const v2MappingComplete = !!config && config.status === 'validated' &&
-      !issues.includes('duplicate-item-id') && !issues.includes('duplicate-stable-key') &&
+      !issues.includes('duplicate-item-id') && !issues.includes('missing-stable-key') &&
+      !issues.includes('duplicate-stable-key') &&
       !issues.some(issue => ['incomplete-v2-frames', 'missing-v2-lods', 'reused-v2-lod-file', 'shared-v2-file-between-items',
         'missing-body-occlusion', 'missing-colour-zones'].includes(issue));
     const wave: ClothingMigrationWave =
