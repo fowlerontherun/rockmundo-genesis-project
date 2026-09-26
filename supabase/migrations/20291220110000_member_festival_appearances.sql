@@ -42,6 +42,7 @@ BEGIN
       booking.status AS booking_status,
       booking.billing_position,
       booking.set_minutes,
+      session.status::text AS session_status,
       coalesce((coalesce(session.scheduled_start_at, slot.start_time)
         AT TIME ZONE coalesce(nullif(city.timezone, ''), 'UTC'))::date,
         booking.provisional_date, edition.starts_on) AS festival_date,
