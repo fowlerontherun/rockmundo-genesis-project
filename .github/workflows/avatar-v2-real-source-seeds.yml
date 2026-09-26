@@ -4,7 +4,7 @@ name: Avatar V2 real source authoring packs
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, feat/avatar-v2-real-starter-tee-proof] # Temporary same-repo proof-run; remove before merge
     paths:
       - 'scripts/avatar-v2/**'
       - '.github/workflows/avatar-v2-real-source-seeds.yml'
