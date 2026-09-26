@@ -32,6 +32,36 @@ function sourceGallery() {
   };
 }
 
+function headMotionGallery() {
+  const original = sourceGallery();
+  return {
+    ...original,
+    frames: original.frames.map(entry => {
+      const headMotion = `${entry.frame}/${entry.frame}-HEAD-RIG-EXPERIMENT-not-validated.glb`;
+      const headMotionViews = Object.fromEntries(VIEWS.map(view => [
+        view, `${entry.frame}/${entry.frame}-head-rig-experiment-${view}.png`,
+      ]));
+      [headMotion, ...Object.values(headMotionViews)].forEach(file =>
+        original.files.push({ file, bytes: 4096, sha256: 'b'.repeat(64) }));
+      return {
+        ...entry,
+        headMotion,
+        headMotionViews,
+        headMotionEvidence: {
+          schema: 'rockmundo.avatar-v2-head-rig-experiment', version: 1,
+          frame: entry.frame, headTurnDegrees: 16, eyeCounterTurnDegrees: -7,
+          headMeanDisplacementMm: 27., torsoMeanDisplacementMm: 0.,
+          eyeMeanDisplacementMm: { L: 17.9, R: 18.1 },
+          gltfJointCount: 62, gltfSkinnedPrimitives: 18,
+          actualSkinBuffers: true, draftWeightsOnly: true,
+          guideHeadPivotStillUnfitted: true, artistReviewed: false,
+          fullBodySkinned: false, faceMorphsAuthored: false, productionValidated: false,
+        },
+      };
+    }),
+  };
+}
+
 describe('player-visible real Avatar V2 preview', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
@@ -70,6 +100,21 @@ describe('player-visible real Avatar V2 preview', () => {
       .toHaveAttribute('data-url', expect.stringContaining('feminine-SOURCE-ONLY-not-validated.glb'));
     fireEvent.click(screen.getByRole('button', { name: 'Close interactive 3D' }));
     expect(screen.queryByTestId('v2-preview-3d')).not.toBeInTheDocument();
+  });
+
+  it('shows actual Blender head/eye movement and can inspect the deliberately unfinished skinned GLB', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true, json: async () => headMotionGallery(),
+    }));
+    render(<AvatarV2PublicPreview frame="masculine" />);
+    const img = await screen.findByAltText('masculine actual V2 Blender head and eye deformation experiment front proof');
+    expect(img).toHaveAttribute('src', expect.stringContaining('masculine-head-rig-experiment-front.png'));
+    expect(screen.getByText(/27.0 mm/)).toBeInTheDocument();
+    expect(screen.queryByTestId('v2-preview-3d')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect the experimental skinned mesh in 3D' }));
+    expect(await screen.findByTestId('v2-preview-3d'))
+      .toHaveAttribute('data-url', expect.stringContaining('masculine-HEAD-RIG-EXPERIMENT-not-validated.glb'));
+    expect(screen.getByText(/full rigging, facial animation, clothing and LOD validation/)).toBeInTheDocument();
   });
 
   it('rejects a forged production claim rather than displaying misleading assets', async () => {
