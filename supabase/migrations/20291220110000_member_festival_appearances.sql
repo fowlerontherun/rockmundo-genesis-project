@@ -72,7 +72,7 @@ BEGIN
       AND contract.status NOT IN ('cancelled','terminated')
     LEFT JOIN public.festival_stage_slots slot
       ON slot.id=coalesce(link.stage_slot_id,contract.stage_slot_id)
-      AND slot.status NOT IN ('cancelled')
+      AND slot.status IN ('confirmed','performing','completed')
     LEFT JOIN public.festival_performance_sessions session
       ON session.contract_id=contract.id
       AND session.status NOT IN ('cancelled')
