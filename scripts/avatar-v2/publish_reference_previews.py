@@ -46,6 +46,18 @@ def publish_references(source_root: pathlib.Path, output_root: pathlib.Path) -> 
     output_root.mkdir(parents=True, exist_ok=True)
 
     frames = [preview_names(frame) for frame in FRAMES]
+    source_frames = {item.get("frame"): item for item in source_manifest.get("frames", [])}
+    if set(source_frames) != set(FRAMES):
+        raise ValueError("Missing real masculine/feminine source anatomy proof.")
+    for entry in frames:
+        evidence = source_frames[entry["frame"]].get("sourceJointSuggestions")
+        if (not isinstance(evidence, dict)
+                or evidence.get("frame") != entry["frame"]
+                or evidence.get("artistReviewed") is not False
+                or evidence.get("rigFitted") is not False
+                or evidence.get("skinWeightsAuthored") is not False):
+            raise ValueError("Verified source pack has no safe, unreviewed anatomical guide.")
+        entry["sourceJointSuggestions"] = evidence
     inventory = []
     for entry in frames:
         names = [

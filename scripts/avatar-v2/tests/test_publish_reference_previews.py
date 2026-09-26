@@ -30,9 +30,27 @@ class ReferencePreviewPublicationTests(unittest.TestCase):
                 path = self.root / name
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes((b"glTF" if name.endswith(".glb") else b"\x89PNG\r\n\x1a\n") + b"x" * 2048)
-        (self.root / "authoring-artifacts-manifest.json").write_text(json.dumps({
+        self.source_manifest = {
             "releaseEligible": False, "sourceArchiveSha256": "a" * 64,
-        }))
+            "frames": [{
+                "frame": frame,
+                "sourceJointSuggestions": {
+                    "schema": "rockmundo.avatar-v2-source-joint-suggestions",
+                    "version": 1,
+                    "frame": frame,
+                    "artistReviewed": False, "rigFitted": False,
+                    "skinWeightsAuthored": False,
+                    "suggestions": [
+                        {"bone": bone, "position": [0, 0, 1], "sourceSamples": 100,
+                         "realSourceGeometry": True, "artistReviewed": False}
+                        for bone in ("Eye.L", "Eye.R", "EarAnchor.L", "EarAnchor.R")
+                    ],
+                },
+            } for frame in ("masculine", "feminine")],
+        }
+        (self.root / "authoring-artifacts-manifest.json").write_text(
+            json.dumps(self.source_manifest),
+        )
 
     def test_publishes_only_verified_preview_images_and_unrigged_glbs(self):
         with patch("publish_reference_previews.verify_artifacts", return_value={"passed": True}):
@@ -41,6 +59,7 @@ class ReferencePreviewPublicationTests(unittest.TestCase):
         self.assertFalse(manifest["productionValidated"])
         self.assertTrue(manifest["previewOnly"])
         self.assertEqual({f["frame"] for f in manifest["frames"]}, {"masculine", "feminine"})
+        self.assertEqual(len(manifest["frames"][0]["sourceJointSuggestions"]["suggestions"]), 4)
         self.assertEqual(len(list(self.output.rglob("*.blend"))), 0)
         self.assertEqual(len(list(self.output.rglob("*.glb"))), 4)
         for entry in manifest["files"]:
@@ -51,6 +70,15 @@ class ReferencePreviewPublicationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "invalid GLB hash"):
                 publish_references(self.root, self.output)
         self.assertFalse(self.output.exists())
+
+    def test_rejects_missing_source_joint_proof_even_when_hash_verifier_is_mocked(self):
+        self.source_manifest["frames"][1].pop("sourceJointSuggestions")
+        (self.root / "authoring-artifacts-manifest.json").write_text(
+            json.dumps(self.source_manifest),
+        )
+        with patch("publish_reference_previews.verify_artifacts", return_value={"passed": True}):
+            with self.assertRaisesRegex(ValueError, "unreviewed anatomical guide"):
+                publish_references(self.root, self.output)
 
     def test_refuses_existing_gallery_and_production_claims(self):
         self.output.mkdir()

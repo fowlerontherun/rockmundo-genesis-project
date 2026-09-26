@@ -82,6 +82,38 @@ class AuthoringArtifactIntegrityTests(unittest.TestCase):
                         for side in ("L", "R")
                     ],
                 },
+                "sourceJointSuggestions": {
+                    "schema": "rockmundo.avatar-v2-source-joint-suggestions",
+                    "version": 1,
+                    "frame": frame,
+                    "source": "actual CC0 eyeball and continuous body vertices",
+                    "eyeRadiiMm": {"L": 36.0, "R": 36.0},
+                    "artistReviewed": False,
+                    "rigFitted": False,
+                    "skinWeightsAuthored": False,
+                    "suggestions": [
+                        {
+                            "bone": bone,
+                            "position": [
+                                .052 if side == "L" else -.052,
+                                -.035,
+                                1.56 if prefix == "Eye" else 1.50,
+                            ],
+                            "armatureLocal": [
+                                .052 if side == "L" else -.052,
+                                -.035,
+                                1.56 if prefix == "Eye" else 1.50,
+                            ],
+                            "sourceMesh": "real_CC0_eye" if prefix == "Eye" else "real_CC0_body",
+                            "sourceSamples": 400 if prefix == "Eye" else 12,
+                            "realSourceGeometry": True,
+                            "artistReviewed": False,
+                        }
+                        for prefix in ("Eye", "EarAnchor")
+                        for side in ("L", "R")
+                        for bone in (f"{prefix}.{side}",)
+                    ],
+                },
                 "sourceVertices": 32000,
                 "guideBones": 72,
                 "fitMarkers": 95,
@@ -205,6 +237,26 @@ class AuthoringArtifactIntegrityTests(unittest.TestCase):
         self.data["frames"][0]["lookdevViews"] = ["masculine-lookdev-front.png"]
         self.write_manifest()
         with self.assertRaisesRegex(ValueError, "eye/skin lookdev proof views"):
+            verify_artifacts(self.root)
+
+    def test_missing_real_joint_suggestions_are_rejected(self):
+        self.data["frames"][0]["sourceJointSuggestions"]["suggestions"].pop()
+        self.write_manifest()
+        with self.assertRaisesRegex(ValueError, "four distinct measured"):
+            verify_artifacts(self.root)
+
+    def test_joint_guide_must_not_claim_artist_approval_or_skin_weights(self):
+        self.data["frames"][0]["sourceJointSuggestions"]["rigFitted"] = True
+        self.write_manifest()
+        with self.assertRaisesRegex(ValueError, "already-certified"):
+            verify_artifacts(self.root)
+
+    def test_fake_ear_vertex_count_or_nan_coords_are_rejected(self):
+        entry = self.data["frames"][1]["sourceJointSuggestions"]["suggestions"][2]
+        entry["sourceSamples"] = 0
+        entry["position"][1] = float("nan")
+        self.write_manifest()
+        with self.assertRaisesRegex(ValueError, "no valid unreviewed"):
             verify_artifacts(self.root)
 
     def test_identical_raw_and_styled_glb_hashes_cannot_pass(self):

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlayerModelPreview } from '@/features/player-model/PlayerModelPreview';
 import { AvatarV2ReferenceGallery } from './AvatarV2ReferenceGallery';
-import { avatarV2ReferenceModelUrl, type AvatarV2ReferenceVariant } from '@/features/player-model/v2/avatarV2ReferencePreview';
+import { avatarV2ReferenceModelUrl, avatarV2SourceWorldToGltf, type AvatarV2ReferenceVariant, type AvatarV2SourceJointSuggestion } from '@/features/player-model/v2/avatarV2ReferencePreview';
 import { Musician } from '@/features/gig-demo-3d/performers';
 import { stageAssignment } from '@/features/gig-demo-3d/instrumentCatalog';
 import { BODY_MUSCLE_LABELS, BODY_MUSCLE_TYPES, defaultAppearance } from '@/features/player-model/appearance';
@@ -47,6 +47,8 @@ const CANDIDATE_VIEW = {
 function CandidateCanvas({
   file,
   referenceUrl,
+  sourceLandmarks,
+  showSourceLandmarks,
   frame,
   lod,
   onReport,
@@ -59,6 +61,8 @@ function CandidateCanvas({
 }: {
   file: File | null;
   referenceUrl: string | null;
+  sourceLandmarks: AvatarV2SourceJointSuggestion[];
+  showSourceLandmarks: boolean;
   frame: AvatarV2Frame;
   lod: AvatarV2Lod;
   onReport: (report: AvatarV2ValidationReport | null) => void;
@@ -238,6 +242,30 @@ function CandidateCanvas({
           model.position.y -= scaled.min.y;
           model.updateMatrixWorld(true);
           scene.add(model);
+          if (referenceUrl && showSourceLandmarks && sourceLandmarks.length === 4) {
+            // The original Blender measurements are for this exact source
+            // scene. Convert Z-up/-Y-forward to the GLB's +Y/+Z convention.
+            // Markers deliberately render above the surface so joint centres
+            // behind the visible eyeball remain inspectable in close-up.
+            const markers = new T.Group();
+            markers.name = 'RMV2_UnreviewedSourceJointSuggestions';
+            for (const joint of sourceLandmarks) {
+              const [x, y, z] = avatarV2SourceWorldToGltf(joint.position);
+              const sphere = new T.Mesh(
+                new T.SphereGeometry(joint.bone.startsWith('Eye.') ? .010 : .012, 16, 10),
+                new T.MeshBasicMaterial({
+                  color: joint.bone.startsWith('Eye.') ? '#41edee' : '#ffad56',
+                  depthTest: false, depthWrite: false,
+                  transparent: true, opacity: .9,
+                }),
+              );
+              sphere.position.set(x, y, z);
+              sphere.name = `UNREVIEWED_${joint.bone}`;
+              sphere.renderOrder = 999;
+              markers.add(sphere);
+            }
+            model.add(markers);
+          }
         }).catch(error => {
           if (!alive) return;
           onReport(null);
@@ -273,7 +301,7 @@ function CandidateCanvas({
         cancelAnimationFrame(raf);
       };
     }
-  }, [file, referenceUrl, frame, lod, onError, onPerformanceReport, onReport, animateFace, appearance, performancePreset, viewPreset]);
+  }, [file, referenceUrl, sourceLandmarks, showSourceLandmarks, frame, lod, onError, onPerformanceReport, onReport, animateFace, appearance, performancePreset, viewPreset]);
 
   return (
     <canvas
@@ -290,6 +318,8 @@ export function AvatarV2CandidateLab() {
   const [lod, setLod] = useState<AvatarV2Lod>(0);
   const [file, setFile] = useState<File | null>(null);
   const [reference, setReference] = useState<AvatarV2ReferenceVariant | null>(null);
+  const [sourceLandmarks, setSourceLandmarks] = useState<AvatarV2SourceJointSuggestion[]>([]);
+  const [showSourceLandmarks, setShowSourceLandmarks] = useState(false);
   const [report, setReport] = useState<AvatarV2ValidationReport | null>(null);
   const [error, setError] = useState('');
   const [animateFace, setAnimateFace] = useState(true);
@@ -336,7 +366,7 @@ export function AvatarV2CandidateLab() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
-        <AvatarV2ReferenceGallery frame={frame} onFrameChange={setFrame} selected={reference}
+        <AvatarV2ReferenceGallery frame={frame} onFrameChange={setFrame} onLandmarks={setSourceLandmarks} selected={reference}
           onSelectPreview={variant => { setFile(null); setReference(variant); setPerformance('backstage'); setAnimateFace(false); }} />
         <div className="flex flex-wrap items-end gap-3">
           <label className="space-y-1 text-sm">
@@ -409,6 +439,15 @@ export function AvatarV2CandidateLab() {
               <option value="feet">Feet / footwear</option>
             </select>
           </label>
+          {reference && sourceLandmarks.length === 4 && (
+            <Button
+              type="button"
+              variant={showSourceLandmarks ? 'default' : 'outline'}
+              onClick={() => setShowSourceLandmarks(value => !value)}
+            >
+              {showSourceLandmarks ? 'Hide measured joints' : 'Show measured joints'}
+            </Button>
+          )}
           <Button
             type="button"
             variant={animateFace ? 'default' : 'outline'}
@@ -461,6 +500,8 @@ export function AvatarV2CandidateLab() {
             <CandidateCanvas
               file={file}
               referenceUrl={referenceUrl}
+              sourceLandmarks={sourceLandmarks}
+              showSourceLandmarks={showSourceLandmarks}
               frame={frame}
               lod={lod}
               onReport={setReport}
@@ -474,6 +515,7 @@ export function AvatarV2CandidateLab() {
           </div>
         </div>
 
+        {reference && showSourceLandmarks && sourceLandmarks.length === 4 && !file && <p className="text-sm text-muted-foreground">Cyan: measured real eye centres · Orange: lower outer ear-surface suggestions. These are unreviewed guide points, not approved joints or game-ready skin weights.</p>}
         {reference && !file && <p className="rounded-md border border-sky-500/30 p-3 text-sm text-muted-foreground">This is the actual {frame} Blender {reference === 'lookdev' ? 'look-development' : 'original CC0'} reference mesh, not a production avatar. It has no fitted skin weights, finished facial morphs or stage animations; A-pose is intentional. The validation gap below must not be interpreted as production certification.</p>}
         {error && <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
 

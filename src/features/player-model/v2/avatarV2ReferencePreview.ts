@@ -8,12 +8,38 @@ const REFERENCE_BASE =
 const FRAMES: readonly AvatarV2Frame[] = ['masculine', 'feminine'];
 const VIEWS: readonly AvatarV2ReferenceView[] = ['front', 'quarter', 'side', 'face'];
 
+export type AvatarV2SourceJointBone = 'Eye.L' | 'Eye.R' | 'EarAnchor.L' | 'EarAnchor.R';
+
+export interface AvatarV2SourceJointSuggestion {
+  bone: AvatarV2SourceJointBone;
+  position: [number, number, number]; // Measured Blender world metres, Z up, -Y forward.
+  armatureLocal: [number, number, number];
+  sourceMesh: string;
+  sourceSamples: number;
+  realSourceGeometry: true;
+  artistReviewed: false;
+}
+
+export interface AvatarV2SourceJointEvidence {
+  schema: 'rockmundo.avatar-v2-source-joint-suggestions';
+  version: 1;
+  frame: AvatarV2Frame;
+  source: 'actual CC0 eyeball and continuous body vertices';
+  eyeRadiiMm: { L: number; R: number };
+  artistReviewed: false;
+  rigFitted: false;
+  skinWeightsAuthored: false;
+  suggestions: AvatarV2SourceJointSuggestion[];
+}
+
 interface ReferenceFrame {
   frame: AvatarV2Frame;
   source: string;
   lookdev: string;
   sourceViews: Record<AvatarV2ReferenceView, string>;
   lookdevViews: Record<AvatarV2ReferenceView, string>;
+  // Optional for the older gallery manifest, but strictly verified when present.
+  sourceJointSuggestions?: AvatarV2SourceJointEvidence;
 }
 
 export interface AvatarV2ReferenceManifest {
@@ -24,6 +50,11 @@ export interface AvatarV2ReferenceManifest {
   productionValidated: false;
   frames: ReferenceFrame[];
   files: Array<{ file: string; bytes: number; sha256: string }>;
+}
+
+/** Blender uses Z-up and -Y forward. The authored GLB contract is +Y-up and +Z forward. */
+export function avatarV2SourceWorldToGltf(point: readonly [number, number, number]): [number, number, number] {
+  return [point[0], point[2], -point[1]];
 }
 
 export const avatarV2ReferenceManifestUrl = `${REFERENCE_BASE}/preview-manifest.json`;
@@ -80,6 +111,40 @@ export function parseAvatarV2ReferenceManifest(raw: unknown): AvatarV2ReferenceM
         ? `${frame}/${frame}-${variant === 'lookdev' ? 'lookdev-' : ''}${view}.png`
         : `${frame}/${frame}-${variant === 'lookdev' ? 'LOOKDEV-ONLY' : 'SOURCE-ONLY'}-not-validated.glb`;
     if (item.source !== expected('source') || item.lookdev !== expected('lookdev')) return null;
+    if (item.sourceJointSuggestions !== undefined) {
+      const evidence = item.sourceJointSuggestions;
+      if (!evidence || typeof evidence !== 'object') return null;
+      const joints = evidence as Record<string, unknown>;
+      const radii = joints.eyeRadiiMm;
+      if (joints.schema !== 'rockmundo.avatar-v2-source-joint-suggestions' ||
+          joints.version !== 1 || joints.frame !== frame ||
+          joints.source !== 'actual CC0 eyeball and continuous body vertices' ||
+          joints.artistReviewed !== false || joints.rigFitted !== false ||
+          joints.skinWeightsAuthored !== false ||
+          !radii || typeof radii !== 'object' ||
+          ![...['L', 'R']].every(side => {
+            const value = (radii as Record<string, unknown>)[side];
+            return typeof value === 'number' && Number.isFinite(value) && value >= 22 && value <= 50;
+          }) || !Array.isArray(joints.suggestions) || joints.suggestions.length !== 4) return null;
+      const names = new Set<AvatarV2SourceJointBone>();
+      for (const candidate of joints.suggestions) {
+        if (!candidate || typeof candidate !== 'object') return null;
+        const point = candidate as Record<string, unknown>;
+        const bone = point.bone as AvatarV2SourceJointBone;
+        if (!(['Eye.L', 'Eye.R', 'EarAnchor.L', 'EarAnchor.R'] as string[]).includes(bone) ||
+            names.has(bone) ||
+            point.realSourceGeometry !== true || point.artistReviewed !== false ||
+            typeof point.sourceMesh !== 'string' || !point.sourceMesh ||
+            typeof point.sourceSamples !== 'number' || !Number.isInteger(point.sourceSamples) ||
+            point.sourceSamples < (bone.startsWith('Eye.') ? 50 : 6) ||
+            ![point.position, point.armatureLocal].every(coordinates =>
+              Array.isArray(coordinates) && coordinates.length === 3 &&
+              coordinates.every(n => typeof n === 'number' && Number.isFinite(n) && Math.abs(n) <= 5)
+            )) return null;
+        names.add(bone);
+      }
+    }
+
     for (const variant of ['source', 'lookdev'] as const) {
       const views = item[`${variant}Views`];
       if (!views || typeof views !== 'object') return null;
