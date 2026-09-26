@@ -156,4 +156,13 @@ def audit_sculpt_fit(fitted: Mapping[str, FitBone]) -> list[str]:
         ear = fitted.get(f"EarAnchor.{side}")
         if eye and ear and abs(ear.head[0] - midline) <= abs(eye.head[0] - midline):
             errors.append(f"EarAnchor.{side} must sit farther out than Eye.{side}.")
+    # Flag major paired-feature misalignment without demanding perfect symmetry.
+    for part, tolerance in (("Eye", .025), ("EarAnchor", .035)):
+        left = fitted.get(f"{part}.L")
+        right = fitted.get(f"{part}.R")
+        if left and right and abs(left.head[2] - right.head[2]) > tolerance:
+            errors.append(f"{part} left/right pivots differ in height by more than {tolerance * 1000:.0f}mm.")
+    jaw = fitted.get("Jaw")
+    if jaw and abs(jaw.head[0] - midline) > .035:
+        errors.append("Jaw hinge is more than 35mm from the body midline.")
     return errors
