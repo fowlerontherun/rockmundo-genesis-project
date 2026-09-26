@@ -1,6 +1,6 @@
 import type { AvatarV2Frame } from './avatarV2Contract';
 
-export type AvatarV2ReferenceVariant = 'source' | 'lookdev';
+export type AvatarV2ReferenceVariant = 'source' | 'lookdev' | 'headMotion';
 export type AvatarV2ReferenceView = 'front' | 'quarter' | 'side' | 'face';
 
 const REFERENCE_BASE =
@@ -32,12 +32,35 @@ export interface AvatarV2SourceJointEvidence {
   suggestions: AvatarV2SourceJointSuggestion[];
 }
 
+export interface AvatarV2HeadMotionEvidence {
+  schema: 'rockmundo.avatar-v2-head-rig-experiment';
+  version: 1;
+  frame: AvatarV2Frame;
+  headTurnDegrees: 16;
+  eyeCounterTurnDegrees: -7;
+  headMeanDisplacementMm: number;
+  torsoMeanDisplacementMm: number;
+  eyeMeanDisplacementMm: { L: number; R: number };
+  gltfJointCount: number;
+  gltfSkinnedPrimitives: number;
+  actualSkinBuffers: true;
+  draftWeightsOnly: true;
+  guideHeadPivotStillUnfitted: true;
+  artistReviewed: false;
+  fullBodySkinned: false;
+  faceMorphsAuthored: false;
+  productionValidated: false;
+}
+
 interface ReferenceFrame {
   frame: AvatarV2Frame;
   source: string;
   lookdev: string;
   sourceViews: Record<AvatarV2ReferenceView, string>;
   lookdevViews: Record<AvatarV2ReferenceView, string>;
+  headMotion?: string;
+  headMotionViews?: Record<AvatarV2ReferenceView, string>;
+  headMotionEvidence?: AvatarV2HeadMotionEvidence;
   // Optional for the older gallery manifest, but strictly verified when present.
   sourceJointSuggestions?: AvatarV2SourceJointEvidence;
 }
@@ -60,7 +83,8 @@ export function avatarV2SourceWorldToGltf(point: readonly [number, number, numbe
 export const avatarV2ReferenceManifestUrl = `${REFERENCE_BASE}/preview-manifest.json`;
 
 export function avatarV2ReferenceModelUrl(frame: AvatarV2Frame, variant: AvatarV2ReferenceVariant) {
-  const role = variant === 'lookdev' ? 'LOOKDEV-ONLY' : 'SOURCE-ONLY';
+  const role = variant === 'lookdev' ? 'LOOKDEV-ONLY' :
+    variant === 'headMotion' ? 'HEAD-RIG-EXPERIMENT' : 'SOURCE-ONLY';
   return `${REFERENCE_BASE}/${frame}/${frame}-${role}-not-validated.glb`;
 }
 
@@ -69,7 +93,9 @@ export function avatarV2ReferenceImageUrl(
   variant: AvatarV2ReferenceVariant,
   view: AvatarV2ReferenceView,
 ) {
-  return `${REFERENCE_BASE}/${frame}/${frame}-${variant === 'lookdev' ? 'lookdev-' : ''}${view}.png`;
+  const prefix = variant === 'lookdev' ? 'lookdev-' :
+    variant === 'headMotion' ? 'head-rig-experiment-' : '';
+  return `${REFERENCE_BASE}/${frame}/${frame}-${prefix}${view}.png`;
 }
 
 /**
@@ -108,8 +134,8 @@ export function parseAvatarV2ReferenceManifest(raw: unknown): AvatarV2ReferenceM
     if (!item) return null;
     const expected = (variant: AvatarV2ReferenceVariant, view?: AvatarV2ReferenceView) =>
       view
-        ? `${frame}/${frame}-${variant === 'lookdev' ? 'lookdev-' : ''}${view}.png`
-        : `${frame}/${frame}-${variant === 'lookdev' ? 'LOOKDEV-ONLY' : 'SOURCE-ONLY'}-not-validated.glb`;
+        ? `${frame}/${frame}-${variant === 'lookdev' ? 'lookdev-' : variant === 'headMotion' ? 'head-rig-experiment-' : ''}${view}.png`
+        : `${frame}/${frame}-${variant === 'lookdev' ? 'LOOKDEV-ONLY' : variant === 'headMotion' ? 'HEAD-RIG-EXPERIMENT' : 'SOURCE-ONLY'}-not-validated.glb`;
     if (item.source !== expected('source') || item.lookdev !== expected('lookdev')) return null;
     if (item.sourceJointSuggestions !== undefined) {
       const evidence = item.sourceJointSuggestions;
@@ -154,7 +180,50 @@ export function parseAvatarV2ReferenceManifest(raw: unknown): AvatarV2ReferenceM
       }
       if (!inventory.has(expected(variant))) return null;
     }
+    const hasHeadMotion = ['headMotion', 'headMotionViews', 'headMotionEvidence']
+      .some(name => item[name] !== undefined);
+    if (hasHeadMotion) {
+      if (item.headMotion !== expected('headMotion') ||
+          !inventory.has(expected('headMotion')) ||
+          !item.headMotionViews || typeof item.headMotionViews !== 'object') return null;
+      for (const view of VIEWS) {
+        if ((item.headMotionViews as Record<string, unknown>)[view] !== expected('headMotion', view) ||
+            !inventory.has(expected('headMotion', view))) return null;
+      }
+      const proof = item.headMotionEvidence;
+      if (!proof || typeof proof !== 'object') return null;
+      const motion = proof as Record<string, unknown>;
+      const eyes = motion.eyeMeanDisplacementMm;
+      if (motion.schema !== 'rockmundo.avatar-v2-head-rig-experiment' ||
+          motion.version !== 1 || motion.frame !== frame ||
+          motion.headTurnDegrees !== 16 || motion.eyeCounterTurnDegrees !== -7 ||
+          motion.actualSkinBuffers !== true ||
+          motion.draftWeightsOnly !== true ||
+          motion.guideHeadPivotStillUnfitted !== true ||
+          motion.artistReviewed !== false ||
+          motion.fullBodySkinned !== false ||
+          motion.faceMorphsAuthored !== false ||
+          motion.productionValidated !== false ||
+          typeof motion.gltfJointCount !== 'number' || motion.gltfJointCount < 5 ||
+          typeof motion.gltfSkinnedPrimitives !== 'number' || motion.gltfSkinnedPrimitives < 3 ||
+          typeof motion.headMeanDisplacementMm !== 'number' ||
+          !Number.isFinite(motion.headMeanDisplacementMm) ||
+          motion.headMeanDisplacementMm < 4 || motion.headMeanDisplacementMm > 500 ||
+          typeof motion.torsoMeanDisplacementMm !== 'number' ||
+          !Number.isFinite(motion.torsoMeanDisplacementMm) ||
+          motion.torsoMeanDisplacementMm < 0 || motion.torsoMeanDisplacementMm > .5 ||
+          !eyes || typeof eyes !== 'object' ||
+          !(['L', 'R'] as const).every(side => {
+            const value = (eyes as Record<string, unknown>)[side];
+            return typeof value === 'number' && Number.isFinite(value) &&
+              value >= 4 && value <= 500;
+          })) return null;
+    }
   }
+  // The new deformed reference must be published for BOTH frame types, or
+  // neither: never quietly show the new V2 proof for only one body.
+  if (manifest.frames.some((item: ReferenceFrame) => !!item.headMotion) &&
+      !manifest.frames.every((item: ReferenceFrame) => !!item.headMotion)) return null;
 
   return manifest as unknown as AvatarV2ReferenceManifest;
 }

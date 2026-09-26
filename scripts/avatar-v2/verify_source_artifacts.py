@@ -159,6 +159,48 @@ def verify_artifacts(root: pathlib.Path) -> dict:
                                    for point in points)):
                         errors.append(f"{frame} {bone} has no valid unreviewed real-geometry joint measurement.")
 
+        experiment = metadata.get("headMotionExperiment")
+        if (not isinstance(experiment, dict)
+                or experiment.get("schema") != "rockmundo.avatar-v2-head-rig-experiment"
+                or experiment.get("version") != 1
+                or experiment.get("frame") != frame
+                or experiment.get("scene") != f"{frame}-head-rig-experiment-UNAPPROVED.blend"
+                or experiment.get("preview") != f"{frame}-HEAD-RIG-EXPERIMENT-not-validated.glb"
+                or set(experiment.get("views", [])) != {
+                    f"{frame}-head-rig-experiment-{view}.png" for view in PREVIEW_VIEWS
+                }
+                or any(experiment.get(key) is not False for key in (
+                    "artistReviewed", "fullBodySkinned", "faceMorphsAuthored", "productionValidated"
+                ))
+                or any(experiment.get(key) is not True for key in (
+                    "eyeCentresFromRealGeometry", "guideHeadPivotStillUnfitted",
+                    "draftWeightsOnly", "actualSkinBuffers",
+                ))):
+            errors.append(f"{frame} has missing, incomplete or falsely certified experimental head motion proof.")
+        else:
+            for key in ("scene", "preview"):
+                expected_files.add(f"{frame}/{experiment[key]}")
+            expected_files.update(f"{frame}/{view}" for view in experiment["views"])
+            displacement = experiment.get("eyeMeanDisplacementMm")
+            if (not isinstance(displacement, dict)
+                    or set(displacement) != {"L", "R"}
+                    or any(not isinstance(value, (int, float)) or not isfinite(value)
+                           or value < 4 or value > 500 for value in displacement.values())
+                    or not isinstance(experiment.get("headMeanDisplacementMm"), (int, float))
+                    or not 4 <= experiment["headMeanDisplacementMm"] <= 500
+                    or not isinstance(experiment.get("torsoMeanDisplacementMm"), (int, float))
+                    or not 0 <= experiment["torsoMeanDisplacementMm"] <= .5
+                    or experiment.get("maxInfluences") not in (1, 2)
+                    or experiment.get("realCC0MeshesBound", 0) < 11
+                    or experiment.get("sampledHeadVertices", 0) < 50
+                    or experiment.get("sampledStableTorsoVertices", 0) < 50
+                    or experiment.get("headTurnDegrees") != 16
+                    or experiment.get("eyeCounterTurnDegrees") != -7
+                    or experiment.get("gltfSkins", 0) < 1
+                    or experiment.get("gltfSkinnedPrimitives", 0) < 3
+                    or experiment.get("gltfJointCount", 0) < 5):
+                errors.append(f"{frame} head/eye experiment lacks measured, low-influence genuine skinned deformation.")
+
         if (metadata.get("productionValidated") is not False
                 or metadata.get("requiresManualJointFit") is not True):
             errors.append(f"{frame} must retain its unfinished manual-rig gate.")

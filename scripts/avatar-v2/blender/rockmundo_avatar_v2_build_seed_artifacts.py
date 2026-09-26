@@ -28,6 +28,7 @@ import rockmundo_avatar_v2_seed as seed  # noqa: E402
 import rockmundo_avatar_v2_rig_guide as guide  # noqa: E402
 import rockmundo_avatar_v2_fit_rig as fitter  # noqa: E402
 import rockmundo_avatar_v2_source_joint_suggestions as joints  # noqa: E402
+import rockmundo_avatar_v2_head_motion_proof as motion  # noqa: E402
 import rockmundo_avatar_v2_source_lookdev as lookdev  # noqa: E402
 from fetch_human_base_meshes import ARCHIVE_NAME, EXPECTED_BYTES, archive_valid  # noqa: E402
 
@@ -105,7 +106,7 @@ def file_manifest(root: pathlib.Path) -> list[dict]:
     return entries
 
 
-def render_contact_views(frame: str, meshes: list[bpy.types.Object], output: pathlib.Path, *, styled: bool = False) -> list[str]:
+def render_contact_views(frame: str, meshes: list[bpy.types.Object], output: pathlib.Path, *, styled: bool = False, tag: str = '') -> list[str]:
     """Real neutral Workbench renders, not AI-synthesised or retouched art."""
     scene = bpy.context.scene
     saved_engine, saved_camera = scene.render.engine, scene.camera
@@ -139,7 +140,7 @@ def render_contact_views(frame: str, meshes: list[bpy.types.Object], output: pat
             direction = centre - camera.location
             camera.rotation_euler = direction.to_track_quat("-Z", "Y").to_euler()
             camera_data.ortho_scale = .56 if view == "face" else 2.14
-            path = output / f"{frame}-{'lookdev-' if styled else ''}{view}.png"
+            path = output / f"{frame}-{'lookdev-' if styled and not tag else ''}{tag + '-' if tag else ''}{view}.png"
             scene.render.filepath = str(path)
             bpy.ops.render.render(write_still=True)
             if not path.exists() or path.stat().st_size < 1024:
@@ -245,6 +246,16 @@ def build_frame(frame: str, source_file: pathlib.Path, root: pathlib.Path) -> di
     handles_path = frame_dir / f"{frame}-joint-handles.blend"
     bpy.ops.wm.save_as_mainfile(filepath=str(handles_path))
 
+    # Experimental, truly skinned and deformed head/gaze proof in an
+    # entirely SEPARATE .blend. The pristine source, lookdev, unfitted rig
+    # and artist landmark handles above remain untouched and authoritative.
+    # No experimental GLB is placed under public/avatar-v2.
+    head_motion = motion.build_head_motion_experiment(
+        frame, rig, real_body[0],
+        {side: group[0] for side, group in real_eyes.items()},
+        detail_meshes, source_joint_report, frame_dir, render_contact_views,
+    )
+
     # The source is a real mesh, but no stock seed has passed the RockMundo
     # fitted-weight, genuine morph, sculpt-detail or full performance gates.
     return {
@@ -265,6 +276,7 @@ def build_frame(frame: str, source_file: pathlib.Path, root: pathlib.Path) -> di
         "guideBones": len(rig.data.bones),
         "fitMarkers": handles["markers"],
         "sourceJointSuggestions": source_joint_report,
+        "headMotionExperiment": head_motion,
         "productionValidated": False,
         "requiresManualJointFit": bool(rig.get("rockmundoAvatarV2RequiresManualFit", True)),
     }

@@ -1,5 +1,42 @@
 # RockMundo Avatar V2 assets
 
+## Genuine experimental head/eye rig proof (NOT gameplay ready)
+
+The pinned Blender source workflow now also writes a **separate proof-only**
+`masculine/feminine-head-rig-experiment-UNAPPROVED.blend` for each genuine CC0
+source sculpt and its improved lookdev. This preserves all existing pristine
+source, artist-lookdev, unfitted rig and manual handle scenes unchanged.
+
+Only the *two actual measured eyeball pivots* are adjusted on an isolated copy
+of the provisional RockMundo skeleton. A bounded two-influence experimental
+gradient binds the connected head to its still-unfitted guide neck, holds the
+sampled torso static, binds each original eyeball and its cornea to the
+corresponding eye bone, and rigidly attaches the visible upper face details to
+the Head. A genuine 16° head yaw with -7° counter-rotated eyes is evaluated
+inside Blender against the original vertex positions. The build rejects tiny
+or absent head movement, moving the normally static torso, missing real
+eye geometry, invalid weights or exported GLBs without real
+`skins` / `JOINTS_0` / `WEIGHTS_0` data.
+
+Four true rendered deformed reference images and one
+`*-HEAD-RIG-EXPERIMENT-not-validated.glb` per frame are verified along
+with the existing source and lookdev proofs. The separately published preview
+branch exposes them to Admin and the ordinary player V2 Preview; UI badges
+clearly label this an **experimental, partially weighted** model.
+
+**Never use this generated experimental proof in the production manifest.**
+The Head, Neck, shoulders, limbs, fingers, hips, toes, all body/garment weights,
+facial visemes, blink/eye-lid deformation, pose-space correctives and body LODs
+still require real artist work and all existing independent release checks.
+The `rockmundoAvatarV2RequiresManualFit` and production-rollout locks are
+retained even for the generated head proof.
+
+Run the pure weighting regressions locally:
+
+```bash
+python3 -m unittest discover -s scripts/avatar-v2/tests -p test_head_motion_weights.py -v
+```
+
 This directory is the import boundary for the replacement avatar mesh system.
 
 Do **not** put experimental meshes into the live `gig-demo-3d` asset family. V2

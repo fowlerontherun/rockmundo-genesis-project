@@ -15,9 +15,11 @@ import { disposeModel } from '../model';
 export function AvatarV2ReferenceCanvas({
   url,
   focus,
+  experimentalRig = false,
 }: {
   url: string;
   focus: 'full' | 'face';
+  experimentalRig?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -143,7 +145,9 @@ export function AvatarV2ReferenceCanvas({
     <div className="avatar-v2-public__canvas-wrap">
       <canvas
         ref={canvasRef}
-        aria-label="Rotate and zoom the genuine, unrigged Avatar V2 Blender preview"
+        aria-label={experimentalRig
+          ? 'Rotate and zoom the genuine, partially skinned V2 Blender head-motion experiment'
+          : 'Rotate and zoom the genuine, unrigged Avatar V2 Blender preview'}
         className="avatar-v2-public__canvas"
       />
       {status === 'loading' && (
@@ -155,7 +159,9 @@ export function AvatarV2ReferenceCanvas({
         </p>
       )}
       {status === 'ready' && (
-        <p className="avatar-v2-public__canvas-caption">Drag to rotate · scroll or pinch to zoom · A-pose only</p>
+        <p className="avatar-v2-public__canvas-caption">
+          Drag to rotate · scroll or pinch to zoom · {experimentalRig ? 'Experimental head rig only · unapproved weights' : 'A-pose only'}
+        </p>
       )}
     </div>
   );

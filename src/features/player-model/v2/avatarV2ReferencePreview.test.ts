@@ -63,6 +63,34 @@ function manifestWithMeasuredAnatomy() {
   };
 }
 
+function manifestWithRealHeadMotion() {
+  const base = validManifest();
+  return {
+    ...base,
+    frames: base.frames.map(frame => {
+      const headMotion = `${frame.frame}/${frame.frame}-HEAD-RIG-EXPERIMENT-not-validated.glb`;
+      const headMotionViews = Object.fromEntries(views.map(view => [
+        view, `${frame.frame}/${frame.frame}-head-rig-experiment-${view}.png`,
+      ]));
+      [headMotion, ...Object.values(headMotionViews)].forEach(file =>
+        base.files.push({ file, bytes: 4096, sha256: 'b'.repeat(64) }));
+      return {
+        ...frame, headMotion, headMotionViews,
+        headMotionEvidence: {
+          schema: 'rockmundo.avatar-v2-head-rig-experiment', version: 1,
+          frame: frame.frame, headTurnDegrees: 16, eyeCounterTurnDegrees: -7,
+          headMeanDisplacementMm: 25.6, torsoMeanDisplacementMm: 0.002,
+          eyeMeanDisplacementMm: { L: 16.1, R: 16.4 },
+          gltfJointCount: 62, gltfSkinnedPrimitives: 18,
+          actualSkinBuffers: true, draftWeightsOnly: true,
+          guideHeadPivotStillUnfitted: true, artistReviewed: false,
+          fullBodySkinned: false, faceMorphsAuthored: false, productionValidated: false,
+        },
+      };
+    }),
+  };
+}
+
 describe('Avatar V2 real-source gallery boundary', () => {
   it('accepts a complete source-verified, explicitly preview-only pair', () => {
     expect(parseAvatarV2ReferenceManifest(validManifest())).not.toBeNull();
@@ -101,6 +129,31 @@ describe('Avatar V2 real-source gallery boundary', () => {
     expect(avatarV2SourceWorldToGltf([.052, -.036, 1.56])).toEqual([.052, 1.56, .036]);
     expect(avatarV2SourceWorldToGltf([-.052, .045, 1.50])).toEqual([-.052, 1.50, -.045]);
   });
+  it('accepts only a complete real skinned head/eye proof for BOTH frame types', () => {
+    const parsed = parseAvatarV2ReferenceManifest(manifestWithRealHeadMotion());
+    expect(parsed?.frames[0].headMotionEvidence?.gltfSkinnedPrimitives).toBe(18);
+    expect(parsed?.frames[1].headMotionEvidence?.productionValidated).toBe(false);
+    expect(avatarV2ReferenceModelUrl('feminine', 'headMotion'))
+      .toContain('feminine-HEAD-RIG-EXPERIMENT-not-validated.glb');
+    expect(avatarV2ReferenceImageUrl('masculine', 'headMotion', 'face'))
+      .toContain('masculine-head-rig-experiment-face.png');
+  });
+
+  it('rejects fake validated heads, missing proof images or no actual skin buffers', () => {
+    const fake = manifestWithRealHeadMotion();
+    fake.frames[0].headMotionEvidence.productionValidated = true;
+    expect(parseAvatarV2ReferenceManifest(fake)).toBeNull();
+    const bare = manifestWithRealHeadMotion();
+    bare.frames[0].headMotionEvidence.actualSkinBuffers = false;
+    expect(parseAvatarV2ReferenceManifest(bare)).toBeNull();
+    const missing = manifestWithRealHeadMotion();
+    missing.files.pop();
+    expect(parseAvatarV2ReferenceManifest(missing)).toBeNull();
+    const one = manifestWithRealHeadMotion();
+    delete (one.frames[1] as Partial<typeof one.frames[number]>).headMotion;
+    expect(parseAvatarV2ReferenceManifest(one)).toBeNull();
+  });
+
   it('builds immutable preview-only asset paths, never production LOD paths', () => {
     expect(avatarV2ReferenceModelUrl('masculine', 'lookdev'))
       .toContain('masculine-LOOKDEV-ONLY-not-validated.glb');

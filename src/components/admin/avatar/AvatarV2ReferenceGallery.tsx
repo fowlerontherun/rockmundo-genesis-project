@@ -39,7 +39,9 @@ export function AvatarV2ReferenceGallery({
   const [availability, setAvailability] = useState<'loading' | 'available' | 'missing'>('loading');
   const [view, setView] = useState<AvatarV2ReferenceView>('front');
   const [manifest, setManifest] = useState<AvatarV2ReferenceManifest | null>(null);
-  const evidence = manifest?.frames.find(item => item.frame === frame)?.sourceJointSuggestions;
+  const selectedFrame = manifest?.frames.find(item => item.frame === frame);
+  const evidence = selectedFrame?.sourceJointSuggestions;
+  const motion = selectedFrame?.headMotionEvidence;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -74,7 +76,8 @@ export function AvatarV2ReferenceGallery({
         <CardDescription>
           These are real masculine/feminine Blender source meshes and the improved physical
           eye, skin, lip, brow and lash lookdev — not another procedural V1 placeholder.
-          The source models are currently unweighted and cannot replace live characters.
+          The original source models remain unweighted. A separate experimental head/eye rig
+          can demonstrate early deformation, but cannot replace a live character.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -134,6 +137,43 @@ export function AvatarV2ReferenceGallery({
                 </div>
               ))}
             </div>
+            {motion && (
+              <div className="rounded-xl border border-teal-400/40 bg-teal-950/20 p-4 space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h4 className="font-semibold">Actual skinned head/eye deformation proof</h4>
+                  <Badge variant="outline">Experimental · NOT production</Badge>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <img
+                      key={`${frame}-motion-${view}`}
+                      src={avatarV2ReferenceImageUrl(frame, 'headMotion', view)}
+                      alt={`${frame} original Blender source experimentally skinned and posed ${view} proof`}
+                      loading="lazy"
+                      className="w-full rounded-lg border bg-slate-950 object-contain aspect-square"
+                    />
+                  </div>
+                  <div className="space-y-3 text-sm">
+                    <p>Both real CC0 eye spheres have measured bone pivots. A provisional
+                      Head/Neck blend moves the source face without moving the tested torso region.
+                      Finger, shoulder, mouth and garment weights still need artistic work.</p>
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="secondary">Head: {motion.headMeanDisplacementMm.toFixed(1)} mm</Badge>
+                      <Badge variant="secondary">Stable torso: {motion.torsoMeanDisplacementMm.toFixed(2)} mm</Badge>
+                      <Badge variant="secondary">{motion.gltfJointCount} guide joints exported</Badge>
+                    </div>
+                    <p className="text-muted-foreground">
+                      These are preliminary automated weights with an unfitted head pivot. 
+                      This file must not be used for performance testing or live characters.
+                    </p>
+                    <Button type="button" variant={selected === 'headMotion' ? 'default' : 'outline'}
+                      onClick={() => onSelectPreview('headMotion')}>
+                      {selected === 'headMotion' ? 'Viewing experimental rig in 3D' : 'Inspect skinned experiment in 3D'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="space-y-2 rounded-xl border border-sky-500/25 p-4">
               <div className="flex flex-wrap items-center gap-2">
                 <h4 className="font-semibold">Actual source rig landmarks</h4>
@@ -169,8 +209,8 @@ export function AvatarV2ReferenceGallery({
             </div>
             <p className="text-xs text-muted-foreground">
               Genuine Blender Workbench renders and GLBs generated from the pinned CC0
-              source. Preview-only; the new facial material pass is not a finished
-              skinned, singing or tattoo-ready game avatar.
+              source. Preview-only; even the optional head/eye deformation proof has
+              incomplete full-body weights, facial morphs and artist-fitted joints.
             </p>
           </>
         )}

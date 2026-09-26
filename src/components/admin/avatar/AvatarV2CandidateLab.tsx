@@ -439,7 +439,7 @@ export function AvatarV2CandidateLab() {
               <option value="feet">Feet / footwear</option>
             </select>
           </label>
-          {reference && sourceLandmarks.length === 4 && (
+          {reference && reference !== 'headMotion' && sourceLandmarks.length === 4 && (
             <Button
               type="button"
               variant={showSourceLandmarks ? 'default' : 'outline'}
@@ -494,14 +494,14 @@ export function AvatarV2CandidateLab() {
             <div className="flex items-center justify-between">
               <h3 className="font-semibold">Avatar V2 candidate</h3>
               <Badge variant={report?.valid ? 'default' : 'secondary'}>
-                {reference && !file ? 'unrigged reference — not game ready' : file ? report?.valid ? 'contract pass' : report ? 'needs fixes' : 'checking' : 'choose a preview or GLB'}
+                {reference && !file ? reference === 'headMotion' ? 'partially skinned experiment — NOT game ready' : 'unrigged reference — not game ready' : file ? report?.valid ? 'contract pass' : report ? 'needs fixes' : 'checking' : 'choose a preview or GLB'}
               </Badge>
             </div>
             <CandidateCanvas
               file={file}
               referenceUrl={referenceUrl}
               sourceLandmarks={sourceLandmarks}
-              showSourceLandmarks={showSourceLandmarks}
+              showSourceLandmarks={showSourceLandmarks && reference !== 'headMotion'}
               frame={frame}
               lod={lod}
               onReport={setReport}
@@ -515,8 +515,12 @@ export function AvatarV2CandidateLab() {
           </div>
         </div>
 
-        {reference && showSourceLandmarks && sourceLandmarks.length === 4 && !file && <p className="text-sm text-muted-foreground">Cyan: measured real eye centres · Orange: lower outer ear-surface suggestions. These are unreviewed guide points, not approved joints or game-ready skin weights.</p>}
-        {reference && !file && <p className="rounded-md border border-sky-500/30 p-3 text-sm text-muted-foreground">This is the actual {frame} Blender {reference === 'lookdev' ? 'look-development' : 'original CC0'} reference mesh, not a production avatar. It has no fitted skin weights, finished facial morphs or stage animations; A-pose is intentional. The validation gap below must not be interpreted as production certification.</p>}
+        {reference && reference !== 'headMotion' && showSourceLandmarks && sourceLandmarks.length === 4 && !file && <p className="text-sm text-muted-foreground">Cyan: measured real eye centres · Orange: lower outer ear-surface suggestions. These are unreviewed guide points, not approved joints or game-ready skin weights.</p>}
+        {reference && !file && <p className="rounded-md border border-sky-500/30 p-3 text-sm text-muted-foreground">
+          {reference === 'headMotion'
+            ? `This is an ACTUAL source-mesh Blender head-turn/eye-gaze experiment for the ${frame} frame. It has measured eye pivots and limited head/neck draft weights but no artist-approved head fit, reliable whole-body/hand deformation, mouth/blink morphs, costumes or playable stage animations. The standard V2 contract and QA failures are expected and must not be waived.`
+            : `This is the actual ${frame} Blender ${reference === 'lookdev' ? 'look-development' : 'original CC0'} reference mesh, not a production avatar. It has no fitted skin weights, finished facial morphs or stage animations; A-pose is intentional. The validation gap below must not be interpreted as production certification.`}
+        </p>}
         {error && <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
 
         {performanceReport && (
