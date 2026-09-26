@@ -3,12 +3,14 @@ import { addDays, startOfDay } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import type { ScheduledActivity } from "@/hooks/useScheduledActivities";
 import { withoutDuplicateBandScheduleActivities } from "@/utils/bandActivityScheduling";
+import { appearanceOnLocalDay, fetchMyBandFestivalAppearances, festivalAppearanceAsActivity } from "@/features/festivals/appearances/bandFestivalAppearances";
 
 export type MobileScheduleSource =
   | "core schedule"
   | "work"
   | "band membership"
   | "gigs"
+  | "festivals"
   | "rehearsals"
   | "recordings"
   | "tour travel"
@@ -55,6 +57,9 @@ function sourceWarningMessage(source: MobileScheduleSource): MobileScheduleSourc
 }
 
 function dedupeKey(activity: ScheduledActivity): string {
+  if (activity.metadata?.festival_booking_id && activity.activity_type === "festival_performance") {
+    return `festival:${activity.metadata.festival_booking_id}`;
+  }
   if (activity.linked_gig_id) return `gig:${activity.linked_gig_id}`;
   if (activity.linked_rehearsal_id) return `rehearsal:${activity.linked_rehearsal_id}`;
   if (activity.linked_recording_id) return `recording:${activity.linked_recording_id}`;
@@ -227,7 +232,20 @@ export function useMobileDaySchedule(
         if (row?.id) recordingMap.set(row.id, row);
       }
 
+      let festivalActivities: ScheduledActivity[] = [];
+      if (bandIds.length) {
+        try {
+          festivalActivities = (await fetchMyBandFestivalAppearances())
+            .filter((appearance) => bandIds.includes(appearance.bandId) && appearanceOnLocalDay(appearance, date))
+            .map((appearance) => festivalAppearanceAsActivity(appearance, userId, profileId));
+        } catch (error) {
+          console.warn("[RockMundo mobile day] festivals unavailable", error);
+          warnings.push("festivals");
+        }
+      }
+
       const externalActivities: ScheduledActivity[] = [
+        ...festivalActivities,
         ...workRows
           .filter((shift) => !["cancelled", "missed"].includes(String(shift.status ?? "").toLowerCase()))
           .map((shift): ScheduledActivity => ({
