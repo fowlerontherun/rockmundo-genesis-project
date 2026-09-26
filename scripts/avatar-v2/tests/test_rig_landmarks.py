@@ -8,7 +8,7 @@ import unittest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from rig_landmarks import (  # noqa: E402
     BoneSpec, FitBone, audit_sculpt_fit, fit_bones, marker_name, moved_markers,
-    position_markers,
+    position_markers, untouched_face_markers,
 )
 
 
@@ -167,6 +167,20 @@ class SculptJointFitTests(unittest.TestCase):
         self.assertTrue(any("Eye left/right" in issue for issue in issues))
         self.assertTrue(any("EarAnchor left/right" in issue for issue in issues))
         self.assertTrue(any("Jaw hinge" in issue for issue in issues))
+
+    def test_face_review_gate_only_exempts_fitted_face_handles(self):
+        bones = example_rig()
+        rest = position_markers(bones)
+        placed = dict(rest)
+        untouched = untouched_face_markers(bones, placed, rest)
+        self.assertIn(marker_name("Eye.L", "head"), untouched)
+        self.assertIn(marker_name("EarAnchor.R", "head"), untouched)
+        self.assertIn(marker_name("Jaw", "head"), untouched)
+        placed[marker_name("Eye.L", "head")] = (.055, -.07, 1.59)
+        after = untouched_face_markers(bones, placed, rest)
+        self.assertNotIn(marker_name("Eye.L", "head"), after)
+        self.assertIn(marker_name("EarAnchor.R", "head"), after)
+        self.assertIn(marker_name("Jaw", "head"), after)
 
     def test_artist_modified_guide_threshold_ignores_submillimetre_noise(self):
         base = position_markers(example_rig())
