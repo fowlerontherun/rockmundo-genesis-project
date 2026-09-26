@@ -60,6 +60,30 @@ status; it never silently updates the live database.
 
 ## Release sequence and actual existing-item assignments
 
+### Current first garment-authoring increment (proof-only)
+
+The real-source Blender pipeline now includes a separate **existing
+Starter Wardrobe four-tee** artist proof from the actual CC0 masculine and
+feminine sculpts. It physically derives connected shoulder/torso/short-sleeve
+surfaces from real body polygons, creates bounded 14mm normal-offset cloth
+shells with attached original-surface seam geometry, maps the existing
+Rockmundo logo onto source-curved front chest triangles, and creates original
+PBR brand/material previews and editable authoring scenes for all **four
+existing catalogue keys**. It runs after and separately from the immutable
+source, lookdev and head-motion authoring builds.
+
+The independently verified proof gallery can show **8 dressed source preview
+GLBs and 16 genuine render PNGs** once the new pinned Blender build publishes
+on main. No V2 garment records are promoted by these source references.
+
+**Next release work, still required:** manually sculpt fabric folds/necklines
+and stitch detail, author proper UV-normal/roughness maps, transfer meaningful
+full-body and arm twist skin weights, produce genuinely distinct LOD0–3 for each
+frame/tee, validate tattoo occlusion and singing/guitar/bass/drum motion, then
+supply verified `garment_config.avatarV2` mapping per existing item. The other
+10 currently published Starter/Punk clothes, four blocked Punk items and 39
+legacy items are **not** implied complete by the four-tee proof.
+
 ### Phase A — baseline, real geometry and storefront truth
 
 - Use the migration work queue to enumerate **all** current items regardless
