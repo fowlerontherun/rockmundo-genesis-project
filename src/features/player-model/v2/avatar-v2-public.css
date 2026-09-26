@@ -47,3 +47,19 @@
 .avatar-v2-public__experiment img { display: block; width: 100%; max-height: 440px; object-fit: contain; background: #101823; border: 1px solid #385e72; border-radius: 8px; }
 .avatar-v2-public__experiment p { font-size: 12px; line-height: 1.65; color: #d0e1ea; }
 .avatar-v2-public__experiment button { min-height: 42px; border-radius: 8px; border: 1px solid #7be6de; background: #276678; color: #ecfffc; padding: 9px 12px; font-size: 12px; font-weight: 730; }
+
+
+.avatar-v2-public__starter { display: grid; gap: 14px; margin-top: 22px; padding: 16px; border-radius: 14px; border: 1px solid #8da7e8; background: linear-gradient(150deg, #202c46, #14202e); }
+.avatar-v2-public__starter h4 { font-size: 16px; font-weight: 750; color: #f1f5ff; }
+.avatar-v2-public__starter .avatar-v2-public__experiment-heading { display: flex; align-items: flex-start; }
+.avatar-v2-public__starter .avatar-v2-public__experiment-heading p { color: #c4cfe1; font-size: 12px; line-height: 1.6; margin-top: 4px; }
+.avatar-v2-public__starter .avatar-v2-public__experiment-heading span { max-width: 190px; font-size: 11px; color: #d1dcff; border: 1px solid #7a96d1; padding: 6px 10px; border-radius: 12px; }
+.avatar-v2-public__starter-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.avatar-v2-public__starter-grid figure { display: grid; align-content: start; border: 1px solid #536380; border-radius: 10px; overflow: hidden; background: #172336; margin: 0; }
+.avatar-v2-public__starter-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; background: #0f1725; display: block; }
+.avatar-v2-public__starter-grid figcaption { display: grid; gap: 7px; padding: 12px; }
+.avatar-v2-public__starter-grid figcaption strong { color: #f3f5ff; font-size: 13px; }
+.avatar-v2-public__starter-grid figcaption span { color: #d3dbea; font-size: 11px; line-height: 1.5; }
+.avatar-v2-public__starter-grid figcaption button { align-self: start; padding: 9px; min-height: 40px; border-radius: 7px; border: 1px solid #9caff3; background: #304575; color: #fff; font-size: 12px; font-weight: 700; }
+.avatar-v2-public__starter > p { color: #ced7e7; font-size: 12px; line-height: 1.65; }
+@media (max-width: 470px) { .avatar-v2-public__starter-grid { grid-template-columns: 1fr; } }
