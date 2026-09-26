@@ -34,8 +34,14 @@ def add_source_joint_suggestions(
         raise RuntimeError("Refusing to annotate any rig already claiming to be fitted.")
     if body.type != "MESH" or len(eyes) != 2 or set(eyes) != {"L", "R"}:
         raise RuntimeError("Need exactly one continuous source sculpt and two genuine eyeball meshes.")
-    if bpy.data.collections.get(COLLECTION_NAME):
-        raise RuntimeError("Existing source joint suggestions must never be overwritten.")
+    previous = bpy.data.collections.get(COLLECTION_NAME)
+    if previous and previous.objects:
+        raise RuntimeError("Existing artist source joint suggestions must never be overwritten.")
+    # The two frames build successively inside one Blender process. The
+    # previous frame's objects are removed by clear_scene(), but its now-empty
+    # collection can remain linked to the scene. Reuse only that empty
+    # collection; never overwrite an occupied artist collection.
+
     if any(eye.type != "MESH" or eye == body for eye in eyes.values()):
         raise RuntimeError("Eye source references must be independent real mesh objects.")
 
@@ -50,8 +56,9 @@ def add_source_joint_suggestions(
     positions, samples, measured = source_joint_suggestions(head_vertices, eye_vertices)
 
     # Never mutate RMV2_Armature or its artist-controlled RMV2_FitHandles.
-    collection = bpy.data.collections.new(COLLECTION_NAME)
-    bpy.context.scene.collection.children.link(collection)
+    collection = previous or bpy.data.collections.new(COLLECTION_NAME)
+    if not previous:
+        bpy.context.scene.collection.children.link(collection)
     collection.hide_render = True
     inverse = rig.matrix_world.inverted_safe()
     results = []
