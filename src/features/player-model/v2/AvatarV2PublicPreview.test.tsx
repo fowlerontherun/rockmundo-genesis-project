@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { AvatarV2PublicPreview } from './AvatarV2PublicPreview';
 
 vi.mock('./AvatarV2ReferenceCanvas', () => ({
@@ -165,7 +165,8 @@ describe('player-visible real Avatar V2 preview', () => {
     expect(screen.getByAltText('feminine real sculpt-fitted clothing.starter.plain-white-tee front Blender material proof'))
       .toBeInTheDocument();
     expect(screen.queryByTestId('v2-preview-3d')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Three-quarter' }));
+    fireEvent.click(within(screen.getByRole('group', { name: 'Starter garment proof angle' }))
+      .getByRole('button', { name: 'Three-quarter' }));
     expect(screen.getByAltText('feminine real sculpt-fitted clothing.starter.logo-tee quarter Blender material proof'))
       .toHaveAttribute('src', expect.stringContaining('feminine-starter-logo-tee-quarter.png'));
     fireEvent.click(screen.getAllByRole('button', { name: 'Inspect real dressed source in 3D' })[0]);
