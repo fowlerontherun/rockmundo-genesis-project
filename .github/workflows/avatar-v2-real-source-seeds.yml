@@ -12,6 +12,9 @@ on:
     paths:
       - 'scripts/avatar-v2/blender/rockmundo_avatar_v2_build_seed_artifacts.py'
       - 'scripts/avatar-v2/verify_source_artifacts.py'
+      - 'scripts/avatar-v2/source_rig_suggestions.py'
+      - 'scripts/avatar-v2/blender/rockmundo_avatar_v2_source_joint_suggestions.py'
+      - 'scripts/avatar-v2/tests/test_source_rig_suggestions.py'
       - 'scripts/avatar-v2/publish_reference_previews.py'
       - 'scripts/avatar-v2/tests/test_publish_reference_previews.py'
       - 'scripts/avatar-v2/tests/test_verify_source_artifacts.py'
@@ -60,6 +63,8 @@ jobs:
         run: python3 -m unittest discover -s scripts/avatar-v2/tests -p test_lip_lookdev.py -v
       - name: Test reference gallery publication safety
         run: python3 -m unittest discover -s scripts/avatar-v2/tests -p test_publish_reference_previews.py -v
+      - name: Test actual eyeball and lateral-head joint guide measurements
+        run: python3 -m unittest discover -s scripts/avatar-v2/tests -p test_source_rig_suggestions.py -v
       - name: Fetch pinned official Blender Human Base Meshes 1.4.1
         run: python3 scripts/avatar-v2/fetch_human_base_meshes.py --output-dir "$SOURCE_ROOT"
       - name: Install pinned Blender and verify official checksum
