@@ -27,6 +27,7 @@ import bpy
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from facial_topology import audit_face_topology
+from rig_review import audit_rig_review
 from rockmundo_avatar_v2_topology_audit import extract_landmarks, head_candidates
 
 BUDGETS = {
@@ -419,41 +420,10 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
     if len(rigs) != 1:
         errors.append(f"Expected exactly one visible armature, found {len(rigs)}.")
 
-    # The proportion-guide armature is never a production rig. A marker fit
-    # report is useful evidence, but cannot replace manual skinning/pose QA.
+    # Keep this gate in a Blender-independent module so every approval and
+    # unfinished-guide case can be regression-tested without Blender.
     for rig in rigs:
-        if rig.get("rockmundoAvatarV2RigGuide"):
-            errors.append(
-                f"{rig.name} is still an authoring proportion guide; use an artist-finished "
-                "rig and clear the guide marker only after binding and pose QA."
-            )
-        if rig.get("rockmundoAvatarV2RequiresManualFit"):
-            errors.append(
-                f"{rig.name} still requires manual rig fitting, skin weighting and pose QA."
-            )
-        if args.lod <= 1:
-            # Every close-up rig requires independent artist sign-offs. Removing
-            # an authoring-guide flag must never bypass the review gate.
-            required_reviews = (
-                "rockmundoAvatarV2JointFitApproved",
-                "rockmundoAvatarV2WeightsApproved",
-                "rockmundoAvatarV2StagePoseApproved",
-            )
-            for key in required_reviews:
-                if rig.get(key) is not True:
-                    errors.append(f"{rig.name} is missing explicit artist approval: {key}.")
-            # A single generic pose approval is not sufficient: instrument
-            # contact and singing exercise different high-risk deformations.
-            pose_reviews = (
-                "rockmundoAvatarV2SingingPoseApproved",
-                "rockmundoAvatarV2GuitarPoseApproved",
-                "rockmundoAvatarV2BassPoseApproved",
-                "rockmundoAvatarV2DrumPoseApproved",
-                "rockmundoAvatarV2MicrophonePoseApproved",
-            )
-            for key in pose_reviews:
-                if rig.get(key) is not True:
-                    errors.append(f"{rig.name} is missing performance-pose approval: {key}.")
+        errors.extend(audit_rig_review(dict(rig.items()), rig.name, args.lod))
 
     # An ear anchor and named material are insufficient if the close-up head is
     # still a flat or low-resolution source sculpt. Check REAL vertex-group
