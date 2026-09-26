@@ -117,6 +117,8 @@ function withActualStarterProof() {
           style, catalogueKey, preview, views,
           evidence: {
             sourceSurfaceVertices: 1450, sourceSelectedFaces: 1600, averageOffsetMm: 14,
+            smoothedRealBoundaryVertices: 124, smoothingReprojectedOnOriginalCC0: true,
+            postSmoothingBoundaryClearanceMm: 14,
             actualOriginalCC0SourceSurface: true,
             gltfConformingOriginalLogo: style === 'logo-tee',
             gltfRealSurfaceHems: true,
