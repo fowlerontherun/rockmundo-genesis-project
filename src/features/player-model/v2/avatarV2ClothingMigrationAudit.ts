@@ -12,6 +12,7 @@ import { avatarV2GarmentConfig } from './avatarV2Garments';
 export type ClothingMigrationIssue =
   | 'missing-stable-key'
   | 'duplicate-stable-key'
+  | 'duplicate-item-id'
   | 'unassigned-pack'
   | 'missing-v2-mapping'
   | 'incomplete-v2-frames'
@@ -80,7 +81,9 @@ export function auditAvatarV2ClothingCatalog(
 ): ClothingMigrationSummary {
   const collectionNames = new Map(collections.map(collection => [collection.id, collection.name]));
   const keys = new Map<string, number>();
+  const ids = new Map<string, number>();
   for (const item of items) {
+    ids.set(item.id, (ids.get(item.id) ?? 0) + 1);
     const key = item.curated_asset_key?.trim();
     if (key) keys.set(key, (keys.get(key) ?? 0) + 1);
   }
@@ -91,6 +94,7 @@ export function auditAvatarV2ClothingCatalog(
     const key = item.curated_asset_key?.trim() || null;
     const slot = richGarmentSlot(item);
     const issues: ClothingMigrationIssue[] = [];
+    if ((ids.get(item.id) ?? 0) > 1) issues.push('duplicate-item-id');
     if (!key) issues.push('missing-stable-key');
     else if ((keys.get(key) ?? 0) > 1) issues.push('duplicate-stable-key');
     if (!item.collection_id || !collectionNames.has(item.collection_id)) issues.push('unassigned-pack');
@@ -126,6 +130,7 @@ export function auditAvatarV2ClothingCatalog(
     if (status === 'legacy') issues.push('legacy-review');
 
     const v2MappingComplete = !!config && config.status === 'validated' &&
+      !issues.includes('duplicate-item-id') && !issues.includes('duplicate-stable-key') &&
       !issues.some(issue => ['incomplete-v2-frames', 'missing-v2-lods', 'reused-v2-lod-file',
         'missing-body-occlusion', 'missing-colour-zones'].includes(issue));
     const wave: ClothingMigrationWave =
