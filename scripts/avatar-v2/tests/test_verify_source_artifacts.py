@@ -66,6 +66,10 @@ class AuthoringArtifactIntegrityTests(unittest.TestCase):
                         "sourceSelectedFaces": 1850,
                         "sourceSurfaceVertices": 1780,
                         "originalSurfaceConforming": True,
+                        "smoothingReprojectedOnOriginalCC0": True,
+                        "boundarySmoothingIterations": 10,
+                        "smoothedRealBoundaryVertices": 102,
+                        "postSmoothingBoundaryClearanceMm": 14.,
                         "largestConnectedOriginalComponent": True,
                         "sculptDerivedShortSleeves": True,
                         "sculptDerivedNeckCut": True,
@@ -279,6 +283,18 @@ class AuthoringArtifactIntegrityTests(unittest.TestCase):
         self.data["frames"][1]["requiresManualJointFit"] = False
         self.write_manifest()
         with self.assertRaisesRegex(ValueError, "fitMarkers"):
+            verify_artifacts(self.root)
+
+    def test_ragged_unchanged_or_detached_cloth_edge_cannot_ship_as_starter_proof(self):
+        surface = self.data["frames"][0]["starterTeePrototypes"]["variants"][1]["sourceSurface"]
+        surface["smoothingReprojectedOnOriginalCC0"] = False
+        self.write_manifest()
+        with self.assertRaisesRegex(ValueError, "unverified CC0-derived garment"):
+            verify_artifacts(self.root)
+        surface["smoothingReprojectedOnOriginalCC0"] = True
+        surface["postSmoothingBoundaryClearanceMm"] = 50
+        self.write_manifest()
+        with self.assertRaisesRegex(ValueError, "unverified CC0-derived garment"):
             verify_artifacts(self.root)
 
     def test_missing_real_starter_chest_artwork_is_rejected(self):
