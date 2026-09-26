@@ -23,10 +23,12 @@ const SOURCE_WORKFLOW =
 
 export function AvatarV2ReferenceGallery({
   frame,
+  onFrameChange,
   selected,
   onSelectPreview,
 }: {
   frame: AvatarV2Frame;
+  onFrameChange: (frame: AvatarV2Frame) => void;
   selected: AvatarV2ReferenceVariant | null;
   onSelectPreview: (variant: AvatarV2ReferenceVariant) => void;
 }) {
@@ -80,6 +82,15 @@ export function AvatarV2ReferenceGallery({
         )}
         {availability === 'available' && (
           <>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Body frame">
+              {(['masculine', 'feminine'] as const).map(option => (
+                <Button key={option} type="button" size="sm"
+                  variant={frame === option ? 'default' : 'outline'}
+                  onClick={() => onFrameChange(option)}>
+                  {option === 'masculine' ? 'Masculine body' : 'Feminine body'}
+                </Button>
+              ))}
+            </div>
             <div className="flex flex-wrap gap-2" role="group" aria-label="Preview camera">
               {VIEWS.map(item => (
                 <Button key={item.key} type="button" size="sm"
