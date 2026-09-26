@@ -34,7 +34,18 @@ BEGIN
     RAISE EXCEPTION 'festival_public_history_anchor_changed';
   END IF;
 
-  EXECUTE replace(definition, anchor, phase_guard || anchor);
+  definition := replace(definition, anchor, phase_guard || anchor);
+  -- Even after the scheduled dates pass, a historical premature result must
+  -- stay internal until its audited replacement is available.
+  definition := replace(definition,
+    '  IF NOT FOUND THEN RETURN NULL; END IF;' || chr(10) ||
+    '  SELECT * INTO v_company FROM public.festival_companies',
+    '  IF NOT FOUND THEN RETURN NULL; END IF;' || chr(10) ||
+    '  IF v_edition.ends_on IS NOT NULL AND v_simplified.completed_at::date < v_edition.ends_on THEN' || chr(10) ||
+    '    RETURN NULL;' || chr(10) ||
+    '  END IF;' || chr(10) ||
+    '  SELECT * INTO v_company FROM public.festival_companies');
+  EXECUTE definition;
 END;
 $migration$;
 
