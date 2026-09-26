@@ -1,5 +1,46 @@
 # RockMundo Avatar V2 assets
 
+## Actual existing Starter Wardrobe T-shirt surface-fitting proofs
+
+The pinned real-source authoring workflow also generates a **separate artist
+working scene** for all four original Starter Wardrobe tees on EACH genuine
+masculine and feminine CC0 sculpt: Rockmundo Logo Tee, Plain Black Tee, Plain
+White Tee and Vintage Charcoal Tee. These use the exact existing catalogue
+keys and preserve all existing player ownership and item bonuses; no new
+purchasable products are created.
+
+The physical prototype pattern selects the largest CONNECTED original CC0
+chest, back, shoulder and short-sleeve surface. Unlike the previous giant
+procedural shapes, all garment mesh vertices are derived from actual source
+face topology and lifted approximately 14mm along true sculpt normals,
+bounded by independent fitting QA. The real edge loops are authored as editable
+seam geometry with 2.2mm draft cloth thickness. The Rockmundo Logo Tee loads
+**src/assets/rockmundo-logo.png**, the existing brand artwork, and maps it via
+UVs onto the original lifted and CURVED front-chest triangles with a
+submillimetre depth separation: not a large floating text/graphic plane.
+
+Each frame's separate `*-starter-four-tee-prototypes-UNAPPROVED.blend` has
+all four original variant surfaces, two actual Blender EEVEE material proofs
+(front/three-quarter) per tee and a full dressed, GLB 2.0 visual-reference
+model per tee. Source manifest QA and strict immutable preview-only gallery
+inventory require all eight physical prototypes and all proof files together.
+The player `/avatar-v2-preview` and Admin V2 gallery show these only when
+both complete verified frame packs are published. Images and 3D load separately;
+player gameplay remains untouched.
+
+**This is NOT a finished wearable:** selected sculpt topology is a source-fit
+starting point, not manually approved cloth construction; fabric maps need
+professional UV baking, real garment joint weights and deformation, correct
+shape morphs, body/tattoo occlusion, 4 independent LODs, plus pose/collision QA
+for guitar, bass, drums, long hair and accessories. Existing V1 clothes,
+inventory IDs, dyes, boosts and full V2 production gates remain unchanged.
+
+Run the independent pattern tests locally:
+
+```bash
+python3 -m unittest discover -s scripts/avatar-v2/tests -p test_tee_surface.py -v
+```
+
 ## Genuine experimental head/eye rig proof (NOT gameplay ready)
 
 The pinned Blender source workflow now also writes a **separate proof-only**
