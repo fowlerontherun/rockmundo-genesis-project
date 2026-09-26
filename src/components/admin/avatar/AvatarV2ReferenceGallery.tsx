@@ -10,6 +10,8 @@ import {
   parseAvatarV2ReferenceManifest,
   type AvatarV2ReferenceVariant,
   type AvatarV2ReferenceView,
+  type AvatarV2ReferenceManifest,
+  type AvatarV2SourceJointSuggestion,
 } from '@/features/player-model/v2/avatarV2ReferencePreview';
 
 const VIEWS: Array<{ key: AvatarV2ReferenceView; title: string }> = [
@@ -24,25 +26,32 @@ const SOURCE_WORKFLOW =
 export function AvatarV2ReferenceGallery({
   frame,
   onFrameChange,
+  onLandmarks,
   selected,
   onSelectPreview,
 }: {
   frame: AvatarV2Frame;
   onFrameChange: (frame: AvatarV2Frame) => void;
+  onLandmarks: (landmarks: AvatarV2SourceJointSuggestion[]) => void;
   selected: AvatarV2ReferenceVariant | null;
   onSelectPreview: (variant: AvatarV2ReferenceVariant) => void;
 }) {
   const [availability, setAvailability] = useState<'loading' | 'available' | 'missing'>('loading');
   const [view, setView] = useState<AvatarV2ReferenceView>('front');
+  const [manifest, setManifest] = useState<AvatarV2ReferenceManifest | null>(null);
+  const evidence = manifest?.frames.find(item => item.frame === frame)?.sourceJointSuggestions;
 
   useEffect(() => {
     const controller = new AbortController();
     setAvailability('loading');
+    setManifest(null);
     void fetch(avatarV2ReferenceManifestUrl, { signal: controller.signal })
       .then(async response => {
         if (!response.ok) throw new Error(`Source gallery HTTP ${response.status}`);
         const raw: unknown = await response.json();
-        if (!parseAvatarV2ReferenceManifest(raw)) throw new Error('Unverified V2 source gallery manifest');
+        const validated = parseAvatarV2ReferenceManifest(raw);
+        if (!validated) throw new Error('Unverified V2 source gallery manifest');
+        setManifest(validated);
         setAvailability('available');
       })
       .catch(() => {
@@ -50,6 +59,10 @@ export function AvatarV2ReferenceGallery({
       });
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    onLandmarks(evidence?.suggestions ?? []);
+  }, [evidence, onLandmarks]);
 
   return (
     <Card className="border-sky-500/30">
@@ -120,6 +133,39 @@ export function AvatarV2ReferenceGallery({
                   </Button>
                 </div>
               ))}
+            </div>
+            <div className="space-y-2 rounded-xl border border-sky-500/25 p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <h4 className="font-semibold">Actual source rig landmarks</h4>
+                <Badge variant="secondary">{evidence ? '4 measured from source geometry' : 'not yet in preview manifest'}</Badge>
+                <Badge variant="outline">unreviewed suggestions</Badge>
+              </div>
+              {evidence ? (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    The eye centres come from the real eye-sphere vertices; the ear locations
+                    are candidates from the actual lower outer head surface. These four
+                    markers are present in the Blender rig guide, but still need an artist
+                    to confirm and fit them before any skinning or production use.
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {evidence.suggestions.map(item => (
+                      <div key={item.bone} className="rounded-lg bg-muted/50 p-3 text-sm">
+                        <div className="font-medium">{item.bone}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {item.sourceSamples.toLocaleString()} source vertices used
+                          · measured height {(item.position[2] * 100).toFixed(1)} cm
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Existing model previews remain available. Measured landmarks will appear
+                  here when the new verified source-build publication completes.
+                </p>
+              )}
             </div>
             <p className="text-xs text-muted-foreground">
               Genuine Blender Workbench renders and GLBs generated from the pinned CC0
