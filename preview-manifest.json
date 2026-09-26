@@ -1,0 +1,420 @@
+{
+  "files": [
+    {
+      "bytes": 1982200,
+      "file": "masculine/masculine-SOURCE-ONLY-not-validated.glb",
+      "sha256": "805288c2220789100ac3265f4bb0c338312fb1c09fef50dcf1e3037e8d6a181e"
+    },
+    {
+      "bytes": 870476,
+      "file": "masculine/masculine-LOOKDEV-ONLY-not-validated.glb",
+      "sha256": "4304c47bb8489c20a44c6c5ec523dc1f1792fe7cf54f318e7a87e41391bbb1d0"
+    },
+    {
+      "bytes": 1332724,
+      "file": "masculine/masculine-HEAD-RIG-EXPERIMENT-not-validated.glb",
+      "sha256": "4c9cec87714f55d08027fb8e29505263e2682353b50590c0aa8b0d9256fdec60"
+    },
+    {
+      "bytes": 420485,
+      "file": "masculine/masculine-head-rig-experiment-front.png",
+      "sha256": "f0241b8659f03eaf7e95d7a9e1ecf65695b1723b98136a284524bc8b9ad3256f"
+    },
+    {
+      "bytes": 421845,
+      "file": "masculine/masculine-head-rig-experiment-quarter.png",
+      "sha256": "5727ae9578f3d1405bacc1a6c0c4ddf50d51f1651aef39513f9f16006a2d4d57"
+    },
+    {
+      "bytes": 386979,
+      "file": "masculine/masculine-head-rig-experiment-side.png",
+      "sha256": "f1294641dcfb1b2f4a202ed0de38bec5b67e45ad83085b252b9bbe2da13eebc1"
+    },
+    {
+      "bytes": 568095,
+      "file": "masculine/masculine-head-rig-experiment-face.png",
+      "sha256": "616044c44261dae02b32d1a5fb78a96f0466a574807e7d29e39f321c2e32aa18"
+    },
+    {
+      "bytes": 418641,
+      "file": "masculine/masculine-front.png",
+      "sha256": "5969d3b5bfea6b915dac315c4f377e995428c761739072abb47f5244a65c7613"
+    },
+    {
+      "bytes": 419811,
+      "file": "masculine/masculine-quarter.png",
+      "sha256": "c9296ec6ad62bf366f083b6cd1db0100d818a891ebf479c94e6605b9a2ed2dba"
+    },
+    {
+      "bytes": 385762,
+      "file": "masculine/masculine-side.png",
+      "sha256": "d40d1982d89b86c411465935a30f1ecce124ca3cbec28b51a07fe8d097258509"
+    },
+    {
+      "bytes": 573680,
+      "file": "masculine/masculine-face.png",
+      "sha256": "7efe0bea80c16d459deee7b66dfd2a24d8268c6f384acffc5363f47725ece440"
+    },
+    {
+      "bytes": 421170,
+      "file": "masculine/masculine-lookdev-front.png",
+      "sha256": "b51cf1653098017b0ec9f93c27eba10558eb86f0577bd3515f7aade5b8f72b3a"
+    },
+    {
+      "bytes": 421356,
+      "file": "masculine/masculine-lookdev-quarter.png",
+      "sha256": "974cc124577e4ce9c594b21db54a87d24f8b7a6e7b4eb73721e792a3813e9481"
+    },
+    {
+      "bytes": 385971,
+      "file": "masculine/masculine-lookdev-side.png",
+      "sha256": "e6478fb88e8cefe6375e9d8cd4af8ac48677bb644c18de7c5a934af9cfef4a82"
+    },
+    {
+      "bytes": 568705,
+      "file": "masculine/masculine-lookdev-face.png",
+      "sha256": "0757f9690ac19b19d090e3ea0dbf455937e450811de0a1e933fa3620095ca904"
+    },
+    {
+      "bytes": 1981816,
+      "file": "feminine/feminine-SOURCE-ONLY-not-validated.glb",
+      "sha256": "ccac55241e448498aee54834fa9fc9fd1c52aff73e9ab15e3931b0758855f706"
+    },
+    {
+      "bytes": 869860,
+      "file": "feminine/feminine-LOOKDEV-ONLY-not-validated.glb",
+      "sha256": "7866eae74304f43e8e24e502296af4a090f11e51e8a1381ef72036ea978144e3"
+    },
+    {
+      "bytes": 1331100,
+      "file": "feminine/feminine-HEAD-RIG-EXPERIMENT-not-validated.glb",
+      "sha256": "726b3d7586ac5a404f5565ad9bed431b55a3e3481825d9aac43842d27f11388a"
+    },
+    {
+      "bytes": 406609,
+      "file": "feminine/feminine-head-rig-experiment-front.png",
+      "sha256": "fa967705b7f717e2022ae9c95d880f3a94d56648aed23e5eb248c2066f8a620d"
+    },
+    {
+      "bytes": 406765,
+      "file": "feminine/feminine-head-rig-experiment-quarter.png",
+      "sha256": "fc8508053da904853b3088b1b79cbb5397a7a060778e6a1e05337c0593c45bca"
+    },
+    {
+      "bytes": 376958,
+      "file": "feminine/feminine-head-rig-experiment-side.png",
+      "sha256": "a8726725fcd4d2b911709a4f1b8b8e096f75463fe9e63632b17bed02fde4d621"
+    },
+    {
+      "bytes": 496400,
+      "file": "feminine/feminine-head-rig-experiment-face.png",
+      "sha256": "d5bb20f2cdeac2da3381016307ba665da9704524792a4c2a6cbcf99c7d6a9d9f"
+    },
+    {
+      "bytes": 404422,
+      "file": "feminine/feminine-front.png",
+      "sha256": "a6d6d55e480631688e0eb5271cd3b17a854c6d426daae6a3d7b5be52ff99bfcd"
+    },
+    {
+      "bytes": 404608,
+      "file": "feminine/feminine-quarter.png",
+      "sha256": "d0f03856629bf926d7f34e9f59f1b1ac897c2df03a48e8f9641d341582bb4b30"
+    },
+    {
+      "bytes": 376319,
+      "file": "feminine/feminine-side.png",
+      "sha256": "de9909b5bccb7cc4f39d302814ba9e645dd50a73093186c1c5525d983e95e520"
+    },
+    {
+      "bytes": 502299,
+      "file": "feminine/feminine-face.png",
+      "sha256": "15af50744b4e181d962460911f4c70216505369f34741b020390e7cdc6a1e00b"
+    },
+    {
+      "bytes": 407062,
+      "file": "feminine/feminine-lookdev-front.png",
+      "sha256": "a01ff48ca7160703d8caaffab2c8f43b3e1118de15716512697bed4354e947f4"
+    },
+    {
+      "bytes": 406259,
+      "file": "feminine/feminine-lookdev-quarter.png",
+      "sha256": "9ed769357073d1a7d9d19ae26a54d4e62b41c3f30fab28415d984177751f1308"
+    },
+    {
+      "bytes": 376623,
+      "file": "feminine/feminine-lookdev-side.png",
+      "sha256": "ee790956d02e0b449ab8f6da3b0c04ac4fd1d380022e0b9395e59eb259126ea0"
+    },
+    {
+      "bytes": 497716,
+      "file": "feminine/feminine-lookdev-face.png",
+      "sha256": "e03d7febdd243468a266ce1db2352405561b3e7e0379df903e3f4b20a7bf48a8"
+    }
+  ],
+  "frames": [
+    {
+      "frame": "masculine",
+      "headMotion": "masculine/masculine-HEAD-RIG-EXPERIMENT-not-validated.glb",
+      "headMotionEvidence": {
+        "actualSkinBuffers": true,
+        "artistReviewed": false,
+        "draftWeightsOnly": true,
+        "eyeCounterTurnDegrees": -7,
+        "eyeMeanDisplacementMm": {
+          "L": 17.976,
+          "R": 18.095
+        },
+        "faceMorphsAuthored": false,
+        "frame": "masculine",
+        "fullBodySkinned": false,
+        "gltfJointCount": 62,
+        "gltfSkinnedPrimitives": 18,
+        "guideHeadPivotStillUnfitted": true,
+        "headMeanDisplacementMm": 26.978,
+        "headTurnDegrees": 16,
+        "productionValidated": false,
+        "schema": "rockmundo.avatar-v2-head-rig-experiment",
+        "torsoMeanDisplacementMm": 0.0,
+        "version": 1
+      },
+      "headMotionViews": {
+        "face": "masculine/masculine-head-rig-experiment-face.png",
+        "front": "masculine/masculine-head-rig-experiment-front.png",
+        "quarter": "masculine/masculine-head-rig-experiment-quarter.png",
+        "side": "masculine/masculine-head-rig-experiment-side.png"
+      },
+      "lookdev": "masculine/masculine-LOOKDEV-ONLY-not-validated.glb",
+      "lookdevViews": {
+        "face": "masculine/masculine-lookdev-face.png",
+        "front": "masculine/masculine-lookdev-front.png",
+        "quarter": "masculine/masculine-lookdev-quarter.png",
+        "side": "masculine/masculine-lookdev-side.png"
+      },
+      "source": "masculine/masculine-SOURCE-ONLY-not-validated.glb",
+      "sourceJointSuggestions": {
+        "artistReviewed": false,
+        "eyeRadiiMm": {
+          "L": 37.24,
+          "R": 37.24
+        },
+        "frame": "masculine",
+        "rigFitted": false,
+        "schema": "rockmundo.avatar-v2-source-joint-suggestions",
+        "skinWeightsAuthored": false,
+        "source": "actual CC0 eyeball and continuous body vertices",
+        "suggestions": [
+          {
+            "armatureLocal": [
+              0.039936,
+              -0.041874,
+              1.638751
+            ],
+            "artistReviewed": false,
+            "bone": "Eye.L",
+            "position": [
+              0.039936,
+              -0.041874,
+              1.638751
+            ],
+            "realSourceGeometry": true,
+            "sourceMesh": "GEO-body_male_stylized.eye.L",
+            "sourceSamples": 802
+          },
+          {
+            "armatureLocal": [
+              -0.039936,
+              -0.041874,
+              1.638751
+            ],
+            "artistReviewed": false,
+            "bone": "Eye.R",
+            "position": [
+              -0.039936,
+              -0.041874,
+              1.638751
+            ],
+            "realSourceGeometry": true,
+            "sourceMesh": "GEO-body_male_stylized.eye.R",
+            "sourceSamples": 802
+          },
+          {
+            "armatureLocal": [
+              0.110013,
+              0.03484,
+              1.583964
+            ],
+            "artistReviewed": false,
+            "bone": "EarAnchor.L",
+            "position": [
+              0.110013,
+              0.03484,
+              1.583964
+            ],
+            "realSourceGeometry": true,
+            "sourceMesh": "GEO-body_male_stylized",
+            "sourceSamples": 18
+          },
+          {
+            "armatureLocal": [
+              -0.110013,
+              0.03484,
+              1.583964
+            ],
+            "artistReviewed": false,
+            "bone": "EarAnchor.R",
+            "position": [
+              -0.110013,
+              0.03484,
+              1.583964
+            ],
+            "realSourceGeometry": true,
+            "sourceMesh": "GEO-body_male_stylized",
+            "sourceSamples": 18
+          }
+        ],
+        "version": 1
+      },
+      "sourceViews": {
+        "face": "masculine/masculine-face.png",
+        "front": "masculine/masculine-front.png",
+        "quarter": "masculine/masculine-quarter.png",
+        "side": "masculine/masculine-side.png"
+      }
+    },
+    {
+      "frame": "feminine",
+      "headMotion": "feminine/feminine-HEAD-RIG-EXPERIMENT-not-validated.glb",
+      "headMotionEvidence": {
+        "actualSkinBuffers": true,
+        "artistReviewed": false,
+        "draftWeightsOnly": true,
+        "eyeCounterTurnDegrees": -7,
+        "eyeMeanDisplacementMm": {
+          "L": 18.722,
+          "R": 18.893
+        },
+        "faceMorphsAuthored": false,
+        "frame": "feminine",
+        "fullBodySkinned": false,
+        "gltfJointCount": 62,
+        "gltfSkinnedPrimitives": 18,
+        "guideHeadPivotStillUnfitted": true,
+        "headMeanDisplacementMm": 27.328,
+        "headTurnDegrees": 16,
+        "productionValidated": false,
+        "schema": "rockmundo.avatar-v2-head-rig-experiment",
+        "torsoMeanDisplacementMm": 0.0,
+        "version": 1
+      },
+      "headMotionViews": {
+        "face": "feminine/feminine-head-rig-experiment-face.png",
+        "front": "feminine/feminine-head-rig-experiment-front.png",
+        "quarter": "feminine/feminine-head-rig-experiment-quarter.png",
+        "side": "feminine/feminine-head-rig-experiment-side.png"
+      },
+      "lookdev": "feminine/feminine-LOOKDEV-ONLY-not-validated.glb",
+      "lookdevViews": {
+        "face": "feminine/feminine-lookdev-face.png",
+        "front": "feminine/feminine-lookdev-front.png",
+        "quarter": "feminine/feminine-lookdev-quarter.png",
+        "side": "feminine/feminine-lookdev-side.png"
+      },
+      "source": "feminine/feminine-SOURCE-ONLY-not-validated.glb",
+      "sourceJointSuggestions": {
+        "artistReviewed": false,
+        "eyeRadiiMm": {
+          "L": 39.43,
+          "R": 39.43
+        },
+        "frame": "feminine",
+        "rigFitted": false,
+        "schema": "rockmundo.avatar-v2-source-joint-suggestions",
+        "skinWeightsAuthored": false,
+        "source": "actual CC0 eyeball and continuous body vertices",
+        "suggestions": [
+          {
+            "armatureLocal": [
+              0.049293,
+              -0.036022,
+              1.563903
+            ],
+            "artistReviewed": false,
+            "bone": "Eye.L",
+            "position": [
+              0.049293,
+              -0.036022,
+              1.563903
+            ],
+            "realSourceGeometry": true,
+            "sourceMesh": "GEO-body_female_stylized.eye.L",
+            "sourceSamples": 802
+          },
+          {
+            "armatureLocal": [
+              -0.049293,
+              -0.036022,
+              1.563903
+            ],
+            "artistReviewed": false,
+            "bone": "Eye.R",
+            "position": [
+              -0.049293,
+              -0.036022,
+              1.563903
+            ],
+            "realSourceGeometry": true,
+            "sourceMesh": "GEO-body_female_stylized.eye.R",
+            "sourceSamples": 802
+          },
+          {
+            "armatureLocal": [
+              0.114011,
+              0.037726,
+              1.51245
+            ],
+            "artistReviewed": false,
+            "bone": "EarAnchor.L",
+            "position": [
+              0.114011,
+              0.037726,
+              1.51245
+            ],
+            "realSourceGeometry": true,
+            "sourceMesh": "GEO-body_female_stylized",
+            "sourceSamples": 12
+          },
+          {
+            "armatureLocal": [
+              -0.114011,
+              0.037726,
+              1.51245
+            ],
+            "artistReviewed": false,
+            "bone": "EarAnchor.R",
+            "position": [
+              -0.114011,
+              0.037726,
+              1.51245
+            ],
+            "realSourceGeometry": true,
+            "sourceMesh": "GEO-body_female_stylized",
+            "sourceSamples": 12
+          }
+        ],
+        "version": 1
+      },
+      "sourceViews": {
+        "face": "feminine/feminine-face.png",
+        "front": "feminine/feminine-front.png",
+        "quarter": "feminine/feminine-quarter.png",
+        "side": "feminine/feminine-side.png"
+      }
+    }
+  ],
+  "previewOnly": true,
+  "productionValidated": false,
+  "schema": "rockmundo.avatar-v2-reference-previews",
+  "source": "blender-human-base-meshes-v1.4.1",
+  "sourceArchiveSha256": "811f43accbb31a88266d932f8f5563b2d13586fca0ba2693aad1f5fe582b3515",
+  "version": 1
+}
