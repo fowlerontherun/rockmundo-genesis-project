@@ -7,6 +7,7 @@ import unittest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from tee_surface import (
     STARTER_TEES, inside_shirt_region, largest_connected_surface,
+    source_boundary_edges, relax_source_boundary,
     upper_shirt_edge, validate_surface_projection,
 )
 
@@ -81,6 +82,43 @@ class StarterTeeSurfaceTests(unittest.TestCase):
         flattened = [(x, -abs(y) - .09, z) for x, y, z in points]
         with self.assertRaisesRegex(ValueError, 'front/back'):
             largest_connected_surface(flattened, faces)
+
+    def test_rounded_source_cut_preserves_real_mesh_and_smooths_sawtooth_seams(self):
+        # Connected physical shell with a noisy upper neck/hem cut. The
+        # boundaries must relax while untouched cloth interior stays exact.
+        count = 40
+        points = []
+        for z, h in enumerate((0.0, .5, 1.0)):
+            for index in range(count):
+                theta = index * 2 * math.pi / count
+                jitter = (.018 if index % 2 else -.018) if z == 2 else 0.
+                points.append((.25 * math.cos(theta), .16 * math.sin(theta),
+                               h + jitter))
+        faces = []
+        for layer in (0, 1):
+            for index in range(count):
+                a = layer * count + index
+                b = layer * count + (index + 1) % count
+                c = (layer + 1) * count + (index + 1) % count
+                d = (layer + 1) * count + index
+                faces.append((a, b, c, d))
+        original = list(points)
+        boundaries = source_boundary_edges(faces)
+        self.assertEqual(len(boundaries), 80)
+        smooth, moved = relax_source_boundary(points, faces, iterations=10)
+        self.assertEqual(moved, 80)
+        self.assertEqual(points, original)  # zero mutation of source
+        self.assertEqual(smooth[40:80], original[40:80])  # exact interior mesh
+        before = max(p[2] for p in original[80:]) - min(p[2] for p in original[80:])
+        after = max(p[2] for p in smooth[80:]) - min(p[2] for p in smooth[80:])
+        self.assertLess(after, before * .55)
+        self.assertTrue(all(math.dist(p, q) <= .036 for p, q in zip(smooth, original)))
+
+    def test_cannot_claim_a_clean_hem_with_detached_or_nonmanifold_source(self):
+        points = [(math.cos(i / 20), math.sin(i / 20), i / 50) for i in range(80)]
+        invalid = [(0, 1, 2), (2, 1, 3), (2, 1, 4), (5, 6, 7)] * 15
+        with self.assertRaisesRegex(ValueError, 'Non-manifold'):
+            relax_source_boundary(points, invalid)
 
     def test_genuine_normal_projection_limits_detached_giant_poncho_geometry(self):
         points = [(.02 * i, -.15, 1.18) for i in range(400)]
