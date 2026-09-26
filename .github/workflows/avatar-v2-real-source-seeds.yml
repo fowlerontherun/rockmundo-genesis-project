@@ -13,6 +13,9 @@ on:
       - 'scripts/avatar-v2/blender/rockmundo_avatar_v2_build_seed_artifacts.py'
       - 'scripts/avatar-v2/verify_source_artifacts.py'
       - 'scripts/avatar-v2/source_rig_suggestions.py'
+      - 'scripts/avatar-v2/head_motion_weights.py'
+      - 'scripts/avatar-v2/blender/rockmundo_avatar_v2_head_motion_proof.py'
+      - 'scripts/avatar-v2/tests/test_head_motion_weights.py'
       - 'scripts/avatar-v2/blender/rockmundo_avatar_v2_source_joint_suggestions.py'
       - 'scripts/avatar-v2/tests/test_source_rig_suggestions.py'
       - 'scripts/avatar-v2/publish_reference_previews.py'
@@ -61,6 +64,8 @@ jobs:
         run: python3 -m unittest discover -s scripts/avatar-v2/tests -p test_facial_fibres.py -v
       - name: Test genuine source upper/lower lip sculpt materials
         run: python3 -m unittest discover -s scripts/avatar-v2/tests -p test_lip_lookdev.py -v
+      - name: Test preliminary, non-certified real head/neck/eye skinning
+        run: python3 -m unittest discover -s scripts/avatar-v2/tests -p test_head_motion_weights.py -v
       - name: Test reference gallery publication safety
         run: python3 -m unittest discover -s scripts/avatar-v2/tests -p test_publish_reference_previews.py -v
       - name: Test actual eyeball and lateral-head joint guide measurements
