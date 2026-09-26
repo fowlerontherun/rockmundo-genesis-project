@@ -27,6 +27,7 @@ sys.path.insert(0, str(SCRIPT_DIR.parent))
 import rockmundo_avatar_v2_seed as seed  # noqa: E402
 import rockmundo_avatar_v2_rig_guide as guide  # noqa: E402
 import rockmundo_avatar_v2_fit_rig as fitter  # noqa: E402
+import rockmundo_avatar_v2_source_joint_suggestions as joints  # noqa: E402
 import rockmundo_avatar_v2_source_lookdev as lookdev  # noqa: E402
 from fetch_human_base_meshes import ARCHIVE_NAME, EXPECTED_BYTES, archive_valid  # noqa: E402
 
@@ -228,6 +229,16 @@ def build_frame(frame: str, source_file: pathlib.Path, root: pathlib.Path) -> di
     min_point, max_point = guide.world_bounds(meshes)
     rig = guide.create_rig(frame, min_point, max_point)
     guide.create_notes(frame)
+    real_body = [obj for obj in meshes if ".eye." not in obj.name.lower()]
+    real_eyes = {
+        side: [obj for obj in meshes if obj.name.lower().endswith(f".eye.{side.lower()}")]
+        for side in ("L", "R")
+    }
+    if len(real_body) != 1 or any(len(group) != 1 for group in real_eyes.values()):
+        raise RuntimeError(f"{frame} has no unique real continuous body and separate L/R eyes.")
+    source_joint_report = joints.add_source_joint_suggestions(
+        frame, real_body[0], {side: group[0] for side, group in real_eyes.items()}, rig,
+    )
     rig_path = frame_dir / f"{frame}-unfitted-rig-guide.blend"
     bpy.ops.wm.save_as_mainfile(filepath=str(rig_path))
     handles = fitter.create_handles(rig, fitter.read_rig(rig))
@@ -253,6 +264,7 @@ def build_frame(frame: str, source_file: pathlib.Path, root: pathlib.Path) -> di
         "sourceVertices": sum(len(obj.data.vertices) for obj in meshes),
         "guideBones": len(rig.data.bones),
         "fitMarkers": handles["markers"],
+        "sourceJointSuggestions": source_joint_report,
         "productionValidated": False,
         "requiresManualJointFit": bool(rig.get("rockmundoAvatarV2RequiresManualFit", True)),
     }
