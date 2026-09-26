@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   avatarV2ReferenceImageUrl,
   avatarV2ReferenceModelUrl,
+  avatarV2SourceWorldToGltf,
   parseAvatarV2ReferenceManifest,
 } from './avatarV2ReferencePreview';
 
@@ -96,6 +97,10 @@ describe('Avatar V2 real-source gallery boundary', () => {
     expect(parseAvatarV2ReferenceManifest(missing)).toBeNull();
   });
 
+  it('converts exact Blender Z-up landmarks into +Y-up GLB coordinates', () => {
+    expect(avatarV2SourceWorldToGltf([.052, -.036, 1.56])).toEqual([.052, 1.56, .036]);
+    expect(avatarV2SourceWorldToGltf([-.052, .045, 1.50])).toEqual([-.052, 1.50, -.045]);
+  });
   it('builds immutable preview-only asset paths, never production LOD paths', () => {
     expect(avatarV2ReferenceModelUrl('masculine', 'lookdev'))
       .toContain('masculine-LOOKDEV-ONLY-not-validated.glb');
