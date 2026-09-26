@@ -2,6 +2,16 @@
 
 ## Genuine Avatar V2 previews for players
 
+The verified gallery also supports the **first four real existing
+Starter Wardrobe T-shirt authoring proofs** when both source packs are published.
+Each is directly fitted to the actual original CC0 sculpt's connected
+chest/short-sleeve polygons, with separate front/three-quarter PBR renders and
+an opt-in real dressed-source 3D GLB. The Rockmundo Logo Tee uses existing
+brand artwork mapped onto curved chest geometry. All four retain their
+**original catalogue keys**, not new items. They have no approved garment skin
+weights, finished textile maps or certified LODs and cannot yet replace the
+live character's bought clothing or affect boosts.
+
 The normal **Avatar Creator** now has an explicit **See the actual new Avatar V2
 models** preview switch beside the current live V1 avatar. The Character Hub,
 character sidebar and mobile route also link directly to
