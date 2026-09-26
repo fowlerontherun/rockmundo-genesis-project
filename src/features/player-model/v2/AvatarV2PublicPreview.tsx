@@ -130,7 +130,7 @@ export function AvatarV2PublicPreview({ frame }: { frame: AvatarV2Frame }) {
                 These are automated draft weights and unapproved head/neck pivots,
                 not finished facial animation, clothing deformation or rigging.
               </p>
-              <button type="button" onClick={() => { setVariant('headMotion'); setShow3D(true); }}>
+              <button type="button" onClick={() => { setStarter3D(null); setVariant('headMotion'); setShow3D(true); }}>
                 Inspect the experimental skinned mesh in 3D
               </button>
             </div>
@@ -170,7 +170,10 @@ export function AvatarV2PublicPreview({ frame }: { frame: AvatarV2Frame }) {
                         ? 'Original Rockmundo brand art on the real curved chest surface'
                         : 'Original item, new real body-conforming source mesh'}</span>
                       <button type="button"
-                        onClick={() => setStarter3D(starter3D === tee.style ? null : tee.style)}>
+                        onClick={() => {
+                          setShow3D(false);
+                          setStarter3D(current => current === tee.style ? null : tee.style);
+                        }}>
                         {starter3D === tee.style ? 'Close 3D outfit proof' : 'Inspect real dressed source in 3D'}
                       </button>
                     </figcaption>
@@ -198,7 +201,10 @@ export function AvatarV2PublicPreview({ frame }: { frame: AvatarV2Frame }) {
           )}
           <div className="avatar-v2-public__inspect">
             <button type="button" className="avatar-v2-public__inspect-toggle"
-              aria-pressed={show3D} onClick={() => setShow3D(value => !value)}>
+              aria-pressed={show3D} onClick={() => {
+                setStarter3D(null);
+                setShow3D(value => !value);
+              }}>
               {show3D ? 'Close interactive 3D' : 'Inspect actual V2 in interactive 3D'}
             </button>
             {show3D && (
