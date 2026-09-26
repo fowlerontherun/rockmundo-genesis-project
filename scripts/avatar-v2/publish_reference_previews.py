@@ -23,6 +23,10 @@ def preview_names(frame: str) -> dict:
         "frame": frame,
         "source": f"{frame}/{frame}-SOURCE-ONLY-not-validated.glb",
         "lookdev": f"{frame}/{frame}-LOOKDEV-ONLY-not-validated.glb",
+        "headMotion": f"{frame}/{frame}-HEAD-RIG-EXPERIMENT-not-validated.glb",
+        "headMotionViews": {
+            view: f"{frame}/{frame}-head-rig-experiment-{view}.png" for view in VIEWS
+        },
         "sourceViews": {view: f"{frame}/{frame}-{view}.png" for view in VIEWS},
         "lookdevViews": {view: f"{frame}/{frame}-lookdev-{view}.png" for view in VIEWS},
     }
@@ -58,11 +62,38 @@ def publish_references(source_root: pathlib.Path, output_root: pathlib.Path) -> 
                 or evidence.get("skinWeightsAuthored") is not False):
             raise ValueError("Verified source pack has no safe, unreviewed anatomical guide.")
         entry["sourceJointSuggestions"] = evidence
+        motion = source_frames[entry["frame"]].get("headMotionExperiment")
+        if (not isinstance(motion, dict)
+                or motion.get("schema") != "rockmundo.avatar-v2-head-rig-experiment"
+                or motion.get("preview") != pathlib.PurePosixPath(entry["headMotion"]).name
+                or motion.get("views") != [
+                    pathlib.PurePosixPath(entry["headMotionViews"][view]).name for view in VIEWS
+                ]
+                or motion.get("actualSkinBuffers") is not True
+                or motion.get("draftWeightsOnly") is not True
+                or motion.get("guideHeadPivotStillUnfitted") is not True
+                or motion.get("artistReviewed") is not False
+                or motion.get("productionValidated") is not False):
+            raise ValueError("Unapproved experimental head rig is not verified on both genuine source frames.")
+        # The source pack's full independent integrity and motion evidence
+        # audit has already passed. Include measured QA data for the UI.
+        entry["headMotionEvidence"] = {
+            key: motion[key] for key in (
+                "schema", "version", "frame", "headTurnDegrees", "eyeCounterTurnDegrees",
+                "headMeanDisplacementMm", "torsoMeanDisplacementMm",
+                "eyeMeanDisplacementMm", "gltfJointCount", "gltfSkinnedPrimitives",
+                "actualSkinBuffers", "draftWeightsOnly",
+                "guideHeadPivotStillUnfitted", "artistReviewed",
+                "fullBodySkinned", "faceMorphsAuthored", "productionValidated",
+            )
+        }
     inventory = []
     for entry in frames:
         names = [
             entry["source"],
             entry["lookdev"],
+            entry["headMotion"],
+            *entry["headMotionViews"].values(),
             *entry["sourceViews"].values(),
             *entry["lookdevViews"].values(),
         ]
@@ -101,7 +132,7 @@ def main() -> None:
     parser.add_argument("--output", type=pathlib.Path, required=True)
     args = parser.parse_args()
     result = publish_references(args.root, args.output)
-    print(f"Published {len(result['files'])} source-only proof files for both frames; "
+    print(f"Published {len(result['files'])} source and experimental rig proof files for both frames; "
           "production validation remains false.")
 
 
