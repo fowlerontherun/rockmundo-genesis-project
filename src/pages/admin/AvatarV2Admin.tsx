@@ -9,6 +9,7 @@ import {
   AVATAR_V2_BASE_ASSETS,
   AVATAR_V2_ROLLOUT,
   avatarV2Readiness,
+  avatarV2ReleaseBlockers,
 } from '@/features/player-model/v2/avatarV2Registry';
 
 const statusVariant = (status: string): 'default' | 'destructive' | 'secondary' =>
@@ -16,6 +17,7 @@ const statusVariant = (status: string): 'default' | 'destructive' | 'secondary' 
 
 export default function AvatarV2Admin() {
   const readiness = avatarV2Readiness();
+  const releaseBlockers = avatarV2ReleaseBlockers();
   const validated = AVATAR_V2_BASE_ASSETS.filter(asset => asset.status === 'validated').length;
   const progress = Math.round((validated / AVATAR_V2_BASE_ASSETS.length) * 100);
 
@@ -116,6 +118,31 @@ export default function AvatarV2Admin() {
             className="inline-flex items-center gap-2 font-semibold text-primary underline underline-offset-4">
             Review the live clothing migration audit <ExternalLink className="h-4 w-4" />
           </Link>
+        </CardContent>
+      </Card>
+
+      <Card className={releaseBlockers.length ? 'border-amber-500/40' : 'border-emerald-500/40'}>
+        <CardHeader>
+          <CardTitle>Production asset diagnostics</CardTitle>
+          <CardDescription>
+            Read-only manifest checks for both body frames and all four LODs. These do not
+            certify the actual GLB geometry, animation or clothing compatibility.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Badge variant={releaseBlockers.length ? 'secondary' : 'default'}>
+            {releaseBlockers.length ? `${releaseBlockers.length} manifest blockers` : 'Manifest checks clear'}
+          </Badge>
+          {releaseBlockers.length > 0 ? (
+            <ul className="max-h-72 list-disc space-y-1 overflow-y-auto pl-5 text-sm text-muted-foreground"
+              aria-label="Avatar V2 production manifest blockers">
+              {releaseBlockers.map((blocker, index) => <li key={`${index}-${blocker}`}>{blocker}</li>)}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Manifest checks passed. Run the import validator and visual QA before enabling V2.
+            </p>
+          )}
         </CardContent>
       </Card>
 
