@@ -38,3 +38,12 @@
   .avatar-v2-public__compare { grid-template-columns: 1fr; }
   .avatar-v2-public__compare img { aspect-ratio: 5 / 4; }
 }
+
+
+.avatar-v2-public__experiment { margin-top: 17px; padding: 15px; border-radius: 12px; border: 1px solid #63aeb2; background: linear-gradient(150deg, #18414e, #122335); display: grid; gap: 12px; }
+.avatar-v2-public__experiment-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.avatar-v2-public__experiment h4 { font-size: 15px; font-weight: 720; }
+.avatar-v2-public__experiment-heading span { font-size: 11px; color: #b4f8eb; border: 1px solid #569b9e; border-radius: 18px; padding: 5px 9px; }
+.avatar-v2-public__experiment img { display: block; width: 100%; max-height: 440px; object-fit: contain; background: #101823; border: 1px solid #385e72; border-radius: 8px; }
+.avatar-v2-public__experiment p { font-size: 12px; line-height: 1.65; color: #d0e1ea; }
+.avatar-v2-public__experiment button { min-height: 42px; border-radius: 8px; border: 1px solid #7be6de; background: #276678; color: #ecfffc; padding: 9px 12px; font-size: 12px; font-weight: 730; }
