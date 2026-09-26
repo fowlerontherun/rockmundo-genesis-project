@@ -32,22 +32,31 @@ def upper_shirt_edge(abs_x: float) -> float:
     return 1.355 + .135 * smooth
 
 
-def inside_shirt_region(point: Vec3) -> bool:
+def inside_shirt_region(point: Vec3, frame: str = "masculine") -> bool:
     """Approximate editable cutting boundaries, *never* final cloth sizing."""
     if len(point) != 3 or not all(isfinite(v) for v in point):
         raise ValueError("Invalid real source geometry for starter tee proof.")
+    if frame not in ("masculine", "feminine"):
+        raise ValueError("Unknown source sculpt frame; no authored tee fit is possible.")
     x, _y, z = point
-    side = abs(x)
+    # The pinned official sculpts are independently normalized to 1.80m and
+    # 1.72m. Reusing masculine WORLD-metre sleeve heights on the smaller
+    # feminine frame previously severed both real sleeves from the torso.
+    height_ratio = 1. if frame == "masculine" else 1.72 / 1.80
+    # Separate non-production clothing pattern per frame. Artist must still
+    # inspect final girth/length and paint real garment skin weights.
+    width_ratio = 1. if frame == "masculine" else .94
+    side = abs(x) / width_ratio
+    cut_height = z / height_ratio
     if side > .415:
         return False
-    # Short sleeves grow from the actual connected arm surface, rather than
-    # scaling the chest into a wrist-width poncho.
     lower = .995 if side < .225 else 1.285
-    return lower < z < upper_shirt_edge(side)
+    return lower < cut_height < upper_shirt_edge(side)
 
 
 def largest_connected_surface(
     positions: Sequence[Vec3], polygons: Sequence[Sequence[int]],
+    frame: str = "masculine",
 ) -> list[int]:
     """Return only the actual connected CC0 torso+short-sleeve component.
 
@@ -65,7 +74,7 @@ def largest_connected_surface(
             raise ValueError("The body contains an invalid source face.")
         centre = tuple(sum(positions[vertex][axis] for vertex in polygon) / len(polygon)
                        for axis in range(3))
-        if not inside_shirt_region(centre):
+        if not inside_shirt_region(centre, frame):
             continue
         selected[index] = tuple(polygon)
         for a, b in zip(polygon, (*polygon[1:], polygon[0])):
@@ -95,23 +104,28 @@ def largest_connected_surface(
         raise ValueError("No connected real shoulder/chest surface; no tee may be published.")
 
     front = back = left = right = 0
+    height_ratio = 1. if frame == "masculine" else 1.72 / 1.80
+    width_ratio = 1. if frame == "masculine" else .94
     for index in main:
         p = selected[index]
         x = sum(positions[i][0] for i in p) / len(p)
         y = sum(positions[i][1] for i in p) / len(p)
         z = sum(positions[i][2] for i in p) / len(p)
-        if 1.08 < z < 1.34 and abs(x) < .22:
+        if 1.08 * height_ratio < z < 1.34 * height_ratio and abs(x) < .22 * width_ratio:
             if y < -.07:
                 front += 1
             if y > .035:
                 back += 1
-        if abs(x) > .23 and z > 1.29:
+        # The smaller original feminine shoulder sits below the male world-
+        # space sleeve band: audit the REAL connected lateral upper-arm mesh
+        # relative to that frame rather than silently accepting 0 sleeves.
+        if abs(x) > .190 * width_ratio and z > 1.205 * height_ratio:
             left += x > 0
             right += x < 0
     if min(front, back, left, right) < 8:
         raise ValueError(
             "The connected real garment does not cover front/back chest and BOTH short sleeves: "
-            f"{front=}, {back=}, {left=}, {right=}."
+            f"{frame=}, {front=}, {back=}, {left=}, {right=}."
         )
     # Stable source-face order preserves the original Blender topology.
     return sorted(main)
