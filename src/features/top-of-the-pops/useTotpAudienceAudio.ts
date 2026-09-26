@@ -52,6 +52,7 @@ export function useTotpAudienceAudio({
   const libraryRef = useRef<TotpCrowdSound[]>([]);
   const clipRef = useRef<HTMLAudioElement | null>(null);
   const ambienceClipRef = useRef<HTMLAudioElement | null>(null);
+  const noiseSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
   useEffect(() => {
     if (!enabled || typeof window === "undefined") return;
@@ -111,6 +112,7 @@ export function useTotpAudienceAudio({
       src.connect(filter);
       filter.connect(ambience);
       src.start();
+      noiseSourceRef.current = src;
       ctxRef.current = ctx;
       masterRef.current = master;
       ambienceRef.current = ambience;
@@ -145,9 +147,11 @@ export function useTotpAudienceAudio({
           `${cueId}:entrance`,
         );
         const hit = clampTotpGain(mix.audienceHit);
-        playApprovedClip(clipRef, clip, hit)
-          .catch(() => playStudioCheer(ctx!, master!, hit, 1.1));
-        if (!clip) playStudioCheer(ctx, master, hit, 1.1);
+        if (clip) {
+          void playApprovedClip(clipRef, clip, hit).catch(() => playStudioCheer(ctx!, master!, hit, 1.1));
+        } else {
+          playStudioCheer(ctx, master, hit, 1.1);
+        }
       }
 
       if (cue?.type === "audience") {
@@ -160,9 +164,11 @@ export function useTotpAudienceAudio({
           `${cueId}:applause`,
         );
         const hit = clampTotpGain(mix.audienceHit);
-        playApprovedClip(clipRef, clip, hit)
-          .catch(() => playStudioCheer(ctx!, master!, hit, 1.8));
-        if (!clip) playStudioCheer(ctx, master, hit, 1.8);
+        if (clip) {
+          void playApprovedClip(clipRef, clip, hit).catch(() => playStudioCheer(ctx!, master!, hit, 1.8));
+        } else {
+          playStudioCheer(ctx, master, hit, 1.8);
+        }
       }
     }
 
@@ -174,13 +180,30 @@ export function useTotpAudienceAudio({
         reaction >= 5 ? 7 : 4,
         `${cueId ?? "performance"}:${Math.floor(playbackState.positionMs / 18_000)}`,
       );
-      playApprovedClip(clipRef, clip, .32 + Math.max(0, reaction) * .018)
-        .catch(() => playStudioCheer(ctx!, master!, 0.38 + Math.max(0, reaction) * 0.018, 0.65));
-      if (!clip) playStudioCheer(ctx, master, 0.38 + Math.max(0, reaction) * 0.018, 0.65);
+      if (clip) {
+        void playApprovedClip(clipRef, clip, .32 + Math.max(0, reaction) * .018)
+          .catch(() => playStudioCheer(ctx!, master!, 0.38 + Math.max(0, reaction) * 0.018, 0.65));
+      } else {
+        playStudioCheer(ctx, master, 0.38 + Math.max(0, reaction) * 0.018, 0.65);
+      }
     }
   }, [audienceReaction, cue?.id, cue?.type, enabled, playbackState.activePhase, playbackState.isPlaying, playbackState.positionMs]);
 
+  useEffect(() => {
+    if (enabled && playbackState.isPlaying) return;
+    clipRef.current?.pause();
+    ambienceClipRef.current?.pause();
+    if (ctxRef.current && ambienceRef.current) {
+      ambienceRef.current.gain.setTargetAtTime(0, ctxRef.current.currentTime, 0.08);
+    }
+  }, [enabled, playbackState.isPlaying]);
+
   useEffect(() => () => {
+    noiseSourceRef.current?.stop();
+    noiseSourceRef.current?.disconnect();
+    noiseSourceRef.current = null;
+    masterRef.current?.disconnect();
+    ambienceRef.current?.disconnect();
     clipRef.current?.pause();
     clipRef.current = null;
     ambienceClipRef.current?.pause();
