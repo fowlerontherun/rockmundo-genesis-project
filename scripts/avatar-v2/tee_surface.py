@@ -131,6 +131,66 @@ def largest_connected_surface(
     return sorted(main)
 
 
+
+def source_boundary_edges(polygons: Sequence[Sequence[int]]) -> list[tuple[int, int]]:
+    """Return only true source-mesh cut loops, never interior triangle edges."""
+    edge_faces: dict[tuple[int, int], int] = defaultdict(int)
+    for polygon in polygons:
+        if len(polygon) < 3 or len(set(polygon)) != len(polygon):
+            raise ValueError("Cannot sew invalid original CC0 source garment polygons.")
+        for a, b in zip(polygon, (*polygon[1:], polygon[0])):
+            edge_faces[tuple(sorted((a, b)))] += 1
+    borders = sorted(edge for edge, count in edge_faces.items() if count == 1)
+    if len(borders) < 20:
+        raise ValueError("A real tee shell requires continuous neck, hem and armhole edges.")
+    if any(count > 2 for count in edge_faces.values()):
+        raise ValueError("Non-manifold prototype seam: clean original selected polygons first.")
+    return borders
+
+
+def relax_source_boundary(
+    points: Sequence[Vec3], polygons: Sequence[Sequence[int]],
+    *, iterations: int = 10, strength: float = .48,
+) -> tuple[list[Vec3], int]:
+    """Smooth only source-connected neckline/cuffs/hem; never blur body shape.
+
+    A selection by original polygon centroids creates polygon-staircase neck
+    and sleeve edges. Iterative boundary-only Laplacian tangential smoothing
+    rounds them while leaving all genuine torso/shoulder inner polygons and
+    original mesh connectivity intact. Blender REPROJECTS the altered cut
+    vertices onto the original real CC0 sculpt, then lifts exactly 14mm:
+    this pure helper does not certify a final wearable fit.
+    """
+    if not 1 <= iterations <= 24 or not .01 <= strength <= .6:
+        raise ValueError("Refusing unsafe or unbounded preliminary hem smoothing.")
+    borders = source_boundary_edges(polygons)
+    adjacency: dict[int, set[int]] = defaultdict(set)
+    for a, b in borders:
+        if not 0 <= a < len(points) or not 0 <= b < len(points):
+            raise ValueError("Shirt boundary contains source vertices outside the mesh.")
+        adjacency[a].add(b)
+        adjacency[b].add(a)
+    if len(adjacency) < 20:
+        raise ValueError("Real CC0 torso has insufficient continuous garment boundary.")
+    if any(len(neighbours) != 2 for neighbours in adjacency.values()):
+        raise ValueError("Extracted shirt has open/non-manifold neckline or cuffs.")
+    result = [tuple(point) for point in points]
+    originals = tuple(result)
+    for _ in range(iterations):
+        updated = list(result)
+        for index, neighbours in adjacency.items():
+            a, b = tuple(sorted(neighbours))
+            mean = tuple((result[a][axis] + result[b][axis]) * .5 for axis in range(3))
+            proposed = tuple(result[index][axis] * (1. - strength) +
+                             mean[axis] * strength for axis in range(3))
+            from math import dist
+            if dist(proposed, originals[index]) > .036:
+                raise ValueError("Hem smoothing would detach clothing from its original source topology.")
+            updated[index] = proposed
+        result = updated
+    return result, len(adjacency)
+
+
 def validate_surface_projection(
     source_points: Sequence[Vec3], projected_points: Sequence[Vec3], *,
     expected_offset: float = .014,
