@@ -442,6 +442,18 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
             for key in required_reviews:
                 if rig.get(key) is not True:
                     errors.append(f"{rig.name} is missing explicit artist approval: {key}.")
+            # A single generic pose approval is not sufficient: instrument
+            # contact and singing exercise different high-risk deformations.
+            pose_reviews = (
+                "rockmundoAvatarV2SingingPoseApproved",
+                "rockmundoAvatarV2GuitarPoseApproved",
+                "rockmundoAvatarV2BassPoseApproved",
+                "rockmundoAvatarV2DrumPoseApproved",
+                "rockmundoAvatarV2MicrophonePoseApproved",
+            )
+            for key in pose_reviews:
+                if rig.get(key) is not True:
+                    errors.append(f"{rig.name} is missing performance-pose approval: {key}.")
 
     # An ear anchor and named material are insufficient if the close-up head is
     # still a flat or low-resolution source sculpt. Check REAL vertex-group
