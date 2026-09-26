@@ -25,7 +25,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { checkBandLockout } from '@/utils/bandLockout';
 import { getVenueCooldowns, type VenueCooldownResult, VENUE_COOLDOWN_DAYS_EXPORT } from '@/utils/venueCooldown';
 import { format, formatDistanceToNow } from 'date-fns';
-import { appearanceDetailHref, FESTIVAL_APPEARANCE_HIGHLIGHT, isFutureFestivalAppearance, localFestivalDate } from '@/features/festivals/appearances/bandFestivalAppearances';
+import { appearanceDetailHref, FESTIVAL_APPEARANCE_HIGHLIGHT, formatFestivalSetTime, isFutureFestivalAppearance, localFestivalDate } from '@/features/festivals/appearances/bandFestivalAppearances';
 import { useMyBandFestivalAppearances } from '@/features/festivals/appearances/useMyBandFestivalAppearances';
 import { TicketSalesDisplay } from '@/components/gig/TicketSalesDisplay';
 import { getGigBookingPlayerError, type GigBookingErrorLike } from '@/utils/gigBookingErrors';
@@ -875,9 +875,7 @@ const GigBooking = () => {
                           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
                             <span className="flex items-center gap-1"><Calendar className="h-4 w-4" />{format(localFestivalDate(appearance.festivalDate), 'EEE, d MMM yyyy')}</span>
                             <span className="flex items-center gap-1"><Clock className="h-4 w-4" />
-                              {appearance.timeConfirmed && appearance.confirmedStartAt && appearance.confirmedEndAt
-                                ? `${format(new Date(appearance.confirmedStartAt), 'p')}–${format(new Date(appearance.confirmedEndAt), 'p')}`
-                                : 'Set time TBA'}
+                              {formatFestivalSetTime(appearance)}
                             </span>
                             {appearance.stageName && <span className="flex items-center gap-1"><Music className="h-4 w-4" />{appearance.stageName}</span>}
                             {appearance.cityName && <span className="flex items-center gap-1"><MapPin className="h-4 w-4" />{appearance.cityName}</span>}
