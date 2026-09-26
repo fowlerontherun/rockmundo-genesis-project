@@ -99,6 +99,9 @@ function getBandActivityKey(activity: ScheduleLikeActivity): string | null {
   if (activity.linked_rehearsal_id) return `rehearsal:${activity.linked_rehearsal_id}`;
   if (activity.linked_recording_id) return `recording:${activity.linked_recording_id}`;
   const metadata = activity.metadata || {};
+  if (metadata.festival_booking_id && activity.activity_type === 'festival_performance') {
+    return `festival:${metadata.festival_booking_id}`;
+  }
   if (metadata.rehearsalId) return `rehearsal:${metadata.rehearsalId}`;
   if (metadata.sessionId && activity.activity_type === 'recording') return `recording:${metadata.sessionId}`;
   return null;
