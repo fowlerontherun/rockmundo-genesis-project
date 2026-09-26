@@ -21,6 +21,7 @@ export interface BandFestivalAppearance {
   festivalEndsOn: string;
   cityName: string | null;
   countryName: string | null;
+  venueTimezone: string | null;
   bookingStatus: string;
   billingPosition: string;
   setMinutes: number;
@@ -62,6 +63,7 @@ export function parseBandFestivalAppearances(data: unknown): BandFestivalAppeara
       festivalEndsOn: text(row.festival_ends_on),
       cityName: nullableText(row.city_name),
       countryName: nullableText(row.country_name),
+      venueTimezone: nullableText(row.venue_timezone),
       bookingStatus: text(row.booking_status),
       billingPosition: text(row.billing_position),
       setMinutes: Number(row.set_minutes) || 0,
@@ -96,6 +98,24 @@ export function appearanceOnLocalDay(appearance: BandFestivalAppearance, date: D
   return appearance.festivalDate === key;
 }
 
+/** Render real set times in the Festival city's zone, not the fan's device zone. */
+export function formatFestivalInstant(
+  timestamp: string,
+  timezone: string | null,
+): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    hour: "numeric", minute: "2-digit", hour12: true,
+    timeZone: timezone || "UTC",
+  }).format(new Date(timestamp));
+}
+
+export function formatFestivalSetTime(appearance: BandFestivalAppearance): string {
+  if (!appearance.timeConfirmed || !appearance.confirmedStartAt || !appearance.confirmedEndAt) {
+    return "Set time TBA";
+  }
+  return `${formatFestivalInstant(appearance.confirmedStartAt, appearance.venueTimezone)}–${formatFestivalInstant(appearance.confirmedEndAt, appearance.venueTimezone)}`;
+}
+
 export function appearanceDetailHref(appearance: BandFestivalAppearance): string {
   return festivalRoutes.publicEdition(
     appearance.festivalSlug || appearance.festivalCompanyId,
@@ -103,9 +123,17 @@ export function appearanceDetailHref(appearance: BandFestivalAppearance): string
   );
 }
 
+export function festivalLocalDateKey(now: Date, venueTimezone: string | null): string {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: venueTimezone || "UTC",
+    year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(now);
+  const part = (type: string) => parts.find((value) => value.type === type)?.value || "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
 export function isFutureFestivalAppearance(appearance: BandFestivalAppearance, today = new Date()): boolean {
-  const midnight = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-  return localFestivalDate(appearance.festivalDate).getTime() >= midnight;
+  return appearance.festivalDate >= festivalLocalDateKey(today, appearance.venueTimezone);
 }
 
 export function festivalAppearanceAsActivity(
@@ -121,10 +149,7 @@ export function festivalAppearanceAsActivity(
     ? new Date(appearance.confirmedEndAt)
     : new Date(start.getTime() + 60 * 1000);
 
-  const localToday = [
-    today.getFullYear(), String(today.getMonth() + 1).padStart(2, "0"),
-    String(today.getDate()).padStart(2, "0"),
-  ].join("-");
+  const localToday = festivalLocalDateKey(today, appearance.venueTimezone);
   // A premature annual result cannot mark a still-running Festival as played.
   const datesFinished = appearance.festivalEndsOn < localToday;
   const status: ScheduledActivity["status"] =
@@ -158,6 +183,7 @@ export function festivalAppearanceAsActivity(
       band_id: appearance.bandId,
       billing_position: appearance.billingPosition,
       stage_name: appearance.stageName,
+      festival_timezone: appearance.venueTimezone,
       date_only: !appearance.timeConfirmed,
       detail_href: appearanceDetailHref(appearance),
     },

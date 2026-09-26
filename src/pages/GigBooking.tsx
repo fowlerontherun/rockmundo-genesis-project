@@ -25,7 +25,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { checkBandLockout } from '@/utils/bandLockout';
 import { getVenueCooldowns, type VenueCooldownResult, VENUE_COOLDOWN_DAYS_EXPORT } from '@/utils/venueCooldown';
 import { format, formatDistanceToNow } from 'date-fns';
-import { appearanceDetailHref, FESTIVAL_APPEARANCE_HIGHLIGHT, isFutureFestivalAppearance, localFestivalDate } from '@/features/festivals/appearances/bandFestivalAppearances';
+import { appearanceDetailHref, FESTIVAL_APPEARANCE_HIGHLIGHT, formatFestivalSetTime, isFutureFestivalAppearance, localFestivalDate } from '@/features/festivals/appearances/bandFestivalAppearances';
 import { useMyBandFestivalAppearances } from '@/features/festivals/appearances/useMyBandFestivalAppearances';
 import { TicketSalesDisplay } from '@/components/gig/TicketSalesDisplay';
 import { getGigBookingPlayerError, type GigBookingErrorLike } from '@/utils/gigBookingErrors';
@@ -62,7 +62,11 @@ const GigBooking = () => {
   const [venues, setVenues] = useState<VenueWithCity[]>([]);
   const [band, setBand] = useState<BandRow | null>(null);
   const [upcomingGigs, setUpcomingGigs] = useState<GigWithVenue[]>([]);
-  const { data: allFestivalAppearances = [], refetch: refetchFestivalAppearances } = useMyBandFestivalAppearances(profileId);
+  const {
+    data: allFestivalAppearances = [],
+    refetch: refetchFestivalAppearances,
+    isError: festivalAppearancesUnavailable,
+  } = useMyBandFestivalAppearances(profileId);
   const bandFestivalAppearances = allFestivalAppearances.filter((appearance) => appearance.bandId === band?.id);
   // The appearance date, not a prematurely written annual result, determines
   // whether a confirmed booking belongs under Upcoming or History.
@@ -851,6 +855,17 @@ const GigBooking = () => {
               </div>
             </CardHeader>
             <CardContent>
+              {festivalAppearancesUnavailable && (
+                <Alert className="mb-4 border-amber-500/50 bg-amber-500/5">
+                  <AlertTitle>Festival bookings could not be loaded</AlertTitle>
+                  <AlertDescription className="mt-1 flex flex-wrap items-center justify-between gap-2">
+                    <span>Ordinary gigs are still shown, but confirmed Festival appearances may be missing.</span>
+                    <Button size="sm" variant="outline" onClick={() => void refetchFestivalAppearances()}>
+                      <RefreshCw className="mr-1 h-4 w-4" /> Retry Festivals
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
               {band ? (
                 <div className="space-y-4">
                   {upcomingFestivals.map((appearance) => (
@@ -875,9 +890,7 @@ const GigBooking = () => {
                           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
                             <span className="flex items-center gap-1"><Calendar className="h-4 w-4" />{format(localFestivalDate(appearance.festivalDate), 'EEE, d MMM yyyy')}</span>
                             <span className="flex items-center gap-1"><Clock className="h-4 w-4" />
-                              {appearance.timeConfirmed && appearance.confirmedStartAt && appearance.confirmedEndAt
-                                ? `${format(new Date(appearance.confirmedStartAt), 'p')}–${format(new Date(appearance.confirmedEndAt), 'p')}`
-                                : 'Set time TBA'}
+                              {formatFestivalSetTime(appearance)}
                             </span>
                             {appearance.stageName && <span className="flex items-center gap-1"><Music className="h-4 w-4" />{appearance.stageName}</span>}
                             {appearance.cityName && <span className="flex items-center gap-1"><MapPin className="h-4 w-4" />{appearance.cityName}</span>}

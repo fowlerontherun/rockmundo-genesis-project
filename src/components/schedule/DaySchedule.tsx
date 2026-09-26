@@ -8,7 +8,7 @@ import {
   BookOpen, Users, Video, Heart, MapPin, Target, Mic, Star, Clapperboard, Trophy
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { FESTIVAL_APPEARANCE_HIGHLIGHT } from "@/features/festivals/appearances/bandFestivalAppearances";
+import { FESTIVAL_APPEARANCE_HIGHLIGHT, formatFestivalInstant } from "@/features/festivals/appearances/bandFestivalAppearances";
 import { useScheduledActivities, type ActivityType, type ScheduledActivity } from "@/hooks/useScheduledActivities";
 import { PageEmptyState, PageErrorState, PageLoadingState } from "@/components/ui/page-state";
 import { formatDurationMinutes, getDisplayDurationMinutes } from "@/utils/activityBookingTime";
@@ -142,8 +142,10 @@ export function DaySchedule({ date, userId }: DayScheduleProps) {
                             </span>
                           ) : (
                             <>
-                              <span><Clock className="mr-1 inline h-3 w-3" />{format(new Date(activity.scheduled_start), 'h:mm a')}</span>
-                              {activity.scheduled_end && <span>Ends {format(new Date(activity.scheduled_end), 'h:mm a')}{duration ? ` · ${duration}` : ''}</span>}
+                              <span><Clock className="mr-1 inline h-3 w-3" />
+                                {isFestival ? formatFestivalInstant(activity.scheduled_start, activity.metadata?.festival_timezone ?? null) : format(new Date(activity.scheduled_start), 'h:mm a')}
+                              </span>
+                              {activity.scheduled_end && <span>Ends {isFestival ? formatFestivalInstant(activity.scheduled_end, activity.metadata?.festival_timezone ?? null) : format(new Date(activity.scheduled_end), 'h:mm a')}{duration ? ` · ${duration}` : ''}</span>}
                             </>
                           )}
                           {activity.location && <span><MapPin className="mr-1 inline h-3 w-3" />{activity.location}</span>}

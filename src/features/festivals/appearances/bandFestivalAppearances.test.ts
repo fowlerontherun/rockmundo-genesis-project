@@ -3,6 +3,8 @@ import {
   appearanceDetailHref,
   appearanceOnLocalDay,
   festivalAppearanceAsActivity,
+  formatFestivalSetTime,
+  festivalLocalDateKey,
   isFutureFestivalAppearance,
   parseBandFestivalAppearances,
 } from "./bandFestivalAppearances";
@@ -21,6 +23,7 @@ const fixture = {
   festival_date: "2026-09-26",
   city_name: "London",
   country_name: "United Kingdom",
+  venue_timezone: "Europe/London",
   booking_status: "confirmed",
   billing_position: "support",
   set_minutes: 60,
@@ -60,6 +63,15 @@ describe("band festival appearances", () => {
     expect(activity.scheduled_end).toBe("2026-09-26T19:00:00.000Z");
     expect(activity.status).toBe("in_progress");
     expect(activity.description).toContain("Main Stage");
+    expect(formatFestivalSetTime(appearance)).toMatch(/7:00\s*pm–8:00\s*pm/i);
+  });
+
+  it("uses the Festival city's date even while the player is in another timezone", () => {
+    const [appearance] = parseBandFestivalAppearances([fixture]);
+    const londonAfterMidnight = new Date("2026-09-26T23:30:00Z");
+    expect(festivalLocalDateKey(londonAfterMidnight, appearance.venueTimezone))
+      .toBe("2026-09-27");
+    expect(isFutureFestivalAppearance(appearance, londonAfterMidnight)).toBe(false);
   });
 
   it("deduplicates projection retries by booking, not by band or festival", () => {
@@ -71,8 +83,10 @@ describe("band festival appearances", () => {
 
   it("shows previous festivals as history without dropping today's appearance", () => {
     const [appearance] = parseBandFestivalAppearances([fixture]);
-    expect(isFutureFestivalAppearance(appearance, new Date(2026, 8, 26, 23))).toBe(true);
-    expect(isFutureFestivalAppearance(appearance, new Date(2026, 8, 27))).toBe(false);
+    // Assertions use UTC instants; local JS constructors would inherit the
+    // CI runner's timezone and flip the expectation during BST.
+    expect(isFutureFestivalAppearance(appearance, new Date("2026-09-26T12:00:00Z"))).toBe(true);
+    expect(isFutureFestivalAppearance(appearance, new Date("2026-09-26T23:30:00Z"))).toBe(false);
   });
 
   it("does not turn an early annual-result posting into a completed band performance", () => {
