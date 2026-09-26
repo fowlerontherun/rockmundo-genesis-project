@@ -66,3 +66,32 @@ export function avatarV2Readiness() {
     productionReady: frames.every(frame => frame.productionReady),
   };
 }
+
+/** Read-only release diagnostics; previews and draft proofs never count as live assets. */
+export function avatarV2ReleaseBlockers(assets: readonly AvatarV2BaseAsset[] = AVATAR_V2_BASE_ASSETS) {
+  const blockers: string[] = [];
+  const expectedFrames: AvatarV2Frame[] = ['masculine', 'feminine'];
+  const expectedLods: AvatarV2Lod[] = [0, 1, 2, 3];
+  const seenFiles = new Set<string>();
+  for (const frame of expectedFrames) {
+    for (const lod of expectedLods) {
+      const entries = assets.filter(asset => asset.frame === frame && asset.lod === lod);
+      if (entries.length !== 1) {
+        blockers.push(`${frame} LOD${lod}: expected one base asset, found ${entries.length}.`);
+        continue;
+      }
+      const asset = entries[0];
+      if (asset.status !== 'validated') blockers.push(`${frame} LOD${lod}: ${asset.status}; production asset not validated.`);
+      if (!/^avatar-v2\\/(masculine|feminine)\\/base-lod[0-3]\\.glb$/.test(asset.file)
+        || asset.file !== `avatar-v2/${frame}/base-lod${lod}.glb`) {
+        blockers.push(`${frame} LOD${lod}: unexpected asset path.`);
+      }
+      if (seenFiles.has(asset.file)) blockers.push(`${frame} LOD${lod}: duplicate asset path.`);
+      seenFiles.add(asset.file);
+    }
+  }
+  if (assets.length !== expectedFrames.length * expectedLods.length) {
+    blockers.push('Base manifest contains unexpected or duplicate entries.');
+  }
+  return blockers;
+}
