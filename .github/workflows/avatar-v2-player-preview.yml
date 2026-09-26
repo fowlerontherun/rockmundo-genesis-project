@@ -1,0 +1,45 @@
+name: Avatar V2 player preview gate
+
+on:
+  pull_request:
+    paths:
+      - 'src/features/player-model/v2/**'
+      - 'src/features/player-model/PlayerModelEditor.tsx'
+      - 'src/features/player-model/README.md'
+      - 'src/pages/AvatarV2PreviewPage.tsx'
+      - 'src/App.tsx'
+      - 'src/pages/hubs/CharacterHub.tsx'
+      - 'src/config/fmNavigation.ts'
+      - 'src/mobile/routeRegistry.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/avatar-v2-player-preview.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/features/player-model/v2/**'
+      - 'src/features/player-model/PlayerModelEditor.tsx'
+      - 'src/pages/AvatarV2PreviewPage.tsx'
+      - 'src/App.tsx'
+      - '.github/workflows/avatar-v2-player-preview.yml'
+
+jobs:
+  preview-and-production-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Use repository npm version
+        run: npm install --global npm@10.9.2
+      - name: Install locked project dependencies
+        run: npm ci
+      - name: Test V2 source gallery, player preview and production safety
+        run: npm run test:avatar-v2
+      - name: Typecheck the whole frontend and workflow
+        run: npm run typecheck
+      - name: Bundle the player-visible preview page
+        run: npm run build
