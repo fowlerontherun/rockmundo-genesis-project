@@ -34,6 +34,7 @@ import { toast } from "sonner";
 import { Plus, Edit, Trash2, Sparkles, Calendar, Package, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { AvatarV2ClothingMigrationPanel } from "@/components/admin/avatar/AvatarV2ClothingMigrationPanel";
 
 interface SkinCollection {
   id: string;
@@ -375,6 +376,8 @@ const SkinCollectionsAdmin = () => {
           </div>
         </CardContent>
       </Card>
+
+      {!isLoading && <AvatarV2ClothingMigrationPanel collections={collections ?? []} />}
 
       <Card>
         <CardHeader>

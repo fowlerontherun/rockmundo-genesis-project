@@ -1,5 +1,7 @@
 # Rockmundo curated skin-pack system
 
+**Existing catalogue first:** [Avatar V2 upgrade and ownership-safe migration plan](avatar-v2-existing-clothing-migration-plan.md) documents the current 57-item inventory, the two active packs, in-place upgrades, detail attachment repairs and the production release gate. The Admin → Curated Skin Packs page now reports the live work queue.
+
 ## Decision
 
 Retire the experimental procedural clothing creator as a production content-authoring workflow.

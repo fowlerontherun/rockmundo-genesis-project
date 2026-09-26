@@ -1,5 +1,7 @@
 # RockMundo Avatar V2 mesh system
 
+**Existing clothing integration:** [in-place migration plan for current RockMundo clothing and skin sets](avatar-v2-existing-clothing-migration-plan.md). No existing item should be replaced, re-sold or marked V2-ready before the fitted body and its own approved garment proof pass.
+
 ## Why this exists
 
 The current stage avatar is reliable and lightweight, but its Quaternius donor

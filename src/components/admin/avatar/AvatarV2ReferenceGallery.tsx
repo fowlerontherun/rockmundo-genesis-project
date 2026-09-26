@@ -38,6 +38,7 @@ export function AvatarV2ReferenceGallery({
 }) {
   const [availability, setAvailability] = useState<'loading' | 'available' | 'missing'>('loading');
   const [view, setView] = useState<AvatarV2ReferenceView>('front');
+  const [refresh, setRefresh] = useState(0);
   const [manifest, setManifest] = useState<AvatarV2ReferenceManifest | null>(null);
   const selectedFrame = manifest?.frames.find(item => item.frame === frame);
   const evidence = selectedFrame?.sourceJointSuggestions;
@@ -47,12 +48,13 @@ export function AvatarV2ReferenceGallery({
     const controller = new AbortController();
     setAvailability('loading');
     setManifest(null);
-    void fetch(avatarV2ReferenceManifestUrl, { signal: controller.signal })
+    void fetch(avatarV2ReferenceManifestUrl, { signal: controller.signal, cache: 'no-cache' })
       .then(async response => {
         if (!response.ok) throw new Error(`Source gallery HTTP ${response.status}`);
         const raw: unknown = await response.json();
         const validated = parseAvatarV2ReferenceManifest(raw);
         if (!validated) throw new Error('Unverified V2 source gallery manifest');
+        if (controller.signal.aborted) return;
         setManifest(validated);
         setAvailability('available');
       })
@@ -60,7 +62,7 @@ export function AvatarV2ReferenceGallery({
         if (!controller.signal.aborted) setAvailability('missing');
       });
     return () => controller.abort();
-  }, []);
+  }, [refresh]);
 
   useEffect(() => {
     onLandmarks(evidence?.suggestions ?? []);
@@ -72,6 +74,12 @@ export function AvatarV2ReferenceGallery({
         <div className="flex flex-wrap items-center gap-2">
           <CardTitle>See the actual Avatar V2 work in progress</CardTitle>
           <Badge variant="outline">artist reference only</Badge>
+          {manifest?.frames.every(item => !!item.headMotionEvidence) &&
+            <Badge variant="secondary">both real head/eye pose proofs published</Badge>}
+          <Button type="button" size="sm" variant="outline" disabled={availability === 'loading'}
+            onClick={() => setRefresh(value => value + 1)}>
+            Refresh published proofs
+          </Button>
         </div>
         <CardDescription>
           These are real masculine/feminine Blender source meshes and the improved physical
@@ -84,11 +92,12 @@ export function AvatarV2ReferenceGallery({
         {availability === 'loading' && <p role="status" className="text-sm text-muted-foreground">Checking verified Blender preview publication…</p>}
         {availability === 'missing' && (
           <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-4 text-sm space-y-2" role="status">
-            <p className="font-semibold flex items-center gap-2"><AlertTriangle className="h-4 w-4" /> Real preview files have not been published yet.</p>
+            <p className="font-semibold flex items-center gap-2"><AlertTriangle className="h-4 w-4" /> Verified V2 previews could not be loaded.</p>
             <p>
-              The current live game has no completed Avatar V2 GLBs. Source-only Blender
-              scenes and proof renders are created by a separate workflow; this gallery
-              will show both real frames once its verified preview publication succeeds.
+              Check the gallery connection or press Refresh published proofs. The gallery
+              only displays independently verified Blender source files and real head/eye
+              experiments; it never substitutes V1 placeholders. The live game still
+              has no certified, fully playable V2 assets.
             </p>
             <a className="inline-flex items-center gap-1 underline underline-offset-4"
               href={SOURCE_WORKFLOW} target="_blank" rel="noreferrer">

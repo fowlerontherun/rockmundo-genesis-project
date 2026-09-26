@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/badge';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { AlertTriangle, CheckCircle2, Cuboid, ExternalLink, Gauge, ShieldCheck } from 'lucide-react';
@@ -96,6 +97,27 @@ export default function AvatarV2Admin() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border-cyan-500/30">
+        <CardHeader>
+          <CardTitle>Existing clothing and Skin Pack migration</CardTitle>
+          <CardDescription>
+            Bring the currently published clothing, blocked details and historical skins
+            forward onto fitted V2 bodies without changing existing purchases or bonuses.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <p className="text-muted-foreground">
+            The live work queue checks every existing item, both body frames,
+            LOD assets, preview status and pack assignment. Production V2 remains
+            locked until each outfit and its skin/tattoo/accessory layers pass QA.
+          </p>
+          <Link to="/admin/skin-collections"
+            className="inline-flex items-center gap-2 font-semibold text-primary underline underline-offset-4">
+            Review the live clothing migration audit <ExternalLink className="h-4 w-4" />
+          </Link>
+        </CardContent>
+      </Card>
 
       <AvatarV2CandidateLab />
 
