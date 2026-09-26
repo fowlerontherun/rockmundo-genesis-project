@@ -140,11 +140,22 @@ export default function AvatarV2Admin() {
             {releaseBlockers.length ? `${releaseBlockers.length} full LOD blockers` : 'Full LOD manifest clear'}
           </Badge>
           </div>
+          {minimumBlockers.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-semibold">Required before initial rollout</p>
+              <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground" aria-label="Avatar V2 minimum rollout blockers">
+                {minimumBlockers.map((blocker, index) => <li key={`minimum-${index}-${blocker}`}>{blocker}</li>)}
+              </ul>
+            </div>
+          )}
           {releaseBlockers.length > 0 ? (
-            <ul className="max-h-72 list-disc space-y-1 overflow-y-auto pl-5 text-sm text-muted-foreground"
-              aria-label="Avatar V2 production manifest blockers">
+            <div className="space-y-2">
+              <p className="text-sm font-semibold">Full four-LOD completion</p>
+              <ul className="max-h-72 list-disc space-y-1 overflow-y-auto pl-5 text-sm text-muted-foreground"
+                aria-label="Avatar V2 production manifest blockers">
               {releaseBlockers.map((blocker, index) => <li key={`${index}-${blocker}`}>{blocker}</li>)}
-            </ul>
+              </ul>
+            </div>
           ) : (
             <p className="text-sm text-muted-foreground">
               Manifest checks passed. Run the import validator and visual QA before enabling V2.
