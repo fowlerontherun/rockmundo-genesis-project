@@ -82,8 +82,7 @@ export function avatarV2ReleaseBlockers(assets: readonly AvatarV2BaseAsset[] = A
       }
       const asset = entries[0];
       if (asset.status !== 'validated') blockers.push(`${frame} LOD${lod}: ${asset.status}; production asset not validated.`);
-      if (!/^avatar-v2\\/(masculine|feminine)\\/base-lod[0-3]\\.glb$/.test(asset.file)
-        || asset.file !== `avatar-v2/${frame}/base-lod${lod}.glb`) {
+      if (asset.file !== `avatar-v2/${frame}/base-lod${lod}.glb`) {
         blockers.push(`${frame} LOD${lod}: unexpected asset path.`);
       }
       if (seenFiles.has(asset.file)) blockers.push(`${frame} LOD${lod}: duplicate asset path.`);
