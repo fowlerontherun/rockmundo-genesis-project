@@ -112,6 +112,7 @@ export function festivalAppearanceAsActivity(
   appearance: BandFestivalAppearance,
   userId: string,
   profileId: string,
+  today = new Date(),
 ): ScheduledActivity {
   const start = appearance.timeConfirmed && appearance.confirmedStartAt
     ? new Date(appearance.confirmedStartAt)
@@ -120,8 +121,15 @@ export function festivalAppearanceAsActivity(
     ? new Date(appearance.confirmedEndAt)
     : new Date(start.getTime() + 60 * 1000);
 
+  const localToday = [
+    today.getFullYear(), String(today.getMonth() + 1).padStart(2, "0"),
+    String(today.getDate()).padStart(2, "0"),
+  ].join("-");
+  // A premature annual result cannot mark a still-running Festival as played.
+  const datesFinished = appearance.festivalEndsOn < localToday;
   const status: ScheduledActivity["status"] =
-    appearance.sessionStatus === "completed" || appearance.festivalStatus === "completed" ? "completed"
+    appearance.sessionStatus === "completed"
+      || (appearance.festivalStatus === "completed" && datesFinished) ? "completed"
       : appearance.sessionStatus === "in_progress" ? "in_progress" : "scheduled";
 
   return {
