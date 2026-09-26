@@ -985,7 +985,7 @@ const GigBooking = () => {
                         </Link>
                       </Button>
                     </div>
-                  )}
+                  ) : null}
                 </div>
               ) : (
                 <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
