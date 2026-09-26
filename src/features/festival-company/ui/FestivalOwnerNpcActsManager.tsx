@@ -59,7 +59,8 @@ export function FestivalOwnerNpcActsManager({
     }
   }, [draft.festivalDate, festivalDates]);
 
-  const editing = Boolean(draft.id);\n  const isDj = draft.genre === "DJ / electronic";
+  const editing = Boolean(draft.id);
+  const isDj = draft.genre === "DJ / electronic";
   const reset = () => setDraft(emptyDraft(festivalDates));
 
   const edit = (act: FestivalOwnerNpcAct) => setDraft({
