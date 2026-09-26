@@ -69,7 +69,7 @@ const STATUS_CONFIG: Record<FestivalStatus, { icon: React.ReactNode; color: stri
 
 const VALID_TRANSITIONS: Record<FestivalStatus, FestivalStatus[]> = {
   draft: ["published", "cancelled"],
-  published: ["postponed", "cancelled", "completed"],
+  published: ["postponed", "cancelled"],
   postponed: ["published", "cancelled"],
   cancelled: [],
   completed: [],
@@ -89,7 +89,7 @@ export function FestivalLifecycleControls({ festival, onUpdate }: FestivalLifecy
   });
   const [cancelReason, setCancelReason] = useState("");
 
-  // Status transition mutation
+  // Completion is owned by the canonical edition close/reconciliation pipeline.\n  // Never expose a legacy status-only shortcut that can publish premature results.\n  // Status transition mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ newStatus, reason }: { newStatus: FestivalStatus; reason?: string }) => {
       const updateData: any = { status: newStatus };
