@@ -64,6 +64,9 @@ jobs:
       PGDATABASE: postgres
     steps:
       - uses: actions/checkout@v4
+      - name: Isolated PostgreSQL member, timing and cancellation contract
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f supabase/tests/fixtures/band_festival_appearances_fixture.sql
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -79,6 +82,3 @@ jobs:
         run: npx vitest run src/features/festivals/appearances
       - name: Production bundle
         run: npm run build
-      - name: Isolated PostgreSQL member, timing and cancellation contract
-        run: |
-          psql -X -v ON_ERROR_STOP=1 -f supabase/tests/fixtures/band_festival_appearances_fixture.sql
