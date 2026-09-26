@@ -162,6 +162,16 @@ def fit_from_handles(rig: bpy.types.Object, specs: list[BoneSpec], reviewed: boo
             "before applying a guide. An untouched proportional guide is not an authored rig."
         )
 
+    # A 10% edit threshold alone can pass while every face attachment remains
+    # at its generic guide position. Report these independently for review.
+    critical = [
+        marker for marker in expected
+        if marker.startswith((
+            "RMV2_FIT__Eye.", "RMV2_FIT__EarAnchor.", "RMV2_FIT__Jaw__",
+        ))
+    ]
+    untouched_critical = sorted(set(critical) - set(changed))
+
     fitted = fit_bones(specs, placed)
     issues = audit_sculpt_fit(fitted)
     if issues:
@@ -195,9 +205,11 @@ def fit_from_handles(rig: bpy.types.Object, specs: list[BoneSpec], reviewed: boo
         "movedFromGuide": len(changed),
         "reviewed": reviewed,
         "jointCount": len(fitted),
+        "untouchedFaceLandmarks": untouched_critical,
         "issues": [],
         "remaining": [
             "Review deforming and connected joints against real topology.",
+            "Inspect every untouched eye, ear and jaw landmark against the actual sculpt.",
             "Manually bind and weight every skin surface; clean each finger and twist helper.",
             "Create real body/face morphs, close-up surfaces, garment regions and LODs.",
             "Pass independent topology, weights and exported-GLB gates before rollout.",
