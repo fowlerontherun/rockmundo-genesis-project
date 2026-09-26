@@ -151,6 +151,7 @@ export function AvatarV2PublicPreview({ frame }: { frame: AvatarV2Frame }) {
                     key={`${frame}-${variant}`}
                     url={avatarV2ReferenceModelUrl(frame, variant)}
                     focus={view === 'face' ? 'face' : 'full'}
+                    experimentalRig={variant === 'headMotion'}
                   />
                 </Suspense>
               </>
