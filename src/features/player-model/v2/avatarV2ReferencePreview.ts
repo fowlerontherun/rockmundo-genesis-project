@@ -2,11 +2,19 @@ import type { AvatarV2Frame } from './avatarV2Contract';
 
 export type AvatarV2ReferenceVariant = 'source' | 'lookdev' | 'headMotion';
 export type AvatarV2ReferenceView = 'front' | 'quarter' | 'side' | 'face';
+export type AvatarV2StarterTeeStyle =
+  'logo-tee' | 'plain-black-tee' | 'plain-white-tee' | 'vintage-charcoal-tee';
 
 const REFERENCE_BASE =
   'https://raw.githubusercontent.com/fowlerontherun/rockmundo-genesis-project/avatar-v2-reference-previews';
 const FRAMES: readonly AvatarV2Frame[] = ['masculine', 'feminine'];
 const VIEWS: readonly AvatarV2ReferenceView[] = ['front', 'quarter', 'side', 'face'];
+const STARTER_TEE_KEYS: Readonly<Record<AvatarV2StarterTeeStyle, string>> = {
+  'logo-tee': 'clothing.starter.logo-tee',
+  'plain-black-tee': 'clothing.starter.plain-black-tee',
+  'plain-white-tee': 'clothing.starter.plain-white-tee',
+  'vintage-charcoal-tee': 'clothing.starter.vintage-charcoal-tee',
+};
 
 export type AvatarV2SourceJointBone = 'Eye.L' | 'Eye.R' | 'EarAnchor.L' | 'EarAnchor.R';
 
@@ -52,6 +60,24 @@ export interface AvatarV2HeadMotionEvidence {
   productionValidated: false;
 }
 
+export interface AvatarV2StarterTeeProof {
+  style: AvatarV2StarterTeeStyle;
+  catalogueKey: string;
+  preview: string;
+  views: { front: string; quarter: string };
+  evidence: {
+    sourceSurfaceVertices: number;
+    sourceSelectedFaces: number;
+    averageOffsetMm: number;
+    actualOriginalCC0SourceSurface: true;
+    gltfConformingOriginalLogo: boolean;
+    gltfRealSurfaceHems: true;
+    realGarmentArtistApproved: false;
+    requiresManualFullBodyRigAndGarmentWeighting: true;
+    productionValidated: false;
+  };
+}
+
 interface ReferenceFrame {
   frame: AvatarV2Frame;
   source: string;
@@ -61,6 +87,7 @@ interface ReferenceFrame {
   headMotion?: string;
   headMotionViews?: Record<AvatarV2ReferenceView, string>;
   headMotionEvidence?: AvatarV2HeadMotionEvidence;
+  starterTees?: AvatarV2StarterTeeProof[];
   // Optional for the older gallery manifest, but strictly verified when present.
   sourceJointSuggestions?: AvatarV2SourceJointEvidence;
 }
@@ -86,6 +113,16 @@ export function avatarV2ReferenceModelUrl(frame: AvatarV2Frame, variant: AvatarV
   const role = variant === 'lookdev' ? 'LOOKDEV-ONLY' :
     variant === 'headMotion' ? 'HEAD-RIG-EXPERIMENT' : 'SOURCE-ONLY';
   return `${REFERENCE_BASE}/${frame}/${frame}-${role}-not-validated.glb`;
+}
+
+export function avatarV2StarterTeeModelUrl(frame: AvatarV2Frame, style: AvatarV2StarterTeeStyle) {
+  return `${REFERENCE_BASE}/${frame}/${frame}-starter-${style}-LOOKDEV-ONLY-not-validated.glb`;
+}
+
+export function avatarV2StarterTeeImageUrl(
+  frame: AvatarV2Frame, style: AvatarV2StarterTeeStyle, view: 'front' | 'quarter',
+) {
+  return `${REFERENCE_BASE}/${frame}/${frame}-starter-${style}-${view}.png`;
 }
 
 export function avatarV2ReferenceImageUrl(
@@ -171,6 +208,38 @@ export function parseAvatarV2ReferenceManifest(raw: unknown): AvatarV2ReferenceM
       }
     }
 
+    if (item.starterTees !== undefined) {
+      if (!Array.isArray(item.starterTees) || item.starterTees.length !== 4) return null;
+      const styles = new Set<AvatarV2StarterTeeStyle>();
+      for (const tee of item.starterTees) {
+        if (!tee || typeof tee !== 'object') return null;
+        const proof = tee as AvatarV2StarterTeeProof;
+        const style = proof.style;
+        if (!(style in STARTER_TEE_KEYS) || styles.has(style) ||
+            proof.catalogueKey !== STARTER_TEE_KEYS[style]) return null;
+        styles.add(style);
+        const glb = `${frame}/${frame}-starter-${style}-LOOKDEV-ONLY-not-validated.glb`;
+        if (proof.preview !== glb || !inventory.has(glb) ||
+            !proof.views || typeof proof.views !== 'object') return null;
+        for (const view of ['front', 'quarter'] as const) {
+          const image = `${frame}/${frame}-starter-${style}-${view}.png`;
+          if (proof.views[view] !== image || !inventory.has(image)) return null;
+        }
+        const evidence = proof.evidence;
+        if (!evidence || evidence.actualOriginalCC0SourceSurface !== true ||
+            evidence.gltfRealSurfaceHems !== true ||
+            evidence.realGarmentArtistApproved !== false ||
+            evidence.requiresManualFullBodyRigAndGarmentWeighting !== true ||
+            evidence.productionValidated !== false ||
+            evidence.gltfConformingOriginalLogo !== (style === 'logo-tee') ||
+            !Number.isInteger(evidence.sourceSurfaceVertices) ||
+            evidence.sourceSurfaceVertices < 350 ||
+            !Number.isInteger(evidence.sourceSelectedFaces) ||
+            evidence.sourceSelectedFaces < 350 ||
+            !Number.isFinite(evidence.averageOffsetMm) ||
+            evidence.averageOffsetMm < 13 || evidence.averageOffsetMm > 15) return null;
+      }
+    }
     for (const variant of ['source', 'lookdev'] as const) {
       const views = item[`${variant}Views`];
       if (!views || typeof views !== 'object') return null;
@@ -224,6 +293,11 @@ export function parseAvatarV2ReferenceManifest(raw: unknown): AvatarV2ReferenceM
   // neither: never quietly show the new V2 proof for only one body.
   if (manifest.frames.some((item: ReferenceFrame) => !!item.headMotion) &&
       !manifest.frames.every((item: ReferenceFrame) => !!item.headMotion)) return null;
+
+  // The new Starter Wardrobe proof must cover all four unchanged existing
+  // catalogue keys on BOTH real CC0 body frames, or neither.
+  if (manifest.frames.some((item: ReferenceFrame) => !!item.starterTees) &&
+      !manifest.frames.every((item: ReferenceFrame) => !!item.starterTees)) return null;
 
   return manifest as unknown as AvatarV2ReferenceManifest;
 }
