@@ -173,15 +173,45 @@ export function avatarV2GarmentConfig(item: ClothingItem): AvatarV2GarmentConfig
   };
 }
 
+/** A validated label alone is not proof of eight distinct frame/LOD files. */
+export function avatarV2GarmentHasCompleteAssetManifest(config: AvatarV2GarmentConfig): boolean {
+  const paths = (['masculine', 'feminine'] as const).flatMap(frame =>
+    ([0, 1, 2, 3] as const).map(lod => config.frames[frame]?.[`lod${lod}`])
+  );
+  return paths.every((path): path is string => !!path) && new Set(paths).size === 8;
+}
+
 export function avatarV2GarmentFile(
   item: ClothingItem,
   frame: AvatarV2Frame,
   lod: AvatarV2Lod,
 ) {
   const config = avatarV2GarmentConfig(item);
-  if (!config || config.status !== 'validated') return null;
+  if (!config || config.status !== 'validated' || !avatarV2GarmentHasCompleteAssetManifest(config)) return null;
+  const slot = richGarmentSlot(item);
+  if (BODY_OCCLUSION_SLOTS.has(slot) && !config.occludeBodyRegions.length) return null;
+  if (config.colourMode === 'zones' && !config.materialZones.main.length) return null;
   const assets = config.frames[frame];
   return assets?.[`lod${lod}` as keyof AvatarV2GarmentFrameAssets] ?? null;
+}
+
+/** Prevent one equipped item from silently borrowing another item's V2 mesh. */
+function sharedEquippedGarmentAsset(clothing: readonly ResolvedEquippedClothing[]): string | null {
+  const owners = new Map<string, string>();
+  for (const { item } of clothing) {
+    const config = avatarV2GarmentConfig(item);
+    if (!config) continue;
+    for (const frame of ['masculine', 'feminine'] as const) {
+      for (const lod of [0, 1, 2, 3] as const) {
+        const path = config.frames[frame]?.[`lod${lod}`];
+        if (!path) continue;
+        const previous = owners.get(path);
+        if (previous && previous !== item.id) return path;
+        owners.set(path, item.id);
+      }
+    }
+  }
+  return null;
 }
 
 export function requiredAvatarV2GarmentFiles(
@@ -189,7 +219,7 @@ export function requiredAvatarV2GarmentFiles(
   frame: AvatarV2Frame,
   lod: AvatarV2Lod,
 ) {
-  if (!AVATAR_V2_ROLLOUT.enabled) return [];
+  if (!AVATAR_V2_ROLLOUT.enabled || sharedEquippedGarmentAsset(clothing)) return [];
   return [...new Set(clothing
     .map(row => avatarV2GarmentFile(row.item, frame, lod))
     .filter((file): file is string => !!file))];
@@ -200,6 +230,18 @@ export function avatarV2ClothingCompatibilityReason(
   frame: AvatarV2Frame,
   lod: AvatarV2Lod,
 ) {
+  const equippedIds = new Set<string>();
+  const equippedKeys = new Set<string>();
+  for (const { item } of clothing) {
+    if (equippedIds.has(item.id)) return `Duplicate equipped clothing item: ${item.name}.`;
+    equippedIds.add(item.id);
+    const key = item.curated_asset_key?.trim();
+    if (key && equippedKeys.has(key)) return `Duplicate equipped curated clothing key: ${key}.`;
+    if (key) equippedKeys.add(key);
+  }
+  if (sharedEquippedGarmentAsset(clothing)) {
+    return 'Equipped Avatar V2 clothing items share a garment asset path.';
+  }
   for (const row of clothing) {
     const slot = richGarmentSlot(row.item);
     if (!SUPPORTED_SLOTS.has(slot)) {

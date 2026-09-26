@@ -12,11 +12,13 @@ import { avatarV2GarmentConfig } from './avatarV2Garments';
 export type ClothingMigrationIssue =
   | 'missing-stable-key'
   | 'duplicate-stable-key'
+  | 'duplicate-item-id'
   | 'unassigned-pack'
   | 'missing-v2-mapping'
   | 'incomplete-v2-frames'
   | 'missing-v2-lods'
   | 'reused-v2-lod-file'
+  | 'shared-v2-file-between-items'
   | 'missing-body-occlusion'
   | 'missing-colour-zones'
   | 'preview-metadata-pending'
@@ -80,7 +82,20 @@ export function auditAvatarV2ClothingCatalog(
 ): ClothingMigrationSummary {
   const collectionNames = new Map(collections.map(collection => [collection.id, collection.name]));
   const keys = new Map<string, number>();
+  const ids = new Map<string, number>();
+  const assetOwners = new Map<string, Set<string>>();
   for (const item of items) {
+    ids.set(item.id, (ids.get(item.id) ?? 0) + 1);
+    const manifest = avatarV2GarmentConfig(item);
+    if (manifest) for (const frame of ['masculine', 'feminine'] as const) {
+      for (const lod of ALL_LODS) {
+        const path = manifest.frames[frame]?.[lod];
+        if (!path) continue;
+        const owners = assetOwners.get(path) ?? new Set<string>();
+        owners.add(item.id);
+        assetOwners.set(path, owners);
+      }
+    }
     const key = item.curated_asset_key?.trim();
     if (key) keys.set(key, (keys.get(key) ?? 0) + 1);
   }
@@ -91,6 +106,7 @@ export function auditAvatarV2ClothingCatalog(
     const key = item.curated_asset_key?.trim() || null;
     const slot = richGarmentSlot(item);
     const issues: ClothingMigrationIssue[] = [];
+    if ((ids.get(item.id) ?? 0) > 1) issues.push('duplicate-item-id');
     if (!key) issues.push('missing-stable-key');
     else if ((keys.get(key) ?? 0) > 1) issues.push('duplicate-stable-key');
     if (!item.collection_id || !collectionNames.has(item.collection_id)) issues.push('unassigned-pack');
@@ -109,6 +125,9 @@ export function auditAvatarV2ClothingCatalog(
         ALL_LODS.map(lod => config.frames[frame as 'masculine' | 'feminine']?.[lod]).filter(Boolean)
       );
       if (new Set(paths).size !== paths.length) issues.push('reused-v2-lod-file');
+      if (paths.some(path => (assetOwners.get(path!)?.size ?? 0) > 1)) {
+        issues.push('shared-v2-file-between-items');
+      }
       if (['masculine', 'feminine'].some(frame =>
         ALL_LODS.some(lod => !config.frames[frame as 'masculine' | 'feminine']?.[lod])
       )) issues.push('missing-v2-lods');
@@ -126,7 +145,9 @@ export function auditAvatarV2ClothingCatalog(
     if (status === 'legacy') issues.push('legacy-review');
 
     const v2MappingComplete = !!config && config.status === 'validated' &&
-      !issues.some(issue => ['incomplete-v2-frames', 'missing-v2-lods', 'reused-v2-lod-file',
+      !issues.includes('duplicate-item-id') && !issues.includes('missing-stable-key') &&
+      !issues.includes('duplicate-stable-key') &&
+      !issues.some(issue => ['incomplete-v2-frames', 'missing-v2-lods', 'reused-v2-lod-file', 'shared-v2-file-between-items',
         'missing-body-occlusion', 'missing-colour-zones'].includes(issue));
     const wave: ClothingMigrationWave =
       status === 'published' ? '1-published' :

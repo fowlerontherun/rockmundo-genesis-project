@@ -7,6 +7,7 @@ import {
   avatarV2ClothingCompatibilityReason,
   avatarV2GarmentConfig,
   avatarV2GarmentFile,
+  avatarV2GarmentHasCompleteAssetManifest,
   buildAvatarV2Garments,
 } from './avatarV2Garments';
 
@@ -37,10 +38,14 @@ function item(overrides: Partial<ClothingItem> = {}): ClothingItem {
           masculine: {
             lod0: 'avatar-v2/clothing/masculine/test-tee-lod0.glb',
             lod1: 'avatar-v2/clothing/masculine/test-tee-lod1.glb',
+            lod2: 'avatar-v2/clothing/masculine/test-tee-lod2.glb',
+            lod3: 'avatar-v2/clothing/masculine/test-tee-lod3.glb',
           },
           feminine: {
             lod0: 'avatar-v2/clothing/feminine/test-tee-lod0.glb',
             lod1: 'avatar-v2/clothing/feminine/test-tee-lod1.glb',
+            lod2: 'avatar-v2/clothing/feminine/test-tee-lod2.glb',
+            lod3: 'avatar-v2/clothing/feminine/test-tee-lod3.glb',
           },
         },
         occludeBodyRegions: ['torso'],
@@ -197,7 +202,55 @@ describe('Avatar V2 garments', () => {
     expect(config?.occludeBodyRegions).toEqual(['torso']);
     expect(avatarV2GarmentFile(item(), 'masculine', 0))
       .toBe('avatar-v2/clothing/masculine/test-tee-lod0.glb');
-    expect(avatarV2GarmentFile(item(), 'masculine', 2)).toBeNull();
+    expect(avatarV2GarmentFile(item(), 'masculine', 2))
+      .toBe('avatar-v2/clothing/masculine/test-tee-lod2.glb');
+  });
+
+  it('refuses incomplete or reused manifests even when marked validated', () => {
+    const original = item();
+    const complete = avatarV2GarmentConfig(original)!;
+    expect(avatarV2GarmentHasCompleteAssetManifest(complete)).toBe(true);
+    const incomplete = item({ garment_config: { avatarV2: {
+      ...complete, frames: { masculine: complete.frames.masculine },
+    } } });
+    expect(avatarV2GarmentFile(incomplete, 'masculine', 0)).toBeNull();
+    const repeated = item({ garment_config: { avatarV2: {
+      ...complete, frames: { ...complete.frames, feminine: {
+        ...complete.frames.feminine, lod3: complete.frames.masculine?.lod3,
+      } },
+    } } });
+    expect(avatarV2GarmentFile(repeated, 'masculine', 0)).toBeNull();
+    expect(avatarV2ClothingCompatibilityReason([row(repeated)], 'masculine', 0))
+      .toContain('no validated');
+  });
+
+  it('rejects duplicate equipped inventory identities and curated keys', () => {
+    const first = item();
+    expect(avatarV2ClothingCompatibilityReason([row(first), row(first)], 'masculine', 0))
+      .toContain('Duplicate equipped clothing item');
+    const second = item({ id: 'other', name: 'Other Tee' });
+    expect(avatarV2ClothingCompatibilityReason([row(first), row(second)], 'masculine', 0))
+      .toContain('Duplicate equipped curated clothing key');
+  });
+
+  it('rejects shared assets across different equipped garments', () => {
+    const first = item();
+    const second = item({ id: 'other', name: 'Other Tee',
+      curated_asset_key: 'clothing.test.other-tee' });
+    expect(avatarV2ClothingCompatibilityReason([row(first), row(second)], 'masculine', 0))
+      .toContain('share a garment asset path');
+  });
+
+  it('does not load a validated garment with missing body coverage or colour zones', () => {
+    const complete = avatarV2GarmentConfig(item())!;
+    const uncovered = item({ garment_config: { avatarV2: {
+      ...complete, occludeBodyRegions: [],
+    } } });
+    expect(avatarV2GarmentFile(uncovered, 'masculine', 0)).toBeNull();
+    const uncoloured = item({ garment_config: { avatarV2: {
+      ...complete, materialZones: { main: [], trim: [] },
+    } } });
+    expect(avatarV2GarmentFile(uncoloured, 'masculine', 0)).toBeNull();
   });
 
   it('keeps an item incompatible until its exact frame and LOD is validated', () => {
@@ -294,7 +347,18 @@ describe('Avatar V2 garments', () => {
           version: 1,
           status: 'validated',
           frames: {
-            masculine: { lod2: 'avatar-v2/clothing/masculine/test-tee-lod2.glb' },
+            masculine: {
+              lod0: 'avatar-v2/clothing/masculine/test-tee-lod0.glb',
+              lod1: 'avatar-v2/clothing/masculine/test-tee-lod1.glb',
+              lod2: 'avatar-v2/clothing/masculine/test-tee-lod2.glb',
+              lod3: 'avatar-v2/clothing/masculine/test-tee-lod3.glb',
+            },
+            feminine: {
+              lod0: 'avatar-v2/clothing/feminine/test-tee-lod0.glb',
+              lod1: 'avatar-v2/clothing/feminine/test-tee-lod1.glb',
+              lod2: 'avatar-v2/clothing/feminine/test-tee-lod2.glb',
+              lod3: 'avatar-v2/clothing/feminine/test-tee-lod3.glb',
+            },
           },
           occludeBodyRegions: ['torso'],
           colourMode: 'zones',
