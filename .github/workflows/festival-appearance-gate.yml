@@ -16,6 +16,7 @@ on:
       - 'src/mobile/components/MobilePrimitives.tsx'
       - 'src/mobile/shell/MobileActivityBar.tsx'
       - 'supabase/migrations/20291220110000_member_festival_appearances.sql'
+      - 'supabase/migrations/20291220110100_confirmed_festival_slots_and_local_timezone.sql'
       - 'supabase/tests/band_festival_appearances_regression.sql'
       - 'supabase/tests/fixtures/band_festival_appearances_fixture.sql'
   push:
@@ -34,6 +35,7 @@ on:
       - 'src/mobile/components/MobilePrimitives.tsx'
       - 'src/mobile/shell/MobileActivityBar.tsx'
       - 'supabase/migrations/20291220110000_member_festival_appearances.sql'
+      - 'supabase/migrations/20291220110100_confirmed_festival_slots_and_local_timezone.sql'
       - 'supabase/tests/band_festival_appearances_regression.sql'
       - 'supabase/tests/fixtures/band_festival_appearances_fixture.sql'
 
