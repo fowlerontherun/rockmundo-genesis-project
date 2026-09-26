@@ -29,6 +29,7 @@ import rockmundo_avatar_v2_rig_guide as guide  # noqa: E402
 import rockmundo_avatar_v2_fit_rig as fitter  # noqa: E402
 import rockmundo_avatar_v2_source_joint_suggestions as joints  # noqa: E402
 import rockmundo_avatar_v2_head_motion_proof as motion  # noqa: E402
+import rockmundo_avatar_v2_starter_tees as tees  # noqa: E402
 import rockmundo_avatar_v2_source_lookdev as lookdev  # noqa: E402
 from fetch_human_base_meshes import ARCHIVE_NAME, EXPECTED_BYTES, archive_valid  # noqa: E402
 
@@ -256,6 +257,14 @@ def build_frame(frame: str, source_file: pathlib.Path, root: pathlib.Path) -> di
         detail_meshes, source_joint_report, frame_dir, render_contact_views,
     )
 
+    # First actual existing-product garment authoring: eight editable genuine
+    # source-conforming tee variants across both CC0 bodies, not production
+    # skinned garments. Build only after the immutable head experiment scene
+    # and GLB have been saved, so separate previews cannot interfere.
+    starter_tees = tees.build_starter_tee_proofs(
+        frame, real_body[0], detail_meshes, frame_dir,
+    )
+
     # The source is a real mesh, but no stock seed has passed the RockMundo
     # fitted-weight, genuine morph, sculpt-detail or full performance gates.
     return {
@@ -277,6 +286,7 @@ def build_frame(frame: str, source_file: pathlib.Path, root: pathlib.Path) -> di
         "fitMarkers": handles["markers"],
         "sourceJointSuggestions": source_joint_report,
         "headMotionExperiment": head_motion,
+        "starterTeePrototypes": starter_tees,
         "productionValidated": False,
         "requiresManualJointFit": bool(rig.get("rockmundoAvatarV2RequiresManualFit", True)),
     }
