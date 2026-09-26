@@ -201,6 +201,80 @@ def verify_artifacts(root: pathlib.Path) -> dict:
                     or experiment.get("gltfJointCount", 0) < 5):
                 errors.append(f"{frame} head/eye experiment lacks measured, low-influence genuine skinned deformation.")
 
+        tees = metadata.get("starterTeePrototypes")
+        existing_keys = {
+            "logo-tee": "clothing.starter.logo-tee",
+            "plain-black-tee": "clothing.starter.plain-black-tee",
+            "plain-white-tee": "clothing.starter.plain-white-tee",
+            "vintage-charcoal-tee": "clothing.starter.vintage-charcoal-tee",
+        }
+        if (not isinstance(tees, dict)
+                or tees.get("schema") != "rockmundo.avatar-v2-starter-tee-authoring-proofs"
+                or tees.get("version") != 1
+                or tees.get("frame") != frame
+                or tees.get("scene") != f"{frame}-starter-four-tee-prototypes-UNAPPROVED.blend"
+                or tees.get("oldCatalogueKeysUnchanged") is not True
+                or tees.get("noDatabaseItemsCreated") is not True
+                or any(tees.get(field) is not False for field in (
+                    "fullRigValidated", "artistApproved", "productionValidated"
+                ))):
+            errors.append(f"{frame} has no honest full existing Starter Wardrobe tee authoring proof.")
+        else:
+            expected_files.add(f"{frame}/{tees['scene']}")
+            variants = tees.get("variants")
+            if (not isinstance(variants, list) or len(variants) != 4
+                    or {entry.get("style") for entry in variants if isinstance(entry, dict)}
+                    != set(existing_keys)):
+                errors.append(f"{frame} did not produce all four exact existing, non-duplicate starter tees.")
+            else:
+                for entry in variants:
+                    style = entry["style"]
+                    preview = f"{frame}-starter-{style}-LOOKDEV-ONLY-not-validated.glb"
+                    views = {angle: f"{frame}-starter-{style}-{angle}.png"
+                             for angle in ("front", "quarter")}
+                    surface = entry.get("sourceSurface")
+                    brand = entry.get("brand")
+                    if (entry.get("catalogueKey") != existing_keys[style]
+                            or entry.get("preview") != preview
+                            or entry.get("views") != views
+                            or not isinstance(surface, dict)
+                            or surface.get("sourceTotalVertices", 0) < 1000
+                            or surface.get("sourceSelectedFaces", 0) < 350
+                            or surface.get("sourceSurfaceVertices", 0) < 350
+                            or surface.get("originalSurfaceConforming") is not True
+                            or surface.get("largestConnectedOriginalComponent") is not True
+                            or surface.get("sculptDerivedShortSleeves") is not True
+                            or surface.get("sculptDerivedNeckCut") is not True
+                            or surface.get("manualGarmentFitRequired") is not True
+                            or surface.get("productionValidated") is not False
+                            or not 8 <= surface.get("minimumOffsetMm", -1) <= 23
+                            or not 8 <= surface.get("maximumOffsetMm", -1) <= 23
+                            or not 13 <= surface.get("averageOffsetMm", -1) <= 15
+                            or entry.get("authoringBoundaryEdges", 0) < 20
+                            or entry.get("actualOriginalCC0SourceSurface") is not True
+                            or entry.get("gltfSourceMappedShirt") is not True
+                            or entry.get("gltfRealSurfaceHems") is not True
+                            or entry.get("gltfHasSkinning") is not False
+                            or entry.get("gltfHasAnimations") is not False
+                            or entry.get("gltfMeshCount", 0) < 13
+                            or entry.get("requiresManualFullBodyRigAndGarmentWeighting") is not True
+                            or entry.get("realGarmentArtistApproved") is not False
+                            or entry.get("productionValidated") is not False):
+                        errors.append(f"{frame}/{style} has unverified CC0-derived garment topology or false certification.")
+                    if style == "logo-tee":
+                        if (not isinstance(brand, dict)
+                                or brand.get("realCurvedPrintFaces", 0) < 12
+                                or brand.get("actualOriginalBrandImage") != "src/assets/rockmundo-logo.png"
+                                or brand.get("usesExistingBrandArtwork") is not True
+                                or brand.get("previewOnly") is not True
+                                or brand.get("printOffsetMm", -1) > 1
+                                or entry.get("gltfConformingOriginalLogo") is not True):
+                            errors.append(f"{frame} real RockMundo logo art must be UV-fitted onto original chest triangles.")
+                    elif brand is not None or entry.get("gltfConformingOriginalLogo") is not False:
+                        errors.append(f"{frame}/{style} has incorrectly inherited a purchased logo graphic.")
+                    expected_files.add(f"{frame}/{preview}")
+                    expected_files.update(f"{frame}/{name}" for name in views.values())
+
         if (metadata.get("productionValidated") is not False
                 or metadata.get("requiresManualJointFit") is not True):
             errors.append(f"{frame} must retain its unfinished manual-rig gate.")
