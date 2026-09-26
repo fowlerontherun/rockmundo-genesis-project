@@ -69,6 +69,9 @@ export interface AvatarV2StarterTeeProof {
     sourceSurfaceVertices: number;
     sourceSelectedFaces: number;
     averageOffsetMm: number;
+    smoothedRealBoundaryVertices: number;
+    smoothingReprojectedOnOriginalCC0: true;
+    postSmoothingBoundaryClearanceMm: number;
     actualOriginalCC0SourceSurface: true;
     gltfConformingOriginalLogo: boolean;
     gltfRealSurfaceHems: true;
@@ -227,6 +230,12 @@ export function parseAvatarV2ReferenceManifest(raw: unknown): AvatarV2ReferenceM
         }
         const evidence = proof.evidence;
         if (!evidence || evidence.actualOriginalCC0SourceSurface !== true ||
+            evidence.smoothingReprojectedOnOriginalCC0 !== true ||
+            !Number.isInteger(evidence.smoothedRealBoundaryVertices) ||
+            evidence.smoothedRealBoundaryVertices < 40 ||
+            !Number.isFinite(evidence.postSmoothingBoundaryClearanceMm) ||
+            evidence.postSmoothingBoundaryClearanceMm < 13.99 ||
+            evidence.postSmoothingBoundaryClearanceMm > 14.01 ||
             evidence.gltfRealSurfaceHems !== true ||
             evidence.realGarmentArtistApproved !== false ||
             evidence.requiresManualFullBodyRigAndGarmentWeighting !== true ||
