@@ -21,7 +21,7 @@ import { MobileEntityCard, MobileErrorState, MobileSectionCard, MobileStatusBadg
 import { MobileInstallPrompt, MobileNotificationGroups, MobileOfflineState, MobileReturningBriefing, MobileUpdateBanner } from "../components/MobileOnboarding";
 import { resolveCompanionPath } from "@/mobile/routeRegistry";
 import { useMobileDaySchedule } from "@/mobile/hooks/useMobileDaySchedule";
-import { FESTIVAL_APPEARANCE_HIGHLIGHT } from "@/features/festivals/appearances/bandFestivalAppearances";
+import { FESTIVAL_APPEARANCE_HIGHLIGHT, formatFestivalInstant } from "@/features/festivals/appearances/bandFestivalAppearances";
 
 const formatTime = (value: string) => new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 const humanise = (value: string) => value.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -69,17 +69,20 @@ function ScheduleList({ schedule, limit }: { schedule: MobileDayQuery; limit?: n
         const festivalHref = festival && typeof activity.metadata?.detail_href === "string"
           && activity.metadata.detail_href.startsWith("/world/festivals/")
           ? activity.metadata.detail_href : null;
+        const festivalClock = festival
+          ? `${formatFestivalInstant(activity.scheduled_start, activity.metadata?.festival_timezone ?? null)}–${formatFestivalInstant(activity.scheduled_end, activity.metadata?.festival_timezone ?? null)}`
+          : `${formatTime(activity.scheduled_start)}–${formatTime(activity.scheduled_end)}`;
         return (
-          <div key={`${activity.activity_type}-${activity.id}`}
-            className={festival ? `rounded-xl ${FESTIVAL_APPEARANCE_HIGHLIGHT}` : undefined}>
-            <MobileEntityCard
-              title={activity.title}
-              subtitle={`${activity.metadata?.date_only ? "Set time TBA" : `${formatTime(activity.scheduled_start)}–${formatTime(activity.scheduled_end)}`}${activity.location ? ` • ${activity.location}` : ""}`}
-              icon={festival ? <Sparkles className="h-5 w-5 text-fuchsia-600 dark:text-fuchsia-300" /> : <Clock3 className="h-5 w-5" />}
-              meta={<MobileStatusBadge tone={festival ? "info" : activity.status === "completed" ? "success" : activity.status === "in_progress" ? "info" : "neutral"}>{festival ? "✦ FESTIVAL" : activity.status.replace("_", " ")}</MobileStatusBadge>}
-              onPress={festivalHref ? () => navigate(festivalHref) : undefined}
-            />
-          </div>
+          <MobileEntityCard
+            key={`${activity.activity_type}-${activity.id}`}
+            className={festival ? FESTIVAL_APPEARANCE_HIGHLIGHT : undefined}
+            title={activity.title}
+            subtitle={`${activity.metadata?.date_only ? "Set time TBA" : festivalClock}${activity.location ? ` • ${activity.location}` : ""}`}
+            icon={festival ? <Sparkles className="h-5 w-5 text-fuchsia-600 dark:text-fuchsia-300" /> : <Clock3 className="h-5 w-5" />}
+            meta={festival ? <span className="rounded-full border border-fuchsia-400/70 bg-fuchsia-500/20 px-2 py-1 text-[11px] font-bold text-fuchsia-800 dark:text-fuchsia-200">✦ FESTIVAL</span> :
+              <MobileStatusBadge tone={activity.status === "completed" ? "success" : activity.status === "in_progress" ? "info" : "neutral"}>{activity.status.replace("_", " ")}</MobileStatusBadge>}
+            onPress={festivalHref ? () => navigate(festivalHref) : undefined}
+          />
         );
       })}
     </div>
