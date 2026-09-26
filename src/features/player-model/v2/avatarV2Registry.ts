@@ -94,3 +94,23 @@ export function avatarV2ReleaseBlockers(assets: readonly AvatarV2BaseAsset[] = A
   }
   return blockers;
 }
+
+/** Minimum production meshes for the guarded rollout; remaining LODs still require separate QA. */
+export function avatarV2MinimumRolloutBlockers(assets: readonly AvatarV2BaseAsset[] = AVATAR_V2_BASE_ASSETS) {
+  const required = assets.filter(asset => asset.lod === 0 || asset.lod === 1);
+  const blockers: string[] = [];
+  for (const frame of ['masculine', 'feminine'] as const) {
+    for (const lod of [0, 1] as const) {
+      const entries = required.filter(asset => asset.frame === frame && asset.lod === lod);
+      if (entries.length !== 1) {
+        blockers.push(`${frame} LOD${lod}: expected one base asset, found ${entries.length}.`);
+        continue;
+      }
+      const asset = entries[0];
+      if (asset.status !== 'validated') blockers.push(`${frame} LOD${lod}: ${asset.status}; not validated.`);
+      if (asset.file !== `avatar-v2/${frame}/base-lod${lod}.glb`) blockers.push(`${frame} LOD${lod}: unexpected asset path.`);
+    }
+  }
+  if (required.length !== 4) blockers.push('Minimum rollout manifest contains extra or duplicate assets.');
+  return blockers;
+}
