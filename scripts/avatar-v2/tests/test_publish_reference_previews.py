@@ -54,6 +54,10 @@ class ReferencePreviewPublicationTests(unittest.TestCase):
                         },
                         "sourceSurface": {
                             "originalSurfaceConforming": True,
+                            "smoothingReprojectedOnOriginalCC0": True,
+                            "boundarySmoothingIterations": 10,
+                            "smoothedRealBoundaryVertices": 110,
+                            "postSmoothingBoundaryClearanceMm": 14,
                             "sourceSurfaceVertices": 1000,
                             "sourceSelectedFaces": 1100,
                             "averageOffsetMm": 14.,
@@ -127,6 +131,8 @@ class ReferencePreviewPublicationTests(unittest.TestCase):
         self.assertEqual(manifest["frames"][0]["starterTees"][0]["catalogueKey"],
                          "clothing.starter.logo-tee")
         self.assertTrue(manifest["frames"][0]["starterTees"][0]["evidence"]["gltfConformingOriginalLogo"])
+        self.assertGreaterEqual(manifest["frames"][0]["starterTees"][0]["evidence"]["smoothedRealBoundaryVertices"], 40)
+        self.assertTrue(manifest["frames"][0]["starterTees"][0]["evidence"]["smoothingReprojectedOnOriginalCC0"])
         self.assertFalse(manifest["frames"][0]["starterTees"][0]["evidence"]["productionValidated"])
         self.assertEqual(len(list(self.output.rglob("*.blend"))), 0)
         self.assertEqual(len(list(self.output.rglob("*.glb"))), 14)
