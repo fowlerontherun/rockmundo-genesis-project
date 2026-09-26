@@ -86,6 +86,8 @@ function actualStarterGallery() {
           style, catalogueKey, preview, views,
           evidence: {
             sourceSurfaceVertices: 1300, sourceSelectedFaces: 1450, averageOffsetMm: 14,
+            smoothedRealBoundaryVertices: 124, smoothingReprojectedOnOriginalCC0: true,
+            postSmoothingBoundaryClearanceMm: 14,
             actualOriginalCC0SourceSurface: true,
             gltfConformingOriginalLogo: style === 'logo-tee',
             gltfRealSurfaceHems: true,
