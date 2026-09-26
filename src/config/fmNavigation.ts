@@ -73,7 +73,7 @@ export const FM_MODULES: FMModule[] = [
     icon: Users,
     rootPath: "/character",
     matchPaths: [
-      "/character", "/hub/character", "/characters", "/my-character", "/avatar-designer",
+      "/character", "/hub/character", "/characters", "/my-character", "/avatar-designer", "/avatar-v2-preview",
       "/wellness", "/skin-store", "/tattoo-parlour", "/gear", "/gear-shop",
       "/inventory", "/clothing-shop", "/housing", "/personal-vehicles",
       "/family", "/legacy", "/hall-of-immortals", "/skills",
@@ -95,6 +95,7 @@ export const FM_MODULES: FMModule[] = [
           { label: "Characters", path: "/characters", icon: Users },
           { label: "Edit Character", path: "/my-character", icon: Users },
           { label: "Avatar Designer", path: "/avatar-designer", icon: Sparkles },
+          { label: "Avatar V2 Preview", path: "/avatar-v2-preview", icon: Star },
           { label: "Skin Store", path: "/skin-store", icon: ShoppingBag },
           { label: "Tattoo Parlour", path: "/tattoo-parlour", icon: Palette },
           { label: "Clothing Shop", path: "/clothing-shop", icon: Scissors },
