@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AVATAR_V2_BASE_ASSETS, avatarV2ReleaseBlockers } from './avatarV2Registry';
+import { AVATAR_V2_BASE_ASSETS, avatarV2ReleaseBlockers, avatarV2MinimumRolloutBlockers } from './avatarV2Registry';
 
 describe('Avatar V2 release diagnostics', () => {
   it('reports all eight unvalidated production assets without enabling rollout', () => {
@@ -10,6 +10,13 @@ describe('Avatar V2 release diagnostics', () => {
   it('accepts a complete, unique validated manifest', () => {
     const assets = AVATAR_V2_BASE_ASSETS.map(asset => ({ ...asset, status: 'validated' as const }));
     expect(avatarV2ReleaseBlockers(assets)).toEqual([]);
+  });
+
+  it('separates minimum LOD0/1 rollout from optional LOD2/3 completion', () => {
+    const assets = AVATAR_V2_BASE_ASSETS.map(asset => ({ ...asset, status: asset.lod <= 1 ? 'validated' as const : 'planned' as const }));
+    expect(avatarV2MinimumRolloutBlockers(assets)).toEqual([]);
+    expect(avatarV2ReleaseBlockers(assets)).toHaveLength(4);
+    expect(avatarV2MinimumRolloutBlockers(assets.slice(1))).toContain('masculine LOD0: expected one base asset, found 0.');
   });
 
   it('rejects missing, duplicated and misrouted assets', () => {
