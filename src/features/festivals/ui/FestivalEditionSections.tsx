@@ -443,12 +443,41 @@ export function FestivalEditionHistory({ editionId }: { editionId: string }) {
               <ResultValue label="Merchandise" value={formatMoney(result.financials.merchandiseRevenueMinor, result.currencyCode)} />
               <ResultValue label="Total revenue" value={formatMoney(result.financials.totalRevenueMinor, result.currencyCode)} />
               <ResultValue label="Operating cost" value={formatMoney(result.financials.operatingCostMinor, result.currencyCode)} />
+              {result.financials.artistFeesMinor !== undefined && (
+                <ResultValue
+                  label="Artist payments (included in costs)"
+                  value={formatMoney(result.financials.artistFeesMinor, result.currencyCode)}
+                />
+              )}
               <ResultValue label="Tax" value={formatMoney(result.financials.taxMinor, result.currencyCode)} />
               <ResultValue
                 label="Net result"
                 value={formatMoney(result.financials.netProfitMinor, result.currencyCode)}
                 emphasis
               />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Contracted artist payments</CardTitle>
+              <CardDescription>
+                These amounts are actual credits to each band's treasury in the contract currency,
+                not estimated crowd attendance or the Festival owner's net profit.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {result.artistPayouts.length ? result.artistPayouts.map((payout) => (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3" key={payout.bookingId}>
+                  <span className="font-medium">{payout.artistName}</span>
+                  <span className="font-semibold">{formatMoney(payout.amountMinor, payout.currencyCode)}</span>
+                </div>
+              )) : (
+                <p className="text-sm text-muted-foreground">
+                  No artist payment receipts were recorded for this annual result.
+                  Review the original bookings and settlement before a rerun.
+                </p>
+              )}
             </CardContent>
           </Card>
 
