@@ -19,6 +19,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json",
     "test:unit": "vitest run",
+    "test:avatar-v2:readiness": "vitest run src/features/player-model/v2/avatarV2Registry.release.test.ts",
     "test:crew": "vitest run src/utils/__tests__/crewScoring.test.ts src/components/band/CrewCareerHistoryDialog.test.tsx",
     "test:crew:db": "bash -lc 'test -n \"$SUPABASE_DB_URL\" || { echo SUPABASE_DB_URL is required; exit 2; }; psql \"$SUPABASE_DB_URL\" -X -v ON_ERROR_STOP=1 -f supabase/tests/crew_reconciliation_harness.sql'",
     "test:critical-journeys": "node scripts/run-critical-journeys.mjs",
