@@ -162,6 +162,15 @@ def audit_sculpt_fit(fitted: Mapping[str, FitBone]) -> list[str]:
         right = fitted.get(f"{part}.R")
         if left and right and abs(left.head[2] - right.head[2]) > tolerance:
             errors.append(f"{part} left/right pivots differ in height by more than {tolerance * 1000:.0f}mm.")
+    # Large horizontal differences between the two eye pivots can leave one
+    # eye outside its socket even when both are on the correct side.
+    eyes = (fitted.get("Eye.L"), fitted.get("Eye.R"))
+    if all(eyes):
+        left_eye, right_eye = eyes
+        left_offset = left_eye.head[0] - midline
+        right_offset = midline - right_eye.head[0]
+        if abs(left_offset - right_offset) > .025:
+            errors.append("Eye left/right pivots differ in distance from the midline by more than 25mm.")
     jaw = fitted.get("Jaw")
     if jaw and abs(jaw.head[0] - midline) > .035:
         errors.append("Jaw hinge is more than 35mm from the body midline.")
