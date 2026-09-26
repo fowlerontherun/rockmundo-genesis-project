@@ -59,6 +59,16 @@ html.rm-mobile-root body {
   box-shadow: var(--m-shadow);
 }
 
+/* Festival bookings have their own unmistakable but motion-free treatment. */
+.rm-mcard.rm-mcard--festival {
+  border-color: hsl(292 85% 60% / 0.72);
+  background: linear-gradient(110deg,
+    hsl(292 85% 60% / 0.18),
+    hsl(268 80% 58% / 0.12) 60%,
+    hsl(var(--card)) 100%);
+  box-shadow: 0 0 25px hsl(292 85% 60% / 0.24), var(--m-shadow);
+}
+
 .rm-mobile .rm-tap {
   min-height: var(--m-tap);
   min-width: var(--m-tap);
