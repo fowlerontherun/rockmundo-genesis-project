@@ -404,7 +404,11 @@ After fitting:
 For LOD0/1 production promotion, an artist must finish the rig and explicitly
 set rockmundoAvatarV2JointFitApproved, rockmundoAvatarV2WeightsApproved and
 rockmundoAvatarV2StagePoseApproved to True on the armature after separate
-joint-placement, weight-paint and instrument/singing pose inspections. Remove
+joint-placement, weight-paint and performance-pose inspections. Also set
+rockmundoAvatarV2SingingPoseApproved, rockmundoAvatarV2GuitarPoseApproved,
+rockmundoAvatarV2BassPoseApproved, rockmundoAvatarV2DrumPoseApproved and
+rockmundoAvatarV2MicrophonePoseApproved only after testing each corresponding
+animation against the fitted body, hands, clothing and instrument contacts. Remove
 the guide and manual-fit flags only after that work is complete. These flags
 record human review; they do not replace the independent GLB validators.
 
