@@ -352,7 +352,7 @@ export function FestivalEditionHistory({ editionId }: { editionId: string }) {
 
   const result = query.data;
   const appearsEarlyFinalised = Boolean(
-    result?.dates?.endsOn && result.completedAt.slice(0, 10) <= result.dates.endsOn,
+    result?.dates?.endsOn && result.completedAt.slice(0, 10) < result.dates.endsOn,
   );
 
   return (
