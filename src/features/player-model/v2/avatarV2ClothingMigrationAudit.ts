@@ -16,6 +16,7 @@ export type ClothingMigrationIssue =
   | 'missing-v2-mapping'
   | 'incomplete-v2-frames'
   | 'missing-v2-lods'
+  | 'reused-v2-lod-file'
   | 'missing-body-occlusion'
   | 'missing-colour-zones'
   | 'preview-metadata-pending'
@@ -103,6 +104,11 @@ export function auditAvatarV2ClothingCatalog(
           !config.frames.masculine.lod0 || !config.frames.feminine.lod0) {
         issues.push('incomplete-v2-frames');
       }
+      // A copied filename across frames or LODs is not eight authored proofs.
+      const paths = ['masculine', 'feminine'].flatMap(frame =>
+        ALL_LODS.map(lod => config.frames[frame as 'masculine' | 'feminine']?.[lod]).filter(Boolean)
+      );
+      if (new Set(paths).size !== paths.length) issues.push('reused-v2-lod-file');
       if (['masculine', 'feminine'].some(frame =>
         ALL_LODS.some(lod => !config.frames[frame as 'masculine' | 'feminine']?.[lod])
       )) issues.push('missing-v2-lods');
@@ -120,7 +126,7 @@ export function auditAvatarV2ClothingCatalog(
     if (status === 'legacy') issues.push('legacy-review');
 
     const v2MappingComplete = !!config && config.status === 'validated' &&
-      !issues.some(issue => ['incomplete-v2-frames', 'missing-v2-lods',
+      !issues.some(issue => ['incomplete-v2-frames', 'missing-v2-lods', 'reused-v2-lod-file',
         'missing-body-occlusion', 'missing-colour-zones'].includes(issue));
     const wave: ClothingMigrationWave =
       status === 'published' ? '1-published' :
