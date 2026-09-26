@@ -17,7 +17,7 @@ import struct
 import sys
 
 import bpy
-from mathutils import Vector
+from mathutils import Quaternion, Vector
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from head_motion_weights import (  # noqa: E402
@@ -187,13 +187,19 @@ def build_head_motion_experiment(
 
     # Apply a modest exploratory head turn and gaze. Never author a fake
     # jawOpen/blink or claim these are valid gig playback animations.
-    head = rig.pose.bones["Head"]
-    head.rotation_mode = "XYZ"
-    head.rotation_euler.z = math.radians(16)
+    # Bone-local axes differ from global axes for upright head vs forward
+    # eyeballs. Express real world-space yaw in each true rest-bone basis;
+    # rotating local Z blindly often makes Blender nod instead of turn.
+    def world_z_yaw(bone_name: str, degrees: float) -> None:
+        pose = rig.pose.bones[bone_name]
+        rest_world = rig.matrix_world.to_3x3() @ rig.data.bones[bone_name].matrix_local.to_3x3()
+        local_axis = (rest_world.inverted() @ Vector((0., 0., 1.))).normalized()
+        pose.rotation_mode = "QUATERNION"
+        pose.rotation_quaternion = Quaternion(local_axis, math.radians(degrees))
+
+    world_z_yaw("Head", 16)
     for side in ("L", "R"):
-        eye = rig.pose.bones[f"Eye.{side}"]
-        eye.rotation_mode = "XYZ"
-        eye.rotation_euler.z = math.radians(-7)
+        world_z_yaw(f"Eye.{side}", -7)
     bpy.context.view_layer.update()
 
     head_vertices = [i for i, point in enumerate(before[body.name]) if point[2] > eye_z - .006]
@@ -242,9 +248,8 @@ def build_head_motion_experiment(
     for mesh in detail_meshes:
         mesh.pop("rockmundoAvatarV2PreviewOnly", None)
     rig.pop("rockmundoAvatarV2PreviewOnly", None)
-    head.rotation_euler.zero()
-    for side in ("L", "R"):
-        rig.pose.bones[f"Eye.{side}"].rotation_euler.zero()
+    for name in ("Head", "Eye.L", "Eye.R"):
+        rig.pose.bones[name].rotation_quaternion.identity()
     bpy.context.view_layer.update()
     return {
         "schema": "rockmundo.avatar-v2-head-rig-experiment",
