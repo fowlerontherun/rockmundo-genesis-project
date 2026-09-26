@@ -12,6 +12,7 @@ DECLARE
   next_start timestamptz;
   next_end timestamptz;
   previous_end timestamptz;
+  first_start timestamptz;
   previous_changeover integer := 0;
   ordinal integer := 0;
 BEGIN
@@ -56,6 +57,7 @@ BEGIN
     END IF;
     IF ordinal=0 THEN
       next_start := (entry->>'startsAt')::timestamptz;
+      first_start := next_start;
       IF next_start IS NULL OR next_start::date <> p_festival_date THEN
         RAISE EXCEPTION 'FESTIVAL_SCHEDULE_INVALID_START';
       END IF;
@@ -73,7 +75,7 @@ BEGIN
   END LOOP;
   IF EXISTS (SELECT 1 FROM public.festival_stage_operating_hours
     WHERE stage_id=p_stage_id AND festival_date=p_festival_date AND
-      (next_start < opens_at OR next_end > curfew_at - make_interval(mins=>shutdown_buffer_minutes))) THEN
+      (first_start < opens_at OR next_end > curfew_at - make_interval(mins=>shutdown_buffer_minutes))) THEN
     RAISE EXCEPTION 'FESTIVAL_SCHEDULE_OUTSIDE_STAGE_HOURS';
   END IF;
   UPDATE public.festival_schedule_revisions SET version=version+1,updated_at=now()
