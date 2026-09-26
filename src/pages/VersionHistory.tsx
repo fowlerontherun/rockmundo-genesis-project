@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.756",
+    date: "2026-09-26",
+    changes: [
+      { type: "fix", description: "Fixed a blank screen caused by a broken file-path check in the new avatar system" },
+    ],
+  },
+  {
     version: "1.1.755",
     date: "2026-09-22",
     changes: [
