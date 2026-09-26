@@ -52,8 +52,8 @@ export const MobileProgressCard = ({ label, value, detail }: { label: string; va
   </div>;
 };
 
-export const MobileEntityCard = ({ title, subtitle, meta, icon, onPress }: { title: ReactNode; subtitle?: ReactNode; meta?: ReactNode; icon?: ReactNode; onPress?: () => void }) => (
-  <MCard title={title} subtitle={subtitle} icon={icon} right={meta} chevron={!!onPress} onPress={onPress} className="min-h-[72px]" />
+export const MobileEntityCard = ({ title, subtitle, meta, icon, onPress, className }: { title: ReactNode; subtitle?: ReactNode; meta?: ReactNode; icon?: ReactNode; onPress?: () => void; className?: string }) => (
+  <MCard title={title} subtitle={subtitle} icon={icon} right={meta} chevron={!!onPress} onPress={onPress} className={cn("min-h-[72px]", className)} />
 );
 
 export const MobileHorizontalCarousel = ({ children, label }: { children: ReactNode; label: string }) => (
