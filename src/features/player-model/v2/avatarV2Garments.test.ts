@@ -224,6 +224,15 @@ describe('Avatar V2 garments', () => {
       .toContain('no validated');
   });
 
+  it('rejects duplicate equipped inventory identities and curated keys', () => {
+    const first = item();
+    expect(avatarV2ClothingCompatibilityReason([row(first), row(first)], 'masculine', 0))
+      .toContain('Duplicate equipped clothing item');
+    const second = item({ id: 'other', name: 'Other Tee' });
+    expect(avatarV2ClothingCompatibilityReason([row(first), row(second)], 'masculine', 0))
+      .toContain('Duplicate equipped curated clothing key');
+  });
+
   it('rejects shared assets across different equipped garments', () => {
     const first = item();
     const second = item({ id: 'other', name: 'Other Tee',
