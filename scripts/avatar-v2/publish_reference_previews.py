@@ -59,7 +59,8 @@ def publish_references(source_root: pathlib.Path, output_root: pathlib.Path) -> 
             destination = output_root / name
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(original, destination)
-            digest = hashlib.file_digest(destination.open("rb"), "sha256").hexdigest()
+            with destination.open("rb") as stream:
+                digest = hashlib.file_digest(stream, "sha256").hexdigest()
             inventory.append({
                 "file": name,
                 "bytes": destination.stat().st_size,
