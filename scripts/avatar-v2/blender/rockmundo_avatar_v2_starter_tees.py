@@ -22,7 +22,8 @@ from mathutils.bvhtree import BVHTree
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from tee_surface import (  # noqa: E402
-    STARTER_TEES, largest_connected_surface, validate_surface_projection,
+    STARTER_TEES, largest_connected_surface, source_boundary_edges,
+    relax_source_boundary, validate_surface_projection,
 )
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
@@ -30,10 +31,10 @@ ORIGINAL_LOGO = ROOT / "src/assets/rockmundo-logo.png"
 PANEL_OFFSET = .014
 PRINT_OFFSET = .00065
 VARIANT_SURFACE = {
-    "logo-tee": ((.041, .049, .063, 1.), (.92, .90, .84, 1.), .82),
-    "plain-black-tee": ((.029, .035, .044, 1.), (.18, .20, .24, 1.), .93),
-    "plain-white-tee": ((.91, .90, .84, 1.), (.78, .77, .70, 1.), .88),
-    "vintage-charcoal-tee": ((.18, .19, .21, 1.), (.23, .24, .27, 1.), .96),
+    "logo-tee": ((.041, .049, .063, 1.), (.085, .092, .110, 1.), .82),
+    "plain-black-tee": ((.029, .035, .044, 1.), (.071, .076, .092, 1.), .93),
+    "plain-white-tee": ((.91, .90, .84, 1.), (.81, .80, .76, 1.), .88),
+    "vintage-charcoal-tee": ((.18, .19, .21, 1.), (.205, .215, .235, 1.), .96),
 }
 
 
@@ -56,17 +57,40 @@ def _print_material() -> bpy.types.Material:
     image = bpy.data.images.load(str(ORIGINAL_LOGO), check_existing=True)
     if min(image.size) < 100:
         raise RuntimeError("Real brand logo is too small for a genuine shirt print prototype.")
-    image.pack()  # The editable artist .blend no longer depends on checkout paths.
+    # The existing brand graphic has an opaque navy-blue background and
+    # dark silhouettes. Print only its original cream R, wordmark and slogan
+    # as actual ink, by extracting their luminance into genuine RGBA alpha.
+    # The SOURCE PNG stays unchanged. This avoids the old hard blue
+    # rectangular sticker over the chest and preserves the existing brand.
+    pixels = list(image.pixels[:])
+    surviving = 0
+    for index in range(0, len(pixels), 4):
+        luminance = .299 * pixels[index] + .587 * pixels[index + 1] + .114 * pixels[index + 2]
+        alpha = max(0., min(1., (luminance - .40) / .28))
+        pixels[index + 3] = alpha
+        surviving += alpha > .7
+    if surviving < 10000:
+        raise RuntimeError("Original Rockmundo art mask removed the actual brand; inspect input artwork.")
+    print_image = bpy.data.images.new(
+        "RMV2_ExistingRockmundo_TransparentShirtInk",
+        width=image.size[0], height=image.size[1], alpha=True,
+    )
+    print_image.pixels[:] = pixels
+    print_image.alpha_mode = "STRAIGHT"
+    print_image.pack()  # Authoring .blend/GLB carries the actual derived ink.
     mat = _fabric_material("RMV2_OriginalRockmundoLogo_SurfacePrint", (1., 1., 1., 1.), .77)
     bsdf = next(node for node in mat.node_tree.nodes if node.type == "BSDF_PRINCIPLED")
     texture = mat.node_tree.nodes.new("ShaderNodeTexImage")
     texture.name = "Original_RockMundo_Brand_PNG"
-    texture.image = image
+    texture.image = print_image
     texture.interpolation = "Linear"
     mat.node_tree.links.new(texture.outputs["Color"], bsdf.inputs["Base Color"])
     mat.node_tree.links.new(texture.outputs["Alpha"], bsdf.inputs["Alpha"])
     mat.surface_render_method = "DITHERED"
     mat["rockmundoAvatarV2UsesExistingBrandArtwork"] = True
+    mat["rockmundoAvatarV2OriginalImageWasNotModified"] = True
+    mat["rockmundoAvatarV2SourceImage"] = "src/assets/rockmundo-logo.png"
+    mat["rockmundoAvatarV2PrintTreatment"] = "transparent cream logo ink extracted from existing artwork"
     return mat
 
 
@@ -93,6 +117,40 @@ def _source_surface(body: bpy.types.Object, frame: str):
         expected_offset=PANEL_OFFSET,
     )
     faces = [tuple(remap[index] for index in polygons[face_index]) for face_index in selected]
+    # Source polygon-centroid cuts made a sawtooth neck/waist/arm opening.
+    # Relax those true polygon boundaries but not the original shirt torso
+    # interior, and project each smoothed vertex BACK onto the genuine CC0
+    # sculpt before restoring its exact 14mm normal clearance.
+    smooth, count = relax_source_boundary(
+        [tuple(point) for point in raised_points], faces,
+        iterations=10, strength=.48,
+    )
+    actual_body = BVHTree.FromPolygons(
+        [Vector(position) for position in positions],
+        polygons, all_triangles=False,
+    )
+    boundary_indices = {vertex for edge in source_boundary_edges(faces) for vertex in edge}
+    if len(boundary_indices) != count:
+        raise RuntimeError("The true original garment cut loops changed under seam relaxation.")
+    for index in boundary_indices:
+        result = actual_body.find_nearest(Vector(smooth[index]), .09)
+        if result is None or result[0] is None or result[1] is None:
+            raise RuntimeError("A rounded garment boundary left the true source body surface.")
+        nearest, face_normal, _face_index, _distance = result
+        if (nearest - source_points[index]).length > .06:
+            raise RuntimeError("Smoothing moved an original shirt boundary to the wrong body surface.")
+        normal = face_normal.normalized()
+        if normal.dot(normals[original_vertices[index]]) < .35:
+            normal = normals[original_vertices[index]]
+        raised_points[index] = nearest + normal * PANEL_OFFSET
+        if abs((raised_points[index] - nearest).length - PANEL_OFFSET) > 1e-6:
+            raise RuntimeError("A rounded shirt opening lost true source-normal offset.")
+    proof.update({
+        "smoothedRealBoundaryVertices": count,
+        "boundarySmoothingIterations": 10,
+        "smoothingReprojectedOnOriginalCC0": True,
+        "postSmoothingBoundaryClearanceMm": PANEL_OFFSET * 1000,
+    })
     proof.update({
         "sourceBody": body.name,
         "sourceTotalVertices": len(body.data.vertices),
@@ -200,7 +258,7 @@ def _add_fitted_hem(frame: str, slug: str, shirt: bpy.types.Object,
     seams = bpy.data.curves.new(f"RMV2_StarterSurfaceSeams_{frame}_{slug}", "CURVE")
     seams.dimensions = "3D"
     seams.resolution_u = 2
-    seams.bevel_depth = .00145
+    seams.bevel_depth = .00083
     seams.bevel_resolution = 2
     seams.resolution_u = 4
     for a, b in borders:
