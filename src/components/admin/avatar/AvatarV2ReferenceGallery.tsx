@@ -7,6 +7,8 @@ import type { AvatarV2Frame } from '@/features/player-model/v2/avatarV2Contract'
 import {
   avatarV2ReferenceImageUrl,
   avatarV2ReferenceManifestUrl,
+  avatarV2StarterTeeImageUrl,
+  avatarV2StarterTeeModelUrl,
   parseAvatarV2ReferenceManifest,
   type AvatarV2ReferenceVariant,
   type AvatarV2ReferenceView,
@@ -43,6 +45,7 @@ export function AvatarV2ReferenceGallery({
   const selectedFrame = manifest?.frames.find(item => item.frame === frame);
   const evidence = selectedFrame?.sourceJointSuggestions;
   const motion = selectedFrame?.headMotionEvidence;
+  const starterTees = selectedFrame?.starterTees;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -181,6 +184,48 @@ export function AvatarV2ReferenceGallery({
                     </Button>
                   </div>
                 </div>
+              </div>
+            )}
+            {starterTees && (
+              <div className="space-y-3 rounded-xl border border-indigo-500/40 bg-indigo-950/15 p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h4 className="font-semibold">Actual existing Starter Wardrobe tee upgrade proofs</h4>
+                  <Badge variant="outline">4 original catalogue keys · unapproved sculpt fit</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Four genuinely source-conforming shirt shells are extracted from each real
+                  CC0 body's connected chest and upper-arm geometry. The original Rockmundo
+                  image is mapped to curved chest triangles, not a floating graphic plane.
+                  No new store products are created and none is a validated V2 garment.
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {starterTees.map(tee => (
+                    <div key={tee.style} className="space-y-2 rounded-lg border p-3">
+                      <img
+                        src={avatarV2StarterTeeImageUrl(frame, tee.style, view === 'quarter' || view === 'side' ? 'quarter' : 'front')}
+                        alt={`${frame} authentic existing ${tee.catalogueKey} on source body`}
+                        loading="lazy" className="w-full rounded-lg border bg-slate-950 object-contain aspect-square"
+                      />
+                      <div className="text-sm font-semibold">{tee.style === 'logo-tee' ? 'Rockmundo Logo Tee' :
+                        tee.style === 'plain-black-tee' ? 'Plain Black Tee' :
+                        tee.style === 'plain-white-tee' ? 'Plain White Tee' : 'Vintage Charcoal Tee'}</div>
+                      <p className="break-all text-xs text-muted-foreground">
+                        {tee.catalogueKey} · {tee.evidence.sourceSelectedFaces.toLocaleString()} original
+                        connected sculpt faces · {tee.evidence.averageOffsetMm.toFixed(1)} mm shell offset
+                      </p>
+                      <a href={avatarV2StarterTeeModelUrl(frame, tee.style)}
+                        target="_blank" rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-primary underline underline-offset-4">
+                        Inspect real proof GLB <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Cloth pattern refinement, correct UV baking, approved full-body weights,
+                  animation collision, skin/tattoo occlusion and real LOD0-3 remain mandatory.
+                  Inventory IDs, purchase prices and existing game boosts are untouched.
+                </p>
               </div>
             )}
             <div className="space-y-2 rounded-xl border border-sky-500/25 p-4">
