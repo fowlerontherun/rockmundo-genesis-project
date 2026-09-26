@@ -10,6 +10,7 @@ import {
   AVATAR_V2_ROLLOUT,
   avatarV2Readiness,
   avatarV2ReleaseBlockers,
+  avatarV2MinimumRolloutBlockers,
 } from '@/features/player-model/v2/avatarV2Registry';
 
 const statusVariant = (status: string): 'default' | 'destructive' | 'secondary' =>
@@ -18,6 +19,7 @@ const statusVariant = (status: string): 'default' | 'destructive' | 'secondary' 
 export default function AvatarV2Admin() {
   const readiness = avatarV2Readiness();
   const releaseBlockers = avatarV2ReleaseBlockers();
+  const minimumBlockers = avatarV2MinimumRolloutBlockers();
   const validated = AVATAR_V2_BASE_ASSETS.filter(asset => asset.status === 'validated').length;
   const progress = Math.round((validated / AVATAR_V2_BASE_ASSETS.length) * 100);
 
@@ -130,9 +132,14 @@ export default function AvatarV2Admin() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            <Badge variant={minimumBlockers.length ? 'secondary' : 'default'}>
+              {minimumBlockers.length ? `${minimumBlockers.length} minimum rollout blockers` : 'Minimum base manifest clear'}
+            </Badge>
           <Badge variant={releaseBlockers.length ? 'secondary' : 'default'}>
-            {releaseBlockers.length ? `${releaseBlockers.length} manifest blockers` : 'Manifest checks clear'}
+            {releaseBlockers.length ? `${releaseBlockers.length} full LOD blockers` : 'Full LOD manifest clear'}
           </Badge>
+          </div>
           {releaseBlockers.length > 0 ? (
             <ul className="max-h-72 list-disc space-y-1 overflow-y-auto pl-5 text-sm text-muted-foreground"
               aria-label="Avatar V2 production manifest blockers">
