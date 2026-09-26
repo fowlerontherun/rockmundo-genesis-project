@@ -33,9 +33,15 @@ class AuthoringArtifactIntegrityTests(unittest.TestCase):
                 "candidatePreview": f"{frame}-SOURCE-ONLY-not-validated.glb",
                 "lookdevBlend": f"{frame}-artist-lookdev.blend",
                 "lookdevPreview": f"{frame}-LOOKDEV-ONLY-not-validated.glb",
+                "headRigScene": f"{frame}-head-rig-experiment-UNAPPROVED.blend",
+                "headRigPreview": f"{frame}-HEAD-RIG-EXPERIMENT-not-validated.glb",
             }
             views = [f"{frame}-{angle}.png" for angle in ("front", "quarter", "side", "face")]
             styled_views = [f"{frame}-lookdev-{angle}.png" for angle in ("front", "quarter", "side", "face")]
+            head_motion_views = [
+                f"{frame}-head-rig-experiment-{angle}.png"
+                for angle in ("front", "quarter", "side", "face")
+            ]
             self.data["frames"].append({
                 "frame": frame,
                 **names,
@@ -82,6 +88,34 @@ class AuthoringArtifactIntegrityTests(unittest.TestCase):
                         for side in ("L", "R")
                     ],
                 },
+                "headMotionExperiment": {
+                    "schema": "rockmundo.avatar-v2-head-rig-experiment",
+                    "version": 1,
+                    "frame": frame,
+                    "scene": names["headRigScene"],
+                    "preview": names["headRigPreview"],
+                    "views": head_motion_views,
+                    "realCC0MeshesBound": 11,
+                    "sampledHeadVertices": 280,
+                    "sampledStableTorsoVertices": 600,
+                    "headTurnDegrees": 16,
+                    "eyeCounterTurnDegrees": -7,
+                    "headMeanDisplacementMm": 20.0,
+                    "torsoMeanDisplacementMm": 0.01,
+                    "eyeMeanDisplacementMm": {"L": 19.4, "R": 19.3},
+                    "maxInfluences": 2,
+                    "eyeCentresFromRealGeometry": True,
+                    "guideHeadPivotStillUnfitted": True,
+                    "draftWeightsOnly": True,
+                    "artistReviewed": False,
+                    "fullBodySkinned": False,
+                    "faceMorphsAuthored": False,
+                    "productionValidated": False,
+                    "gltfSkins": 1,
+                    "gltfSkinnedPrimitives": 11,
+                    "gltfJointCount": 65,
+                    "actualSkinBuffers": True,
+                },
                 "sourceJointSuggestions": {
                     "schema": "rockmundo.avatar-v2-source-joint-suggestions",
                     "version": 1,
@@ -120,7 +154,7 @@ class AuthoringArtifactIntegrityTests(unittest.TestCase):
                 "productionValidated": False,
                 "requiresManualJointFit": True,
             })
-            for name in [*names.values(), *views, *styled_views]:
+            for name in [*names.values(), *views, *styled_views, *head_motion_views]:
                 path = self.root / frame / name
                 path.parent.mkdir(parents=True, exist_ok=True)
                 header = (b"BLENDER" if path.suffix == ".blend" else
@@ -143,7 +177,7 @@ class AuthoringArtifactIntegrityTests(unittest.TestCase):
     def test_complete_cc0_sources_are_authoring_only(self):
         report = verify_artifacts(self.root)
         self.assertTrue(report["passed"])
-        self.assertEqual(report["verifiedFiles"], 28)
+        self.assertEqual(report["verifiedFiles"], 40)
         self.assertFalse(report["productionValidated"])
 
     def test_never_certify_stock_source_as_production_ready(self):
@@ -257,6 +291,34 @@ class AuthoringArtifactIntegrityTests(unittest.TestCase):
         entry["position"][1] = float("nan")
         self.write_manifest()
         with self.assertRaisesRegex(ValueError, "no valid unreviewed"):
+            verify_artifacts(self.root)
+
+    def test_absent_or_forged_experimental_rig_cannot_pass(self):
+        self.data["frames"][0]["headMotionExperiment"]["fullBodySkinned"] = True
+        self.write_manifest()
+        with self.assertRaisesRegex(ValueError, "falsely certified experimental"):
+            verify_artifacts(self.root)
+        self.data["frames"][0]["headMotionExperiment"]["fullBodySkinned"] = False
+        self.data["frames"][0]["headMotionExperiment"]["gltfSkinnedPrimitives"] = 0
+        self.write_manifest()
+        with self.assertRaisesRegex(ValueError, "lacks measured"):
+            verify_artifacts(self.root)
+
+    def test_head_turn_must_actually_move_head_but_not_stable_torso(self):
+        self.data["frames"][1]["headMotionExperiment"]["headMeanDisplacementMm"] = 0
+        self.write_manifest()
+        with self.assertRaisesRegex(ValueError, "lacks measured"):
+            verify_artifacts(self.root)
+        self.data["frames"][1]["headMotionExperiment"]["headMeanDisplacementMm"] = 19.0
+        self.data["frames"][1]["headMotionExperiment"]["torsoMeanDisplacementMm"] = 14.0
+        self.write_manifest()
+        with self.assertRaisesRegex(ValueError, "lacks measured"):
+            verify_artifacts(self.root)
+
+    def test_missing_actual_blender_proof_frame_is_rejected(self):
+        self.data["frames"][0]["headMotionExperiment"]["views"].pop()
+        self.write_manifest()
+        with self.assertRaisesRegex(ValueError, "incomplete"):
             verify_artifacts(self.root)
 
     def test_identical_raw_and_styled_glb_hashes_cannot_pass(self):
