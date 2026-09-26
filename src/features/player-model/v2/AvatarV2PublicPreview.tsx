@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import type { AvatarV2Frame } from './avatarV2Contract';
+import './avatar-v2-public.css';
 import {
   avatarV2ReferenceImageUrl,
   avatarV2ReferenceManifestUrl,
