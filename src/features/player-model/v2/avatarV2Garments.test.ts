@@ -553,7 +553,10 @@ describe('Avatar V2 garments', () => {
             version: 1,
             status: 'validated',
             frames: {
-              masculine: { lod1: `avatar-v2/clothing/masculine/test-${wearable_slot}-lod1.glb` },
+              masculine: Object.fromEntries([0, 1, 2, 3].map(lod =>
+                [`lod${lod}`, `avatar-v2/clothing/masculine/test-${wearable_slot}-lod${lod}.glb`])),
+              feminine: Object.fromEntries([0, 1, 2, 3].map(lod =>
+                [`lod${lod}`, `avatar-v2/clothing/feminine/test-${wearable_slot}-lod${lod}.glb`])),
             },
             occludeBodyRegions: [],
             colourMode: 'authored',
