@@ -70,12 +70,12 @@ def _print_material() -> bpy.types.Material:
     return mat
 
 
-def _source_surface(body: bpy.types.Object):
+def _source_surface(body: bpy.types.Object, frame: str):
     if body.type != "MESH" or body.get("rockmundoAvatarV2Source") != "blender-human-base-meshes-v1.4.1":
         raise RuntimeError("Starter prototypes must fit the actual pinned, provenance-stamped CC0 sculpt.")
     positions = [tuple(body.matrix_world @ v.co) for v in body.data.vertices]
     polygons = [tuple(face.vertices) for face in body.data.polygons]
-    selected = largest_connected_surface(positions, polygons)
+    selected = largest_connected_surface(positions, polygons, frame)
     original_vertices = sorted({i for face_index in selected for i in polygons[face_index]})
     if len(original_vertices) < 350:
         raise RuntimeError("Too few original sculpt vertices for an actual high-resolution shirt shell.")
@@ -334,7 +334,7 @@ def build_starter_tee_proofs(
             if modifier.type == "ARMATURE":
                 mesh.modifiers.remove(modifier)
 
-    points, faces, _normals, original_indices, source_report = _source_surface(body)
+    points, faces, _normals, original_indices, source_report = _source_surface(body, frame)
     source_positions = [Vector(body.matrix_world @ body.data.vertices[i].co)
                         for i in original_indices]
     collection = bpy.data.collections.new(f"RMV2_StarterTees_DRAFT_{frame}")
