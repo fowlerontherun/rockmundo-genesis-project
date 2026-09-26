@@ -62,6 +62,43 @@ function headMotionGallery() {
   };
 }
 
+function actualStarterGallery() {
+  const base = sourceGallery();
+  const styles = {
+    'logo-tee': 'clothing.starter.logo-tee',
+    'plain-black-tee': 'clothing.starter.plain-black-tee',
+    'plain-white-tee': 'clothing.starter.plain-white-tee',
+    'vintage-charcoal-tee': 'clothing.starter.vintage-charcoal-tee',
+  } as const;
+  return {
+    ...base,
+    frames: base.frames.map(frame => ({
+      ...frame,
+      starterTees: Object.entries(styles).map(([style, catalogueKey]) => {
+        const preview = `${frame.frame}/${frame.frame}-starter-${style}-LOOKDEV-ONLY-not-validated.glb`;
+        const views = {
+          front: `${frame.frame}/${frame.frame}-starter-${style}-front.png`,
+          quarter: `${frame.frame}/${frame.frame}-starter-${style}-quarter.png`,
+        };
+        [preview, ...Object.values(views)].forEach(file =>
+          base.files.push({ file, bytes: 4096, sha256: 'c'.repeat(64) }));
+        return {
+          style, catalogueKey, preview, views,
+          evidence: {
+            sourceSurfaceVertices: 1300, sourceSelectedFaces: 1450, averageOffsetMm: 14,
+            actualOriginalCC0SourceSurface: true,
+            gltfConformingOriginalLogo: style === 'logo-tee',
+            gltfRealSurfaceHems: true,
+            realGarmentArtistApproved: false,
+            requiresManualFullBodyRigAndGarmentWeighting: true,
+            productionValidated: false,
+          },
+        };
+      }),
+    })),
+  };
+}
+
 describe('player-visible real Avatar V2 preview', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
@@ -115,6 +152,26 @@ describe('player-visible real Avatar V2 preview', () => {
     expect(await screen.findByTestId('v2-preview-3d'))
       .toHaveAttribute('data-url', expect.stringContaining('masculine-HEAD-RIG-EXPERIMENT-not-validated.glb'));
     expect(screen.getByText(/full rigging, facial animation, clothing and LOD validation/)).toBeInTheDocument();
+  });
+
+  it('shows all FOUR original source-fitted Starter wardrobe tees and never loads outfit 3D without a click', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true, json: async () => actualStarterGallery(),
+    }));
+    render(<AvatarV2PublicPreview frame="feminine" />);
+    expect(await screen.findByText('Real Starter Wardrobe T-shirt prototypes')).toBeInTheDocument();
+    expect(screen.getByAltText('feminine real sculpt-fitted clothing.starter.logo-tee front Blender material proof'))
+      .toHaveAttribute('src', expect.stringContaining('feminine-starter-logo-tee-front.png'));
+    expect(screen.getByAltText('feminine real sculpt-fitted clothing.starter.plain-white-tee front Blender material proof'))
+      .toBeInTheDocument();
+    expect(screen.queryByTestId('v2-preview-3d')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Three-quarter' }));
+    expect(screen.getByAltText('feminine real sculpt-fitted clothing.starter.logo-tee quarter Blender material proof'))
+      .toHaveAttribute('src', expect.stringContaining('feminine-starter-logo-tee-quarter.png'));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Inspect real dressed source in 3D' })[0]);
+    expect(await screen.findByTestId('v2-preview-3d'))
+      .toHaveAttribute('data-url', expect.stringContaining('feminine-starter-logo-tee-LOOKDEV-ONLY-not-validated.glb'));
+    expect(screen.getByText(/purchased V1 clothing and item boosts are unchanged/)).toBeInTheDocument();
   });
 
   it('rejects a forged production claim rather than displaying misleading assets', async () => {
