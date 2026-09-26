@@ -176,7 +176,7 @@ describe('Avatar V2 real-source gallery boundary', () => {
   });
   it('rejects invented new shop SKUs, fake approved weights, floating logo and one-frame prototypes', () => {
     const sku = withActualStarterProof();
-    sku.frames[0].starterTees[1].catalogueKey = 'clothing.new.repurchase-black-tee';
+    (sku.frames[0].starterTees[1] as { catalogueKey: string }).catalogueKey = 'clothing.new.repurchase-black-tee';
     expect(parseAvatarV2ReferenceManifest(sku)).toBeNull();
     const published = withActualStarterProof();
     published.frames[1].starterTees[1].evidence.productionValidated = true;
