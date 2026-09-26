@@ -11,6 +11,7 @@ on:
       - 'src/pages/GigBooking.tsx'
       - 'src/mobile/hooks/useMobileDaySchedule.ts'
       - 'src/mobile/pages/MobileHome.tsx'
+      - 'src/mobile/theme/tokens.css'
       - 'src/mobile/pages/MobileMe.tsx'
       - 'src/mobile/components/MobilePrimitives.tsx'
       - 'src/mobile/shell/MobileActivityBar.tsx'
@@ -28,11 +29,13 @@ on:
       - 'src/pages/GigBooking.tsx'
       - 'src/mobile/hooks/useMobileDaySchedule.ts'
       - 'src/mobile/pages/MobileHome.tsx'
+      - 'src/mobile/theme/tokens.css'
       - 'src/mobile/pages/MobileMe.tsx'
       - 'src/mobile/components/MobilePrimitives.tsx'
       - 'src/mobile/shell/MobileActivityBar.tsx'
       - 'supabase/migrations/20291220110000_member_festival_appearances.sql'
       - 'supabase/tests/band_festival_appearances_regression.sql'
+      - 'supabase/tests/fixtures/band_festival_appearances_fixture.sql'
 
 jobs:
   verify-festival-appearances:
