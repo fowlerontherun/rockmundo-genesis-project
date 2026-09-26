@@ -5,10 +5,13 @@ import {
   avatarV2ReferenceImageUrl,
   avatarV2ReferenceManifestUrl,
   avatarV2ReferenceModelUrl,
+  avatarV2StarterTeeImageUrl,
+  avatarV2StarterTeeModelUrl,
   parseAvatarV2ReferenceManifest,
   type AvatarV2ReferenceManifest,
   type AvatarV2ReferenceVariant,
   type AvatarV2ReferenceView,
+  type AvatarV2StarterTeeStyle,
 } from './avatarV2ReferencePreview';
 
 const ReferenceCanvas = lazy(() =>
@@ -35,6 +38,8 @@ export function AvatarV2PublicPreview({ frame }: { frame: AvatarV2Frame }) {
   const [view, setView] = useState<AvatarV2ReferenceView>('front');
   const [variant, setVariant] = useState<AvatarV2ReferenceVariant>('lookdev');
   const [show3D, setShow3D] = useState(false);
+  const [teeView, setTeeView] = useState<'front' | 'quarter'>('front');
+  const [starter3D, setStarter3D] = useState<AvatarV2StarterTeeStyle | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -130,6 +135,67 @@ export function AvatarV2PublicPreview({ frame }: { frame: AvatarV2Frame }) {
               </button>
             </div>
           )}
+          {frameData.starterTees && (
+            <div className="avatar-v2-public__starter">
+              <div className="avatar-v2-public__experiment-heading">
+                <div>
+                  <h4>Real Starter Wardrobe T-shirt prototypes</h4>
+                  <p>Four existing items on the actual {frame} Blender body, not new store purchases.</p>
+                </div>
+                <span>Source-fitted artist proofs · No live V2 garments yet</span>
+              </div>
+              <div className="avatar-v2-public__controls" role="group" aria-label="Starter garment proof angle">
+                {(['front', 'quarter'] as const).map(angle => (
+                  <button key={angle} type="button" aria-pressed={teeView === angle}
+                    onClick={() => setTeeView(angle)}>
+                    {angle === 'front' ? 'Front' : 'Three-quarter'}
+                  </button>
+                ))}
+              </div>
+              <div className="avatar-v2-public__starter-grid">
+                {frameData.starterTees.map(tee => (
+                  <figure key={tee.style}>
+                    <img
+                      key={`${frame}-starter-${tee.style}-${teeView}`}
+                      loading="lazy"
+                      src={avatarV2StarterTeeImageUrl(frame, tee.style, teeView)}
+                      alt={`${frame} real sculpt-fitted ${tee.catalogueKey} ${teeView} Blender material proof`}
+                    />
+                    <figcaption>
+                      <strong>{tee.style === 'logo-tee' ? 'Rockmundo Logo Tee'
+                        : tee.style === 'plain-black-tee' ? 'Plain Black Tee'
+                          : tee.style === 'plain-white-tee' ? 'Plain White Tee'
+                            : 'Vintage Charcoal Tee'}</strong>
+                      <span>{tee.style === 'logo-tee'
+                        ? 'Original Rockmundo brand art on the real curved chest surface'
+                        : 'Original item, new real body-conforming source mesh'}</span>
+                      <button type="button"
+                        onClick={() => setStarter3D(starter3D === tee.style ? null : tee.style)}>
+                        {starter3D === tee.style ? 'Close 3D outfit proof' : 'Inspect real dressed source in 3D'}
+                      </button>
+                    </figcaption>
+                  </figure>
+                ))}
+              </div>
+              {starter3D && (
+                <Suspense fallback={<p role="status">Loading genuine garment reference viewer…</p>}>
+                  <ReferenceCanvas
+                    key={`${frame}-starter-${starter3D}`}
+                    url={avatarV2StarterTeeModelUrl(frame, starter3D)}
+                    focus="full"
+                  />
+                </Suspense>
+              )}
+              <p>
+                These meshes reuse the original four catalogue keys and are physically
+                projected onto real Blender source geometry. The original logo uses
+                the existing Rockmundo artwork, not floating text. They still need
+                artist-authored fabric folds, approved body/garment skinning, four
+                distinct performance LODs and collision testing. Your purchased
+                V1 clothing and item boosts are unchanged.
+              </p>
+            </div>
+          )}
           <div className="avatar-v2-public__inspect">
             <button type="button" className="avatar-v2-public__inspect-toggle"
               aria-pressed={show3D} onClick={() => setShow3D(value => !value)}>
@@ -159,7 +225,8 @@ export function AvatarV2PublicPreview({ frame }: { frame: AvatarV2Frame }) {
           </div>
           <p className="avatar-v2-public__disclaimer">
             This is a verified visual preview of the real Blender source, not your saved playable avatar.
-            The head-motion experiment has preliminary partial weights, but V2 has not
+            The head-motion experiment has preliminary partial weights and the Starter
+            shirt previews have source-fitted fabric surfaces, but V2 has not
             passed full rigging, facial animation, clothing and LOD validation, so
             your live character and gig visuals remain on V1. Appearance controls and Save avatar
             still apply only to your current live character.
