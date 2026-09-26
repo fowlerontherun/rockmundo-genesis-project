@@ -33,3 +33,20 @@ The public Festival page now identifies the date phase separately from ticket-sa
 9. **Regression suite:** cover before start, first and middle day, after last local day including DST, sell-out/refund flows, zero or partial confirmed acts, player billing and NPC fill, historical/legacy redirects, duplicate Run clicks, retry-safe settlement and owner/public projection consistency.
 
 Do not promote this migration without verifying the database readiness helper shape and CI/runtime harness results. The existing production Shock result requires a separate audited repair rather than a destructive migration.
+
+
+## Approved replacement-run path
+
+The owner has explicitly agreed to replace Shock's prematurely run 2026 edition because the initial band payments were low and they manage both confirmed bands. The existing result **must not** be replayed by another direct Run click before the corrective migrations and separate cash reversal have been reviewed.
+
+- Existing original: 26 September at 06:02 UTC, 1,069 simulated attendees, original company net posting GBP 16,802.06, with no GBP festival credit to either band's treasury on the event date. One ticketed attendee record remains, without check-in.
+- Original confirmed fees: Shockmaster GBP 78.00 and WAR DOGS GBP 5,000.00. Both have `support` billing positions and 26 September provisional dates. Do **not** rewrite signed booking fees or silently upgrade billing positions without owner/artist contractual approval.
+- The replacement changes in this branch put confirmed acts ahead of filler, include accepted artist fees in settlement costs and credit each band's **GBP** treasury atomically. Both existing treasuries have USD as their primary currency, so no GBP/USD conversion is assumed. The user-facing owner results will show each artist credit.
+- A private service-role-only `prepare_premature_simplified_festival_rerun` function requires the expected original edition, runtime and result IDs and an operator's approval reference. Only eligible early-settled simplified editions with no prior payout receipts, canonical settlement, rich result or applied attendee engagement can use it.
+- The preparation takes an immutable JSON archive of the edition, original runtime, digest, evidence, simplified result, original company transaction and finance ledger. It posts an **opposite** company-transaction journal entry, compensates original net profit and reputation, removes only the archived simplified runtime/result/ledger rows, and reopens the same canonical annual edition without deleting paid tickets, bookings or attendance.
+- Preparation is not permitted until **28 September 2026, Europe/London** or later, following the two published festival dates. Run the corrected `run_simplified_festival_edition` only after confirming both booking terms, public running order and readiness projection. Use a fresh idempotency key and verify a new result and exactly two unique band payment receipts.
+- After the rerun, compare the old reversal to the archived original posting, the new company posting to the new ledger, new booking expenses to the two band GBP credits, and the new audience estimate to paid tickets/verified attendance without conflating them.
+
+**Still unimplemented:** named, believable NPC supporting acts instead of placeholder labels, proper day-by-day live performance simulation, and the canonical engagement finalisation path for any ticketed player who has not completed attendance. These are separate from the safeguarded replacement-run approval.
+
+**Release gate:** do not run the replay operation on production until the draft PR migrations have passed CI and disposable SQL tests, are approved and deployed, and the original archive preflight verifies that there are no surprise child effects or payment receipts.
