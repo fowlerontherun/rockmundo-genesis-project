@@ -16,6 +16,7 @@ on:
       - 'src/mobile/shell/MobileActivityBar.tsx'
       - 'supabase/migrations/20291220110000_member_festival_appearances.sql'
       - 'supabase/tests/band_festival_appearances_regression.sql'
+      - 'supabase/tests/fixtures/band_festival_appearances_fixture.sql'
   push:
     branches: [main]
     paths:
@@ -36,6 +37,24 @@ on:
 jobs:
   verify-festival-appearances:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGHOST: localhost
+      PGPORT: '5432'
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -53,3 +72,6 @@ jobs:
         run: npx vitest run src/features/festivals/appearances
       - name: Production bundle
         run: npm run build
+      - name: Isolated PostgreSQL member, timing and cancellation contract
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f supabase/tests/fixtures/band_festival_appearances_fixture.sql
