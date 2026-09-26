@@ -75,7 +75,7 @@ function ScheduleList({ schedule, limit }: { schedule: MobileDayQuery; limit?: n
         return (
           <MobileEntityCard
             key={`${activity.activity_type}-${activity.id}`}
-            className={festival ? FESTIVAL_APPEARANCE_HIGHLIGHT : undefined}
+            className={festival ? `rm-mcard--festival ${FESTIVAL_APPEARANCE_HIGHLIGHT}` : undefined}
             title={activity.title}
             subtitle={`${activity.metadata?.date_only ? "Set time TBA" : festivalClock}${activity.location ? ` • ${activity.location}` : ""}`}
             icon={festival ? <Sparkles className="h-5 w-5 text-fuchsia-600 dark:text-fuchsia-300" /> : <Clock3 className="h-5 w-5" />}
