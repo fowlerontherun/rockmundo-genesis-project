@@ -59,7 +59,7 @@ export function FestivalOwnerNpcActsManager({
     }
   }, [draft.festivalDate, festivalDates]);
 
-  const editing = Boolean(draft.id);
+  const editing = Boolean(draft.id);\n  const isDj = draft.genre === "DJ / electronic";
   const reset = () => setDraft(emptyDraft(festivalDates));
 
   const edit = (act: FestivalOwnerNpcAct) => setDraft({
@@ -76,7 +76,7 @@ export function FestivalOwnerNpcActsManager({
   const submit = () => {
     const fame = Number(draft.fame);
     const setMinutes = Number(draft.setMinutes);
-    if (!draft.displayName.trim() || !draft.festivalDate || !Number.isInteger(fame) || !Number.isInteger(setMinutes)) {
+    if (!draft.displayName.trim() || !draft.festivalDate || !Number.isInteger(fame) || fame < 0 || fame > 1000000 || !Number.isInteger(setMinutes) || setMinutes < 10 || setMinutes > 240) {
       toast.error("Give the NPC act a name, Festival date, fame and set length.");
       return;
     }
@@ -112,14 +112,14 @@ export function FestivalOwnerNpcActsManager({
       <CardHeader>
         <CardTitle className="flex items-center gap-2"><Bot className="h-5 w-5" /> NPC acts</CardTitle>
         <CardDescription>
-          Add or update game-controlled acts at any point after approval or launch. Player artist contracts are not changed by these edits.
+          Add NPC bands or DJs, choose their festival day, stage and billing. Player artist contracts are not changed by these edits. Final running order and set times are managed separately in the stage schedule.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
-        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+        <div className="flex flex-wrap gap-2" role="group" aria-label="NPC act type">\n          <Button type="button" variant={!isDj ? "default" : "outline"} onClick={() => setDraft((d) => ({ ...d, genre: d.genre === "DJ / electronic" ? "" : d.genre, setMinutes: d.setMinutes === "60" ? "45" : d.setMinutes }))}>NPC band</Button>\n          <Button type="button" variant={isDj ? "default" : "outline"} onClick={() => setDraft((d) => ({ ...d, genre: "DJ / electronic", setMinutes: "60" }))}>DJ</Button>\n        </div>\n        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-1.5 lg:col-span-2">
-            <Label htmlFor="festival-npc-name">Act name</Label>
-            <Input id="festival-npc-name" value={draft.displayName} onChange={(e) => setDraft((d) => ({ ...d, displayName: e.target.value }))} placeholder="The Midnight Static" />
+            <Label htmlFor="festival-npc-name">{isDj ? "DJ name" : "Act name"}</Label>
+            <Input id="festival-npc-name" value={draft.displayName} onChange={(e) => setDraft((d) => ({ ...d, displayName: e.target.value }))} placeholder={isDj ? "DJ Nightfall" : "The Midnight Static"} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="festival-npc-genre">Genre</Label>
@@ -183,7 +183,7 @@ export function FestivalOwnerNpcActsManager({
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <strong>{act.displayName}</strong>
-                    <Badge variant="secondary">NPC</Badge>
+                    <Badge variant="secondary">{act.genre === "DJ / electronic" ? "DJ" : "NPC band"}</Badge>
                     <Badge variant="outline" className="capitalize">{act.billingPosition.replaceAll("_", " ")}</Badge>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
