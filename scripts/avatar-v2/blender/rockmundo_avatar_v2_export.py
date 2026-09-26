@@ -431,6 +431,18 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
             errors.append(
                 f"{rig.name} still requires manual rig fitting, skin weighting and pose QA."
             )
+        if rig.get("rockmundoAvatarV2RigGuide") is not None and args.lod <= 1:
+            # Removing the guide flag alone must not silently certify a close-up
+            # character. Require independent, explicit sign-offs for the fitted
+            # source and its high-motion stage poses.
+            required_reviews = (
+                "rockmundoAvatarV2JointFitApproved",
+                "rockmundoAvatarV2WeightsApproved",
+                "rockmundoAvatarV2StagePoseApproved",
+            )
+            for key in required_reviews:
+                if rig.get(key) is not True:
+                    errors.append(f"{rig.name} is missing explicit artist approval: {key}.")
 
     # An ear anchor and named material are insufficient if the close-up head is
     # still a flat or low-resolution source sculpt. Check REAL vertex-group
