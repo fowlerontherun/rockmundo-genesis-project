@@ -4,6 +4,7 @@ import { FestivalScheduleWorkspace } from "./FestivalScheduleWorkspace";
 
 const upsertItem = { mutate: vi.fn() };
 const publish = { isPending: false, mutate: vi.fn() };
+const reorderStage = { isPending: false, mutateAsync: vi.fn().mockResolvedValue({updated:2}) };
 const previewTemplate = { mutate: vi.fn() };
 const applyTemplate = { mutate: vi.fn() };
 
@@ -13,7 +14,7 @@ const workspace = {
   timeZone: "Europe/London",
   festivalDates: ["2030-06-01"],
   scheduleState: "draft",
-  draftRevision: { id: "revision-1", revision_number: 3 },
+  draftRevision: { id: "revision-1", revision_number: 3, version: 5 },
   publishedRevision: null,
   revisionHistory: [],
   stages: [
@@ -48,6 +49,7 @@ vi.mock("../hooks", () => ({
   useFestivalScheduleWorkspace: () => ({ data: workspace, isLoading: false, error: null }),
   useScheduleMutations: () => ({
     upsertItem,
+    reorderStage,
     publish,
     previewTemplate,
     applyTemplate,
@@ -67,6 +69,7 @@ vi.mock("./FestivalArtistScheduleFinaliser", () => ({
 
 afterEach(() => {
   upsertItem.mutate.mockClear();
+  reorderStage.mutateAsync.mockClear();
   publish.mutate.mockClear();
   previewTemplate.mutate.mockClear();
   applyTemplate.mutate.mockClear();
@@ -81,6 +84,25 @@ describe("FestivalScheduleWorkspace owner slot management", () => {
     expect(screen.getAllByText("Main Stage").length).toBeGreaterThan(0);
     expect(screen.getByText("Second Stage")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /Sunset opener/i }).length).toBeGreaterThan(0);
+  });
+
+  it("previews and atomically submits a stage reorder", async () => {
+    const second = {...workspace.scheduleItems[0], id: "slot-2", title: "Evening headline", starts_at: "2030-06-01T19:00:00Z", ends_at: "2030-06-01T20:00:00Z", duration_minutes: 60, version: 3};
+    workspace.scheduleItems.push(second);
+    try {
+      render(<FestivalScheduleWorkspace editionId="edition-1" />);
+      fireEvent.click(screen.getByRole("button", {name:"Preview moving Evening headline earlier"}));
+      expect(screen.getByText("Proposed running order")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", {name:"Save proposed order"}));
+      await waitFor(() => expect(reorderStage.mutateAsync).toHaveBeenCalledWith(expect.objectContaining({
+        editionId: "edition-1", revisionId: "revision-1", stageId: "stage-main",
+        date: "2030-06-01", expectedRevisionVersion: 5,
+        items: [
+          expect.objectContaining({id:"slot-2", version:3}),
+          expect.objectContaining({id:"slot-1", version:2}),
+        ],
+      })));
+    } finally { workspace.scheduleItems.pop(); }
   });
 
   it("creates a manual festival slot in the owner schedule workspace", async () => {
