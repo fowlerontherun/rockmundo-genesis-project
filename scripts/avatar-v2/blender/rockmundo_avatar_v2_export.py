@@ -419,6 +419,19 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
     if len(rigs) != 1:
         errors.append(f"Expected exactly one visible armature, found {len(rigs)}.")
 
+    # The proportion-guide armature is never a production rig. A marker fit
+    # report is useful evidence, but cannot replace manual skinning/pose QA.
+    for rig in rigs:
+        if rig.get("rockmundoAvatarV2RigGuide"):
+            errors.append(
+                f"{rig.name} is still an authoring proportion guide; use an artist-finished "
+                "rig and clear the guide marker only after binding and pose QA."
+            )
+        if rig.get("rockmundoAvatarV2RequiresManualFit"):
+            errors.append(
+                f"{rig.name} still requires manual rig fitting, skin weighting and pose QA."
+            )
+
     # An ear anchor and named material are insufficient if the close-up head is
     # still a flat or low-resolution source sculpt. Check REAL vertex-group
     # samples on one continuous head surface before any GLB export.
