@@ -72,6 +72,43 @@ The existing `public/avatar-v2/manifest.json` remains separately gated and
 must stay `planned` until an artist has actually completed fitting, skinning,
 morphs, LODs and visual approval.
 
+### Real-source eye and earlobe joint suggestions (unfitted)
+
+The Blender source build now measures the two **actual eyeball mesh centres**
+and samples bilateral **lower outer-ear skin patches on the continuous CC0
+source body**. These four candidates are created as coloured,
+artist-visible `RMV2_SourceJointSuggestions` empties in each masculine/feminine
+`*-unfitted-rig-guide.blend` and `*-joint-handles.blend`:
+
+- Cyan `RMV2_SUGGEST__Eye.L/R`: measured eye-sphere centres.
+- Orange `RMV2_SUGGEST__EarAnchor.L/R`: *candidate* lower lateral skin
+  points, not independently certified piercing positions or rigid ear pivots.
+
+Their geometry sample counts, world positions, armature-local positions and
+source object names are recorded in the SHA-verified authoring manifest.
+The published reference preview manifest also includes these measurements,
+and Admin → Avatar V2 now displays them and can overlay the four unreviewed
+points on the actual source-only or lookdev-only 3D reference.
+
+**Artist action:** open the handles working file and inspect these measured
+suggestions against the real anatomy in front, side and perspective views.
+Move the corresponding `RMV2_FIT__Eye.*__head` and
+`RMV2_FIT__EarAnchor.*__head` handles to *reviewed* anatomical positions.
+Do not automatically copy suggestions to the production rig. The current
+joint-fitting helper still requires artist-reviewed changes on multiple
+independent bones, rejects untouched guides and enforces left/right topology.
+The eyeball and lower-ear measurements leave all other joint centres,
+body/face weights, visemes, blink morphs, retopology and deformation correctives
+unfinished. No assets are promoted in `public/avatar-v2/manifest.json`,
+and V1 remains the only production body.
+
+Run the standalone measurement test locally:
+
+```bash
+python3 -m unittest discover -s scripts/avatar-v2/tests \
+  -p test_source_rig_suggestions.py -v
+```
+
 ### Improved real-geometry eye and skin references
 
 The source workflow now retains the untouched CC0 baseline **and also** creates
