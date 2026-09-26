@@ -155,4 +155,18 @@ describe('existing owned clothing -> Avatar V2 migration audit', () => {
     }
   });
 
+  it('flags two different existing garments pointing to the same V2 files', () => {
+    const result = auditAvatarV2ClothingCatalog([
+      garment({ garment_config: fullV2, preview_status: 'ready' }),
+      garment({ id: 'second', curated_asset_key: 'clothing.starter.second',
+        garment_config: fullV2, preview_status: 'ready' }),
+    ], packs);
+    expect(result.v2MappingComplete).toBe(0);
+    for (const row of result.rows) {
+      expect(row.issues).toContain('shared-v2-file-between-items');
+      expect(row.issues).not.toContain('duplicate-item-id');
+      expect(row.issues).not.toContain('duplicate-stable-key');
+    }
+  });
+
 });
