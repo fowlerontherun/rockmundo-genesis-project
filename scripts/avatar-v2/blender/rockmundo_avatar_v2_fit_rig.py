@@ -11,7 +11,7 @@ Create handles from the existing proportion-guide armature:
 In interactive Blender, snap/edit handles in RMV2_FitHandles onto the actual
 skin surface and internal joint pivots. Align fingertip chains, both jaws/
 eyeballs, ears, shoulders, elbows, wrists, hips, knees, ankles and toes.
-The collection is render-disabled but visible in the Blender viewport.
+The collection is render-disabled but visible in the Blender viewport.\nEvery eye, ear and jaw handle must be moved to the sculpt or explicitly\nreviewed with --review-face when its guide location is already correct.\nThe --review-face override is recorded in the JSON report; it does not\ncertify weights, animation or production asset readiness.
 
 Transfer only after artist review:
   blender work/avatar-v2-masculine-handles.blend --background \\
