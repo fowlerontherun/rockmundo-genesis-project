@@ -59,6 +59,20 @@ class StarterTeeSurfaceTests(unittest.TestCase):
         self.assertGreater(len(left), 8)
         self.assertGreater(len(right), 8)
 
+    def test_smaller_feminine_source_uses_actual_scaled_neck_and_both_arm_regions(self):
+        points, faces = continuous_anatomical_torso()
+        smaller = [(x * .94, y * .96, z * 1.72 / 1.80) for x, y, z in points]
+        selected = largest_connected_surface(smaller, faces, "feminine")
+        self.assertGreater(len(selected), 350)
+        self.assertTrue(inside_shirt_region((.29 * .94, -.05, 1.38 * 1.72 / 1.80), "feminine"))
+        self.assertFalse(inside_shirt_region((.5, -.05, 1.3), "feminine"))
+        self.assertGreater(len([
+            i for i in selected if any(smaller[v][0] > .19 * .94 for v in faces[i])
+        ]), 8)
+        self.assertGreater(len([
+            i for i in selected if any(smaller[v][0] < -.19 * .94 for v in faces[i])
+        ]), 8)
+
     def test_refuses_missing_real_mesh_disconnected_stub_and_missing_back(self):
         points, faces = continuous_anatomical_torso()
         with self.assertRaisesRegex(ValueError, 'complete, original'):
