@@ -336,7 +336,7 @@ export function AvatarV2CandidateLab() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
-        <AvatarV2ReferenceGallery frame={frame} selected={reference}
+        <AvatarV2ReferenceGallery frame={frame} onFrameChange={setFrame} selected={reference}
           onSelectPreview={variant => { setFile(null); setReference(variant); setPerformance('backstage'); setAnimateFace(false); }} />
         <div className="flex flex-wrap items-end gap-3">
           <label className="space-y-1 text-sm">
