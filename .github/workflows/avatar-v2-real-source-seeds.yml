@@ -3,10 +3,17 @@ name: Avatar V2 real source authoring packs
 # Actual downloadable CC0 scenes and visual proof, not production assets.
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/avatar-v2/**'
+      - '.github/workflows/avatar-v2-real-source-seeds.yml'
   pull_request:
     paths:
       - 'scripts/avatar-v2/blender/rockmundo_avatar_v2_build_seed_artifacts.py'
       - 'scripts/avatar-v2/verify_source_artifacts.py'
+      - 'scripts/avatar-v2/publish_reference_previews.py'
+      - 'scripts/avatar-v2/tests/test_publish_reference_previews.py'
       - 'scripts/avatar-v2/tests/test_verify_source_artifacts.py'
       - 'scripts/avatar-v2/eye_lookdev.py'
       - 'scripts/avatar-v2/tests/test_eye_lookdev.py'
@@ -20,7 +27,12 @@ on:
       - '.github/workflows/avatar-v2-real-source-seeds.yml'
 
 permissions:
-  contents: read
+  contents: write
+
+# Avoid competing runs updating the same generated proof-only branch.
+concurrency:
+  group: avatar-v2-source-proofs-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build-authoring-packs:
@@ -46,6 +58,8 @@ jobs:
         run: python3 -m unittest discover -s scripts/avatar-v2/tests -p test_facial_fibres.py -v
       - name: Test genuine source upper/lower lip sculpt materials
         run: python3 -m unittest discover -s scripts/avatar-v2/tests -p test_lip_lookdev.py -v
+      - name: Test reference gallery publication safety
+        run: python3 -m unittest discover -s scripts/avatar-v2/tests -p test_publish_reference_previews.py -v
       - name: Fetch pinned official Blender Human Base Meshes 1.4.1
         run: python3 scripts/avatar-v2/fetch_human_base_meshes.py --output-dir "$SOURCE_ROOT"
       - name: Install pinned Blender and verify official checksum
@@ -94,3 +108,28 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 6
+
+      # This branch holds only generated source reference PNGs and source-only
+      # GLBs, not artist .blend files or any public/avatar-v2 production assets.
+      # PRs never publish; only trusted main pushes/manual main builds can.
+      - name: Package verified in-game reference proofs
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: |
+          python3 scripts/avatar-v2/publish_reference_previews.py \
+            --root "$ARTIFACT_ROOT" \
+            --output "$RUNNER_TEMP/avatar-v2-reference-previews"
+      - name: Publish source-only proof gallery branch
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/avatar-v2-reference-previews"
+          git init -b avatar-v2-reference-previews
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add preview-manifest.json masculine feminine
+          git commit -m "Publish verified Avatar V2 source-only visual previews"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push --force origin HEAD:refs/heads/avatar-v2-reference-previews
