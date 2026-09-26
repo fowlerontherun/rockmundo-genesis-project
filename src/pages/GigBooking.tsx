@@ -62,7 +62,11 @@ const GigBooking = () => {
   const [venues, setVenues] = useState<VenueWithCity[]>([]);
   const [band, setBand] = useState<BandRow | null>(null);
   const [upcomingGigs, setUpcomingGigs] = useState<GigWithVenue[]>([]);
-  const { data: allFestivalAppearances = [], refetch: refetchFestivalAppearances } = useMyBandFestivalAppearances(profileId);
+  const {
+    data: allFestivalAppearances = [],
+    refetch: refetchFestivalAppearances,
+    isError: festivalAppearancesUnavailable,
+  } = useMyBandFestivalAppearances(profileId);
   const bandFestivalAppearances = allFestivalAppearances.filter((appearance) => appearance.bandId === band?.id);
   // The appearance date, not a prematurely written annual result, determines
   // whether a confirmed booking belongs under Upcoming or History.
@@ -851,6 +855,17 @@ const GigBooking = () => {
               </div>
             </CardHeader>
             <CardContent>
+              {festivalAppearancesUnavailable && (
+                <Alert className="mb-4 border-amber-500/50 bg-amber-500/5">
+                  <AlertTitle>Festival bookings could not be loaded</AlertTitle>
+                  <AlertDescription className="mt-1 flex flex-wrap items-center justify-between gap-2">
+                    <span>Ordinary gigs are still shown, but confirmed Festival appearances may be missing.</span>
+                    <Button size="sm" variant="outline" onClick={() => void refetchFestivalAppearances()}>
+                      <RefreshCw className="mr-1 h-4 w-4" /> Retry Festivals
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
               {band ? (
                 <div className="space-y-4">
                   {upcomingFestivals.map((appearance) => (
