@@ -2,6 +2,7 @@ import { STAGE_INSTRUMENTS, stageAssignment, type InstrumentId } from '@/feature
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import { useState } from 'react';
 import { PlayerModelPreview } from './PlayerModelPreview';
+import { AvatarV2PublicPreview } from './v2/AvatarV2PublicPreview';
 import { useEquippedRichClothing, usePlayerModel, usePlayerStageTattoos } from './usePlayerModel';
 import { BODY_MUSCLE_LABELS, BODY_MUSCLE_TYPES, defaultAppearance, SLOTS, STYLES, STYLE_LABELS, type PlayerAppearance, type Style } from './appearance';
 import { HeadStyling } from './HeadStyling';
@@ -24,6 +25,7 @@ export default function PlayerModelEditor() {
 function EditorSession({ profileId, initial, model, richClothing, richClothingError, tattoos, tattooError }: { profileId: string; initial: { appearance: PlayerAppearance; revision: number | null }; model: ReturnType<typeof usePlayerModel>; richClothing: ResolvedEquippedClothing[]; richClothingError: boolean; tattoos: import('./tattoos').ResolvedTattooVisual[]; tattooError: boolean }) {
   const [draft, setDraft] = useState(initial.appearance), [baseline, setBaseline] = useState(initial), [role, setRole] = useState('other');
   const [feedback, setFeedback] = useState(''), [error, setError] = useState('');
+  const [previewMode, setPreviewMode] = useState<'live' | 'v2'>('live');
   const dirty = JSON.stringify(draft) !== JSON.stringify(baseline.appearance);
   const change = (next: PlayerAppearance) => { setDraft(next); setFeedback(''); setError(''); };
   const setBody = (value: Partial<PlayerAppearance['body']>) => change({ ...draft, body: { ...draft.body, ...value } });
@@ -39,17 +41,44 @@ function EditorSession({ profileId, initial, model, richClothing, richClothingEr
     else setError('Your saved model could not be reloaded. Your edits are still here.');
   }
   return <section className="player-model-editor" aria-label="Full-body avatar creator">
-    <div className="player-model-editor__intro"><div><span className="player-model-editor__eyebrow">YOUR LOOK. YOUR STAGE.</span><h2>Create your full-body avatar</h2><p>Shape your face and character, dress them head to toe, add accessories and tattoos, and take the same look on stage.</p></div><span className="player-model-editor__badge">FACE DETAIL · ACCESSORIES · TATTOOS · SKIN STORE</span></div>
+    <div className="player-model-editor__intro"><div><span className="player-model-editor__eyebrow">YOUR LOOK. YOUR STAGE.</span><h2>Create your full-body avatar</h2><p>Shape your face and character, dress them head to toe, add accessories and tattoos, and take the same look on stage.</p></div><span className="player-model-editor__badge">LIVE V1 · REAL V2 PREVIEW NOW AVAILABLE</span></div>
     <div className="player-model-editor__layout">
       <div className="player-model-editor__showcase">
-        <PlayerModelPreview appearance={draft} role={stageAssignment(role).role} instrument={role in STAGE_INSTRUMENTS ? role as InstrumentId : undefined} richClothing={richClothing} tattoos={tattoos} />
+        <div className="player-model-editor__mode-switch" role="group" aria-label="Avatar preview version">
+          <button type="button" aria-pressed={previewMode === 'live'} onClick={() => setPreviewMode('live')}>
+            My live avatar · V1
+          </button>
+          <button type="button" aria-pressed={previewMode === 'v2'} onClick={() => setPreviewMode('v2')}>
+            See the actual new Avatar V2 models
+          </button>
+        </div>
+        {previewMode === 'v2' ? (
+          <>
+            <p className="player-model-editor__v2-note" role="status">
+              Viewing genuine work-in-progress V2 Blender models. This does not change
+              your saved character or what appears at gigs.
+            </p>
+            <AvatarV2PublicPreview frame={draft.body.frame} />
+          </>
+        ) : (
+          <>
+            <PlayerModelPreview appearance={draft} role={stageAssignment(role).role} instrument={role in STAGE_INSTRUMENTS ? role as InstrumentId : undefined} richClothing={richClothing} tattoos={tattoos} />
         {richClothing.length > 0 && <p className="player-model-editor__hint">Your currently equipped Skin Store clothing is layered over the starter base model and will also appear in 3D gigs.</p>}
         {richClothingError && <p role="status" className="player-model-editor__hint">Your equipped Skin Store clothing could not be loaded; the starter base outfit is shown.</p>}
         {tattoos.length > 0 && <p className="player-model-editor__hint">{tattoos.length} tattoo{tattoos.length === 1 ? '' : 's'} from the Tattoo Parlour {tattoos.length === 1 ? 'is' : 'are'} rendered directly on this stage model.</p>}
         {tattooError && <p role="status" className="player-model-editor__hint">Your tattoo visuals could not be loaded. Your saved tattoos have not been changed.</p>}
         <div className="player-model-editor__preview-role"><label htmlFor="preview-instrument">Try a performance pose</label><select id="preview-instrument" value={role} onChange={event => setRole(event.target.value)}><option value="other">Backstage</option>{Object.entries(STAGE_INSTRUMENTS).map(([id, spec]) => <option key={id} value={id}>{spec.label}</option>)}</select><p>Your band role decides which instrument you play at gigs.</p></div>
+          </>
+        )}
       </div>
       <form className="player-model-editor__form" onSubmit={event => { event.preventDefault(); void save(); }}>
+        {previewMode === 'v2' && (
+          <p className="player-model-editor__v2-form-note">
+            These controls still edit and save your current playable V1 avatar. Switch to
+            “My live avatar” to see those appearance changes; the V2 models above are
+            unrigged design previews only.
+          </p>
+        )}
         <fieldset disabled={model.save.isPending}>
           <legend>01 <span>Character</span></legend>
           <div className="player-model-editor__choices" role="group" aria-label="Body frame">{(['masculine', 'feminine'] as const).map(frame => <button key={frame} type="button" aria-pressed={draft.body.frame === frame} onClick={() => setBody({ frame })}>{frame === 'masculine' ? 'Masculine' : 'Feminine'}</button>)}</div>
