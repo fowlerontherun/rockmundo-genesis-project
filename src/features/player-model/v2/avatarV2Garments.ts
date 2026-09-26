@@ -173,13 +173,21 @@ export function avatarV2GarmentConfig(item: ClothingItem): AvatarV2GarmentConfig
   };
 }
 
+/** A validated label alone is not proof of eight distinct frame/LOD files. */
+export function avatarV2GarmentHasCompleteAssetManifest(config: AvatarV2GarmentConfig): boolean {
+  const paths = (['masculine', 'feminine'] as const).flatMap(frame =>
+    ([0, 1, 2, 3] as const).map(lod => config.frames[frame]?.[`lod${lod}`])
+  );
+  return paths.every((path): path is string => !!path) && new Set(paths).size === 8;
+}
+
 export function avatarV2GarmentFile(
   item: ClothingItem,
   frame: AvatarV2Frame,
   lod: AvatarV2Lod,
 ) {
   const config = avatarV2GarmentConfig(item);
-  if (!config || config.status !== 'validated') return null;
+  if (!config || config.status !== 'validated' || !avatarV2GarmentHasCompleteAssetManifest(config)) return null;
   const assets = config.frames[frame];
   return assets?.[`lod${lod}` as keyof AvatarV2GarmentFrameAssets] ?? null;
 }
