@@ -21,6 +21,7 @@ export interface BandFestivalAppearance {
   festivalEndsOn: string;
   cityName: string | null;
   countryName: string | null;
+  venueTimezone: string | null;
   bookingStatus: string;
   billingPosition: string;
   setMinutes: number;
@@ -62,6 +63,7 @@ export function parseBandFestivalAppearances(data: unknown): BandFestivalAppeara
       festivalEndsOn: text(row.festival_ends_on),
       cityName: nullableText(row.city_name),
       countryName: nullableText(row.country_name),
+      venueTimezone: nullableText(row.venue_timezone),
       bookingStatus: text(row.booking_status),
       billingPosition: text(row.billing_position),
       setMinutes: Number(row.set_minutes) || 0,
@@ -94,6 +96,24 @@ export function appearanceOnLocalDay(appearance: BandFestivalAppearance, date: D
   const key = [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"),
     String(date.getDate()).padStart(2, "0")].join("-");
   return appearance.festivalDate === key;
+}
+
+/** Render real set times in the Festival city's zone, not the fan's device zone. */
+export function formatFestivalInstant(
+  timestamp: string,
+  timezone: string | null,
+): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    hour: "numeric", minute: "2-digit", hour12: true,
+    timeZone: timezone || "UTC",
+  }).format(new Date(timestamp));
+}
+
+export function formatFestivalSetTime(appearance: BandFestivalAppearance): string {
+  if (!appearance.timeConfirmed || !appearance.confirmedStartAt || !appearance.confirmedEndAt) {
+    return "Set time TBA";
+  }
+  return `${formatFestivalInstant(appearance.confirmedStartAt, appearance.venueTimezone)}–${formatFestivalInstant(appearance.confirmedEndAt, appearance.venueTimezone)}`;
 }
 
 export function appearanceDetailHref(appearance: BandFestivalAppearance): string {
@@ -158,6 +178,7 @@ export function festivalAppearanceAsActivity(
       band_id: appearance.bandId,
       billing_position: appearance.billingPosition,
       stage_name: appearance.stageName,
+      festival_timezone: appearance.venueTimezone,
       date_only: !appearance.timeConfirmed,
       detail_href: appearanceDetailHref(appearance),
     },
