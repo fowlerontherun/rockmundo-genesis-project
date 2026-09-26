@@ -15,6 +15,7 @@ export default function CharacterHub() {
           tiles: [
             { icon: Users, labelKey: "nav.characters", path: "/characters", tileImageKey: "buy-character-slot", imagePrompt: "A character roster screen with multiple punk avatars and stats cards" },
             { icon: User, labelKey: "nav.avatar", path: "/avatar-designer", imagePrompt: "A character customization screen with a rock star avatar and clothing options" },
+            { icon: Sparkles, labelKey: "Avatar V2 Preview", path: "/avatar-v2-preview", imagePrompt: "A next-generation 3D character development studio featuring a pair of evolving rock star avatars" },
             { icon: ShoppingCart, labelKey: "nav.skinStore", path: "/skin-store", imagePrompt: "A colorful shop displaying character skins, outfits, and accessories" },
             { icon: Palette, labelKey: "nav.tattooParlour", path: "/tattoo-parlour", imagePrompt: "A tattoo parlour with flash art on walls and rock-themed designs" },
             { icon: Scissors, labelKey: "nav.clothingShop", path: "/clothing-shop", imagePrompt: "A boutique clothing shop with stage outfits and racks of rock fashion" },

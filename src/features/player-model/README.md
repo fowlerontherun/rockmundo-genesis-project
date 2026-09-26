@@ -1,5 +1,28 @@
 # Player stage models
 
+## Genuine Avatar V2 previews for players
+
+The normal **Avatar Creator** now has an explicit **See the actual new Avatar V2
+models** preview switch beside the current live V1 avatar. The Character Hub,
+character sidebar and mobile route also link directly to
+`/avatar-v2-preview`. The stand-alone page works even when no active player
+character has been selected.
+
+Both use the immutable, verified
+`avatar-v2-reference-previews/preview-manifest.json` and its original plus
+improved Blender proof views for **masculine and feminine** source bodies.
+Players can switch front, three-quarter, side and face views and deliberately
+opt in to a rotating, zoomable **real .glb**. The 3D module is loaded only after
+the player presses its button, and switching away from the active live avatar
+unmounts the other WebGL canvas. All references are locked to locally constructed
+GitHub preview-only paths; an invalid manifest or unavailable network displays
+an honest error and retry rather than any replacement stock mannequin.
+
+This is **not** early access to a working avatar replacement. V2 Blender
+sources remain unrigged, unweighted and unequipped. The existing Avatar Creator
+form still modifies and saves V1 only, the live Gig Viewer still uses validated
+V1 models, and no new production LOD or rollout flag is promoted.
+
 `/avatar-designer` and the onboarding appearance step open the full-body Avatar
 Creator, replacing the photo-generator designer. Existing profile images remain
 stored separately. The editor and gig viewers use the same rig,
