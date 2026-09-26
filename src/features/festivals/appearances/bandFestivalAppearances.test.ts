@@ -75,6 +75,16 @@ describe("band festival appearances", () => {
     expect(isFutureFestivalAppearance(appearance, new Date(2026, 8, 27))).toBe(false);
   });
 
+  it("does not turn an early annual-result posting into a completed band performance", () => {
+    const [appearance] = parseBandFestivalAppearances([
+      { ...fixture, festival_status: "completed" },
+    ]);
+    expect(festivalAppearanceAsActivity(appearance, "user", "profile", new Date(2026, 8, 26)).status)
+      .toBe("scheduled");
+    expect(festivalAppearanceAsActivity(appearance, "user", "profile", new Date(2026, 8, 28)).status)
+      .toBe("completed");
+  });
+
   it("rejects malformed or incomplete projections rather than adding false gigs", () => {
     expect(() => parseBandFestivalAppearances({})).toThrow();
     expect(() => parseBandFestivalAppearances([{ ...fixture, festival_date: null }])).toThrow();
