@@ -230,6 +230,15 @@ export function avatarV2ClothingCompatibilityReason(
   frame: AvatarV2Frame,
   lod: AvatarV2Lod,
 ) {
+  const equippedIds = new Set<string>();
+  const equippedKeys = new Set<string>();
+  for (const { item } of clothing) {
+    if (equippedIds.has(item.id)) return `Duplicate equipped clothing item: ${item.name}.`;
+    equippedIds.add(item.id);
+    const key = item.curated_asset_key?.trim();
+    if (key && equippedKeys.has(key)) return `Duplicate equipped curated clothing key: ${key}.`;
+    if (key) equippedKeys.add(key);
+  }
   if (sharedEquippedGarmentAsset(clothing)) {
     return 'Equipped Avatar V2 clothing items share a garment asset path.';
   }
