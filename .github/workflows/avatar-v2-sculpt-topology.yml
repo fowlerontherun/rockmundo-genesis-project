@@ -27,6 +27,8 @@ jobs:
             scripts/avatar-v2/verify_source_artifacts.py \
             scripts/avatar-v2/blender/rockmundo_avatar_v2_build_seed_artifacts.py \
             scripts/avatar-v2/rig_landmarks.py \
+            scripts/avatar-v2/source_rig_suggestions.py \
+            scripts/avatar-v2/blender/rockmundo_avatar_v2_source_joint_suggestions.py \
             scripts/avatar-v2/eye_lookdev.py \
             scripts/avatar-v2/facial_fibres.py \
             scripts/avatar-v2/lip_lookdev.py \
@@ -52,5 +54,7 @@ jobs:
         run: python -m unittest discover -s scripts/avatar-v2/tests -p test_facial_fibres.py -v
       - name: Test genuine unmodified upper/lower lip sculpt tint geometry
         run: python -m unittest discover -s scripts/avatar-v2/tests -p test_lip_lookdev.py -v
+      - name: Test real CC0 eye and earlobe source joint suggestions
+        run: python -m unittest discover -s scripts/avatar-v2/tests -p test_source_rig_suggestions.py -v
       - name: Check audited export provenance and stale-GLB regression
         run: node --test scripts/avatar-v2/tests/face-topology-provenance.test.mjs
