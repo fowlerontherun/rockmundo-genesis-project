@@ -117,4 +117,28 @@ describe('existing owned clothing -> Avatar V2 migration audit', () => {
       expect(row.v2MappingComplete).toBe(false);
     }
   });
+  it('rejects a single proof file reused across frames or LODs without touching paid inventory', () => {
+    const repeated = {
+      avatarV2: {
+        ...fullV2.avatarV2,
+        frames: {
+          ...fullV2.avatarV2.frames,
+          feminine: {
+            ...fullV2.avatarV2.frames.feminine,
+            lod2: fullV2.avatarV2.frames.masculine.lod2,
+          },
+        },
+      },
+    };
+    const existing = garment({ garment_config: repeated, preview_status: 'ready' });
+    const before = JSON.stringify(existing);
+    const result = auditAvatarV2ClothingCatalog([existing], packs);
+    expect(result.rows[0].issues).toContain('reused-v2-lod-file');
+    expect(result.rows[0].v2MappingComplete).toBe(false);
+    expect(result.publishedMissingV2).toBe(1);
+    expect(existing.id).toBe('tee');
+    expect(existing.bonus_config).toEqual({ daily_xp: 2 });
+    expect(JSON.stringify(existing)).toBe(before);
+  });
+
 });
