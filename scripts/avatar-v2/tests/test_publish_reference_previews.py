@@ -27,6 +27,8 @@ class ReferencePreviewPublicationTests(unittest.TestCase):
                 frame["source"], frame["lookdev"], frame["headMotion"],
                 *frame["sourceViews"].values(), *frame["lookdevViews"].values(),
                 *frame["headMotionViews"].values(),
+                *(name for item in frame["starterTees"]
+                  for name in [item["preview"], *item["views"].values()]),
             ):
                 path = self.root / name
                 path.parent.mkdir(parents=True, exist_ok=True)
@@ -35,6 +37,40 @@ class ReferencePreviewPublicationTests(unittest.TestCase):
             "releaseEligible": False, "sourceArchiveSha256": "a" * 64,
             "frames": [{
                 "frame": frame,
+                "starterTeePrototypes": {
+                    "schema": "rockmundo.avatar-v2-starter-tee-authoring-proofs",
+                    "version": 1, "frame": frame,
+                    "oldCatalogueKeysUnchanged": True,
+                    "noDatabaseItemsCreated": True,
+                    "artistApproved": False,
+                    "productionValidated": False,
+                    "variants": [{
+                        "style": item["style"],
+                        "catalogueKey": item["catalogueKey"],
+                        "preview": pathlib.PurePosixPath(item["preview"]).name,
+                        "views": {
+                            view: pathlib.PurePosixPath(url).name
+                            for view, url in item["views"].items()
+                        },
+                        "sourceSurface": {
+                            "originalSurfaceConforming": True,
+                            "sourceSurfaceVertices": 1000,
+                            "sourceSelectedFaces": 1100,
+                            "averageOffsetMm": 14.,
+                            "productionValidated": False,
+                        },
+                        "brand": {
+                            "usesExistingBrandArtwork": True,
+                        } if item["style"] == "logo-tee" else None,
+                        "gltfSourceMappedShirt": True,
+                        "gltfRealSurfaceHems": True,
+                        "gltfHasSkinning": False,
+                        "gltfHasAnimations": False,
+                        "gltfConformingOriginalLogo": item["style"] == "logo-tee",
+                        "realGarmentArtistApproved": False,
+                        "productionValidated": False,
+                    } for item in preview_names(frame)["starterTees"]],
+                },
                 "headMotionExperiment": {
                     "schema": "rockmundo.avatar-v2-head-rig-experiment",
                     "version": 1,
@@ -80,15 +116,20 @@ class ReferencePreviewPublicationTests(unittest.TestCase):
     def test_publishes_only_verified_preview_images_and_unrigged_glbs(self):
         with patch("publish_reference_previews.verify_artifacts", return_value={"passed": True}):
             manifest = publish_references(self.root, self.output)
-        self.assertEqual(len(manifest["files"]), 30)
+        self.assertEqual(len(manifest["files"]), 54)
         self.assertFalse(manifest["productionValidated"])
         self.assertTrue(manifest["previewOnly"])
         self.assertEqual({f["frame"] for f in manifest["frames"]}, {"masculine", "feminine"})
         self.assertEqual(len(manifest["frames"][0]["sourceJointSuggestions"]["suggestions"]), 4)
         self.assertTrue(manifest["frames"][0]["headMotionEvidence"]["actualSkinBuffers"])
         self.assertFalse(manifest["frames"][0]["headMotionEvidence"]["fullBodySkinned"])
+        self.assertEqual(len(manifest["frames"][0]["starterTees"]), 4)
+        self.assertEqual(manifest["frames"][0]["starterTees"][0]["catalogueKey"],
+                         "clothing.starter.logo-tee")
+        self.assertTrue(manifest["frames"][0]["starterTees"][0]["evidence"]["gltfConformingOriginalLogo"])
+        self.assertFalse(manifest["frames"][0]["starterTees"][0]["evidence"]["productionValidated"])
         self.assertEqual(len(list(self.output.rglob("*.blend"))), 0)
-        self.assertEqual(len(list(self.output.rglob("*.glb"))), 6)
+        self.assertEqual(len(list(self.output.rglob("*.glb"))), 14)
         for entry in manifest["files"]:
             self.assertTrue((self.output / entry["file"]).exists())
 
@@ -122,6 +163,19 @@ class ReferencePreviewPublicationTests(unittest.TestCase):
         )
         with patch("publish_reference_previews.verify_artifacts", return_value={"passed": True}):
             with self.assertRaisesRegex(ValueError, "head rig is not verified"):
+                publish_references(self.root, self.output)
+
+    def test_refuses_premature_clothing_certification_or_fake_logo(self):
+        self.source_manifest["frames"][0]["starterTeePrototypes"]["variants"][0]["productionValidated"] = True
+        (self.root / "authoring-artifacts-manifest.json").write_text(json.dumps(self.source_manifest))
+        with patch("publish_reference_previews.verify_artifacts", return_value={"passed": True}):
+            with self.assertRaisesRegex(ValueError, "Starter clothing proof is unverified"):
+                publish_references(self.root, self.output)
+        self.source_manifest["frames"][0]["starterTeePrototypes"]["variants"][0]["productionValidated"] = False
+        self.source_manifest["frames"][0]["starterTeePrototypes"]["variants"][0]["brand"] = None
+        (self.root / "authoring-artifacts-manifest.json").write_text(json.dumps(self.source_manifest))
+        with patch("publish_reference_previews.verify_artifacts", return_value={"passed": True}):
+            with self.assertRaisesRegex(ValueError, "Starter clothing proof is unverified"):
                 publish_references(self.root, self.output)
 
     def test_refuses_existing_gallery_and_production_claims(self):
