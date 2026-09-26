@@ -431,10 +431,9 @@ def validate(args: argparse.Namespace) -> tuple[list[str], list[str], dict[str, 
             errors.append(
                 f"{rig.name} still requires manual rig fitting, skin weighting and pose QA."
             )
-        if rig.get("rockmundoAvatarV2RigGuide") is not None and args.lod <= 1:
-            # Removing the guide flag alone must not silently certify a close-up
-            # character. Require independent, explicit sign-offs for the fitted
-            # source and its high-motion stage poses.
+        if args.lod <= 1:
+            # Every close-up rig requires independent artist sign-offs. Removing
+            # an authoring-guide flag must never bypass the review gate.
             required_reviews = (
                 "rockmundoAvatarV2JointFitApproved",
                 "rockmundoAvatarV2WeightsApproved",
