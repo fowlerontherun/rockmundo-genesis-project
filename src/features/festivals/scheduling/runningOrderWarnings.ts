@@ -17,3 +17,33 @@ export function getRunningOrderWarnings(items: FestivalScheduleItem[], defaultCh
     return { itemId: item.id, warning: null };
   });
 }
+
+/** Preview a move without touching booked contracts or the published revision.
+ * Preserve the first stage start and each act's duration; use each preceding
+ * act's changeover when calculating the next start. */
+export function previewRunningOrderMove(
+  items: FestivalScheduleItem[],
+  itemId: string,
+  direction: -1 | 1,
+  defaultChangeoverMinutes = 30,
+) {
+  const ordered = [...items].sort((a, b) => String(a.starts_at ?? "").localeCompare(String(b.starts_at ?? ""));
+  const from = ordered.findIndex(item => item.id === itemId);
+  const to = from + direction;
+  if (from < 0 || to < 0 || to >= ordered.length || ordered.some(item => item.locked || !item.starts_at || !item.ends_at)) return null;
+  const [moved] = ordered.splice(from, 1);
+  ordered.splice(to, 0, moved);
+  let cursor = Math.min(...ordered.map(item => Date.parse(String(item.starts_at))));
+  if (!Number.isFinite(cursor) || ordered.some(item =>
+    !Number.isInteger(item.duration_minutes) || item.duration_minutes <= 0 ||
+    !Number.isFinite(item.changeover_minutes ?? defaultChangeoverMinutes) ||
+    (item.changeover_minutes ?? defaultChangeoverMinutes) < 0
+  )) return null;
+  return ordered.map((item, index) => {
+    const startsAt = new Date(cursor).toISOString();
+    const end = cursor + item.duration_minutes * 60000;
+    const endsAt = new Date(end).toISOString();
+    cursor = end + (index < ordered.length - 1 ? (item.changeover_minutes ?? defaultChangeoverMinutes) * 60000 : 0);
+    return { id: item.id, title: item.title, startsAt, endsAt, durationMinutes: item.duration_minutes };
+  });
+}
