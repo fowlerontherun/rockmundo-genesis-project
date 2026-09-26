@@ -19,6 +19,7 @@ import {
   usePurchaseFestivalTickets,
 } from "../application/useFestivalLaunch";
 import { formatFestivalLaunchMoney } from "../domain/festivalLaunch";
+import { getFestivalPublicEventPhase } from "./festivalEventPhase";
 
 const Countdown = ({ target }: { target: string }) => {
   const remaining = Math.max(0, Date.parse(target) - Date.now());
@@ -92,6 +93,13 @@ export default function PublicFestivalPage() {
   if (isLoading) return <main className="p-8" role="status">Loading Festival…</main>;
   if (isError || !f) return <main className="p-8" role="alert">Festival not found.</main>;
 
+  const eventPhase = getFestivalPublicEventPhase(f.startsAt, f.endsAt);
+  const eventPhaseLabel = eventPhase === "upcoming"
+    ? "Upcoming Festival"
+    : eventPhase === "in_progress"
+      ? "Festival dates under way"
+      : "Festival dates ended";
+
   const myAttendance = attendance.find(
     (item) => item.festivalLaunchId === f.id && item.status !== "cancelled" && item.status !== "refunded",
   );
@@ -142,7 +150,12 @@ export default function PublicFestivalPage() {
             </div>
           ) : null}
           <div className="min-w-0">
-            <Badge>{f.launchStatus.replaceAll("_", " ")}</Badge>
+            <div className="flex flex-wrap gap-2">
+              <Badge>{eventPhaseLabel}</Badge>
+              <Badge variant="outline" className="border-white/50 text-white">
+                Ticket sales: {f.launchStatus.replaceAll("_", " ")}
+              </Badge>
+            </div>
             <h1 className="mt-4 text-4xl font-black md:text-7xl">{f.name}</h1>
             <p className="mt-3 max-w-3xl text-lg">{f.tagline}</p>
             <p className="mt-5">
@@ -150,7 +163,13 @@ export default function PublicFestivalPage() {
               {new Date(f.endsAt).toLocaleDateString("en-GB")}
             </p>
             <div className="mt-5">
-              <Countdown target={f.countdownTarget} />
+              {eventPhase === "upcoming" ? (
+                <Countdown target={f.countdownTarget} />
+              ) : eventPhase === "in_progress" ? (
+                <p className="text-lg font-semibold">The Festival dates are under way. Check the line-up and timetable for the published programme.</p>
+              ) : (
+                <p className="text-lg font-semibold">The scheduled dates have ended. Final results follow Festival reconciliation.</p>
+              )}
               <span className="text-xs">Festival local time: {f.timezone}</span>
             </div>
           </div>
