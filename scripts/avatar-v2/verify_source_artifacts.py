@@ -242,6 +242,10 @@ def verify_artifacts(root: pathlib.Path) -> dict:
                             or surface.get("sourceSelectedFaces", 0) < 350
                             or surface.get("sourceSurfaceVertices", 0) < 350
                             or surface.get("originalSurfaceConforming") is not True
+                            or surface.get("smoothingReprojectedOnOriginalCC0") is not True
+                            or surface.get("boundarySmoothingIterations") != 10
+                            or surface.get("smoothedRealBoundaryVertices", 0) < 40
+                            or not 13.99 <= surface.get("postSmoothingBoundaryClearanceMm", -1) <= 14.01
                             or surface.get("largestConnectedOriginalComponent") is not True
                             or surface.get("sculptDerivedShortSleeves") is not True
                             or surface.get("sculptDerivedNeckCut") is not True
