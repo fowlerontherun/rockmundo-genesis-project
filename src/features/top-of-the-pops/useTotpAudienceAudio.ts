@@ -53,6 +53,8 @@ export function useTotpAudienceAudio({
   const clipRef = useRef<HTMLAudioElement | null>(null);
   const ambienceClipRef = useRef<HTMLAudioElement | null>(null);
   const noiseSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const playbackActiveRef = useRef(false);
+  playbackActiveRef.current = enabled && playbackState.isPlaying;
 
   useEffect(() => {
     if (!enabled || typeof window === "undefined") return;
@@ -68,11 +70,13 @@ export function useTotpAudienceAudio({
           "totp:studio-bed",
         );
         if (bed && typeof Audio !== "undefined") {
+          ambienceClipRef.current?.pause();
           const audio = new Audio(bed.audio_url);
           audio.preload = "auto";
           audio.loop = true;
           audio.volume = 0.14;
           ambienceClipRef.current = audio;
+          if (playbackActiveRef.current) void audio.play().catch(() => undefined);
         }
       })
       .catch(() => { if (!cancelled) libraryRef.current = []; });
@@ -148,7 +152,9 @@ export function useTotpAudienceAudio({
         );
         const hit = clampTotpGain(mix.audienceHit);
         if (clip) {
-          void playApprovedClip(clipRef, clip, hit).catch(() => playStudioCheer(ctx!, master!, hit, 1.1));
+          void playApprovedClip(clipRef, clip, hit, () => playbackActiveRef.current).catch(() => {
+            if (playbackActiveRef.current) playStudioCheer(ctx!, master!, hit, 1.1);
+          });
         } else {
           playStudioCheer(ctx, master, hit, 1.1);
         }
@@ -165,7 +171,9 @@ export function useTotpAudienceAudio({
         );
         const hit = clampTotpGain(mix.audienceHit);
         if (clip) {
-          void playApprovedClip(clipRef, clip, hit).catch(() => playStudioCheer(ctx!, master!, hit, 1.8));
+          void playApprovedClip(clipRef, clip, hit, () => playbackActiveRef.current).catch(() => {
+            if (playbackActiveRef.current) playStudioCheer(ctx!, master!, hit, 1.8);
+          });
         } else {
           playStudioCheer(ctx, master, hit, 1.8);
         }
@@ -181,8 +189,10 @@ export function useTotpAudienceAudio({
         `${cueId ?? "performance"}:${Math.floor(playbackState.positionMs / 18_000)}`,
       );
       if (clip) {
-        void playApprovedClip(clipRef, clip, .32 + Math.max(0, reaction) * .018)
-          .catch(() => playStudioCheer(ctx!, master!, 0.38 + Math.max(0, reaction) * 0.018, 0.65));
+        void playApprovedClip(clipRef, clip, .32 + Math.max(0, reaction) * .018, () => playbackActiveRef.current)
+          .catch(() => {
+            if (playbackActiveRef.current) playStudioCheer(ctx!, master!, 0.38 + Math.max(0, reaction) * 0.018, 0.65);
+          });
       } else {
         playStudioCheer(ctx, master, 0.38 + Math.max(0, reaction) * 0.018, 0.65);
       }
@@ -199,6 +209,7 @@ export function useTotpAudienceAudio({
   }, [enabled, playbackState.isPlaying]);
 
   useEffect(() => () => {
+    playbackActiveRef.current = false;
     noiseSourceRef.current?.stop();
     noiseSourceRef.current?.disconnect();
     noiseSourceRef.current = null;
@@ -247,8 +258,9 @@ async function playApprovedClip(
   clipRef: { current: HTMLAudioElement | null },
   sound: TotpCrowdSound | null,
   volume: number,
+  isActive: () => boolean,
 ) {
-  if (!sound || typeof Audio === "undefined") return;
+  if (!sound || typeof Audio === "undefined" || !isActive()) return;
   clipRef.current?.pause();
   const audio = new Audio(sound.audio_url);
   audio.preload = "auto";
@@ -256,6 +268,8 @@ async function playApprovedClip(
   clipRef.current = audio;
   audio.onended = () => { if (clipRef.current === audio) clipRef.current = null; };
   await audio.play();
+  // A pending play() can settle after Pause or a newer reaction replaced it.
+  if (!isActive() || clipRef.current !== audio) audio.pause();
 }
 
 
