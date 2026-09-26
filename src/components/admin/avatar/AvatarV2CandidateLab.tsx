@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlayerModelPreview } from '@/features/player-model/PlayerModelPreview';
+import { AvatarV2ReferenceGallery } from './AvatarV2ReferenceGallery';
+import { avatarV2ReferenceModelUrl, type AvatarV2ReferenceVariant } from '@/features/player-model/v2/avatarV2ReferencePreview';
 import { Musician } from '@/features/gig-demo-3d/performers';
 import { stageAssignment } from '@/features/gig-demo-3d/instrumentCatalog';
 import { BODY_MUSCLE_LABELS, BODY_MUSCLE_TYPES, defaultAppearance } from '@/features/player-model/appearance';
@@ -44,6 +46,7 @@ const CANDIDATE_VIEW = {
 
 function CandidateCanvas({
   file,
+  referenceUrl,
   frame,
   lod,
   onReport,
@@ -55,6 +58,7 @@ function CandidateCanvas({
   viewPreset,
 }: {
   file: File | null;
+  referenceUrl: string | null;
   frame: AvatarV2Frame;
   lod: AvatarV2Lod;
   onReport: (report: AvatarV2ValidationReport | null) => void;
@@ -168,9 +172,13 @@ function CandidateCanvas({
       onError('');
       onPerformanceReport(null);
 
-      if (file) {
-        objectUrl = URL.createObjectURL(file);
-        void new GLTFLoader().loadAsync(objectUrl).then(gltf => {
+      if (file || referenceUrl) {
+        // Generated source previews are read-only remote assets. Never expose
+        // them to the production model library or treat them as validated.
+        objectUrl = file ? URL.createObjectURL(file) : null;
+        const candidateUrl = objectUrl ?? referenceUrl;
+        if (!candidateUrl) throw new Error('Candidate GLB URL is missing.');
+        void new GLTFLoader().loadAsync(candidateUrl).then(gltf => {
           if (!alive) {
             disposeModel(gltf.scene);
             return;
@@ -265,7 +273,7 @@ function CandidateCanvas({
         cancelAnimationFrame(raf);
       };
     }
-  }, [file, frame, lod, onError, onPerformanceReport, onReport, animateFace, appearance, performancePreset, viewPreset]);
+  }, [file, referenceUrl, frame, lod, onError, onPerformanceReport, onReport, animateFace, appearance, performancePreset, viewPreset]);
 
   return (
     <canvas
@@ -281,6 +289,7 @@ export function AvatarV2CandidateLab() {
   const [muscle, setMuscle] = useState<(typeof BODY_MUSCLE_TYPES)[number]>('natural');
   const [lod, setLod] = useState<AvatarV2Lod>(0);
   const [file, setFile] = useState<File | null>(null);
+  const [reference, setReference] = useState<AvatarV2ReferenceVariant | null>(null);
   const [report, setReport] = useState<AvatarV2ValidationReport | null>(null);
   const [error, setError] = useState('');
   const [animateFace, setAnimateFace] = useState(true);
@@ -307,6 +316,8 @@ export function AvatarV2CandidateLab() {
     return next;
   }, [frame, muscle, faceDetailProof]);
 
+  const referenceUrl = !file && reference ? avatarV2ReferenceModelUrl(frame, reference) : null;
+
   const comparisonAssignment = useMemo(
     () => performance === 'backstage' ? stageAssignment(null, 'other') : stageAssignment(performance),
     [performance],
@@ -317,7 +328,7 @@ export function AvatarV2CandidateLab() {
       <CardHeader>
         <CardTitle>V1 ↔ V2 candidate lab</CardTitle>
         <CardDescription>
-          Load a GLB locally for side-by-side visual inspection. The lab applies the same saved-hair and
+          Inspect real source-only V2 references or load your own GLB locally for side-by-side visual inspection. The lab applies the same saved-hair and
           accessory bridge as the live V2 path, using a quiff, square glasses and independent earrings as
           visible fit checks. Face-detail proof mode additionally checks custom eyebrows and freckles against the V2 head.
           The file stays in this browser session and is not published, uploaded or made
@@ -325,6 +336,8 @@ export function AvatarV2CandidateLab() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
+        <AvatarV2ReferenceGallery frame={frame} onFrameChange={setFrame} selected={reference}
+          onSelectPreview={variant => { setFile(null); setReference(variant); setPerformance('backstage'); setAnimateFace(false); }} />
         <div className="flex flex-wrap items-end gap-3">
           <label className="space-y-1 text-sm">
             <span className="font-medium">Frame</span>
@@ -366,7 +379,7 @@ export function AvatarV2CandidateLab() {
               type="file"
               accept=".glb,model/gltf-binary"
               className="block max-w-xs rounded-md border bg-background px-3 py-2 text-sm"
-              onChange={event => setFile(event.target.files?.[0] ?? null)}
+              onChange={event => { setFile(event.target.files?.[0] ?? null); setReference(null); }}
             />
           </label>
           <label className="space-y-1 text-sm">
@@ -410,12 +423,13 @@ export function AvatarV2CandidateLab() {
           >
             {faceDetailProof ? 'Face detail proof on' : 'Face detail proof off'}
           </Button>
-          {file && (
+          {(file || reference) && (
             <Button
               type="button"
               variant="outline"
               onClick={() => {
                 setFile(null);
+                setReference(null);
                 setReport(null);
                 setError('');
               }}
@@ -441,11 +455,12 @@ export function AvatarV2CandidateLab() {
             <div className="flex items-center justify-between">
               <h3 className="font-semibold">Avatar V2 candidate</h3>
               <Badge variant={report?.valid ? 'default' : 'secondary'}>
-                {file ? report?.valid ? 'contract pass' : report ? 'needs fixes' : 'checking' : 'load a GLB'}
+                {reference && !file ? 'unrigged reference — not game ready' : file ? report?.valid ? 'contract pass' : report ? 'needs fixes' : 'checking' : 'choose a preview or GLB'}
               </Badge>
             </div>
             <CandidateCanvas
               file={file}
+              referenceUrl={referenceUrl}
               frame={frame}
               lod={lod}
               onReport={setReport}
@@ -459,6 +474,7 @@ export function AvatarV2CandidateLab() {
           </div>
         </div>
 
+        {reference && !file && <p className="rounded-md border border-sky-500/30 p-3 text-sm text-muted-foreground">This is the actual {frame} Blender {reference === 'lookdev' ? 'look-development' : 'original CC0'} reference mesh, not a production avatar. It has no fitted skin weights, finished facial morphs or stage animations; A-pose is intentional. The validation gap below must not be interpreted as production certification.</p>}
         {error && <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
 
         {performanceReport && (
@@ -537,7 +553,12 @@ export function AvatarV2CandidateLab() {
           </div>
         )}
 
-        {report && (
+        {report && reference && !file && (
+          <div className="rounded-lg border p-4 text-sm" role="status">
+            Actual source geometry loaded in the candidate lab. It is intentionally not certified: {report.issues.length} automated production-contract gaps remain. Continue with the artist-fitted rig, real morphs and LOD validation before live rollout.
+          </div>
+        )}
+        {report && (!reference || !!file) && (
           <div className="space-y-3 rounded-lg border p-4">
             <div className="flex flex-wrap gap-2">
               <Badge variant={report.valid ? 'default' : 'destructive'}>{report.valid ? 'Automated contract passed' : 'Contract failed'}</Badge>

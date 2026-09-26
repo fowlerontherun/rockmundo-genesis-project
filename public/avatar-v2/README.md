@@ -46,6 +46,32 @@ verification step checks both full packs and rejects changed or missing files.
 The two artifacts are retained for **14 days**; rerun the manual workflow
 to produce fresh references when necessary.
 
+### See the actual work-in-progress meshes in RockMundo Admin
+
+The admin route `/admin/avatar-v2` now contains a real-source reference gallery
+and side-by-side V1/V2 candidate viewer. Unlike the production mesh registry,
+this gallery is explicitly **preview-only**: it shows the genuine pinned CC0
+masculine/feminine source meshes, their distinct eye/skin/lip/brow/lash lookdev,
+four real Blender proof angles, and their matching unrigged reference GLBs.
+Selecting **Inspect actual mesh in 3D** opens the genuine model in the existing
+A-pose viewer; this does not put it in player profiles, gigs or Top of the Pops.
+
+A trusted main-branch build or manual main run of
+`avatar-v2-real-source-seeds.yml` runs the full real-source proof verifier,
+then publishes only 16 proof PNGs, four `SOURCE-ONLY` or `LOOKDEV-ONLY`
+GLBs, and the strict preview manifest into the dedicated generated
+`avatar-v2-reference-previews` branch. The website reads those stable public
+proof files, not expiring Actions artifacts; it never accepts the branch as
+a production asset or switches on Avatar V2. If the real Blender build fails
+or the proof branch does not exist, Admin shows a clear unavailable state and
+links to the source workflow instead of an empty model placeholder.
+
+Any future source change must pass the same full integrity, geometry and
+non-production checks before replacing those public reference previews.
+The existing `public/avatar-v2/manifest.json` remains separately gated and
+must stay `planned` until an artist has actually completed fitting, skinning,
+morphs, LODs and visual approval.
+
 ### Improved real-geometry eye and skin references
 
 The source workflow now retains the untouched CC0 baseline **and also** creates
