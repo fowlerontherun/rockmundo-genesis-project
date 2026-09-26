@@ -64,13 +64,13 @@ const GigBooking = () => {
   const [upcomingGigs, setUpcomingGigs] = useState<GigWithVenue[]>([]);
   const { data: allFestivalAppearances = [], refetch: refetchFestivalAppearances } = useMyBandFestivalAppearances(profileId);
   const bandFestivalAppearances = allFestivalAppearances.filter((appearance) => appearance.bandId === band?.id);
+  // The appearance date, not a prematurely written annual result, determines
+  // whether a confirmed booking belongs under Upcoming or History.
   const upcomingFestivals = bandFestivalAppearances.filter((appearance) =>
-    appearance.festivalStatus !== 'completed' &&
-    (isFutureFestivalAppearance(appearance) || appearance.festivalStatus === 'live')
+    isFutureFestivalAppearance(appearance)
   );
   const pastFestivals = bandFestivalAppearances.filter((appearance) =>
-    appearance.festivalStatus === 'completed' ||
-    (!isFutureFestivalAppearance(appearance) && appearance.festivalStatus !== 'live')
+    !isFutureFestivalAppearance(appearance)
   );
   const [bookingVenue, setBookingVenue] = useState<VenueRow | null>(null);
   const [cancellingGig, setCancellingGig] = useState<GigWithVenue | null>(null);
