@@ -40,6 +40,8 @@ export const MobileActivityBar = () => {
     const now = Date.now();
 
     const scheduledNow = today.data.find((activity) => {
+      // The noon anchor of an untimed Festival booking is for display only.
+      if (activity.activity_type === "festival_performance" && activity.metadata?.date_only) return false;
       const starts = new Date(activity.scheduled_start).getTime();
       const ends = new Date(activity.scheduled_end).getTime();
       return Number.isFinite(starts)
