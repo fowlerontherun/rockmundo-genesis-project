@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Award, CalendarDays, CalendarPlus, ChevronLeft, Clock3, Gift, Heart, MessageSquare, Moon, Plane, RefreshCw, Smile, Twitter, Zap } from "lucide-react";
+import { AlertTriangle, Award, CalendarDays, CalendarPlus, ChevronLeft, Clock3, Gift, Heart, MessageSquare, Moon, Plane, RefreshCw, Smile, Sparkles, Twitter, Zap } from "lucide-react";
 import { useGameData } from "@/hooks/useGameData";
 import { useNotificationsFeed } from "@/hooks/useNotificationsFeed";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -21,6 +21,7 @@ import { MobileEntityCard, MobileErrorState, MobileSectionCard, MobileStatusBadg
 import { MobileInstallPrompt, MobileNotificationGroups, MobileOfflineState, MobileReturningBriefing, MobileUpdateBanner } from "../components/MobileOnboarding";
 import { resolveCompanionPath } from "@/mobile/routeRegistry";
 import { useMobileDaySchedule } from "@/mobile/hooks/useMobileDaySchedule";
+import { FESTIVAL_APPEARANCE_HIGHLIGHT } from "@/features/festivals/appearances/bandFestivalAppearances";
 
 const formatTime = (value: string) => new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 const humanise = (value: string) => value.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -50,6 +51,7 @@ function ScheduleWarnings({ schedule }: { schedule: MobileDayQuery }) {
 }
 
 function ScheduleList({ schedule, limit }: { schedule: MobileDayQuery; limit?: number }) {
+  const navigate = useNavigate();
   if (schedule.isLoading) return <SkeletonCard />;
   if (schedule.isError) return <MobileErrorState message="Your schedule could not be loaded." onRetry={() => schedule.refetch()} />;
 
@@ -62,15 +64,24 @@ function ScheduleList({ schedule, limit }: { schedule: MobileDayQuery; limit?: n
 
   return (
     <div className="space-y-2">
-      {rows.map((activity) => (
-        <MobileEntityCard
-          key={`${activity.activity_type}-${activity.id}`}
-          title={activity.title}
-          subtitle={`${formatTime(activity.scheduled_start)}–${formatTime(activity.scheduled_end)}${activity.location ? ` • ${activity.location}` : ""}`}
-          icon={<Clock3 className="h-5 w-5" />}
-          meta={<MobileStatusBadge tone={activity.status === "completed" ? "success" : activity.status === "in_progress" ? "info" : "neutral"}>{activity.status.replace("_", " ")}</MobileStatusBadge>}
-        />
-      ))}
+      {rows.map((activity) => {
+        const festival = activity.activity_type === "festival_performance";
+        const festivalHref = festival && typeof activity.metadata?.detail_href === "string"
+          && activity.metadata.detail_href.startsWith("/world/festivals/")
+          ? activity.metadata.detail_href : null;
+        return (
+          <div key={`${activity.activity_type}-${activity.id}`}
+            className={festival ? `rounded-xl ${FESTIVAL_APPEARANCE_HIGHLIGHT}` : undefined}>
+            <MobileEntityCard
+              title={activity.title}
+              subtitle={`${activity.metadata?.date_only ? "Set time TBA" : `${formatTime(activity.scheduled_start)}–${formatTime(activity.scheduled_end)}`}${activity.location ? ` • ${activity.location}` : ""}`}
+              icon={festival ? <Sparkles className="h-5 w-5 text-fuchsia-600 dark:text-fuchsia-300" /> : <Clock3 className="h-5 w-5" />}
+              meta={<MobileStatusBadge tone={festival ? "info" : activity.status === "completed" ? "success" : activity.status === "in_progress" ? "info" : "neutral"}>{festival ? "✦ FESTIVAL" : activity.status.replace("_", " ")}</MobileStatusBadge>}
+              onPress={festivalHref ? () => navigate(festivalHref) : undefined}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }

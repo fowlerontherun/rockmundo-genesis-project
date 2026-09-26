@@ -4,6 +4,7 @@ import { toast } from "@/hooks/use-toast";
 import { startOfDay, endOfDay, addDays } from "date-fns";
 import { getDurationMinutes, validateBookingWindow } from "@/utils/activityBookingTime";
 import { withoutDuplicateBandScheduleActivities } from "@/utils/bandActivityScheduling";
+import { appearanceOnLocalDay, fetchMyBandFestivalAppearances, festivalAppearanceAsActivity, localFestivalDate } from "@/features/festivals/appearances/bandFestivalAppearances";
 
 export type ActivityType = 
   | 'songwriting' | 'gig' | 'rehearsal' | 'busking' | 'recording' 
@@ -120,6 +121,18 @@ export function useScheduledActivities(date: Date, userId?: string) {
       
       const userBandIds = userBands?.map(b => b.band_id) || [];
 
+      // The same confirmed booking belongs on every active member's calendar.
+      let festivalActivities: ScheduledActivity[] = [];
+      if (userBandIds.length) {
+        try {
+          festivalActivities = (await fetchMyBandFestivalAppearances())
+            .filter((appearance) => userBandIds.includes(appearance.bandId) && appearanceOnLocalDay(appearance, date))
+            .map((appearance) => festivalAppearanceAsActivity(appearance, userId, activeProfile.id));
+        } catch (error) {
+          console.warn("Could not load confirmed Festival appearances", error);
+        }
+      }
+
       // Fetch gigs for user's bands
       // Use date-only comparison to avoid timezone issues
       const dateString = date.toISOString().split('T')[0];
@@ -228,6 +241,7 @@ export function useScheduledActivities(date: Date, userId?: string) {
       // Convert to unified format
       const activities: ScheduledActivity[] = [
         ...(scheduledData || []),
+        ...festivalActivities,
         ...(gigs || []).map((g: any) => {
           // Give gigs a default 4-hour duration for display
           const gigStart = new Date(g.scheduled_date);
@@ -311,7 +325,22 @@ export function useWeekScheduledActivities(startDate: Date, userId?: string) {
         .order('scheduled_start', { ascending: true });
 
       if (error) throw error;
-      return (data || []) as ScheduledActivity[];
+
+      let festivalActivities: ScheduledActivity[] = [];
+      try {
+        festivalActivities = (await fetchMyBandFestivalAppearances())
+          .filter((appearance) => {
+            const day = localFestivalDate(appearance.festivalDate).getTime();
+            return day >= weekStart.getTime() && day <= weekEnd.getTime();
+          })
+          .map((appearance) => festivalAppearanceAsActivity(appearance, userId, activeProfile.id));
+      } catch (festivalError) {
+        console.warn("Could not load weekly Festival appearances", festivalError);
+      }
+
+      return withoutDuplicateBandScheduleActivities([
+        ...((data || []) as ScheduledActivity[]), ...festivalActivities,
+      ]).sort((a, b) => new Date(a.scheduled_start).getTime() - new Date(b.scheduled_start).getTime());
     },
     enabled: !!userId,
     staleTime: 1000 * 60,

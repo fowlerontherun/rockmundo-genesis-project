@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Calendar, CheckCircle, CheckCircle2, Clock, DollarSign, Filter, Flag, MapPin, Music, PlayCircle, RefreshCw, Star, Ticket, Users, XCircle } from 'lucide-react';
+import { Calendar, CheckCircle, CheckCircle2, Clock, DollarSign, Filter, Flag, MapPin, Music, PlayCircle, RefreshCw, Sparkles, Star, Ticket, Users, XCircle } from 'lucide-react';
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,7 +24,9 @@ import { useAutoGigStart } from '@/hooks/useAutoGigStart';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { checkBandLockout } from '@/utils/bandLockout';
 import { getVenueCooldowns, type VenueCooldownResult, VENUE_COOLDOWN_DAYS_EXPORT } from '@/utils/venueCooldown';
-import { formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
+import { appearanceDetailHref, FESTIVAL_APPEARANCE_HIGHLIGHT, isFutureFestivalAppearance, localFestivalDate } from '@/features/festivals/appearances/bandFestivalAppearances';
+import { useMyBandFestivalAppearances } from '@/features/festivals/appearances/useMyBandFestivalAppearances';
 import { TicketSalesDisplay } from '@/components/gig/TicketSalesDisplay';
 import { getGigBookingPlayerError, type GigBookingErrorLike } from '@/utils/gigBookingErrors';
 import { formatMerchCurrency } from '@/lib/api/merch';
@@ -60,6 +62,16 @@ const GigBooking = () => {
   const [venues, setVenues] = useState<VenueWithCity[]>([]);
   const [band, setBand] = useState<BandRow | null>(null);
   const [upcomingGigs, setUpcomingGigs] = useState<GigWithVenue[]>([]);
+  const { data: allFestivalAppearances = [], refetch: refetchFestivalAppearances } = useMyBandFestivalAppearances(profileId);
+  const bandFestivalAppearances = allFestivalAppearances.filter((appearance) => appearance.bandId === band?.id);
+  // The appearance date, not a prematurely written annual result, determines
+  // whether a confirmed booking belongs under Upcoming or History.
+  const upcomingFestivals = bandFestivalAppearances.filter((appearance) =>
+    isFutureFestivalAppearance(appearance)
+  );
+  const pastFestivals = bandFestivalAppearances.filter((appearance) =>
+    !isFutureFestivalAppearance(appearance)
+  );
   const [bookingVenue, setBookingVenue] = useState<VenueRow | null>(null);
   const [cancellingGig, setCancellingGig] = useState<GigWithVenue | null>(null);
   const [isBooking, setIsBooking] = useState(false);
@@ -587,9 +599,9 @@ const GigBooking = () => {
           <TabsTrigger value="upcoming">
             <Calendar className="h-4 w-4 mr-1" />
             Upcoming Gigs
-            {upcomingGigs.length > 0 && (
+            {(upcomingGigs.length + upcomingFestivals.length) > 0 && (
               <Badge variant="secondary" className="ml-2 h-5 min-w-5 rounded-full px-1">
-                {upcomingGigs.length}
+                {upcomingGigs.length + upcomingFestivals.length}
               </Badge>
             )}
           </TabsTrigger>
@@ -825,13 +837,13 @@ const GigBooking = () => {
                     Upcoming Gigs
                   </CardTitle>
                   <CardDescription>
-                    Manage your scheduled performances and head to the stage when ready.
+                    Manage club gigs and confirmed Festival appearances in one place.
                   </CardDescription>
                 </div>
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => band?.id && loadUpcomingGigs(band.id)}
+                  onClick={() => { if (band?.id) void loadUpcomingGigs(band.id); void refetchFestivalAppearances(); }}
                 >
                   <RefreshCw className="h-4 w-4 mr-1" />
                   Refresh
@@ -841,6 +853,47 @@ const GigBooking = () => {
             <CardContent>
               {band ? (
                 <div className="space-y-4">
+                  {upcomingFestivals.map((appearance) => (
+                    <div
+                      key={appearance.bookingId}
+                      className={`relative overflow-hidden rounded-xl border p-4 ${FESTIVAL_APPEARANCE_HIGHLIGHT}`}
+                    >
+                      <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-fuchsia-400/10 blur-2xl" aria-hidden="true" />
+                      <div className="relative flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Sparkles className="h-5 w-5 text-fuchsia-600 dark:text-fuchsia-300" aria-hidden="true" />
+                            <span className="text-lg font-bold">{appearance.festivalName}</span>
+                            <Badge className="border-fuchsia-300/70 bg-fuchsia-500/20 font-bold text-fuchsia-800 hover:bg-fuchsia-500/20 dark:text-fuchsia-100" variant="outline">
+                              ✦ FESTIVAL
+                            </Badge>
+                            <Badge variant="secondary" className="capitalize">
+                              {appearance.festivalStatus === 'live' ? 'Festival underway' : appearance.bookingStatus.replace(/_/g, ' ')}
+                            </Badge>
+                          </div>
+                          <p className="text-sm font-medium">{appearance.bandName} · {appearance.billingPosition.replace(/_/g, ' ')}</p>
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                            <span className="flex items-center gap-1"><Calendar className="h-4 w-4" />{format(localFestivalDate(appearance.festivalDate), 'EEE, d MMM yyyy')}</span>
+                            <span className="flex items-center gap-1"><Clock className="h-4 w-4" />
+                              {appearance.timeConfirmed && appearance.confirmedStartAt && appearance.confirmedEndAt
+                                ? `${format(new Date(appearance.confirmedStartAt), 'p')}–${format(new Date(appearance.confirmedEndAt), 'p')}`
+                                : 'Set time TBA'}
+                            </span>
+                            {appearance.stageName && <span className="flex items-center gap-1"><Music className="h-4 w-4" />{appearance.stageName}</span>}
+                            {appearance.cityName && <span className="flex items-center gap-1"><MapPin className="h-4 w-4" />{appearance.cityName}</span>}
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 flex-wrap gap-2 sm:flex-col">
+                          <Button asChild size="sm" className="bg-fuchsia-600 text-white hover:bg-fuchsia-700">
+                            <Link to={appearanceDetailHref(appearance)}>Festival details</Link>
+                          </Button>
+                          <Button asChild size="sm" variant="outline" className="border-fuchsia-400/50 bg-background/50">
+                            <Link to="/festival-opportunities">My festival bookings</Link>
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                   {upcomingGigs.length ? (
                     upcomingGigs.map((gig) => {
                       const venue = gig.venues;
@@ -922,17 +975,17 @@ const GigBooking = () => {
                         </div>
                       );
                     })
-                  ) : (
+                  ) : !upcomingFestivals.length ? (
                     <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
                       <CheckCircle className="h-5 w-5 text-primary" />
-                      No gigs scheduled yet. Book a venue to get started.
+                      No gigs or festivals scheduled yet. Book a venue or apply to perform at a Festival.
                       <Button asChild size="sm" className="mt-2">
                         <Link to="#" onClick={() => document.querySelector('[value="book"]')?.dispatchEvent(new MouseEvent('click'))}>
                           Browse Venues
                         </Link>
                       </Button>
                     </div>
-                  )}
+                  ) : null}
                 </div>
               ) : (
                 <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
@@ -945,7 +998,23 @@ const GigBooking = () => {
 
         <TabsContent value="history">
           {band ? (
-            <GigHistoryTab bandId={band.id} />
+            <div className="space-y-4">
+              {pastFestivals.length > 0 && (
+                <Card className="border-fuchsia-400/50 shadow-[0_0_20px_rgba(217,70,239,0.10)]">
+                  <CardHeader><CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-fuchsia-500" />Festival appearances</CardTitle></CardHeader>
+                  <CardContent className="space-y-2">
+                    {pastFestivals.map((appearance) => (
+                      <Link to={appearanceDetailHref(appearance)} key={appearance.bookingId}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-fuchsia-400/40 bg-fuchsia-500/5 p-3 hover:bg-fuchsia-500/10">
+                        <span className="font-semibold">{appearance.festivalName}</span>
+                        <span className="text-sm text-muted-foreground">{format(localFestivalDate(appearance.festivalDate), 'd MMM yyyy')} · {appearance.bandName}</span>
+                      </Link>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+              <GigHistoryTab bandId={band.id} />
+            </div>
           ) : (
             <Card>
               <CardContent className="pt-6">
