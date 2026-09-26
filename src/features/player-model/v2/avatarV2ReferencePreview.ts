@@ -215,7 +215,7 @@ export function parseAvatarV2ReferenceManifest(raw: unknown): AvatarV2ReferenceM
         if (!tee || typeof tee !== 'object') return null;
         const proof = tee as AvatarV2StarterTeeProof;
         const style = proof.style;
-        if (!(style in STARTER_TEE_KEYS) || styles.has(style) ||
+        if (!Object.prototype.hasOwnProperty.call(STARTER_TEE_KEYS, style) || styles.has(style) ||
             proof.catalogueKey !== STARTER_TEE_KEYS[style]) return null;
         styles.add(style);
         const glb = `${frame}/${frame}-starter-${style}-LOOKDEV-ONLY-not-validated.glb`;
