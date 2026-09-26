@@ -15,7 +15,7 @@ on:
       - 'package-lock.json'
       - '.github/workflows/avatar-v2-player-preview.yml'
   push:
-    branches: [main]
+    branches: [main, feat/avatar-v2-real-starter-tee-proof] # Temporary same-repo proof gate; remove before merge
     paths:
       - 'src/features/player-model/v2/**'
       - 'src/features/player-model/PlayerModelEditor.tsx'
