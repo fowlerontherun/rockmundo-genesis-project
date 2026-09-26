@@ -188,8 +188,30 @@ export function avatarV2GarmentFile(
 ) {
   const config = avatarV2GarmentConfig(item);
   if (!config || config.status !== 'validated' || !avatarV2GarmentHasCompleteAssetManifest(config)) return null;
+  const slot = richGarmentSlot(item);
+  if (BODY_OCCLUSION_SLOTS.has(slot) && !config.occludeBodyRegions.length) return null;
+  if (config.colourMode === 'zones' && !config.materialZones.main.length) return null;
   const assets = config.frames[frame];
   return assets?.[`lod${lod}` as keyof AvatarV2GarmentFrameAssets] ?? null;
+}
+
+/** Prevent one equipped item from silently borrowing another item's V2 mesh. */
+function sharedEquippedGarmentAsset(clothing: readonly ResolvedEquippedClothing[]): string | null {
+  const owners = new Map<string, string>();
+  for (const { item } of clothing) {
+    const config = avatarV2GarmentConfig(item);
+    if (!config) continue;
+    for (const frame of ['masculine', 'feminine'] as const) {
+      for (const lod of [0, 1, 2, 3] as const) {
+        const path = config.frames[frame]?.[`lod${lod}`];
+        if (!path) continue;
+        const previous = owners.get(path);
+        if (previous && previous !== item.id) return path;
+        owners.set(path, item.id);
+      }
+    }
+  }
+  return null;
 }
 
 export function requiredAvatarV2GarmentFiles(
@@ -197,7 +219,7 @@ export function requiredAvatarV2GarmentFiles(
   frame: AvatarV2Frame,
   lod: AvatarV2Lod,
 ) {
-  if (!AVATAR_V2_ROLLOUT.enabled) return [];
+  if (!AVATAR_V2_ROLLOUT.enabled || sharedEquippedGarmentAsset(clothing)) return [];
   return [...new Set(clothing
     .map(row => avatarV2GarmentFile(row.item, frame, lod))
     .filter((file): file is string => !!file))];
@@ -208,6 +230,9 @@ export function avatarV2ClothingCompatibilityReason(
   frame: AvatarV2Frame,
   lod: AvatarV2Lod,
 ) {
+  if (sharedEquippedGarmentAsset(clothing)) {
+    return 'Equipped Avatar V2 clothing items share a garment asset path.';
+  }
   for (const row of clothing) {
     const slot = richGarmentSlot(row.item);
     if (!SUPPORTED_SLOTS.has(slot)) {
