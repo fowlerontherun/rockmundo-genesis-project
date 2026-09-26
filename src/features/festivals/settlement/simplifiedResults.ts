@@ -4,6 +4,7 @@ export interface SimplifiedFestivalFinancials {
   foodAndDrinkRevenueMinor: number;
   merchandiseRevenueMinor: number;
   operatingCostMinor: number;
+  artistFeesMinor?: number;
   taxMinor: number;
   totalRevenueMinor: number;
   netProfitMinor: number;
@@ -39,7 +40,17 @@ export interface SimplifiedFestivalCompanyImpact {
   realAttendance: SimplifiedFestivalRealAttendance;
 }
 
+export interface SimplifiedFestivalArtistPayout {
+  bookingId: string;
+  bandId: string;
+  artistName: string;
+  amountMinor: number;
+  currencyCode: string;
+  creditedAt: string;
+}
+
 export interface SimplifiedFestivalResults {
+  artistPayouts: SimplifiedFestivalArtistPayout[];
   festivalName: string;
   editionYear: number | null;
   dates: { startsOn?: string; endsOn?: string } | null;
@@ -146,12 +157,24 @@ export function parseSimplifiedFestivalResults(value: unknown): SimplifiedFestiv
     profitabilityBand: requiredString(result, "profitabilityBand"),
     completedAt: requiredString(result, "completedAt"),
     currencyCode: requiredString(result, "currencyCode"),
+    artistPayouts: (Array.isArray(result.artistPayouts) ? result.artistPayouts : []).map((entry) => {
+      const payment = asObject(entry, "Festival artist payout");
+      return {
+        bookingId: requiredString(payment, "bookingId"),
+        bandId: requiredString(payment, "bandId"),
+        artistName: requiredString(payment, "artistName"),
+        amountMinor: requiredNumber(payment, "amountMinor"),
+        currencyCode: requiredString(payment, "currencyCode"),
+        creditedAt: requiredString(payment, "creditedAt"),
+      };
+    }),
     financials: {
       ticketRevenueMinor: requiredNumber(financials, "ticketRevenueMinor"),
       sponsorshipRevenueMinor: requiredNumber(financials, "sponsorshipRevenueMinor"),
       foodAndDrinkRevenueMinor: requiredNumber(financials, "foodAndDrinkRevenueMinor"),
       merchandiseRevenueMinor: requiredNumber(financials, "merchandiseRevenueMinor"),
       operatingCostMinor: requiredNumber(financials, "operatingCostMinor"),
+      artistFeesMinor: optionalNumber(financials.artistFeesMinor),
       taxMinor: requiredNumber(financials, "taxMinor"),
       totalRevenueMinor: requiredNumber(financials, "totalRevenueMinor"),
       netProfitMinor: requiredNumber(financials, "netProfitMinor"),
