@@ -106,6 +106,30 @@ export function AvatarV2PublicPreview({ frame }: { frame: AvatarV2Frame }) {
               </figure>
             ))}
           </div>
+          {frameData.headMotionEvidence && frameData.headMotion && (
+            <div className="avatar-v2-public__experiment">
+              <div className="avatar-v2-public__experiment-heading">
+                <h4>New: real head-turn and eye-gaze experiment</h4>
+                <span>Preliminary weights · Not playable</span>
+              </div>
+              <img
+                key={`${frame}-head-motion-${view}`}
+                src={avatarV2ReferenceImageUrl(frame, 'headMotion', view)}
+                alt={`${frame} actual V2 Blender head and eye deformation experiment ${view} proof`}
+                loading="lazy"
+              />
+              <p>
+                The real Blender body and separate eye meshes are driven by an experimental
+                armature. The test measures {(frameData.headMotionEvidence.headMeanDisplacementMm).toFixed(1)} mm
+                average head movement while holding the sampled torso near-still.
+                These are automated draft weights and unapproved head/neck pivots,
+                not finished facial animation, clothing deformation or rigging.
+              </p>
+              <button type="button" onClick={() => { setVariant('headMotion'); setShow3D(true); }}>
+                Inspect the experimental skinned mesh in 3D
+              </button>
+            </div>
+          )}
           <div className="avatar-v2-public__inspect">
             <button type="button" className="avatar-v2-public__inspect-toggle"
               aria-pressed={show3D} onClick={() => setShow3D(value => !value)}>
@@ -114,10 +138,11 @@ export function AvatarV2PublicPreview({ frame }: { frame: AvatarV2Frame }) {
             {show3D && (
               <>
                 <div className="avatar-v2-public__controls" role="group" aria-label="3D mesh variant">
-                  {(['lookdev', 'source'] as const).map(option => (
+                  {(['lookdev', 'source', ...(frameData.headMotionEvidence ? ['headMotion'] as const : [])] as const).map(option => (
                     <button key={option} type="button" aria-pressed={variant === option}
                       onClick={() => setVariant(option)}>
-                      {option === 'lookdev' ? 'Improved V2 model' : 'Original source model'}
+                      {option === 'lookdev' ? 'Improved V2 model' :
+                        option === 'headMotion' ? 'Draft skinned head experiment' : 'Original source model'}
                     </button>
                   ))}
                 </div>
@@ -133,7 +158,8 @@ export function AvatarV2PublicPreview({ frame }: { frame: AvatarV2Frame }) {
           </div>
           <p className="avatar-v2-public__disclaimer">
             This is a verified visual preview of the real Blender source, not your saved playable avatar.
-            V2 has not yet passed rigging, facial animation, clothing and LOD validation, so
+            The head-motion experiment has preliminary partial weights, but V2 has not
+            passed full rigging, facial animation, clothing and LOD validation, so
             your live character and gig visuals remain on V1. Appearance controls and Save avatar
             still apply only to your current live character.
             {' '}<a href={GALLERY} target="_blank" rel="noreferrer">View verified source proofs</a>
