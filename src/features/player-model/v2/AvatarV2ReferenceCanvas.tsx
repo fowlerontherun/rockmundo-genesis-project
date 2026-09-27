@@ -4,7 +4,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { disposeModel } from '../model';
 import type { PlayerAppearance } from '../appearance';
-import { isAvatarV2PreviewSkinMaterial } from './avatarV2PreviewMaterials';
+import { isAvatarV2PreviewIrisMaterial, isAvatarV2PreviewSkinMaterial } from './avatarV2PreviewMaterials';
 
 /**
  * Read-only viewer for published Blender SOURCE/LOOKDEV previews.
@@ -29,9 +29,12 @@ export function AvatarV2ReferenceCanvas({
   const previewModel = useRef<T.Object3D | null>(null);
   const referenceScale = useRef(1);
   const originalSkinMaterials = useRef<Array<{ material: T.MeshStandardMaterial; color: T.Color }>>([]);
+  const irisMaterials = useRef<T.MeshStandardMaterial[]>([]);
   const redraw = useRef<(() => void) | null>(null);
   const skinTone = useRef(appearance?.body.skin);
   skinTone.current = appearance?.body.skin;
+  const eyeColor = useRef(appearance?.head.eyeColor);
+  eyeColor.current = appearance?.head.eyeColor;
   const proportions = useRef({ height: appearance?.body.height ?? 1, build: appearance?.body.build ?? 1 });
   proportions.current = { height: appearance?.body.height ?? 1, build: appearance?.body.build ?? 1 };
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -138,17 +141,20 @@ export function AvatarV2ReferenceCanvas({
         // Only recolour materials explicitly identified as skin by the
         // Blender export. Do not tint eyes, clothes or unidentified meshes.
         originalSkinMaterials.current = [];
+        irisMaterials.current = [];
         const clones = new Map<T.MeshStandardMaterial, T.MeshStandardMaterial>();
         source.traverse(object => {
           if (!(object instanceof T.Mesh)) return;
           const cloneSkin = (material: T.Material): T.Material => {
             if (!(material instanceof T.MeshStandardMaterial) ||
-                !isAvatarV2PreviewSkinMaterial(material.name)) return material;
+                (!isAvatarV2PreviewSkinMaterial(material.name) && !isAvatarV2PreviewIrisMaterial(material.name))) return material;
             let clone = clones.get(material);
             if (!clone) {
               clone = material.clone();
               clones.set(material, clone);
-              originalSkinMaterials.current.push({ material: clone, color: clone.color.clone() });
+              if (isAvatarV2PreviewSkinMaterial(material.name)) {
+                originalSkinMaterials.current.push({ material: clone, color: clone.color.clone() });
+              } else irisMaterials.current.push(clone);
             }
             return clone;
           };
@@ -160,6 +166,7 @@ export function AvatarV2ReferenceCanvas({
         if (skinTone.current) {
           for (const entry of originalSkinMaterials.current) entry.material.color.set(skinTone.current);
         }
+        if (eyeColor.current) for (const iris of irisMaterials.current) iris.color.set(eyeColor.current);
         previewModel.current = source;
         candidate = source;
         scene.add(source);
@@ -179,6 +186,7 @@ export function AvatarV2ReferenceCanvas({
       active = false;
       previewModel.current = null;
       originalSkinMaterials.current = [];
+      irisMaterials.current = [];
       redraw.current = null;
       cancelAnimationFrame(queuedFrame);
       resizeObserver?.disconnect();
@@ -214,6 +222,12 @@ export function AvatarV2ReferenceCanvas({
     }
     redraw.current?.();
   }, [appearance?.body.skin]);
+
+  useEffect(() => {
+    if (!appearance?.head.eyeColor) return;
+    for (const iris of irisMaterials.current) iris.color.set(appearance.head.eyeColor);
+    redraw.current?.();
+  }, [appearance?.head.eyeColor]);
 
   return (
     <div className="avatar-v2-public__canvas-wrap">
