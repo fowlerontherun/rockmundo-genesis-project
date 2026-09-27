@@ -112,9 +112,13 @@ describe('touring IMAG hangers', () => {
       expect(mounts[1]).toEqual([expectedX + suspension.mountOffset, suspension.screenTop, suspension.cableZ]);
       expect(suspension.mountOffset).toBeGreaterThan(suspension.screenWidth * .35);
       expect(suspension.cableZ).toBeLessThan(screen.position.z - .15);
-      const screenBounds = new T.Box3().setFromObject(screen);
-      expect(screenBounds.max.y).toBeCloseTo(suspension.screenTop, 1);
-      expect(screenBounds.max.y).toBeLessThan(suspension.anchorY);
+      // The screen's anonymous outer frame is static-batched into the venue.
+      // Its named pixel display remains beneath the frame's 12 cm top border.
+      const display = root.getObjectByName('stage-side-screen-' + side + '-display') as T.Mesh;
+      const displayBounds = new T.Box3().setFromObject(display);
+      expect(displayBounds.max.y).toBeCloseTo(suspension.screenTop - .12, 2);
+      expect(suspension.screenTop - displayBounds.max.y).toBeCloseTo(.12, 2);
+      expect(displayBounds.max.y).toBeLessThan(suspension.anchorY);
       expect(screen.position.z).toBeCloseTo(suspension.screenZ);
     }
     disposeModel(scene);
