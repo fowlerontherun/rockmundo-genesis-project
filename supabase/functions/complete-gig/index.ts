@@ -97,16 +97,19 @@ serve(async (req) => {
     }
 
     const performedPositions = new Set((existingPerformances || []).map((p: any) => p.position));
+    let expectedSetlistSize: number | null = null;
     console.log(`[complete-gig] Found ${performedPositions.size} existing song performances`);
 
     // === SERVER-SIDE: Process any unplayed songs ===
     // This ensures gigs complete properly even if the browser was closed
     if (gig.setlist_id) {
-      const { data: setlistSongs } = await supabaseClient
+      const { data: setlistSongs, error: setlistError } = await supabaseClient
         .from('setlist_songs')
         .select('id,song_id,performance_item_id,item_type,position,songs(id,title,duration_seconds,quality_score),performance_items_catalog(id,name,duration_seconds)')
         .eq('setlist_id', gig.setlist_id)
         .order('position');
+      if (setlistError) throw setlistError;
+      expectedSetlistSize = setlistSongs?.length ?? 0;
 
       if (setlistSongs && setlistSongs.length > 0) {
         const unplayedSongs = setlistSongs.filter((_: any, idx: number) => !performedPositions.has(idx));
@@ -140,26 +143,41 @@ serve(async (req) => {
               console.error(`[complete-gig] Error processing setlist item ${setlistSong.song_id ?? setlistSong.performance_item_id}:`, songErr);
             }
           }
-          
-          // Update gig position to reflect all songs played
-          await supabaseClient
-            .from('gigs')
-            .update({ current_song_position: setlistSongs.length })
-            .eq('id', gigId);
+          // Leave progress untouched until every canonical setlist position
+          // is verified below, including non-song stage interactions.
         }
       }
     }
 
     // Re-fetch all performances after processing missing songs
-    const { data: performances } = await supabaseClient
+    const { data: performances, error: finalPerformancesError } = await supabaseClient
       .from('gig_song_performances')
       .select('*')
       .eq('gig_outcome_id', outcome.id)
       .order('position');
+    if (finalPerformancesError) throw finalPerformancesError;
 
     if (!performances || performances.length === 0) {
       console.log('[complete-gig] No performances even after server-side processing');
       throw new Error('No song performances found - gig could not be processed');
+    }
+
+    // Do not settle merchandise, pay band rewards, or mark the gig completed
+    // when any song or stage action failed. Previous code silently scored the
+    // partial setlist and wrote current_song_position as if all items played.
+    if (expectedSetlistSize !== null) {
+      const recorded = new Set(performances.map((entry: any) => entry.position));
+      const missing = Array.from({ length: expectedSetlistSize }, (_, position) => position)
+        .filter((position) => !recorded.has(position));
+      if (missing.length > 0) {
+        throw new Error(`Incomplete gig setlist: missing positions ${missing.join(', ')} of ${expectedSetlistSize}`);
+      }
+
+      const { error: progressError } = await supabaseClient
+        .from('gigs')
+        .update({ current_song_position: expectedSetlistSize })
+        .eq('id', gigId);
+      if (progressError) throw progressError;
     }
 
     console.log(`[complete-gig] Total performances for final calculation: ${performances.length}`);
