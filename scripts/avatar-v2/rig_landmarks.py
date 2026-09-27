@@ -91,12 +91,20 @@ def stale_guide_markers(
 
 
 def rig_structure_fingerprint(bones: Sequence[BoneSpec]) -> str:
-    """Stable digest of joint names, parenting and connected-chain topology.
+    """Digest hierarchy and unmarked eye/ear rest directions.
 
-    Artist handle sets must not survive a hierarchy edit merely because all
-    surviving marker coordinates happen to be unchanged.
+    Eye and ear guide tails have no movable handles: their original facing
+    vectors are reused when fitting. Changing one must invalidate the artist
+    handles even when the visible eye/ear head markers have not moved.
     """
-    structure = sorted((bone.name, bone.parent, bone.connected) for bone in bones)
+    structure = sorted(
+        (
+            bone.name, bone.parent, bone.connected,
+            tuple(round(bone.tail[i] - bone.head[i], 4) for i in range(3))
+            if bone.name.startswith(("Eye.", "EarAnchor.")) else None,
+        )
+        for bone in bones
+    )
     payload = json.dumps(structure, separators=(",", ":"), ensure_ascii=True)
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
