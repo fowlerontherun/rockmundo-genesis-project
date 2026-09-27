@@ -14,7 +14,7 @@ type QueryState = {
   refetch: typeof refetch;
 };
 
-type QueryOptions = { queryFn: () => Promise<unknown> };
+type QueryOptions = { queryKey: string[]; queryFn: () => Promise<unknown> };
 type MutationVariables = { invitationId: string; status: "accepted" | "declined" };
 type MutationResult = { id: string; status: string };
 type MutationOptions = {
@@ -33,11 +33,14 @@ const invitation = {
   vocal_role: null,
   message: "Join us",
   created_at: "2026-09-03T12:00:00Z",
-  bands: { name: "The Testers", genre: "Rock" },
+  bands: { name: "The Testers", genre: "Rock", status: "active", is_solo_artist: false },
 };
 
 vi.mock("@tanstack/react-query", () => ({
   useQuery: (options: QueryOptions) => {
+    if (options.queryKey[0] === "active-band-membership") {
+      return { data: null, isLoading: false };
+    }
     capturedQueryOptions = options;
     return queryState;
   },
@@ -131,5 +134,20 @@ describe("BandInvitations", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("Invitation query failed");
     fireEvent.click(screen.getByRole("button", { name: /try again/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps decline available when the source band no longer exists", async () => {
+    queryState = {
+      data: [{ ...invitation, bands: null }],
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch,
+    };
+    render(<BandInvitations />);
+    expect(screen.getByText("Unavailable band")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /accept invitation from unavailable band/i })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: /decline invitation from unavailable band/i }));
+    await waitFor(() => expect(respondBandInvitation).toHaveBeenCalledWith(invitation.id, "declined"));
   });
 });
