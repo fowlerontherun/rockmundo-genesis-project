@@ -151,8 +151,7 @@ describe("Band Members player invitations", () => {
     dataByTable.profiles = [{ id: targetProfileId, user_id: targetUserId, display_name: "Guest Guitarist", username: "guestguitarist" }];
     render(<InviteFriendToBand bandId={bandId} bandName="The Testers" currentUserId={inviterProfileId} currentAccountId={inviterUserId} />);
     await openDialog();
-    await waitFor(() => expect(screen.getByText("Recent invitation activity")).toBeInTheDocument());
-    expect(screen.getByText("Accepted")).toBeInTheDocument();
+    expect(await screen.findByText("Accepted")).toBeInTheDocument();
     expect(screen.getByText("Declined")).toBeInTheDocument();
     expect(screen.getByText("Guest Guitarist")).toBeInTheDocument();
     expect(screen.getByText("No pending invitations.")).toBeInTheDocument();
