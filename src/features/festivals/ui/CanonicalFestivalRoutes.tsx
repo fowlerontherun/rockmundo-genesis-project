@@ -599,7 +599,17 @@ function PublicEditionHistory({
       {query.isLoading ? (
         <p role="status">Loading Festival results…</p>
       ) : !query.data ? (
-        <p>This Festival has no completed public result yet.</p>
+        <Card>
+          <CardHeader>
+            <CardTitle>Festival programme and tickets</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p>This edition has no completed public results yet. The current public Festival page shows the announced line-up, published performance times and ticket availability.</p>
+            <Link className="inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground" to={festivalRoutes.publicCompany(slug)}>
+              View Festival programme and tickets
+            </Link>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           <Summary
