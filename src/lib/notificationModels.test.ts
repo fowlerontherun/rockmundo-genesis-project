@@ -54,6 +54,16 @@ describe("notification recruitment normalization", () => {
   it("shows invitation final status without inventing actions", () => {
     const display = normalizeNotification(base({ band_invitation_id: "invite-1", band_application_id: undefined, band_invitation_status: "cancelled" }, "/band-manager"));
     expect(display.statusLabel).toBe("Cancelled");
-    expect(display.routePath).toBe("/band-manager");
+    expect(display.routePath).toBe("/band/members");
+  });
+
+  it("opens the actual members route from an old invitation even without band metadata", () => {
+    const display = normalizeNotification(base({ band_id: undefined, band_application_id: undefined, band_invitation_id: "invite-1" }, "/band-manager"));
+    expect(display.routePath).toBe("/band/members");
+  });
+
+  it("normalizes legacy band-invite notification types and stale action URLs", () => {
+    expect(getNotificationRoute({ ...base({ band_id: undefined, band_application_id: undefined }), type: "band_invite", action_path: null })).toBe("/band/members");
+    expect(getNotificationRoute(base({ band_id: undefined, band_application_id: undefined }, "/band-manager"))).toBe("/band/members");
   });
 });
