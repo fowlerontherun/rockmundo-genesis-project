@@ -119,7 +119,13 @@ describe('capacity-correct material tiling on wing and runway decks', () => {
     expect(headSize.x).toBeCloseTo(6);
     expect(headSize.z).toBeCloseTo(2.8);
     expect(runway.position.z - runwaySize.z / 2).toBeCloseTo(.65);
-    expect(runway.position.z + runwaySize.z / 2).toBeGreaterThan(landing.position.z - headSize.z / 2);
+    // Adjacent floor tops must touch exactly; overlapping coplanar stage
+    // textures make the runway visibly flicker in motion.
+    expect(runway.position.z + runwaySize.z / 2).toBeCloseTo(landing.position.z - headSize.z / 2);
+    const runwayTop = new T.Box3().setFromObject(runwaySurface);
+    const headTop = new T.Box3().setFromObject(landingSurface);
+    expect(runwayTop.max.z).toBeCloseTo(headTop.min.z);
+    expect(runwayTop.max.y).toBeCloseTo(headTop.max.y);
     checkPhysicalTiling(runwaySurface, floor, 3.2, 6, p.stageWidth, p.stageDepth);
     checkPhysicalTiling(landingSurface, floor, 6, 2.8, p.stageWidth, p.stageDepth);
     const left = root.getObjectByName('stage-front-edge--1') as T.Mesh;
