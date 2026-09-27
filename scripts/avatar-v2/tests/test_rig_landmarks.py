@@ -8,7 +8,7 @@ import unittest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from rig_landmarks import (  # noqa: E402
     BoneSpec, FitBone, audit_sculpt_fit, fit_bones, marker_name, moved_markers,
-    position_markers, untouched_face_markers,
+    position_markers, untouched_face_markers, stale_guide_markers,
 )
 
 
@@ -58,6 +58,21 @@ def example_rig():
 
 
 class SculptJointFitTests(unittest.TestCase):
+    def test_stale_handles_reject_changed_rest_skeleton(self):
+        original = position_markers(example_rig())
+        current = dict(original)
+        key = marker_name("Hand.L", "tail")
+        current[key] = (original[key][0] + .01, *original[key][1:])
+        self.assertEqual(stale_guide_markers(current, original), [key])
+        self.assertEqual(stale_guide_markers(original, original), [])
+
+    def test_stale_handles_ignore_submillimetre_rounding(self):
+        original = position_markers(example_rig())
+        current = dict(original)
+        key = marker_name("Eye.R", "head")
+        current[key] = (original[key][0] + .00001, *original[key][1:])
+        self.assertEqual(stale_guide_markers(current, original), [])
+
     def test_marker_map_reuses_parent_tails_for_connected_chains(self):
         markers = position_markers(example_rig())
         self.assertIn(marker_name("Shoulder.L", "head"), markers)
