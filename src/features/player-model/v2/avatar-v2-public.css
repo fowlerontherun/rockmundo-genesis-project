@@ -50,4 +50,4 @@
 
 .avatar-v2-public__skin-warning { position: absolute; top: 12px; left: 12px; right: 12px; z-index: 1; padding: 9px 12px; border: 1px solid #c9a35a; border-radius: 8px; background: #302718ed; color: #ffe6af; font-size: 12px; line-height: 1.5; pointer-events: none; }
 
-.avatar-v2-public__iris-warning { position: absolute; top: 76px; left: 12px; right: 12px; z-index: 1; padding: 9px 12px; border: 1px solid #c9a35a; border-radius: 8px; background: #302718ed; color: #ffe6af; font-size: 12px; line-height: 1.5; pointer-events: none; }
+.avatar-v2-public__material-warnings { position: absolute; top: 12px; left: 12px; right: 12px; z-index: 1; display: grid; gap: 6px; padding: 9px 12px; border: 1px solid #c9a35a; border-radius: 8px; background: #302718ed; color: #ffe6af; font-size: 12px; line-height: 1.5; pointer-events: none; }
