@@ -63,7 +63,7 @@ export function FestivalSetlistEditorCanonical({
     setSavedDraftConfirmed(false);
   }, [contract.id, currentSetlistId, currentSetlistVersion]);
   const editItems = (next: FestivalSetlistItemInput[]) => {
-    editItems(next);
+    setItems(next);
     setDirty(true);
     setSavedDraftConfirmed(false);
   };
