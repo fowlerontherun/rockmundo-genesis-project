@@ -29,6 +29,8 @@ export function AvatarV2ReferenceCanvas({
   const referenceScale = useRef(1);
   const originalSkinMaterials = useRef<Array<{ material: T.MeshStandardMaterial; color: T.Color }>>([]);
   const redraw = useRef<(() => void) | null>(null);
+  const skinTone = useRef(appearance?.body.skin);
+  skinTone.current = appearance?.body.skin;
   const proportions = useRef({ height: appearance?.body.height ?? 1, build: appearance?.body.build ?? 1 });
   proportions.current = { height: appearance?.body.height ?? 1, build: appearance?.body.build ?? 1 };
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -146,8 +148,8 @@ export function AvatarV2ReferenceCanvas({
             originalSkinMaterials.current.push({ material: clone, color: clone.color.clone() });
           }
         });
-        if (appearance?.body.skin) {
-          for (const entry of originalSkinMaterials.current) entry.material.color.set(appearance.body.skin);
+        if (skinTone.current) {
+          for (const entry of originalSkinMaterials.current) entry.material.color.set(skinTone.current);
         }
         previewModel.current = source;
         candidate = source;
