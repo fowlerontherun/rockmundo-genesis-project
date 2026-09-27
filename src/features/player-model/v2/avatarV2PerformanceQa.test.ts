@@ -262,6 +262,25 @@ describe('Avatar V2 performance QA', () => {
     expect(detached.issues.some(issue => issue.code === 'missing-drumsticks')).toBe(true);
   });
 
+  it('rejects swapped stick hand metadata and sticks moved outside the drum rig', () => {
+    const actor = new Musician(
+      simpleRiggedModel(), 'drums', [0, 0, 0], 0, undefined,
+      defaultAppearance('v2-swapped-drumstick-qa'), 'rock_drums',
+    );
+    const left = actor.instrumentRig!.tools.find(tool => tool.name === 'playing-stick-l')!;
+    left.userData.handSide = 'R';
+    const swapped = inspectAvatarV2Performance(actor, 'rock_drums')!;
+    expect(swapped.valid).toBe(false);
+    expect(swapped.drumsticks).toBe(1);
+    expect(swapped.issues.some(issue => issue.code === 'missing-drumsticks')).toBe(true);
+    left.userData.handSide = 'L';
+    actor.root.attach(left);
+    const misplaced = inspectAvatarV2Performance(actor, 'rock_drums')!;
+    expect(misplaced.valid).toBe(false);
+    expect(misplaced.drumsticks).toBe(1);
+    expect(misplaced.issues.some(issue => issue.code === 'missing-drumsticks')).toBe(true);
+  });
+
   it('rejects an instrument candidate that drops a required twist helper', () => {
     const model = simpleRiggedModel();
     model.getObjectByName('ForearmTwist.R')!.removeFromParent();
