@@ -186,13 +186,28 @@ function ledTexture() {
   return map;
 }
 
-/** One deterministic show graphic is shared by all the venue's LED walls.
- * A 2K stadium display should not use a blown-up club-size texture or
- * allocate a separate identical graphic for every IMAG screen.
- * Canvas is purely a browser render asset: Node tests use the safe fallback. */
-export function createVenueShowScreenTexture(p: VenueProfile, bandName: string, tier: number): T.Texture {
-  const width = tier >= 4 ? 2048 : tier >= 2 ? 1024 : 512;
-  const height = width / 2;
+/** Match the canvas to the *physical* display instead of stretching a landscape
+ * image across square IMAG wings. Resolution remains bounded even in a stadium. */
+export type VenueScreenFormat = 'wide' | 'square';
+export function venueScreenDimensions(tier: number, format: VenueScreenFormat = 'wide') {
+  const size = tier >= 4 ? 2048 : tier >= 2 ? 1024 : 512;
+  if (format === 'square') {
+    const edge = tier >= 4 ? 1536 : size;
+    return { width: edge, height: edge, format };
+  }
+  const height = tier >= 3 ? size * 3 / 8 : size * 7 / 16;
+  return { width: size, height, format };
+}
+
+/** One deterministic asset per display *format*, not per panel.
+ * The main stage and two square wing screens need different typography/layouts,
+ * but every panel with the same format reuses the exact same GPU texture. */
+export function createVenueShowScreenTexture(
+  p: VenueProfile, bandName: string, tier: number, format: VenueScreenFormat = 'wide',
+): T.Texture {
+  const { width, height } = venueScreenDimensions(tier, format);
+  const name = (bandName || '').trim().replace(/\s+/g, ' ').slice(0, 64) || 'ROCKMUNDO';
+  const square = format === 'square';
   const texture = (() => {
     if (typeof document === 'undefined') return ledTexture();
     const canvas = document.createElement('canvas');
@@ -207,12 +222,11 @@ export function createVenueShowScreenTexture(p: VenueProfile, bandName: string, 
     fill.addColorStop(1, '#050a12');
     ctx.fillStyle = fill;
     ctx.fillRect(0, 0, width, height);
-    // Layered stage-camera shapes, modular LED seam highlights and an
-    // unmistakable named artist, without external artwork or image rights.
-    ctx.lineWidth = 7 * unit;
+    ctx.lineWidth = 5 * unit;
     ctx.strokeStyle = p.accent;
     for (let ring = 0; ring < 5; ring++) {
-      const inset = (52 + ring * 54) * unit;
+      const inset = (40 + ring * 35) * unit;
+      if (inset * 2 >= width || inset * 1.3 >= height) continue;
       ctx.globalAlpha = .4 / (ring + 1);
       ctx.strokeRect(inset, inset * .65, width - inset * 2, height - inset * 1.3);
     }
@@ -221,40 +235,62 @@ export function createVenueShowScreenTexture(p: VenueProfile, bandName: string, 
     for (let i = 0; i < 48; i++) {
       const x = (i + .5) * width / 48;
       const shape = (Math.sin(i * .73 + p.seed * .013) * .5 + .5) ** 2;
-      const barHeight = (38 + shape * 165) * unit;
-      ctx.fillRect(x, height * .84 - barHeight, width / 70, barHeight);
+      const barHeight = height * (.035 + shape * .12);
+      ctx.fillRect(x, height * .96 - barHeight, width / 70, barHeight);
     }
     ctx.globalAlpha = .14;
     ctx.fillStyle = '#e7f5ff';
-    for (let x = 0; x < width; x += 24 * unit)
-      ctx.fillRect(x, 0, unit, height);
+    for (let x = 0; x < width; x += 24 * unit) ctx.fillRect(x, 0, unit, height);
     ctx.globalAlpha = 1;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.shadowColor = p.accent;
-    ctx.shadowBlur = 29 * unit;
+    ctx.shadowBlur = 22 * unit;
     ctx.fillStyle = '#eaf5ff';
-    ctx.font = `800 ${42 * unit}px sans-serif`;
-    ctx.fillText('ROCKMUNDO LIVE', width / 2, height * .18, width * .84);
-    const name = bandName.trim().slice(0, 64) || 'ROCKMUNDO';
-    const textSize = (name.length > 28 ? 83 : name.length > 17 ? 110 : 148) * unit;
-    ctx.font = `900 ${textSize}px sans-serif`;
-    ctx.fillText(name.toUpperCase(), width / 2, height * .44, width * .87);
+    ctx.font = '800 ' + Math.round((square ? 38 : 32) * unit) + 'px sans-serif';
+    ctx.fillText('ROCKMUNDO LIVE', width / 2, height * (square ? .23 : .19), width * .84);
+    if (square) {
+      // On square side screens two lines preserve letter proportions for long
+      // names instead of compressing a 30-character name into a single sliver.
+      const words = name.toUpperCase().split(' ');
+      let lines = [words.join(' ')];
+      if (words.length > 1 && name.length > 17) {
+        let split = 1, closest = Infinity;
+        for (let i = 1; i < words.length; i++) {
+          const a = words.slice(0, i).join(' ').length;
+          const b = words.slice(i).join(' ').length;
+          if (Math.abs(a - b) < closest) { split = i; closest = Math.abs(a - b); }
+        }
+        lines = [words.slice(0, split).join(' '), words.slice(split).join(' ')];
+      }
+      ctx.font = '900 ' + Math.round((name.length > 35 ? 102 : 137) * unit) + 'px sans-serif';
+      if (lines.length === 1) ctx.fillText(lines[0], width / 2, height * .49, width * .84);
+      else {
+        ctx.fillText(lines[0], width / 2, height * .43, width * .84);
+        ctx.fillText(lines[1], width / 2, height * .55, width * .84);
+      }
+    } else {
+      const textSize = (name.length > 28 ? 76 : name.length > 17 ? 101 : 137) * unit;
+      ctx.font = '900 ' + Math.round(textSize) + 'px sans-serif';
+      ctx.fillText(name.toUpperCase(), width / 2, height * .46, width * .87);
+    }
     ctx.shadowBlur = 0;
     ctx.globalAlpha = .88;
-    ctx.font = `700 ${33 * unit}px sans-serif`;
+    ctx.font = '700 ' + Math.round((square ? 34 : 30) * unit) + 'px sans-serif';
     ctx.fillStyle = '#b4d5e5';
-    ctx.fillText(p.label.toUpperCase(), width / 2, height * .62, width * .8);
+    ctx.fillText(p.label.toUpperCase(), width / 2, height * (square ? .73 : .70), width * .8);
     const result = new T.CanvasTexture(canvas);
     result.generateMipmaps = true;
     result.minFilter = T.LinearMipmapLinearFilter;
     result.magFilter = T.LinearFilter;
     return result;
   })();
-  texture.name = 'venue-shared-show-led-' + p.kind;
+  texture.name = 'venue-shared-show-led-' + p.kind + '-' + format;
   texture.colorSpace = T.SRGBColorSpace;
+  texture.wrapS = texture.wrapT = T.ClampToEdgeWrapping;
+  texture.repeat.set(1, 1);
   texture.anisotropy = 4;
-  texture.userData.venueShowGraphics = { venueKind: p.kind, bandName: bandName.trim().slice(0, 64) || 'ROCKMUNDO', width, height };
+  texture.userData.venueShowGraphics = { venueKind: p.kind, bandName: name, width, height, format };
   texture.needsUpdate = true;
   return texture;
 }
