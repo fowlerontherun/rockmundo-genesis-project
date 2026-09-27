@@ -58,22 +58,27 @@ function tiledTexture(url: string, width: number, depth: number, color: boolean)
 }
 
 /** Distinct stage-floor surfaces with physically sized tiling and bump detail. */
-export function createStageDeckMaterial(p: VenueProfile, fallbackWood: T.Material): T.Material {
-  if (['cafe_stage', 'jazz_lounge', 'church_hall', 'concert_hall', 'theatre', 'park_bandstand'].includes(p.kind))
-    return fallbackWood;
+export function createStageDeckMaterial(p: VenueProfile, _fallbackWood: T.Material): T.Material {
+  // Previously the heritage floor reused a fixed-tiling generic wood shader.
+  // Give every stage its own metre-scaled map and bump; ornate rooms keep
+  // a warmer finish, while touring decks retain their metal/rubber treatment.
+  const wood = ['cafe_stage', 'jazz_lounge', 'church_hall', 'concert_hall', 'theatre', 'park_bandstand'].includes(p.kind);
   const concrete = ['street_corner', 'city_square', 'warehouse'].includes(p.kind);
-  const metal = ['indoor_arena', 'ice_arena', 'stadium', 'festival_stage', 'live_house'].includes(p.kind);
-  const url = concrete ? concreteFloorUrl : metal ? metalFloorUrl : rubberFloorUrl;
+  const isMetal = ['indoor_arena', 'ice_arena', 'stadium', 'festival_stage', 'live_house'].includes(p.kind);
+  const url = wood ? woodFloorUrl : concrete ? concreteFloorUrl : isMetal ? metalFloorUrl : rubberFloorUrl;
+  const surfaceKind = wood ? 'timber' : concrete ? 'concrete' : isMetal ? 'metal' : 'rubber';
   const surface = new T.MeshStandardMaterial({
-    name: 'venue-stage-floor-' + (concrete ? 'concrete' : metal ? 'metal' : 'rubber'),
+    name: 'venue-stage-floor-' + surfaceKind,
+    color: p.kind === 'jazz_lounge' ? '#a27e72' : '#ffffff',
     map: tiledTexture(url, p.stageWidth, p.stageDepth, true),
     bumpMap: tiledTexture(url, p.stageWidth, p.stageDepth, false),
-    bumpScale: concrete ? .025 : metal ? .012 : .018,
-    roughness: metal ? .62 : .83,
-    metalness: metal ? .32 : 0,
+    bumpScale: wood ? .032 : concrete ? .025 : isMetal ? .012 : .018,
+    roughness: wood ? (p.kind === 'concert_hall' ? .53 : .69) : isMetal ? .62 : .83,
+    metalness: isMetal ? .32 : 0,
   });
   surface.userData.venueSurfaceRole = 'stage-deck';
   surface.userData.venueKind = p.kind;
+  surface.userData.venueFloorTreatment = surfaceKind;
   return surface;
 }
 
@@ -181,9 +186,82 @@ function ledTexture() {
   return map;
 }
 
+/** One deterministic show graphic is shared by all the venue's LED walls.
+ * A 2K stadium display should not use a blown-up club-size texture or
+ * allocate a separate identical graphic for every IMAG screen.
+ * Canvas is purely a browser render asset: Node tests use the safe fallback. */
+export function createVenueShowScreenTexture(p: VenueProfile, bandName: string, tier: number): T.Texture {
+  const width = tier >= 4 ? 2048 : tier >= 2 ? 1024 : 512;
+  const height = width / 2;
+  const texture = (() => {
+    if (typeof document === 'undefined') return ledTexture();
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return ledTexture();
+    const unit = width / 1024;
+    const fill = ctx.createLinearGradient(0, 0, width, height);
+    fill.addColorStop(0, '#090f1c');
+    fill.addColorStop(.51, p.kind === 'theatre' || p.kind === 'concert_hall' ? '#302422' : '#172b3c');
+    fill.addColorStop(1, '#050a12');
+    ctx.fillStyle = fill;
+    ctx.fillRect(0, 0, width, height);
+    // Layered stage-camera shapes, modular LED seam highlights and an
+    // unmistakable named artist, without external artwork or image rights.
+    ctx.lineWidth = 7 * unit;
+    ctx.strokeStyle = p.accent;
+    for (let ring = 0; ring < 5; ring++) {
+      const inset = (52 + ring * 54) * unit;
+      ctx.globalAlpha = .4 / (ring + 1);
+      ctx.strokeRect(inset, inset * .65, width - inset * 2, height - inset * 1.3);
+    }
+    ctx.globalAlpha = .62;
+    ctx.fillStyle = p.accent;
+    for (let i = 0; i < 48; i++) {
+      const x = (i + .5) * width / 48;
+      const shape = (Math.sin(i * .73 + p.seed * .013) * .5 + .5) ** 2;
+      const barHeight = (38 + shape * 165) * unit;
+      ctx.fillRect(x, height * .84 - barHeight, width / 70, barHeight);
+    }
+    ctx.globalAlpha = .14;
+    ctx.fillStyle = '#e7f5ff';
+    for (let x = 0; x < width; x += 24 * unit)
+      ctx.fillRect(x, 0, unit, height);
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = p.accent;
+    ctx.shadowBlur = 29 * unit;
+    ctx.fillStyle = '#eaf5ff';
+    ctx.font = `800 ${42 * unit}px sans-serif`;
+    ctx.fillText('ROCKMUNDO LIVE', width / 2, height * .18, width * .84);
+    const name = bandName.trim().slice(0, 64) || 'ROCKMUNDO';
+    const textSize = (name.length > 28 ? 83 : name.length > 17 ? 110 : 148) * unit;
+    ctx.font = `900 ${textSize}px sans-serif`;
+    ctx.fillText(name.toUpperCase(), width / 2, height * .44, width * .87);
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = .88;
+    ctx.font = `700 ${33 * unit}px sans-serif`;
+    ctx.fillStyle = '#b4d5e5';
+    ctx.fillText(p.label.toUpperCase(), width / 2, height * .62, width * .8);
+    const result = new T.CanvasTexture(canvas);
+    result.generateMipmaps = true;
+    result.minFilter = T.LinearMipmapLinearFilter;
+    result.magFilter = T.LinearFilter;
+    return result;
+  })();
+  texture.name = 'venue-shared-show-led-' + p.kind;
+  texture.colorSpace = T.SRGBColorSpace;
+  texture.anisotropy = 4;
+  texture.userData.venueShowGraphics = { venueKind: p.kind, bandName: bandName.trim().slice(0, 64) || 'ROCKMUNDO', width, height };
+  texture.needsUpdate = true;
+  return texture;
+}
+
 export function addVideoScreen(
   parent: T.Object3D, name: string, width: number, height: number, pos: readonly [number, number, number],
-  frame: T.Material, trim: T.Material, accent: string,
+  frame: T.Material, trim: T.Material, accent: string, showTexture?: T.Texture,
 ) {
   const root = new T.Group();
   root.name = name;
@@ -192,10 +270,10 @@ export function addVideoScreen(
   box(root, [width + .24, height + .24, .32], [0, 0, 0], frame);
   // One image backs both diffuse and emissive channels so every IMAG panel
   // shares its pixel alignment and does not allocate a duplicate GPU texture.
-  const ledMap = ledTexture();
+  const ledMap = showTexture ?? ledTexture();
   const pixels = new T.MeshStandardMaterial({
-    color: '#91b9d3', map: ledMap, emissive: accent, emissiveMap: ledMap,
-    emissiveIntensity: 1.1, roughness: .38, metalness: .12,
+    color: '#ffffff', map: ledMap, emissive: showTexture ? '#ffffff' : accent, emissiveMap: ledMap,
+    emissiveIntensity: showTexture ? .83 : 1.1, roughness: .38, metalness: .12,
   });
   const face = box(root, [width, height, .045], [0, 0, .185], pixels);
   face.name = name + '-display';
