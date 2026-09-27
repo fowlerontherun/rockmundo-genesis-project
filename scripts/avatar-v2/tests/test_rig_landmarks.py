@@ -66,6 +66,17 @@ class SculptJointFitTests(unittest.TestCase):
         self.assertEqual(stale_guide_markers(current, original), [key])
         self.assertEqual(stale_guide_markers(original, original), [])
 
+    def test_extra_and_missing_old_handles_are_detected(self):
+        original = position_markers(example_rig())
+        extra = dict(original)
+        extra["RMV2_FIT__DeletedBone__tail"] = (0.0, 0.0, 0.0)
+        self.assertEqual(stale_guide_markers(original, extra),
+                         ["RMV2_FIT__DeletedBone__tail"])
+        missing = dict(original)
+        removed = marker_name("Eye.L", "head")
+        del missing[removed]
+        self.assertEqual(stale_guide_markers(original, missing), [removed])
+
     def test_nonfinite_stored_markers_are_never_trusted(self):
         original = position_markers(example_rig())
         key = marker_name("Hand.R", "tail")
