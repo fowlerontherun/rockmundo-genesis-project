@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mutate = vi.fn();
@@ -59,6 +59,7 @@ vi.mock("@tanstack/react-query", () => ({
 }));
 
 vi.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast }) }));
+vi.mock("@/hooks/useBandInvitationsRealtime", () => ({ useBandInvitationsRealtime: vi.fn() }));
 vi.mock("@/hooks/useActiveProfile", () => ({
   useActiveProfile: () => ({ profileId: "profile-1", userId: "user-1" }),
 }));
@@ -75,6 +76,7 @@ vi.mock("@/services/bandInvitations", () => ({
 import { supabase } from "@/integrations/supabase/client";
 import { respondBandInvitation } from "@/services/bandInvitations";
 import { BandInvitations } from "./BandInvitations";
+import { useBandInvitationsRealtime } from "@/hooks/useBandInvitationsRealtime";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -88,6 +90,21 @@ beforeEach(() => {
 });
 
 describe("BandInvitations", () => {
+  it("refreshes an incoming invitation immediately and invalidates membership after acceptance", () => {
+    render(<BandInvitations />);
+    const realtime = vi.mocked(useBandInvitationsRealtime).mock.calls[0][0];
+    expect(realtime.filterColumn).toBe("invited_user_id");
+    expect(realtime.filterValue).toBe("user-1");
+    act(() => realtime.onChange({ eventType: "INSERT", status: "pending" }));
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["band-invitations", "user-1", "profile-1"] });
+
+    invalidateQueries.mockClear();
+    act(() => realtime.onChange({ eventType: "UPDATE", status: "accepted" }));
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["band-invitations", "user-1", "profile-1"] });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["user-bands"] });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["active-band-membership"] });
+  });
+
   it("accepts through the guarded service and refreshes local membership state", async () => {
     const onMembershipChanged = vi.fn();
     render(<BandInvitations onMembershipChanged={onMembershipChanged} />);
