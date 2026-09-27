@@ -33,6 +33,16 @@ def parse_sections(raw: str) -> tuple[tuple[str, int], ...]:
     return tuple(result)
 
 def build_manifest(seed: str, bpm: int, sections: tuple[tuple[str, int], ...]) -> dict:
+    # Contact QA is role-specific: these are required checks, not claims that
+    # a rig has passed. Include them in every exported rehearsal manifest.
+    contact_checks = {
+        "singer": ("microphone-grip", "mouth-to-mic-clearance", "feet-floor"),
+        "guitar": ("fretting-hand-neck", "picking-hand-strings", "strap-shoulder", "feet-floor"),
+        "bass": ("fretting-hand-neck", "plucking-hand-strings", "strap-shoulder", "feet-floor"),
+        "drums": ("left-drumstick-grip", "right-drumstick-grip", "stick-to-drum-clearance", "kick-pedal"),
+        "keys": ("left-hand-keys", "right-hand-keys", "keyboard-stand-clearance", "feet-floor"),
+        "dj": ("left-hand-deck", "right-hand-deck", "mixer-clearance", "feet-floor"),
+    }
     plans = {role: [asdict(item) for item in plan_performance(
         role, sections, seed=seed, bpm=bpm,
     )] for role in ROLES}
@@ -48,6 +58,9 @@ def build_manifest(seed: str, bpm: int, sections: tuple[tuple[str, int], ...]) -
         "instrumentContactValidated": False,
         "runtimeIntegrated": False,
         "roles": plans,
+        "requiredContactQA": {role: [
+            {"check": check, "status": "unverified"} for check in checks
+        ] for role, checks in contact_checks.items()},
     }
 
 def main() -> None:
