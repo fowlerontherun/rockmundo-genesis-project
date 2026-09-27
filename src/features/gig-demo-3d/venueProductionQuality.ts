@@ -236,6 +236,14 @@ export function createVenueShowScreenTexture(
         const inset = width * (.08 + line * .07);
         ctx.strokeRect(inset, height * .03 + line * 8, width - inset * 2, height * .94 - line * 16);
       }
+      // Venue-seeded equalizer bars differentiate otherwise identical touring
+      // stages without relying on random browser state or third-party art.
+      ctx.globalAlpha = .30;
+      ctx.fillStyle = p.accent;
+      for (let i = 0; i < 24; i++) {
+        const peak = height * (.018 + .034 * (Math.sin(i * .73 + p.seed * .017) * .5 + .5));
+        ctx.fillRect(width * (.09 + i * .034), height * .14 - peak, width * .019, peak);
+      }
       ctx.globalAlpha = 1;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
