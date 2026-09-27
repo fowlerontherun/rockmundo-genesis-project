@@ -16,6 +16,7 @@ describe("pre-event Festival owner and directory sales preview", () => {
     expect(owner).toContain("Paid admissions sold");
     expect(owner).toContain("Available admissions");
     expect(owner).toContain("Gross ticket receipts");
+    expect(owner).toContain("gross !== null");
     expect(owner).toContain("Confirmed acts");
     expect(owner).toContain("current.lineup?.length ?? 0");
     expect(owner).not.toContain("current.timetable.length");
