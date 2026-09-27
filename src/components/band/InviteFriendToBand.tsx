@@ -393,7 +393,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
             </div>
           )}
 
-          <div className="flex justify-end"><Button variant="outline" onClick={() => setOpen(false)} disabled={submitting || !!cancellingId}>Close</Button></div>
+          <div className="flex justify-end"><Button variant="outline" aria-label="Close invitation dialog" onClick={() => setOpen(false)} disabled={submitting || !!cancellingId}>Close</Button></div>
         </DialogContent>
       </Dialog>
     </>
