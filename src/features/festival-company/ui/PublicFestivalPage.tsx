@@ -407,6 +407,7 @@ export default function PublicFestivalPage() {
             )}
 
             {eventPhase === "ended" && <p role="status" className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">This festival has ended. Ticket purchases are closed; existing tickets remain available in your wallet.</p>}
+            {eventPhase !== "ended" && f.launchStatus !== "tickets_on_sale" && <p role="status" className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">Ticket sales are not currently open. You can still review ticket types and any tickets in your wallet.</p>}
             <section className="grid gap-4 md:grid-cols-2">
               {f.ticketProducts.map((p) => (
                 <Card key={p.id}>
@@ -428,7 +429,7 @@ export default function PublicFestivalPage() {
                         min={1}
                         max={Math.min(p.purchaseLimit, p.availableQuantity)}
                         value={quantities[p.id] ?? 1}
-                        disabled={eventPhase === "ended" || p.availableQuantity === 0}
+                        disabled={eventPhase === "ended" || f.launchStatus !== "tickets_on_sale" || p.availableQuantity === 0}
                         onChange={(e) => setQuantities((previous) => ({ ...previous, [p.id]: Number(e.target.value) }))}
                       />
                     </label>
@@ -445,7 +446,7 @@ export default function PublicFestivalPage() {
                         });
                       }}
                     >
-                      {buy.isPending && activePurchaseProductId === p.id ? "Completing purchase…" : eventPhase === "ended" ? "Festival ended" : p.availableQuantity === 0 ? "Sold out" : !user ? "Sign in to purchase" : "Confirm purchase"}
+                      {buy.isPending && activePurchaseProductId === p.id ? "Completing purchase…" : eventPhase === "ended" ? "Festival ended" : p.availableQuantity === 0 ? "Sold out" : f.launchStatus !== "tickets_on_sale" ? "Sales unavailable" : !user ? "Sign in to purchase" : "Confirm purchase"}
                     </Button>
                     {buy.isError && activePurchaseProductId === p.id && <p role="alert">{buy.error.message.replaceAll("_", " ")}</p>}
                     {buy.isSuccess && activePurchaseProductId === p.id && (
