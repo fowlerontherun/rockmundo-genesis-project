@@ -5,6 +5,11 @@ export type CameraShot =
   | 'guitar'
   | 'drums'
   | 'stage'
+  | 'band_medium'
+  | 'lead_close'
+  | 'side_pit'
+  | 'side_stage'
+  | 'crane'
   | 'tv_presenter_wide'
   | 'tv_presenter_close'
   | 'tv_crane'
@@ -43,6 +48,9 @@ export const SHOTS: { id: CameraShot; label: string }[] = [
   { id: 'director', label: 'Director' }, { id: 'front', label: 'Front row' },
   { id: 'guitar', label: 'Guitar side' }, { id: 'drums', label: 'Drum cam' },
   { id: 'stage', label: 'On stage' },
+  { id: 'band_medium', label: 'Band medium' }, { id: 'lead_close', label: 'Lead close-up' },
+  { id: 'side_pit', label: 'Low pit cam' }, { id: 'side_stage', label: 'Stage wing' },
+  { id: 'crane', label: 'Crane overhead' },
 ];
 export const DEMO_DURATION = 96;
 export function songSection(seconds: number) {
