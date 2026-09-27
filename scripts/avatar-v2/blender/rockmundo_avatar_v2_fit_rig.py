@@ -40,6 +40,7 @@ from rig_landmarks import (  # noqa: E402
     BoneSpec, audit_sculpt_fit, fit_bones, moved_markers, position_markers,
     untouched_face_markers,
 )
+from rig_review import invalidate_rig_reviews
 
 RIG_NAME = "RMV2_Armature"
 COLLECTION_NAME = "RMV2_FitHandles"
@@ -223,6 +224,11 @@ def fit_from_handles(rig: bpy.types.Object, specs: list[BoneSpec], reviewed: boo
             "Pass independent topology, weights and exported-GLB gates before rollout.",
         ],
     }
+    # Refitting invalidates earlier manual approvals, including instrument poses.
+    # Do not carry sign-offs from an older skeleton into a newly edited rig.
+    for key, value in invalidate_rig_reviews(dict(rig.items())).items():
+        if key.startswith("rockmundoAvatarV2") and key.endswith("Approved"):
+            rig[key] = value
     rig["rockmundoAvatarV2ArtistFitReport"] = json.dumps(report)
     # No marker positioning is sufficient to waive sculpt/weight certification.
     rig["rockmundoAvatarV2RequiresManualFit"] = True
