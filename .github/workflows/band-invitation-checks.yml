@@ -49,7 +49,7 @@ jobs:
           cache-dependency-path: package-lock.json
       - run: npm install --global npm@10.9.2
       - run: npm ci
-      - name: Check frontend types
-        run: npm run typecheck
       - name: Test player search and band invitations
         run: npx vitest run src/services/__tests__/bandInviteEligibility.test.ts src/services/__tests__/bandInvitations.test.ts src/services/__tests__/publicProfileSearch.test.ts src/components/band/InviteFriendToBand.test.tsx src/components/band/BandInvitations.test.tsx src/lib/notificationModels.test.ts
+      - name: Check frontend types
+        run: npm run typecheck
