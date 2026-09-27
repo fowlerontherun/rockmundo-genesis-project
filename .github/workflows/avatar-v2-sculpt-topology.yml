@@ -30,6 +30,7 @@ jobs:
             scripts/avatar-v2/rig_review.py \
             scripts/avatar-v2/stage_performance_catalogue.py \
             scripts/avatar-v2/stage_performance_sequence.py \
+            scripts/avatar-v2/export_stage_performance_plan.py \
             scripts/avatar-v2/blender/rockmundo_avatar_v2_stage_animation_preview.py \
             scripts/avatar-v2/source_rig_suggestions.py \
             scripts/avatar-v2/head_motion_weights.py \
