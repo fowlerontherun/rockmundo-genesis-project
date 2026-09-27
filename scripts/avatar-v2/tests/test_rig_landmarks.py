@@ -66,6 +66,15 @@ class SculptJointFitTests(unittest.TestCase):
         self.assertEqual(stale_guide_markers(current, original), [key])
         self.assertEqual(stale_guide_markers(original, original), [])
 
+    def test_nonfinite_stored_markers_are_never_trusted(self):
+        original = position_markers(example_rig())
+        key = marker_name("Hand.R", "tail")
+        corrupt = dict(original)
+        corrupt[key] = (float("nan"), *original[key][1:])
+        self.assertEqual(stale_guide_markers(original, corrupt), [key])
+        corrupt[key] = (float("inf"), *original[key][1:])
+        self.assertEqual(stale_guide_markers(original, corrupt), [key])
+
     def test_stale_handles_ignore_submillimetre_rounding(self):
         original = position_markers(example_rig())
         current = dict(original)
