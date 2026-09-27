@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { useBandInvitationsRealtime } from "@/hooks/useBandInvitationsRealtime";
 import { BandCreationForm } from "@/components/band/BandCreationForm";
 import { BandOverview } from "@/components/band/BandOverview";
 import { BandMemberCard } from "@/components/band/BandMemberCard";
@@ -72,6 +73,7 @@ export default function BandManager() {
   const [selectedBandId, setSelectedBandId] = useState<string | null>(null);
   const [selectedBand, setSelectedBand] = useState<any>(null);
   const [members, setMembers] = useState<any[]>([]);
+  const [rosterVersion, setRosterVersion] = useState(0);
   const [loading, setLoading] = useState(true);
 
   // Enable auto-gig execution for the selected band
@@ -191,6 +193,7 @@ export default function BandManager() {
 
       if (selectedBandId) {
         await loadBandMembers(selectedBandId);
+        setRosterVersion((version) => version + 1);
       }
     } catch (error: any) {
       toast({
@@ -228,6 +231,20 @@ export default function BandManager() {
       });
     }
   };
+
+  // Invitation acceptance commits membership and status in one transaction.
+  // Refresh both the manager summary and the independent roster subviews on
+  // the accepted UPDATE; no subscription to the wider membership table needed.
+  useBandInvitationsRealtime({
+    filterColumn: "band_id",
+    filterValue: selectedBandId,
+    onChange: ({ eventType, status }) => {
+      if (eventType === "UPDATE" && status === "accepted" && selectedBandId) {
+        void loadBandMembers(selectedBandId);
+        setRosterVersion((version) => version + 1);
+      }
+    },
+  });
 
   const activeSection = (() => {
     const path = location.pathname;
@@ -448,11 +465,14 @@ export default function BandManager() {
           {isLeader && selectedBand.status === "active" && (
             <BandApplicationsList
               bandId={selectedBand.id}
-              onMemberAdded={() => loadBandMembers(selectedBand.id)}
+              onMemberAdded={() => {
+                void loadBandMembers(selectedBand.id);
+                setRosterVersion((version) => version + 1);
+              }}
             />
           )}
 
-          <BandRosterTab bandId={selectedBand.id} />
+          <BandRosterTab key={`${selectedBand.id}:${rosterVersion}`} bandId={selectedBand.id} />
 
           <Card>
             <CardHeader>
