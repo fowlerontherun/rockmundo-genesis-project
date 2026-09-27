@@ -4,7 +4,7 @@ import sys
 import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
-from rig_review import audit_rig_review, CLOSEUP_REVIEWS, PERFORMANCE_REVIEWS
+from rig_review import audit_rig_review, invalidate_rig_reviews, CLOSEUP_REVIEWS, PERFORMANCE_REVIEWS
 
 
 class RigReviewTests(unittest.TestCase):
@@ -35,6 +35,15 @@ class RigReviewTests(unittest.TestCase):
         self.assertEqual(audit_rig_review({}, "ArtistRig", 3), [])
         errors = audit_rig_review({"rockmundoAvatarV2RigGuide": True}, "Guide", 3)
         self.assertEqual(len(errors), 1)
+
+    def test_refit_invalidates_all_previous_signoffs_without_mutating_source(self):
+        original = {key: True for key in (*CLOSEUP_REVIEWS, *PERFORMANCE_REVIEWS)}
+        original["unrelated"] = "preserve"
+        invalidated = invalidate_rig_reviews(original)
+        self.assertTrue(all(original[key] is True for key in CLOSEUP_REVIEWS))
+        self.assertEqual(invalidated["unrelated"], "preserve")
+        self.assertEqual(len(audit_rig_review(invalidated, "Refitted", 0)),
+                         len(CLOSEUP_REVIEWS) + len(PERFORMANCE_REVIEWS))
 
     def test_truthy_non_boolean_is_not_artist_approval(self):
         properties = {key: True for key in (*CLOSEUP_REVIEWS, *PERFORMANCE_REVIEWS)}
