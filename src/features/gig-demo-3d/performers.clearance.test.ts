@@ -58,6 +58,22 @@ describe("performer instrument body clearance", () => {
     expect(right!.getWorldPosition(new T.Vector3()).distanceTo(actor.bones.get("Hand.R")!.getWorldPosition(new T.Vector3()))).toBeLessThan(.12);
   });
 
+  it("keeps chorus crash strike targets tied to the correct stick when tool order changes", () => {
+    const actor = new Musician(simpleRiggedModel(), "drums", [0, 0, 0], 0, undefined, defaultAppearance("drum-crash-order"), "rock_drums");
+    const rig = actor.instrumentRig!;
+    const left = rig.tools.find(tool => tool.name === "playing-stick-l")!;
+    const right = rig.tools.find(tool => tool.name === "playing-stick-r")!;
+    rig.tools.reverse();
+    actor.performanceSection = "chorus";
+    actor.sectionProgress = 0;
+    actor.update(2.2, .9, false);
+    expect((left.userData.strikeTarget as T.Vector3).distanceTo(new T.Vector3(.7, 1.46, 1))).toBeLessThan(.001);
+    expect((right.userData.strikeTarget as T.Vector3).distanceTo(new T.Vector3(-.75, 1.3, .65))).toBeLessThan(.001);
+    rig.tools.splice(rig.tools.indexOf(left), 1);
+    actor.update(2.3, .9, false);
+    expect((right.userData.strikeTarget as T.Vector3).distanceTo(new T.Vector3(-.75, 1.3, .65))).toBeLessThan(.001);
+  });
+
   it("keeps arm IK finite after applying wider pole clearance", () => {
     const broad = defaultAppearance("broad-ik");
     broad.body.build = 1.35;
