@@ -308,7 +308,7 @@ export default function PublicFestivalPage() {
                                 {entry.artistName}
                                 {entry.billingPosition === "headliner" && <Badge>Headliner</Badge>}
                                 {entry.artistType === "dj" && <Badge variant="secondary">DJ</Badge>}
-                                {entry.artistType === "npc" && <Badge variant="outline">Local NPC band</Badge>}
+                                {entry.artistType === "npc" && <Badge variant="outline">NPC band</Badge>}
                               </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-1 text-sm">
