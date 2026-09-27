@@ -70,38 +70,51 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
   }, []);
 
   const loadRecruitmentOptions = useCallback(async (profileId: string) => {
-    const { data: friendships, error } = await supabase
-      .from('friendships')
-      .select('id, requestor_id, addressee_id, status')
-      .eq('status', 'accepted')
-      .or(`requestor_id.eq.${profileId},addressee_id.eq.${profileId}`);
-    if (error) throw error;
+    // Pending invitations and the roster are essential; the friends shortcut is
+    // optional. A broken friendship/profile lookup must not prevent inviting
+    // other players by public search or hide already-sent invitations.
+    const [inviteResult, memberResult, friendResult] = await Promise.all([
+      supabase.from('band_invitations')
+        .select('id, invited_user_id, invited_profile_id, instrument_role, created_at')
+        .eq('band_id', bandId)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false }),
+      supabase.from('band_members')
+        .select('user_id')
+        .eq('band_id', bandId)
+        .eq('member_status', 'active'),
+      supabase.from('friendships')
+        .select('id, requestor_id, addressee_id, status')
+        .eq('status', 'accepted')
+        .or(`requestor_id.eq.${profileId},addressee_id.eq.${profileId}`),
+    ]);
+    if (inviteResult.error) throw inviteResult.error;
+    if (memberResult.error) throw memberResult.error;
 
-    const otherProfileIds = Array.from(new Set((friendships || []).map(friendship =>
+    const pendingInvites = inviteResult.data || [];
+    const bandMembers = memberResult.data || [];
+    const friendships = friendResult.error ? [] : (friendResult.data || []);
+    const memberIds = new Set(bandMembers.map((m) => m.user_id).filter((id): id is string => !!id));
+    const pendingIds = new Set(pendingInvites.map((invite) => invite.invited_user_id).filter((id): id is string => !!id));
+    setMemberUserIds(memberIds);
+    setPendingUserIds(pendingIds);
+
+    const friendProfileIds = friendships.map((friendship) =>
       friendship.requestor_id === profileId ? friendship.addressee_id : friendship.requestor_id
-    )));
-
-    const { data: pendingInvites, error: invitesError } = await supabase
-      .from('band_invitations')
-      .select('id, invited_user_id, invited_profile_id, instrument_role, created_at')
-      .eq('band_id', bandId)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false });
-    if (invitesError) throw invitesError;
-
-    const pendingProfileIds = (pendingInvites || []).map((invite) => invite.invited_profile_id).filter((id): id is string => !!id);
-    const profileIds = Array.from(new Set([...otherProfileIds, ...pendingProfileIds]));
+    );
+    const pendingProfileIds = pendingInvites.map((invite) => invite.invited_profile_id).filter((id): id is string => !!id);
+    const profileIds = Array.from(new Set([...friendProfileIds, ...pendingProfileIds]));
     const { data: profiles, error: profilesError } = profileIds.length
       ? await supabase.from('profiles').select('id, display_name, username, user_id').in('id', profileIds)
       : { data: [], error: null };
-    if (profilesError) throw profilesError;
 
-    const profileMap = new Map((profiles || []).map((profile) => [profile.id, profile]));
-    const friendsWithProfiles = (friendships || []).map(friendship => {
+    const profileMap = new Map((profilesError ? [] : (profiles || [])).map((profile) => [profile.id, profile]));
+    const friendOptions: Friend[] = friendships.flatMap((friendship) => {
       const otherId = friendship.requestor_id === profileId ? friendship.addressee_id : friendship.requestor_id;
       const profile = profileMap.get(otherId);
-      if (!profile) return null;
-      return {
+      if (!profile || memberIds.has(profile.user_id) || pendingIds.has(profile.user_id)
+        || profile.user_id === currentAccountId) return [];
+      return [{
         id: friendship.id,
         profile: {
           id: profile.id,
@@ -109,24 +122,10 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
           display_name: profile.display_name || 'Unknown',
           username: profile.username || 'unknown',
         },
-      } satisfies Friend;
-    }).filter(Boolean) as Friend[];
-
-    const { data: bandMembers, error: membersError } = await supabase
-      .from('band_members')
-      .select('user_id')
-      .eq('band_id', bandId)
-      .eq('member_status', 'active');
-    if (membersError) throw membersError;
-
-    const existingUserIds = new Set([
-      ...(bandMembers?.map(m => m.user_id).filter(Boolean) || []),
-      ...(pendingInvites?.map(i => i.invited_user_id).filter(Boolean) || []),
-    ]);
-    setMemberUserIds(new Set((bandMembers || []).map(m => m.user_id).filter((id): id is string => !!id)));
-    setPendingUserIds(new Set((pendingInvites || []).map(i => i.invited_user_id).filter((id): id is string => !!id)));
-    setFriends(friendsWithProfiles.filter((friend) => !existingUserIds.has(friend.profile.user_id) && friend.profile.user_id !== currentAccountId));
-    setSentInvites((pendingInvites || []).map((invite) => {
+      }];
+    });
+    setFriends(friendOptions);
+    setSentInvites(pendingInvites.map((invite) => {
       const profile = invite.invited_profile_id ? profileMap.get(invite.invited_profile_id) : undefined;
       return {
         id: invite.id,
@@ -211,7 +210,11 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
       setInstrumentRole(DEFAULT_BAND_PERFORMANCE_ROLE);
       setVocalRole(undefined);
       setMessage('');
-      await loadRecruitmentOptions(currentUserId);
+      try {
+        await loadRecruitmentOptions(currentUserId);
+      } catch {
+        toast({ title: 'Invitation sent, but the pending list could not refresh', description: 'Reopen this dialog to load the latest invitations.' });
+      }
     } catch (error) {
       toast({ title: 'Invitation failed', description: friendlyBandInvitationError(error), variant: 'destructive' });
     } finally {
@@ -224,7 +227,12 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
     try {
       await cancelBandInvitation(invitationId);
       toast({ title: 'Invitation cancelled', description: 'The pending band invitation has been withdrawn.' });
-      await loadRecruitmentOptions(currentUserId);
+      try {
+        await loadRecruitmentOptions(currentUserId);
+      } catch {
+        setSentInvites((previous) => previous.filter((invite) => invite.id !== invitationId));
+        toast({ title: 'Invitation cancelled, but the pending list could not refresh' });
+      }
     } catch (error) {
       toast({ title: 'Could not cancel invitation', description: friendlyBandInvitationError(error), variant: 'destructive' });
     } finally {
@@ -238,7 +246,15 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
         <UserPlus className="h-4 w-4 mr-2" /> Invite Player
       </Button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(next) => {
+        if (!next && (submitting || !!cancellingId)) return;
+        setOpen(next);
+        if (!next) {
+          setPlayerQuery('');
+          setSelectedPlayer('');
+          setSelectedPlayerLabel('');
+        }
+      }}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Invite a player to {bandName}</DialogTitle>
@@ -262,7 +278,11 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
                       maxLength={80}
                       placeholder="Search username or character name"
                       value={playerQuery}
-                      onChange={(event) => setPlayerQuery(event.target.value)}
+                      onChange={(event) => {
+                        setPlayerQuery(event.target.value);
+                        setSelectedPlayer('');
+                        setSelectedPlayerLabel('');
+                      }}
                     />
                   </div>
                   {playerQuery.trim().length < 2 && (
@@ -303,7 +323,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
                             <span className="min-w-0 flex-1">
                               <span className="block truncate text-sm font-medium">{player.display_name || player.username} (@{player.username})</span>
                               <span className="block text-xs text-muted-foreground">
-                                {unavailable || [player.city_name, player.bands[0]?.name].filter(Boolean).join(' • ') || 'Available to invite'}
+                                {unavailable || [player.city_name, player.bands[0]?.name ? `Member of ${player.bands[0].name}` : null].filter(Boolean).join(' • ') || 'Available to invite'}
                               </span>
                             </span>
                             {selected && <span className="text-xs font-medium text-primary">Selected</span>}
