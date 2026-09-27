@@ -150,6 +150,15 @@ class SculptJointFitTests(unittest.TestCase):
         self.assertTrue(any("Hand.L is disconnected" in issue for issue in issues))
         self.assertTrue(any("Index2.R is disconnected" in issue for issue in issues))
 
+    def test_reversed_and_divergent_eye_gaze_fail_review(self):
+        bones = example_rig()
+        fitted = fit_bones(bones, position_markers(bones))
+        left = fitted["Eye.L"]
+        fitted["Eye.L"] = FitBone(left.head, (left.head[0], left.head[1] + .03, left.head[2]))
+        issues = audit_sculpt_fit(fitted)
+        self.assertTrue(any("Eye.L gaze must point forwards" in issue for issue in issues))
+        self.assertTrue(any("gaze directions diverge" in issue for issue in issues))
+
     def test_eye_socket_spacing_mismatch_fails_review(self):
         bones = example_rig()
         markers = position_markers(bones)
