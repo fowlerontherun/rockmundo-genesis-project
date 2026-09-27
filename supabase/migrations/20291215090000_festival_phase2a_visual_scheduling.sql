@@ -1,4 +1,6 @@
--- Compatibility: keep revisioned scheduler hours separate from the existing canonical\n-- festival_stage_operating_hours (different columns and uniqueness semantics).\n-- Phase 2A festival visual scheduling: revisioned schedule model and RPC projections.
+-- Compatibility: keep revisioned scheduler hours separate from the existing canonical
+-- festival_stage_operating_hours (different columns and uniqueness semantics).
+-- Phase 2A festival visual scheduling: revisioned schedule model and RPC projections.
 ALTER TABLE IF EXISTS public.festival_editions ADD COLUMN IF NOT EXISTS time_zone text NOT NULL DEFAULT 'UTC';
 ALTER TABLE IF EXISTS public.festival_stages ADD COLUMN IF NOT EXISTS public_name text;
 DO $$ BEGIN
@@ -197,6 +199,30 @@ END $$;
 CREATE OR REPLACE FUNCTION public.public_festival_edition_schedule(p_edition_id uuid) RETURNS jsonb LANGUAGE sql SECURITY DEFINER SET search_path=public AS $$
 WITH r AS (SELECT * FROM public.festival_schedule_revisions WHERE edition_id=p_edition_id AND state='published' ORDER BY revision_number DESC LIMIT 1)
 SELECT COALESCE(jsonb_build_object('editionId',p_edition_id,'revision',(SELECT to_jsonb(r) FROM r),'festivalDates',COALESCE((SELECT jsonb_agg(DISTINCT festival_date ORDER BY festival_date) FROM public.festival_schedule_items i JOIN r ON r.id=i.revision_id WHERE i.public_visible),'[]'::jsonb),'stages',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',s.id,'name',COALESCE(s.public_name,s.stage_name),'capacity',s.capacity) ORDER BY s.stage_number NULLS LAST, s.stage_name) FROM public.festival_stages s WHERE s.edition_id=p_edition_id AND s.archived_at IS NULL),'[]'::jsonb),'items',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',i.id,'stageId',i.stage_id,'festivalDate',i.festival_date,'itemType',i.item_type,'startsAt',i.starts_at,'endsAt',i.ends_at,'title',i.title,'status',i.status,'performerName',COALESCE(b.name,i.title),'publicVisible',i.public_visible) ORDER BY i.festival_date,i.starts_at) FROM public.festival_schedule_items i JOIN r ON r.id=i.revision_id LEFT JOIN public.bands b ON b.id=i.band_id WHERE i.public_visible AND i.stage_id IS NOT NULL),'[]'::jsonb)), jsonb_build_object('editionId',p_edition_id,'items','[]'::jsonb,'stages','[]'::jsonb,'festivalDates','[]'::jsonb)) $$;
+
+-- Internal revision/audit rows are accessed only through explicitly authorised RPCs.
+-- Enforce RLS as defence in depth; no direct client table grants or policies.
+ALTER TABLE public.festival_schedule_revisions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.festival_schedule_stage_operating_hours ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.festival_schedule_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.festival_schedule_audit_events ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.festival_schedule_revisions, public.festival_schedule_stage_operating_hours, public.festival_schedule_items, public.festival_schedule_audit_events FROM PUBLIC, anon, authenticated;
+
+-- PostgreSQL grants EXECUTE to PUBLIC on new functions unless revoked.
+-- Restrict the privileged scheduler RPCs before explicitly granting client access.
+REVOKE ALL ON FUNCTION public.festival_schedule_can_manage(uuid) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.ensure_festival_schedule_draft_revision(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.festival_schedule_conflicts(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.festival_edition_schedule_workspace(uuid) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.festival_schedule_configure_stage_hours(uuid,uuid,date,time,time,integer,integer,text) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.festival_schedule_upsert_item(uuid,uuid,jsonb,integer,text) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.festival_schedule_preview_template(uuid,uuid,date,text,time,time) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.festival_schedule_apply_template(uuid,uuid,uuid,date,text,time,time,boolean,text) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.festival_schedule_publish(uuid,uuid,boolean,text) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.festival_schedule_lock(uuid,uuid,text,text) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.festival_schedule_reopen(uuid,uuid,text,text) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.festival_schedule_discard_draft(uuid,uuid,text,text) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.public_festival_edition_schedule(uuid) FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION public.festival_edition_schedule_workspace(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.festival_schedule_configure_stage_hours(uuid,uuid,date,time,time,integer,integer,text) TO authenticated;
