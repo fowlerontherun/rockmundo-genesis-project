@@ -117,7 +117,11 @@ export function FestivalOwnerNpcActsManager({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
-        <div className="flex flex-wrap gap-2" role="group" aria-label="NPC act type">\n          <Button type="button" variant={!isDj ? "default" : "outline"} onClick={() => setDraft((d) => ({ ...d, genre: d.genre === "DJ / electronic" ? "" : d.genre, setMinutes: d.setMinutes === "60" ? "45" : d.setMinutes }))}>NPC band</Button>\n          <Button type="button" variant={isDj ? "default" : "outline"} onClick={() => setDraft((d) => ({ ...d, genre: "DJ / electronic", setMinutes: "60" }))}>DJ</Button>\n        </div>\n        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+        <div className="flex flex-wrap gap-2" role="group" aria-label="NPC act type">
+          <Button type="button" variant={!isDj ? "default" : "outline"} onClick={() => setDraft((d) => ({ ...d, genre: d.genre === "DJ / electronic" ? "" : d.genre, setMinutes: d.setMinutes === "60" ? "45" : d.setMinutes }))}>NPC band</Button>
+          <Button type="button" variant={isDj ? "default" : "outline"} onClick={() => setDraft((d) => ({ ...d, genre: "DJ / electronic", setMinutes: "60" }))}>DJ</Button>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-1.5 lg:col-span-2">
             <Label htmlFor="festival-npc-name">{isDj ? "DJ name" : "Act name"}</Label>
             <Input id="festival-npc-name" value={draft.displayName} onChange={(e) => setDraft((d) => ({ ...d, displayName: e.target.value }))} placeholder={isDj ? "DJ Nightfall" : "The Midnight Static"} />
