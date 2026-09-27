@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -433,6 +433,9 @@ export default function PublicFestivalPage() {
                         onChange={(e) => setQuantities((previous) => ({ ...previous, [p.id]: Number(e.target.value) }))}
                       />
                     </label>
+                    {!user && eventPhase !== "ended" && f.launchStatus === "tickets_on_sale" && p.availableQuantity > 0 && (
+                      <Button asChild variant="outline"><Link to="/auth">Sign in to purchase</Link></Button>
+                    )}
                     <Button
                       disabled={buy.isPending || !user || eventPhase === "ended" || p.availableQuantity === 0 || f.launchStatus !== "tickets_on_sale" || !Number.isSafeInteger(quantities[p.id] ?? 1) || (quantities[p.id] ?? 1) < 1 || (quantities[p.id] ?? 1) > Math.min(p.purchaseLimit, p.availableQuantity)}
                       onClick={() => {
@@ -446,7 +449,7 @@ export default function PublicFestivalPage() {
                         });
                       }}
                     >
-                      {buy.isPending && activePurchaseProductId === p.id ? "Completing purchase…" : eventPhase === "ended" ? "Festival ended" : p.availableQuantity === 0 ? "Sold out" : f.launchStatus !== "tickets_on_sale" ? "Sales unavailable" : !user ? "Sign in to purchase" : "Confirm purchase"}
+                      {buy.isPending && activePurchaseProductId === p.id ? "Completing purchase…" : eventPhase === "ended" ? "Festival ended" : p.availableQuantity === 0 ? "Sold out" : f.launchStatus !== "tickets_on_sale" ? "Sales unavailable" : !user ? "Sign in required" : "Confirm purchase"}
                     </Button>
                     {buy.isError && activePurchaseProductId === p.id && <p role="alert">{buy.error.message.replaceAll("_", " ")}</p>}
                     {buy.isSuccess && activePurchaseProductId === p.id && (
