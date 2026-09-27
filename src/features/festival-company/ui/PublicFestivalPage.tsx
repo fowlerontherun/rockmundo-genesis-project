@@ -435,6 +435,7 @@ export default function PublicFestivalPage() {
                     <Button
                       disabled={buy.isPending || !user || eventPhase === "ended" || p.availableQuantity === 0 || f.launchStatus !== "tickets_on_sale" || !Number.isSafeInteger(quantities[p.id] ?? 1) || (quantities[p.id] ?? 1) < 1 || (quantities[p.id] ?? 1) > Math.min(p.purchaseLimit, p.availableQuantity)}
                       onClick={() => {
+                        buy.reset();
                         setActivePurchaseProductId(p.id);
                         buy.mutate({
                           festivalLaunchId: f.id,
@@ -444,7 +445,7 @@ export default function PublicFestivalPage() {
                         });
                       }}
                     >
-                      {buy.isPending ? "Completing purchase…" : eventPhase === "ended" ? "Festival ended" : p.availableQuantity === 0 ? "Sold out" : !user ? "Sign in to purchase" : "Confirm purchase"}
+                      {buy.isPending && activePurchaseProductId === p.id ? "Completing purchase…" : eventPhase === "ended" ? "Festival ended" : p.availableQuantity === 0 ? "Sold out" : !user ? "Sign in to purchase" : "Confirm purchase"}
                     </Button>
                     {buy.isError && activePurchaseProductId === p.id && <p role="alert">{buy.error.message.replaceAll("_", " ")}</p>}
                     {buy.isSuccess && activePurchaseProductId === p.id && (
