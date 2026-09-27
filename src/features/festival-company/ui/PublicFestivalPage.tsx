@@ -112,7 +112,9 @@ export default function PublicFestivalPage() {
     (ticket) => ticket.productClass === "admission" && !["cancelled", "refunded", "transferred"].includes(ticket.status),
   );
 
-  const confirmedLineup = f.lineup?.length ? f.lineup : f.timetable.map((entry) => ({
+  // A present (even empty) confirmed lineup is authoritative. The legacy timetable
+  // is only a compatibility fallback for older deployments without the lineup field.
+  const confirmedLineup = f.lineup ?? f.timetable.map((entry) => ({
     id: entry.id,
     artistName: entry.artistName,
     artistType: entry.artistType,
