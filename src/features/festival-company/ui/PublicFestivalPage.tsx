@@ -89,6 +89,7 @@ export default function PublicFestivalPage() {
   const checkIn = useCheckInToFestival();
   const leaveEarly = useLeaveFestivalEarly();
   const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [activePurchaseProductId, setActivePurchaseProductId] = useState<string | null>(null);
 
   if (isLoading) return <main className="p-8" role="status">Loading Festival…</main>;
   if (isError || !f) return <main className="p-8" role="alert">Festival not found.</main>;
@@ -433,17 +434,20 @@ export default function PublicFestivalPage() {
                     </label>
                     <Button
                       disabled={buy.isPending || !user || eventPhase === "ended" || p.availableQuantity === 0 || f.launchStatus !== "tickets_on_sale" || !Number.isSafeInteger(quantities[p.id] ?? 1) || (quantities[p.id] ?? 1) < 1 || (quantities[p.id] ?? 1) > Math.min(p.purchaseLimit, p.availableQuantity)}
-                      onClick={() => buy.mutate({
-                        festivalLaunchId: f.id,
-                        ticketProductId: p.id,
-                        quantity: quantities[p.id] ?? 1,
-                        idempotencyKey: crypto.randomUUID(),
-                      })}
+                      onClick={() => {
+                        setActivePurchaseProductId(p.id);
+                        buy.mutate({
+                          festivalLaunchId: f.id,
+                          ticketProductId: p.id,
+                          quantity: quantities[p.id] ?? 1,
+                          idempotencyKey: crypto.randomUUID(),
+                        });
+                      }}
                     >
                       {buy.isPending ? "Completing purchase…" : eventPhase === "ended" ? "Festival ended" : p.availableQuantity === 0 ? "Sold out" : !user ? "Sign in to purchase" : "Confirm purchase"}
                     </Button>
-                    {buy.isError && <p role="alert">{buy.error.message.replaceAll("_", " ")}</p>}
-                    {buy.isSuccess && (
+                    {buy.isError && activePurchaseProductId === p.id && <p role="alert">{buy.error.message.replaceAll("_", " ")}</p>}
+                    {buy.isSuccess && activePurchaseProductId === p.id && (
                       <p role="status">Purchase complete. {buy.data.tickets.length} ticket(s) issued.</p>
                     )}
                   </CardContent>
