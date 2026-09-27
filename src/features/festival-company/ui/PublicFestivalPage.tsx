@@ -112,7 +112,10 @@ export default function PublicFestivalPage() {
     (ticket) => ticket.productClass === "admission" && !["cancelled", "refunded", "transferred"].includes(ticket.status),
   );
 
-  // The simplified timetable contains automatically generated provisional slots.\n  // Only the authoritative confirmed lineup may be advertised publicly.\n  const confirmedLineup = f.lineup ?? [];\n  const publishedPerformances = confirmedLineup.filter(
+  // The simplified timetable contains automatically generated provisional slots.
+  // Only the authoritative confirmed lineup may be advertised publicly.
+  const confirmedLineup = f.lineup ?? [];
+  const publishedPerformances = confirmedLineup.filter(
     (entry) => entry.startsAt && entry.endsAt && entry.stageName,
   );
   const dayLabel = (festivalDate: string | null) => festivalDate
