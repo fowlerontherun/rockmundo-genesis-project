@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { BAND_PERFORMANCE_ROLES, BAND_VOCAL_ASSIGNMENTS, DEFAULT_BAND_PERFORMANCE_ROLE } from '@/data/bandPerformanceRoles';
 import { useToast } from '@/hooks/use-toast';
+import { useBandInvitationsRealtime } from '@/hooks/useBandInvitationsRealtime';
 import { UserPlus, Loader2, X, Search } from 'lucide-react';
 import { searchPublicProfiles, type PublicProfileSearchResult } from '@/services/publicProfileSearch';
 import { bandInviteUnavailability } from '@/services/bandInviteEligibility';
@@ -176,6 +177,17 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
     void prepare();
   }, [open, currentUserId, loadRecruitmentOptions, toast]);
 
+  // Refresh pending invitations and response history while the manager keeps
+  // the dialog open, including changes made by the invited player elsewhere.
+  useBandInvitationsRealtime({
+    filterColumn: 'band_id',
+    filterValue: open ? bandId : null,
+    onChange: () => {
+      void loadRecruitmentOptions(currentUserId).catch(() => {
+        // An explicit close/reopen retains the normal load-and-retry feedback.
+      });
+    },
+  });
 
   // Reuse the game's privacy-aware public profile search instead of exposing
   // raw profiles to the band manager. Backend invitation rules are authoritative.
