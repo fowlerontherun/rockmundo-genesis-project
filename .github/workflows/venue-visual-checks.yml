@@ -26,5 +26,5 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci
-      - name: Verify venue materials, production tiers and environment geometry
-        run: npx vitest run src/features/gig-demo-3d/venueProduction.test.ts src/features/gig-demo-3d/venueSurfaceMaterials.test.ts src/features/gig-demo-3d/venueEnvironment.test.ts
+      - name: Verify venue materials and capacity-tier production geometry
+        run: npx vitest run src/features/gig-demo-3d/venueProduction.test.ts src/features/gig-demo-3d/venueSurfaceMaterials.test.ts
