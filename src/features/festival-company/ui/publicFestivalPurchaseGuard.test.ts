@@ -27,5 +27,8 @@ describe("public festival purchase controls", () => {
     expect(page).toContain("!user || eventPhase === \"ended\"");
     expect(page).toContain('f.launchStatus !== "tickets_on_sale"');
     expect(page).toContain("Sign in to purchase");
+    expect(page).toContain("Ticket sales are not currently open.");
+    expect(page).toContain('disabled={eventPhase === "ended" || f.launchStatus !== "tickets_on_sale" || p.availableQuantity === 0}');
+    expect(page).toContain("Sales unavailable");
   });
 });
