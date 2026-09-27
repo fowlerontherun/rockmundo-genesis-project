@@ -6,6 +6,11 @@ import { AvatarV2PublicPreview } from '@/features/player-model/v2/AvatarV2Public
 import type { AvatarV2Frame } from '@/features/player-model/v2/avatarV2Contract';
 import { defaultAppearance } from '@/features/player-model/appearance';
 
+const SKIN_TONES = [
+  ['Porcelain', '#f1d5c0'], ['Fair', '#edc7a5'], ['Warm', '#d4a373'],
+  ['Olive', '#b88b65'], ['Brown', '#8d5524'], ['Deep', '#593a2d'],
+] as const;
+
 /** Any logged-in player can inspect real source progress, even without a character selected. */
 export default function AvatarV2PreviewPage() {
   const [frame, setFrame] = useState<AvatarV2Frame>('masculine');
@@ -54,6 +59,20 @@ export default function AvatarV2PreviewPage() {
               </label>
             ))}
           </div>
+          <fieldset className="mt-4">
+            <legend className="text-sm font-medium">Experimental skin tone · recognised skin materials only</legend>
+            <div className="mt-2 flex flex-wrap gap-3">
+              {SKIN_TONES.map(([label, color]) => (
+                <button key={color} type="button" aria-label={`${label} skin tone`}
+                  aria-pressed={appearance.body.skin === color}
+                  title={label}
+                  onClick={() => setAppearance(current => ({ ...current, body: { ...current.body, skin: color } }))}
+                  className={`h-10 w-10 rounded-full border-2 ${appearance.body.skin === color ? 'border-teal-300 ring-2 ring-teal-400/60' : 'border-slate-400'}`}
+                  style={{ backgroundColor: color }} />
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-slate-400">If the source GLB has no separately labelled skin material, the model remains unchanged.</p>
+          </fieldset>
           <button type="button" className="mt-4 rounded border px-3 py-2 text-sm" onClick={() => setAppearance(defaultAppearance('avatar-v2-preview'))}>
             Reset preview proportions
           </button>
