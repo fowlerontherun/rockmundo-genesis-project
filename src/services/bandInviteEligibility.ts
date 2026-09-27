@@ -20,6 +20,15 @@ export function bandInviteUnavailability(
   }
   if (context.memberUserIds.has(player.user_id)) return "Already a band member";
   if (context.pendingUserIds.has(player.user_id)) return "Invitation pending";
-  if (player.bands.length > 0) return "Already in another band";
+  // A hiatus or disbanded membership need not prevent joining. Public search
+  // exposes band names but not their active status; the guarded invite RPC is
+  // authoritative about which other memberships are actually disqualifying.
   return null;
+}
+
+/** Mirrors the visible recruiter roles, never replaces server-side permission checks. */
+export function canShowBandInvite(input: { isLeader: boolean; role?: string | null; bandStatus: string; isSoloArtist: boolean }): boolean {
+  const recruiterRoles = new Set(["leader", "founder", "co-leader", "co_leader", "manager", "recruiter"]);
+  return input.bandStatus === "active" && !input.isSoloArtist
+    && (input.isLeader || recruiterRoles.has((input.role || "").toLowerCase()));
 }
