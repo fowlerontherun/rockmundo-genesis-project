@@ -2,8 +2,8 @@
 import * as T from 'three';
 import { describe, expect, it } from 'vitest';
 import { disposeModel } from '@/features/player-model/model';
-import { buildVenueProduction } from './venueProduction';
-import { createStageDeckMaterial, createVenueShowScreenTexture } from './venueProductionQuality';
+import { buildVenueProduction, stageLedEdgePositions } from './venueProduction';
+import { createStageDeckMaterial, createVenueShowScreenTexture, venueScreenDimensions } from './venueProductionQuality';
 import { resolveVenueProfile, VENUE_TYPES, type VenueKind } from './venueProfile';
 
 const label = () => new T.Mesh(new T.PlaneGeometry(1, .3), new T.MeshBasicMaterial());
@@ -46,36 +46,42 @@ describe('shared high-resolution artist LED graphics', () => {
     const small = createVenueShowScreenTexture(club, 'The Reverbs', 2);
     const big = createVenueShowScreenTexture(stadium, 'The Reverbs', 4);
     expect(small.userData.venueShowGraphics).toEqual({
-      venueKind: 'live_house', bandName: 'The Reverbs', width: 1024, height: 512,
+      venueKind: 'live_house', bandName: 'The Reverbs', width: 1024, height: 448, format: 'wide',
     });
     expect(big.userData.venueShowGraphics).toEqual({
-      venueKind: 'stadium', bandName: 'The Reverbs', width: 2048, height: 1024,
+      venueKind: 'stadium', bandName: 'The Reverbs', width: 2048, height: 768, format: 'wide',
     });
     expect(big.colorSpace).toBe(T.SRGBColorSpace);
-    expect(big.name).toBe('venue-shared-show-led-stadium');
+    expect(big.name).toBe('venue-shared-show-led-stadium-wide');
     small.dispose(); big.dispose();
   });
 
   it.each([
-    ['live_house', 900, 1024],
-    ['indoor_arena', 9000, 1024],
-    ['stadium', 65000, 2048],
-    ['festival_stage', 20000, 2048],
-  ] as const)('%s capacity %i displays a single artist graphic at resolution %i', (kind, capacity, width) => {
+    ['live_house', 900, 1024, 448],
+    ['indoor_arena', 9000, 1024, 384],
+    ['stadium', 65000, 2048, 768],
+    ['festival_stage', 20000, 2048, 768],
+  ] as const)('%s capacity %i displays layout-specific artist graphics', (kind, capacity, width, height) => {
     const p = resolveVenueProfile({ type: kind, capacity });
     const scene = new T.Scene();
     const root = buildVenueProduction(scene, p, new T.MeshStandardMaterial(), new T.MeshStandardMaterial(), label, 'THE SHOCKS');
     const wall = root.getObjectByName('stage-led-wall-display') as T.Mesh;
     const material = wall.material as T.MeshStandardMaterial;
     expect(material.map?.userData.venueShowGraphics).toEqual({
-      venueKind: kind, bandName: 'THE SHOCKS', width, height: width / 2,
+      venueKind: kind, bandName: 'THE SHOCKS', width, height, format: 'wide',
     });
     expect(material.map).toBe(material.emissiveMap);
     if (capacity > 3000) {
       const left = root.getObjectByName('stage-side-screen--1-display') as T.Mesh;
       const right = root.getObjectByName('stage-side-screen-1-display') as T.Mesh;
-      expect((left.material as T.MeshStandardMaterial).map).toBe(material.map);
-      expect((right.material as T.MeshStandardMaterial).map).toBe(material.map);
+      const leftMap = (left.material as T.MeshStandardMaterial).map;
+      const rightMap = (right.material as T.MeshStandardMaterial).map;
+      expect(leftMap).toBe(rightMap);
+      expect(leftMap).not.toBe(material.map);
+      const sideSize = width === 2048 ? 1536 : 1024;
+      expect(leftMap?.userData.venueShowGraphics).toEqual({
+        venueKind: kind, bandName: 'THE SHOCKS', width: sideSize, height: sideSize, format: 'square',
+      });
     }
     disposeModel(scene);
   });
@@ -88,5 +94,67 @@ describe('shared high-resolution artist LED graphics', () => {
     expect(long.userData.venueShowGraphics.bandName).toHaveLength(64);
     expect(long.userData.venueShowGraphics.bandName).toBe('x'.repeat(64));
     empty.dispose(); long.dispose();
+  });
+});
+
+
+describe('stage LED image aspect and picture clearance', () => {
+  it('sizes wide and square artwork to match the actual screen geometry at each tier', () => {
+    const representative = [
+      ['live_house', 900, 2],
+      ['indoor_arena', 9000, 3],
+      ['stadium', 65000, 4],
+    ] as const;
+    for (const [kind, capacity, tier] of representative) {
+      const p = resolveVenueProfile({ type: kind, capacity });
+      const wide = venueScreenDimensions(tier);
+      const wideDisplayAspect = (p.stageWidth * .7) / ((p.rigHeight - p.stageHeight) * .65);
+      expect(Math.abs(wide.width / wide.height / wideDisplayAspect - 1)).toBeLessThan(.08);
+      const square = venueScreenDimensions(tier, 'square');
+      if (tier >= 3) {
+        const sideWidth = tier === 4 ? 7 : 4.6;
+        const sideHeight = tier === 4 ? 7.4 : 4.5;
+        expect(Math.abs(square.width / square.height / (sideWidth / sideHeight) - 1)).toBeLessThan(.08);
+      }
+      expect(square.width).toBe(square.height);
+    }
+    expect(venueScreenDimensions(4)).toEqual({ width: 2048, height: 768, format: 'wide' });
+    expect(venueScreenDimensions(4, 'square')).toEqual({ width: 1536, height: 1536, format: 'square' });
+  });
+
+  it.each(['live_house', 'indoor_arena', 'stadium'] as const)(
+    '%s positions all decorative LED battens beside the screen instead of over its picture', kind => {
+      const p = resolveVenueProfile({ type: kind });
+      const positions = stageLedEdgePositions(p);
+      const activePictureHalfWidth = p.stageWidth * .7 / 2;
+      const barHalfWidth = p.stageWidth * .009 / 2;
+      expect(positions).toHaveLength(18);
+      expect(positions.filter(bar => bar.x < 0)).toHaveLength(9);
+      expect(positions.filter(bar => bar.x > 0)).toHaveLength(9);
+      for (const bar of positions) {
+        expect(Math.abs(bar.x) - barHalfWidth).toBeGreaterThan(activePictureHalfWidth);
+        expect(Math.abs(bar.x) + barHalfWidth).toBeLessThan(p.stageWidth / 2);
+        expect(bar.height).toBeGreaterThan(0);
+        expect(bar.height).toBeLessThan(p.rigHeight - p.stageHeight);
+      }
+    },
+  );
+
+  it('reuses square IMAG art across left and right without allocating a copy for each screen', () => {
+    const p = resolveVenueProfile({ type: 'stadium', capacity: 65000 });
+    const scene = new T.Scene();
+    const root = buildVenueProduction(scene, p, new T.MeshStandardMaterial(), new T.MeshStandardMaterial(), label, 'EXTRA LONG BAND NAME');
+    const front = root.getObjectByName('stage-led-wall-display') as T.Mesh;
+    const left = root.getObjectByName('stage-side-screen--1-display') as T.Mesh;
+    const right = root.getObjectByName('stage-side-screen-1-display') as T.Mesh;
+    const wide = (front.material as T.MeshStandardMaterial).map;
+    const leftMap = (left.material as T.MeshStandardMaterial).map;
+    const rightMap = (right.material as T.MeshStandardMaterial).map;
+    expect(leftMap).toBe(rightMap);
+    expect(leftMap).not.toBe(wide);
+    expect(wide?.userData.venueShowGraphics.format).toBe('wide');
+    expect(leftMap?.userData.venueShowGraphics.format).toBe('square');
+    expect((left.material as T.MeshStandardMaterial).emissiveMap).toBe(leftMap);
+    disposeModel(scene);
   });
 });
