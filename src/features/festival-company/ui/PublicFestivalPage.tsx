@@ -146,7 +146,7 @@ export default function PublicFestivalPage() {
             <div className="flex flex-wrap gap-2">
               <Badge>{eventPhaseLabel}</Badge>
               <Badge variant="outline" className="border-white/50 text-white">
-                Ticket sales: {f.launchStatus.replaceAll("_", " ")}
+                Ticket sales: {eventPhase === "ended" ? "closed" : f.launchStatus.replaceAll("_", " ")}
               </Badge>
             </div>
             <h1 className="mt-4 text-4xl font-black md:text-7xl">{f.name}</h1>
@@ -437,7 +437,7 @@ export default function PublicFestivalPage() {
                       <Button asChild variant="outline"><Link to="/auth">Sign in to purchase</Link></Button>
                     )}
                     {user && <Button
-                      disabled={buy.isPending || !user || eventPhase === "ended" || p.availableQuantity === 0 || f.launchStatus !== "tickets_on_sale" || !Number.isSafeInteger(quantities[p.id] ?? 1) || (quantities[p.id] ?? 1) < 1 || (quantities[p.id] ?? 1) > Math.min(p.purchaseLimit, p.availableQuantity)}
+                      disabled={buy.isPending || eventPhase === "ended" || p.availableQuantity === 0 || f.launchStatus !== "tickets_on_sale" || !Number.isSafeInteger(quantities[p.id] ?? 1) || (quantities[p.id] ?? 1) < 1 || (quantities[p.id] ?? 1) > Math.min(p.purchaseLimit, p.availableQuantity)}
                       onClick={() => {
                         buy.reset();
                         setActivePurchaseProductId(p.id);
@@ -449,7 +449,7 @@ export default function PublicFestivalPage() {
                         });
                       }}
                     >
-                      {buy.isPending && activePurchaseProductId === p.id ? "Completing purchase…" : eventPhase === "ended" ? "Festival ended" : p.availableQuantity === 0 ? "Sold out" : f.launchStatus !== "tickets_on_sale" ? "Sales unavailable" : !user ? "Sign in required" : "Confirm purchase"}
+                      {buy.isPending && activePurchaseProductId === p.id ? "Completing purchase…" : eventPhase === "ended" ? "Festival ended" : p.availableQuantity === 0 ? "Sold out" : f.launchStatus !== "tickets_on_sale" ? "Sales unavailable" : "Confirm purchase"}
                     </Button>}
                     {buy.isError && activePurchaseProductId === p.id && <p role="alert">{buy.error.message.replaceAll("_", " ")}</p>}
                     {buy.isSuccess && activePurchaseProductId === p.id && (
