@@ -59,3 +59,17 @@ The next festival edition is gated on the complete published programme, capacity
 ### Public schedule privacy and publication checks
 
 The revisioned migration now returns only public revision metadata (`id`, `revisionNumber`, `publishedAt`) rather than serialising internal revision notes, owner profile IDs or audit fields. Publishing a schedule now retains each item's explicitly chosen `public_visible` value instead of automatically exposing all assigned items. Staging certification must assert that private soundchecks, technical maintenance and unpublished performer assignments remain absent from the anonymous public projection; explicitly published performances remain visible. The scheduler is still pending staging execution and must not be described as live.
+
+### Festival foundation: setlist approval through stage performance
+
+The band-facing canonical contract editor now offers the band's saved setlists as starting selections. A preset is copied into the contract-specific draft; the original band setlist remains unchanged. The editor rejects preset songs unavailable in the contract repertoire, requires authoritative preflight to complete, and prevents submitting an unsaved selection. A contract setlist must follow the existing draft → submitted → organiser-approved (or changes-requested) → locked workflow. Organisers review but cannot silently replace the band's songs. A new performance session uses the locked canonical setlist and persists an immutable setlist snapshot for deterministic playback and audit.
+
+Integration gates for the next festival edition:
+1. Band accepts a confirmed stage-slot contract, selects a saved setlist, adjusts songs, saves, submits, receives changes request, resubmits and obtains organiser approval.
+2. Assert the organiser sees the same ordered song IDs, durations, encore flags and approved version; no unpublished setlist leaks into the public timetable.
+3. Lock the approved version and create the performance session exactly once; assert its setlist snapshot matches the locked version and cannot change when the band's general saved setlist is edited.
+4. Ensure a rejected, unapproved, stale or over-duration setlist cannot start a performance. Verify permissions for another band, another organiser and anonymous callers.
+5. Simulate stage call, performance and completion with deterministic replay; check session event idempotency and one settlement record per performance.
+6. Test multi-day/multi-stage overlapping sets, late replacements, no-shows and cancellations without silently changing the locked setlist.
+
+Production read-only inventory on 2026-09-27: canonical performance-session storage exists but there are zero performance sessions and zero locked contract setlists; the revisioned visual scheduler table does not yet exist. Only the production Supabase project was available in the connected project list. Do not treat source-level changes as production deployment or claim staging execution without a separate test database.
