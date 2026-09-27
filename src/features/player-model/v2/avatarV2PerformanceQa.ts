@@ -149,8 +149,18 @@ export function inspectAvatarV2Performance(
   const sticks = preset === 'rock_drums'
     ? (['l', 'r'] as const).map(side => rig.tools.find(tool => tool.name === `playing-stick-${side}`))
     : [];
-  // Explicit side matching prevents a swapped-stick rig from passing merely
-  // because two objects happen to exist in the tools array.
+  // Names alone cannot prove the correct stick is in the correct hand: verify
+  // the attachment subtree, hand-side metadata and visibility through parents.
+  const stickReady = (stick: T.Object3D | undefined, side: 'L' | 'R') => {
+    if (!stick || stick.userData.handSide !== side || stick.userData.followsHand !== true) return false;
+    let current: T.Object3D | null = stick;
+    while (current && current !== rig.root) {
+      if (!current.visible) return false;
+      current = current.parent;
+    }
+    return current === rig.root && rig.root.visible;
+  };
+  const sticksReady = () => stickReady(sticks[0], 'L') && stickReady(sticks[1], 'R');
   const guitarPicks = preset === 'electric_guitar'
     ? actor.root.getObjectsByProperty('name', 'playing-guitar-pick').length
     : 0;
@@ -260,7 +270,7 @@ export function inspectAvatarV2Performance(
       }
     }
 
-    if (preset === 'rock_drums' && sticks.every((stick): stick is T.Object3D => !!stick) && left && right) {
+    if (preset === 'rock_drums' && sticksReady() && left && right) {
       const hands = [left, right] as const;
       for (let index = 0; index < 2; index++) {
         const stickWorld = sticks[index]!.getWorldPosition(new T.Vector3());
@@ -403,7 +413,7 @@ export function inspectAvatarV2Performance(
   }
 
   if (preset === 'rock_drums') {
-    if (sticks.some(stick => !stick || !stick.visible || !stick.parent)) {
+    if (!sticksReady()) {
       issues.push({ code: 'missing-drumsticks', message: 'The drum rig must expose two visible, attached, correctly sided playing-stick tools.' });
     } else if (left && right && maxStick > STICK_LIMIT) {
       issues.push({
@@ -431,7 +441,7 @@ export function inspectAvatarV2Performance(
     preset,
     maxLeftGripError: needsLeft && left ? maxLeft : null,
     maxRightGripError: right ? maxRight : null,
-    maxDrumstickError: preset === 'rock_drums' && sticks.every(Boolean) && left && right ? maxStick : null,
+    maxDrumstickError: preset === 'rock_drums' && sticksReady() && left && right ? maxStick : null,
     maxFingerContactError: fingerSamples ? maxFinger : null,
     maxEyeMotion: eyes.length ? maxEyeMotion : null,
     maxTwistMotion: twists.length ? maxTwistMotion : null,
@@ -447,7 +457,7 @@ export function inspectAvatarV2Performance(
     twistBones: twists.length,
     shoulderBones: shoulders.length,
     toeBones: toes.length,
-    drumsticks: sticks.filter(stick => !!stick && stick.visible && !!stick.parent).length,
+    drumsticks: sticks.filter((stick, index) => stickReady(stick, index === 0 ? 'L' : 'R')).length,
     guitarPicks,
     issues: uniqueIssues,
   };
