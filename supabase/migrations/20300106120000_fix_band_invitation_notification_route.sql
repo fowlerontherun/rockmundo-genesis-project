@@ -145,7 +145,7 @@ BEGIN
 
   RETURN v_result;
 END;
-$function$
+$function$;
 
 UPDATE public.notifications
 SET action_path = '/band/members'
