@@ -74,6 +74,21 @@ describe("performer instrument body clearance", () => {
     expect((right.userData.strikeTarget as T.Vector3).distanceTo(new T.Vector3(-.75, 1.3, .65))).toBeLessThan(.001);
   });
 
+  it("does not unhide or reattach invalid drumsticks during subsequent frames", () => {
+    const actor = new Musician(simpleRiggedModel(), "drums", [0, 0, 0], 0, undefined, defaultAppearance("drum-invalid-stick"), "rock_drums");
+    const rig = actor.instrumentRig!;
+    const left = rig.tools.find(tool => tool.name === "playing-stick-l")!;
+    const right = rig.tools.find(tool => tool.name === "playing-stick-r")!;
+    left.visible = false;
+    right.removeFromParent();
+    actor.performanceSection = "chorus";
+    actor.sectionProgress = 0;
+    actor.update(2.2, .9, false);
+    expect(left.visible).toBe(false);
+    expect(right.parent).toBeNull();
+    expect(right.userData.handSide).toBe("R");
+  });
+
   it("keeps arm IK finite after applying wider pole clearance", () => {
     const broad = defaultAppearance("broad-ik");
     broad.body.build = 1.35;
