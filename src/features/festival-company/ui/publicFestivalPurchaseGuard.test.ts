@@ -26,7 +26,8 @@ describe("public festival purchase controls", () => {
     expect(page).toContain("Math.min(p.purchaseLimit, p.availableQuantity)");
     expect(page).toContain("!user || eventPhase === \"ended\"");
     expect(page).toContain('f.launchStatus !== "tickets_on_sale"');
-    expect(page).toContain("Sign in to purchase");
+    expect(page).toContain('<Link to="/auth">Sign in to purchase</Link>');
+    expect(page).toContain('!user ? "Sign in required"');
     expect(page).toContain("Ticket sales are not currently open.");
     expect(page).toContain('disabled={eventPhase === "ended" || f.launchStatus !== "tickets_on_sale" || p.availableQuantity === 0}');
     expect(page).toContain("Sales unavailable");
