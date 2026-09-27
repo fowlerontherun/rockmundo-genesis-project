@@ -4,7 +4,7 @@ import { PersonStanding } from 'lucide-react';
 import { FMPageScaffold } from '@/components/fm/FMPageScaffold';
 import { AvatarV2PublicPreview } from '@/features/player-model/v2/AvatarV2PublicPreview';
 import type { AvatarV2Frame } from '@/features/player-model/v2/avatarV2Contract';
-import { defaultAppearance } from '@/features/player-model/appearance';
+import { defaultAppearance, EYE_COLORS } from '@/features/player-model/appearance';
 
 const SKIN_TONES = [
   ['Porcelain', '#f1d5c0'], ['Fair', '#edc7a5'], ['Warm', '#d4a373'],
@@ -72,6 +72,18 @@ export default function AvatarV2PreviewPage() {
               ))}
             </div>
             <p className="mt-2 text-xs text-slate-400">If the source GLB has no separately labelled skin material, the model remains unchanged.</p>
+          </fieldset>
+          <fieldset className="mt-4">
+            <legend className="text-sm font-medium">Eye colour · genuine Blender iris surfaces</legend>
+            <div className="mt-2 flex flex-wrap gap-3">
+              {EYE_COLORS.map(([label, color]) => (
+                <button key={color} type="button" aria-label={`${label} eyes`}
+                  aria-pressed={appearance.head.eyeColor === color} title={label}
+                  onClick={() => setAppearance(current => ({ ...current, head: { ...current.head, eyeColor: color } }))}
+                  className={`h-10 w-10 rounded-full border-2 ${appearance.head.eyeColor === color ? 'border-teal-300 ring-2 ring-teal-400/60' : 'border-slate-400'}`}
+                  style={{ backgroundColor: color }} />
+              ))}
+            </div>
           </fieldset>
           <button type="button" className="mt-4 rounded border px-3 py-2 text-sm" onClick={() => setAppearance(defaultAppearance('avatar-v2-preview'))}>
             Reset preview proportions
