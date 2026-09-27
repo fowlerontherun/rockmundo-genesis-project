@@ -5,6 +5,7 @@ on:
     paths:
       - "src/features/gig-demo-3d/venueProduction*"
       - "src/features/gig-demo-3d/venueShowIdentity*"
+      - "src/features/gig-demo-3d/venueScreenGraphics*"
       - "src/features/gig-demo-3d/venueSurfaceMaterials*"
       - "src/features/gig-demo-3d/venueProfile.ts"
       - ".github/workflows/venue-visual-checks.yml"
@@ -13,6 +14,7 @@ on:
     paths:
       - "src/features/gig-demo-3d/venueProduction*"
       - "src/features/gig-demo-3d/venueShowIdentity*"
+      - "src/features/gig-demo-3d/venueScreenGraphics*"
       - "src/features/gig-demo-3d/venueSurfaceMaterials*"
       - "src/features/gig-demo-3d/venueProfile.ts"
       - ".github/workflows/venue-visual-checks.yml"
@@ -29,4 +31,6 @@ jobs:
           cache-dependency-path: package-lock.json
       - run: npm ci
       - name: Verify venue materials and capacity-tier production geometry
-        run: npx vitest run src/features/gig-demo-3d/venueProduction.test.ts src/features/gig-demo-3d/venueSurfaceMaterials.test.ts src/features/gig-demo-3d/venueShowIdentity.test.ts
+        run: npx vitest run src/features/gig-demo-3d/venueProduction.test.ts src/features/gig-demo-3d/venueSurfaceMaterials.test.ts src/features/gig-demo-3d/venueShowIdentity.test.ts src/features/gig-demo-3d/venueScreenGraphics.test.ts
+      - name: Typecheck venue production against the actual frontend build
+        run: npm run typecheck

@@ -9,6 +9,7 @@ import {
     addSubwoofer,
     addVideoScreen,
     createStageDeckMaterial,
+    createVenueShowScreenTexture,
     productionEquipmentSpec,
 } from './venueProductionQuality';
 
@@ -86,6 +87,7 @@ export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Ma
             }
     }
     const curtain = ['theatre', 'jazz_lounge'].includes(p.kind), led = ['festival_stage', 'stadium', 'indoor_arena', 'ice_arena', 'live_house'].includes(p.kind);
+    const showTexture = led || layout.wings ? createVenueShowScreenTexture(p, bandName, layout.tier) : undefined;
     if (curtain) {
         const g = new T.PlaneGeometry(p.stageWidth * .94, p.rigHeight - y, 100, 1), v = g.attributes.position;
         for (let i = 0; i < v.count; i++)
@@ -102,7 +104,7 @@ export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Ma
     else if (led) {
         const width = p.stageWidth * .7, height = (p.rigHeight - y) * .65;
         addVideoScreen(root, 'stage-led-wall', width, height,
-            [0, y + (p.rigHeight - y) * .49, back + .3], black, steel, p.accent);
+            [0, y + (p.rigHeight - y) * .49, back + .3], black, steel, p.accent, showTexture);
         const strip = new T.MeshStandardMaterial({ color: '#52b6bf', emissive: '#308c9e', emissiveIntensity: 1.5 });
         for (let i = 0; i < 18; i++)
             box(root, [p.stageWidth * .012, (p.rigHeight - y) * (.1 + Math.sin(i * .83) ** 2 * .35), .025],
@@ -211,7 +213,7 @@ export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Ma
         for (const side of [-1, 1]) {
             const x = side * (half + 3.2), screenHeight = equipment.screenHeight;
             addVideoScreen(root, 'stage-side-screen-' + side, equipment.screenWidth, screenHeight,
-                [x, y + screenHeight * .7, back + p.stageDepth * .6], black, steel, p.accent);
+                [x, y + screenHeight * .7, back + p.stageDepth * .6], black, steel, p.accent, showTexture);
             for (const z of [p.crowdDepth * .43, ...(layout.tier === 4 ? [p.crowdDepth * .76] : [])]) {
                 const towerX = side * (p.crowdWidth * .45);
                 const towerHeight = layout.tier === 4 ? 10 : 7;

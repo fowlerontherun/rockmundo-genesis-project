@@ -221,7 +221,12 @@ function materialFor(
     material.bumpMap = proceduralTexture(specValue, name, true, textureSize);
     material.bumpScale = specValue.bumpScale ?? .04;
   }
-  material.userData.venueTextureResolution = material.map?.image?.width ?? textureSize;
+  // Three.js Texture.image is typed as unknown; guard HTMLImageElement and
+  // DataTexture image payloads without assuming the browser has loaded an image.
+  const image = material.map?.image;
+  material.userData.venueTextureResolution =
+    image && typeof image === 'object' && 'width' in image &&
+    typeof image.width === 'number' ? image.width : textureSize;
   material.userData.venueSurfacePattern = specValue.pattern;
   material.userData.venueSurfaceRole = role;
   material.userData.venueKind = p.kind;
