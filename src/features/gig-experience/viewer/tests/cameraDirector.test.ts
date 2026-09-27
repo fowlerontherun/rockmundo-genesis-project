@@ -44,6 +44,17 @@ describe("gig viewer camera direction", () => {
     expect(auto.shot).toBe("performer");
   });
 
+  it("provides manual lead, pit and crane framing in the 2D fallback", () => {
+    const common = { event: event(), positionMs: 2_000, viewport, stage, audience, performers, reducedMotion: true };
+    const lead = deriveCameraForMode({ ...common, mode: "lead_close" });
+    const pit = deriveCameraForMode({ ...common, mode: "pit_view" });
+    const crane = deriveCameraForMode({ ...common, mode: "crane_view" });
+    expect(lead).toMatchObject({ shot: "performer", subjectId: "vocalist", camera: { zoom: 1.2 } });
+    expect(pit).toMatchObject({ shot: "performer", subjectId: "vocalist", camera: { zoom: 1.16 } });
+    expect(crane).toMatchObject({ shot: "wide", camera: { zoom: 1.07 } });
+    expect(deriveCameraForMode({ ...common, mode: "lead_close" })).toEqual(lead);
+  });
+
   it("keeps reduced-motion and song-boundary frames on the complete venue", () => {
     const reduced = deriveCameraFrame({ event: event(), positionMs: 2_000, viewport, stage, audience, performers, reducedMotion: true });
     const boundary = deriveCameraFrame({
