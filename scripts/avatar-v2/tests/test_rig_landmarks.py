@@ -76,6 +76,21 @@ class SculptJointFitTests(unittest.TestCase):
         ]
         self.assertNotEqual(original, rig_structure_fingerprint(disconnected))
 
+    def test_hierarchy_fingerprint_detects_unmarked_eye_and_ear_rotation(self):
+        bones = example_rig()
+        original = rig_structure_fingerprint(bones)
+        for target in ("Eye.L", "EarAnchor.R"):
+            rotated = [
+                BoneSpec(b.name, b.parent, b.connected, b.head,
+                         (b.tail[0], b.tail[1] + .01, b.tail[2])
+                         if b.name == target else b.tail)
+                for b in bones
+            ]
+            self.assertNotEqual(original, rig_structure_fingerprint(rotated))
+            # Moving an editable marker is handled by stale_guide_markers,
+            # not by the hierarchy/rest-direction fingerprint.
+            self.assertEqual(position_markers(bones), position_markers(rotated))
+
     def test_edit_bone_inventory_preflight_catches_missing_bones(self):
         names = [bone.name for bone in example_rig()]
         self.assertEqual(missing_edit_bones(names, names), [])
