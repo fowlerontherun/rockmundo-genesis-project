@@ -4,10 +4,14 @@ import { PersonStanding } from 'lucide-react';
 import { FMPageScaffold } from '@/components/fm/FMPageScaffold';
 import { AvatarV2PublicPreview } from '@/features/player-model/v2/AvatarV2PublicPreview';
 import type { AvatarV2Frame } from '@/features/player-model/v2/avatarV2Contract';
+import { defaultAppearance } from '@/features/player-model/appearance';
 
 /** Any logged-in player can inspect real source progress, even without a character selected. */
 export default function AvatarV2PreviewPage() {
   const [frame, setFrame] = useState<AvatarV2Frame>('masculine');
+  const [appearance, setAppearance] = useState(() => defaultAppearance('avatar-v2-preview'));
+  const updateBody = (key: 'height' | 'build', value: number) =>
+    setAppearance(current => ({ ...current, body: { ...current.body, [key]: value } }));
 
   return (
     <FMPageScaffold
@@ -36,7 +40,25 @@ export default function AvatarV2PreviewPage() {
             ))}
           </div>
         </div>
-        <AvatarV2PublicPreview frame={frame} />
+        <section className="rounded-xl border border-teal-500/30 bg-slate-950/80 p-4" aria-label="Experimental Avatar Creator controls">
+          <h3 className="font-semibold">Avatar Creator · V2 body preview</h3>
+          <p className="mt-1 text-sm text-slate-300">Try body proportions on the real 3D source. These controls are experimental, do not save and do not affect the fixed Blender comparison renders.</p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            {(['height', 'build'] as const).map(key => (
+              <label key={key} className="flex flex-col gap-2 text-sm capitalize">
+                <span>{key} · {Math.round(appearance.body[key] * 100)}%</span>
+                <input type="range" min={key === 'height' ? .9 : .85} max={key === 'height' ? 1.1 : 1.15}
+                  step=".01" value={appearance.body[key]}
+                  onChange={event => updateBody(key, Number(event.target.value))}
+                  aria-label={`Preview body ${key}`} />
+              </label>
+            ))}
+          </div>
+          <button type="button" className="mt-4 rounded border px-3 py-2 text-sm" onClick={() => setAppearance(defaultAppearance('avatar-v2-preview'))}>
+            Reset preview proportions
+          </button>
+        </section>
+        <AvatarV2PublicPreview frame={frame} appearance={{ ...appearance, body: { ...appearance.body, frame } }} />
         <p className="text-center text-sm text-muted-foreground">
           Want to customize your current live character?{' '}
           <Link to="/avatar-designer" className="underline underline-offset-4">Return to Avatar Creator</Link>.
