@@ -79,6 +79,8 @@ export function FestivalSetlistEditorCanonical({
   const preflightBlocked = preflight.data?.outcome === "blocked";
   const canPersist = validation.valid && !preflightBlocked && !preflight.isError;
   const fp = JSON.stringify(items);
+  const savedFingerprint = JSON.stringify(current.items ?? []);
+  const hasUnsavedChanges = fp !== savedFingerprint;
   const saveKey = useStableMutationIdempotencyKey(
     "save-setlist",
     contract.id,
@@ -440,7 +442,7 @@ export function FestivalSetlistEditorCanonical({
           ["draft", "changes_requested"].includes(current.status) ? (
             <Button
               size="sm"
-              disabled={!canPersist || contract.status !== "active"}
+              disabled={!canPersist || contract.status !== "active" || hasUnsavedChanges || submitSetlist.isPending || !current.id}
               onClick={() =>
                 submitSetlist.mutate(
                   {
@@ -457,6 +459,9 @@ export function FestivalSetlistEditorCanonical({
               Submit for review
             </Button>
           ) : null}
+          {!organiser && hasUnsavedChanges && ["draft", "changes_requested"].includes(current.status) ? (
+            <p className="text-xs text-amber-600">Save your latest song selection before submitting it for organiser approval.</p>
+          ) : null}
           {organiser && current.status === "submitted" ? (
             <>
               <Input
@@ -467,11 +472,15 @@ export function FestivalSetlistEditorCanonical({
               />
               <Button
                 size="sm"
+                disabled={reviewSetlist.isPending}
                 onClick={() =>
                   reviewSetlist.mutate({
                     setlistId: current.id ?? "",
                     action: "approve",
                     idempotencyKey: approveKey.idempotencyKey,
+                  }, {
+                    onSuccess: () => { approveKey.markSucceeded(); toast.success("Festival setlist approved"); },
+                    onError: (e) => toast.error(mapBookingError(e).message),
                   })
                 }
               >
@@ -480,13 +489,16 @@ export function FestivalSetlistEditorCanonical({
               <Button
                 size="sm"
                 variant="outline"
-                disabled={!reason}
+                disabled={!reason.trim() || reviewSetlist.isPending}
                 onClick={() =>
                   reviewSetlist.mutate({
                     setlistId: current.id ?? "",
                     action: "request_changes",
                     reason,
                     idempotencyKey: changesKey.idempotencyKey,
+                  }, {
+                    onSuccess: () => { changesKey.markSucceeded(); toast.success("Changes requested from the band"); },
+                    onError: (e) => toast.error(mapBookingError(e).message),
                   })
                 }
               >
