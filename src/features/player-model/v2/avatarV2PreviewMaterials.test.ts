@@ -1,7 +1,20 @@
+import { Color } from 'three';
 import { describe, expect, it } from 'vitest';
-import { hasAvatarV2PreviewIrisPair, isAvatarV2PreviewIrisMaterial, isAvatarV2PreviewSkinMaterial } from './avatarV2PreviewMaterials';
+import { applyAvatarV2PreviewSwatch, hasAvatarV2PreviewIrisPair, isAvatarV2PreviewIrisMaterial, isAvatarV2PreviewSkinMaterial } from './avatarV2PreviewMaterials';
 
 describe('Avatar V2 preview skin material identification', () => {
+  it('reversibly applies and clears skin and iris swatches without modifying source colours', () => {
+    for (const [originalHex, selectedHex] of [['#d4a373', '#593a2d'], ['#65442d', '#4d79a8']]) {
+      const original = new Color(originalHex);
+      const material = { color: original.clone() };
+      applyAvatarV2PreviewSwatch(material, original, selectedHex);
+      expect(material.color.getHexString()).toBe(new Color(selectedHex).getHexString());
+      expect(original.getHexString()).toBe(new Color(originalHex).getHexString());
+      applyAvatarV2PreviewSwatch(material, original, undefined);
+      expect(material.color.getHexString()).toBe(original.getHexString());
+    }
+  });
+
   it('recognises both real Blender body skin exports', () => {
     expect(isAvatarV2PreviewSkinMaterial('RMV2_Preview_Skin_masculine')).toBe(true);
     expect(isAvatarV2PreviewSkinMaterial('RMV2_Preview_Skin_feminine')).toBe(true);
