@@ -153,6 +153,7 @@ export function AvatarV2PublicPreview({ frame, appearance }: { frame: AvatarV2Fr
                     url={avatarV2ReferenceModelUrl(frame, variant)}
                     focus={view === 'face' ? 'face' : 'full'}
                     experimentalRig={variant === 'headMotion'}
+                    lookdev={variant === 'lookdev'}
                     appearance={appearance}
                   />
                 </Suspense>
@@ -163,8 +164,9 @@ export function AvatarV2PublicPreview({ frame, appearance }: { frame: AvatarV2Fr
             This is a verified visual preview of the real Blender source, not your saved playable avatar.
             The head-motion experiment has preliminary partial weights, but V2 has not
             passed full rigging, facial animation, clothing and LOD validation, so
-            your live character and gig visuals remain on V1. The experimental height/build
-            controls affect only this 3D preview; other Avatar Creator features and Save avatar
+            your live character and gig visuals remain on V1. Experimental height/build
+            controls affect only this 3D preview; skin and eye colours require the Improved V2
+            lookdev model. Other Avatar Creator features and Save avatar
             still apply only to your current live character.
             {' '}<a href={GALLERY} target="_blank" rel="noreferrer">View verified source proofs</a>
           </p>
