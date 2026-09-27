@@ -88,7 +88,7 @@ export default function PublicFestivalPage() {
   const buy = usePurchaseFestivalTickets();
   const checkIn = useCheckInToFestival();
   const leaveEarly = useLeaveFestivalEarly();
-  const [quantity, setQuantity] = useState(1);
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
 
   if (isLoading) return <main className="p-8" role="status">Loading Festival…</main>;
   if (isError || !f) return <main className="p-8" role="alert">Festival not found.</main>;
@@ -425,21 +425,22 @@ export default function PublicFestivalPage() {
                         className="ml-2 w-16 rounded border bg-background p-2"
                         type="number"
                         min={1}
-                        max={p.purchaseLimit}
-                        value={quantity}
-                        onChange={(e) => setQuantity(Number(e.target.value))}
+                        max={Math.min(p.purchaseLimit, p.availableQuantity)}
+                        value={quantities[p.id] ?? 1}
+                        disabled={eventPhase === "ended" || p.availableQuantity === 0}
+                        onChange={(e) => setQuantities((previous) => ({ ...previous, [p.id]: Number(e.target.value) }))}
                       />
                     </label>
                     <Button
-                      disabled={buy.isPending || eventPhase === "ended" || p.availableQuantity === 0 || f.launchStatus !== "tickets_on_sale"}
+                      disabled={buy.isPending || !user || eventPhase === "ended" || p.availableQuantity === 0 || f.launchStatus !== "tickets_on_sale" || !Number.isSafeInteger(quantities[p.id] ?? 1) || (quantities[p.id] ?? 1) < 1 || (quantities[p.id] ?? 1) > Math.min(p.purchaseLimit, p.availableQuantity)}
                       onClick={() => buy.mutate({
                         festivalLaunchId: f.id,
                         ticketProductId: p.id,
-                        quantity,
+                        quantity: quantities[p.id] ?? 1,
                         idempotencyKey: crypto.randomUUID(),
                       })}
                     >
-                      {buy.isPending ? "Completing purchase…" : eventPhase === "ended" ? "Festival ended" : p.availableQuantity === 0 ? "Sold out" : "Confirm purchase"}
+                      {buy.isPending ? "Completing purchase…" : eventPhase === "ended" ? "Festival ended" : p.availableQuantity === 0 ? "Sold out" : !user ? "Sign in to purchase" : "Confirm purchase"}
                     </Button>
                     {buy.isError && <p role="alert">{buy.error.message.replaceAll("_", " ")}</p>}
                     {buy.isSuccess && (
