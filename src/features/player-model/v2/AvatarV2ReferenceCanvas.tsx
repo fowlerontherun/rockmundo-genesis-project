@@ -142,7 +142,7 @@ export function AvatarV2ReferenceCanvas({
           if (!(object instanceof T.Mesh)) return;
           const cloneSkin = (material: T.Material): T.Material => {
             if (!(material instanceof T.MeshStandardMaterial) ||
-                !/^(skin|body[ _-]?skin)(?:[ _.-]|$)/i.test(material.name)) return material;
+                !/^(?:RMV2_Preview_Skin_(?:masculine|feminine)|skin(?:[ _.-]|$)|body[ _-]?skin(?:[ _.-]|$))/i.test(material.name)) return material;
             let clone = clones.get(material);
             if (!clone) {
               clone = material.clone();
