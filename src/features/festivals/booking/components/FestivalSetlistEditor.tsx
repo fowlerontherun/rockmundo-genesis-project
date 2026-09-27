@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { listBandFestivalSetlistPresets, loadBandFestivalSetlistPreset } from "../setlistPresets";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,6 +53,13 @@ export function FestivalSetlistEditorCanonical({
     current.items ?? [],
   );
   const [reason, setReason] = useState("");
+  const [selectedPreset, setSelectedPreset] = useState("");
+  const [loadingPreset, setLoadingPreset] = useState(false);
+  const presets = useQuery({
+    queryKey: ["festival-setlist-presets", contract.band_id],
+    queryFn: () => listBandFestivalSetlistPresets(contract.band_id),
+    enabled: !organiser && Boolean(contract.band_id),
+  });
   const repertoire = useFestivalContractRepertoire(contract.id);
   const collaborators = useFestivalContractCollaborators(contract.id);
   const acceptedCollaborators = (collaborators.data ?? []).filter(
@@ -121,6 +130,52 @@ export function FestivalSetlistEditorCanonical({
             The band repertoire could not be loaded. Setlist changes are disabled
             until it is available.
           </p>
+        ) : null}
+
+        {!organiser && !readOnly ? (
+          <div className="flex flex-wrap items-center gap-2 rounded border p-3">
+            <Select value={selectedPreset} onValueChange={setSelectedPreset}
+              disabled={presets.isLoading || presets.isError || loadingPreset}>
+              <SelectTrigger className="min-w-48 max-w-sm" aria-label="Choose a saved band setlist">
+                <SelectValue placeholder="Choose a saved band setlist" />
+              </SelectTrigger>
+              <SelectContent>
+                {(presets.data ?? []).map((preset) => (
+                  <SelectItem key={preset.id} value={preset.id}>{preset.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button type="button" size="sm" variant="outline"
+              disabled={!selectedPreset || loadingPreset || repertoire.isLoading || repertoire.isError}
+              onClick={async () => {
+                setLoadingPreset(true);
+                try {
+                  const selected = await loadBandFestivalSetlistPreset(selectedPreset, contract.band_id);
+                  const songs = repertoire.data ?? [];
+                  const missing = selected.filter((item) => !songs.some((song) =>
+                    song.songId === item.song_id && !song.unavailableReason));
+                  if (missing.length) {
+                    toast.error("This saved setlist contains songs unavailable for this festival contract.");
+                    return;
+                  }
+                  setItems(selected.map((item) => ({
+                    ...item,
+                    planned_duration_seconds: songs.find((song) => song.songId === item.song_id)?.durationSeconds ?? 180,
+                  })));
+                  toast.success("Saved setlist loaded. Review its duration and submit for approval.");
+                } catch (error) {
+                  toast.error(mapBookingError(error).message);
+                } finally {
+                  setLoadingPreset(false);
+                }
+              }}>
+              Load selection
+            </Button>
+            <p className="w-full text-xs text-muted-foreground">
+              Loading a saved setlist replaces the current unsaved song selection. Save this festival draft before submitting it.
+            </p>
+            {presets.isError ? <p role="alert" className="text-sm text-destructive">Saved setlists could not be loaded.</p> : null}
+          </div>
         ) : null}
 
         <div className="space-y-2">
