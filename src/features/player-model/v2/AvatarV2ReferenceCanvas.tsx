@@ -4,7 +4,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { disposeModel } from '../model';
 import type { PlayerAppearance } from '../appearance';
-import { hasAvatarV2PreviewIrisPair, isAvatarV2PreviewIrisMaterial, isAvatarV2PreviewSkinMaterial } from './avatarV2PreviewMaterials';
+import { applyAvatarV2PreviewSwatch, hasAvatarV2PreviewIrisPair, isAvatarV2PreviewIrisMaterial, isAvatarV2PreviewSkinMaterial } from './avatarV2PreviewMaterials';
 import { applyAvatarV2PreviewProportions } from './avatarV2PreviewProportions';
 
 /**
@@ -178,10 +178,10 @@ export function AvatarV2ReferenceCanvas({
         setSkinMaterialCount(originalSkinMaterials.current.length);
         setIrisMaterialCount(hasAvatarV2PreviewIrisPair(irisNames.current) ? 2 : 0);
         if (skinTone.current) {
-          for (const entry of originalSkinMaterials.current) entry.material.color.set(skinTone.current);
+          for (const entry of originalSkinMaterials.current) applyAvatarV2PreviewSwatch(entry.material, entry.color, skinTone.current);
         }
         if (eyeColor.current && hasAvatarV2PreviewIrisPair(irisNames.current)) {
-          for (const iris of irisMaterials.current) iris.material.color.set(eyeColor.current);
+          for (const iris of irisMaterials.current) applyAvatarV2PreviewSwatch(iris.material, iris.color, eyeColor.current);
         }
         previewModel.current = source;
         scene.add(source);
@@ -238,7 +238,7 @@ export function AvatarV2ReferenceCanvas({
 
   useEffect(() => {
     for (const entry of originalSkinMaterials.current) {
-      entry.material.color.copy(appearance?.body.skin ? new T.Color(appearance.body.skin) : entry.color);
+      applyAvatarV2PreviewSwatch(entry.material, entry.color, appearance?.body.skin);
     }
     redraw.current?.();
   }, [appearance?.body.skin]);
@@ -246,8 +246,7 @@ export function AvatarV2ReferenceCanvas({
   useEffect(() => {
     if (!hasAvatarV2PreviewIrisPair(irisNames.current)) return;
     for (const iris of irisMaterials.current) {
-      if (appearance?.head.eyeColor) iris.material.color.set(appearance.head.eyeColor);
-      else iris.material.color.copy(iris.color);
+      applyAvatarV2PreviewSwatch(iris.material, iris.color, appearance?.head.eyeColor);
     }
     redraw.current?.();
   }, [appearance?.head.eyeColor]);
