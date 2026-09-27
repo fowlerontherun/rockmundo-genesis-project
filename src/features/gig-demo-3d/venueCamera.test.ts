@@ -24,6 +24,44 @@ describe('capacity-aware camera framing', () => {
       }
     }
   });
+  it('frames live performers close-up in large arenas, stadiums and festivals', () => {
+    for (const [type, capacity] of [
+      ['rock_club', 700], ['indoor_arena', 18000], ['stadium', 65000], ['festival_stage', 20000],
+    ] as const) for (const aspect of [.55, 1.78]) {
+      const p = resolveVenueProfile({ type, capacity });
+      const root = new T.Group();
+      root.position.set(...stagePosition(p, .5, .76));
+      for (const shot of ['lead_close', 'band_medium', 'side_pit', 'side_stage', 'crane'] as const) {
+        const { rig } = harness(capacity, aspect, shot);
+        rig.venueProfile = p;
+        rig.actors = [{ id: 'lead', role: 'vocals', root, hasVocals: () => true }];
+        rig.moveCamera(.016);
+        rig.camera.updateMatrixWorld(true);
+        const focus = root.position.clone().add(new T.Vector3(0, 1.32, 0));
+        const imagePoint = focus.clone().project(rig.camera);
+        expect(Number.isFinite(imagePoint.x)).toBe(true);
+        expect(Math.abs(imagePoint.x)).toBeLessThan(.94);
+        expect(Math.abs(imagePoint.y)).toBeLessThan(.94);
+        if (shot === 'lead_close') {
+          expect(rig.camera.position.distanceTo(focus)).toBeLessThan(4);
+          expect(rig.camera.position.distanceTo(focus)).toBeGreaterThan(2.5);
+        }
+      }
+    }
+  });
+
+  it('keeps the singer noticeably closer than the venue-wide lens in a stadium', () => {
+    const { rig, p } = harness(65000, 1.78);
+    const root = new T.Group();
+    root.position.set(...stagePosition(p, .5, .76));
+    rig.actors = [{ id: 'lead', role: 'vocals', root, hasVocals: () => true }];
+    rig.moveCamera(.016);
+    const distant = rig.camera.position.distanceTo(root.position);
+    rig.settings.camera = 'lead_close';
+    rig.moveCamera(.016);
+    expect(distant).toBeGreaterThan(rig.camera.position.distanceTo(root.position) * 5);
+  });
+
   it('keeps the drummer camera in front of the backdrop in the smallest venue', () => {
     const { rig, p } = harness(40, 1.8, 'drums'), root = new T.Group(); root.position.set(...stagePosition(p, .5, .18));
     rig.actors = [{ role: 'drums', root }]; rig.moveCamera(.016);
