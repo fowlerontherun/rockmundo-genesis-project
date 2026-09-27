@@ -1,4 +1,5 @@
-import { stageLightPositions } from './venueProduction';
+import { productionLayout, stageLightPositions } from './venueProduction';
+import { planVenueLighting, venueBeamCue } from './venueLightShow';
 import { updateTvStudioMonitors } from './tvStudioProduction';
 import { resolveTotpStudioStageGeometry, totpStudioStageCenter } from './totpStudioGeometry';
 import { updateVenueAudience } from './venueAudience';
@@ -137,13 +138,17 @@ export class ConcertScene {
     }
   }
   private buildLighting() {
-    for (let i = 0; i < (this.venueProfile?.production === 'portable' ? 4 : 8); i++) {
+    const positions = this.venueProfile ? stageLightPositions(this.venueProfile) : [];
+    const plan = planVenueLighting(
+      this.venueProfile, positions,
+      this.venueProfile ? productionLayout(this.venueProfile).tier : 2, 'high',
+    );
+    for (let i = 0; i < plan.physicalSpotlightCount; i++) {
       const back = i < 4, x = -4.4 + (i % 4) * 2.95, z = back ? -4.3 : 0.6;
       const light = new T.SpotLight('#ffe0b8', back ? 90 : 72, 16, back ? 0.24 : 0.34, 0.72, 1.55);
       light.position.set(x, 5.7, z); light.target.position.set(x * 0.5, 1, back ? 1.0 : -2.4);
       if (this.venueProfile) {
-        const positions=stageLightPositions(this.venueProfile);
-        light.position.set(...positions[Math.floor(i*positions.length/(this.venueProfile.production==='portable'?4:8))]);
+        light.position.set(...positions[plan.spotlightIndices[i]]);
         light.target.position.set(x/5*this.venueProfile.stageWidth*.35,this.venueProfile.stageHeight+.8,.65-this.venueProfile.stageDepth*(back?.25:.6));
         light.angle=back?.28:.38;
         light.distance = light.position.distanceTo(light.target.position) * 1.35;
@@ -161,14 +166,25 @@ export class ConcertScene {
           uniforms: { color: { value: new T.Color('#1ea2dd') }, opacity: { value: 0.045 } },
           vertexShader: 'varying vec2 vUv; varying vec3 vNormal; varying vec3 vView; void main(){vUv=uv;vec4 mv=modelViewMatrix*vec4(position,1.);vNormal=normalize(normalMatrix*normal);vView=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}',
           fragmentShader: 'uniform vec3 color; uniform float opacity; varying vec2 vUv; varying vec3 vNormal; varying vec3 vView; void main(){float edge=pow(abs(dot(normalize(vNormal),normalize(vView))),1.4);float lengthFade=pow(vUv.y,1.2);gl_FragColor=vec4(color,opacity*edge*lengthFade);}' });
-        const beam = new T.Mesh(geometry, material); beam.position.copy(light.position); this.scene.add(beam); this.beams.push(beam);
+        const beam = new T.Mesh(geometry, material);
+        beam.position.copy(light.position);
+        beam.name = 'venue-haze-beam-' + this.beams.length;
+        beam.userData.fixtureIndex = plan.spotlightIndices[i] ?? i;
+        this.scene.add(beam); this.beams.push(beam);
       }
     }
-    if(this.venueProfile?.production === 'touring' && this.beams[0]) {
-      const positions=stageLightPositions(this.venueProfile);
-      for(let i=1;i<positions.length;i+=4){
-        const source=this.beams[0],beam=new T.Mesh(source.geometry.clone(),(source.material as T.ShaderMaterial).clone());
-        beam.position.set(...positions[i]);beam.userData.extraProductionBeam=true;this.scene.add(beam);this.beams.push(beam);
+    if (this.venueProfile && this.beams[0]) {
+      // The high-quality rig allocates at most twenty cheap haze meshes.
+      // Balanced and low settings only toggle visibility, so previews can
+      // switch quality without rebuilding or losing the saved-gig light cue.
+      for (const index of plan.supplementaryBeamIndices) {
+        const source = this.beams[0];
+        const beam = new T.Mesh(source.geometry, (source.material as T.ShaderMaterial).clone());
+        beam.name = 'venue-haze-beam-' + this.beams.length;
+        beam.position.set(...positions[index]);
+        beam.userData.extraProductionBeam = true;
+        beam.userData.fixtureIndex = index;
+        this.scene.add(beam); this.beams.push(beam);
       }
     }
     for (let i = 0; i < 8; i++) {
@@ -189,8 +205,23 @@ export class ConcertScene {
     const look = LOOKS[next.look];
     this.fog.color.set(new T.Color(look.ambient).multiplyScalar(0.18)); this.scene.fog = next.haze ? this.fog : null;
     this.lights.forEach((light, i) => { const color = i >= 4 ? look.key : i % 2 === 0 ? look.left : look.right; light.color.set(color); this.lenses[i].emissive.set(color); });
-    this.beams.forEach((beam, i) => { const mat = beam.material as T.ShaderMaterial; mat.uniforms.color.value.set(i % 2 === 0 ? look.left : look.right); beam.visible = next.haze && this.venueProfile?.production !== 'portable' && (!beam.userData.extraProductionBeam || next.quality !== 'low'); });
-    this.scene.traverse(object=>{if(object instanceof T.Mesh){const material=object.material;if(!Array.isArray(material)&&material.name==='production-light-lens')(material as T.MeshStandardMaterial).emissive.set(look.left);}});
+    const positions = this.venueProfile ? stageLightPositions(this.venueProfile) : [];
+    const plan = planVenueLighting(
+      this.venueProfile, positions,
+      this.venueProfile ? productionLayout(this.venueProfile).tier : 2, next.quality,
+    );
+    this.beams.forEach((beam, i) => {
+      const mat = beam.material as T.ShaderMaterial;
+      mat.uniforms.color.value.set(beam.position.x <= 0 ? look.left : look.right);
+      beam.visible = next.haze && this.venueProfile?.production !== 'portable' && i < plan.activeBeamCount;
+    });
+    this.scene.traverse(object => {
+      if (!(object instanceof T.Mesh) || Array.isArray(object.material)) return;
+      const mat = object.material;
+      if (!mat.name.startsWith('production-light-lens-')) return;
+      const channel = mat.name.slice('production-light-lens-'.length);
+      (mat as T.MeshStandardMaterial).emissive.set(channel === 'left' ? look.left : channel === 'right' ? look.right : look.key);
+    });
     this.particles.visible = next.haze && !next.reducedMotion && this.venueProfile?.production !== 'portable';
     this.bloom.strength = next.quality === 'high' ? 0.26 : 0.16;
     this.renderer.shadowMap.enabled = next.quality !== 'low';
@@ -494,13 +525,34 @@ export class ConcertScene {
     this.updateTelevisionPresenter(t);
     this.updateTelevisionCrew(t);
     this.updateEffects();
+    const playbackLight = this.playback?.lightLevel ?? 1;
+    const baseBeamCount = Math.min(4, this.lights.length);
     this.lights.forEach((light, i) => {
       const releaseLight = section === 'release' ? T.MathUtils.lerp(1, .72, smoothMotion(releaseProgress)) : 1;
-      light.intensity = (i < 4 ? 90 : 72) * (this.venueProfile?.production === 'portable' ? .4 : this.venueProfile ? Math.pow((this.venueProfile.rigHeight-this.venueProfile.stageHeight)/5.3,1.3) : 1) * (this.playback?.lightLevel ?? 1) * releaseLight;
-      if (i < 4) { light.target.position.x = ((i - 1.5) * 1.4 + Math.sin(t * 0.35 + i * 1.4) * (this.settings.reducedMotion ? 0 : 1.4)) * (this.venueProfile ? this.venueProfile.stageWidth / 11.6 : 1); const beam = this.beams[i]; const reach=light.position.distanceTo(light.target.position)/5.6;beam.scale.set(Math.max(1,reach*.62),reach,Math.max(1,reach*.62));beam.quaternion.setFromUnitVectors(new T.Vector3(0, -1, 0), light.target.position.clone().sub(light.position).normalize()); } });
-    if(this.venueProfile) this.beams.slice(4).forEach((beam,i)=>{
-      const p=this.venueProfile!,target=new T.Vector3(beam.position.x*.6+(this.settings.reducedMotion ? 0 : Math.sin(t*.3+i)*Math.min(3,p.stageWidth*.1)),p.stageHeight,.65-p.stageDepth*.28);
-      const reach=beam.position.distanceTo(target)/5.6;beam.scale.set(Math.max(1,reach*.52),reach,Math.max(1,reach*.52));beam.quaternion.setFromUnitVectors(new T.Vector3(0,-1,0),target.sub(beam.position).normalize());
+      light.intensity = (i < 4 ? 90 : 72) * (this.venueProfile?.production === 'portable' ? .4 : this.venueProfile ? Math.pow((this.venueProfile.rigHeight - this.venueProfile.stageHeight) / 5.3, 1.3) : 1) * playbackLight * releaseLight;
+      if (i >= baseBeamCount) return;
+      const beam = this.beams[i];
+      if (this.venueProfile) {
+        const cue = venueBeamCue(this.venueProfile, light.position.toArray() as [number, number, number], i, t, playbackLight * releaseLight, this.settings.reducedMotion);
+        light.target.position.set(...cue.target);
+        if (beam) (beam.material as T.ShaderMaterial).uniforms.opacity.value = cue.opacity;
+      } else {
+        light.target.position.x = ((i - 1.5) * 1.4 + Math.sin(t * .35 + i * 1.4) * (this.settings.reducedMotion ? 0 : 1.4));
+      }
+      if (beam) {
+        const reach = light.position.distanceTo(light.target.position) / 5.6;
+        beam.scale.set(Math.max(1, reach * .62), reach, Math.max(1, reach * .62));
+        beam.quaternion.setFromUnitVectors(new T.Vector3(0, -1, 0), light.target.position.clone().sub(light.position).normalize());
+      }
+    });
+    if (this.venueProfile) this.beams.slice(baseBeamCount).forEach((beam, i) => {
+      const p = this.venueProfile!;
+      const cue = venueBeamCue(p, beam.position.toArray() as [number, number, number], baseBeamCount + i, t, playbackLight, this.settings.reducedMotion);
+      const target = new T.Vector3(...cue.target);
+      const reach = beam.position.distanceTo(target) / 5.6;
+      beam.scale.set(Math.max(1, reach * .52), reach, Math.max(1, reach * .52));
+      beam.quaternion.setFromUnitVectors(new T.Vector3(0, -1, 0), target.sub(beam.position).normalize());
+      (beam.material as T.ShaderMaterial).uniforms.opacity.value = cue.opacity;
     });
     this.cymbals.forEach((object, i) => { object.rotation.z = this.settings.reducedMotion ? 0 : Math.sin(t * 12.56 + i) * 0.012 * this.settings.energy; });
     this.particles.rotation.y = t * 0.008; this.moveCamera(dt);
