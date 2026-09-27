@@ -11,6 +11,12 @@ describe("revisioned festival scheduler migration safeguards", () => {
     expect(migration).not.toContain("SET public_visible=true, status='published'");
   });
 
+  it("uses unique numbered keys for repeated template slot titles", () => {
+    expect(migration).toContain("item_index:=item_index+1");
+    expect(migration).toContain("item_index::text");
+    expect(migration).not.toContain("replace(item->>'title',' ','_')");
+  });
+
   it("rejects publication of locked or archived revisions", () => {
     expect(migration).toContain("IF r.state NOT IN ('draft','ready_for_review') THEN RAISE EXCEPTION 'FESTIVAL_SCHEDULE_REVISION_NOT_EDITABLE'; END IF; conflicts:=");
   });
