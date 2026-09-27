@@ -147,8 +147,10 @@ export function inspectAvatarV2Performance(
   let maxExpressiveFaceWeight = 0;
   const activeVocalVisemes = new Set<AvatarV2Expression>();
   const sticks = preset === 'rock_drums'
-    ? rig.tools.filter(tool => /^playing-stick(?:-|$)/.test(tool.name))
+    ? (['l', 'r'] as const).map(side => rig.tools.find(tool => tool.name === `playing-stick-${side}`))
     : [];
+  // Explicit side matching prevents a swapped-stick rig from passing merely
+  // because two objects happen to exist in the tools array.
   const guitarPicks = preset === 'electric_guitar'
     ? actor.root.getObjectsByProperty('name', 'playing-guitar-pick').length
     : 0;
@@ -258,10 +260,10 @@ export function inspectAvatarV2Performance(
       }
     }
 
-    if (preset === 'rock_drums' && sticks.length >= 2 && left && right) {
+    if (preset === 'rock_drums' && sticks.every((stick): stick is T.Object3D => !!stick) && left && right) {
       const hands = [left, right] as const;
       for (let index = 0; index < 2; index++) {
-        const stickWorld = sticks[index].getWorldPosition(new T.Vector3());
+        const stickWorld = sticks[index]!.getWorldPosition(new T.Vector3());
         const distance = stickWorld.distanceTo(hands[index].getWorldPosition(new T.Vector3()));
         if (Number.isFinite(distance)) maxStick = Math.max(maxStick, distance);
         else issues.push({ code: `invalid-drumstick-${index}`, message: 'A drumstick produced an invalid transform.' });
@@ -401,8 +403,8 @@ export function inspectAvatarV2Performance(
   }
 
   if (preset === 'rock_drums') {
-    if (sticks.length < 2) {
-      issues.push({ code: 'missing-drumsticks', message: 'The drum rig must expose two visible playing-stick tools.' });
+    if (sticks.some(stick => !stick || !stick.visible || !stick.parent)) {
+      issues.push({ code: 'missing-drumsticks', message: 'The drum rig must expose two visible, attached, correctly sided playing-stick tools.' });
     } else if (left && right && maxStick > STICK_LIMIT) {
       issues.push({
         code: 'drumstick-hand-clearance',
@@ -429,7 +431,7 @@ export function inspectAvatarV2Performance(
     preset,
     maxLeftGripError: needsLeft && left ? maxLeft : null,
     maxRightGripError: right ? maxRight : null,
-    maxDrumstickError: preset === 'rock_drums' && sticks.length >= 2 && left && right ? maxStick : null,
+    maxDrumstickError: preset === 'rock_drums' && sticks.every(Boolean) && left && right ? maxStick : null,
     maxFingerContactError: fingerSamples ? maxFinger : null,
     maxEyeMotion: eyes.length ? maxEyeMotion : null,
     maxTwistMotion: twists.length ? maxTwistMotion : null,
@@ -445,7 +447,7 @@ export function inspectAvatarV2Performance(
     twistBones: twists.length,
     shoulderBones: shoulders.length,
     toeBones: toes.length,
-    drumsticks: sticks.length,
+    drumsticks: sticks.filter(stick => !!stick && stick.visible && !!stick.parent).length,
     guitarPicks,
     issues: uniqueIssues,
   };
