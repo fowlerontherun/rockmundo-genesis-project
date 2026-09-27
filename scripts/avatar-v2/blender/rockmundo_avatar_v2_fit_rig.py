@@ -144,6 +144,20 @@ def fit_from_handles(rig: bpy.types.Object, specs: list[BoneSpec], reviewed: boo
     if not collection:
         raise SystemExit("Create the RMV2_FitHandles collection and move its joint markers first.")
 
+    # Old handles left in the collection can indicate a changed skeleton or
+    # renamed bones. Reject the entire mixed handle set rather than silently
+    # applying only the subset that still matches the current guide.
+    unexpected = sorted(
+        obj.name for obj in collection.objects
+        if obj.name.startswith("RMV2_FIT__") and obj.name not in expected
+    )
+    if unexpected:
+        raise SystemExit(
+            "Unexpected old joint handles in the current fit collection: "
+            + ", ".join(unexpected[:12])
+            + ". Reconcile the armature and regenerate its handles before applying."
+        )
+
     placed: dict[str, tuple[float, float, float]] = {}
     rest: dict[str, tuple[float, float, float]] = {}
     inverse = rig.matrix_world.inverted_safe()
