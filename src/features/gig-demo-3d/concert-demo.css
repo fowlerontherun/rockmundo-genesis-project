@@ -36,7 +36,7 @@
 .concert-demo__time { font-variant-numeric: tabular-nums; font-size: 11px; color: #d3dceb; white-space: nowrap; }
 .concert-demo__time span, .concert-demo__silent { color: #7f8aa0; }
 .concert-demo__silent { font-size: 10px; padding-left: 14px; border-left: 1px solid #ffffff26; white-space: nowrap; }
-.concert-demo__cameras { display: flex; align-items: center; gap: 4px; color: #78869d; }
+.concert-demo__cameras { display: flex; flex: 1 1 auto; min-width: 0; max-width: 100%; align-items: center; gap: 4px; color: #78869d; overflow-x: auto; scrollbar-width: thin; padding-bottom: 3px; }
 .concert-demo__cameras > svg { margin-right: 9px; }
 .concert-demo__cameras button { color: #97a5ba; border-radius: 5px; padding: 8px 11px; font-size: 11px; white-space: nowrap; }
 .concert-demo__cameras button:hover { background: #ffffff09; color: #e7eefa; }
@@ -60,7 +60,7 @@
 .concert-demo__notice { margin-top: 12px; font-size: 12px; color: #e2be82; }
 .concert-demo__experience:fullscreen { display: flex; flex-direction: column; border: 0; border-radius: 0; }
 .concert-demo__experience:fullscreen .concert-demo__viewport { flex: 1; min-height: 0; height: auto; }
-@media (max-width: 1100px) { .concert-demo__silent, .concert-demo__fixture { display: none; } .concert-demo__controls { gap: 18px; } .concert-demo__transport { flex-wrap: wrap; } .concert-demo__cameras { order: 3; width: 100%; justify-content: center; } }
+@media (max-width: 1100px) { .concert-demo__silent, .concert-demo__fixture { display: none; } .concert-demo__controls { gap: 18px; } .concert-demo__transport { flex-wrap: wrap; } .concert-demo__cameras { order: 3; width: 100%; flex-basis: 100%; justify-content: flex-start; } }
 @media (max-width: 720px) { .concert-demo { padding: 18px 12px; } .concert-demo__header { margin-bottom: 16px; } .concert-demo__badge { display: none; } .concert-demo__viewport { height: 420px; } .concert-demo__controls { grid-template-columns: 1fr 1fr; gap: 22px; padding: 20px; } .concert-demo__cameras button { padding: 8px; font-size: 10px; } .concert-demo__cameras > svg { display: none; } .concert-demo__footer { flex-direction: column; gap: 12px; } }
 @media (prefers-reduced-motion: reduce) { .concert-demo button { transition: none; } .concert-demo__spinner { animation: none; } }
 
