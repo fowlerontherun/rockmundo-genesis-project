@@ -52,6 +52,9 @@ def main() -> None:
             bone = rig.pose.bones[bone_name]
             bone.rotation_mode = "XYZ"
             bone.rotation_euler = Euler((0., 0., 0.))
+        # Never let a bone retain the previous Action's last evaluated pose.
+        # Set all touched bones to rest before writing each key, otherwise
+        # keyframe_insert may accidentally capture unrelated bone motion.
         for beat, bone_name, degrees in sorted(clip.keys):
             bone = rig.pose.bones[bone_name]
             bone.rotation_euler = Euler(tuple(radians(angle) for angle in degrees))
@@ -75,6 +78,15 @@ def main() -> None:
             scene.frame_set(endpoint)
             if any(abs(rig.pose.bones[probe_bone].rotation_euler[i]) > .015 for i in range(3)):
                 raise RuntimeError(f"Draft Action {name} does not return to rest at its loop boundary.")
+        # Force linear-time-independent, smooth in/out motion; constant-speed
+        # linear keys look robotic at each beat and cause abrupt reversals.
+        # Blender 4.2 uses legacy F-curves; later versions expose Action slots.
+        if hasattr(action, "fcurves"):
+            for curve in action.fcurves:
+                for key in curve.keyframe_points:
+                    key.interpolation = "BEZIER"
+                    key.handle_left_type = "AUTO_CLAMPED"
+                    key.handle_right_type = "AUTO_CLAMPED"
         action["rockmundoAvatarV2DraftOnly"] = True
         action["rockmundoAvatarV2ArtistApproved"] = False
         action["rockmundoAvatarV2Role"] = clip.role
