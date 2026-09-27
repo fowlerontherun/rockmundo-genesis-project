@@ -71,7 +71,7 @@ export default function AvatarV2PreviewPage() {
                   style={{ backgroundColor: color }} />
               ))}
             </div>
-            <p className="mt-2 text-xs text-slate-400">If the source GLB has no separately labelled skin material, the model remains unchanged.</p>
+            <p className="mt-2 text-xs text-slate-400">Skin and eye-colour swatches affect only the improved lookdev 3D model. The original source and fixed comparison renders remain unchanged.</p>
           </fieldset>
           <fieldset className="mt-4">
             <legend className="text-sm font-medium">Eye colour · genuine Blender iris surfaces</legend>
@@ -86,7 +86,7 @@ export default function AvatarV2PreviewPage() {
             </div>
           </fieldset>
           <button type="button" className="mt-4 rounded border px-3 py-2 text-sm" onClick={() => setAppearance(defaultAppearance('avatar-v2-preview'))}>
-            Reset preview proportions
+            Reset preview customization
           </button>
         </section>
         <AvatarV2PublicPreview frame={frame} appearance={{ ...appearance, body: { ...appearance.body, frame } }} />
