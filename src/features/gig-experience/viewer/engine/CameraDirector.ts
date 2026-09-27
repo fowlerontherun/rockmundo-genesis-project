@@ -3,7 +3,7 @@ import { cameraForPlayback, clampCamera, wideVenueCamera, type SceneCamera } fro
 import type { Point, Rect, Size } from "./Viewport";
 
 export type CameraShot = "wide" | "performer" | "crowd" | "highlight" | "performance_item";
-export type GigViewerCameraMode = "venue_wide" | "stage_focus" | "auto" | "drums" | "band_pov";
+export type GigViewerCameraMode = "venue_wide" | "stage_focus" | "auto" | "drums" | "band_pov" | "lead_close" | "pit_view" | "crane_view";
 
 export interface CameraPerformer {
   id: string;
@@ -49,6 +49,17 @@ export function deriveCameraForMode(options: {
     const safeZoom = Math.min(1.2, options.viewport.width / compositionWidth, options.viewport.height / compositionHeight);
     const stageAndFrontCrowd = { x: (compositionLeft + compositionRight) / 2, y: (compositionTop + compositionBottom) / 2, zoom: safeZoom };
     return { camera: clampToSafeBounds(stageAndFrontCrowd, options.viewport, options.safeCameraBounds), shot: "wide", subjectId: null, strength: 1 };
+  }
+  if (options.mode === "lead_close" || options.mode === "pit_view" || options.mode === "crane_view") {
+    // The 2D fallback cannot reproduce a 3D lens angle; pan/zoom toward
+    // the equivalent stage subject while retaining the authored safe bounds.
+    const visible = options.performers?.filter(performer => performer.visible) ?? [];
+    const stageCenter = center(options.stage, .55);
+    const subject = visible[0];
+    const focus = options.mode === "crane_view" ? stageCenter : subject?.position ?? stageCenter;
+    const zoom = options.mode === "lead_close" ? 1.2 : options.mode === "pit_view" ? 1.16 : 1.07;
+    return { camera: clampToSafeBounds({ ...focus, zoom }, options.viewport, options.safeCameraBounds),
+      shot: options.mode === "crane_view" ? "wide" : "performer", subjectId: subject?.id ?? null, strength: 1 };
   }
   return deriveCameraFrame(options);
 }

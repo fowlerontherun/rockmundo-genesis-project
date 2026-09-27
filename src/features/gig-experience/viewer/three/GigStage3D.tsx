@@ -23,7 +23,10 @@ const EMPTY_APPEARANCES: Record<string, PlayerAppearance> = {};
 const EMPTY_RICH_CLOTHING: Record<string, ResolvedEquippedClothing[]> = {};
 const EMPTY_TATTOOS: Record<string, ResolvedTattooVisual[]> = {};
 const EMPTY_INSTRUMENT_SKINS: Record<string, ResolvedInstrumentSkinVisual[]> = {};
-const CAMERAS: Record<GigViewerCameraMode, CameraShot> = { venue_wide: 'front', stage_focus: 'guitar', auto: 'director', drums: 'drums', band_pov: 'stage' };
+const CAMERAS: Record<GigViewerCameraMode, CameraShot> = {
+  venue_wide: 'front', stage_focus: 'band_medium', auto: 'director', drums: 'drums', band_pov: 'stage',
+  lead_close: 'lead_close', pit_view: 'side_pit', crane_view: 'crane',
+};
 const TOTP_CAMERAS: Record<TotpCameraShot, CameraShot> = {
   presenter_wide: 'tv_presenter_wide', presenter_close: 'tv_presenter_close', crane_sweep: 'tv_crane', studio_master: 'front',
   lead_close: 'tv_lead_close', lead_medium: 'tv_lead_medium', instrument_close: 'tv_instrument_left', drummer_close: 'tv_drummer_close', side_tracking: 'tv_tracking',

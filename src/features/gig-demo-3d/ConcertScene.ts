@@ -14,16 +14,22 @@ import { buildVenue, cylinder, rod, matte } from './stage';
 import { loadBand, type Musician, type DemoCrowd } from './performers';
 import { smoothMotion } from './performanceMotion';
 import type { CrowdTuningOptions } from '@/features/gig-experience/viewer/engine/CrowdTuning';
-import { resolveVenueProfile, stageTransform, type VenueProfile } from './venueProfile';
+import { resolveVenueProfile, stagePosition, stageTransform, type VenueProfile } from './venueProfile';
 import type { ConcertOptions, ConcertFrame } from './liveTypes';
 import { avatarV2QualityForScene } from '@/features/player-model/v2/avatarV2Model';
 import { DEFAULT_SETTINGS, LOOKS, seededRandom, type DemoSettings, type DemoStats, type CameraShot } from './config';
+import { directGigCamera } from './gigCameraSequence';
 
 const CAMERAS = {
   front: { position: [0.4, 2.8, 6.7], target: [0, 2.4, -1.9], fov: 42 },
   guitar: { position: [-4, 2.35, 1.2], target: [-2.0, 2.05, -1.5], fov: 49 },
   drums: { position: [3.5, 3.65, -4.45], target: [0.7, 2.15, -2.65], fov: 55 },
   stage: { position: [-3.7, 2.75, -4.1], target: [1.25, 1.65, 6], fov: 58 },
+  band_medium: { position: [1.2, 2.8, 5.5], target: [0, 1.75, -1.6], fov: 43 },
+  lead_close: { position: [.7, 2.1, 2.65], target: [0, 1.7, -1.55], fov: 39 },
+  side_pit: { position: [-3.5, 1.1, 2.7], target: [0, 1.85, -1.55], fov: 46 },
+  side_stage: { position: [-4.1, 2.6, -2.65], target: [0, 1.75, -1.6], fov: 48 },
+  crane: { position: [4.3, 6.8, 6.5], target: [0, 1.65, -1.75], fov: 52 },
   tv_presenter_wide: { position: [-5.1, 2.8, 4.8], target: [-3.2, 1.75, -0.4], fov: 46 },
   tv_presenter_close: { position: [-4.25, 2.15, 2.05], target: [-3.2, 1.72, -0.45], fov: 34 },
   tv_crane: { position: [6.8, 6.6, 6.5], target: [0, 1.75, -1.2], fov: 50 },
@@ -253,11 +259,17 @@ export class ConcertScene {
   }
   private moveCamera(dt: number) {
     const { camera, reducedMotion } = this.settings;
-    const sequence: Exclude<CameraShot, 'director'>[] = ['front', 'guitar', 'front', 'drums', 'guitar', 'stage'];
-    let selected = camera === 'director' ? reducedMotion ? 'front' : sequence[Math.floor(this.seconds / 16) % sequence.length] : camera;
-    if (camera === 'director' && !reducedMotion && this.playback?.section === 'release') {
-      const release = this.playback.sectionProgress ?? 0;
-      selected = release < .5 ? 'front' : this.options?.television ? 'tv_audience_reverse' : 'stage';
+    // TV broadcasts have their own shot cues. Ordinary gigs use a faster,
+    // deterministic grammar with recurring close-ups in large venues.
+    const tvSequence: Exclude<CameraShot, 'director'>[] = ['front', 'guitar', 'front', 'drums', 'guitar', 'stage'];
+    let selected = camera === 'director'
+      ? this.options?.television
+        ? reducedMotion ? 'front' : tvSequence[Math.floor(this.seconds / 16) % tvSequence.length]
+        : directGigCamera(this.seconds, this.playback?.section, this.playback?.sectionProgress,
+            this.venueProfile?.size === 'large' || this.venueProfile?.size === 'landmark', reducedMotion)
+      : camera;
+    if (camera === 'director' && !reducedMotion && this.options?.television && this.playback?.section === 'release') {
+      selected = (this.playback.sectionProgress ?? 0) < .5 ? 'front' : 'tv_audience_reverse';
     }
     const shot = CAMERAS[selected];
     this.cameraPos.fromArray(shot.position); this.targetPos.fromArray(shot.target);
@@ -307,6 +319,34 @@ export class ConcertScene {
           this.cameraPos.set(0, 1.85, .65 - p.stageDepth + .55);
           this.targetPos.set(0, 1.35, Math.min(p.crowdDepth * .62, 8.5));
         }
+      }
+    }
+    if (this.venueProfile && !this.options?.television &&
+        ['band_medium', 'lead_close', 'side_pit', 'side_stage', 'crane'].includes(selected)) {
+      const p = this.venueProfile;
+      const visible = this.actors.filter(actor => actor.root.visible);
+      const lead = visible.find(actor => actor.hasVocals()) ?? visible.find(actor => actor.role === 'vocals')
+        ?? visible.find(actor => actor.id === this.playback?.focusId) ?? visible[0];
+      // In the opening frames models may not yet be loaded. Aim at the actual
+      // authored stage, then move to the performer as soon as one is visible.
+      const subject = lead?.root.position ?? new T.Vector3(...stagePosition(p, .5, .62));
+      this.targetPos.copy(subject).add(new T.Vector3(0, 1.32, 0));
+      if (selected === 'lead_close') {
+        this.cameraPos.copy(this.targetPos).add(new T.Vector3(.7, .25, 3.15));
+      } else if (selected === 'band_medium') {
+        this.targetPos.y = subject.y + 1.12;
+        this.cameraPos.copy(this.targetPos).add(new T.Vector3(1.1, .72, Math.max(5.5, 6.4 / Math.min(1, this.camera.aspect))));
+      } else if (selected === 'side_pit') {
+        this.targetPos.y = subject.y + 1.48;
+        this.cameraPos.copy(this.targetPos).add(new T.Vector3(-3.45, -Math.min(1.05, p.stageHeight + .5), 4.6));
+      } else if (selected === 'side_stage') {
+        this.cameraPos.copy(this.targetPos).add(new T.Vector3(-Math.max(4.6, Math.min(9, p.stageWidth * .24)), 1.25, -1.8));
+      } else if (selected === 'crane') {
+        this.targetPos.set(0, p.stageHeight + 1.15, .65 - p.stageDepth * .46);
+        this.cameraPos.set(p.stageWidth * .29, Math.min(p.roofHeight - .45, p.stageHeight + Math.min(10, 3.5 + p.stageWidth * .2)),
+          this.targetPos.z + Math.max(7, p.stageWidth * .35));
+        // Outdoor cranes can operate above the nominal indoor roof envelope.
+        if (p.outdoor) this.cameraPos.y = p.stageHeight + Math.min(12, 4 + p.stageWidth * .2);
       }
     }
     if (!this.options && this.camera.aspect < 1.15 && selected === 'front') this.cameraPos.z += (1.15 - this.camera.aspect) * 8;
@@ -398,6 +438,21 @@ export class ConcertScene {
       if (sightline.length() < minimumLensDistance) {
         if (sightline.lengthSq() < 0.0001) sightline.set(0, .2, 1);
         this.cameraPos.copy(this.targetPos).add(sightline.normalize().multiplyScalar(minimumLensDistance));
+      }
+    }
+
+    // Guard the extra stage-level gig lenses against passing through performers.
+    // This is presentation-only; performer positions and replay state do not change.
+    if (this.options && !this.options.television &&
+        ['lead_close', 'band_medium', 'side_pit', 'side_stage', 'guitar', 'drums'].includes(selected)) {
+      for (const actor of this.actors) {
+        if (!actor.root.visible) continue;
+        const centre = actor.root.position.clone().add(new T.Vector3(0, 1.15, 0));
+        const away = this.cameraPos.clone().sub(centre);
+        if (away.lengthSq() < 1.8 * 1.8) {
+          if (away.lengthSq() < .0001) away.set(0, .25, 1);
+          this.cameraPos.copy(centre).add(away.normalize().multiplyScalar(1.8));
+        }
       }
     }
 

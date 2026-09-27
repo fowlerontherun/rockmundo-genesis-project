@@ -18,6 +18,9 @@ const CAMERA_LABELS: Record<GigViewerCameraMode, string> = {
   auto: "Director",
   drums: "Drums",
   band_pov: "From stage",
+  lead_close: "Lead close",
+  pit_view: "Pit cam",
+  crane_view: "Crane cam",
 };
 
 export function GigViewerControls({ performancePreference = "auto", onPerformancePreference, playing, complete, speed, reducedMotion, pyrotechnics, cameraMode, fullscreen, compact = false, canPreviousSong, canNextSong, canNextHighlight, canResult, onPlay, onPause, onRestart, onSpeed, onPrevious, onNext, onPreviousSong, onNextSong, onNextHighlight, onSkipResult, onResult, onClose, onReducedMotion, onPyrotechnics, onCameraMode, onFullscreen }: { playing: boolean; complete: boolean; speed: PlaybackSpeed; reducedMotion: boolean; pyrotechnics?: boolean; cameraMode: GigViewerCameraMode; fullscreen?: boolean; canPreviousSong?: boolean; canNextSong?: boolean; canNextHighlight?: boolean; canResult?: boolean; onPlay: () => void; onPause: () => void; onRestart: () => void; onSpeed: (speed: PlaybackSpeed) => void; onPrevious: () => void; onNext: () => void; onPreviousSong?: () => void; onNextSong?: () => void; onNextHighlight?: () => void; onSkipResult?: () => void; onResult?: () => void; onClose: () => void; onReducedMotion: (v: boolean) => void; onPyrotechnics?: (v: boolean) => void; onCameraMode: (mode: GigViewerCameraMode) => void; onFullscreen?: () => void; compact?: boolean; performancePreference?: PerformancePreference; onPerformancePreference?: (value: PerformancePreference) => void }) {
@@ -69,7 +72,7 @@ export function GigViewerControls({ performancePreference = "auto", onPerformanc
 
 function CameraModeControls({ value, onChange, compact = false }: { value: GigViewerCameraMode; onChange: (mode: GigViewerCameraMode) => void; compact?: boolean }) {
   return (
-    <div className="flex shrink-0 rounded-md border p-1" role="group" aria-label="Camera mode">
+    <div className="flex max-w-full shrink-0 overflow-x-auto rounded-md border p-1" role="group" aria-label="Camera mode">
       {(Object.keys(CAMERA_LABELS) as GigViewerCameraMode[]).map((mode) => (
         <Button
           key={mode}
