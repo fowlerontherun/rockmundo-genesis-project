@@ -70,4 +70,17 @@ describe('venue surface materials', () => {
       signature('beach_stage'),
     ]).size).toBeGreaterThanOrEqual(7);
   });
+
+  it('increases near-camera procedural surface detail with venue scale', () => {
+    const wood = new T.MeshStandardMaterial(), brick = new T.MeshStandardMaterial();
+    const intimate = buildVenueSurfaceMaterials(resolveVenueProfile({ type: 'street_corner', capacity: 40 }), wood, brick);
+    const club = buildVenueSurfaceMaterials(resolveVenueProfile({ type: 'rock_club', capacity: 700 }), wood, brick);
+    const stadium = buildVenueSurfaceMaterials(resolveVenueProfile({ type: 'stadium', capacity: 65000 }), wood, brick);
+    expect((intimate.floor.map?.image as { width: number }).width).toBe(64);
+    expect((club.floor.map?.image as { width: number }).width).toBe(128);
+    expect((stadium.floor.map?.image as { width: number }).width).toBe(256);
+    expect((stadium.floor.bumpMap?.image as { width: number }).width).toBe(256);
+    expect(stadium.floor.map?.repeat.toArray()).toEqual([7, 7]);
+  });
+
 });

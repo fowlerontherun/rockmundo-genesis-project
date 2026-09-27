@@ -141,8 +141,8 @@ function proceduralTexture(
   specValue: SurfaceSpec,
   name: string,
   bump = false,
+  size = 64,
 ) {
-  const size = 64;
   const data = new Uint8Array(size * size * 4);
   const base = rgb(specValue.base);
   const detail = rgb(specValue.detail);
@@ -193,6 +193,10 @@ function materialFor(
   fallbackBrick: T.Material,
 ) {
   const name = `venue-${p.kind}-${role}-${specValue.pattern}`;
+  // Near-camera surface detail should not be limited to a tiny 64px tile
+  // when a player is looking across an arena floor or stadium concourse.
+  const textureSize = p.size === 'large' || p.size === 'landmark' ? 256 :
+    p.size === 'medium' || p.size === 'small' ? 128 : 64;
   const fallback = specValue.pattern === 'wood' ? fallbackWood : specValue.pattern === 'brick' ? fallbackBrick : null;
   const usesMappedFallback = fallback instanceof T.MeshStandardMaterial;
   const material = usesMappedFallback
@@ -212,11 +216,12 @@ function materialFor(
     material.bumpMap = cloneMappedTexture(material.bumpMap, specValue.repeat);
   }
 
-  if (!material.map) material.map = proceduralTexture(specValue, name);
+  if (!material.map) material.map = proceduralTexture(specValue, name, false, textureSize);
   if (!material.normalMap && !material.bumpMap) {
-    material.bumpMap = proceduralTexture(specValue, name, true);
+    material.bumpMap = proceduralTexture(specValue, name, true, textureSize);
     material.bumpScale = specValue.bumpScale ?? .04;
   }
+  material.userData.venueTextureResolution = material.map?.image?.width ?? textureSize;
   material.userData.venueSurfacePattern = specValue.pattern;
   material.userData.venueSurfaceRole = role;
   material.userData.venueKind = p.kind;
