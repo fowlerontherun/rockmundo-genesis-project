@@ -158,6 +158,9 @@ export function AvatarV2ReferenceCanvas({
             ? object.material.map(cloneSkin)
             : cloneSkin(object.material);
         });
+        // Cloned materials replace every matching GLTF material reference. The
+        // originals are now orphaned; release them without disposing shared maps.
+        for (const original of clones.keys()) original.dispose();
         setSkinMaterialCount(originalSkinMaterials.current.length);
         setIrisMaterialCount(irisMaterials.current.length);
         if (skinTone.current) {
@@ -173,6 +176,14 @@ export function AvatarV2ReferenceCanvas({
         requestDraw();
       }).catch(cause => {
         if (!active) return;
+        if (candidate) {
+          candidate.removeFromParent();
+          disposeModel(candidate);
+          candidate = null;
+          previewModel.current = null;
+          originalSkinMaterials.current = [];
+          irisMaterials.current = [];
+        }
         setError(cause instanceof Error ? cause.message : 'The 3D preview could not load.');
         setStatus('error');
       });
