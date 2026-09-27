@@ -20,7 +20,7 @@ interface BandInvitation {
     genre: string | null;
     status: string | null;
     is_solo_artist: boolean | null;
-  };
+  } | null;
 }
 
 interface ActiveMembership {
@@ -213,8 +213,8 @@ export const BandInvitations = ({ onMembershipChanged }: BandInvitationsProps) =
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">{invitation.bands.name}</span>
-                    {invitation.bands.genre && (
+                    <span className="font-medium">{invitation.bands?.name || "Unavailable band"}</span>
+                    {invitation.bands?.genre && (
                       <Badge variant="secondary">{invitation.bands.genre}</Badge>
                     )}
                   </div>
@@ -234,13 +234,13 @@ export const BandInvitations = ({ onMembershipChanged }: BandInvitationsProps) =
                     </div>
                   )}
                 </div>
-                <div className="flex w-full gap-2 sm:w-auto" aria-label={`Respond to invitation from ${invitation.bands.name}`}>
+                <div className="flex w-full gap-2 sm:w-auto" aria-label={`Respond to invitation from ${invitation.bands?.name || "unavailable band"}`}>
                   <Button
                     size="sm"
                     className="flex-1 sm:flex-none"
                     onClick={() => responseMutation.mutate({ invitation, status: "accepted" })}
                     disabled={responseMutation.isPending || isMembershipLoading || !!acceptanceBlockReason}
-                    aria-label={`Accept invitation from ${invitation.bands.name}`}
+                    aria-label={`Accept invitation from ${invitation.bands?.name || "unavailable band"}`}
                     title={acceptanceBlockReason || undefined}
                   >
                     <CheckCircle2 className="mr-1 h-4 w-4" />
@@ -252,7 +252,7 @@ export const BandInvitations = ({ onMembershipChanged }: BandInvitationsProps) =
                     variant="outline"
                     onClick={() => responseMutation.mutate({ invitation, status: "declined" })}
                     disabled={responseMutation.isPending}
-                    aria-label={`Decline invitation from ${invitation.bands.name}`}
+                    aria-label={`Decline invitation from ${invitation.bands?.name || "unavailable band"}`}
                   >
                     <XCircle className="mr-1 h-4 w-4" />
                     Decline
