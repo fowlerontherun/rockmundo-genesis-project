@@ -269,11 +269,11 @@ export function AvatarV2ReferenceCanvas({
       {status === 'ready' && !lookdev && (
         <p className="avatar-v2-public__skin-warning" role="status">This source or experimental rig is for geometry inspection. Switch to Improved V2 model to preview skin and eye colours.</p>
       )}
-      {status === 'ready' && lookdev && skinMaterialCount === 0 && (
-        <p className="avatar-v2-public__skin-warning" role="status">Skin tone is not available for this Blender export: no separately named skin material was found.</p>
-      )}
-      {status === 'ready' && lookdev && irisMaterialCount !== 2 && (
-        <p className="avatar-v2-public__iris-warning" role="status">Eye-colour preview unavailable: this export does not expose both separately named iris materials.</p>
+      {status === 'ready' && lookdev && (skinMaterialCount === 0 || irisMaterialCount !== 2) && (
+        <div className="avatar-v2-public__material-warnings" role="status">
+          {skinMaterialCount === 0 && <p>Skin-tone preview unavailable: this export has no separately named skin material.</p>}
+          {irisMaterialCount !== 2 && <p>Eye-colour preview unavailable: this export needs separate left and right iris materials.</p>}
+        </div>
       )}
       {status === 'ready' && (
         <p className="avatar-v2-public__canvas-caption">
