@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isAvatarV2PreviewIrisMaterial, isAvatarV2PreviewSkinMaterial } from './avatarV2PreviewMaterials';
+import { hasAvatarV2PreviewIrisPair, isAvatarV2PreviewIrisMaterial, isAvatarV2PreviewSkinMaterial } from './avatarV2PreviewMaterials';
 
 describe('Avatar V2 preview skin material identification', () => {
   it('recognises both real Blender body skin exports', () => {
@@ -16,6 +16,12 @@ describe('Avatar V2 preview skin material identification', () => {
     for (const name of ['RMV2_Preview_Pupil_masculine_L', 'RMV2_Preview_Sclera_feminine_R', 'RMV2_Preview_Cornea_masculine_L', 'RMV2_Preview_Skin_feminine']) {
       expect(isAvatarV2PreviewIrisMaterial(name)).toBe(false);
     }
+  });
+
+  it('requires a real left/right iris pair rather than two duplicate left-eye materials', () => {
+    expect(hasAvatarV2PreviewIrisPair(['RMV2_Preview_Iris_masculine_L', 'RMV2_Preview_Iris_masculine_R'])).toBe(true);
+    expect(hasAvatarV2PreviewIrisPair(['RMV2_Preview_Iris_feminine_L', 'RMV2_Preview_Iris_feminine_L'])).toBe(false);
+    expect(hasAvatarV2PreviewIrisPair(['RMV2_Preview_Iris_feminine_R', 'RMV2_Preview_Pupil_feminine_L'])).toBe(false);
   });
 
   it('rejects ambiguous generic skin materials and lookdev facial variants', () => {
