@@ -50,6 +50,7 @@ function query(table: string) {
     or: vi.fn(),
     order: vi.fn(),
     in: vi.fn(),
+    limit: vi.fn(),
     then: (resolve: (value: ReturnType<typeof result>) => unknown, reject?: (error: unknown) => unknown) =>
       Promise.resolve(result()).then(resolve, reject),
   };
@@ -58,6 +59,7 @@ function query(table: string) {
   chain.or.mockReturnValue(chain);
   chain.order.mockReturnValue(chain);
   chain.in.mockReturnValue(chain);
+  chain.limit.mockReturnValue(chain);
   return chain;
 }
 
@@ -107,6 +109,8 @@ describe("Band Members player invitations", () => {
       invited_profile_id: targetProfileId,
       instrument_role: "Guitar",
       created_at: "2026-09-26T00:00:00Z",
+      status: "pending",
+      responded_at: null,
     }];
     dataByTable.profiles = [{ id: targetProfileId, user_id: targetUserId, display_name: "Guest Guitarist", username: "guestguitarist" }];
 
@@ -121,6 +125,36 @@ describe("Band Members player invitations", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     await waitFor(() => expect(mocks.cancelBandInvitation).toHaveBeenCalledWith("66666666-6666-4666-8666-666666666666"));
+  });
+
+  it("shows resolved invitations with their final status without disabling an eligible search result", async () => {
+    dataByTable.band_invitations = [
+      {
+        id: "66666666-6666-4666-8666-666666666666",
+        invited_user_id: targetUserId,
+        invited_profile_id: targetProfileId,
+        instrument_role: "Guitar",
+        status: "accepted",
+        created_at: "2026-09-25T00:00:00Z",
+        responded_at: "2026-09-26T00:00:00Z",
+      },
+      {
+        id: "77777777-7777-4777-8777-777777777777",
+        invited_user_id: "88888888-8888-4888-8888-888888888888",
+        invited_profile_id: "99999999-9999-4999-8999-999999999999",
+        instrument_role: "Bass",
+        status: "declined",
+        created_at: "2026-09-25T00:00:00Z",
+        responded_at: "2026-09-26T01:00:00Z",
+      },
+    ];
+    dataByTable.profiles = [{ id: targetProfileId, user_id: targetUserId, display_name: "Guest Guitarist", username: "guestguitarist" }];
+    render(<InviteFriendToBand bandId={bandId} bandName="The Testers" currentUserId={inviterProfileId} currentAccountId={inviterUserId} />);
+    await openDialog();
+    expect(await screen.findByText("Accepted")).toBeInTheDocument();
+    expect(screen.getByText("Declined")).toBeInTheDocument();
+    expect(screen.getByText("Guest Guitarist")).toBeInTheDocument();
+    expect(screen.getByText("No pending invitations.")).toBeInTheDocument();
   });
 
   it("keeps player search available when optional friends cannot load and clears stale selections on close", async () => {

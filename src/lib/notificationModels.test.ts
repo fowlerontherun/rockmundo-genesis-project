@@ -51,6 +51,15 @@ describe("notification recruitment normalization", () => {
     expect(getNotificationRoute(base({ band_application_status: "pending" }, "/bands/band-1?tab=applications"))).toBe("/bands/band-1");
   });
 
+  it("routes the inviting player's accepted or declined notification to Band Members", () => {
+    const response = { ...base({ band_invitation_id: "invite-1", band_application_id: undefined, band_invitation_status: "accepted" }, "/band/members"), type: "band_invite_response" };
+    const display = normalizeNotification(response);
+    expect(display.routePath).toBe("/band/members");
+    expect(display.actionLabel).toBe("View band members");
+    expect(display.statusLabel).toBe("Accepted");
+    expect(display.priority).toBe("normal");
+  });
+
   it("shows invitation final status without inventing actions", () => {
     const display = normalizeNotification(base({ band_invitation_id: "invite-1", band_application_id: undefined, band_invitation_status: "cancelled" }, "/band-manager"));
     expect(display.statusLabel).toBe("Cancelled");

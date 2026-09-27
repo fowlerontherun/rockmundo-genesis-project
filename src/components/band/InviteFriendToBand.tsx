@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { BAND_PERFORMANCE_ROLES, BAND_VOCAL_ASSIGNMENTS, DEFAULT_BAND_PERFORMANCE_ROLE } from '@/data/bandPerformanceRoles';
 import { useToast } from '@/hooks/use-toast';
@@ -40,10 +41,16 @@ interface SentInvitation {
   displayName: string;
 }
 
+interface ResolvedInvitation extends SentInvitation {
+  status: 'accepted' | 'declined' | 'cancelled';
+  responded_at: string | null;
+}
+
 export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAccountId }: InviteFriendToBandProps) {
   const [open, setOpen] = useState(false);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [sentInvites, setSentInvites] = useState<SentInvitation[]>([]);
+  const [recentResponses, setRecentResponses] = useState<ResolvedInvitation[]>([]);
   const [memberUserIds, setMemberUserIds] = useState<Set<string>>(new Set());
   const [pendingUserIds, setPendingUserIds] = useState<Set<string>>(new Set());
   const [playerQuery, setPlayerQuery] = useState('');
@@ -75,10 +82,11 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
     // other players by public search or hide already-sent invitations.
     const [inviteResult, memberResult, friendResult] = await Promise.all([
       supabase.from('band_invitations')
-        .select('id, invited_user_id, invited_profile_id, instrument_role, created_at')
+        .select('id, invited_user_id, invited_profile_id, instrument_role, status, created_at, responded_at')
         .eq('band_id', bandId)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false }),
+        .in('status', ['pending', 'accepted', 'declined', 'cancelled'])
+        .order('created_at', { ascending: false })
+        .limit(80),
       supabase.from('band_members')
         .select('user_id')
         .eq('band_id', bandId)
@@ -91,7 +99,11 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
     if (inviteResult.error) throw inviteResult.error;
     if (memberResult.error) throw memberResult.error;
 
-    const pendingInvites = inviteResult.data || [];
+    const invitations = inviteResult.data || [];
+    const pendingInvites = invitations.filter((invite) => invite.status === 'pending');
+    const resolved = invitations.filter((invite) => invite.status !== 'pending' && invite.responded_at)
+      .sort((a, b) => new Date(b.responded_at || 0).getTime() - new Date(a.responded_at || 0).getTime())
+      .slice(0, 10);
     const bandMembers = memberResult.data || [];
     const friendships = friendResult.error ? [] : (friendResult.data || []);
     const memberIds = new Set(bandMembers.map((m) => m.user_id).filter((id): id is string => !!id));
@@ -102,7 +114,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
     const friendProfileIds = friendships.map((friendship) =>
       friendship.requestor_id === profileId ? friendship.addressee_id : friendship.requestor_id
     );
-    const pendingProfileIds = pendingInvites.map((invite) => invite.invited_profile_id).filter((id): id is string => !!id);
+    const pendingProfileIds = [...pendingInvites, ...resolved].map((invite) => invite.invited_profile_id).filter((id): id is string => !!id);
     const profileIds = Array.from(new Set([...friendProfileIds, ...pendingProfileIds]));
     const { data: profiles, error: profilesError } = profileIds.length
       ? await supabase.from('profiles').select('id, display_name, username, user_id').in('id', profileIds)
@@ -125,7 +137,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
       }];
     });
     setFriends(friendOptions);
-    setSentInvites(pendingInvites.map((invite) => {
+    const displayInvite = (invite: typeof invitations[number]): SentInvitation => {
       const profile = invite.invited_profile_id ? profileMap.get(invite.invited_profile_id) : undefined;
       return {
         id: invite.id,
@@ -134,7 +146,13 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
         created_at: invite.created_at,
         displayName: profile?.display_name || profile?.username || 'Invited player',
       };
-    }));
+    };
+    setSentInvites(pendingInvites.map(displayInvite));
+    setRecentResponses(resolved.map((invite) => ({
+      ...displayInvite(invite),
+      status: invite.status as ResolvedInvitation['status'],
+      responded_at: invite.responded_at,
+    })));
   }, [bandId, currentAccountId]);
 
   useEffect(() => {
@@ -148,6 +166,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
         toast({ title: 'Could not load invitations', description: error instanceof Error ? error.message : 'Failed to prepare band invitations', variant: 'destructive' });
         setFriends([]);
         setSentInvites([]);
+        setRecentResponses([]);
         setMemberUserIds(new Set());
         setPendingUserIds(new Set());
       } finally {
@@ -389,6 +408,25 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
                     <Button type="button" size="sm" variant="outline" disabled={cancellingId === invite.id} onClick={() => handleCancelInvitation(invite.id)}>
                       {cancellingId === invite.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><X className="mr-1 h-4 w-4" />Cancel</>}
                     </Button>
+                  </div>
+                ))}
+              </section>
+
+              <section className="space-y-3 border-t pt-4">
+                <h3 className="font-medium">Recent invitation activity</h3>
+                {recentResponses.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No recent responses yet.</p>
+                ) : recentResponses.map((invite) => (
+                  <div key={invite.id} className="flex items-center justify-between gap-3 rounded-md border p-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{invite.displayName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {invite.instrument_role} • {invite.responded_at ? new Date(invite.responded_at).toLocaleDateString() : new Date(invite.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <Badge variant={invite.status === 'accepted' ? 'default' : 'secondary'} className="capitalize">
+                      {invite.status.charAt(0).toUpperCase() + invite.status.slice(1)}
+                    </Badge>
                   </div>
                 ))}
               </section>
