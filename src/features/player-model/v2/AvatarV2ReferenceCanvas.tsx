@@ -35,6 +35,7 @@ export function AvatarV2ReferenceCanvas({
   proportions.current = { height: appearance?.body.height ?? 1, build: appearance?.body.build ?? 1 };
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [error, setError] = useState('');
+  const [skinMaterialCount, setSkinMaterialCount] = useState<number | null>(null);
 
   useEffect(() => {
     const element = canvasRef.current;
@@ -75,6 +76,7 @@ export function AvatarV2ReferenceCanvas({
     redraw.current = requestDraw;
     setStatus('loading');
     setError('');
+    setSkinMaterialCount(null);
 
     try {
       renderer = new T.WebGLRenderer({
@@ -135,19 +137,25 @@ export function AvatarV2ReferenceCanvas({
         // Only recolour materials explicitly identified as skin by the
         // Blender export. Do not tint eyes, clothes or unidentified meshes.
         originalSkinMaterials.current = [];
+        const clones = new Map<T.MeshStandardMaterial, T.MeshStandardMaterial>();
         source.traverse(object => {
           if (!(object instanceof T.Mesh)) return;
-          for (const material of (Array.isArray(object.material) ? object.material : [object.material])) {
+          const cloneSkin = (material: T.Material): T.Material => {
             if (!(material instanceof T.MeshStandardMaterial) ||
-                !/^(skin|body[ _-]?skin)(?:[ _.-]|$)/i.test(material.name)) continue;
-            // Clone to avoid modifying a shared GLTF material outside preview.
-            const clone = material.clone();
-            if (Array.isArray(object.material)) {
-              object.material = object.material.map(entry => entry === material ? clone : entry);
-            } else object.material = clone;
-            originalSkinMaterials.current.push({ material: clone, color: clone.color.clone() });
-          }
+                !/^(skin|body[ _-]?skin)(?:[ _.-]|$)/i.test(material.name)) return material;
+            let clone = clones.get(material);
+            if (!clone) {
+              clone = material.clone();
+              clones.set(material, clone);
+              originalSkinMaterials.current.push({ material: clone, color: clone.color.clone() });
+            }
+            return clone;
+          };
+          object.material = Array.isArray(object.material)
+            ? object.material.map(cloneSkin)
+            : cloneSkin(object.material);
         });
+        setSkinMaterialCount(originalSkinMaterials.current.length);
         if (skinTone.current) {
           for (const entry of originalSkinMaterials.current) entry.material.color.set(skinTone.current);
         }
@@ -222,6 +230,9 @@ export function AvatarV2ReferenceCanvas({
         <p className="avatar-v2-public__canvas-overlay" role="alert">
           3D preview unavailable: {error} The image previews are still available.
         </p>
+      )}
+      {status === 'ready' && skinMaterialCount === 0 && (
+        <p className="avatar-v2-public__skin-warning" role="status">Skin tone is not available for this Blender export: no separately named skin material was found.</p>
       )}
       {status === 'ready' && (
         <p className="avatar-v2-public__canvas-caption">
