@@ -5,6 +5,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { disposeModel } from '../model';
 import type { PlayerAppearance } from '../appearance';
 import { isAvatarV2PreviewIrisMaterial, isAvatarV2PreviewSkinMaterial } from './avatarV2PreviewMaterials';
+import { applyAvatarV2PreviewProportions } from './avatarV2PreviewProportions';
 
 /**
  * Read-only viewer for published Blender SOURCE/LOOKDEV previews.
@@ -130,18 +131,9 @@ export function AvatarV2ReferenceCanvas({
         }
         // Display at human scale and ground the unchanged source A-pose.
         referenceScale.current = 1.78 / size.y;
-        source.scale.setScalar(referenceScale.current);
-        source.updateMatrixWorld(true);
-        const scaled = new T.Box3().setFromObject(source);
-        source.position.y -= scaled.min.y;
+        applyAvatarV2PreviewProportions(source, referenceScale.current, proportions.current);
         // Creator body proportions are a reversible preview transform only.
-        // Unfitted source meshes cannot yet support safe garment, hair or
-        // accessory attachment, and these edits are never saved as V2 assets.
-        source.scale.x *= proportions.current.build;
-        source.scale.z *= proportions.current.build;
-        source.scale.y *= proportions.current.height;
-        source.updateMatrixWorld(true);
-        source.position.y -= new T.Box3().setFromObject(source).min.y;
+        // The source meshes still have no approved garment/accessory fit.
         // Only recolour materials explicitly identified as skin by the
         // Blender export. Do not tint eyes, clothes or unidentified meshes.
         originalSkinMaterials.current = [];
@@ -214,12 +206,7 @@ export function AvatarV2ReferenceCanvas({
   useEffect(() => {
     const model = previewModel.current;
     if (!model) return;
-    const baseline = referenceScale.current;
-    model.scale.set(baseline * proportions.current.build, baseline * proportions.current.height, baseline * proportions.current.build);
-    // Re-ground from the model's current bounding box after every edit, even
-    // when the original GLB has a non-zero origin or the height is reduced.
-    model.updateMatrixWorld(true);
-    model.position.y -= new T.Box3().setFromObject(model).min.y;
+    applyAvatarV2PreviewProportions(model, referenceScale.current, proportions.current);
     redraw.current?.();
   }, [appearance?.body.build, appearance?.body.height]);
 
