@@ -1,6 +1,7 @@
-/** Recognise only body skin, not lip, brow, iris or other lookdev materials. */
+/** Only materials exported by the pinned Blender lookdev pass are safe to recolour.
+ * The unshaded SOURCE-ONLY GLB has no exported materials and is unsupported. */
 export function isAvatarV2PreviewSkinMaterial(name: string): boolean {
-  return /^(?:RMV2_Preview_Skin_(?:masculine|feminine)|skin(?:[ _.-]|$)|body[ _-]?skin(?:[ _.-]|$))/i.test(name);
+  return /^RMV2_Preview_Skin_(?:masculine|feminine)$/i.test(name);
 }
 
 /** Iris-only lookdev material from the genuine Blender export. */
