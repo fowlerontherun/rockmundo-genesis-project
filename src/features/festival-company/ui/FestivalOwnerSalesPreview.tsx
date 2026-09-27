@@ -5,6 +5,7 @@ import { festivalRoutes } from "@/features/festivals/routes";
 import {
   useFestivalLaunchPlan,
   useFestivalSalesSummary,
+  useFestivalPlayerTicketSalesBreakdown,
   usePublicFestival,
 } from "../application/useFestivalLaunch";
 
@@ -16,6 +17,8 @@ const launchedStatuses = new Set([
 ]);
 
 type OwnerLaunchPlan = { launch?: { launchStatus?: string; publicSlug?: string | null }; launchStatus?: string; publicSlug?: string | null };
+
+type PlayerSalesBreakdown = { source: string; ticketsSold: number; orders: number; uniqueBuyers: number; grossMinor: number; subtotalMinor: number; feeMinor: number; taxMinor: number; byProduct: Array<{productId:string;name:string;ticketsSold:number;orders:number;grossMinor:number}> };
 
 type OwnerSales = {
   ticketsSold?: number;
@@ -44,6 +47,7 @@ export function FestivalOwnerSalesPreview({
   const slug = isLaunched ? launchInfo?.publicSlug ?? undefined : undefined;
   const publicFestival = usePublicFestival(slug);
   const sales = useFestivalSalesSummary(isLaunched ? festivalCompanyId : undefined);
+  const playerSales = useFestivalPlayerTicketSalesBreakdown(isLaunched ? festivalCompanyId : undefined);
   const current = publicFestival.data;
 
   // Annual companies can hold old launch records while planning a new year.
@@ -55,6 +59,7 @@ export function FestivalOwnerSalesPreview({
 
   const counts = current.ticketSales;
   const owner = sales.data as OwnerSales | undefined;
+  const players = playerSales.data as PlayerSalesBreakdown | undefined;
   const grossMinor = owner?.grossMinor ?? owner?.grossSalesMinor;
   const gross = typeof grossMinor === "number" && Number.isFinite(grossMinor)
     ? new Intl.NumberFormat("en-GB", {
@@ -117,6 +122,32 @@ export function FestivalOwnerSalesPreview({
               <strong>{gross}</strong>
             </p>
           </div>
+        ) : null}
+        {playerSales.isError ? (
+          <p role="status" className="text-sm text-muted-foreground">Player purchase breakdown is temporarily unavailable.</p>
+        ) : players ? (
+          <section aria-label="Player ticket purchases" className="space-y-3 rounded-lg border p-4">
+            <div>
+              <h3 className="font-semibold">Real player purchases</h3>
+              <p className="text-xs text-muted-foreground">Confirmed purchases only. Forecast attendance and future simulated sales are not included.</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <p><span className="block text-xs text-muted-foreground">Tickets purchased</span><strong className="text-xl">{players.ticketsSold.toLocaleString("en-GB")}</strong></p>
+              <p><span className="block text-xs text-muted-foreground">Orders</span><strong className="text-xl">{players.orders.toLocaleString("en-GB")}</strong></p>
+              <p><span className="block text-xs text-muted-foreground">Unique players</span><strong className="text-xl">{players.uniqueBuyers.toLocaleString("en-GB")}</strong></p>
+            </div>
+            {players.byProduct?.length > 0 && (
+              <div className="space-y-1 border-t pt-3">
+                <p className="text-sm font-medium">Sales by ticket type</p>
+                {players.byProduct.map((product) => (
+                  <div key={product.productId} className="flex justify-between gap-4 text-sm">
+                    <span>{product.name}</span>
+                    <span>{product.ticketsSold.toLocaleString("en-GB")} sold</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
         ) : null}
         <p className="text-xs text-muted-foreground">
           Gross receipts include any booking fees, tax and add-ons. The admission
