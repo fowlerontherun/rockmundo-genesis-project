@@ -64,9 +64,14 @@ def main() -> None:
         action["rockmundoAvatarV2LoopBeats"] = clip.beats
         report.append({"name": name, "role": clip.role, "beats": clip.beats})
         rig.animation_data.action = None
+    # These Actions key rotation_euler, so the target bones MUST remain in
+    # Euler mode for playback. Resetting them to quaternion silently makes
+    # all 60 clips appear motionless despite valid Action F-curves.
+    animated = {bone_name for clip in clips for _, bone_name, _ in clip.keys}
     for bone in rig.pose.bones:
-        bone.rotation_mode = "QUATERNION"
-        bone.rotation_quaternion.identity()
+        if bone.name in animated:
+            bone.rotation_mode = "XYZ"
+            bone.rotation_euler = Euler((0., 0., 0.))
     scene.frame_set(1)
     rig["rockmundoAvatarV2PerformanceClipsDraftOnly"] = True
     output = pathlib.Path(args.output).expanduser().resolve()
