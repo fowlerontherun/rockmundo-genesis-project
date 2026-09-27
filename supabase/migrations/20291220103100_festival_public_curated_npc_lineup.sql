@@ -56,7 +56,7 @@ BEGIN
       st.name stage_name,NULL::timestamptz starts_at,NULL::timestamptz ends_at,
       n.created_at ordering_time
     FROM public.festival_owner_npc_lineup_acts n
-    LEFT JOIN public.festival_site_plan_stages st ON st.id=n.stage_id
+    LEFT JOIN public.festival_site_plan_stages st ON st.id=n.stage_id\n      AND st.festival_company_id=p_festival_company_id\n      AND EXISTS (SELECT 1 FROM public.festival_site_plans sp\n        WHERE sp.id=st.festival_site_plan_id AND sp.festival_edition_id=v_edition_id)
     WHERE n.festival_edition_id=v_edition_id AND n.festival_company_id=p_festival_company_id
       AND n.status='confirmed'
   ), public_acts AS (
