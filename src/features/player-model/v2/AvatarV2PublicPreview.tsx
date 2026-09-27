@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import type { AvatarV2Frame } from './avatarV2Contract';
+import type { PlayerAppearance } from '../appearance';
 import './avatar-v2-public.css';
 import {
   avatarV2ReferenceImageUrl,
@@ -28,7 +29,7 @@ const GALLERY = 'https://github.com/fowlerontherun/rockmundo-genesis-project/tre
  * outfitting, animating or routing these unfinished models into live gigs.
  * Only complete, hash-inventoried, explicitly non-production previews appear.
  */
-export function AvatarV2PublicPreview({ frame }: { frame: AvatarV2Frame }) {
+export function AvatarV2PublicPreview({ frame, appearance }: { frame: AvatarV2Frame; appearance?: PlayerAppearance }) {
   const [manifest, setManifest] = useState<AvatarV2ReferenceManifest | null>(null);
   const [status, setStatus] = useState<'loading' | 'available' | 'unavailable'>('loading');
   const [attempt, setAttempt] = useState(0);
@@ -152,6 +153,7 @@ export function AvatarV2PublicPreview({ frame }: { frame: AvatarV2Frame }) {
                     url={avatarV2ReferenceModelUrl(frame, variant)}
                     focus={view === 'face' ? 'face' : 'full'}
                     experimentalRig={variant === 'headMotion'}
+                    appearance={appearance}
                   />
                 </Suspense>
               </>
@@ -161,7 +163,8 @@ export function AvatarV2PublicPreview({ frame }: { frame: AvatarV2Frame }) {
             This is a verified visual preview of the real Blender source, not your saved playable avatar.
             The head-motion experiment has preliminary partial weights, but V2 has not
             passed full rigging, facial animation, clothing and LOD validation, so
-            your live character and gig visuals remain on V1. Appearance controls and Save avatar
+            your live character and gig visuals remain on V1. The experimental height/build
+            controls affect only this 3D preview; other Avatar Creator features and Save avatar
             still apply only to your current live character.
             {' '}<a href={GALLERY} target="_blank" rel="noreferrer">View verified source proofs</a>
           </p>
