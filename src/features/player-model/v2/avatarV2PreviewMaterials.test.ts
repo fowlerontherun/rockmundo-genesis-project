@@ -1,10 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { isAvatarV2PreviewSkinMaterial } from './avatarV2PreviewMaterials';
+import { isAvatarV2PreviewIrisMaterial, isAvatarV2PreviewSkinMaterial } from './avatarV2PreviewMaterials';
 
 describe('Avatar V2 preview skin material identification', () => {
   it('recognises both real Blender body skin exports', () => {
     expect(isAvatarV2PreviewSkinMaterial('RMV2_Preview_Skin_masculine')).toBe(true);
     expect(isAvatarV2PreviewSkinMaterial('RMV2_Preview_Skin_feminine')).toBe(true);
+  });
+
+  it('identifies only the genuine left and right iris materials', () => {
+    for (const frame of ['masculine', 'feminine']) {
+      for (const side of ['L', 'R']) {
+        expect(isAvatarV2PreviewIrisMaterial(`RMV2_Preview_Iris_${frame}_${side}`)).toBe(true);
+      }
+    }
+    for (const name of ['RMV2_Preview_Pupil_masculine_L', 'RMV2_Preview_Sclera_feminine_R', 'RMV2_Preview_Cornea_masculine_L', 'RMV2_Preview_Skin_feminine']) {
+      expect(isAvatarV2PreviewIrisMaterial(name)).toBe(false);
+    }
   });
 
   it('never recolours lips, eyes, lashes or brows', () => {
