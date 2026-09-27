@@ -1,7 +1,7 @@
 import * as T from 'three';
 import { box, rod, matte, metal, batchStaticMeshes } from './stage';
 import type { VenueProfile } from './venueProfile';
-import { buildVenueShowIdentity } from './venueShowIdentity';
+import { buildVenueShowIdentity, resolveVenueShowPlan } from './venueShowIdentity';
 import { planVenueLighting } from './venueLightShow';
 import {
     addAmplifierStack,
@@ -118,6 +118,8 @@ export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Ma
     // by both IMAG wings. A wide graphic on square panels crushed band names.
     const mainScreenTexture = led ? createVenueShowScreenTexture(p, bandName, layout.tier, 'wide') : undefined;
     const wingScreenTexture = layout.wings ? createVenueShowScreenTexture(p, bandName, layout.tier, 'square') : undefined;
+    const portraitTexture = resolveVenueShowPlan(p, layout.tier).wingVideoTotems > 0
+        ? createVenueShowScreenTexture(p, bandName, layout.tier, 'portrait') : undefined;
     if (curtain) {
         const g = new T.PlaneGeometry(p.stageWidth * .94, p.rigHeight - y, 100, 1), v = g.attributes.position;
         for (let i = 0; i < v.count; i++)
@@ -278,7 +280,7 @@ export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Ma
         for (let i = 0; i < Math.floor(p.stageWidth / 1.4); i++)
             box(root, [.9, .045, .08], [(i - (Math.floor(p.stageWidth / 1.4) - 1) / 2) * 1.4, y + .05, .51], i % 2 === 0 ? lens.left : lens.right);
     // Signature stage architecture is shared by live gigs, replays and venue previews.
-    buildVenueShowIdentity(root, p, layout.tier);
+    buildVenueShowIdentity(root, p, layout.tier, portraitTexture);
     batchStaticMeshes(root);
     return root;
 }
