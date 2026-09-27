@@ -38,7 +38,7 @@ from mathutils import Vector
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from rig_landmarks import (  # noqa: E402
     BoneSpec, audit_sculpt_fit, fit_bones, moved_markers, position_markers,
-    untouched_face_markers, stale_guide_markers,
+    untouched_face_markers, stale_guide_markers, missing_edit_bones,
 )
 from rig_review import invalidate_rig_reviews
 
@@ -229,7 +229,9 @@ def fit_from_handles(rig: bpy.types.Object, specs: list[BoneSpec], reviewed: boo
     try:
         # Verify the whole edit-bone set before changing any joint. A missing
         # bone must not leave a half-refitted artist scene behind.
-        missing_bones = sorted(set(fitted) - {bone.name for bone in rig.data.edit_bones})
+        missing_bones = missing_edit_bones(
+            list(fitted), [bone.name for bone in rig.data.edit_bones]
+        )
         if missing_bones:
             raise RuntimeError(
                 "Rig changed during marker fitting; missing edit bones: "
