@@ -9,12 +9,11 @@ export function isAvatarV2PreviewIrisMaterial(name: string): boolean {
   return /^RMV2_Preview_Iris_(?:masculine|feminine)_[LR]$/i.test(name);
 }
 
-/** Require one left and one right iris, not merely two matching materials. */
+/** Reject partial, mixed-frame or ambiguous exports instead of tinting the wrong eyes. */
 export function hasAvatarV2PreviewIrisPair(names: readonly string[]): boolean {
-  const sides = new Set<string>();
-  for (const name of names) {
-    if (!isAvatarV2PreviewIrisMaterial(name)) continue;
-    sides.add(name.slice(-1).toUpperCase());
-  }
-  return sides.has('L') && sides.has('R');
+  if (names.length !== 2) return false;
+  const matches = names.map(name => /^RMV2_Preview_Iris_(masculine|feminine)_([LR])$/i.exec(name));
+  return matches.every((match): match is RegExpExecArray => match !== null) &&
+    matches[0][1].toLowerCase() === matches[1][1].toLowerCase() &&
+    matches[0][2].toUpperCase() !== matches[1][2].toUpperCase();
 }
