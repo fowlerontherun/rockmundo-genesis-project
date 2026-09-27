@@ -72,6 +72,49 @@ MOTIONS = {
     ),
 }
 
+# Additional performance phrases broaden song-section variety without assuming
+# authored instrument grips or solved IK. Contact-dependent phrases remain QA-only.
+ADDITIONAL_MOTIONS = {
+    "singer": (
+        ("intro-anticipation", 4, {"Head": (0, 0, 6), "Spine2": (0, 0, -3)}),
+        ("verse-step-pulse", 4, {"Hips": (0, 0, 4), "Spine2": (0, 0, -4)}),
+        ("big-note-reach", 8, {"Head": (-5, 0, 0), "Shoulder.L": (0, 0, 14)}),
+        ("quiet-bridge", 8, {"Head": (5, 0, 0), "Spine2": (3, 0, 0)}),
+    ),
+    "guitar": (
+        ("palm-muted-drive", 2, {"Hand.R": (0, 0, 5), "LowerArm.R": (0, 0, 6)}),
+        ("alternate-picking", 2, {"Hand.R": (0, 0, 10), "LowerArm.R": (0, 0, 4)}),
+        ("solo-bend-emphasis", 4, {"Hand.L": (0, 0, 4), "Head": (-5, 0, 0)}),
+        ("breakdown-stomp", 4, {"Hips": (0, 0, 5), "Head": (7, 0, 0)}),
+    ),
+    "bass": (
+        ("syncopated-pluck", 2, {"Hand.R": (0, 0, 8), "Head": (0, 0, 4)}),
+        ("octave-jump", 4, {"Hand.L": (0, 0, 5), "LowerArm.L": (0, 0, 3)}),
+        ("chorus-lock-in", 4, {"Spine2": (0, 0, 6), "Head": (4, 0, 0)}),
+        ("low-note-sustain", 8, {"Head": (-4, 0, 0), "Spine2": (-2, 0, 0)}),
+    ),
+    "drums": (
+        ("ghost-note", 2, {"Hand.L": (0, 0, 4), "LowerArm.L": (0, 0, 3)}),
+        ("open-hihat-accent", 4, {"Hand.R": (0, 0, 10), "LowerArm.R": (0, 0, 8)}),
+        ("floor-tom-run", 4, {"LowerArm.R": (0, 0, 12), "Spine2": (0, 0, 4)}),
+        ("both-crash-finale", 8, {"Shoulder.L": (0, 0, 12), "Shoulder.R": (0, 0, 12)}),
+    ),
+    "keys": (
+        ("left-hand-bass", 4, {"Hand.L": (0, 0, 7), "Head": (0, 0, -3)}),
+        ("right-hand-trill", 2, {"Hand.R": (0, 0, 8), "LowerArm.R": (0, 0, 3)}),
+        ("pad-build", 8, {"Spine2": (-3, 0, 0), "Head": (0, 0, 4)}),
+        ("final-chord", 8, {"Hand.L": (0, 0, 6), "Hand.R": (0, 0, 6)}),
+    ),
+    "dj": (
+        ("two-deck-mix", 4, {"Hand.L": (0, 0, 6), "Hand.R": (0, 0, -6)}),
+        ("filter-build", 8, {"Hand.R": (0, 0, 8), "Spine2": (0, 0, 4)}),
+        ("beat-juggle", 4, {"Hand.L": (0, 0, 9), "Hand.R": (0, 0, 9)}),
+        ("drop-celebration", 8, {"Shoulder.L": (0, 0, 15), "Head": (-5, 0, 0)}),
+    ),
+}
+for _role, _entries in ADDITIONAL_MOTIONS.items():
+    MOTIONS[_role] += _entries
+
 def build_catalogue(bpm: int = 120) -> tuple[StageClip, ...]:
     if not 50 <= bpm <= 220:
         raise ValueError("Stage BPM must be between 50 and 220.")
