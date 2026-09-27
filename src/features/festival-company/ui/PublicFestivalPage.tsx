@@ -307,6 +307,8 @@ export default function PublicFestivalPage() {
                               <CardTitle className="flex flex-wrap items-center gap-2">
                                 {entry.artistName}
                                 {entry.billingPosition === "headliner" && <Badge>Headliner</Badge>}
+                                {entry.artistType === "dj" && <Badge variant="secondary">DJ</Badge>}
+                                {entry.artistType === "npc" && <Badge variant="outline">Local NPC band</Badge>}
                               </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-1 text-sm">
