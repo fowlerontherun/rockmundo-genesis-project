@@ -9,7 +9,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from rig_landmarks import (  # noqa: E402
     BoneSpec, FitBone, audit_sculpt_fit, fit_bones, marker_name, moved_markers,
     position_markers, untouched_face_markers, stale_guide_markers,
-    missing_edit_bones,
+    missing_edit_bones, rig_structure_fingerprint,
 )
 
 
@@ -59,6 +59,23 @@ def example_rig():
 
 
 class SculptJointFitTests(unittest.TestCase):
+    def test_hierarchy_fingerprint_detects_reparenting_and_connection_edits(self):
+        bones = example_rig()
+        original = rig_structure_fingerprint(bones)
+        self.assertEqual(original, rig_structure_fingerprint(list(reversed(bones))))
+        reparented = [
+            BoneSpec(b.name, "Spine1" if b.name == "Eye.L" else b.parent,
+                     b.connected, b.head, b.tail)
+            for b in bones
+        ]
+        self.assertNotEqual(original, rig_structure_fingerprint(reparented))
+        disconnected = [
+            BoneSpec(b.name, b.parent, False if b.name == "Hand.R" else b.connected,
+                     b.head, b.tail)
+            for b in bones
+        ]
+        self.assertNotEqual(original, rig_structure_fingerprint(disconnected))
+
     def test_edit_bone_inventory_preflight_catches_missing_bones(self):
         names = [bone.name for bone in example_rig()]
         self.assertEqual(missing_edit_bones(names, names), [])
