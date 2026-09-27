@@ -243,6 +243,25 @@ describe('Avatar V2 performance QA', () => {
     expect(report!.valid).toBe(true);
   });
 
+  it('rejects a hidden or detached drumstick even when the other stick is valid', () => {
+    const actor = new Musician(
+      simpleRiggedModel(), 'drums', [0, 0, 0], 0, undefined,
+      defaultAppearance('v2-hidden-drumstick-qa'), 'rock_drums',
+    );
+    const right = actor.instrumentRig!.tools.find(tool => tool.name === 'playing-stick-r')!;
+    right.visible = false;
+    const hidden = inspectAvatarV2Performance(actor, 'rock_drums')!;
+    expect(hidden.valid).toBe(false);
+    expect(hidden.drumsticks).toBe(1);
+    expect(hidden.issues.some(issue => issue.code === 'missing-drumsticks')).toBe(true);
+    right.visible = true;
+    right.removeFromParent();
+    const detached = inspectAvatarV2Performance(actor, 'rock_drums')!;
+    expect(detached.valid).toBe(false);
+    expect(detached.drumsticks).toBe(1);
+    expect(detached.issues.some(issue => issue.code === 'missing-drumsticks')).toBe(true);
+  });
+
   it('rejects an instrument candidate that drops a required twist helper', () => {
     const model = simpleRiggedModel();
     model.getObjectByName('ForearmTwist.R')!.removeFromParent();
