@@ -4,6 +4,11 @@ on:
   pull_request:
     paths:
       - "src/components/band/InviteFriendToBand.tsx"
+      - "src/components/band/InviteFriendToBand.test.tsx"
+      - "src/components/band/BandInvitations.tsx"
+      - "src/components/band/BandInvitations.test.tsx"
+      - "src/lib/notificationModels.ts"
+      - "src/lib/notificationModels.test.ts"
       - "src/pages/BandManager.tsx"
       - "src/services/bandInviteEligibility.ts"
       - "src/services/bandInvitations.ts"
@@ -17,6 +22,11 @@ on:
     branches: [main]
     paths:
       - "src/components/band/InviteFriendToBand.tsx"
+      - "src/components/band/InviteFriendToBand.test.tsx"
+      - "src/components/band/BandInvitations.tsx"
+      - "src/components/band/BandInvitations.test.tsx"
+      - "src/lib/notificationModels.ts"
+      - "src/lib/notificationModels.test.ts"
       - "src/pages/BandManager.tsx"
       - "src/services/bandInviteEligibility.ts"
       - "src/services/bandInvitations.ts"
@@ -42,4 +52,4 @@ jobs:
       - name: Check frontend types
         run: npm run typecheck
       - name: Test player search and band invitations
-        run: npx vitest run src/services/__tests__/bandInviteEligibility.test.ts src/services/__tests__/bandInvitations.test.ts src/services/__tests__/publicProfileSearch.test.ts
+        run: npx vitest run src/services/__tests__/bandInviteEligibility.test.ts src/services/__tests__/bandInvitations.test.ts src/services/__tests__/publicProfileSearch.test.ts src/components/band/InviteFriendToBand.test.tsx src/components/band/BandInvitations.test.tsx src/lib/notificationModels.test.ts
