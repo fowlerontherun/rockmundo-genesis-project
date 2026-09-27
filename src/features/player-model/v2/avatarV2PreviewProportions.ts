@@ -7,6 +7,9 @@ export function applyAvatarV2PreviewProportions(
   referenceScale: number,
   proportions: { height: number; build: number },
 ): void {
+  if (![referenceScale, proportions.height, proportions.build].every(value => Number.isFinite(value) && value > 0)) {
+    throw new Error('Invalid V2 reference preview proportions.');
+  }
   model.scale.set(
     referenceScale * proportions.build,
     referenceScale * proportions.height,
