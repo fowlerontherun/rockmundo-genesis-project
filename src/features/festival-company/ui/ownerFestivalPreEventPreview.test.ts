@@ -17,6 +17,8 @@ describe("pre-event Festival owner and directory sales preview", () => {
     expect(owner).toContain("Available admissions");
     expect(owner).toContain("Gross ticket receipts");
     expect(owner).toContain("Confirmed acts");
+    expect(owner).toContain("current.lineup?.length ?? 0");
+    expect(owner).not.toContain("current.timetable.length");
   });
 
   it("reads the nested launch object and never carries last year's sales to a new edition", () => {
