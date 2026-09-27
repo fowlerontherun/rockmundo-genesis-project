@@ -67,6 +67,22 @@ def moved_markers(
     ]
 
 
+def stale_guide_markers(
+    current: Mapping[str, Vec3],
+    stored: Mapping[str, Vec3],
+    tolerance: float = .0001,
+) -> list[str]:
+    """Find handles created against a different armature rest pose.
+
+    A changed skeleton must receive new handles; applying old artist handles
+    to a new guide can silently displace wrists, eyes and instrument grips.
+    """
+    return sorted(
+        name for name, position in current.items()
+        if name not in stored or dist(position, stored[name]) > tolerance
+    )
+
+
 def untouched_face_markers(
     bones: Sequence[BoneSpec],
     placed: Mapping[str, Vec3],
