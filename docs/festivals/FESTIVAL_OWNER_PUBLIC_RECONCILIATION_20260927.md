@@ -27,3 +27,12 @@ Status: source audit plus read-only production schema verification on 27 Septemb
 ## Related in-flight work
 - PR #2148: move/retime preview.
 - PR #2149: draft atomic stage reorder; must reconcile stage ID/domain and deployment before use.
+
+## Direct production migration execution — 27 September 2026
+
+- Applied `festival_owner_npc_lineup` directly to the active RockMundo Supabase project; verified NPC table, management RPCs and enabled RLS.
+- Applied `festival_public_curated_npc_lineup` directly after fixing three literal escaped newlines in the SQL file. Verified `festival_public_projection_v2` executes for the existing company and returns a JSON array containing two confirmed acts. NPC table currently contains zero rows.
+- Restored missing `festival_admin_can_operate_edition(uuid,text[])` from the canonical edition operations source as a separate production migration, with restricted EXECUTE grants.
+- Attempted `festival_phase2a_visual_scheduling` but it failed atomically. First corrected reserved CTE alias `overlaps` to `stage_overlaps` in-memory; the next failure showed production already has `festival_stage_operating_hours` with `opening_time time`, `curfew time`, `changeover_minutes`, not the proposed `opens_at timestamptz`, `curfew_at timestamptz`, `default_changeover_minutes`. `CREATE TABLE IF NOT EXISTS` cannot reconcile this drift. **The schedule revision tables are not deployed.** Do not run the atomic reorder migration until a deliberate schema-compatible bridge is designed and tested.
+- Permission check: NPC management RPCs executable by authenticated/service_role, not anon; public projection executable only by service_role. Existing production data was not altered or festivals rerun.
+- Supabase security advisor has pre-existing broad RLS-without-policy notices; inspect [database linter remediation](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy) separately before treating these as regressions.
