@@ -779,11 +779,14 @@ export class Musician {
             const up = new T.Vector3(0, 1, 0).applyQuaternion(rootRotation).normalize();
 
             for (const stick of rig.tools.filter(tool => tool.name.startsWith('playing-stick'))) {
-                stick.visible = true;
+                // Only animate a correctly attached, hand-assigned stick. Do not
+                // force hidden QA failures visible again on the next frame.
                 const side = stick.userData.handSide as 'L' | 'R' | undefined;
                 const hand = side ? this.bones.get(`Hand.${side}`) : undefined;
                 const target = stick.userData.strikeTarget as T.Vector3 | undefined;
-                if (!side || !hand || !target || !stick.parent) continue;
+                const expectedName = side ? `playing-stick-${side.toLowerCase()}` : '';
+                if (!stick.visible || !stick.userData.followsHand || !side || !hand ||
+                    stick.name !== expectedName || !target || stick.parent !== rig.root) continue;
 
                 // Follow the actual hand in world space, then move the grip a few
                 // centimetres toward the kit/camera so the shaft starts visibly
