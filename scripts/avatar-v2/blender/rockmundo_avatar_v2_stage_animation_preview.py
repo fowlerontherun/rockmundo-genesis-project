@@ -57,6 +57,24 @@ def main() -> None:
             bone.rotation_euler = Euler(tuple(radians(angle) for angle in degrees))
             frame = 1 + round(beat * 60 / clip.bpm * args.fps)
             bone.keyframe_insert(data_path="rotation_euler", frame=frame, group=bone_name)
+        # Verify that Blender actually evaluates the generated Action. Merely
+        # counting keyframes cannot catch a mismatched rotation mode or a
+        # broken Action binding. Sample a nonzero mid-phrase pose and rest at
+        # both loop endpoints before accepting each preview.
+        probe_beat, probe_bone, probe_angles = next(
+            (beat, bone, angles) for beat, bone, angles in clip.keys
+            if beat > 0 and any(abs(angle) > .01 for angle in angles)
+        )
+        probe_frame = 1 + round(probe_beat * 60 / clip.bpm * args.fps)
+        scene.frame_set(probe_frame)
+        actual = rig.pose.bones[probe_bone].rotation_euler
+        expected = tuple(radians(angle) for angle in probe_angles)
+        if any(abs(actual[i] - expected[i]) > .015 for i in range(3)):
+            raise RuntimeError(f"Blender did not evaluate draft Action {name} at its peak.")
+        for endpoint in (1, 1 + round(clip.beats * 60 / clip.bpm * args.fps)):
+            scene.frame_set(endpoint)
+            if any(abs(rig.pose.bones[probe_bone].rotation_euler[i]) > .015 for i in range(3)):
+                raise RuntimeError(f"Draft Action {name} does not return to rest at its loop boundary.")
         action["rockmundoAvatarV2DraftOnly"] = True
         action["rockmundoAvatarV2ArtistApproved"] = False
         action["rockmundoAvatarV2Role"] = clip.role
