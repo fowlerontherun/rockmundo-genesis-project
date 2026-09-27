@@ -160,7 +160,14 @@ def fit_from_handles(rig: bpy.types.Object, specs: list[BoneSpec], reviewed: boo
 
     placed: dict[str, tuple[float, float, float]] = {}
     rest: dict[str, tuple[float, float, float]] = {}
-    inverse = rig.matrix_world.inverted_safe()
+    # inverted_safe() silently returns a fallback for singular transforms.
+    # That can turn every artist world-space handle into a wrong local joint.
+    if abs(rig.matrix_world.determinant()) < 1e-10:
+        raise SystemExit(
+            "Armature world transform is singular (zero or near-zero scale). "
+            "Restore a valid armature transform before applying sculpt handles."
+        )
+    inverse = rig.matrix_world.inverted()
     for name in expected:
         obj = collection.objects.get(name)
         if not obj or obj.type != "EMPTY":
