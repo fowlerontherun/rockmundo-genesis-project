@@ -1,6 +1,7 @@
 import * as T from 'three';
 import { box, matte, metal, rod } from './stage';
 import type { VenueProfile } from './venueProfile';
+import { productionEquipmentSpec } from './venueProductionQuality';
 
 /**
  * Fixed dressing for the production rig, deliberately separated from room architecture:
@@ -42,8 +43,28 @@ export function resolveVenueShowPlan(p: VenueProfile, tier: number): VenueShowPl
   };
 }
 
+/** The mount points come from the *same* physical cabinets/screens used by the
+ * main stage builder; the old rig left its two hangers near each screen's middle
+ * and drew its wires directly through the screen backs. */
+export function venueScreenSuspension(p: VenueProfile, tier: number) {
+  if (tier < 3) return null;
+  const spec = productionEquipmentSpec(tier);
+  const back = .65 - p.stageDepth;
+  const screenZ = back + p.stageDepth * .6;
+  const screenTop = p.stageHeight + spec.screenHeight * 1.2 + .12;
+  return {
+    screenWidth: spec.screenWidth,
+    screenHeight: spec.screenHeight,
+    screenZ,
+    screenTop,
+    mountOffset: spec.screenWidth / 2 - .23,
+    anchorY: p.rigHeight - .2,
+    cableZ: screenZ - .24,
+  };
+}
+
 /** Accessible by name to venue previews and QA, without affecting crowd/performer placement. */
-export function buildVenueShowIdentity(root: T.Group, p: VenueProfile, tier: number) {
+export function buildVenueShowIdentity(root: T.Group, p: VenueProfile, tier: number, portraitTexture?: T.Texture) {
   const plan = resolveVenueShowPlan(p, tier);
   const group = new T.Group();
   group.name = 'venue-show-identity-' + p.kind;
@@ -103,24 +124,40 @@ export function buildVenueShowIdentity(root: T.Group, p: VenueProfile, tier: num
     }
   }
 
-  // Touring IMAG support bridges and safety cables visibly connect each wing
-  // display to a flown load path instead of leaving a screen floating in space.
-  if (plan.hasScreenSafetyRig) {
+  // Real wing displays hang from spreader beams that reach their outer edges.
+  // Secondary safety cables run behind the screen frames, not through the image.
+  const suspension = venueScreenSuspension(p, tier);
+  if (plan.hasScreenSafetyRig && suspension) {
     const rigging = new T.Group();
     rigging.name = 'venue-screen-support-rigging';
-    group.add(rigging);
-    const screenTop = y + (tier === 4 ? 7.4 : 4.5) * 1.2 + .2;
-    const spanZ = back + p.stageDepth * .6;
-    for (const side of [-1, 1]) {
-      const x = side * (half + 3.2);
-      rod(rigging, [side * half, p.rigHeight - .2, spanZ], [x, p.rigHeight - .2, spanZ], .065, trim);
-      rod(rigging, [x - .65, p.rigHeight - .2, spanZ], [x - .65, screenTop, spanZ], .018, trim);
-      rod(rigging, [x + .65, p.rigHeight - .2, spanZ], [x + .65, screenTop, spanZ], .018, trim);
-      box(rigging, [1.5, .22, .26], [x, p.rigHeight - .23, spanZ], black);
-      for (const horizontal of [-.7, .7])
-        box(rigging, [.09, .12, .3], [x + horizontal, p.rigHeight - .3, spanZ], trim);
-    }
     rigging.userData.supportedScreens = 2;
+    rigging.userData.screenWidth = suspension.screenWidth;
+    rigging.userData.mountOffset = suspension.mountOffset;
+    rigging.userData.screenTop = suspension.screenTop;
+    rigging.userData.anchorY = suspension.anchorY;
+    group.add(rigging);
+    for (const side of [-1, 1]) {
+      const sideRig = new T.Group();
+      sideRig.name = 'venue-side-screen-suspension-' + side;
+      rigging.add(sideRig);
+      const x = side * (half + 3.2);
+      const outerX = x + side * (suspension.screenWidth / 2 + .16);
+      const mounts = [-suspension.mountOffset, suspension.mountOffset];
+      sideRig.userData.mounts = mounts.map(dx => [x + dx, suspension.screenTop, suspension.cableZ]);
+      rod(sideRig, [side * half, suspension.anchorY, suspension.cableZ],
+        [outerX, suspension.anchorY, suspension.cableZ], .063, trim);
+      for (const dx of mounts) {
+        const mountX = x + dx;
+        rod(sideRig, [mountX, suspension.anchorY, suspension.cableZ],
+          [mountX, suspension.screenTop + .065, suspension.cableZ], .018, trim);
+        box(sideRig, [.27, .14, .36],
+          [mountX, suspension.screenTop + .025, suspension.screenZ - .14], black);
+      }
+      rod(sideRig, [side * half, suspension.anchorY, suspension.cableZ],
+        [x, suspension.screenTop + .28, suspension.cableZ], .025, trim);
+      box(sideRig, [1.1, .2, .29],
+        [x, suspension.anchorY - .05, suspension.cableZ], black);
+    }
   }
 
   if (plan.wingVideoTotems) {
@@ -128,15 +165,28 @@ export function buildVenueShowIdentity(root: T.Group, p: VenueProfile, tier: num
     totems.name = 'venue-video-totems';
     group.add(totems);
     const h = tier === 4 ? 4.3 : 2.85;
+    // Every display uses the *same* portrait texture/emissive channel, so four
+    // stadium video columns don't upload four copies of identical artwork.
+    const portraitMaterial = portraitTexture ? new T.MeshStandardMaterial({
+      name: 'venue-portrait-artist-led',
+      map: portraitTexture,
+      emissiveMap: portraitTexture,
+      emissive: '#ffffff',
+      emissiveIntensity: .78,
+      roughness: .46,
+      metalness: .12,
+    }) : accent;
     for (const side of [-1, 1]) for (let index = 0; index < plan.wingVideoTotems; index++) {
       const x = side * (half - 1.05 - index * 1.4);
       const z = back + .32;
       box(totems, [.94, h + .18, .25], [x, y + h / 2 + .15, z], black);
-      box(totems, [.78, h, .035], [x, y + h / 2 + .15, z + .145], accent);
+      const display = box(totems, [.78, h, .035], [x, y + h / 2 + .15, z + .145], portraitMaterial);
+      display.name = 'venue-video-totem-display-' + side + '-' + index;
       for (let row = 1; row < Math.ceil(h / .72); row++)
         box(totems, [.8, .012, .02], [x, y + .15 + row * h / Math.ceil(h / .72), z + .167], trim);
     }
     totems.userData.count = 2 * plan.wingVideoTotems;
+    totems.userData.graphicsFormat = portraitTexture ? 'portrait' : 'accent';
   }
 
   if (plan.hasWeatherValance) {
