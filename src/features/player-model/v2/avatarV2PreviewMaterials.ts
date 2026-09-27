@@ -17,3 +17,13 @@ export function hasAvatarV2PreviewIrisPair(names: readonly string[]): boolean {
     matches[0][1].toLowerCase() === matches[1][1].toLowerCase() &&
     matches[0][2].toUpperCase() !== matches[1][2].toUpperCase();
 }
+
+/** Apply an optional creator swatch without losing the exported lookdev colour. */
+export function applyAvatarV2PreviewSwatch(
+  material: { color: { set(value: string): unknown; copy(value: any): unknown } },
+  original: Parameters<typeof material.color.copy>[0],
+  swatch: string | undefined,
+): void {
+  if (swatch) material.color.set(swatch);
+  else material.color.copy(original);
+}
