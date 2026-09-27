@@ -39,3 +39,15 @@ def audit_rig_review(properties: Mapping[str, Any], name: str, lod: int) -> list
             if properties.get(key) is not True:
                 errors.append(f"{name} is missing performance-pose approval: {key}.")
     return errors
+
+
+def invalidate_rig_reviews(properties: Mapping[str, Any]) -> dict[str, Any]:
+    """Clear stale sign-offs after any guide-joint edit or refit.
+
+    Returns a new property mapping; callers apply it only after a successful
+    edit so a rejected fit does not mutate the original rig.
+    """
+    updated = dict(properties)
+    for key in (*CLOSEUP_REVIEWS, *PERFORMANCE_REVIEWS):
+        updated[key] = False
+    return updated
