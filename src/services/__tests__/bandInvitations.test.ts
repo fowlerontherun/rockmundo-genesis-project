@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   cancelBandInvitation,
+  friendlyBandInvitationError,
   normalizeBandInvitationInput,
   normalizeBandInvitationResponseInput,
   respondBandInvitation,
@@ -22,6 +23,13 @@ const validInvitationId = "33333333-3333-4333-8333-333333333333";
 describe("band invitation service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("preserves useful errors for already-committed players, full rosters and pending invitations", () => {
+    expect(friendlyBandInvitationError(new Error("That player already belongs to another active band."))).toMatch(/active band/);
+    expect(friendlyBandInvitationError(new Error("This band has no open member slots."))).toMatch(/no open member slots/);
+    expect(friendlyBandInvitationError(new Error("This player is not available for band invitations."))).toMatch(/availability or privacy/);
+    expect(friendlyBandInvitationError(new Error("That account already has a pending invitation for another character."))).toMatch(/pending invitation/);
   });
 
   it("normalizes valid send input", () => {
