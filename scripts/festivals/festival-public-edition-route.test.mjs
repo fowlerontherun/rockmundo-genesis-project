@@ -17,5 +17,5 @@ test("public projection never publishes an unassigned NPC slot time", () => {
   assert.match(sql, /NULL::timestamptz starts_at,NULL::timestamptz ends_at/);
   assert.match(sql, /slot\.public_status IN \('published','public'\)/);
   assert.match(sql, /REVOKE ALL ON FUNCTION public\.festival_public_projection_v2\(uuid\)/);
-  assert.doesNotMatch(sql, /\\\\n/);
+  assert.doesNotMatch(sql, /\\n/);
 });
