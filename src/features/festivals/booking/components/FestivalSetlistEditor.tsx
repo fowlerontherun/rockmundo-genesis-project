@@ -121,7 +121,7 @@ export function FestivalSetlistEditorCanonical({
     const next = [...items];
     const [it] = next.splice(i, 1);
     next.splice(i + d, 0, it);
-    setItems(next);
+    editItems(next);
   };
 
   const remove = (index: number) =>
@@ -275,7 +275,7 @@ export function FestivalSetlistEditorCanonical({
                   disabled={readOnly || collaborators.isLoading}
                   value={item.guest_profile_id ?? "none"}
                   onValueChange={(value) =>
-                    setItems(
+                    editItems(
                       items.map((it, i) =>
                         i === index
                           ? {
@@ -308,7 +308,7 @@ export function FestivalSetlistEditorCanonical({
                   disabled={readOnly}
                   value={item.performance_notes ?? ""}
                   onChange={(e) =>
-                    setItems(
+                    editItems(
                       items.map((it, i) =>
                         i === index
                           ? { ...it, performance_notes: e.target.value }
