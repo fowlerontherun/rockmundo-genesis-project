@@ -1,6 +1,15 @@
 import * as T from 'three';
 import { box, cylinder, rod, matte, metal, batchStaticMeshes } from './stage';
 import type { VenueProfile } from './venueProfile';
+import {
+    addAmplifierStack,
+    addLineArrayCabinet,
+    addMovingHead,
+    addSubwoofer,
+    addVideoScreen,
+    createStageDeckMaterial,
+    productionEquipmentSpec,
+} from './venueProductionQuality';
 
 function stagePositionForTv(p: VenueProfile, u: number, v: number): [number, number, number] {
     return [(u - .5) * p.stageWidth * .78, p.stageHeight, .65 - p.stageDepth * .91 + v * p.stageDepth * .8];
@@ -27,12 +36,14 @@ export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Ma
     root.name = 'venue';
     root.userData.profile = p;
     root.userData.production = productionLayout(p);
+    root.userData.equipment = productionEquipmentSpec(root.userData.production.tier);
     scene.add(root);
-    const layout = productionLayout(p), half = p.stageWidth / 2, back = .65 - p.stageDepth, y = p.stageHeight;
+    const layout = productionLayout(p), equipment = productionEquipmentSpec(layout.tier), half = p.stageWidth / 2, back = .65 - p.stageDepth, y = p.stageHeight;
     const black = matte('#11151d'), steel = metal('#58636e'), chrome = metal('#a4adb7'), trim = matte(p.accent);
     const deck = box(root, [p.stageWidth, y, p.stageDepth], [0, y / 2, .65 - p.stageDepth / 2], black);
     deck.name = 'stage-deck';
-    box(root, [p.stageWidth, .065, p.stageDepth], [0, y - .032, .65 - p.stageDepth / 2], wood);
+    const deckSurface = createStageDeckMaterial(p, wood);
+    box(root, [p.stageWidth, .065, p.stageDepth], [0, y - .032, .65 - p.stageDepth / 2], deckSurface);
     box(root, [p.stageWidth, .035, .05], [0, y + .01, .65], chrome);
     if (layout.wings)
         for (const side of [-1, 1]) {
@@ -88,12 +99,13 @@ export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Ma
                 box(root, [1.3, p.rigHeight - y, .5], [side * (half - .4), (p.rigHeight + y) / 2, back + 1], matte('#6b283f'));
     }
     else if (led) {
-        const material = new T.MeshStandardMaterial({ color: '#121f32', emissive: '#205273', emissiveIntensity: .7, roughness: .6 });
-        const wall = box(root, [p.stageWidth * .7, (p.rigHeight - y) * .65, .15], [0, y + (p.rigHeight - y) * .49, back + .3], material);
-        wall.name = 'stage-led-wall';
+        const width = p.stageWidth * .7, height = (p.rigHeight - y) * .65;
+        addVideoScreen(root, 'stage-led-wall', width, height,
+            [0, y + (p.rigHeight - y) * .49, back + .3], black, steel, p.accent);
         const strip = new T.MeshStandardMaterial({ color: '#52b6bf', emissive: '#308c9e', emissiveIntensity: 1.5 });
         for (let i = 0; i < 18; i++)
-            box(root, [p.stageWidth * .012, (p.rigHeight - y) * (.1 + Math.sin(i * .83) ** 2 * .35), .025], [(i - 8.5) * p.stageWidth * .036, y + (p.rigHeight - y) * .4, back + .39], strip);
+            box(root, [p.stageWidth * .012, (p.rigHeight - y) * (.1 + Math.sin(i * .83) ** 2 * .35), .025],
+                [(i - 8.5) * p.stageWidth * .036, y + (p.rigHeight - y) * .4, back + .535], strip);
     }
     else if (p.kind === 'concert_hall') {
         for (let i = 0; i < 9; i++) {
@@ -151,67 +163,69 @@ export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Ma
         banner.position.set(0, Math.min(p.rigHeight - 1, y + (p.rigHeight - y) * .77), back + .55);
         root.add(banner);
     }
-    // Backline amplifiers remain human-sized, even on a stadium deck.
+    // Scale real cabinets, not entire instrument/performer rigs. Touring shows
+    // have larger backline stacks and satellite guitar rigs at stage wings.
+    const backlineZ = back + p.stageDepth * (p.kind === 'tv_studio' ? .24 : .45);
     for (const side of [-1, 1]) {
-        const x = side * Math.min(half * (p.kind === 'tv_studio' ? .82 : .67), 6.2);
-        for (let row = 0; row < (layout.tier >= 2 ? 2 : 1); row++) {
-            const backlineDepth = back + p.stageDepth * (p.kind === 'tv_studio' ? .24 : .45);
-            box(root, [.88, .72, .48], [x, y + .38 + row * .77, backlineDepth], black);
-            box(root, [.8, .64, .018], [x, y + .38 + row * .77, backlineDepth + .25], grille);
-        }
-        box(root, [.8, .22, .42], [x, y + (layout.tier >= 2 ? 1.63 : .86), back + p.stageDepth * (p.kind === 'tv_studio' ? .24 : .45)], black);
+        const innerX = side * Math.min(half * (p.kind === 'tv_studio' ? .82 : .67), 6.2);
+        addAmplifierStack(root, 'backline-stack-inner-' + side, innerX, y, backlineZ,
+            equipment, black, grille, steel, chrome, makeLabel);
+        if (layout.tier >= 3)
+            addAmplifierStack(root, 'backline-stack-outer-' + side, side * p.stageWidth * .34, y, backlineZ,
+                equipment, black, grille, steel, chrome, makeLabel);
         if (layout.arrayBoxes === 0) {
-            const speaker = box(root, [.5, .76, .42], [side * (half - .3), y + 1.65, 0], black);
-            speaker.name = `portable-speaker-${side}`;
+            const speaker = box(root, [equipment.paWidth, .76, equipment.paDepth],
+                [side * (half - .3), y + 1.65, 0], black);
+            speaker.name = 'portable-speaker-' + side;
+            box(root, [equipment.paWidth - .06, .7, .02],
+                [side * (half - .3), y + 1.65, equipment.paDepth / 2 + .015], grille);
             rod(root, [side * (half - .3), y, 0], [side * (half - .3), y + 1.3, 0], .027, chrome);
+        } else {
+            const arrayX = side * (half + equipment.paWidth / 2 + .35);
+            rod(root, [arrayX, p.rigHeight + .04, .45], [arrayX, p.rigHeight - .45, .45], .037, steel);
+            for (let i = 0; i < layout.arrayBoxes; i++)
+                addLineArrayCabinet(root, 'line-array-' + side + '-' + i, arrayX,
+                    p.rigHeight - .55 - i * (equipment.paHeight + .045), .45, i,
+                    equipment, black, grille, steel);
         }
-        else
-            for (let i = 0; i < layout.arrayBoxes; i++) {
-                const speaker = box(root, [layout.tier >= 3 ? 1.3 : .66, .36, .58], [side * (half + .75), p.rigHeight - .55 - i * .37, .45], black);
-                speaker.rotation.x = -Math.max(0, i - layout.arrayBoxes * .45) * .035;
-                box(speaker, [layout.tier >= 3 ? 1.2 : .6, .3, .02], [0, 0, .3], grille);
-            }
     }
+    const subSpacing = equipment.subWidth + .2;
     for (let i = 0; i < layout.subs; i++) {
-        const x = (i - (layout.subs - 1) / 2) * 1.15;
-        if (layout.runway && Math.abs(x) < 2)
-            continue;
-        box(root, [1.03, .75, .8], [x, .4, 1.2], black);
-        box(root, [.96, .64, .02], [x, .4, 1.61], grille);
+        const x = (i - (layout.subs - 1) / 2) * subSpacing;
+        if (layout.runway && Math.abs(x) < 2) continue;
+        addSubwoofer(root, 'subwoofer-' + i, x, 1.2, equipment, black, grille, steel);
     }
     for (let i = 0; i < layout.monitors; i++) {
-        const spread = p.kind === 'tv_studio' ? Math.min(p.stageWidth * .9, 18) : Math.min(p.stageWidth * .8, 18);
+        const spread = Math.min(p.stageWidth * (p.kind === 'tv_studio' ? .9 : .8), 22);
         const x = (i / Math.max(1, layout.monitors - 1) - .5) * spread;
-        const m = box(root, [.8, .32, .55], [x, y + .2, -.2], black);
-        m.rotation.x = -.28;
-        box(m, [.7, .02, .42], [0, .17, 0], grille);
+        const monitorWidth = .8 + layout.tier * .09;
+        const monitor = box(root, [monitorWidth, .32 + layout.tier * .035, .55 + layout.tier * .04],
+            [x, y + .2, -.2], black);
+        monitor.rotation.x = -.28;
+        box(monitor, [monitorWidth - .09, .02, .4 + layout.tier * .04],
+            [0, .17 + layout.tier * .0175, 0], grille);
     }
-    // Side screens and delay towers distinguish a touring production from a club.
+    // Projection towers and crowd delay PA scale up with production capacity.
     if (layout.wings)
         for (const side of [-1, 1]) {
-            const x = side * (half + 3.2), screenHeight = layout.tier === 4 ? 6 : 4.2;
-            box(root, [4.5, screenHeight, .3], [x, y + screenHeight * .7, back + p.stageDepth * .6], black);
-            const screen = box(root, [4.25, screenHeight - .3, .04], [x, y + screenHeight * .7, back + p.stageDepth * .6 + .18], new T.MeshStandardMaterial({ color: '#253e56', emissive: '#357596', emissiveIntensity: .9 }));
-            screen.name = `stage-side-screen-${side}`;
+            const x = side * (half + 3.2), screenHeight = equipment.screenHeight;
+            addVideoScreen(root, 'stage-side-screen-' + side, equipment.screenWidth, screenHeight,
+                [x, y + screenHeight * .7, back + p.stageDepth * .6], black, steel, p.accent);
             for (const z of [p.crowdDepth * .43, ...(layout.tier === 4 ? [p.crowdDepth * .76] : [])]) {
                 const towerX = side * (p.crowdWidth * .45);
-                rod(root, [towerX, 0, z], [towerX, 7, z], .075, steel);
-                for (let i = 0; i < 4; i++)
-                    box(root, [.75, .38, .5], [towerX, 6.6 - i * .4, z], black);
+                const towerHeight = layout.tier === 4 ? 10 : 7;
+                rod(root, [towerX, 0, z], [towerX, towerHeight, z], .075, steel);
+                for (let i = 0; i < (layout.tier === 4 ? 6 : 4); i++)
+                    addLineArrayCabinet(root, 'delay-array-' + side + '-' + z + '-' + i,
+                        towerX, towerHeight - .45 - i * (equipment.paHeight + .025), z, i,
+                        equipment, black, grille, steel);
             }
         }
     // Fixture count grows from two portable lamps to 56 heads plus LED battens.
     const lensMaterial = new T.MeshStandardMaterial({ color: '#d8ecf7', emissive: '#5099b3', emissiveIntensity: 2.2 });
     lensMaterial.name = 'production-light-lens';
     for (const [i, pos] of stageLightPositions(p).entries()) {
-        const fixture = new T.Group();
-        fixture.position.set(...pos);
-        fixture.name = `production-light-${i}`;
-        root.add(fixture);
-        box(fixture, [.27, .15, .22], [0, .14, 0], black);
-        const head = cylinder(fixture, .12, .15, .28, [0, -.05, 0], black, 12);
-        head.rotation.x = .25;
-        cylinder(fixture, .1, .1, .025, [0, -.2, .04], lensMaterial, 12);
+        addMovingHead(root, 'production-light-' + i, pos, equipment.fixtureScale, black, steel, lensMaterial);
         if (layout.tier === 0)
             rod(root, [pos[0], 0, pos[2]], [pos[0], pos[1], pos[2]], .022, chrome);
     }
