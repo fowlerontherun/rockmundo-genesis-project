@@ -185,6 +185,27 @@ def audit_sculpt_fit(fitted: Mapping[str, FitBone]) -> list[str]:
         right_offset = midline - right_eye.head[0]
         if abs(left_offset - right_offset) > .025:
             errors.append("Eye left/right pivots differ in distance from the midline by more than 25mm.")
+    # Both eye guide bones must point forwards (-Y). An eye pivot may be in
+    # the right socket while its gaze vector is reversed or strongly skewed.
+    for side in ("L", "R"):
+        eye = fitted.get(f"Eye.{side}")
+        if eye:
+            gaze = tuple(eye.tail[i] - eye.head[i] for i in range(3))
+            length = dist(eye.head, eye.tail)
+            if gaze[1] >= -length * .7:
+                errors.append(f"Eye.{side} gaze must point forwards (-Y) within the guide tolerance.")
+    left_eye, right_eye = eyes
+    if left_eye and right_eye:
+        left_gaze = tuple(left_eye.tail[i] - left_eye.head[i] for i in range(3))
+        right_gaze = tuple(right_eye.tail[i] - right_eye.head[i] for i in range(3))
+        left_length = dist(left_eye.head, left_eye.tail)
+        right_length = dist(right_eye.head, right_eye.tail)
+        directions = (
+            tuple(value / left_length for value in left_gaze),
+            tuple(value / right_length for value in right_gaze),
+        )
+        if dist(*directions) > .35:
+            errors.append("Eye left/right gaze directions diverge; review both eye pivots.")
     jaw = fitted.get("Jaw")
     if jaw and abs(jaw.head[0] - midline) > .035:
         errors.append("Jaw hinge is more than 35mm from the body midline.")
