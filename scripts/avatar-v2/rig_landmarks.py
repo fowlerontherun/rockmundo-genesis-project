@@ -88,6 +88,13 @@ def stale_guide_markers(
     )
 
 
+def missing_edit_bones(
+    fitted_names: Sequence[str], available_names: Sequence[str],
+) -> list[str]:
+    """Preflight the complete Blender edit-bone inventory before any mutation."""
+    return sorted(set(fitted_names) - set(available_names))
+
+
 def untouched_face_markers(
     bones: Sequence[BoneSpec],
     placed: Mapping[str, Vec3],
