@@ -582,7 +582,7 @@ export function PublicFestivalEditionPage() {
 
   // Completed editions retain their immutable settlement results.
   if (!results.data && current.data?.editionId === resolved.editionId) {
-    return <PublicFestivalPage />;
+    return <PublicFestivalPage publicSlug={resolved.publicSlug} />;
   }
 
   return (
