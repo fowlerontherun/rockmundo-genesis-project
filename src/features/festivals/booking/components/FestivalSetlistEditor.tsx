@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { listBandFestivalSetlistPresets, loadBandFestivalSetlistPreset } from "../setlistPresets";
 import { toast } from "sonner";
@@ -53,11 +53,25 @@ export function FestivalSetlistEditorCanonical({
     current.items ?? [],
   );
   const [reason, setReason] = useState("");
+  const [dirty, setDirty] = useState(false);
+  const [savedDraftConfirmed, setSavedDraftConfirmed] = useState(false);
+  const currentSetlistId = current.id ?? null;
+  const currentSetlistVersion = current.version ?? 0;
+  useEffect(() => {
+    setItems(current.items ?? []);
+    setDirty(false);
+    setSavedDraftConfirmed(false);
+  }, [contract.id, currentSetlistId, currentSetlistVersion]);
+  const editItems = (next: FestivalSetlistItemInput[]) => {
+    editItems(next);
+    setDirty(true);
+    setSavedDraftConfirmed(false);
+  };
   const [selectedPreset, setSelectedPreset] = useState("");
   const [loadingPreset, setLoadingPreset] = useState(false);
   const presets = useQuery({
     queryKey: ["festival-setlist-presets", contract.band_id],
-    queryFn: () => listBandFestivalSetlistPresets(contract.band_id),
+    queryFn: () => listBandFestivalSetlistPresets(contract.band_id!),
     enabled: !organiser && Boolean(contract.band_id),
   });
   const repertoire = useFestivalContractRepertoire(contract.id);
@@ -77,10 +91,9 @@ export function FestivalSetlistEditorCanonical({
     "cancelled",
   ].includes(current.status);
   const preflightBlocked = preflight.data?.outcome === "blocked";
-  const canPersist = validation.valid && !preflightBlocked && !preflight.isError;
+  const canPersist = validation.valid && preflight.isSuccess && !preflight.isFetching && !preflightBlocked && !repertoire.isError && !repertoire.isLoading;
   const fp = JSON.stringify(items);
-  const savedFingerprint = JSON.stringify(current.items ?? []);
-  const hasUnsavedChanges = fp !== savedFingerprint;
+  const hasUnsavedChanges = dirty && !savedDraftConfirmed;
   const saveKey = useStableMutationIdempotencyKey(
     "save-setlist",
     contract.id,
@@ -112,7 +125,7 @@ export function FestivalSetlistEditorCanonical({
   };
 
   const remove = (index: number) =>
-    setItems(items.filter((_, itemIndex) => itemIndex !== index));
+    editItems(items.filter((_, itemIndex) => itemIndex !== index));
 
   return (
     <Card>
@@ -152,7 +165,7 @@ export function FestivalSetlistEditorCanonical({
               onClick={async () => {
                 setLoadingPreset(true);
                 try {
-                  const selected = await loadBandFestivalSetlistPreset(selectedPreset, contract.band_id);
+                  const selected = await loadBandFestivalSetlistPreset(selectedPreset, contract.band_id!);
                   const songs = repertoire.data ?? [];
                   const missing = selected.filter((item) => !songs.some((song) =>
                     song.songId === item.song_id && !song.unavailableReason));
@@ -160,7 +173,7 @@ export function FestivalSetlistEditorCanonical({
                     toast.error("This saved setlist contains songs unavailable for this festival contract.");
                     return;
                   }
-                  setItems(selected.map((item) => ({
+                  editItems(selected.map((item) => ({
                     ...item,
                     planned_duration_seconds: songs.find((song) => song.songId === item.song_id)?.durationSeconds ?? 180,
                   })));
@@ -197,7 +210,7 @@ export function FestivalSetlistEditorCanonical({
                     const song = (repertoire.data ?? []).find(
                       (candidate) => candidate.songId === songId,
                     );
-                    setItems(
+                    editItems(
                       items.map((it, i) =>
                         i === index
                           ? {
@@ -246,7 +259,7 @@ export function FestivalSetlistEditorCanonical({
                   min={1}
                   value={item.planned_duration_seconds}
                   onChange={(e) =>
-                    setItems(
+                    editItems(
                       items.map((it, i) =>
                         i === index
                           ? {
@@ -348,7 +361,7 @@ export function FestivalSetlistEditorCanonical({
             size="sm"
             disabled={repertoire.isLoading || repertoire.isError}
             onClick={() =>
-              setItems([
+              editItems([
                 ...items,
                 {
                   song_id: "",
@@ -428,6 +441,7 @@ export function FestivalSetlistEditorCanonical({
                   {
                     onSuccess: () => {
                       saveKey.markSucceeded();
+                      setSavedDraftConfirmed(true);
                       toast.success("Draft saved");
                     },
                     onError: (e) => toast.error(mapBookingError(e).message),
@@ -442,7 +456,7 @@ export function FestivalSetlistEditorCanonical({
           ["draft", "changes_requested"].includes(current.status) ? (
             <Button
               size="sm"
-              disabled={!canPersist || contract.status !== "active" || hasUnsavedChanges || submitSetlist.isPending || !current.id}
+              disabled={!canPersist || contract.status !== "active" || hasUnsavedChanges || saveDraft.isPending || submitSetlist.isPending || !current.id}
               onClick={() =>
                 submitSetlist.mutate(
                   {
