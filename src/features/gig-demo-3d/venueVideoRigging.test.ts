@@ -1,6 +1,6 @@
 // @vitest-environment node
 import * as T from 'three';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { disposeModel } from '@/features/player-model/model';
 import { buildVenueProduction, productionLayout } from './venueProduction';
 import { createVenueShowScreenTexture, venueScreenDimensions } from './venueProductionQuality';
@@ -76,6 +76,49 @@ describe('real-sized touring video column artwork', () => {
     expect(graphic.wrapS).toBe(T.ClampToEdgeWrapping);
     expect(graphic.wrapT).toBe(T.ClampToEdgeWrapping);
     graphic.dispose();
+  });
+});
+
+describe('browser-generated portrait stage artwork', () => {
+  it('actually paints the artist and deterministic venue-specific equalizer on a portrait canvas', () => {
+    const painted: number[][] = [], words: string[] = [], rotations: number[] = [];
+    const ctx = {
+      createLinearGradient: () => ({ addColorStop: () => undefined }),
+      fillRect: (...args: number[]) => { painted.push(args); },
+      strokeRect: () => undefined,
+      save: () => undefined,
+      restore: () => undefined,
+      translate: () => undefined,
+      rotate: (angle: number) => { rotations.push(angle); },
+      fillText: (word: string) => { words.push(word); },
+    };
+    const canvas = { width: 0, height: 0, getContext: () => ctx };
+    vi.stubGlobal('document', { createElement: () => canvas });
+    const textures: T.Texture[] = [];
+    try {
+      const a = resolveVenueProfile({ type: 'stadium', seed: 314 });
+      const b = resolveVenueProfile({ type: 'stadium', seed: 612 });
+      const one = painted.length;
+      textures.push(createVenueShowScreenTexture(a, 'Shockmaster', 4, 'portrait'));
+      const firstPattern = painted.slice(one);
+      const two = painted.length;
+      textures.push(createVenueShowScreenTexture(a, 'Shockmaster', 4, 'portrait'));
+      const replayPattern = painted.slice(two);
+      const three = painted.length;
+      textures.push(createVenueShowScreenTexture(b, 'Shockmaster', 4, 'portrait'));
+      const otherVenuePattern = painted.slice(three);
+      expect(textures.every(texture => texture instanceof T.CanvasTexture)).toBe(true);
+      expect(canvas).toMatchObject({ width: 256, height: 1408 });
+      expect(words).toContain('SHOCKMASTER');
+      expect(words).toContain('ROCKMUNDO');
+      expect(rotations).toEqual([-Math.PI / 2, -Math.PI / 2, -Math.PI / 2]);
+      expect(firstPattern.length).toBeGreaterThanOrEqual(25);
+      expect(firstPattern).toEqual(replayPattern);
+      expect(firstPattern).not.toEqual(otherVenuePattern);
+    } finally {
+      textures.forEach(texture => texture.dispose());
+      vi.unstubAllGlobals();
+    }
   });
 });
 
