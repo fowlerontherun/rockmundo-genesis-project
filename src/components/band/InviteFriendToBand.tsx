@@ -240,21 +240,23 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
     }
   };
 
+  const handleDialogOpenChange = (next: boolean) => {
+    if (!next && (submitting || !!cancellingId)) return;
+    setOpen(next);
+    if (!next) {
+      setPlayerQuery('');
+      setSelectedPlayer('');
+      setSelectedPlayerLabel('');
+    }
+  };
+
   return (
     <>
       <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)} aria-haspopup="dialog" aria-expanded={open}>
         <UserPlus className="h-4 w-4 mr-2" /> Invite Player
       </Button>
 
-      <Dialog open={open} onOpenChange={(next) => {
-        if (!next && (submitting || !!cancellingId)) return;
-        setOpen(next);
-        if (!next) {
-          setPlayerQuery('');
-          setSelectedPlayer('');
-          setSelectedPlayerLabel('');
-        }
-      }}>
+      <Dialog open={open} onOpenChange={handleDialogOpenChange}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Invite a player to {bandName}</DialogTitle>
@@ -393,7 +395,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
             </div>
           )}
 
-          <div className="flex justify-end"><Button variant="outline" aria-label="Close invitation dialog" onClick={() => setOpen(false)} disabled={submitting || !!cancellingId}>Close</Button></div>
+          <div className="flex justify-end"><Button variant="outline" aria-label="Close invitation dialog" onClick={() => handleDialogOpenChange(false)} disabled={submitting || !!cancellingId}>Close</Button></div>
         </DialogContent>
       </Dialog>
     </>
