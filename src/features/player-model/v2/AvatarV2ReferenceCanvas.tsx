@@ -25,6 +25,10 @@ export function AvatarV2ReferenceCanvas({
   experimentalRig?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const previewModel = useRef<T.Object3D | null>(null);
+  const redraw = useRef<(() => void) | null>(null);
+  const proportions = useRef({ height: appearance?.body.height ?? 1, build: appearance?.body.build ?? 1 });
+  proportions.current = { height: appearance?.body.height ?? 1, build: appearance?.body.build ?? 1 };
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [error, setError] = useState('');
 
@@ -64,6 +68,7 @@ export function AvatarV2ReferenceCanvas({
     const requestDraw = () => {
       if (active && !queuedFrame) queuedFrame = requestAnimationFrame(draw);
     };
+    redraw.current = requestDraw;
     setStatus('loading');
     setError('');
 
@@ -117,11 +122,10 @@ export function AvatarV2ReferenceCanvas({
         // Creator body proportions are a reversible preview transform only.
         // Unfitted source meshes cannot yet support safe garment, hair or
         // accessory attachment, and these edits are never saved as V2 assets.
-        if (appearance) {
-          source.scale.x *= appearance.body.build;
-          source.scale.z *= appearance.body.build;
-          source.scale.y *= appearance.body.height;
-        }
+        source.scale.x *= proportions.current.build;
+        source.scale.z *= proportions.current.build;
+        source.scale.y *= proportions.current.height;
+        previewModel.current = source;
         candidate = source;
         scene.add(source);
         setStatus('ready');
@@ -138,6 +142,8 @@ export function AvatarV2ReferenceCanvas({
 
     return () => {
       active = false;
+      previewModel.current = null;
+      redraw.current = null;
       cancelAnimationFrame(queuedFrame);
       resizeObserver?.disconnect();
       controls?.dispose();
@@ -150,7 +156,20 @@ export function AvatarV2ReferenceCanvas({
       renderer?.dispose();
       renderer?.forceContextLoss();
     };
-  }, [url, focus, appearance?.body.build, appearance?.body.height]);
+  }, [url, focus]);
+
+  // Creator sliders should update the loaded mesh without fetching the GLB,
+  // resetting the orbit camera or destroying the WebGL context on every drag.
+  useEffect(() => {
+    const model = previewModel.current;
+    if (!model) return;
+    const bounds = new T.Box3().setFromObject(model);
+    const baseline = model.scale.y / proportions.current.height;
+    model.scale.set(baseline * proportions.current.build, baseline * proportions.current.height, baseline * proportions.current.build);
+    model.updateMatrixWorld(true);
+    model.position.y -= new T.Box3().setFromObject(model).min.y;
+    redraw.current?.();
+  }, [appearance?.body.build, appearance?.body.height]);
 
   return (
     <div className="avatar-v2-public__canvas-wrap">
