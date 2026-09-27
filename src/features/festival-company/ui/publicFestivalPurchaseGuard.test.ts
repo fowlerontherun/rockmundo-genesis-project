@@ -13,7 +13,9 @@ describe("public festival purchase controls", () => {
   });
 
   it("shows purchase success or failure only beside the selected ticket type", () => {
+    expect(page).toContain("buy.reset();");
     expect(page).toContain("setActivePurchaseProductId(p.id)");
+    expect(page).toContain("buy.isPending && activePurchaseProductId === p.id");
     expect(page).toContain("buy.isError && activePurchaseProductId === p.id");
     expect(page).toContain("buy.isSuccess && activePurchaseProductId === p.id");
   });
