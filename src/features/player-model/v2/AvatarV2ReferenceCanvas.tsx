@@ -27,6 +27,7 @@ export function AvatarV2ReferenceCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const previewModel = useRef<T.Object3D | null>(null);
   const referenceScale = useRef(1);
+  const originalSkinMaterials = useRef<Array<{ material: T.MeshStandardMaterial; color: T.Color }>>([]);
   const redraw = useRef<(() => void) | null>(null);
   const proportions = useRef({ height: appearance?.body.height ?? 1, build: appearance?.body.build ?? 1 });
   proportions.current = { height: appearance?.body.height ?? 1, build: appearance?.body.build ?? 1 };
@@ -129,6 +130,25 @@ export function AvatarV2ReferenceCanvas({
         source.scale.y *= proportions.current.height;
         source.updateMatrixWorld(true);
         source.position.y -= new T.Box3().setFromObject(source).min.y;
+        // Only recolour materials explicitly identified as skin by the
+        // Blender export. Do not tint eyes, clothes or unidentified meshes.
+        originalSkinMaterials.current = [];
+        source.traverse(object => {
+          if (!(object instanceof T.Mesh)) return;
+          for (const material of (Array.isArray(object.material) ? object.material : [object.material])) {
+            if (!(material instanceof T.MeshStandardMaterial) ||
+                !/^(skin|body[ _-]?skin)(?:[ _.-]|$)/i.test(material.name)) continue;
+            // Clone to avoid modifying a shared GLTF material outside preview.
+            const clone = material.clone();
+            if (Array.isArray(object.material)) {
+              object.material = object.material.map(entry => entry === material ? clone : entry);
+            } else object.material = clone;
+            originalSkinMaterials.current.push({ material: clone, color: clone.color.clone() });
+          }
+        });
+        if (appearance?.body.skin) {
+          for (const entry of originalSkinMaterials.current) entry.material.color.set(appearance.body.skin);
+        }
         previewModel.current = source;
         candidate = source;
         scene.add(source);
@@ -147,6 +167,7 @@ export function AvatarV2ReferenceCanvas({
     return () => {
       active = false;
       previewModel.current = null;
+      originalSkinMaterials.current = [];
       redraw.current = null;
       cancelAnimationFrame(queuedFrame);
       resizeObserver?.disconnect();
@@ -175,6 +196,13 @@ export function AvatarV2ReferenceCanvas({
     model.position.y -= new T.Box3().setFromObject(model).min.y;
     redraw.current?.();
   }, [appearance?.body.build, appearance?.body.height]);
+
+  useEffect(() => {
+    for (const entry of originalSkinMaterials.current) {
+      entry.material.color.copy(appearance?.body.skin ? new T.Color(appearance.body.skin) : entry.color);
+    }
+    redraw.current?.();
+  }, [appearance?.body.skin]);
 
   return (
     <div className="avatar-v2-public__canvas-wrap">
