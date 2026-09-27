@@ -112,20 +112,7 @@ export default function PublicFestivalPage() {
     (ticket) => ticket.productClass === "admission" && !["cancelled", "refunded", "transferred"].includes(ticket.status),
   );
 
-  // A present (even empty) confirmed lineup is authoritative. The legacy timetable
-  // is only a compatibility fallback for older deployments without the lineup field.
-  const confirmedLineup = f.lineup ?? f.timetable.map((entry) => ({
-    id: entry.id,
-    artistName: entry.artistName,
-    artistType: entry.artistType,
-    genre: entry.genre,
-    billingPosition: entry.headline ? "headliner" : "support",
-    festivalDate: entry.festivalDate,
-    stageName: null,
-    startsAt: null,
-    endsAt: null,
-  }));
-  const publishedPerformances = confirmedLineup.filter(
+  // The simplified timetable contains automatically generated provisional slots.\n  // Only the authoritative confirmed lineup may be advertised publicly.\n  const confirmedLineup = f.lineup ?? [];\n  const publishedPerformances = confirmedLineup.filter(
     (entry) => entry.startsAt && entry.endsAt && entry.stageName,
   );
   const dayLabel = (festivalDate: string | null) => festivalDate
