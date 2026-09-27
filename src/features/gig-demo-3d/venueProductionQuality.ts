@@ -105,7 +105,7 @@ export function lineArrayCabinetPose(index: number, spec: ProductionEquipmentSpe
   const cabinet = Number.isFinite(index) ? Math.max(0, Math.floor(index)) : 0;
   const spacing = Number.isFinite(gap) ? Math.max(0, gap) : .045;
   const tilt = cabinet * .018;
-  const forwardOffset = (spec.paHeight + spacing) * .018 * cabinet * (cabinet - 1) / 2;
+  const forwardOffset = cabinet < 2 ? 0 : (spec.paHeight + spacing) * .018 * cabinet * (cabinet - 1) / 2;
   return { tilt, forwardOffset };
 }
 
