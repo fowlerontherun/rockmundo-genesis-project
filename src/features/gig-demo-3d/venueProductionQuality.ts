@@ -1,0 +1,217 @@
+import * as T from 'three';
+import woodFloorUrl from '@/assets/textures/floors/stage-floor-wood.png';
+import metalFloorUrl from '@/assets/textures/floors/stage-floor-metal.png';
+import rubberFloorUrl from '@/assets/textures/floors/stage-floor-rubber.png';
+import concreteFloorUrl from '@/assets/textures/floors/stage-floor-concrete.png';
+import ledPanelUrl from '@/assets/textures/venue/stage-backdrop-led.png';
+import { box, cylinder, rod } from './stage';
+import type { VenueProfile } from './venueProfile';
+
+/** Metres, not a multiplier on the entire venue mesh. Equipment grows in both
+ * cabinet size and number: a stadium uses a concert PA, not stretched pub boxes. */
+export interface ProductionEquipmentSpec {
+  readonly ampWidth: number;
+  readonly ampHeight: number;
+  readonly ampDepth: number;
+  readonly ampColumns: number;
+  readonly ampRows: number;
+  readonly paWidth: number;
+  readonly paHeight: number;
+  readonly paDepth: number;
+  readonly subWidth: number;
+  readonly subHeight: number;
+  readonly subDepth: number;
+  readonly screenWidth: number;
+  readonly screenHeight: number;
+  readonly fixtureScale: number;
+}
+const TIERS: readonly ProductionEquipmentSpec[] = [
+  { ampWidth: .66, ampHeight: .55, ampDepth: .42, ampColumns: 1, ampRows: 1, paWidth: .5, paHeight: .35, paDepth: .43, subWidth: .84, subHeight: .6, subDepth: .65, screenWidth: 0, screenHeight: 0, fixtureScale: .8 },
+  { ampWidth: .9, ampHeight: .72, ampDepth: .48, ampColumns: 1, ampRows: 1, paWidth: .66, paHeight: .39, paDepth: .54, subWidth: 1.05, subHeight: .75, subDepth: .8, screenWidth: 0, screenHeight: 0, fixtureScale: 1 },
+  { ampWidth: 1.12, ampHeight: .82, ampDepth: .57, ampColumns: 1, ampRows: 2, paWidth: .92, paHeight: .43, paDepth: .68, subWidth: 1.25, subHeight: .86, subDepth: .98, screenWidth: 0, screenHeight: 0, fixtureScale: 1.18 },
+  { ampWidth: 1.27, ampHeight: .89, ampDepth: .66, ampColumns: 2, ampRows: 2, paWidth: 1.3, paHeight: .49, paDepth: .8, subWidth: 1.52, subHeight: 1.02, subDepth: 1.15, screenWidth: 4.6, screenHeight: 4.5, fixtureScale: 1.47 },
+  { ampWidth: 1.46, ampHeight: .96, ampDepth: .73, ampColumns: 2, ampRows: 2, paWidth: 1.62, paHeight: .56, paDepth: .94, subWidth: 1.77, subHeight: 1.16, subDepth: 1.35, screenWidth: 7, screenHeight: 7.4, fixtureScale: 1.8 },
+];
+
+/** Tier comes from the actual venue capacity; all visual dimensions are deterministic. */
+export function productionEquipmentSpec(tier: number): ProductionEquipmentSpec {
+  return TIERS[Math.min(TIERS.length - 1, Math.max(0, Math.floor(Number.isFinite(tier) ? tier : 0)))];
+}
+
+function tiledTexture(url: string, width: number, depth: number, color: boolean) {
+  const map = new T.TextureLoader().load(url);
+  map.wrapS = map.wrapT = T.RepeatWrapping;
+  map.repeat.set(Math.max(1, width / 2.4), Math.max(1, depth / 2.4));
+  map.colorSpace = color ? T.SRGBColorSpace : T.NoColorSpace;
+  map.anisotropy = 4;
+  return map;
+}
+
+/** Distinct stage-floor surfaces with physically sized tiling and bump detail. */
+export function createStageDeckMaterial(p: VenueProfile, fallbackWood: T.Material): T.Material {
+  if (['cafe_stage', 'jazz_lounge', 'church_hall', 'concert_hall', 'theatre', 'park_bandstand'].includes(p.kind))
+    return fallbackWood;
+  const concrete = ['street_corner', 'city_square', 'warehouse'].includes(p.kind);
+  const metal = ['indoor_arena', 'ice_arena', 'stadium', 'festival_stage', 'live_house'].includes(p.kind);
+  const url = concrete ? concreteFloorUrl : metal ? metalFloorUrl : rubberFloorUrl;
+  const surface = new T.MeshStandardMaterial({
+    name: 'venue-stage-floor-' + (concrete ? 'concrete' : metal ? 'metal' : 'rubber'),
+    map: tiledTexture(url, p.stageWidth, p.stageDepth, true),
+    bumpMap: tiledTexture(url, p.stageWidth, p.stageDepth, false),
+    bumpScale: concrete ? .025 : metal ? .012 : .018,
+    roughness: metal ? .62 : .83,
+    metalness: metal ? .32 : 0,
+  });
+  surface.userData.venueSurfaceRole = 'stage-deck';
+  surface.userData.venueKind = p.kind;
+  return surface;
+}
+
+function speakerFront(parent: T.Object3D, width: number, height: number, depth: number, grille: T.Material, steel: T.Material) {
+  box(parent, [width - .075, height - .075, .023], [0, 0, depth / 2 + .014], grille);
+  for (const side of [-1, 1]) {
+    box(parent, [.025, height - .045, .04], [side * (width / 2 - .025), 0, depth / 2 + .03], steel);
+  }
+  box(parent, [width - .045, .022, .04], [0, height / 2 - .023, depth / 2 + .03], steel);
+  box(parent, [width - .045, .022, .04], [0, -height / 2 + .023, depth / 2 + .03], steel);
+}
+
+/** Stack dimensions and cabinet grids are visible even from the venue-wide shot. */
+export function addAmplifierStack(
+  parent: T.Object3D,
+  name: string,
+  x: number,
+  baseY: number,
+  z: number,
+  spec: ProductionEquipmentSpec,
+  shell: T.Material,
+  grille: T.Material,
+  steel: T.Material,
+  chrome: T.Material,
+  makeLabel: (text: string, w: number, h: number) => T.Mesh,
+) {
+  const root = new T.Group();
+  root.name = name;
+  root.position.set(x, baseY, z);
+  parent.add(root);
+  const gap = .045;
+  for (let row = 0; row < spec.ampRows; row++)
+    for (let col = 0; col < spec.ampColumns; col++) {
+      const cabinet = new T.Group();
+      cabinet.position.set((col - (spec.ampColumns - 1) / 2) * (spec.ampWidth + gap), row * (spec.ampHeight + gap) + spec.ampHeight / 2, 0);
+      root.add(cabinet);
+      box(cabinet, [spec.ampWidth, spec.ampHeight, spec.ampDepth], [0, 0, 0], shell);
+      speakerFront(cabinet, spec.ampWidth, spec.ampHeight, spec.ampDepth, grille, steel);
+      for (const side of [-1, 1]) {
+        box(cabinet, [.15, .035, .035], [side * (spec.ampWidth / 2 - .015), .1, 0], chrome);
+        for (const vertical of [-1, 1])
+          box(cabinet, [.058, .065, .11], [side * (spec.ampWidth / 2 - .03), vertical * (spec.ampHeight / 2 - .032), spec.ampDepth / 2 - .04], steel);
+      }
+    }
+  const totalWidth = spec.ampColumns * spec.ampWidth + (spec.ampColumns - 1) * gap;
+  const top = spec.ampRows * spec.ampHeight + (spec.ampRows - 1) * gap;
+  const headHeight = .22 + spec.ampWidth * .055;
+  box(root, [totalWidth, headHeight, spec.ampDepth * .88], [0, top + headHeight / 2 + .045, 0], shell);
+  box(root, [totalWidth - .12, headHeight * .5, .025], [0, top + headHeight / 2 + .045, spec.ampDepth * .44 + .02], steel);
+  const logo = makeLabel('VOLTAGE', Math.min(totalWidth * .5, .88), .15);
+  logo.name = name + '-badge';
+  logo.position.set(-totalWidth * .12, top + headHeight / 2 + .048, spec.ampDepth * .44 + .046);
+  root.add(logo);
+  for (let i = 0; i < 4; i++) {
+    const knob = cylinder(root, .018, .018, .028, [totalWidth * .16 + i * .07, top + headHeight / 2 + .045, spec.ampDepth * .44 + .055], chrome, 8);
+    knob.rotation.x = Math.PI / 2;
+  }
+  root.userData.cabinets = spec.ampRows * spec.ampColumns;
+  return root;
+}
+
+export function addLineArrayCabinet(
+  parent: T.Object3D, name: string, x: number, y: number, z: number, index: number,
+  spec: ProductionEquipmentSpec, shell: T.Material, grille: T.Material, steel: T.Material,
+) {
+  const root = new T.Group();
+  root.name = name;
+  root.position.set(x, y, z);
+  root.rotation.x = -index * .018;
+  parent.add(root);
+  box(root, [spec.paWidth, spec.paHeight, spec.paDepth], [0, 0, 0], shell);
+  speakerFront(root, spec.paWidth, spec.paHeight, spec.paDepth, grille, steel);
+  for (const side of [-1, 1]) {
+    const xSide = side * (spec.paWidth / 2 + .025);
+    box(root, [.05, spec.paHeight * .73, spec.paDepth * .55], [xSide, 0, 0], steel);
+    box(root, [.05, .04, .12], [xSide, spec.paHeight * .24, -.1], steel);
+  }
+  return root;
+}
+
+export function addSubwoofer(
+  parent: T.Object3D, name: string, x: number, z: number, spec: ProductionEquipmentSpec,
+  shell: T.Material, grille: T.Material, steel: T.Material,
+) {
+  const root = new T.Group();
+  root.name = name;
+  root.position.set(x, spec.subHeight / 2, z);
+  parent.add(root);
+  box(root, [spec.subWidth, spec.subHeight, spec.subDepth], [0, 0, 0], shell);
+  speakerFront(root, spec.subWidth, spec.subHeight, spec.subDepth, grille, steel);
+  for (const side of [-1, 1])
+    box(root, [.12, .055, .22], [side * (spec.subWidth / 2 + .005), spec.subHeight * .17, 0], steel);
+  return root;
+}
+
+function ledTexture() {
+  const map = new T.TextureLoader().load(ledPanelUrl);
+  map.colorSpace = T.SRGBColorSpace;
+  map.wrapS = map.wrapT = T.RepeatWrapping;
+  map.repeat.set(3, 2);
+  map.anisotropy = 4;
+  return map;
+}
+
+export function addVideoScreen(
+  parent: T.Object3D, name: string, width: number, height: number, pos: readonly [number, number, number],
+  frame: T.Material, trim: T.Material, accent: string,
+) {
+  const root = new T.Group();
+  root.name = name;
+  root.position.set(...pos);
+  parent.add(root);
+  box(root, [width + .24, height + .24, .32], [0, 0, 0], frame);
+  const pixels = new T.MeshStandardMaterial({
+    color: '#91b9d3', map: ledTexture(), emissive: accent, emissiveMap: ledTexture(),
+    emissiveIntensity: 1.1, roughness: .38, metalness: .12,
+  });
+  const face = box(root, [width, height, .045], [0, 0, .185], pixels);
+  face.name = name + '-display';
+  // Individual LED modules are delineated without hundreds of separate screen meshes.
+  const cols = Math.max(2, Math.ceil(width / 1.4)), rows = Math.max(2, Math.ceil(height / 1.2));
+  for (let i = 1; i < cols; i++)
+    box(root, [.012, height, .02], [-width / 2 + i * width / cols, 0, .216], trim);
+  for (let i = 1; i < rows; i++)
+    box(root, [width, .012, .02], [0, -height / 2 + i * height / rows, .216], trim);
+  for (const side of [-1, 1])
+    box(root, [.05, height + .32, .4], [side * (width / 2 + .14), 0, 0], trim);
+  root.userData.displaySize = [width, height];
+  return root;
+}
+
+export function addMovingHead(
+  parent: T.Object3D, name: string, pos: [number, number, number], scale: number,
+  shell: T.Material, steel: T.Material, lens: T.Material,
+) {
+  const root = new T.Group();
+  root.name = name;
+  root.position.set(...pos);
+  parent.add(root);
+  box(root, [.28 * scale, .12 * scale, .25 * scale], [0, .14 * scale, 0], shell);
+  for (const side of [-1, 1])
+    rod(root, [side * .12 * scale, .14 * scale, 0], [side * .12 * scale, -.11 * scale, 0], .018 * scale, steel);
+  const head = cylinder(root, .125 * scale, .15 * scale, .29 * scale, [0, -.08 * scale, 0], shell, 16);
+  head.rotation.x = .28;
+  cylinder(root, .09 * scale, .09 * scale, .025 * scale, [0, -.245 * scale, .05 * scale], lens, 16);
+  const bezel = new T.Mesh(new T.TorusGeometry(.095 * scale, .018 * scale, 5, 16), steel);
+  bezel.position.set(0, -.258 * scale, .056 * scale);
+  bezel.rotation.x = Math.PI / 2;
+  root.add(bezel);
+  return root;
+}
