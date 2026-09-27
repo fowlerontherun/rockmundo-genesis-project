@@ -33,6 +33,15 @@ describe("pre-event Festival owner and directory sales preview", () => {
     expect(hooks).toContain("refetchInterval:60_000");
   });
 
+  it("separates actual player purchases from demand and refreshes the owner breakdown", () => {
+    expect(owner).toContain("Real player purchases");
+    expect(owner).toContain("Unique players");
+    expect(owner).toContain("Sales by ticket type");
+    expect(owner).toContain("Forecast attendance and future simulated sales are not included.");
+    expect(owner).toContain("useFestivalPlayerTicketSalesBreakdown");
+    expect(hooks).toContain('c.invalidateQueries({queryKey:["festival-player-sales-breakdown"]})');
+  });
+
   it("marks a festival sold out when admissions sell out even if upgrades remain", () => {
     expect(directory).toContain("festival.ticketSales.admissionTicketAllocation > 0");
     expect(directory).toContain("festival.ticketSales.admissionTicketsAvailable === 0");
