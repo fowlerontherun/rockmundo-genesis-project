@@ -117,7 +117,7 @@ describe('capacity-driven stage production detail', () => {
     });
 
     it('uses a tiled textured steel stage and visibly larger stadium video screens than a mid-size show', () => {
-        const studio = resolveVenueProfile({ type: 'rock_club', capacity: 2500 });
+        const studio = resolveVenueProfile({ type: 'live_house', capacity: 2500 });
         const stadium = resolveVenueProfile({ type: 'stadium', capacity: 65000 });
         const smallScene = new T.Scene(), largeScene = new T.Scene();
         const wood = new T.MeshStandardMaterial(), grille = new T.MeshStandardMaterial();
