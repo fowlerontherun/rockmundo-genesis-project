@@ -31,6 +31,7 @@ import { BandEarnings } from "@/components/band/BandEarnings";
 import { BandFinancesTab } from "@/components/bands/BandFinancesTab";
 import { BandRosterTab } from "@/components/bands/BandRosterTab";
 import { InviteFriendToBand } from "@/components/band/InviteFriendToBand";
+import { canShowBandInvite } from "@/services/bandInviteEligibility";
 import { BandSettingsTab } from "@/components/band/BandSettingsTab";
 import { BandStatusBanner } from "@/components/band/BandStatusBanner";
 import { BandApplicationsList } from "@/components/band/BandApplicationsList";
@@ -324,11 +325,18 @@ export default function BandManager() {
     (userId && currentMembership?.bands?.leader_id === userId),
   );
 
+  const canInviteMembers = canShowBandInvite({
+    isLeader,
+    role: currentMembership?.role,
+    bandStatus: selectedBand.status,
+    isSoloArtist: !!selectedBand.is_solo_artist,
+  });
+
   const bandTitle = selectedBand.is_solo_artist
     ? selectedBand.artist_name || selectedBand.name
     : selectedBand.name;
   const hubActions = [
-    ...(!selectedBand.is_solo_artist ? [{
+    ...(canInviteMembers ? [{
       label: "Invite member",
       path: "/band/members",
       icon: Plus,
@@ -455,20 +463,23 @@ export default function BandManager() {
                     {members.length} of {selectedBand.max_members} members
                   </CardDescription>
                 </div>
-                {isLeader && selectedBand.status === "active" && (
-                  <div className="flex gap-2">
-                    {!selectedBand.is_solo_artist && (
+                {(canInviteMembers || (isLeader && selectedBand.status === "active")) && (
+                  <div className="flex flex-wrap gap-2">
+                    {canInviteMembers && (
                       <InviteFriendToBand
+                        key={selectedBand.id}
                         bandId={selectedBand.id}
                         bandName={selectedBand.name}
                         currentUserId={profileId!}
                         currentAccountId={userId}
                       />
                     )}
-                    <AddTouringMember
-                      bandId={selectedBand.id}
-                      onAdded={() => loadBandMembers(selectedBand.id)}
-                    />
+                    {isLeader && selectedBand.status === "active" && (
+                      <AddTouringMember
+                        bandId={selectedBand.id}
+                        onAdded={() => loadBandMembers(selectedBand.id)}
+                      />
+                    )}
                   </div>
                 )}
               </div>
