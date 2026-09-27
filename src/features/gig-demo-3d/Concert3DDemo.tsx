@@ -250,7 +250,7 @@ export default function Concert3DDemo() {
       </div>
     </section>
 
-    <footer className="concert-demo__footer"><p>Four-piece band · 21 venue settings · five camera views · {songs.length.toLocaleString()} songs · {crowdSounds.length.toLocaleString()} crowd sounds <span>Local preview. No game records are changed.</span></p><button aria-pressed={showStats} onClick={() => setShowStats(value => !value)}><SlidersHorizontal size={14} /> Performance stats</button></footer>
+    <footer className="concert-demo__footer"><p>Four-piece band · 21 venue settings · {SHOTS.length} camera views · {songs.length.toLocaleString()} songs · {crowdSounds.length.toLocaleString()} crowd sounds <span>Local preview. No game records are changed.</span></p><button aria-pressed={showStats} onClick={() => setShowStats(value => !value)}><SlidersHorizontal size={14} /> Performance stats</button></footer>
     {message && state !== 'error' && <p className="concert-demo__notice" role="status">{message}</p>}
   </main>;
 }
