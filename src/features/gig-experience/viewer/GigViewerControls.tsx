@@ -72,7 +72,7 @@ export function GigViewerControls({ performancePreference = "auto", onPerformanc
 
 function CameraModeControls({ value, onChange, compact = false }: { value: GigViewerCameraMode; onChange: (mode: GigViewerCameraMode) => void; compact?: boolean }) {
   return (
-    <div className="flex shrink-0 rounded-md border p-1" role="group" aria-label="Camera mode">
+    <div className="flex max-w-full shrink-0 overflow-x-auto rounded-md border p-1" role="group" aria-label="Camera mode">
       {(Object.keys(CAMERA_LABELS) as GigViewerCameraMode[]).map((mode) => (
         <Button
           key={mode}
