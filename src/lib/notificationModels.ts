@@ -162,7 +162,11 @@ export function getNotificationRoute(notification: PersistedNotification): strin
   const hasApplication = Boolean(getString(metadata.band_application_id));
   const hasInvitation = Boolean(getString(metadata.band_invitation_id));
   const isRehearsal = notification.type === "rehearsal_outcome" || notification.category === "rehearsal" || Boolean(getString(metadata.rehearsal_id));
-  if (notification.type === "band_request" && bandId) return hasApplication ? `/bands/${bandId}` : hasInvitation ? "/band-manager" : `/bands/${bandId}`;
+  // All invitation notifications (including older /band-manager links) land on
+  // the actual Band Members route, even when the recipient has no band yet.
+  if (hasInvitation || notification.type === "band_invite") return "/band/members";
+  if (notification.type === "band_request" && bandId) return `/bands/${bandId}`;
+  if (notification.action_path === "/band-manager" && !hasApplication) return "/band/members";
   if (notification.action_path?.includes("?tab=applications") && bandId) return `/bands/${bandId}`;
   if ((notification.type === "pr_outcome" || notification.category === "pr") && !notification.action_path) return "/pr";
   if ((notification.type === "practice_outcome" || notification.category === "practice") && !notification.action_path) return "/skills";
