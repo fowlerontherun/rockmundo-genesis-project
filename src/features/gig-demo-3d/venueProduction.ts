@@ -241,16 +241,23 @@ export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Ma
             }
         }
     // Fixture count grows from two portable lamps to 56 heads plus LED battens.
-    const lensMaterial = new T.MeshStandardMaterial({ color: '#d8ecf7', emissive: '#5099b3', emissiveIntensity: 2.2 });
-    lensMaterial.name = 'production-light-lens';
+    // Three shared optic materials give the actual rig alternating color zones
+    // without allocating a new shader and draw call for every moving head.
+    const lens = {
+        left: new T.MeshStandardMaterial({ name: 'production-light-lens-left', color: '#d8ecf7', emissive: '#5099b3', emissiveIntensity: 2.2 }),
+        right: new T.MeshStandardMaterial({ name: 'production-light-lens-right', color: '#d8ecf7', emissive: '#b34b74', emissiveIntensity: 2.2 }),
+        key: new T.MeshStandardMaterial({ name: 'production-light-lens-key', color: '#f9efe1', emissive: '#cba97f', emissiveIntensity: 2.2 }),
+    };
     for (const [i, pos] of stageLightPositions(p).entries()) {
-        addMovingHead(root, 'production-light-' + i, pos, equipment.fixtureScale, black, steel, lensMaterial);
+        const row = Math.floor(i / layout.columns);
+        const bank = row === 0 ? lens.key : i % 2 === 0 ? lens.left : lens.right;
+        addMovingHead(root, 'production-light-' + i, pos, equipment.fixtureScale, black, steel, bank);
         if (layout.tier === 0)
             rod(root, [pos[0], 0, pos[2]], [pos[0], pos[1], pos[2]], .022, chrome);
     }
     if (layout.tier >= 3)
         for (let i = 0; i < Math.floor(p.stageWidth / 1.4); i++)
-            box(root, [.9, .045, .08], [(i - (Math.floor(p.stageWidth / 1.4) - 1) / 2) * 1.4, y + .05, .51], lensMaterial);
+            box(root, [.9, .045, .08], [(i - (Math.floor(p.stageWidth / 1.4) - 1) / 2) * 1.4, y + .05, .51], i % 2 === 0 ? lens.left : lens.right);
     // Signature stage architecture is shared by live gigs, replays and venue previews.
     buildVenueShowIdentity(root, p, layout.tier);
     batchStaticMeshes(root);
