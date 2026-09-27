@@ -492,14 +492,21 @@ export class Musician {
                     : 0;
                 const crash = Math.max(transitionCrash, releaseCrash);
                 if (crash > .02) {
-                    const sticks = rig.tools.filter(tool => tool.name.startsWith('playing-stick'));
-                    const targets = [new T.Vector3(.7, 1.46, 1), new T.Vector3(-.75, 1.3, .65)];
-                    [rig.left, rig.right].forEach((grip, index) => {
-                        const target = targets[index];
+                    // Match strike targets by hand side, never by tools-array order:
+                    // a missing/reordered stick must not make the surviving stick
+                    // jump to the opposite hand's cymbal on a chorus crash.
+                    const targets = {
+                        L: new T.Vector3(.7, 1.46, 1),
+                        R: new T.Vector3(-.75, 1.3, .65),
+                    };
+                    for (const side of ['L', 'R'] as const) {
+                        const target = targets[side];
+                        const grip = side === 'L' ? rig.left : rig.right;
                         grip.position.set(target.x * .72, target.y + .16 * crash, target.z - .37);
-                        const stick = sticks[index];
+                        const stick = rig.tools.find(tool => tool.name === `playing-stick-${side.toLowerCase()}`
+                            && tool.userData.handSide === side);
                         if (stick) stick.userData.strikeTarget = target;
-                    });
+                    }
                 }
             }
             if (rig.family === 'voice' && this.mouth) {
