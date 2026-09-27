@@ -26,6 +26,7 @@ export function AvatarV2ReferenceCanvas({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const previewModel = useRef<T.Object3D | null>(null);
+  const referenceScale = useRef(1);
   const redraw = useRef<(() => void) | null>(null);
   const proportions = useRef({ height: appearance?.body.height ?? 1, build: appearance?.body.build ?? 1 });
   proportions.current = { height: appearance?.body.height ?? 1, build: appearance?.body.build ?? 1 };
@@ -115,7 +116,8 @@ export function AvatarV2ReferenceCanvas({
           throw new Error('This reference model has no measurable body height.');
         }
         // Display at human scale and ground the unchanged source A-pose.
-        source.scale.setScalar(1.78 / size.y);
+        referenceScale.current = 1.78 / size.y;
+        source.scale.setScalar(referenceScale.current);
         source.updateMatrixWorld(true);
         const scaled = new T.Box3().setFromObject(source);
         source.position.y -= scaled.min.y;
@@ -163,8 +165,7 @@ export function AvatarV2ReferenceCanvas({
   useEffect(() => {
     const model = previewModel.current;
     if (!model) return;
-    const bounds = new T.Box3().setFromObject(model);
-    const baseline = model.scale.y / proportions.current.height;
+    const baseline = referenceScale.current;
     model.scale.set(baseline * proportions.current.build, baseline * proportions.current.height, baseline * proportions.current.build);
     model.updateMatrixWorld(true);
     model.position.y -= new T.Box3().setFromObject(model).min.y;
