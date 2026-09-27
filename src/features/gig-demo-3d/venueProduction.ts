@@ -129,14 +129,17 @@ export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Ma
     if (layout.runway) {
         const runway = box(root, [3.2, y, 6], [0, y / 2, 3.65], black);
         runway.name = 'stage-runway';
-        const head = box(root, [6, y, 2.8], [0, y / 2, 7.65], black);
+        // The wider head begins exactly where the narrow runway ends.
+        // Overlapping equal-height floor patches flicker (Z-fight) in wide shots.
+        const runwayHeadZ = .65 + 6 + 2.8 / 2;
+        const head = box(root, [6, y, 2.8], [0, y / 2, runwayHeadZ], black);
         head.name = 'stage-runway-head';
         tileStageFloorPatch(
             box(root, [3.2, .065, 6], [0, y - .032, 3.65], deckSurface),
             p, 3.2, 6, 'stage-runway-deck-surface',
         );
         tileStageFloorPatch(
-            box(root, [6, .065, 2.8], [0, y - .032, 7.65], deckSurface),
+            box(root, [6, .065, 2.8], [0, y - .032, runwayHeadZ], deckSurface),
             p, 6, 2.8, 'stage-runway-head-surface',
         );
         const edgeLED = new T.MeshStandardMaterial({
@@ -145,9 +148,9 @@ export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Ma
         edgeLED.name = 'stage-runway-edge-led';
         for (const side of [-1, 1]) {
             box(root, [.028, .025, 6], [side * 1.58, y + .025, 3.65], edgeLED);
-            box(root, [.028, .025, 2.8], [side * 2.96, y + .025, 7.65], edgeLED);
+            box(root, [.028, .025, 2.8], [side * 2.96, y + .025, runwayHeadZ], edgeLED);
         }
-        box(root, [5.94, .025, .028], [0, y + .025, 9.02], edgeLED);
+        box(root, [5.94, .025, .028], [0, y + .025, runwayHeadZ + 1.37], edgeLED);
     }
     const access = new T.Group();
     access.name = 'stage-side-access-stairs';
