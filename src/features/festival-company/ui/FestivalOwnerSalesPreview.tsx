@@ -67,7 +67,7 @@ export function FestivalOwnerSalesPreview({
         currency: owner?.currency || "GBP",
       }).format(grossMinor / 100)
     : null;
-  const confirmed = current.lineup?.length ?? current.timetable.length;
+  const confirmed = current.lineup?.length ?? 0;
 
   return (
     <Card aria-label="Current Festival ticket sales and confirmed line-up">
