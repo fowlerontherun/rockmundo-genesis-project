@@ -190,8 +190,11 @@ export function addVideoScreen(
   root.position.set(...pos);
   parent.add(root);
   box(root, [width + .24, height + .24, .32], [0, 0, 0], frame);
+  // One image backs both diffuse and emissive channels so every IMAG panel
+  // shares its pixel alignment and does not allocate a duplicate GPU texture.
+  const ledMap = ledTexture();
   const pixels = new T.MeshStandardMaterial({
-    color: '#91b9d3', map: ledTexture(), emissive: accent, emissiveMap: ledTexture(),
+    color: '#91b9d3', map: ledMap, emissive: accent, emissiveMap: ledMap,
     emissiveIntensity: 1.1, roughness: .38, metalness: .12,
   });
   const face = box(root, [width, height, .045], [0, 0, .185], pixels);
