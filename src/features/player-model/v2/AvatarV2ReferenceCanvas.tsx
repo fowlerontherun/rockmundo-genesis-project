@@ -167,6 +167,8 @@ export function AvatarV2ReferenceCanvas({
     if (!model) return;
     const baseline = referenceScale.current;
     model.scale.set(baseline * proportions.current.build, baseline * proportions.current.height, baseline * proportions.current.build);
+    // Re-ground from the model's current bounding box after every edit, even
+    // when the original GLB has a non-zero origin or the height is reduced.
     model.updateMatrixWorld(true);
     model.position.y -= new T.Box3().setFromObject(model).min.y;
     redraw.current?.();
