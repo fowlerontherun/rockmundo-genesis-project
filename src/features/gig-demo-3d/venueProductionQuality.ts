@@ -38,8 +38,18 @@ export function productionEquipmentSpec(tier: number): ProductionEquipmentSpec {
   return TIERS[Math.min(TIERS.length - 1, Math.max(0, Math.floor(Number.isFinite(tier) ? tier : 0)))];
 }
 
+function loadTexture(url: string) {
+  // The deterministic fallback keeps the 3D scene constructible in Node smoke tests.
+  if (typeof document === 'undefined') {
+    const map = new T.DataTexture(new Uint8Array([112, 126, 138, 255]), 1, 1, T.RGBAFormat);
+    map.needsUpdate = true;
+    return map;
+  }
+  return new T.TextureLoader().load(url);
+}
+
 function tiledTexture(url: string, width: number, depth: number, color: boolean) {
-  const map = new T.TextureLoader().load(url);
+  const map = loadTexture(url);
   map.wrapS = map.wrapT = T.RepeatWrapping;
   map.repeat.set(Math.max(1, width / 2.4), Math.max(1, depth / 2.4));
   map.colorSpace = color ? T.SRGBColorSpace : T.NoColorSpace;
@@ -100,7 +110,8 @@ export function addAmplifierStack(
       const cabinet = new T.Group();
       cabinet.position.set((col - (spec.ampColumns - 1) / 2) * (spec.ampWidth + gap), row * (spec.ampHeight + gap) + spec.ampHeight / 2, 0);
       root.add(cabinet);
-      box(cabinet, [spec.ampWidth, spec.ampHeight, spec.ampDepth], [0, 0, 0], shell);
+      const body = box(cabinet, [spec.ampWidth, spec.ampHeight, spec.ampDepth], [0, 0, 0], shell);
+      body.name = name + '-cabinet-' + row + '-' + col;
       speakerFront(cabinet, spec.ampWidth, spec.ampHeight, spec.ampDepth, grille, steel);
       for (const side of [-1, 1]) {
         box(cabinet, [.15, .035, .035], [side * (spec.ampWidth / 2 - .015), .1, 0], chrome);
@@ -134,7 +145,8 @@ export function addLineArrayCabinet(
   root.position.set(x, y, z);
   root.rotation.x = -index * .018;
   parent.add(root);
-  box(root, [spec.paWidth, spec.paHeight, spec.paDepth], [0, 0, 0], shell);
+  const body = box(root, [spec.paWidth, spec.paHeight, spec.paDepth], [0, 0, 0], shell);
+  body.name = name + '-cabinet';
   speakerFront(root, spec.paWidth, spec.paHeight, spec.paDepth, grille, steel);
   for (const side of [-1, 1]) {
     const xSide = side * (spec.paWidth / 2 + .025);
@@ -152,7 +164,8 @@ export function addSubwoofer(
   root.name = name;
   root.position.set(x, spec.subHeight / 2, z);
   parent.add(root);
-  box(root, [spec.subWidth, spec.subHeight, spec.subDepth], [0, 0, 0], shell);
+  const body = box(root, [spec.subWidth, spec.subHeight, spec.subDepth], [0, 0, 0], shell);
+  body.name = name + '-cabinet';
   speakerFront(root, spec.subWidth, spec.subHeight, spec.subDepth, grille, steel);
   for (const side of [-1, 1])
     box(root, [.12, .055, .22], [side * (spec.subWidth / 2 + .005), spec.subHeight * .17, 0], steel);
@@ -160,7 +173,7 @@ export function addSubwoofer(
 }
 
 function ledTexture() {
-  const map = new T.TextureLoader().load(ledPanelUrl);
+  const map = loadTexture(ledPanelUrl);
   map.colorSpace = T.SRGBColorSpace;
   map.wrapS = map.wrapT = T.RepeatWrapping;
   map.repeat.set(3, 2);
