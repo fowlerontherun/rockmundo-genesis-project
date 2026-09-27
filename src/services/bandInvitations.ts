@@ -120,8 +120,14 @@ export async function cancelBandInvitation(invitationId: string): Promise<BandIn
 export function friendlyBandInvitationError(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error ?? "");
   if (!message) return "Something went wrong sending that band invitation.";
-  if (/duplicate|already/i.test(message)) return "That musician already has a pending invitation.";
-  if (/not.*friend/i.test(message)) return "That player isn't available for band invitations under their current privacy settings.";
+  if (/already (belongs|an active member)|another active band|leave your current active band/i.test(message)) {
+    return "That player already belongs to an active band. They must leave it before joining this one.";
+  }
+  if (/no open member slots|band is full/i.test(message)) return "Your band has no open member slots.";
+  if (/not available for band invitations|not.*friend/i.test(message)) {
+    return "That player cannot receive this invitation under their current availability or privacy settings.";
+  }
+  if (/pending invitation|pending invite|duplicate invitation/i.test(message)) return "That musician already has a pending invitation.";
   if (/uuid|invalid/i.test(message)) return "That invitation target isn't valid.";
   return message;
 }
