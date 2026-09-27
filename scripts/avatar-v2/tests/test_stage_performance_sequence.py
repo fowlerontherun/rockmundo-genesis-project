@@ -32,6 +32,9 @@ class StagePerformanceSequenceTests(unittest.TestCase):
         self.assertFalse(manifest["runtimeIntegrated"])
         self.assertFalse(manifest["instrumentContactValidated"])
         self.assertEqual(len(manifest["roles"]), 6)
+        self.assertEqual(len(manifest["requiredContactQA"]), 6)
+        self.assertIn("left-drumstick-grip", [item["check"] for item in manifest["requiredContactQA"]["drums"]])
+        self.assertTrue(all(item["status"] == "unverified" for checks in manifest["requiredContactQA"].values() for item in checks))
         self.assertTrue(all(plan[-1]["end_beat"] == 48 for plan in manifest["roles"].values()))
         with self.assertRaises(ValueError):
             parse_sections("verse:0")
