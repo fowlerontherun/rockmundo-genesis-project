@@ -78,12 +78,13 @@ def stale_guide_markers(
     to a new guide can silently displace wrists, eyes and instrument grips.
     """
     return sorted(
-        name for name, position in current.items()
-        if name not in stored
-        or len(position) != 3
+        name for name in current.keys() | stored.keys()
+        if name not in current
+        or name not in stored
+        or len(current[name]) != 3
         or len(stored[name]) != 3
-        or not all(isfinite(value) for value in (*position, *stored[name]))
-        or dist(position, stored[name]) > tolerance
+        or not all(isfinite(value) for value in (*current[name], *stored[name]))
+        or dist(current[name], stored[name]) > tolerance
     )
 
 
