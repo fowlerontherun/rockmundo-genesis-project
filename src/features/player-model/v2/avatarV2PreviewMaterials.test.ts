@@ -22,6 +22,8 @@ describe('Avatar V2 preview skin material identification', () => {
     expect(hasAvatarV2PreviewIrisPair(['RMV2_Preview_Iris_masculine_L', 'RMV2_Preview_Iris_masculine_R'])).toBe(true);
     expect(hasAvatarV2PreviewIrisPair(['RMV2_Preview_Iris_feminine_L', 'RMV2_Preview_Iris_feminine_L'])).toBe(false);
     expect(hasAvatarV2PreviewIrisPair(['RMV2_Preview_Iris_feminine_R', 'RMV2_Preview_Pupil_feminine_L'])).toBe(false);
+    expect(hasAvatarV2PreviewIrisPair(['RMV2_Preview_Iris_feminine_R', 'RMV2_Preview_Iris_masculine_L'])).toBe(false);
+    expect(hasAvatarV2PreviewIrisPair(['RMV2_Preview_Iris_feminine_R', 'RMV2_Preview_Iris_feminine_L', 'RMV2_Preview_Iris_feminine_L'])).toBe(false);
   });
 
   it('rejects ambiguous generic skin materials and lookdev facial variants', () => {
