@@ -127,6 +127,8 @@ export function AvatarV2ReferenceCanvas({
         source.scale.x *= proportions.current.build;
         source.scale.z *= proportions.current.build;
         source.scale.y *= proportions.current.height;
+        source.updateMatrixWorld(true);
+        source.position.y -= new T.Box3().setFromObject(source).min.y;
         previewModel.current = source;
         candidate = source;
         scene.add(source);
