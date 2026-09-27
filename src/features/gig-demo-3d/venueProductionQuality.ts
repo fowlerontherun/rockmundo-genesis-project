@@ -188,9 +188,12 @@ function ledTexture() {
 
 /** Match the canvas to the *physical* display instead of stretching a landscape
  * image across square IMAG wings. Resolution remains bounded even in a stadium. */
-export type VenueScreenFormat = 'wide' | 'square';
+export type VenueScreenFormat = 'wide' | 'square' | 'portrait';
 export function venueScreenDimensions(tier: number, format: VenueScreenFormat = 'wide') {
   const size = tier >= 4 ? 2048 : tier >= 2 ? 1024 : 512;
+  // Touring video columns are far narrower than square IMAG wings.
+  // Keep a sub-megabyte portrait asset rather than stretching square artwork.
+  if (format === 'portrait') return { width: 256, height: tier >= 4 ? 1408 : 928, format };
   if (format === 'square') {
     const edge = tier >= 4 ? 1536 : size;
     return { width: edge, height: edge, format };
@@ -222,6 +225,49 @@ export function createVenueShowScreenTexture(
     fill.addColorStop(1, '#050a12');
     ctx.fillStyle = fill;
     ctx.fillRect(0, 0, width, height);
+    if (format === 'portrait') {
+      // One readable vertical signature for every touring column. The full
+      // artist name runs up the display, with a legible distant monogram.
+      const initials = name.toUpperCase().split(/\s+/).slice(0, 2).map(word => word[0]).join('');
+      ctx.strokeStyle = p.accent;
+      ctx.globalAlpha = .57;
+      ctx.lineWidth = Math.max(3, width * .025);
+      for (let line = 0; line < 3; line++) {
+        const inset = width * (.08 + line * .07);
+        ctx.strokeRect(inset, height * .03 + line * 8, width - inset * 2, height * .94 - line * 16);
+      }
+      // Venue-seeded equalizer bars differentiate otherwise identical touring
+      // stages without relying on random browser state or third-party art.
+      ctx.globalAlpha = .30;
+      ctx.fillStyle = p.accent;
+      for (let i = 0; i < 24; i++) {
+        const peak = height * (.018 + .034 * (Math.sin(i * .73 + p.seed * .017) * .5 + .5));
+        ctx.fillRect(width * (.09 + i * .034), height * .14 - peak, width * .019, peak);
+      }
+      ctx.globalAlpha = 1;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = p.accent;
+      ctx.shadowBlur = 17;
+      ctx.fillStyle = '#edf9ff';
+      ctx.font = '900 102px sans-serif';
+      ctx.fillText(initials || 'RM', width / 2, height * .24, width * .84);
+      ctx.save();
+      ctx.translate(width / 2, height * .57);
+      ctx.rotate(-Math.PI / 2);
+      ctx.font = '900 67px sans-serif';
+      ctx.fillText(name.toUpperCase(), 0, 0, height * .57);
+      ctx.restore();
+      ctx.shadowBlur = 0;
+      ctx.font = '800 24px sans-serif';
+      ctx.fillStyle = '#a8d6e9';
+      ctx.fillText('ROCKMUNDO', width / 2, height * .88, width * .86);
+      const portrait = new T.CanvasTexture(canvas);
+      portrait.generateMipmaps = true;
+      portrait.minFilter = T.LinearMipmapLinearFilter;
+      portrait.magFilter = T.LinearFilter;
+      return portrait;
+    }
     ctx.lineWidth = 5 * unit;
     ctx.strokeStyle = p.accent;
     for (let ring = 0; ring < 5; ring++) {
