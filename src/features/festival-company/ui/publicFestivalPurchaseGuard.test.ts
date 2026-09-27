@@ -12,6 +12,12 @@ describe("public festival purchase controls", () => {
     expect(page).toContain("quantity: quantities[p.id] ?? 1");
   });
 
+  it("shows purchase success or failure only beside the selected ticket type", () => {
+    expect(page).toContain("setActivePurchaseProductId(p.id)");
+    expect(page).toContain("buy.isError && activePurchaseProductId === p.id");
+    expect(page).toContain("buy.isSuccess && activePurchaseProductId === p.id");
+  });
+
   it("rejects invalid quantities, expired events, sold-out products and signed-out purchases", () => {
     expect(page).toContain("!Number.isSafeInteger(quantities[p.id] ?? 1)");
     expect(page).toContain("(quantities[p.id] ?? 1) < 1");
