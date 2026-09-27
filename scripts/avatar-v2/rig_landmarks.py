@@ -79,7 +79,11 @@ def stale_guide_markers(
     """
     return sorted(
         name for name, position in current.items()
-        if name not in stored or dist(position, stored[name]) > tolerance
+        if name not in stored
+        or len(position) != 3
+        or len(stored[name]) != 3
+        or not all(isfinite(value) for value in (*position, *stored[name]))
+        or dist(position, stored[name]) > tolerance
     )
 
 
