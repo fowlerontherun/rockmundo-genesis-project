@@ -1,0 +1,29 @@
+name: Avatar V2 creator preview
+
+on:
+  pull_request:
+    paths:
+      - 'src/features/player-model/v2/**'
+      - 'src/pages/AvatarV2PreviewPage.tsx'
+      - '.github/workflows/avatar-v2-creator-preview.yml'
+  push:
+    paths:
+      - 'src/features/player-model/v2/**'
+      - 'src/pages/AvatarV2PreviewPage.tsx'
+      - '.github/workflows/avatar-v2-creator-preview.yml'
+
+jobs:
+  creator-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Test actual Blender material selection and stable preview proportions
+        run: npx vitest run src/features/player-model/v2/avatarV2PreviewMaterials.test.ts src/features/player-model/v2/avatarV2PreviewProportions.test.ts
+      - name: Typecheck creator preview integration
+        run: npm run typecheck
