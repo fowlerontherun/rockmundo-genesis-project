@@ -425,7 +425,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
                       </p>
                     </div>
                     <Badge variant={invite.status === 'accepted' ? 'default' : 'secondary'} className="capitalize">
-                      {invite.status}
+                      {invite.status.charAt(0).toUpperCase() + invite.status.slice(1)}
                     </Badge>
                   </div>
                 ))}
