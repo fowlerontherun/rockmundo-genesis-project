@@ -113,7 +113,7 @@ export function FestivalOwnerSalesPreview({
           <p className="text-sm text-muted-foreground" role="status">
             Owner-only gross receipts are temporarily unavailable.
           </p>
-        ) : gross ? (
+        ) : gross !== null ? (
           <div className="flex flex-wrap gap-6 rounded-lg bg-muted/40 p-3 text-sm">
             <p><span className="text-muted-foreground">Completed ticket orders: </span>
               <strong>{(owner?.orders ?? 0).toLocaleString("en-GB")}</strong>
