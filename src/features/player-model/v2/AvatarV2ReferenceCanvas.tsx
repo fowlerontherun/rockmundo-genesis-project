@@ -40,6 +40,7 @@ export function AvatarV2ReferenceCanvas({
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [error, setError] = useState('');
   const [skinMaterialCount, setSkinMaterialCount] = useState<number | null>(null);
+  const [irisMaterialCount, setIrisMaterialCount] = useState<number | null>(null);
 
   useEffect(() => {
     const element = canvasRef.current;
@@ -81,6 +82,7 @@ export function AvatarV2ReferenceCanvas({
     setStatus('loading');
     setError('');
     setSkinMaterialCount(null);
+    setIrisMaterialCount(null);
 
     try {
       renderer = new T.WebGLRenderer({
@@ -163,6 +165,7 @@ export function AvatarV2ReferenceCanvas({
             : cloneSkin(object.material);
         });
         setSkinMaterialCount(originalSkinMaterials.current.length);
+        setIrisMaterialCount(irisMaterials.current.length);
         if (skinTone.current) {
           for (const entry of originalSkinMaterials.current) entry.material.color.set(skinTone.current);
         }
@@ -248,6 +251,9 @@ export function AvatarV2ReferenceCanvas({
       )}
       {status === 'ready' && skinMaterialCount === 0 && (
         <p className="avatar-v2-public__skin-warning" role="status">Skin tone is not available for this Blender export: no separately named skin material was found.</p>
+      )}
+      {status === 'ready' && irisMaterialCount !== null && irisMaterialCount < 2 && (
+        <p className="avatar-v2-public__iris-warning" role="status">Eye-colour preview unavailable: this export does not expose both separately named iris materials.</p>
       )}
       {status === 'ready' && (
         <p className="avatar-v2-public__canvas-caption">
