@@ -58,6 +58,36 @@ export function stageBannerLayout(p: VenueProfile, ledScreen: boolean) {
     return { centerY: screenTop + clearance * .5, height: Math.min(height, clearance * .55), screenTop };
 }
 
+/** Keep actual tile dimensions on smaller pieces of the same stage floor.
+ * All floor surfaces use the original pair of colour/bump maps (two GPU
+ * textures per venue, not two new textures for each wing, stair or runway).
+ * Three.js BoxGeometry's +Y face occupies UV vertices 8–11. */
+export function tileStageFloorPatch(
+    mesh: T.Mesh, p: VenueProfile, width: number, depth: number, role: string,
+) {
+    const uv = mesh.geometry.attributes.uv;
+    for (let i = 8; i < 12; i++)
+        uv.setXY(i, uv.getX(i) * width / p.stageWidth, uv.getY(i) * depth / p.stageDepth);
+    uv.needsUpdate = true;
+    mesh.name = role;
+    mesh.userData.venueFloorPatch = { width, depth, repeatX: width / 2.4, repeatZ: depth / 2.4 };
+    return mesh;
+}
+
+/** Stairs start away from the stage and rise *toward* the stage lip.
+ * Using an exact fraction of the stage height avoids the previous highest
+ * tread overshooting the deck on most capacity tiers. */
+export function stageAccessStairPlan(p: VenueProfile) {
+    const count = Math.max(1, Math.ceil(p.stageHeight / .22));
+    const rise = p.stageHeight / count;
+    const run = .38;
+    return Array.from({ length: count }, (_, index) => ({
+        index, height: (index + 1) * rise,
+        z: .65 + (count - 1 - index) * run,
+        rise, run,
+    }));
+}
+
 /** Production uses metre-sized equipment. A larger show adds rigging and PA,
  * rather than stretching a club's amplifiers and curtain with its floor. */
 export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Material, grille: T.Material, makeLabel: (text: string, w: number, h: number) => T.Mesh, bandName: string) {
@@ -72,23 +102,91 @@ export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Ma
     const deck = box(root, [p.stageWidth, y, p.stageDepth], [0, y / 2, .65 - p.stageDepth / 2], black);
     deck.name = 'stage-deck';
     const deckSurface = createStageDeckMaterial(p, wood);
-    box(root, [p.stageWidth, .065, p.stageDepth], [0, y - .032, .65 - p.stageDepth / 2], deckSurface);
-    box(root, [p.stageWidth, .035, .05], [0, y + .01, .65], chrome);
+    tileStageFloorPatch(
+        box(root, [p.stageWidth, .065, p.stageDepth], [0, y - .032, .65 - p.stageDepth / 2], deckSurface),
+        p, p.stageWidth, p.stageDepth, 'stage-main-deck-surface',
+    );
+    // A continuous metal edge across the centre looked like an obstruction
+    // on venues with a runway. Split it at the 3.2m runway entrance instead.
+    if (layout.runway) {
+        const sideWidth = (p.stageWidth - 3.2) / 2;
+        for (const side of [-1, 1])
+            box(root, [sideWidth, .035, .05],
+                [side * (1.6 + sideWidth / 2), y + .01, .65], chrome).name = 'stage-front-edge-' + side;
+    } else {
+        box(root, [p.stageWidth, .035, .05], [0, y + .01, .65], chrome).name = 'stage-front-edge';
+    }
     if (layout.wings)
         for (const side of [-1, 1]) {
-            box(root, [4, y, p.stageDepth * .8], [side * (half + 2), y / 2, back + p.stageDepth * .45], black);
-            box(root, [3.8, .04, p.stageDepth * .78], [side * (half + 2), y + .02, back + p.stageDepth * .45], deckSurface);
+            const x = side * (half + 2), depth = p.stageDepth * .78;
+            const z = back + p.stageDepth * .45;
+            box(root, [4, y, p.stageDepth * .8], [x, y / 2, z], black);
+            tileStageFloorPatch(
+                box(root, [3.8, .04, depth], [x, y - .019, z], deckSurface),
+                p, 3.8, depth, 'stage-side-wing-deck-surface-' + side,
+            );
         }
     if (layout.runway) {
         const runway = box(root, [3.2, y, 6], [0, y / 2, 3.65], black);
         runway.name = 'stage-runway';
-        box(root, [6, y, 2.8], [0, y / 2, 7.65], black);
-        for (const x of [-1.56, 1.56])
-            box(root, [.025, .025, 6], [x, y + .02, 3.65], trim);
+        // The wider head begins exactly where the narrow runway ends.
+        // Overlapping equal-height floor patches flicker (Z-fight) in wide shots.
+        const runwayHeadZ = .65 + 6 + 2.8 / 2;
+        const head = box(root, [6, y, 2.8], [0, y / 2, runwayHeadZ], black);
+        head.name = 'stage-runway-head';
+        tileStageFloorPatch(
+            box(root, [3.2, .065, 6], [0, y - .032, 3.65], deckSurface),
+            p, 3.2, 6, 'stage-runway-deck-surface',
+        );
+        tileStageFloorPatch(
+            box(root, [6, .065, 2.8], [0, y - .032, runwayHeadZ], deckSurface),
+            p, 6, 2.8, 'stage-runway-head-surface',
+        );
+        const edgeLED = new T.MeshStandardMaterial({
+            color: p.accent, emissive: p.accent, emissiveIntensity: .9, roughness: .28,
+        });
+        edgeLED.name = 'stage-runway-edge-led';
+        for (const side of [-1, 1]) {
+            box(root, [.028, .025, 6], [side * 1.58, y + .025, 3.65], edgeLED);
+            box(root, [.028, .025, 2.8], [side * 2.96, y + .025, runwayHeadZ], edgeLED);
+        }
+        box(root, [5.94, .025, .028], [0, y + .025, runwayHeadZ + 1.37], edgeLED);
     }
-    for (const side of [-1, 1])
-        for (let step = 0; step < Math.ceil(y / .22); step++)
-            box(root, [1.2, (step + 1) * .22, .35], [side * (half + .65), (step + 1) * .11, .65 - step * .35], black);
+    const access = new T.Group();
+    access.name = 'stage-side-access-stairs';
+    root.add(access);
+    const stairPlan = stageAccessStairPlan(p);
+    access.userData.stepsPerSide = stairPlan.length;
+    access.userData.rise = stairPlan[0].rise;
+    access.userData.run = stairPlan[0].run;
+    const litNose = layout.tier >= 3 ? new T.MeshStandardMaterial({
+        color: p.accent, emissive: p.accent, emissiveIntensity: .6, roughness: .3,
+    }) : chrome;
+    for (const side of [-1, 1]) {
+        const x = side * (half + .65);
+        for (const step of stairPlan) {
+            box(access, [1.2, step.height, .35], [x, step.height / 2, step.z], black);
+            tileStageFloorPatch(
+                box(access, [1.16, .03, .34], [x, step.height - .012, step.z], deckSurface),
+                p, 1.16, .34, 'stage-access-tread-' + side + '-' + step.index,
+            );
+            box(access, [1.17, .022, .028],
+                [x, step.height + .008, step.z + .17], litNose);
+        }
+        if (y >= .9) {
+            // Single sloped handrail per side of each stair, with upright
+            // brackets rather than unsupported lines cutting through treads.
+            const lowest = stairPlan[0], highest = stairPlan[stairPlan.length - 1];
+            for (const dx of [-.57, .57]) {
+                const railX = x + dx;
+                rod(access, [railX, lowest.height + .86, lowest.z],
+                    [railX, highest.height + .86, highest.z], .024, chrome);
+                for (const step of [lowest, highest])
+                    rod(access, [railX, step.height, step.z],
+                        [railX, step.height + .86, step.z], .017, chrome);
+            }
+        }
+    }
     // A real cross-braced truss, with a fixed tube diameter at every venue size.
     const truss = (a: number[], b: number[]) => {
         for (const offset of [-.18, .18])
