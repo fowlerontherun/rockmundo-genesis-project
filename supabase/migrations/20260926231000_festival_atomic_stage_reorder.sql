@@ -13,6 +13,8 @@ DECLARE
   next_end timestamptz;
   previous_end timestamptz;
   first_start timestamptz;
+  stage_hours public.festival_stage_operating_hours%ROWTYPE;
+  edition_tz text;
   previous_changeover integer := 0;
   ordinal integer := 0;
 BEGIN
@@ -31,6 +33,9 @@ BEGIN
     WHERE id=p_stage_id AND edition_id=p_edition_id) THEN
     RAISE EXCEPTION 'FESTIVAL_SCHEDULE_INVALID_STAGE';
   END IF;
+  SELECT COALESCE(time_zone,'UTC') INTO edition_tz FROM public.festival_editions WHERE id=p_edition_id;
+  SELECT * INTO stage_hours FROM public.festival_stage_operating_hours WHERE stage_id=p_stage_id AND festival_date=p_festival_date AND edition_id=p_edition_id;
+  IF NOT FOUND THEN RAISE EXCEPTION 'FESTIVAL_SCHEDULE_STAGE_HOURS_REQUIRED'; END IF;
   IF jsonb_typeof(p_items) IS DISTINCT FROM 'array' OR jsonb_array_length(p_items)=0 THEN
     RAISE EXCEPTION 'FESTIVAL_SCHEDULE_INVALID_ORDER';
   END IF;
@@ -58,13 +63,16 @@ BEGIN
     IF ordinal=0 THEN
       next_start := (entry->>'startsAt')::timestamptz;
       first_start := next_start;
-      IF next_start IS NULL OR next_start::date <> p_festival_date THEN
+      IF next_start IS NULL OR (next_start AT TIME ZONE edition_tz)::date <> p_festival_date THEN
         RAISE EXCEPTION 'FESTIVAL_SCHEDULE_INVALID_START';
       END IF;
     ELSE
       next_start := previous_end + make_interval(mins=>previous_changeover);
     END IF;
     next_end := next_start + make_interval(mins=>item.duration_minutes);
+    IF next_start < stage_hours.opens_at OR next_end > stage_hours.curfew_at - make_interval(mins=>stage_hours.shutdown_buffer_minutes) THEN
+      RAISE EXCEPTION 'FESTIVAL_SCHEDULE_OUTSIDE_STAGE_HOURS';
+    END IF;
     UPDATE public.festival_schedule_items SET starts_at=next_start,ends_at=next_end,
       sort_order=ordinal,version=version+1,updated_at=now(),
       updated_by_profile_id=public.festival_schedule_actor()
@@ -73,11 +81,6 @@ BEGIN
     previous_changeover:=item.changeover_minutes;
     ordinal:=ordinal+1;
   END LOOP;
-  IF EXISTS (SELECT 1 FROM public.festival_stage_operating_hours
-    WHERE stage_id=p_stage_id AND festival_date=p_festival_date AND
-      (first_start < opens_at OR next_end > curfew_at - make_interval(mins=>shutdown_buffer_minutes))) THEN
-    RAISE EXCEPTION 'FESTIVAL_SCHEDULE_OUTSIDE_STAGE_HOURS';
-  END IF;
   UPDATE public.festival_schedule_revisions SET version=version+1,updated_at=now()
     WHERE id=p_revision_id;
   INSERT INTO public.festival_schedule_audit_events
