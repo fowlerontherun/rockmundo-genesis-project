@@ -9,6 +9,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from rig_landmarks import (  # noqa: E402
     BoneSpec, FitBone, audit_sculpt_fit, fit_bones, marker_name, moved_markers,
     position_markers, untouched_face_markers, stale_guide_markers,
+    missing_edit_bones,
 )
 
 
@@ -58,6 +59,16 @@ def example_rig():
 
 
 class SculptJointFitTests(unittest.TestCase):
+    def test_edit_bone_inventory_preflight_catches_missing_bones(self):
+        names = [bone.name for bone in example_rig()]
+        self.assertEqual(missing_edit_bones(names, names), [])
+        missing = {"Eye.L", "Hand.R", "Index3.L"}
+        self.assertEqual(
+            missing_edit_bones(names, [name for name in names if name not in missing]),
+            sorted(missing),
+        )
+        self.assertEqual(missing_edit_bones(names, names + ["UnrelatedHelper"]), [])
+
     def test_stale_handles_reject_changed_rest_skeleton(self):
         original = position_markers(example_rig())
         current = dict(original)
