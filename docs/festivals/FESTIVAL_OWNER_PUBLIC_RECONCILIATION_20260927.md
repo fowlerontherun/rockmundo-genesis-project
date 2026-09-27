@@ -1,8 +1,8 @@
 # Festival owner/public integration audit — 27 September 2026
 
-Status: source-level findings; production data and deployment not yet verified.
+Status: source audit plus read-only production schema verification on 27 September 2026. Production migration reconciliation outstanding.
 
-## Confirmed source gaps
+## Verified production schema blockers\n\nRead-only checks against the active RockMundo Supabase project returned:\n- `to_regclass('public.festival_owner_npc_lineup_acts') = NULL` — curated NPC storage is absent.\n- `to_regclass('public.festival_schedule_revisions') = NULL` — canonical revisioned schedule storage is absent.\n- `to_regprocedure('public.festival_public_projection_v2(uuid)')` and `_festival_simplified_timetable_projection(uuid)` both exist.\n\n**Do not deploy the new NPC public-projection migration until its prerequisite NPC storage migration is applied. Do not enable atomic reorder until the canonical schedule migration and its dependent objects exist.** Verify both migrations against production migration history and schema, then apply in dependency order with an explicit reconciliation/rollback plan. Do not recreate existing production objects blindly.\n\n## Confirmed source gaps
 - `festival_public_projection_v2` in `20291220103000_public_festival_pre_event_lineup_sales.sql` builds `lineup` solely from `festival_artist_bookings`. Curated NPC bands and DJs live in `festival_owner_npc_lineup_acts` and appear in `_festival_simplified_timetable_projection`, but not the public `lineup` field. Public views that render `lineup` omit them.
 - Public booking times are read from `festival_stage_slots` with public status, whereas the new visual scheduling workspace edits `festival_schedule_items`. A draft or published visual slot is not automatically reflected in the public lineup.
 - The simplified timetable assigns starts using 14:00 plus 90-minute ordinal increments; it does not honor the owner's explicit running order and can diverge from public published slots.
