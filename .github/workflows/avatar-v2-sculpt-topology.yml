@@ -29,6 +29,7 @@ jobs:
             scripts/avatar-v2/rig_landmarks.py \
             scripts/avatar-v2/rig_review.py \
             scripts/avatar-v2/stage_performance_catalogue.py \
+            scripts/avatar-v2/stage_performance_sequence.py \
             scripts/avatar-v2/blender/rockmundo_avatar_v2_stage_animation_preview.py \
             scripts/avatar-v2/source_rig_suggestions.py \
             scripts/avatar-v2/head_motion_weights.py \
@@ -51,6 +52,8 @@ jobs:
         run: python -m unittest discover -s scripts/avatar-v2/tests -p test_rig_landmarks.py -v
       - name: Test draft stage choreography catalogue and looping
         run: python -m unittest discover -s scripts/avatar-v2/tests -p test_stage_performance_catalogue.py -v
+      - name: Test deterministic stage sequencing and replay
+        run: python -m unittest discover -s scripts/avatar-v2/tests -p test_stage_performance_sequence.py -v
       - name: Test production rig review and stage-pose approval gates
         run: python -m unittest discover -s scripts/avatar-v2/tests -p test_rig_review.py -v
       - name: Test genuine retopology morph and skin weight transfer
