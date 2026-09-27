@@ -1,3 +1,5 @@
+import type { Color } from 'three';
+
 /** Only materials exported by the pinned Blender lookdev pass are safe to recolour.
  * The unshaded SOURCE-ONLY GLB has no exported materials and is unsupported. */
 export function isAvatarV2PreviewSkinMaterial(name: string): boolean {
@@ -20,8 +22,8 @@ export function hasAvatarV2PreviewIrisPair(names: readonly string[]): boolean {
 
 /** Apply an optional creator swatch without losing the exported lookdev colour. */
 export function applyAvatarV2PreviewSwatch(
-  material: { color: { set(value: string): unknown; copy(value: any): unknown } },
-  original: Parameters<typeof material.color.copy>[0],
+  material: { color: Color },
+  original: Color,
   swatch: string | undefined,
 ): void {
   if (swatch) material.color.set(swatch);
