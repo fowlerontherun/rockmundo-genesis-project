@@ -59,9 +59,7 @@ def main() -> None:
             bone = rig.pose.bones[bone_name]
             bone.rotation_euler = Euler(tuple(radians(angle) for angle in degrees))
             frame = 1 + round(beat * 60 / clip.bpm * args.fps)
-            # Insert on the Action itself, not through pose-bone keyframe_insert:
-            # the latter may key the armature's active slot differently across
-            # Blender versions. Here the assigned Action is always explicit.
+            # The Action is assigned to this rig above before keying bones.
             bone.keyframe_insert(data_path="rotation_euler", frame=frame, group=bone_name)
         # Verify that Blender actually evaluates the generated Action. Merely
         # counting keyframes cannot catch a mismatched rotation mode or a
