@@ -18,6 +18,12 @@ describe('Avatar V2 preview skin material identification', () => {
     }
   });
 
+  it('rejects ambiguous generic skin materials and lookdev facial variants', () => {
+    for (const name of ['skin', 'body_skin', 'RMV2_Preview_Skin_masculine_lips', 'RMV2_Preview_Skin_feminine.001']) {
+      expect(isAvatarV2PreviewSkinMaterial(name)).toBe(false);
+    }
+  });
+
   it('never recolours lips, eyes, lashes or brows', () => {
     for (const name of [
       'RMV2_Preview_Iris_masculine_L', 'RMV2_Preview_Sclera_feminine_R',
