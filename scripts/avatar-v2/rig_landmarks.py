@@ -8,6 +8,8 @@ transfers those coordinates to the existing production-named armature.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
+import json
 from math import dist, isfinite
 from typing import Mapping, Sequence
 
@@ -86,6 +88,17 @@ def stale_guide_markers(
         or not all(isfinite(value) for value in (*current[name], *stored[name]))
         or dist(current[name], stored[name]) > tolerance
     )
+
+
+def rig_structure_fingerprint(bones: Sequence[BoneSpec]) -> str:
+    """Stable digest of joint names, parenting and connected-chain topology.
+
+    Artist handle sets must not survive a hierarchy edit merely because all
+    surviving marker coordinates happen to be unchanged.
+    """
+    structure = sorted((bone.name, bone.parent, bone.connected) for bone in bones)
+    payload = json.dumps(structure, separators=(",", ":"), ensure_ascii=True)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def missing_edit_bones(
