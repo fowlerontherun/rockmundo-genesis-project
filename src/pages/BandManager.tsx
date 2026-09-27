@@ -462,6 +462,7 @@ export default function BandManager() {
                         bandId={selectedBand.id}
                         bandName={selectedBand.name}
                         currentUserId={profileId!}
+                        currentAccountId={userId}
                       />
                     )}
                     <AddTouringMember

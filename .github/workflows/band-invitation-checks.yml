@@ -1,0 +1,45 @@
+name: Band invitation checks
+
+on:
+  pull_request:
+    paths:
+      - "src/components/band/InviteFriendToBand.tsx"
+      - "src/pages/BandManager.tsx"
+      - "src/services/bandInviteEligibility.ts"
+      - "src/services/bandInvitations.ts"
+      - "src/services/publicProfileSearch.ts"
+      - "src/services/__tests__/bandInviteEligibility.test.ts"
+      - "src/services/__tests__/bandInvitations.test.ts"
+      - "src/services/__tests__/publicProfileSearch.test.ts"
+      - "supabase/migrations/*band_invitation*.sql"
+      - ".github/workflows/band-invitation-checks.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/components/band/InviteFriendToBand.tsx"
+      - "src/pages/BandManager.tsx"
+      - "src/services/bandInviteEligibility.ts"
+      - "src/services/bandInvitations.ts"
+      - "src/services/publicProfileSearch.ts"
+      - "src/services/__tests__/bandInviteEligibility.test.ts"
+      - "src/services/__tests__/bandInvitations.test.ts"
+      - "src/services/__tests__/publicProfileSearch.test.ts"
+      - "supabase/migrations/*band_invitation*.sql"
+      - ".github/workflows/band-invitation-checks.yml"
+
+jobs:
+  verify-band-invitations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm install --global npm@10.9.2
+      - run: npm ci
+      - name: Check frontend types
+        run: npm run typecheck
+      - name: Test player search and band invitations
+        run: npx vitest run src/services/__tests__/bandInviteEligibility.test.ts src/services/__tests__/bandInvitations.test.ts src/services/__tests__/publicProfileSearch.test.ts
