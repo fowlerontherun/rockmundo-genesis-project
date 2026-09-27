@@ -38,6 +38,78 @@ export function productionEquipmentSpec(tier: number): ProductionEquipmentSpec {
   return TIERS[Math.min(TIERS.length - 1, Math.max(0, Math.floor(Number.isFinite(tier) ? tier : 0)))];
 }
 
+export type VenueSpeakerRole = 'line-array' | 'subwoofer';
+
+/**
+ * One rights-clear generated grille per PA role for an entire venue, including
+ * the audience delay towers. Drivers, waveguide, protective mesh and fasteners
+ * are baked into a small colour texture instead of dozens of tiny 3D meshes.
+ * DataTexture works identically for headless tests and the browser, so there
+ * is no canvas/document requirement or external art dependency.
+ */
+export function createVenueSpeakerGrille(spec: ProductionEquipmentSpec, role: VenueSpeakerRole): T.MeshStandardMaterial {
+  const width = role === 'line-array' ? 512 : 256;
+  const height = 256;
+  const faceWidth = role === 'line-array' ? spec.paWidth : spec.subWidth;
+  const faceHeight = role === 'line-array' ? spec.paHeight : spec.subHeight;
+  const pixels = new Uint8Array(width * height * 4);
+  const coneRadius = Math.min(faceHeight * (role === 'line-array' ? .30 : .35), faceWidth * .21);
+  const centers = role === 'line-array' ? [-faceWidth * .28, faceWidth * .28] : [0];
+  for (let y = 0; y < height; y++) {
+    const py = (.5 - (y + .5) / height) * faceHeight;
+    for (let x = 0; x < width; x++) {
+      const px = ((x + .5) / width - .5) * faceWidth;
+      let shade = 26;
+      for (const center of centers) {
+        const radius = Math.hypot(px - center, py);
+        if (radius < coneRadius * .23) shade = 32;
+        else if (radius < coneRadius * .76) shade = 16 + Math.round(radius / coneRadius * 17);
+        else if (radius < coneRadius * .89) shade = 47;
+        else if (radius < coneRadius * 1.04) shade = 78;
+        else if (radius < coneRadius * 1.11) shade = Math.max(shade, 36);
+      }
+      if (role === 'line-array' && Math.abs(px) < faceWidth * .095 && Math.abs(py) < faceHeight * .19)
+        shade = 52 + Math.round((1 - Math.abs(py) / (faceHeight * .19)) * 25);
+      // Corner bolts and a faint, tightly pitched woven protective mesh.
+      if (Math.abs(px) > faceWidth * .44 && Math.abs(py) > faceHeight * .4 &&
+        Math.hypot((Math.abs(px) - faceWidth * .462) / faceWidth, (Math.abs(py) - faceHeight * .447) / faceHeight) < .025)
+        shade = 125;
+      if (x % 7 === (y % 2) * 2 && y % 7 === 0) shade += 13;
+      const i = (y * width + x) * 4;
+      pixels[i] = shade; pixels[i + 1] = Math.min(255, shade + 4);
+      pixels[i + 2] = Math.min(255, shade + 8); pixels[i + 3] = 255;
+    }
+  }
+  const map = new T.DataTexture(pixels, width, height, T.RGBAFormat);
+  map.name = 'venue-' + role + '-grille-detail';
+  map.colorSpace = T.SRGBColorSpace;
+  map.wrapS = map.wrapT = T.ClampToEdgeWrapping;
+  map.magFilter = T.LinearFilter;
+  map.minFilter = T.LinearMipmapLinearFilter;
+  map.generateMipmaps = true;
+  map.anisotropy = 4;
+  map.userData.venueSpeakerDetail = { role, width, height, coneCount: centers.length };
+  map.needsUpdate = true;
+  const material = new T.MeshStandardMaterial({
+    name: 'venue-' + role + '-speaker-front', map, color: '#ffffff',
+    metalness: .24, roughness: .78,
+  });
+  material.userData.venueSpeakerRole = role;
+  return material;
+}
+
+/** Concert arrays progressively splay down toward the audience. Earlier rigs
+ * tilted upward and kept every cabinet at the same depth, so the flying array
+ * looked like a crooked straight line instead of a curved PA system. */
+export function lineArrayCabinetPose(index: number, spec: ProductionEquipmentSpec, gap = .045) {
+  const cabinet = Number.isFinite(index) ? Math.max(0, Math.floor(index)) : 0;
+  const spacing = Number.isFinite(gap) ? Math.max(0, gap) : .045;
+  const tilt = cabinet * .018;
+  const forwardOffset = (spec.paHeight + spacing) * .018 * cabinet * (cabinet - 1) / 2;
+  return { tilt, forwardOffset };
+}
+
+
 function loadTexture(url: string) {
   // The deterministic fallback keeps the 3D scene constructible in Node smoke tests.
   if (typeof document === 'undefined') {
@@ -144,11 +216,14 @@ export function addAmplifierStack(
 export function addLineArrayCabinet(
   parent: T.Object3D, name: string, x: number, y: number, z: number, index: number,
   spec: ProductionEquipmentSpec, shell: T.Material, grille: T.Material, steel: T.Material,
+  gap = .045,
 ) {
   const root = new T.Group();
   root.name = name;
-  root.position.set(x, y, z);
-  root.rotation.x = -index * .018;
+  const pose = lineArrayCabinetPose(index, spec, gap);
+  root.position.set(x, y, z + pose.forwardOffset);
+  root.rotation.x = pose.tilt;
+  root.userData.hangingArray = { cabinetIndex: index, gap, ...pose };
   parent.add(root);
   const body = box(root, [spec.paWidth, spec.paHeight, spec.paDepth], [0, 0, 0], shell);
   body.name = name + '-cabinet';
