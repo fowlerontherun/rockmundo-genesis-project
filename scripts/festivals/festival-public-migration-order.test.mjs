@@ -20,3 +20,15 @@ test("public NPC projection follows NPC storage and original public projection",
   assert.match(sql, /NULL::timestamptz starts_at,NULL::timestamptz ends_at/);
   assert.match(sql, /REVOKE ALL ON FUNCTION public\.festival_public_projection_v2\(uuid\)/);
 });
+
+test("public page never promotes an explicitly empty lineup to confirmed acts", () => {
+  const page = readFileSync(new URL("../../src/features/festival-company/ui/PublicFestivalPage.tsx", import.meta.url), "utf8");
+  assert.match(page, /const confirmedLineup = f\.lineup \?\? f\.timetable\.map/);
+  assert.doesNotMatch(page, /f\.lineup\?\.length\s*\?\s*f\.lineup/);
+  assert.match(page, /startsAt: null,\s*endsAt: null/);
+});
+test("curated NPC public stage is scoped to the current company and edition", () => {
+  const sql = readFileSync(new URL(named("festival_public_curated_npc_lineup.sql"), root), "utf8");
+  assert.match(sql, /st\.festival_company_id=p_festival_company_id/);
+  assert.match(sql, /sp\.festival_edition_id=v_edition_id/);
+});
