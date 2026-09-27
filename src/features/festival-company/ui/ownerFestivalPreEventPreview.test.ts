@@ -29,6 +29,7 @@ describe("pre-event Festival owner and directory sales preview", () => {
 
   it("keeps sales up to date and previews the complete publicly announced lineup", () => {
     expect(owner).toContain("festivalRoutes.publicCompany(slug)");
+    expect(hooks).toContain('c.invalidateQueries({queryKey:["festival-sales-summary",id]})');
     expect(hooks).toContain('c.invalidateQueries({queryKey:["festival-sales-summary"]})');
     expect(hooks).toContain("refetchInterval:60_000");
   });
