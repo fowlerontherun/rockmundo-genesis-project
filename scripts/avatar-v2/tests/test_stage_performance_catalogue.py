@@ -13,12 +13,12 @@ BONES = {
 }
 
 class StagePerformanceCatalogueTests(unittest.TestCase):
-    def test_all_roles_have_six_unique_clips_and_valid_bones(self):
+    def test_all_roles_have_ten_unique_clips_and_valid_bones(self):
         clips = build_catalogue()
-        self.assertEqual(len(clips), 36)
+        self.assertEqual(len(clips), 60)
         self.assertEqual({clip.role for clip in clips}, set(ROLES))
         for role in ROLES:
-            self.assertEqual(sum(clip.role == role for clip in clips), 6)
+            self.assertEqual(sum(clip.role == role for clip in clips), 10)
         validate_catalogue(clips, BONES)
 
     def test_every_bone_returns_to_rest_at_loop_boundary(self):
