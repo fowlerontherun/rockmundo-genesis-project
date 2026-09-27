@@ -1,6 +1,7 @@
 import * as T from 'three';
 import { box, rod, matte, metal, batchStaticMeshes } from './stage';
 import type { VenueProfile } from './venueProfile';
+import { buildVenueShowIdentity } from './venueShowIdentity';
 import {
     addAmplifierStack,
     addLineArrayCabinet,
@@ -232,6 +233,8 @@ export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Ma
     if (layout.tier >= 3)
         for (let i = 0; i < Math.floor(p.stageWidth / 1.4); i++)
             box(root, [.9, .045, .08], [(i - (Math.floor(p.stageWidth / 1.4) - 1) / 2) * 1.4, y + .05, .51], lensMaterial);
+    // Signature stage architecture is shared by live gigs, replays and venue previews.
+    buildVenueShowIdentity(root, p, layout.tier);
     batchStaticMeshes(root);
     return root;
 }
