@@ -1,5 +1,5 @@
 import * as T from 'three';
-import { box, cylinder, rod, matte, metal, batchStaticMeshes } from './stage';
+import { box, rod, matte, metal, batchStaticMeshes } from './stage';
 import type { VenueProfile } from './venueProfile';
 import {
     addAmplifierStack,
@@ -36,9 +36,9 @@ export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Ma
     root.name = 'venue';
     root.userData.profile = p;
     root.userData.production = productionLayout(p);
-    root.userData.equipment = productionEquipmentSpec(root.userData.production.tier);
     scene.add(root);
     const layout = productionLayout(p), equipment = productionEquipmentSpec(layout.tier), half = p.stageWidth / 2, back = .65 - p.stageDepth, y = p.stageHeight;
+    root.userData.equipment = equipment;
     const black = matte('#11151d'), steel = metal('#58636e'), chrome = metal('#a4adb7'), trim = matte(p.accent);
     const deck = box(root, [p.stageWidth, y, p.stageDepth], [0, y / 2, .65 - p.stageDepth / 2], black);
     deck.name = 'stage-deck';
@@ -48,7 +48,7 @@ export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Ma
     if (layout.wings)
         for (const side of [-1, 1]) {
             box(root, [4, y, p.stageDepth * .8], [side * (half + 2), y / 2, back + p.stageDepth * .45], black);
-            box(root, [3.8, .04, p.stageDepth * .78], [side * (half + 2), y + .02, back + p.stageDepth * .45], wood);
+            box(root, [3.8, .04, p.stageDepth * .78], [side * (half + 2), y + .02, back + p.stageDepth * .45], deckSurface);
         }
     if (layout.runway) {
         const runway = box(root, [3.2, y, 6], [0, y / 2, 3.65], black);
