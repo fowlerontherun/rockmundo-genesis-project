@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { fetchMyBandFestivalAppearances, isFutureFestivalAppearance } from "@/features/festivals/appearances/bandFestivalAppearances";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface GigOffer {
@@ -123,11 +124,23 @@ export const useAdvancedGigs = (bandId?: string) => {
     enabled: !!bandId,
   });
 
+  // Festival appearances are independent of gigs and must never make the gig list fail.
+  const { data: festivalAppearances = [], isError: festivalsError, isLoading: festivalsLoading } = useQuery({
+    queryKey: ["band-upcoming-festival-appearances", bandId],
+    queryFn: async () => (await fetchMyBandFestivalAppearances())
+      .filter((appearance) => appearance.bandId === bandId && isFutureFestivalAppearance(appearance)),
+    enabled: !!bandId,
+    retry: 1,
+  });
+
   return {
     offers,
     conflicts,
     lockouts,
     upcomingGigs,
+    festivalAppearances,
+    festivalsError,
+    festivalsLoading,
     isLoading: offersLoading || conflictsLoading || lockoutsLoading || gigsLoading,
   };
 };
