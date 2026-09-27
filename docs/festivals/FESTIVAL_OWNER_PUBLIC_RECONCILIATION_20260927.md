@@ -9,7 +9,7 @@ Status: source-level findings; production data and deployment not yet verified.
 - NPC manager previously contained literal `\\n` sequences inside JSX (repaired in this PR); confirm build and route visibility.
 - Player artist invitations, confirmed bookings, site-plan stages, legacy stage slots and revisioned visual schedule have separate identifiers and state transitions. The owner cannot yet reliably choose an invitation's exact stage/day/time and see that exact assignment publicly.
 
-## Required single workflow
+- The canonical annual-edition public route currently renders `PublicEditionHistory` from `CanonicalFestivalRoutes.tsx`, which calls settlement history and shows a completed-results empty state for editions without results. Upcoming editions need an edition-aware public overview rather than this history-only destination.\n\n## Required single workflow
 1. Owner creates or opens an edition and configures dated stages, opening hours and curfew.
 2. Owner invites a band into a proposed stage/day/slot; the invitation carries those proposed terms. Acceptance yields a confirmed booking, not an automatically public or arbitrarily timed performance.
 3. Owner selects local NPC bands/DJs from an edition-city-aware catalogue, not only free-text presets; add them to unfilled dated stage slots with duration/changeover.
@@ -20,7 +20,7 @@ Status: source-level findings; production data and deployment not yet verified.
 ## Release gates
 - Build/test owner NPC selector and both public route variants.
 - SQL fixtures: player invited -> accepted -> exact stage slot -> published; NPC band and DJ assigned to spare slots; cancellation; conflicts, curfew, stale version and visibility.
-- Compare owner draft, published projection and attendee timetable for one seeded multi-day edition.
+- Compare owner draft, published projection and attendee timetable for one seeded multi-day edition.\n- Verify public edition URL for both upcoming and completed editions: upcoming should show lineup, stages, tickets and release status; completed should retain history/results.
 - Check active route declarations against `routes.ts` rather than relying on historical routing audits.
 - Verify migration applied, data backfilled, and live public pages populated before calling this fixed.
 
