@@ -18,12 +18,14 @@ export function AvatarV2ReferenceCanvas({
   url,
   focus,
   experimentalRig = false,
+  lookdev = true,
   appearance,
 }: {
   url: string;
   appearance?: PlayerAppearance;
   focus: 'full' | 'face';
   experimentalRig?: boolean;
+  lookdev?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const previewModel = useRef<T.Object3D | null>(null);
@@ -148,7 +150,7 @@ export function AvatarV2ReferenceCanvas({
         source.traverse(object => {
           if (!(object instanceof T.Mesh)) return;
           const cloneSkin = (material: T.Material): T.Material => {
-            if (!(material instanceof T.MeshStandardMaterial) ||
+            if (!lookdev || !(material instanceof T.MeshStandardMaterial) ||
                 (!isAvatarV2PreviewSkinMaterial(material.name) && !isAvatarV2PreviewIrisMaterial(material.name))) return material;
             let clone = clones.get(material);
             if (!clone) {
@@ -169,7 +171,9 @@ export function AvatarV2ReferenceCanvas({
         if (skinTone.current) {
           for (const entry of originalSkinMaterials.current) entry.material.color.set(skinTone.current);
         }
-        if (eyeColor.current) for (const iris of irisMaterials.current) iris.color.set(eyeColor.current);
+        if (eyeColor.current && irisMaterials.current.length === 2) {
+          for (const iris of irisMaterials.current) iris.color.set(eyeColor.current);
+        }
         previewModel.current = source;
         candidate = source;
         scene.add(source);
@@ -203,7 +207,7 @@ export function AvatarV2ReferenceCanvas({
       renderer?.dispose();
       renderer?.forceContextLoss();
     };
-  }, [url, focus]);
+  }, [url, focus, lookdev]);
 
   // Creator sliders should update the loaded mesh without fetching the GLB,
   // resetting the orbit camera or destroying the WebGL context on every drag.
@@ -227,7 +231,7 @@ export function AvatarV2ReferenceCanvas({
   }, [appearance?.body.skin]);
 
   useEffect(() => {
-    if (!appearance?.head.eyeColor) return;
+    if (!appearance?.head.eyeColor || irisMaterials.current.length !== 2) return;
     for (const iris of irisMaterials.current) iris.color.set(appearance.head.eyeColor);
     redraw.current?.();
   }, [appearance?.head.eyeColor]);
@@ -249,10 +253,13 @@ export function AvatarV2ReferenceCanvas({
           3D preview unavailable: {error} The image previews are still available.
         </p>
       )}
-      {status === 'ready' && skinMaterialCount === 0 && (
+      {status === 'ready' && !lookdev && (
+        <p className="avatar-v2-public__skin-warning" role="status">The original source export has no lookdev materials. Switch to Improved V2 model to preview skin and eye colours.</p>
+      )}
+      {status === 'ready' && lookdev && skinMaterialCount === 0 && (
         <p className="avatar-v2-public__skin-warning" role="status">Skin tone is not available for this Blender export: no separately named skin material was found.</p>
       )}
-      {status === 'ready' && irisMaterialCount !== null && irisMaterialCount < 2 && (
+      {status === 'ready' && lookdev && irisMaterialCount !== 2 && (
         <p className="avatar-v2-public__iris-warning" role="status">Eye-colour preview unavailable: this export does not expose both separately named iris materials.</p>
       )}
       {status === 'ready' && (
