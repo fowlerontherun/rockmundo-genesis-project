@@ -14,6 +14,8 @@ import {
 } from "@/features/festivals/editions/repository";
 import { FestivalLiveControlRoom } from "@/features/festivals/runtime/FestivalLiveControlRoom";
 import { settlementRepository } from "@/features/festivals/settlement/repository";
+import { usePublicFestival } from "@/features/festival-company/application/useFestivalLaunch";
+import PublicFestivalPage from "@/features/festival-company/ui/PublicFestivalPage";
 import { resolveOwnerFestivalIdentifier, resolvePublicFestivalIdentifier } from "../resolver";
 import { festivalRoutes } from "../routes";
 import {
@@ -552,6 +554,16 @@ export function PublicFestivalEditionPage() {
       ),
   });
 
+  const resolved = query.data?.status === "resolved" ? query.data : null;
+  // Edition routes must never display a different year's current programme.
+  // The public projection exposes its actual editionId, not a guessed date.
+  const current = usePublicFestival(resolved?.publicSlug ?? undefined);
+  const results = useQuery({
+    queryKey: ["public-festival-history", resolved?.editionId],
+    enabled: Boolean(resolved?.editionId),
+    queryFn: () => settlementRepository.history(resolved!.editionId!),
+  });
+
   if (query.isLoading) {
     return (
       <main className="p-6" role="status">
@@ -560,15 +572,24 @@ export function PublicFestivalEditionPage() {
     );
   }
 
-  if (!query.data || query.data.status !== "resolved") {
+  if (!resolved) {
     return <ResolutionState status={query.data?.status ?? "unavailable"} />;
+  }
+
+  if (results.isLoading || current.isLoading) {
+    return <main className="p-6" role="status">Loading Festival programme…</main>;
+  }
+
+  // Completed editions retain their immutable settlement results.
+  if (!results.data && current.data?.editionId === resolved.editionId) {
+    return <PublicFestivalPage publicSlug={resolved.publicSlug} />;
   }
 
   return (
     <PublicEditionHistory
-      editionId={query.data.editionId!}
-      slug={query.data.publicSlug!}
-      year={query.data.editionYear}
+      editionId={resolved.editionId!}
+      slug={resolved.publicSlug!}
+      year={resolved.editionYear}
     />
   );
 }
@@ -598,6 +619,8 @@ function PublicEditionHistory({
       </h1>
       {query.isLoading ? (
         <p role="status">Loading Festival results…</p>
+      ) : query.isError ? (
+        <p role="alert">Festival results are temporarily unavailable. Please try again later.</p>
       ) : !query.data ? (
         <Card>
           <CardHeader>

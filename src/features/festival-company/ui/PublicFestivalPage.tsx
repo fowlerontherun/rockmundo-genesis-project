@@ -77,10 +77,10 @@ const attendanceLabel = (status: string) => {
   }
 };
 
-export default function PublicFestivalPage() {
+export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string } = {}) {
   const { festivalCompanyIdentifier } = useParams();
   const { user } = useAuth();
-  const { data: f, isLoading, isError } = usePublicFestival(festivalCompanyIdentifier);
+  const { data: f, isLoading, isError } = usePublicFestival(publicSlug ?? festivalCompanyIdentifier);
   const { data: attendance = [] } = useMyFestivalAttendance(Boolean(user));
   const { data: checkInEligibility = [] } = useMyFestivalCheckInEligibility(Boolean(user));
   const { data: festivalMemorabilia = [] } = useMyFestivalMemorabilia(Boolean(user));
