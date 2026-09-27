@@ -165,7 +165,16 @@ export function AvatarV2ReferenceCanvas({
         });
         // Cloned materials replace every matching GLTF material reference. The
         // originals are now orphaned; release them without disposing shared maps.
-        for (const original of clones.keys()) original.dispose();
+        // Dispose only materials no longer referenced by any mesh (a source
+        // export may share one material with non-preview geometry).
+        const stillUsed = new Set<T.Material>();
+        source.traverse(object => {
+          if (!(object instanceof T.Mesh)) return;
+          for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+            stillUsed.add(material);
+          }
+        });
+        for (const original of clones.keys()) if (!stillUsed.has(original)) original.dispose();
         setSkinMaterialCount(originalSkinMaterials.current.length);
         setIrisMaterialCount(hasAvatarV2PreviewIrisPair(irisNames.current) ? 2 : 0);
         if (skinTone.current) {
@@ -258,7 +267,7 @@ export function AvatarV2ReferenceCanvas({
         </p>
       )}
       {status === 'ready' && !lookdev && (
-        <p className="avatar-v2-public__skin-warning" role="status">The original source export has no lookdev materials. Switch to Improved V2 model to preview skin and eye colours.</p>
+        <p className="avatar-v2-public__skin-warning" role="status">This source or experimental rig is for geometry inspection. Switch to Improved V2 model to preview skin and eye colours.</p>
       )}
       {status === 'ready' && lookdev && skinMaterialCount === 0 && (
         <p className="avatar-v2-public__skin-warning" role="status">Skin tone is not available for this Blender export: no separately named skin material was found.</p>
