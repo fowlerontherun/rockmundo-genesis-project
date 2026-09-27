@@ -4,6 +4,7 @@ import sys
 import unittest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from stage_performance_sequence import plan_performance
+from export_stage_performance_plan import build_manifest, parse_sections
 
 SECTIONS = (("intro", 8), ("verse", 16), ("chorus", 16), ("bridge", 8), ("solo", 16), ("outro", 8))
 
@@ -22,6 +23,18 @@ class StagePerformanceSequenceTests(unittest.TestCase):
         original = plan_performance("drums", SECTIONS, seed="gig-42")
         self.assertEqual(original, plan_performance("drums", SECTIONS, seed="gig-42"))
         self.assertEqual(original, plan_performance("drums", SECTIONS, seed="gig-42", bpm=160))
+
+    def test_review_manifest_is_reproducible_and_explicitly_unapproved(self):
+        sections = parse_sections("intro:8,verse:16,chorus:16,outro:8")
+        manifest = build_manifest("gig-42", 120, sections)
+        self.assertEqual(manifest, build_manifest("gig-42", 120, sections))
+        self.assertEqual(manifest["durationBeats"], 48)
+        self.assertFalse(manifest["runtimeIntegrated"])
+        self.assertFalse(manifest["instrumentContactValidated"])
+        self.assertEqual(len(manifest["roles"]), 6)
+        self.assertTrue(all(plan[-1]["end_beat"] == 48 for plan in manifest["roles"].values()))
+        with self.assertRaises(ValueError):
+            parse_sections("verse:0")
 
     def test_short_section_and_invalid_input(self):
         plan = plan_performance("guitar", (("intro", 1), ("outro", 3)), seed="tiny")
