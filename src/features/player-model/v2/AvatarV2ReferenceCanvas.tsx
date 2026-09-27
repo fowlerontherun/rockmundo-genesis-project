@@ -32,7 +32,7 @@ export function AvatarV2ReferenceCanvas({
   const previewModel = useRef<T.Object3D | null>(null);
   const referenceScale = useRef(1);
   const originalSkinMaterials = useRef<Array<{ material: T.MeshStandardMaterial; color: T.Color }>>([]);
-  const irisMaterials = useRef<T.MeshStandardMaterial[]>([]);
+  const irisMaterials = useRef<Array<{ material: T.MeshStandardMaterial; color: T.Color }>>([]);
   const irisNames = useRef<string[]>([]);
   const redraw = useRef<(() => void) | null>(null);
   const skinTone = useRef(appearance?.body.skin);
@@ -153,7 +153,7 @@ export function AvatarV2ReferenceCanvas({
               if (isAvatarV2PreviewSkinMaterial(material.name)) {
                 originalSkinMaterials.current.push({ material: clone, color: clone.color.clone() });
               } else {
-                irisMaterials.current.push(clone);
+                irisMaterials.current.push({ material: clone, color: clone.color.clone() });
                 irisNames.current.push(material.name);
               }
             }
@@ -181,7 +181,7 @@ export function AvatarV2ReferenceCanvas({
           for (const entry of originalSkinMaterials.current) entry.material.color.set(skinTone.current);
         }
         if (eyeColor.current && hasAvatarV2PreviewIrisPair(irisNames.current)) {
-          for (const iris of irisMaterials.current) iris.color.set(eyeColor.current);
+          for (const iris of irisMaterials.current) iris.material.color.set(eyeColor.current);
         }
         previewModel.current = source;
         scene.add(source);
@@ -244,8 +244,11 @@ export function AvatarV2ReferenceCanvas({
   }, [appearance?.body.skin]);
 
   useEffect(() => {
-    if (!appearance?.head.eyeColor || !hasAvatarV2PreviewIrisPair(irisNames.current)) return;
-    for (const iris of irisMaterials.current) iris.color.set(appearance.head.eyeColor);
+    if (!hasAvatarV2PreviewIrisPair(irisNames.current)) return;
+    for (const iris of irisMaterials.current) {
+      if (appearance?.head.eyeColor) iris.material.color.set(appearance.head.eyeColor);
+      else iris.material.color.copy(iris.color);
+    }
     redraw.current?.();
   }, [appearance?.head.eyeColor]);
 
