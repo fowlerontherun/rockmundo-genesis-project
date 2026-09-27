@@ -38,7 +38,7 @@ from mathutils import Vector
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from rig_landmarks import (  # noqa: E402
     BoneSpec, audit_sculpt_fit, fit_bones, moved_markers, position_markers,
-    untouched_face_markers,
+    untouched_face_markers, stale_guide_markers,
 )
 from rig_review import invalidate_rig_reviews
 
@@ -159,6 +159,15 @@ def fit_from_handles(rig: bpy.types.Object, specs: list[BoneSpec], reviewed: boo
         rest[name] = tuple(float(x) for x in stored)
         local = inverse @ obj.matrix_world.translation
         placed[name] = tuple(float(x) for x in local)
+
+    stale = stale_guide_markers(expected, rest)
+    if stale:
+        raise SystemExit(
+            "Fit handles were created for a different armature rest pose: "
+            + ", ".join(stale[:12])
+            + ". Preserve this working file for reference and regenerate handles "
+            "from the current skeleton before fitting."
+        )
 
     changed = moved_markers(placed, rest)
     minimum_edits = max(8, math.ceil(len(expected) * .10))
