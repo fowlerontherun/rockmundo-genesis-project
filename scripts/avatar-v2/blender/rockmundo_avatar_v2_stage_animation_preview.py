@@ -1,4 +1,4 @@
-"""Generate UNAPPROVED Blender Action previews from the draft stage clip catalogue.
+"""Generate 60 UNAPPROVED Blender Action previews from the draft stage clip catalogue.
 
 Run in a Blender scene with an RMV2_Armature. Saves editable Action datablocks
 but never marks them artist-approved or exports production gameplay animation.
@@ -33,11 +33,15 @@ def main() -> None:
     scene.render.fps = args.fps
     if rig.animation_data is None:
         rig.animation_data_create()
+    # Check all target Action names before creating any datablocks. A second
+    # run must never leave half a catalogue alongside existing artist edits.
+    conflicts = ["RMV2_DRAFT_" + clip.name for clip in clips
+                 if bpy.data.actions.get("RMV2_DRAFT_" + clip.name)]
+    if conflicts:
+        raise SystemExit("Existing Actions would be overwritten: " + ", ".join(conflicts[:10]))
     report = []
     for clip in clips:
         name = "RMV2_DRAFT_" + clip.name
-        if bpy.data.actions.get(name):
-            raise SystemExit("Existing artist Action would be overwritten: " + name)
         action = bpy.data.actions.new(name)
         action.use_fake_user = True
         rig.animation_data.action = action
