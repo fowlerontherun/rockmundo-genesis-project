@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: mocks.from } }));
 vi.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast: mocks.toast }) }));
+vi.mock("@/hooks/useBandInvitationsRealtime", () => ({ useBandInvitationsRealtime: vi.fn() }));
 vi.mock("@/services/publicProfileSearch", () => ({ searchPublicProfiles: mocks.searchPublicProfiles }));
 vi.mock("@/services/bandInvitations", () => ({
   sendBandInvitation: mocks.sendBandInvitation,
@@ -19,6 +20,7 @@ vi.mock("@/services/bandInvitations", () => ({
 }));
 
 import { InviteFriendToBand } from "./InviteFriendToBand";
+import { useBandInvitationsRealtime } from "@/hooks/useBandInvitationsRealtime";
 
 const bandId = "11111111-1111-4111-8111-111111111111";
 const inviterProfileId = "22222222-2222-4222-8222-222222222222";
@@ -84,6 +86,29 @@ beforeEach(() => {
 });
 
 describe("Band Members player invitations", () => {
+  it("refreshes pending invitations when the invited player responds while the dialog is open", async () => {
+    render(<InviteFriendToBand bandId={bandId} bandName="The Testers" currentUserId={inviterProfileId} currentAccountId={inviterUserId} />);
+    await openDialog();
+    await screen.findByText("No pending invitations.");
+    const realtime = vi.mocked(useBandInvitationsRealtime).mock.calls.at(-1)?.[0];
+    expect(realtime?.filterColumn).toBe("band_id");
+    expect(realtime?.filterValue).toBe(bandId);
+
+    dataByTable.band_invitations = [{
+      id: "66666666-6666-4666-8666-666666666666",
+      invited_user_id: targetUserId,
+      invited_profile_id: targetProfileId,
+      instrument_role: "Guitar",
+      status: "declined",
+      created_at: "2026-09-26T00:00:00Z",
+      responded_at: "2026-09-27T00:00:00Z",
+    }];
+    dataByTable.profiles = [{ id: targetProfileId, user_id: targetUserId, display_name: "Guest Guitarist", username: "guestguitarist" }];
+    act(() => realtime?.onChange({ eventType: "UPDATE", status: "declined" }));
+    expect(await screen.findByText("Declined")).toBeInTheDocument();
+    expect(screen.getByText("Guest Guitarist")).toBeInTheDocument();
+  });
+
   it("searches and invites non-friends through the guarded invitation service", async () => {
     render(<InviteFriendToBand bandId={bandId} bandName="The Testers" currentUserId={inviterProfileId} currentAccountId={inviterUserId} />);
     const input = await openDialog();

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { useBandInvitationsRealtime } from "@/hooks/useBandInvitationsRealtime";
 import { AlertCircle, CheckCircle2, Mail, RefreshCw, Users, XCircle } from "lucide-react";
 
 interface BandInvitation {
@@ -40,6 +41,22 @@ export const BandInvitations = ({ onMembershipChanged }: BandInvitationsProps) =
   const { profileId, userId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // New, withdrawn and answered invitations should appear without revisiting
+  // the page. An acceptance also invalidates the active character’s band data.
+  useBandInvitationsRealtime({
+    filterColumn: "invited_user_id",
+    filterValue: userId,
+    onChange: ({ eventType, status }) => {
+      void queryClient.invalidateQueries({ queryKey: ["band-invitations", userId, profileId] });
+      if (eventType === "UPDATE" && status === "accepted") {
+        void queryClient.invalidateQueries({ queryKey: ["user-bands"] });
+        void queryClient.invalidateQueries({ queryKey: ["active-band-membership"] });
+        void queryClient.invalidateQueries({ queryKey: ["primary-band"] });
+        void queryClient.invalidateQueries({ queryKey: ["band-join-eligibility"] });
+      }
+    },
+  });
 
   const { data: invitations, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["band-invitations", userId, profileId],
