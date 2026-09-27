@@ -38,6 +38,15 @@ describe('Avatar V2 reference-only proportion transforms', () => {
     expect(root.scale.toArray()).toEqual([.89, .89, .89]);
   });
 
+  it('rejects invalid scale inputs without mutating the model', () => {
+    const root = model();
+    for (const height of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() => applyAvatarV2PreviewProportions(root, .89, { height, build: 1 }))
+        .toThrow('Invalid V2 reference preview proportions.');
+      expect(root.scale.toArray()).toEqual([1, 1, 1]);
+    }
+  });
+
   it('rejects an empty source rather than applying an infinite offset', () => {
     expect(() => applyAvatarV2PreviewProportions(new T.Group(), 1, { height: 1, build: 1 }))
       .toThrow('Cannot ground an empty V2 reference model.');
