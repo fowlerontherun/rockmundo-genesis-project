@@ -29,6 +29,8 @@ jobs:
         run: npm ci
       - name: Verify dependency tree
         run: npm run verify:dependencies
+      - name: Verify festival public migration dependencies
+        run: node --test scripts/festivals/festival-public-migration-order.test.mjs
       - name: Verify Top of the Pops migration timestamps
         run: npm run verify:totp-migration-timestamps
       - name: Verify Avatar V2 Blender helpers
