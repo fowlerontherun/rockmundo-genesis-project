@@ -405,6 +405,7 @@ export default function PublicFestivalPage() {
               </Card>
             )}
 
+            {eventPhase === "ended" && <p role="status" className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">This festival has ended. Ticket purchases are closed; existing tickets remain available in your wallet.</p>}
             <section className="grid gap-4 md:grid-cols-2">
               {f.ticketProducts.map((p) => (
                 <Card key={p.id}>
@@ -430,7 +431,7 @@ export default function PublicFestivalPage() {
                       />
                     </label>
                     <Button
-                      disabled={buy.isPending || p.availableQuantity === 0 || f.launchStatus !== "tickets_on_sale"}
+                      disabled={buy.isPending || eventPhase === "ended" || p.availableQuantity === 0 || f.launchStatus !== "tickets_on_sale"}
                       onClick={() => buy.mutate({
                         festivalLaunchId: f.id,
                         ticketProductId: p.id,
@@ -438,7 +439,7 @@ export default function PublicFestivalPage() {
                         idempotencyKey: crypto.randomUUID(),
                       })}
                     >
-                      {buy.isPending ? "Completing purchase…" : p.availableQuantity === 0 ? "Sold out" : "Confirm purchase"}
+                      {buy.isPending ? "Completing purchase…" : eventPhase === "ended" ? "Festival ended" : p.availableQuantity === 0 ? "Sold out" : "Confirm purchase"}
                     </Button>
                     {buy.isError && <p role="alert">{buy.error.message.replaceAll("_", " ")}</p>}
                     {buy.isSuccess && (
