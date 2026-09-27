@@ -101,10 +101,27 @@ def _check_glb_skins(path: pathlib.Path) -> dict:
     skins = scene.get("skins", [])
     if not skins or max(len(item.get("joints", [])) for item in skins) < 5:
         raise RuntimeError("Experimental exported GLB has no actual multi-joint skin.")
-    skinned = sum(
-        1 for mesh in scene.get("meshes", []) for prim in mesh.get("primitives", [])
-        if "JOINTS_0" in prim.get("attributes", {}) and "WEIGHTS_0" in prim.get("attributes", {})
-    )
+    accessors = scene.get("accessors", [])
+    skinned = 0
+    weighted_vertices = 0
+    for mesh in scene.get("meshes", []):
+        for prim in mesh.get("primitives", []):
+            attrs = prim.get("attributes", {})
+            if not {"POSITION", "JOINTS_0", "WEIGHTS_0"} <= attrs.keys():
+                continue
+            try:
+                position, joints, weights = (
+                    accessors[attrs[key]] for key in ("POSITION", "JOINTS_0", "WEIGHTS_0")
+                )
+            except (IndexError, KeyError, TypeError) as exc:
+                raise RuntimeError("Experimental GLB has broken skin accessor references.") from exc
+            count = position.get("count", 0)
+            if (not isinstance(count, int) or count < 50
+                    or joints.get("count") != count or weights.get("count") != count
+                    or joints.get("type") != "VEC4" or weights.get("type") != "VEC4"):
+                raise RuntimeError("Experimental GLB skin buffers do not match actual mesh vertices.")
+            skinned += 1
+            weighted_vertices += count
     if skinned < 3:
         raise RuntimeError("Actual source body and both eye spheres must export real vertex skin data.")
     if scene.get("animations"):
@@ -112,6 +129,7 @@ def _check_glb_skins(path: pathlib.Path) -> dict:
     return {
         "gltfSkins": len(skins),
         "gltfSkinnedPrimitives": skinned,
+        "gltfWeightedVertices": weighted_vertices,
         "gltfJointCount": max(len(item["joints"]) for item in skins),
         "actualSkinBuffers": True,
     }
