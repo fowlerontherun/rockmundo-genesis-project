@@ -226,15 +226,23 @@ def fit_from_handles(rig: bpy.types.Object, specs: list[BoneSpec], reviewed: boo
     rig.select_set(True)
     bpy.context.view_layer.objects.active = rig
     bpy.ops.object.mode_set(mode="EDIT")
-    for name in sorted(fitted, key=depth):
-        bone = rig.data.edit_bones.get(name)
-        if not bone:
-            raise RuntimeError(f"Rig changed during marker fitting: {name}")
-        fit = fitted[name]
-        if not bone.use_connect:
-            bone.head = Vector(fit.head)
-        bone.tail = Vector(fit.tail)
-    bpy.ops.object.mode_set(mode="OBJECT")
+    try:
+        # Verify the whole edit-bone set before changing any joint. A missing
+        # bone must not leave a half-refitted artist scene behind.
+        missing_bones = sorted(set(fitted) - {bone.name for bone in rig.data.edit_bones})
+        if missing_bones:
+            raise RuntimeError(
+                "Rig changed during marker fitting; missing edit bones: "
+                + ", ".join(missing_bones)
+            )
+        for name in sorted(fitted, key=depth):
+            bone = rig.data.edit_bones[name]
+            fit = fitted[name]
+            if not bone.use_connect:
+                bone.head = Vector(fit.head)
+            bone.tail = Vector(fit.tail)
+    finally:
+        bpy.ops.object.mode_set(mode="OBJECT")
 
     report = {
         "action": "artist-markers-applied",
