@@ -2,6 +2,7 @@ import * as T from 'three';
 import { box, rod, matte, metal, batchStaticMeshes } from './stage';
 import type { VenueProfile } from './venueProfile';
 import { buildVenueShowIdentity } from './venueShowIdentity';
+import { planVenueLighting } from './venueLightShow';
 import {
     addAmplifierStack,
     addLineArrayCabinet,
@@ -42,6 +43,19 @@ export function stageLedEdgePositions(p: VenueProfile) {
         positions.push({ x, height: gap * (.1 + Math.sin(phase) ** 2 * .35) });
     }
     return positions;
+}
+
+/** Reserve a visible gap above the LED picture for the independent band
+ * banner, rather than drawing a second label across the top of the artwork. */
+export function stageBannerLayout(p: VenueProfile, ledScreen: boolean) {
+    const height = Math.min(1.1, p.stageWidth * .13);
+    if (!ledScreen) {
+        return { centerY: Math.min(p.rigHeight - 1, p.stageHeight + (p.rigHeight - p.stageHeight) * .77), height, screenTop: null };
+    }
+    const gap = p.rigHeight - p.stageHeight;
+    const screenTop = p.stageHeight + gap * (.49 + .65 / 2);
+    const clearance = p.rigHeight - screenTop;
+    return { centerY: screenTop + clearance * .5, height: Math.min(height, clearance * .55), screenTop };
 }
 
 /** Production uses metre-sized equipment. A larger show adds rigging and PA,
@@ -177,9 +191,12 @@ export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Ma
     }
 
     if (p.kind !== 'tv_studio') {
-        const banner = makeLabel(bandName, Math.min(p.stageWidth * .5, 10), Math.min(1.1, p.stageWidth * .13));
+        const placement = stageBannerLayout(p, led);
+        const banner = makeLabel(bandName, Math.min(p.stageWidth * .5, 10), placement.height);
         banner.name = 'stage-band-banner';
-        banner.position.set(0, Math.min(p.rigHeight - 1, y + (p.rigHeight - y) * .77), back + .55);
+        banner.position.set(0, placement.centerY, back + .55);
+        banner.userData.bannerHeight = placement.height;
+        banner.userData.screenTop = placement.screenTop;
         root.add(banner);
     }
     // Scale real cabinets, not entire instrument/performer rigs. Touring shows
@@ -248,10 +265,12 @@ export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Ma
         right: new T.MeshStandardMaterial({ name: 'production-light-lens-right', color: '#d8ecf7', emissive: '#b34b74', emissiveIntensity: 2.2 }),
         key: new T.MeshStandardMaterial({ name: 'production-light-lens-key', color: '#f9efe1', emissive: '#cba97f', emissiveIntensity: 2.2 }),
     };
-    for (const [i, pos] of stageLightPositions(p).entries()) {
+    const fixturePositions = stageLightPositions(p);
+    const motorized = new Set(p.kind === 'tv_studio' ? [] : planVenueLighting(p, fixturePositions, layout.tier, 'high').spotlightIndices);
+    for (const [i, pos] of fixturePositions.entries()) {
         const row = Math.floor(i / layout.columns);
         const bank = row === 0 ? lens.key : i % 2 === 0 ? lens.left : lens.right;
-        addMovingHead(root, 'production-light-' + i, pos, equipment.fixtureScale, black, steel, bank);
+        addMovingHead(root, 'production-light-' + i, pos, equipment.fixtureScale, black, steel, bank, motorized.has(i));
         if (layout.tier === 0)
             rod(root, [pos[0], 0, pos[2]], [pos[0], pos[1], pos[2]], .022, chrome);
     }

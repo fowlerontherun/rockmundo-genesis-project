@@ -1,5 +1,6 @@
 import { productionLayout, stageLightPositions } from './venueProduction';
 import { planVenueLighting, venueBeamCue } from './venueLightShow';
+import { aimMotorizedHead } from './venueProductionQuality';
 import { updateTvStudioMonitors } from './tvStudioProduction';
 import { resolveTotpStudioStageGeometry, totpStudioStageCenter } from './totpStudioGeometry';
 import { updateVenueAudience } from './venueAudience';
@@ -53,6 +54,7 @@ export class ConcertScene {
   private actors: Musician[] = [];
   private crowd: DemoCrowd | null = null;
   private lights: T.SpotLight[] = [];
+  private motorizedHeads: Array<T.Object3D | null> = [];
   private beams: T.Mesh[] = [];
   private lenses: T.MeshStandardMaterial[] = [];
   private cymbals: T.Object3D[] = [];
@@ -156,6 +158,11 @@ export class ConcertScene {
       }
       if (i === 4 || i === 7) { light.castShadow = true; light.shadow.mapSize.set(1024, 1024); light.shadow.bias = -0.0005; light.shadow.normalBias = 0.035; }
       this.scene.add(light, light.target); this.lights.push(light);
+      const movingHead = this.venueProfile && this.venueProfile.kind !== 'tv_studio'
+        ? this.scene.getObjectByName('production-light-' + plan.spotlightIndices[i] + '-head')
+        : undefined;
+      this.motorizedHeads.push(movingHead ?? null);
+      if (movingHead) aimMotorizedHead(movingHead, light.position, light.target.position);
       const fixture = new T.Group(); fixture.position.copy(light.position); fixture.lookAt(light.target.position); if(!this.venueProfile)this.scene.add(fixture);
       if (!this.venueProfile) cylinder(fixture, 0.17, 0.21, 0.34, [0, 0, 0], matte('#10151e')).rotation.x = Math.PI / 2;
       const lens = new T.MeshStandardMaterial({ color: '#f4e9dd', emissive: '#f3dcc8', emissiveIntensity: 2.25 });
@@ -535,6 +542,8 @@ export class ConcertScene {
       if (this.venueProfile) {
         const cue = venueBeamCue(this.venueProfile, light.position.toArray() as [number, number, number], i, t, playbackLight * releaseLight, this.settings.reducedMotion);
         light.target.position.set(...cue.target);
+        const movingHead = this.motorizedHeads[i];
+        if (movingHead) aimMotorizedHead(movingHead, light.position, light.target.position);
         if (beam) (beam.material as T.ShaderMaterial).uniforms.opacity.value = cue.opacity;
       } else {
         light.target.position.x = ((i - 1.5) * 1.4 + Math.sin(t * .35 + i * 1.4) * (this.settings.reducedMotion ? 0 : 1.4));

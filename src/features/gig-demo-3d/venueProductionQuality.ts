@@ -327,7 +327,7 @@ export function addVideoScreen(
 
 export function addMovingHead(
   parent: T.Object3D, name: string, pos: [number, number, number], scale: number,
-  shell: T.Material, steel: T.Material, lens: T.Material,
+  shell: T.Material, steel: T.Material, lens: T.Material, motorized = false,
 ) {
   const root = new T.Group();
   root.name = name;
@@ -336,12 +336,31 @@ export function addMovingHead(
   box(root, [.28 * scale, .12 * scale, .25 * scale], [0, .14 * scale, 0], shell);
   for (const side of [-1, 1])
     rod(root, [side * .12 * scale, .14 * scale, 0], [side * .12 * scale, -.11 * scale, 0], .018 * scale, steel);
-  const head = cylinder(root, .125 * scale, .15 * scale, .29 * scale, [0, -.08 * scale, 0], shell, 16);
+
+  // Preserve the motorized head as an addressable moving assembly. Unselected
+  // touring fixtures remain static and can still be merged into batched meshes.
+  const pivot = motorized ? new T.Group() : root;
+  if (motorized) {
+    pivot.name = name + '-head';
+    pivot.userData.motorizedHead = true;
+    root.add(pivot);
+  }
+  const head = cylinder(pivot, .125 * scale, .15 * scale, .29 * scale, [0, -.08 * scale, 0], shell, 16);
   head.rotation.x = .28;
-  cylinder(root, .09 * scale, .09 * scale, .025 * scale, [0, -.245 * scale, .05 * scale], lens, 16);
+  const glass = cylinder(pivot, .09 * scale, .09 * scale, .025 * scale, [0, -.245 * scale, .05 * scale], lens, 16);
   const bezel = new T.Mesh(new T.TorusGeometry(.095 * scale, .018 * scale, 5, 16), steel);
   bezel.position.set(0, -.258 * scale, .056 * scale);
   bezel.rotation.x = Math.PI / 2;
-  root.add(bezel);
+  pivot.add(bezel);
+  if (motorized) for (const mesh of [head, glass, bezel]) mesh.userData.animated = true;
   return root;
+}
+
+/** Aim the visible lamp head along the same downward axis as its stage beam.
+ * Target/source are stage coordinates, so replay scrubs do not accumulate
+ * rotational drift. The fixed yoke stays attached to the truss. */
+export function aimMotorizedHead(pivot: T.Object3D, source: T.Vector3, target: T.Vector3) {
+  const direction = target.clone().sub(source);
+  if (direction.lengthSq() < 1e-8 || !direction.toArray().every(Number.isFinite)) return;
+  pivot.quaternion.setFromUnitVectors(new T.Vector3(0, -1, 0), direction.normalize());
 }
