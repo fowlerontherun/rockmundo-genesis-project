@@ -31,6 +31,19 @@ export function stageLightPositions(p: VenueProfile) {
             positions.push([(col / (layout.columns - 1) - .5) * p.stageWidth * .88, p.rigHeight - .35, .65 - p.stageDepth * (.87 - row / Math.max(1, layout.rows - 1) * .8)]);
     return positions;
 }
+/** The pair of slim LED battens lives *outside* the active stage picture so
+ * artist names remain readable in wide camera shots of every venue size. */
+export function stageLedEdgePositions(p: VenueProfile) {
+    const positions: { x: number; height: number }[] = [];
+    const gap = p.rigHeight - p.stageHeight;
+    for (const side of [-1, 1]) for (let i = 0; i < 9; i++) {
+        const x = side * p.stageWidth * (.385 + i * .011);
+        const phase = (i + (side < 0 ? 0 : 9)) * .83;
+        positions.push({ x, height: gap * (.1 + Math.sin(phase) ** 2 * .35) });
+    }
+    return positions;
+}
+
 /** Production uses metre-sized equipment. A larger show adds rigging and PA,
  * rather than stretching a club's amplifiers and curtain with its floor. */
 export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Material, grille: T.Material, makeLabel: (text: string, w: number, h: number) => T.Mesh, bandName: string) {
@@ -87,7 +100,10 @@ export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Ma
             }
     }
     const curtain = ['theatre', 'jazz_lounge'].includes(p.kind), led = ['festival_stage', 'stadium', 'indoor_arena', 'ice_arena', 'live_house'].includes(p.kind);
-    const showTexture = led || layout.wings ? createVenueShowScreenTexture(p, bandName, layout.tier) : undefined;
+    // One landscape texture for the main wall, and one square texture shared
+    // by both IMAG wings. A wide graphic on square panels crushed band names.
+    const mainScreenTexture = led ? createVenueShowScreenTexture(p, bandName, layout.tier, 'wide') : undefined;
+    const wingScreenTexture = layout.wings ? createVenueShowScreenTexture(p, bandName, layout.tier, 'square') : undefined;
     if (curtain) {
         const g = new T.PlaneGeometry(p.stageWidth * .94, p.rigHeight - y, 100, 1), v = g.attributes.position;
         for (let i = 0; i < v.count; i++)
@@ -104,11 +120,11 @@ export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Ma
     else if (led) {
         const width = p.stageWidth * .7, height = (p.rigHeight - y) * .65;
         addVideoScreen(root, 'stage-led-wall', width, height,
-            [0, y + (p.rigHeight - y) * .49, back + .3], black, steel, p.accent, showTexture);
+            [0, y + (p.rigHeight - y) * .49, back + .3], black, steel, p.accent, mainScreenTexture);
         const strip = new T.MeshStandardMaterial({ color: '#52b6bf', emissive: '#308c9e', emissiveIntensity: 1.5 });
-        for (let i = 0; i < 18; i++)
-            box(root, [p.stageWidth * .012, (p.rigHeight - y) * (.1 + Math.sin(i * .83) ** 2 * .35), .025],
-                [(i - 8.5) * p.stageWidth * .036, y + (p.rigHeight - y) * .4, back + .535], strip);
+        for (const { x, height } of stageLedEdgePositions(p))
+            box(root, [p.stageWidth * .009, height, .025],
+                [x, y + (p.rigHeight - y) * .4, back + .535], strip);
     }
     else if (p.kind === 'concert_hall') {
         for (let i = 0; i < 9; i++) {
@@ -213,7 +229,7 @@ export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Ma
         for (const side of [-1, 1]) {
             const x = side * (half + 3.2), screenHeight = equipment.screenHeight;
             addVideoScreen(root, 'stage-side-screen-' + side, equipment.screenWidth, screenHeight,
-                [x, y + screenHeight * .7, back + p.stageDepth * .6], black, steel, p.accent, showTexture);
+                [x, y + screenHeight * .7, back + p.stageDepth * .6], black, steel, p.accent, wingScreenTexture);
             for (const z of [p.crowdDepth * .43, ...(layout.tier === 4 ? [p.crowdDepth * .76] : [])]) {
                 const towerX = side * (p.crowdWidth * .45);
                 const towerHeight = layout.tier === 4 ? 10 : 7;
