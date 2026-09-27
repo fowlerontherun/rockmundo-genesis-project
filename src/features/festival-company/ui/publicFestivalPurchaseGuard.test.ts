@@ -24,7 +24,7 @@ describe("public festival purchase controls", () => {
     expect(page).toContain("!Number.isSafeInteger(quantities[p.id] ?? 1)");
     expect(page).toContain("(quantities[p.id] ?? 1) < 1");
     expect(page).toContain("Math.min(p.purchaseLimit, p.availableQuantity)");
-    expect(page).toContain("!user || eventPhase === \"ended\"");
+    expect(page).toContain('disabled={buy.isPending || eventPhase === "ended"');
     expect(page).toContain('f.launchStatus !== "tickets_on_sale"');
     expect(page).toContain('<Link to="/auth">Sign in to purchase</Link>');
     expect(page).toContain("{user && <Button");
