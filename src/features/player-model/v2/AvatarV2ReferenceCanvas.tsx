@@ -4,7 +4,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { disposeModel } from '../model';
 import type { PlayerAppearance } from '../appearance';
-import { isAvatarV2PreviewIrisMaterial, isAvatarV2PreviewSkinMaterial } from './avatarV2PreviewMaterials';
+import { hasAvatarV2PreviewIrisPair, isAvatarV2PreviewIrisMaterial, isAvatarV2PreviewSkinMaterial } from './avatarV2PreviewMaterials';
 import { applyAvatarV2PreviewProportions } from './avatarV2PreviewProportions';
 
 /**
@@ -33,6 +33,7 @@ export function AvatarV2ReferenceCanvas({
   const referenceScale = useRef(1);
   const originalSkinMaterials = useRef<Array<{ material: T.MeshStandardMaterial; color: T.Color }>>([]);
   const irisMaterials = useRef<T.MeshStandardMaterial[]>([]);
+  const irisNames = useRef<string[]>([]);
   const redraw = useRef<(() => void) | null>(null);
   const skinTone = useRef(appearance?.body.skin);
   skinTone.current = appearance?.body.skin;
@@ -122,11 +123,11 @@ export function AvatarV2ReferenceCanvas({
           return;
         }
         const source = gltf.scene;
+        candidate = source; // Cleanup also covers errors during bounds, scaling or material traversal.
         source.updateMatrixWorld(true);
         const bounds = new T.Box3().setFromObject(source);
         const size = bounds.getSize(new T.Vector3());
         if (!Number.isFinite(size.y) || size.y < .3) {
-          disposeModel(source);
           throw new Error('This reference model has no measurable body height.');
         }
         // Display at human scale and ground the unchanged source A-pose.
@@ -138,6 +139,7 @@ export function AvatarV2ReferenceCanvas({
         // Blender export. Do not tint eyes, clothes or unidentified meshes.
         originalSkinMaterials.current = [];
         irisMaterials.current = [];
+        irisNames.current = [];
         const clones = new Map<T.MeshStandardMaterial, T.MeshStandardMaterial>();
         source.traverse(object => {
           if (!(object instanceof T.Mesh)) return;
@@ -150,7 +152,10 @@ export function AvatarV2ReferenceCanvas({
               clones.set(material, clone);
               if (isAvatarV2PreviewSkinMaterial(material.name)) {
                 originalSkinMaterials.current.push({ material: clone, color: clone.color.clone() });
-              } else irisMaterials.current.push(clone);
+              } else {
+                irisMaterials.current.push(clone);
+                irisNames.current.push(material.name);
+              }
             }
             return clone;
           };
@@ -162,15 +167,14 @@ export function AvatarV2ReferenceCanvas({
         // originals are now orphaned; release them without disposing shared maps.
         for (const original of clones.keys()) original.dispose();
         setSkinMaterialCount(originalSkinMaterials.current.length);
-        setIrisMaterialCount(irisMaterials.current.length);
+        setIrisMaterialCount(hasAvatarV2PreviewIrisPair(irisNames.current) ? 2 : 0);
         if (skinTone.current) {
           for (const entry of originalSkinMaterials.current) entry.material.color.set(skinTone.current);
         }
-        if (eyeColor.current && irisMaterials.current.length === 2) {
+        if (eyeColor.current && hasAvatarV2PreviewIrisPair(irisNames.current)) {
           for (const iris of irisMaterials.current) iris.color.set(eyeColor.current);
         }
         previewModel.current = source;
-        candidate = source;
         scene.add(source);
         setStatus('ready');
         requestDraw();
@@ -183,6 +187,7 @@ export function AvatarV2ReferenceCanvas({
           previewModel.current = null;
           originalSkinMaterials.current = [];
           irisMaterials.current = [];
+          irisNames.current = [];
         }
         setError(cause instanceof Error ? cause.message : 'The 3D preview could not load.');
         setStatus('error');
@@ -197,6 +202,7 @@ export function AvatarV2ReferenceCanvas({
       previewModel.current = null;
       originalSkinMaterials.current = [];
       irisMaterials.current = [];
+      irisNames.current = [];
       redraw.current = null;
       cancelAnimationFrame(queuedFrame);
       resizeObserver?.disconnect();
@@ -229,7 +235,7 @@ export function AvatarV2ReferenceCanvas({
   }, [appearance?.body.skin]);
 
   useEffect(() => {
-    if (!appearance?.head.eyeColor || irisMaterials.current.length !== 2) return;
+    if (!appearance?.head.eyeColor || !hasAvatarV2PreviewIrisPair(irisNames.current)) return;
     for (const iris of irisMaterials.current) iris.color.set(appearance.head.eyeColor);
     redraw.current?.();
   }, [appearance?.head.eyeColor]);
