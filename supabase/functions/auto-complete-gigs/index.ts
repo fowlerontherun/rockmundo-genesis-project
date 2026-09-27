@@ -189,15 +189,19 @@ serve(async (req) => {
         if (elapsedSeconds >= totalDuration) {
           console.log(`[auto-complete-gigs] Gig ${gig.id} duration exceeded, completing...`);
 
-          const { error: completeError } = await supabaseClient.functions.invoke("complete-gig", {
+          const { data: completionResult, error: completeError } = await supabaseClient.functions.invoke("complete-gig", {
             body: { gigId: gig.id },
           });
 
           if (completeError) {
             console.error("[auto-complete-gigs] Error completing gig:", completeError);
-          } else {
+          } else if (completionResult?.processing) {
+            console.log(`[auto-complete-gigs] Gig ${gig.id} is still processing in another worker`);
+          } else if (completionResult?.success && (completionResult?.alreadyCompleted || completionResult?.resultReadyAt)) {
             completedCount++;
             console.log(`[auto-complete-gigs] ✅ Completed gig ${gig.id}`);
+          } else {
+            console.error(`[auto-complete-gigs] Gig ${gig.id} did not return a final result`, completionResult);
           }
         }
       } catch (error) {
@@ -261,6 +265,10 @@ serve(async (req) => {
           );
           if (retryError) attemptError = getErrorMessage(retryError);
           else if (retryResult?.error) attemptError = String(retryResult.error);
+          else if (retryResult?.processing) attemptError = "Gig completion still in progress in another worker";
+          else if (!retryResult?.success || (!retryResult?.alreadyCompleted && !retryResult?.resultReadyAt)) {
+            attemptError = "Gig completion returned without a final result";
+          }
         } catch (invokeError) {
           attemptError = getErrorMessage(invokeError);
         }
