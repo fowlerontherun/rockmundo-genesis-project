@@ -4,6 +4,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { disposeModel } from '../model';
 import type { PlayerAppearance } from '../appearance';
+import { isAvatarV2PreviewSkinMaterial } from './avatarV2PreviewMaterials';
 
 /**
  * Read-only viewer for published Blender SOURCE/LOOKDEV previews.
@@ -142,7 +143,7 @@ export function AvatarV2ReferenceCanvas({
           if (!(object instanceof T.Mesh)) return;
           const cloneSkin = (material: T.Material): T.Material => {
             if (!(material instanceof T.MeshStandardMaterial) ||
-                !/^(?:RMV2_Preview_Skin_(?:masculine|feminine)|skin(?:[ _.-]|$)|body[ _-]?skin(?:[ _.-]|$))/i.test(material.name)) return material;
+                !isAvatarV2PreviewSkinMaterial(material.name)) return material;
             let clone = clones.get(material);
             if (!clone) {
               clone = material.clone();
