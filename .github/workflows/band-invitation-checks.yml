@@ -10,6 +10,8 @@ on:
       - "src/lib/notificationModels.ts"
       - "src/lib/notificationModels.test.ts"
       - "src/pages/BandManager.tsx"
+      - "src/hooks/useBandInvitationsRealtime.ts"
+      - "src/hooks/useBandInvitationsRealtime.test.tsx"
       - "src/services/bandInviteEligibility.ts"
       - "src/services/bandInvitations.ts"
       - "src/services/publicProfileSearch.ts"
@@ -28,6 +30,8 @@ on:
       - "src/lib/notificationModels.ts"
       - "src/lib/notificationModels.test.ts"
       - "src/pages/BandManager.tsx"
+      - "src/hooks/useBandInvitationsRealtime.ts"
+      - "src/hooks/useBandInvitationsRealtime.test.tsx"
       - "src/services/bandInviteEligibility.ts"
       - "src/services/bandInvitations.ts"
       - "src/services/publicProfileSearch.ts"
@@ -50,6 +54,6 @@ jobs:
       - run: npm install --global npm@10.9.2
       - run: npm ci
       - name: Test player search and band invitations
-        run: npx vitest run src/services/__tests__/bandInviteEligibility.test.ts src/services/__tests__/bandInvitations.test.ts src/services/__tests__/publicProfileSearch.test.ts src/components/band/InviteFriendToBand.test.tsx src/components/band/BandInvitations.test.tsx src/lib/notificationModels.test.ts
+        run: npx vitest run src/services/__tests__/bandInviteEligibility.test.ts src/services/__tests__/bandInvitations.test.ts src/services/__tests__/publicProfileSearch.test.ts src/components/band/InviteFriendToBand.test.tsx src/components/band/BandInvitations.test.tsx src/lib/notificationModels.test.ts src/hooks/useBandInvitationsRealtime.test.tsx
       - name: Check frontend types
         run: npm run typecheck
