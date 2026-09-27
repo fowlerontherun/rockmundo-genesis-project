@@ -3,6 +3,7 @@ import * as T from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { disposeModel } from '../model';
+import type { PlayerAppearance } from '../appearance';
 
 /**
  * Read-only viewer for published Blender SOURCE/LOOKDEV previews.
@@ -16,8 +17,10 @@ export function AvatarV2ReferenceCanvas({
   url,
   focus,
   experimentalRig = false,
+  appearance,
 }: {
   url: string;
+  appearance?: PlayerAppearance;
   focus: 'full' | 'face';
   experimentalRig?: boolean;
 }) {
@@ -111,6 +114,14 @@ export function AvatarV2ReferenceCanvas({
         source.updateMatrixWorld(true);
         const scaled = new T.Box3().setFromObject(source);
         source.position.y -= scaled.min.y;
+        // Creator body proportions are a reversible preview transform only.
+        // Unfitted source meshes cannot yet support safe garment, hair or
+        // accessory attachment, and these edits are never saved as V2 assets.
+        if (appearance) {
+          source.scale.x *= appearance.body.build;
+          source.scale.z *= appearance.body.build;
+          source.scale.y *= appearance.body.height;
+        }
         candidate = source;
         scene.add(source);
         setStatus('ready');
@@ -139,7 +150,7 @@ export function AvatarV2ReferenceCanvas({
       renderer?.dispose();
       renderer?.forceContextLoss();
     };
-  }, [url, focus]);
+  }, [url, focus, appearance?.body.build, appearance?.body.height]);
 
   return (
     <div className="avatar-v2-public__canvas-wrap">
