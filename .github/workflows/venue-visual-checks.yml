@@ -11,6 +11,7 @@ on:
       - "src/features/gig-demo-3d/venueScreenGraphics*"
       - "src/features/gig-demo-3d/venueVideoRigging*"
       - "src/features/gig-demo-3d/venueStageAccess*"
+      - "src/features/gig-demo-3d/venueSpeakerArray*"
       - "src/features/gig-demo-3d/venueSurfaceMaterials*"
       - "src/features/gig-demo-3d/venueProfile.ts"
       - ".github/workflows/venue-visual-checks.yml"
@@ -25,6 +26,7 @@ on:
       - "src/features/gig-demo-3d/venueScreenGraphics*"
       - "src/features/gig-demo-3d/venueVideoRigging*"
       - "src/features/gig-demo-3d/venueStageAccess*"
+      - "src/features/gig-demo-3d/venueSpeakerArray*"
       - "src/features/gig-demo-3d/venueSurfaceMaterials*"
       - "src/features/gig-demo-3d/venueProfile.ts"
       - ".github/workflows/venue-visual-checks.yml"
@@ -41,6 +43,6 @@ jobs:
           cache-dependency-path: package-lock.json
       - run: npm ci
       - name: Verify venue materials and capacity-tier production geometry
-        run: npx vitest run src/features/gig-demo-3d/venueProduction.test.ts src/features/gig-demo-3d/venueSurfaceMaterials.test.ts src/features/gig-demo-3d/venueShowIdentity.test.ts src/features/gig-demo-3d/venueScreenGraphics.test.ts src/features/gig-demo-3d/venueLightShow.test.ts src/features/gig-demo-3d/venueMotorizedFixtures.test.ts src/features/gig-demo-3d/venueVideoRigging.test.ts src/features/gig-demo-3d/venueStageAccess.test.ts
+        run: npx vitest run src/features/gig-demo-3d/venueProduction.test.ts src/features/gig-demo-3d/venueSurfaceMaterials.test.ts src/features/gig-demo-3d/venueShowIdentity.test.ts src/features/gig-demo-3d/venueScreenGraphics.test.ts src/features/gig-demo-3d/venueLightShow.test.ts src/features/gig-demo-3d/venueMotorizedFixtures.test.ts src/features/gig-demo-3d/venueVideoRigging.test.ts src/features/gig-demo-3d/venueStageAccess.test.ts src/features/gig-demo-3d/venueSpeakerArray.test.ts
       - name: Typecheck venue production against the actual frontend build
         run: npm run typecheck

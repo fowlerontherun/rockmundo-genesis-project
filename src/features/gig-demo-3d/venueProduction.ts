@@ -11,6 +11,7 @@ import {
     addVideoScreen,
     createStageDeckMaterial,
     createVenueShowScreenTexture,
+    createVenueSpeakerGrille,
     productionEquipmentSpec,
 } from './venueProductionQuality';
 
@@ -99,6 +100,10 @@ export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Ma
     const layout = productionLayout(p), equipment = productionEquipmentSpec(layout.tier), half = p.stageWidth / 2, back = .65 - p.stageDepth, y = p.stageHeight;
     root.userData.equipment = equipment;
     const black = matte('#11151d'), steel = metal('#58636e'), chrome = metal('#a4adb7'), trim = matte(p.accent);
+    // One map/material per audio cabinet role for the whole stage and every
+    // audience delay tower; backline amps retain the existing grille material.
+    const paGrille = layout.arrayBoxes ? createVenueSpeakerGrille(equipment, 'line-array') : grille;
+    const subGrille = layout.subs ? createVenueSpeakerGrille(equipment, 'subwoofer') : grille;
     const deck = box(root, [p.stageWidth, y, p.stageDepth], [0, y / 2, .65 - p.stageDepth / 2], black);
     deck.name = 'stage-deck';
     const deckSurface = createStageDeckMaterial(p, wood);
@@ -318,18 +323,24 @@ export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Ma
             rod(root, [side * (half - .3), y, 0], [side * (half - .3), y + 1.3, 0], .027, chrome);
         } else {
             const arrayX = side * (half + equipment.paWidth / 2 + .35);
-            rod(root, [arrayX, p.rigHeight + .04, .45], [arrayX, p.rigHeight - .45, .45], .037, steel);
+            // A suspension bumper and two actual flying cables support the
+            // curved array at the outer corners instead of one central rod.
+            box(root, [equipment.paWidth + .18, .09, equipment.paDepth + .12],
+                [arrayX, p.rigHeight - .32, .45], steel).name = 'stage-pa-bumper-' + side;
+            for (const dx of [-equipment.paWidth * .39, equipment.paWidth * .39])
+                rod(root, [arrayX + dx, p.rigHeight + .04, .35],
+                    [arrayX + dx, p.rigHeight - .5, .35], .018, chrome);
             for (let i = 0; i < layout.arrayBoxes; i++)
                 addLineArrayCabinet(root, 'line-array-' + side + '-' + i, arrayX,
                     p.rigHeight - .55 - i * (equipment.paHeight + .045), .45, i,
-                    equipment, black, grille, steel);
+                    equipment, black, paGrille, steel);
         }
     }
     const subSpacing = equipment.subWidth + .2;
     for (let i = 0; i < layout.subs; i++) {
         const x = (i - (layout.subs - 1) / 2) * subSpacing;
         if (layout.runway && Math.abs(x) < 2) continue;
-        addSubwoofer(root, 'subwoofer-' + i, x, 1.2, equipment, black, grille, steel);
+        addSubwoofer(root, 'subwoofer-' + i, x, 1.2, equipment, black, subGrille, steel);
     }
     for (let i = 0; i < layout.monitors; i++) {
         const spread = Math.min(p.stageWidth * (p.kind === 'tv_studio' ? .9 : .8), 22);
@@ -354,7 +365,7 @@ export function buildVenueProduction(scene: T.Scene, p: VenueProfile, wood: T.Ma
                 for (let i = 0; i < (layout.tier === 4 ? 6 : 4); i++)
                     addLineArrayCabinet(root, 'delay-array-' + side + '-' + z + '-' + i,
                         towerX, towerHeight - .45 - i * (equipment.paHeight + .025), z, i,
-                        equipment, black, grille, steel);
+                        equipment, black, paGrille, steel, .025);
             }
         }
     // Fixture count grows from two portable lamps to 56 heads plus LED battens.
