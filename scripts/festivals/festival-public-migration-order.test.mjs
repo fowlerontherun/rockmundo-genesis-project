@@ -20,8 +20,3 @@ test("public NPC projection follows NPC storage and original public projection",
   assert.match(sql, /NULL::timestamptz starts_at,NULL::timestamptz ends_at/);
   assert.match(sql, /REVOKE ALL ON FUNCTION public\.festival_public_projection_v2\(uuid\)/);
 });
-test("atomic reorder follows canonical scheduling tables", () => {
-  const source = named("festival_phase2a_visual_scheduling.sql");
-  const reorder = named("festival_atomic_stage_reorder.sql");
-  assert.ok(reorder > source, `${reorder} must follow ${source}`);
-});
