@@ -130,7 +130,7 @@ describe("Band Members player invitations", () => {
     fireEvent.change(input, { target: { value: "guest" } });
     fireEvent.click(await screen.findByRole("button", { name: /Guest Guitarist.*guestguitarist/i }));
 
-    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    fireEvent.click(screen.getByRole("button", { name: "Close invitation dialog" }));
     await openDialog();
     expect(screen.getByRole("button", { name: "Send Invitation" })).toBeDisabled();
     expect(screen.getByLabelText("Find a player")).toHaveValue("");
