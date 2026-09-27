@@ -39,6 +39,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from rig_landmarks import (  # noqa: E402
     BoneSpec, audit_sculpt_fit, fit_bones, moved_markers, position_markers,
     untouched_face_markers, stale_guide_markers, missing_edit_bones,
+    rig_structure_fingerprint,
 )
 from rig_review import invalidate_rig_reviews
 
@@ -110,6 +111,7 @@ def create_handles(rig: bpy.types.Object, specs: list[BoneSpec]) -> dict:
     collection = previous or bpy.data.collections.new(COLLECTION_NAME)
     if not previous:
         bpy.context.scene.collection.children.link(collection)
+    collection["rockmundoFitRigStructure"] = rig_structure_fingerprint(specs)
     collection.hide_render = True
     collection.hide_viewport = False
 
@@ -143,6 +145,14 @@ def fit_from_handles(rig: bpy.types.Object, specs: list[BoneSpec], reviewed: boo
     collection = bpy.data.collections.get(COLLECTION_NAME)
     if not collection:
         raise SystemExit("Create the RMV2_FitHandles collection and move its joint markers first.")
+
+    if collection.get("rockmundoFitRigStructure") != rig_structure_fingerprint(specs):
+        raise SystemExit(
+            "The armature hierarchy or connected-bone topology changed since "
+            "these handles were created (or the handle set predates hierarchy "
+            "tracking). Preserve the working file and regenerate handles from "
+            "the current skeleton before fitting."
+        )
 
     # Old handles left in the collection can indicate a changed skeleton or
     # renamed bones. Reject the entire mixed handle set rather than silently
