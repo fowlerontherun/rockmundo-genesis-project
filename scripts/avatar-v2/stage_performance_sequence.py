@@ -6,7 +6,7 @@ Never assumes instrument grips, drumsticks or foot contact have passed QA.
 from __future__ import annotations
 from dataclasses import dataclass
 from hashlib import sha256
-from stage_performance_catalogue import StageClip, build_catalogue, ROLES
+from stage_performance_catalogue import build_catalogue, ROLES
 
 @dataclass(frozen=True)
 class StageSegment:
@@ -31,10 +31,11 @@ def plan_performance(
     role: str, sections: tuple[tuple[str, int], ...], *,
     seed: str, bpm: int = 120, transition_beats: int = 1,
 ) -> tuple[StageSegment, ...]:
-    if role not in ROLES or not seed or not 0 <= transition_beats <= 2:
+    if (role not in ROLES or not isinstance(seed, str) or not seed
+            or not isinstance(transition_beats, int) or not 0 <= transition_beats <= 2):
         raise ValueError("Invalid role, replay seed or transition duration.")
     catalogue = [clip for clip in build_catalogue(bpm) if clip.role == role]
-    if not sections or any(name not in SECTION_TAGS or not isinstance(beats, int) or beats <= 0 for name, beats in sections):
+    if not sections or any(name not in SECTION_TAGS or type(beats) is not int or beats <= 0 for name, beats in sections):
         raise ValueError("Sections need valid names and positive integer beat counts.")
     result: list[StageSegment] = []
     cursor = 0
@@ -57,7 +58,8 @@ def plan_performance(
             digest = sha256(f"{seed}|{role}|{section_index}|{phrase}".encode()).digest()
             clip = available[int.from_bytes(digest[:8], "big") % len(available)]
             duration = min(clip.beats, remaining)
-            transition = min(transition_beats, duration // 2, result[-1].end_beat - result[-1].start_beat if result else 0)
+            transition = min(transition_beats, duration // 2,
+                             (result[-1].end_beat - result[-1].start_beat) // 2 if result else 0)
             result.append(StageSegment(clip.name, role, cursor, cursor + duration, transition))
             cursor += duration
             remaining -= duration
