@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { collectAvatarV2ExpressionBindings } from './avatarV2Expressions';
 
 /**
  * Read-only Phase 2 candidate audit. A pass here is structural evidence only:
@@ -28,6 +29,7 @@ export interface AvatarV2FaceAudit {
   invalidMorphTargets: string[];
   invalidBaseMeshes: string[];
   duplicateAnchors: string[];
+  missingRuntimeExpressions: string[];
 }
 
 /** Check actual loaded candidate geometry, not catalogue metadata. */
@@ -75,8 +77,14 @@ export function auditAvatarV2Face(root: T.Object3D): AvatarV2FaceAudit {
   const missingChannels = REQUIRED_FACE_CHANNELS.filter(name => !channels.has(name));
   const missingAnchors = REQUIRED_HEAD_ANCHORS.filter(name => !anchors.has(name));
   const duplicateAnchors = REQUIRED_HEAD_ANCHORS.filter(name => (anchors.get(name) ?? 0) > 1);
+  // Structural completeness is distinct from what the shipped gig controller
+  // can actually drive. Report both so exporters can fix naming mismatches.
+  const bindings = collectAvatarV2ExpressionBindings(root);
+  const runtimeRequired = ['blinkLeft', 'blinkRight', 'jawOpen', 'mouthSmile',
+    'visemeAA', 'visemeEE', 'visemeIH', 'visemeOH', 'visemeOU'] as const;
+  const missingRuntimeExpressions = runtimeRequired.filter(name => !(bindings[name]?.length));
   return {
-    passed: !missingChannels.length && !missingAnchors.length && !duplicateAnchors.length && !invalidMorphTargets.length && !invalidBaseMeshes.length,
-    missingChannels, missingAnchors, duplicateAnchors, invalidMorphTargets, invalidBaseMeshes,
+    passed: !missingChannels.length && !missingAnchors.length && !duplicateAnchors.length && !invalidMorphTargets.length && !invalidBaseMeshes.length && !missingRuntimeExpressions.length,
+    missingChannels, missingAnchors, duplicateAnchors, invalidMorphTargets, invalidBaseMeshes, missingRuntimeExpressions,
   };
 }
