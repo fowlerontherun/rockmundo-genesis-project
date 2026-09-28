@@ -5,6 +5,8 @@ on:
     paths:
       - 'scripts/avatar-v2/phase1_body_contract.py'
       - 'scripts/avatar-v2/blender/rockmundo_avatar_v2_phase1_body.py'
+      - 'scripts/avatar-v2/blender/rockmundo_avatar_v2_phase1_autobind_probe.py'
+      - 'scripts/avatar-v2/blender/rockmundo_avatar_v2_phase1_source_smoke.py'
       - 'scripts/avatar-v2/tests/test_phase1_body_contract.py'
       - 'docs/avatar-v2-phase1-body-rigs.md'
       - '.github/workflows/avatar-v2-phase1-body.yml'
@@ -13,6 +15,8 @@ on:
     paths:
       - 'scripts/avatar-v2/phase1_body_contract.py'
       - 'scripts/avatar-v2/blender/rockmundo_avatar_v2_phase1_body.py'
+      - 'scripts/avatar-v2/blender/rockmundo_avatar_v2_phase1_autobind_probe.py'
+      - 'scripts/avatar-v2/blender/rockmundo_avatar_v2_phase1_source_smoke.py'
       - 'scripts/avatar-v2/tests/test_phase1_body_contract.py'
       - '.github/workflows/avatar-v2-phase1-body.yml'
   workflow_dispatch:
@@ -33,6 +37,8 @@ jobs:
           python3 -m py_compile \
             scripts/avatar-v2/phase1_body_contract.py \
             scripts/avatar-v2/blender/rockmundo_avatar_v2_phase1_body.py \
+            scripts/avatar-v2/blender/rockmundo_avatar_v2_phase1_autobind_probe.py \
+            scripts/avatar-v2/blender/rockmundo_avatar_v2_phase1_source_smoke.py \
             scripts/avatar-v2/blender/rockmundo_avatar_v2_fit_rig.py \
             scripts/avatar-v2/blender/rockmundo_avatar_v2_weight_audit.py
       - name: Test independent both-frame weight, region and pose gates
