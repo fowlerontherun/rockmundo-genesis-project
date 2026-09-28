@@ -221,6 +221,24 @@ describe('Avatar V2 garments', () => {
       .toContain('no Avatar V2 garment mapping');
   });
 
+  it('requires an explicit migration status and colour mode', () => {
+    const complete = avatarV2GarmentConfig(item())!;
+    const { status: _status, ...withoutStatus } = complete;
+    const { colourMode: _colourMode, ...withoutColourMode } = complete;
+    expect(avatarV2GarmentConfig(item({ garment_config: { avatarV2: withoutStatus } }))).toBeNull();
+    expect(avatarV2GarmentConfig(item({ garment_config: { avatarV2: withoutColourMode } }))).toBeNull();
+  });
+
+  it('rejects conflicting main and trim material dye zones', () => {
+    const complete = avatarV2GarmentConfig(item())!;
+    const conflicting = item({ garment_config: { avatarV2: {
+      ...complete,
+      materialZones: { main: ['RMV2_Garment_Main'], trim: ['RMV2_Garment_Main'] },
+    } } });
+    expect(avatarV2GarmentConfig(conflicting)).toBeNull();
+    expect(avatarV2GarmentFile(conflicting, 'masculine', 0)).toBeNull();
+  });
+
   it('refuses incomplete or reused manifests even when marked validated', () => {
     const original = item();
     const complete = avatarV2GarmentConfig(original)!;
@@ -237,6 +255,54 @@ describe('Avatar V2 garments', () => {
     expect(avatarV2GarmentFile(repeated, 'masculine', 0)).toBeNull();
     expect(avatarV2ClothingCompatibilityReason([row(repeated)], 'masculine', 0))
       .toContain('no validated');
+  });
+
+  it('rejects noncanonical migrated asset paths instead of normalising them', () => {
+    const complete = avatarV2GarmentConfig(item())!;
+    for (const invalid of [
+      '/avatar-v2/clothing/masculine/test-tee-lod0.glb',
+      'avatar-v2/clothing/masculine/../masculine/test-tee-lod0.glb',
+      'avatar-v2/clothing/masculine//test-tee-lod0.glb',
+      'avatar-v2/clothing/masculine/%2e%2e/test-tee-lod0.glb',
+      'avatar-v2\\\\clothing\\\\masculine\\\\test-tee-lod0.glb',
+    ]) {
+      const migrated = item({ garment_config: { avatarV2: {
+        ...complete,
+        frames: { ...complete.frames, masculine: { ...complete.frames.masculine, lod0: invalid } },
+      } } });
+      expect(avatarV2GarmentFile(migrated, 'masculine', 0)).toBeNull();
+    }
+  });
+
+  it('rejects swapped frame and LOD filenames during skin migration', () => {
+    const complete = avatarV2GarmentConfig(item())!;
+    const swapped = item({ garment_config: { avatarV2: {
+      ...complete,
+      frames: {
+        ...complete.frames,
+        masculine: {
+          ...complete.frames.masculine,
+          lod0: complete.frames.masculine?.lod1,
+          lod1: complete.frames.masculine?.lod0,
+        },
+      },
+    } } });
+    expect(avatarV2GarmentHasCompleteAssetManifest(avatarV2GarmentConfig(swapped)!)).toBe(false);
+    expect(avatarV2GarmentFile(swapped, 'masculine', 0)).toBeNull();
+  });
+
+  it('rejects mislabelled frame assets and misleading LOD suffixes', () => {
+    const complete = avatarV2GarmentConfig(item())!;
+    for (const invalid of [
+      'avatar-v2/clothing/feminine/test-tee-lod0.glb',
+      'avatar-v2/clothing/masculine/test-tee-fakelod0.glb',
+    ]) {
+      const migrated = item({ garment_config: { avatarV2: {
+        ...complete,
+        frames: { ...complete.frames, masculine: { ...complete.frames.masculine, lod0: invalid } },
+      } } });
+      expect(avatarV2GarmentFile(migrated, 'masculine', 0)).toBeNull();
+    }
   });
 
   it('rejects duplicate equipped inventory identities and curated keys', () => {

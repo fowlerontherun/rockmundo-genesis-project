@@ -126,10 +126,11 @@ function stringList(value: unknown) {
 
 function safeAssetPath(value: unknown) {
   if (typeof value !== 'string') return undefined;
-  const file = value.replace(/^\/+/, '');
-  if (!/^avatar-v2\/clothing\/[a-z0-9._/-]+\.glb$/i.test(file)) return undefined;
-  if (file.split('/').some(segment => segment === '.' || segment === '..')) return undefined;
-  return file;
+  // Require canonical relative paths; never silently normalise migration inputs.
+  if (value.startsWith('/') || value.includes('\\') || value.includes('%')) return undefined;
+  if (!/^avatar-v2\/clothing\/[a-z0-9._/-]+\.glb$/i.test(value)) return undefined;
+  if (value.split('/').some(segment => !segment || segment === '.' || segment === '..')) return undefined;
+  return value;
 }
 
 function frameAssets(value: unknown): AvatarV2GarmentFrameAssets {
@@ -148,14 +149,19 @@ export function avatarV2GarmentConfig(item: ClothingItem): AvatarV2GarmentConfig
   if (!Object.keys(source).length) return null;
   if (source.version !== 1) return null;
 
-  const status = String(source.status || 'planned') as AvatarV2GarmentStatus;
+  const status = source.status as AvatarV2GarmentStatus;
   if (!STATUSES.has(status)) return null;
 
   const frames = record(source.frames);
   const regions = stringList(source.occludeBodyRegions)
     .filter((region): region is AvatarV2BodyRegion => BODY_REGIONS.has(region as AvatarV2BodyRegion));
   const zones = record(source.materialZones);
-  const colourMode = source.colourMode === 'zones' ? 'zones' : 'authored';
+  if (source.colourMode !== 'zones' && source.colourMode !== 'authored') return null;
+  const colourMode = source.colourMode;
+
+  const main = stringList(zones.main);
+  const trim = stringList(zones.trim);
+  if (main.some(name => trim.includes(name))) return null;
 
   return {
     version: 1,
@@ -167,18 +173,29 @@ export function avatarV2GarmentConfig(item: ClothingItem): AvatarV2GarmentConfig
     occludeBodyRegions: [...new Set(regions)],
     colourMode,
     materialZones: {
-      main: stringList(zones.main),
-      trim: stringList(zones.trim),
+      main,
+      trim,
     },
   };
 }
 
 /** A validated label alone is not proof of eight distinct frame/LOD files. */
 export function avatarV2GarmentHasCompleteAssetManifest(config: AvatarV2GarmentConfig): boolean {
-  const paths = (['masculine', 'feminine'] as const).flatMap(frame =>
-    ([0, 1, 2, 3] as const).map(lod => config.frames[frame]?.[`lod${lod}`])
+  const entries = (['masculine', 'feminine'] as const).flatMap(frame =>
+    ([0, 1, 2, 3] as const).map(lod => ({
+      frame,
+      lod,
+      path: config.frames[frame]?.[`lod${lod}`],
+    }))
   );
-  return paths.every((path): path is string => !!path) && new Set(paths).size === 8;
+  const paths = entries.map(entry => entry.path);
+  return paths.every((path): path is string => !!path)
+    && new Set(paths).size === 8
+    && entries.every(({ frame, lod, path }) => {
+      if (!path || !path.toLowerCase().split('/').includes(frame)) return false;
+      const tokens = path.toLowerCase().split('/').pop()?.split(/[-_.]/) ?? [];
+      return tokens[tokens.length - 2] === `lod${lod}` && tokens[tokens.length - 1] === 'glb';
+    });
 }
 
 export function avatarV2GarmentFile(

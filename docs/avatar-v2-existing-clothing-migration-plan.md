@@ -197,3 +197,25 @@ with an immediate V1 fallback for any non-compatible outfit.
 **Do not seed fake production GLBs or mark any existing garment validated
 to make dashboard counts look complete.** The work queue is deliberately
 live and shows the gap until actual visual/functional proof exists.
+
+## External authoring pack intake (28 September 2026)
+
+The following **local, downloadable authoring packs** were generated outside the
+repository. The GitHub connector has not uploaded their binary GLBs or PNGs;
+none are available to the game loader, and none count as production mappings.
+
+| Pack | Existing items represented | Contents | Status |
+|---|---|---|---|
+| Starter tees | Rockmundo Logo Tee, Plain Black Tee, Plain White Tee, Vintage Charcoal Tee | 4 static GLB shell starts, 2048px colour reference PNGs | External artist starts only |
+| Starter denim | Dark Slim Jeans, Blue Straight Jeans, Black Straight Jeans | 3 static GLB shell starts, 1024px denim colour reference PNGs | External artist starts only |
+| Footwear | Canvas Trainers, Black Boots, Brown Boots, Combat Boots | 4 static two-shoe GLB blockouts, 1024px colour reference PNGs | External artist starts only |
+
+**Import checklist:** obtain the corresponding ZIP files from the authoring
+handoff; review every source and licence; commit raw starts in a clearly named
+non-runtime authoring directory; do not place static blockouts under
+`public/avatar-v2/clothing/`. Artists must sculpt and UV the actual garment,
+rig to both production body frames, create four genuinely distinct LODs per
+frame, attach all detail to weighted meshes, bake texture maps, test all stage
+poses and pass visual/performance QA. Only then add production asset paths to
+existing item records, leaving item IDs, ownership and bonuses unchanged.
+
