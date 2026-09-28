@@ -14,6 +14,14 @@ npm run validate:avatar-v2
 
 The shared CI workflow runs the same checks. The real-source workflow separately fetches pinned CC0 Blender Human Base Meshes 1.4.1, builds the masculine and feminine authoring packs, checks the SHA-256 inventory, then reads **actual BIN skin/accessor bytes** from both Blender-exported experimental head-motion GLBs. It does not count their draft weights as production assets. The proofs stay on the source-only preview branch; production files belong only under `public/avatar-v2/` after review.
 
+## Browser evidence for real source experiments
+
+The real-source authoring workflow now renders each generated **masculine and feminine experimental head-rig GLB** in a genuine Chromium WebGL/Three.js viewer at 1440 × 900 desktop and 390 × 844 mobile widths. It uses the binary files generated **in the same workflow run** after Blender source-hash and GLB BIN validation. Playwright intercepts a CI-only fixture URL; these source GLBs are **not** copied into the production `public/avatar-v2/` registry.
+
+The `npm run test:avatar-v2:browser-proof` command runs four checks once `work/avatar-v2-authoring-artifacts/` has been built. Each check requires visible WebGL canvas, real skinned geometry and source materials, reports UV-mapped and embedded-texture slots separately, and writes a screenshot and structured diagnostics to `work/avatar-v2-browser-proofs/`. The workflow uploads these alongside the source-only Blender artifacts for reviewer inspection.
+
+Passing this gate proves automated desktop/mobile **browser rendering of the source experiment**, not authenticated private admin storage access, correct garment UV fitting, finished production textures, independent artist fit approval or mobile GPU frame-rate budgets. Those require separate manual/admin acceptance evidence before production certification.
+
 ## Versioned status contract
 
 Both production manifests retain their explicit `assetVersion` and their existing schemas. The binary gate enforces matching asset versions, unique frame/LOD and garment keys, exact production paths and no unregistered GLBs under the public V2 directory.
@@ -66,6 +74,6 @@ The independent reviewer must confirm full rig fit, morphs, material/texture fid
 - CI: record the passing full CI URL and the dedicated real-source workflow URL from the **same reviewed commit**; check both frame artifacts are downloadable and checksum verified.
 - Binary: the Python regression suite must reject corrupted GLB chunk lengths, JSON-only skin declarations, invalid BIN offsets, illegal positive-weight joint indexes, invalid weight sums and NaN inverse matrices.
 - Source-only separation: no preview/reference or blocked asset is found on the production path, and no manifest declares an unreviewed asset validated.
-- Admin/browser: after frontend deployment, inspect original GLB and textured lookdev for both frames, plus the draft head-motion variant, on desktop and mobile. A complete manifest and screenshots do **not** replace a browser render, texture or private-archive validation test. Record this visual check separately; it is not automatically certified by CI.
+- Admin/browser: after frontend deployment, inspect original GLB and textured lookdev for both frames, plus the draft head-motion variant, on desktop and mobile. The automated browser proof above does not replace authenticated private-archive loading, review of actual embedded textures, or a device-performance check. Record this visual check separately; it is not automatically certified by CI.
 
 Current registry rollout remains disabled until Phase 1 onward has produced reviewed assets for both frames.
