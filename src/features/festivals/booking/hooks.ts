@@ -187,7 +187,10 @@ export function useFestivalSetlist(contractId?: string) {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: festivalBookingKeys.setlist(contractId) }),
       queryClient.invalidateQueries({ queryKey: festivalBookingKeys.contracts(undefined, contractId) }),
-      queryClient.invalidateQueries({ queryKey: festivalBookingKeys.root, refetchType: "active" }),
+      // Contract lists and organiser/band workspaces also project setlist status.
+      queryClient.invalidateQueries({ queryKey: [...festivalBookingKeys.root, "contracts"], predicate: (query) => query.queryKey[3] !== "all" }),
+      queryClient.invalidateQueries({ queryKey: [...festivalBookingKeys.root, "band-workspace"] }),
+      queryClient.invalidateQueries({ queryKey: [...festivalBookingKeys.root, "organiser-workspace"] }),
     ]);
   };
   return {
