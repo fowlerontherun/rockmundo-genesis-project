@@ -1,6 +1,6 @@
 """Fail-closed glTF 2.0 skinning gate for Avatar V2 body and garment exports.
 
-Usage: python3 scripts/avatar-v2/verify_skinned_glb.py file.glb [...]
+Usage: python3 scripts/avatar-v2/verify_skinned_glb.py [--garment] file.glb [...]
 No third-party dependencies. A passing result is structural only, NOT fit approval.
 """
 import argparse
@@ -15,7 +15,7 @@ REQUIRED = {"Hips", "Spine1", "Spine2", "Neck", "Head", "UpperArm.L",
             "LowerLeg.R", "Foot.R"}
 
 
-def inspect(path):
+def inspect(path, *, garment=False):
     raw = pathlib.Path(path).read_bytes()
     if len(raw) < 20 or raw[:4] != b"glTF" or struct.unpack_from("<I", raw, 4)[0] != 2:
         raise ValueError("Not a glTF 2.0 binary file")
@@ -31,14 +31,16 @@ def inspect(path):
     if not skins:
         raise ValueError("No glTF skins")
     names = {node.get("name") for node in nodes}
-    missing = REQUIRED - names
-    if missing:
-        raise ValueError("Missing runtime bones: " + ", ".join(sorted(missing)))
+    if not garment:
+        missing = REQUIRED - names
+        if missing:
+            raise ValueError("Missing runtime bones: " + ", ".join(sorted(missing)))
     if not any(isinstance(skin.get("joints"), list) and
                all(type(j) is int and 0 <= j < len(nodes) for j in skin["joints"]) and
-               {nodes[j].get("name") for j in skin["joints"]} >= REQUIRED
+               (({nodes[j].get("name") for j in skin["joints"]} & REQUIRED) if garment
+                else ({nodes[j].get("name") for j in skin["joints"]} >= REQUIRED))
                for skin in skins):
-        raise ValueError("No single skin contains all required runtime joints")
+        raise ValueError("No valid skin with required runtime joints")
     bound = [node for node in nodes if "mesh" in node and "skin" in node]
     if not bound:
         raise ValueError("No mesh node bound to a skin")
@@ -74,11 +76,12 @@ def inspect(path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("glb", nargs="+")
+    parser.add_argument("--garment", action="store_true", help="Allow garment skins to reference a subset of runtime bones")
     args = parser.parse_args()
     failed = False
     for path in args.glb:
         try:
-            print(json.dumps(inspect(path)))
+            print(json.dumps(inspect(path, garment=args.garment)))
         except (ValueError, OSError, json.JSONDecodeError, struct.error) as exc:
             failed = True
             print(json.dumps({"file": path, "result": "FAIL", "reason": str(exc)}), file=sys.stderr)
