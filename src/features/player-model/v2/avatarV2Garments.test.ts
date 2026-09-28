@@ -239,6 +239,22 @@ describe('Avatar V2 garments', () => {
       .toContain('no validated');
   });
 
+  it('rejects noncanonical migrated asset paths instead of normalising them', () => {
+    const complete = avatarV2GarmentConfig(item())!;
+    for (const invalid of [
+      '/avatar-v2/clothing/masculine/test-tee-lod0.glb',
+      'avatar-v2/clothing/masculine/../masculine/test-tee-lod0.glb',
+      'avatar-v2/clothing/masculine//test-tee-lod0.glb',
+      'avatar-v2/clothing/masculine/%2e%2e/test-tee-lod0.glb',
+    ]) {
+      const migrated = item({ garment_config: { avatarV2: {
+        ...complete,
+        frames: { ...complete.frames, masculine: { ...complete.frames.masculine, lod0: invalid } },
+      } } });
+      expect(avatarV2GarmentFile(migrated, 'masculine', 0)).toBeNull();
+    }
+  });
+
   it('rejects swapped frame and LOD filenames during skin migration', () => {
     const complete = avatarV2GarmentConfig(item())!;
     const swapped = item({ garment_config: { avatarV2: {
