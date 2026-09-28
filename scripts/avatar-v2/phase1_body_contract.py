@@ -159,6 +159,10 @@ def propose_missing_finger_weights(
     # can be painted on any existing Hand-weighted point.
     proposals = {}
     near_but_no_hand = {side: 0 for side in ("L", "R")}
+    proximity = {name: {"nearestSurfaceMm": float("inf"),
+                        "bodyVerticesNearSegment": 0,
+                        "existingHandVerticesNearSegment": 0}
+                 for name in missing}
     for i, (point, original) in enumerate(zip(positions, existing)):
         if any(original.get(name, 0) > .0001 for name in required):
             continue
@@ -170,10 +174,16 @@ def propose_missing_finger_weights(
                 length = dist(head, tail)
                 radius = min(radius_m, max(.004, length * .44))
                 separation, along = segment_distance(point, head, tail)
+                evidence = proximity[name]
+                evidence["nearestSurfaceMm"] = min(
+                    evidence["nearestSurfaceMm"], round(separation * 1000, 3))
                 # Reject points beyond real end planes (e.g. palms, adjacent
                 # fingers or an accidentally misplaced guide endpoint).
                 if separation > radius or not -.10 <= along <= 1.1:
                     continue
+                evidence["bodyVerticesNearSegment"] += 1
+                if palm > .05:
+                    evidence["existingHandVerticesNearSegment"] += 1
                 if palm <= .05:
                     near_but_no_hand[side] += 1
                     continue
@@ -201,6 +211,7 @@ def propose_missing_finger_weights(
         "proposedPerFinger": {name: total[name] for name in sorted(required)},
         "stillMissing": sorted(name for name in required if total[name] < 4),
         "nearFittedFingersButMissingHandWeights": near_but_no_hand,
+        "unpaintedJointGeometry": {name: proximity[name] for name in sorted(missing)},
         "requiresArtistRepaintAndGripReview": True,
     }
     return proposals, report
