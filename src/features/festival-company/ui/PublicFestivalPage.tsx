@@ -478,6 +478,35 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                 </dl>
               </div>
             </header>
+            <div className="grid gap-4 md:grid-cols-2">
+              <section className="rounded-xl border bg-card p-5" aria-labelledby="visitor-opening-times">
+                <h3 id="visitor-opening-times" className="text-lg font-bold">Opening times & performances</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  The festival runs from {new Date(f.startsAt).toLocaleDateString("en-GB", { day: "numeric", month: "long" })} to {new Date(f.endsAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}.
+                </p>
+                {f.timetable.length > 0 ? (
+                  <>
+                    <p className="mt-3 text-sm">{f.timetable.length} published performance{f.timetable.length === 1 ? "" : "s"} across {new Set(f.timetable.map((slot) => slot.stageId)).size} stage{new Set(f.timetable.map((slot) => slot.stageId)).size === 1 ? "" : "s"}.</p>
+                    <p className="mt-2 text-sm">See the <strong>Timetable</strong> tab for confirmed stage times.</p>
+                  </>
+                ) : <p className="mt-3 text-sm text-muted-foreground">Performance times have not been published yet. Gate opening and curfew times are not confirmed.</p>}
+              </section>
+              <section className="rounded-xl border bg-card p-5" aria-labelledby="visitor-ticket-help">
+                <h3 id="visitor-ticket-help" className="text-lg font-bold">Tickets & entry</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Review the published ticket types and their individual access dates before purchasing.</p>
+                {f.ticketProducts.length > 0 ? (
+                  <ul className="mt-3 space-y-2 text-sm">
+                    {f.ticketProducts.filter((product) => product.productClass === "admission").map((product) => (
+                      <li key={product.id} className="rounded-md border p-2">
+                        <span className="font-medium">{product.name}</span>
+                        <span className="block text-muted-foreground">Valid {product.accessStartDate} to {product.accessEndDate}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : <p className="mt-3 text-sm text-muted-foreground">Admission ticket details are not published yet.</p>}
+                <p className="mt-3 text-sm text-muted-foreground">Upgrades and add-ons do not grant admission on their own.</p>
+              </section>
+            </div>
             <nav aria-label="Festival visitor guide" className="flex flex-wrap gap-2">
               {[
                 ["travel", "Getting here"], ["camping", "Camping"], ["accessibility", "Accessibility"],
