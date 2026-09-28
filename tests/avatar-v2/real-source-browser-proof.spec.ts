@@ -33,7 +33,7 @@ for (const device of [
               state: string; sourceFrame: string; sourceOnly: boolean;
               meshes: number; skinnedMeshes: number; uvMappedMeshes: number;
               materialSlots: number; embeddedTextureSlots: number;
-              triangles: number; webglVersion: string; visiblePixels: number; error?: string;
+              triangles: number; webglVersion: string; visiblePixels: number; cameraPosition?: number[]; error?: string;
             }
           }).__avatarV2BrowserProof
         ));
@@ -46,6 +46,8 @@ for (const device of [
         expect(diagnostics?.triangles).toBeGreaterThan(1000);
         expect(diagnostics?.webglVersion).toMatch(/webgl/i);
         expect(diagnostics?.visiblePixels, 'Real source model must contribute non-background pixels').toBeGreaterThan(300);
+        expect(diagnostics?.cameraPosition?.length).toBe(3);
+        expect(diagnostics?.cameraPosition?.every(Number.isFinite), 'Camera must have finite coordinates').toBe(true);
         expect(diagnostics?.error).toBeUndefined();
 
         const canvas = page.locator('#proof-viewer canvas');

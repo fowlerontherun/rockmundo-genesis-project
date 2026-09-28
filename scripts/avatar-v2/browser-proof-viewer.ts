@@ -107,7 +107,8 @@ async function showGenuineBlenderSource() {
     result.restBounds = { min: bounds.min.toArray(), max: bounds.max.toArray() };
     if (bounds.isEmpty()) throw new Error('GLB browser scene has empty rest-pose geometry');
     const center = bounds.getCenter(new THREE.Vector3());
-    const radius = Math.max(bounds.getSize(new THREE.Vector3()).length * 0.65, 0.3);
+    const radius = Math.max(bounds.getSize(new THREE.Vector3()).length() * 0.65, 0.3);
+    if (!Number.isFinite(radius)) throw new Error('Non-finite camera framing radius');
     camera.near = Math.max(radius / 1000, 0.001);
     camera.far = radius * 100;
     camera.position.copy(center).add(new THREE.Vector3(radius, radius * 0.65, radius));
