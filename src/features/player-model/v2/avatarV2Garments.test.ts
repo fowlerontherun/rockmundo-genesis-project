@@ -272,6 +272,20 @@ describe('Avatar V2 garments', () => {
     expect(avatarV2GarmentFile(swapped, 'masculine', 0)).toBeNull();
   });
 
+  it('rejects mislabelled frame assets and misleading LOD suffixes', () => {
+    const complete = avatarV2GarmentConfig(item())!;
+    for (const invalid of [
+      'avatar-v2/clothing/feminine/test-tee-lod0.glb',
+      'avatar-v2/clothing/masculine/test-tee-fakelod0.glb',
+    ]) {
+      const migrated = item({ garment_config: { avatarV2: {
+        ...complete,
+        frames: { ...complete.frames, masculine: { ...complete.frames.masculine, lod0: invalid } },
+      } } });
+      expect(avatarV2GarmentFile(migrated, 'masculine', 0)).toBeNull();
+    }
+  });
+
   it('rejects duplicate equipped inventory identities and curated keys', () => {
     const first = item();
     expect(avatarV2ClothingCompatibilityReason([row(first), row(first)], 'masculine', 0))
