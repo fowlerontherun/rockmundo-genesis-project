@@ -32,8 +32,16 @@ describe('Avatar V2 Phase 2 facial candidate audit', () => {
   it('accepts complete, finite facial morphs and independent anchors', () => {
     expect(auditAvatarV2Face(candidate().root)).toEqual({
       passed: true, missingChannels: [], missingAnchors: [],
-      duplicateAnchors: [], invalidMorphTargets: [], invalidBaseMeshes: [], missingRuntimeExpressions: [],
+      duplicateAnchors: [], invalidMorphTargets: [], invalidBaseMeshes: [], missingRuntimeExpressions: [], duplicateMorphIndices: [],
     });
+  });
+
+  it('rejects two facial expressions mapped to the same target index', () => {
+    const { root, face } = candidate();
+    face.morphTargetDictionary!.visemeEE = face.morphTargetDictionary!.visemeAA;
+    const result = auditAvatarV2Face(root);
+    expect(result.passed).toBe(false);
+    expect(result.duplicateMorphIndices).toContain('face:visemeAA/visemeEE');
   });
 
   it('reports exported expressions that gig playback cannot bind', () => {
