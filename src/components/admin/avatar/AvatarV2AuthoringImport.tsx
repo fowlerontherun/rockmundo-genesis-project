@@ -84,6 +84,25 @@ export function AvatarV2AuthoringImport() {
     }
   }
 
+  async function stageArchive(name: string) {
+    if (!window.confirm('Extract this verified ZIP into private artist-review storage? This does not publish clothing.')) return;
+    setStaging(name);
+    try {
+      const { data, error } = await supabase.functions.invoke('validate-avatar-v2-authoring', {
+        body: { key: `incoming/${name}`, extract: true },
+      });
+      if (error || !data?.valid || !data?.extracted) {
+        throw new Error(data?.error ?? error?.message ?? 'Staging failed');
+      }
+      setStaged(previous => ({ ...previous, [name]: true }));
+      toast.success('15 models and supporting source files staged privately for artist review.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Staging failed');
+    } finally {
+      setStaging(null);
+    }
+  }
+
   async function upload() {
     if (!file || uploading) return;
     if (!file.name.toLowerCase().endsWith('.zip') || file.size > MAX_BYTES || file.size === 0) {
@@ -138,7 +157,7 @@ export function AvatarV2AuthoringImport() {
           {archives.map(archive => { const saved = savedReviews.find(review => review.storage_key === `incoming/${archive.name}`); return (
             <div key={archive.name} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3 text-sm">
               <span className="break-all">{archive.name}</span>
-              <div className="flex flex-wrap items-center gap-2"><Badge variant={saved || reviews[archive.name]?.startsWith("Source verified") ? "default" : "secondary"}>{saved ? `Source verified: ${saved.source_file_count} files, ${saved.glb_model_count} models` : reviews[archive.name] ?? "Awaiting source validation"}</Badge><Button size="sm" variant="outline" disabled={validating === archive.name} onClick={() => void validateArchive(archive.name)}>{validating === archive.name ? "Validating…" : "Validate bundle"}</Button><Button size="sm" variant="outline" disabled={opening === archive.name} onClick={() => void downloadArchive(archive.name)}><Download className="mr-1 h-4 w-4" /> Download</Button></div>
+              <div className="flex flex-wrap items-center gap-2"><Badge variant={saved || reviews[archive.name]?.startsWith("Source verified") ? "default" : "secondary"}>{saved ? `Source verified: ${saved.source_file_count} files, ${saved.glb_model_count} models` : reviews[archive.name] ?? "Awaiting source validation"}</Badge><Button size="sm" variant="outline" disabled={validating === archive.name} onClick={() => void validateArchive(archive.name)}>{validating === archive.name ? "Validating…" : "Validate bundle"}</Button>{saved && <Button size="sm" variant="outline" disabled={staging === archive.name || staged[archive.name]} onClick={() => void stageArchive(archive.name)}>{staging === archive.name ? "Extracting…" : staged[archive.name] ? "Staged for review" : "Extract for review"}</Button>}<Button size="sm" variant="outline" disabled={opening === archive.name} onClick={() => void downloadArchive(archive.name)}><Download className="mr-1 h-4 w-4" /> Download</Button></div>
             </div>
           ); })}
           {!isLoading && !archives.length && <p className="text-sm text-muted-foreground">No archives uploaded yet.</p>}
