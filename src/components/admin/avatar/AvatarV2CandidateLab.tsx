@@ -543,6 +543,7 @@ export function AvatarV2CandidateLab() {
               ['Missing head, eye or ear bones', faceAudit.missingAnchors],
               ['Duplicate attachment bones', faceAudit.duplicateAnchors],
               ['Invalid morph geometry', faceAudit.invalidMorphTargets],
+              ['Shared morph indices', faceAudit.duplicateMorphIndices],
               ['Invalid base mesh geometry', faceAudit.invalidBaseMeshes],
             ] as const).map(([label, items]) => (
               <p key={label} className="text-sm"><strong>{label}:</strong> {items.length ? items.join(', ') : 'none'}</p>
