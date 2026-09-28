@@ -1,6 +1,5 @@
 """Regression tests for independent masculine and feminine body candidate gates."""
 import pathlib
-import re
 import sys
 import unittest
 
@@ -28,9 +27,11 @@ class Phase1BodyContractTests(unittest.TestCase):
                    / "src/features/player-model/v2/avatarV2PoseCorrectives.ts").read_text()
         for corrective, (bone, start, full) in CORRECTIVE_DRIVERS.items():
             with self.subTest(corrective=corrective):
-                pattern = (rf"{corrective}: \\{{ bone: '{re.escape(bone)}', "
-                           rf"start: {format(start, '.2f').lstrip('0')}, full: {full:.2f} \\}}")
-                self.assertRegex(runtime, pattern)
+                expected = (
+                    f"{corrective}: {{ bone: '{bone}', "
+                    f"start: {format(start, '.2f').lstrip('0')}, full: {full:.2f} }},"
+                )
+                self.assertIn(expected, runtime)
 
     def test_correctives_follow_actual_pose_and_reset(self):
         reach = pose_corrective_weights(POSES["reach"])
