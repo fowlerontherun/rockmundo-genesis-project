@@ -18,10 +18,12 @@ import bpy
 
 ROOT = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
+from phase1_body_contract import DIGITS, DEFORM_BONES, propose_missing_finger_weights  # noqa: E402
 from rockmundo_avatar_v2_phase1_body import (  # noqa: E402
     ARMATURE, POSES, assign_eight_skin_regions, audit_weights, bind_original_eyes,
     candidate_export, drive_correctives, mesh_world_positions,
     render_contact_sheet, selected_parent_bind, set_pose, twist_seed_and_normalise,
+    vertex_weights,
 )
 
 parser = argparse.ArgumentParser()
@@ -58,6 +60,23 @@ try:
     selected_parent_bind(body, rig)
     twist_seed_and_normalise(body, rig)
     report["initialSkinAudit"] = audit_weights(body, rig)
+    # Analyse the actual distance to EVERY existing finger guide and whether
+    # its nearby CC0 vertices have any real base Hand weight. Do NOT apply
+    # weight proposals to an unfitted diagnostic guide.
+    segments = {
+        f"{digit}{joint}.{side}": (
+            tuple(rig.matrix_world @ rig.data.bones[f"{digit}{joint}.{side}"].head_local),
+            tuple(rig.matrix_world @ rig.data.bones[f"{digit}{joint}.{side}"].tail_local),
+        )
+        for side in ("L", "R") for digit in DIGITS for joint in (1, 2, 3)
+    }
+    surface = [tuple(body.matrix_world @ vertex.co) for vertex in body.data.vertices]
+    paint = [vertex_weights(body, vertex, set(DEFORM_BONES))
+             for vertex in body.data.vertices]
+    _proposals, finger_geometry = propose_missing_finger_weights(surface, paint, segments)
+    finger_geometry["proposalsApplied"] = False
+    finger_geometry["unfittedGuidesNotArtistReviewed"] = True
+    report["diagnosticFingerGeometry"] = finger_geometry
     eyes = bind_original_eyes(rig, args.frame)
     report["independentEyeObjects"] = {k: eye.name for k, eye in eyes.items()}
     try:
