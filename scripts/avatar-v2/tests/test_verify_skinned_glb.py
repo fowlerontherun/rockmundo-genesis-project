@@ -78,6 +78,27 @@ class StructuralSkinGateTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "No valid skin"):
             gate.inspect(self.write(doc), garment=True)
 
+    def test_unskinned_second_mesh_rejected(self):
+        doc = self.valid()
+        doc["nodes"].append({"mesh": 0})
+        with self.assertRaisesRegex(ValueError, "Unskinned mesh"):
+            gate.inspect(self.write(doc))
+
+    def test_second_mesh_bound_to_incomplete_body_skin_rejected(self):
+        doc = self.valid()
+        doc["skins"].append({"joints": [0]})
+        doc["nodes"].append({"mesh": 0, "skin": 1})
+        with self.assertRaisesRegex(ValueError, "Bound body skin"):
+            gate.inspect(self.write(doc))
+
+    def test_second_garment_skin_without_runtime_joint_rejected(self):
+        doc = self.valid()
+        doc["nodes"].append({"name": "custom_non_runtime_joint"})
+        doc["skins"].append({"joints": [len(doc["nodes"]) - 1]})
+        doc["nodes"].append({"mesh": 0, "skin": 1})
+        with self.assertRaisesRegex(ValueError, "Bound garment skin"):
+            gate.inspect(self.write(doc), garment=True)
+
     def test_integer_weights_must_be_normalized(self):
         doc = self.valid()
         doc["accessors"][2]["componentType"] = 5123
