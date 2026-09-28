@@ -19,7 +19,10 @@ def main():
     if destination.exists() and args.apply:
         sys.exit("Refusing to overwrite existing art-source/avatar-v2; reconcile manually.")
     with zipfile.ZipFile(args.bundle) as archive:
-        names = archive.namelist()
+        prefix = "rockmundo_v2_authoring_import/"
+        names = [name[len(prefix):] for name in archive.namelist() if name.startswith(prefix)]
+        if len(names) != len(archive.namelist()):
+            sys.exit("Unexpected archive layout.")
         if len(names) != len(set(names)):
             sys.exit("Duplicate archive entries.")
         for name in names:
@@ -27,7 +30,7 @@ def main():
             if path.is_absolute() or ".." in path.parts or "\\" in name:
                 sys.exit(f"Unsafe archive entry: {name}")
         def read(name):
-            return archive.read(name)
+            return archive.read(prefix + name)
         checksums = json.loads(read("CHECKSUMS.json"))
         expected = {entry["path"]: entry["sha256"] for entry in checksums}
         if len(expected) != len(checksums):
