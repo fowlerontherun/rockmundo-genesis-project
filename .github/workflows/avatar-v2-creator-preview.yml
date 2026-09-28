@@ -1,6 +1,7 @@
 name: Avatar V2 creator preview
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - 'src/features/player-model/v2/**'
