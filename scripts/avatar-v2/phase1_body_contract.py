@@ -206,6 +206,57 @@ def audit_missing_finger_geometry(
     return results
 
 
+def missing_finger_review_hints(
+    positions: Sequence[Sequence[float]],
+    existing: Sequence[Mapping[str, float]],
+    segments: Mapping[str, tuple[Sequence[float], Sequence[float]]],
+) -> dict[str, dict]:
+    """Real-source vertex hints for artists, NEVER an automatically fitted joint.
+
+    Select the nearest *actual* CC0 body vertex for each bone heat miss. Include
+    the weights it already carries: the nearest point might be on the
+    neighbouring finger and is therefore only a visual starting reference.
+    """
+    evidence = audit_missing_finger_geometry(positions, existing, segments)
+    hints = {}
+    for name, diagnostic in evidence.items():
+        side = name.rsplit(".", 1)[1]
+        digit = name.split(".", 1)[0].rstrip("123")
+        head, tail = segments[name]
+        closest = min(
+            range(len(positions)),
+            key=lambda i: (segment_distance(positions[i], head, tail)[0], i),
+        )
+        source = positions[closest]
+        donor_groups = {bone: round(weight, 5)
+                        for bone, weight in sorted(existing[closest].items())
+                        if weight > .0001}
+        other_digit = sorted(
+            bone for bone in donor_groups if bone.endswith("." + side)
+            and any(bone.startswith(other) for other in DIGITS if other != digit)
+        )
+        hints[name] = {
+            "nearestActualSourceVertexIndex": closest,
+            "actualSourceSurfacePosition": [round(x, 6) for x in source],
+            "sourceDistanceMm": diagnostic["nearestActualSourceMm"],
+            "currentGuideHead": [round(x, 6) for x in head],
+            "currentGuideTail": [round(x, 6) for x in tail],
+            "nearestSourceWeights": donor_groups,
+            "nearbyOtherDigitWeights": other_digit,
+            "possibleWrongFingerSurface": bool(other_digit),
+            "hintIsOnSkinNotInternalJointPivot": True,
+            "artistReviewed": False,
+            "productionValidated": False,
+            "requiredAction": (
+                "Inspect this real CC0 surface and trace the correct digit "
+                "topology. Independently place BOTH joint handles inside "
+                "the actual knuckle and finger bones; repaint real skin, "
+                "test grip, and get independent artist approval."
+            ),
+        }
+    return hints
+
+
 def propose_missing_finger_weights(
     positions: Sequence[Sequence[float]],
     existing: Sequence[Mapping[str, float]],
