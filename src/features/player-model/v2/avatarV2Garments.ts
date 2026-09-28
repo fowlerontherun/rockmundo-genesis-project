@@ -126,10 +126,9 @@ function stringList(value: unknown) {
 
 function safeAssetPath(value: unknown) {
   if (typeof value !== 'string') return undefined;
-  // Migration manifests must use canonical, relative asset paths. Do not
-  // silently turn absolute paths into trusted garment references.
-  if (value.startsWith('/') || value.includes('\\\\') || value.includes('%')) return undefined;
-  if (!/^avatar-v2\\/clothing\\/[a-z0-9._/-]+\\.glb$/i.test(value)) return undefined;
+  // Require canonical relative paths; never silently normalise migration inputs.
+  if (value.startsWith('/') || value.includes('\\') || value.includes('%')) return undefined;
+  if (!/^avatar-v2\/clothing\/[a-z0-9._/-]+\.glb$/i.test(value)) return undefined;
   if (value.split('/').some(segment => !segment || segment === '.' || segment === '..')) return undefined;
   return value;
 }
