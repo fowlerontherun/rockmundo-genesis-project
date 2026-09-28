@@ -30,6 +30,7 @@ export interface AvatarV2FaceAudit {
   invalidBaseMeshes: string[];
   duplicateAnchors: string[];
   missingRuntimeExpressions: string[];
+  duplicateMorphIndices: string[];
 }
 
 /** Check actual loaded candidate geometry, not catalogue metadata. */
@@ -37,6 +38,7 @@ export function auditAvatarV2Face(root: T.Object3D): AvatarV2FaceAudit {
   const anchors = new Map<string, number>();
   const channels = new Set<string>();
   const validMorphBindings = new Map<T.Mesh, Set<number>>();
+  const duplicateMorphIndices: string[] = [];
   const invalidMorphTargets: string[] = [];
   const invalidBaseMeshes: string[] = [];
   root.traverse(node => {
@@ -58,7 +60,13 @@ export function auditAvatarV2Face(root: T.Object3D): AvatarV2FaceAudit {
       }
     }
     const dictionary = node.morphTargetDictionary ?? {};
+    const indexOwners = new Map<number, string>();
     for (const [name, index] of Object.entries(dictionary)) {
+      if (Number.isInteger(index) && index >= 0) {
+        const previous = indexOwners.get(index);
+        if (previous) duplicateMorphIndices.push(`${node.name}:${previous}/${name}`);
+        else indexOwners.set(index, name);
+      }
       const target = morphs[index];
       if (!Number.isInteger(index) || index < 0 || !target || !positions || target.itemSize !== 3 || target.count !== positions.count) {
         invalidMorphTargets.push(`${node.name}:${name}`);
@@ -92,7 +100,7 @@ export function auditAvatarV2Face(root: T.Object3D): AvatarV2FaceAudit {
     !(bindings[name] ?? []).some(binding => validMorphBindings.get(binding.mesh)?.has(binding.index)),
   );
   return {
-    passed: !missingChannels.length && !missingAnchors.length && !duplicateAnchors.length && !invalidMorphTargets.length && !invalidBaseMeshes.length && !missingRuntimeExpressions.length,
-    missingChannels, missingAnchors, duplicateAnchors, invalidMorphTargets, invalidBaseMeshes, missingRuntimeExpressions,
+    passed: !missingChannels.length && !missingAnchors.length && !duplicateAnchors.length && !invalidMorphTargets.length && !invalidBaseMeshes.length && !missingRuntimeExpressions.length && !duplicateMorphIndices.length,
+    missingChannels, missingAnchors, duplicateAnchors, invalidMorphTargets, invalidBaseMeshes, missingRuntimeExpressions, duplicateMorphIndices,
   };
 }
