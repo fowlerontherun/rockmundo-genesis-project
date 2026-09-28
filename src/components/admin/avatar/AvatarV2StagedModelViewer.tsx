@@ -33,6 +33,7 @@ export function AvatarV2StagedModelViewer({ sha }: { sha: string }) {
   const [selected, setSelected] = useState('');
   const [finish, setFinish] = useState('original');
   const [meshInfo, setMeshInfo] = useState('');
+  const [readiness, setReadiness] = useState<string[]>([]);
   const [meshAudit, setMeshAudit] = useState<{ meshes: number; textured: number; skinned: number; uvMapped: number; triangles: number; missingNormals: number } | null>(null);
   const captureRef = useRef<(() => void) | null>(null);
   const [message, setMessage] = useState('Loading private review models…');
@@ -53,6 +54,7 @@ export function AvatarV2StagedModelViewer({ sha }: { sha: string }) {
         const paths = results.flat().sort();
         setModels(paths);
         setMeshAudit(null);
+        setReadiness([]);
         setSelected(paths[0] ?? '');
         setMessage(paths.length ? '' : 'No staged GLB models found. Use Extract for review first.');
       } catch (error) {
@@ -141,6 +143,14 @@ export function AvatarV2StagedModelViewer({ sha }: { sha: string }) {
           if (finish !== 'original') node.material = materials.map(() => new THREE.MeshStandardMaterial({ color: finish, roughness: 0.9, metalness: 0, normalMap: node.geometry.getAttribute('uv') ? fabricNormal : null, normalScale: new THREE.Vector2(.2, .2), side: THREE.DoubleSide }));
         });
         setMeshAudit({ meshes, textured, skinned, uvMapped, triangles: Math.round(triangles), missingNormals });
+        setReadiness([
+          ...(meshes === 0 ? ['No garment geometry found.'] : []),
+          ...(uvMapped < meshes ? [(meshes - uvMapped) + ' meshes have no UV coordinates.'] : []),
+          ...(textured < meshes ? [(meshes - textured) + ' meshes lack embedded base-colour textures.'] : []),
+          ...(skinned < meshes ? [(meshes - skinned) + ' meshes have no skinning.'] : []),
+          ...(missingNormals ? [missingNormals + ' meshes have no vertex normals.'] : []),
+          'Both Avatar V2 body-frame fit checks and animation deformation tests remain unverified.',
+        ]);
         setMeshInfo(meshes + ' meshes, ' + textured + ' textured, ' + skinned + ' skinned, ' + uvMapped + ' UV mapped');
         scene.add(gltf.scene);
         const bounds = new THREE.Box3().setFromObject(gltf.scene);
@@ -199,6 +209,7 @@ export function AvatarV2StagedModelViewer({ sha }: { sha: string }) {
       </select>
       <div ref={mount} className="w-full overflow-hidden rounded-md" style={{ height: 340, touchAction: 'none' }}
         aria-label="Interactive 3D model preview: drag to rotate, pinch to zoom" />
+      {readiness.length > 0 && selected && <div className="rounded border border-amber-500/40 bg-amber-500/10 p-3 text-xs"><p className="font-semibold">Production readiness blockers</p><ul className="mt-1 list-disc space-y-1 pl-4">{readiness.map(reason => <li key={reason}>{reason}</li>)}</ul></div>}
       {meshInfo && selected && <p className="text-xs text-muted-foreground">{meshInfo}</p>}
       {message && <p role="status" className="text-sm text-muted-foreground">{message}</p>}
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
