@@ -44,13 +44,13 @@ BEGIN
     INTO v_year FROM public.festival_editions_v2 WHERE festival_company_id=p_festival_company_id;
   INSERT INTO public.festival_editions_v2(
     festival_company_id,edition_year,name,status,starts_on,ends_on,
-    country_code,city_id,vibe,site_type,duration_days,environmental_policy
+    country_code,city_id,vibe,site_type,duration_days,environmental_policy,preferred_month,creation_source
   ) VALUES(
     p_festival_company_id,v_year,
     coalesce(nullif(btrim(coalesce(v_cfg.public_name,'')),''),v_fc.public_name)||' '||v_year,
     'draft',NULL,NULL,v_fc.country_code,v_cfg.home_city_id,v_fc.default_vibe,
     v_fc.default_site_type,coalesce(v_cfg.duration_days,v_fc.default_duration_days),
-    v_fc.environmental_policy
+    v_fc.environmental_policy,v_fc.annual_month,'next_annual'
   ) RETURNING id INTO v_id;
   v_result:=jsonb_build_object('festivalCompanyId',p_festival_company_id,
     'festivalEditionId',v_id,'editionYear',v_year,'status','draft','idempotent',false);
