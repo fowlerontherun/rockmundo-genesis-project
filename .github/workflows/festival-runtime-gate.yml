@@ -150,6 +150,8 @@ jobs:
           mkdir -p festival-runtime-diagnostics
           set -o pipefail
           supabase db reset 2>&1 | tee festival-runtime-diagnostics/migration-reset.log
+      - name: Verify festival launch sponsor compatibility
+        run: psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/festival_launch_sponsor_compatibility.sql
       - name: Apply and certify Festival production parity overlay
         run: |
           psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/reconciliation/festival/20260822_simplified_festival_post_bootstrap.sql
