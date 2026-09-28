@@ -33,6 +33,9 @@ import { formatMinorMoney } from "../domain/festivalTicketPlan";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const billingLabel = (value: string) => value.replaceAll("_", " ");
+const invitedBilling = (message: string) => billingPositions.find((position) =>
+  message.includes(`Proposed billing: ${billingLabel(position)}.`),
+) ?? "support";
 
 const identityKey = (identity: ArtistIdentity) => {
   if (identity.type === "solo") return `solo:${identity.artistProfileId}`;
@@ -95,7 +98,10 @@ export function SimplifiedFestivalLineupManager({
       if (error) throw error;
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["festival-artist-programme"] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["festival-artist-programme"] }),
+        queryClient.invalidateQueries({ queryKey: ["news-festival-band-announcements"] }),
+      ]);
       toast.success("Festival billing position updated");
     },
     onError: (error: Error) => toast.error(`Could not change billing: ${error.message}`),
@@ -257,7 +263,7 @@ export function SimplifiedFestivalLineupManager({
       ),
       setMinutes: invitation.suggestedSetMinutes ?? 60,
       requestedDates: invitation.suggestedDates,
-      billingPosition: billingInputs[`invitation:${invitation.id}`] ?? billingPositions.find((position) => invitation.message.includes(`Proposed billing: ${billingLabel(position)}.`)) ?? "support",
+      billingPosition: billingInputs[`invitation:${invitation.id}`] ?? invitedBilling(invitation.message),
     });
   };
 
@@ -346,7 +352,7 @@ export function SimplifiedFestivalLineupManager({
                       </Select><Button
                       size="sm"
                       disabled={workflowPending}
-                      onClick={() => void offerApplication(application)}
+                      onClick={() => void offerApplication(application).catch((error: Error) => toast.error(`Could not send festival offer: ${error.message}`))}
                     >
                       Send offer
                     </Button></div>
@@ -542,7 +548,7 @@ export function SimplifiedFestivalLineupManager({
                       <Button
                         size="sm"
                         disabled={workflowPending}
-                        onClick={() => void offerInvitation(invitation)}
+                        onClick={() => void offerInvitation(invitation).catch((error: Error) => toast.error(`Could not send festival offer: ${error.message}`))}
                       >
                         Send offer
                       </Button>
