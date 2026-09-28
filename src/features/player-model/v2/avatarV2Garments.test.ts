@@ -553,7 +553,18 @@ describe('Avatar V2 garments', () => {
             version: 1,
             status: 'validated',
             frames: {
-              masculine: { lod1: `avatar-v2/clothing/masculine/test-${wearable_slot}-lod1.glb` },
+              masculine: {
+                lod0: `avatar-v2/clothing/masculine/test-${wearable_slot}-lod0.glb`,
+                lod1: `avatar-v2/clothing/masculine/test-${wearable_slot}-lod1.glb`,
+                lod2: `avatar-v2/clothing/masculine/test-${wearable_slot}-lod2.glb`,
+                lod3: `avatar-v2/clothing/masculine/test-${wearable_slot}-lod3.glb`,
+              },
+              feminine: {
+                lod0: `avatar-v2/clothing/feminine/test-${wearable_slot}-lod0.glb`,
+                lod1: `avatar-v2/clothing/feminine/test-${wearable_slot}-lod1.glb`,
+                lod2: `avatar-v2/clothing/feminine/test-${wearable_slot}-lod2.glb`,
+                lod3: `avatar-v2/clothing/feminine/test-${wearable_slot}-lod3.glb`,
+              },
             },
             occludeBodyRegions: [],
             colourMode: 'authored',
