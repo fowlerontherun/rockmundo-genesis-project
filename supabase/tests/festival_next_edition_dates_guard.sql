@@ -26,6 +26,14 @@ BEGIN
  IF position('owner_profile.died_at IS NULL' IN body)=0 THEN
    RAISE EXCEPTION 'Owner account authorization must require a living owner profile';
  END IF;
+ IF NOT EXISTS (
+   SELECT 1 FROM pg_constraint c
+   WHERE c.conrelid='public.festival_company_audit_log'::regclass
+     AND c.conname='festival_company_audit_log_action_check'
+     AND position('festival_edition_planned' IN pg_get_constraintdef(c.oid))>0
+ ) THEN
+   RAISE EXCEPTION 'Annual festival planning audit action is rejected';
+ END IF;
  IF position('v_fc.annual_month' IN body)=0 THEN
    RAISE EXCEPTION 'Annual month not carried forward';
  END IF;
