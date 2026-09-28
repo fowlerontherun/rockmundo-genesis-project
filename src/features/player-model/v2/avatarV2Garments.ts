@@ -149,14 +149,19 @@ export function avatarV2GarmentConfig(item: ClothingItem): AvatarV2GarmentConfig
   if (!Object.keys(source).length) return null;
   if (source.version !== 1) return null;
 
-  const status = String(source.status || 'planned') as AvatarV2GarmentStatus;
+  const status = source.status as AvatarV2GarmentStatus;
   if (!STATUSES.has(status)) return null;
 
   const frames = record(source.frames);
   const regions = stringList(source.occludeBodyRegions)
     .filter((region): region is AvatarV2BodyRegion => BODY_REGIONS.has(region as AvatarV2BodyRegion));
   const zones = record(source.materialZones);
-  const colourMode = source.colourMode === 'zones' ? 'zones' : 'authored';
+  if (source.colourMode !== 'zones' && source.colourMode !== 'authored') return null;
+  const colourMode = source.colourMode;
+
+  const main = stringList(zones.main);
+  const trim = stringList(zones.trim);
+  if (main.some(name => trim.includes(name))) return null;
 
   return {
     version: 1,
@@ -168,8 +173,8 @@ export function avatarV2GarmentConfig(item: ClothingItem): AvatarV2GarmentConfig
     occludeBodyRegions: [...new Set(regions)],
     colourMode,
     materialZones: {
-      main: stringList(zones.main),
-      trim: stringList(zones.trim),
+      main,
+      trim,
     },
   };
 }
