@@ -181,10 +181,15 @@ export function useFestivalContractActions(contractId?: string) {
 
 export function useFestivalSetlist(contractId?: string) {
   const queryClient = useQueryClient();
-  const invalidateSetlist = () =>
-    queryClient.invalidateQueries({
-      queryKey: festivalBookingKeys.setlist(contractId),
-    });
+  const invalidateSetlist = async () => {
+    // The editor renders the current setlist from the canonical contract, not
+    // from the standalone setlist query. Refresh both after every transition.
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: festivalBookingKeys.setlist(contractId) }),
+      queryClient.invalidateQueries({ queryKey: festivalBookingKeys.contracts(undefined, contractId) }),
+      queryClient.invalidateQueries({ queryKey: festivalBookingKeys.root, refetchType: "active" }),
+    ]);
+  };
   return {
     saveDraft: useMutation({
       mutationFn: saveFestivalSetlistDraft,
