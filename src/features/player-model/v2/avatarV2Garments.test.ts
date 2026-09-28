@@ -221,6 +221,24 @@ describe('Avatar V2 garments', () => {
       .toContain('no Avatar V2 garment mapping');
   });
 
+  it('requires an explicit migration status and colour mode', () => {
+    const complete = avatarV2GarmentConfig(item())!;
+    const { status: _status, ...withoutStatus } = complete;
+    const { colourMode: _colourMode, ...withoutColourMode } = complete;
+    expect(avatarV2GarmentConfig(item({ garment_config: { avatarV2: withoutStatus } }))).toBeNull();
+    expect(avatarV2GarmentConfig(item({ garment_config: { avatarV2: withoutColourMode } }))).toBeNull();
+  });
+
+  it('rejects conflicting main and trim material dye zones', () => {
+    const complete = avatarV2GarmentConfig(item())!;
+    const conflicting = item({ garment_config: { avatarV2: {
+      ...complete,
+      materialZones: { main: ['RMV2_Garment_Main'], trim: ['RMV2_Garment_Main'] },
+    } } });
+    expect(avatarV2GarmentConfig(conflicting)).toBeNull();
+    expect(avatarV2GarmentFile(conflicting, 'masculine', 0)).toBeNull();
+  });
+
   it('refuses incomplete or reused manifests even when marked validated', () => {
     const original = item();
     const complete = avatarV2GarmentConfig(original)!;
