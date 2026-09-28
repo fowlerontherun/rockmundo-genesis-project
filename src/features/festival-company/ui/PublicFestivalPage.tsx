@@ -21,6 +21,18 @@ import {
 import { formatFestivalLaunchMoney } from "../domain/festivalLaunch";
 import { getFestivalPublicEventPhase } from "./festivalEventPhase";
 
+/** Keep the sponsor name visible if a legacy logo URL is unavailable. */
+const SponsorIdentity = ({ name, logoReference }: { name: string; logoReference: string | null }) => {
+  const [imageFailed, setImageFailed] = useState(false);
+  return (
+    <div className="flex min-h-16 items-center justify-center rounded-lg border bg-background p-3">
+      {logoReference && /^https:\/\//i.test(logoReference) && !imageFailed ? (
+        <img src={logoReference} alt={`${name} logo`} loading="lazy" className="max-h-16 max-w-full object-contain" onError={() => setImageFailed(true)} />
+      ) : <span className="text-center text-lg font-bold">{name}</span>}
+    </div>
+  );
+};
+
 const Countdown = ({ target }: { target: string }) => {
   const remaining = Math.max(0, Date.parse(target) - Date.now());
   if (!remaining) return <p className="font-semibold">Festival opening is scheduled now.</p>;
@@ -264,12 +276,23 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
             <Card>
               <CardContent className="pt-6">
                 <p>{f.description}</p>
-                <h2 className="mt-6 text-2xl font-bold">Sponsors</h2>
-                <div className="mt-3 flex flex-wrap gap-3">
-                  {f.sponsors.map((s) => (
-                    <Badge key={s.id} variant="outline">{s.name} · {s.relationshipLabel}</Badge>
-                  ))}
-                </div>
+                <section aria-labelledby="festival-sponsors-title" className="mt-8 space-y-4">
+                  <h2 id="festival-sponsors-title" className="text-2xl font-bold">Festival partners</h2>
+                  {f.sponsors.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Festival partners have not been announced yet.</p>
+                  ) : (
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {f.sponsors.map((s) => (
+                        <div key={s.id} className="rounded-xl border p-4">
+                          <SponsorIdentity name={s.name} logoReference={s.logoReference} />
+                          <h3 className="mt-3 font-semibold">{s.name}</h3>
+                          <p className="text-sm text-muted-foreground">{s.relationshipLabel}</p>
+                          {s.sponsoredArea && <p className="mt-1 text-sm">Supporting {s.sponsoredArea}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
               </CardContent>
             </Card>
           </TabsContent>
@@ -461,15 +484,126 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
             </section>
           </TabsContent>
 
-          <TabsContent value="information">
-            <dl className="grid gap-5 md:grid-cols-2">
-              {Object.entries(f.information).map(([k, v]) => (
-                <div key={k}>
-                  <dt className="font-bold capitalize">{k.replace(/([A-Z])/g, " $1")}</dt>
-                  <dd>{v || "Information coming soon."}</dd>
-                </div>
+          <TabsContent value="information" className="space-y-6">
+            <header className="space-y-2">
+              <h2 className="text-2xl font-bold">Plan your festival visit</h2>
+              <p className="text-sm text-muted-foreground">
+                Visitor information for this edition of {f.name}. Details that have not been
+                confirmed are marked clearly and may be updated by the organiser.
+              </p>
+              <div className="rounded-xl border bg-card p-4">
+                <h3 className="font-semibold">Your festival at a glance</h3>
+                <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+                  <div><dt className="text-muted-foreground">Location</dt><dd className="font-medium">{[f.city, f.country].filter(Boolean).join(", ")}</dd></div>
+                  <div><dt className="text-muted-foreground">Dates</dt><dd className="font-medium">{new Date(f.startsAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} – {new Date(f.endsAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</dd></div>
+                  <div><dt className="text-muted-foreground">Festival style</dt><dd className="font-medium">{f.festivalType || "Not yet confirmed"}</dd></div>
+                  <div><dt className="text-muted-foreground">Ticket sales</dt><dd className="font-medium">{f.launchStatus === "tickets_on_sale" ? "On sale" : eventPhase === "ended" ? "Festival ended" : "Not currently on sale"}</dd></div>
+                </dl>
+              </div>
+            </header>
+            <div className="grid gap-4 md:grid-cols-2">
+              <section className="rounded-xl border bg-card p-5" aria-labelledby="visitor-opening-times">
+                <h3 id="visitor-opening-times" className="text-lg font-bold">Opening times & performances</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  The festival runs from {new Date(f.startsAt).toLocaleDateString("en-GB", { day: "numeric", month: "long" })} to {new Date(f.endsAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}.
+                </p>
+                {f.timetable.length > 0 ? (
+                  <>
+                    <p className="mt-3 text-sm">{f.timetable.length} published performance{f.timetable.length === 1 ? "" : "s"} across {new Set(f.timetable.map((slot) => slot.stageId)).size} stage{new Set(f.timetable.map((slot) => slot.stageId)).size === 1 ? "" : "s"}.</p>
+                    <p className="mt-2 text-sm">See the <strong>Timetable</strong> tab for confirmed stage times.</p>
+                  </>
+                ) : <p className="mt-3 text-sm text-muted-foreground">Performance times have not been published yet. Gate opening and curfew times are not confirmed.</p>}
+              </section>
+              <section className="rounded-xl border bg-card p-5" aria-labelledby="visitor-ticket-help">
+                <h3 id="visitor-ticket-help" className="text-lg font-bold">Tickets & entry</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Review the published ticket types and their individual access dates before purchasing.</p>
+                {f.ticketProducts.length > 0 ? (
+                  <ul className="mt-3 space-y-2 text-sm">
+                    {f.ticketProducts.filter((product) => product.productClass === "admission").map((product) => (
+                      <li key={product.id} className="rounded-md border p-2">
+                        <span className="font-medium">{product.name}</span>
+                        <span className="block text-muted-foreground">Valid {product.accessStartDate} to {product.accessEndDate}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : <p className="mt-3 text-sm text-muted-foreground">Admission ticket details are not published yet.</p>}
+                <p className="mt-3 text-sm text-muted-foreground">Upgrades and add-ons do not grant admission on their own.</p>
+              </section>
+            </div>
+            <section aria-labelledby="visitor-faq-title" className="rounded-xl border bg-card p-5">
+              <h3 id="visitor-faq-title" className="text-lg font-bold">Frequently asked questions</h3>
+              <div className="mt-3 divide-y">
+                <details className="py-3">
+                  <summary className="cursor-pointer font-medium">When is the festival?</summary>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {new Date(f.startsAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} to {new Date(f.endsAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} in {f.city}, {f.country}.
+                  </p>
+                </details>
+                <details className="py-3">
+                  <summary className="cursor-pointer font-medium">Where can I find the running order?</summary>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {f.timetable.length ? "Published performance times are available in the Timetable tab." : "The running order has not been published yet. Check the Timetable tab for updates."}
+                  </p>
+                </details>
+                <details className="py-3">
+                  <summary className="cursor-pointer font-medium">Does an upgrade or add-on include entry?</summary>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    No. You need a valid admission ticket to enter the festival. Check the Tickets tab for each product's access dates.
+                  </p>
+                </details>
+                <details className="py-3">
+                  <summary className="cursor-pointer font-medium">Is camping included?</summary>
+                  <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">
+                    {f.information.camping?.trim() || "Camping availability and eligibility have not been confirmed. Do not assume your ticket includes camping."}
+                  </p>
+                </details>
+                <details className="py-3">
+                  <summary className="cursor-pointer font-medium">What if the festival is cancelled?</summary>
+                  <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">
+                    {f.information.refundPolicy?.trim() || "Refund terms have not been published. Check your ticket conditions and the festival's official updates before making plans."}
+                  </p>
+                </details>
+              </div>
+            </section>
+            <nav aria-label="Festival visitor guide" className="flex flex-wrap gap-2">
+              {[
+                ["travel", "Getting here"], ["camping", "Camping"], ["accessibility", "Accessibility"],
+                ["foodAndDrink", "Food & drink"], ["ageGuidance", "Age guidance"],
+                ["terms", "Terms"], ["refundPolicy", "Refunds"], ["contact", "Contact"],
+              ].map(([key, label]) => (
+                <a key={key} href={`#festival-info-${key}`} className="rounded-full border px-3 py-1.5 text-sm hover:bg-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">{label}</a>
               ))}
-            </dl>
+            </nav>
+            <div className="grid gap-4 md:grid-cols-2">
+              {([
+                ["travel", "Getting here", "Location, transport and arrival details"],
+                ["camping", "Camping", "Camping arrangements and facilities"],
+                ["accessibility", "Accessibility", "Accessible entry and visitor assistance"],
+                ["foodAndDrink", "Food & drink", "Food, refreshments and dietary information"],
+                ["ageGuidance", "Age guidance", "Age restrictions and entry requirements"],
+                ["terms", "Terms & entry", "Conditions of admission"],
+                ["refundPolicy", "Tickets & refunds", "Cancellation and refund information"],
+                ["contact", "Contact the organiser", "Questions and visitor support"],
+              ] as const).map(([key, title, description]) => (
+                <section id={`festival-info-${key}`} key={key} aria-labelledby={`festival-info-title-${key}`} className="scroll-mt-6 rounded-xl border bg-card p-5">
+                  <h3 id={`festival-info-title-${key}`} className="text-lg font-bold">{title}</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+                  {f.information[key]?.trim() ? (
+                    <p className="mt-4 whitespace-pre-line text-sm leading-relaxed">{f.information[key]}</p>
+                  ) : (
+                    <p className="mt-4 rounded-md border border-dashed p-3 text-sm text-muted-foreground" role="status">
+                      {key === "camping" ? "Camping arrangements have not been confirmed. Do not assume camping is included with your ticket." :
+                        key === "refundPolicy" ? "Refund details have not been published. Check the ticket conditions before purchasing." :
+                        key === "accessibility" ? "Accessibility arrangements have not been published. Contact the organiser before making travel plans if you need assistance." :
+                        "The organiser has not published this information yet."}
+                    </p>
+                  )}
+                </section>
+              ))}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Only confirmed information is displayed. Please check back for updates before travelling.
+            </p>
           </TabsContent>
         </Tabs>
       </div>
