@@ -11,6 +11,9 @@ describe("festival billing and confirmed-band visibility", () => {
     expect(lineup).toContain('billingInputs[`invitation:${invitation.id}`]');
     expect(lineup).toContain("update_festival_booking_billing");
     expect(lineup).toContain("billingPositions.map");
+    expect(lineup).toContain("invitedBilling(invitation.message)");
+    expect(lineup).toContain("billingInputs[key] ?? invitedBilling(invitation.message)");
+    expect(lineup).toContain('queryKey: ["news-festival-band-announcements"]');
   });
   it("loads booked band names independently of the candidate search", () => {
     expect(lineup).toContain('supabase.from("bands").select("id,name")');
