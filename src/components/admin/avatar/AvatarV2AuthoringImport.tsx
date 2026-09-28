@@ -16,6 +16,8 @@ export function AvatarV2AuthoringImport() {
   const [uploading, setUploading] = useState(false);
   const [digest, setDigest] = useState<string | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
+  const [validating, setValidating] = useState<string | null>(null);
+  const [reviews, setReviews] = useState<Record<string, string>>({});
   const queryClient = useQueryClient();
   const { data: archives = [], isLoading } = useQuery({
     queryKey: ['admin-avatar-v2-authoring-archives'],
@@ -52,6 +54,23 @@ export function AvatarV2AuthoringImport() {
       toast.error(error instanceof Error ? error.message : 'Could not open archive');
     } finally {
       setOpening(null);
+    }
+  }
+
+  async function validateArchive(name: string) {
+    setValidating(name);
+    try {
+      const { data, error } = await supabase.functions.invoke('validate-avatar-v2-authoring', {
+        body: { key: `incoming/${name}` },
+      });
+      if (error || !data?.valid) throw new Error(data?.error ?? error?.message ?? 'Validation failed');
+      setReviews(previous => ({ ...previous, [name]: `Source verified: ${data.files} files, 15 models` }));
+      toast.success('All source checksums and GLB headers verified. Production QA is still required.');
+    } catch (error) {
+      setReviews(previous => ({ ...previous, [name]: 'Validation failed' }));
+      toast.error(error instanceof Error ? error.message : 'Validation failed');
+    } finally {
+      setValidating(null);
     }
   }
 
@@ -109,7 +128,7 @@ export function AvatarV2AuthoringImport() {
           {archives.map(archive => (
             <div key={archive.name} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3 text-sm">
               <span className="break-all">{archive.name}</span>
-              <div className="flex items-center gap-2"><Badge variant="secondary">Awaiting asset review</Badge><Button size="sm" variant="outline" disabled={opening === archive.name} onClick={() => void downloadArchive(archive.name)}><Download className="mr-1 h-4 w-4" /> Download</Button></div>
+              <div className="flex flex-wrap items-center gap-2"><Badge variant={reviews[archive.name]?.startsWith("Source verified") ? "default" : "secondary"}>{reviews[archive.name] ?? "Awaiting source validation"}</Badge><Button size="sm" variant="outline" disabled={validating === archive.name} onClick={() => void validateArchive(archive.name)}>{validating === archive.name ? "Validating…" : "Validate bundle"}</Button><Button size="sm" variant="outline" disabled={opening === archive.name} onClick={() => void downloadArchive(archive.name)}><Download className="mr-1 h-4 w-4" /> Download</Button></div>
             </div>
           ))}
           {!isLoading && !archives.length && <p className="text-sm text-muted-foreground">No archives uploaded yet.</p>}
