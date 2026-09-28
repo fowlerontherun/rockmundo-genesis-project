@@ -1,12 +1,13 @@
 """Regression tests for independent masculine and feminine body candidate gates."""
 import pathlib
+import re
 import sys
 import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from phase1_body_contract import (  # noqa: E402
-    ATTACHMENT_BONES, CORRECTIVES, DEFORM_BONES, POSES,
-    REGIONS, normalise_four, region_from_weights, report_errors,
+    ATTACHMENT_BONES, CORRECTIVES, CORRECTIVE_DRIVERS, DEFORM_BONES, POSES,
+    REGIONS, normalise_four, pose_corrective_weights, region_from_weights, report_errors,
 )
 
 
@@ -21,6 +22,30 @@ class Phase1BodyContractTests(unittest.TestCase):
             self.assertIn(f"Eye.{side}", ATTACHMENT_BONES)
             self.assertIn(f"EarAnchor.{side}", ATTACHMENT_BONES)
         self.assertEqual(len(DEFORM_BONES), len(set(DEFORM_BONES)))
+
+    def test_pose_drivers_match_live_typescript_contract(self):
+        runtime = (pathlib.Path(__file__).resolve().parents[3]
+                   / "src/features/player-model/v2/avatarV2PoseCorrectives.ts").read_text()
+        for corrective, (bone, start, full) in CORRECTIVE_DRIVERS.items():
+            with self.subTest(corrective=corrective):
+                pattern = (rf"{corrective}: \\{{ bone: '{re.escape(bone)}', "
+                           rf"start: {start:.2f}, full: {full:.2f} \\}}")
+                self.assertRegex(runtime, pattern)
+
+    def test_correctives_follow_actual_pose_and_reset(self):
+        reach = pose_corrective_weights(POSES["reach"])
+        self.assertGreater(reach["poseShoulderLeft"], .99)
+        self.assertGreater(reach["poseShoulderRight"], .99)
+        self.assertEqual(reach["poseElbowLeft"], 0)
+        crouch = pose_corrective_weights(POSES["crouch"])
+        for name in ("poseHipLeft", "poseHipRight", "poseKneeLeft", "poseKneeRight"):
+            self.assertGreater(crouch[name], .99)
+        inactive = pose_corrective_weights(POSES["instrument-grip"])
+        self.assertEqual(set(inactive), set(CORRECTIVES))
+        self.assertTrue(all(value == 0 for value in inactive.values()))
+        self.assertTrue(all(value == 0 for value in pose_corrective_weights({}).values()))
+        with self.assertRaises(ValueError):
+            pose_corrective_weights({"UpperArm.L": (0, 1, 0, float("nan"))})
 
     def test_weight_cleanup_is_bounded_and_deterministic(self):
         raw = {"Hips": .4, "Spine1": .3, "Spine2": .2,
