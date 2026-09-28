@@ -84,6 +84,7 @@ describe('Avatar V2 Phase 2 facial candidate audit', () => {
     expect(result.passed).toBe(false);
     expect(result.invalidMorphTargets).toContain('face:visemeAA');
     expect(result.missingChannels).toContain('visemeAA');
+    expect(result.missingRuntimeExpressions).toContain('visemeAA');
   });
 
   it('rejects non-finite morph coordinates', () => {
@@ -92,5 +93,15 @@ describe('Avatar V2 Phase 2 facial candidate audit', () => {
     const result = auditAvatarV2Face(root);
     expect(result.passed).toBe(false);
     expect(result.invalidMorphTargets).toContain('face:jawOpen');
+    expect(result.missingRuntimeExpressions).toContain('jawOpen');
+  });
+
+  it('does not accept a live binding backed by an invalid morph on another mesh', () => {
+    const { root, face } = candidate();
+    const jawIndex = face.morphTargetDictionary!.jawOpen;
+    face.geometry.morphAttributes.position[jawIndex] = new T.Float32BufferAttribute([0, 0, 0], 3);
+    const result = auditAvatarV2Face(root);
+    expect(result.missingRuntimeExpressions).toContain('jawOpen');
+    expect(result.passed).toBe(false);
   });
 });
