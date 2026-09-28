@@ -24,13 +24,13 @@ def inspect(path, *, garment=False):
     size, kind = struct.unpack_from("<I4s", raw, 12)
     if kind != b"JSON" or 20 + size > len(raw):
         raise ValueError("Missing or truncated JSON chunk")
-    doc = json.loads(raw[20:20 + size])
+    # A GLB JSON chunk is four-byte aligned; reject malformed trailing chunks.\n    if size % 4:\n        raise ValueError("Unaligned GLB JSON chunk")\n    offset = 20 + size\n    binary_chunks = []\n    while offset < len(raw):\n        if offset + 8 > len(raw):\n            raise ValueError("Truncated GLB chunk header")\n        chunk_size, chunk_kind = struct.unpack_from("<I4s", raw, offset)\n        offset += 8\n        if chunk_size % 4 or offset + chunk_size > len(raw):\n            raise ValueError("Malformed GLB chunk length")\n        if chunk_kind == b"BIN\\x00":\n            binary_chunks.append(chunk_size)\n        offset += chunk_size\n    if len(binary_chunks) > 1:\n        raise ValueError("Multiple GLB BIN chunks")\n    doc = json.loads(raw[20:20 + size])
     nodes, skins, meshes, accessors = (doc.get(k, []) for k in ("nodes", "skins", "meshes", "accessors"))
     if not isinstance(nodes, list) or not isinstance(skins, list) or not isinstance(meshes, list) or not isinstance(accessors, list):
         raise ValueError("Invalid glTF top-level arrays")
     if not skins:
         raise ValueError("No glTF skins")
-    names = {node.get("name") for node in nodes}
+    if any(not isinstance(node, dict) for node in nodes) or any(not isinstance(skin, dict) for skin in skins):\n        raise ValueError("Invalid node or skin object")\n    names = {node.get("name") for node in nodes}
     if not garment:
         missing = REQUIRED - names
         if missing:
@@ -56,7 +56,7 @@ def inspect(path, *, garment=False):
         joints = skin.get("joints")
         if not isinstance(joints, list) or not joints or any(type(j) is not int or j < 0 or j >= len(nodes) for j in joints):
             raise ValueError("Bound mesh has invalid skin joints")
-        joint_names = {nodes[j].get("name") for j in joints}
+        if len(joints) != len(set(joints)):\n            raise ValueError("Duplicate joint in bound skin")\n        inverse = skin.get("inverseBindMatrices")\n        if inverse is not None:\n            if type(inverse) is not int or inverse < 0 or inverse >= len(accessors):\n                raise ValueError("Invalid inverse bind matrix accessor")\n            matrix_accessor = accessors[inverse]\n            if matrix_accessor.get("count") != len(joints) or matrix_accessor.get("type") != "MAT4" or matrix_accessor.get("componentType") != 5126:\n                raise ValueError("Inverse bind matrices do not match skin joints")\n        joint_names = {nodes[j].get("name") for j in joints}
         if garment and not joint_names.intersection(REQUIRED):
             raise ValueError("Bound garment skin has no runtime joint")
         if not garment and not joint_names.issuperset(REQUIRED):
