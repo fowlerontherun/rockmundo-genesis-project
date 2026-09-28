@@ -227,9 +227,6 @@ def build_frame(frame: str, source_file: pathlib.Path, root: pathlib.Path) -> di
         frame, detail_meshes, frame_dir, styled=True,
     )
 
-    min_point, max_point = guide.world_bounds(meshes)
-    rig = guide.create_rig(frame, min_point, max_point)
-    guide.create_notes(frame)
     real_body = [obj for obj in meshes if ".eye." not in obj.name.lower()]
     real_eyes = {
         side: [obj for obj in meshes if obj.name.lower().endswith(f".eye.{side.lower()}")]
@@ -237,6 +234,18 @@ def build_frame(frame: str, source_file: pathlib.Path, root: pathlib.Path) -> di
     }
     if len(real_body) != 1 or any(len(group) != 1 for group in real_eyes.values()):
         raise RuntimeError(f"{frame} has no unique real continuous body and separate L/R eyes.")
+    # The old height-proportional generic guide left EVERY finger bone 45-53cm
+    # from the true CC0 hand. Place UNAPPROVED guides near actual per-frame
+    # shoulder/elbow/wrist/palm surfaces and proximal-to-distal finger spans.
+    # Joint handles remain mandatory for subsequent real anatomical fitting.
+    source_skin_vertices = [
+        tuple(real_body[0].matrix_world @ vertex.co)
+        for vertex in real_body[0].data.vertices
+    ]
+    min_point, max_point = guide.world_bounds(meshes)
+    rig = guide.create_rig(frame, min_point, max_point,
+                           source_vertices=source_skin_vertices)
+    guide.create_notes(frame)
     source_joint_report = joints.add_source_joint_suggestions(
         frame, real_body[0], {side: group[0] for side, group in real_eyes.items()}, rig,
     )
@@ -274,6 +283,7 @@ def build_frame(frame: str, source_file: pathlib.Path, root: pathlib.Path) -> di
         "sourceMeshCount": len(meshes),
         "sourceVertices": sum(len(obj.data.vertices) for obj in meshes),
         "guideBones": len(rig.data.bones),
+        "sourceLimbGuide": json.loads(rig["rockmundoAvatarV2MeasuredLimbGuide"]),
         "fitMarkers": handles["markers"],
         "sourceJointSuggestions": source_joint_report,
         "headMotionExperiment": head_motion,
