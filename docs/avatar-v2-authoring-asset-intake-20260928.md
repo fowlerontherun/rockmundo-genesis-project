@@ -24,3 +24,7 @@ The archives are delivered as conversation downloads, **not committed binary ass
 ## Local GLB integrity check (28 September 2026)
 
 All **15** artist-start GLBs across the four packs were individually loaded as 3D scenes using `trimesh` (4 tees, 3 denim, 4 footwear, 4 Punk). All 15 loaded. This verifies only GLB parseability; it **does not** verify rigging, UVs, PBR materials, animation fit, body frames, production LODs or in-game render quality. The generated local `rockmundo_v2_asset_qa_report.md` records per-model geometry counts and is delivered separately to the project owner. Binary import remains pending.
+
+## Combined handoff bundle
+
+A local `rockmundo_v2_authoring_import_bundle.zip` combines all four packs, with 15 source GLBs and 38 total source/reference/manifest files. The bundle includes `CHECKSUMS.json` and `verify_bundle.py`; all 38 checksums were verified locally. To import, extract it into a local checkout and copy the contained `assets/` folder into `art-source/avatar-v2/` **only**. The bundle is supplied separately to the owner, not committed to GitHub by this text-only update. Do not route the blockouts into production `public/avatar-v2/clothing/`.
