@@ -77,3 +77,22 @@ ALTER TABLE public.festival_company_audit_log
 ALTER TABLE public.festival_company_audit_log
   ADD CONSTRAINT festival_company_audit_log_action_check
   CHECK (action IN ('festival_company_founded', 'founding_fee_charged', 'festival_edition_planned'));
+
+-- Festival organisers may revise billing before a booking is scheduled;
+-- contracted fees and other accepted offer terms remain untouched.
+CREATE OR REPLACE FUNCTION public.update_festival_booking_billing(p_booking_id uuid,p_position text)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public','pg_temp' AS $$
+DECLARE v_booking public.festival_artist_bookings%ROWTYPE; v_company uuid; v_edition public.festival_editions_v2%ROWTYPE; v_actor uuid := public._caller_profile_id();
+BEGIN
+ IF auth.uid() IS NULL OR p_position NOT IN ('headliner','sub_headliner','featured','support','emerging','special_guest') THEN RAISE EXCEPTION 'festival_billing_invalid' USING ERRCODE='P0001'; END IF;
+ SELECT * INTO v_booking FROM public.festival_artist_bookings WHERE id=p_booking_id FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'festival_booking_not_found' USING ERRCODE='P0001'; END IF;
+ SELECT p.festival_company_id INTO v_company FROM public.festival_artist_programmes p WHERE p.id=v_booking.festival_artist_programme_id;
+ IF NOT public._festival_company_manager_authorized(v_company,v_actor) THEN RAISE EXCEPTION 'festival_billing_forbidden' USING ERRCODE='P0001'; END IF;
+ SELECT e.* INTO v_edition FROM public.festival_editions_v2 e JOIN public.festival_artist_programmes p ON p.festival_edition_id=e.id WHERE p.id=v_booking.festival_artist_programme_id;
+ IF v_edition.locked_at IS NOT NULL OR v_edition.status IN ('completed','cancelled') OR v_booking.status NOT IN ('confirmed','awaiting_schedule') THEN RAISE EXCEPTION 'festival_billing_locked' USING ERRCODE='P0001'; END IF;
+ UPDATE public.festival_artist_bookings SET billing_position=p_position WHERE id=p_booking_id;
+ RETURN jsonb_build_object('bookingId',p_booking_id,'billingPosition',p_position);
+END $$;
+REVOKE ALL ON FUNCTION public.update_festival_booking_billing(uuid,text) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.update_festival_booking_billing(uuid,text) TO authenticated;
