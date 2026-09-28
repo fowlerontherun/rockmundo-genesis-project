@@ -3,7 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { billingPositions, type FestivalArtistOffer } from "../domain/festivalArtistProgramme";
+import { billingPositions } from "../domain/festivalArtistProgramme";
+import type { FestivalArtistOffer } from "../domain/festivalArtistProgramme";
 import { ClipboardList, Search, Send, UserPlus } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -86,10 +87,10 @@ export function SimplifiedFestivalLineupManager({
 }) {
   const [search, setSearch] = useState("");
   const [feeInputs, setFeeInputs] = useState<Record<string, string>>({});
-  const [billingInputs, setBillingInputs] = useState<Record<string, typeof billingPositions[number]>>({});
+  const [billingInputs, setBillingInputs] = useState<Record<string, (typeof billingPositions)[number]>>({});
   const queryClient = useQueryClient();
   const changeBilling = useMutation({
-    mutationFn: async ({ bookingId, position }: { bookingId: string; position: typeof billingPositions[number] }) => {
+    mutationFn: async ({ bookingId, position }: { bookingId: string; position: (typeof billingPositions)[number] }) => {
       const { error } = await (supabase as any).rpc("update_festival_booking_billing", { p_booking_id: bookingId, p_position: position });
       if (error) throw error;
     },
@@ -133,8 +134,8 @@ export function SimplifiedFestivalLineupManager({
   );
 
   const nameFor = (identity: ArtistIdentity) =>
-    candidateNames.get(identityKey(identity)) ??
     (identity.type === "band" ? knownBands.data?.get(identity.bandId) : undefined) ??
+    candidateNames.get(identityKey(identity)) ??
     fallbackIdentityLabel(identity);
 
   const workflowError =
@@ -169,7 +170,7 @@ export function SimplifiedFestivalLineupManager({
     feeMinor: number;
     setMinutes: number;
     requestedDates?: string[];
-    billingPosition?: typeof billingPositions[number];
+    billingPosition?: (typeof billingPositions)[number];
   }) => {
     const created = await createOffer.mutateAsync({
       festivalCompanyId,
@@ -256,7 +257,7 @@ export function SimplifiedFestivalLineupManager({
       ),
       setMinutes: invitation.suggestedSetMinutes ?? 60,
       requestedDates: invitation.suggestedDates,
-      billingPosition: billingInputs[`invitation:${invitation.id}`] ?? billingPositions.find((position) => invitation.message.includes(`Proposed billing: ${billingLabel(position)}`)) ?? "support",
+      billingPosition: billingInputs[`invitation:${invitation.id}`] ?? billingPositions.find((position) => invitation.message.includes(`Proposed billing: ${billingLabel(position)}.`)) ?? "support",
     });
   };
 
@@ -339,7 +340,7 @@ export function SimplifiedFestivalLineupManager({
                     "under_review",
                     "shortlisted",
                     "offer_pending",
-                  ].includes(application.status) ? (<div className="flex flex-wrap items-center gap-2"><Select value={billingInputs[`application:${application.id}`] ?? "support"} onValueChange={(value) => setBillingInputs((current) => ({ ...current, [`application:${application.id}`]: value as typeof billingPositions[number] }))}>
+                  ].includes(application.status) ? (<div className="flex flex-wrap items-center gap-2"><Select value={billingInputs[`application:${application.id}`] ?? "support"} onValueChange={(value) => setBillingInputs((current) => ({ ...current, [`application:${application.id}`]: value as (typeof billingPositions)[number] }))}>
                         <SelectTrigger aria-label="Billing position"><SelectValue placeholder="Billing position" /></SelectTrigger>
                         <SelectContent>{billingPositions.map((position) => <SelectItem key={position} value={position} className="capitalize">{billingLabel(position)}</SelectItem>)}</SelectContent>
                       </Select><Button
@@ -454,7 +455,7 @@ export function SimplifiedFestivalLineupManager({
                         }
                       />
                     </div>
-                    <Select value={billingInputs[key] ?? "support"} onValueChange={(value) => setBillingInputs((current) => ({ ...current, [key]: value as typeof billingPositions[number] }))}>
+                    <Select value={billingInputs[key] ?? "support"} onValueChange={(value) => setBillingInputs((current) => ({ ...current, [key]: value as (typeof billingPositions)[number] }))}>
                         <SelectTrigger aria-label="Billing position"><SelectValue placeholder="Billing position" /></SelectTrigger>
                         <SelectContent>{billingPositions.map((position) => <SelectItem key={position} value={position} className="capitalize">{billingLabel(position)}</SelectItem>)}</SelectContent>
                       </Select>
@@ -534,7 +535,7 @@ export function SimplifiedFestivalLineupManager({
                           }
                         />
                       </div>
-                      <Select value={billingInputs[key] ?? "support"} onValueChange={(value) => setBillingInputs((current) => ({ ...current, [key]: value as typeof billingPositions[number] }))}>
+                      <Select value={billingInputs[key] ?? "support"} onValueChange={(value) => setBillingInputs((current) => ({ ...current, [key]: value as (typeof billingPositions)[number] }))}>
                         <SelectTrigger aria-label="Billing position"><SelectValue placeholder="Billing position" /></SelectTrigger>
                         <SelectContent>{billingPositions.map((position) => <SelectItem key={position} value={position} className="capitalize">{billingLabel(position)}</SelectItem>)}</SelectContent>
                       </Select>
@@ -609,7 +610,7 @@ export function SimplifiedFestivalLineupManager({
                   </p>
                   {["confirmed", "awaiting_schedule"].includes(booking.status) && data.canWrite ? (
                     <div className="mt-2 max-w-52">
-                      <Select value={booking.billingPosition} disabled={changeBilling.isPending} onValueChange={(position) => changeBilling.mutate({ bookingId: booking.id, position: position as typeof billingPositions[number] })}>
+                      <Select value={booking.billingPosition} disabled={changeBilling.isPending} onValueChange={(position) => changeBilling.mutate({ bookingId: booking.id, position: position as (typeof billingPositions)[number] })}>
                         <SelectTrigger aria-label={`Billing position for ${nameFor(booking.identity)}`}><SelectValue /></SelectTrigger>
                         <SelectContent>{billingPositions.map((position) => <SelectItem key={position} value={position} className="capitalize">{billingLabel(position)}</SelectItem>)}</SelectContent>
                       </Select>
