@@ -539,6 +539,7 @@ export function AvatarV2CandidateLab() {
             </Badge>
             {([
               ['Missing expression/viseme channels', faceAudit.missingChannels],
+              ['Not bindable by live gig animations', faceAudit.missingRuntimeExpressions],
               ['Missing head, eye or ear bones', faceAudit.missingAnchors],
               ['Duplicate attachment bones', faceAudit.duplicateAnchors],
               ['Invalid morph geometry', faceAudit.invalidMorphTargets],
