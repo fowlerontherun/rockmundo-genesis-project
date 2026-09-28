@@ -97,6 +97,9 @@ export function FestivalSetlistEditorCanonical({
   const canPersist = validation.valid && preflight.isSuccess && !preflight.isFetching && !preflightBlocked && !repertoire.isError && !repertoire.isLoading;
   const fp = JSON.stringify(items);
   const hasUnsavedChanges = dirty && (!savedDraftConfirmed || savedFingerprint !== fp);
+  // Freeze edits while the server saves the exact draft fingerprint. Otherwise
+  // an in-flight save/refetch can replace edits made after the request began.
+  const editingDisabled = readOnly || saveDraft.isPending || submitSetlist.isPending;
   const saveKey = useStableMutationIdempotencyKey(
     "save-setlist",
     contract.id,
@@ -153,7 +156,7 @@ export function FestivalSetlistEditorCanonical({
         {!organiser && !readOnly ? (
           <div className="flex flex-wrap items-center gap-2 rounded border p-3">
             <Select value={selectedPreset} onValueChange={setSelectedPreset}
-              disabled={presets.isLoading || presets.isError || loadingPreset}>
+              disabled={presets.isLoading || presets.isError || loadingPreset || editingDisabled}>
               <SelectTrigger className="min-w-48 max-w-sm" aria-label="Choose a saved band setlist">
                 <SelectValue placeholder="Choose a saved band setlist" />
               </SelectTrigger>
@@ -164,7 +167,7 @@ export function FestivalSetlistEditorCanonical({
               </SelectContent>
             </Select>
             <Button type="button" size="sm" variant="outline"
-              disabled={!selectedPreset || loadingPreset || repertoire.isLoading || repertoire.isError}
+              disabled={!selectedPreset || loadingPreset || editingDisabled || repertoire.isLoading || repertoire.isError}
               onClick={async () => {
                 setLoadingPreset(true);
                 try {
@@ -207,7 +210,7 @@ export function FestivalSetlistEditorCanonical({
                 className="grid gap-2 rounded border p-2 sm:grid-cols-[minmax(0,1fr)_7rem_minmax(0,0.8fr)_minmax(0,1fr)_auto]"
               >
                 <Select
-                  disabled={readOnly || repertoire.isLoading || repertoire.isError}
+                  disabled={editingDisabled || repertoire.isLoading || repertoire.isError}
                   value={item.song_id || undefined}
                   onValueChange={(songId) => {
                     const song = (repertoire.data ?? []).find(
@@ -257,7 +260,7 @@ export function FestivalSetlistEditorCanonical({
                 </Select>
                 <Input
                   aria-label={`Planned duration for song ${index + 1}`}
-                  disabled={readOnly}
+                  disabled={editingDisabled}
                   inputMode="numeric"
                   min={1}
                   value={item.planned_duration_seconds}
@@ -275,7 +278,7 @@ export function FestivalSetlistEditorCanonical({
                   }
                 />
                 <Select
-                  disabled={readOnly || collaborators.isLoading}
+                  disabled={editingDisabled || collaborators.isLoading}
                   value={item.guest_profile_id ?? "none"}
                   onValueChange={(value) =>
                     editItems(
@@ -327,7 +330,7 @@ export function FestivalSetlistEditorCanonical({
                     type="button"
                     size="sm"
                     variant="outline"
-                    disabled={readOnly || index === 0}
+                    disabled={editingDisabled || index === 0}
                     onClick={() => move(index, -1)}
                   >
                     ↑
@@ -337,7 +340,7 @@ export function FestivalSetlistEditorCanonical({
                     type="button"
                     size="sm"
                     variant="outline"
-                    disabled={readOnly || index === items.length - 1}
+                    disabled={editingDisabled || index === items.length - 1}
                     onClick={() => move(index, 1)}
                   >
                     ↓
@@ -362,7 +365,7 @@ export function FestivalSetlistEditorCanonical({
           <Button
             variant="outline"
             size="sm"
-            disabled={repertoire.isLoading || repertoire.isError}
+            disabled={editingDisabled || repertoire.isLoading || repertoire.isError}
             onClick={() =>
               editItems([
                 ...items,
