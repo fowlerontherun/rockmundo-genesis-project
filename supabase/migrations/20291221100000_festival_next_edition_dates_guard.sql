@@ -16,8 +16,14 @@ BEGIN
   IF p_idempotency_key IS NULL OR length(btrim(p_idempotency_key)) < 8 THEN RAISE EXCEPTION 'idempotency_key_required' USING ERRCODE='P0001'; END IF;
   SELECT * INTO v_fc FROM public.festival_companies WHERE id=p_festival_company_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'festival_company_not_found' USING ERRCODE='P0001'; END IF;
-  IF v_fc.owner_profile_id IS DISTINCT FROM v_profile
-     AND NOT coalesce(public.has_role(auth.uid(),'admin'::public.app_role),false) THEN
+  -- The owner may switch between living profiles on the same account.
+  -- Check the immutable account owner rather than only the selected profile.
+  IF NOT EXISTS (
+    SELECT 1 FROM public.profiles owner_profile
+    WHERE owner_profile.id = v_fc.owner_profile_id
+      AND owner_profile.user_id = auth.uid()
+      AND owner_profile.died_at IS NULL
+  ) AND NOT coalesce(public.has_role(auth.uid(),'admin'::public.app_role),false) THEN
     RAISE EXCEPTION 'festival_configuration_forbidden' USING ERRCODE='P0001';
   END IF;
   IF v_fc.status <> 'active' OR NOT v_fc.setup_completed THEN
