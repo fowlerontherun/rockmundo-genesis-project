@@ -414,7 +414,7 @@ export function AvatarV2CandidateLab() {
               <span className="font-medium">{label}</span>
               <select className="block rounded-md border bg-background px-3 py-2" value={value}
                 onChange={event => setValue(event.target.value as never)}>
-                {options.map(option => <option key={option} value={option}>{labels[option as keyof typeof labels]}</option>)}
+                {options.map(option => <option key={option} value={option}>{Object.entries(labels).find(([key]) => key === option)?.[1] ?? option}</option>)}
               </select>
             </label>
           ))}
