@@ -29,7 +29,7 @@ class Phase1BodyContractTests(unittest.TestCase):
         for corrective, (bone, start, full) in CORRECTIVE_DRIVERS.items():
             with self.subTest(corrective=corrective):
                 pattern = (rf"{corrective}: \\{{ bone: '{re.escape(bone)}', "
-                           rf"start: {start:.2f}, full: {full:.2f} \\}}")
+                           rf"start: {format(start, '.2f').lstrip('0')}, full: {full:.2f} \\}}")
                 self.assertRegex(runtime, pattern)
 
     def test_correctives_follow_actual_pose_and_reset(self):
