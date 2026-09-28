@@ -18,6 +18,7 @@ import bpy
 
 ROOT = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT.parent))
 from phase1_body_contract import DIGITS, DEFORM_BONES, propose_missing_finger_weights  # noqa: E402
 from rockmundo_avatar_v2_phase1_body import (  # noqa: E402
     ARMATURE, POSES, assign_eight_skin_regions, audit_weights, bind_original_eyes,
