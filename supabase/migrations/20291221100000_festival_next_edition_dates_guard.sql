@@ -96,3 +96,19 @@ BEGIN
 END $$;
 REVOKE ALL ON FUNCTION public.update_festival_booking_billing(uuid,text) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.update_festival_booking_billing(uuid,text) TO authenticated;
+
+-- Recent confirmed player-band festival bookings for the in-game daily news.
+CREATE OR REPLACE FUNCTION public.recent_festival_band_announcements(p_limit integer DEFAULT 8)
+RETURNS TABLE(booking_id uuid,band_name text,festival_name text,billing_position text,confirmed_at timestamptz)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public','pg_temp' AS $$
+ SELECT b.id,band.name::text,e.name,b.billing_position,b.confirmed_at
+ FROM public.festival_artist_bookings b
+ JOIN public.bands band ON band.id=b.band_id
+ JOIN public.festival_artist_programmes p ON p.id=b.festival_artist_programme_id
+ JOIN public.festival_editions_v2 e ON e.id=p.festival_edition_id
+ WHERE b.status IN ('confirmed','awaiting_schedule','scheduled')
+   AND b.confirmed_at >= now()-interval '14 days'
+ ORDER BY b.confirmed_at DESC,b.id DESC LIMIT least(greatest(coalesce(p_limit,8),1),20);
+$$;
+REVOKE ALL ON FUNCTION public.recent_festival_band_announcements(integer) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.recent_festival_band_announcements(integer) TO authenticated;
