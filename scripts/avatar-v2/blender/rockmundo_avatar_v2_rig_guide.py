@@ -23,11 +23,15 @@ After generation:
 from __future__ import annotations
 
 import argparse
+import json
 import pathlib
 import sys
 
 import bpy
 from mathutils import Vector
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from source_limb_guide import source_finger_bone_segments, source_limb_landmarks  # noqa: E402
 
 RIG_OBJECT_NAME = "RMV2_Armature"
 
@@ -138,7 +142,21 @@ def create_digit_chain(
     hand: bpy.types.EditBone,
     height: float,
     centre_y: float,
+    *,
+    measured_segments=None,
 ) -> None:
+    if measured_segments is not None:
+        # True pinned CC0 source geometry, independently observed PER FRAME.
+        # Positions remain guides, never independent artist confirmation.
+        for digit in DIGIT_SPREAD:
+            parent = hand
+            for joint in (1, 2, 3):
+                start, end = measured_segments[f"{digit}{joint}.{side}"]
+                parent = add_bone(
+                    armature, f"{digit}{joint}.{side}",
+                    Vector(start), Vector(end), parent, connected=joint > 1,
+                )
+        return
     direction = 1.0 if side == "L" else -1.0
     base = hand.tail.copy()
 
@@ -172,7 +190,8 @@ def create_digit_chain(
             start = end
 
 
-def create_rig(frame: str, minimum: Vector, maximum: Vector) -> bpy.types.Object:
+def create_rig(frame: str, minimum: Vector, maximum: Vector, *, source_vertices=None) -> bpy.types.Object:
+    measured = source_limb_landmarks(source_vertices) if source_vertices is not None else None
     height = maximum.z - minimum.z
     if height <= 0.5:
         raise SystemExit(f"Visible body height is only {height:.3f}m; normalize the source seed first.")
@@ -191,6 +210,9 @@ def create_rig(frame: str, minimum: Vector, maximum: Vector) -> bpy.types.Object
     rig["rockmundoAvatarV2Frame"] = frame
     rig["rockmundoAvatarV2ReferenceHeight"] = FRAME_REFERENCE_HEIGHT[frame]
     rig["rockmundoAvatarV2RequiresManualFit"] = True
+    if measured is not None:
+        rig["rockmundoAvatarV2MeasuredLimbGuide"] = json.dumps(measured)
+        rig["rockmundoAvatarV2SourceLimbSuggestionsOnly"] = True
 
     bpy.context.view_layer.objects.active = rig
     rig.select_set(True)
@@ -281,19 +303,20 @@ def create_rig(frame: str, minimum: Vector, maximum: Vector) -> bpy.types.Object
 
     for side in ("L", "R"):
         direction = 1.0 if side == "L" else -1.0
+        limb = measured["sides"][side] if measured is not None else None
 
         shoulder = add_bone(
             armature,
             f"Shoulder.{side}",
             Vector((x(direction * 0.025), centre_y, z(0.755))),
-            Vector((x(direction * 0.115), centre_y, z(0.745))),
+            Vector(limb["shoulder"]) if limb else Vector((x(direction * 0.115), centre_y, z(0.745))),
             spine2,
         )
         upper_arm = add_bone(
             armature,
             f"UpperArm.{side}",
             shoulder.tail.copy(),
-            Vector((x(direction * 0.265), centre_y, z(0.685))),
+            Vector(limb["elbow"]) if limb else Vector((x(direction * 0.265), centre_y, z(0.685))),
             shoulder,
             connected=True,
         )
@@ -302,7 +325,7 @@ def create_rig(frame: str, minimum: Vector, maximum: Vector) -> bpy.types.Object
             armature,
             f"LowerArm.{side}",
             upper_arm.tail.copy(),
-            Vector((x(direction * 0.405), centre_y, z(0.625))),
+            Vector(limb["wrist"]) if limb else Vector((x(direction * 0.405), centre_y, z(0.625))),
             upper_arm,
             connected=True,
         )
@@ -311,11 +334,15 @@ def create_rig(frame: str, minimum: Vector, maximum: Vector) -> bpy.types.Object
             armature,
             f"Hand.{side}",
             lower_arm.tail.copy(),
-            Vector((x(direction * 0.475), centre_y, z(0.605))),
+            Vector(limb["palm"]) if limb else Vector((x(direction * 0.475), centre_y, z(0.605))),
             lower_arm,
             connected=True,
         )
-        create_digit_chain(armature, side, hand, height, centre_y)
+        create_digit_chain(
+            armature, side, hand, height, centre_y,
+            measured_segments=source_finger_bone_segments(side, limb, measured["height"])
+            if limb is not None else None,
+        )
 
         upper_leg = add_bone(
             armature,
