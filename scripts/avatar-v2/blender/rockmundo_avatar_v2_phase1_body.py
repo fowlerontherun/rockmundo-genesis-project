@@ -27,7 +27,7 @@ sys.path.insert(0, str(SCRIPT_DIR.parent))
 from phase1_body_contract import (  # noqa: E402
     ATTACHMENT_BONES, CORRECTIVES, DEFORM_BONES, POSES, REGIONS,
     DIGITS, CORRECTIVE_DRIVERS, normalise_four, pose_corrective_weights,
-    region_from_weights, report_errors,
+    propose_missing_finger_weights, region_from_weights, report_errors,
 )
 from verify_glb_binary import verify_skin_binary  # noqa: E402
 
@@ -174,6 +174,35 @@ def twist_seed_and_normalise(body, rig):
                     group.remove([v.index])
         for name, weight in kept.items():
             groups[name].add([v.index], weight, "REPLACE")
+
+
+def seed_unapproved_finger_paint(body, rig):
+    """Optional INITIAL STARTING PAINT on fitted real fingers; not certification.
+
+    Never runs on the unfitted diagnostics probe or replaces hand-painted
+    finger joints. If the fitted hand has no trustworthy base hand weights,
+    emit actionable blockers rather than transfer weight from random arms.
+    """
+    required = {
+        f"{digit}{joint}.{side}": (
+            tuple(rig.matrix_world @ rig.data.bones[f"{digit}{joint}.{side}"].head_local),
+            tuple(rig.matrix_world @ rig.data.bones[f"{digit}{joint}.{side}"].tail_local),
+        )
+        for side in ("L", "R") for digit in DIGITS for joint in (1, 2, 3)
+    }
+    original = [vertex_weights(body, vertex, set(DEFORM_BONES))
+                for vertex in body.data.vertices]
+    locations = [tuple(body.matrix_world @ vertex.co) for vertex in body.data.vertices]
+    proposals, report = propose_missing_finger_weights(locations, original, required)
+    for index, weights in proposals.items():
+        for name in original[index]:
+            if name not in weights:
+                body.vertex_groups[name].remove([index])
+        for name, weight in weights.items():
+            group = body.vertex_groups.get(name) or body.vertex_groups.new(name=name)
+            group.add([index], weight, "REPLACE")
+    report["sourceFrame"] = rig.get("rockmundoAvatarV2Frame")
+    return report
 
 
 def assign_eight_skin_regions(body):
@@ -500,6 +529,7 @@ def main():
     if args.mode == "prepare":
         selected_parent_bind(body, rig)
         twist_seed_and_normalise(body, rig)
+        finger_seed = seed_unapproved_finger_paint(body, rig)
         regions = assign_eight_skin_regions(body)
         eyes = bind_original_eyes(rig, args.frame)
         body["rockmundoAvatarV2Phase1Candidate"] = True
@@ -510,7 +540,8 @@ def main():
         audit = audit_weights(body, rig)
         report = {"schema": "rockmundo.avatar-v2-phase1-initial-bind", "version": 1,
                   "frame": args.frame, "candidateOnly": True, "jointFit": fit,
-                  "body": body.name, "skin": audit, "regions": regions,
+                  "body": body.name, "skin": audit, "fingerStartingPaint": finger_seed,
+                  "regions": regions,
                   "eyeMeshes": [obj.name for obj in eyes.values()],
                   "sourceScene": scene.name,
                   "mustRepaintAndAuthorCorrectives": True,
