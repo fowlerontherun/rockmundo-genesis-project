@@ -68,3 +68,12 @@ BEGIN
   RETURN v_result;
 END $$;
 REVOKE ALL ON FUNCTION public._festival_plan_edition(uuid,text,text) FROM PUBLIC,anon,authenticated;
+
+-- Annual-edition planning writes an audit event after creating the draft.
+-- The founding-only constraint previously rejected that event and rolled back
+-- the entire planning transaction.
+ALTER TABLE public.festival_company_audit_log
+  DROP CONSTRAINT IF EXISTS festival_company_audit_log_action_check;
+ALTER TABLE public.festival_company_audit_log
+  ADD CONSTRAINT festival_company_audit_log_action_check
+  CHECK (action IN ('festival_company_founded', 'founding_fee_charged', 'festival_edition_planned'));
