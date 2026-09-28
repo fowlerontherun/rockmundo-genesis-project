@@ -18,6 +18,15 @@ export function AvatarV2AuthoringImport() {
   const [opening, setOpening] = useState<string | null>(null);
   const [validating, setValidating] = useState<string | null>(null);
   const [reviews, setReviews] = useState<Record<string, string>>({});
+  const { data: savedReviews = [] } = useQuery({
+    queryKey: ['admin-avatar-v2-source-reviews'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('avatar_v2_authoring_reviews' as never)
+        .select('storage_key,archive_sha256,status,source_file_count,glb_model_count,validated_at');
+      if (error) throw error;
+      return (data ?? []) as Array<{storage_key: string; archive_sha256: string; status: string; source_file_count: number; glb_model_count: number; validated_at: string}>;
+    },
+  });
   const queryClient = useQueryClient();
   const { data: archives = [], isLoading } = useQuery({
     queryKey: ['admin-avatar-v2-authoring-archives'],
@@ -65,6 +74,7 @@ export function AvatarV2AuthoringImport() {
       });
       if (error || !data?.valid) throw new Error(data?.error ?? error?.message ?? 'Validation failed');
       setReviews(previous => ({ ...previous, [name]: `Source verified: ${data.files} files, 15 models` }));
+      await queryClient.invalidateQueries({ queryKey: ['admin-avatar-v2-source-reviews'] });
       toast.success('All source checksums and GLB headers verified. Production QA is still required.');
     } catch (error) {
       setReviews(previous => ({ ...previous, [name]: 'Validation failed' }));
@@ -125,12 +135,12 @@ export function AvatarV2AuthoringImport() {
         {file && <div className="space-y-1 text-sm text-muted-foreground"><p>Selected: {file.name} ({(file.size / 1048576).toFixed(1)} MB)</p>{digest && <p className="break-all font-mono text-xs">Local SHA-256: {digest}</p>}</div>}
         <div className="space-y-2">
           <p className="font-medium">Uploaded archives {isLoading ? '(loading)' : `(${archives.length})`}</p>
-          {archives.map(archive => (
+          {archives.map(archive => { const saved = savedReviews.find(review => review.storage_key === `incoming/${archive.name}`); return (
             <div key={archive.name} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3 text-sm">
               <span className="break-all">{archive.name}</span>
-              <div className="flex flex-wrap items-center gap-2"><Badge variant={reviews[archive.name]?.startsWith("Source verified") ? "default" : "secondary"}>{reviews[archive.name] ?? "Awaiting source validation"}</Badge><Button size="sm" variant="outline" disabled={validating === archive.name} onClick={() => void validateArchive(archive.name)}>{validating === archive.name ? "Validating…" : "Validate bundle"}</Button><Button size="sm" variant="outline" disabled={opening === archive.name} onClick={() => void downloadArchive(archive.name)}><Download className="mr-1 h-4 w-4" /> Download</Button></div>
+              <div className="flex flex-wrap items-center gap-2"><Badge variant={saved || reviews[archive.name]?.startsWith("Source verified") ? "default" : "secondary"}>{saved ? `Source verified: ${saved.source_file_count} files, ${saved.glb_model_count} models` : reviews[archive.name] ?? "Awaiting source validation"}</Badge><Button size="sm" variant="outline" disabled={validating === archive.name} onClick={() => void validateArchive(archive.name)}>{validating === archive.name ? "Validating…" : "Validate bundle"}</Button><Button size="sm" variant="outline" disabled={opening === archive.name} onClick={() => void downloadArchive(archive.name)}><Download className="mr-1 h-4 w-4" /> Download</Button></div>
             </div>
-          ))}
+          ); })}
           {!isLoading && !archives.length && <p className="text-sm text-muted-foreground">No archives uploaded yet.</p>}
         </div>
       </CardContent>
