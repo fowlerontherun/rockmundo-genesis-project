@@ -411,7 +411,7 @@ def assess_poses(body, rig):
     return results
 
 
-def render_contact_sheet(body, rig, root, frame):
+def render_contact_sheet(body, rig, root, frame, *, only=None):
     """Real evaluated geometry with live-equivalent pose corrective weights."""
     scene = bpy.context.scene
     camera = bpy.data.objects.new("RMV2_Phase1ProofCamera",
@@ -445,6 +445,8 @@ def render_contact_sheet(body, rig, root, frame):
              (.55, 0, 1.05), .65),
         ]
         for label, pose, location, target, scale in configurations:
+            if only is not None and label not in only:
+                continue
             set_pose(rig, pose)
             drive_correctives(body, pose)
             camera.location = location
