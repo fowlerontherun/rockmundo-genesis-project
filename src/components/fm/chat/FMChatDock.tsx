@@ -76,18 +76,28 @@ export function FMChatDock() {
     }
   }, [open, activeRoom]);
 
-  // Subscribe even while the dock is minimised. Seed the latest message so
-  // historical messages do not trigger a popup on initial load.
+  // Keep the dock subscribed while minimised. Poll as a fallback for dropped
+  // realtime events (including reconnects and missed events during startup).
   useEffect(() => {
     if (!myProfileId) return;
     let disposed = false;
+    let currentUserId: string | undefined;
+    let newestTimestamp: string | null = null;
+    let checking = false;
+    const pending: Array<{ id: string; profile_id?: string | null; user_id?: string; created_at: string }> = [];
     worldReady.current = false;
     seenWorldIds.current.clear();
-    const handleMessage = (row: { id: string; profile_id?: string | null; user_id?: string }) => {
-      if (!worldReady.current || seenWorldIds.current.has(row.id)) return;
+
+    const handleMessage = (row: { id: string; profile_id?: string | null; user_id?: string; created_at: string }) => {
+      if (disposed || seenWorldIds.current.has(row.id)) return;
+      if (!worldReady.current) {
+        pending.push(row);
+        return;
+      }
       seenWorldIds.current.add(row.id);
-      if (seenWorldIds.current.size > 200) {
-        seenWorldIds.current = new Set(Array.from(seenWorldIds.current).slice(-100));
+      if (!newestTimestamp || row.created_at > newestTimestamp) newestTimestamp = row.created_at;
+      if (seenWorldIds.current.size > 300) {
+        seenWorldIds.current = new Set(Array.from(seenWorldIds.current).slice(-150));
       }
       if (row.profile_id === profileRef.current || row.user_id === currentUserId) return;
       if (modeRef.current === "off") return;
@@ -99,26 +109,64 @@ export function FMChatDock() {
         setOpen(true);
       }
     };
-    let currentUserId: string | undefined;
+
+    const checkMissedMessages = async () => {
+      if (disposed || !worldReady.current || checking || !newestTimestamp) return;
+      checking = true;
+      try {
+        const { data, error } = await supabase.from("global_chat")
+          .select("id, profile_id, user_id, created_at")
+          .eq("channel", "world")
+          .gte("created_at", newestTimestamp)
+          .order("created_at", { ascending: true }).limit(100);
+        if (error) throw error;
+        for (const row of data ?? []) handleMessage(row);
+      } catch (error) {
+        console.warn("World Chat notification sync failed", error);
+      } finally {
+        checking = false;
+      }
+    };
+
     const channel = supabase.channel(`world-chat-dock-${myProfileId}`)
       .on("postgres_changes", {
         event: "INSERT", schema: "public", table: "global_chat", filter: "channel=eq.world",
-      }, (payload) => handleMessage(payload.new as { id: string; profile_id?: string | null; user_id?: string }))
-      .subscribe();
+      }, (payload) => handleMessage(payload.new as { id: string; profile_id?: string | null; user_id?: string; created_at: string }))
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") void checkMissedMessages();
+      });
+
     void (async () => {
       const [auth, latest] = await Promise.all([
         supabase.auth.getUser(),
-        supabase.from("global_chat").select("id").eq("channel", "world")
+        supabase.from("global_chat").select("id, created_at").eq("channel", "world")
           .order("created_at", { ascending: false }).limit(1),
       ]);
       if (disposed) return;
       currentUserId = auth.data.user?.id;
-      for (const row of latest.data ?? []) seenWorldIds.current.add(row.id);
+      if (latest.error) {
+        console.warn("World Chat notification initialisation failed", latest.error);
+        return;
+      }
+      const initial = latest.data?.[0];
+      if (initial) {
+        newestTimestamp = initial.created_at;
+        seenWorldIds.current.add(initial.id);
+      } else {
+        newestTimestamp = new Date().toISOString();
+      }
       worldReady.current = true;
+      for (const row of pending.splice(0)) handleMessage(row);
+      void checkMissedMessages();
     })();
+    const timer = window.setInterval(() => void checkMissedMessages(), 8000);
+    const onVisible = () => { if (document.visibilityState === "visible") void checkMissedMessages(); };
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       disposed = true;
       worldReady.current = false;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
       void supabase.removeChannel(channel);
     };
   }, [myProfileId, setOpen]);
