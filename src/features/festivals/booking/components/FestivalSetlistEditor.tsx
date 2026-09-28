@@ -55,17 +55,20 @@ export function FestivalSetlistEditorCanonical({
   const [reason, setReason] = useState("");
   const [dirty, setDirty] = useState(false);
   const [savedDraftConfirmed, setSavedDraftConfirmed] = useState(false);
+  const [savedFingerprint, setSavedFingerprint] = useState<string | null>(null);
   const currentSetlistId = current.id ?? null;
   const currentSetlistVersion = current.version ?? 0;
   useEffect(() => {
     setItems(current.items ?? []);
     setDirty(false);
     setSavedDraftConfirmed(false);
+    setSavedFingerprint(null);
   }, [contract.id, currentSetlistId, currentSetlistVersion]);
   const editItems = (next: FestivalSetlistItemInput[]) => {
     setItems(next);
     setDirty(true);
     setSavedDraftConfirmed(false);
+    setSavedFingerprint(null);
   };
   const [selectedPreset, setSelectedPreset] = useState("");
   const [loadingPreset, setLoadingPreset] = useState(false);
@@ -93,7 +96,7 @@ export function FestivalSetlistEditorCanonical({
   const preflightBlocked = preflight.data?.outcome === "blocked";
   const canPersist = validation.valid && preflight.isSuccess && !preflight.isFetching && !preflightBlocked && !repertoire.isError && !repertoire.isLoading;
   const fp = JSON.stringify(items);
-  const hasUnsavedChanges = dirty && !savedDraftConfirmed;
+  const hasUnsavedChanges = dirty && (!savedDraftConfirmed || savedFingerprint !== fp);
   const saveKey = useStableMutationIdempotencyKey(
     "save-setlist",
     contract.id,
@@ -442,6 +445,7 @@ export function FestivalSetlistEditorCanonical({
                     onSuccess: () => {
                       saveKey.markSucceeded();
                       setSavedDraftConfirmed(true);
+                      setSavedFingerprint(fp);
                       toast.success("Draft saved");
                     },
                     onError: (e) => toast.error(mapBookingError(e).message),
@@ -523,10 +527,14 @@ export function FestivalSetlistEditorCanonical({
           {organiser && current.status === "approved" ? (
             <Button
               size="sm"
+              disabled={lockSetlist.isPending}
               onClick={() =>
                 lockSetlist.mutate({
                   setlistId: current.id ?? "",
                   idempotencyKey: lockKey.idempotencyKey,
+                }, {
+                  onSuccess: () => { lockKey.markSucceeded(); toast.success("Approved festival setlist locked"); },
+                  onError: (e) => toast.error(mapBookingError(e).message),
                 })
               }
             >
