@@ -41,15 +41,30 @@ def inspect(path, *, garment=False):
                 else ({nodes[j].get("name") for j in skin["joints"]} >= REQUIRED))
                for skin in skins):
         raise ValueError("No valid skin with required runtime joints")
-    bound = [node for node in nodes if "mesh" in node and "skin" in node]
-    if not bound:
-        raise ValueError("No mesh node bound to a skin")
+    mesh_nodes = [node for node in nodes if "mesh" in node]
+    if not mesh_nodes:
+        raise ValueError("No mesh nodes")
+    if any("skin" not in node for node in mesh_nodes):
+        raise ValueError("Unskinned mesh node in export")
+    bound = mesh_nodes
     checked = 0
     for node in bound:
         mi, si = node["mesh"], node["skin"]
         if type(mi) is not int or mi < 0 or mi >= len(meshes) or type(si) is not int or si < 0 or si >= len(skins):
             raise ValueError("Invalid mesh/skin index")
-        for prim in meshes[mi].get("primitives", []):
+        skin = skins[si]
+        joints = skin.get("joints")
+        if not isinstance(joints, list) or not joints or any(type(j) is not int or j < 0 or j >= len(nodes) for j in joints):
+            raise ValueError("Bound mesh has invalid skin joints")
+        joint_names = {nodes[j].get("name") for j in joints}
+        if garment and not joint_names.intersection(REQUIRED):
+            raise ValueError("Bound garment skin has no runtime joint")
+        if not garment and not joint_names.issuperset(REQUIRED):
+            raise ValueError("Bound body skin is missing runtime joints")
+        primitives = meshes[mi].get("primitives", [])
+        if not primitives:
+            raise ValueError("Bound mesh has no primitives")
+        for prim in primitives:
             attrs = prim.get("attributes", {})
             for name in ("POSITION", "JOINTS_0", "WEIGHTS_0"):
                 idx = attrs.get(name)
