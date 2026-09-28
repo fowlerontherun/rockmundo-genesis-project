@@ -229,3 +229,38 @@ has broader non-Phase-1 failures. These must not be called successful merely
 because the two Blender body probes, binary skin verifiers and Phase 1
 contract checks succeeded independently. Do not route these preliminary GLBs
 to the player avatar registry or gig renderer.
+
+
+## Source-guide geometry correction: remove the 0.5-metre floating fingers
+
+The second genuine source diagnostic run of both frames reported that **every
+single generated finger bone was 445–528mm from its nearest actual source
+skin vertex**; not one had even a 9mm-proximity vertex. The generic
+`create_digit_chain` extended fingers along full-height-based character X,
+while the official stylised CC0 arms angle downward with actual hands far
+closer to the body. Merely repainting this original guide could not solve the
+source problem.
+
+The source authoring builder now separately measures, **on each official real
+continuous sculpt**, observed lateral shoulder, elbow, wrist and palm
+cross-sections. It also measures each hand's genuine distal surface height.
+The initial unreviewed guide uses those measurements to place its long bones
+and 30 starting finger segments along the actually observed palm axis, with
+frame-specific finger length and thumb orientation. It does NOT copy the
+masculine position/length to the feminine rig. The generated guide retains
+`rockmundoAvatarV2RequiresManualFit=true`, records measured provenance,
+and must still have every knuckle/joint snapped and reviewed interactively.
+No script marks the suggested joints, the provisional initial skin or the
+old source GLBs as production valid.
+
+The real Blender smoke test now fails immediately if **any** of the 30
+regenerated finger-guide segments remains more than 35mm from its nearest
+actual source vertex. It still separately demands that production fitting
+reject the whole unfitted guide. This 35mm limit is only a sanity bound to
+prevent the original catastrophic float, **not** a visual/anatomical
+acceptance tolerance. An actual production finger must be hand-fitted,
+painted into real skin, tested in an instrument grip, and independently
+reviewed before issue #2197 closes. Both distinct newly generated CC0
+source authoring artifacts should be used for all subsequent artist fitting;
+older downloaded source guides still contain the gross original spacing
+error and must be regenerated, not reused as reviewed fits.
