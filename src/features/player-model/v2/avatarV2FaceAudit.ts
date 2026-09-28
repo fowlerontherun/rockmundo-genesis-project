@@ -26,6 +26,7 @@ export interface AvatarV2FaceAudit {
   missingChannels: string[];
   missingAnchors: string[];
   invalidMorphTargets: string[];
+  invalidBaseMeshes: string[];
   duplicateAnchors: string[];
 }
 
@@ -34,6 +35,7 @@ export function auditAvatarV2Face(root: T.Object3D): AvatarV2FaceAudit {
   const anchors = new Map<string, number>();
   const channels = new Set<string>();
   const invalidMorphTargets: string[] = [];
+  const invalidBaseMeshes: string[] = [];
   root.traverse(node => {
     if (node instanceof T.Bone && REQUIRED_HEAD_ANCHORS.includes(node.name as typeof REQUIRED_HEAD_ANCHORS[number])) {
       anchors.set(node.name, (anchors.get(node.name) ?? 0) + 1);
@@ -42,10 +44,20 @@ export function auditAvatarV2Face(root: T.Object3D): AvatarV2FaceAudit {
     const geometry = node.geometry;
     const positions = geometry.attributes.position;
     const morphs = geometry.morphAttributes.position ?? [];
+    if (!positions || positions.itemSize !== 3 || positions.count === 0) {
+      invalidBaseMeshes.push(node.name || '(unnamed mesh)');
+    } else {
+      for (let i = 0; i < positions.count; i++) {
+        if (![positions.getX(i), positions.getY(i), positions.getZ(i)].every(Number.isFinite)) {
+          invalidBaseMeshes.push(node.name || '(unnamed mesh)');
+          break;
+        }
+      }
+    }
     const dictionary = node.morphTargetDictionary ?? {};
     for (const [name, index] of Object.entries(dictionary)) {
       const target = morphs[index];
-      if (!target || !positions || target.count !== positions.count) {
+      if (!Number.isInteger(index) || index < 0 || !target || !positions || target.itemSize !== 3 || target.count !== positions.count) {
         invalidMorphTargets.push(`${node.name}:${name}`);
         continue;
       }
@@ -64,7 +76,7 @@ export function auditAvatarV2Face(root: T.Object3D): AvatarV2FaceAudit {
   const missingAnchors = REQUIRED_HEAD_ANCHORS.filter(name => !anchors.has(name));
   const duplicateAnchors = REQUIRED_HEAD_ANCHORS.filter(name => (anchors.get(name) ?? 0) > 1);
   return {
-    passed: !missingChannels.length && !missingAnchors.length && !duplicateAnchors.length && !invalidMorphTargets.length,
-    missingChannels, missingAnchors, duplicateAnchors, invalidMorphTargets,
+    passed: !missingChannels.length && !missingAnchors.length && !duplicateAnchors.length && !invalidMorphTargets.length && !invalidBaseMeshes.length,
+    missingChannels, missingAnchors, duplicateAnchors, invalidMorphTargets, invalidBaseMeshes,
   };
 }
