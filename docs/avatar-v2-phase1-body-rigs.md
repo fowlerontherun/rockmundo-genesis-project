@@ -292,3 +292,35 @@ pose claim untrustworthy. The output still consists of UNFITTED experiments:
 the correct fix for competing/misassigned finger heat is explicit interactive
 anatomical fitting and region-aware repaint, followed by genuine grip/camera
 visual review rather than blindly inserting 0.001 weights into every bone.
+
+
+## Interactive artist handoff for each real unweighted finger joint
+
+The genuine two-body UNFITTED diagnostic workflow now embeds a
+`RMV2_Phase1FingerReviewHints` collection in each experimental Blender
+`.blend`. It creates one visibly labelled source-skin sphere per truly
+missing finger group (not dummy positions for every bone) and saves matching
+`fingerFitReviewHints` in the JSON report. Each hint records the exact
+source vertex, actual world position, current guide segment, proximity,
+existing automatic bone weights and whether that nearest source point may
+actually belong to **another digit**.
+
+To inspect, download the latest workflow's
+`avatar-v2-phase1-UNFITTED-diagnostics` artifact and open either
+`<frame>-AUTOBIND-EXPERIMENT-not-validated.blend` in Blender. Expand
+`RMV2_Phase1FingerReviewHints` in the Outliner, select a labelled
+`RMV2_UNAPPROVED_FINGER_HINT__*` marker, and view the embedded text
+`ROCKMUNDO_PHASE1_MISSING_FINGERS`. **Red markers specifically warn that
+the nearest skin vertex may have been heat-bound to a DIFFERENT finger**;
+cyan simply shows source proximity, not confirmed anatomy. The marker is on
+an actual skin surface, **never** the internal joint pivot and **never** a
+replacement for inspected source polygon loops.
+
+Open the corresponding latest official CC0
+`<frame>-joint-handles.blend` separately to do the actual work. Snap the
+*two anatomical handles of each missing joint*, check adjacent finger loops,
+then run the reviewed fitted-rig transfer followed by proper weight paint.
+Do not paste a surface hint's XYZ into the actual joint handle or apply the
+experimental scene's automatic weight paint as final. Both complete body
+rigs still need the full corrective sculpt, all-pose assessment and independent
+human artist sign-off in #2197; these hints only remove guesswork.
