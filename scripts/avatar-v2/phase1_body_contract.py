@@ -128,6 +128,84 @@ def segment_distance(point: Sequence[float], head: Sequence[float],
     return dist(point, nearest), t
 
 
+def audit_missing_finger_geometry(
+    positions: Sequence[Sequence[float]],
+    existing: Sequence[Mapping[str, float]],
+    segments: Mapping[str, tuple[Sequence[float], Sequence[float]]],
+    *,
+    radius_m: float = .009,
+) -> dict[str, dict]:
+    """For each truly missing finger bone, inspect ALL real source vertices.
+
+    Do not repeat the old misleading measurement that omitted vertices already
+    claimed by another bone-heat finger group. That made physically close
+    finger segments incorrectly appear 55–70mm away from the CC0 source.
+    No proposed or artist skin weights are modified by this diagnostic.
+    """
+    if len(positions) != len(existing) or not .004 <= radius_m <= .016:
+        raise ValueError("Invalid source body sample or local finger radius")
+    required = {f"{digit}{joint}.{side}" for side in ("L", "R")
+                for digit in DIGITS for joint in (1, 2, 3)}
+    if set(segments) != required:
+        raise ValueError("Require complete 30-joint actual finger geometry")
+    missing = sorted(name for name in required
+                     if not any(w.get(name, 0) > .0001 for w in existing))
+    results = {}
+    for name in missing:
+        side = name.rsplit(".", 1)[1]
+        head, tail = segments[name]
+        length = dist(head, tail)
+        if length < 1e-4:
+            raise ValueError(f"Degenerate fitted finger {name}")
+        radius = min(radius_m, max(.004, length * .44))
+        closest = float("inf")
+        near = eligible = hand_near = claimed_other = 0
+        competing: dict[str, int] = {}
+        for point, weights in zip(positions, existing):
+            distance, along = segment_distance(point, head, tail)
+            closest = min(closest, distance)
+            if distance > radius or not -.10 <= along <= 1.1:
+                continue
+            near += 1
+            if weights.get(f"Hand.{side}", 0) > .05:
+                hand_near += 1
+            actual_owners = [finger for finger in sorted(required)
+                             if weights.get(finger, 0) > .0001]
+            if actual_owners:
+                claimed_other += 1
+                for owner in actual_owners:
+                    competing[owner] = competing.get(owner, 0) + 1
+            elif weights.get(f"Hand.{side}", 0) > .05:
+                eligible += 1
+        # JSON cannot encode Infinity portably. No source vertices is a hard
+        # input error; every real CC0 has a complete continuous body mesh.
+        if not positions:
+            raise ValueError("No actual source skin vertices for finger audit")
+        if near == 0 and closest > .035:
+            problem = "guide-floats-far-from-source-skin"
+        elif claimed_other:
+            problem = "nearby-vertices-claimed-by-other-fingers"
+        elif hand_near == 0:
+            problem = "no-nearby-existing-same-side-hand-weight"
+        elif eligible:
+            problem = "bone-heat-missed-eligible-local-palm-vertices"
+        else:
+            problem = "requires-artist-detailed-finger-fitting"
+        results[name] = {
+            "nearestActualSourceMm": round(closest * 1000, 3),
+            "geometricRadiusMm": round(radius * 1000, 3),
+            "nearbyActualSourceVertices": near,
+            "nearbyExistingHandVertices": hand_near,
+            "nearbyUnclaimedHandVertices": eligible,
+            "nearbyOtherFingerClaimedVertices": claimed_other,
+            "competingFingerGroups": competing,
+            "blocker": problem,
+            "reviewedAnatomicalFit": False,
+            "automaticProductionApproval": False,
+        }
+    return results
+
+
 def propose_missing_finger_weights(
     positions: Sequence[Sequence[float]],
     existing: Sequence[Mapping[str, float]],
@@ -159,7 +237,7 @@ def propose_missing_finger_weights(
     # can be painted on any existing Hand-weighted point.
     proposals = {}
     near_but_no_hand = {side: 0 for side in ("L", "R")}
-    proximity = {name: {"nearestSurfaceMm": float("inf"),
+    proximity = {name: {"nearestUnclaimedSourceMm": float("inf"),
                         "bodyVerticesNearSegment": 0,
                         "existingHandVerticesNearSegment": 0}
                  for name in missing}
@@ -175,8 +253,8 @@ def propose_missing_finger_weights(
                 radius = min(radius_m, max(.004, length * .44))
                 separation, along = segment_distance(point, head, tail)
                 evidence = proximity[name]
-                evidence["nearestSurfaceMm"] = min(
-                    evidence["nearestSurfaceMm"], round(separation * 1000, 3))
+                evidence["nearestUnclaimedSourceMm"] = min(
+                    evidence["nearestUnclaimedSourceMm"], round(separation * 1000, 3))
                 # Reject points beyond real end planes (e.g. palms, adjacent
                 # fingers or an accidentally misplaced guide endpoint).
                 if separation > radius or not -.10 <= along <= 1.1:
@@ -202,6 +280,9 @@ def propose_missing_finger_weights(
         candidate_weights[chosen] = share
         proposals[i] = normalise_four(candidate_weights)
         total[chosen] += 1
+    for evidence in proximity.values():
+        if evidence["nearestUnclaimedSourceMm"] == float("inf"):
+            evidence["nearestUnclaimedSourceMm"] = None
     report = {
         "candidateOnly": True,
         "basedOnReviewedFittedBoneGeometry": True,
@@ -212,6 +293,9 @@ def propose_missing_finger_weights(
         "stillMissing": sorted(name for name in required if total[name] < 4),
         "nearFittedFingersButMissingHandWeights": near_but_no_hand,
         "unpaintedJointGeometry": {name: proximity[name] for name in sorted(missing)},
+        "missingJointSourceEvidence": audit_missing_finger_geometry(
+            positions, existing, segments, radius_m=radius_m
+        ),
         "requiresArtistRepaintAndGripReview": True,
     }
     return proposals, report

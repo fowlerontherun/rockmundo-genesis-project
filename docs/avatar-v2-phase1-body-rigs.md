@@ -264,3 +264,31 @@ reviewed before issue #2197 closes. Both distinct newly generated CC0
 source authoring artifacts should be used for all subsequent artist fitting;
 older downloaded source guides still contain the gross original spacing
 error and must be regenerated, not reused as reviewed fits.
+
+
+## Verify the six remaining real initial finger-weight gaps without misleading geometry
+
+The previous provisional finger-paint report listed `nearestSurfaceMm` only
+for vertices **not already claimed by any finger bone**. On the genuine CC0
+source, that is not necessarily the physical distance to the actual skin:
+Blender bone heat may attach all nearby distal vertices to an *adjacent* finger
+segment. An otherwise nearby bone can incorrectly appear 55–70mm from skin
+when its actual nearest vertices were excluded from the report.
+
+The diagnostic now measures **all** actual body vertices independently of
+existing weights (`nearestActualSourceMm`) and records nearby body vertices,
+nearby same-side Hand weights, nearby unclaimed Hand vertices, and the exact
+other finger groups that currently own those points. Unclaimed-source
+proximity remains a separate field; it can be `null` if another finger has
+claimed all adjacent skin. The report labels possible causes separately:
+missing source geometry, adjacent bone-heat ownership, absent palm paint,
+and true bone-heat misses of still-unclaimed hand skin. It never overwrites
+artist-painted finger groups or silently reassigns crowded hand vertices.
+
+The isolated real Blender probes for BOTH bodies also compare source vertex
+positions **before vs after armature parenting** and abort if the rest shape
+moves by more than 1mm. A displaced mesh would make any finger proximity or
+pose claim untrustworthy. The output still consists of UNFITTED experiments:
+the correct fix for competing/misassigned finger heat is explicit interactive
+anatomical fitting and region-aware repaint, followed by genuine grip/camera
+visual review rather than blindly inserting 0.001 weights into every bone.
