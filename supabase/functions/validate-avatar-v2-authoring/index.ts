@@ -43,7 +43,7 @@ serve(async req => {
     }
     const names = Object.keys(zip).filter(name => !name.endsWith('/'));
     if (!names.includes(ROOT + 'CHECKSUMS.json')) return respond({ error: 'This is not the combined authoring bundle' }, 400);
-    if (names.some(name => !name.startsWith(ROOT) || name.includes('..') || name.includes('\\'))) {
+    if (names.some(name => !name.startsWith(ROOT) || name.split('/').some(part => part === '..' || part === '.') || name.includes('\\'))) {
       return respond({ error: 'Unexpected or unsafe archive paths' }, 400);
     }
     const checksums: unknown = JSON.parse(new TextDecoder().decode(zip[ROOT + 'CHECKSUMS.json']));
