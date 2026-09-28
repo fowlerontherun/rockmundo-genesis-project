@@ -4,7 +4,6 @@ import argparse
 import hashlib
 import json
 from pathlib import Path, PurePosixPath
-import shutil
 import sys
 import zipfile
 
@@ -25,6 +24,12 @@ def main():
             sys.exit("Unexpected archive layout.")
         if len(names) != len(set(names)):
             sys.exit("Duplicate archive entries.")
+        for info in archive.infolist():
+            # Reject symlinks and unexpectedly large payloads before reading.
+            if (info.external_attr >> 16) & 0o170000 == 0o120000:
+                sys.exit(f"Archive symlink not allowed: {info.filename}")
+            if info.file_size > 32 * 1024 * 1024:
+                sys.exit(f"Oversized archive member: {info.filename}")
         for name in names:
             path = PurePosixPath(name)
             if path.is_absolute() or ".." in path.parts or "\\" in name:
@@ -36,7 +41,7 @@ def main():
         if len(expected) != len(checksums):
             sys.exit("Duplicate checksum entries.")
         for name, digest in expected.items():
-            if not name.startswith("assets/") or name not in names:
+            if not name.startswith("assets/") or name not in names or name.endswith("/"):
                 sys.exit(f"Missing or unexpected file: {name}")
             if hashlib.sha256(read(name)).hexdigest() != digest:
                 sys.exit(f"Checksum mismatch: {name}")
