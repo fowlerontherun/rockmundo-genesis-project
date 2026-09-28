@@ -34,7 +34,7 @@ class StructuralSkinGateTests(unittest.TestCase):
             "nodes": [{"name": name} for name in names] + [{"mesh": 0, "skin": 0}],
             "skins": [{"joints": list(range(len(names)))}],
             "meshes": [{"primitives": [{"attributes": {"POSITION": 0, "JOINTS_0": 1, "WEIGHTS_0": 2}}]}],
-            "accessors": [{"count": 4, "type": "VEC3"}, {"count": 4, "type": "VEC4"}, {"count": 4, "type": "VEC4"}],
+            "accessors": [{"count": 4, "type": "VEC3"}, {"count": 4, "type": "VEC4", "componentType": 5123}, {"count": 4, "type": "VEC4", "componentType": 5126}],
         }
 
     def test_valid_structural_candidate(self):
@@ -56,6 +56,18 @@ class StructuralSkinGateTests(unittest.TestCase):
         doc = self.valid()
         doc["accessors"][2]["count"] = 3
         with self.assertRaisesRegex(ValueError, "vertex counts differ"):
+            gate.inspect(self.write(doc))
+
+    def test_out_of_range_joint_rejected(self):
+        doc = self.valid()
+        doc["skins"][0]["joints"].append(999)
+        with self.assertRaisesRegex(ValueError, "No single skin"):
+            gate.inspect(self.write(doc))
+
+    def test_integer_weights_must_be_normalized(self):
+        doc = self.valid()
+        doc["accessors"][2]["componentType"] = 5123
+        with self.assertRaisesRegex(ValueError, "must be normalized"):
             gate.inspect(self.write(doc))
 
     def test_truncated_glb_rejected(self):
