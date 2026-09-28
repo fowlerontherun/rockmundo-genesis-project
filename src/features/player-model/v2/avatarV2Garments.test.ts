@@ -206,6 +206,21 @@ describe('Avatar V2 garments', () => {
       .toBe('avatar-v2/clothing/masculine/test-tee-lod2.glb');
   });
 
+  it('requires an explicit V2 schema version before accepting migrated clothing', () => {
+    const complete = avatarV2GarmentConfig(item())!;
+    const missingVersion = item({ garment_config: { avatarV2: {
+      status: complete.status,
+      frames: complete.frames,
+      occludeBodyRegions: complete.occludeBodyRegions,
+      colourMode: complete.colourMode,
+      materialZones: complete.materialZones,
+    } } });
+    expect(avatarV2GarmentConfig(missingVersion)).toBeNull();
+    expect(avatarV2GarmentFile(missingVersion, 'masculine', 0)).toBeNull();
+    expect(avatarV2ClothingCompatibilityReason([row(missingVersion)], 'masculine', 0))
+      .toContain('no Avatar V2 garment mapping');
+  });
+
   it('refuses incomplete or reused manifests even when marked validated', () => {
     const original = item();
     const complete = avatarV2GarmentConfig(original)!;
