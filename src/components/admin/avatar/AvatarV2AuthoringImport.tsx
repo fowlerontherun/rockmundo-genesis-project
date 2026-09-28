@@ -17,6 +17,8 @@ export function AvatarV2AuthoringImport() {
   const [digest, setDigest] = useState<string | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
   const [validating, setValidating] = useState<string | null>(null);
+  const [staging, setStaging] = useState<string | null>(null);
+  const [staged, setStaged] = useState<Record<string, boolean>>({});
   const [reviews, setReviews] = useState<Record<string, string>>({});
   const { data: savedReviews = [] } = useQuery({
     queryKey: ['admin-avatar-v2-source-reviews'],
@@ -95,6 +97,7 @@ export function AvatarV2AuthoringImport() {
         throw new Error(data?.error ?? error?.message ?? 'Staging failed');
       }
       setStaged(previous => ({ ...previous, [name]: true }));
+      await queryClient.invalidateQueries({ queryKey: ['admin-avatar-v2-source-reviews'] });
       toast.success('15 models and supporting source files staged privately for artist review.');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Staging failed');
@@ -138,7 +141,7 @@ export function AvatarV2AuthoringImport() {
         <CardTitle className="flex items-center gap-2"><Archive className="h-5 w-5" /> Import Avatar V2 assets</CardTitle>
         <CardDescription>
           Upload the combined RockMundo authoring ZIP here. Files stay in private admin storage;
-          they are not extracted, rigged, certified, or added to the live clothing catalogue.
+          verified archives can be extracted into private artist-review storage, but are not rigged, certified, or added to the live clothing catalogue.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
