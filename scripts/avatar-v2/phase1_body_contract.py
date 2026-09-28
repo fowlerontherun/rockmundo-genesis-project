@@ -130,6 +130,12 @@ def report_errors(report: dict) -> list[str]:
         errors.append("Missing artist-reviewed joint-fit report")
     if report.get("missingDeformBones"):
         errors.append("Some required deform bones carry no body weight")
+    if report.get("insufficientDeformBones"):
+        errors.append("Required finger or twist chains have insufficient real weighted vertices")
+    if report.get("nonBodyBoneInfluences"):
+        errors.append("Body contains undeclared deform bone influences")
+    if report.get("invalidWeights", 0):
+        errors.append("Invalid non-finite or negative source weights")
     if report.get("unweightedVertices", 1) or report.get("overInfluencedVertices", 1):
         errors.append("Unweighted or over-influenced vertices")
     if report.get("unnormalisedVertices", 1):
