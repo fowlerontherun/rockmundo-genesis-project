@@ -26,7 +26,8 @@ SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR.parent))
 from phase1_body_contract import (  # noqa: E402
     ATTACHMENT_BONES, CORRECTIVES, DEFORM_BONES, POSES, REGIONS,
-    normalise_four, region_from_weights, report_errors,
+    DIGITS, CORRECTIVE_DRIVERS, normalise_four, pose_corrective_weights,
+    region_from_weights, report_errors,
 )
 from verify_glb_binary import verify_skin_binary  # noqa: E402
 
@@ -43,7 +44,9 @@ SENTINELS = {
     "crouch": ("UpperLeg.L", "UpperLeg.R", "LowerLeg.L", "LowerLeg.R"),
     "seated-drums": ("UpperLeg.L", "UpperLeg.R", "LowerLeg.L", "LowerLeg.R"),
     "ankle-flex": ("Foot.L", "Foot.R", "Toe.L", "Toe.R"),
-    "instrument-grip": ("Index2.L", "Index2.R", "Middle2.L", "Middle2.R"),
+    "instrument-grip": tuple(f"{digit}{joint}.{side}"
+                             for side in ("L", "R") for digit in DIGITS
+                             for joint in (1, 2, 3)),
     "torso-twist": ("Spine2",),
 }
 
@@ -121,7 +124,7 @@ def selected_parent_bind(body, rig):
 def vertex_weights(obj, vertex, allowed):
     return {obj.vertex_groups[m.group].name: float(m.weight)
             for m in vertex.groups if m.group < len(obj.vertex_groups)
-            and obj.vertex_groups[m.group].name in allowed and m.weight > 0}
+            and obj.vertex_groups[m.group].name in allowed and m.weight > .0001}
 
 
 def twist_seed_and_normalise(body, rig):
@@ -229,13 +232,24 @@ def bind_original_eyes(rig, frame):
 
 def audit_weights(body, rig):
     names = set(DEFORM_BONES)
-    unknown = {g.name for g in body.vertex_groups if g.name not in names
-               and not g.name.startswith("RMV2_")}
-    # Native source vertex groups used for sculpt/material authoring are kept,
-    # but may not contribute to final skin deformation.
     counts = {name: 0 for name in DEFORM_BONES}
-    empty = too_many = unnormalised = 0
+    empty = too_many = unnormalised = invalid = 0
+    # Source sculpt/provenance landmark groups must survive the authoring pass.
+    # They cannot silently deform the rig: only non-contract BONE weights fail.
+    unrelated = sorted(g.name for g in body.vertex_groups
+                       if g.name not in names and g.name not in rig.data.bones
+                       and not g.name.startswith("RMV2_"))
+    illicit_bones = set()
     for v in body.data.vertices:
+        for membership in v.groups:
+            if membership.group >= len(body.vertex_groups):
+                invalid += 1
+                continue
+            name = body.vertex_groups[membership.group].name
+            if not math.isfinite(membership.weight) or membership.weight < 0:
+                invalid += 1
+            if name in rig.data.bones and name not in names and membership.weight > .0001:
+                illicit_bones.add(name)
         skin = vertex_weights(body, v, names)
         if not skin:
             empty += 1
@@ -246,19 +260,25 @@ def audit_weights(body, rig):
         for name in skin:
             counts[name] += 1
     missing = sorted(name for name in DEFORM_BONES if not counts[name])
+    # A token vertex cannot certify entire finger or axial twist deformation.
+    insufficient = {name: {"weighted": count, "minimum": 4 if name.startswith(DIGITS) else 12}
+                    for name, count in counts.items()
+                    if count and count < (4 if name.startswith(DIGITS) else 12)}
     errors = []
     if not any(m.type == "ARMATURE" and m.object == rig for m in body.modifiers):
         errors.append("Body Armature modifier is missing or targets another rig")
-    if unknown:
-        errors.append("Unexpected source skin groups: " + ", ".join(sorted(unknown)))
-    if empty or too_many or unnormalised or missing:
-        errors.append(f"Skin audit: empty={empty}, >4={too_many}, nonunit={unnormalised}, missing={missing}")
+    if illicit_bones:
+        errors.append("Body has non-body bone influences: " + ", ".join(sorted(illicit_bones)))
+    if invalid or empty or too_many or unnormalised or missing or insufficient:
+        errors.append(f"Skin audit: invalid={invalid}, empty={empty}, >4={too_many}, "
+                      f"nonunit={unnormalised}, missing={missing}, insufficient={insufficient}")
     return {"vertices": len(body.data.vertices),
             "unweightedVertices": empty, "overInfluencedVertices": too_many,
-            "unnormalisedVertices": unnormalised,
-            "missingDeformBones": missing,
-            "weightedBoneVertexCounts": counts,
-            "errors": errors}
+            "unnormalisedVertices": unnormalised, "invalidWeights": invalid,
+            "missingDeformBones": missing, "insufficientDeformBones": insufficient,
+            "nonBodyBoneInfluences": sorted(illicit_bones),
+            "ignoredSourceLandmarkGroups": unrelated,
+            "weightedBoneVertexCounts": counts, "errors": errors}
 
 
 def corrective_audit(body):
@@ -318,8 +338,21 @@ def set_pose(rig, spec):
     bpy.context.view_layer.update()
 
 
+def drive_correctives(body, spec):
+    """Drive the same angle-based sculpt keys as the real 3D gig controller."""
+    weights = pose_corrective_weights(spec)
+    if body.data.shape_keys:
+        for name, value in weights.items():
+            key = body.data.shape_keys.key_blocks.get(name)
+            if key:
+                key.value = value
+    bpy.context.view_layer.update()
+    return weights
+
+
 def assess_poses(body, rig):
     set_pose(rig, {})
+    drive_correctives(body, {})
     before = mesh_world_positions(body)
     vertex_samples = {}
     for name in {bone for names in SENTINELS.values() for bone in names}:
@@ -331,19 +364,33 @@ def assess_poses(body, rig):
     try:
         for pose, spec in POSES.items():
             set_pose(rig, spec)
+            drive_correctives(body, {})
+            uncorrected = mesh_world_positions(body)
+            weights = drive_correctives(body, spec)
             after = mesh_world_positions(body)
             if any(not all(math.isfinite(coordinate) for coordinate in position)
                    for position in after):
                 raise RuntimeError(f"Non-finite deformed geometry in {pose}")
+            if len(before) != len(after):
+                raise RuntimeError(f"Unexpected topology change in {pose}")
+            active = {name: round(value, 4) for name, value in weights.items() if value > .01}
+            corrected_mm = max(((a - b).length for a, b in zip(after, uncorrected)),
+                               default=0) * 1000
+            max_displacement = max(((a - b).length for a, b in zip(after, before)),
+                                   default=0)
+            morph_pass = (not active or corrected_mm >= .5)
             per_bone = {}
             for bone in SENTINELS[pose]:
                 sample = vertex_samples[bone]
                 if len(sample) < 3:
-                    per_bone[bone] = {"sampled": len(sample), "error": "No meaningful deform surface"}
+                    per_bone[bone] = {"sampled": len(sample), "pass": False,
+                                      "error": "No meaningful deform surface"}
                     continue
                 distances = [(after[i] - before[i]).length for i in sample]
                 mean = sum(distances) / len(distances)
-                minimum = .001 if bone.startswith(("Hand", "Index", "Middle", "Toe")) else .003
+                minimum = .001 if bone.startswith(
+                    ("Hand", "Thumb", "Index", "Middle", "Ring", "Pinky", "Toe")
+                ) else .003
                 per_bone[bone] = {
                     "sampled": len(sample),
                     "meanDisplacementMm": round(mean * 1000, 3),
@@ -351,15 +398,21 @@ def assess_poses(body, rig):
                 }
             results[pose] = {
                 "bones": per_bone,
-                "pass": bool(per_bone) and all(item.get("pass") for item in per_bone.values()),
+                "activeCorrectives": active,
+                "measuredCorrectiveDisplacementMm": round(corrected_mm, 3),
+                "maxBodyDisplacementMm": round(max_displacement * 1000, 3),
+                "correctivePass": morph_pass,
+                "pass": bool(per_bone) and all(item.get("pass") for item in per_bone.values())
+                        and morph_pass and max_displacement <= 1.25,
             }
     finally:
+        drive_correctives(body, {})
         set_pose(rig, {})
     return results
 
 
 def render_contact_sheet(body, rig, root, frame):
-    """Real evaluated Blender geometry; front/side/back + four extreme poses."""
+    """Real evaluated geometry with live-equivalent pose corrective weights."""
     scene = bpy.context.scene
     camera = bpy.data.objects.new("RMV2_Phase1ProofCamera",
                                   bpy.data.cameras.new("RMV2_Phase1ProofCamera"))
@@ -374,22 +427,31 @@ def render_contact_sheet(body, rig, root, frame):
     scene.render.resolution_x = 768
     scene.render.resolution_y = 768
     camera.data.type = "ORTHO"
-    camera.data.ortho_scale = 2.25
     shots = []
     try:
         configurations = [
-            ("front", {}, (0, -3.2, 1.0)),
-            ("side", {}, (3.2, 0, 1.0)),
-            ("back", {}, (0, 3.2, 1.0)),
-            ("reach", POSES["reach"], (0, -3.2, 1.0)),
-            ("crouch", POSES["crouch"], (3.2, -2.5, .9)),
-            ("seated-drums", POSES["seated-drums"], (3.2, -2.5, .9)),
-            ("instrument-grip", POSES["instrument-grip"], (0, -2.7, 1.25)),
+            ("front", {}, (0, -3.2, 1.0), (0, 0, .9), 2.25),
+            ("side", {}, (3.2, 0, 1.0), (0, 0, .9), 2.25),
+            ("back", {}, (0, 3.2, 1.0), (0, 0, .9), 2.25),
+            ("reach", POSES["reach"], (0, -3.2, 1.0), (0, 0, .9), 2.25),
+            ("arm-fold", POSES["arm-fold"], (0, -3.2, 1.0), (0, 0, .9), 2.25),
+            ("wrist-roll", POSES["wrist-roll"], (0, -3.2, 1.0), (0, 0, .9), 2.25),
+            ("crouch", POSES["crouch"], (3.2, -2.5, .9), (0, 0, .9), 2.25),
+            ("seated-drums", POSES["seated-drums"], (3.2, -2.5, .9), (0, 0, .9), 2.25),
+            ("ankle-flex", POSES["ankle-flex"], (3.2, -2.7, 1), (0, 0, .9), 2.25),
+            ("instrument-grip", POSES["instrument-grip"], (0, -2.7, 1.25), (0, 0, .9), 2.25),
+            ("torso-twist", POSES["torso-twist"], (0, -3.2, 1), (0, 0, .9), 2.25),
+            ("instrument-grip-close", POSES["instrument-grip"], (.8, -1.3, 1.1),
+             (.55, 0, 1.05), .65),
         ]
-        for label, pose, location in configurations:
+        for label, pose, location, target, scale in configurations:
             set_pose(rig, pose)
+            drive_correctives(body, pose)
             camera.location = location
-            camera.rotation_euler = (Vector((0, 0, .9)) - camera.location).to_track_quat("-Z", "Y").to_euler()
+            camera.data.ortho_scale = scale
+            camera.rotation_euler = (Vector(target) - camera.location).to_track_quat(
+                "-Z", "Y"
+            ).to_euler()
             path = root / f"{frame}-phase1-{label}.png"
             scene.render.filepath = str(path)
             bpy.ops.render.render(write_still=True)
@@ -397,6 +459,7 @@ def render_contact_sheet(body, rig, root, frame):
                 raise RuntimeError(f"Missing actual Blender pose capture {path.name}")
             shots.append(path.name)
     finally:
+        drive_correctives(body, {})
         set_pose(rig, {})
         scene.camera, scene.render.engine, scene.render.filepath, scene.render.resolution_x, scene.render.resolution_y = old
         bpy.data.objects.remove(camera, do_unlink=True)
