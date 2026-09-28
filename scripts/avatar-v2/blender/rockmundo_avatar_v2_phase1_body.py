@@ -262,18 +262,35 @@ def audit_weights(body, rig):
 
 
 def corrective_audit(body):
+    """Do not accept a named empty key, one moved spike or an unrelated joint."""
     keys = body.data.shape_keys
     if keys is None or keys.key_blocks.get("Basis") is None:
         return []
     basis = keys.key_blocks["Basis"]
     approved = []
+    region_bones = {
+        "Shoulder": ("Shoulder", "UpperArm"),
+        "Elbow": ("UpperArm", "LowerArm"),
+        "Hip": ("Hips", "UpperLeg", "ThighTwist"),
+        "Knee": ("UpperLeg", "LowerLeg"),
+    }
     for name in CORRECTIVES:
         target = keys.key_blocks.get(name)
         if not target or len(target.data) != len(basis.data):
             continue
-        if max((target.data[i].co - basis.data[i].co).length
-               for i in range(len(basis.data))) >= .0005:
-            approved.append(name)
+        side = "L" if name.endswith("Left") else "R"
+        joint = next(j for j in region_bones if name.startswith(f"pose{j}"))
+        bone_names = {f"{part}.{side}" if part != "Hips" else "Hips"
+                      for part in region_bones[joint]}
+        moved = 0
+        for vertex in body.data.vertices:
+            if sum(vertex_weights(body, vertex, bone_names).values()) < .15:
+                continue
+            if (target.data[vertex.index].co - basis.data[vertex.index].co).length >= .0005:
+                moved += 1
+                if moved >= 12:
+                    approved.append(name)
+                    break
     return approved
 
 
