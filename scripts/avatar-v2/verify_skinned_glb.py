@@ -26,14 +26,17 @@ def inspect(path):
         raise ValueError("Missing or truncated JSON chunk")
     doc = json.loads(raw[20:20 + size])
     nodes, skins, meshes, accessors = (doc.get(k, []) for k in ("nodes", "skins", "meshes", "accessors"))
+    if not isinstance(nodes, list) or not isinstance(skins, list) or not isinstance(meshes, list) or not isinstance(accessors, list):
+        raise ValueError("Invalid glTF top-level arrays")
     if not skins:
         raise ValueError("No glTF skins")
     names = {node.get("name") for node in nodes}
     missing = REQUIRED - names
     if missing:
         raise ValueError("Missing runtime bones: " + ", ".join(sorted(missing)))
-    if not any(set(skin.get("joints", [])) <= set(range(len(nodes))) and
-               {nodes[j].get("name") for j in skin.get("joints", [])} >= REQUIRED
+    if not any(isinstance(skin.get("joints"), list) and
+               all(type(j) is int and 0 <= j < len(nodes) for j in skin["joints"]) and
+               {nodes[j].get("name") for j in skin["joints"]} >= REQUIRED
                for skin in skins):
         raise ValueError("No single skin contains all required runtime joints")
     bound = [node for node in nodes if "mesh" in node and "skin" in node]
@@ -42,7 +45,7 @@ def inspect(path):
     checked = 0
     for node in bound:
         mi, si = node["mesh"], node["skin"]
-        if not isinstance(mi, int) or mi < 0 or mi >= len(meshes) or not isinstance(si, int) or si < 0 or si >= len(skins):
+        if type(mi) is not int or mi < 0 or mi >= len(meshes) or type(si) is not int or si < 0 or si >= len(skins):
             raise ValueError("Invalid mesh/skin index")
         for prim in meshes[mi].get("primitives", []):
             attrs = prim.get("attributes", {})
@@ -55,6 +58,12 @@ def inspect(path):
                 raise ValueError("Skin attribute vertex counts differ")
             if accessors[attrs["JOINTS_0"]].get("type") != "VEC4" or accessors[attrs["WEIGHTS_0"]].get("type") != "VEC4":
                 raise ValueError("Expected four-component joint and weight attributes")
+            if accessors[attrs["JOINTS_0"]].get("componentType") not in (5121, 5123):
+                raise ValueError("JOINTS_0 must use unsigned byte or unsigned short")
+            if accessors[attrs["WEIGHTS_0"]].get("componentType") not in (5126, 5121, 5123):
+                raise ValueError("WEIGHTS_0 has invalid component type")
+            if accessors[attrs["WEIGHTS_0"]].get("componentType") != 5126 and not accessors[attrs["WEIGHTS_0"]].get("normalized"):
+                raise ValueError("Integer weights must be normalized")
             checked += 1
     if not checked:
         raise ValueError("No skinned mesh primitives")
