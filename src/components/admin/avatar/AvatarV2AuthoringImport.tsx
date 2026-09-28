@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { AvatarV2StagedModelViewer } from './AvatarV2StagedModelViewer';
 
 const BUCKET = 'avatar-v2-authoring';
 const MAX_BYTES = 50 * 1024 * 1024;
@@ -22,6 +23,7 @@ export function AvatarV2AuthoringImport() {
   const [staging, setStaging] = useState<string | null>(null);
   const [staged, setStaged] = useState<Record<string, boolean>>({});
   const [reviews, setReviews] = useState<Record<string, string>>({});
+  const [previewSha, setPreviewSha] = useState<string | null>(null);
   const { data: savedReviews = [] } = useQuery({
     queryKey: ['admin-avatar-v2-source-reviews'],
     queryFn: async () => {
@@ -180,6 +182,17 @@ export function AvatarV2AuthoringImport() {
               <div className="flex flex-wrap items-center gap-2"><Badge variant={saved || reviews[archive.name]?.startsWith("Source verified") ? "default" : "secondary"}>{saved ? `${saved.status === "staged_for_review" ? "Staged for artist review" : "Source verified"}: ${saved.source_file_count} files, ${saved.glb_model_count} models` : reviews[archive.name] ?? "Awaiting source validation"}</Badge><Button size="sm" variant="outline" disabled={validating === archive.name} onClick={() => void validateArchive(archive.name)}>{validating === archive.name ? "Validating…" : "Validate bundle"}</Button>{saved && <Button size="sm" variant="outline" disabled={staging === archive.name || staged[archive.name] || saved.status === "staged_for_review"} onClick={() => void stageArchive(archive.name)}>{staging === archive.name ? "Extracting…" : staged[archive.name] || saved.status === "staged_for_review" ? "Staged for review" : "Extract for review"}</Button>}<Button size="sm" variant="outline" disabled={opening === archive.name} onClick={() => void downloadArchive(archive.name)}><Download className="mr-1 h-4 w-4" /> Download</Button></div>
             </div>
           ); })}
+          {savedReviews.filter(review => review.status === 'staged_for_review').map(review => (
+            <div key={review.storage_key} className="rounded-lg border p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="break-all text-sm">{review.storage_key.split('/').pop()}</span>
+                <Button size="sm" variant="outline" type="button" onClick={() => setPreviewSha(previewSha === review.archive_sha256 ? null : review.archive_sha256)}>
+                  {previewSha === review.archive_sha256 ? 'Close 3D preview' : 'Preview 3D models'}
+                </Button>
+              </div>
+              {previewSha === review.archive_sha256 && <AvatarV2StagedModelViewer sha={review.archive_sha256} />}
+            </div>
+          ))}
           {!isLoading && !archives.length && <p className="text-sm text-muted-foreground">No archives uploaded yet.</p>}
         </div>
       </CardContent>
