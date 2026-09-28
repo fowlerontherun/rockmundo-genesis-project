@@ -21,6 +21,18 @@ import {
 import { formatFestivalLaunchMoney } from "../domain/festivalLaunch";
 import { getFestivalPublicEventPhase } from "./festivalEventPhase";
 
+/** Keep the sponsor name visible if a legacy logo URL is unavailable. */
+const SponsorIdentity = ({ name, logoReference }: { name: string; logoReference: string | null }) => {
+  const [imageFailed, setImageFailed] = useState(false);
+  return (
+    <div className="flex min-h-16 items-center justify-center rounded-lg border bg-background p-3">
+      {logoReference && /^https:\/\//i.test(logoReference) && !imageFailed ? (
+        <img src={logoReference} alt={`${name} logo`} loading="lazy" className="max-h-16 max-w-full object-contain" onError={() => setImageFailed(true)} />
+      ) : <span className="text-center text-lg font-bold">{name}</span>}
+    </div>
+  );
+};
+
 const Countdown = ({ target }: { target: string }) => {
   const remaining = Math.max(0, Date.parse(target) - Date.now());
   if (!remaining) return <p className="font-semibold">Festival opening is scheduled now.</p>;
@@ -264,12 +276,23 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
             <Card>
               <CardContent className="pt-6">
                 <p>{f.description}</p>
-                <h2 className="mt-6 text-2xl font-bold">Sponsors</h2>
-                <div className="mt-3 flex flex-wrap gap-3">
-                  {f.sponsors.map((s) => (
-                    <Badge key={s.id} variant="outline">{s.name} · {s.relationshipLabel}</Badge>
-                  ))}
-                </div>
+                <section aria-labelledby="festival-sponsors-title" className="mt-8 space-y-4">
+                  <h2 id="festival-sponsors-title" className="text-2xl font-bold">Festival partners</h2>
+                  {f.sponsors.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Festival partners have not been announced yet.</p>
+                  ) : (
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {f.sponsors.map((s) => (
+                        <div key={s.id} className="rounded-xl border p-4">
+                          <SponsorIdentity name={s.name} logoReference={s.logoReference} />
+                          <h3 className="mt-3 font-semibold">{s.name}</h3>
+                          <p className="text-sm text-muted-foreground">{s.relationshipLabel}</p>
+                          {s.sponsoredArea && <p className="mt-1 text-sm">Supporting {s.sponsoredArea}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
               </CardContent>
             </Card>
           </TabsContent>
