@@ -108,6 +108,43 @@ jobs:
             --source-root "$SOURCE_ROOT" --output-root "$ARTIFACT_ROOT"
       - name: Verify geometry, both complete packs and SHA-256 integrity
         run: python3 scripts/avatar-v2/verify_source_artifacts.py --root "$ARTIFACT_ROOT"
+      - name: Prove Phase 1 refuses BOTH real unfitted source rigs
+        shell: bash
+        run: |
+          set -euo pipefail
+          for FRAME in masculine feminine; do
+            xvfb-run -a -s "-screen 0 1920x1080x24" \
+              "$BLENDER_BIN" --background \
+              "$ARTIFACT_ROOT/$FRAME/$FRAME-unfitted-rig-guide.blend" \
+              --python scripts/avatar-v2/blender/rockmundo_avatar_v2_phase1_source_smoke.py -- \
+              --frame "$FRAME"
+          done
+      # This is a diagnostic, NOT a production gate: artist joint fitting
+      # must be completed before claiming actual usable full-body skinning.
+      - name: Probe real full-body initial weights and deformation on both UNFITTED CC0 guides
+        id: phase1_probe
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          FAILED=0
+          for FRAME in masculine feminine; do
+            xvfb-run -a -s "-screen 0 1920x1080x24" \
+              "$BLENDER_BIN" --background \
+              "$ARTIFACT_ROOT/$FRAME/$FRAME-unfitted-rig-guide.blend" \
+              --python scripts/avatar-v2/blender/rockmundo_avatar_v2_phase1_autobind_probe.py -- \
+              --frame "$FRAME" --output-root work/avatar-v2-phase1-probes || FAILED=1
+          done
+          exit "$FAILED"
+      - name: Upload private experimental body skinning diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: avatar-v2-phase1-UNFITTED-diagnostics
+          path: work/avatar-v2-phase1-probes/**
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 6
       - name: Verify actual Blender-exported GLB binary skin weights for both source experiments
         run: |
           python3 scripts/avatar-v2/verify_glb_binary.py \

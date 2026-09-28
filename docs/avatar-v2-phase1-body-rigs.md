@@ -148,3 +148,43 @@ The dedicated `avatar-v2-phase1-body.yml` CI runs the reproducible shared
 contract, joint-fit and real binary regressions without falsely claiming
 that CI has visually inspected either Blender source. Use the two detailed
 per-frame reports and the separate source workflow for full asset evidence.
+
+## Continued Phase 1: live-pose-equivalent corrective and real-source experimental proof
+
+The `--mode assess` path now drives **exactly the same joint-angle
+thresholds and smoothstep weights as the live Three.js pose-corrective
+controller**, rather than merely checking the names of shape keys.
+It measures **actual evaluated geometry differences before and after
+applying the correction shapes** at reach, elbow fold, crouch and seated
+drumming angles. The body fails assessment if the correction is absent
+where the game would activate it. All 30 finger-segment groups are now
+observed independently during the instrument-grip proof, and the body
+weight audit rejects token-weighted fingers/twist regions and accidental
+weights on undeclared deforming bones. Existing genuine CC0 source
+landmark groups are reported without treating them as skin bones.
+
+Both frame-specific passing candidates get 12 Workbench proof views:
+three neutral anatomical angles, eight distinct extreme poses and a
+dedicated hand/finger grip close-up. The captures actually apply the
+correction targets with live-equivalent weights. They are still
+**deformation diagnostics**, not an autonomous visual fit approval.
+
+The real-source GitHub Actions workflow additionally attempts an
+**explicitly unreviewed, non-production initial heat-binding experiment**
+on each actual official CC0 source guide. These probes are intentionally
+isolated from the `--mode prepare` production candidate contract:
+an unfitted guide must *always* fail the reviewed-fit preflight.
+The experiment can save a genuine Blender working scene, a limited
+pose contact gallery, a read-only skin audit, and—only if raw weight
+integrity allows it—a binary-inspected source-only GLB. It emits clear
+blocking reasons when a joint's auto weights, body-region coverage or
+binary export fail. Results are separately uploaded for 14 days in the
+`avatar-v2-phase1-UNFITTED-diagnostics` GitHub Actions artifact.
+Blender probe failures are deliberately non-gating while initial
+unfitted artist sources are under review; the script still saves per-frame
+diagnostics and the separate existing source/GLB production-boundary
+checks remain required.
+
+Neither experimental result can replace the two artist-fitted and
+manually cleaned body scenes, deformation correction sculpts or
+independent sign-off tracked in [Phase 1 issue #2197](https://github.com/fowlerontherun/rockmundo-genesis-project/issues/2197).

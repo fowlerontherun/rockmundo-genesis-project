@@ -5,7 +5,7 @@ applies independently to the real CC0 masculine and feminine fitted bodies.
 """
 from __future__ import annotations
 
-from math import isfinite
+from math import isfinite, radians
 from typing import Mapping
 
 FRAMES = ("masculine", "feminine")
@@ -46,6 +46,37 @@ POSES = {
                         for joint in (1, 2, 3)},
     "torso-twist": {"Spine1": (0, 0, 1, 20), "Spine2": (0, 0, 1, 28)},
 }
+# Mirror src/features/player-model/v2/avatarV2PoseCorrectives.ts JOINTS.
+# The real game uses these exact quaternion-angle thresholds after stage IK.
+CORRECTIVE_DRIVERS = {
+    f"pose{joint}{side_name}": (f"{bone}.{side}", start, full)
+    for joint, bone, start, full in (
+        ("Shoulder", "UpperArm", .20, 1.05),
+        ("Elbow", "LowerArm", .16, 1.45),
+        ("Hip", "UpperLeg", .18, 1.02),
+        ("Knee", "LowerLeg", .16, 1.45),
+    )
+    for side_name, side in (("Left", "L"), ("Right", "R"))
+}
+
+
+def pose_corrective_weights(pose: Mapping[str, tuple[float, float, float, float]]) -> dict[str, float]:
+    """Match Three.js smoothstep of the actual bone's angular rest-pose delta.
+
+    Each test pose contains (world axis x/y/z, signed degrees). The QA uses
+    angular distance just like the live controller, never signed bend alone.
+    """
+    values = {}
+    for name, (bone, start, full) in CORRECTIVE_DRIVERS.items():
+        spec = pose.get(bone)
+        angle = 0.0 if spec is None else radians(abs(spec[3]))
+        if not isfinite(angle):
+            raise ValueError(f"Non-finite angular input for {bone}")
+        t = max(0.0, min(1.0, (angle - start) / (full - start)))
+        values[name] = t * t * (3.0 - 2.0 * t)
+    return values
+
+
 # Bone-to-region mapping for genuine face-weighted occlusion material assignment.
 REGION_BONES = {
     "torso": {"Spine1", "Spine2", "Neck", "Head", "Jaw"},
@@ -99,6 +130,12 @@ def report_errors(report: dict) -> list[str]:
         errors.append("Missing artist-reviewed joint-fit report")
     if report.get("missingDeformBones"):
         errors.append("Some required deform bones carry no body weight")
+    if report.get("insufficientDeformBones"):
+        errors.append("Required finger or twist chains have insufficient real weighted vertices")
+    if report.get("nonBodyBoneInfluences"):
+        errors.append("Body contains undeclared deform bone influences")
+    if report.get("invalidWeights", 0):
+        errors.append("Invalid non-finite or negative source weights")
     if report.get("unweightedVertices", 1) or report.get("overInfluencedVertices", 1):
         errors.append("Unweighted or over-influenced vertices")
     if report.get("unnormalisedVertices", 1):
