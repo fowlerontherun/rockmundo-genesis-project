@@ -19,6 +19,7 @@ import type { ConcertOptions, ConcertFrame } from './liveTypes';
 import { avatarV2QualityForScene } from '@/features/player-model/v2/avatarV2Model';
 import { DEFAULT_SETTINGS, LOOKS, seededRandom, type DemoSettings, type DemoStats, type CameraShot } from './config';
 import { directGigCamera } from './gigCameraSequence';
+import { frameVenuePerformer } from './venueCameraAngles';
 
 const CAMERAS = {
   front: { position: [0.4, 2.8, 6.7], target: [0, 2.4, -1.9], fov: 42 },
@@ -27,6 +28,8 @@ const CAMERAS = {
   stage: { position: [-3.7, 2.75, -4.1], target: [1.25, 1.65, 6], fov: 58 },
   band_medium: { position: [1.2, 2.8, 5.5], target: [0, 1.75, -1.6], fov: 43 },
   lead_close: { position: [.7, 2.1, 2.65], target: [0, 1.7, -1.55], fov: 39 },
+  bass_close: { position: [-2.15, 2.15, 2.9], target: [-.8, 1.83, -1.65], fov: 37 },
+  backline_reverse: { position: [-2.35, 3.15, -3.3], target: [0, 1.8, 1.35], fov: 54 },
   side_pit: { position: [-3.5, 1.1, 2.7], target: [0, 1.85, -1.55], fov: 46 },
   side_stage: { position: [-4.1, 2.6, -2.65], target: [0, 1.75, -1.6], fov: 48 },
   crane: { position: [4.3, 6.8, 6.5], target: [0, 1.65, -1.75], fov: 52 },
@@ -322,7 +325,7 @@ export class ConcertScene {
       }
     }
     if (this.venueProfile && !this.options?.television &&
-        ['band_medium', 'lead_close', 'side_pit', 'side_stage', 'crane'].includes(selected)) {
+        ['band_medium', 'lead_close', 'bass_close', 'backline_reverse', 'side_pit', 'side_stage', 'crane'].includes(selected)) {
       const p = this.venueProfile;
       const visible = this.actors.filter(actor => actor.root.visible);
       const lead = visible.find(actor => actor.hasVocals()) ?? visible.find(actor => actor.role === 'vocals')
@@ -331,7 +334,15 @@ export class ConcertScene {
       // authored stage, then move to the performer as soon as one is visible.
       const subject = lead?.root.position ?? new T.Vector3(...stagePosition(p, .5, .62));
       this.targetPos.copy(subject).add(new T.Vector3(0, 1.32, 0));
-      if (selected === 'lead_close') {
+      if (selected === 'bass_close' || selected === 'backline_reverse') {
+        const bass = visible.find(actor => actor.role === 'bass')
+          ?? visible.find(actor => actor.role === 'guitar')
+          ?? lead;
+        const focus = (selected === 'bass_close' ? bass : lead)?.root.position ?? subject;
+        const pose = frameVenuePerformer(p, selected, focus.toArray() as [number, number, number], this.camera.aspect);
+        this.targetPos.fromArray(pose.target);
+        this.cameraPos.fromArray(pose.position);
+      } else if (selected === 'lead_close') {
         this.cameraPos.copy(this.targetPos).add(new T.Vector3(.7, .25, 3.15));
       } else if (selected === 'band_medium') {
         this.targetPos.y = subject.y + 1.12;
@@ -444,7 +455,7 @@ export class ConcertScene {
     // Guard the extra stage-level gig lenses against passing through performers.
     // This is presentation-only; performer positions and replay state do not change.
     if (this.options && !this.options.television &&
-        ['lead_close', 'band_medium', 'side_pit', 'side_stage', 'guitar', 'drums'].includes(selected)) {
+        ['lead_close', 'bass_close', 'backline_reverse', 'band_medium', 'side_pit', 'side_stage', 'guitar', 'drums'].includes(selected)) {
       for (const actor of this.actors) {
         if (!actor.root.visible) continue;
         const centre = actor.root.position.clone().add(new T.Vector3(0, 1.15, 0));
