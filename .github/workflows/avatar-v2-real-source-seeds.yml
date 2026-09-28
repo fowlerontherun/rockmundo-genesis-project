@@ -102,6 +102,11 @@ jobs:
             --source-root "$SOURCE_ROOT" --output-root "$ARTIFACT_ROOT"
       - name: Verify geometry, both complete packs and SHA-256 integrity
         run: python3 scripts/avatar-v2/verify_source_artifacts.py --root "$ARTIFACT_ROOT"
+      - name: Verify actual Blender-exported GLB binary skin weights for both source experiments
+        run: |
+          python3 scripts/avatar-v2/verify_glb_binary.py \
+            "$ARTIFACT_ROOT"/masculine/*-HEAD-RIG-EXPERIMENT-not-validated.glb \
+            "$ARTIFACT_ROOT"/feminine/*-HEAD-RIG-EXPERIMENT-not-validated.glb
       - name: Upload real masculine authoring scene, rig handles and visual proofs
         uses: actions/upload-artifact@v4
         with:
