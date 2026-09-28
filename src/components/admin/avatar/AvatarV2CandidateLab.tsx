@@ -14,6 +14,7 @@ import { stageAssignment } from '@/features/gig-demo-3d/instrumentCatalog';
 import { BODY_MUSCLE_LABELS, BODY_MUSCLE_TYPES, defaultAppearance } from '@/features/player-model/appearance';
 import { disposeModel } from '@/features/player-model/model';
 import { AvatarV2ExpressionController } from '@/features/player-model/v2/avatarV2Expressions';
+import { auditAvatarV2Face, type AvatarV2FaceAudit } from '@/features/player-model/v2/avatarV2FaceAudit';
 import { prepareAvatarV2CandidateModel } from '@/features/player-model/v2/avatarV2Model';
 import { applyAvatarV2Compatibility } from '@/features/player-model/v2/avatarV2Compatibility';
 import {
@@ -54,6 +55,7 @@ function CandidateCanvas({
   onReport,
   onError,
   onPerformanceReport,
+  onFaceAudit,
   animateFace,
   appearance,
   performancePreset,
@@ -68,6 +70,7 @@ function CandidateCanvas({
   onReport: (report: AvatarV2ValidationReport | null) => void;
   onError: (message: string) => void;
   onPerformanceReport: (report: AvatarV2PerformanceQaReport | null) => void;
+  onFaceAudit: (report: AvatarV2FaceAudit | null) => void;
   animateFace: boolean;
   appearance: ReturnType<typeof defaultAppearance>;
   performancePreset: AvatarV2PerformancePreset;
@@ -175,6 +178,7 @@ function CandidateCanvas({
       onReport(null);
       onError('');
       onPerformanceReport(null);
+      onFaceAudit(null);
 
       if (file || referenceUrl) {
         // Generated source previews are read-only remote assets. Never expose
@@ -192,6 +196,7 @@ function CandidateCanvas({
           source.updateMatrixWorld(true);
           const report = validateAvatarV2Scene(source, frame, lod);
           onReport(report);
+          onFaceAudit(auditAvatarV2Face(source));
 
           if (report.valid) {
             const compatibilityQuality = lod === 0 ? 'cinematic' : lod === 1 ? 'high' : lod === 2 ? 'balanced' : 'crowd';
@@ -270,6 +275,7 @@ function CandidateCanvas({
           if (!alive) return;
           onReport(null);
           onPerformanceReport(null);
+          onFaceAudit(null);
           onError(error instanceof Error ? error.message : 'Candidate GLB could not be loaded.');
         });
       }
@@ -301,7 +307,7 @@ function CandidateCanvas({
         cancelAnimationFrame(raf);
       };
     }
-  }, [file, referenceUrl, sourceLandmarks, showSourceLandmarks, frame, lod, onError, onPerformanceReport, onReport, animateFace, appearance, performancePreset, viewPreset]);
+  }, [file, referenceUrl, sourceLandmarks, showSourceLandmarks, frame, lod, onError, onPerformanceReport, onFaceAudit, onReport, animateFace, appearance, performancePreset, viewPreset]);
 
   return (
     <canvas
@@ -327,6 +333,7 @@ export function AvatarV2CandidateLab() {
   const [viewPreset, setViewPreset] = useState<CandidateViewPreset>('full');
   const [faceDetailProof, setFaceDetailProof] = useState(false);
   const [performanceReport, setPerformanceReport] = useState<AvatarV2PerformanceQaReport | null>(null);
+  const [faceAudit, setFaceAudit] = useState<AvatarV2FaceAudit | null>(null);
 
   const appearance = useMemo(() => {
     const next = defaultAppearance('avatar-v2-side-by-side');
@@ -470,6 +477,7 @@ export function AvatarV2CandidateLab() {
                 setFile(null);
                 setReference(null);
                 setReport(null);
+                setFaceAudit(null);
                 setError('');
               }}
             >
@@ -507,6 +515,7 @@ export function AvatarV2CandidateLab() {
               onReport={setReport}
               onError={setError}
               onPerformanceReport={setPerformanceReport}
+              onFaceAudit={setFaceAudit}
               animateFace={animateFace}
               appearance={appearance}
               performancePreset={performance}
@@ -522,6 +531,23 @@ export function AvatarV2CandidateLab() {
             : `This is the actual ${frame} Blender ${reference === 'lookdev' ? 'look-development' : 'original CC0'} reference mesh, not a production avatar. It has no fitted skin weights, finished facial morphs or stage animations; A-pose is intentional. The validation gap below must not be interpreted as production certification.`}
         </p>}
         {error && <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+
+        {faceAudit && (
+          <div className="space-y-2 rounded-lg border p-4" aria-label="Phase 2 facial candidate audit">
+            <Badge variant={faceAudit.passed ? 'default' : 'destructive'}>
+              {faceAudit.passed ? 'Facial structure pass — visual approval still required' : 'Facial structure incomplete'}
+            </Badge>
+            {([
+              ['Missing expression/viseme channels', faceAudit.missingChannels],
+              ['Missing head, eye or ear bones', faceAudit.missingAnchors],
+              ['Duplicate attachment bones', faceAudit.duplicateAnchors],
+              ['Invalid morph geometry', faceAudit.invalidMorphTargets],
+            ] as const).map(([label, items]) => (
+              <p key={label} className="text-sm"><strong>{label}:</strong> {items.length ? items.join(', ') : 'none'}</p>
+            ))}
+            <p className="text-xs text-muted-foreground">Read-only GLB structure check; does not approve hairstyle fit, expression quality or player rollout.</p>
+          </div>
+        )}
 
         {performanceReport && (
           <div className="space-y-3 rounded-lg border p-4">
