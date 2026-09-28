@@ -22,8 +22,8 @@ function candidate() {
   // provide it alongside the independent left/right close-up controls.
   const smileIndex = geometry.morphAttributes.position.length;
   geometry.morphAttributes.position.push(new T.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 0], 3));
-  face.morphTargetDictionary.mouthSmile = smileIndex;
-  face.morphTargetInfluences.push(0);
+  face.morphTargetDictionary!.mouthSmile = smileIndex;
+  face.morphTargetInfluences!.push(0);
   root.add(face);
   return { root, face };
 }
