@@ -102,6 +102,9 @@ serve(async req => {
           return respond({ error: 'Verified archive but staging failed; retry is safe', file: sourcePath }, 500);
         }
       }
+      const { error: stageReviewError } = await writer.from('avatar_v2_authoring_reviews')
+        .update({ status: 'staged_for_review' }).eq('storage_key', key);
+      if (stageReviewError) return respond({ error: 'Files staged but review status could not be saved' }, 500);
     }
     return respond({ valid: true, files: listed.size, models: counts, archiveSha256,
       extracted: extract, status: extract ? 'staged-for-artist-review' : 'source-verified-not-production-ready' });
