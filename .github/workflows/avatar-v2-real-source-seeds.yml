@@ -8,6 +8,9 @@ on:
     paths:
       - 'scripts/avatar-v2/**'
       - '.github/workflows/avatar-v2-real-source-seeds.yml'
+      - 'avatar-v2-browser-smoke.html'
+      - 'playwright.avatar-v2.config.ts'
+      - 'tests/avatar-v2/**'
   pull_request:
     paths:
       - 'public/avatar-v2/**'
@@ -33,6 +36,9 @@ on:
       - 'scripts/avatar-v2/tests/test_lip_lookdev.py'
       - 'scripts/avatar-v2/tests/test_facial_fibres.py'
       - '.github/workflows/avatar-v2-real-source-seeds.yml'
+      - 'avatar-v2-browser-smoke.html'
+      - 'playwright.avatar-v2.config.ts'
+      - 'tests/avatar-v2/**'
 
 permissions:
   contents: write
@@ -107,6 +113,34 @@ jobs:
           python3 scripts/avatar-v2/verify_glb_binary.py \
             "$ARTIFACT_ROOT"/masculine/*-HEAD-RIG-EXPERIMENT-not-validated.glb \
             "$ARTIFACT_ROOT"/feminine/*-HEAD-RIG-EXPERIMENT-not-validated.glb
+      # Use genuine exported artifacts from this exact run, not mocks or
+      # captured Blender PNGs, to verify the browser's WebGL GLTFLoader on
+      # desktop and mobile. The viewer is a CI-only page; no live promotion.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install locked browser-test dependencies
+        run: |
+          npm install --global npm@10.9.2
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Browser-render actual masculine and feminine GLBs on desktop and mobile
+        env:
+          CI: 'true'
+        run: npm run test:avatar-v2:browser-proof
+      - name: Upload browser-rendered GLB proof screenshots and render diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: avatar-v2-real-browser-source-only
+          path: |
+            work/avatar-v2-browser-proofs/**
+            work/avatar-v2-playwright-results/**
+            work/avatar-v2-playwright-report/**
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Upload real masculine authoring scene, rig handles and visual proofs
         uses: actions/upload-artifact@v4
         with:
