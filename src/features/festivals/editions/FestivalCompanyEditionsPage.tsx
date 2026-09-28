@@ -174,8 +174,14 @@ export function FestivalCompanyEditionsPage({
     },
     onError: (error: Error) => {
       const message = error.message.includes("festival_edition_year_exists")
-        ? "A Festival already exists for the next available game year."
-        : "The next annual Festival could not be planned.";
+        ? "A Festival already exists for the next available game year. Reload the edition list."
+        : error.message.includes("festival_edition_already_open")
+          ? "An annual Festival is already open. Reload the edition list to continue planning it."
+          : error.message.includes("festival_company_not_ready")
+            ? "The Festival company must be active and its initial setup completed."
+            : error.message.includes("festival_configuration_incomplete")
+              ? "The Festival configuration is incomplete. Review the company setup before continuing."
+              : `The next annual Festival could not be planned: ${error.message}`;
       toast.error(message);
     },
   });
