@@ -35,6 +35,7 @@ import { Plus, Edit, Trash2, Sparkles, Calendar, Package, ExternalLink } from "l
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { AvatarV2ClothingMigrationPanel } from "@/components/admin/avatar/AvatarV2ClothingMigrationPanel";
+import { AvatarV2AuthoringImport } from "@/components/admin/avatar/AvatarV2AuthoringImport";
 
 interface SkinCollection {
   id: string;
@@ -377,7 +378,8 @@ const SkinCollectionsAdmin = () => {
         </CardContent>
       </Card>
 
-      {!isLoading && <AvatarV2ClothingMigrationPanel collections={collections ?? []} />}
+      {!isLoading && <AvatarV2AuthoringImport />
+      <AvatarV2ClothingMigrationPanel collections={collections ?? []} />}
 
       <Card>
         <CardHeader>
