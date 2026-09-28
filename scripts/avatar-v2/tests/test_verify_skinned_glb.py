@@ -105,6 +105,27 @@ class StructuralSkinGateTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "must be normalized"):
             gate.inspect(self.write(doc))
 
+    def test_duplicate_skin_joint_rejected(self):
+        doc = self.valid()
+        doc["skins"][0]["joints"].append(0)
+        with self.assertRaisesRegex(ValueError, "Duplicate joint"):
+            gate.inspect(self.write(doc))
+
+    def test_inverse_bind_count_mismatch_rejected(self):
+        doc = self.valid()
+        doc["skins"][0]["inverseBindMatrices"] = len(doc["accessors"])
+        doc["accessors"].append({"count": 1, "type": "MAT4", "componentType": 5126})
+        with self.assertRaisesRegex(ValueError, "Inverse bind matrices"):
+            gate.inspect(self.write(doc))
+
+    def test_malformed_chunk_length_rejected(self):
+        self.path.write_bytes(glb(self.valid()) + b"\\x08\\x00\\x00\\x00BIN\\x00")
+        raw = bytearray(self.path.read_bytes())
+        struct.pack_into("<I", raw, 8, len(raw))
+        self.path.write_bytes(raw)
+        with self.assertRaisesRegex(ValueError, "Malformed GLB chunk"):
+            gate.inspect(self.path)
+
     def test_truncated_glb_rejected(self):
         self.path.write_bytes(b"glTF")
         with self.assertRaises(ValueError):
