@@ -461,15 +461,62 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
             </section>
           </TabsContent>
 
-          <TabsContent value="information">
-            <dl className="grid gap-5 md:grid-cols-2">
-              {Object.entries(f.information).map(([k, v]) => (
-                <div key={k}>
-                  <dt className="font-bold capitalize">{k.replace(/([A-Z])/g, " $1")}</dt>
-                  <dd>{v || "Information coming soon."}</dd>
-                </div>
+          <TabsContent value="information" className="space-y-6">
+            <header className="space-y-2">
+              <h2 className="text-2xl font-bold">Plan your festival visit</h2>
+              <p className="text-sm text-muted-foreground">
+                Visitor information for this edition of {f.name}. Details that have not been
+                confirmed are marked clearly and may be updated by the organiser.
+              </p>
+              <div className="rounded-xl border bg-card p-4">
+                <h3 className="font-semibold">Your festival at a glance</h3>
+                <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+                  <div><dt className="text-muted-foreground">Location</dt><dd className="font-medium">{[f.city, f.country].filter(Boolean).join(", ")}</dd></div>
+                  <div><dt className="text-muted-foreground">Dates</dt><dd className="font-medium">{new Date(f.startsAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} – {new Date(f.endsAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</dd></div>
+                  <div><dt className="text-muted-foreground">Festival style</dt><dd className="font-medium">{f.festivalType || "Not yet confirmed"}</dd></div>
+                  <div><dt className="text-muted-foreground">Ticket sales</dt><dd className="font-medium">{f.launchStatus === "tickets_on_sale" ? "On sale" : eventPhase === "ended" ? "Festival ended" : "Not currently on sale"}</dd></div>
+                </dl>
+              </div>
+            </header>
+            <nav aria-label="Festival visitor guide" className="flex flex-wrap gap-2">
+              {[
+                ["travel", "Getting here"], ["camping", "Camping"], ["accessibility", "Accessibility"],
+                ["foodAndDrink", "Food & drink"], ["ageGuidance", "Age guidance"],
+                ["terms", "Terms"], ["refundPolicy", "Refunds"], ["contact", "Contact"],
+              ].map(([key, label]) => (
+                <a key={key} href={`#festival-info-${key}`} className="rounded-full border px-3 py-1.5 text-sm hover:bg-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">{label}</a>
               ))}
-            </dl>
+            </nav>
+            <div className="grid gap-4 md:grid-cols-2">
+              {([
+                ["travel", "Getting here", "Location, transport and arrival details"],
+                ["camping", "Camping", "Camping arrangements and facilities"],
+                ["accessibility", "Accessibility", "Accessible entry and visitor assistance"],
+                ["foodAndDrink", "Food & drink", "Food, refreshments and dietary information"],
+                ["ageGuidance", "Age guidance", "Age restrictions and entry requirements"],
+                ["terms", "Terms & entry", "Conditions of admission"],
+                ["refundPolicy", "Tickets & refunds", "Cancellation and refund information"],
+                ["contact", "Contact the organiser", "Questions and visitor support"],
+              ] as const).map(([key, title, description]) => (
+                <section id={`festival-info-${key}`} key={key} aria-labelledby={`festival-info-title-${key}`} className="scroll-mt-6 rounded-xl border bg-card p-5">
+                  <h3 id={`festival-info-title-${key}`} className="text-lg font-bold">{title}</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+                  {f.information[key]?.trim() ? (
+                    <p className="mt-4 whitespace-pre-line text-sm leading-relaxed">{f.information[key]}</p>
+                  ) : (
+                    <p className="mt-4 rounded-md border border-dashed p-3 text-sm text-muted-foreground" role="status">
+                      {key === "camping" ? "Camping arrangements have not been confirmed. Do not assume camping is included with your ticket." :
+                        key === "refundPolicy" ? "Refund details have not been published. Check the ticket conditions before purchasing." :
+                        key === "accessibility" ? "Accessibility arrangements have not been published. Contact the organiser before making travel plans if you need assistance." :
+                        "The organiser has not published this information yet."}
+                    </p>
+                  )}
+                </section>
+              ))}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Only confirmed information is displayed. Please check back for updates before travelling.
+            </p>
           </TabsContent>
         </Tabs>
       </div>
