@@ -91,7 +91,7 @@ class ProductionGateTests(unittest.TestCase):
         gate.EVIDENCE.mkdir(parents=True, exist_ok=True)
         for view in ("front", "side", "back", "performance"):
             image = gate.EVIDENCE / f"masculine-lod0-{view}.png"
-            image.write_bytes(b"\\x89PNG\\r\\n\\x1a\\n" + view.encode())
+            image.write_bytes(b"\x89PNG\r\n\x1a\n" + view.encode())
             proofs[view] = {
                 "path": image.relative_to(self.root).as_posix(),
                 "sha256": hashlib.sha256(image.read_bytes()).hexdigest(),
