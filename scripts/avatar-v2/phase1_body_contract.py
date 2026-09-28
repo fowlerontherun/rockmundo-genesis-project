@@ -5,8 +5,8 @@ applies independently to the real CC0 masculine and feminine fitted bodies.
 """
 from __future__ import annotations
 
-from math import isfinite, radians
-from typing import Mapping
+from math import dist, isfinite, radians
+from typing import Mapping, Sequence
 
 FRAMES = ("masculine", "feminine")
 REGIONS = ("torso", "upper-arms", "lower-arms", "hands", "hips",
@@ -110,6 +110,111 @@ def normalise_four(weights: Mapping[str, float], *, epsilon: float = 0.0001) -> 
     if not total:
         raise ValueError("A body vertex has no meaningful skin weights")
     return {bone: weight / total for bone, weight in ordered}
+
+
+
+def segment_distance(point: Sequence[float], head: Sequence[float],
+                     tail: Sequence[float]) -> tuple[float, float]:
+    """True point-to-fitted-bone-segment distance in Blender world metres."""
+    if (any(len(v) != 3 or not all(isfinite(x) for x in v)
+            for v in (point, head, tail))):
+        raise ValueError("Invalid non-finite or non-3D finger-fitting geometry")
+    direction = [end - start for start, end in zip(head, tail)]
+    span2 = sum(x * x for x in direction)
+    if span2 < 1e-8:
+        raise ValueError("A fitted finger joint has no usable length")
+    t = sum((p - h) * d for p, h, d in zip(point, head, direction)) / span2
+    nearest = [h + min(1., max(0., t)) * d for h, d in zip(head, direction)]
+    return dist(point, nearest), t
+
+
+def propose_missing_finger_weights(
+    positions: Sequence[Sequence[float]],
+    existing: Sequence[Mapping[str, float]],
+    segments: Mapping[str, tuple[Sequence[float], Sequence[float]]],
+    *,
+    radius_m: float = .009,
+) -> tuple[dict[int, dict[str, float]], dict]:
+    """Non-authoritative finger *starting paint*, only from reviewed fitted bones.
+
+    For each vertex with existing trustworthy hand skin, find its nearest actual
+    fitted finger segment (not a world-space A-pose axis assumption). Do not
+    invent hand weights; never replace any pre-existing artist finger weights.
+    Never mark the seed approved; a real person must clean hand and grip poses.
+    """
+    if len(positions) != len(existing) or not .004 <= radius_m <= .016:
+        raise ValueError("Unexpected body positions/weights or finger-paint radius")
+    required = {f"{digit}{joint}.{side}" for side in ("L", "R")
+                for digit in DIGITS for joint in (1, 2, 3)}
+    if set(segments) != required:
+        raise ValueError("Only complete bilateral fitted 30-joint finger geometry is accepted")
+    total = {name: 0 for name in required}
+    for weights in existing:
+        for name in required:
+            if weights.get(name, 0) > .0001:
+                total[name] += 1
+    missing = required - {name for name, count in total.items() if count}
+    # A locally seeded vertex may NEVER skip a higher-quality artist-painted
+    # finger group. Existing skin is copied and only one proposed new group
+    # can be painted on any existing Hand-weighted point.
+    proposals = {}
+    near_but_no_hand = {side: 0 for side in ("L", "R")}
+    proximity = {name: {"nearestSurfaceMm": float("inf"),
+                        "bodyVerticesNearSegment": 0,
+                        "existingHandVerticesNearSegment": 0}
+                 for name in missing}
+    for i, (point, original) in enumerate(zip(positions, existing)):
+        if any(original.get(name, 0) > .0001 for name in required):
+            continue
+        best = None
+        for side in ("L", "R"):
+            palm = original.get(f"Hand.{side}", 0)
+            for name in sorted(name for name in missing if name.endswith(f".{side}")):
+                head, tail = segments[name]
+                length = dist(head, tail)
+                radius = min(radius_m, max(.004, length * .44))
+                separation, along = segment_distance(point, head, tail)
+                evidence = proximity[name]
+                evidence["nearestSurfaceMm"] = min(
+                    evidence["nearestSurfaceMm"], round(separation * 1000, 3))
+                # Reject points beyond real end planes (e.g. palms, adjacent
+                # fingers or an accidentally misplaced guide endpoint).
+                if separation > radius or not -.10 <= along <= 1.1:
+                    continue
+                evidence["bodyVerticesNearSegment"] += 1
+                if palm > .05:
+                    evidence["existingHandVerticesNearSegment"] += 1
+                if palm <= .05:
+                    near_but_no_hand[side] += 1
+                    continue
+                candidate = (separation / radius, name, palm)
+                if best is None or candidate[:2] < best[:2]:
+                    best = candidate
+        if best is None:
+            continue
+        proportion, chosen, parent_weight = best
+        share = parent_weight * (.34 + .46 * (1. - proportion))
+        if share <= .01:
+            continue
+        candidate_weights = dict(original)
+        parent = f"Hand.{chosen.rsplit('.', 1)[1]}"
+        candidate_weights[parent] = max(0., candidate_weights[parent] - share)
+        candidate_weights[chosen] = share
+        proposals[i] = normalise_four(candidate_weights)
+        total[chosen] += 1
+    report = {
+        "candidateOnly": True,
+        "basedOnReviewedFittedBoneGeometry": True,
+        "automaticApproval": False,
+        "untouchedArtistFingerGroups": sorted(required - missing),
+        "proposedVertices": len(proposals),
+        "proposedPerFinger": {name: total[name] for name in sorted(required)},
+        "stillMissing": sorted(name for name in required if total[name] < 4),
+        "nearFittedFingersButMissingHandWeights": near_but_no_hand,
+        "unpaintedJointGeometry": {name: proximity[name] for name in sorted(missing)},
+        "requiresArtistRepaintAndGripReview": True,
+    }
+    return proposals, report
 
 
 def region_from_weights(vertex_weights: list[Mapping[str, float]]) -> str:

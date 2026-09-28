@@ -6,7 +6,8 @@ import unittest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from phase1_body_contract import (  # noqa: E402
     ATTACHMENT_BONES, CORRECTIVES, CORRECTIVE_DRIVERS, DEFORM_BONES, POSES,
-    REGIONS, normalise_four, pose_corrective_weights, region_from_weights, report_errors,
+    REGIONS, normalise_four, pose_corrective_weights, propose_missing_finger_weights,
+    region_from_weights, report_errors,
 )
 
 
@@ -47,6 +48,56 @@ class Phase1BodyContractTests(unittest.TestCase):
         self.assertTrue(all(value == 0 for value in pose_corrective_weights({}).values()))
         with self.assertRaises(ValueError):
             pose_corrective_weights({"UpperArm.L": (0, 1, 0, float("nan"))})
+
+    def test_real_fitted_finger_candidate_seeds_all_thirty_distinct_joints(self):
+        segments = {}
+        positions, original = [], []
+        for side, x in (("L", .36), ("R", -.36)):
+            for digit_index, digit in enumerate(
+                    ("Thumb", "Index", "Middle", "Ring", "Pinky")):
+                for joint in (1, 2, 3):
+                    name = f"{digit}{joint}.{side}"
+                    head = (x, digit_index * .028, joint * .032)
+                    tail = (x, digit_index * .028, joint * .032 + .020)
+                    segments[name] = (head, tail)
+                    for delta in (-.002, -.001, .001, .002):
+                        positions.append((x + delta, head[1], head[2] + .010))
+                        original.append({f"Hand.{side}": 1.0})
+        proposals, report = propose_missing_finger_weights(
+            positions, original, segments, radius_m=.009)
+        self.assertEqual(len(proposals), 120)
+        self.assertEqual(len(report["proposedPerFinger"]), 30)
+        self.assertEqual(report["stillMissing"], [])
+        self.assertTrue(all(c == 4 for c in report["proposedPerFinger"].values()))
+        self.assertFalse(report["automaticApproval"])
+        self.assertTrue(report["requiresArtistRepaintAndGripReview"])
+        for index, weights in proposals.items():
+            self.assertEqual(len(weights), 2)
+            self.assertAlmostEqual(sum(weights.values()), 1.)
+            self.assertIn(next(iter(original[index])), weights)
+
+    def test_proposals_never_invent_hand_skin_or_replace_existing_fingers(self):
+        segments = {}
+        for side, x in (("L", .36), ("R", -.36)):
+            for digit_index, digit in enumerate(
+                    ("Thumb", "Index", "Middle", "Ring", "Pinky")):
+                for joint in (1, 2, 3):
+                    segments[f"{digit}{joint}.{side}"] = (
+                        (x, digit_index * .03, joint * .03),
+                        (x, digit_index * .03, joint * .03 + .02))
+        test_vertex = (.36, 0, .04)
+        no_hand, report = propose_missing_finger_weights(
+            [test_vertex], [{"LowerArm.L": 1.}], segments)
+        self.assertEqual(no_hand, {})
+        self.assertGreater(report["nearFittedFingersButMissingHandWeights"]["L"], 0)
+        painted, report = propose_missing_finger_weights(
+            [test_vertex],
+            [{"Hand.L": .20, "Thumb1.L": .80}], segments)
+        self.assertEqual(painted, {})
+        self.assertIn("Thumb1.L", report["untouchedArtistFingerGroups"])
+        with self.assertRaisesRegex(ValueError, "complete bilateral"):
+            propose_missing_finger_weights(
+                [test_vertex], [{"Hand.L": 1.}], {"Thumb1.L": segments["Thumb1.L"]})
 
     def test_weight_cleanup_is_bounded_and_deterministic(self):
         raw = {"Hips": .4, "Spine1": .3, "Spine2": .2,

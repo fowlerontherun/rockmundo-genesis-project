@@ -188,3 +188,44 @@ checks remain required.
 Neither experimental result can replace the two artist-fitted and
 manually cleaned body scenes, deformation correction sculpts or
 independent sign-off tracked in [Phase 1 issue #2197](https://github.com/fowlerontherun/rockmundo-genesis-project/issues/2197).
+
+
+## Follow-up: real Blender diagnostic evidence and conservative finger starter paint
+
+[Real-source diagnostic run 36476457516](https://github.com/fowlerontherun/rockmundo-genesis-project/actions/runs/36476457516)
+produced genuine, **UNFITTED experimental** `.blend`, actual Blender pose
+screenshots and binary-verifiable *preview-only* skin GLBs for both official
+12,502-vertex CC0 body sculpts. Their per-frame JSON revealed a consistent
+root cause, not an approved or satisfactory hand rig:
+
+| Body | Genuinely missing heat-painted bones | Missing material/occlusion regions | Status |
+|---|---|---|---|
+| Masculine | All 30 finger joints | hands | unreviewed guide, NOT shippable |
+| Feminine | All 30 finger joints, Hand.L, Hand.R | hands, lower-arms | unreviewed guide, NOT shippable |
+
+The explicit `--mode prepare` path now uses the **reviewed fitted bone
+positions** to propose conservative initial weights for *missing* finger joints,
+transferring existing, real same-side palm weights only to the nearest actual
+fitted finger segment within a narrow local radius. It never invents hand
+skin when a palm has no hand weight, never overwrites artist-painted finger
+groups and never marks a proposed result approved. Its `fingerStartingPaint`
+report includes each joint's proposed vertex count, real source-surface
+distance, nearby actual CC0 vertex count and whether the prerequisites (a
+correctly weighted palm) are missing. The unreviewed source diagnostic runs
+this same geometry measurement **without applying any proposals** to the
+unfitted guide; the report becomes a precise joint-by-joint manual fitting
+to-do rather than misrepresenting a provisional heat bind as production.
+
+**Important initial-preparation fix:** Missing provisional hand/lower-arm
+material regions no longer discard the artist's only initial-bound working
+scene. `prepare` preserves the distinct editable initial `.blend` and
+records `missingBodyRegions`, while `assess` still refuses to accept an
+incomplete eight-region production candidate. A saved editable work scene
+is not evidence of actual finished finger paint or corrected body silhouette.
+
+The same CI source workflow also has a separate desktop/mobile browser
+proof failure on the source-only GLBs (blank WebGL frames) and the shared CI
+has broader non-Phase-1 failures. These must not be called successful merely
+because the two Blender body probes, binary skin verifiers and Phase 1
+contract checks succeeded independently. Do not route these preliminary GLBs
+to the player avatar registry or gig renderer.
