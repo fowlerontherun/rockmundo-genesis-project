@@ -79,10 +79,10 @@ export function AvatarV2StagedModelViewer({ sha }: { sha: string }) {
     async function loadSidecarReferences() {
       try {
         const directory = selected.slice(0, selected.lastIndexOf('/'));
-        const base = (selected.split('/').pop() ?? '').replace(/\\.glb$/i, '').toLowerCase();
+        const base = (selected.split('/').pop() ?? '').replace(/\.glb$/i, '').toLowerCase();
         const { data, error } = await supabase.storage.from(BUCKET).list(directory, { limit: 100 });
         if (error) throw error;
-        const allImages = (data ?? []).filter(file => /\\.(png|jpe?g)$/i.test(file.name));
+        const allImages = (data ?? []).filter(file => /\.(png|jpe?g)$/i.test(file.name));
         const matched = allImages.filter(file => file.name.toLowerCase().includes(base));
         const chosen = (matched.length ? matched : allImages).slice(0, 8);
         const downloaded = await Promise.all(chosen.map(async file => {
