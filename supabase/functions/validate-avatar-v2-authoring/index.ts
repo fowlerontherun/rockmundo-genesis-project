@@ -78,8 +78,11 @@ serve(async req => {
     }
     // Private source review only. This never modifies clothing, manifests, or runtime assets.
     const writer = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    const { data: previousReview } = await writer.from('avatar_v2_authoring_reviews')
+      .select('status,archive_sha256').eq('storage_key', key).maybeSingle();
+    const alreadyStaged = previousReview?.status === 'staged_for_review' && previousReview.archive_sha256 === archiveSha256;
     const { error: reviewError } = await writer.from('avatar_v2_authoring_reviews').upsert({
-      storage_key: key, archive_sha256: archiveSha256, status: 'source_verified',
+      storage_key: key, archive_sha256: archiveSha256, status: alreadyStaged ? 'staged_for_review' : 'source_verified',
       source_file_count: listed.size, glb_model_count: Object.values(counts).reduce((a, b) => a + b, 0),
       validated_by: identity.user.id, validated_at: new Date().toISOString(),
     }, { onConflict: 'storage_key' });
