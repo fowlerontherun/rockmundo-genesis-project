@@ -18,6 +18,12 @@ function candidate() {
   face.name = 'face';
   face.morphTargetDictionary = Object.fromEntries(REQUIRED_FACE_CHANNELS.map((name, i) => [name, i]));
   face.morphTargetInfluences = REQUIRED_FACE_CHANNELS.map(() => 0);
+  // Gig playback currently binds a single smile channel; exporter must
+  // provide it alongside the independent left/right close-up controls.
+  const smileIndex = geometry.morphAttributes.position.length;
+  geometry.morphAttributes.position.push(new T.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 0], 3));
+  face.morphTargetDictionary.mouthSmile = smileIndex;
+  face.morphTargetInfluences.push(0);
   root.add(face);
   return { root, face };
 }
@@ -26,8 +32,17 @@ describe('Avatar V2 Phase 2 facial candidate audit', () => {
   it('accepts complete, finite facial morphs and independent anchors', () => {
     expect(auditAvatarV2Face(candidate().root)).toEqual({
       passed: true, missingChannels: [], missingAnchors: [],
-      duplicateAnchors: [], invalidMorphTargets: [], invalidBaseMeshes: [],
+      duplicateAnchors: [], invalidMorphTargets: [], invalidBaseMeshes: [], missingRuntimeExpressions: [],
     });
+  });
+
+  it('reports exported expressions that gig playback cannot bind', () => {
+    const { root, face } = candidate();
+    delete face.morphTargetDictionary!.mouthSmile;
+    const result = auditAvatarV2Face(root);
+    expect(result.missingChannels).toEqual([]);
+    expect(result.missingRuntimeExpressions).toContain('mouthSmile');
+    expect(result.passed).toBe(false);
   });
 
   it('reports missing channels and missing ear anchors', () => {
