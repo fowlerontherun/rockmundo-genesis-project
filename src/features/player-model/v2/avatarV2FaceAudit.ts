@@ -14,6 +14,7 @@ export const REQUIRED_FACE_CHANNELS = [
   'eyeLookDownLeft', 'eyeLookDownRight',
   'eyeLookInLeft', 'eyeLookInRight',
   'eyeLookOutLeft', 'eyeLookOutRight',
+  'visemeAA', 'visemeEE', 'visemeIH', 'visemeOH', 'visemeOU',
 ] as const;
 
 export const REQUIRED_HEAD_ANCHORS = [
