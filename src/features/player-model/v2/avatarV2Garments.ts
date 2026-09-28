@@ -189,7 +189,198 @@ export function avatarV2GarmentHasCompleteAssetManifest(config: AvatarV2GarmentC
     && new Set(paths).size === 8
     && entries.every(({ frame, lod, path }) =>
       !!path && path.toLowerCase().split('/').includes(frame)
-      && path.toLowerCase().endsWith(`lod${lod}.glb`)
+      && new RegExp(`(?:^|[-_])lod${lod}\\.glbimport * as T from 'three';
+import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
+import type { ClothingItem } from '@/hooks/useSkinStore';
+import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
+import { buildRichGarmentVisualSpec, richGarmentSlot } from '@/features/clothing-preview/richGarmentVisuals';
+import type { Fabric, PlayerAppearance } from '../appearance';
+import { fabricNormalTexture } from '../fabrics';
+import type { AvatarVisualQuality } from '../avatarVisualQuality';
+import { disposeModel, type ModelLibrary } from '../model';
+import type { AvatarV2BodyRegion, AvatarV2Frame, AvatarV2Lod } from './avatarV2Contract';
+import {
+  AVATAR_V2_BODY_REGIONS,
+  avatarV2BodyRegion,
+  avatarV2BodyRegions,
+  avatarV2MaterialBodyRegion,
+  avatarV2RuntimeBoneName,
+  avatarV2UsedMaterials,
+  cleanAvatarV2Name,
+} from './avatarV2Contract';
+import { AVATAR_V2_ROLLOUT } from './avatarV2Registry';
+import { applyAvatarV2Customization } from './avatarV2Customization';
+import {
+  AVATAR_V2_POSE_CORRECTIVES,
+  supportedAvatarV2PoseCorrectives,
+  type AvatarV2PoseCorrective,
+} from './avatarV2PoseCorrectives';
+import { AVATAR_V2_TWIST_RUNTIME_NAMES } from './avatarV2TwistBones';
+import { avatarV2TextureDetailQuality } from './avatarV2Materials';
+
+export type AvatarV2GarmentStatus = 'planned' | 'asset_ready' | 'validated' | 'blocked';
+
+export interface AvatarV2GarmentFrameAssets {
+  lod0?: string;
+  lod1?: string;
+  lod2?: string;
+  lod3?: string;
+}
+
+export interface AvatarV2GarmentConfig {
+  version: 1;
+  status: AvatarV2GarmentStatus;
+  frames: Partial<Record<AvatarV2Frame, AvatarV2GarmentFrameAssets>>;
+  occludeBodyRegions: AvatarV2BodyRegion[];
+  colourMode: 'authored' | 'zones';
+  materialZones: {
+    main: string[];
+    trim: string[];
+  };
+}
+
+const BODY_REGIONS = new Set<AvatarV2BodyRegion>(AVATAR_V2_BODY_REGIONS);
+const STATUSES = new Set<AvatarV2GarmentStatus>(['planned','asset_ready','validated','blocked']);
+const SUPPORTED_SLOTS = new Set(['top', 'bottom', 'footwear', 'headwear', 'eyewear', 'accessory']);
+const BODY_OCCLUSION_SLOTS = new Set(['top', 'bottom', 'footwear']);
+const BODY_FIT_REGIONS = new Set<AvatarV2BodyRegion>(['torso', 'upper-arms', 'lower-arms', 'hips', 'upper-legs', 'lower-legs']);
+const UPPER_BODY_REGIONS = new Set<AvatarV2BodyRegion>(['torso', 'upper-arms', 'lower-arms']);
+const LOWER_BODY_REGIONS = new Set<AvatarV2BodyRegion>(['hips', 'upper-legs', 'lower-legs']);
+const UPPER_BODY_CORRECTIVES = AVATAR_V2_POSE_CORRECTIVES.filter(name => /Shoulder|Elbow/.test(name));
+const LOWER_BODY_CORRECTIVES = AVATAR_V2_POSE_CORRECTIVES.filter(name => /Hip|Knee/.test(name));
+const TWIST_BONES_BY_REGION: Partial<Record<AvatarV2BodyRegion, string[]>> = {
+  'upper-arms': [
+    AVATAR_V2_TWIST_RUNTIME_NAMES.leftUpperArmTwist,
+    AVATAR_V2_TWIST_RUNTIME_NAMES.rightUpperArmTwist,
+  ],
+  'lower-arms': [
+    AVATAR_V2_TWIST_RUNTIME_NAMES.leftForearmTwist,
+    AVATAR_V2_TWIST_RUNTIME_NAMES.rightForearmTwist,
+  ],
+  'upper-legs': [
+    AVATAR_V2_TWIST_RUNTIME_NAMES.leftThighTwist,
+    AVATAR_V2_TWIST_RUNTIME_NAMES.rightThighTwist,
+  ],
+};
+const clean = cleanAvatarV2Name;
+
+function requiredTwistBones(regions: AvatarV2BodyRegion[]) {
+  return [...new Set(regions.flatMap(region => TWIST_BONES_BY_REGION[region] ?? []))];
+}
+
+function sourceRuntimeWeightedBoneNames(root: T.Object3D) {
+  const names = new Set<string>();
+  root.traverse(node => {
+    if (!(node instanceof T.SkinnedMesh)) return;
+    const joints = node.geometry.getAttribute('skinIndex');
+    const weights = node.geometry.getAttribute('skinWeight');
+    if (!joints || !weights) return;
+
+    const component = (attribute: T.BufferAttribute | T.InterleavedBufferAttribute, vertex: number, slot: number) => {
+      if (slot === 0) return attribute.getX(vertex);
+      if (slot === 1) return attribute.getY(vertex);
+      if (slot === 2) return attribute.getZ(vertex);
+      return attribute.getW(vertex);
+    };
+
+    for (let vertex = 0; vertex < Math.min(joints.count, weights.count); vertex++) {
+      for (let slot = 0; slot < 4; slot++) {
+        const weight = component(weights, vertex, slot);
+        if (weight <= .0001) continue;
+        const index = Math.round(component(joints, vertex, slot));
+        const bone = node.skeleton.bones[index];
+        if (bone) names.add(avatarV2RuntimeBoneName(bone.name));
+      }
+    }
+  });
+  return names;
+}
+
+function requiredPoseCorrectives(regions: AvatarV2BodyRegion[]): AvatarV2PoseCorrective[] {
+  const required = new Set<AvatarV2PoseCorrective>();
+  if (regions.some(region => UPPER_BODY_REGIONS.has(region))) UPPER_BODY_CORRECTIVES.forEach(name => required.add(name));
+  if (regions.some(region => LOWER_BODY_REGIONS.has(region))) LOWER_BODY_CORRECTIVES.forEach(name => required.add(name));
+  return [...required];
+}
+
+function record(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+function stringList(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+    : [];
+}
+
+function safeAssetPath(value: unknown) {
+  if (typeof value !== 'string') return undefined;
+  // Migration manifests must use canonical, relative asset paths. Do not
+  // silently turn absolute paths into trusted garment references.
+  if (value.startsWith('/') || value.includes('\\\\') || value.includes('%')) return undefined;
+  if (!/^avatar-v2\\/clothing\\/[a-z0-9._/-]+\\.glb$/i.test(value)) return undefined;
+  if (value.split('/').some(segment => !segment || segment === '.' || segment === '..')) return undefined;
+  return value;
+}
+
+function frameAssets(value: unknown): AvatarV2GarmentFrameAssets {
+  const source = record(value);
+  return {
+    ...(safeAssetPath(source.lod0) ? { lod0: safeAssetPath(source.lod0) } : {}),
+    ...(safeAssetPath(source.lod1) ? { lod1: safeAssetPath(source.lod1) } : {}),
+    ...(safeAssetPath(source.lod2) ? { lod2: safeAssetPath(source.lod2) } : {}),
+    ...(safeAssetPath(source.lod3) ? { lod3: safeAssetPath(source.lod3) } : {}),
+  };
+}
+
+export function avatarV2GarmentConfig(item: ClothingItem): AvatarV2GarmentConfig | null {
+  const garment = record(item.garment_config);
+  const source = record(garment.avatarV2);
+  if (!Object.keys(source).length) return null;
+  if (source.version !== 1) return null;
+
+  const status = String(source.status || 'planned') as AvatarV2GarmentStatus;
+  if (!STATUSES.has(status)) return null;
+
+  const frames = record(source.frames);
+  const regions = stringList(source.occludeBodyRegions)
+    .filter((region): region is AvatarV2BodyRegion => BODY_REGIONS.has(region as AvatarV2BodyRegion));
+  const zones = record(source.materialZones);
+  const colourMode = source.colourMode === 'zones' ? 'zones' : 'authored';
+
+  return {
+    version: 1,
+    status,
+    frames: {
+      masculine: frameAssets(frames.masculine),
+      feminine: frameAssets(frames.feminine),
+    },
+    occludeBodyRegions: [...new Set(regions)],
+    colourMode,
+    materialZones: {
+      main: stringList(zones.main),
+      trim: stringList(zones.trim),
+    },
+  };
+}
+
+/** A validated label alone is not proof of eight distinct frame/LOD files. */
+export function avatarV2GarmentHasCompleteAssetManifest(config: AvatarV2GarmentConfig): boolean {
+  const entries = (['masculine', 'feminine'] as const).flatMap(frame =>
+    ([0, 1, 2, 3] as const).map(lod => ({
+      frame,
+      lod,
+      path: config.frames[frame]?.[`lod${lod}`],
+    }))
+  );
+  const paths = entries.map(entry => entry.path);
+  return paths.every((path): path is string => !!path)
+    && new Set(paths).size === 8
+    && entries.every(({ frame, lod, path }) =>
+      !!path && path.toLowerCase().split('/').includes(frame)
+      && , 'i').test(path)
     );
 }
 
