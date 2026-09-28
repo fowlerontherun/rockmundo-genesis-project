@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS public.avatar_v2_authoring_reviews (
   validated_at timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE public.avatar_v2_authoring_reviews ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Avatar V2 admins read source reviews" ON public.avatar_v2_authoring_reviews;
 CREATE POLICY "Avatar V2 admins read source reviews"
   ON public.avatar_v2_authoring_reviews FOR SELECT TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
