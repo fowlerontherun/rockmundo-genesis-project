@@ -8,6 +8,26 @@ import { Button } from '@/components/ui/button';
 const BUCKET = 'avatar-v2-authoring';
 const GROUPS = ['tee', 'denim', 'footwear', 'punk'] as const;
 
+// Deterministic woven-fabric normal detail for private visual review only.
+function makeFabricNormalMap() {
+  const size = 128;
+  const pixels = new Uint8Array(size * size * 4);
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    const offset = (y * size + x) * 4;
+    const warp = Math.sin(x * Math.PI / 2);
+    const weft = Math.sin(y * Math.PI / 2);
+    pixels[offset] = Math.round(128 + warp * 19);
+    pixels[offset + 1] = Math.round(128 + weft * 19);
+    pixels[offset + 2] = 252;
+    pixels[offset + 3] = 255;
+  }
+  const texture = new THREE.DataTexture(pixels, size, size, THREE.RGBAFormat);
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(6, 6);
+  texture.needsUpdate = true;
+  return texture;
+}
+
 export function AvatarV2StagedModelViewer({ sha }: { sha: string }) {
   const [models, setModels] = useState<string[]>([]);
   const [selected, setSelected] = useState('');
@@ -47,6 +67,7 @@ export function AvatarV2StagedModelViewer({ sha }: { sha: string }) {
     let objectUrl: string | null = null;
     let frame = 0;
     const scene = new THREE.Scene();
+    const fabricNormal = makeFabricNormalMap();
     scene.background = new THREE.Color('#20232b');
     const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 1000);
     camera.position.set(2, 1.5, 2.5);
@@ -89,15 +110,17 @@ export function AvatarV2StagedModelViewer({ sha }: { sha: string }) {
         let meshes = 0;
         let textured = 0;
         let skinned = 0;
+        let uvMapped = 0;
         gltf.scene.traverse(node => {
           if (!(node instanceof THREE.Mesh)) return;
           meshes++;
           if (node instanceof THREE.SkinnedMesh) skinned++;
+          if (node.geometry.getAttribute('uv')) uvMapped++;
           const materials = Array.isArray(node.material) ? node.material : [node.material];
           if (materials.some(material => material instanceof THREE.MeshStandardMaterial && !!material.map)) textured++;
-          if (finish !== 'original') node.material = materials.map(() => new THREE.MeshStandardMaterial({ color: finish, roughness: 0.9, metalness: 0, side: THREE.DoubleSide }));
+          if (finish !== 'original') node.material = materials.map(() => new THREE.MeshStandardMaterial({ color: finish, roughness: 0.9, metalness: 0, normalMap: node.geometry.getAttribute('uv') ? fabricNormal : null, normalScale: new THREE.Vector2(.2, .2), side: THREE.DoubleSide }));
         });
-        setMeshInfo(meshes + ' meshes, ' + textured + ' textured, ' + skinned + ' skinned');
+        setMeshInfo(meshes + ' meshes, ' + textured + ' textured, ' + skinned + ' skinned, ' + uvMapped + ' UV mapped');
         scene.add(gltf.scene);
         const bounds = new THREE.Box3().setFromObject(gltf.scene);
         if (bounds.isEmpty()) throw new Error('This model has no visible geometry');
@@ -128,6 +151,7 @@ export function AvatarV2StagedModelViewer({ sha }: { sha: string }) {
           materials.forEach(material => material.dispose());
         }
       });
+      fabricNormal.dispose();
       renderer.dispose();
       renderer.domElement.remove();
       if (objectUrl) URL.revokeObjectURL(objectUrl);
@@ -160,7 +184,7 @@ export function AvatarV2StagedModelViewer({ sha }: { sha: string }) {
         <Button type="button" size="sm" variant="outline" onClick={() => setSelected('')}>Clear preview</Button>
         {!selected && models.length > 0 && <Button type="button" size="sm" onClick={() => setSelected(models[0])}>Show first model</Button>}
       </div>
-      <p className="text-xs text-muted-foreground">These material finishes are temporary simulations, not saved clothing skins. Rigging, fitting and production textures are still required.</p>
+      <p className="text-xs text-muted-foreground">Fabric finishes now include woven normal-map detail on UV-mapped meshes. These are temporary simulations, not saved clothing skins. Rigging, fitting and production textures are still required.</p>
     </div>
   );
 }
