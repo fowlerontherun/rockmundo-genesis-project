@@ -7,7 +7,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from phase1_body_contract import (  # noqa: E402
     ATTACHMENT_BONES, CORRECTIVES, CORRECTIVE_DRIVERS, DEFORM_BONES, POSES,
     REGIONS, audit_missing_finger_geometry, normalise_four, pose_corrective_weights,
-    propose_missing_finger_weights,
+    propose_missing_finger_weights, missing_finger_review_hints,
     region_from_weights, report_errors,
 )
 
@@ -106,6 +106,30 @@ class Phase1BodyContractTests(unittest.TestCase):
                          ["nearestUnclaimedSourceMm"], None)
         self.assertEqual(detail["missingJointSourceEvidence"]["Middle3.L"]
                          ["nearestActualSourceMm"], missed["nearestActualSourceMm"])
+
+    def test_unpainted_finger_visual_hints_warn_before_snapping_other_digit(self):
+        segments = {
+            f"{digit}{joint}.{side}": ((x, digit_index * .03, joint * .032),
+                                      (x, digit_index * .03, joint * .032 + .02))
+            for side, x in (("L", .36), ("R", -.36))
+            for digit_index, digit in enumerate(
+                ("Thumb", "Index", "Middle", "Ring", "Pinky"))
+            for joint in (1, 2, 3)
+        }
+        actual_cc0 = [(0.36, .06, .107), (0.35, .09, .107)]
+        initial_heat = [{"Ring2.L": .8, "Hand.L": .2},
+                        {"Pinky2.L": 1.}]
+        hints = missing_finger_review_hints(actual_cc0, initial_heat, segments)
+        middle = hints["Middle3.L"]
+        self.assertEqual(middle["nearestActualSourceVertexIndex"], 0)
+        self.assertEqual(middle["actualSourceSurfacePosition"], list(actual_cc0[0]))
+        self.assertTrue(middle["possibleWrongFingerSurface"])
+        self.assertEqual(middle["nearbyOtherDigitWeights"], ["Ring2.L"])
+        self.assertTrue(middle["hintIsOnSkinNotInternalJointPivot"])
+        self.assertFalse(middle["artistReviewed"])
+        self.assertFalse(middle["productionValidated"])
+        self.assertNotIn("Pinky2.L", hints)
+        self.assertIn("Independently place BOTH joint handles", middle["requiredAction"])
 
     def test_finger_diagnostic_flags_no_real_skin_and_missing_local_hand(self):
         segments = {
