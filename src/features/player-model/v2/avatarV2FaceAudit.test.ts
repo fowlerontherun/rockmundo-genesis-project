@@ -26,7 +26,7 @@ describe('Avatar V2 Phase 2 facial candidate audit', () => {
   it('accepts complete, finite facial morphs and independent anchors', () => {
     expect(auditAvatarV2Face(candidate().root)).toEqual({
       passed: true, missingChannels: [], missingAnchors: [],
-      duplicateAnchors: [], invalidMorphTargets: [],
+      duplicateAnchors: [], invalidMorphTargets: [], invalidBaseMeshes: [],
     });
   });
 
@@ -52,6 +52,23 @@ describe('Avatar V2 Phase 2 facial candidate audit', () => {
     expect(result.duplicateAnchors).toContain('Eye.L');
     expect(result.invalidMorphTargets).toContain('face:jawOpen');
     expect(result.missingChannels).toContain('jawOpen');
+  });
+
+  it('rejects invalid base vertices even when all morph targets are valid', () => {
+    const { root, face } = candidate();
+    face.geometry.attributes.position.setX(0, Number.NaN);
+    const result = auditAvatarV2Face(root);
+    expect(result.passed).toBe(false);
+    expect(result.invalidBaseMeshes).toContain('face');
+  });
+
+  it('rejects malformed morph indices without crashing the admin preview', () => {
+    const { root, face } = candidate();
+    face.morphTargetDictionary!.visemeAA = -1;
+    const result = auditAvatarV2Face(root);
+    expect(result.passed).toBe(false);
+    expect(result.invalidMorphTargets).toContain('face:visemeAA');
+    expect(result.missingChannels).toContain('visemeAA');
   });
 
   it('rejects non-finite morph coordinates', () => {
