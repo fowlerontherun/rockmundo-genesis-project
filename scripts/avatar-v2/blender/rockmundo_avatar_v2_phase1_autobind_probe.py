@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import pathlib
 import sys
 import traceback
@@ -41,7 +42,7 @@ report = {
     "version": 1, "frame": args.frame,
     "sourceUnfitted": True, "artistReviewed": False, "productionValidated": False,
     "fullBodyArtApproved": False, "visualApproval": "not_requested",
-    "warning": "Poorly positioned guide: rendered body must never enter gameplay or production.",
+    "warning": "Guide is unreviewed; experimental body must never enter gameplay or production.",
 }
 try:
     rig = bpy.data.objects.get(ARMATURE)
@@ -58,7 +59,19 @@ try:
         raise RuntimeError("Missing actual high-detail continuous CC0 body")
     report.update({"realSourceBody": body.name, "realSourceVertices": len(body.data.vertices),
                    "guideBoneCount": len(rig.data.bones)})
+    # A parent operation or stale Blender dependency transform must not be
+    # misdiagnosed as a body bone physically floating 7cm from the source.
+    original_world_surface = [tuple(body.matrix_world @ v.co) for v in body.data.vertices]
     selected_parent_bind(body, rig)
+    bpy.context.view_layer.update()
+    bound_world_surface = [tuple(body.matrix_world @ v.co) for v in body.data.vertices]
+    max_rest_shift = max(
+        math.dist(before, after)
+        for before, after in zip(original_world_surface, bound_world_surface)
+    )
+    report["bindingRestSurfaceShiftMm"] = round(max_rest_shift * 1000, 3)
+    if max_rest_shift > .001:
+        raise RuntimeError("Blender skin parenting displaced actual source rest geometry")
     twist_seed_and_normalise(body, rig)
     report["initialSkinAudit"] = audit_weights(body, rig)
     # Analyse the actual distance to EVERY existing finger guide and whether
@@ -78,6 +91,12 @@ try:
     finger_geometry["proposalsApplied"] = False
     finger_geometry["unfittedGuidesNotArtistReviewed"] = True
     report["diagnosticFingerGeometry"] = finger_geometry
+    for name, evidence in finger_geometry["missingJointSourceEvidence"].items():
+        print(f"[phase1/pilot] {args.frame} {name}: "
+              f"actualSourceDistance={evidence['nearestActualSourceMm']}mm; "
+              f"eligibleHandVertices={evidence['nearbyUnclaimedHandVertices']}; "
+              f"claimedByOtherFingers={evidence['competingFingerGroups']}; "
+              f"blocker={evidence['blocker']}; UNAPPROVED")
     eyes = bind_original_eyes(rig, args.frame)
     report["independentEyeObjects"] = {k: eye.name for k, eye in eyes.items()}
     try:
