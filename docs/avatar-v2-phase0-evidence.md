@@ -21,7 +21,7 @@ Both production manifests retain their explicit `assetVersion` and their existin
 - **Source-only**: original CC0 scene or staged garment blockout, kept under `art-source/avatar-v2/` or the independent reference gallery; never a live manifest's validated file.
 - **Experimental**: a genuine source rig or lookdev proof with unfinished manual fit; marked `productionValidated=false`, never used for live avatars.
 - **Candidate**: `asset_ready` only after the real file exists in its exact manifest path and automated geometry, material and BIN validations pass. `asset_ready` must not bypass V1 fallback.
-- **Validated**: `validated` only after automated checks plus a separate, reviewer-signed evidence document bound to the specific GLB SHA-256. A status change alone cannot certify a model.
+- **Validated**: `validated` only after automated checks plus a separate, independently reviewed, checksum-bound evidence document bound to the specific GLB SHA-256. A status change alone cannot certify a model.
 - **Blocked/planned**: permitted to remain absent; blocked assets must not be placed under the public production path.
 
 The gate rejects out-of-range BIN bufferView/accessor layouts, missing bytes, non-finite positions or weights, non-normalised weights, vertex joints outside the bound skin, non-finite inverse bind matrices, unskinned mesh nodes, and multiple/absent GLB BIN chunks. These are necessary structural checks, not deformation, texture appearance or performance approval.
@@ -37,25 +37,29 @@ A `validated` body record must contain `qaEvidence: "art-source/avatar-v2/eviden
   "kind": "body",
   "frame": "masculine",
   "lod": 0,
+  "assetVersion": "v2-alpha-1",
   "assetPath": "avatar-v2/masculine/base-lod0.glb",
-  "sha256": "<64-character SHA-256 of the exact exported GLB>",
-  "sourceSha256": "<64-character SHA-256 of the reviewed editable source>",
+  "sha256": "<actual lowercase SHA-256 of exported GLB>",
+  "sourceFile": "art-source/avatar-v2/masculine/reviewed-base.blend",
+  "sourceSha256": "<actual lowercase SHA-256 of the reviewed .blend>",
   "sourceOnly": false,
   "rigReviewed": true,
   "visualApproved": true,
   "performanceApproved": true,
-  "reviewer": "<independent reviewer>",
-  "approvedAt": "<ISO-8601 UTC timestamp>",
-  "proofFiles": [
-    "art-source/avatar-v2/evidence/masculine-lod0-front.png",
-    "art-source/avatar-v2/evidence/masculine-lod0-side.png",
-    "art-source/avatar-v2/evidence/masculine-lod0-back.png",
-    "art-source/avatar-v2/evidence/masculine-lod0-performance.png"
-  ]
+  "author": "<source artist>",
+  "reviewer": "<different independent reviewer>",
+  "approvedAt": "2026-09-28T12:00:00Z",
+  "proofFiles": {
+    "front": { "path": "art-source/avatar-v2/evidence/masculine-lod0-front.png", "sha256": "<actual file SHA-256>" },
+    "side": { "path": "art-source/avatar-v2/evidence/masculine-lod0-side.png", "sha256": "<actual file SHA-256>" },
+    "back": { "path": "art-source/avatar-v2/evidence/masculine-lod0-back.png", "sha256": "<actual file SHA-256>" },
+    "performance": { "path": "art-source/avatar-v2/evidence/masculine-lod0-performance.png", "sha256": "<actual file SHA-256>" }
+  }
 }
 ```
 
-The independent reviewer must confirm full rig fit, morphs, material/texture fidelity, no floating accessories, extreme instrument poses, and the relevant mobile/desktop mesh budgets. Keep evidence outside `public/`; the gate compares the document's GLB SHA-256 and verifies that the proof files exist before accepting `validated`. Do not create placeholder approvals.
+
+The independent reviewer must confirm full rig fit, morphs, material/texture fidelity, no floating accessories, extreme instrument poses, and the relevant mobile/desktop mesh budgets. Keep evidence outside `public/`; the gate compares the document's GLB SHA-256 and requires a different named reviewer, checks the UTC approval timestamp, matches the actual reviewed editable Blender source file, and verifies four distinct PNG proof captures against their recorded SHA-256 digests before accepting `validated`. Do not create placeholder approvals. This is a reviewed artifact record, not a cryptographic digital signature; independent visual QA remains a separate human gate.
 
 ## Exit checks
 
