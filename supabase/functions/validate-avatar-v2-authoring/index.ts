@@ -33,7 +33,9 @@ serve(async req => {
     const { data: blob, error: downloadError } = await userClient.storage.from(BUCKET).download(key);
     if (downloadError || !blob) return respond({ error: 'Archive not found or admin access denied' }, 403);
     if (blob.size > 50 * 1024 * 1024) return respond({ error: 'Archive exceeds 50 MB' }, 400);
-    const zip = unzipSync(new Uint8Array(await blob.arrayBuffer()));
+    const archiveBytes = new Uint8Array(await blob.arrayBuffer());
+    const archiveSha256 = hex(new Uint8Array(await crypto.subtle.digest('SHA-256', archiveBytes)));
+    const zip = unzipSync(archiveBytes);
     const names = Object.keys(zip).filter(name => !name.endsWith('/'));
     if (!names.includes(ROOT + 'CHECKSUMS.json')) return respond({ error: 'This is not the combined authoring bundle' }, 400);
     if (names.some(name => !name.startsWith(ROOT) || name.includes('..') || name.includes('\\'))) {
@@ -68,8 +70,15 @@ serve(async req => {
         names.some(name => name.startsWith(ROOT + 'assets/') && !listed.has(name.slice(ROOT.length)))) {
       return respond({ error: 'Unexpected source inventory' }, 400);
     }
-    // This endpoint is intentionally read-only: validated source archives are not production garments.
-    return respond({ valid: true, files: listed.size, models: counts, status: 'source-verified-not-production-ready' });
+    // Private source review only. This never modifies clothing, manifests, or runtime assets.
+    const writer = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    const { error: reviewError } = await writer.from('avatar_v2_authoring_reviews').upsert({
+      storage_key: key, archive_sha256: archiveSha256, status: 'source_verified',
+      source_file_count: listed.size, glb_model_count: Object.values(counts).reduce((a, b) => a + b, 0),
+      validated_by: identity.user.id, validated_at: new Date().toISOString(),
+    }, { onConflict: 'storage_key' });
+    if (reviewError) return respond({ error: 'Source verified but review could not be saved' }, 500);
+    return respond({ valid: true, files: listed.size, models: counts, archiveSha256, status: 'source-verified-not-production-ready' });
   } catch (error) {
     return respond({ error: error instanceof Error ? error.message : 'Validation failed' }, 400);
   }
