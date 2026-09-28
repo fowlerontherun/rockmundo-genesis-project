@@ -246,6 +246,7 @@ describe('Avatar V2 garments', () => {
       'avatar-v2/clothing/masculine/../masculine/test-tee-lod0.glb',
       'avatar-v2/clothing/masculine//test-tee-lod0.glb',
       'avatar-v2/clothing/masculine/%2e%2e/test-tee-lod0.glb',
+      'avatar-v2\\\\clothing\\\\masculine\\\\test-tee-lod0.glb',
     ]) {
       const migrated = item({ garment_config: { avatarV2: {
         ...complete,
