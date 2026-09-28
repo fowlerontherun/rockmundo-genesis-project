@@ -11,7 +11,7 @@ import { AvatarV2ReferenceGallery } from './AvatarV2ReferenceGallery';
 import { avatarV2ReferenceModelUrl, avatarV2SourceWorldToGltf, type AvatarV2ReferenceVariant, type AvatarV2SourceJointSuggestion } from '@/features/player-model/v2/avatarV2ReferencePreview';
 import { Musician } from '@/features/gig-demo-3d/performers';
 import { stageAssignment } from '@/features/gig-demo-3d/instrumentCatalog';
-import { BODY_MUSCLE_LABELS, BODY_MUSCLE_TYPES, defaultAppearance } from '@/features/player-model/appearance';
+import { BODY_MUSCLE_LABELS, BODY_MUSCLE_TYPES, HAIR_STYLES, HAIR_LABELS, FACE_SHAPES, FACE_SHAPE_LABELS, GLASSES_STYLES, GLASSES_LABELS, EARRING_STYLES, EARRING_LABELS, defaultAppearance } from '@/features/player-model/appearance';
 import { disposeModel } from '@/features/player-model/model';
 import { AvatarV2ExpressionController } from '@/features/player-model/v2/avatarV2Expressions';
 import { auditAvatarV2Face, type AvatarV2FaceAudit } from '@/features/player-model/v2/avatarV2FaceAudit';
@@ -332,6 +332,11 @@ export function AvatarV2CandidateLab() {
   const [performance, setPerformance] = useState<AvatarV2PerformancePreset>('vocals');
   const [viewPreset, setViewPreset] = useState<CandidateViewPreset>('full');
   const [faceDetailProof, setFaceDetailProof] = useState(false);
+  const [hairStyle, setHairStyle] = useState<(typeof HAIR_STYLES)[number]>('quiff');
+  const [faceShape, setFaceShape] = useState<(typeof FACE_SHAPES)[number]>('classic');
+  const [glasses, setGlasses] = useState<(typeof GLASSES_STYLES)[number]>('square');
+  const [leftEarring, setLeftEarring] = useState<(typeof EARRING_STYLES)[number]>('hoops');
+  const [rightEarring, setRightEarring] = useState<(typeof EARRING_STYLES)[number]>('studs');
   const [performanceReport, setPerformanceReport] = useState<AvatarV2PerformanceQaReport | null>(null);
   const [faceAudit, setFaceAudit] = useState<AvatarV2FaceAudit | null>(null);
 
@@ -339,19 +344,20 @@ export function AvatarV2CandidateLab() {
     const next = defaultAppearance('avatar-v2-side-by-side');
     next.body.frame = frame;
     next.body.muscle = muscle;
-    next.head.hairStyle = 'quiff';
+    next.head.hairStyle = hairStyle;
+    next.head.faceShape = faceShape;
     if (faceDetailProof) {
       next.head.eyebrowStyle = 'arched';
       next.head.eyebrowColor = '#854b32';
       next.head.skinDetail = 'freckles';
     }
     if (next.accessories) {
-      next.accessories.glasses = 'square';
-      next.accessories.leftEarring = 'hoops';
-      next.accessories.rightEarring = 'studs';
+      next.accessories.glasses = glasses;
+      next.accessories.leftEarring = leftEarring;
+      next.accessories.rightEarring = rightEarring;
     }
     return next;
-  }, [frame, muscle, faceDetailProof]);
+  }, [frame, muscle, faceDetailProof, hairStyle, faceShape, glasses, leftEarring, rightEarring]);
 
   const referenceUrl = !file && reference ? avatarV2ReferenceModelUrl(frame, reference) : null;
 
@@ -366,8 +372,8 @@ export function AvatarV2CandidateLab() {
         <CardTitle>V1 ↔ V2 candidate lab</CardTitle>
         <CardDescription>
           Inspect real source-only V2 references or load your own GLB locally for side-by-side visual inspection. The lab applies the same saved-hair and
-          accessory bridge as the live V2 path, using a quiff, square glasses and independent earrings as
-          visible fit checks. Face-detail proof mode additionally checks custom eyebrows and freckles against the V2 head.
+          accessory bridge as the live V2 path, with selectable hairstyles, face shapes, glasses and independent earrings for
+          fit checks. Face-detail proof mode additionally checks custom eyebrows and freckles against the V2 head.
           The file stays in this browser session and is not published, uploaded or made
           available to players.
         </CardDescription>
@@ -397,6 +403,21 @@ export function AvatarV2CandidateLab() {
               {BODY_MUSCLE_TYPES.map(value => <option key={value} value={value}>{BODY_MUSCLE_LABELS[value]}</option>)}
             </select>
           </label>
+          {([
+            ['Hairstyle', hairStyle, setHairStyle, HAIR_STYLES, HAIR_LABELS],
+            ['Face shape', faceShape, setFaceShape, FACE_SHAPES, FACE_SHAPE_LABELS],
+            ['Glasses', glasses, setGlasses, GLASSES_STYLES, GLASSES_LABELS],
+            ['Left earring', leftEarring, setLeftEarring, EARRING_STYLES, EARRING_LABELS],
+            ['Right earring', rightEarring, setRightEarring, EARRING_STYLES, EARRING_LABELS],
+          ] as const).map(([label, value, setValue, options, labels]) => (
+            <label key={label} className="space-y-1 text-sm">
+              <span className="font-medium">{label}</span>
+              <select className="block rounded-md border bg-background px-3 py-2" value={value}
+                onChange={event => setValue(event.target.value as never)}>
+                {options.map(option => <option key={option} value={option}>{labels[option as keyof typeof labels]}</option>)}
+              </select>
+            </label>
+          ))}
           <label className="space-y-1 text-sm">
             <span className="font-medium">Target LOD</span>
             <select
