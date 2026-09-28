@@ -1,10 +1,9 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Archive, Download, UploadCloud } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 
@@ -13,6 +12,9 @@ const MAX_BYTES = 50 * 1024 * 1024;
 
 export function AvatarV2AuthoringImport() {
   const [file, setFile] = useState<File | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const uploadLock = useRef(false);
+  const [uploadStatus, setUploadStatus] = useState('Select a ZIP to upload automatically.');
   const [uploading, setUploading] = useState(false);
   const [digest, setDigest] = useState<string | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
@@ -42,21 +44,17 @@ export function AvatarV2AuthoringImport() {
   });
 
   async function chooseFile(next: File | null) {
+    if (!next || uploadLock.current) return;
     setFile(next);
     setDigest(null);
-    if (!next) return;
     if (!next.name.toLowerCase().endsWith('.zip') || next.size === 0 || next.size > MAX_BYTES) {
-      toast.error('Choose a non-empty ZIP file smaller than 50 MB.');
+      setUploadStatus('Invalid file: select a non-empty .zip archive under 50 MB.');
+      toast.error('Select a non-empty ZIP archive smaller than 50 MB.');
       return;
     }
-    try {
-      const bytes = await next.arrayBuffer();
-      const hash = await crypto.subtle.digest('SHA-256', bytes);
-      setDigest(Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, '0')).join(''));
-      toast.success('ZIP selected. Press Upload authoring ZIP to send it to private storage.');
-    } catch {
-      toast.error('Could not calculate the archive checksum.');
-    }
+    // Android's desktop-mode file picker may not trigger a second button reliably.
+    // Upload directly from the File supplied by the change event, not React state.
+    await upload(next);
   }
 
   async function downloadArchive(name: string) {
@@ -111,31 +109,43 @@ export function AvatarV2AuthoringImport() {
     }
   }
 
-  async function upload() {
-    if (!file || uploading) return;
-    if (!file.name.toLowerCase().endsWith('.zip') || file.size > MAX_BYTES || file.size === 0) {
-      toast.error('Select a non-empty ZIP archive no larger than 50 MB.');
+  async function upload(selected: File | null = file) {
+    if (!selected || uploadLock.current) return;
+    if (!selected.name.toLowerCase().endsWith('.zip') || selected.size > MAX_BYTES || selected.size === 0) {
+      setUploadStatus('Invalid ZIP file. Select a non-empty ZIP smaller than 50 MB.');
       return;
     }
+    uploadLock.current = true;
     setUploading(true);
+    setUploadStatus('Reading selected ZIP…');
     try {
-      const header = new Uint8Array(await file.slice(0, 4).arrayBuffer());
+      const header = new Uint8Array(await selected.slice(0, 4).arrayBuffer());
       if (header[0] !== 0x50 || header[1] !== 0x4b || header[2] !== 0x03 || header[3] !== 0x04) {
-        throw new Error('The selected file is not a standard ZIP archive.');
+        throw new Error('This file is not a standard ZIP archive.');
       }
-      const safeName = file.name.replace(/[^a-z0-9._-]/gi, '-');
+      // Hashing is optional for upload; do not block mobile browsers if digest fails.
+      try {
+        const hash = await crypto.subtle.digest('SHA-256', await selected.arrayBuffer());
+        setDigest(Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, '0')).join(''));
+      } catch { setDigest(null); }
+      setUploadStatus('Uploading ZIP to private storage…');
+      const safeName = selected.name.replace(/[^a-z0-9._-]/gi, '-');
       const key = `incoming/${crypto.randomUUID()}-${safeName}`;
-      const { error } = await supabase.storage.from(BUCKET).upload(key, file, {
+      const { error } = await supabase.storage.from(BUCKET).upload(key, selected, {
         contentType: 'application/zip', upsert: false,
       });
       if (error) throw error;
+      setUploadStatus('Upload complete. Find your ZIP under Uploaded archives below and select Validate bundle.');
       setFile(null);
-      setDigest(null);
+      if (fileInput.current) fileInput.current.value = '';
       await queryClient.invalidateQueries({ queryKey: ['admin-avatar-v2-authoring-archives'] });
-      toast.success('Archive uploaded to private authoring intake. Not published to the game.');
+      toast.success('ZIP uploaded to private storage. Select Validate bundle below.');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Upload failed');
+      const message = error instanceof Error ? error.message : 'Upload failed';
+      setUploadStatus(`Upload failed: ${message}. You can retry using the button.`);
+      toast.error(message);
     } finally {
+      uploadLock.current = false;
       setUploading(false);
     }
   }
@@ -150,17 +160,18 @@ export function AvatarV2AuthoringImport() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-muted-foreground">Step 1: Select the ZIP. Step 2: Click Upload authoring ZIP. Step 3: Validate the uploaded archive, then Extract for review.</p>
+        <p className="text-sm text-muted-foreground">Select the ZIP to upload automatically (including on mobile). Then validate the uploaded archive and extract it for review.</p>
         <div className="flex flex-wrap items-center gap-3">
-          <Input aria-label="Choose Avatar V2 authoring ZIP" type="file" accept=".zip,application/zip"
-            className="max-w-md" disabled={uploading}
-            onChange={event => void chooseFile(event.target.files?.[0] ?? null)} />
-          <Button disabled={!file || uploading} onClick={upload}>
+          <input ref={fileInput} aria-label="Choose Avatar V2 authoring ZIP" type="file"
+            className="block w-full max-w-md text-sm" disabled={uploading}
+            onChange={event => void chooseFile(event.currentTarget.files?.[0] ?? null)} />
+          <Button disabled={!file || uploading} onClick={() => void upload()}>
             <UploadCloud className="mr-2 h-4 w-4" />
-            {uploading ? 'Uploading…' : 'Upload authoring ZIP'}
+            {uploading ? 'Uploading…' : 'Retry upload'}
           </Button>
         </div>
-        {file && <div role="status" aria-live="polite" className="space-y-1 text-sm text-muted-foreground"><p>Ready to upload: {file.name} ({(file.size / 1048576).toFixed(1)} MB). Press the Upload authoring ZIP button above.</p>{digest && <p className="break-all font-mono text-xs">Local SHA-256: {digest}</p>}</div>}
+        <p role="status" aria-live="polite" className="rounded-md border p-3 text-sm">{uploadStatus}</p>
+        {file && <div className="space-y-1 text-sm text-muted-foreground"><p>Selected: {file.name} ({(file.size / 1048576).toFixed(1)} MB)</p>{digest && <p className="break-all font-mono text-xs">SHA-256: {digest}</p>}</div>}
         <div className="space-y-2">
           <p className="font-medium">Uploaded archives {isLoading ? '(loading)' : `(${archives.length})`}</p>
           {archives.map(archive => { const saved = savedReviews.find(review => review.storage_key === `incoming/${archive.name}`); return (
