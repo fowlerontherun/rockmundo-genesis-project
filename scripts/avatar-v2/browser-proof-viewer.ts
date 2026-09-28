@@ -14,6 +14,10 @@ interface BrowserProof {
   embeddedTextureSlots: number;
   triangles: number;
   webglVersion: string;
+  visiblePixels: number;
+  restBounds?: { min: number[]; max: number[] };
+  posedBounds?: { min: number[]; max: number[] };
+  cameraPosition?: number[];
   error?: string;
 }
 
@@ -32,7 +36,7 @@ if (!status || !audit || !host) throw new Error('Browser proof fixture has no ou
 const result: BrowserProof = {
   state: 'loading', sourceFrame: frame, sourceOnly: true,
   meshes: 0, skinnedMeshes: 0, uvMappedMeshes: 0, materialSlots: 0,
-  embeddedTextureSlots: 0, triangles: 0, webglVersion: '',
+  embeddedTextureSlots: 0, triangles: 0, webglVersion: '', visiblePixels: 0,
 };
 window.__avatarV2BrowserProof = result;
 
@@ -64,6 +68,9 @@ async function showGenuineBlenderSource() {
     gltf.scene.traverse(node => {
       if (!(node instanceof THREE.Mesh)) return;
       result.meshes += 1;
+      // Source rigs can have conservative or stale skinned-mesh AABBs;
+      // actual screen-space proof must not incorrectly cull real geometry.
+      node.frustumCulled = false;
       if (node instanceof THREE.SkinnedMesh) result.skinnedMeshes += 1;
       const geometry = node.geometry;
       if (geometry.getAttribute('uv')) result.uvMappedMeshes += 1;
@@ -81,15 +88,34 @@ async function showGenuineBlenderSource() {
       throw new Error('Actual Blender GLB is missing skinned visible geometry or materials');
     }
     scene.add(gltf.scene);
-    const bounds = new THREE.Box3().setFromObject(gltf.scene);
-    if (bounds.isEmpty()) throw new Error('GLB browser scene has empty geometry');
+    gltf.scene.updateMatrixWorld(true);
+    // SkinnedMesh.computeBoundingBox may use a badly fitted draft pose. Frame
+    // the model from authored rest-geometry vertices transformed to world
+    // space, and retain the posed box for diagnostics rather than camera fit.
+    const bounds = new THREE.Box3();
+    gltf.scene.traverse(node => {
+      if (!(node instanceof THREE.Mesh)) return;
+      node.geometry.computeBoundingBox();
+      if (node.geometry.boundingBox) {
+        bounds.union(node.geometry.boundingBox.clone().applyMatrix4(node.matrixWorld));
+      }
+    });
+    const posedBounds = new THREE.Box3().setFromObject(gltf.scene);
+    if (!posedBounds.isEmpty()) {
+      result.posedBounds = { min: posedBounds.min.toArray(), max: posedBounds.max.toArray() };
+    }
+    result.restBounds = { min: bounds.min.toArray(), max: bounds.max.toArray() };
+    if (bounds.isEmpty()) throw new Error('GLB browser scene has empty rest-pose geometry');
     const center = bounds.getCenter(new THREE.Vector3());
     const radius = Math.max(bounds.getSize(new THREE.Vector3()).length * 0.65, 0.3);
     camera.near = Math.max(radius / 1000, 0.001);
     camera.far = radius * 100;
     camera.position.copy(center).add(new THREE.Vector3(radius, radius * 0.65, radius));
     controls.target.copy(center);
+    camera.lookAt(center);
     camera.updateProjectionMatrix();
+    controls.update();
+    result.cameraPosition = camera.position.toArray();
 
     const resize = () => {
       const width = Math.max(host!.clientWidth, 1);
@@ -107,7 +133,30 @@ async function showGenuineBlenderSource() {
       requestAnimationFrame(render);
     };
     render();
+    // WebGL context creation, mesh counts or screenshot byte lengths alone
+    // cannot prove that a model is in the frame. Inspect actual framebuffer
+    // pixels before declaring browser rendering successful.
+    const w = renderer.domElement.width;
+    const h = renderer.domElement.height;
+    const sampleWidth = Math.min(w, 640);
+    const sampleHeight = Math.min(h, 640);
+    const pixels = new Uint8Array(sampleWidth * sampleHeight * 4);
+    gl.readPixels(
+      Math.floor((w - sampleWidth) / 2), Math.floor((h - sampleHeight) / 2),
+      sampleWidth, sampleHeight, gl.RGBA, gl.UNSIGNED_BYTE, pixels,
+    );
+    for (let p = 0; p < pixels.length; p += 4) {
+      if (Math.abs(pixels[p] - 34) + Math.abs(pixels[p + 1] - 39) + Math.abs(pixels[p + 2] - 51) > 40) {
+        result.visiblePixels++;
+      }
+    }
     result.triangles = Math.round(result.triangles);
+    if (gl.isContextLost() || result.visiblePixels < 300) {
+      throw new Error('Actual skinned GLB produced a blank WebGL frame: ' + JSON.stringify({
+        visiblePixels: result.visiblePixels, restBounds: result.restBounds,
+        posedBounds: result.posedBounds, cameraPosition: result.cameraPosition,
+      }));
+    }
     result.state = 'loaded';
     status!.textContent = 'Real GLB loaded and browser-rendered; experimental source only.';
     audit!.textContent = JSON.stringify(result, null, 2);
