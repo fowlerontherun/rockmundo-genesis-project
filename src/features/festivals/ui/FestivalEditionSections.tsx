@@ -20,6 +20,7 @@ import {
 import { FestivalArtistPlanner } from "@/features/festival-company/ui/FestivalArtistPlanner";
 import { FestivalLineupWorkflowManager } from "@/features/festival-company/ui/FestivalLineupWorkflowManager";
 import { FestivalTicketPlanner } from "@/features/festival-company/ui/FestivalTicketPlanner";
+import { FestivalCanonicalBrandPicker } from "@/features/festival-company/ui/FestivalCanonicalBrandPicker";
 import { FestivalAnnualPlan } from "@/features/festivals/annual-plan/FestivalAnnualPlan";
 import {
   getFestivalCompanyEditions,
@@ -331,6 +332,19 @@ export function FestivalEditionFinance({
           festivalCompanyId={festivalCompanyId}
           festivalEditionId={editionId}
         />
+        <Card>
+          <CardHeader>
+            <CardTitle>Festival sponsor prospects</CardTitle>
+            <CardDescription>
+              Optionally approach an existing RockMundo brand. Adding a prospect
+              does not create a contract or change the automatic sponsorship
+              estimate in your ticket budget.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <FestivalCanonicalBrandPicker festivalCompanyId={festivalCompanyId} />
+          </CardContent>
+        </Card>
       </EditionScope>
     </SectionShell>
   );
