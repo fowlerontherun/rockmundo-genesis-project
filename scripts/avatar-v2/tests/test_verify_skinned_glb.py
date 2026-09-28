@@ -66,8 +66,7 @@ class StructuralSkinGateTests(unittest.TestCase):
 
     def test_garment_subset_accepted_but_body_rejected(self):
         doc = self.valid()
-        doc["skins"][0]["joints"] = [0]
-        doc["nodes"][0]["name"] = "Hips"
+        doc["skins"][0]["joints"] = [sorted(gate.REQUIRED).index("Hips")]
         self.assertEqual(gate.inspect(self.write(doc), garment=True)["skinned_primitives"], 1)
         with self.assertRaisesRegex(ValueError, "No valid skin"):
             gate.inspect(self.path)
