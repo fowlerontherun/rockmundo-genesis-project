@@ -7,6 +7,8 @@ export type CameraShot =
   | 'stage'
   | 'band_medium'
   | 'lead_close'
+  | 'bass_close'
+  | 'backline_reverse'
   | 'side_pit'
   | 'side_stage'
   | 'crane'
@@ -49,6 +51,7 @@ export const SHOTS: { id: CameraShot; label: string }[] = [
   { id: 'guitar', label: 'Guitar side' }, { id: 'drums', label: 'Drum cam' },
   { id: 'stage', label: 'On stage' },
   { id: 'band_medium', label: 'Band medium' }, { id: 'lead_close', label: 'Lead close-up' },
+  { id: 'bass_close', label: 'Bass close-up' }, { id: 'backline_reverse', label: 'Backline to crowd' },
   { id: 'side_pit', label: 'Low pit cam' }, { id: 'side_stage', label: 'Stage wing' },
   { id: 'crane', label: 'Crane overhead' },
 ];
