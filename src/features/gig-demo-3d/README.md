@@ -36,7 +36,7 @@ query-free route continues to open the existing fixture/replay inspector.
   nearby raised hands. Attendance is preserved. Quiet/sparse crowds, cramped
   floors, runways, television studios and reduced motion suppress these events.
   The crowd-reaction selector includes dedicated circle-pit and surfing previews.
-- Ten views, including a deterministic camera sequence, lead close-up, low pit, stage-wing and crane shots, plus three lighting palettes. Large-venue Director coverage returns regularly to a close performer lens.
+- Twelve views, including a deterministic camera sequence, singer and bassist close-ups, low pit, stage-wing, reverse backline-to-crowd, and crane shots, plus three lighting palettes. Large-venue Director coverage returns regularly to a close performer lens.
   Play/pause, restart, fullscreen, performance intensity, crowd density, haze,
   quality and reduced motion are available without rebuilding the renderer.
 
