@@ -44,11 +44,16 @@ export function AvatarV2AuthoringImport() {
   async function chooseFile(next: File | null) {
     setFile(next);
     setDigest(null);
-    if (!next || next.size > MAX_BYTES) return;
+    if (!next) return;
+    if (!next.name.toLowerCase().endsWith('.zip') || next.size === 0 || next.size > MAX_BYTES) {
+      toast.error('Choose a non-empty ZIP file smaller than 50 MB.');
+      return;
+    }
     try {
       const bytes = await next.arrayBuffer();
       const hash = await crypto.subtle.digest('SHA-256', bytes);
       setDigest(Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, '0')).join(''));
+      toast.success('ZIP selected. Press Upload authoring ZIP to send it to private storage.');
     } catch {
       toast.error('Could not calculate the archive checksum.');
     }
@@ -145,6 +150,7 @@ export function AvatarV2AuthoringImport() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <p className="text-sm text-muted-foreground">Step 1: Select the ZIP. Step 2: Click Upload authoring ZIP. Step 3: Validate the uploaded archive, then Extract for review.</p>
         <div className="flex flex-wrap items-center gap-3">
           <Input aria-label="Choose Avatar V2 authoring ZIP" type="file" accept=".zip,application/zip"
             className="max-w-md" disabled={uploading}
@@ -154,7 +160,7 @@ export function AvatarV2AuthoringImport() {
             {uploading ? 'Uploading…' : 'Upload authoring ZIP'}
           </Button>
         </div>
-        {file && <div className="space-y-1 text-sm text-muted-foreground"><p>Selected: {file.name} ({(file.size / 1048576).toFixed(1)} MB)</p>{digest && <p className="break-all font-mono text-xs">Local SHA-256: {digest}</p>}</div>}
+        {file && <div role="status" aria-live="polite" className="space-y-1 text-sm text-muted-foreground"><p>Ready to upload: {file.name} ({(file.size / 1048576).toFixed(1)} MB). Press the Upload authoring ZIP button above.</p>{digest && <p className="break-all font-mono text-xs">Local SHA-256: {digest}</p>}</div>}
         <div className="space-y-2">
           <p className="font-medium">Uploaded archives {isLoading ? '(loading)' : `(${archives.length})`}</p>
           {archives.map(archive => { const saved = savedReviews.find(review => review.storage_key === `incoming/${archive.name}`); return (
