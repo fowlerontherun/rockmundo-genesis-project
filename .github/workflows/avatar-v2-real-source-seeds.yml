@@ -66,7 +66,7 @@ jobs:
         run: python3 -m unittest discover -s scripts/avatar-v2/tests -p test_lip_lookdev.py -v
       - name: Test preliminary, non-certified real head/neck/eye skinning
         run: python3 -m unittest discover -s scripts/avatar-v2/tests -p test_head_motion_weights.py -v
-      - name: Test reference gallery publication safety
+      - name: Test garment GLB skinning gate\n        run: python3 -m unittest discover -s scripts/avatar-v2/tests -p test_verify_skinned_glb.py -v\n      - name: Test reference gallery publication safety
         run: python3 -m unittest discover -s scripts/avatar-v2/tests -p test_publish_reference_previews.py -v
       - name: Test actual eyeball and lateral-head joint guide measurements
         run: python3 -m unittest discover -s scripts/avatar-v2/tests -p test_source_rig_suggestions.py -v
