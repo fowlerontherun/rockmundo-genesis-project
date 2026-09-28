@@ -62,10 +62,10 @@ describe('curated donor garments', () => {
 
   it('applies the selected colour and material variant to donor geometry', () => {
     const top = item();
-    const rows = [{
+    const rows: ResolvedEquippedClothing[] = [{
       item: top,
       variant: { id: 'color-1', label: 'Colour 2', color: '#eeeeee', secondaryColor: '#991122', material: 'stripe', pattern: 'solid' },
-    }]: ResolvedEquippedClothing[];
+    }];
     const resolved = curatedDonorForSlot(rows, 'top');
     expect(resolved?.source.color).toBe('#eeeeee');
     expect(resolved?.source.fabric).toBe('stripe');
@@ -74,7 +74,7 @@ describe('curated donor garments', () => {
 
   it('loads the correct frame-specific donor model for live performance', () => {
     const punkTop = item({ render_config: { curatedSource: { kind: 'avatar-part', style: 'punk', part: 'body', color: '#111111', fabric: 'plain' } } });
-    const rows = [{ item: punkTop, variant: undefined }]: ResolvedEquippedClothing[];
+    const rows: ResolvedEquippedClothing[] = [{ item: punkTop, variant: undefined }];
     expect(requiredCuratedDonorModelFiles(rows, 'feminine')).toEqual(['female-punk.glb']);
     expect(requiredCuratedDonorModelFiles(rows, 'masculine')).toEqual(['punk.glb']);
   });
@@ -87,7 +87,7 @@ describe('curated donor garments', () => {
       wearable_slot: 'bottom',
       render_config: { curatedSource: { kind: 'avatar-part', style: 'punk', part: 'legs', color: '#20252d', fabric: 'denim' } },
     });
-    const rows = [{ item: top, variant: undefined }, { item: bottom, variant: undefined }]: ResolvedEquippedClothing[];
+    const rows: ResolvedEquippedClothing[] = [{ item: top, variant: undefined }, { item: bottom, variant: undefined }];
     expect(curatedDonorForSlot(rows, 'top')?.source.style).toBe('casual');
     expect(curatedDonorForSlot(rows, 'bottom')?.source.part).toBe('legs');
     expect(curatedDonorForSlot(rows, 'footwear')).toBeNull();
