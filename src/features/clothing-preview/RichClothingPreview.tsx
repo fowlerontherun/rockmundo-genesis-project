@@ -132,7 +132,7 @@ export function RichClothingPreview({ appearance, item, variant, onStatusChange 
         library = loaded;
         const currentPreview = latestPreview.current;
         const donor = curatedDonorSource(currentPreview.item);
-        const previewClothing = donor ? [{ item: currentPreview.item, variant: currentPreview.variant }] as any : [];
+        const previewClothing = donor ? [{ item: currentPreview.item, variant: currentPreview.variant }] : [];
         const base = assemblePlayerModel(library, appearance, [], previewClothing, visualQuality);
         scene.add(base);
         if (donor) {
