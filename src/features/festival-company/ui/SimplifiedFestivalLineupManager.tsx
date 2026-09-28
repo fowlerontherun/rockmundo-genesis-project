@@ -212,7 +212,7 @@ export function SimplifiedFestivalLineupManager({
       suggestedSetMinutes: 60,
       suggestedDates: data.festivalDates[0] ? [data.festivalDates[0]] : [],
       responseDeadline: responseDeadline(data.festivalDates),
-      message: "We would like to invite you to perform at this year's Festival.",
+      message: `We would like to invite you to perform at this year\'s Festival. Proposed billing: ${billingLabel(billingInputs[key] ?? "support")}.`,
       idempotencyKey: crypto.randomUUID(),
     });
   };
@@ -243,7 +243,7 @@ export function SimplifiedFestivalLineupManager({
       ),
       setMinutes: invitation.suggestedSetMinutes ?? 60,
       requestedDates: invitation.suggestedDates,
-      billingPosition: billingInputs[`invitation:${invitation.id}`] ?? "support",
+      billingPosition: billingInputs[`invitation:${invitation.id}`] ?? billingPositions.find((position) => invitation.message.includes(`Proposed billing: ${billingLabel(position)}`)) ?? "support",
     });
   };
 
