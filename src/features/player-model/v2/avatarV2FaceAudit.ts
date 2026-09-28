@@ -36,6 +36,7 @@ export interface AvatarV2FaceAudit {
 export function auditAvatarV2Face(root: T.Object3D): AvatarV2FaceAudit {
   const anchors = new Map<string, number>();
   const channels = new Set<string>();
+  const validMorphBindings = new Map<T.Mesh, Set<number>>();
   const invalidMorphTargets: string[] = [];
   const invalidBaseMeshes: string[] = [];
   root.traverse(node => {
@@ -71,7 +72,12 @@ export function auditAvatarV2Face(root: T.Object3D): AvatarV2FaceAudit {
         }
       }
       if (!finite) invalidMorphTargets.push(`${node.name}:${name}`);
-      else channels.add(name);
+      else {
+        channels.add(name);
+        const valid = validMorphBindings.get(node) ?? new Set<number>();
+        valid.add(index);
+        validMorphBindings.set(node, valid);
+      }
     }
   });
   const missingChannels = REQUIRED_FACE_CHANNELS.filter(name => !channels.has(name));
@@ -82,7 +88,9 @@ export function auditAvatarV2Face(root: T.Object3D): AvatarV2FaceAudit {
   const bindings = collectAvatarV2ExpressionBindings(root);
   const runtimeRequired = ['blinkLeft', 'blinkRight', 'jawOpen', 'mouthSmile',
     'visemeAA', 'visemeEE', 'visemeIH', 'visemeOH', 'visemeOU'] as const;
-  const missingRuntimeExpressions = runtimeRequired.filter(name => !(bindings[name]?.length));
+  const missingRuntimeExpressions = runtimeRequired.filter(name =>
+    !(bindings[name] ?? []).some(binding => validMorphBindings.get(binding.mesh)?.has(binding.index)),
+  );
   return {
     passed: !missingChannels.length && !missingAnchors.length && !duplicateAnchors.length && !invalidMorphTargets.length && !invalidBaseMeshes.length && !missingRuntimeExpressions.length,
     missingChannels, missingAnchors, duplicateAnchors, invalidMorphTargets, invalidBaseMeshes, missingRuntimeExpressions,
