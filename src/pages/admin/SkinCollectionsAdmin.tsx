@@ -378,8 +378,8 @@ const SkinCollectionsAdmin = () => {
         </CardContent>
       </Card>
 
-      {!isLoading && <AvatarV2AuthoringImport />
-      <AvatarV2ClothingMigrationPanel collections={collections ?? []} />}
+      <AvatarV2AuthoringImport />
+      {!isLoading && <AvatarV2ClothingMigrationPanel collections={collections ?? []} />}
 
       <Card>
         <CardHeader>
