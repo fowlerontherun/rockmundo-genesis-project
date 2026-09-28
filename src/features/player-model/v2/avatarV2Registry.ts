@@ -54,8 +54,11 @@ export function avatarV2Readiness() {
       ready: assets.filter(asset => asset.status === 'asset_ready').length,
       validated: assets.filter(asset => asset.status === 'validated').length,
       blocked: assets.filter(asset => asset.status === 'blocked').length,
-      productionReady: assets.some(asset => asset.lod === 0 && asset.status === 'validated')
-        && assets.some(asset => asset.lod === 1 && asset.status === 'validated'),
+      productionReady: ([0, 1] as const).every(lod => {
+        const matches = assets.filter(asset => asset.lod === lod);
+        return matches.length === 1 && matches[0].status === 'validated'
+          && matches[0].file === `avatar-v2/${frame}/base-lod${lod}.glb`;
+      }),
     };
   });
 
@@ -63,7 +66,7 @@ export function avatarV2Readiness() {
     assetVersion: AVATAR_V2_ASSET_VERSION,
     rolloutEnabled: AVATAR_V2_ROLLOUT.enabled,
     frames,
-    productionReady: frames.every(frame => frame.productionReady),
+    productionReady: avatarV2MinimumRolloutBlockers().length === 0,
   };
 }
 
@@ -93,5 +96,24 @@ export function avatarV2ReleaseBlockers(assets: readonly AvatarV2BaseAsset[] = A
   if (assets.length !== expectedFrames.length * expectedLods.length) {
     blockers.push('Base manifest contains unexpected or duplicate entries.');
   }
+  return blockers;
+}
+
+/** Minimum validated meshes required to enable the guarded Avatar V2 rollout. */
+export function avatarV2MinimumRolloutBlockers(assets: readonly AvatarV2BaseAsset[] = AVATAR_V2_BASE_ASSETS) {
+  const blockers: string[] = [];
+  for (const frame of ['masculine', 'feminine'] as const) {
+    for (const lod of [0, 1] as const) {
+      const entries = assets.filter(asset => asset.frame === frame && asset.lod === lod);
+      if (entries.length !== 1) {
+        blockers.push(`${frame} LOD${lod}: expected one base asset, found ${entries.length}.`);
+        continue;
+      }
+      const asset = entries[0];
+      if (asset.status !== 'validated') blockers.push(`${frame} LOD${lod}: ${asset.status}; not validated.`);
+      if (asset.file !== `avatar-v2/${frame}/base-lod${lod}.glb`) blockers.push(`${frame} LOD${lod}: unexpected asset path.`);
+    }
+  }
+  if (assets.length !== 8) blockers.push('Base manifest must contain exactly eight LOD0–3 entries.');
   return blockers;
 }
