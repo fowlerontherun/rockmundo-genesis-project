@@ -21,6 +21,9 @@ describe("festival setlist approval transition safeguards", () => {
     expect(editor).toContain("savedFingerprint !== fp");
     expect(editor).toContain("saveDraft.isPending || submitSetlist.isPending");
     expect(editor).toContain("preflight.isSuccess");
+    expect(editor).toContain("const editingDisabled = readOnly || saveDraft.isPending || submitSetlist.isPending");
+    expect(editor).toContain("disabled={editingDisabled || repertoire.isLoading || repertoire.isError}");
+    expect(editor).toContain("disabled={editingDisabled || index === 0}");
   });
 
   it("shows the organiser the outcome of locking the approved setlist", () => {
