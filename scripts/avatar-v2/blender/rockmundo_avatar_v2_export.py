@@ -27,6 +27,7 @@ import bpy
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from facial_topology import audit_face_topology
+from verify_skinned_glb import inspect as inspect_exported_skin
 from rockmundo_avatar_v2_topology_audit import extract_landmarks, head_candidates
 
 BUDGETS = {
@@ -867,6 +868,15 @@ def export_glb(args: argparse.Namespace) -> None:
         export_extras=True,
         export_yup=True,
     )
+    # Validate the actual serialized GLB, not just the Blender scene. Never
+    # leave an invalid export at a production-looking destination.
+    try:
+        skin_proof = inspect_exported_skin(output)
+    except (ValueError, OSError, json.JSONDecodeError) as exc:
+        output.unlink(missing_ok=True)
+        raise RuntimeError(f"Serialized Avatar V2 GLB skinning failed: {exc}") from exc
+    print(f"[avatar-v2/blender] GLB structural skinning: {skin_proof['skinned_primitives']} primitives")
+
     # glTF omits Blender vertex-group landmark data. Keep a deterministic
     # provenance sidecar that binds the source audit to these exact GLB bytes.
     # The repository validator refuses stale/missing sidecars for LOD0/LOD1.
