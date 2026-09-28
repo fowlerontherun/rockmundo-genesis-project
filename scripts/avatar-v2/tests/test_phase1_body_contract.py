@@ -73,7 +73,8 @@ class Phase1BodyContractTests(unittest.TestCase):
     def complete_report(self, frame):
         return {
             "frame": frame, "jointFit": {"reviewed": True},
-            "missingDeformBones": [],
+            "missingDeformBones": [], "insufficientDeformBones": {},
+            "nonBodyBoneInfluences": [], "invalidWeights": 0,
             "unweightedVertices": 0, "overInfluencedVertices": 0,
             "unnormalisedVertices": 0, "bodyRegions": list(REGIONS),
             "poseResults": {name: {"pass": True} for name in POSES},
@@ -91,6 +92,9 @@ class Phase1BodyContractTests(unittest.TestCase):
                     ("overInfluencedVertices", 1),
                     ("unnormalisedVertices", 1),
                     ("missingDeformBones", ["Hand.R"]),
+                    ("insufficientDeformBones", {"Index3.L": {"weighted": 1, "minimum": 4}}),
+                    ("nonBodyBoneInfluences", ["Eye.L"]),
+                    ("invalidWeights", 1),
                     ("bodyRegions", list(REGIONS[:-1])),
                     ("poseResults", {}),
                     ("correctives", []),
