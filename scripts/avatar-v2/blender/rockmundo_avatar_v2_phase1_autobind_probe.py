@@ -121,8 +121,13 @@ try:
         marker["rockmundoPossibleWrongDigitSurface"] = data["possibleWrongFingerSurface"]
         marker["rockmundoArtistReviewed"] = False
         marker["rockmundoProductionValidated"] = False
+    if set(hints) != set(report["initialSkinAudit"]["missingDeformBones"]) & set(segments):
+        raise RuntimeError("Finger source hint count differs from genuinely unweighted joints")
     report["fingerFitReviewHints"] = hints
     report["fingerFitHintCollection"] = hint_collection.name
+    print(f"[phase1/pilot] {args.frame}: saved {len(hints)} actual CC0 skin "
+          f"artist-review markers; {sum(bool(x['possibleWrongFingerSurface']) for x in hints.values())} "
+          "nearest points have another digit's bone-heat skin and require extra visual care")
     notes = bpy.data.texts.get("ROCKMUNDO_PHASE1_MISSING_FINGERS") or bpy.data.texts.new(
         "ROCKMUNDO_PHASE1_MISSING_FINGERS"
     )
