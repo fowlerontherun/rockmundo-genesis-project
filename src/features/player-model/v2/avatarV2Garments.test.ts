@@ -239,6 +239,23 @@ describe('Avatar V2 garments', () => {
       .toContain('no validated');
   });
 
+  it('rejects swapped frame and LOD filenames during skin migration', () => {
+    const complete = avatarV2GarmentConfig(item())!;
+    const swapped = item({ garment_config: { avatarV2: {
+      ...complete,
+      frames: {
+        ...complete.frames,
+        masculine: {
+          ...complete.frames.masculine,
+          lod0: complete.frames.masculine?.lod1,
+          lod1: complete.frames.masculine?.lod0,
+        },
+      },
+    } } });
+    expect(avatarV2GarmentHasCompleteAssetManifest(avatarV2GarmentConfig(swapped)!)).toBe(false);
+    expect(avatarV2GarmentFile(swapped, 'masculine', 0)).toBeNull();
+  });
+
   it('rejects duplicate equipped inventory identities and curated keys', () => {
     const first = item();
     expect(avatarV2ClothingCompatibilityReason([row(first), row(first)], 'masculine', 0))
