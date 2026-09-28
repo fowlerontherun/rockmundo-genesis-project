@@ -530,6 +530,41 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                 <p className="mt-3 text-sm text-muted-foreground">Upgrades and add-ons do not grant admission on their own.</p>
               </section>
             </div>
+            <section aria-labelledby="visitor-faq-title" className="rounded-xl border bg-card p-5">
+              <h3 id="visitor-faq-title" className="text-lg font-bold">Frequently asked questions</h3>
+              <div className="mt-3 divide-y">
+                <details className="py-3">
+                  <summary className="cursor-pointer font-medium">When is the festival?</summary>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {new Date(f.startsAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} to {new Date(f.endsAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} in {f.city}, {f.country}.
+                  </p>
+                </details>
+                <details className="py-3">
+                  <summary className="cursor-pointer font-medium">Where can I find the running order?</summary>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {f.timetable.length ? "Published performance times are available in the Timetable tab." : "The running order has not been published yet. Check the Timetable tab for updates."}
+                  </p>
+                </details>
+                <details className="py-3">
+                  <summary className="cursor-pointer font-medium">Does an upgrade or add-on include entry?</summary>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    No. You need a valid admission ticket to enter the festival. Check the Tickets tab for each product's access dates.
+                  </p>
+                </details>
+                <details className="py-3">
+                  <summary className="cursor-pointer font-medium">Is camping included?</summary>
+                  <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">
+                    {f.information.camping?.trim() || "Camping availability and eligibility have not been confirmed. Do not assume your ticket includes camping."}
+                  </p>
+                </details>
+                <details className="py-3">
+                  <summary className="cursor-pointer font-medium">What if the festival is cancelled?</summary>
+                  <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">
+                    {f.information.refundPolicy?.trim() || "Refund terms have not been published. Check your ticket conditions and the festival's official updates before making plans."}
+                  </p>
+                </details>
+              </div>
+            </section>
             <nav aria-label="Festival visitor guide" className="flex flex-wrap gap-2">
               {[
                 ["travel", "Getting here"], ["camping", "Camping"], ["accessibility", "Accessibility"],
