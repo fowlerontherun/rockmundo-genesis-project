@@ -6,7 +6,8 @@ import unittest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from phase1_body_contract import (  # noqa: E402
     ATTACHMENT_BONES, CORRECTIVES, CORRECTIVE_DRIVERS, DEFORM_BONES, POSES,
-    REGIONS, normalise_four, pose_corrective_weights, propose_missing_finger_weights,
+    REGIONS, audit_missing_finger_geometry, normalise_four, pose_corrective_weights,
+    propose_missing_finger_weights,
     region_from_weights, report_errors,
 )
 
@@ -75,6 +76,57 @@ class Phase1BodyContractTests(unittest.TestCase):
             self.assertEqual(len(weights), 2)
             self.assertAlmostEqual(sum(weights.values()), 1.)
             self.assertIn(next(iter(original[index])), weights)
+
+    def test_finger_diagnostic_distinguishes_real_skin_from_heat_collisions(self):
+        segments = {
+            f"{digit}{joint}.{side}": ((x, digit_index * .03, joint * .032),
+                                      (x, digit_index * .03, joint * .032 + .02))
+            for side, x in (("L", .36), ("R", -.36))
+            for digit_index, digit in enumerate(
+                ("Thumb", "Index", "Middle", "Ring", "Pinky"))
+            for joint in (1, 2, 3)
+        }
+        # A physically close skin vertex is already owned by a different
+        # finger due to initial bone-heat, so cannot be auto-transferred in
+        # an artist-preserving starter pass. Old diagnostics called it 70mm
+        # away by ignoring all bone-heat claimed source vertices.
+        measured = (.361, .06, .107)
+        audit = audit_missing_finger_geometry(
+            [measured], [{"Middle2.L": .9, "Hand.L": .1}], segments)
+        missed = audit["Middle3.L"]
+        self.assertLess(missed["nearestActualSourceMm"], 2)
+        self.assertEqual(missed["nearbyOtherFingerClaimedVertices"], 1)
+        self.assertEqual(missed["competingFingerGroups"], {"Middle2.L": 1})
+        self.assertEqual(missed["blocker"], "nearby-vertices-claimed-by-other-fingers")
+        self.assertFalse(missed["automaticProductionApproval"])
+        proposed, detail = propose_missing_finger_weights(
+            [measured], [{"Middle2.L": .9, "Hand.L": .1}], segments)
+        self.assertEqual(proposed, {})
+        self.assertEqual(detail["unpaintedJointGeometry"]["Middle3.L"]
+                         ["nearestUnclaimedSourceMm"], None)
+        self.assertEqual(detail["missingJointSourceEvidence"]["Middle3.L"]
+                         ["nearestActualSourceMm"], missed["nearestActualSourceMm"])
+
+    def test_finger_diagnostic_flags_no_real_skin_and_missing_local_hand(self):
+        segments = {
+            f"{digit}{joint}.{side}": ((x, digit_index * .03, joint * .032),
+                                      (x, digit_index * .03, joint * .032 + .02))
+            for side, x in (("L", .36), ("R", -.36))
+            for digit_index, digit in enumerate(
+                ("Thumb", "Index", "Middle", "Ring", "Pinky"))
+            for joint in (1, 2, 3)
+        }
+        sample = (.36, .06, .107)
+        audit = audit_missing_finger_geometry(
+            [sample], [{"Spine2": 1.}], segments)
+        self.assertEqual(audit["Middle3.L"]["blocker"],
+                         "no-nearby-existing-same-side-hand-weight")
+        distant = audit_missing_finger_geometry(
+            [(0, 0, 0)], [{"Spine2": 1.}], segments)
+        self.assertEqual(distant["Middle3.L"]["blocker"],
+                         "guide-floats-far-from-source-skin")
+        with self.assertRaisesRegex(ValueError, "complete 30-joint"):
+            audit_missing_finger_geometry([sample], [{"Hand.L": 1.}], {})
 
     def test_proposals_never_invent_hand_skin_or_replace_existing_fingers(self):
         segments = {}
