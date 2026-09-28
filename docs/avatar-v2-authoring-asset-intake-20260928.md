@@ -20,3 +20,7 @@ The four Punk blockouts deliberately contain separately editable rigid details. 
 5. Review each item independently in the admin migration queue. Preserve all original item IDs, variants, inventory and bonuses. Keep V1 fallback until full-outfit V2 compatibility is proven.
 
 The archives are delivered as conversation downloads, **not committed binary assets**. A GitHub text-file commit does not constitute a binary import.
+
+## Local GLB integrity check (28 September 2026)
+
+All **15** artist-start GLBs across the four packs were individually loaded as 3D scenes using `trimesh` (4 tees, 3 denim, 4 footwear, 4 Punk). All 15 loaded. This verifies only GLB parseability; it **does not** verify rigging, UVs, PBR materials, animation fit, body frames, production LODs or in-game render quality. The generated local `rockmundo_v2_asset_qa_report.md` records per-model geometry counts and is delivered separately to the project owner. Binary import remains pending.
