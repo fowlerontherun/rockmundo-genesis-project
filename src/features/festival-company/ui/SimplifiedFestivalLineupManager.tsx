@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { billingPositions, type FestivalArtistOffer } from "../domain/festivalArtistProgramme";
@@ -86,6 +87,18 @@ export function SimplifiedFestivalLineupManager({
   const [search, setSearch] = useState("");
   const [feeInputs, setFeeInputs] = useState<Record<string, string>>({});
   const [billingInputs, setBillingInputs] = useState<Record<string, typeof billingPositions[number]>>({});
+  const queryClient = useQueryClient();
+  const changeBilling = useMutation({
+    mutationFn: async ({ bookingId, position }: { bookingId: string; position: typeof billingPositions[number] }) => {
+      const { error } = await (supabase as any).rpc("update_festival_booking_billing", { p_booking_id: bookingId, p_position: position });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["festival-artist-programme"] });
+      toast.success("Festival billing position updated");
+    },
+    onError: (error: Error) => toast.error(`Could not change billing: ${error.message}`),
+  });
   const bandIds = [...new Set([...data.applications, ...data.invitations, ...data.offers, ...data.bookings]
     .filter((entry) => entry.identity.type === "band")
     .map((entry) => entry.identity.type === "band" ? entry.identity.bandId : ""))];
@@ -594,6 +607,14 @@ export function SimplifiedFestivalLineupManager({
                     )}{" "}
                     committed · {booking.setMinutes} minute set · {billingLabel(booking.billingPosition)}
                   </p>
+                  {["confirmed", "awaiting_schedule"].includes(booking.status) && data.canWrite ? (
+                    <div className="mt-2 max-w-52">
+                      <Select value={booking.billingPosition} disabled={changeBilling.isPending} onValueChange={(position) => changeBilling.mutate({ bookingId: booking.id, position: position as typeof billingPositions[number] })}>
+                        <SelectTrigger aria-label={`Billing position for ${nameFor(booking.identity)}`}><SelectValue /></SelectTrigger>
+                        <SelectContent>{billingPositions.map((position) => <SelectItem key={position} value={position} className="capitalize">{billingLabel(position)}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                  ) : null}
                 </div>
               ))
             )}
