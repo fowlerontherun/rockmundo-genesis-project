@@ -158,7 +158,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
             <div className="flex flex-wrap gap-2">
               <Badge>{eventPhaseLabel}</Badge>
               <Badge variant="outline" className="border-white/50 text-white">
-                Ticket sales: {eventPhase === "ended" ? "closed" : f.launchStatus.replaceAll("_", " ")}
+                Ticket sales: {eventPhase === "dates_ended" ? "closed" : f.launchStatus.replaceAll("_", " ")}
               </Badge>
             </div>
             <h1 className="mt-4 text-4xl font-black md:text-7xl">{f.name}</h1>
@@ -429,8 +429,8 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
               </Card>
             )}
 
-            {eventPhase === "ended" && <p role="status" className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">This festival has ended. Ticket purchases are closed; existing tickets remain available in your wallet.</p>}
-            {eventPhase !== "ended" && f.launchStatus !== "tickets_on_sale" && <p role="status" className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">Ticket sales are not currently open. You can still review ticket types and any tickets in your wallet.</p>}
+            {eventPhase === "dates_ended" && <p role="status" className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">This festival has ended. Ticket purchases are closed; existing tickets remain available in your wallet.</p>}
+            {eventPhase !== "dates_ended" && f.launchStatus !== "tickets_on_sale" && <p role="status" className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">Ticket sales are not currently open. You can still review ticket types and any tickets in your wallet.</p>}
             <section className="grid gap-4 md:grid-cols-2">
               {f.ticketProducts.map((p) => (
                 <Card key={p.id}>
@@ -452,15 +452,15 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                         min={1}
                         max={Math.min(p.purchaseLimit, p.availableQuantity)}
                         value={quantities[p.id] ?? 1}
-                        disabled={eventPhase === "ended" || f.launchStatus !== "tickets_on_sale" || p.availableQuantity === 0}
+                        disabled={eventPhase === "dates_ended" || f.launchStatus !== "tickets_on_sale" || p.availableQuantity === 0}
                         onChange={(e) => setQuantities((previous) => ({ ...previous, [p.id]: Number(e.target.value) }))}
                       />
                     </label>
-                    {!user && eventPhase !== "ended" && f.launchStatus === "tickets_on_sale" && p.availableQuantity > 0 && (
+                    {!user && eventPhase !== "dates_ended" && f.launchStatus === "tickets_on_sale" && p.availableQuantity > 0 && (
                       <Button asChild variant="outline"><Link to="/auth">Sign in to purchase</Link></Button>
                     )}
                     {user && <Button
-                      disabled={buy.isPending || eventPhase === "ended" || p.availableQuantity === 0 || f.launchStatus !== "tickets_on_sale" || !Number.isSafeInteger(quantities[p.id] ?? 1) || (quantities[p.id] ?? 1) < 1 || (quantities[p.id] ?? 1) > Math.min(p.purchaseLimit, p.availableQuantity)}
+                      disabled={buy.isPending || eventPhase === "dates_ended" || p.availableQuantity === 0 || f.launchStatus !== "tickets_on_sale" || !Number.isSafeInteger(quantities[p.id] ?? 1) || (quantities[p.id] ?? 1) < 1 || (quantities[p.id] ?? 1) > Math.min(p.purchaseLimit, p.availableQuantity)}
                       onClick={() => {
                         buy.reset();
                         setActivePurchaseProductId(p.id);
@@ -472,7 +472,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                         });
                       }}
                     >
-                      {buy.isPending && activePurchaseProductId === p.id ? "Completing purchase…" : eventPhase === "ended" ? "Festival ended" : p.availableQuantity === 0 ? "Sold out" : f.launchStatus !== "tickets_on_sale" ? "Sales unavailable" : "Confirm purchase"}
+                      {buy.isPending && activePurchaseProductId === p.id ? "Completing purchase…" : eventPhase === "dates_ended" ? "Festival ended" : p.availableQuantity === 0 ? "Sold out" : f.launchStatus !== "tickets_on_sale" ? "Sales unavailable" : "Confirm purchase"}
                     </Button>}
                     {buy.isError && activePurchaseProductId === p.id && <p role="alert">{buy.error.message.replaceAll("_", " ")}</p>}
                     {buy.isSuccess && activePurchaseProductId === p.id && (
@@ -497,7 +497,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                   <div><dt className="text-muted-foreground">Location</dt><dd className="font-medium">{[f.city, f.country].filter(Boolean).join(", ")}</dd></div>
                   <div><dt className="text-muted-foreground">Dates</dt><dd className="font-medium">{new Date(f.startsAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} – {new Date(f.endsAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</dd></div>
                   <div><dt className="text-muted-foreground">Festival style</dt><dd className="font-medium">{f.festivalType || "Not yet confirmed"}</dd></div>
-                  <div><dt className="text-muted-foreground">Ticket sales</dt><dd className="font-medium">{f.launchStatus === "tickets_on_sale" ? "On sale" : eventPhase === "ended" ? "Festival ended" : "Not currently on sale"}</dd></div>
+                  <div><dt className="text-muted-foreground">Ticket sales</dt><dd className="font-medium">{f.launchStatus === "tickets_on_sale" ? "On sale" : eventPhase === "dates_ended" ? "Festival ended" : "Not currently on sale"}</dd></div>
                 </dl>
               </div>
             </header>
