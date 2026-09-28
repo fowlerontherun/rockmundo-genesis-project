@@ -44,16 +44,16 @@ describe("FestivalCanonicalBrandPicker", () => {
     render(<FestivalCanonicalBrandPicker festivalCompanyId={COMPANY_ID} />);
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     expect(useFestivalCanonicalBrands).toHaveBeenLastCalledWith(COMPANY_ID, "", "", "asc", 1);
-    fireEvent.click(screen.getByRole("button", { name: "B", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: /^B$/ }));
     expect(useFestivalCanonicalBrands).toHaveBeenLastCalledWith(COMPANY_ID, "", "B", "asc", 0);
-    expect(screen.getByRole("button", { name: "B", exact: true }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: /^B$/ }).getAttribute("aria-pressed")).toBe("true");
     fireEvent.change(screen.getByLabelText("Sort"), { target: { value: "desc" } });
     expect(useFestivalCanonicalBrands).toHaveBeenLastCalledWith(COMPANY_ID, "", "B", "desc", 0);
   });
 
   it("keeps search and letter filtering together", () => {
     render(<FestivalCanonicalBrandPicker festivalCompanyId={COMPANY_ID} />);
-    fireEvent.click(screen.getByRole("button", { name: "A", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: /^A$/ }));
     fireEvent.change(screen.getByPlaceholderText("Brand name or category"), { target: { value: "audio" } });
     fireEvent.click(screen.getByRole("button", { name: "Search brands" }));
     expect(useFestivalCanonicalBrands).toHaveBeenLastCalledWith(COMPANY_ID, "audio", "A", "asc", 0);
