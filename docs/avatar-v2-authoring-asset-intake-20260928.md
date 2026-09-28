@@ -28,3 +28,7 @@ All **15** artist-start GLBs across the four packs were individually loaded as 3
 ## Combined handoff bundle
 
 A local `rockmundo_v2_authoring_import_bundle.zip` combines all four packs, with 15 source GLBs and 38 total source/reference/manifest files. The bundle includes `CHECKSUMS.json` and `verify_bundle.py`; all 38 checksums were verified locally. To import, extract it into a local checkout and copy the contained `assets/` folder into `art-source/avatar-v2/` **only**. The bundle is supplied separately to the owner, not committed to GitHub by this text-only update. Do not route the blockouts into production `public/avatar-v2/clothing/`.
+
+## Local import staging
+
+The complete bundle has now been extracted and checksum-verified into the repository-relative layout `art-source/avatar-v2/{tee,denim,footwear,punk}/` in a downloadable local staging directory (38 files, including 15 GLBs). This is **not yet a GitHub commit**: the connected GitHub text actions cannot ingest the local binary bundle directly and the working container cannot reach GitHub over the network. The owner can apply the staging archive to a checkout and commit the 38 source files. Keep this staging path distinct from the production public asset path.
