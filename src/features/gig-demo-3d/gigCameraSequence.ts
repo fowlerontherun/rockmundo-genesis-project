@@ -11,12 +11,12 @@ export const GIG_CAMERA_SHOT_SECONDS = 9;
 
 const STANDARD_SHOTS = [
   'front', 'side_pit', 'guitar', 'band_medium', 'drums',
-  'lead_close', 'side_stage', 'crane',
+  'lead_close', 'side_stage', 'crane', 'bass_close', 'backline_reverse',
 ] as const satisfies readonly CameraShot[];
 
 const LARGE_VENUE_SHOTS = [
-  'front', 'lead_close', 'side_pit', 'guitar', 'crane',
-  'lead_close', 'drums', 'band_medium', 'side_stage', 'lead_close',
+  'front', 'lead_close', 'side_pit', 'bass_close', 'crane',
+  'lead_close', 'drums', 'band_medium', 'backline_reverse', 'side_stage', 'lead_close', 'guitar',
 ] as const satisfies readonly CameraShot[];
 
 export function directGigCamera(
