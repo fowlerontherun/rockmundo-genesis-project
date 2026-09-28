@@ -61,8 +61,23 @@ class StructuralSkinGateTests(unittest.TestCase):
     def test_out_of_range_joint_rejected(self):
         doc = self.valid()
         doc["skins"][0]["joints"].append(999)
-        with self.assertRaisesRegex(ValueError, "No single skin"):
+        with self.assertRaisesRegex(ValueError, "No valid skin"):
             gate.inspect(self.write(doc))
+
+    def test_garment_subset_accepted_but_body_rejected(self):
+        doc = self.valid()
+        doc["skins"][0]["joints"] = [0]
+        doc["nodes"][0]["name"] = "Hips"
+        self.assertEqual(gate.inspect(self.write(doc), garment=True)["skinned_primitives"], 1)
+        with self.assertRaisesRegex(ValueError, "No valid skin"):
+            gate.inspect(self.path)
+
+    def test_garment_unknown_joint_rejected(self):
+        doc = self.valid()
+        doc["skins"][0]["joints"] = [0]
+        doc["nodes"][0]["name"] = "not_a_runtime_bone"
+        with self.assertRaisesRegex(ValueError, "No valid skin"):
+            gate.inspect(self.write(doc), garment=True)
 
     def test_integer_weights_must_be_normalized(self):
         doc = self.valid()
