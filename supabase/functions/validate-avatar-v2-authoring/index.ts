@@ -22,21 +22,16 @@ serve(async req => {
     if (!auth) return respond({ error: 'Authentication required' }, 401);
     const url = Deno.env.get('SUPABASE_URL')!;
     const anon = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const userClient = createClient(url, anon, { global: { headers: { Authorization: auth } } });
     const { data: identity, error: identityError } = await userClient.auth.getUser();
     if (identityError || !identity.user) return respond({ error: 'Authentication required' }, 401);
-    const { data: isAdmin, error: roleError } = await userClient.rpc('has_role', {
-      _user_id: identity.user.id, _role: 'admin',
-    });
-    if (roleError || isAdmin !== true) return respond({ error: 'Admin access required' }, 403);
     const { key } = await req.json();
     if (typeof key !== 'string' || !/^incoming\/[a-f0-9-]{36}-[a-zA-Z0-9._-]+\.zip$/.test(key)) {
       return respond({ error: 'Invalid intake archive key' }, 400);
     }
-    const storage = createClient(url, service);
-    const { data: blob, error: downloadError } = await storage.storage.from(BUCKET).download(key);
-    if (downloadError || !blob) return respond({ error: 'Archive not found' }, 404);
+    // The bucket's SELECT policy is admin-only; use the caller's JWT, never service-role bypass.
+    const { data: blob, error: downloadError } = await userClient.storage.from(BUCKET).download(key);
+    if (downloadError || !blob) return respond({ error: 'Archive not found or admin access denied' }, 403);
     if (blob.size > 50 * 1024 * 1024) return respond({ error: 'Archive exceeds 50 MB' }, 400);
     const zip = unzipSync(new Uint8Array(await blob.arrayBuffer()));
     const names = Object.keys(zip).filter(name => !name.endsWith('/'));
