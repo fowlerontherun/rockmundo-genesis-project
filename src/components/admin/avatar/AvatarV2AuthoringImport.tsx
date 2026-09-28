@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Archive, UploadCloud } from 'lucide-react';
+import { Archive, Download, UploadCloud } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,8 @@ const MAX_BYTES = 50 * 1024 * 1024;
 export function AvatarV2AuthoringImport() {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [digest, setDigest] = useState<string | null>(null);
+  const [opening, setOpening] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { data: archives = [], isLoading } = useQuery({
     queryKey: ['admin-avatar-v2-authoring-archives'],
@@ -25,6 +27,33 @@ export function AvatarV2AuthoringImport() {
       return data.filter(item => item.name.toLowerCase().endsWith('.zip'));
     },
   });
+
+  async function chooseFile(next: File | null) {
+    setFile(next);
+    setDigest(null);
+    if (!next || next.size > MAX_BYTES) return;
+    try {
+      const bytes = await next.arrayBuffer();
+      const hash = await crypto.subtle.digest('SHA-256', bytes);
+      setDigest(Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, '0')).join(''));
+    } catch {
+      toast.error('Could not calculate the archive checksum.');
+    }
+  }
+
+  async function downloadArchive(name: string) {
+    setOpening(name);
+    try {
+      const { data, error } = await supabase.storage.from(BUCKET)
+        .createSignedUrl(`incoming/${name}`, 60, { download: name });
+      if (error) throw error;
+      window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not open archive');
+    } finally {
+      setOpening(null);
+    }
+  }
 
   async function upload() {
     if (!file || uploading) return;
@@ -45,6 +74,7 @@ export function AvatarV2AuthoringImport() {
       });
       if (error) throw error;
       setFile(null);
+      setDigest(null);
       await queryClient.invalidateQueries({ queryKey: ['admin-avatar-v2-authoring-archives'] });
       toast.success('Archive uploaded to private authoring intake. Not published to the game.');
     } catch (error) {
@@ -67,19 +97,19 @@ export function AvatarV2AuthoringImport() {
         <div className="flex flex-wrap items-center gap-3">
           <Input aria-label="Choose Avatar V2 authoring ZIP" type="file" accept=".zip,application/zip"
             className="max-w-md" disabled={uploading}
-            onChange={event => setFile(event.target.files?.[0] ?? null)} />
+            onChange={event => void chooseFile(event.target.files?.[0] ?? null)} />
           <Button disabled={!file || uploading} onClick={upload}>
             <UploadCloud className="mr-2 h-4 w-4" />
             {uploading ? 'Uploading…' : 'Upload authoring ZIP'}
           </Button>
         </div>
-        {file && <p className="text-sm text-muted-foreground">Selected: {file.name} ({(file.size / 1048576).toFixed(1)} MB)</p>}
+        {file && <div className="space-y-1 text-sm text-muted-foreground"><p>Selected: {file.name} ({(file.size / 1048576).toFixed(1)} MB)</p>{digest && <p className="break-all font-mono text-xs">Local SHA-256: {digest}</p>}</div>}
         <div className="space-y-2">
           <p className="font-medium">Uploaded archives {isLoading ? '(loading)' : `(${archives.length})`}</p>
           {archives.map(archive => (
             <div key={archive.name} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3 text-sm">
               <span className="break-all">{archive.name}</span>
-              <Badge variant="secondary">Awaiting asset review</Badge>
+              <div className="flex items-center gap-2"><Badge variant="secondary">Awaiting asset review</Badge><Button size="sm" variant="outline" disabled={opening === archive.name} onClick={() => void downloadArchive(archive.name)}><Download className="mr-1 h-4 w-4" /> Download</Button></div>
             </div>
           ))}
           {!isLoading && !archives.length && <p className="text-sm text-muted-foreground">No archives uploaded yet.</p>}
