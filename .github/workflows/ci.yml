@@ -35,8 +35,14 @@ jobs:
         run: npm run verify:totp-migration-timestamps
       - name: Verify Avatar V2 Blender helpers
         run: npm run verify:avatar-v2-blender-scripts
+      - name: Test Avatar V2 binary GLB skinning and malformed exports
+        run: python3 -m unittest discover -s scripts/avatar-v2/tests -p test_verify_skinned_glb.py -v
       - name: Verify Avatar V2 asset contract
         run: npm run validate:avatar-v2
+      - name: Verify Avatar V2 binary production manifest and signed QA evidence
+        run: python3 scripts/avatar-v2/validate_production_glbs.py
+      - name: Test production asset quarantine and status promotion rules
+        run: python3 -m unittest discover -s scripts/avatar-v2/tests -p test_validate_production_glbs.py -v
       - name: Avatar V2 regression tests
         run: npm run test:avatar-v2
       - name: Typecheck

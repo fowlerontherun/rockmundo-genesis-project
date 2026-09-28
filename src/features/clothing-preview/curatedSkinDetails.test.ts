@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as T from 'three';
 import { addCuratedSkinDetails } from './curatedSkinDetails';
+import type { ResolvedEquippedClothing } from './equippedClothing';
 
 function bones() {
   const map = new Map<string, T.Bone>();
@@ -61,7 +62,7 @@ function clothing(keys: string[]) {
       curated_asset_status: 'published',
     },
     variant: undefined,
-  })) as any;
+  })) as unknown as ResolvedEquippedClothing[];
 }
 
 describe('curated punk detail skins', () => {

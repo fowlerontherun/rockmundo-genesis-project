@@ -29,7 +29,7 @@ async function loadAllDemoSongs(): Promise<DemoSong[]> {
   const pageSize = 1000;
   const rows: DemoSong[] = [];
   for (let from = 0; ; from += pageSize) {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('songs')
       .select('id,title,audio_url,extended_audio_url,audio_generation_status,duration_seconds')
       .or('archived.is.null,archived.eq.false')

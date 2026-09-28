@@ -1,6 +1,6 @@
 import * as T from 'three';
 import { describe, expect, it } from 'vitest';
-import type { ClothingItem } from '@/hooks/useSkinStore';
+import type { ClothingDetailLayer, ClothingItem } from '@/hooks/useSkinStore';
 import { buildProceduralGarment, disposeProceduralGarment } from './proceduralGarmentRenderer';
 import { isCompositeSurfaceLayer } from './garmentSurfaceTextures';
 
@@ -26,6 +26,10 @@ function item(category: string, wearableSlot: string, garment: Record<string, un
     pattern_config: { type: 'solid' },
     detail_layers: [],
   } as ClothingItem;
+}
+
+function detail(type: ClothingDetailLayer['type']): ClothingDetailLayer {
+  return { id: 'layer', type, name: type, zone: 'main', color: '#ffffff' };
 }
 
 function anchors(clothing: ClothingItem) {
@@ -61,7 +65,7 @@ describe('procedural garment stage rig anchors', () => {
       opacity: 100,
       offsetX: 0,
       offsetY: 0,
-    }] as any;
+    }];
     const garment = buildProceduralGarment(clothing);
     const detail = garment.children[garment.children.length - 1] as T.Mesh;
     detail.geometry.computeBoundingBox();
@@ -73,18 +77,18 @@ describe('procedural garment stage rig anchors', () => {
   });
 
   it('classifies printable artwork separately from structural garment details', () => {
-    expect(isCompositeSurfaceLayer({ type: 'text' } as any)).toBe(true);
-    expect(isCompositeSurfaceLayer({ type: 'graphic' } as any)).toBe(true);
-    expect(isCompositeSurfaceLayer({ type: 'badge' } as any)).toBe(true);
-    expect(isCompositeSurfaceLayer({ type: 'zip' } as any)).toBe(false);
-    expect(isCompositeSurfaceLayer({ type: 'studs' } as any)).toBe(false);
+    expect(isCompositeSurfaceLayer({ type: 'text' } as ClothingDetailLayer)).toBe(true);
+    expect(isCompositeSurfaceLayer({ type: 'graphic' } as ClothingDetailLayer)).toBe(true);
+    expect(isCompositeSurfaceLayer({ type: 'badge' } as ClothingDetailLayer)).toBe(true);
+    expect(isCompositeSurfaceLayer({ type: 'zip' } as ClothingDetailLayer)).toBe(false);
+    expect(isCompositeSurfaceLayer({ type: 'studs' } as ClothingDetailLayer)).toBe(false);
   });
 
   it('keeps structural details as geometry while compositing flat artwork', () => {
     const clothing = item('jacket', 'top', { sleeve: 'long', closure: 'zip' });
     clothing.detail_layers = [
       { id: 'zip-1', type: 'zip', name: 'Side zip', zone: 'trim', color: '#cccccc', scale: 100, rotation: 0, opacity: 100, offsetX: 20, offsetY: 0, surface: 'front' },
-    ] as any;
+    ];
     const garment = buildProceduralGarment(clothing);
     const structural = garment.children.filter(child => child instanceof T.Mesh && child.userData.rigAnchor === 'Torso');
     expect(structural.length).toBeGreaterThan(1);
@@ -107,7 +111,7 @@ describe('procedural garment stage rig anchors', () => {
       surface: 'left-sleeve',
       widthScale: 100,
       heightScale: 100,
-    }] as any;
+    }];
     const garment = buildProceduralGarment(clothing);
     const detail = garment.children[garment.children.length - 1] as T.Mesh;
     expect(detail.userData.rigAnchor).toBe('UpperArm.L');
@@ -131,7 +135,7 @@ describe('procedural garment stage rig anchors', () => {
       surface: 'back',
       widthScale: 100,
       heightScale: 100,
-    }] as any;
+    }];
     const garment = buildProceduralGarment(clothing);
     const detail = garment.children[garment.children.length - 1] as T.Mesh;
     expect(detail.position.z).toBeLessThan(0);
