@@ -128,7 +128,7 @@ function safeAssetPath(value: unknown) {
   if (typeof value !== 'string') return undefined;
   const file = value.replace(/^\/+/, '');
   if (!/^avatar-v2\/clothing\/[a-z0-9._/-]+\.glb$/i.test(file)) return undefined;
-  if (file.includes('..')) return undefined;
+  if (file.split('/').some(segment => segment === '.' || segment === '..')) return undefined;
   return file;
 }
 
@@ -146,7 +146,7 @@ export function avatarV2GarmentConfig(item: ClothingItem): AvatarV2GarmentConfig
   const garment = record(item.garment_config);
   const source = record(garment.avatarV2);
   if (!Object.keys(source).length) return null;
-  if (source.version != null && source.version !== 1) return null;
+  if (source.version !== 1) return null;
 
   const status = String(source.status || 'planned') as AvatarV2GarmentStatus;
   if (!STATUSES.has(status)) return null;
