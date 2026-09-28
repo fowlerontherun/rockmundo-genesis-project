@@ -9,6 +9,9 @@ describe("festival setlist approval transition safeguards", () => {
     const transitions = hooks.slice(hooks.indexOf("export function useFestivalSetlist("), hooks.indexOf("export function useFestivalRepresentedBands("));
     expect(transitions).toContain("festivalBookingKeys.contracts(undefined, contractId)");
     expect(transitions).toContain("festivalBookingKeys.setlist(contractId)");
+    expect(transitions).toContain('"band-workspace"');
+    expect(transitions).toContain('"organiser-workspace"');
+    expect(transitions).not.toContain('queryKey: festivalBookingKeys.root, refetchType: "active"');
     for (const action of ["saveDraft", "submitSetlist", "reviewSetlist", "lockSetlist"]) {
       expect(transitions).toMatch(new RegExp(action + ":[\\s\\S]*?onSuccess: invalidateSetlist"));
     }
