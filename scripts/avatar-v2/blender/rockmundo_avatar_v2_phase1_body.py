@@ -135,6 +135,13 @@ def twist_seed_and_normalise(body, rig):
             a = rig.matrix_world @ rig.data.bones[f"{base}.{side}"].head_local
             b = rig.matrix_world @ rig.data.bones[f"{base}.{side}"].tail_local
             segments.append((f"{base}.{side}", f"{helper}.{side}", a, b - a, radius))
+    # Real eyeballs have their OWN eye-bone skin. Bone-heat can otherwise
+    # incorrectly attach nearby face vertices to Eye.L/R; reject that bleed
+    # rather than exporting extra hidden influences into a four-weight body.
+    for eye_name in ("Eye.L", "Eye.R"):
+        leaked = body.vertex_groups.get(eye_name)
+        if leaked:
+            body.vertex_groups.remove(leaked)
     for v in body.data.vertices:
         weights = vertex_weights(body, v, set(DEFORM_BONES))
         position = body.matrix_world @ v.co
@@ -295,6 +302,7 @@ def set_pose(rig, spec):
 
 
 def assess_poses(body, rig):
+    set_pose(rig, {})
     before = mesh_world_positions(body)
     vertex_samples = {}
     for name in {bone for names in SENTINELS.values() for bone in names}:
@@ -307,7 +315,8 @@ def assess_poses(body, rig):
         for pose, spec in POSES.items():
             set_pose(rig, spec)
             after = mesh_world_positions(body)
-            if any(not all(math.isfinite(p) for p in xyz) for xyz in after for p in xyz):
+            if any(not all(math.isfinite(coordinate) for coordinate in position)
+                   for position in after):
                 raise RuntimeError(f"Non-finite deformed geometry in {pose}")
             per_bone = {}
             for bone in SENTINELS[pose]:
