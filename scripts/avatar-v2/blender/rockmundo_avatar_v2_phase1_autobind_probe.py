@@ -16,11 +16,14 @@ import sys
 import traceback
 
 import bpy
+from mathutils import Vector
 
 ROOT = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT.parent))
-from phase1_body_contract import DIGITS, DEFORM_BONES, propose_missing_finger_weights  # noqa: E402
+from phase1_body_contract import (DIGITS, DEFORM_BONES,
+                                  propose_missing_finger_weights,
+                                  missing_finger_review_hints)  # noqa: E402
 from rockmundo_avatar_v2_phase1_body import (  # noqa: E402
     ARMATURE, POSES, assign_eight_skin_regions, audit_weights, bind_original_eyes,
     candidate_export, drive_correctives, mesh_world_positions,
@@ -91,6 +94,43 @@ try:
     finger_geometry["proposalsApplied"] = False
     finger_geometry["unfittedGuidesNotArtistReviewed"] = True
     report["diagnosticFingerGeometry"] = finger_geometry
+    # Make genuine source-surface locations inspectable in the ARTIST's
+    # experimental .blend viewport. Nearest skin may belong to the WRONG
+    # finger; never move a bone, overwrite a fit handle, or claim approval.
+    hints = missing_finger_review_hints(surface, paint, segments)
+    hint_collection = bpy.data.collections.get("RMV2_Phase1FingerReviewHints")
+    if hint_collection and hint_collection.objects:
+        raise RuntimeError("Refusing to overwrite prior artist finger annotations")
+    if not hint_collection:
+        hint_collection = bpy.data.collections.new("RMV2_Phase1FingerReviewHints")
+        bpy.context.scene.collection.children.link(hint_collection)
+    hint_collection.hide_render = True
+    hint_collection.hide_viewport = False
+    for name, data in hints.items():
+        marker = bpy.data.objects.new(f"RMV2_UNAPPROVED_FINGER_HINT__{name}", None)
+        hint_collection.objects.link(marker)
+        marker.empty_display_type = "SPHERE"
+        marker.empty_display_size = .006
+        marker.show_name = True
+        marker.show_in_front = True
+        marker.color = ((1.0, .22, .15, 1.) if data["possibleWrongFingerSurface"]
+                        else (.05, .87, .95, 1.))
+        marker.location = Vector(data["actualSourceSurfacePosition"])
+        marker["rockmundoSourceBoneForArtistToReview"] = name
+        marker["rockmundoActualSourceVertexIndex"] = data["nearestActualSourceVertexIndex"]
+        marker["rockmundoPossibleWrongDigitSurface"] = data["possibleWrongFingerSurface"]
+        marker["rockmundoArtistReviewed"] = False
+        marker["rockmundoProductionValidated"] = False
+    report["fingerFitReviewHints"] = hints
+    report["fingerFitHintCollection"] = hint_collection.name
+    notes = bpy.data.texts.get("ROCKMUNDO_PHASE1_MISSING_FINGERS") or bpy.data.texts.new(
+        "ROCKMUNDO_PHASE1_MISSING_FINGERS"
+    )
+    notes.clear()
+    notes.write("EXPERIMENTAL SOURCE SKIN HINTS ONLY, NOT REAL JOINT PIVOTS.\\n"
+                "Red markers are especially likely to point to the WRONG DIGIT.\\n"
+                "Independently snap actual anatomy handles and repaint before review.\\n"
+                + json.dumps(hints, indent=2, sort_keys=True))
     for name, evidence in finger_geometry["missingJointSourceEvidence"].items():
         print(f"[phase1/pilot] {args.frame} {name}: "
               f"actualSourceDistance={evidence['nearestActualSourceMm']}mm; "
