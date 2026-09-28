@@ -34,6 +34,8 @@ export function AvatarV2StagedModelViewer({ sha }: { sha: string }) {
   const [finish, setFinish] = useState('original');
   const [meshInfo, setMeshInfo] = useState('');
   const [readiness, setReadiness] = useState<string[]>([]);
+  const [referenceImages, setReferenceImages] = useState<Array<{ name: string; url: string }>>([]);
+  const [referenceMessage, setReferenceMessage] = useState('');
   const [meshAudit, setMeshAudit] = useState<{ meshes: number; textured: number; skinned: number; uvMapped: number; triangles: number; missingNormals: number } | null>(null);
   const captureRef = useRef<(() => void) | null>(null);
   const [message, setMessage] = useState('Loading private review models…');
@@ -64,6 +66,53 @@ export function AvatarV2StagedModelViewer({ sha }: { sha: string }) {
     void listModels();
     return () => { cancelled = true; };
   }, [sha]);
+
+  // The authoring ZIP contains separate reference PNGs. Show them alongside
+  // the actual embedded-material GLB; never silently pretend they are baked
+  // textures or apply unrelated UVs to a production garment.
+  useEffect(() => {
+    let cancelled = false;
+    const objectUrls: string[] = [];
+    setReferenceImages([]);
+    setReferenceMessage('');
+    if (!selected) return;
+    async function loadSidecarReferences() {
+      try {
+        const directory = selected.slice(0, selected.lastIndexOf('/'));
+        const base = (selected.split('/').pop() ?? '').replace(/\\.glb$/i, '').toLowerCase();
+        const { data, error } = await supabase.storage.from(BUCKET).list(directory, { limit: 100 });
+        if (error) throw error;
+        const allImages = (data ?? []).filter(file => /\\.(png|jpe?g)$/i.test(file.name));
+        const matched = allImages.filter(file => file.name.toLowerCase().includes(base));
+        const chosen = (matched.length ? matched : allImages).slice(0, 8);
+        const downloaded = await Promise.all(chosen.map(async file => {
+          const { data: blob, error: downloadError } = await supabase.storage.from(BUCKET)
+            .download(directory + '/' + file.name);
+          if (downloadError || !blob) throw downloadError ?? new Error('Could not open reference image');
+          return { name: file.name, blob };
+        }));
+        if (cancelled) return;
+        const images = downloaded.map(image => {
+          const url = URL.createObjectURL(image.blob);
+          objectUrls.push(url);
+          return { name: image.name, url };
+        });
+        setReferenceImages(images);
+        if (!images.length) {
+          setReferenceMessage('No separate reference images were found for this review folder.');
+        } else if (!matched.length) {
+          setReferenceMessage('Showing references from the same source pack; they may belong to other garments.');
+        }
+      } catch (error) {
+        if (!cancelled) setReferenceMessage(error instanceof Error ? error.message : 'Could not load source reference images');
+      }
+    }
+    void loadSidecarReferences();
+    return () => {
+      cancelled = true;
+      objectUrls.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [selected]);
 
   useEffect(() => {
     const host = mount.current;
@@ -211,6 +260,26 @@ export function AvatarV2StagedModelViewer({ sha }: { sha: string }) {
         aria-label="Interactive 3D model preview: drag to rotate, pinch to zoom" />
       {readiness.length > 0 && selected && <div className="rounded border border-amber-500/40 bg-amber-500/10 p-3 text-xs"><p className="font-semibold">Production readiness blockers</p><ul className="mt-1 list-disc space-y-1 pl-4">{readiness.map(reason => <li key={reason}>{reason}</li>)}</ul></div>}
       {meshInfo && selected && <p className="text-xs text-muted-foreground">{meshInfo}</p>}
+      <div className="rounded-md border p-3 text-xs">
+        <p className="font-semibold">Asset status: source-only · private artist review</p>
+        <p className="mt-1 text-muted-foreground">
+          This is actual uploaded GLB geometry. Original materials show only textures embedded in the GLB;
+          the separate reference pictures below are not automatically fitted or baked onto its UVs.
+          Experimental rigs are also unapproved. Candidate and validated status require distinct
+          fitted frame/LOD files, binary validation and independent visual QA.
+        </p>
+        {!!referenceImages.length && (
+          <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+            {referenceImages.map(image => (
+              <figure key={image.name} className="min-w-0">
+                <img src={image.url} alt={image.name + ' authoring reference'} className="aspect-square w-full rounded border object-contain" loading="lazy" />
+                <figcaption className="mt-1 break-all text-muted-foreground">{image.name}</figcaption>
+              </figure>
+            ))}
+          </div>
+        )}
+        {referenceMessage && <p role="status" className="mt-2 text-muted-foreground">{referenceMessage}</p>}
+      </div>
       {message && <p role="status" className="text-sm text-muted-foreground">{message}</p>}
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         <span>Drag to rotate · pinch or scroll to zoom</span>
