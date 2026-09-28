@@ -340,8 +340,10 @@ describe('Avatar V2 garments', () => {
         avatarV2: {
           version: 1,
           status: 'asset_ready',
-          frames: { masculine: { lod1: 'avatar-v2/clothing/masculine/test.glb' } },
+          frames: (item().garment_config as { avatarV2: { frames: unknown } }).avatarV2.frames,
           occludeBodyRegions: ['torso'],
+          colourMode: 'zones',
+          materialZones: { main: ['RMV2_Garment_Main'], trim: ['RMV2_Garment_Trim'] },
         },
       },
     });
