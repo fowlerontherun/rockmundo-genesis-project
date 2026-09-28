@@ -3,10 +3,22 @@
   "version": 1,
   "assetVersion": "v2-alpha-1",
   "budgets": {
-    "lod0": { "maxTriangles": 25000, "maxVertices": 32000 },
-    "lod1": { "maxTriangles": 14000, "maxVertices": 20000 },
-    "lod2": { "maxTriangles": 6500, "maxVertices": 9000 },
-    "lod3": { "maxTriangles": 3000, "maxVertices": 4500 }
+    "lod0": {
+      "maxTriangles": 25000,
+      "maxVertices": 32000
+    },
+    "lod1": {
+      "maxTriangles": 14000,
+      "maxVertices": 20000
+    },
+    "lod2": {
+      "maxTriangles": 6500,
+      "maxVertices": 9000
+    },
+    "lod3": {
+      "maxTriangles": 3000,
+      "maxVertices": 4500
+    }
   },
   "items": [
     {
@@ -14,20 +26,30 @@
       "name": "Rockmundo Logo Tee",
       "slot": "top",
       "status": "planned",
-      "occludeBodyRegions": ["torso"],
+      "occludeBodyRegions": [
+        "torso"
+      ],
       "colourMode": "zones",
       "materialZones": {
-        "main": ["RMV2_Garment_Main"],
-        "trim": ["RMV2_Garment_Trim"]
+        "main": [
+          "RMV2_Garment_Main"
+        ],
+        "trim": [
+          "RMV2_Garment_Trim"
+        ]
       },
       "frames": {
         "masculine": {
           "lod0": "avatar-v2/clothing/masculine/clothing.starter.logo-tee-lod0.glb",
-          "lod1": "avatar-v2/clothing/masculine/clothing.starter.logo-tee-lod1.glb"
+          "lod1": "avatar-v2/clothing/masculine/clothing.starter.logo-tee-lod1.glb",
+          "lod2": "avatar-v2/clothing/masculine/clothing.starter.logo-tee-lod2.glb",
+          "lod3": "avatar-v2/clothing/masculine/clothing.starter.logo-tee-lod3.glb"
         },
         "feminine": {
           "lod0": "avatar-v2/clothing/feminine/clothing.starter.logo-tee-lod0.glb",
-          "lod1": "avatar-v2/clothing/feminine/clothing.starter.logo-tee-lod1.glb"
+          "lod1": "avatar-v2/clothing/feminine/clothing.starter.logo-tee-lod1.glb",
+          "lod2": "avatar-v2/clothing/feminine/clothing.starter.logo-tee-lod2.glb",
+          "lod3": "avatar-v2/clothing/feminine/clothing.starter.logo-tee-lod3.glb"
         }
       }
     },
@@ -36,20 +58,32 @@
       "name": "Dark Slim Jeans",
       "slot": "bottom",
       "status": "planned",
-      "occludeBodyRegions": ["hips", "upper-legs", "lower-legs"],
+      "occludeBodyRegions": [
+        "hips",
+        "upper-legs",
+        "lower-legs"
+      ],
       "colourMode": "zones",
       "materialZones": {
-        "main": ["RMV2_Garment_Main"],
-        "trim": ["RMV2_Garment_Trim"]
+        "main": [
+          "RMV2_Garment_Main"
+        ],
+        "trim": [
+          "RMV2_Garment_Trim"
+        ]
       },
       "frames": {
         "masculine": {
           "lod0": "avatar-v2/clothing/masculine/clothing.starter.dark-slim-jeans-lod0.glb",
-          "lod1": "avatar-v2/clothing/masculine/clothing.starter.dark-slim-jeans-lod1.glb"
+          "lod1": "avatar-v2/clothing/masculine/clothing.starter.dark-slim-jeans-lod1.glb",
+          "lod2": "avatar-v2/clothing/masculine/clothing.starter.dark-slim-jeans-lod2.glb",
+          "lod3": "avatar-v2/clothing/masculine/clothing.starter.dark-slim-jeans-lod3.glb"
         },
         "feminine": {
           "lod0": "avatar-v2/clothing/feminine/clothing.starter.dark-slim-jeans-lod0.glb",
-          "lod1": "avatar-v2/clothing/feminine/clothing.starter.dark-slim-jeans-lod1.glb"
+          "lod1": "avatar-v2/clothing/feminine/clothing.starter.dark-slim-jeans-lod1.glb",
+          "lod2": "avatar-v2/clothing/feminine/clothing.starter.dark-slim-jeans-lod2.glb",
+          "lod3": "avatar-v2/clothing/feminine/clothing.starter.dark-slim-jeans-lod3.glb"
         }
       }
     },
@@ -58,20 +92,420 @@
       "name": "Black Boots",
       "slot": "footwear",
       "status": "planned",
-      "occludeBodyRegions": ["feet"],
+      "occludeBodyRegions": [
+        "feet"
+      ],
       "colourMode": "zones",
       "materialZones": {
-        "main": ["RMV2_Garment_Main"],
-        "trim": ["RMV2_Garment_Trim"]
+        "main": [
+          "RMV2_Garment_Main"
+        ],
+        "trim": [
+          "RMV2_Garment_Trim"
+        ]
       },
       "frames": {
         "masculine": {
           "lod0": "avatar-v2/clothing/masculine/clothing.starter.black-boots-lod0.glb",
-          "lod1": "avatar-v2/clothing/masculine/clothing.starter.black-boots-lod1.glb"
+          "lod1": "avatar-v2/clothing/masculine/clothing.starter.black-boots-lod1.glb",
+          "lod2": "avatar-v2/clothing/masculine/clothing.starter.black-boots-lod2.glb",
+          "lod3": "avatar-v2/clothing/masculine/clothing.starter.black-boots-lod3.glb"
         },
         "feminine": {
           "lod0": "avatar-v2/clothing/feminine/clothing.starter.black-boots-lod0.glb",
-          "lod1": "avatar-v2/clothing/feminine/clothing.starter.black-boots-lod1.glb"
+          "lod1": "avatar-v2/clothing/feminine/clothing.starter.black-boots-lod1.glb",
+          "lod2": "avatar-v2/clothing/feminine/clothing.starter.black-boots-lod2.glb",
+          "lod3": "avatar-v2/clothing/feminine/clothing.starter.black-boots-lod3.glb"
+        }
+      }
+    },
+    {
+      "itemKey": "clothing.starter.plain-black-tee",
+      "name": "Plain Black Tee",
+      "slot": "top",
+      "status": "planned",
+      "occludeBodyRegions": [
+        "torso"
+      ],
+      "colourMode": "zones",
+      "materialZones": {
+        "main": [
+          "RMV2_Garment_Main"
+        ],
+        "trim": [
+          "RMV2_Garment_Trim"
+        ]
+      },
+      "frames": {
+        "masculine": {
+          "lod0": "avatar-v2/clothing/masculine/clothing.starter.plain-black-tee-lod0.glb",
+          "lod1": "avatar-v2/clothing/masculine/clothing.starter.plain-black-tee-lod1.glb",
+          "lod2": "avatar-v2/clothing/masculine/clothing.starter.plain-black-tee-lod2.glb",
+          "lod3": "avatar-v2/clothing/masculine/clothing.starter.plain-black-tee-lod3.glb"
+        },
+        "feminine": {
+          "lod0": "avatar-v2/clothing/feminine/clothing.starter.plain-black-tee-lod0.glb",
+          "lod1": "avatar-v2/clothing/feminine/clothing.starter.plain-black-tee-lod1.glb",
+          "lod2": "avatar-v2/clothing/feminine/clothing.starter.plain-black-tee-lod2.glb",
+          "lod3": "avatar-v2/clothing/feminine/clothing.starter.plain-black-tee-lod3.glb"
+        }
+      }
+    },
+    {
+      "itemKey": "clothing.starter.plain-white-tee",
+      "name": "Plain White Tee",
+      "slot": "top",
+      "status": "planned",
+      "occludeBodyRegions": [
+        "torso"
+      ],
+      "colourMode": "zones",
+      "materialZones": {
+        "main": [
+          "RMV2_Garment_Main"
+        ],
+        "trim": [
+          "RMV2_Garment_Trim"
+        ]
+      },
+      "frames": {
+        "masculine": {
+          "lod0": "avatar-v2/clothing/masculine/clothing.starter.plain-white-tee-lod0.glb",
+          "lod1": "avatar-v2/clothing/masculine/clothing.starter.plain-white-tee-lod1.glb",
+          "lod2": "avatar-v2/clothing/masculine/clothing.starter.plain-white-tee-lod2.glb",
+          "lod3": "avatar-v2/clothing/masculine/clothing.starter.plain-white-tee-lod3.glb"
+        },
+        "feminine": {
+          "lod0": "avatar-v2/clothing/feminine/clothing.starter.plain-white-tee-lod0.glb",
+          "lod1": "avatar-v2/clothing/feminine/clothing.starter.plain-white-tee-lod1.glb",
+          "lod2": "avatar-v2/clothing/feminine/clothing.starter.plain-white-tee-lod2.glb",
+          "lod3": "avatar-v2/clothing/feminine/clothing.starter.plain-white-tee-lod3.glb"
+        }
+      }
+    },
+    {
+      "itemKey": "clothing.starter.vintage-charcoal-tee",
+      "name": "Vintage Charcoal Tee",
+      "slot": "top",
+      "status": "planned",
+      "occludeBodyRegions": [
+        "torso"
+      ],
+      "colourMode": "zones",
+      "materialZones": {
+        "main": [
+          "RMV2_Garment_Main"
+        ],
+        "trim": [
+          "RMV2_Garment_Trim"
+        ]
+      },
+      "frames": {
+        "masculine": {
+          "lod0": "avatar-v2/clothing/masculine/clothing.starter.vintage-charcoal-tee-lod0.glb",
+          "lod1": "avatar-v2/clothing/masculine/clothing.starter.vintage-charcoal-tee-lod1.glb",
+          "lod2": "avatar-v2/clothing/masculine/clothing.starter.vintage-charcoal-tee-lod2.glb",
+          "lod3": "avatar-v2/clothing/masculine/clothing.starter.vintage-charcoal-tee-lod3.glb"
+        },
+        "feminine": {
+          "lod0": "avatar-v2/clothing/feminine/clothing.starter.vintage-charcoal-tee-lod0.glb",
+          "lod1": "avatar-v2/clothing/feminine/clothing.starter.vintage-charcoal-tee-lod1.glb",
+          "lod2": "avatar-v2/clothing/feminine/clothing.starter.vintage-charcoal-tee-lod2.glb",
+          "lod3": "avatar-v2/clothing/feminine/clothing.starter.vintage-charcoal-tee-lod3.glb"
+        }
+      }
+    },
+    {
+      "itemKey": "clothing.starter.black-straight-jeans",
+      "name": "Black Straight Jeans",
+      "slot": "bottom",
+      "status": "planned",
+      "occludeBodyRegions": [
+        "hips",
+        "upper-legs",
+        "lower-legs"
+      ],
+      "colourMode": "zones",
+      "materialZones": {
+        "main": [
+          "RMV2_Garment_Main"
+        ],
+        "trim": [
+          "RMV2_Garment_Trim"
+        ]
+      },
+      "frames": {
+        "masculine": {
+          "lod0": "avatar-v2/clothing/masculine/clothing.starter.black-straight-jeans-lod0.glb",
+          "lod1": "avatar-v2/clothing/masculine/clothing.starter.black-straight-jeans-lod1.glb",
+          "lod2": "avatar-v2/clothing/masculine/clothing.starter.black-straight-jeans-lod2.glb",
+          "lod3": "avatar-v2/clothing/masculine/clothing.starter.black-straight-jeans-lod3.glb"
+        },
+        "feminine": {
+          "lod0": "avatar-v2/clothing/feminine/clothing.starter.black-straight-jeans-lod0.glb",
+          "lod1": "avatar-v2/clothing/feminine/clothing.starter.black-straight-jeans-lod1.glb",
+          "lod2": "avatar-v2/clothing/feminine/clothing.starter.black-straight-jeans-lod2.glb",
+          "lod3": "avatar-v2/clothing/feminine/clothing.starter.black-straight-jeans-lod3.glb"
+        }
+      }
+    },
+    {
+      "itemKey": "clothing.starter.blue-straight-jeans",
+      "name": "Blue Straight Jeans",
+      "slot": "bottom",
+      "status": "planned",
+      "occludeBodyRegions": [
+        "hips",
+        "upper-legs",
+        "lower-legs"
+      ],
+      "colourMode": "zones",
+      "materialZones": {
+        "main": [
+          "RMV2_Garment_Main"
+        ],
+        "trim": [
+          "RMV2_Garment_Trim"
+        ]
+      },
+      "frames": {
+        "masculine": {
+          "lod0": "avatar-v2/clothing/masculine/clothing.starter.blue-straight-jeans-lod0.glb",
+          "lod1": "avatar-v2/clothing/masculine/clothing.starter.blue-straight-jeans-lod1.glb",
+          "lod2": "avatar-v2/clothing/masculine/clothing.starter.blue-straight-jeans-lod2.glb",
+          "lod3": "avatar-v2/clothing/masculine/clothing.starter.blue-straight-jeans-lod3.glb"
+        },
+        "feminine": {
+          "lod0": "avatar-v2/clothing/feminine/clothing.starter.blue-straight-jeans-lod0.glb",
+          "lod1": "avatar-v2/clothing/feminine/clothing.starter.blue-straight-jeans-lod1.glb",
+          "lod2": "avatar-v2/clothing/feminine/clothing.starter.blue-straight-jeans-lod2.glb",
+          "lod3": "avatar-v2/clothing/feminine/clothing.starter.blue-straight-jeans-lod3.glb"
+        }
+      }
+    },
+    {
+      "itemKey": "clothing.starter.brown-boots",
+      "name": "Brown Boots",
+      "slot": "footwear",
+      "status": "planned",
+      "occludeBodyRegions": [
+        "feet"
+      ],
+      "colourMode": "zones",
+      "materialZones": {
+        "main": [
+          "RMV2_Garment_Main"
+        ],
+        "trim": [
+          "RMV2_Garment_Trim"
+        ]
+      },
+      "frames": {
+        "masculine": {
+          "lod0": "avatar-v2/clothing/masculine/clothing.starter.brown-boots-lod0.glb",
+          "lod1": "avatar-v2/clothing/masculine/clothing.starter.brown-boots-lod1.glb",
+          "lod2": "avatar-v2/clothing/masculine/clothing.starter.brown-boots-lod2.glb",
+          "lod3": "avatar-v2/clothing/masculine/clothing.starter.brown-boots-lod3.glb"
+        },
+        "feminine": {
+          "lod0": "avatar-v2/clothing/feminine/clothing.starter.brown-boots-lod0.glb",
+          "lod1": "avatar-v2/clothing/feminine/clothing.starter.brown-boots-lod1.glb",
+          "lod2": "avatar-v2/clothing/feminine/clothing.starter.brown-boots-lod2.glb",
+          "lod3": "avatar-v2/clothing/feminine/clothing.starter.brown-boots-lod3.glb"
+        }
+      }
+    },
+    {
+      "itemKey": "clothing.starter.canvas-trainers",
+      "name": "Canvas Trainers",
+      "slot": "footwear",
+      "status": "planned",
+      "occludeBodyRegions": [
+        "feet"
+      ],
+      "colourMode": "zones",
+      "materialZones": {
+        "main": [
+          "RMV2_Garment_Main"
+        ],
+        "trim": [
+          "RMV2_Garment_Trim"
+        ]
+      },
+      "frames": {
+        "masculine": {
+          "lod0": "avatar-v2/clothing/masculine/clothing.starter.canvas-trainers-lod0.glb",
+          "lod1": "avatar-v2/clothing/masculine/clothing.starter.canvas-trainers-lod1.glb",
+          "lod2": "avatar-v2/clothing/masculine/clothing.starter.canvas-trainers-lod2.glb",
+          "lod3": "avatar-v2/clothing/masculine/clothing.starter.canvas-trainers-lod3.glb"
+        },
+        "feminine": {
+          "lod0": "avatar-v2/clothing/feminine/clothing.starter.canvas-trainers-lod0.glb",
+          "lod1": "avatar-v2/clothing/feminine/clothing.starter.canvas-trainers-lod1.glb",
+          "lod2": "avatar-v2/clothing/feminine/clothing.starter.canvas-trainers-lod2.glb",
+          "lod3": "avatar-v2/clothing/feminine/clothing.starter.canvas-trainers-lod3.glb"
+        }
+      }
+    },
+    {
+      "itemKey": "clothing.punk.combat-boots",
+      "name": "Combat Boots",
+      "slot": "footwear",
+      "status": "planned",
+      "occludeBodyRegions": [
+        "feet"
+      ],
+      "colourMode": "zones",
+      "materialZones": {
+        "main": [
+          "RMV2_Garment_Main"
+        ],
+        "trim": [
+          "RMV2_Garment_Trim"
+        ]
+      },
+      "frames": {
+        "masculine": {
+          "lod0": "avatar-v2/clothing/masculine/clothing.punk.combat-boots-lod0.glb",
+          "lod1": "avatar-v2/clothing/masculine/clothing.punk.combat-boots-lod1.glb",
+          "lod2": "avatar-v2/clothing/masculine/clothing.punk.combat-boots-lod2.glb",
+          "lod3": "avatar-v2/clothing/masculine/clothing.punk.combat-boots-lod3.glb"
+        },
+        "feminine": {
+          "lod0": "avatar-v2/clothing/feminine/clothing.punk.combat-boots-lod0.glb",
+          "lod1": "avatar-v2/clothing/feminine/clothing.punk.combat-boots-lod1.glb",
+          "lod2": "avatar-v2/clothing/feminine/clothing.punk.combat-boots-lod2.glb",
+          "lod3": "avatar-v2/clothing/feminine/clothing.punk.combat-boots-lod3.glb"
+        }
+      }
+    },
+    {
+      "itemKey": "clothing.punk.double-eyelet-belt",
+      "name": "Double Eyelet Belt",
+      "slot": "accessory",
+      "status": "blocked",
+      "occludeBodyRegions": [
+        "hips"
+      ],
+      "colourMode": "zones",
+      "materialZones": {
+        "main": [
+          "RMV2_Garment_Main"
+        ],
+        "trim": [
+          "RMV2_Garment_Trim"
+        ]
+      },
+      "frames": {
+        "masculine": {
+          "lod0": "avatar-v2/clothing/masculine/clothing.punk.double-eyelet-belt-lod0.glb",
+          "lod1": "avatar-v2/clothing/masculine/clothing.punk.double-eyelet-belt-lod1.glb",
+          "lod2": "avatar-v2/clothing/masculine/clothing.punk.double-eyelet-belt-lod2.glb",
+          "lod3": "avatar-v2/clothing/masculine/clothing.punk.double-eyelet-belt-lod3.glb"
+        },
+        "feminine": {
+          "lod0": "avatar-v2/clothing/feminine/clothing.punk.double-eyelet-belt-lod0.glb",
+          "lod1": "avatar-v2/clothing/feminine/clothing.punk.double-eyelet-belt-lod1.glb",
+          "lod2": "avatar-v2/clothing/feminine/clothing.punk.double-eyelet-belt-lod2.glb",
+          "lod3": "avatar-v2/clothing/feminine/clothing.punk.double-eyelet-belt-lod3.glb"
+        }
+      }
+    },
+    {
+      "itemKey": "clothing.punk.patch-jacket",
+      "name": "Patch Jacket",
+      "slot": "top",
+      "status": "planned",
+      "occludeBodyRegions": [
+        "torso",
+        "upper-arms"
+      ],
+      "colourMode": "zones",
+      "materialZones": {
+        "main": [
+          "RMV2_Garment_Main"
+        ],
+        "trim": [
+          "RMV2_Garment_Trim"
+        ]
+      },
+      "frames": {
+        "masculine": {
+          "lod0": "avatar-v2/clothing/masculine/clothing.punk.patch-jacket-lod0.glb",
+          "lod1": "avatar-v2/clothing/masculine/clothing.punk.patch-jacket-lod1.glb",
+          "lod2": "avatar-v2/clothing/masculine/clothing.punk.patch-jacket-lod2.glb",
+          "lod3": "avatar-v2/clothing/masculine/clothing.punk.patch-jacket-lod3.glb"
+        },
+        "feminine": {
+          "lod0": "avatar-v2/clothing/feminine/clothing.punk.patch-jacket-lod0.glb",
+          "lod1": "avatar-v2/clothing/feminine/clothing.punk.patch-jacket-lod1.glb",
+          "lod2": "avatar-v2/clothing/feminine/clothing.punk.patch-jacket-lod2.glb",
+          "lod3": "avatar-v2/clothing/feminine/clothing.punk.patch-jacket-lod3.glb"
+        }
+      }
+    },
+    {
+      "itemKey": "clothing.punk.safety-pin-tee",
+      "name": "Safety Pin Tee",
+      "slot": "top",
+      "status": "planned",
+      "occludeBodyRegions": [
+        "torso"
+      ],
+      "colourMode": "zones",
+      "materialZones": {
+        "main": [
+          "RMV2_Garment_Main"
+        ],
+        "trim": [
+          "RMV2_Garment_Trim"
+        ]
+      },
+      "frames": {
+        "masculine": {
+          "lod0": "avatar-v2/clothing/masculine/clothing.punk.safety-pin-tee-lod0.glb",
+          "lod1": "avatar-v2/clothing/masculine/clothing.punk.safety-pin-tee-lod1.glb",
+          "lod2": "avatar-v2/clothing/masculine/clothing.punk.safety-pin-tee-lod2.glb",
+          "lod3": "avatar-v2/clothing/masculine/clothing.punk.safety-pin-tee-lod3.glb"
+        },
+        "feminine": {
+          "lod0": "avatar-v2/clothing/feminine/clothing.punk.safety-pin-tee-lod0.glb",
+          "lod1": "avatar-v2/clothing/feminine/clothing.punk.safety-pin-tee-lod1.glb",
+          "lod2": "avatar-v2/clothing/feminine/clothing.punk.safety-pin-tee-lod2.glb",
+          "lod3": "avatar-v2/clothing/feminine/clothing.punk.safety-pin-tee-lod3.glb"
+        }
+      }
+    },
+    {
+      "itemKey": "clothing.punk.studded-wrist-cuffs",
+      "name": "Studded Wrist Cuffs",
+      "slot": "accessory",
+      "status": "blocked",
+      "occludeBodyRegions": [
+        "lower-arms",
+        "hands"
+      ],
+      "colourMode": "zones",
+      "materialZones": {
+        "main": [
+          "RMV2_Garment_Main"
+        ],
+        "trim": [
+          "RMV2_Garment_Trim"
+        ]
+      },
+      "frames": {
+        "masculine": {
+          "lod0": "avatar-v2/clothing/masculine/clothing.punk.studded-wrist-cuffs-lod0.glb",
+          "lod1": "avatar-v2/clothing/masculine/clothing.punk.studded-wrist-cuffs-lod1.glb",
+          "lod2": "avatar-v2/clothing/masculine/clothing.punk.studded-wrist-cuffs-lod2.glb",
+          "lod3": "avatar-v2/clothing/masculine/clothing.punk.studded-wrist-cuffs-lod3.glb"
+        },
+        "feminine": {
+          "lod0": "avatar-v2/clothing/feminine/clothing.punk.studded-wrist-cuffs-lod0.glb",
+          "lod1": "avatar-v2/clothing/feminine/clothing.punk.studded-wrist-cuffs-lod1.glb",
+          "lod2": "avatar-v2/clothing/feminine/clothing.punk.studded-wrist-cuffs-lod2.glb",
+          "lod3": "avatar-v2/clothing/feminine/clothing.punk.studded-wrist-cuffs-lod3.glb"
         }
       }
     }
