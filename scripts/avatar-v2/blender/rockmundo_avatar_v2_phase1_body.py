@@ -205,7 +205,7 @@ def seed_unapproved_finger_paint(body, rig):
     return report
 
 
-def assign_eight_skin_regions(body):
+def assign_eight_skin_regions(body, *, require_all=True):
     """Partition the existing continuous CC0 polygons by true weighted bones.
 
     Material copies preserve original authored PBR nodes and UVs. No duplicate
@@ -231,7 +231,7 @@ def assign_eight_skin_regions(body):
             materials[key] = len(body.data.materials)
             body.data.materials.append(material)
         poly.material_index = materials[key]
-    if not all(counts.values()):
+    if require_all and not all(counts.values()):
         raise RuntimeError("Missing body occlusion polygons: " +
                            ", ".join(r for r, count in counts.items() if not count))
     return counts
@@ -530,7 +530,12 @@ def main():
         selected_parent_bind(body, rig)
         twist_seed_and_normalise(body, rig)
         finger_seed = seed_unapproved_finger_paint(body, rig)
-        regions = assign_eight_skin_regions(body)
+        # In the real source probe, BOTH untuned guides lacked a hand
+        # region. The preliminary editable artist scene must survive this
+        # expected condition so hand painting can actually be completed.
+        # The downstream --mode assess still blocks all incomplete regions.
+        regions = assign_eight_skin_regions(body, require_all=False)
+        missing_regions = [name for name, count in regions.items() if not count]
         eyes = bind_original_eyes(rig, args.frame)
         body["rockmundoAvatarV2Phase1Candidate"] = True
         rig["rockmundoAvatarV2SkinWeightsAuthored"] = False
@@ -541,7 +546,8 @@ def main():
         report = {"schema": "rockmundo.avatar-v2-phase1-initial-bind", "version": 1,
                   "frame": args.frame, "candidateOnly": True, "jointFit": fit,
                   "body": body.name, "skin": audit, "fingerStartingPaint": finger_seed,
-                  "regions": regions,
+                  "regions": regions, "missingBodyRegions": missing_regions,
+                  "mustPaintMissingBodyRegions": bool(missing_regions),
                   "eyeMeshes": [obj.name for obj in eyes.values()],
                   "sourceScene": scene.name,
                   "mustRepaintAndAuthorCorrectives": True,
