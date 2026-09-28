@@ -20,6 +20,12 @@ BEGIN
  IF position('''draft'',NULL,NULL' IN body)=0 THEN
    RAISE EXCEPTION 'New edition still inherits expired dates';
  END IF;
+ IF position('owner_profile.user_id = auth.uid()' IN body)=0 THEN
+   RAISE EXCEPTION 'Festival owning account must retain planning access after switching profiles';
+ END IF;
+ IF position('owner_profile.died_at IS NULL' IN body)=0 THEN
+   RAISE EXCEPTION 'Owner account authorization must require a living owner profile';
+ END IF;
  IF position('v_fc.annual_month' IN body)=0 THEN
    RAISE EXCEPTION 'Annual month not carried forward';
  END IF;
