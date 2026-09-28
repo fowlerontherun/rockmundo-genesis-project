@@ -25,7 +25,8 @@ serve(async req => {
     const userClient = createClient(url, anon, { global: { headers: { Authorization: auth } } });
     const { data: identity, error: identityError } = await userClient.auth.getUser();
     if (identityError || !identity.user) return respond({ error: 'Authentication required' }, 401);
-    const { key } = await req.json();
+    const { key, extract = false } = await req.json();
+    if (typeof extract !== 'boolean') return respond({ error: 'Invalid extraction flag' }, 400);
     if (typeof key !== 'string' || !/^incoming\/[a-f0-9-]{36}-[a-zA-Z0-9._-]+\.zip$/.test(key)) {
       return respond({ error: 'Invalid intake archive key' }, 400);
     }
@@ -35,7 +36,11 @@ serve(async req => {
     if (blob.size > 50 * 1024 * 1024) return respond({ error: 'Archive exceeds 50 MB' }, 400);
     const archiveBytes = new Uint8Array(await blob.arrayBuffer());
     const archiveSha256 = hex(new Uint8Array(await crypto.subtle.digest('SHA-256', archiveBytes)));
+    // Cap total expanded payload and member count before extracting or persisting.
     const zip = unzipSync(archiveBytes);
+    if (Object.keys(zip).length > 80 || Object.values(zip).reduce((sum, bytes) => sum + bytes.byteLength, 0) > 100 * 1024 * 1024) {
+      return respond({ error: 'Archive expands beyond safe intake limits' }, 400);
+    }
     const names = Object.keys(zip).filter(name => !name.endsWith('/'));
     if (!names.includes(ROOT + 'CHECKSUMS.json')) return respond({ error: 'This is not the combined authoring bundle' }, 400);
     if (names.some(name => !name.startsWith(ROOT) || name.includes('..') || name.includes('\\'))) {
@@ -66,7 +71,8 @@ serve(async req => {
         }
       }
     }
-    if (Object.keys(counts).some(group => counts[group] !== COUNTS[group]) ||
+    if (names.some(name => name.startsWith(ROOT + 'assets/') && name.slice(ROOT.length).split('/').some(segment => segment === '.' || segment === '..')) ||
+        Object.keys(counts).some(group => counts[group] !== COUNTS[group]) ||
         names.some(name => name.startsWith(ROOT + 'assets/') && !listed.has(name.slice(ROOT.length)))) {
       return respond({ error: 'Unexpected source inventory' }, 400);
     }
@@ -78,7 +84,24 @@ serve(async req => {
       validated_by: identity.user.id, validated_at: new Date().toISOString(),
     }, { onConflict: 'storage_key' });
     if (reviewError) return respond({ error: 'Source verified but review could not be saved' }, 500);
-    return respond({ valid: true, files: listed.size, models: counts, archiveSha256, status: 'source-verified-not-production-ready' });
+    if (extract) {
+      const prefix = `reviewed/${archiveSha256}/`;
+      // An immutable content-addressed destination keeps repeat imports idempotent.
+      for (const sourcePath of listed) {
+        const bytes = zip[ROOT + sourcePath];
+        const contentType = sourcePath.endsWith('.glb') ? 'model/gltf-binary'
+          : sourcePath.endsWith('.png') ? 'image/png'
+          : sourcePath.endsWith('.json') ? 'application/json' : 'text/plain';
+        const { error } = await writer.storage.from(BUCKET).upload(prefix + sourcePath, bytes, {
+          contentType, upsert: false,
+        });
+        if (error && !/already exists|duplicate/i.test(error.message)) {
+          return respond({ error: 'Verified archive but staging failed; retry is safe', file: sourcePath }, 500);
+        }
+      }
+    }
+    return respond({ valid: true, files: listed.size, models: counts, archiveSha256,
+      extracted: extract, status: extract ? 'staged-for-artist-review' : 'source-verified-not-production-ready' });
   } catch (error) {
     return respond({ error: error instanceof Error ? error.message : 'Validation failed' }, 400);
   }
