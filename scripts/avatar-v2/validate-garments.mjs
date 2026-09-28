@@ -121,9 +121,9 @@ function validateManifestItem(item) {
   if (!item || typeof item !== 'object') return ['Entry is not an object.'];
   const errors = [];
   if (!item.itemKey || typeof item.itemKey !== 'string') errors.push('itemKey is required.');
-  if (!['top','bottom','footwear'].includes(item.slot)) errors.push(`Unsupported slot: ${String(item.slot)}.`);
+  if (!['top','bottom','footwear','accessory'].includes(item.slot)) errors.push(`Unsupported slot: ${String(item.slot)}.`);
   if (!VALID_STATUSES.has(item.status)) errors.push(`Unsupported status: ${String(item.status)}.`);
-  if (!Array.isArray(item.occludeBodyRegions) || !item.occludeBodyRegions.length) {
+  if (!Array.isArray(item.occludeBodyRegions) || (!item.occludeBodyRegions.length && item.slot !== 'accessory')) {
     errors.push('At least one body occlusion region is required.');
   } else {
     for (const region of item.occludeBodyRegions) {
