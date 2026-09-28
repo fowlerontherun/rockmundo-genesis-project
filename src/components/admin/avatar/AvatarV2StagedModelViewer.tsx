@@ -33,6 +33,8 @@ export function AvatarV2StagedModelViewer({ sha }: { sha: string }) {
   const [selected, setSelected] = useState('');
   const [finish, setFinish] = useState('original');
   const [meshInfo, setMeshInfo] = useState('');
+  const [meshAudit, setMeshAudit] = useState<{ meshes: number; textured: number; skinned: number; uvMapped: number; triangles: number; missingNormals: number } | null>(null);
+  const captureRef = useRef<(() => void) | null>(null);
   const [message, setMessage] = useState('Loading private review models…');
   const mount = useRef<HTMLDivElement>(null);
 
@@ -50,6 +52,7 @@ export function AvatarV2StagedModelViewer({ sha }: { sha: string }) {
         if (cancelled) return;
         const paths = results.flat().sort();
         setModels(paths);
+        setMeshAudit(null);
         setSelected(paths[0] ?? '');
         setMessage(paths.length ? '' : 'No staged GLB models found. Use Extract for review first.');
       } catch (error) {
@@ -71,10 +74,22 @@ export function AvatarV2StagedModelViewer({ sha }: { sha: string }) {
     scene.background = new THREE.Color('#20232b');
     const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 1000);
     camera.position.set(2, 1.5, 2.5);
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, preserveDrawingBuffer: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     host.appendChild(renderer.domElement);
+    captureRef.current = () => {
+      renderer.render(scene, camera);
+      renderer.domElement.toBlob(blob => {
+        if (!blob) { setMessage('Could not capture preview image'); return; }
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = (selected.split('/').pop() ?? 'avatar-v2').replace(/\.glb$/i, '') + '-review.png';
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }, 'image/png');
+    };
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     scene.add(new THREE.HemisphereLight(0xffffff, 0x555566, 2.2));
@@ -111,15 +126,21 @@ export function AvatarV2StagedModelViewer({ sha }: { sha: string }) {
         let textured = 0;
         let skinned = 0;
         let uvMapped = 0;
+        let triangles = 0;
+        let missingNormals = 0;
         gltf.scene.traverse(node => {
           if (!(node instanceof THREE.Mesh)) return;
           meshes++;
+          const positions = node.geometry.getAttribute('position');
+          if (!node.geometry.getAttribute('normal')) missingNormals++;
+          triangles += node.geometry.index ? node.geometry.index.count / 3 : (positions?.count ?? 0) / 3;
           if (node instanceof THREE.SkinnedMesh) skinned++;
           if (node.geometry.getAttribute('uv')) uvMapped++;
           const materials = Array.isArray(node.material) ? node.material : [node.material];
           if (materials.some(material => material instanceof THREE.MeshStandardMaterial && !!material.map)) textured++;
           if (finish !== 'original') node.material = materials.map(() => new THREE.MeshStandardMaterial({ color: finish, roughness: 0.9, metalness: 0, normalMap: node.geometry.getAttribute('uv') ? fabricNormal : null, normalScale: new THREE.Vector2(.2, .2), side: THREE.DoubleSide }));
         });
+        setMeshAudit({ meshes, textured, skinned, uvMapped, triangles: Math.round(triangles), missingNormals });
         setMeshInfo(meshes + ' meshes, ' + textured + ' textured, ' + skinned + ' skinned, ' + uvMapped + ' UV mapped');
         scene.add(gltf.scene);
         const bounds = new THREE.Box3().setFromObject(gltf.scene);
@@ -141,6 +162,7 @@ export function AvatarV2StagedModelViewer({ sha }: { sha: string }) {
     void load();
     return () => {
       cancelled = true;
+      captureRef.current = null;
       cancelAnimationFrame(frame);
       observer.disconnect();
       controls.dispose();
@@ -181,6 +203,17 @@ export function AvatarV2StagedModelViewer({ sha }: { sha: string }) {
       {message && <p role="status" className="text-sm text-muted-foreground">{message}</p>}
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         <span>Drag to rotate · pinch or scroll to zoom</span>
+        <Button type="button" size="sm" variant="outline" disabled={!selected} onClick={() => captureRef.current?.()}>Save preview PNG</Button>
+        <Button type="button" size="sm" variant="outline" disabled={!meshAudit || !selected} onClick={() => {
+          if (!meshAudit) return;
+          const report = JSON.stringify({ model: selected, finish, ...meshAudit, note: 'Review diagnostics only. No production rigging or texture certification.' }, null, 2);
+          const url = URL.createObjectURL(new Blob([report], { type: 'application/json' }));
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = (selected.split('/').pop() ?? 'avatar-v2').replace(/\.glb$/i, '') + '-audit.json';
+          link.click();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }}>Export mesh audit</Button>
         <Button type="button" size="sm" variant="outline" onClick={() => setSelected('')}>Clear preview</Button>
         {!selected && models.length > 0 && <Button type="button" size="sm" onClick={() => setSelected(models[0])}>Show first model</Button>}
       </div>
