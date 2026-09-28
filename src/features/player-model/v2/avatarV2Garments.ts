@@ -126,10 +126,12 @@ function stringList(value: unknown) {
 
 function safeAssetPath(value: unknown) {
   if (typeof value !== 'string') return undefined;
-  const file = value.replace(/^\/+/, '');
-  if (!/^avatar-v2\/clothing\/[a-z0-9._/-]+\.glb$/i.test(file)) return undefined;
-  if (file.split('/').some(segment => segment === '.' || segment === '..')) return undefined;
-  return file;
+  // Migration manifests must use canonical, relative asset paths. Do not
+  // silently turn absolute paths into trusted garment references.
+  if (value.startsWith('/') || value.includes('\\\\') || value.includes('%')) return undefined;
+  if (!/^avatar-v2\\/clothing\\/[a-z0-9._/-]+\\.glb$/i.test(value)) return undefined;
+  if (value.split('/').some(segment => !segment || segment === '.' || segment === '..')) return undefined;
+  return value;
 }
 
 function frameAssets(value: unknown): AvatarV2GarmentFrameAssets {
