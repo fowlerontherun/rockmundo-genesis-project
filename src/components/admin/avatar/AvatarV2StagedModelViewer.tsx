@@ -11,6 +11,8 @@ const GROUPS = ['tee', 'denim', 'footwear', 'punk'] as const;
 export function AvatarV2StagedModelViewer({ sha }: { sha: string }) {
   const [models, setModels] = useState<string[]>([]);
   const [selected, setSelected] = useState('');
+  const [finish, setFinish] = useState('original');
+  const [meshInfo, setMeshInfo] = useState('');
   const [message, setMessage] = useState('Loading private review models…');
   const mount = useRef<HTMLDivElement>(null);
 
@@ -84,6 +86,18 @@ export function AvatarV2StagedModelViewer({ sha }: { sha: string }) {
         objectUrl = URL.createObjectURL(data);
         const gltf = await new GLTFLoader().loadAsync(objectUrl);
         if (cancelled) return;
+        let meshes = 0;
+        let textured = 0;
+        let skinned = 0;
+        gltf.scene.traverse(node => {
+          if (!(node instanceof THREE.Mesh)) return;
+          meshes++;
+          if (node instanceof THREE.SkinnedMesh) skinned++;
+          const materials = Array.isArray(node.material) ? node.material : [node.material];
+          if (materials.some(material => material instanceof THREE.MeshStandardMaterial && !!material.map)) textured++;
+          if (finish !== 'original') node.material = materials.map(() => new THREE.MeshStandardMaterial({ color: finish, roughness: 0.9, metalness: 0, side: THREE.DoubleSide }));
+        });
+        setMeshInfo(meshes + ' meshes, ' + textured + ' textured, ' + skinned + ' skinned');
         scene.add(gltf.scene);
         const bounds = new THREE.Box3().setFromObject(gltf.scene);
         if (bounds.isEmpty()) throw new Error('This model has no visible geometry');
@@ -118,7 +132,7 @@ export function AvatarV2StagedModelViewer({ sha }: { sha: string }) {
       renderer.domElement.remove();
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [selected]);
+  }, [selected, finish]);
 
   return (
     <div className="mt-3 space-y-2 rounded-lg border p-3">
@@ -128,15 +142,25 @@ export function AvatarV2StagedModelViewer({ sha }: { sha: string }) {
         value={selected} onChange={event => setSelected(event.target.value)}>
         {models.map(path => <option key={path} value={path}>{path.split('/').slice(-2).join(' / ')}</option>)}
       </select>
+      <label className="block text-sm" htmlFor="v2-finish">Material preview</label>
+      <select id="v2-finish" className="w-full rounded border bg-background p-2 text-sm" value={finish} onChange={event => setFinish(event.target.value)}>
+        <option value="original">Original embedded materials</option>
+        <option value="#202026">Black fabric simulation</option>
+        <option value="#dedbd2">White fabric simulation</option>
+        <option value="#344c72">Blue denim simulation</option>
+        <option value="#282024">Dark leather simulation</option>
+        <option value="#a51f34">Red fabric simulation</option>
+      </select>
       <div ref={mount} className="w-full overflow-hidden rounded-md" style={{ height: 340, touchAction: 'none' }}
         aria-label="Interactive 3D model preview: drag to rotate, pinch to zoom" />
+      {meshInfo && selected && <p className="text-xs text-muted-foreground">{meshInfo}</p>}
       {message && <p role="status" className="text-sm text-muted-foreground">{message}</p>}
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         <span>Drag to rotate · pinch or scroll to zoom</span>
         <Button type="button" size="sm" variant="outline" onClick={() => setSelected('')}>Clear preview</Button>
         {!selected && models.length > 0 && <Button type="button" size="sm" onClick={() => setSelected(models[0])}>Show first model</Button>}
       </div>
-      <p className="text-xs text-muted-foreground">These models are not rigged, fitted to avatars or published in-game.</p>
+      <p className="text-xs text-muted-foreground">These material finishes are temporary simulations, not saved clothing skins. Rigging, fitting and production textures are still required.</p>
     </div>
   );
 }
