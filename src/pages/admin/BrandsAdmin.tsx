@@ -68,6 +68,7 @@ const emptyForm = {
   availableBudget: 100000,
   minFame: 0,
   active: true,
+  logoUrl: "",
   exclusivity: false,
   targetingFlags: "",
 };
@@ -133,6 +134,7 @@ const BrandsAdmin = () => {
       min_fame_required: Math.max(0, Number(form.minFame) || 0),
       min_fame_threshold: Math.max(0, Number(form.minFame) || 0),
       is_active: form.active,
+      logo_url: form.logoUrl.trim() || null,
       exclusivity_pref: form.exclusivity,
       targeting_flags: form.targetingFlags
         .split(",")
@@ -176,6 +178,7 @@ const BrandsAdmin = () => {
       availableBudget: brand.available_budget ?? 0,
       minFame: brand.min_fame_threshold ?? brand.min_fame_required,
       active: brand.is_active,
+      logoUrl: brand.logo_url ?? "",
       exclusivity: Boolean(brand.exclusivity_pref),
       targetingFlags: (brand.targeting_flags ?? []).join(", "),
     });
@@ -318,6 +321,7 @@ const BrandsAdmin = () => {
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          <TableHead>Logo</TableHead>
                           <TableHead>Name</TableHead>
                           <TableHead>Size</TableHead>
                           <TableHead>Category</TableHead>
@@ -331,6 +335,7 @@ const BrandsAdmin = () => {
                       <TableBody>
                         {filteredBrands.map((brand) => (
                           <TableRow key={brand.id}>
+                            <TableCell>{brand.logo_url ? <img src={brand.logo_url} alt={`${brand.name} logo`} loading="lazy" className="h-12 w-20 rounded border object-contain" /> : <span className="text-xs text-muted-foreground">Missing</span>}</TableCell>
                             <TableCell className="font-semibold">{brand.name}</TableCell>
                             <TableCell>{brand.size}</TableCell>
                             <TableCell>{brand.category}</TableCell>
@@ -376,6 +381,11 @@ const BrandsAdmin = () => {
                   <div className="space-y-2">
                     <Label htmlFor="brand-name">Name</Label>
                     <Input id="brand-name" value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="brand-logo">Logo URL</Label>
+                    <Input id="brand-logo" value={form.logoUrl} onChange={(e) => setForm((prev) => ({ ...prev, logoUrl: e.target.value }))} placeholder="https://… or seeded data:image/svg+xml" />
+                    {form.logoUrl && <img src={form.logoUrl} alt="Brand logo preview" className="h-20 w-32 rounded border object-contain" />}
                   </div>
                   <div className="space-y-2">
                     <Label>Category</Label>
