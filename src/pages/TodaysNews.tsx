@@ -67,6 +67,15 @@ export default function TodaysNewsPage() {
     },
   });
 
+  const { data: festivalBandAnnouncements } = useQuery({
+    queryKey: ["news-festival-band-announcements", today],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).rpc("recent_festival_band_announcements", { p_limit: 8 });
+      if (error) throw error;
+      return (data ?? []) as Array<{ booking_id: string; band_name: string; festival_name: string; billing_position: string; confirmed_at: string }>;
+    },
+  });
+
   const { data: festivals } = useQuery({
     queryKey: ["news-festivals", today],
     queryFn: async () => {
@@ -162,6 +171,17 @@ export default function TodaysNewsPage() {
               <BandGainsNews />
               <EarningsNews />
             </div>
+
+            {festivalBandAnnouncements && festivalBandAnnouncements.length > 0 ? (
+              <NewsPanel title="Festival Line-up Announcements" icon={Music}>
+                {festivalBandAnnouncements.map((announcement) => (
+                  <article key={announcement.booking_id} className="border-b border-border/50 py-2 last:border-0">
+                    <p className="font-semibold font-serif">{announcement.band_name} confirmed for {announcement.festival_name}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{announcement.billing_position.replaceAll("_", " ")} · {format(new Date(announcement.confirmed_at), "d MMM")}</p>
+                  </article>
+                ))}
+              </NewsPanel>
+            ) : null}
 
             <MerchSalesNews />
 

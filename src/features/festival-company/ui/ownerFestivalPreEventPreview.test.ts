@@ -16,7 +16,10 @@ describe("pre-event Festival owner and directory sales preview", () => {
     expect(owner).toContain("Paid admissions sold");
     expect(owner).toContain("Available admissions");
     expect(owner).toContain("Gross ticket receipts");
+    expect(owner).toContain("gross !== null");
     expect(owner).toContain("Confirmed acts");
+    expect(owner).toContain("current.lineup?.length ?? 0");
+    expect(owner).not.toContain("current.timetable.length");
   });
 
   it("reads the nested launch object and never carries last year's sales to a new edition", () => {
@@ -29,8 +32,18 @@ describe("pre-event Festival owner and directory sales preview", () => {
 
   it("keeps sales up to date and previews the complete publicly announced lineup", () => {
     expect(owner).toContain("festivalRoutes.publicCompany(slug)");
+    expect(hooks).toContain('c.invalidateQueries({queryKey:["festival-sales-summary",id]})');
     expect(hooks).toContain('c.invalidateQueries({queryKey:["festival-sales-summary"]})');
     expect(hooks).toContain("refetchInterval:60_000");
+  });
+
+  it("separates actual player purchases from demand and refreshes the owner breakdown", () => {
+    expect(owner).toContain("Real player purchases");
+    expect(owner).toContain("Unique players");
+    expect(owner).toContain("Sales by ticket type");
+    expect(owner).toContain("Forecast attendance and future simulated sales are not included.");
+    expect(owner).toContain("useFestivalPlayerTicketSalesBreakdown");
+    expect(hooks).toContain('c.invalidateQueries({queryKey:["festival-player-sales-breakdown"]})');
   });
 
   it("marks a festival sold out when admissions sell out even if upgrades remain", () => {

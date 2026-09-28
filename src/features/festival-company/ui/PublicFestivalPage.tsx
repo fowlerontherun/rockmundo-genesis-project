@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -88,7 +88,8 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   const buy = usePurchaseFestivalTickets();
   const checkIn = useCheckInToFestival();
   const leaveEarly = useLeaveFestivalEarly();
-  const [quantity, setQuantity] = useState(1);
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [activePurchaseProductId, setActivePurchaseProductId] = useState<string | null>(null);
 
   if (isLoading) return <main className="p-8" role="status">Loading Festival…</main>;
   if (isError || !f) return <main className="p-8" role="alert">Festival not found.</main>;
@@ -112,19 +113,9 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
     (ticket) => ticket.productClass === "admission" && !["cancelled", "refunded", "transferred"].includes(ticket.status),
   );
 
-  // A present (even empty) confirmed lineup is authoritative. The legacy timetable
-  // is only a compatibility fallback for older deployments without the lineup field.
-  const confirmedLineup = f.lineup ?? f.timetable.map((entry) => ({
-    id: entry.id,
-    artistName: entry.artistName,
-    artistType: entry.artistType,
-    genre: entry.genre,
-    billingPosition: entry.headline ? "headliner" : "support",
-    festivalDate: entry.festivalDate,
-    stageName: null,
-    startsAt: null,
-    endsAt: null,
-  }));
+  // The simplified timetable contains automatically generated provisional slots.
+  // Only the authoritative confirmed lineup may be advertised publicly.
+  const confirmedLineup = f.lineup ?? [];
   const publishedPerformances = confirmedLineup.filter(
     (entry) => entry.startsAt && entry.endsAt && entry.stageName,
   );
@@ -155,7 +146,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
             <div className="flex flex-wrap gap-2">
               <Badge>{eventPhaseLabel}</Badge>
               <Badge variant="outline" className="border-white/50 text-white">
-                Ticket sales: {f.launchStatus.replaceAll("_", " ")}
+                Ticket sales: {eventPhase === "ended" ? "closed" : f.launchStatus.replaceAll("_", " ")}
               </Badge>
             </div>
             <h1 className="mt-4 text-4xl font-black md:text-7xl">{f.name}</h1>
@@ -415,6 +406,8 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
               </Card>
             )}
 
+            {eventPhase === "ended" && <p role="status" className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">This festival has ended. Ticket purchases are closed; existing tickets remain available in your wallet.</p>}
+            {eventPhase !== "ended" && f.launchStatus !== "tickets_on_sale" && <p role="status" className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">Ticket sales are not currently open. You can still review ticket types and any tickets in your wallet.</p>}
             <section className="grid gap-4 md:grid-cols-2">
               {f.ticketProducts.map((p) => (
                 <Card key={p.id}>
@@ -434,24 +427,32 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                         className="ml-2 w-16 rounded border bg-background p-2"
                         type="number"
                         min={1}
-                        max={p.purchaseLimit}
-                        value={quantity}
-                        onChange={(e) => setQuantity(Number(e.target.value))}
+                        max={Math.min(p.purchaseLimit, p.availableQuantity)}
+                        value={quantities[p.id] ?? 1}
+                        disabled={eventPhase === "ended" || f.launchStatus !== "tickets_on_sale" || p.availableQuantity === 0}
+                        onChange={(e) => setQuantities((previous) => ({ ...previous, [p.id]: Number(e.target.value) }))}
                       />
                     </label>
-                    <Button
-                      disabled={buy.isPending || p.availableQuantity === 0 || f.launchStatus !== "tickets_on_sale"}
-                      onClick={() => buy.mutate({
-                        festivalLaunchId: f.id,
-                        ticketProductId: p.id,
-                        quantity,
-                        idempotencyKey: crypto.randomUUID(),
-                      })}
+                    {!user && eventPhase !== "ended" && f.launchStatus === "tickets_on_sale" && p.availableQuantity > 0 && (
+                      <Button asChild variant="outline"><Link to="/auth">Sign in to purchase</Link></Button>
+                    )}
+                    {user && <Button
+                      disabled={buy.isPending || eventPhase === "ended" || p.availableQuantity === 0 || f.launchStatus !== "tickets_on_sale" || !Number.isSafeInteger(quantities[p.id] ?? 1) || (quantities[p.id] ?? 1) < 1 || (quantities[p.id] ?? 1) > Math.min(p.purchaseLimit, p.availableQuantity)}
+                      onClick={() => {
+                        buy.reset();
+                        setActivePurchaseProductId(p.id);
+                        buy.mutate({
+                          festivalLaunchId: f.id,
+                          ticketProductId: p.id,
+                          quantity: quantities[p.id] ?? 1,
+                          idempotencyKey: crypto.randomUUID(),
+                        });
+                      }}
                     >
-                      {buy.isPending ? "Completing purchase…" : p.availableQuantity === 0 ? "Sold out" : "Confirm purchase"}
-                    </Button>
-                    {buy.isError && <p role="alert">{buy.error.message.replaceAll("_", " ")}</p>}
-                    {buy.isSuccess && (
+                      {buy.isPending && activePurchaseProductId === p.id ? "Completing purchase…" : eventPhase === "ended" ? "Festival ended" : p.availableQuantity === 0 ? "Sold out" : f.launchStatus !== "tickets_on_sale" ? "Sales unavailable" : "Confirm purchase"}
+                    </Button>}
+                    {buy.isError && activePurchaseProductId === p.id && <p role="alert">{buy.error.message.replaceAll("_", " ")}</p>}
+                    {buy.isSuccess && activePurchaseProductId === p.id && (
                       <p role="status">Purchase complete. {buy.data.tickets.length} ticket(s) issued.</p>
                     )}
                   </CardContent>

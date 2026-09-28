@@ -1,4 +1,10 @@
 import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { billingPositions } from "../domain/festivalArtistProgramme";
+import type { FestivalArtistOffer } from "../domain/festivalArtistProgramme";
 import { ClipboardList, Search, Send, UserPlus } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -20,13 +26,16 @@ import type {
   ArtistIdentity,
   FestivalArtistApplication,
   FestivalArtistInvitation,
-  FestivalArtistOffer,
   FestivalArtistProgrammeResult,
 } from "../domain/festivalArtistProgramme";
 import type { FestivalArtistCandidate } from "../domain/festivalArtistWorkflows";
 import { formatMinorMoney } from "../domain/festivalTicketPlan";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const billingLabel = (value: string) => value.replaceAll("_", " ");
+const invitedBilling = (message: string) => billingPositions.find((position) =>
+  message.includes(`Proposed billing: ${billingLabel(position)}.`),
+) ?? "support";
 
 const identityKey = (identity: ArtistIdentity) => {
   if (identity.type === "solo") return `solo:${identity.artistProfileId}`;
@@ -81,6 +90,34 @@ export function SimplifiedFestivalLineupManager({
 }) {
   const [search, setSearch] = useState("");
   const [feeInputs, setFeeInputs] = useState<Record<string, string>>({});
+  const [billingInputs, setBillingInputs] = useState<Record<string, (typeof billingPositions)[number]>>({});
+  const queryClient = useQueryClient();
+  const changeBilling = useMutation({
+    mutationFn: async ({ bookingId, position }: { bookingId: string; position: (typeof billingPositions)[number] }) => {
+      const { error } = await (supabase as any).rpc("update_festival_booking_billing", { p_booking_id: bookingId, p_position: position });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["festival-artist-programme"] }),
+        queryClient.invalidateQueries({ queryKey: ["news-festival-band-announcements"] }),
+      ]);
+      toast.success("Festival billing position updated");
+    },
+    onError: (error: Error) => toast.error(`Could not change billing: ${error.message}`),
+  });
+  const bandIds = [...new Set([...data.applications, ...data.invitations, ...data.offers, ...data.bookings]
+    .filter((entry) => entry.identity.type === "band")
+    .map((entry) => entry.identity.type === "band" ? entry.identity.bandId : ""))];
+  const knownBands = useQuery({
+    queryKey: ["festival-lineup-band-names", bandIds.slice().sort()],
+    enabled: bandIds.length > 0,
+    queryFn: async () => {
+      const { data: rows, error } = await supabase.from("bands").select("id,name").in("id", bandIds);
+      if (error) throw error;
+      return new Map((rows ?? []).map((band) => [band.id, band.name]));
+    },
+  });
   const candidates = useFestivalArtistCandidates({
     festivalCompanyId,
     festivalEditionId,
@@ -103,7 +140,9 @@ export function SimplifiedFestivalLineupManager({
   );
 
   const nameFor = (identity: ArtistIdentity) =>
-    candidateNames.get(identityKey(identity)) ?? fallbackIdentityLabel(identity);
+    (identity.type === "band" ? knownBands.data?.get(identity.bandId) : undefined) ??
+    candidateNames.get(identityKey(identity)) ??
+    fallbackIdentityLabel(identity);
 
   const workflowError =
     reviewApplication.error ??
@@ -137,6 +176,7 @@ export function SimplifiedFestivalLineupManager({
     feeMinor: number;
     setMinutes: number;
     requestedDates?: string[];
+    billingPosition?: (typeof billingPositions)[number];
   }) => {
     const created = await createOffer.mutateAsync({
       festivalCompanyId,
@@ -147,7 +187,7 @@ export function SimplifiedFestivalLineupManager({
       feeMinor: Math.max(0, input.feeMinor),
       setMinutes: Math.max(10, Math.min(240, input.setMinutes)),
       preferredDate: preferredDate(data.festivalDates, input.requestedDates),
-      billingPosition: "support",
+      billingPosition: input.billingPosition ?? "support",
       responseDeadline: responseDeadline(data.festivalDates),
       message: "Festival performance offer",
       idempotencyKey: crypto.randomUUID(),
@@ -192,7 +232,7 @@ export function SimplifiedFestivalLineupManager({
       suggestedSetMinutes: 60,
       suggestedDates: data.festivalDates[0] ? [data.festivalDates[0]] : [],
       responseDeadline: responseDeadline(data.festivalDates),
-      message: "We would like to invite you to perform at this year's Festival.",
+      message: `We would like to invite you to perform at this year\'s Festival. Proposed billing: ${billingLabel(billingInputs[key] ?? "support")}.`,
       idempotencyKey: crypto.randomUUID(),
     });
   };
@@ -208,6 +248,7 @@ export function SimplifiedFestivalLineupManager({
         Math.min(application.maximumSetMinutes, 60),
       ),
       requestedDates: application.preferredDates,
+      billingPosition: billingInputs[`application:${application.id}`] ?? "support",
     });
 
   const offerInvitation = (invitation: FestivalArtistInvitation) => {
@@ -222,6 +263,7 @@ export function SimplifiedFestivalLineupManager({
       ),
       setMinutes: invitation.suggestedSetMinutes ?? 60,
       requestedDates: invitation.suggestedDates,
+      billingPosition: billingInputs[`invitation:${invitation.id}`] ?? invitedBilling(invitation.message),
     });
   };
 
@@ -304,14 +346,16 @@ export function SimplifiedFestivalLineupManager({
                     "under_review",
                     "shortlisted",
                     "offer_pending",
-                  ].includes(application.status) ? (
-                    <Button
+                  ].includes(application.status) ? (<div className="flex flex-wrap items-center gap-2"><Select value={billingInputs[`application:${application.id}`] ?? "support"} onValueChange={(value) => setBillingInputs((current) => ({ ...current, [`application:${application.id}`]: value as (typeof billingPositions)[number] }))}>
+                        <SelectTrigger aria-label="Billing position"><SelectValue placeholder="Billing position" /></SelectTrigger>
+                        <SelectContent>{billingPositions.map((position) => <SelectItem key={position} value={position} className="capitalize">{billingLabel(position)}</SelectItem>)}</SelectContent>
+                      </Select><Button
                       size="sm"
                       disabled={workflowPending}
-                      onClick={() => void offerApplication(application)}
+                      onClick={() => void offerApplication(application).catch((error: Error) => toast.error(`Could not send festival offer: ${error.message}`))}
                     >
                       Send offer
-                    </Button>
+                    </Button></div>
                   ) : null}
                   {["submitted", "under_review", "shortlisted"].includes(
                     application.status,
@@ -417,6 +461,10 @@ export function SimplifiedFestivalLineupManager({
                         }
                       />
                     </div>
+                    <Select value={billingInputs[key] ?? "support"} onValueChange={(value) => setBillingInputs((current) => ({ ...current, [key]: value as (typeof billingPositions)[number] }))}>
+                        <SelectTrigger aria-label="Billing position"><SelectValue placeholder="Billing position" /></SelectTrigger>
+                        <SelectContent>{billingPositions.map((position) => <SelectItem key={position} value={position} className="capitalize">{billingLabel(position)}</SelectItem>)}</SelectContent>
+                      </Select>
                     <Button
                       size="sm"
                       variant="outline"
@@ -493,10 +541,14 @@ export function SimplifiedFestivalLineupManager({
                           }
                         />
                       </div>
+                      <Select value={billingInputs[key] ?? "support"} onValueChange={(value) => setBillingInputs((current) => ({ ...current, [key]: value as (typeof billingPositions)[number] }))}>
+                        <SelectTrigger aria-label="Billing position"><SelectValue placeholder="Billing position" /></SelectTrigger>
+                        <SelectContent>{billingPositions.map((position) => <SelectItem key={position} value={position} className="capitalize">{billingLabel(position)}</SelectItem>)}</SelectContent>
+                      </Select>
                       <Button
                         size="sm"
                         disabled={workflowPending}
-                        onClick={() => void offerInvitation(invitation)}
+                        onClick={() => void offerInvitation(invitation).catch((error: Error) => toast.error(`Could not send festival offer: ${error.message}`))}
                       >
                         Send offer
                       </Button>
@@ -515,7 +567,7 @@ export function SimplifiedFestivalLineupManager({
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {formatMinorMoney(offer.offeredFeeMinor, offer.currencyCode)} ·{" "}
-                  {offer.setMinutes} minute set
+                  {offer.setMinutes} minute set · {billingLabel(offer.billingPosition)}
                 </p>
                 {offer.status === "draft" || offer.status === "countered" ? (
                   <Button
@@ -560,8 +612,16 @@ export function SimplifiedFestivalLineupManager({
                       booking.totalCommitmentMinor,
                       booking.currencyCode,
                     )}{" "}
-                    committed · {booking.setMinutes} minute set
+                    committed · {booking.setMinutes} minute set · {billingLabel(booking.billingPosition)}
                   </p>
+                  {["confirmed", "awaiting_schedule"].includes(booking.status) && data.canWrite ? (
+                    <div className="mt-2 max-w-52">
+                      <Select value={booking.billingPosition} disabled={changeBilling.isPending} onValueChange={(position) => changeBilling.mutate({ bookingId: booking.id, position: position as (typeof billingPositions)[number] })}>
+                        <SelectTrigger aria-label={`Billing position for ${nameFor(booking.identity)}`}><SelectValue /></SelectTrigger>
+                        <SelectContent>{billingPositions.map((position) => <SelectItem key={position} value={position} className="capitalize">{billingLabel(position)}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                  ) : null}
                 </div>
               ))
             )}

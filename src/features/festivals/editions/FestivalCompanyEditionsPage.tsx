@@ -174,8 +174,14 @@ export function FestivalCompanyEditionsPage({
     },
     onError: (error: Error) => {
       const message = error.message.includes("festival_edition_year_exists")
-        ? "A Festival already exists for the next available game year."
-        : "The next annual Festival could not be planned.";
+        ? "A Festival already exists for the next available game year. Reload the edition list."
+        : error.message.includes("festival_edition_already_open")
+          ? "An annual Festival is already open. Reload the edition list to continue planning it."
+          : error.message.includes("festival_company_not_ready")
+            ? "The Festival company must be active and its initial setup completed."
+            : error.message.includes("festival_configuration_incomplete")
+              ? "The Festival configuration is incomplete. Review the company setup before continuing."
+              : `The next annual Festival could not be planned: ${error.message}`;
       toast.error(message);
     },
   });
@@ -211,6 +217,7 @@ export function FestivalCompanyEditionsPage({
   const historicalFestivals = data.editions.filter(
     (edition) => !edition.editable,
   );
+  const canPlanNext = data.companyStatus === "active" && data.setupCompleted && activeFestivals.length === 0;
   const currentEditionId = activeFestivals
     .sort((left, right) => left.editionYear - right.editionYear)[0]
     ?.festivalEditionId;
@@ -245,7 +252,7 @@ export function FestivalCompanyEditionsPage({
         </div>
         <Button
           type="button"
-          disabled={!data.canPlanNext || createFestival.isPending}
+          disabled={!canPlanNext || createFestival.isPending}
           onClick={() => createFestival.mutate()}
         >
           <Plus className="mr-2 h-4 w-4" />
@@ -255,12 +262,24 @@ export function FestivalCompanyEditionsPage({
         </Button>
       </header>
 
-      {!data.canPlanNext ? (
+      {!canPlanNext ? (
         <Card>
           <CardContent className="pt-6 text-sm text-muted-foreground">
-            Complete the Festival company setup and keep the company active before
-            planning another annual event.
+            {activeFestivals.length
+              ? "Finish the current annual Festival before planning another."
+              : data.companyStatus !== "active" || !data.setupCompleted
+                ? "Complete the Festival company setup and keep the company active before planning another annual event."
+                : "The next annual Festival is currently unavailable. Reload or contact support if this continues."}
           </CardContent>
+        </Card>
+      ) : null}
+
+      {!activeFestivals.length && historicalFestivals.length ? (
+        <Card className="border-emerald-500/40">
+          <CardHeader>
+            <CardTitle>The last Festival is complete</CardTitle>
+            <CardDescription>Its results remain in company history. You can plan the next edition without deleting or rerunning the previous event.</CardDescription>
+          </CardHeader>
         </Card>
       ) : null}
 
