@@ -58,6 +58,25 @@ GRANT EXECUTE ON FUNCTION public.reconcile_stale_gig_post_processing(interval, i
 -- PostgreSQL UNIQUE treats NULL target_id values as distinct. Most gig-wide
 -- consequence keys use a NULL target_id, so retries previously could duplicate
 -- the same snapshot despite the declared unique constraint.
+-- Archive historical duplicates before removing them.
+CREATE TABLE IF NOT EXISTS public.gig_consequence_snapshots_legacy_archive (
+  id uuid PRIMARY KEY,
+  gig_id uuid NOT NULL,
+  original_record jsonb NOT NULL,
+  archived_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE public.gig_consequence_snapshots_legacy_archive ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.gig_consequence_snapshots_legacy_archive FROM PUBLIC, anon, authenticated;
+WITH ranked AS (
+ SELECT s.*, row_number() OVER (
+   PARTITION BY gig_id,consequence_key,target_type,
+     coalesce(target_id,'00000000-0000-0000-0000-000000000000'::uuid)
+   ORDER BY created_at,id
+ ) AS ordinal FROM public.gig_consequence_snapshots s
+)
+INSERT INTO public.gig_consequence_snapshots_legacy_archive(id,gig_id,original_record)
+SELECT id,gig_id,to_jsonb(ranked)-'ordinal' FROM ranked WHERE ordinal>1
+ON CONFLICT (id) DO NOTHING;
 -- Preserve the oldest snapshot per logical key when repairing historical rows.
 WITH duplicates AS (
   SELECT id, row_number() OVER (
