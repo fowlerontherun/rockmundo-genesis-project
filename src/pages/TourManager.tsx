@@ -148,6 +148,7 @@ const TourManager = () => {
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [draftRouteCityIds, setDraftRouteCityIds] = useState<string[]>([]);
 
   // Other tours filters
   const [fameFilter, setFameFilter] = useState<string>("all");
@@ -787,7 +788,8 @@ const TourManager = () => {
               <CardDescription>Select a city to inspect local fame, then use the tour planner to schedule stops.</CardDescription>
             </CardHeader>
             <CardContent>
-              <WorldAtlas cities={atlasCities} bandId={currentBandId} mode="tour" />
+              <WorldAtlas cities={atlasCities} bandId={currentBandId} mode="tour"
+                onPlanRoute={ids => { setDraftRouteCityIds(ids); setWizardOpen(true); }} />
               <div className="mt-4">
                 <Button onClick={() => setWizardOpen(true)}>Create tour from destinations</Button>
               </div>
@@ -1318,6 +1320,7 @@ const TourManager = () => {
           {currentBandId && (
             <TourWizard
               bandId={currentBandId}
+              initialRouteCityIds={draftRouteCityIds}
               onComplete={() => setWizardOpen(false)}
               onCancel={() => setWizardOpen(false)}
             />
