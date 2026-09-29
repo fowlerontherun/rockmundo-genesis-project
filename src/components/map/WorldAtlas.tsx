@@ -93,7 +93,7 @@ export default function WorldAtlas({ cities, currentCityId, bandId, mode = "expl
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
         <div className="h-[420px] md:h-[600px] min-w-0 overflow-hidden rounded-lg border">
           <InteractiveWorldMap cities={filtered} currentCityId={currentCityId}
-            routeCityIds={plannedStops} onCityClick={choose} />
+            routeCityIds={plannedStops} routeCities={cities} onCityClick={choose} />
         </div>
         <aside className="rounded-lg border p-3 space-y-3" aria-label="Map city details">
           <h3 className="font-semibold">{selected ? selected.name : "Choose a city"}</h3>
