@@ -18,9 +18,10 @@ interface InteractiveWorldMapProps {
   cities: City[];
   currentCityId?: string | null;
   onCityClick?: (cityId: string) => void;
+  routeCityIds?: string[];
 }
 
-const InteractiveWorldMap = ({ cities, currentCityId, onCityClick }: InteractiveWorldMapProps) => {
+const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds = [] }: InteractiveWorldMapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markers = useRef<mapboxgl.Marker[]>([]);
@@ -233,6 +234,55 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick }: Interactive
       markers.current = [];
     };
   }, [cities, currentCityId, navigate, onCityClick]);
+
+  // Draw the player's proposed tour directly on the globe, without changing bookings.
+  useEffect(() => {
+    const activeMap = map.current;
+    if (!activeMap) return;
+    const sourceId = 'atlas-draft-route';
+    const layerId = 'atlas-draft-route-line';
+    const points = routeCityIds.flatMap(id => {
+      const city = cities.find(item => item.id === id);
+      if (!city || city.latitude == null || city.longitude == null ||
+          !Number.isFinite(city.latitude) || !Number.isFinite(city.longitude) ||
+          Math.abs(city.latitude) > 90 || Math.abs(city.longitude) > 180) return [];
+      return [[city.longitude, city.latitude]];
+    });
+    const updateRoute = () => {
+      if (!activeMap.isStyleLoaded()) return;
+      if (activeMap.getLayer(layerId)) activeMap.removeLayer(layerId);
+      if (activeMap.getSource(sourceId)) activeMap.removeSource(sourceId);
+      if (points.length < 2) return;
+      activeMap.addSource(sourceId, {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          properties: {},
+          geometry: { type: 'LineString', coordinates: points },
+        },
+      });
+      activeMap.addLayer({
+        id: layerId,
+        type: 'line',
+        source: sourceId,
+        paint: {
+          'line-color': '#38bdf8',
+          'line-width': 3,
+          'line-opacity': 0.9,
+          'line-dasharray': [2, 1],
+        },
+      });
+    };
+    if (activeMap.isStyleLoaded()) updateRoute();
+    activeMap.on('style.load', updateRoute);
+    return () => {
+      activeMap.off('style.load', updateRoute);
+      if (activeMap.isStyleLoaded()) {
+        if (activeMap.getLayer(layerId)) activeMap.removeLayer(layerId);
+        if (activeMap.getSource(sourceId)) activeMap.removeSource(sourceId);
+      }
+    };
+  }, [cities, routeCityIds]);
 
   // Add pulse animation styles
   useEffect(() => {
