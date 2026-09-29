@@ -34,6 +34,32 @@ ALTER TABLE public.gig_consequence_snapshots
 UPDATE public.gig_consequence_snapshots s SET processing_id = p.id
 FROM public.gig_post_processing p
 WHERE s.gig_id = p.gig_id AND s.processing_id IS NULL;
+-- The deployed legacy table contains multiple processing rows per gig.
+-- Retain the earliest row, preserve discarded row IDs in its audit history,
+-- and reparent any historical snapshots before removing duplicates.
+WITH ranked AS (
+  SELECT id,gig_id,first_value(id) OVER (PARTITION BY gig_id ORDER BY created_at,id) AS keep_id
+  FROM public.gig_post_processing
+)
+UPDATE public.gig_consequence_snapshots s SET processing_id = r.keep_id
+FROM ranked r WHERE s.processing_id = r.id AND r.id <> r.keep_id;
+WITH ranked AS (
+  SELECT id,gig_id,first_value(id) OVER (PARTITION BY gig_id ORDER BY created_at,id) AS keep_id
+  FROM public.gig_post_processing
+), discarded AS (
+  SELECT keep_id,jsonb_agg(id::text ORDER BY id) AS ids FROM ranked
+  WHERE id <> keep_id GROUP BY keep_id
+)
+UPDATE public.gig_post_processing p SET
+  audit_history = coalesce(p.audit_history,'[]'::jsonb) ||
+    jsonb_build_array(jsonb_build_object('event','legacy_duplicate_rows_consolidated','discarded_ids',d.ids,'at',now()))
+FROM discarded d WHERE p.id=d.keep_id;
+WITH ranked AS (
+  SELECT id,row_number() OVER (PARTITION BY gig_id ORDER BY created_at,id) AS ordinal
+  FROM public.gig_post_processing
+)
+DELETE FROM public.gig_post_processing p USING ranked r
+WHERE p.id=r.id AND r.ordinal>1;
 -- Historical orphan snapshots remain nullable and require manual review.
 CREATE UNIQUE INDEX IF NOT EXISTS gig_post_processing_gig_id_unique
   ON public.gig_post_processing(gig_id);
