@@ -79,7 +79,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
   
   const [currentStep, setCurrentStep] = useState(0);
   const routeCityIds = useMemo(() => [...new Set(options.initialRouteCityIds ?? [])], [options.initialRouteCityIds]);
-  const { data: routeCities = [], isLoading: routeCitiesLoading } = useQuery({
+  const { data: routeCities = [], isLoading: routeCitiesLoading, isError: routeCitiesError } = useQuery({
     queryKey: ['tour-map-route-cities', routeCityIds],
     enabled: routeCityIds.length > 0,
     queryFn: async () => {
@@ -150,7 +150,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
     [routeCities]);
 
   // Fetch available venues based on filters
-  const { data: availableVenues, isLoading: venuesLoading } = useQuery({
+  const { data: availableVenues, isLoading: venuesLoading, isError: venuesError } = useQuery({
     queryKey: ['tour-venues', state.selectedCountries, state.venueTypes, state.maxVenueCapacity, state.venueGenreFilter, state.venueCityFilter, state.venueCountryFilter, routeCityIds],
     queryFn: async () => {
       if (state.selectedCountries.length === 0) return [];
@@ -574,6 +574,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
     mutationFn: async () => {
       if (!profileId || !userId || !state.bandId) throw new Error('Missing user, profile or band');
       if (routeCitiesLoading || venuesLoading) throw new Error('Please wait for the map destinations and venue checks to finish.');
+      if (routeCitiesError || venuesError) throw new Error('Could not verify all destinations and venues. Retry after the data loads.');
       if (missingRouteCityIds.length > 0) throw new Error('Some map destinations have no eligible venue. Update the route or venue filters before booking.');
       
       const endDate = state.startDate 
@@ -953,7 +954,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
       case 2: // Countries
         return state.selectedCountries.length > 0;
       case 3: // Venues
-        return !routeCitiesLoading && !venuesLoading && state.venueTypes.length > 0 && venueMatches.length > 0 && missingRouteCityIds.length === 0;
+        return !routeCitiesLoading && !venuesLoading && !routeCitiesError && !venuesError && state.venueTypes.length > 0 && venueMatches.length > 0 && missingRouteCityIds.length === 0;
       case 4: // Tickets
         return true; // Always valid, uses recommended if not set
       case 5: // Stage Production
@@ -963,11 +964,11 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
       case 7: // Support Artist
         return true; // Optional step
       case 8: // Review
-        return !routeCitiesLoading && !venuesLoading && venueMatches.length > 0 && missingRouteCityIds.length === 0 && (band?.band_balance || 0) >= costEstimate.netUpfrontCost;
+        return !routeCitiesLoading && !venuesLoading && !routeCitiesError && !venuesError && venueMatches.length > 0 && missingRouteCityIds.length === 0 && (band?.band_balance || 0) >= costEstimate.netUpfrontCost;
       default:
         return false;
     }
-  }, [currentStep, state, scopeAccess, venueMatches.length, band?.band_balance, band?.fame, costEstimate.netUpfrontCost, missingRouteCityIds.length, routeCitiesLoading, venuesLoading]);
+  }, [currentStep, state, scopeAccess, venueMatches.length, band?.band_balance, band?.fame, costEstimate.netUpfrontCost, missingRouteCityIds.length, routeCitiesLoading, venuesLoading, routeCitiesError, venuesError]);
 
   return {
     state,
@@ -992,6 +993,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
     venueMatches,
     missingRouteCityIds,
     routeCitiesLoading,
+    routeValidationError: routeCitiesError || venuesError,
     costEstimate,
     maxAllowedCapacity,
     scopeAccess,
