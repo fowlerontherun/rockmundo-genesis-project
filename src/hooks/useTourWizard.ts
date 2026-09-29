@@ -44,6 +44,7 @@ import { reduceTravelDurationHours } from '@/utils/dynamicTravel';
 
 export interface UseTourWizardOptions {
   bandId?: string;
+  initialRouteCityIds?: string[];
 }
 
 type CreatedTourGig = Pick<
@@ -76,6 +77,17 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
   });
   
   const [currentStep, setCurrentStep] = useState(0);
+  const routeCityIds = useMemo(() => [...new Set(options.initialRouteCityIds ?? [])], [options.initialRouteCityIds]);
+  const { data: routeCities = [] } = useQuery({
+    queryKey: ['tour-map-route-cities', routeCityIds],
+    enabled: routeCityIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('cities')
+        .select('id, country').in('id', routeCityIds);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
   // Fetch band data
   const { data: band } = useQuery({
@@ -130,9 +142,15 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
     },
   });
 
+  // Route handoff does not override fame-based scope restrictions.
+  // Countries are suggested only; the player still chooses their tour scope.
+  const routeCountries = useMemo(() =>
+    [...new Set(routeCities.map(city => city.country).filter(Boolean))],
+    [routeCities]);
+
   // Fetch available venues based on filters
   const { data: availableVenues, isLoading: venuesLoading } = useQuery({
-    queryKey: ['tour-venues', state.selectedCountries, state.venueTypes, state.maxVenueCapacity, state.venueGenreFilter, state.venueCityFilter, state.venueCountryFilter],
+    queryKey: ['tour-venues', state.selectedCountries, state.venueTypes, state.maxVenueCapacity, state.venueGenreFilter, state.venueCityFilter, state.venueCountryFilter, routeCityIds],
     queryFn: async () => {
       if (state.selectedCountries.length === 0) return [];
       
@@ -149,6 +167,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
       if (state.venueCityFilter) {
         citiesQuery = citiesQuery.eq('id', state.venueCityFilter);
       }
+      if (routeCityIds.length > 0) citiesQuery = citiesQuery.in('id', routeCityIds);
       
       const { data: cities, error: citiesError } = await citiesQuery;
       
@@ -189,6 +208,14 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
     },
     enabled: state.selectedCountries.length > 0,
   });
+
+  // Apply the imported route countries when the player has not made a selection.
+  // Avoid changing the selection once they begin editing it.
+  const [routeCountriesApplied, setRouteCountriesApplied] = useState(false);
+  if (!routeCountriesApplied && routeCountries.length > 0 && state.selectedCountries.length === 0) {
+    setRouteCountriesApplied(true);
+    setState(prev => ({ ...prev, selectedCountries: routeCountries }));
+  }
 
   // Fetch city coordinates for geographic sorting
   const { data: cityCoordinates } = useQuery({
@@ -379,7 +406,10 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
     }
 
     // Apply geographic sorting
-    const sorted = sortGeographically(rawMatches, state.startingCityId);
+    const sorted = routeCityIds.length > 0
+      ? rawMatches.filter(v => routeCityIds.includes(v.cityId))
+          .sort((a, b) => routeCityIds.indexOf(a.cityId) - routeCityIds.indexOf(b.cityId))
+      : sortGeographically(rawMatches, state.startingCityId);
 
     // Assign dates after geographic ordering
     const schedule = state.startDate 
@@ -390,7 +420,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
       ...v,
       date: schedule[i]?.toISOString().split('T')[0] || '',
     }));
-  }, [availableVenues, state.targetShowCount, state.durationDays, state.minRestDays, state.startDate, state.selectedVenueIds, band?.total_fans, state.startingCityId, sortGeographically]);
+  }, [availableVenues, state.targetShowCount, state.durationDays, state.minRestDays, state.startDate, state.selectedVenueIds, band?.total_fans, state.startingCityId, sortGeographically, routeCityIds]);
 
   // Calculate recommended ticket price
   const recommendedTicketPrice = useMemo(() => {
