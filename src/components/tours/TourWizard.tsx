@@ -24,12 +24,13 @@ import { cn } from '@/lib/utils';
 
 interface TourWizardProps {
   bandId: string;
+  initialRouteCityIds?: string[];
   onComplete?: () => void;
   onCancel?: () => void;
 }
 
-export function TourWizard({ bandId, onComplete, onCancel }: TourWizardProps) {
-  const wizard = useTourWizard({ bandId });
+export function TourWizard({ bandId, initialRouteCityIds = [], onComplete, onCancel }: TourWizardProps) {
+  const wizard = useTourWizard({ bandId, initialRouteCityIds });
   const progress = ((wizard.currentStep + 1) / wizard.totalSteps) * 100;
 
   const handleBook = () => {
@@ -54,6 +55,9 @@ export function TourWizard({ bandId, onComplete, onCancel }: TourWizardProps) {
       </CardHeader>
       
       <CardContent className="space-y-6">
+        {initialRouteCityIds.length > 0 && <div className="rounded border p-3 text-sm">
+          Imported {initialRouteCityIds.length} ordered map destinations. Country and venue eligibility still apply; unavailable destinations cannot be booked.
+        </div>}
         {/* Step 0: Basics */}
         {wizard.currentStep === 0 && (
           <div className="space-y-4">
