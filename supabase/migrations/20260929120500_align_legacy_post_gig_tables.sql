@@ -17,10 +17,10 @@ SET processing_version = 'post-gig-consequences-v1'
 WHERE processing_version = '1';
 -- Keep historical snapshots intact while aligning their source factor type.
 CREATE OR REPLACE FUNCTION public._gig_jsonb_source_factors(p_value jsonb)
-RETURNS text[] LANGUAGE sql IMMUTABLE SET search_path = public AS $
+RETURNS text[] LANGUAGE sql IMMUTABLE SET search_path = public AS $body$
   SELECT coalesce(array_agg(value), ARRAY[]::text[])
   FROM jsonb_array_elements_text(CASE WHEN jsonb_typeof(p_value) = 'array' THEN p_value ELSE '[]'::jsonb END) AS t(value);
-$;
+$body$;
 ALTER TABLE public.gig_consequence_snapshots
   ALTER COLUMN source_factors DROP DEFAULT;
 ALTER TABLE public.gig_consequence_snapshots
