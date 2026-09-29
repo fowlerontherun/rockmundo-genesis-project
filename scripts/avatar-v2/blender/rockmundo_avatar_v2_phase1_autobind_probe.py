@@ -24,6 +24,7 @@ sys.path.insert(0, str(ROOT.parent))
 from phase1_body_contract import (DIGITS, DEFORM_BONES,
                                   propose_missing_finger_weights,
                                   missing_finger_review_hints)  # noqa: E402
+from phase1_finger_topology import trace_missing_finger_source  # noqa: E402
 from rockmundo_avatar_v2_phase1_body import (  # noqa: E402
     ARMATURE, POSES, assign_eight_skin_regions, audit_weights, bind_original_eyes,
     candidate_export, drive_correctives, mesh_world_positions,
@@ -125,6 +126,69 @@ try:
         raise RuntimeError("Finger source hint count differs from genuinely unweighted joints")
     report["fingerFitReviewHints"] = hints
     report["fingerFitHintCollection"] = hint_collection.name
+    # The nearest missing-guide source skin can belong to a DIFFERENT
+    # digit. Start instead from genuinely heat-owned SAME-DIGIT parent skin,
+    # then walk only actual polygon EDGES, never through another digit's
+    # painted surface or by jumping across a gap in world space. Still only
+    # diagnostic: no actual weights, fit handles or guide bones are changed.
+    topology = trace_missing_finger_source(
+        surface,
+        [tuple(int(i) for i in edge.vertices) for edge in body.data.edges],
+        paint, segments,
+    )
+    if set(topology) != set(hints):
+        raise RuntimeError("Actual topology and original heat-miss audit disagree")
+    report["fingerTopologyAnchors"] = topology
+    trace_collection = bpy.data.collections.get("RMV2_Phase1SameDigitSurfaceAnchors")
+    if trace_collection and trace_collection.objects:
+        raise RuntimeError("Existing artist same-digit surface annotations must be retained")
+    if not trace_collection:
+        trace_collection = bpy.data.collections.new("RMV2_Phase1SameDigitSurfaceAnchors")
+        scene.collection.children.link(trace_collection)
+    trace_collection.hide_render = True
+    trace_collection.hide_viewport = False
+    for joint_name, trace in topology.items():
+        for key, suffix, size, tint in (
+            ("sameDigitAnchorVertex", "PARENT", .0065, (.05, 1., .18, 1.)),
+            ("distalTopologyVertex", "TRACED_DISTAL", .0045, (.16, .57, 1., 1.)),
+        ):
+            actual_index = trace[key]
+            if actual_index is None:
+                continue
+            marker = bpy.data.objects.new(
+                f"RMV2_UNAPPROVED_SAME_DIGIT_{suffix}__{joint_name}", None
+            )
+            trace_collection.objects.link(marker)
+            marker.location = Vector(surface[actual_index])
+            marker.empty_display_type = "SPHERE"
+            marker.empty_display_size = size
+            marker.show_name = True
+            marker.show_in_front = True
+            marker.color = tint
+            marker["realCC0SourceVertexIndex"] = actual_index
+            marker["correctDigitParentBone"] = trace["upstreamSameDigitBone"]
+            marker["NOT_A_JOINT_PIVOT"] = True
+            marker["artistReviewed"] = False
+            marker["productionValidated"] = False
+        print(f"[phase1/topology] {args.frame} {joint_name}: "
+              f"parent={trace['upstreamSameDigitBone']} "
+              f"sameDigitVertex={trace['sameDigitAnchorVertex']} "
+              f"distalTrace={trace['distalTopologyVertex']} "
+              f"nearActualSkin={trace.get('nearTargetTopologyVertices', 0)} "
+              f"blockedOtherDigitEdges={trace['otherDigitEdgesBlocked']} "
+              f"paintApplied={trace.get('candidatePaintApplied', False)}; UNAPPROVED")
+    trace_notes = bpy.data.texts.get("ROCKMUNDO_PHASE1_SAME_DIGIT_TOPOLOGY") or bpy.data.texts.new(
+        "ROCKMUNDO_PHASE1_SAME_DIGIT_TOPOLOGY"
+    )
+    trace_notes.clear()
+    trace_notes.write(
+        "UNFITTED REAL CC0 MESH-EDGE TOPOLOGY TRACE; NEVER A JOINT PIVOT.\\n"
+        "GREEN = true same-digit upstream heat-owned SOURCE VERTEX.\\n"
+        "BLUE = topologically reachable source vertex without crossing painted other digits.\\n"
+        "RED nearby guide point may belong to a different anatomical finger.\\n"
+        "Inspect live connected sculpt edge loops manually; no weights were applied.\\n"
+        + json.dumps(topology, indent=2, sort_keys=True)
+    )
     print(f"[phase1/pilot] {args.frame}: saved {len(hints)} actual CC0 skin "
           f"artist-review markers; {sum(bool(x['possibleWrongFingerSurface']) for x in hints.values())} "
           "nearest points have another digit's bone-heat skin and require extra visual care")
