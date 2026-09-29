@@ -95,8 +95,7 @@ def main() -> None:
                 trace.get("notAnInternalJointPivot") is not True or
                 trace.get("artistReviewed") is not False or
                 trace.get("productionValidated") is not False or
-                trace.get("candidatePaintApplied") is not False and
-                trace.get("sameDigitAnchorVertex") is not None):
+                trace.get("candidatePaintApplied") is not False):
             raise RuntimeError(f"{name}: rejecting unapproved or stale topology handoff")
         base, side = name.split(".")
         digit, joint = base.rstrip("123"), int(base[-1])
