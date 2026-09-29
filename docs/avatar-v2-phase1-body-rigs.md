@@ -365,3 +365,39 @@ the existing `fit_rig.py --mode apply --reviewed`, production initial-bind,
 manual per-finger repaint, grip-closeup and independent full-body corrective
 review process. This artist convenience step is **not** physical completion
 or production certification; V1 remains in use.
+
+## Trace correct-digit source topology before repairing the six heat-missed fingers
+
+The nearest-body-vertex warnings from #2209 are intentionally RED where
+bone heat mapped the closest skin to a **neighbouring finger**. It would be
+unsafe to move the Middle3/Pinky3 internal joint to these red points.
+
+The source Blender probe now independently traces the ORIGINAL continuous
+CC0 sculpt **mesh edges** from existing truly painted **same-finger upstream**
+vertices. Its read-only `fingerTopologyAnchors` report includes the actual
+CC0 source vertex IDs and coordinates of a green trusted parent-finger surface
+anchor and, where observed, a blue edge-connected distal sample. It refuses
+to walk an edge into a different finger **or the opposite hand** when that
+source point has significant existing finger heat weights; skips disconnected
+surfaces; applies a tightly bounded mesh path length and requires source
+proximity to the actual guide. The `otherDigitEdgesBlocked` counter helps
+show exactly why red near-guide skin is not safe evidence for that digit.
+
+The matching frame's new `<frame>-FINGER-REVIEW-HANDLES-UNAPPROVED.blend`
+also has `RMV2_UnapprovedSameDigitSurface` next to the existing
+`RMV2_FitHandles` and `RMV2_UnapprovedFingerHandoff` collections:
+
+- **Red:** closest guide-to-surface vertex may belong to a DIFFERENT finger.
+- **Green:** original skin vertex with genuine upstream SAME-digit heat paint.
+- **Blue:** actual source skin reached along genuine mesh edges without
+  crossing any other significantly painted digit; the skin may still be
+  unassigned and remains only an exploratory topology reference.
+
+Blue and green markers are **all on source skin**, never anatomical internal
+joint pivots. If a same-digit anchor does not exist, the report retains an
+explicit blocker instead of silently borrowing another finger. The extra
+markers do not move a single fit handle, change a single bone, write any
+weight or assert human-reviewed geometry. The original body and guide
+remain unchanged. Inspect the real finger loops and position each joint
+head/tail, then finish **all** manual cleanup and independent artist reviews
+documented above before running the production `prepare` and `assess`.
