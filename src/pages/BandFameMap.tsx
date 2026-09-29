@@ -115,7 +115,7 @@ export default function BandFameMap() {
     queryKey: ["fame-atlas-cities"],
     queryFn: async () => {
       const { data, error } = await supabase.from("cities")
-        .select("id, name, country, dominant_genre")
+        .select("id, name, country, dominant_genre, latitude, longitude")
         .order("name");
       if (error) throw error;
       return data ?? [];
