@@ -101,6 +101,38 @@ BEGIN
      CASE WHEN v_demand>0 THEN 'positive' WHEN v_demand<0 THEN 'negative' ELSE 'neutral' END,
      'Booking demand updated from the settled gig and reputation movement.',ARRAY['overall_rating','actual_attendance','venue_capacity'], '{}'::jsonb);
 
+  -- Structured coverage is generated from the immutable outcome, not a random reroll.
+  -- An ineligible gig still has its four core consequence snapshots.
+  IF coalesce(v_outcome.actual_attendance,0) >= 80 THEN
+    INSERT INTO public.gig_media_reviews
+      (gig_id, reviewer_type, review_tier, headline, rating, summary,
+       positive_points, negative_points, visibility)
+    VALUES
+      (p_gig_id, 'system_template',
+       CASE WHEN coalesce(v_gig.capacity,0) >= 2500 AND v_target >= 70 THEN 'national_press'
+            WHEN coalesce(v_gig.capacity,0) >= 600 AND v_target >= 60 THEN 'local_press'
+            ELSE 'local_blog' END,
+       CASE WHEN v_target >= 75 THEN 'A memorable live performance'
+            WHEN v_target < 40 THEN 'A challenging night on stage'
+            ELSE 'The crowd responds to a completed show' END,
+       greatest(1,least(5,round(v_target/20))),
+       'Automated coverage based on the completed gig rating and attendance.',
+       jsonb_build_array('Gig outcome and attendance verified'),
+       CASE WHEN v_attendance < 0.45 THEN jsonb_build_array('Attendance limited reach') ELSE '[]'::jsonb END,
+       'public')
+    ON CONFLICT (gig_id, review_tier) DO NOTHING;
+    INSERT INTO public.gig_consequence_snapshots
+      (gig_id,processing_id,category,target_type,target_id,consequence_key,
+       delta_value,status,explanation,source_factors,metadata)
+    VALUES (p_gig_id,v_processing.id,'media','gig',p_gig_id,'media.review',
+      greatest(1,least(5,round(v_target/20))),
+      CASE WHEN v_target >= 70 THEN 'positive' WHEN v_target < 40 THEN 'negative' ELSE 'neutral' END,
+      'Structured automated coverage generated from the immutable gig outcome.',
+      ARRAY['overall_rating','actual_attendance','venue_capacity'],
+      jsonb_build_object('automated',true))
+    ON CONFLICT DO NOTHING;
+  END IF;
+
   UPDATE public.gig_post_processing SET status = 'completed',
     processing_version = 'post-gig-consequences-v1-db', completed_at = now(),
     error_snapshot = NULL,
