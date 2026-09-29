@@ -313,7 +313,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req);
+  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null; manual?: boolean }>(req);
   const triggeredBy = payload?.triggeredBy ?? req.headers.get("x-triggered-by") ?? undefined;
 
   const supabaseClient = createClient(
@@ -325,7 +325,8 @@ serve(async (req) => {
   // Scheduled jobs without a user token retain the existing all-session behaviour.
   const authorization = req.headers.get("authorization");
   let manualProfileId: string | undefined;
-  if (authorization && !req.headers.get("x-triggered-by")) {
+  if (payload?.manual === true) {
+    if (!authorization) return new Response(JSON.stringify({ error: "Please sign in again." }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     const { data: auth, error: authError } = await supabaseClient.auth.getUser(authorization.replace(/^Bearer\\s+/i, ""));
     if (authError || !auth.user) return new Response(JSON.stringify({ error: "Please sign in again." }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     const { data: profile, error: profileError } = await supabaseClient.from("profiles").select("id").eq("user_id", auth.user.id).limit(1).maybeSingle();
