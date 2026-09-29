@@ -77,7 +77,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
   });
   
   const [currentStep, setCurrentStep] = useState(0);
-  const routeCityIds = useMemo(() => [...new Set(options.initialRouteCityIds ?? [])], [options.initialRouteCityIds]);
+  const routeCityIds = useMemo(() => [...new Set(options.initialRouteCityIds ?? [])], [(options.initialRouteCityIds ?? []).join('|')]);
   const { data: routeCities = [] } = useQuery({
     queryKey: ['tour-map-route-cities', routeCityIds],
     enabled: routeCityIds.length > 0,
@@ -385,7 +385,9 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
         return aScore - bScore;
       });
       
-      for (const venue of sortedVenues) {
+      for (const venue of (routeCityIds.length > 0
+        ? [...sortedVenues].sort((a, b) => routeCityIds.indexOf(a.city_id || '') - routeCityIds.indexOf(b.city_id || ''))
+        : sortedVenues)) {
         if (rawMatches.length >= showCount) break;
         if (citiesUsed.has(venue.city_id || '')) continue;
         
