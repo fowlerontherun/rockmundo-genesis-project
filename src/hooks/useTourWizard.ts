@@ -361,7 +361,13 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
     // If user manually selected venues, use those
     if (state.selectedVenueIds.length > 0) {
       const selectedVenues = availableVenues.filter(v => state.selectedVenueIds.includes(v.id));
-      rawMatches = selectedVenues.map((v) => ({
+      // Imported map routes represent one show per destination. Do not silently
+      // book multiple shows in the same city when manual venue IDs are selected.
+      const uniqueSelectedVenues = routeCityIds.length > 0
+        ? selectedVenues.filter((venue, index, all) =>
+            all.findIndex(other => other.city_id === venue.city_id) === index)
+        : selectedVenues;
+      rawMatches = uniqueSelectedVenues.map((v) => ({
         venueId: v.id,
         venueName: v.name,
         cityId: v.city_id || '',
