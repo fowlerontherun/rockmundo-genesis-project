@@ -3,7 +3,6 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Loader2 } from 'lucide-react';
-import { getCoordinatesForCity } from '@/utils/worldTravel';
 import { EmptyState } from '@/components/ui/EmptyState';
 
 interface City {
@@ -156,9 +155,11 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick }: Interactive
 
       // Add new markers
       cities.forEach((city) => {
-        const coordinates = city.latitude != null && city.longitude != null
-          ? { lat: city.latitude, lng: city.longitude }
-          : getCoordinatesForCity(city.name, city.country);
+        // Never place unknown cities at a guessed coordinate.
+        if (city.latitude == null || city.longitude == null ||
+            !Number.isFinite(city.latitude) || !Number.isFinite(city.longitude) ||
+            Math.abs(city.latitude) > 90 || Math.abs(city.longitude) > 180) return;
+        const coordinates = { lat: city.latitude, lng: city.longitude };
         const isCurrentCity = city.id === currentCityId;
 
         // Create custom marker element
@@ -191,24 +192,21 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick }: Interactive
             : '0 0 8px hsl(var(--primary) / 0.4)';
         });
 
-        // Create popup
-        const popupContent = `
-          <div style="font-family: system-ui, -apple-system, sans-serif; padding: 4px;">
-            <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px; color: hsl(var(--foreground));">
-              ${city.name}${city.country ? `, ${city.country}` : ''}
-              ${isCurrentCity ? ' 📍' : ''}
-            </div>
-            <div style="font-size: 12px; color: hsl(var(--muted-foreground));">
-              ${city.dominant_genre ? `Genre: ${city.dominant_genre}` : 'Click to explore'}
-            </div>
-          </div>
-        `;
-
+        // Build popup with DOM text nodes: city names are database content, not HTML.
+        const popupContent = document.createElement('div');
+        popupContent.style.cssText = 'font-family:system-ui,sans-serif;padding:4px';
+        const heading = document.createElement('div');
+        heading.style.cssText = 'font-weight:600;font-size:14px;margin-bottom:4px';
+        heading.textContent = city.name + (city.country ? ', ' + city.country : '') + (isCurrentCity ? ' 📍' : '');
+        const detail = document.createElement('div');
+        detail.style.fontSize = '12px';
+        detail.textContent = city.dominant_genre ? 'Genre: ' + city.dominant_genre : 'Click to explore';
+        popupContent.append(heading, detail);
         const popup = new mapboxgl.Popup({
           offset: 15,
           closeButton: false,
           className: 'city-popup'
-        }).setHTML(popupContent);
+        }).setDOMContent(popupContent);
 
         // Create marker
         const marker = new mapboxgl.Marker({ element: el })
