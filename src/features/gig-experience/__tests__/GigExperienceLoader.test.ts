@@ -218,4 +218,24 @@ describe("gig experience resilient loader", () => {
       reference: "GIGVIEW-GIG-42501-11111111",
     });
   });
+  it("does not present historical processing without snapshots as applied consequences", async () => {
+    const experience = await getGigExperience(gigId, legacyCompatibilityClient({
+      gig_post_processing: () => response({ status: "processing", processing_version: "post-gig-consequences-v1", completed_at: null }),
+      gig_consequence_snapshots: () => response([]),
+    }));
+    expect(experience?.postConsequences.processingStatus).toBe("processing");
+    expect(experience?.postConsequences.liveReputationDelta.status).toBe("legacy_missing");
+    expect(experience?.postConsequences.mediaCoverage.status).toBe("legacy_missing");
+  });
+
+  it("downgrades a completed processing row with no snapshots to retry required", async () => {
+    const experience = await getGigExperience(gigId, legacyCompatibilityClient({
+      gig_post_processing: () => response({ status: "completed", processing_version: "post-gig-consequences-v1", completed_at: "2026-08-10T23:00:00Z" }),
+      gig_consequence_snapshots: () => response([]),
+    }));
+    expect(experience?.postConsequences.processingStatus).toBe("retry_required");
+    expect(experience?.postConsequences.processedAt).toBeNull();
+    expect(experience?.postConsequences.mediaCoverage.status).toBe("legacy_missing");
+  });
+
 });
