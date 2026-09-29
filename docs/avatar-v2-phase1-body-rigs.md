@@ -401,3 +401,45 @@ weight or assert human-reviewed geometry. The original body and guide
 remain unchanged. Inspect the real finger loops and position each joint
 head/tail, then finish **all** manual cleanup and independent artist reviews
 documented above before running the production `prepare` and `assess`.
+
+## Carefully quarantined real same-finger starter-weight trial
+
+After the independently verified #2211 genuine mesh-edge traces, only the
+distinct **feminine Pinky2.L/R** currently have 17 eligible upstream
+same-finger, source-connected local vertices per side. The two masculine
+Middle3 joints have wrong-finger coverage separating the existing parent
+skin from their distal guide, and feminine Pinky3 has no usable local
+distal-trace route. A blind nearest-bone heat transfer would repaint
+neighbouring digits and is NOT an acceptable fix.
+
+The source workflow optionally opens a **separate original experimental
+source copy**, re-computes ALL source-mesh-edge traces from real Blender
+geometry and existing bone-heat skin and rejects any mismatch with the
+same-run diagnostic report. It then attempts tiny provisional
+upstream-to-child weight transfers only for joints with a complete
+same-digit trace, at least **four distinct actual source vertices** with
+significant matching upstream skin, original guide proximity and no
+other-finger painted ownership at all. It preserves every existing
+significant non-parent influence and the four-weight limit. It refuses
+to populate a joint using one token vertex or to use same-world-position
+skin reached by jumping across disconnected CC0 polygon edges.
+
+For each frame, the independent unapproved
+`same-digit-trial/<frame>-UNFITTED-SAME-DIGIT-TRIAL-report.json`
+reports exactly what changed and what remained blocked. If at least one
+joint can be genuinely weighted, the workflow saves
+`<frame>-UNFITTED-SAME-DIGIT-PAINT-TRIAL-not-validated.blend`
+in that quarantine folder and takes an actual instrument-grip close-up.
+It independently verifies the REAL post-edit Blender weighted bones and
+the new joints' **isolated evaluated-mesh motion**. A frame with zero
+safely transferable vertices remains entirely unmodified and records why.
+
+**No trial file is a fitted or production rig.** None changes the source
+`<frame>-unfitted-rig-guide.blend`, original auto-bound experimental
+scene, editable artist fit handles, public runtime assets, player
+snapshots or approved GLBs. The experimental motion is not a reviewed
+visual claim about knuckle position, finger silhouettes or physical
+performance animation. A professional must still inspect genuine source
+edge loops, position all joints, repaint every digit, sculpt eight
+authored correctives for EACH full body and independently sign off full
+body articulation before either frame can pass production assessment.
