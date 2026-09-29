@@ -11,6 +11,8 @@ interface City {
   name: string;
   country: string;
   dominant_genre?: string;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 interface InteractiveWorldMapProps {
@@ -131,28 +133,32 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick }: Interactive
       markers.current.forEach(marker => marker.remove());
       markers.current = [];
       map.current?.remove();
+      map.current = null;
     };
   }, []);
 
   // Update markers when cities change
   useEffect(() => {
-    if (!map.current || !cities.length) return;
+    if (!map.current) return;
 
     // Wait for map to be fully loaded
-    if (!map.current.loaded()) {
+    if (!map.current.isStyleLoaded()) {
       map.current.once('load', () => addMarkers());
     } else {
       addMarkers();
     }
 
     function addMarkers() {
+      if (!map.current) return;
       // Remove existing markers
       markers.current.forEach(marker => marker.remove());
       markers.current = [];
 
       // Add new markers
       cities.forEach((city) => {
-        const coordinates = getCoordinatesForCity(city.name, city.country);
+        const coordinates = city.latitude != null && city.longitude != null
+          ? { lat: city.latitude, lng: city.longitude }
+          : getCoordinatesForCity(city.name, city.country);
         const isCurrentCity = city.id === currentCityId;
 
         // Create custom marker element
