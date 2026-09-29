@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import pathlib
 import sys
 
@@ -82,6 +83,44 @@ def main() -> None:
     positions = [tuple(body.matrix_world @ v.co) for v in body.data.vertices]
     probe = json.loads(args.probe_report.read_text(encoding="utf8"))
     hints = validate_finger_handoff(probe, args.frame, positions, segments)
+    topology = probe.get("fingerTopologyAnchors")
+    if not isinstance(topology, dict) or set(topology) != set(hints):
+        raise RuntimeError("Source report is missing SAME-RUN original source topology per unweighted joint")
+    # The original fitting scene contains the identical immutable CC0 source
+    # but NO provisional bone-heat paint. Validate every reported source
+    # location by original vertex ID and the guide already checked above.
+    for name, trace in topology.items():
+        if (trace.get("missingJoint") != name or
+                trace.get("sourceTopologyOnly") is not True or
+                trace.get("notAnInternalJointPivot") is not True or
+                trace.get("artistReviewed") is not False or
+                trace.get("productionValidated") is not False or
+                trace.get("candidatePaintApplied") is not False and
+                trace.get("sameDigitAnchorVertex") is not None):
+            raise RuntimeError(f"{name}: rejecting unapproved or stale topology handoff")
+        base, side = name.split(".")
+        digit, joint = base.rstrip("123"), int(base[-1])
+        parent = trace.get("upstreamSameDigitBone")
+        if parent is not None and parent not in {
+            f"{digit}{earlier}.{side}" for earlier in range(1, joint)
+        }:
+            raise RuntimeError(f"{name}: parent source weight belongs to wrong finger or side")
+        for key, point_key in (("sameDigitAnchorVertex", "sameDigitAnchorWorld"),
+                               ("distalTopologyVertex", "distalTopologyWorld")):
+            idx = trace.get(key)
+            recorded = trace.get(point_key)
+            if idx is None:
+                if recorded is not None:
+                    raise RuntimeError(f"{name}: topology marker has no source ID")
+                continue
+            if (type(idx) is not int or not 0 <= idx < len(positions)
+                    or not isinstance(recorded, list) or len(recorded) != 3
+                    or math.dist(positions[idx], recorded) > .000003):
+                raise RuntimeError(f"{name}: the topological source vertex changed")
+        if parent is not None and (trace.get("sameDigitAnchorVertex") is None or
+                                   not .20 <= trace.get("sameDigitAnchorParentWeight", 0) <= 1.001):
+            raise RuntimeError(f"{name}: supposed same-digit anchor lacks real parent paint")
+
     collection = bpy.data.collections.new(COLLECTION)
     scene.collection.children.link(collection)
     collection.hide_render = True
@@ -109,6 +148,38 @@ def main() -> None:
         # Existing RMV2_FIT__<name>__tail markers are left untouched. Where
         # the bone is connected, the start pivot follows its parent's tail.
 
+    # Green shows an actual heat-owned SAME-DIGIT upstream source vertex;
+    # blue is only a candidate continuous edge-connected surface sample.
+    # Neither is an INTERNAL knuckle pivot; never relocate RMV2_FitHandles.
+    trace_collection = bpy.data.collections.new("RMV2_UnapprovedSameDigitSurface")
+    scene.collection.children.link(trace_collection)
+    trace_collection.hide_render = True
+    for name, trace in sorted(topology.items()):
+        for key, label, color, size in (
+            ("sameDigitAnchorVertex", "UPSTREAM", (.04, 1., .18, 1.), .006),
+            ("distalTopologyVertex", "TRACED", (.14, .58, 1., 1.), .004),
+        ):
+            idx = trace.get(key)
+            if idx is None:
+                continue
+            if key == "distalTopologyVertex" and idx == trace.get("sameDigitAnchorVertex"):
+                continue
+            marker = bpy.data.objects.new(
+                f"RMV2_UNAPPROVED_SAME_DIGIT_{label}__{name}", None
+            )
+            trace_collection.objects.link(marker)
+            marker.location = Vector(positions[idx])
+            marker.empty_display_type = "SPHERE"
+            marker.empty_display_size = size
+            marker.show_name = True
+            marker.show_in_front = True
+            marker.color = color
+            marker["actualCC0SourceVertex"] = idx
+            marker["missingJoint"] = name
+            marker["upstreamSameDigitHeatBone"] = trace.get("upstreamSameDigitBone") or ""
+            marker["NOT_AN_INTERNAL_JOINT"] = True
+            marker["artistReviewed"] = False
+            marker["productionValidated"] = False
     readme = bpy.data.texts.get(TEXT_NAME) or bpy.data.texts.new(TEXT_NAME)
     readme.clear()
     readme.write(
@@ -121,7 +192,9 @@ def main() -> None:
         "Inspect true CC0 edge loops from multiple views and fit each real joint.\n"
         "Repaint every finger; verify a close-up full grip, twist and creases.\n"
         "Independent review, all 8 corrective sculpts and full assess are REQUIRED.\n\n"
-        + json.dumps(hints, indent=2, sort_keys=True)
+        + "NEAREST SOURCE WARNINGS:\\n" + json.dumps(hints, indent=2, sort_keys=True)
+        + "\\nSAME-DIGIT SOURCE TOPOLOGY:\\n"
+        + json.dumps(topology, indent=2, sort_keys=True)
     )
     scene["rockmundoAvatarV2UnapprovedFingerHandoff"] = True
     scene["rockmundoAvatarV2FingerHandoffCount"] = len(hints)
@@ -132,7 +205,12 @@ def main() -> None:
     summary = {
         "schema": "rockmundo.avatar-v2-unapproved-finger-handoff",
         "frame": args.frame, "sourceMesh": body.name, "actualSourceVertices": len(positions),
-        "hints": sorted(hints), "wrongDigitWarnings": sorted(
+        "hints": sorted(hints),
+        "sameDigitAnchors": sorted(name for name, t in topology.items()
+                                   if t["sameDigitAnchorVertex"] is not None),
+        "traceBlockers": {name: t["blocker"] for name, t in topology.items()
+                          if t["blocker"]},
+        "wrongDigitWarnings": sorted(
             name for name, hint in hints.items() if hint["possibleWrongFingerSurface"]
         ), "editableFitHandlesIntact": True,
         "artistReviewed": False, "productionValidated": False,
