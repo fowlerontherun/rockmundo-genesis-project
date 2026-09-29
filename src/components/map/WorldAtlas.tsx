@@ -22,10 +22,11 @@ interface WorldAtlasProps {
   bandId?: string | null;
   mode?: "explore" | "fame" | "tour";
   onCitySelect?: (cityId: string) => void;
+  onPlanRoute?: (cityIds: string[]) => void;
 }
 
 /** A shared city selection surface. Travel booking remains with the authoritative travel/tour flows. */
-export default function WorldAtlas({ cities, currentCityId, bandId, mode = "explore", onCitySelect }: WorldAtlasProps) {
+export default function WorldAtlas({ cities, currentCityId, bandId, mode = "explore", onCitySelect, onPlanRoute }: WorldAtlasProps) {
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [onlyReached, setOnlyReached] = useState(false);
@@ -85,6 +86,7 @@ export default function WorldAtlas({ cities, currentCityId, bandId, mode = "expl
           })}
         </ol>
         <TourRouteMap points={routePoints} />
+        {onPlanRoute && <Button onClick={() => onPlanRoute(plannedStops)}>Continue in tour planner</Button>}
       </section>}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
         <div className="h-[420px] md:h-[600px] min-w-0 overflow-hidden rounded-lg border">
