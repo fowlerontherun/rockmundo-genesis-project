@@ -58,6 +58,14 @@ BEGIN
   VALUES (v_gig.band_id) ON CONFLICT (band_id) DO NOTHING;
   SELECT * INTO v_rep FROM public.band_live_reputation
   WHERE band_id = v_gig.band_id FOR UPDATE;
+  -- A historical partial application may have updated reputation before
+  -- failing to write snapshots. Never award a second experience increment.
+  IF v_rep.last_gig_id = p_gig_id THEN
+    UPDATE public.gig_post_processing SET status = 'retry_required',
+      error_snapshot = jsonb_build_object('reason','reputation_already_applied_without_snapshots'),
+      updated_at = now() WHERE id = v_processing.id;
+    RETURN 'manual_review_required';
+  END IF;
   v_rating := greatest(0, least(100, v_outcome.overall_rating * 4));
   v_attendance := CASE WHEN coalesce(v_gig.capacity,0) > 0
     THEN greatest(0,least(1,v_outcome.actual_attendance::numeric/v_gig.capacity)) ELSE 0 END;
