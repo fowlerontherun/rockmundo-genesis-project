@@ -61,16 +61,18 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-triggered-by",
 };
 
-async function processAttendance(supabaseClient: any) {
+async function processAttendance(supabaseClient: any, profileId?: string) {
   console.log("Starting book reading attendance processing...");
 
-  const { data: sessions, error: sessionsError } = await supabaseClient
+  let sessionsQuery = supabaseClient
     .from("player_book_reading_sessions")
     .select(`
       *,
       skill_books (skill_slug, skill_percentage_gain, base_reading_days)
     `)
     .eq("status", "reading");
+  if (profileId) sessionsQuery = sessionsQuery.eq("profile_id", profileId);
+  const { data: sessions, error: sessionsError } = await sessionsQuery;
 
   if (sessionsError) throw sessionsError;
 
@@ -93,6 +95,7 @@ async function processAttendance(supabaseClient: any) {
 
       if (existing) {
         console.log(`Attendance already recorded for session ${session.id}`);
+        records.push({ session_id: session.id, reason: "already_recorded" });
         continue;
       }
 
@@ -108,6 +111,8 @@ async function processAttendance(supabaseClient: any) {
       if (tierError) throw tierError;
       if (tierUnlocked === false) {
         console.log(`[Books] Skipping locked tier ${book.skill_slug} on profile ${session.profile_id}`);
+        records.push({ session_id: session.id, error: "This book\u0027s skill prerequisites are not unlocked yet." });
+        errorCount += 1;
         continue;
       }
 
@@ -308,13 +313,26 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req);
+  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null; manual?: boolean }>(req);
   const triggeredBy = payload?.triggeredBy ?? req.headers.get("x-triggered-by") ?? undefined;
 
   const supabaseClient = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   );
+
+  // Manual button presses must only process the authenticated player\u0027s active profile.
+  // Scheduled jobs without a user token retain the existing all-session behaviour.
+  const authorization = req.headers.get("authorization");
+  let manualProfileId: string | undefined;
+  if (payload?.manual === true) {
+    if (!authorization) return new Response(JSON.stringify({ error: "Please sign in again." }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const { data: auth, error: authError } = await supabaseClient.auth.getUser(authorization.replace(/^Bearer\\s+/i, ""));
+    if (authError || !auth.user) return new Response(JSON.stringify({ error: "Please sign in again." }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const { data: profile, error: profileError } = await supabaseClient.from("profiles").select("id").eq("user_id", auth.user.id).limit(1).maybeSingle();
+    if (profileError || !profile) return new Response(JSON.stringify({ error: "No player profile found." }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    manualProfileId = profile.id;
+  }
 
   let runId: string | null = null;
   const startedAt = Date.now();
@@ -329,7 +347,7 @@ serve(async (req) => {
       requestId: payload?.requestId ?? null,
     });
 
-    const { records, processedCount, errorCount, totalXpAwarded } = await processAttendance(supabaseClient);
+    const { records, processedCount, errorCount, totalXpAwarded } = await processAttendance(supabaseClient, manualProfileId);
 
     await completeJobRun({
       jobName: "book-reading-attendance",
