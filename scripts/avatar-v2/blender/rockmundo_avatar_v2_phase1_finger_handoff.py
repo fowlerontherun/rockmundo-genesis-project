@@ -59,7 +59,7 @@ def main() -> None:
     )
     if body is None or body.type != "MESH" or len(body.data.vertices) < 1000:
         raise RuntimeError("Actual matching continuous source body was not found")
-    if body.modifiers or any(
+    if any(mod.type == "ARMATURE" for mod in body.modifiers) or any(
         group.name in {f"{digit}{joint}.{side}" for digit in DIGITS
                        for joint in (1, 2, 3) for side in ("L", "R")}
         for group in body.vertex_groups
