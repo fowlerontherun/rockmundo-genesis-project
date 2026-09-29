@@ -426,6 +426,8 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
     }));
   }, [availableVenues, state.targetShowCount, state.durationDays, state.minRestDays, state.startDate, state.selectedVenueIds, band?.total_fans, state.startingCityId, sortGeographically, routeCityIds]);
 
+  const missingRouteCityIds = routeCityIds.filter(id => !venueMatches.some(venue => venue.cityId === id));
+
   // Calculate recommended ticket price
   const recommendedTicketPrice = useMemo(() => {
     if (venueMatches.length === 0) return 20;
@@ -565,6 +567,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
   const bookTourMutation = useMutation({
     mutationFn: async () => {
       if (!profileId || !userId || !state.bandId) throw new Error('Missing user, profile or band');
+      if (missingRouteCityIds.length > 0) throw new Error('Some map destinations have no eligible venue. Update the route or venue filters before booking.');
       
       const endDate = state.startDate 
         ? calculateTourEndDate(
@@ -943,7 +946,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
       case 2: // Countries
         return state.selectedCountries.length > 0;
       case 3: // Venues
-        return state.venueTypes.length > 0 && venueMatches.length > 0;
+        return state.venueTypes.length > 0 && venueMatches.length > 0 && missingRouteCityIds.length === 0;
       case 4: // Tickets
         return true; // Always valid, uses recommended if not set
       case 5: // Stage Production
@@ -953,11 +956,11 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
       case 7: // Support Artist
         return true; // Optional step
       case 8: // Review
-        return venueMatches.length > 0 && (band?.band_balance || 0) >= costEstimate.netUpfrontCost;
+        return venueMatches.length > 0 && missingRouteCityIds.length === 0 && (band?.band_balance || 0) >= costEstimate.netUpfrontCost;
       default:
         return false;
     }
-  }, [currentStep, state, scopeAccess, venueMatches.length, band?.band_balance, band?.fame, costEstimate.netUpfrontCost]);
+  }, [currentStep, state, scopeAccess, venueMatches.length, band?.band_balance, band?.fame, costEstimate.netUpfrontCost, missingRouteCityIds.length]);
 
   return {
     state,
@@ -980,6 +983,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
     venuesLoading,
     setlists,
     venueMatches,
+    missingRouteCityIds,
     costEstimate,
     maxAllowedCapacity,
     scopeAccess,
