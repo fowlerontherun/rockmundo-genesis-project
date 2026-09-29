@@ -1598,6 +1598,42 @@ export type Database = {
           },
         ]
       }
+      avatar_v2_authoring_reviews: {
+        Row: {
+          archive_sha256: string
+          glb_model_count: number
+          id: string
+          review_notes: string
+          source_file_count: number
+          status: string
+          storage_key: string
+          validated_at: string
+          validated_by: string
+        }
+        Insert: {
+          archive_sha256: string
+          glb_model_count: number
+          id?: string
+          review_notes?: string
+          source_file_count: number
+          status?: string
+          storage_key: string
+          validated_at?: string
+          validated_by: string
+        }
+        Update: {
+          archive_sha256?: string
+          glb_model_count?: number
+          id?: string
+          review_notes?: string
+          source_file_count?: number
+          status?: string
+          storage_key?: string
+          validated_at?: string
+          validated_by?: string
+        }
+        Relationships: []
+      }
       award_nominations: {
         Row: {
           award_show_id: string
@@ -12303,6 +12339,42 @@ export type Database = {
           },
         ]
       }
+      crew_wage_balance_history: {
+        Row: {
+          applied_at: string
+          balance_version: string
+          catalog_rows: number
+          catalog_salary_after: number
+          catalog_salary_before: number
+          hired_rows: number
+          hired_salary_after: number
+          hired_salary_before: number
+          open_assignment_rows: number
+        }
+        Insert: {
+          applied_at?: string
+          balance_version: string
+          catalog_rows: number
+          catalog_salary_after: number
+          catalog_salary_before: number
+          hired_rows: number
+          hired_salary_after: number
+          hired_salary_before: number
+          open_assignment_rows: number
+        }
+        Update: {
+          applied_at?: string
+          balance_version?: string
+          catalog_rows?: number
+          catalog_salary_after?: number
+          catalog_salary_before?: number
+          hired_rows?: number
+          hired_salary_after?: number
+          hired_salary_before?: number
+          open_assignment_rows?: number
+        }
+        Relationships: []
+      }
       cron_job_config: {
         Row: {
           allow_manual_trigger: boolean | null
@@ -17078,6 +17150,59 @@ export type Database = {
           },
         ]
       }
+      festival_canonical_brand_selections: {
+        Row: {
+          brand_id: string
+          created_at: string
+          festival_company_id: string
+          id: string
+          selected_by_profile_id: string
+        }
+        Insert: {
+          brand_id: string
+          created_at?: string
+          festival_company_id: string
+          id?: string
+          selected_by_profile_id: string
+        }
+        Update: {
+          brand_id?: string
+          created_at?: string
+          festival_company_id?: string
+          id?: string
+          selected_by_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_canonical_brand_selections_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "sponsorship_brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_canonical_brand_selections_festival_company_id_fkey"
+            columns: ["festival_company_id"]
+            isOneToOne: false
+            referencedRelation: "festival_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_canonical_brand_selections_selected_by_profile_id_fkey"
+            columns: ["selected_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_canonical_brand_selections_selected_by_profile_id_fkey"
+            columns: ["selected_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_companies: {
         Row: {
           annual_month: number | null
@@ -21389,6 +21514,86 @@ export type Database = {
             columns: ["festival_result_id"]
             isOneToOne: true
             referencedRelation: "festival_simplified_edition_results"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_owner_npc_lineup_acts: {
+        Row: {
+          billing_position: string
+          created_at: string
+          created_by_profile_id: string | null
+          display_name: string
+          fame: number
+          festival_company_id: string
+          festival_date: string
+          festival_edition_id: string
+          genre: string | null
+          id: string
+          set_minutes: number
+          stage_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          billing_position?: string
+          created_at?: string
+          created_by_profile_id?: string | null
+          display_name: string
+          fame?: number
+          festival_company_id: string
+          festival_date: string
+          festival_edition_id: string
+          genre?: string | null
+          id?: string
+          set_minutes?: number
+          stage_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          billing_position?: string
+          created_at?: string
+          created_by_profile_id?: string | null
+          display_name?: string
+          fame?: number
+          festival_company_id?: string
+          festival_date?: string
+          festival_edition_id?: string
+          genre?: string | null
+          id?: string
+          set_minutes?: number
+          stage_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_owner_npc_lineup_acts_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_owner_npc_lineup_acts_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_owner_npc_lineup_acts_festival_edition_id_fkey"
+            columns: ["festival_edition_id"]
+            isOneToOne: false
+            referencedRelation: "festival_editions_v2"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_owner_npc_lineup_acts_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "festival_site_plan_stages"
             referencedColumns: ["id"]
           },
         ]
@@ -30705,7 +30910,7 @@ export type Database = {
           performance_score: number
           position: number
           rehearsal_contrib: number | null
-          song_id: string
+          song_id: string | null
           song_quality_contrib: number | null
           song_title: string | null
           started_at: string | null
@@ -30726,7 +30931,7 @@ export type Database = {
           performance_score: number
           position: number
           rehearsal_contrib?: number | null
-          song_id: string
+          song_id?: string | null
           song_quality_contrib?: number | null
           song_title?: string | null
           started_at?: string | null
@@ -30747,7 +30952,7 @@ export type Database = {
           performance_score?: number
           position?: number
           rehearsal_contrib?: number | null
-          song_id?: string
+          song_id?: string | null
           song_quality_contrib?: number | null
           song_title?: string | null
           started_at?: string | null
@@ -30764,7 +30969,7 @@ export type Database = {
             foreignKeyName: "gig_song_performances_performance_item_id_fkey"
             columns: ["performance_item_id"]
             isOneToOne: false
-            referencedRelation: "performance_items"
+            referencedRelation: "performance_items_catalog"
             referencedColumns: ["id"]
           },
           {
@@ -37275,6 +37480,7 @@ export type Database = {
           customer_type: string
           discount_pct: number
           gig_id: string | null
+          gig_settlement_id: string | null
           id: string
           merchandise_id: string | null
           net_revenue: number | null
@@ -37297,6 +37503,7 @@ export type Database = {
           customer_type?: string
           discount_pct?: number
           gig_id?: string | null
+          gig_settlement_id?: string | null
           id?: string
           merchandise_id?: string | null
           net_revenue?: number | null
@@ -37319,6 +37526,7 @@ export type Database = {
           customer_type?: string
           discount_pct?: number
           gig_id?: string | null
+          gig_settlement_id?: string | null
           id?: string
           merchandise_id?: string | null
           net_revenue?: number | null
@@ -37351,6 +37559,13 @@ export type Database = {
             columns: ["gig_id"]
             isOneToOne: false
             referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merch_orders_gig_settlement_id_fkey"
+            columns: ["gig_settlement_id"]
+            isOneToOne: false
+            referencedRelation: "gig_commerce_settlements"
             referencedColumns: ["id"]
           },
           {
@@ -61540,6 +61755,7 @@ export type Database = {
           amount: number
           created_at: string
           description: string | null
+          gig_settlement_id: string | null
           id: string
           related_booking_id: string | null
           transaction_type: string
@@ -61549,6 +61765,7 @@ export type Database = {
           amount: number
           created_at?: string
           description?: string | null
+          gig_settlement_id?: string | null
           id?: string
           related_booking_id?: string | null
           transaction_type: string
@@ -61558,12 +61775,20 @@ export type Database = {
           amount?: number
           created_at?: string
           description?: string | null
+          gig_settlement_id?: string | null
           id?: string
           related_booking_id?: string | null
           transaction_type?: string
           venue_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "venue_financial_transactions_gig_settlement_id_fkey"
+            columns: ["gig_settlement_id"]
+            isOneToOne: false
+            referencedRelation: "gig_commerce_settlements"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "venue_financial_transactions_related_booking_id_fkey"
             columns: ["related_booking_id"]
@@ -64130,6 +64355,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      add_festival_legacy_brand_prospect: {
+        Args: { p_brand_id: string; p_festival_company_id: string }
+        Returns: Json
+      }
       add_festival_stage_performance_to_day_plan: {
         Args: {
           p_attendance_id: string
@@ -65579,6 +65808,15 @@ export type Database = {
         Args: { p_item_id: string }
         Returns: Json
       }
+      cancel_festival_owner_npc_lineup_act: {
+        Args: {
+          p_festival_company_id: string
+          p_festival_edition_id: string
+          p_idempotency_key: string
+          p_npc_act_id: string
+        }
+        Returns: Json
+      }
       cancel_festival_performance_session: {
         Args: {
           p_cancel_status?: string
@@ -65908,6 +66146,7 @@ export type Database = {
       clamp_city_rating: { Args: { p_value: number }; Returns: number }
       cleanup_stuck_cron_runs: { Args: never; Returns: number }
       cleanup_timed_out_generations: { Args: never; Returns: number }
+      close_expired_festival_ticket_sales: { Args: never; Returns: number }
       close_festival_ticket_sales: {
         Args: {
           p_expected_launch_version: number
@@ -67105,6 +67344,10 @@ export type Database = {
         Args: { p_error: string; p_job_id: string; p_retry?: boolean }
         Returns: undefined
       }
+      festival_admin_can_operate_edition: {
+        Args: { p_edition_id: string; p_roles?: string[] }
+        Returns: boolean
+      }
       festival_application_eligibility: {
         Args: { p_band_id: string; p_edition_id: string }
         Returns: Json
@@ -68112,6 +68355,25 @@ export type Database = {
         Returns: Json
       }
       get_festival_awards: { Args: { p_year?: number }; Returns: Json }
+      get_festival_canonical_brand_candidates: {
+        Args: {
+          p_festival_company_id: string
+          p_limit?: number
+          p_search?: string
+        }
+        Returns: {
+          already_contracted: boolean
+          already_prospected: boolean
+          available_budget: number
+          brand_id: string
+          brand_name: string
+          category: string
+          exclusivity_pref: boolean
+          logo_url: string
+          region: string
+          wealth_score: number
+        }[]
+      }
       get_festival_company_editions: {
         Args: { p_festival_company_id: string }
         Returns: Json
@@ -68224,8 +68486,16 @@ export type Database = {
         Args: { p_festival_company_id: string; p_festival_edition_id: string }
         Returns: Json
       }
+      get_festival_owner_npc_lineup_acts: {
+        Args: { p_festival_company_id: string; p_festival_edition_id: string }
+        Returns: Json
+      }
       get_festival_performance_settlement_breakdown: {
         Args: { p_session_id: string }
+        Returns: Json
+      }
+      get_festival_player_ticket_sales_breakdown: {
+        Args: { p_festival_company_id: string }
         Returns: Json
       }
       get_festival_real_attendance_signal: {
@@ -68314,6 +68584,7 @@ export type Database = {
         Args: { p_limit?: number; p_status?: string }
         Returns: Json
       }
+      get_my_band_festival_appearances: { Args: never; Returns: Json }
       get_my_band_funding_sources: {
         Args: { p_band_id: string }
         Returns: Json
@@ -69200,6 +69471,29 @@ export type Database = {
           other_username: string
           type: string
           unread_count: number
+        }[]
+      }
+      list_festival_canonical_brands: {
+        Args: {
+          p_festival_company_id: string
+          p_initial?: string
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+          p_sort?: string
+        }
+        Returns: {
+          already_contracted: boolean
+          already_prospected: boolean
+          available_budget: number
+          brand_id: string
+          brand_name: string
+          category: string
+          exclusivity_pref: boolean
+          logo_url: string
+          region: string
+          total_count: number
+          wealth_score: number
         }[]
       }
       list_festival_for_sale: {
@@ -70093,6 +70387,16 @@ export type Database = {
       receive_festival_settlement_receivable: {
         Args: { p_idempotency_key: string; p_line_id: string }
         Returns: Json
+      }
+      recent_festival_band_announcements: {
+        Args: { p_limit?: number }
+        Returns: {
+          band_name: string
+          billing_position: string
+          booking_id: string
+          confirmed_at: string
+          festival_name: string
+        }[]
       }
       recommended_gig_ticket_price: {
         Args: { p_capacity: number; p_prestige: number }
@@ -73653,6 +73957,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      update_festival_booking_billing: {
+        Args: { p_booking_id: string; p_position: string }
+        Returns: Json
+      }
       update_festival_edition_planning:
         | {
             Args: { p_edition_id: string; p_patch?: Json }
@@ -73805,6 +74113,22 @@ export type Database = {
       }
       upgrade_university_quality: {
         Args: { p_profile_id: string; p_university_id: string }
+        Returns: Json
+      }
+      upsert_festival_owner_npc_lineup_act: {
+        Args: {
+          p_billing_position: string
+          p_display_name: string
+          p_fame: number
+          p_festival_company_id: string
+          p_festival_date: string
+          p_festival_edition_id: string
+          p_genre: string
+          p_idempotency_key: string
+          p_npc_act_id: string
+          p_set_minutes: number
+          p_stage_id: string
+        }
         Returns: Json
       }
       use_substance: {
