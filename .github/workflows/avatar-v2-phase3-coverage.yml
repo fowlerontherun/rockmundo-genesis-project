@@ -6,6 +6,7 @@ on:
       - 'public/avatar-v2/clothing/**'
       - 'scripts/avatar-v2/audit-phase3-garments.mjs'
       - 'scripts/avatar-v2/validate-garments.mjs'
+      - 'scripts/avatar-v2/tests/phase3-garment-validation.test.mjs'
       - '.github/workflows/avatar-v2-phase3-coverage.yml'
   push:
     branches: [main]
@@ -27,6 +28,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - name: Test Phase 3 validation failure cases
+        run: node --test scripts/avatar-v2/tests/phase3-garment-validation.test.mjs
       - name: Validate all present garment GLBs and manifest entries
         run: node scripts/avatar-v2/validate-garments.mjs
       - name: Report all missing Phase 3 production deliverables
