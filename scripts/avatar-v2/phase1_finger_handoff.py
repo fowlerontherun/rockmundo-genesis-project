@@ -65,6 +65,12 @@ def validate_finger_handoff(
         if type(index) is not int or not 0 <= index < len(source_positions):
             raise ValueError(f"{name}: invalid original source vertex")
         point = source_positions[index]
+        nearest_index = min(
+            range(len(source_positions)),
+            key=lambda i: (segment_distance(source_positions[i], *bone_segments[name])[0], i),
+        )
+        if index != nearest_index:
+            raise ValueError(f"{name}: stale or non-nearest source skin vertex")
         if len(hint.get("actualSourceSurfacePosition", [])) != 3 or dist(
             point, hint["actualSourceSurfacePosition"]
         ) > .000003:
