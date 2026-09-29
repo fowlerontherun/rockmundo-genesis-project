@@ -141,14 +141,15 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick }: Interactive
     if (!map.current) return;
 
     // Wait for map to be fully loaded
-    if (!map.current.isStyleLoaded()) {
-      map.current.once('load', () => addMarkers());
+    const activeMap = map.current;
+    if (!activeMap.isStyleLoaded()) {
+      activeMap.once('style.load', addMarkers);
     } else {
       addMarkers();
     }
 
     function addMarkers() {
-      if (!map.current) return;
+      if (!map.current || map.current !== activeMap) return;
       // Remove existing markers
       markers.current.forEach(marker => marker.remove());
       markers.current = [];
@@ -226,6 +227,11 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick }: Interactive
         markers.current.push(marker);
       });
     }
+    return () => {
+      activeMap.off('style.load', addMarkers);
+      markers.current.forEach(marker => marker.remove());
+      markers.current = [];
+    };
   }, [cities, currentCityId, navigate, onCityClick]);
 
   // Add pulse animation styles
