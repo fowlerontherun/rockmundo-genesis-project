@@ -60,6 +60,7 @@ export function TourWizard({ bandId, initialRouteCityIds = EMPTY_ROUTE, onComple
         {initialRouteCityIds.length > 0 && <div className="rounded border p-3 text-sm">
           Imported {initialRouteCityIds.length} ordered map destinations. Country and venue eligibility still apply; unavailable destinations cannot be booked.
         </div>}
+        {initialRouteCityIds.length > 0 && wizard.routeValidationError && <div role="alert" className="rounded border border-destructive p-3 text-sm text-destructive">Could not verify the selected destinations or venues. Please retry once the data is available.</div>}
         {initialRouteCityIds.length > 0 && wizard.routeCitiesLoading && <p role="status" className="text-sm text-muted-foreground">Checking imported destinations and available venues...</p>}
         {wizard.missingRouteCityIds.length > 0 && !wizard.routeCitiesLoading && !wizard.venuesLoading && <div role="alert" className="rounded border border-destructive p-3 text-sm text-destructive">
           {wizard.missingRouteCityIds.length} selected map destination(s) currently have no eligible venue.
@@ -353,7 +354,7 @@ export function TourWizard({ bandId, initialRouteCityIds = EMPTY_ROUTE, onComple
           {wizard.currentStep < wizard.totalSteps - 1 ? (
             <Button onClick={wizard.nextStep} disabled={!wizard.canProceed}>Continue</Button>
           ) : (
-            <Button onClick={handleBook} disabled={!wizard.canProceed || wizard.isBooking || wizard.routeCitiesLoading || wizard.venuesLoading}>
+            <Button onClick={handleBook} disabled={!wizard.canProceed || wizard.isBooking || wizard.routeCitiesLoading || wizard.venuesLoading || wizard.routeValidationError}>
               {wizard.isBooking ? 'Booking...' : `Book Tour ($${wizard.costEstimate.netUpfrontCost.toLocaleString()})`}
             </Button>
           )}
