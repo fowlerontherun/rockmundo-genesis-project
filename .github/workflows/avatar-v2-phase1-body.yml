@@ -5,6 +5,8 @@ on:
     paths:
       - 'scripts/avatar-v2/phase1_body_contract.py'
       - 'scripts/avatar-v2/phase1_finger_handoff.py'
+      - 'scripts/avatar-v2/phase1_finger_topology.py'
+      - 'scripts/avatar-v2/tests/test_phase1_finger_topology.py'
       - 'scripts/avatar-v2/blender/rockmundo_avatar_v2_phase1_finger_handoff.py'
       - 'scripts/avatar-v2/tests/test_phase1_finger_handoff.py'
       - 'scripts/avatar-v2/source_limb_guide.py'
@@ -22,6 +24,8 @@ on:
     paths:
       - 'scripts/avatar-v2/phase1_body_contract.py'
       - 'scripts/avatar-v2/phase1_finger_handoff.py'
+      - 'scripts/avatar-v2/phase1_finger_topology.py'
+      - 'scripts/avatar-v2/tests/test_phase1_finger_topology.py'
       - 'scripts/avatar-v2/blender/rockmundo_avatar_v2_phase1_finger_handoff.py'
       - 'scripts/avatar-v2/tests/test_phase1_finger_handoff.py'
       - 'scripts/avatar-v2/source_limb_guide.py'
@@ -51,6 +55,7 @@ jobs:
           python3 -m py_compile \
             scripts/avatar-v2/phase1_body_contract.py \
             scripts/avatar-v2/phase1_finger_handoff.py \
+            scripts/avatar-v2/phase1_finger_topology.py \
             scripts/avatar-v2/source_limb_guide.py \
             scripts/avatar-v2/blender/rockmundo_avatar_v2_rig_guide.py \
             scripts/avatar-v2/blender/rockmundo_avatar_v2_build_seed_artifacts.py \
@@ -64,6 +69,7 @@ jobs:
         run: |
           python3 -m unittest discover -s scripts/avatar-v2/tests -p test_phase1_body_contract.py -v
           python3 -m unittest discover -s scripts/avatar-v2/tests -p test_phase1_finger_handoff.py -v
+          python3 -m unittest discover -s scripts/avatar-v2/tests -p test_phase1_finger_topology.py -v
           python3 -m unittest discover -s scripts/avatar-v2/tests -p test_source_limb_guide.py -v
       - name: Regression-test artist joint fitting and genuine binary GLB validation
         run: |
