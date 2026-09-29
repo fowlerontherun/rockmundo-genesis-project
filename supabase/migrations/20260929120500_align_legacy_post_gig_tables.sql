@@ -31,9 +31,12 @@ DROP FUNCTION public._gig_jsonb_source_factors(jsonb);
 ALTER TABLE public.gig_consequence_snapshots
   ADD COLUMN IF NOT EXISTS processing_id uuid REFERENCES public.gig_post_processing(id) ON DELETE CASCADE,
   ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+WITH canonical AS (
+  SELECT DISTINCT ON (gig_id) gig_id,id
+  FROM public.gig_post_processing ORDER BY gig_id,created_at,id
+)
 UPDATE public.gig_consequence_snapshots s SET processing_id = p.id
-FROM public.gig_post_processing p
-WHERE s.gig_id = p.gig_id AND s.processing_id IS NULL;
+FROM canonical p WHERE s.gig_id=p.gig_id AND s.processing_id IS NULL;
 -- Archive the exact legacy records before consolidation so audit data,
 -- timestamps, and original statuses remain recoverable for administrators.
 CREATE TABLE IF NOT EXISTS public.gig_post_processing_legacy_archive (
