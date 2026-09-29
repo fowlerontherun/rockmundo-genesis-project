@@ -1,7 +1,12 @@
 
 -- v1.0.737: Seed TV shows for all countries
 
-INSERT INTO tv_shows (network_id, show_name, show_type, host_name, time_slot, viewer_reach, fame_boost_min, fame_boost_max, fan_boost_min, fan_boost_max, compensation_min, compensation_max, min_fame_required, description, days_of_week) VALUES
+-- Only seed shows for networks present at this point in a clean migration.
+-- Preserve every show row whose network exists; avoid foreign-key failures for
+-- optional networks seeded by later migrations or environment-specific data.
+INSERT INTO tv_shows (network_id, show_name, show_type, host_name, time_slot, viewer_reach, fame_boost_min, fame_boost_max, fan_boost_min, fan_boost_max, compensation_min, compensation_max, min_fame_required, description, days_of_week)
+SELECT seed.*
+FROM (VALUES
 
 -- AUSTRALIA
 ('f61b7070-26d8-4f53-94e1-ed4c2a5ef6f2', 'ABC Breakfast', 'morning_show', 'Lisa Millar', 'morning', 320000, 80, 300, 150, 800, 400, 2500, 5, 'Australia''s trusted morning news and entertainment program', ARRAY[1,2,3,4,5]),
@@ -121,4 +126,5 @@ INSERT INTO tv_shows (network_id, show_name, show_type, host_name, time_slot, vi
 -- MORE US SHOWS
 ('ff67467b-9bdb-4d71-a8f0-d96282651a65', 'Austin City Limits', 'music_special', NULL, 'prime_time', 400000, 180, 700, 350, 1800, 700, 5500, 15, 'Legendary live music showcase from Austin, Texas', ARRAY[6]),
 ('48a5523d-f03a-42bc-8ebe-bceec1681b74', 'The Masked Singer', 'entertainment', 'Nick Cannon', 'prime_time', 800000, 200, 800, 400, 2000, 800, 7000, 20, 'Costumed celebrity singing competition', ARRAY[3]),
-('af4f13ae-49e0-436e-99cd-a5dc94b916f6', 'Sonic Highways', 'music_special', 'Dave Grohl', 'prime_time', 500000, 200, 800, 400, 2000, 800, 6000, 18, 'Documentary music series exploring American music cities', ARRAY[7]);
+('af4f13ae-49e0-436e-99cd-a5dc94b916f6', 'Sonic Highways', 'music_special', 'Dave Grohl', 'prime_time', 500000, 200, 800, 400, 2000, 800, 6000, 18, 'Documentary music series exploring American music cities', ARRAY[7])) AS seed(network_id, show_name, show_type, host_name, time_slot, viewer_reach, fame_boost_min, fame_boost_max, fan_boost_min, fan_boost_max, compensation_min, compensation_max, min_fame_required, description, days_of_week)
+JOIN tv_networks AS network ON network.id = seed.network_id;
