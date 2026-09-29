@@ -8,7 +8,7 @@ export const useBookReading = () => {
 
   const processAttendance = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("book-reading-attendance");
+      const { data, error } = await supabase.functions.invoke("book-reading-attendance", { body: { manual: true } });
       
       if (error) throw error;
       if (!data || data.success === false) throw new Error(data?.error || "Reading attendance could not be processed.");
