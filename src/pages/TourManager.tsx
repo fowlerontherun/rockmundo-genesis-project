@@ -687,7 +687,7 @@ const TourManager = () => {
       icon={Map}
       backTo="/hub/band-live"
       headerActions={
-        <Button onClick={() => setWizardOpen(true)} size="sm">
+        <Button onClick={() => { setDraftRouteCityIds([]); setWizardOpen(true); }} size="sm">
           <Plus className="h-4 w-4 mr-2" />
           Create Tour
         </Button>
@@ -791,7 +791,7 @@ const TourManager = () => {
               <WorldAtlas cities={atlasCities} bandId={currentBandId} mode="tour"
                 onPlanRoute={ids => { setDraftRouteCityIds(ids); setWizardOpen(true); }} />
               <div className="mt-4">
-                <Button onClick={() => setWizardOpen(true)}>Create tour from destinations</Button>
+                <Button onClick={() => { setDraftRouteCityIds([]); setWizardOpen(true); }}>Create tour from destinations</Button>
               </div>
             </CardContent>
           </Card>
@@ -809,7 +809,7 @@ const TourManager = () => {
               title="No Active Tour"
               description="No active tour. Create one to start."
               action={
-                <Button onClick={() => setWizardOpen(true)}>
+                <Button onClick={() => { setDraftRouteCityIds([]); setWizardOpen(true); }}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create New Tour
                 </Button>
@@ -836,7 +836,7 @@ const TourManager = () => {
               title="No Upcoming Tours"
               description="No upcoming tours scheduled."
               action={
-                <Button onClick={() => setWizardOpen(true)}>
+                <Button onClick={() => { setDraftRouteCityIds([]); setWizardOpen(true); }}>
                   <Plus className="h-4 w-4 mr-2" />
                   Schedule a Tour
                 </Button>
@@ -1310,7 +1310,7 @@ const TourManager = () => {
       </Dialog>
 
       {/* Tour Creation Wizard */}
-      <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
+      <Dialog open={wizardOpen} onOpenChange={open => { setWizardOpen(open); if (!open) setDraftRouteCityIds([]); }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
