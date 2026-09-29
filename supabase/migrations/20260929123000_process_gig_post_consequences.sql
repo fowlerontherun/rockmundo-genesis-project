@@ -27,7 +27,8 @@ BEGIN
   INTO v_gig FROM public.gigs g
   LEFT JOIN public.venues v ON v.id = g.venue_id
   WHERE g.id = p_gig_id;
-  IF NOT FOUND OR v_gig.status <> 'completed' OR v_gig.result_ready_at IS NULL THEN
+  IF NOT FOUND THEN RETURN 'not_found'; END IF;
+  IF v_gig.status <> 'completed' OR v_gig.result_ready_at IS NULL THEN
     RETURN 'not_ready';
   END IF;
   SELECT o.overall_rating, o.actual_attendance, o.new_followers,
@@ -35,7 +36,8 @@ BEGIN
   INTO v_outcome FROM public.gig_outcomes o
   WHERE o.gig_id = p_gig_id AND o.completed_at IS NOT NULL
   ORDER BY o.completed_at DESC, o.id DESC LIMIT 1;
-  IF NOT FOUND OR v_outcome.overall_rating IS NULL THEN RETURN 'missing_outcome'; END IF;
+  IF NOT FOUND THEN RETURN 'missing_outcome'; END IF;
+  IF v_outcome.overall_rating IS NULL THEN RETURN 'missing_outcome'; END IF;
 
   INSERT INTO public.gig_post_processing (gig_id, status, started_at)
   VALUES (p_gig_id, 'processing', now())
