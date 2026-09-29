@@ -144,3 +144,33 @@ END;
 $$;
 REVOKE ALL ON FUNCTION public.process_gig_post_consequences(uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.process_gig_post_consequences(uuid) TO service_role;
+
+-- Run explicitly from an authorized maintenance job in small batches.
+-- Chronological ordering limits historical reputation distortion. Each gig
+-- remains independently idempotent; a partial legacy snapshot needs review.
+CREATE OR REPLACE FUNCTION public.backfill_gig_post_consequences(p_limit integer DEFAULT 25)
+RETURNS TABLE(gig_id uuid, result text)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
+AS $$
+DECLARE v_gig_id uuid;
+BEGIN
+  IF p_limit < 1 OR p_limit > 100 THEN
+    RAISE EXCEPTION 'backfill limit must be between 1 and 100';
+  END IF;
+  FOR v_gig_id IN
+    SELECT p.gig_id FROM public.gig_post_processing p
+    JOIN public.gigs g ON g.id=p.gig_id
+    WHERE p.status IN ('processing','pending','retry_required','partially_failed')
+      AND g.status='completed' AND g.result_ready_at IS NOT NULL
+      AND NOT EXISTS (SELECT 1 FROM public.gig_consequence_snapshots s WHERE s.gig_id=p.gig_id)
+    ORDER BY g.result_ready_at,p.gig_id
+    LIMIT p_limit
+  LOOP
+    gig_id := v_gig_id;
+    result := public.process_gig_post_consequences(v_gig_id);
+    RETURN NEXT;
+  END LOOP;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.backfill_gig_post_consequences(integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.backfill_gig_post_consequences(integer) TO service_role;
