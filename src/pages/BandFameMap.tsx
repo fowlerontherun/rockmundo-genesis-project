@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import WorldAtlas from "@/components/map/WorldAtlas";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
@@ -108,6 +109,17 @@ export default function BandFameMap() {
       return data || [];
     },
     enabled: !!bandId,
+  });
+
+  const { data: atlasCities = [] } = useQuery({
+    queryKey: ["fame-atlas-cities"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("cities")
+        .select("id, name, country, dominant_genre, latitude, longitude")
+        .order("name");
+      if (error) throw error;
+      return data ?? [];
+    },
   });
 
   const { data: cityFans = [] } = useQuery({
@@ -278,6 +290,8 @@ export default function BandFameMap() {
         ) : null
       }
     >
+
+      {atlasCities.length > 0 && <WorldAtlas cities={atlasCities} bandId={bandId} mode="fame" />}
 
       {/* Summary */}
       <Card className="border-primary/20">

@@ -1,3 +1,4 @@
+import WorldAtlas from "@/components/map/WorldAtlas";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -152,6 +153,19 @@ const TourManager = () => {
   const [fameFilter, setFameFilter] = useState<string>("all");
   const [genreFilter, setGenreFilter] = useState<string>("all");
   const [otherToursPage, setOtherToursPage] = useState(1);
+
+  const { data: atlasCities = [] } = useQuery({
+    queryKey: ["tour-atlas-cities"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("cities")
+        .select("id, name, country, latitude, longitude")
+        .order("name");
+      if (error) throw error;
+      return (data ?? []).filter(city =>
+        city.latitude != null && city.longitude != null
+      );
+    },
+  });
 
   // Fetch user's band tours - split by status
   const { data: myTours = [], isLoading: loadingMyTours } = useQuery({
@@ -746,7 +760,8 @@ const TourManager = () => {
 
       <Tabs defaultValue="current" className="space-y-4">
         <div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
-          <TabsList className="inline-flex w-max gap-1 lg:w-auto lg:grid lg:grid-cols-5">
+          <TabsList className="inline-flex w-max gap-1 lg:w-auto lg:grid lg:grid-cols-6">
+            <TabsTrigger value="atlas" className="whitespace-nowrap">World Atlas</TabsTrigger>
             <TabsTrigger value="current" className="whitespace-nowrap">
               Current
             </TabsTrigger>
@@ -764,6 +779,21 @@ const TourManager = () => {
             </TabsTrigger>
           </TabsList>
         </div>
+
+        <TabsContent value="atlas" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Explore tour destinations</CardTitle>
+              <CardDescription>Select a city to inspect local fame, then use the tour planner to schedule stops.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <WorldAtlas cities={atlasCities} bandId={currentBandId} mode="tour" />
+              <div className="mt-4">
+                <Button onClick={() => setWizardOpen(true)}>Create tour from destinations</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* My Current Tour */}
         <TabsContent value="current" className="space-y-4">
