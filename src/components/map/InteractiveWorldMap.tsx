@@ -19,6 +19,7 @@ interface InteractiveWorldMapProps {
   currentCityId?: string | null;
   onCityClick?: (cityId: string) => void;
   routeCityIds?: string[];
+  routeCities?: City[];
 }
 
 const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds = [] }: InteractiveWorldMapProps) => {
@@ -242,7 +243,7 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
     const sourceId = 'atlas-draft-route';
     const layerId = 'atlas-draft-route-line';
     const points = routeCityIds.flatMap(id => {
-      const city = cities.find(item => item.id === id);
+      const city = (routeCities ?? cities).find(item => item.id === id);
       if (!city || city.latitude == null || city.longitude == null ||
           !Number.isFinite(city.latitude) || !Number.isFinite(city.longitude) ||
           Math.abs(city.latitude) > 90 || Math.abs(city.longitude) > 180) return [];
@@ -282,7 +283,7 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
         if (activeMap.getSource(sourceId)) activeMap.removeSource(sourceId);
       }
     };
-  }, [cities, routeCityIds]);
+  }, [cities, routeCities, routeCityIds]);
 
   // Add pulse animation styles
   useEffect(() => {
