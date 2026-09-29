@@ -81,6 +81,13 @@ WHERE p.id=r.id AND r.ordinal>1;
 CREATE UNIQUE INDEX IF NOT EXISTS gig_post_processing_gig_id_unique
   ON public.gig_post_processing(gig_id);
 
+-- Legacy snapshots defaulted to 'applied', which violates the new directional
+-- status constraint. Existing 'applied' rows retain their meaning in metadata.
+UPDATE public.gig_consequence_snapshots
+SET metadata = coalesce(metadata,'{}'::jsonb) || jsonb_build_object('legacy_status',status),
+    status = 'neutral'
+WHERE status = 'applied';
+ALTER TABLE public.gig_consequence_snapshots ALTER COLUMN status SET DEFAULT 'neutral';
 -- Restore constraints omitted by the legacy production schema.
 ALTER TABLE public.gig_post_processing
   ADD CONSTRAINT gig_post_processing_status_valid CHECK
