@@ -58,6 +58,10 @@ export function TourWizard({ bandId, initialRouteCityIds = [], onComplete, onCan
         {initialRouteCityIds.length > 0 && <div className="rounded border p-3 text-sm">
           Imported {initialRouteCityIds.length} ordered map destinations. Country and venue eligibility still apply; unavailable destinations cannot be booked.
         </div>}
+        {wizard.missingRouteCityIds.length > 0 && <div role="alert" className="rounded border border-destructive p-3 text-sm text-destructive">
+          {wizard.missingRouteCityIds.length} selected map destination(s) currently have no eligible venue.
+          Check the selected countries, venue types and capacity. Booking remains disabled until every stop is covered.
+        </div>}
         {/* Step 0: Basics */}
         {wizard.currentStep === 0 && (
           <div className="space-y-4">
