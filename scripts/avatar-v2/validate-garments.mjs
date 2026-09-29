@@ -135,11 +135,17 @@ function validateManifestItem(item) {
     if (!Array.isArray(main) || !main.length) errors.push('colourMode=zones requires materialZones.main.');
   }
 
+  const paths = new Set();
   for (const frame of ['masculine','feminine']) {
     const assets = item.frames?.[frame];
     if (!assets || typeof assets !== 'object') {
       errors.push(`Missing ${frame} frame mapping.`);
       continue;
+    }
+    if (item.status === 'validated' || item.status === 'asset_ready') {
+      for (const lodName of ['lod0','lod1','lod2','lod3']) {
+        if (!assets[lodName]) errors.push(`${item.status} requires ${frame}.${lodName}.`);
+      }
     }
     for (const [lodName, asset] of Object.entries(assets)) {
       if (!/^lod[0-3]$/.test(lodName)) {
