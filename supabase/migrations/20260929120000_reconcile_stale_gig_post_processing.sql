@@ -12,9 +12,8 @@ AS $$
 DECLARE
   v_count integer;
 BEGIN
-  IF NOT (SELECT coalesce(auth.role(), '') = 'service_role') THEN
-    RAISE EXCEPTION 'service_role required';
-  END IF;
+  -- Caller access is enforced by the EXECUTE grant below. Avoid deprecated
+  -- JWT role checks inside a SECURITY DEFINER function.
   IF p_min_age < interval '5 minutes' OR p_limit < 1 OR p_limit > 1000 THEN
     RAISE EXCEPTION 'invalid reconciliation parameters';
   END IF;
