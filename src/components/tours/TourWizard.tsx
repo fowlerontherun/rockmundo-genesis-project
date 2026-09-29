@@ -29,7 +29,9 @@ interface TourWizardProps {
   onCancel?: () => void;
 }
 
-export function TourWizard({ bandId, initialRouteCityIds = [], onComplete, onCancel }: TourWizardProps) {
+const EMPTY_ROUTE: string[] = [];
+
+export function TourWizard({ bandId, initialRouteCityIds = EMPTY_ROUTE, onComplete, onCancel }: TourWizardProps) {
   const wizard = useTourWizard({ bandId, initialRouteCityIds });
   const progress = ((wizard.currentStep + 1) / wizard.totalSteps) * 100;
 
@@ -58,7 +60,8 @@ export function TourWizard({ bandId, initialRouteCityIds = [], onComplete, onCan
         {initialRouteCityIds.length > 0 && <div className="rounded border p-3 text-sm">
           Imported {initialRouteCityIds.length} ordered map destinations. Country and venue eligibility still apply; unavailable destinations cannot be booked.
         </div>}
-        {wizard.missingRouteCityIds.length > 0 && <div role="alert" className="rounded border border-destructive p-3 text-sm text-destructive">
+        {initialRouteCityIds.length > 0 && wizard.routeCitiesLoading && <p role="status" className="text-sm text-muted-foreground">Checking imported destinations and available venues...</p>}
+        {wizard.missingRouteCityIds.length > 0 && !wizard.routeCitiesLoading && !wizard.venuesLoading && <div role="alert" className="rounded border border-destructive p-3 text-sm text-destructive">
           {wizard.missingRouteCityIds.length} selected map destination(s) currently have no eligible venue.
           Check the selected countries, venue types and capacity. Booking remains disabled until every stop is covered.
         </div>}
@@ -350,7 +353,7 @@ export function TourWizard({ bandId, initialRouteCityIds = [], onComplete, onCan
           {wizard.currentStep < wizard.totalSteps - 1 ? (
             <Button onClick={wizard.nextStep} disabled={!wizard.canProceed}>Continue</Button>
           ) : (
-            <Button onClick={handleBook} disabled={!wizard.canProceed || wizard.isBooking}>
+            <Button onClick={handleBook} disabled={!wizard.canProceed || wizard.isBooking || wizard.routeCitiesLoading || wizard.venuesLoading}>
               {wizard.isBooking ? 'Booking...' : `Book Tour ($${wizard.costEstimate.netUpfrontCost.toLocaleString()})`}
             </Button>
           )}
