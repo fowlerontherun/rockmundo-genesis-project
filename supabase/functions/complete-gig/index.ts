@@ -59,6 +59,16 @@ serve(async (req) => {
           .eq('id', gigId);
       }
 
+      // Repair advanced consequences on safe completion retries without rerolling rewards.
+      try {
+        const { data: consequenceState, error: consequenceError } = await supabaseClient.rpc('process_gig_post_consequences', { p_gig_id: gigId });
+        if (consequenceError || consequenceState !== 'completed' && consequenceState !== 'already_completed') {
+          console.warn('[complete-gig] Advanced consequence retry deferred:', consequenceError ?? consequenceState);
+        }
+      } catch (consequenceError) {
+        console.warn('[complete-gig] Advanced consequence retry error:', consequenceError);
+      }
+
       // Repair a missed crew settlement on safe, idempotent completion retries.
       const { error: crewRetryError } = await supabaseClient.rpc('_settle_completed_gig_crew', { p_gig_id: gigId });
       if (crewRetryError) console.warn('[complete-gig] Crew settlement retry failed:', crewRetryError);
@@ -1039,6 +1049,17 @@ serve(async (req) => {
     if (crewSettlementError) console.warn('[complete-gig] Crew settlement needs repair:', crewSettlementError);
 
     console.log(`Gig ${gigId} completed successfully. Rating: ${avgRating.toFixed(1)}, Profit: $${netProfit}, New Fans: ${newFansTotal}`);
+
+    // Advanced consequences run only after the authoritative result is committed.
+    // This RPC is transactional and idempotent; failure does not re-run core payouts.
+    try {
+      const { data: consequenceState, error: consequenceError } = await supabaseClient.rpc('process_gig_post_consequences', { p_gig_id: gigId });
+      if (consequenceError || consequenceState !== 'completed' && consequenceState !== 'already_completed') {
+        console.warn('[complete-gig] Advanced consequences need follow-up:', consequenceError ?? consequenceState);
+      }
+    } catch (consequenceError) {
+      console.warn('[complete-gig] Advanced consequences deferred:', consequenceError);
+    }
 
     // Phase 5 PR 05: generate the canonical viewer replay after the authoritative
     // completion/result_ready_at update commits. Replay generation is idempotent and
