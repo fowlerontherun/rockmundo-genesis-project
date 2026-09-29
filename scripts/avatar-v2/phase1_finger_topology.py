@@ -106,7 +106,7 @@ def trace_missing_finger_source(
         # Don't accept blended parent skin already claimed by adjacent digits.
         seeds = [
             i for i, w in enumerate(weights)
-            if w.get(parent, 0) >= .20 and digit_owners(w).issubset({digit})
+            if w.get(parent, 0) >= .20 and digit_owners(w).issubset({f"{digit}.{side}"})
             and dist(positions[i], head) <= MAX_PARENT_DISTANCE
         ]
         if not seeds:
@@ -131,7 +131,7 @@ def trace_missing_finger_source(
                 continue
             for neighbor in sorted(adj[current]):
                 observed_owners = digit_owners(weights[neighbor])
-                if not observed_owners.issubset({digit}):
+                if not observed_owners.issubset({f"{digit}.{side}"}):
                     blocked += 1
                     continue
                 step = dist(positions[current], positions[neighbor])
@@ -153,7 +153,7 @@ def trace_missing_finger_source(
             if separation <= MAX_GUIDE_DISTANCE and -.40 <= along <= 1.5:
                 nearby.append((i, cost, separation, along))
                 if (weights[i].get(parent, 0) >= .25
-                        and digit_owners(weights[i]).issubset({digit})
+                        and digit_owners(weights[i]).issubset({f"{digit}.{side}"})
                         and separation <= .018):
                     safe.append(i)
         # Prefer the most distal observed nearby topology sample; still a
