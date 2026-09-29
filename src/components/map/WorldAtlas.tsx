@@ -12,6 +12,8 @@ export interface AtlasCity {
   name: string;
   country: string;
   dominant_genre?: string;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 interface WorldAtlasProps {
   cities: AtlasCity[];
