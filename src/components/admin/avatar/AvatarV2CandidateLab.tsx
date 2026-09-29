@@ -339,6 +339,27 @@ export function AvatarV2CandidateLab() {
   const [rightEarring, setRightEarring] = useState<(typeof EARRING_STYLES)[number]>('studs');
   const [performanceReport, setPerformanceReport] = useState<AvatarV2PerformanceQaReport | null>(null);
   const [faceAudit, setFaceAudit] = useState<AvatarV2FaceAudit | null>(null);
+  const [fitCase, setFitCase] = useState<'manual' | 'bare' | 'short' | 'long' | 'accessories'>('manual');
+
+  const applyFitCase = (value: 'bare' | 'short' | 'long' | 'accessories') => {
+    setFitCase(value);
+    setViewPreset('face');
+    setAnimateFace(false);
+    setFaceDetailProof(value === 'accessories');
+    if (value === 'bare') {
+      setHairStyle('bald'); setFaceShape('classic'); setGlasses('none');
+      setLeftEarring('none'); setRightEarring('none');
+    } else if (value === 'short') {
+      setHairStyle('buzz'); setFaceShape('angular'); setGlasses('round');
+      setLeftEarring('studs'); setRightEarring('none');
+    } else if (value === 'long') {
+      setHairStyle('long_waves'); setFaceShape('oval'); setGlasses('none');
+      setLeftEarring('drops'); setRightEarring('drops');
+    } else {
+      setHairStyle('afro'); setFaceShape('wide'); setGlasses('aviator');
+      setLeftEarring('hoops'); setRightEarring('studs');
+    }
+  };
 
   const appearance = useMemo(() => {
     const next = defaultAppearance('avatar-v2-side-by-side');
@@ -381,6 +402,18 @@ export function AvatarV2CandidateLab() {
       <CardContent className="space-y-5">
         <AvatarV2ReferenceGallery frame={frame} onFrameChange={setFrame} onLandmarks={setSourceLandmarks} selected={reference}
           onSelectPreview={variant => { setFile(null); setReference(variant); setPerformance('backstage'); setAnimateFace(false); }} />
+        <div className="space-y-2 rounded-md border p-3">
+          <p className="text-sm font-medium">Phase 2 facial fit review presets</p>
+          <p className="text-xs text-muted-foreground">Repeat each preset on both frames and inspect front, side and three-quarter views. These are visual aids, not automatic approval.</p>
+          <div className="flex flex-wrap gap-2">
+            {([
+              ['bare', 'Bare head / baseline'], ['short', 'Short hair + one earring'],
+              ['long', 'Long hair + drop earrings'], ['accessories', 'Dense hair + glasses'],
+            ] as const).map(([value, label]) => (
+              <Button key={value} type="button" size="sm" variant={fitCase === value ? 'default' : 'outline'} onClick={() => applyFitCase(value)}>{label}</Button>
+            ))}
+          </div>
+        </div>
         <div className="flex flex-wrap items-end gap-3">
           <label className="space-y-1 text-sm">
             <span className="font-medium">Frame</span>
