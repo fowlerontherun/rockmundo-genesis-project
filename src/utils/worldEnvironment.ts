@@ -734,6 +734,8 @@ export interface WeatherCondition {
 
 export interface City {
   id: string;
+  latitude?: number | null;
+  longitude?: number | null;
   name: string;
   country: string;
   description?: string;
@@ -946,6 +948,8 @@ const normalizeCityRecord = (item: Record<string, unknown>): City => {
 
   return {
     id: String(item.id ?? crypto.randomUUID()),
+    latitude: typeof item.latitude === "number" && Number.isFinite(item.latitude) ? item.latitude : null,
+    longitude: typeof item.longitude === "number" && Number.isFinite(item.longitude) ? item.longitude : null,
     name: typeof item.name === "string" ? item.name : "Unknown",
     country: typeof item.country === "string" ? item.country : "",
     description,
