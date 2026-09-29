@@ -154,6 +154,28 @@ jobs:
               --probe-report "work/avatar-v2-phase1-probes/$FRAME/$FRAME-AUTOBIND-EXPERIMENT-report.json" \
               --output "work/avatar-v2-phase1-probes/$FRAME/$FRAME-FINGER-REVIEW-HANDLES-UNAPPROVED.blend"
           done
+      # Strict separate UNFITTED source-copy experiment. Only genuine, actual
+      # mesh-edge-connected same-digit parent vertices are eligible. Do NOT
+      # paint the original experimental scene, editable fit-handle guides or
+      # public/avatar-v2, and do not count trial weights as artist approval.
+      - name: Test real safe same-digit finger skin trial on both isolated CC0 copies
+        id: phase1_same_digit_trial
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          FAILED=0
+          python3 -m unittest discover -s scripts/avatar-v2/tests -p test_phase1_finger_trial.py -v || FAILED=1
+          for FRAME in masculine feminine; do
+            xvfb-run -a -s "-screen 0 1920x1080x24" \
+              "$BLENDER_BIN" --background \
+              "work/avatar-v2-phase1-probes/$FRAME/$FRAME-AUTOBIND-EXPERIMENT-not-validated.blend" \
+              --python scripts/avatar-v2/blender/rockmundo_avatar_v2_phase1_same_digit_trial.py -- \
+              --frame "$FRAME" \
+              --probe-report "work/avatar-v2-phase1-probes/$FRAME/$FRAME-AUTOBIND-EXPERIMENT-report.json" \
+              --output-root "work/avatar-v2-phase1-probes" || FAILED=1
+          done
+          exit "$FAILED"
       - name: Upload private experimental body skinning diagnostics
         if: always()
         uses: actions/upload-artifact@v4
