@@ -54,3 +54,24 @@ END;
 $$;
 REVOKE ALL ON FUNCTION public.reconcile_stale_gig_post_processing(interval, integer) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.reconcile_stale_gig_post_processing(interval, integer) TO service_role;
+
+-- PostgreSQL UNIQUE treats NULL target_id values as distinct. Most gig-wide
+-- consequence keys use a NULL target_id, so retries previously could duplicate
+-- the same snapshot despite the declared unique constraint.
+-- Preserve the oldest snapshot per logical key when repairing historical rows.
+WITH duplicates AS (
+  SELECT id, row_number() OVER (
+    PARTITION BY gig_id, consequence_key, target_type, coalesce(target_id, '00000000-0000-0000-0000-000000000000'::uuid)
+    ORDER BY created_at, id
+  ) AS ordinal
+  FROM public.gig_consequence_snapshots
+)
+DELETE FROM public.gig_consequence_snapshots s
+USING duplicates d
+WHERE s.id = d.id AND d.ordinal > 1;
+
+CREATE UNIQUE INDEX IF NOT EXISTS gig_consequence_snapshots_logical_key_unique
+ON public.gig_consequence_snapshots (
+  gig_id, consequence_key, target_type,
+  (coalesce(target_id, '00000000-0000-0000-0000-000000000000'::uuid))
+);
