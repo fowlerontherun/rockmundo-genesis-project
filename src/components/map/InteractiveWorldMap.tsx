@@ -22,7 +22,9 @@ interface InteractiveWorldMapProps {
   routeCities?: City[];
 }
 
-const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds = [] }: InteractiveWorldMapProps) => {
+const EMPTY_ROUTE_CITY_IDS: string[] = [];
+
+const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds = EMPTY_ROUTE_CITY_IDS, routeCities }: InteractiveWorldMapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markers = useRef<mapboxgl.Marker[]>([]);
