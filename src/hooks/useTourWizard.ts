@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
@@ -212,10 +212,12 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
   // Apply the imported route countries when the player has not made a selection.
   // Avoid changing the selection once they begin editing it.
   const [routeCountriesApplied, setRouteCountriesApplied] = useState(false);
-  if (!routeCountriesApplied && routeCountries.length > 0 && state.selectedCountries.length === 0) {
+  useEffect(() => {
+    if (routeCountriesApplied || routeCountries.length === 0) return;
     setRouteCountriesApplied(true);
-    setState(prev => ({ ...prev, selectedCountries: routeCountries }));
-  }
+    setState(prev => prev.selectedCountries.length > 0
+      ? prev : { ...prev, selectedCountries: routeCountries });
+  }, [routeCountriesApplied, routeCountries]);
 
   // Fetch city coordinates for geographic sorting
   const { data: cityCoordinates } = useQuery({
@@ -348,10 +350,10 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
   const venueMatches = useMemo((): VenueMatch[] => {
     if (!availableVenues || availableVenues.length === 0) return [];
     
-    const showCount = state.targetShowCount || Math.min(
+    const showCount = routeCityIds.length > 0 ? routeCityIds.length : (state.targetShowCount || Math.min(
       Math.floor((state.durationDays || 30) / (1 + state.minRestDays)),
       availableVenues.length
-    );
+    ));
     
     let rawMatches: VenueMatch[];
     
