@@ -34,6 +34,23 @@ ALTER TABLE public.gig_consequence_snapshots
 UPDATE public.gig_consequence_snapshots s SET processing_id = p.id
 FROM public.gig_post_processing p
 WHERE s.gig_id = p.gig_id AND s.processing_id IS NULL;
+-- Archive the exact legacy records before consolidation so audit data,
+-- timestamps, and original statuses remain recoverable for administrators.
+CREATE TABLE IF NOT EXISTS public.gig_post_processing_legacy_archive (
+  id uuid PRIMARY KEY,
+  gig_id uuid NOT NULL,
+  original_record jsonb NOT NULL,
+  archived_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE public.gig_post_processing_legacy_archive ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.gig_post_processing_legacy_archive FROM PUBLIC, anon, authenticated;
+WITH ranked AS (
+ SELECT p.*, row_number() OVER (PARTITION BY gig_id ORDER BY created_at,id) AS ordinal
+ FROM public.gig_post_processing p
+)
+INSERT INTO public.gig_post_processing_legacy_archive (id,gig_id,original_record)
+SELECT id,gig_id,to_jsonb(ranked) - 'ordinal' FROM ranked WHERE ordinal>1
+ON CONFLICT (id) DO NOTHING;
 -- The deployed legacy table contains multiple processing rows per gig.
 -- Retain the earliest row, preserve discarded row IDs in its audit history,
 -- and reparent any historical snapshots before removing duplicates.
