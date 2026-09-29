@@ -32,10 +32,10 @@ MAX_PARENT_DISTANCE = .09
 def digit_owners(weights: Mapping[str, float], *, threshold: float = .08) -> set[str]:
     """Observed significant heat skin; omit unrelated torso/hand groups."""
     return {
-        digit
-        for digit in DIGITS
+        f"{digit}.{side}"
+        for digit in DIGITS for side in ("L", "R")
         if any(weights.get(f"{digit}{joint}.{side}", 0.) > threshold
-               for side in ("L", "R") for joint in (1, 2, 3))
+               for joint in (1, 2, 3))
     }
 
 
