@@ -16,15 +16,18 @@ UPDATE public.gig_post_processing
 SET processing_version = 'post-gig-consequences-v1'
 WHERE processing_version = '1';
 -- Keep historical snapshots intact while aligning their source factor type.
+CREATE OR REPLACE FUNCTION public._gig_jsonb_source_factors(p_value jsonb)
+RETURNS text[] LANGUAGE sql IMMUTABLE SET search_path = public AS $
+  SELECT coalesce(array_agg(value), ARRAY[]::text[])
+  FROM jsonb_array_elements_text(CASE WHEN jsonb_typeof(p_value) = 'array' THEN p_value ELSE '[]'::jsonb END) AS t(value);
+$;
 ALTER TABLE public.gig_consequence_snapshots
   ALTER COLUMN source_factors DROP DEFAULT;
 ALTER TABLE public.gig_consequence_snapshots
-  ALTER COLUMN source_factors TYPE text[] USING
-    CASE WHEN jsonb_typeof(source_factors) = 'array' THEN
-      ARRAY(SELECT jsonb_array_elements_text(source_factors))
-    ELSE ARRAY[]::text[] END;
+  ALTER COLUMN source_factors TYPE text[] USING public._gig_jsonb_source_factors(source_factors);
 ALTER TABLE public.gig_consequence_snapshots
   ALTER COLUMN source_factors SET DEFAULT '{}'::text[];
+DROP FUNCTION public._gig_jsonb_source_factors(jsonb);
 ALTER TABLE public.gig_consequence_snapshots
   ADD COLUMN IF NOT EXISTS processing_id uuid REFERENCES public.gig_post_processing(id) ON DELETE CASCADE,
   ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
