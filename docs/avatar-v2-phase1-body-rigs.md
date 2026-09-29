@@ -324,3 +324,44 @@ Do not paste a surface hint's XYZ into the actual joint handle or apply the
 experimental scene's automatic weight paint as final. Both complete body
 rigs still need the full corrective sculpt, all-pose assessment and independent
 human artist sign-off in #2197; these hints only remove guesswork.
+
+## Direct same-scene finger-fitting handoff (29 September 2026)
+
+The genuine source diagnostic packs previously contained real missing-finger
+surface warnings in an **experimental weighted scene**, while the editable
+`RMV2_FitHandles` lived in a **separate original unweighted scene**. That
+made it easy to lose the warning, paste a skin vertex into a knuckle pivot
+by mistake or accidentally fit a guide against the opposite frame.
+
+The real-source workflow now attempts an additional, separately saved
+`<frame>-FINGER-REVIEW-HANDLES-UNAPPROVED.blend` for EACH body.
+Open it from the `avatar-v2-phase1-UNFITTED-diagnostics` artifact:
+
+- `RMV2_FitHandles`: the original, **unchanged** editable anatomical
+  handle positions, including the affected finger joint-tail handles.
+- `RMV2_UnapprovedFingerHandoff`: separate labelled spheres on measured
+  **actual CC0 skin vertices** beside the problematic finger guides. **Red**
+  warns that a nearby vertex is already skinned to a *different* digit; cyan
+  denotes a proximity/auto-heat gap without a different-digit warning.
+- `ROCKMUNDO_PHASE1_FINGER_HANDOFF_READ_ME`: each actual vertex ID,
+  measured guide, neighbour skin weights and instructions inside the
+  editable .blend. The adjacent .json lists the exact remaining gaps.
+
+This extra Blender file is independently validated against the original
+12,502-vertex same-frame sculpt, the real source vertex coordinates,
+all 30 live guide segments, the original bone endpoints and the probe's
+missing-heat audit. Stale, opposite-frame, edited-guide, mismatched-vertex
+or incorrectly classified wrong-digit reports **cannot produce** the
+handoff. Original handles, all body weights and the rig are never changed
+by this stage, and the independent source and experimental files stay
+available. If the optional step fails, inspect its logs rather than treating
+the missing handoff as evidence that fitting passed.
+
+Use the single handoff scene to inspect true finger edge loops from multiple
+views and move the appropriate `RMV2_FIT__*__tail` and independent head
+handles to anatomically correct internal pivots. A red sphere might be on the
+**neighbouring finger**; it must never be auto-snapped to a joint. Follow
+the existing `fit_rig.py --mode apply --reviewed`, production initial-bind,
+manual per-finger repaint, grip-closeup and independent full-body corrective
+review process. This artist convenience step is **not** physical completion
+or production certification; V1 remains in use.
