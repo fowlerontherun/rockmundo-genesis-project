@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchWorldEnvironmentSnapshot } from "@/utils/worldEnvironment";
-import InteractiveWorldMap from "@/components/map/InteractiveWorldMap";
+import WorldAtlas from "@/components/map/WorldAtlas";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
@@ -77,11 +77,8 @@ const WorldMap = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="relative w-full h-[600px]">
-            <InteractiveWorldMap 
-              cities={cities}
-              currentCityId={currentCityId}
-            />
+          <div className="relative w-full">
+            <WorldAtlas cities={cities} currentCityId={currentCityId} />
           </div>
           <div className="px-6 py-4 text-sm text-muted-foreground border-t border-border">
             🌍 Interact with the globe to explore cities worldwide. Click a city marker to view details and travel options.
