@@ -92,6 +92,7 @@ def trace_missing_finger_source(
             "sourceTopologyOnly": True, "artistReviewed": False,
             "productionValidated": False, "notAnInternalJointPivot": True,
             "nearestWrongDigitMayBeElsewhere": True,
+            "candidatePaintApplied": False,
         }
         if not parent:
             outputs[name] = {
