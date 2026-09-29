@@ -86,7 +86,7 @@ try:
     if before["missingDeformBones"] != pilot["initialSkinAudit"]["missingDeformBones"]:
         raise RuntimeError("Trial source differs from the saved original bone-heat weight audit")
     report["initialMissingDeformBones"] = before["missingDeformBones"]
-    report["initialInsufficientBoneCoverage"] = before["insufficientBoneCoverage"]
+    report["initialInsufficientBoneCoverage"] = before["insufficientDeformBones"]
     segments = {
         f"{digit}{joint}.{side}": (
             tuple(rig.matrix_world @ rig.data.bones[f"{digit}{joint}.{side}"].head_local),
@@ -122,7 +122,7 @@ try:
         after = audit_weights(body, rig)
         if (after["unweightedVertices"] or after["overInfluencedVertices"] or
                 after["unnormalisedVertices"] or after["invalidWeights"]
-                or after["undeclaredBoneInfluences"]):
+                or after["nonBodyBoneInfluences"]):
             raise RuntimeError("Blender trial failed original four-influence real-skin rules")
         new = sorted(set(before["missingDeformBones"]) - set(after["missingDeformBones"]))
         claimed = sorted(k for k, v in trial["perFinger"].items()
