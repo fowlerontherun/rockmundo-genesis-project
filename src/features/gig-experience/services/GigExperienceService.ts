@@ -518,18 +518,28 @@ function mapPostConsequences(processing: { status: string; processing_version: s
   const media = consequences.find((c) => c.category === "media");
   const timeline = ["Performance completed", "Financial settlement", "Fan response", "Media response", "Reputation changes", "Venue and promoter response", "Performer and crew progression", "Equipment inspection", "Health and recovery", "Future offers"];
   const allowedStatuses = new Set<GigPostConsequencesDTO["processingStatus"]>(["pending", "processing", "completed", "partially_failed", "retry_required", "skipped", "legacy_missing"]);
-  const processingStatus = processing && allowedStatuses.has(processing.status as GigPostConsequencesDTO["processingStatus"])
+  const declaredStatus = processing && allowedStatuses.has(processing.status as GigPostConsequencesDTO["processingStatus"])
     ? processing.status as GigPostConsequencesDTO["processingStatus"]
     : "legacy_missing";
+  // A historical processing row is not evidence that the advanced pipeline ran.
+  // Likewise, never display an empty completed row as settled consequences.
+  const processingStatus = declaredStatus === "completed" && consequences.length === 0
+    ? "retry_required"
+    : declaredStatus;
+  const missingReason = processingStatus === "processing" || processingStatus === "pending"
+    ? "Post-gig consequences are awaiting processing"
+    : processingStatus === "retry_required" || processingStatus === "partially_failed"
+    ? "Post-gig consequence processing needs a retry"
+    : "Post-gig consequence snapshot unavailable";
   return {
     processingStatus,
     processingVersion: processing?.processing_version ?? null,
-    processedAt: processing?.completed_at ?? null,
-    liveReputationDelta: findDelta("live_reputation.overall") !== undefined ? metricAvailable(findDelta("live_reputation.overall")!) : metricLegacyMissing("Post-gig consequences have not been processed for this legacy result"),
-    fanDelta: findDelta("fans.local_delta") !== undefined ? metricAvailable(findDelta("fans.local_delta")!) : metricLegacyMissing("Fan consequence snapshot missing"),
-    followerDelta: findDelta("followers.delta") !== undefined ? metricAvailable(findDelta("followers.delta")!) : metricLegacyMissing("Follower consequence snapshot missing"),
-    bookingDemandDelta: findDelta("booking_demand.recent") !== undefined ? metricAvailable(findDelta("booking_demand.recent")!) : metricLegacyMissing("Booking-demand consequence snapshot missing"),
-    mediaCoverage: media ? metricAvailable(String(media.newValue ?? media.deltaValue ?? media.key)) : metricNotApplicable("No media coverage met the significance threshold"),
+    processedAt: processingStatus === "completed" ? processing?.completed_at ?? null : null,
+    liveReputationDelta: findDelta("live_reputation.overall") !== undefined ? metricAvailable(findDelta("live_reputation.overall")!) : metricLegacyMissing(missingReason),
+    fanDelta: findDelta("fans.local_delta") !== undefined ? metricAvailable(findDelta("fans.local_delta")!) : metricLegacyMissing(missingReason),
+    followerDelta: findDelta("followers.delta") !== undefined ? metricAvailable(findDelta("followers.delta")!) : metricLegacyMissing(missingReason),
+    bookingDemandDelta: findDelta("booking_demand.recent") !== undefined ? metricAvailable(findDelta("booking_demand.recent")!) : metricLegacyMissing(missingReason),
+    mediaCoverage: media ? metricAvailable(String(media.newValue ?? media.deltaValue ?? media.key)) : processingStatus === "completed" ? metricNotApplicable("No media coverage met the significance threshold") : metricLegacyMissing(missingReason),
     timeline,
     nextActions: buildPostGigNextActions(consequences),
     consequences,
