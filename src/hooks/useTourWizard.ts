@@ -41,6 +41,7 @@ import {
 import { createBandScheduledActivities } from '@/utils/bandActivityScheduling';
 import { getGigBookingPlayerError } from '@/utils/gigBookingErrors';
 import { reduceTravelDurationHours } from '@/utils/dynamicTravel';
+import { findUnmatchedRouteStops, orderRouteVenues } from '@/utils/tourAtlasRoute';
 
 export interface UseTourWizardOptions {
   bandId?: string;
@@ -77,7 +78,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
   });
   
   const [currentStep, setCurrentStep] = useState(0);
-  const routeCityIds = useMemo(() => [...new Set(options.initialRouteCityIds ?? [])], [(options.initialRouteCityIds ?? []).join('|')]);
+  const routeCityIds = useMemo(() => [...new Set(options.initialRouteCityIds ?? [])], [options.initialRouteCityIds]);
   const { data: routeCities = [] } = useQuery({
     queryKey: ['tour-map-route-cities', routeCityIds],
     enabled: routeCityIds.length > 0,
@@ -411,8 +412,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
 
     // Apply geographic sorting
     const sorted = routeCityIds.length > 0
-      ? rawMatches.filter(v => routeCityIds.includes(v.cityId))
-          .sort((a, b) => routeCityIds.indexOf(a.cityId) - routeCityIds.indexOf(b.cityId))
+      ? orderRouteVenues(rawMatches, routeCityIds)
       : sortGeographically(rawMatches, state.startingCityId);
 
     // Assign dates after geographic ordering
@@ -426,7 +426,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
     }));
   }, [availableVenues, state.targetShowCount, state.durationDays, state.minRestDays, state.startDate, state.selectedVenueIds, band?.total_fans, state.startingCityId, sortGeographically, routeCityIds]);
 
-  const missingRouteCityIds = routeCityIds.filter(id => !venueMatches.some(venue => venue.cityId === id));
+  const missingRouteCityIds = findUnmatchedRouteStops(routeCityIds, venueMatches);
 
   // Calculate recommended ticket price
   const recommendedTicketPrice = useMemo(() => {
