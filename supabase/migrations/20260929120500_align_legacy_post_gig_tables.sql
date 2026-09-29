@@ -63,3 +63,11 @@ WHERE p.id=r.id AND r.ordinal>1;
 -- Historical orphan snapshots remain nullable and require manual review.
 CREATE UNIQUE INDEX IF NOT EXISTS gig_post_processing_gig_id_unique
   ON public.gig_post_processing(gig_id);
+
+-- Restore constraints omitted by the legacy production schema.
+ALTER TABLE public.gig_post_processing
+  ADD CONSTRAINT gig_post_processing_status_valid CHECK
+  (status IN ('pending','processing','completed','partially_failed','retry_required','skipped'));
+ALTER TABLE public.gig_consequence_snapshots
+  ADD CONSTRAINT gig_consequence_snapshots_status_valid CHECK
+  (status IN ('positive','neutral','negative'));
