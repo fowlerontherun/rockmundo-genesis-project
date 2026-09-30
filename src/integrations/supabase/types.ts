@@ -65949,6 +65949,7 @@ export type Database = {
         Args: { p_contract_id: string; p_reason?: string }
         Returns: Json
       }
+      cancel_tour: { Args: { p_tour_id: string }; Returns: Json }
       capture_contributions_for_gig_outcome: {
         Args: { p_gig_outcome_id: string }
         Returns: number

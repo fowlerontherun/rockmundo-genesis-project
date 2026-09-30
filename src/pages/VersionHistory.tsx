@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.757",
+    date: "2026-09-30",
+    changes: [
+      { type: "fix", description: "Bands can cancel tours again — upcoming gigs and travel are cancelled, tour history is kept, and same-day cancellations refund the upfront cost" },
+    ],
+  },
+  {
     version: "1.1.756",
     date: "2026-09-26",
     changes: [
