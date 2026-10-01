@@ -242,7 +242,6 @@ const StageTemplatesAdmin = lazyWithRetry(() => import("./pages/admin/StageTempl
 const BandAvatarsAdmin = lazyWithRetry(() => import("./pages/admin/BandAvatarsAdmin"));
 const CrowdBehaviorAdmin = lazyWithRetry(() => import("./pages/admin/CrowdBehaviorAdmin"));
 const CrowdSoundsAdmin = lazyWithRetry(() => import("./pages/admin/CrowdSoundsAdmin"));
-const POVClipAdmin = lazyWithRetry(() => import("./pages/admin/POVClipAdmin"));
 const SkillDefinitionsAdmin = lazyWithRetry(() => import("./pages/admin/SkillDefinitions"));
 const PlayerSearch = lazyWithRetry(() => import("./pages/PlayerSearch"));
 const PlayerDiscovery = lazyWithRetry(() => import("./pages/PlayerDiscovery"));
@@ -274,7 +273,6 @@ const GameBalanceAdmin = lazyWithRetry(() => import("./pages/admin/GameBalanceAd
 const TutorialsAdmin = lazyWithRetry(() => import("./pages/admin/TutorialsAdmin"));
 const VipManagement = lazyWithRetry(() => import("./pages/admin/VipManagement"));
 const SkinCollectionsAdmin = lazyWithRetry(() => import("./pages/admin/SkinCollectionsAdmin"));
-const AvatarV2Admin = lazyWithRetry(() => import("./pages/admin/AvatarV2Admin"));
 const AISongGeneration = lazyWithRetry(() => import("./pages/admin/AISongGeneration"));
 const MusicVideosAdmin = lazyWithRetry(() => import("./pages/admin/MusicVideosAdmin"));
 const RandomEventsAdmin = lazyWithRetry(() => import("./pages/admin/RandomEventsAdmin"));
@@ -348,7 +346,6 @@ const MyCharacterEdit = lazyWithRetry(() => import("./pages/MyCharacterEdit"));
 const TodaysNewsPage = lazyWithRetry(() => import("./pages/TodaysNews"));
 const Gear = lazyWithRetry(() => import("./pages/Gear"));
 const AvatarDesigner = lazyWithRetry(() => import("./pages/AvatarDesigner"));
-const AvatarV2PreviewPage = lazyWithRetry(() => import("./pages/AvatarV2PreviewPage"));
 const BandRiders = lazyWithRetry(() => import("./pages/BandRiders"));
 const BandVehicles = lazyWithRetry(() => import("./pages/BandVehicles"));
 const SkinStore = lazyWithRetry(() => import("./pages/SkinStore"));
@@ -846,7 +843,6 @@ function App() {
                     <Route path="band/:bandId" element={<BandProfile />} />
                     <Route path="merchandise" element={<Merchandise />} />
                     <Route path="avatar-designer" element={<AvatarDesigner />} />
-                    <Route path="avatar-v2-preview" element={<AvatarV2PreviewPage />} />
                     <Route path="skin-store" element={<SkinStore />} />
                     <Route path="labels" element={<RecordLabel />} />
                     <Route path="labels/:labelId/manage" element={<LabelManagement />} />
@@ -993,7 +989,6 @@ function App() {
                     <Route path="admin/logistics-companies" element={<LogisticsCompaniesAdmin />} />
                     <Route path="admin/skin-collections" element={<SkinCollectionsAdmin />} />
                     <Route path="admin/skin-collections/:collectionId/items" element={<CollectionItemsAdmin />} />
-                    <Route path="admin/avatar-v2" element={<AvatarV2Admin />} />
                     <Route path="admin/random-events" element={<RandomEventsAdmin />} />
                     <Route path="admin/skill-definitions" element={<SkillDefinitionsAdmin />} />
                     <Route path="admin/stream-multiplier" element={<StreamMultiplier />} />
@@ -1001,7 +996,6 @@ function App() {
                     <Route path="admin/band-avatars" element={<BandAvatarsAdmin />} />
                     <Route path="admin/crowd-behavior" element={<CrowdBehaviorAdmin />} />
                     <Route path="admin/crowd-sounds" element={<CrowdSoundsAdmin />} />
-                    <Route path="admin/pov-clips" element={<POVClipAdmin />} />
                     <Route path="admin/practice-tracks" element={<PracticeTracksAdmin />} />
                     </Route>
                     {/* P2 admin route boundary end */}

@@ -16,7 +16,7 @@ import { smoothMotion } from './performanceMotion';
 import type { CrowdTuningOptions } from '@/features/gig-experience/viewer/engine/CrowdTuning';
 import { resolveVenueProfile, stagePosition, stageTransform, type VenueProfile } from './venueProfile';
 import type { ConcertOptions, ConcertFrame } from './liveTypes';
-import { avatarV2QualityForScene } from '@/features/player-model/v2/avatarV2Model';
+import type { AvatarVisualQuality } from '@/features/player-model/avatarVisualQuality';
 import { DEFAULT_SETTINGS, LOOKS, seededRandom, type DemoSettings, type DemoStats, type CameraShot } from './config';
 import { directGigCamera } from './gigCameraSequence';
 import { frameVenuePerformer } from './venueCameraAngles';
@@ -130,7 +130,9 @@ export class ConcertScene {
   private async load() {
     try {
       const television = !!this.options?.television && this.venueProfile?.kind === 'tv_studio';
-      const avatarQuality = avatarV2QualityForScene(this.settings.quality, television);
+      const avatarQuality: AvatarVisualQuality = television
+        ? (this.settings.quality === 'high' ? 'ultra' : this.settings.quality === 'balanced' ? 'high' : 'balanced')
+        : (this.settings.quality === 'low' ? 'balanced' : 'high');
       const [band] = await Promise.all([loadBand(
         this.scene,
         this.assetManager,

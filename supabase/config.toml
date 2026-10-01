@@ -219,5 +219,3 @@ verify_jwt = false
 [functions.totp-render-broker]
 verify_jwt = false
 
-[functions.validate-avatar-v2-authoring]
-verify_jwt = true
