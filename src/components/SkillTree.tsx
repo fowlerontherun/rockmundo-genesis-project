@@ -512,6 +512,62 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
         </div>
       </div>
 
+      {/* Next-step recommendations for maxed tiers */}
+      {(() => {
+        const tierCap = { basic: 10, professional: 20, mastery: 30 } as const;
+        const nextName = (s: string) => {
+          if (/(^|_)basic_/.test(s)) return s.replace(/(^|_)basic_/, "$1professional_");
+          if (/(^|_)professional_/.test(s)) return s.replace(/(^|_)professional_/, "$1mastery_");
+          return null;
+        };
+        const prettify = (slug: string) =>
+          slug.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+        const recs = progress
+          .filter((p) => {
+            const t = getSkillTier(p.skill_slug);
+            return t !== "mastery" && (p.current_level || 0) >= tierCap[t];
+          })
+          .map((p) => {
+            const next = nextName(p.skill_slug);
+            if (!next) return null;
+            const alt = next.startsWith("genres_") ? next.slice(7) : `genres_${next}`;
+            const nextDef = skills.find((s) => s.slug === next || s.slug === alt);
+            const nextProg = progress.find((q) => q.skill_slug === next || q.skill_slug === alt);
+            const nextTier = getSkillTier(next);
+            if (nextProg && (nextProg.current_level || 0) >= tierCap[nextTier]) return null;
+            const fromDef = skills.find((s) => s.slug === p.skill_slug);
+            return {
+              key: p.skill_slug,
+              from: fromDef?.display_name ?? prettify(p.skill_slug),
+              to: nextDef?.display_name ?? prettify(next),
+              level: nextProg?.current_level || 0,
+              cap: tierCap[nextTier],
+              started: !!nextProg,
+            };
+          })
+          .filter(Boolean) as Array<{ key: string; from: string; to: string; level: number; cap: number; started: boolean }>;
+        if (recs.length === 0) return null;
+        return (
+          <div className="mb-2 rounded-md border border-primary/30 bg-primary/5 p-2">
+            <p className="text-xs font-semibold mb-1">Next step in your skill tree</p>
+            <div className="space-y-1">
+              {recs.slice(0, 6).map((r) => (
+                <div key={r.key} className="flex flex-wrap items-center gap-1 text-[11px]">
+                  <span className="text-muted-foreground">{r.from} maxed →</span>
+                  <span className="font-medium">{r.to}</span>
+                  <Badge variant="secondary" className="text-[10px] px-1.5">
+                    {r.started ? `Lv ${r.level}/${r.cap}` : "Now unlocked"}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Train it with SXP, practice, university, books or a mentor.
+            </p>
+          </div>
+        );
+      })()}
+
       {/* Skills display */}
       <ScrollArea className="h-[500px] rounded-md border p-3">
         {filteredSkills.length === 0 ? (

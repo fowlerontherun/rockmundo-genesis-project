@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.758",
+    date: "2026-10-01",
+    changes: [
+      { type: "feature", description: "Skill tree now recommends the next skill to learn once you max a tier (e.g. Basic Singing at level 10 points you to Professional Singing)" },
+    ],
+  },
+  {
     version: "1.1.757",
     date: "2026-09-30",
     changes: [
