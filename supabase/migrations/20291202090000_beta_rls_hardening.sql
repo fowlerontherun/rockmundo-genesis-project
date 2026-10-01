@@ -105,8 +105,6 @@ CREATE POLICY "Admins can update practice tracks"
 CREATE POLICY "Admins can delete practice tracks"
   ON storage.objects FOR DELETE TO authenticated
   USING (bucket_id = 'practice-tracks' AND public.has_role(auth.uid(), 'admin'::public.app_role));
-  WITH CHECK (bucket_id = 'pov-clips' AND public.has_role(auth.uid(), 'admin'::public.app_role));
-  WITH CHECK (bucket_id = 'pov-clips' AND public.has_role(auth.uid(), 'admin'::public.app_role));
 CREATE POLICY "Admins can upload DikCok thumbnails"
   ON storage.objects FOR INSERT TO authenticated
   WITH CHECK (bucket_id = 'dikcok-thumbnails' AND public.has_role(auth.uid(), 'admin'::public.app_role));
