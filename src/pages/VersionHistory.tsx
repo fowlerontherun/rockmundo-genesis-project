@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.759",
+    date: "2026-10-02",
+    changes: [
+      { type: "fix", description: "Paid VIP subscriptions now show in game: the game checks Stripe for an active subscription and activates VIP automatically; fixed the payment notification handler that failed to record purchases" },
+    ],
+  },
+  {
     version: "1.1.758",
     date: "2026-10-01",
     changes: [
