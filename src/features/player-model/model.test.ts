@@ -275,6 +275,64 @@ describe('shipped modular stage models', () => {
     }
   });
 
+  it.each(['masculine', 'feminine'] as const)('refines the %s tank top on the stable skinned donor mesh', frame => {
+    const appearance = defaultAppearance('tank-safe');
+    appearance.body.frame = frame;
+    appearance.equipment.top.itemId = 'starter.top.tank';
+    const model = assemblePlayerModel(library, appearance);
+    const tanks: T.SkinnedMesh[] = [];
+    model.traverse(node => {
+      if (node instanceof T.SkinnedMesh && node.userData.avatarV1TankPolished) tanks.push(node);
+      expect(node.name.startsWith('Starter_Body_')).toBe(false);
+    });
+    expect(tanks.length).toBeGreaterThan(0);
+    expect(tanks.some(mesh => Number(mesh.userData.avatarV1TankArmVertexCount) > 0)).toBe(true);
+    disposeModel(model);
+  });
+
+  it.each(['masculine', 'feminine'] as const)('crops %s shorts and underwear from the stable skinned donor geometry', frame => {
+    for (const itemId of [
+      'starter.bottom.denim-shorts',
+      'starter.bottom.cargo-shorts',
+      'starter.bottom.athletic-shorts',
+      'starter.bottom.boxer-briefs',
+      'starter.bottom.briefs',
+    ] as const) {
+      const appearance = defaultAppearance(itemId);
+      appearance.body.frame = frame;
+      appearance.equipment.bottom.itemId = itemId;
+      const model = assemblePlayerModel(library, appearance);
+      const cropped: T.SkinnedMesh[] = [];
+      model.traverse(node => {
+        if (node instanceof T.SkinnedMesh && node.userData.avatarV1CroppedBottomVariant === itemId) cropped.push(node);
+        expect(node.name.startsWith('Starter_Legs_')).toBe(false);
+      });
+      expect(cropped.length).toBeGreaterThan(0);
+      expect(cropped.every(mesh => Number(mesh.userData.avatarV1CroppedBottomIndexCount) > 0)).toBe(true);
+      for (const mesh of cropped) {
+        expect(mesh.geometry.getAttribute('skinWeight')).toBeTruthy();
+        expect(mesh.geometry.getAttribute('skinIndex')).toBeTruthy();
+      }
+      disposeModel(model);
+    }
+  });
+
+  it.each(['masculine', 'feminine'] as const)('shapes %s chinos and wide-leg trousers without replacing the donor rig', frame => {
+    for (const itemId of ['starter.bottom.chinos', 'starter.bottom.wide-leg'] as const) {
+      const appearance = defaultAppearance(itemId);
+      appearance.body.frame = frame;
+      appearance.equipment.bottom.itemId = itemId;
+      const model = assemblePlayerModel(library, appearance);
+      const shaped: T.SkinnedMesh[] = [];
+      model.traverse(node => {
+        if (node instanceof T.SkinnedMesh && node.userData.avatarV1TrouserVariant === itemId) shaped.push(node);
+        expect(node.name.startsWith('Starter_Legs_')).toBe(false);
+      });
+      expect(shaped.length).toBeGreaterThan(0);
+      disposeModel(model);
+    }
+  });
+
   it.each(['masculine', 'feminine'] as const)('keeps the %s Rockmundo chest print nearly flush to the garment surface', frame => {
     const appearance = defaultAppearance('logo-surface');
     appearance.body.frame = frame;
