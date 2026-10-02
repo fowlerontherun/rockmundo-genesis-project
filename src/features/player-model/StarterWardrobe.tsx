@@ -1,6 +1,17 @@
 import { Shirt, Footprints } from 'lucide-react';
 import { CLOTHING_COLORS, LIVE_STARTER_ITEM_IDS, SLOT_LABELS, equipmentItem, starterItemsForWardrobe, type EquipmentSlot, type PlayerAppearance } from './appearance';
 
+const ITEM_DEFAULT_COLOURS: Record<string, string> = {
+  'starter.top.plain-black': '#20232b',
+  'starter.top.plain-white': '#eee8db',
+  'starter.top.vintage-charcoal': '#657386',
+  'starter.bottom.blue-jeans': '#426baa',
+  'starter.bottom.black-jeans': '#20232b',
+  'starter.bottom.dark-slim-jeans': '#283954',
+  'starter.footwear.black-boots': '#20232b',
+  'starter.footwear.brown-boots': '#ad6241',
+};
+
 export function StarterWardrobe({ slot, appearance, onChange }: { slot: EquipmentSlot; appearance: PlayerAppearance; onChange: (next: PlayerAppearance) => void }) {
   const equipped = appearance.equipment[slot];
   const items = starterItemsForWardrobe(slot);
@@ -8,7 +19,7 @@ export function StarterWardrobe({ slot, appearance, onChange }: { slot: Equipmen
   return <div className="player-model-wardrobe" role="group" aria-label={SLOT_LABELS[slot]}>
     <div className="player-model-wardrobe__heading"><h3>{SLOT_LABELS[slot]}</h3><span>{items.length} included</span></div>
     <div className="player-model-wardrobe__grid">
-      {items.map(item => <button key={item.id} type="button" aria-pressed={equipped.itemId === item.id} onClick={() => edit({ itemId: item.id })}>
+      {items.map(item => <button key={item.id} type="button" aria-pressed={equipped.itemId === item.id} onClick={() => edit({ itemId: item.id, ...(ITEM_DEFAULT_COLOURS[item.id] ? { color: ITEM_DEFAULT_COLOURS[item.id] } : {}) })}>
         <span aria-hidden="true" className={`player-model-wardrobe__tile fabric-${item.fabric}`} style={{ color: equipped.color }}>
           {slot === 'top' ? <Shirt size={34} strokeWidth={1.5} /> : slot === 'footwear' ? <Footprints size={34} strokeWidth={1.5} /> : <svg width="34" height="34" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M9 3h14l2 25h-7l-2-16-2 16H7L9 3Z" /><path d="M9 7h14M16 3v9" /></svg>}
         </span><span>{item.label}</span>
