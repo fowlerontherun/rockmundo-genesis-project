@@ -291,10 +291,10 @@ function polishV1CrewTeeGeometry(
     // bind-space edits only; no bones, weights or inverse binds are replaced.
     const vintage = itemId === 'starter.top.vintage-charcoal';
     const vNeck = itemId === 'starter.top.v-neck';
-    const torsoXScale = yNorm < .24 ? (vintage ? .91 : .94) : (vintage ? .945 : .965);
-    const topDepthScale = yNorm > .68 ? (vNeck ? .83 : .86) : (vintage ? .9 : .93);
-    const xScale = armWeight > .42 ? (vintage ? .8 : .84) : torsoXScale;
-    const zScale = armWeight > .42 ? .89 : topDepthScale;
+    const torsoXScale = yNorm < .24 ? (vintage ? .90 : .925) : (vintage ? .935 : .95);
+    const topDepthScale = yNorm > .68 ? (vNeck ? .80 : .82) : (vintage ? .87 : .89);
+    const xScale = armWeight > .42 ? (vintage ? .76 : .79) : torsoXScale;
+    const zScale = armWeight > .42 ? .84 : topDepthScale;
     if (armWeight > .42) sleeveVertices += 1;
     position.setXYZ(
       vertex,
