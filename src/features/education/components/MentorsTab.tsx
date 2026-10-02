@@ -269,31 +269,22 @@ export const MentorsTab = () => {
           {(!filteredMentors || filteredMentors.length === 0) && (
             <Card>
               <CardContent className="py-12 text-center">
-                {filter === 'discovered' ? (
-                  <>
-                    <EyeOff className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">You haven't discovered any masters yet.</p>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Explore cities, talk to NPCs, and complete achievements to discover legendary masters.
-                    </p>
-                  </>
-                ) : filter === 'available' ? (
+                {filter === 'available' ? (
                   <>
                     <MapPin className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">No masters available in your current city today.</p>
+                    <p className="text-muted-foreground">No mentors are available in your current city today.</p>
                     <p className="text-sm text-muted-foreground mt-2">
-                      Travel to other cities or check back on different days.
+                      Choose All Mentors to see every learning option.
                     </p>
                   </>
                 ) : (
-                  <p className="text-muted-foreground">No masters available at the moment.</p>
+                  <p className="text-muted-foreground">No mentors are available at the moment.</p>
                 )}
               </CardContent>
             </Card>
           )}
         </TabsContent>
       </Tabs>
-    </div>
     </div>
   );
 };
