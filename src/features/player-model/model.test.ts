@@ -4,7 +4,7 @@ import * as T from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { assemblePlayerModel, disposeModel, type ModelLibrary } from './model';
-import { appearanceSchema, defaultAppearance, resolveAppearance, STYLES, modelFile, SLOTS, STARTER_ITEMS, STARTER_VISUAL_FALLBACKS, starterItemsForWardrobe, visualEquipmentItem, resolveAppearance as roundTrip } from './appearance';
+import { appearanceSchema, defaultAppearance, resolveAppearance, STYLES, modelFile, SLOTS, STARTER_ITEMS, STARTER_VISUAL_FALLBACKS, starterItemsForWardrobe, visualEquipmentItem, equipmentStyle, resolveAppearance as roundTrip } from './appearance';
 import { Musician } from '@/features/gig-demo-3d/performers';
 
 const library: ModelLibrary = new Map();
@@ -238,11 +238,47 @@ describe('shipped modular stage models', () => {
         expect(node.name.startsWith('Starter_Body_')).toBe(false);
       });
       expect(polished.length).toBeGreaterThan(0);
+      expect(polished.some(mesh => mesh.userData.avatarV1ShortSleeveVariant === itemId)).toBe(true);
+      expect(polished.some(mesh => Number(mesh.userData.avatarV1ShortSleeveRemovedTriangles) > 0)).toBe(true);
+      expect(model.getObjectByName('avatar-v1-exposed-arm-lower-l')).toBeTruthy();
+      expect(model.getObjectByName('avatar-v1-exposed-arm-lower-r')).toBeTruthy();
       for (const mesh of polished) {
         expect(mesh.geometry.getAttribute('skinWeight')).toBeTruthy();
         expect(mesh.geometry.getAttribute('skinIndex')).toBeTruthy();
       }
+      if (itemId === 'starter.top.vintage-charcoal') expect(equipmentStyle(appearance, 'top')).toBe('casual');
       if (itemId === 'starter.top.v-neck') expect(model.getObjectByName('avatar-v1-v-neck-trim')).toBeTruthy();
+      disposeModel(model);
+    }
+  });
+
+  it.each(['masculine', 'feminine'] as const)('never crops the %s full-length trouser family into shorts', frame => {
+    for (const itemId of [
+      'starter.bottom.casual',
+      'starter.bottom.punk',
+      'starter.bottom.suit',
+      'starter.bottom.denim',
+      'starter.bottom.blue-jeans',
+      'starter.bottom.black-jeans',
+      'starter.bottom.dark-slim-jeans',
+      'starter.bottom.plaid',
+      'starter.bottom.pinstripe',
+      'starter.bottom.chinos',
+    ] as const) {
+      const appearance = defaultAppearance(itemId);
+      appearance.body.frame = frame;
+      appearance.equipment.bottom.itemId = itemId;
+      const model = assemblePlayerModel(library, appearance);
+      let cropped = 0;
+      model.traverse(node => {
+        if (node instanceof T.SkinnedMesh && node.userData.avatarV1CroppedBottom) cropped += 1;
+      });
+      expect(cropped).toBe(0);
+      if (itemId === 'starter.bottom.punk' || itemId === 'starter.bottom.black-jeans' || itemId === 'starter.bottom.dark-slim-jeans') {
+        expect(equipmentStyle(appearance, 'bottom')).toBe('casual');
+      }
+      const bounds = new T.Box3().setFromObject(model);
+      expect(bounds.max.y - bounds.min.y).toBeGreaterThan(1.5);
       disposeModel(model);
     }
   });
