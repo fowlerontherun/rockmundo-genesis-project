@@ -339,6 +339,40 @@ describe('shipped modular stage models', () => {
     }
   });
 
+  it.each(['masculine', 'feminine'] as const)('renders the %s pullover hoodie as a fitted skinned garment', frame => {
+    const appearance = defaultAppearance('hoodie-fitted');
+    appearance.body.frame = frame;
+    appearance.equipment.top.itemId = 'starter.top.hoodie';
+    const model = assemblePlayerModel(library, appearance);
+    const sleeves = model.getObjectByName('avatar-v1-fitted-hoodie-sleeves') as T.SkinnedMesh | undefined;
+    expect(sleeves).toBeTruthy();
+    expect(sleeves?.userData.avatarV1FittedSleeveVariant).toBe('starter.top.hoodie');
+    expect(Number(sleeves?.userData.avatarV1FittedSleeveTriangleCount)).toBeGreaterThan(4);
+    expect(model.getObjectByName('avatar-v1-hoodie-hood')).toBeTruthy();
+    expect(model.getObjectByName('avatar-v1-hoodie-kangaroo-pocket')).toBeTruthy();
+    expect(model.getObjectByName('Starter_Body_garment-hoodie-kangaroo-pocket')).toBeFalsy();
+    expect(starterItemsForWardrobe('top').some(item => item.id === 'starter.top.hoodie')).toBe(true);
+    disposeModel(model);
+  });
+
+  it.each(['masculine', 'feminine'] as const)('keeps the %s fitted hoodie bounded during gig animation', frame => {
+    const appearance = defaultAppearance('hoodie-animation');
+    appearance.body.frame = frame;
+    appearance.equipment.top.itemId = 'starter.top.hoodie';
+    const source = assemblePlayerModel(library, appearance);
+    const actor = new Musician(source, 'guitar', [0, 0, 0], 0, undefined, appearance);
+    disposeModel(source);
+    for (const time of [0, 3, 11, 24]) {
+      actor.update(time, .8, false);
+      const bounds = new T.Box3().setFromObject(actor.root);
+      expect(bounds.max.y).toBeLessThan(2.85);
+      expect(bounds.min.y).toBeGreaterThan(-.25);
+      expect(bounds.max.x - bounds.min.x).toBeLessThan(2.45);
+    }
+    expect(actor.root.getObjectByName('avatar-v1-hoodie-hood')).toBeTruthy();
+    disposeModel(actor.root);
+  });
+
   it.each(['masculine', 'feminine'] as const)('keeps the %s Rockmundo chest print nearly flush to the garment surface', frame => {
     const appearance = defaultAppearance('logo-surface');
     appearance.body.frame = frame;
@@ -433,7 +467,6 @@ describe('appearance boundaries', () => {
 describe('V1 starter clothing safety gate', () => {
   it('only exposes visually verified starter clothing in the live wardrobe', () => {
     expect(starterItemsForWardrobe('top').map(item => item.id)).not.toEqual(expect.arrayContaining([
-      'starter.top.hoodie',
       'starter.top.zip-hoodie',
       'starter.top.denim-jacket',
       'starter.top.flannel-shirt',
