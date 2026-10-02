@@ -7,6 +7,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, stripe-signature",
 };
 
+const periodEndOf = (sub: any): Date => {
+  const legacy = sub?.current_period_end;
+  const fromItems = Math.max(0, ...((sub?.items?.data ?? []).map((i: any) => i?.current_period_end ?? 0)));
+  const end = legacy || fromItems;
+  return end ? new Date(end * 1000) : new Date(Date.now() + 30 * 86400000);
+};
+
 const logStep = (step: string, details?: any) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
   console.log(`[STRIPE-WEBHOOK] ${step}${detailsStr}`);
@@ -71,20 +78,21 @@ serve(async (req) => {
 
         const subscriptionId = session.subscription as string;
         const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-        const currentPeriodEnd = new Date(subscription.current_period_end * 1000);
+        const currentPeriodEnd = periodEndOf(subscription);
 
-        const { error } = await supabaseClient
-          .from("vip_subscriptions")
-          .upsert({
-            user_id: userId,
-            status: "active",
-            subscription_type: "paid",
-            starts_at: new Date().toISOString(),
-            expires_at: currentPeriodEnd.toISOString(),
-            stripe_subscription_id: subscriptionId,
-          }, {
-            onConflict: "user_id",
-          });
+        const row = {
+          user_id: userId,
+          status: "active",
+          subscription_type: "paid",
+          starts_at: new Date().toISOString(),
+          expires_at: currentPeriodEnd.toISOString(),
+          stripe_subscription_id: subscriptionId,
+        };
+        const { data: existingRow } = await supabaseClient
+          .from("vip_subscriptions").select("id").eq("stripe_subscription_id", subscriptionId).maybeSingle();
+        const { error } = existingRow
+          ? await supabaseClient.from("vip_subscriptions").update({ status: "active", expires_at: row.expires_at }).eq("id", existingRow.id)
+          : await supabaseClient.from("vip_subscriptions").insert(row);
 
         if (error) {
           logStep("Error creating VIP subscription", { error });
@@ -149,7 +157,7 @@ serve(async (req) => {
           break;
         }
 
-        const currentPeriodEnd = new Date(subscription.current_period_end * 1000);
+        const currentPeriodEnd = periodEndOf(subscription);
         const status = subscription.status === "active" ? "active" :
                        subscription.status === "canceled" ? "cancelled" : "expired";
 
