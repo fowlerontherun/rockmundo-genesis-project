@@ -199,6 +199,32 @@ describe('shipped modular stage models', () => {
     }
   });
 
+  it.each(['masculine', 'feminine'] as const)('renders %s shorts with exposed skinned legs', frame => {
+    for (const itemId of ['starter.bottom.denim-shorts', 'starter.bottom.cargo-shorts', 'starter.bottom.athletic-shorts'] as const) {
+      const appearance = defaultAppearance(itemId);
+      appearance.body.frame = frame;
+      appearance.equipment.bottom.itemId = itemId;
+      const model = assemblePlayerModel(library, appearance);
+      expect(model.getObjectByName('Starter_Legs_garment-shorts-waistband')).toBeTruthy();
+      expect(model.getObjectByName('avatar-v1-short-leg-underlay-lower-l')).toBeTruthy();
+      expect(model.getObjectByName('avatar-v1-short-leg-underlay-lower-r')).toBeTruthy();
+      disposeModel(model);
+    }
+  });
+
+  it.each(['masculine', 'feminine'] as const)('renders %s underwear as a distinct short fitted bottom', frame => {
+    for (const itemId of ['starter.bottom.boxer-briefs', 'starter.bottom.briefs'] as const) {
+      const appearance = defaultAppearance(itemId);
+      appearance.body.frame = frame;
+      appearance.equipment.bottom.itemId = itemId;
+      const model = assemblePlayerModel(library, appearance);
+      expect(model.getObjectByName('Starter_Legs_garment-underwear-waistband')).toBeTruthy();
+      expect(model.getObjectByName('avatar-v1-short-leg-underlay-upper-l')).toBeTruthy();
+      expect(model.getObjectByName('avatar-v1-short-leg-underlay-lower-l')).toBeTruthy();
+      disposeModel(model);
+    }
+  });
+
   it.each(['masculine', 'feminine'] as const)('keeps the %s Rockmundo chest print nearly flush to the garment surface', frame => {
     const appearance = defaultAppearance('logo-surface');
     appearance.body.frame = frame;
@@ -292,7 +318,7 @@ describe('appearance boundaries', () => {
 
 describe('expanded starter wardrobe', () => {
   it.each(['masculine', 'feminine'] as const)('renders and preserves the full starter wardrobe on the %s gig rig', frame => {
-    const expectedCounts = { top: 17, bottom: 9, footwear: 10 } as const;
+    const expectedCounts = { top: 17, bottom: 14, footwear: 10 } as const;
     for (const slot of SLOTS) {
       expect(STARTER_ITEMS[slot]).toHaveLength(expectedCounts[slot]);
       expect(new Set(STARTER_ITEMS[slot].map(item => item.id)).size).toBe(STARTER_ITEMS[slot].length);
