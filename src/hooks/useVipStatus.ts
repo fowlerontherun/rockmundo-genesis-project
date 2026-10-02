@@ -39,7 +39,14 @@ export const useVipStatus = () => {
         };
       }
 
-      console.log('[useVipStatus] Checking VIP for user:', userId);
+      // Pull any paid Stripe subscription into the game before reading VIP status,
+      // so purchases show up even if the payment notification was missed.
+      try {
+        await supabase.functions.invoke("sync-vip-subscription");
+      } catch (syncError) {
+        console.warn("[useVipStatus] VIP sync failed", syncError);
+      }
+
       
       const { data, error } = await supabase
         .from("vip_subscriptions")
