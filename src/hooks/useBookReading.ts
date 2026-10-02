@@ -1,14 +1,19 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 export const useBookReading = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { profileId } = useActiveProfile();
 
   const processAttendance = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("book-reading-attendance", { body: { manual: true } });
+      if (!profileId) throw new Error("Select an active player character before recording reading.");
+      const { data, error } = await supabase.functions.invoke("book-reading-attendance", {
+        body: { manual: true, profileId },
+      });
       
       if (error) throw error;
       if (!data || data.success === false) throw new Error(data?.error || "Reading attendance could not be processed.");
@@ -38,7 +43,7 @@ export const useBookReading = () => {
       } else {
         toast({
           title: "Reading Not Recorded",
-          description: "No active reading session was processed. Refresh your library and try again.",
+          description: "No active reading session was found for this character. Reopen Education > Books and try again.",
           variant: "destructive",
         });
       }
