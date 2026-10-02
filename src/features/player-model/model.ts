@@ -56,6 +56,14 @@ const V1_SKINNED_TEE_ITEMS = new Set([
   'starter.top.v-neck',
 ]);
 
+const V1_SKINNED_OUTERWEAR_ITEMS = new Set([
+  'starter.top.long-sleeve',
+  'starter.top.hoodie',
+  'starter.top.zip-hoodie',
+  'starter.top.denim-jacket',
+  'starter.top.flannel-shirt',
+]);
+
 function polishV1CrewTeeGeometry(
   mesh: T.SkinnedMesh,
   materials: T.Material[],
@@ -137,6 +145,97 @@ function polishV1CrewTeeGeometry(
   mesh.userData.avatarV1CrewTeeVariant = itemId;
   mesh.userData.avatarV1CrewTeeVertexCount = garmentVertices.size;
   mesh.userData.avatarV1CrewTeeSleeveVertexCount = sleeveVertices;
+}
+
+function polishV1OuterwearGeometry(
+  mesh: T.SkinnedMesh,
+  materials: T.Material[],
+  itemId: string,
+) {
+  const geometry = mesh.geometry;
+  const position = geometry.getAttribute('position') as T.BufferAttribute | undefined;
+  const skinIndex = geometry.getAttribute('skinIndex') as T.BufferAttribute | undefined;
+  const skinWeight = geometry.getAttribute('skinWeight') as T.BufferAttribute | undefined;
+  if (!position || !skinIndex || !skinWeight || !geometry.groups.length || !materials.length) return;
+
+  const garmentMaterialIndices = new Set<number>();
+  materials.forEach((material, index) => {
+    const name = material.name.toLowerCase();
+    if (!/skin|eye|earring|metal|hair/.test(name)) garmentMaterialIndices.add(index);
+  });
+  if (!garmentMaterialIndices.size) return;
+
+  const garmentVertices = new Set<number>();
+  const index = geometry.index;
+  for (const group of geometry.groups) {
+    if (!garmentMaterialIndices.has(group.materialIndex ?? 0)) continue;
+    for (let i = group.start; i < group.start + group.count; i += 1) {
+      garmentVertices.add(index ? index.getX(i) : i);
+    }
+  }
+  if (!garmentVertices.size) return;
+
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (const vertex of garmentVertices) {
+    minX = Math.min(minX, position.getX(vertex));
+    maxX = Math.max(maxX, position.getX(vertex));
+    minZ = Math.min(minZ, position.getZ(vertex));
+    maxZ = Math.max(maxZ, position.getZ(vertex));
+  }
+  const centreX = (minX + maxX) * .5;
+  const centreZ = (minZ + maxZ) * .5;
+  const jacket = itemId === 'starter.top.denim-jacket';
+  const flannel = itemId === 'starter.top.flannel-shirt';
+  const hoodie = itemId === 'starter.top.hoodie' || itemId === 'starter.top.zip-hoodie';
+  const longSleeve = itemId === 'starter.top.long-sleeve';
+  let armVertices = 0;
+
+  for (const vertex of garmentVertices) {
+    let upperArmWeight = 0;
+    let lowerArmWeight = 0;
+    for (let channel = 0; channel < 4; channel += 1) {
+      const weight = skinWeight.getComponent(vertex, channel);
+      if (weight <= 0) continue;
+      const boneIndex = skinIndex.getComponent(vertex, channel);
+      const boneName = mesh.skeleton.bones[boneIndex]?.name ?? '';
+      if (/upperarm/i.test(boneName)) upperArmWeight += weight;
+      if (/lowerarm|forearm/i.test(boneName)) lowerArmWeight += weight;
+    }
+    const armWeight = upperArmWeight + lowerArmWeight;
+    const x = position.getX(vertex);
+    const y = position.getY(vertex);
+    const z = position.getZ(vertex);
+
+    let xScale = 1;
+    let zScale = 1;
+    if (armWeight > .34) {
+      armVertices += 1;
+      if (longSleeve) { xScale = .92; zScale = .93; }
+      else if (hoodie) { xScale = 1.015; zScale = 1.025; }
+      else if (jacket) { xScale = 1.025; zScale = 1.035; }
+      else if (flannel) { xScale = .985; zScale = .985; }
+    } else {
+      if (longSleeve) { xScale = .955; zScale = .92; }
+      else if (hoodie) { xScale = 1.025; zScale = 1.045; }
+      else if (jacket) { xScale = 1.035; zScale = 1.055; }
+      else if (flannel) { xScale = .99; zScale = .97; }
+    }
+    position.setXYZ(
+      vertex,
+      centreX + (x - centreX) * xScale,
+      y,
+      centreZ + (z - centreZ) * zScale,
+    );
+  }
+
+  position.needsUpdate = true;
+  geometry.computeVertexNormals();
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  mesh.userData.avatarV1OuterwearPolished = true;
+  mesh.userData.avatarV1OuterwearVariant = itemId;
+  mesh.userData.avatarV1OuterwearVertexCount = garmentVertices.size;
+  mesh.userData.avatarV1OuterwearArmVertexCount = armVertices;
 }
 
 function rockmundoWordmarkTexture() {
@@ -254,6 +353,41 @@ function addV1VNeckTrim(root: T.Object3D, appearance: PlayerAppearance, bones: M
   trim.name = 'avatar-v1-v-neck-trim';
   trim.renderOrder = 2;
   attachSurfaceGraphic(root, chest, trim, attachment, .00035);
+}
+
+function addV1OuterwearFrontDetail(root: T.Object3D, appearance: PlayerAppearance, bones: Map<string, T.Bone>) {
+  const itemId = appearance.equipment.top.itemId;
+  if (!['starter.top.zip-hoodie','starter.top.denim-jacket','starter.top.flannel-shirt'].includes(itemId)) return;
+  const chest = findPlayerBone(bones, ['Spine2','Spine.002','Chest','UpperChest'])
+    ?? findPlayerBone(bones, ['Spine1','Spine.001']);
+  if (!chest) return;
+  const attachment = findFrontSurfaceAttachment(
+    root,
+    'body',
+    chest.getWorldPosition(new T.Vector3()),
+    appearance.body.frame === 'feminine' ? .018 : .025,
+  );
+  if (!attachment) return;
+
+  const line = new T.Mesh(
+    new T.PlaneGeometry(itemId === 'starter.top.denim-jacket' ? .014 : .01, itemId === 'starter.top.flannel-shirt' ? .34 : .39),
+    new T.MeshStandardMaterial({
+      color: new T.Color(appearance.equipment.top.color).offsetHSL(0, 0, itemId === 'starter.top.denim-jacket' ? .12 : -.16),
+      roughness: itemId === 'starter.top.zip-hoodie' ? .5 : .86,
+      metalness: itemId === 'starter.top.zip-hoodie' ? .42 : .04,
+      side: T.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1,
+    }),
+  );
+  line.name = itemId === 'starter.top.zip-hoodie'
+    ? 'avatar-v1-zip-hoodie-zip'
+    : itemId === 'starter.top.denim-jacket'
+      ? 'avatar-v1-denim-jacket-seam'
+      : 'avatar-v1-flannel-placket';
+  line.renderOrder = 2;
+  attachSurfaceGraphic(root, chest, line, attachment, .0004);
 }
 
 function applyV1HandProportionPolish(bones: Map<string, T.Bone>) {
@@ -869,6 +1003,17 @@ export function assemblePlayerModel(
             appearance.equipment.top.itemId,
           );
         }
+        if (
+          choice.part === 'body' &&
+          !choice.assetKey &&
+          V1_SKINNED_OUTERWEAR_ITEMS.has(appearance.equipment.top.itemId)
+        ) {
+          polishV1OuterwearGeometry(
+            clonedNode,
+            Array.isArray(original.material) ? original.material : [original.material],
+            appearance.equipment.top.itemId,
+          );
+        }
         if (choice.fabric !== 'plain' || choice.finish) fabricUVs(clonedNode.geometry, choice.part === 'feet');
         if (choice.assetKey) applyCuratedMacroShading(clonedNode.geometry, choice.assetKey, choice.finish as CuratedFinish | undefined);
         if (choice.part === 'head' || (choice.part === 'body' && !choice.assetKey)) {
@@ -1030,6 +1175,7 @@ export function assemblePlayerModel(
   if (presentation === 'stage') {
     addStarterLogoTee(result, appearance, bones, richClothing);
     addV1VNeckTrim(result, appearance, bones);
+    addV1OuterwearFrontDetail(result, appearance, bones);
     addCuratedSkinDetails(result, bones, richClothing, quality);
   }
   addTattoos(result, tattoos, bones);
