@@ -64,6 +64,19 @@ const V1_SKINNED_OUTERWEAR_ITEMS = new Set([
   'starter.top.flannel-shirt',
 ]);
 
+const V1_CROPPED_BOTTOM_ITEMS = new Set([
+  'starter.bottom.denim-shorts',
+  'starter.bottom.cargo-shorts',
+  'starter.bottom.athletic-shorts',
+  'starter.bottom.boxer-briefs',
+  'starter.bottom.briefs',
+]);
+
+const V1_SHAPED_TROUSER_ITEMS = new Set([
+  'starter.bottom.chinos',
+  'starter.bottom.wide-leg',
+]);
+
 function polishV1CrewTeeGeometry(
   mesh: T.SkinnedMesh,
   materials: T.Material[],
@@ -236,6 +249,146 @@ function polishV1OuterwearGeometry(
   mesh.userData.avatarV1OuterwearVariant = itemId;
   mesh.userData.avatarV1OuterwearVertexCount = garmentVertices.size;
   mesh.userData.avatarV1OuterwearArmVertexCount = armVertices;
+}
+
+function polishV1TankGeometry(mesh: T.SkinnedMesh, materials: T.Material[]) {
+  const geometry = mesh.geometry;
+  const position = geometry.getAttribute('position') as T.BufferAttribute | undefined;
+  const skinIndex = geometry.getAttribute('skinIndex') as T.BufferAttribute | undefined;
+  const skinWeight = geometry.getAttribute('skinWeight') as T.BufferAttribute | undefined;
+  if (!position || !skinIndex || !skinWeight || !geometry.groups.length) return;
+
+  const garmentMaterialIndices = new Set<number>();
+  materials.forEach((material, index) => {
+    if (!/skin|eye|earring|metal|hair/i.test(material.name)) garmentMaterialIndices.add(index);
+  });
+  const garmentVertices = new Set<number>();
+  const index = geometry.index;
+  for (const group of geometry.groups) {
+    if (!garmentMaterialIndices.has(group.materialIndex ?? 0)) continue;
+    for (let i = group.start; i < group.start + group.count; i += 1) garmentVertices.add(index ? index.getX(i) : i);
+  }
+  if (!garmentVertices.size) return;
+
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (const vertex of garmentVertices) {
+    minX = Math.min(minX, position.getX(vertex)); maxX = Math.max(maxX, position.getX(vertex));
+    minZ = Math.min(minZ, position.getZ(vertex)); maxZ = Math.max(maxZ, position.getZ(vertex));
+  }
+  const centreX = (minX + maxX) * .5, centreZ = (minZ + maxZ) * .5;
+  let armVertices = 0;
+  for (const vertex of garmentVertices) {
+    let armWeight = 0;
+    for (let channel = 0; channel < 4; channel += 1) {
+      const weight = skinWeight.getComponent(vertex, channel);
+      if (weight <= 0) continue;
+      const boneName = mesh.skeleton.bones[skinIndex.getComponent(vertex, channel)]?.name ?? '';
+      if (/upperarm/i.test(boneName)) armWeight += weight;
+    }
+    const x = position.getX(vertex), y = position.getY(vertex), z = position.getZ(vertex);
+    if (armWeight > .32) {
+      armVertices += 1;
+      position.setXYZ(vertex, centreX + (x - centreX) * .58, y + .01, centreZ + (z - centreZ) * .8);
+    } else {
+      position.setXYZ(vertex, centreX + (x - centreX) * .94, y, centreZ + (z - centreZ) * .91);
+    }
+  }
+  position.needsUpdate = true;
+  geometry.computeVertexNormals();
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  mesh.userData.avatarV1TankPolished = true;
+  mesh.userData.avatarV1TankArmVertexCount = armVertices;
+}
+
+function cropV1BottomGarmentGeometry(mesh: T.SkinnedMesh, materials: T.Material[], itemId: string) {
+  const geometry = mesh.geometry;
+  const position = geometry.getAttribute('position') as T.BufferAttribute | undefined;
+  if (!position || !geometry.groups.length) return;
+
+  const garmentMaterialIndices = new Set<number>();
+  materials.forEach((material, index) => {
+    if (!/skin|eye|earring|metal|hair/i.test(material.name)) garmentMaterialIndices.add(index);
+  });
+  if (!garmentMaterialIndices.size) return;
+
+  const sourceIndex = geometry.index;
+  const indexAt = (offset: number) => sourceIndex ? sourceIndex.getX(offset) : offset;
+  let minY = Infinity, maxY = -Infinity;
+  for (const group of geometry.groups) {
+    if (!garmentMaterialIndices.has(group.materialIndex ?? 0)) continue;
+    for (let i = group.start; i < group.start + group.count; i += 1) {
+      const y = position.getY(indexAt(i));
+      minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+    }
+  }
+  if (!Number.isFinite(minY) || !Number.isFinite(maxY) || maxY <= minY) return;
+
+  const underwear = itemId === 'starter.bottom.boxer-briefs' || itemId === 'starter.bottom.briefs';
+  const cropY = minY + (maxY - minY) * (underwear ? .69 : .48);
+  const nextIndices: number[] = [];
+  const nextGroups: Array<{ start: number; count: number; materialIndex: number }> = [];
+
+  for (const group of geometry.groups) {
+    const start = nextIndices.length;
+    const garment = garmentMaterialIndices.has(group.materialIndex ?? 0);
+    for (let i = group.start; i + 2 < group.start + group.count; i += 3) {
+      const a = indexAt(i), b = indexAt(i + 1), c = indexAt(i + 2);
+      if (garment) {
+        const lowest = Math.min(position.getY(a), position.getY(b), position.getY(c));
+        if (lowest < cropY) continue;
+      }
+      nextIndices.push(a, b, c);
+    }
+    const count = nextIndices.length - start;
+    if (count) nextGroups.push({ start, count, materialIndex: group.materialIndex ?? 0 });
+  }
+
+  if (!nextIndices.length) return;
+  geometry.setIndex(nextIndices);
+  geometry.clearGroups();
+  nextGroups.forEach(group => geometry.addGroup(group.start, group.count, group.materialIndex));
+  geometry.computeVertexNormals();
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  mesh.userData.avatarV1CroppedBottom = true;
+  mesh.userData.avatarV1CroppedBottomVariant = itemId;
+  mesh.userData.avatarV1CroppedBottomCutY = cropY;
+  mesh.userData.avatarV1CroppedBottomIndexCount = nextIndices.length;
+}
+
+function shapeV1TrouserGeometry(mesh: T.SkinnedMesh, materials: T.Material[], itemId: string) {
+  const geometry = mesh.geometry;
+  const position = geometry.getAttribute('position') as T.BufferAttribute | undefined;
+  if (!position || !geometry.groups.length) return;
+  const garmentMaterialIndices = new Set<number>();
+  materials.forEach((material, index) => {
+    if (!/skin|eye|earring|metal|hair/i.test(material.name)) garmentMaterialIndices.add(index);
+  });
+  const vertices = new Set<number>();
+  const index = geometry.index;
+  for (const group of geometry.groups) {
+    if (!garmentMaterialIndices.has(group.materialIndex ?? 0)) continue;
+    for (let i = group.start; i < group.start + group.count; i += 1) vertices.add(index ? index.getX(i) : i);
+  }
+  if (!vertices.size) return;
+  let minX = Infinity, maxX = -Infinity;
+  for (const vertex of vertices) {
+    minX = Math.min(minX, position.getX(vertex));
+    maxX = Math.max(maxX, position.getX(vertex));
+  }
+  const centreX = (minX + maxX) * .5;
+  const wide = itemId === 'starter.bottom.wide-leg';
+  for (const vertex of vertices) {
+    const x = position.getX(vertex);
+    position.setX(vertex, centreX + (x - centreX) * (wide ? 1.105 : .955));
+  }
+  position.needsUpdate = true;
+  geometry.computeVertexNormals();
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  mesh.userData.avatarV1TrouserPolished = true;
+  mesh.userData.avatarV1TrouserVariant = itemId;
 }
 
 function rockmundoWordmarkTexture() {
@@ -1012,6 +1165,38 @@ export function assemblePlayerModel(
             clonedNode,
             Array.isArray(original.material) ? original.material : [original.material],
             appearance.equipment.top.itemId,
+          );
+        }
+        if (
+          choice.part === 'body' &&
+          !choice.assetKey &&
+          appearance.equipment.top.itemId === 'starter.top.tank'
+        ) {
+          polishV1TankGeometry(
+            clonedNode,
+            Array.isArray(original.material) ? original.material : [original.material],
+          );
+        }
+        if (
+          choice.part === 'legs' &&
+          !choice.assetKey &&
+          V1_CROPPED_BOTTOM_ITEMS.has(appearance.equipment.bottom.itemId)
+        ) {
+          cropV1BottomGarmentGeometry(
+            clonedNode,
+            Array.isArray(original.material) ? original.material : [original.material],
+            appearance.equipment.bottom.itemId,
+          );
+        }
+        if (
+          choice.part === 'legs' &&
+          !choice.assetKey &&
+          V1_SHAPED_TROUSER_ITEMS.has(appearance.equipment.bottom.itemId)
+        ) {
+          shapeV1TrouserGeometry(
+            clonedNode,
+            Array.isArray(original.material) ? original.material : [original.material],
+            appearance.equipment.bottom.itemId,
           );
         }
         if (choice.fabric !== 'plain' || choice.finish) fabricUVs(clonedNode.geometry, choice.part === 'feet');
