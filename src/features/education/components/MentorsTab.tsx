@@ -4,9 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, DollarSign, TrendingUp, Award, MapPin, Calendar, Eye, EyeOff, Plane, Sparkles, Music, Building, BookOpen } from "lucide-react";
+import { Clock, DollarSign, TrendingUp, Award, MapPin, Calendar, Plane, Sparkles } from "lucide-react";
 import { useMentorSessions } from "@/hooks/useMentorSessions";
 import { formatFocusSkill } from "@/pages/admin/mentors.helpers";
+import { isHigherTierSkill, useSkillTierAccess } from "../hooks/useSkillTierAccess";
 
 export const MentorsTab = () => {
   const { 
@@ -16,15 +17,15 @@ export const MentorsTab = () => {
     bookSession, 
     isBooking, 
     canBookSession,
-    isMentorDiscovered,
     isAvailableToday,
     isInMentorCity,
     getDayName,
-    discoveredCount,
     totalMentors,
   } = useMentorSessions();
 
   const [filter, setFilter] = useState<'all' | 'available'>('all');
+  const tierAccess = useSkillTierAccess(profile?.id, (mentors ?? []).map((mentor) => mentor.focus_skill));
+  const accessBySkill = tierAccess.data ?? new Map<string, boolean>();
 
   const getSkillLevel = (skillSlug: string) => {
     return skillProgress?.find((s) => s.skill_slug === skillSlug)?.current_level || 0;
@@ -37,10 +38,11 @@ export const MentorsTab = () => {
   };
 
   const filteredMentors = mentors?.filter(mentor => {
-    const discovered = isMentorDiscovered(mentor.id);
     const inCity = isInMentorCity(mentor.city_id);
     const availableDay = isAvailableToday(mentor.available_day);
+    const locked = isHigherTierSkill(mentor.focus_skill) && accessBySkill.get(mentor.focus_skill) === false;
 
+    if (locked) return false;
     if (filter === 'available') return inCity && availableDay;
     return true;
   });
@@ -95,7 +97,6 @@ export const MentorsTab = () => {
             Available Now
           </TabsTrigger>
           <TabsTrigger value="all" className="gap-1">
-            <EyeOff className="h-3 w-3" />
             All Mentors
           </TabsTrigger>
         </TabsList>
@@ -103,74 +104,11 @@ export const MentorsTab = () => {
         <TabsContent value={filter} className="mt-6">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {filteredMentors?.map((mentor) => {
-              const discovered = isMentorDiscovered(mentor.id);
               const { canBook, reason } = canBookSession(mentor.id);
               const skillLevel = getSkillLevel(mentor.focus_skill);
               const skillProgressPercent = getSkillProgress(mentor.focus_skill);
               const inCity = isInMentorCity(mentor.city_id);
               const availableDay = isAvailableToday(mentor.available_day);
-
-              // Undiscovered masters show as silhouettes
-              if (!discovered && filter === 'all') {
-                return (
-                  <Card key={mentor.id} className="flex flex-col opacity-60 bg-muted/30">
-                    <CardHeader className="space-y-2">
-                      <div className="flex items-start justify-between">
-                        <CardTitle className="text-lg text-muted-foreground">??? Unknown Master</CardTitle>
-                        <Badge variant="outline" className="text-xs">
-                          <EyeOff className="h-3 w-3 mr-1" />
-                          Undiscovered
-                        </Badge>
-                      </div>
-                      <CardDescription className="italic">
-                        {mentor.discovery_hint || (
-                          mentor.discovery_type === 'venue_gig' 
-                            ? "Play a legendary gig to catch this master's attention..."
-                            : mentor.discovery_type === 'studio_session'
-                            ? "Record at the right studio to discover this master..."
-                            : "Explore cities and talk to NPCs to find this master..."
-                        )}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex-1 space-y-4">
-                      <div className="space-y-2 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4" />
-                          <span>Location: ???</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          <span>Available: ???</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {mentor.discovery_type === 'venue_gig' ? (
-                            <Music className="h-4 w-4" />
-                          ) : mentor.discovery_type === 'studio_session' ? (
-                            <Building className="h-4 w-4" />
-                          ) : (
-                            <Sparkles className="h-4 w-4" />
-                          )}
-                          <span>
-                            {mentor.discovery_type === 'venue_gig' 
-                              ? "Discovered by playing a venue"
-                              : mentor.discovery_type === 'studio_session'
-                              ? "Discovered by using a studio"
-                              : "Discovered by exploring"
-                            }
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <TrendingUp className="h-4 w-4" />
-                          <span>Teaches: {formatFocusSkill(mentor.focus_skill)}</span>
-                        </div>
-                      </div>
-                      <Button className="w-full" variant="outline" disabled>
-                        Discover to Unlock
-                      </Button>
-                    </CardContent>
-                  </Card>
-                );
-              }
 
               return (
                 <Card key={mentor.id} className="flex flex-col">

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Loader2, GraduationCap, Search, MapPin, Globe, Filter, Music, Mic, Headphones, Radio, Zap, PenTool, Cpu, X, Clock, DollarSign, TrendingUp } from "lucide-react";
+import { Loader2, GraduationCap, Search, MapPin, Globe, Filter, Music, Mic, Headphones, Radio, Zap, PenTool, Cpu, X, Clock, DollarSign, TrendingUp, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ import {
   getUniversityQualityBand,
   normalizeUniversityRating,
 } from "@/lib/universityBalance";
+import { isHigherTierSkill, useSkillTierAccess } from "../hooks/useSkillTierAccess";
 
 interface University {
   id: string;
@@ -223,6 +224,9 @@ export const UniversityTab = () => {
       return allCourses;
     },
   });
+
+  const tierAccess = useSkillTierAccess(profileId, (courses ?? []).map((course) => course.skill_slug));
+  const accessBySkill = tierAccess.data ?? new Map<string, boolean>();
 
   const { data: courseCounts } = useQuery({
     queryKey: ["university_course_counts"],
@@ -614,7 +618,16 @@ export const UniversityTab = () => {
                 {selectedCategory !== "all" ? ` in ${SKILL_CATEGORIES.find(c => c.value === selectedCategory)?.label}` : ""}
               </p>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {filteredCourses.slice(0, 50).map((course) => {
+                {filteredCourses
+                  .slice()
+                  .sort((a, b) => {
+                    const aLocked = isHigherTierSkill(a.skill_slug) && accessBySkill.get(a.skill_slug) === false;
+                    const bLocked = isHigherTierSkill(b.skill_slug) && accessBySkill.get(b.skill_slug) === false;
+                    return Number(aLocked) - Number(bLocked) || a.name.localeCompare(b.name);
+                  })
+                  .slice(0, 50)
+                  .map((course) => {
+                  const locked = isHigherTierSkill(course.skill_slug) && accessBySkill.get(course.skill_slug) === false;
                   const effectivePrice = calculateUniversityCoursePrice(
                     course.base_price,
                     course.universities?.course_cost_modifier,
@@ -638,6 +651,11 @@ export const UniversityTab = () => {
                             <Badge variant="outline" className="text-xs">
                               {formatSkillSlug(course.skill_slug)}
                             </Badge>
+                            {locked && (
+                              <Badge variant="outline" className="gap-1 text-xs">
+                                <Lock className="h-3 w-3" /> Locked
+                              </Badge>
+                            )}
                             <Badge variant="secondary" className="gap-1 text-xs">
                               <DollarSign className="h-3 w-3" />
                               {effectivePrice.toLocaleString()}
@@ -671,9 +689,15 @@ export const UniversityTab = () => {
                               <span>{course.universities.city}</span>
                             </div>
                           )}
-                          <Button asChild variant="ghost" size="sm" className="mt-2 w-full">
-                            <Link to={`/university/${course.university_id}`}>View University</Link>
-                          </Button>
+                          {locked ? (
+                            <div className="mt-2 rounded-md border bg-muted/30 p-2 text-center text-xs text-muted-foreground">
+                              Max the previous skill tier to unlock enrollment.
+                            </div>
+                          ) : (
+                            <Button asChild variant="ghost" size="sm" className="mt-2 w-full">
+                              <Link to={`/university/${course.university_id}`}>View University</Link>
+                            </Button>
+                          )}
                         </div>
                       </CardContent>
                     </Card>
