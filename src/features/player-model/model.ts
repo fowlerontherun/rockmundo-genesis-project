@@ -127,6 +127,31 @@ function addStarterLogoTee(root: T.Object3D, appearance: PlayerAppearance, bones
   attachSurfaceGraphic(root, chest, mark, attachment, .00045);
 }
 
+function applyV1HandProportionPolish(bones: Map<string, T.Bone>) {
+  const joint = (digit: string, index: number, side: 'L' | 'R') =>
+    findPlayerBone(bones, [`${digit}${index}.${side}`, `${digit}${index}_${side}`, `${digit}${index}${side}`]);
+
+  // The legacy donor rigs have intentionally chunky stage hands, but the finger
+  // chains read too long and spider-like in the fitting-room close-up. Shorten
+  // each digit from its base instead of editing vertices, which keeps the
+  // existing weights, IK and instrument finger animation fully compatible.
+  const baseScale: Record<string, number> = {
+    Thumb: .94,
+    Index: .955,
+    Middle: .95,
+    Ring: .925,
+    Pinky: .89,
+  };
+  for (const side of ['L', 'R'] as const) {
+    for (const digit of ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky']) {
+      const proximal = joint(digit, 1, side);
+      if (!proximal) continue;
+      proximal.scale.multiplyScalar(baseScale[digit]);
+      proximal.userData.avatarV1FingerScale = baseScale[digit];
+    }
+  }
+}
+
 function applyRelaxedV1HandPose(bones: Map<string, T.Bone>) {
   const joint = (digit: string, index: number, side: 'L' | 'R') =>
     findPlayerBone(bones, [`${digit}${index}.${side}`, `${digit}${index}_${side}`, `${digit}${index}${side}`]);
@@ -702,9 +727,10 @@ export function assemblePlayerModel(
     addCuratedSkinDetails(result, bones, richClothing, quality);
   }
   addTattoos(result, tattoos, bones);
-  // V1 donor hands have an exaggerated open/splayed bind pose. A restrained
-  // neutral curl makes creator/profile hands read naturally while preserving
-  // all finger bones for gig-specific instrument posing.
+  // V1 donor hands have long, exaggerated fingers and an open/splayed bind pose.
+  // Keep the original skin weights and animation chains but improve their
+  // proportions and resting silhouette for creator/profile close-ups.
+  applyV1HandProportionPolish(bones);
   applyRelaxedV1HandPose(bones);
   result.userData.rockmundoAvatarPresentation = presentation;
   result.updateMatrixWorld(true);
