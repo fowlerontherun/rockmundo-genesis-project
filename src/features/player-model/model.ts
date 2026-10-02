@@ -146,7 +146,8 @@ function trimV1TeeToShortSleeves(mesh: T.SkinnedMesh, materials: T.Material[]) {
   const position = geometry.getAttribute('position') as T.BufferAttribute | undefined;
   const skinIndex = geometry.getAttribute('skinIndex') as T.BufferAttribute | undefined;
   const skinWeight = geometry.getAttribute('skinWeight') as T.BufferAttribute | undefined;
-  if (!position || !skinIndex || !skinWeight || !geometry.groups.length) return;
+  if (!position || !skinIndex || !skinWeight) return;
+  const groups = geometry.groups.length ? geometry.groups : [{ start: 0, count: geometry.index?.count ?? position.count, materialIndex: 0 }];
 
   const garmentMaterialIndices = new Set<number>();
   materials.forEach((material, index) => {
@@ -215,7 +216,7 @@ function trimV1TeeToShortSleeves(mesh: T.SkinnedMesh, materials: T.Material[]) {
   const nextGroups: Array<{ start: number; count: number; materialIndex: number }> = [];
   let removed = 0;
 
-  for (const group of geometry.groups) {
+  for (const group of groups) {
     const start = nextIndices.length;
     const garment = garmentMaterialIndices.has(group.materialIndex ?? 0);
     for (let i = group.start; i + 2 < group.start + group.count; i += 3) {
@@ -256,7 +257,8 @@ function polishV1CrewTeeGeometry(
   const position = geometry.getAttribute('position') as T.BufferAttribute | undefined;
   const skinIndex = geometry.getAttribute('skinIndex') as T.BufferAttribute | undefined;
   const skinWeight = geometry.getAttribute('skinWeight') as T.BufferAttribute | undefined;
-  if (!position || !skinIndex || !skinWeight || !geometry.groups.length || !materials.length) return;
+  if (!position || !skinIndex || !skinWeight || !materials.length) return;
+  const groups = geometry.groups.length ? geometry.groups : [{ start: 0, count: geometry.index?.count ?? position.count, materialIndex: 0 }];
 
   const garmentMaterialIndices = new Set<number>();
   materials.forEach((material, index) => {
@@ -267,7 +269,7 @@ function polishV1CrewTeeGeometry(
 
   const garmentVertices = new Set<number>();
   const index = geometry.index;
-  for (const group of geometry.groups) {
+  for (const group of groups) {
     if (!garmentMaterialIndices.has(group.materialIndex ?? 0)) continue;
     const end = group.start + group.count;
     for (let i = group.start; i < end; i += 1) {
@@ -307,10 +309,10 @@ function polishV1CrewTeeGeometry(
     // bind-space edits only; no bones, weights or inverse binds are replaced.
     const vintage = itemId === 'starter.top.vintage-charcoal';
     const vNeck = itemId === 'starter.top.v-neck';
-    const torsoXScale = yNorm < .24 ? (vintage ? .91 : .94) : (vintage ? .945 : .965);
-    const topDepthScale = yNorm > .68 ? (vNeck ? .83 : .86) : (vintage ? .9 : .93);
-    const xScale = armWeight > .42 ? (vintage ? .8 : .84) : torsoXScale;
-    const zScale = armWeight > .42 ? .89 : topDepthScale;
+    const torsoXScale = yNorm < .24 ? (vintage ? .90 : .925) : (vintage ? .935 : .95);
+    const topDepthScale = yNorm > .68 ? (vNeck ? .80 : .82) : (vintage ? .87 : .89);
+    const xScale = armWeight > .42 ? (vintage ? .76 : .79) : torsoXScale;
+    const zScale = armWeight > .42 ? .84 : topDepthScale;
     if (armWeight > .42) sleeveVertices += 1;
     position.setXYZ(
       vertex,
@@ -1297,7 +1299,7 @@ function addLegacyBareBodyUnderlay(
   for (const side of ['L', 'R'] as const) {
     const upperArm = bone(`UpperArm.${side}`, `UpperArm_${side}`, `UpperArm${side}`);
     const lowerArm = bone(`LowerArm.${side}`, `LowerArm_${side}`, `LowerArm${side}`);
-    const hand = bone(`Hand.${side}`, `Hand_${side}`, `Hand${side}`);
+    const hand = bone(`Hand.${side}`, `Hand_${side}`, `Hand${side}`, `Wrist.${side}`, `Wrist_${side}`, `Wrist${side}`);
     addEllipsoid(`upper-arm-${side.toLowerCase()}`, upperArm, upperArm, lowerArm, .062 * frameScale * muscleScale, .061 * muscleScale);
     // Topless stage avatars hide the donor shirt material, including the sleeve/forearm
     // geometry on some V1 exports. Always rebuild the complete arm so hands never
