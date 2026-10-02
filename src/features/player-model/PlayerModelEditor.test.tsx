@@ -32,6 +32,7 @@ afterEach(cleanup);
 it('previews edits without saving, then persists the selected character and equipped pieces', async () => {
   render(<PlayerModelEditor />);
   fireEvent.click(screen.getByRole('button', { name: 'Feminine' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Outfit' }));
   fireEvent.click(screen.getByRole('button', { name: 'Tailored jacket' }));
   fireEvent.change(screen.getByLabelText('Try a performance pose'), { target: { value: 'guitar' } });
   expect(save).not.toHaveBeenCalled();
@@ -51,6 +52,7 @@ it('preserves edits after a failed save and resets the draft when the active cha
 
 it('gives every character the full free starter wardrobe and persists new designs and colours', async () => {
   render(<PlayerModelEditor />);
+  fireEvent.click(screen.getByRole('button', { name: 'Outfit' }));
   for (const slot of SLOTS) {
     const group = screen.getByRole('group', { name: SLOT_LABELS[slot] });
     for (const item of STARTER_ITEMS[slot]) expect(within(group).getByRole('button', { name: item.label })).toBeEnabled();
@@ -64,6 +66,7 @@ it('gives every character the full free starter wardrobe and persists new design
 it('saves topless and muscle definition as independent avatar choices', async () => {
   render(<PlayerModelEditor />);
   fireEvent.click(screen.getByRole('button', { name: 'Bodybuilder' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Outfit' }));
   fireEvent.click(screen.getByRole('button', { name: 'Topless' }));
   fireEvent.click(screen.getByRole('button', { name: 'Save avatar' }));
   await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({
@@ -76,6 +79,7 @@ it('saves topless and muscle definition as independent avatar choices', async ()
 
 it('saves detailed face, eye, brow, hair and skin choices as one appearance', async () => {
   render(<PlayerModelEditor />);
+  fireEvent.click(screen.getByRole('button', { name: 'Face & hair' }));
   fireEvent.change(screen.getByLabelText('Face shape'), { target: { value: 'angular' } });
   fireEvent.change(screen.getByLabelText('Skin detail'), { target: { value: 'freckles' } });
   fireEvent.click(screen.getByRole('button', { name: 'Eye colour: Green' }));
@@ -115,6 +119,7 @@ it('passes currently equipped rich clothing into the shared animated preview', (
 
 it('saves hats, glasses, lens choices and earrings as one shared stage appearance', async () => {
   render(<PlayerModelEditor />);
+  fireEvent.click(screen.getByRole('button', { name: 'Accessories' }));
   fireEvent.change(screen.getByLabelText('Hat'), { target: { value: 'bucket_hat' } });
   fireEvent.change(screen.getByLabelText('Glasses'), { target: { value: 'aviator' } });
   fireEvent.change(screen.getByLabelText('Lenses'), { target: { value: 'tinted' } });
@@ -146,4 +151,19 @@ it('passes owned tattoo visuals into the same avatar preview', () => {
   render(<PlayerModelEditor />);
   expect(preview).toHaveBeenCalledWith(expect.objectContaining({ tattoos }));
   expect(screen.getByText(/1 tattoo from the Tattoo Parlour is rendered/i)).toBeVisible();
+});
+
+
+it('applies complete basic outfit presets to the live draft', async () => {
+  render(<PlayerModelEditor />);
+  fireEvent.click(screen.getByRole('button', { name: 'Outfit' }));
+  fireEvent.click(screen.getByRole('button', { name: 'All black' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save avatar' }));
+  await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({
+    appearance: expect.objectContaining({ equipment: expect.objectContaining({
+      top: { itemId: 'starter.top.plain-black', color: '#20232b' },
+      bottom: { itemId: 'starter.bottom.black-jeans', color: '#20232b' },
+      footwear: { itemId: 'starter.footwear.black-boots', color: '#20232b' },
+    }) }),
+  })));
 });
