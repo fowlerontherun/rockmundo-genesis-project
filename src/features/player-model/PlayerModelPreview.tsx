@@ -90,7 +90,7 @@ export function PlayerModelPreview({ appearance, role = 'other', instrument, ric
               shownTattoos,
               shownClothing,
               visualQuality,
-              { presentation: nextPresentation },
+              nextPresentation,
             );
             actor = new Musician(assembled, nextRole, [0, 0, 0], 0, undefined, value, nextInstrument, undefined, shownClothing); disposeModel(assembled); scene.add(actor.root);
             equipment = actor.equipment; if(equipment)scene.add(equipment);
