@@ -5,6 +5,7 @@ import {
   Clock,
   Leaf,
   Loader2,
+  Lock,
   Play,
   Search,
   SlidersHorizontal,
@@ -33,6 +34,7 @@ import {
 } from "../hooks/useEducationVideoSubscriptions";
 import { useEducationVideoPlaylists } from "../hooks/useEducationVideoPlaylists";
 import { getCooldownStatus, useWatchVideo } from "../hooks/useWatchVideo";
+import { isHigherTierSkill, useSkillTierAccess } from "../hooks/useSkillTierAccess";
 import type { VideoResource } from "../types";
 
 type DifficultyFilter = "all" | "1" | "2" | "3";
@@ -97,6 +99,9 @@ export const VideosTab = () => {
     }
     return Array.from(byId.values());
   }, [playlists]);
+
+  const tierAccess = useSkillTierAccess(profileId, allVideos.map((video) => video.skillSlug));
+  const accessBySkill = tierAccess.data ?? new Map<string, boolean>();
 
   const skillOptions = useMemo(() => {
     const labels = new Map<string, string>();
@@ -429,6 +434,11 @@ export const VideosTab = () => {
           {filteredVideos.slice(0, visibleCount).map((video) => {
             const subscribed = video.skillSlug ? subscribedSkills.has(video.skillSlug) : false;
             const watchingThis = watchVideo.isPending && watchVideo.variables?.videoId === video.id;
+            const locked = Boolean(
+              video.skillSlug &&
+                isHigherTierSkill(video.skillSlug) &&
+                accessBySkill.get(video.skillSlug) === false,
+            );
             return (
               <Card key={video.id} className="flex h-full flex-col transition-all hover:border-primary/50 hover:shadow-md">
                 <CardHeader className="space-y-3 pb-3">
@@ -438,6 +448,11 @@ export const VideosTab = () => {
                       {video.featured && (
                         <Badge variant="default">
                           <Star className="mr-1 h-3 w-3" /> Featured
+                        </Badge>
+                      )}
+                      {locked && (
+                        <Badge variant="outline">
+                          <Lock className="mr-1 h-3 w-3" /> Locked
                         </Badge>
                       )}
                     </div>
@@ -480,11 +495,15 @@ export const VideosTab = () => {
                   <div className="mt-auto flex items-center justify-between gap-3 border-t pt-3">
                     <div>
                       <p className="text-xs font-medium text-primary">+15 education XP</p>
-                      {video.skillSlug && <p className="text-[10px] text-muted-foreground">+ skill XP when eligible</p>}
+                      {video.skillSlug && (
+                        <p className="text-[10px] text-muted-foreground">
+                          {locked ? "Max the previous skill tier to unlock this lesson" : "+ skill XP when eligible"}
+                        </p>
+                      )}
                     </div>
                     <Button
                       size="sm"
-                      disabled={!cooldownStatus.canWatch || watchVideo.isPending}
+                      disabled={!cooldownStatus.canWatch || watchVideo.isPending || locked}
                       onClick={() => handleWatch(video)}
                     >
                       {watchingThis ? (
