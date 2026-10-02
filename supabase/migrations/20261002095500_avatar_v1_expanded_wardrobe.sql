@@ -100,7 +100,7 @@ begin
       if item is distinct from 'starter.instrument.standard' then return false; end if;
     elsif item is null or not (item = any(case slot
       when 'top' then array['starter.top.casual','starter.top.topless','starter.top.punk','starter.top.suit','starter.top.stripe','starter.top.plain-black','starter.top.plain-white','starter.top.vintage-charcoal','starter.top.plaid','starter.top.pinstripe','starter.top.v-neck','starter.top.long-sleeve','starter.top.tank','starter.top.hoodie','starter.top.zip-hoodie','starter.top.denim-jacket','starter.top.flannel-shirt']
-      when 'bottom' then array['starter.bottom.casual','starter.bottom.punk','starter.bottom.suit','starter.bottom.denim','starter.bottom.blue-jeans','starter.bottom.black-jeans','starter.bottom.dark-slim-jeans','starter.bottom.plaid','starter.bottom.pinstripe']
+      when 'bottom' then array['starter.bottom.casual','starter.bottom.punk','starter.bottom.suit','starter.bottom.denim','starter.bottom.blue-jeans','starter.bottom.black-jeans','starter.bottom.dark-slim-jeans','starter.bottom.plaid','starter.bottom.pinstripe','starter.bottom.denim-shorts','starter.bottom.cargo-shorts','starter.bottom.athletic-shorts','starter.bottom.boxer-briefs','starter.bottom.briefs']
       when 'footwear' then array['starter.footwear.casual','starter.footwear.punk','starter.footwear.suit','starter.footwear.canvas','starter.footwear.black-boots','starter.footwear.brown-boots','starter.footwear.canvas-trainers','starter.footwear.combat-boots','starter.footwear.two-tone','starter.footwear.patent']
       else array[]::text[] end))
     then return false; end if;
