@@ -297,6 +297,10 @@ const PROCEDURAL_STARTER_BOTTOMS = new Set([
   'starter.bottom.athletic-shorts',
   'starter.bottom.boxer-briefs',
   'starter.bottom.briefs',
+  'starter.bottom.chinos',
+  'starter.bottom.wide-leg',
+  'starter.bottom.pleated-skirt',
+  'starter.bottom.mini-skirt',
 ]);
 
 function starterBottomVisualItem(appearance: PlayerAppearance): ClothingItem | null {
@@ -305,11 +309,15 @@ function starterBottomVisualItem(appearance: PlayerAppearance): ClothingItem | n
   const underwear = id === 'starter.bottom.boxer-briefs' || id === 'starter.bottom.briefs';
   const denim = id === 'starter.bottom.denim-shorts';
   const cargo = id === 'starter.bottom.cargo-shorts';
+  const athletic = id === 'starter.bottom.athletic-shorts';
+  const skirt = id === 'starter.bottom.pleated-skirt' || id === 'starter.bottom.mini-skirt';
+  const wideLeg = id === 'starter.bottom.wide-leg';
+  const chinos = id === 'starter.bottom.chinos';
   return {
     id,
     name: equipmentItem(appearance, 'bottom').label,
     description: 'Built-in Avatar V1 starter garment',
-    category: underwear ? 'underwear' : 'shorts',
+    category: underwear ? 'underwear' : skirt ? 'skirt' : (id.includes('shorts') ? 'shorts' : 'trousers'),
     wearable_slot: 'bottom',
     price: 0,
     is_premium: false,
@@ -322,25 +330,26 @@ function starterBottomVisualItem(appearance: PlayerAppearance): ClothingItem | n
     featured: false,
     rpm_asset_id: null,
     material_config: {
-      fabric: denim ? 'denim' : underwear ? 'cotton' : 'cotton',
+      fabric: denim ? 'denim' : 'cotton',
       primaryColor: appearance.equipment.bottom.color,
-      secondaryColor: underwear ? '#e9e4db' : '#b8b2a5',
+      secondaryColor: underwear ? '#e9e4db' : denim ? '#d6c5a4' : '#b8b2a5',
       roughness: denim ? .86 : .9,
-      thickness: underwear ? .28 : .48,
+      thickness: underwear ? .28 : skirt ? .4 : wideLeg ? .5 : .48,
     },
     pattern_config: { type: 'solid' },
     fit_config: {
-      fit: underwear || id === 'starter.bottom.athletic-shorts' ? 'slim' : 'regular',
-      drape: underwear ? .22 : .4,
-      taper: underwear ? .44 : .25,
+      fit: underwear || athletic ? 'slim' : cargo || wideLeg ? 'relaxed' : 'regular',
+      drape: underwear ? .22 : skirt ? .55 : wideLeg ? .62 : .4,
+      taper: underwear ? .44 : wideLeg ? .05 : chinos ? .34 : .25,
     },
     wear_config: {},
     garment_config: {
-      templateKey: underwear ? 'underwear' : 'shorts',
-      silhouette: underwear ? 'fitted' : cargo ? 'relaxed' : 'classic',
-      cut: underwear ? 'fitted' : cargo ? 'relaxed' : 'regular',
-      length: underwear ? 'mini' : 'short',
-      waistScale: underwear ? .94 : 1,
+      templateKey: underwear ? 'underwear' : skirt ? 'skirt' : wideLeg ? 'wide-leg' : (id.includes('shorts') ? 'shorts' : 'trousers'),
+      silhouette: underwear ? 'fitted' : skirt ? (id === 'starter.bottom.pleated-skirt' ? 'a-line' : 'fitted') : cargo || wideLeg ? 'relaxed' : 'classic',
+      cut: underwear ? 'fitted' : cargo || wideLeg ? 'relaxed' : chinos ? 'tapered' : 'regular',
+      length: underwear ? 'mini' : id === 'starter.bottom.mini-skirt' ? 'mini' : skirt ? 'short' : id.includes('shorts') ? 'short' : 'standard',
+      waistScale: underwear ? .94 : skirt ? .98 : 1,
+      construction: denim ? 'denim-shorts' : cargo ? 'cargo-shorts' : athletic ? 'athletic-shorts' : id === 'starter.bottom.pleated-skirt' ? 'pleated-skirt' : id === 'starter.bottom.mini-skirt' ? 'mini-skirt' : chinos ? 'chinos' : wideLeg ? 'wide-leg' : underwear ? 'underwear' : 'plain',
     },
     detail_layers: [],
     render_config: {},
@@ -362,6 +371,12 @@ function starterBottomVisualItem(appearance: PlayerAppearance): ClothingItem | n
     last_preview_error: null,
     shape_config: null,
   } as ClothingItem;
+}
+
+function starterBottomExposesLegs(item: ClothingItem) {
+  const garment = (item.garment_config || {}) as Record<string, unknown>;
+  const templateKey = String(garment.templateKey || garment.template_key || '').toLowerCase();
+  return templateKey === 'shorts' || templateKey === 'underwear' || templateKey === 'skirt';
 }
 
 function addStarterProceduralGarment(
@@ -827,7 +842,7 @@ export function assemblePlayerModel(
   }
   if (proceduralStarterBottom) {
     addStarterProceduralGarment(result, bones, proceduralStarterBottom, 'Legs');
-    addV1BareLegUnderlay(result, appearance, bones, quality);
+    if (starterBottomExposesLegs(proceduralStarterBottom)) addV1BareLegUnderlay(result, appearance, bones, quality);
   }
 
   if (topless || presentation === 'tattoo') {
