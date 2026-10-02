@@ -4,7 +4,7 @@ import * as T from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { assemblePlayerModel, disposeModel, type ModelLibrary } from './model';
-import { appearanceSchema, defaultAppearance, resolveAppearance, STYLES, modelFile, SLOTS, STARTER_ITEMS, resolveAppearance as roundTrip } from './appearance';
+import { appearanceSchema, defaultAppearance, resolveAppearance, STYLES, modelFile, SLOTS, STARTER_ITEMS, STARTER_VISUAL_FALLBACKS, starterItemsForWardrobe, visualEquipmentItem, resolveAppearance as roundTrip } from './appearance';
 import { Musician } from '@/features/gig-demo-3d/performers';
 
 const library: ModelLibrary = new Map();
