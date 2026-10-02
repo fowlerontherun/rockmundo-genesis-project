@@ -170,32 +170,31 @@ describe('shipped modular stage models', () => {
     disposeModel(model);
   });
 
-  it.each(['masculine', 'feminine'] as const)('renders the %s starter crew tee without hoodie geometry', frame => {
-    const appearance = defaultAppearance('crew-tee');
-    appearance.body.frame = frame;
-    appearance.equipment.top.itemId = 'starter.top.casual';
-    const model = assemblePlayerModel(library, appearance);
-    expect(model.getObjectByName('Starter_Body_garment-hoodie-kangaroo-pocket')).toBeFalsy();
-    expect(model.getObjectByName('Starter_Body_garment-hoodie-drawstring-left')).toBeFalsy();
-    expect(model.getObjectByName('avatar-rockmundo-logo')).toBeTruthy();
-    let proceduralPieces = 0;
-    model.traverse(node => { if (node instanceof T.Mesh && node.name.startsWith('Starter_Body_')) proceduralPieces += 1; });
-    expect(proceduralPieces).toBeGreaterThan(3);
-    disposeModel(model);
-  });
-
-  it.each(['masculine', 'feminine'] as const)('gives the %s hoodie and jacket visibly distinct construction', frame => {
-    for (const [itemId, expectedName] of [
-      ['starter.top.hoodie', 'Starter_Body_garment-hoodie-kangaroo-pocket'],
-      ['starter.top.denim-jacket', 'Starter_Body_garment-jacket-lapel-left'],
-      ['starter.top.flannel-shirt', 'Starter_Body_garment-shirt-placket'],
+  it.each(['masculine', 'feminine'] as const)('uses stable donor-skinned V1 clothing on the %s live avatar', frame => {
+    for (const [slot, itemIds] of [
+      ['top', ['starter.top.casual','starter.top.v-neck','starter.top.long-sleeve','starter.top.hoodie','starter.top.denim-jacket']],
+      ['bottom', ['starter.bottom.denim-shorts','starter.bottom.boxer-briefs','starter.bottom.pleated-skirt','starter.bottom.chinos','starter.bottom.wide-leg']],
     ] as const) {
-      const appearance = defaultAppearance(itemId);
-      appearance.body.frame = frame;
-      appearance.equipment.top.itemId = itemId;
-      const model = assemblePlayerModel(library, appearance);
-      expect(model.getObjectByName(expectedName)).toBeTruthy();
-      disposeModel(model);
+      for (const itemId of itemIds) {
+        const appearance = defaultAppearance(itemId);
+        appearance.body.frame = frame;
+        appearance.equipment[slot].itemId = itemId;
+        const model = assemblePlayerModel(library, appearance);
+        let proceduralPieces = 0;
+        let visibleDonorMaterials = 0;
+        model.traverse(node => {
+          if (!(node instanceof T.Mesh)) return;
+          if (node.name.startsWith('Starter_Body_') || node.name.startsWith('Starter_Legs_')) proceduralPieces += 1;
+          const partName = `${node.name} ${node.parent?.name ?? ''}`;
+          if (!new RegExp(slot === 'top' ? 'Body' : 'Legs', 'i').test(partName)) return;
+          for (const material of Array.isArray(node.material) ? node.material : [node.material]) {
+            if (!/skin/i.test(material.name) && material.visible !== false) visibleDonorMaterials += 1;
+          }
+        });
+        expect(proceduralPieces).toBe(0);
+        expect(visibleDonorMaterials).toBeGreaterThan(0);
+        disposeModel(model);
+      }
     }
   });
 
@@ -292,7 +291,7 @@ describe('appearance boundaries', () => {
 
 describe('expanded starter wardrobe', () => {
   it.each(['masculine', 'feminine'] as const)('renders and preserves the full starter wardrobe on the %s gig rig', frame => {
-    const expectedCounts = { top: 17, bottom: 9, footwear: 10 } as const;
+    const expectedCounts = { top: 17, bottom: 18, footwear: 10 } as const;
     for (const slot of SLOTS) {
       expect(STARTER_ITEMS[slot]).toHaveLength(expectedCounts[slot]);
       expect(new Set(STARTER_ITEMS[slot].map(item => item.id)).size).toBe(STARTER_ITEMS[slot].length);
