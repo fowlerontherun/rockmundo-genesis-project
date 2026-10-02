@@ -131,6 +131,11 @@ describe('shipped modular stage models', () => {
     expect(visibleSkin).toBeGreaterThan(0);
     expect(hiddenGarment).toBeGreaterThan(0);
     expect(model.getObjectByName('avatar-v1-skin-underlay-torso')).toBeTruthy();
+    for (const side of ['l', 'r']) {
+      expect(model.getObjectByName(`avatar-v1-skin-underlay-upper-arm-${side}`)).toBeTruthy();
+      expect(model.getObjectByName(`avatar-v1-skin-underlay-lower-arm-${side}`)).toBeTruthy();
+      expect(model.getObjectByName(`avatar-v1-skin-underlay-elbow-${side}`)).toBeTruthy();
+    }
     expect(model.userData.rockmundoAvatarPresentation).toBe('stage');
     disposeModel(model);
   });
