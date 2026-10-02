@@ -1,12 +1,14 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, ChevronLeft, HeartPulse, Plane, Zap } from "lucide-react";
+import { CalendarDays, ChevronLeft, HeartPulse, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { createScheduledActivity } from "@/hooks/useActivityBooking";
+import { useGameData } from "@/hooks/useGameData";
+import { usePracticeSkill, useSkillPracticeRestrictions } from "@/hooks/useSkillPractice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MobileEntityCard, MobilePageShell, MobileSectionCard, MobileSectionHeader, MobileStatusBadge } from "./MobilePrimitives";
+import { MobileEntityCard, MobileErrorState, MobilePageShell, MobileSectionCard, MobileSectionHeader, MobileStatusBadge } from "./MobilePrimitives";
 
 function nextWholeHour() {
   const value = new Date();
@@ -20,12 +22,33 @@ function toLocalInputValue(date: Date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+const humanise = (value: string) => value.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
 export function MobileBook({ profileId, onBack }: { profileId?: string | null; onBack: () => void }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { skillProgress } = useGameData();
+  const practice = usePracticeSkill();
   const [when, setWhen] = useState(toLocalInputValue(nextWholeHour()));
   const [durationHours, setDurationHours] = useState("1");
-  const [booking, setBooking] = useState(false);
+  const [bookingRecovery, setBookingRecovery] = useState(false);
+  const [skillSlug, setSkillSlug] = useState("");
+
+  const selectedDate = useMemo(() => {
+    const parsed = new Date(when);
+    return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+  }, [when]);
+  const restrictions = useSkillPracticeRestrictions(profileId ?? undefined, selectedDate);
+
+  const skillOptions = useMemo(() => (skillProgress ?? [])
+    .map((row: any) => ({ slug: String(row?.skill_slug ?? "").trim(), level: Number(row?.current_level ?? 0) }))
+    .filter((row) => row.slug && Number.isFinite(row.level) && row.level >= 1)
+    .sort((a, b) => b.level - a.level)
+    .slice(0, 30), [skillProgress]);
+
+  useEffect(() => {
+    if (!skillSlug && skillOptions[0]?.slug) setSkillSlug(skillOptions[0].slug);
+  }, [skillOptions, skillSlug]);
 
   const recoveryWindow = useMemo(() => {
     const start = new Date(when);
@@ -35,9 +58,31 @@ export function MobileBook({ profileId, onBack }: { profileId?: string | null; o
     return { start, end: new Date(start.getTime() + hours * 60 * 60 * 1000) };
   }, [durationHours, when]);
 
+  const refreshSchedules = () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: ["mobile-day-schedule"] }),
+    queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] }),
+    queryClient.invalidateQueries({ queryKey: ["week-scheduled-activities"] }),
+  ]);
+
+  const bookPractice = () => {
+    if (!skillSlug || !when || restrictions.data?.canPractice === false || practice.isPending) return;
+    const scheduledStart = new Date(when);
+    if (Number.isNaN(scheduledStart.getTime())) return;
+    practice.mutate(
+      { skillSlug, skillName: humanise(skillSlug), scheduledStart },
+      {
+        onSuccess: async () => {
+          await refreshSchedules();
+          toast.success("Practice booked");
+          navigate("/mobile");
+        },
+      },
+    );
+  };
+
   const bookRecovery = async () => {
-    if (!profileId || !recoveryWindow || booking) return;
-    setBooking(true);
+    if (!profileId || !recoveryWindow || bookingRecovery) return;
+    setBookingRecovery(true);
     try {
       await createScheduledActivity({
         activityType: "health",
@@ -47,38 +92,43 @@ export function MobileBook({ profileId, onBack }: { profileId?: string | null; o
         description: "Scheduled personal recovery time",
         metadata: { mobile_booking: true, source: "mobile_companion" },
       });
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["mobile-day-schedule"] }),
-        queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] }),
-        queryClient.invalidateQueries({ queryKey: ["week-scheduled-activities"] }),
-      ]);
+      await refreshSchedules();
       toast.success("Recovery time booked");
-      navigate("/mobile?view=day");
+      navigate("/mobile");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Recovery time could not be booked");
     } finally {
-      setBooking(false);
+      setBookingRecovery(false);
     }
   };
 
   return (
     <MobilePageShell>
       <div className="flex items-center gap-2">
-        <button onClick={onBack} aria-label="Back to mobile home" className="rm-tap flex h-10 w-10 items-center justify-center rounded-full border">
+        <button onClick={onBack} aria-label="Back to schedule" className="rm-tap flex h-10 w-10 items-center justify-center rounded-full border">
           <ChevronLeft className="h-5 w-5" />
         </button>
-        <MobileSectionHeader eyebrow="Companion" title="Book activity" description="Schedule lightweight daily activities without opening the full desktop game." />
+        <MobileSectionHeader eyebrow="Companion" title="Book activity" description="Schedule supported daily activities from mobile." />
       </div>
 
-      <MobileSectionCard title="Quick bookings" subtitle="These use the same authoritative booking rules and schedule as desktop.">
-        <div className="space-y-2">
-          <MobileEntityCard title="Practice" subtitle="Book a one-hour skill practice session." icon={<Zap className="h-5 w-5" />} meta={<MobileStatusBadge tone="info">Book</MobileStatusBadge>} onPress={() => navigate("/mobile?view=day#practice")} />
-          <MobileEntityCard title="Travel" subtitle="Choose a destination, transport and departure." icon={<Plane className="h-5 w-5" />} meta={<MobileStatusBadge tone="info">Book</MobileStatusBadge>} onPress={() => navigate("/mobile/world/travel")} />
-          <MobileEntityCard title="Wellness" subtitle="Choose a recovery or wellness action." icon={<HeartPulse className="h-5 w-5" />} meta={<MobileStatusBadge tone="info">Choose</MobileStatusBadge>} onPress={() => navigate("/mobile/me/wellness")} />
-        </div>
+      <MobileSectionCard title="Practice" subtitle="Book a one-hour practice session using a skill already unlocked by this character." action={<MobileStatusBadge tone={restrictions.data?.canPractice === false ? "warning" : "success"}>{restrictions.data?.sessionsRemaining ?? "—"} left</MobileStatusBadge>}>
+        {restrictions.isLoading ? <p className="text-sm text-muted-foreground">Checking availability…</p> : restrictions.isError ? <MobileErrorState message="Practice availability could not be checked." onRetry={() => restrictions.refetch()} /> : skillOptions.length === 0 ? <p className="text-sm text-muted-foreground">No unlocked skills are currently available for practice.</p> : <div className="space-y-3">
+          {restrictions.data?.canPractice === false && <p className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-sm">{restrictions.data.reason}</p>}
+          <label className="block text-sm font-medium">Skill
+            <select value={skillSlug} onChange={(event) => setSkillSlug(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3">
+              {skillOptions.map((skill) => <option key={skill.slug} value={skill.slug}>{humanise(skill.slug)} · level {skill.level}</option>)}
+            </select>
+          </label>
+          <label className="block text-sm font-medium">Start time
+            <Input type="datetime-local" value={when} min={toLocalInputValue(new Date())} onChange={(event) => setWhen(event.target.value)} className="mt-1 min-h-11" />
+          </label>
+          <Button className="min-h-11 w-full" disabled={!skillSlug || restrictions.data?.canPractice === false || practice.isPending} onClick={bookPractice}>
+            <Zap className="mr-2 h-4 w-4" />{practice.isPending ? "Booking…" : "Book practice"}
+          </Button>
+        </div>}
       </MobileSectionCard>
 
-      <MobileSectionCard title="Schedule recovery" subtitle="Block recovery time in My Day. Completed recovery uses the existing scheduled health completion rules.">
+      <MobileSectionCard title="Recovery time" subtitle="Block recovery time in the same schedule used by desktop.">
         <div className="space-y-3">
           <label className="block text-sm font-medium">Start time
             <Input type="datetime-local" value={when} min={toLocalInputValue(new Date())} onChange={(event) => setWhen(event.target.value)} className="mt-1 min-h-11" />
@@ -90,19 +140,15 @@ export function MobileBook({ profileId, onBack }: { profileId?: string | null; o
               <option value="4">4 hours</option>
             </select>
           </label>
-          <Button className="min-h-11 w-full" disabled={!profileId || !recoveryWindow || booking} onClick={bookRecovery}>
-            {booking ? "Booking…" : "Book recovery time"}
+          <Button variant="outline" className="min-h-11 w-full" disabled={!profileId || !recoveryWindow || bookingRecovery} onClick={bookRecovery}>
+            <HeartPulse className="mr-2 h-4 w-4" />{bookingRecovery ? "Booking…" : "Book recovery time"}
           </Button>
         </div>
       </MobileSectionCard>
 
-      <MobileSectionCard title="Schedule" subtitle="Bookings immediately appear in the same My Day schedule.">
-        <Button variant="outline" className="min-h-11 w-full" onClick={() => navigate("/mobile?view=day")}>
-          <CalendarDays className="mr-2 h-4 w-4" /> View My Day
-        </Button>
+      <MobileSectionCard title="Schedule" subtitle="Successful bookings immediately appear on the mobile schedule.">
+        <MobileEntityCard title="View My Schedule" subtitle="Return to today's booked activities." icon={<CalendarDays className="h-5 w-5" />} onPress={() => navigate("/mobile")} />
       </MobileSectionCard>
-
-      <p className="px-1 text-xs text-muted-foreground">Detailed gig, recording, rehearsal, release and band-management configuration remains desktop-only. Mobile is for the quick daily loop.</p>
     </MobilePageShell>
   );
 }
