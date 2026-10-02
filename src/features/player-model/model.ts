@@ -121,7 +121,115 @@ const V1_CROPPED_BOTTOM_ITEMS = new Set([
 
 const V1_SHAPED_TROUSER_ITEMS = new Set([
   'starter.bottom.chinos',
+  'starter.bottom.black-jeans',
+  'starter.bottom.dark-slim-jeans',
 ]);
+
+function trimV1TeeToShortSleeves(mesh: T.SkinnedMesh, materials: T.Material[]) {
+  const geometry = mesh.geometry;
+  const position = geometry.getAttribute('position') as T.BufferAttribute | undefined;
+  const skinIndex = geometry.getAttribute('skinIndex') as T.BufferAttribute | undefined;
+  const skinWeight = geometry.getAttribute('skinWeight') as T.BufferAttribute | undefined;
+  if (!position || !skinIndex || !skinWeight || !geometry.groups.length) return;
+
+  const garmentMaterialIndices = new Set<number>();
+  materials.forEach((material, index) => {
+    if (!/skin|eye|earring|metal|hair/i.test(material.name)) garmentMaterialIndices.add(index);
+  });
+  if (!garmentMaterialIndices.size) return;
+
+  const boneIndex = (pattern: RegExp) => mesh.skeleton.bones.findIndex(bone => pattern.test(cleanBoneName(bone.name)));
+  const bindPosition = (index: number) => {
+    if (index < 0 || !mesh.skeleton.boneInverses[index]) return null;
+    return new T.Vector3()
+      .setFromMatrixPosition(mesh.skeleton.boneInverses[index].clone().invert())
+      .applyMatrix4(mesh.bindMatrixInverse);
+  };
+  const arm = {
+    L: {
+      upperIndex: boneIndex(/^upperarml$/),
+      lowerIndex: boneIndex(/^lowerarml$|^forearml$/),
+    },
+    R: {
+      upperIndex: boneIndex(/^upperarmr$/),
+      lowerIndex: boneIndex(/^lowerarmr$|^forearmr$/),
+    },
+  } as const;
+
+  const segments = {
+    L: { shoulder: bindPosition(arm.L.upperIndex), elbow: bindPosition(arm.L.lowerIndex) },
+    R: { shoulder: bindPosition(arm.R.upperIndex), elbow: bindPosition(arm.R.lowerIndex) },
+  } as const;
+
+  const vertexArm = (vertex: number) => {
+    let upperL = 0, lowerL = 0, upperR = 0, lowerR = 0;
+    for (let channel = 0; channel < 4; channel += 1) {
+      const weight = skinWeight.getComponent(vertex, channel);
+      if (weight <= 0) continue;
+      const index = skinIndex.getComponent(vertex, channel);
+      if (index === arm.L.upperIndex) upperL += weight;
+      else if (index === arm.L.lowerIndex) lowerL += weight;
+      else if (index === arm.R.upperIndex) upperR += weight;
+      else if (index === arm.R.lowerIndex) lowerR += weight;
+    }
+    const side = upperL + lowerL >= upperR + lowerR ? 'L' : 'R';
+    const upper = side === 'L' ? upperL : upperR;
+    const lower = side === 'L' ? lowerL : lowerR;
+    const segment = segments[side];
+    let along = 0;
+    if (segment.shoulder && segment.elbow) {
+      const axis = segment.elbow.clone().sub(segment.shoulder);
+      const lengthSq = axis.lengthSq();
+      if (lengthSq > 1e-6) {
+        along = T.MathUtils.clamp(
+          new T.Vector3(position.getX(vertex), position.getY(vertex), position.getZ(vertex))
+            .sub(segment.shoulder)
+            .dot(axis) / lengthSq,
+          0,
+          1.5,
+        );
+      }
+    }
+    return { upper, lower, armWeight: upper + lower, along };
+  };
+
+  const sourceIndex = geometry.index;
+  const indexAt = (offset: number) => sourceIndex ? sourceIndex.getX(offset) : offset;
+  const nextIndices: number[] = [];
+  const nextGroups: Array<{ start: number; count: number; materialIndex: number }> = [];
+  let removed = 0;
+
+  for (const group of geometry.groups) {
+    const start = nextIndices.length;
+    const garment = garmentMaterialIndices.has(group.materialIndex ?? 0);
+    for (let i = group.start; i + 2 < group.start + group.count; i += 3) {
+      const a = indexAt(i), b = indexAt(i + 1), c = indexAt(i + 2);
+      if (garment) {
+        const values = [vertexArm(a), vertexArm(b), vertexArm(c)];
+        const avgArm = (values[0].armWeight + values[1].armWeight + values[2].armWeight) / 3;
+        const avgLower = (values[0].lower + values[1].lower + values[2].lower) / 3;
+        const avgAlong = (values[0].along + values[1].along + values[2].along) / 3;
+        // Keep the shoulder and first half of the upper-arm garment, but remove
+        // anything that belongs to the forearm or extends past a short T-shirt sleeve.
+        const beyondShortSleeve = avgLower > .08 || (avgArm > .42 && avgAlong > .56);
+        if (beyondShortSleeve) { removed += 1; continue; }
+      }
+      nextIndices.push(a, b, c);
+    }
+    const count = nextIndices.length - start;
+    if (count) nextGroups.push({ start, count, materialIndex: group.materialIndex ?? 0 });
+  }
+
+  if (!removed || !nextIndices.length) return;
+  geometry.setIndex(nextIndices);
+  geometry.clearGroups();
+  nextGroups.forEach(group => geometry.addGroup(group.start, group.count, group.materialIndex));
+  geometry.computeVertexNormals();
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  mesh.userData.avatarV1ShortSleeveTrim = true;
+  mesh.userData.avatarV1ShortSleeveRemovedTriangles = removed;
+}
 
 function polishV1CrewTeeGeometry(
   mesh: T.SkinnedMesh,
@@ -516,10 +624,14 @@ function shapeV1TrouserGeometry(mesh: T.SkinnedMesh, materials: T.Material[], it
     maxX = Math.max(maxX, position.getX(vertex));
   }
   const centreX = (minX + maxX) * .5;
-  const wide = itemId === 'starter.bottom.wide-leg';
+  const widthScale =
+    itemId === 'starter.bottom.dark-slim-jeans' ? .9 :
+    itemId === 'starter.bottom.black-jeans' ? .935 :
+    itemId === 'starter.bottom.wide-leg' ? 1.105 :
+    .955;
   for (const vertex of vertices) {
     const x = position.getX(vertex);
-    position.setX(vertex, centreX + (x - centreX) * (wide ? 1.105 : .955));
+    position.setX(vertex, centreX + (x - centreX) * widthScale);
   }
   position.needsUpdate = true;
   geometry.computeVertexNormals();
@@ -1112,6 +1224,7 @@ function addLegacyBareBodyUnderlay(
   bones: Map<string, T.Bone>,
   quality: AvatarVisualQuality,
   fullBody: boolean,
+  includeTorso = true,
 ) {
   root.updateMatrixWorld(true);
   const muscle = appearance.body.muscle ?? 'natural';
@@ -1180,7 +1293,7 @@ function addLegacyBareBodyUnderlay(
   const neck = bone('Neck');
   const torsoTop = neck ?? spine2;
   const torsoDriver = spine1 ?? spine2 ?? hips;
-  if (hips && torsoTop && torsoDriver) {
+  if (includeTorso && hips && torsoTop && torsoDriver) {
     const breastScale = appearance.body.frame === 'feminine' ? T.MathUtils.lerp(.9, 1.16, T.MathUtils.inverseLerp(.75, 1.35, appearance.body.breastSize ?? 1)) : 1;
     addEllipsoid('torso', torsoDriver, hips, torsoTop, .185 * frameScale * muscleScale, .112 * (1 + (muscleScale - 1) * .55) * breastScale, 1.02);
   }
@@ -1377,6 +1490,10 @@ export function assemblePlayerModel(
             Array.isArray(original.material) ? original.material : [original.material],
             appearance.equipment.top.itemId,
           );
+          trimV1TeeToShortSleeves(
+            clonedNode,
+            Array.isArray(original.material) ? original.material : [original.material],
+          );
         }
         if (
           choice.part === 'body' &&
@@ -1567,6 +1684,11 @@ export function assemblePlayerModel(
     // The live avatar donor meshes are clothing-first, so this neutral skinned
     // underlay prevents holes for topless and tattoo presentation modes.
     addLegacyBareBodyUnderlay(result, appearance, bones, quality, presentation === 'tattoo');
+  } else if (presentation === 'stage' && V1_SKINNED_TEE_ITEMS.has(appearance.equipment.top.itemId)) {
+    // T-shirt donors were authored with long sleeves. After trimming the garment
+    // triangles, provide a fitted skin-only arm layer so the exposed forearms and
+    // lower upper-arms cannot disappear or leave holes.
+    addLegacyBareBodyUnderlay(result, appearance, bones, quality, false, false);
   }
 
   // Punk trousers were authored to meet tall boots. A skinned calf beneath
