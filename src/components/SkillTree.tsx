@@ -363,8 +363,7 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
       filtered = filtered.filter((skill) => {
         const sp = progress.find((p) => p.skill_slug === skill.slug);
         const lvl = sp?.current_level ?? 0;
-        const tier = getSkillTier(skill.slug);
-        const cap = tier === "basic" ? 10 : tier === "professional" ? 20 : 30;
+        const cap = Number((skill.tier_caps as any)?.max_level) || 100;
         return lvl < cap;
       });
     }
@@ -405,6 +404,42 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
       new Map((availabilityQuery.data ?? []).map((item) => [item.slug, item])),
     [availabilityQuery.data],
   );
+
+  const unlockedNextTiers = useMemo(() => {
+    const normalise = (slug: string) =>
+      slug
+        .replace(/^genres_/, "")
+        .replace(/(^|_)(basic|professional|mastery)(_|$)/g, "_")
+        .replace(/^_+|_+$/g, "");
+    return progress.flatMap((p) => {
+      const from = skills.find((s) => s.slug === p.skill_slug);
+      if (!from) return [];
+      const fromTier = getSkillTier(from.slug);
+      if (fromTier === "mastery") return [];
+      const cap = Number((from.tier_caps as any)?.max_level) || 100;
+      if ((p.current_level || 0) < cap) return [];
+      const targetTier = fromTier === "basic" ? "professional" : "mastery";
+      const core = normalise(from.slug);
+      const next = skills.find(
+        (s) => getSkillTier(s.slug) === targetTier && normalise(s.slug) === core,
+      );
+      if (!next) return [];
+      const nextProgress = progress.find((q) => q.skill_slug === next.slug);
+      return [{ from, next, started: (nextProgress?.current_level || 0) > 0 }];
+    });
+  }, [progress, skills]);
+
+  useEffect(() => {
+    if (!profile?.id || unlockedNextTiers.length === 0) return;
+    unlockedNextTiers.forEach(({ from, next }) => {
+      const key = `rockmundo:skill-tier-unlock:${profile.id}:${next.slug}`;
+      if (localStorage.getItem(key)) return;
+      localStorage.setItem(key, "1");
+      toast.success(`${next.display_name} unlocked`, {
+        description: `You maxed ${from.display_name}. The next tier is now visible in your skill tree and can be learned through Education.`,
+      });
+    });
+  }, [profile?.id, unlockedNextTiers]);
 
   if (loading || catalogueQuery.isLoading) {
     return (
@@ -512,61 +547,24 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
         </div>
       </div>
 
-      {/* Next-step recommendations for maxed tiers */}
-      {(() => {
-        const tierCap = { basic: 10, professional: 20, mastery: 30 } as const;
-        const nextName = (s: string) => {
-          if (/(^|_)basic_/.test(s)) return s.replace(/(^|_)basic_/, "$1professional_");
-          if (/(^|_)professional_/.test(s)) return s.replace(/(^|_)professional_/, "$1mastery_");
-          return null;
-        };
-        const prettify = (slug: string) =>
-          slug.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-        const recs = progress
-          .filter((p) => {
-            const t = getSkillTier(p.skill_slug);
-            return t !== "mastery" && (p.current_level || 0) >= tierCap[t];
-          })
-          .map((p) => {
-            const next = nextName(p.skill_slug);
-            if (!next) return null;
-            const alt = next.startsWith("genres_") ? next.slice(7) : `genres_${next}`;
-            const nextDef = skills.find((s) => s.slug === next || s.slug === alt);
-            const nextProg = progress.find((q) => q.skill_slug === next || q.skill_slug === alt);
-            const nextTier = getSkillTier(next);
-            if (nextProg && (nextProg.current_level || 0) >= tierCap[nextTier]) return null;
-            const fromDef = skills.find((s) => s.slug === p.skill_slug);
-            return {
-              key: p.skill_slug,
-              from: fromDef?.display_name ?? prettify(p.skill_slug),
-              to: nextDef?.display_name ?? prettify(next),
-              level: nextProg?.current_level || 0,
-              cap: tierCap[nextTier],
-              started: !!nextProg,
-            };
-          })
-          .filter(Boolean) as Array<{ key: string; from: string; to: string; level: number; cap: number; started: boolean }>;
-        if (recs.length === 0) return null;
-        return (
-          <div className="mb-2 rounded-md border border-primary/30 bg-primary/5 p-2">
-            <p className="text-xs font-semibold mb-1">Next step in your skill tree</p>
-            <div className="space-y-1">
-              {recs.slice(0, 6).map((r) => (
-                <div key={r.key} className="flex flex-wrap items-center gap-1 text-[11px]">
-                  <span className="text-muted-foreground">{r.from} maxed →</span>
-                  <span className="font-medium">{r.to}</span>
-                  <Badge variant="secondary" className="text-[10px] px-1.5">
-                    {r.started ? `Lv ${r.level}/${r.cap}` : "Now unlocked"}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-1">
-              Train it with SXP, practice, university, books or a mentor.
-            </p>
+      {/* Clear next-tier unlocks in the tree */}
+      {unlockedNextTiers.length > 0 && (
+        <div className="mb-2 rounded-md border border-primary/30 bg-primary/5 p-3">
+          <p className="text-sm font-semibold">New skill tier unlocked</p>
+          <div className="mt-2 space-y-1">
+            {unlockedNextTiers.slice(0, 6).map(({ from, next, started }) => (
+              <div key={next.slug} className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="text-muted-foreground">{from.display_name} maxed →</span>
+                <span className="font-medium">{next.display_name}</span>
+                <Badge variant="secondary">{started ? "In progress" : "Ready to learn"}</Badge>
+              </div>
+            ))}
           </div>
-        );
-      })()}
+          <p className="mt-2 text-xs text-muted-foreground">
+            Open Education and choose a book, course, YouTube course or mentor for the unlocked skill.
+          </p>
+        </div>
+      )}
 
       {/* Skills display */}
       <ScrollArea className="h-[500px] rounded-md border p-3">
