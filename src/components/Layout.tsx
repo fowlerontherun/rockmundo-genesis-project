@@ -170,7 +170,8 @@ const Layout = () => {
   if (isMobile && !gigViewerDemoTestAccess) {
     const bridgeTarget = getMobileBridgeTarget(location.pathname);
     if (bridgeTarget && bridgeTarget !== location.pathname) {
-      return <Navigate to={`${bridgeTarget}${location.search}`} replace />;
+      const target = location.search ? `${bridgeTarget}${bridgeTarget.includes("?") ? "&" : "?"}${location.search.slice(1)}` : bridgeTarget;
+      return <Navigate to={target} replace />;
     }
     return (
       <MobileShell>
