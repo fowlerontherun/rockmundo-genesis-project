@@ -172,6 +172,13 @@ function applyRelaxedV1HandPose(bones: Map<string, T.Bone>) {
   }
 }
 
+// Hotfix guard: the procedural starter garment meshes are preview-grade and
+// attach too rigidly to the V1 skeleton in the live fitting room (flat torso
+// panels / T-pose sleeves). Keep their definitions available for isolated
+// development, but ship stable donor-skinned garments until each replacement
+// has proper skin weights and visual acceptance coverage.
+const USE_PROCEDURAL_STARTER_GARMENTS = false;
+
 const PROCEDURAL_STARTER_TOPS = new Set([
   'starter.top.casual',
   'starter.top.stripe',
@@ -673,8 +680,12 @@ export function assemblePlayerModel(
   const curatedBottom = presentation === 'tattoo' ? undefined : curatedDonorForSlot(richClothing, 'bottom');
   const curatedFootwear = presentation === 'tattoo' ? undefined : curatedDonorForSlot(richClothing, 'footwear');
   const topless = presentation === 'stage' && appearance.equipment.top.itemId === 'starter.top.topless' && !curatedTop;
-  const proceduralStarterTop = presentation === 'stage' && !curatedTop ? starterTopVisualItem(appearance) : null;
-  const proceduralStarterBottom = presentation === 'stage' && !curatedBottom ? starterBottomVisualItem(appearance) : null;
+  const proceduralStarterTop = USE_PROCEDURAL_STARTER_GARMENTS && presentation === 'stage' && !curatedTop
+    ? starterTopVisualItem(appearance)
+    : null;
+  const proceduralStarterBottom = USE_PROCEDURAL_STARTER_GARMENTS && presentation === 'stage' && !curatedBottom
+    ? starterBottomVisualItem(appearance)
+    : null;
   const choices = [
     { part: 'head', style: headModelStyle(appearance), dye: appearance.head.hair, fabric: 'plain' as const },
     {
