@@ -247,54 +247,9 @@ describe('shipped modular stage models', () => {
     }
   });
 
-  it.each(['masculine', 'feminine'] as const)('refines the %s stable long-sleeve and outerwear family on the donor rig', frame => {
-    for (const [itemId, detail] of [
-      ['starter.top.long-sleeve', null],
-      ['starter.top.hoodie', null],
-      ['starter.top.zip-hoodie', 'avatar-v1-zip-hoodie-zip'],
-      ['starter.top.denim-jacket', 'avatar-v1-denim-jacket-seam'],
-      ['starter.top.flannel-shirt', 'avatar-v1-flannel-placket'],
-    ] as const) {
-      const appearance = defaultAppearance(itemId);
-      appearance.body.frame = frame;
-      appearance.equipment.top.itemId = itemId;
-      const model = assemblePlayerModel(library, appearance);
-      const polished: T.SkinnedMesh[] = [];
-      model.traverse(node => {
-        if (node instanceof T.SkinnedMesh && node.userData.avatarV1OuterwearVariant === itemId) polished.push(node);
-        expect(node.name.startsWith('Starter_Body_')).toBe(false);
-      });
-      expect(polished.length).toBeGreaterThan(0);
-      expect(polished.some(mesh => Number(mesh.userData.avatarV1OuterwearArmVertexCount) > 0)).toBe(true);
-      for (const mesh of polished) {
-        expect(mesh.geometry.getAttribute('skinWeight')).toBeTruthy();
-        expect(mesh.geometry.getAttribute('skinIndex')).toBeTruthy();
-      }
-      if (detail) expect(model.getObjectByName(detail)).toBeTruthy();
-      disposeModel(model);
-    }
-  });
-
-  it.each(['masculine', 'feminine'] as const)('refines the %s tank top on the stable skinned donor mesh', frame => {
-    const appearance = defaultAppearance('tank-safe');
-    appearance.body.frame = frame;
-    appearance.equipment.top.itemId = 'starter.top.tank';
-    const model = assemblePlayerModel(library, appearance);
-    const tanks: T.SkinnedMesh[] = [];
-    model.traverse(node => {
-      if (node instanceof T.SkinnedMesh && node.userData.avatarV1TankPolished) tanks.push(node);
-      expect(node.name.startsWith('Starter_Body_')).toBe(false);
-    });
-    expect(tanks.length).toBeGreaterThan(0);
-    expect(tanks.some(mesh => Number(mesh.userData.avatarV1TankArmVertexCount) > 0)).toBe(true);
-    disposeModel(model);
-  });
-
   it.each(['masculine', 'feminine'] as const)('crops %s shorts and underwear from the stable skinned donor geometry', frame => {
     for (const itemId of [
       'starter.bottom.denim-shorts',
-      'starter.bottom.cargo-shorts',
-      'starter.bottom.athletic-shorts',
       'starter.bottom.boxer-briefs',
       'starter.bottom.briefs',
     ] as const) {
@@ -318,7 +273,7 @@ describe('shipped modular stage models', () => {
   });
 
   it.each(['masculine', 'feminine'] as const)('shapes %s chinos and wide-leg trousers without replacing the donor rig', frame => {
-    for (const itemId of ['starter.bottom.chinos', 'starter.bottom.wide-leg'] as const) {
+    for (const itemId of ['starter.bottom.chinos'] as const) {
       const appearance = defaultAppearance(itemId);
       appearance.body.frame = frame;
       appearance.equipment.bottom.itemId = itemId;
@@ -330,6 +285,57 @@ describe('shipped modular stage models', () => {
       });
       expect(shaped.length).toBeGreaterThan(0);
       disposeModel(model);
+    }
+  });
+
+  it.each(['masculine', 'feminine'] as const)('builds the %s long-sleeve from fitted skinned arm geometry', frame => {
+    const appearance = defaultAppearance('long-sleeve-fitted');
+    appearance.body.frame = frame;
+    appearance.equipment.top.itemId = 'starter.top.long-sleeve';
+    const model = assemblePlayerModel(library, appearance);
+    const sleeves = model.getObjectByName('avatar-v1-fitted-long-sleeves') as T.SkinnedMesh | undefined;
+    expect(sleeves).toBeTruthy();
+    expect(sleeves?.userData.avatarV1FittedSleeves).toBe(true);
+    expect(Number(sleeves?.userData.avatarV1FittedSleeveTriangleCount)).toBeGreaterThan(4);
+    expect(sleeves?.geometry.getAttribute('skinWeight')).toBeTruthy();
+    expect(sleeves?.geometry.getAttribute('skinIndex')).toBeTruthy();
+    expect(starterItemsForWardrobe('top').some(item => item.id === 'starter.top.long-sleeve')).toBe(true);
+    disposeModel(model);
+  });
+
+  it.each(['masculine', 'feminine'] as const)('makes the %s tank sleeveless by removing only garment sleeve triangles', frame => {
+    const appearance = defaultAppearance('tank-fitted');
+    appearance.body.frame = frame;
+    appearance.equipment.top.itemId = 'starter.top.tank';
+    const model = assemblePlayerModel(library, appearance);
+    const tanks: T.SkinnedMesh[] = [];
+    model.traverse(node => {
+      if (node instanceof T.SkinnedMesh && node.userData.avatarV1TankSleevesRemoved) tanks.push(node);
+      expect(node.name.startsWith('Starter_Body_')).toBe(false);
+    });
+    expect(tanks.length).toBeGreaterThan(0);
+    expect(tanks.some(mesh => Number(mesh.userData.avatarV1TankRemovedTriangleCount) > 0)).toBe(true);
+    expect(starterItemsForWardrobe('top').some(item => item.id === 'starter.top.tank')).toBe(true);
+    disposeModel(model);
+  });
+
+  it.each(['masculine', 'feminine'] as const)('keeps the %s fitted long-sleeve and tank stable through gig animation', frame => {
+    for (const itemId of ['starter.top.long-sleeve', 'starter.top.tank'] as const) {
+      const appearance = defaultAppearance(itemId);
+      appearance.body.frame = frame;
+      appearance.equipment.top.itemId = itemId;
+      const source = assemblePlayerModel(library, appearance);
+      const actor = new Musician(source, 'guitar', [0, 0, 0], 0, undefined, appearance);
+      disposeModel(source);
+      for (const time of [0, 2.5, 8, 18]) {
+        actor.update(time, .8, false);
+        const bounds = new T.Box3().setFromObject(actor.root);
+        expect(bounds.max.y).toBeLessThan(2.8);
+        expect(bounds.min.y).toBeGreaterThan(-.25);
+        expect(bounds.max.x - bounds.min.x).toBeLessThan(2.4);
+      }
+      expect(actor.root.getObjectByName('Starter_Body_garment-piece')).toBeFalsy();
+      disposeModel(actor.root);
     }
   });
 
@@ -471,6 +477,11 @@ describe('V1 starter clothing safety gate', () => {
         if (node.name.startsWith('Starter_Body_') || node.name.startsWith('Starter_Legs_')) procedural += 1;
       });
       expect(procedural).toBe(0);
+      if (slot === 'top') {
+        expect(model.getObjectByName('avatar-v1-zip-hoodie-zip')).toBeFalsy();
+        expect(model.getObjectByName('avatar-v1-denim-jacket-seam')).toBeFalsy();
+        expect(model.getObjectByName('avatar-v1-flannel-placket')).toBeFalsy();
+      }
       disposeModel(model);
     }
   });
