@@ -208,7 +208,43 @@ function addLegacyBareBodyUnderlay(
     const lowerArm = bone(`LowerArm.${side}`, `LowerArm_${side}`, `LowerArm${side}`);
     const hand = bone(`Hand.${side}`, `Hand_${side}`, `Hand${side}`);
     addEllipsoid(`upper-arm-${side.toLowerCase()}`, upperArm, upperArm, lowerArm, .062 * frameScale * muscleScale, .061 * muscleScale);
-    if (fullBody) addEllipsoid(`lower-arm-${side.toLowerCase()}`, lowerArm, lowerArm, hand, .047 * frameScale * (1 + (muscleScale - 1) * .7), .046 * (1 + (muscleScale - 1) * .7));
+    // Topless stage avatars hide the donor shirt material, including the sleeve/forearm
+    // geometry on some V1 exports. Always rebuild the complete arm so hands never
+    // appear detached. Tattoo mode still extends the same underlay to the legs/feet.
+    addEllipsoid(
+      `lower-arm-${side.toLowerCase()}`,
+      lowerArm,
+      lowerArm,
+      hand,
+      .047 * frameScale * (1 + (muscleScale - 1) * .7),
+      .046 * (1 + (muscleScale - 1) * .7),
+      1.1,
+    );
+
+    // A small elbow bridge softens the seam between the two skinned ellipsoids in
+    // close-up creator/profile views while remaining driven by the lower-arm bone.
+    if (lowerArm) {
+      const elbow = lowerArm.getWorldPosition(new T.Vector3());
+      const geometry = new T.SphereGeometry(
+        .052 * frameScale * (1 + (muscleScale - 1) * .78),
+        quality === 'cinematic' ? 24 : 16,
+        quality === 'cinematic' ? 16 : 12,
+      );
+      geometry.translate(elbow.x, elbow.y, elbow.z);
+      const count = geometry.attributes.position.count;
+      const indices = new Uint16Array(count * 4);
+      const weights = new Float32Array(count * 4);
+      for (let i = 0; i < count; i += 1) weights[i * 4] = 1;
+      geometry.setAttribute('skinIndex', new T.Uint16BufferAttribute(indices, 4));
+      geometry.setAttribute('skinWeight', new T.Float32BufferAttribute(weights, 4));
+      geometry.computeVertexNormals();
+      const elbowMesh = new T.SkinnedMesh(geometry, skin);
+      elbowMesh.name = `avatar-v1-skin-underlay-elbow-${side.toLowerCase()}`;
+      elbowMesh.castShadow = true;
+      elbowMesh.receiveShadow = true;
+      root.add(elbowMesh);
+      elbowMesh.bind(new T.Skeleton([lowerArm], [lowerArm.matrixWorld.clone().invert()]), new T.Matrix4());
+    }
 
     if (!fullBody) continue;
     const upperLeg = bone(`UpperLeg.${side}`, `UpperLeg_${side}`, `UpperLeg${side}`);
