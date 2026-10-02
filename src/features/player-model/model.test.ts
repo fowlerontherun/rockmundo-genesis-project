@@ -424,6 +424,58 @@ describe('appearance boundaries', () => {
   });
 });
 
+describe('V1 starter clothing safety gate', () => {
+  it('only exposes visually verified starter clothing in the live wardrobe', () => {
+    expect(starterItemsForWardrobe('top').map(item => item.id)).not.toEqual(expect.arrayContaining([
+      'starter.top.hoodie',
+      'starter.top.zip-hoodie',
+      'starter.top.denim-jacket',
+      'starter.top.flannel-shirt',
+      'starter.top.long-sleeve',
+      'starter.top.tank',
+    ]));
+    expect(starterItemsForWardrobe('bottom').map(item => item.id)).not.toEqual(expect.arrayContaining([
+      'starter.bottom.cargo-shorts',
+      'starter.bottom.athletic-shorts',
+      'starter.bottom.wide-leg',
+      'starter.bottom.pleated-skirt',
+      'starter.bottom.mini-skirt',
+    ]));
+    expect(starterItemsForWardrobe('bottom').map(item => item.id)).toEqual(expect.arrayContaining([
+      'starter.bottom.denim-shorts',
+      'starter.bottom.boxer-briefs',
+      'starter.bottom.briefs',
+      'starter.bottom.chinos',
+    ]));
+  });
+
+  it('keeps previously saved experimental clothing valid but renders a safe donor fallback', () => {
+    for (const [savedId, fallbackId] of Object.entries(STARTER_VISUAL_FALLBACKS)) {
+      const appearance = defaultAppearance(savedId);
+      const slot = savedId.includes('.top.') ? 'top' : 'bottom';
+      appearance.equipment[slot].itemId = savedId;
+      expect(appearanceSchema.safeParse(appearance).success).toBe(true);
+      expect(visualEquipmentItem(appearance, slot).id).toBe(fallbackId);
+    }
+  });
+
+  it.each(['masculine', 'feminine'] as const)('never injects experimental rigid garments for saved %s avatars', frame => {
+    for (const savedId of Object.keys(STARTER_VISUAL_FALLBACKS)) {
+      const appearance = defaultAppearance(savedId);
+      appearance.body.frame = frame;
+      const slot = savedId.includes('.top.') ? 'top' : 'bottom';
+      appearance.equipment[slot].itemId = savedId;
+      const model = assemblePlayerModel(library, appearance);
+      let procedural = 0;
+      model.traverse(node => {
+        if (node.name.startsWith('Starter_Body_') || node.name.startsWith('Starter_Legs_')) procedural += 1;
+      });
+      expect(procedural).toBe(0);
+      disposeModel(model);
+    }
+  });
+});
+
 describe('expanded starter wardrobe', () => {
   it.each(['masculine', 'feminine'] as const)('renders and preserves the full starter wardrobe on the %s gig rig', frame => {
     const expectedCounts = { top: 17, bottom: 18, footwear: 10 } as const;
