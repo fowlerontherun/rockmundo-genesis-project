@@ -266,8 +266,12 @@ describe('shipped modular stage models', () => {
       });
       expect(trimmed.length).toBeGreaterThan(0);
       expect(trimmed.some(mesh => Number(mesh.userData.avatarV1ShortSleeveRemovedTriangles) > 0)).toBe(true);
-      expect(model.getObjectByName('avatar-v1-skin-underlay-lower-arm-l')).toBeTruthy();
-      expect(model.getObjectByName('avatar-v1-skin-underlay-lower-arm-r')).toBeTruthy();
+      expect(model.getObjectByName('avatar-v1-skin-underlay-upper-arm-l')).toBeFalsy();
+      expect(model.getObjectByName('avatar-v1-skin-underlay-upper-arm-r')).toBeFalsy();
+      expect(model.getObjectByName('avatar-v1-skin-underlay-lower-arm-l')).toBeFalsy();
+      expect(model.getObjectByName('avatar-v1-skin-underlay-lower-arm-r')).toBeFalsy();
+      expect(model.getObjectByName('avatar-v1-skin-underlay-elbow-l')).toBeFalsy();
+      expect(model.getObjectByName('avatar-v1-skin-underlay-elbow-r')).toBeFalsy();
       expect(model.getObjectByName('avatar-v1-fitted-long-sleeves')).toBeFalsy();
       expect(model.getObjectByName('avatar-v1-hoodie-hood')).toBeFalsy();
       expect(model.getObjectByName('avatar-v1-zip-hoodie-hood')).toBeFalsy();
