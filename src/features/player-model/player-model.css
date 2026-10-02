@@ -84,3 +84,26 @@
 
 .player-model-accessories__owned { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; font-size: 12px; margin-top: 12px; }
 .player-model-accessories__owned button { border: 1px solid #3b4a5e; border-radius: 7px; padding: 8px 12px; min-height: 40px; }
+
+.player-model-editor__tabs { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: -28px -28px 24px; padding: 14px 18px; border-bottom: 1px solid #344155; background: #151f2df2; backdrop-filter: blur(8px); }
+.player-model-editor__tabs button { min-height: 42px; padding: 8px 6px; border: 1px solid #3b4a5e; border-radius: 7px; color: #b9c7d9; font-size: 11px; line-height: 1.25; }
+.player-model-editor__tabs button.is-active { border-color: #8adbd7; background: #213e46; color: #adf0e8; }
+.player-model-editor__section-title { margin: 4px 0 10px; color: #dce6f2; font-size: 12px; font-weight: 650; }
+.player-model-editor__outfit-presets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 20px; }
+.player-model-editor__outfit-presets button { min-height: 42px; padding: 8px; border: 1px solid #3b4a5e; border-radius: 7px; background: #1b2839; font-size: 11px; }
+.player-model-editor__outfit-presets button:hover { border-color: #6dc8d0; }
+@media (min-width: 761px) {
+  .player-model-editor__showcase { position: sticky; top: 12px; align-self: start; max-height: calc(100vh - 24px); overflow: auto; }
+  .player-model-preview { position: relative; top: 0; height: min(58vw, calc(100vh - 155px)); min-height: 400px; }
+}
+@media (max-width: 760px) {
+  .player-model-editor__showcase { position: sticky; top: 0; z-index: 8; box-shadow: 0 10px 24px #0008; }
+  .player-model-preview { height: min(48vh, 390px); min-height: 300px; }
+  .player-model-editor__showcase > .player-model-editor__hint { display: none; }
+  .player-model-editor__preview-role { display: none; }
+  .player-model-editor__tabs { top: min(48vh, 390px); margin: -23px -23px 20px; padding: 10px 12px; }
+}
+@media (max-width: 430px) {
+  .player-model-editor__tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .player-model-editor__outfit-presets { grid-template-columns: 1fr; }
+}

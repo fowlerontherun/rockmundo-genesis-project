@@ -17,15 +17,15 @@ const wardrobe = (slot: EquipmentSlot, rows: [string, Style, string, Fabric][]):
 export const STARTER_ITEMS: Record<EquipmentSlot, StarterItem[]> = {
   top: wardrobe('top', [
     ['casual', 'casual', 'Rockmundo logo T-shirt', 'plain'], ['topless', 'casual', 'Topless', 'plain'], ['punk', 'punk', 'Punk top', 'plain'], ['suit', 'suit', 'Tailored jacket', 'plain'],
-    ['stripe', 'casual', 'Striped top', 'stripe'], ['plaid', 'punk', 'Plaid punk top', 'plaid'], ['pinstripe', 'suit', 'Pinstripe jacket', 'pinstripe'],
+    ['stripe', 'casual', 'Striped top', 'stripe'], ['plain-black', 'casual', 'Plain black T-shirt', 'plain'], ['plain-white', 'casual', 'Plain white T-shirt', 'plain'], ['vintage-charcoal', 'punk', 'Vintage charcoal T-shirt', 'plain'], ['plaid', 'punk', 'Plaid punk top', 'plaid'], ['pinstripe', 'suit', 'Pinstripe jacket', 'pinstripe'],
   ]),
   bottom: wardrobe('bottom', [
     ['casual', 'casual', 'Everyday trousers', 'plain'], ['punk', 'punk', 'Punk trousers', 'plain'], ['suit', 'suit', 'Tailored trousers', 'plain'],
-    ['denim', 'casual', 'Denim trousers', 'denim'], ['plaid', 'suit', 'Checked trousers', 'plaid'], ['pinstripe', 'suit', 'Pinstripe trousers', 'pinstripe'],
+    ['denim', 'casual', 'Denim trousers', 'denim'], ['blue-jeans', 'casual', 'Blue straight jeans', 'denim'], ['black-jeans', 'punk', 'Black straight jeans', 'denim'], ['dark-slim-jeans', 'punk', 'Dark slim jeans', 'denim'], ['plaid', 'suit', 'Checked trousers', 'plaid'], ['pinstripe', 'suit', 'Pinstripe trousers', 'pinstripe'],
   ]),
   footwear: wardrobe('footwear', [
     ['casual', 'casual', 'Everyday shoes', 'plain'], ['punk', 'punk', 'Punk boots', 'plain'], ['suit', 'suit', 'Formal shoes', 'plain'],
-    ['canvas', 'casual', 'Canvas shoes', 'canvas'], ['two-tone', 'suit', 'Two-tone shoes', 'two-tone'], ['patent', 'suit', 'Patent shoes', 'patent'],
+    ['canvas', 'casual', 'Canvas shoes', 'canvas'], ['black-boots', 'punk', 'Black boots', 'plain'], ['brown-boots', 'casual', 'Brown boots', 'plain'], ['canvas-trainers', 'casual', 'Canvas trainers', 'canvas'], ['combat-boots', 'punk', 'Combat boots', 'plain'], ['two-tone', 'suit', 'Two-tone shoes', 'two-tone'], ['patent', 'suit', 'Patent shoes', 'patent'],
   ]),
 };
 export const SLOT_LABELS: Record<EquipmentSlot, string> = { top: 'Tops', bottom: 'Bottoms', footwear: 'Footwear' };
