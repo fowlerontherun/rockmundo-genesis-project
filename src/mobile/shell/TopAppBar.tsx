@@ -90,6 +90,7 @@ export const TopAppBar = () => {
           <div className="font-bold text-[16px] leading-tight truncate">{title}</div>
         </div>
         <RMRadioButton className="rm-tap h-10 w-10 shrink-0 rounded-full p-0 hover:bg-muted" />
+        <VipBadge size="sm" />
         <button
           onClick={() => navigate("/mobile/world/travel")}
           className="rm-tap h-10 w-10 flex items-center justify-center rounded-full hover:bg-muted"
