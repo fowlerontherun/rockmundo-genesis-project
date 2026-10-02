@@ -1,67 +1,26 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { resolveCompanionPath } from "./routeRegistry";
-
-const careerRoutes = readFileSync("src/mobile/pages/MobileCareerRoutes.tsx", "utf8");
-const careerOverview = readFileSync("src/mobile/pages/MobileCareer.tsx", "utf8");
-const topBar = readFileSync("src/mobile/shell/TopAppBar.tsx", "utf8");
-const shell = readFileSync("src/mobile/shell/MobileShell.tsx", "utf8");
-const mobileTokens = readFileSync("src/mobile/theme/tokens.css", "utf8");
-const swipeTabs = readFileSync("src/mobile/components/SwipeTabs.tsx", "utf8");
-
-describe("mobile navigation and page contracts", () => {
-  it("renders a real Career overview instead of redirecting the route to itself", () => {
-    expect(careerRoutes).toContain("return <MobileCareer />");
-    expect(careerRoutes).not.toContain('if (!section) return <Navigate to="/mobile/career" replace />');
-    expect(careerOverview).toContain("Career areas");
+const bottom = readFileSync("src/mobile/shell/BottomNav.tsx", "utf8");
+const top = readFileSync("src/mobile/shell/TopAppBar.tsx", "utf8");
+const fab = readFileSync("src/mobile/shell/FabMenu.tsx", "utf8");
+const app = readFileSync("src/App.tsx", "utf8");
+describe("stripped mobile navigation", () => {
+  it("shows only schedule inbox chat and progression in primary nav", () => {
+    for (const label of ["Schedule", "Inbox", "Chat", "XP / AP"]) expect(bottom).toContain(`label: "${label}"`);
+    for (const removed of ["Career", "Social", "World", "Me"]) expect(bottom).not.toContain(`label: "${removed}"`);
   });
-
-  it("routes desktop Home separately from My Day schedule links", () => {
-    expect(resolveCompanionPath("/home")).toBe("/mobile");
-    expect(resolveCompanionPath("/dashboard")).toBe("/mobile");
-    expect(resolveCompanionPath("/schedule/today")).toBe("/mobile/career/schedule");
-    expect(resolveCompanionPath("/stage-practice")).toBe("/mobile/career/practice");
+  it("removes unsupported top-bar and quick-action links", () => {
+    expect(top).not.toContain("/mobile/world");
+    expect(top).not.toContain("/mobile/me");
+    expect(fab).not.toContain("Travel");
+    expect(fab).not.toContain("Twaater");
+    expect(fab).not.toContain("Recover");
   });
-
-  it("keeps direct player links useful on mobile", () => {
-    expect(resolveCompanionPath("/player/example-player")).toBe("/mobile/social/profile/example-player");
-  });
-
-  it("sends canonical and legacy Social and Media routes to supported companions", () => {
-    expect(resolveCompanionPath("/community/friends")).toBe("/mobile/social/friends");
-    expect(resolveCompanionPath("/social/players")).toBe("/mobile/social/friends");
-    expect(resolveCompanionPath("/media/radio")).toBe("/mobile/career");
-  });
-
-  it("uses direct supported mobile destinations from the top app bar", () => {
-    expect(topBar).toContain('navigate("/mobile/world/travel")');
-    expect(topBar).toContain('navigate("/mobile/social/messages")');
-    expect(topBar).toContain('navigate("/mobile/social/notifications")');
-    expect(topBar).not.toContain('navigate("/inbox")');
-  });
-
-  it("shows useful titles for nested companion pages", () => {
-    expect(topBar).toContain('"/mobile/world/travel": "Travel"');
-    expect(topBar).toContain('"/mobile/social/messages": "Messages"');
-    expect(topBar).toContain('"/mobile/me/wellness": "Wellness"');
-  });
-
-  it("resets the owned mobile scroller between pages and honors quick-action hash targets", () => {
-    expect(shell).toContain("location.hash");
-    expect(shell).toContain("scrollIntoView");
-    expect(shell).toContain("container.scrollTo");
-    expect(shell).not.toContain("window.scrollTo");
-  });
-
-  it("keeps one bounded vertical scroll owner on mobile", () => {
-    expect(shell).toContain('h-[100dvh] min-h-0 overflow-hidden');
-    expect(shell).toContain('rm-mobile-scroll min-h-0 flex-1 overflow-x-hidden');
-    expect(mobileTokens).toContain("html.rm-mobile-root body #root");
-    expect(mobileTokens).toContain("min-height: 0");
-    expect(mobileTokens).toContain("touch-action: pan-x pan-y pinch-zoom");
-    expect(mobileTokens).not.toContain("overscroll-behavior-y: contain");
-    expect(swipeTabs).not.toContain("rm-mobile-scroll");
-    expect(swipeTabs).toContain("overflow-x-auto overflow-y-hidden");
-    expect(swipeTabs).toContain('sticky top-0');
+  it("only mounts supported dedicated mobile routes", () => {
+    expect(app).toContain('path="inbox" element={<MobileSocial />}');
+    expect(app).toContain('path="chat" element={<MobileSocial />}');
+    expect(app).toContain('path="progression" element={<MobileProgression />}');
+    expect(app).not.toContain('path="world" element={<MobileWorld');
+    expect(app).not.toContain('path="me" element={<MobileMe');
   });
 });
