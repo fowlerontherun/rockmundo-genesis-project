@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.760",
+    date: "2026-10-02",
+    changes: [
+      { type: "feature", description: "A VIP crown badge now always shows in the top bar while VIP is active — hovering it reveals how many days remain" },
+    ],
+  },
+  {
     version: "1.1.759",
     date: "2026-10-02",
     changes: [
