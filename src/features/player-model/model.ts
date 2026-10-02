@@ -21,6 +21,8 @@ import { applyAvatarEyeQuality, applyAvatarHairQuality, applyAvatarSkinQuality, 
 import type { AvatarVisualQuality } from './avatarVisualQuality';
 import { applyAvatarSkinMacroShading } from './avatarSkinMacroShading';
 import { createCorneaOverlay, upgradeCuratedGarmentMaterial, upgradeSkinMaterial, upgradeStarterFabricMaterial } from './avatarPhysicalMaterials';
+import { buildProceduralGarment, type GarmentRigAnchor } from '@/features/clothing-preview/proceduralGarmentRenderer';
+import type { ClothingItem } from '@/hooks/useSkinStore';
 
 export type ModelLibrary = Map<string, T.Object3D>;
 export type PlayerModelPresentation = 'stage' | 'tattoo';
@@ -125,6 +127,31 @@ function addStarterLogoTee(root: T.Object3D, appearance: PlayerAppearance, bones
   attachSurfaceGraphic(root, chest, mark, attachment, .00045);
 }
 
+function applyV1HandProportionPolish(bones: Map<string, T.Bone>) {
+  const joint = (digit: string, index: number, side: 'L' | 'R') =>
+    findPlayerBone(bones, [`${digit}${index}.${side}`, `${digit}${index}_${side}`, `${digit}${index}${side}`]);
+
+  // The legacy donor rigs have intentionally chunky stage hands, but the finger
+  // chains read too long and spider-like in the fitting-room close-up. Shorten
+  // each digit from its base instead of editing vertices, which keeps the
+  // existing weights, IK and instrument finger animation fully compatible.
+  const baseScale: Record<string, number> = {
+    Thumb: .94,
+    Index: .955,
+    Middle: .95,
+    Ring: .925,
+    Pinky: .89,
+  };
+  for (const side of ['L', 'R'] as const) {
+    for (const digit of ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky']) {
+      const proximal = joint(digit, 1, side);
+      if (!proximal) continue;
+      proximal.scale.multiplyScalar(baseScale[digit]);
+      proximal.userData.avatarV1FingerScale = baseScale[digit];
+    }
+  }
+}
+
 function applyRelaxedV1HandPose(bones: Map<string, T.Bone>) {
   const joint = (digit: string, index: number, side: 'L' | 'R') =>
     findPlayerBone(bones, [`${digit}${index}.${side}`, `${digit}${index}_${side}`, `${digit}${index}${side}`]);
@@ -143,6 +170,151 @@ function applyRelaxedV1HandPose(bones: Map<string, T.Bone>) {
       }
     }
   }
+}
+
+const PROCEDURAL_STARTER_TOPS = new Set([
+  'starter.top.casual',
+  'starter.top.stripe',
+  'starter.top.plain-black',
+  'starter.top.plain-white',
+  'starter.top.vintage-charcoal',
+  'starter.top.v-neck',
+  'starter.top.long-sleeve',
+  'starter.top.tank',
+  'starter.top.hoodie',
+  'starter.top.zip-hoodie',
+  'starter.top.denim-jacket',
+  'starter.top.flannel-shirt',
+]);
+
+function starterTopVisualItem(appearance: PlayerAppearance): ClothingItem | null {
+  const id = appearance.equipment.top.itemId;
+  if (!PROCEDURAL_STARTER_TOPS.has(id)) return null;
+
+  const common = {
+    id,
+    name: equipmentItem(appearance, 'top').label,
+    description: 'Built-in Avatar V1 starter garment',
+    category: 'top',
+    wearable_slot: 'top',
+    price: 0,
+    is_premium: false,
+    rarity: 'common',
+    color_variants: [],
+    collection_id: null,
+    release_date: null,
+    expiry_date: null,
+    is_limited_edition: false,
+    featured: false,
+    rpm_asset_id: null,
+    material_config: {
+      fabric: id === 'starter.top.denim-jacket' ? 'denim' : 'cotton',
+      primaryColor: appearance.equipment.top.color,
+      secondaryColor: id === 'starter.top.denim-jacket' ? '#b8b2a5' : '#e9e4db',
+      roughness: id === 'starter.top.denim-jacket' ? .86 : .9,
+      thickness: id.includes('hoodie') || id.includes('jacket') ? .72 : .46,
+    },
+    pattern_config: { type: id === 'starter.top.stripe' ? 'stripe' : id === 'starter.top.flannel-shirt' ? 'plaid' : 'solid' },
+    fit_config: { fit: id.includes('hoodie') ? 'relaxed' : id === 'starter.top.vintage-charcoal' ? 'slim' : 'regular', drape: .42, taper: .28 },
+    wear_config: id === 'starter.top.vintage-charcoal' ? { condition: 'stage-worn', distress: .28 } : {},
+    detail_layers: [],
+    render_config: {},
+    curated_asset_key: null,
+    curated_asset_status: 'legacy' as const,
+    supported_frames: ['masculine', 'feminine'],
+    validation_notes: null,
+    bonus_enabled: false,
+    bonus_config: null,
+    customization_zones: null,
+    variant_matrix: null,
+    external_key: null,
+    schema_version: 1,
+    import_source: 'avatar-v1-starter',
+    import_batch_id: null,
+    preview_status: null,
+    preview_manifest: null,
+    preview_generated_at: null,
+    last_preview_error: null,
+    shape_config: null,
+  };
+
+  const garment_config: Record<string, unknown> = {
+    templateKey: 't-shirt',
+    silhouette: 'classic',
+    cut: 'regular',
+    sleeve: 'short',
+    collar: 'crew',
+    closure: 'none',
+    length: 'standard',
+    waistScale: 1,
+    sleeveLengthScale: .82,
+    sleeveWidthScale: .95,
+  };
+
+  if (id === 'starter.top.v-neck') garment_config.collar = 'v-neck';
+  if (id === 'starter.top.long-sleeve') {
+    garment_config.templateKey = 'long-sleeve';
+    garment_config.sleeve = 'long';
+    garment_config.sleeveLengthScale = 1.04;
+  }
+  if (id === 'starter.top.tank') {
+    garment_config.templateKey = 'vest';
+    garment_config.sleeve = 'none';
+    garment_config.cut = 'fitted';
+    garment_config.waistScale = .94;
+  }
+  if (id === 'starter.top.hoodie' || id === 'starter.top.zip-hoodie') {
+    garment_config.templateKey = 'hoodie';
+    garment_config.sleeve = 'long';
+    garment_config.collar = 'hood';
+    garment_config.silhouette = 'relaxed';
+    garment_config.sleeveLengthScale = 1.08;
+    garment_config.sleeveWidthScale = 1.08;
+    if (id === 'starter.top.zip-hoodie') garment_config.closure = 'zip';
+  }
+  if (id === 'starter.top.denim-jacket') {
+    garment_config.templateKey = 'jacket';
+    garment_config.sleeve = 'long';
+    garment_config.collar = 'shirt';
+    garment_config.closure = 'button';
+    garment_config.cut = 'structured';
+    garment_config.sleeveLengthScale = 1.04;
+  }
+  if (id === 'starter.top.flannel-shirt') {
+    garment_config.templateKey = 'shirt';
+    garment_config.sleeve = 'long';
+    garment_config.collar = 'shirt';
+    garment_config.closure = 'button';
+    garment_config.sleeveLengthScale = 1.02;
+  }
+
+  return { ...common, garment_config } as ClothingItem;
+}
+
+function addStarterProceduralTop(
+  root: T.Object3D,
+  bones: Map<string, T.Bone>,
+  item: ClothingItem,
+) {
+  const garment = buildProceduralGarment(item);
+  root.add(garment);
+  root.updateMatrixWorld(true);
+
+  const pieces: T.Mesh[] = [];
+  garment.traverse(node => {
+    if (!(node instanceof T.Mesh)) return;
+    node.name = `Starter_Body_${node.name || 'garment-piece'}`;
+    pieces.push(node);
+  });
+
+  for (const piece of pieces) {
+    const anchorName = String(piece.userData.rigAnchor || 'Torso') as GarmentRigAnchor;
+    const anchor = bones.get(anchorName)
+      ?? (anchorName === 'Torso' ? findPlayerBone(bones, ['Spine2','Spine.002','Chest','UpperChest','Spine1','Spine.001']) : undefined);
+    if (anchor) anchor.attach(piece);
+    else root.attach(piece);
+  }
+  garment.removeFromParent();
 }
 
 function addLegacyBareBodyUnderlay(
@@ -353,6 +525,7 @@ export function assemblePlayerModel(
   const curatedBottom = presentation === 'tattoo' ? undefined : curatedDonorForSlot(richClothing, 'bottom');
   const curatedFootwear = presentation === 'tattoo' ? undefined : curatedDonorForSlot(richClothing, 'footwear');
   const topless = presentation === 'stage' && appearance.equipment.top.itemId === 'starter.top.topless' && !curatedTop;
+  const proceduralStarterTop = presentation === 'stage' && !curatedTop ? starterTopVisualItem(appearance) : null;
   const choices = [
     { part: 'head', style: headModelStyle(appearance), dye: appearance.head.hair, fabric: 'plain' as const },
     {
@@ -408,7 +581,8 @@ export function assemblePlayerModel(
           const skinMaterial = /skin/.test(name);
           const hideForTattooView = presentation === 'tattoo' && choice.part !== 'head' && !skinMaterial;
           const hideForTopless = topless && choice.part === 'body' && !skinMaterial;
-          if (hideForTattooView || hideForTopless) {
+          const hideForProceduralStarterTop = !!proceduralStarterTop && choice.part === 'body' && !skinMaterial;
+          if (hideForTattooView || hideForTopless || hideForProceduralStarterTop) {
             material.visible = false;
             material.transparent = true;
             material.opacity = 0;
@@ -513,6 +687,10 @@ export function assemblePlayerModel(
       (parent ?? result).add(part);
     }
   }
+  if (proceduralStarterTop) {
+    addStarterProceduralTop(result, bones, proceduralStarterTop);
+  }
+
   if (topless || presentation === 'tattoo') {
     // The live avatar donor meshes are clothing-first, so this neutral skinned
     // underlay prevents holes for topless and tattoo presentation modes.
@@ -549,9 +727,10 @@ export function assemblePlayerModel(
     addCuratedSkinDetails(result, bones, richClothing, quality);
   }
   addTattoos(result, tattoos, bones);
-  // V1 donor hands have an exaggerated open/splayed bind pose. A restrained
-  // neutral curl makes creator/profile hands read naturally while preserving
-  // all finger bones for gig-specific instrument posing.
+  // V1 donor hands have long, exaggerated fingers and an open/splayed bind pose.
+  // Keep the original skin weights and animation chains but improve their
+  // proportions and resting silhouette for creator/profile close-ups.
+  applyV1HandProportionPolish(bones);
   applyRelaxedV1HandPose(bones);
   result.userData.rockmundoAvatarPresentation = presentation;
   result.updateMatrixWorld(true);
