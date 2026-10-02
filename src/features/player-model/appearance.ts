@@ -26,6 +26,8 @@ export const STARTER_ITEMS: Record<EquipmentSlot, StarterItem[]> = {
     ['denim', 'casual', 'Denim trousers', 'denim'], ['blue-jeans', 'casual', 'Blue straight jeans', 'denim'], ['black-jeans', 'punk', 'Black straight jeans', 'denim'], ['dark-slim-jeans', 'punk', 'Dark slim jeans', 'denim'], ['plaid', 'suit', 'Checked trousers', 'plaid'], ['pinstripe', 'suit', 'Pinstripe trousers', 'pinstripe'],
     ['denim-shorts', 'casual', 'Denim shorts', 'denim'], ['cargo-shorts', 'casual', 'Cargo shorts', 'plain'], ['athletic-shorts', 'punk', 'Athletic shorts', 'plain'],
     ['boxer-briefs', 'casual', 'Boxer briefs', 'plain'], ['briefs', 'casual', 'Briefs', 'plain'],
+    ['chinos', 'casual', 'Chinos', 'plain'], ['wide-leg', 'casual', 'Wide-leg trousers', 'plain'],
+    ['pleated-skirt', 'casual', 'Pleated skirt', 'plain'], ['mini-skirt', 'punk', 'Mini skirt', 'plain'],
   ]),
   footwear: wardrobe('footwear', [
     ['casual', 'casual', 'Everyday shoes', 'plain'], ['punk', 'punk', 'Punk boots', 'plain'], ['suit', 'suit', 'Formal shoes', 'plain'],
