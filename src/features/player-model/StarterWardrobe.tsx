@@ -1,5 +1,5 @@
 import { Shirt, Footprints } from 'lucide-react';
-import { CLOTHING_COLORS, SLOT_LABELS, equipmentItem, starterItemsForWardrobe, type EquipmentSlot, type PlayerAppearance } from './appearance';
+import { CLOTHING_COLORS, LIVE_STARTER_ITEM_IDS, SLOT_LABELS, equipmentItem, starterItemsForWardrobe, type EquipmentSlot, type PlayerAppearance } from './appearance';
 
 export function StarterWardrobe({ slot, appearance, onChange }: { slot: EquipmentSlot; appearance: PlayerAppearance; onChange: (next: PlayerAppearance) => void }) {
   const equipped = appearance.equipment[slot];
@@ -15,6 +15,7 @@ export function StarterWardrobe({ slot, appearance, onChange }: { slot: Equipmen
       </button>)}
     </div>
     <p className="player-model-wardrobe__equipped">Selected: {equipmentItem(appearance, slot).label}</p>
+    {!LIVE_STARTER_ITEM_IDS.has(equipped.itemId) && <p className="player-model-wardrobe__equipped">This saved item is temporarily shown with a stable V1 fallback until its fitted asset is ready.</p>}
     <div className="player-model-wardrobe__colours" role="group" aria-label={`${SLOT_LABELS[slot]} colours`}>
       {CLOTHING_COLORS.map(([name, color]) => <button key={color} type="button" title={name} aria-label={`${SLOT_LABELS[slot]} colour: ${name}`} aria-pressed={equipped.color === color} style={{ backgroundColor: color }} onClick={() => edit({ color })} />)}
       <label>Custom<input type="color" aria-label={`Custom ${slot} colour`} value={equipped.color} onChange={event => edit({ color: event.target.value })} /></label>
