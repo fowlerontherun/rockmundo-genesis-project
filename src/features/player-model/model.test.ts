@@ -373,6 +373,42 @@ describe('shipped modular stage models', () => {
     disposeModel(actor.root);
   });
 
+  it.each(['masculine', 'feminine'] as const)('renders the %s zip hoodie from fitted skinned V1 geometry', frame => {
+    const appearance = defaultAppearance('zip-hoodie-fitted');
+    appearance.body.frame = frame;
+    appearance.equipment.top.itemId = 'starter.top.zip-hoodie';
+    const model = assemblePlayerModel(library, appearance);
+    const sleeves = model.getObjectByName('avatar-v1-fitted-zip-hoodie-sleeves') as T.SkinnedMesh | undefined;
+    expect(sleeves).toBeTruthy();
+    expect(sleeves?.userData.avatarV1FittedSleeveVariant).toBe('starter.top.zip-hoodie');
+    expect(Number(sleeves?.userData.avatarV1FittedSleeveTriangleCount)).toBeGreaterThan(4);
+    expect(model.getObjectByName('avatar-v1-zip-hoodie-hood')).toBeTruthy();
+    expect(model.getObjectByName('avatar-v1-zip-hoodie-zip')).toBeTruthy();
+    expect(model.getObjectByName('avatar-v1-zip-hoodie-pocket-left')).toBeTruthy();
+    expect(model.getObjectByName('avatar-v1-zip-hoodie-pocket-right')).toBeTruthy();
+    expect(model.getObjectByName('Starter_Body_garment-piece')).toBeFalsy();
+    expect(starterItemsForWardrobe('top').some(item => item.id === 'starter.top.zip-hoodie')).toBe(true);
+    disposeModel(model);
+  });
+
+  it.each(['masculine', 'feminine'] as const)('keeps the %s fitted zip hoodie bounded during gig animation', frame => {
+    const appearance = defaultAppearance('zip-hoodie-animation');
+    appearance.body.frame = frame;
+    appearance.equipment.top.itemId = 'starter.top.zip-hoodie';
+    const source = assemblePlayerModel(library, appearance);
+    const actor = new Musician(source, 'guitar', [0, 0, 0], 0, undefined, appearance);
+    disposeModel(source);
+    for (const time of [0, 4, 13, 25]) {
+      actor.update(time, .8, false);
+      const bounds = new T.Box3().setFromObject(actor.root);
+      expect(bounds.max.y).toBeLessThan(2.85);
+      expect(bounds.min.y).toBeGreaterThan(-.25);
+      expect(bounds.max.x - bounds.min.x).toBeLessThan(2.45);
+    }
+    expect(actor.root.getObjectByName('avatar-v1-zip-hoodie-hood')).toBeTruthy();
+    disposeModel(actor.root);
+  });
+
   it.each(['masculine', 'feminine'] as const)('keeps the %s Rockmundo chest print nearly flush to the garment surface', frame => {
     const appearance = defaultAppearance('logo-surface');
     appearance.body.frame = frame;
@@ -467,7 +503,6 @@ describe('appearance boundaries', () => {
 describe('V1 starter clothing safety gate', () => {
   it('only exposes visually verified starter clothing in the live wardrobe', () => {
     expect(starterItemsForWardrobe('top').map(item => item.id)).not.toEqual(expect.arrayContaining([
-      'starter.top.zip-hoodie',
       'starter.top.denim-jacket',
       'starter.top.flannel-shirt',
     ]));

@@ -60,6 +60,7 @@ const V1_SKINNED_TEE_ITEMS = new Set([
 // valid and resolve through visualEquipmentItem() to a safe donor fallback.
 const V1_SKINNED_OUTERWEAR_ITEMS = new Set<string>([
   'starter.top.hoodie',
+  'starter.top.zip-hoodie',
 ]);
 
 const V1_CROPPED_BOTTOM_ITEMS = new Set([
@@ -350,7 +351,7 @@ function addV1FittedLongSleeves(mesh: T.SkinnedMesh, materials: T.Material[], it
   const sleevePosition = sleeveGeometry.getAttribute('position') as T.BufferAttribute;
   const sleeveNormal = sleeveGeometry.getAttribute('normal') as T.BufferAttribute | undefined;
   const usedVertices = new Set(sleeveIndices);
-  const surfaceOffset = itemId === 'starter.top.hoodie' ? .007 : .004;
+  const surfaceOffset = itemId === 'starter.top.hoodie' || itemId === 'starter.top.zip-hoodie' ? .007 : .004;
   if (sleeveNormal) {
     for (const vertex of usedVertices) {
       sleevePosition.setXYZ(
@@ -367,14 +368,18 @@ function addV1FittedLongSleeves(mesh: T.SkinnedMesh, materials: T.Material[], it
   sleeveGeometry.computeBoundingSphere();
 
   const sleeveMaterial = garmentMaterial.clone();
-  sleeveMaterial.name = itemId === 'starter.top.hoodie' ? 'V1FittedHoodieSleeve' : 'V1FittedLongSleeve';
+  sleeveMaterial.name = itemId === 'starter.top.hoodie' || itemId === 'starter.top.zip-hoodie' ? 'V1FittedHoodieSleeve' : 'V1FittedLongSleeve';
   sleeveMaterial.polygonOffset = true;
   sleeveMaterial.polygonOffsetFactor = -2;
   sleeveMaterial.polygonOffsetUnits = -2;
   sleeveMaterial.roughness = Math.max(.82, sleeveMaterial.roughness);
 
   const sleeves = new T.SkinnedMesh(sleeveGeometry, sleeveMaterial);
-  sleeves.name = itemId === 'starter.top.hoodie' ? 'avatar-v1-fitted-hoodie-sleeves' : 'avatar-v1-fitted-long-sleeves';
+  sleeves.name = itemId === 'starter.top.hoodie'
+    ? 'avatar-v1-fitted-hoodie-sleeves'
+    : itemId === 'starter.top.zip-hoodie'
+      ? 'avatar-v1-fitted-zip-hoodie-sleeves'
+      : 'avatar-v1-fitted-long-sleeves';
   sleeves.castShadow = true;
   sleeves.receiveShadow = true;
   sleeves.bind(mesh.skeleton, mesh.bindMatrix.clone());
@@ -631,8 +636,10 @@ function addV1OuterwearFrontDetail(root: T.Object3D, appearance: PlayerAppearanc
 }
 
 function addV1HoodieDetails(root: T.Object3D, appearance: PlayerAppearance, bones: Map<string, T.Bone>) {
-  if (appearance.equipment.top.itemId !== 'starter.top.hoodie') return;
-  if (visualEquipmentItem(appearance, 'top').id !== 'starter.top.hoodie') return;
+  const itemId = appearance.equipment.top.itemId;
+  const zip = itemId === 'starter.top.zip-hoodie';
+  if (itemId !== 'starter.top.hoodie' && !zip) return;
+  if (visualEquipmentItem(appearance, 'top').id !== itemId) return;
 
   const chest = findPlayerBone(bones, ['Spine2','Spine.002','Chest','UpperChest'])
     ?? findPlayerBone(bones, ['Spine1','Spine.001']);
@@ -648,12 +655,11 @@ function addV1HoodieDetails(root: T.Object3D, appearance: PlayerAppearance, bone
   });
   fabric.name = 'V1HoodieDetail';
 
-  // Compact hood roll follows the neck rather than floating from the torso.
   const hood = new T.Mesh(
     new T.TorusGeometry(appearance.body.frame === 'feminine' ? .105 : .115, .027, 10, 32, Math.PI * 1.55),
     fabric.clone(),
   );
-  hood.name = 'avatar-v1-hoodie-hood';
+  hood.name = zip ? 'avatar-v1-zip-hoodie-hood' : 'avatar-v1-hoodie-hood';
   hood.rotation.x = Math.PI / 2;
   hood.rotation.z = Math.PI * .22;
   hood.position.copy(neck.getWorldPosition(new T.Vector3())).add(new T.Vector3(0, -.025, -.035));
@@ -668,25 +674,40 @@ function addV1HoodieDetails(root: T.Object3D, appearance: PlayerAppearance, bone
   );
   if (!attachment) return;
 
-  const pocketShape = new T.Shape();
-  pocketShape.moveTo(-.105, .045);
-  pocketShape.quadraticCurveTo(-.125, .015, -.11, -.065);
-  pocketShape.lineTo(.11, -.065);
-  pocketShape.quadraticCurveTo(.125, .015, .105, .045);
-  pocketShape.lineTo(.06, .06);
-  pocketShape.lineTo(-.06, .06);
-  pocketShape.closePath();
-  const pocket = new T.Mesh(new T.ShapeGeometry(pocketShape), fabric.clone());
-  pocket.name = 'avatar-v1-hoodie-kangaroo-pocket';
-  pocket.renderOrder = 2;
-  attachSurfaceGraphic(root, chest, pocket, attachment, .00065);
+  if (zip) {
+    for (const side of [-1, 1]) {
+      const pocketShape = new T.Shape();
+      pocketShape.moveTo(side * .012, .045);
+      pocketShape.lineTo(side * .11, .04);
+      pocketShape.lineTo(side * .115, -.07);
+      pocketShape.lineTo(side * .018, -.07);
+      pocketShape.closePath();
+      const pocket = new T.Mesh(new T.ShapeGeometry(pocketShape), fabric.clone());
+      pocket.name = `avatar-v1-zip-hoodie-pocket-${side < 0 ? 'left' : 'right'}`;
+      pocket.renderOrder = 2;
+      attachSurfaceGraphic(root, chest, pocket, attachment, .00062);
+    }
+  } else {
+    const pocketShape = new T.Shape();
+    pocketShape.moveTo(-.105, .045);
+    pocketShape.quadraticCurveTo(-.125, .015, -.11, -.065);
+    pocketShape.lineTo(.11, -.065);
+    pocketShape.quadraticCurveTo(.125, .015, .105, .045);
+    pocketShape.lineTo(.06, .06);
+    pocketShape.lineTo(-.06, .06);
+    pocketShape.closePath();
+    const pocket = new T.Mesh(new T.ShapeGeometry(pocketShape), fabric.clone());
+    pocket.name = 'avatar-v1-hoodie-kangaroo-pocket';
+    pocket.renderOrder = 2;
+    attachSurfaceGraphic(root, chest, pocket, attachment, .00065);
 
-  for (const side of [-1, 1]) {
-    const drawstring = new T.Mesh(new T.PlaneGeometry(.006, .12), fabric.clone());
-    drawstring.name = `avatar-v1-hoodie-drawstring-${side < 0 ? 'left' : 'right'}`;
-    drawstring.position.x = side * .026;
-    drawstring.position.y = -.045;
-    pocket.add(drawstring);
+    for (const side of [-1, 1]) {
+      const drawstring = new T.Mesh(new T.PlaneGeometry(.006, .12), fabric.clone());
+      drawstring.name = `avatar-v1-hoodie-drawstring-${side < 0 ? 'left' : 'right'}`;
+      drawstring.position.x = side * .026;
+      drawstring.position.y = -.045;
+      pocket.add(drawstring);
+    }
   }
 }
 
@@ -1457,7 +1478,11 @@ export function assemblePlayerModel(
         if (
           choice.part === 'body' &&
           !choice.assetKey &&
-          (appearance.equipment.top.itemId === 'starter.top.long-sleeve' || appearance.equipment.top.itemId === 'starter.top.hoodie')
+          (
+            appearance.equipment.top.itemId === 'starter.top.long-sleeve' ||
+            appearance.equipment.top.itemId === 'starter.top.hoodie' ||
+            appearance.equipment.top.itemId === 'starter.top.zip-hoodie'
+          )
         ) {
           addV1FittedLongSleeves(
             clonedNode,
