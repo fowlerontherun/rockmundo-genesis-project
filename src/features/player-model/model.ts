@@ -898,26 +898,6 @@ function applyV1HandProportionPolish(bones: Map<string, T.Bone>) {
   }
 }
 
-function applyRelaxedV1HandPose(bones: Map<string, T.Bone>) {
-  const joint = (digit: string, index: number, side: 'L' | 'R') =>
-    findPlayerBone(bones, [`${digit}${index}.${side}`, `${digit}${index}_${side}`, `${digit}${index}${side}`]);
-
-  for (const side of ['L', 'R'] as const) {
-    const sideSign = side === 'L' ? 1 : -1;
-    const curls: Record<string, number> = { Index: .10, Middle: .14, Ring: .17, Pinky: .20, Thumb: .08 };
-    const splays: Record<string, number> = { Index: -.018, Middle: -.006, Ring: .008, Pinky: .018, Thumb: -.025 };
-    for (const digit of ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky']) {
-      for (const index of [1, 2, 3] as const) {
-        const bone = joint(digit, index, side);
-        if (!bone) continue;
-        const curl = curls[digit] * (index === 1 ? .55 : index === 2 ? .82 : 1);
-        bone.rotateX(curl);
-        if (index === 1) bone.rotateZ(splays[digit] * sideSign);
-      }
-    }
-  }
-}
-
 // Hotfix guard: the procedural starter garment meshes are preview-grade and
 // attach too rigidly to the V1 skeleton in the live fitting room (flat torso
 // panels / T-pose sleeves). Keep their definitions available for isolated
@@ -1684,11 +1664,6 @@ export function assemblePlayerModel(
     // The live avatar donor meshes are clothing-first, so this neutral skinned
     // underlay prevents holes for topless and tattoo presentation modes.
     addLegacyBareBodyUnderlay(result, appearance, bones, quality, presentation === 'tattoo');
-  } else if (presentation === 'stage' && V1_SKINNED_TEE_ITEMS.has(appearance.equipment.top.itemId)) {
-    // T-shirt donors were authored with long sleeves. After trimming the garment
-    // triangles, provide a fitted skin-only arm layer so the exposed forearms and
-    // lower upper-arms cannot disappear or leave holes.
-    addLegacyBareBodyUnderlay(result, appearance, bones, quality, false, false);
   }
 
   // Punk trousers were authored to meet tall boots. A skinned calf beneath
@@ -1728,7 +1703,6 @@ export function assemblePlayerModel(
   // Keep the original skin weights and animation chains but improve their
   // proportions and resting silhouette for creator/profile close-ups.
   applyV1HandProportionPolish(bones);
-  applyRelaxedV1HandPose(bones);
   result.userData.rockmundoAvatarPresentation = presentation;
   result.updateMatrixWorld(true);
   return result;
