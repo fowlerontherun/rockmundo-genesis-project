@@ -119,9 +119,86 @@ const V1_CROPPED_BOTTOM_ITEMS = new Set([
   'starter.bottom.briefs',
 ]);
 
+const V1_FULL_LENGTH_BOTTOM_ITEMS = new Set([
+  'starter.bottom.casual',
+  'starter.bottom.punk',
+  'starter.bottom.suit',
+  'starter.bottom.denim',
+  'starter.bottom.blue-jeans',
+  'starter.bottom.black-jeans',
+  'starter.bottom.dark-slim-jeans',
+  'starter.bottom.plaid',
+  'starter.bottom.pinstripe',
+  'starter.bottom.chinos',
+  'starter.bottom.wide-leg',
+]);
+
 const V1_SHAPED_TROUSER_ITEMS = new Set([
   'starter.bottom.chinos',
 ]);
+
+function trimV1TeeToShortSleeves(mesh: T.SkinnedMesh, materials: T.Material[], itemId: string) {
+  const geometry = mesh.geometry;
+  const skinIndex = geometry.getAttribute('skinIndex') as T.BufferAttribute | undefined;
+  const skinWeight = geometry.getAttribute('skinWeight') as T.BufferAttribute | undefined;
+  if (!skinIndex || !skinWeight || !geometry.groups.length) return;
+
+  const garmentMaterialIndices = new Set<number>();
+  materials.forEach((material, index) => {
+    if (!/skin|eye|earring|metal|hair/i.test(material.name)) garmentMaterialIndices.add(index);
+  });
+  if (!garmentMaterialIndices.size) return;
+
+  const sourceIndex = geometry.index;
+  const indexAt = (offset: number) => sourceIndex ? sourceIndex.getX(offset) : offset;
+  const weightsFor = (vertex: number) => {
+    let upper = 0, lower = 0, hand = 0;
+    for (let channel = 0; channel < 4; channel += 1) {
+      const weight = skinWeight.getComponent(vertex, channel);
+      if (weight <= 0) continue;
+      const boneName = mesh.skeleton.bones[skinIndex.getComponent(vertex, channel)]?.name ?? '';
+      if (/upperarm/i.test(boneName)) upper += weight;
+      else if (/lowerarm|forearm/i.test(boneName)) lower += weight;
+      else if (/hand|wrist/i.test(boneName)) hand += weight;
+    }
+    return { upper, lower, hand };
+  };
+
+  const nextIndices: number[] = [];
+  const nextGroups: Array<{ start: number; count: number; materialIndex: number }> = [];
+  let removed = 0;
+  for (const group of geometry.groups) {
+    const start = nextIndices.length;
+    const garment = garmentMaterialIndices.has(group.materialIndex ?? 0);
+    for (let i = group.start; i + 2 < group.start + group.count; i += 3) {
+      const a = indexAt(i), b = indexAt(i + 1), c = indexAt(i + 2);
+      let removeTriangle = false;
+      if (garment) {
+        const weights = [weightsFor(a), weightsFor(b), weightsFor(c)];
+        const lower = Math.max(...weights.map(value => value.lower));
+        const hand = Math.max(...weights.map(value => value.hand));
+        // Remove forearm/wrist cloth so starter T-shirts are genuinely
+        // short-sleeved. Upper-arm cloth remains as the T-shirt sleeve.
+        removeTriangle = lower > .16 || hand > .08;
+      }
+      if (removeTriangle) { removed += 1; continue; }
+      nextIndices.push(a, b, c);
+    }
+    const count = nextIndices.length - start;
+    if (count) nextGroups.push({ start, count, materialIndex: group.materialIndex ?? 0 });
+  }
+
+  if (!removed || !nextIndices.length) return;
+  geometry.setIndex(nextIndices);
+  geometry.clearGroups();
+  nextGroups.forEach(group => geometry.addGroup(group.start, group.count, group.materialIndex));
+  geometry.computeVertexNormals();
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  mesh.userData.avatarV1ShortSleeveTrimmed = true;
+  mesh.userData.avatarV1ShortSleeveVariant = itemId;
+  mesh.userData.avatarV1ShortSleeveRemovedTriangles = removed;
+}
 
 function polishV1CrewTeeGeometry(
   mesh: T.SkinnedMesh,
@@ -183,10 +260,10 @@ function polishV1CrewTeeGeometry(
     // bind-space edits only; no bones, weights or inverse binds are replaced.
     const vintage = itemId === 'starter.top.vintage-charcoal';
     const vNeck = itemId === 'starter.top.v-neck';
-    const torsoXScale = yNorm < .24 ? (vintage ? .91 : .94) : (vintage ? .945 : .965);
-    const topDepthScale = yNorm > .68 ? (vNeck ? .83 : .86) : (vintage ? .9 : .93);
-    const xScale = armWeight > .42 ? (vintage ? .8 : .84) : torsoXScale;
-    const zScale = armWeight > .42 ? .89 : topDepthScale;
+    const torsoXScale = yNorm < .24 ? (vintage ? .90 : .925) : (vintage ? .935 : .95);
+    const topDepthScale = yNorm > .68 ? (vNeck ? .80 : .82) : (vintage ? .87 : .89);
+    const xScale = armWeight > .42 ? (vintage ? .76 : .79) : torsoXScale;
+    const zScale = armWeight > .42 ? .84 : topDepthScale;
     if (armWeight > .42) sleeveVertices += 1;
     position.setXYZ(
       vertex,
@@ -204,6 +281,7 @@ function polishV1CrewTeeGeometry(
   mesh.userData.avatarV1CrewTeeVariant = itemId;
   mesh.userData.avatarV1CrewTeeVertexCount = garmentVertices.size;
   mesh.userData.avatarV1CrewTeeSleeveVertexCount = sleeveVertices;
+  trimV1TeeToShortSleeves(mesh, materials, itemId);
 }
 
 function polishV1OuterwearGeometry(
@@ -1106,6 +1184,64 @@ function addV1BareLegUnderlay(
   }
 }
 
+function addV1ExposedArmUnderlay(
+  root: T.Object3D,
+  appearance: PlayerAppearance,
+  bones: Map<string, T.Bone>,
+  quality: AvatarVisualQuality,
+) {
+  root.updateMatrixWorld(true);
+  const muscle = appearance.body.muscle ?? 'natural';
+  const muscleScale = { natural: 1, toned: 1.035, athletic: 1.075, muscular: 1.13, bodybuilder: 1.2 }[muscle];
+  const frameScale = appearance.body.frame === 'feminine' ? .92 : 1;
+  const material = upgradeSkinMaterial(
+    Object.assign(new T.MeshStandardMaterial({
+      color: appearance.body.skin,
+      roughness: skinRoughness(appearance),
+      metalness: 0,
+    }), { name: 'Skin_Underlay' }),
+    appearance,
+    quality,
+  );
+  material.name = 'Skin_Underlay';
+
+  const bone = (...names: string[]) => findPlayerBone(bones, names);
+  const addSegment = (name: string, driver: T.Bone | undefined, from: T.Bone | undefined, to: T.Bone | undefined, radiusX: number, radiusZ: number) => {
+    if (!driver || !from || !to) return;
+    const start = from.getWorldPosition(new T.Vector3());
+    const end = to.getWorldPosition(new T.Vector3());
+    const direction = end.clone().sub(start);
+    const length = direction.length();
+    if (!Number.isFinite(length) || length < .015) return;
+    const geometry = new T.SphereGeometry(1, quality === 'cinematic' ? 24 : 16, quality === 'cinematic' ? 16 : 12);
+    geometry.applyMatrix4(new T.Matrix4().compose(
+      start.clone().add(end).multiplyScalar(.5),
+      new T.Quaternion().setFromUnitVectors(new T.Vector3(0, 1, 0), direction.normalize()),
+      new T.Vector3(radiusX, length * .53, radiusZ),
+    ));
+    const count = geometry.attributes.position.count;
+    const weights = new Float32Array(count * 4);
+    for (let i = 0; i < count; i += 1) weights[i * 4] = 1;
+    geometry.setAttribute('skinIndex', new T.Uint16BufferAttribute(new Uint16Array(count * 4), 4));
+    geometry.setAttribute('skinWeight', new T.Float32BufferAttribute(weights, 4));
+    geometry.computeVertexNormals();
+    const mesh = new T.SkinnedMesh(geometry, material);
+    mesh.name = `avatar-v1-exposed-arm-${name}`;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    root.add(mesh);
+    mesh.bind(new T.Skeleton([driver], [driver.matrixWorld.clone().invert()]), new T.Matrix4());
+  };
+
+  for (const side of ['L', 'R'] as const) {
+    const upperArm = bone(`UpperArm.${side}`, `UpperArm_${side}`, `UpperArm${side}`);
+    const lowerArm = bone(`LowerArm.${side}`, `LowerArm_${side}`, `LowerArm${side}`);
+    const hand = bone(`Hand.${side}`, `Hand_${side}`, `Hand${side}`);
+    addSegment(`upper-${side.toLowerCase()}`, upperArm, upperArm, lowerArm, .061 * frameScale * muscleScale, .06 * muscleScale);
+    addSegment(`lower-${side.toLowerCase()}`, lowerArm, lowerArm, hand, .046 * frameScale * (1 + (muscleScale - 1) * .7), .045 * (1 + (muscleScale - 1) * .7));
+  }
+}
+
 function addLegacyBareBodyUnderlay(
   root: T.Object3D,
   appearance: PlayerAppearance,
@@ -1402,7 +1538,8 @@ export function assemblePlayerModel(
         if (
           choice.part === 'legs' &&
           !choice.assetKey &&
-          V1_CROPPED_BOTTOM_ITEMS.has(appearance.equipment.bottom.itemId)
+          V1_CROPPED_BOTTOM_ITEMS.has(appearance.equipment.bottom.itemId) &&
+          !V1_FULL_LENGTH_BOTTOM_ITEMS.has(appearance.equipment.bottom.itemId)
         ) {
           cropV1BottomGarmentGeometry(
             clonedNode,
@@ -1561,6 +1698,14 @@ export function assemblePlayerModel(
   if (proceduralStarterBottom) {
     addStarterProceduralGarment(result, bones, proceduralStarterBottom, 'Legs');
     if (starterBottomExposesLegs(proceduralStarterBottom)) addV1BareLegUnderlay(result, appearance, bones, quality);
+  }
+
+  if (
+    presentation === 'stage' &&
+    !curatedTop &&
+    (V1_SKINNED_TEE_ITEMS.has(appearance.equipment.top.itemId) || appearance.equipment.top.itemId === 'starter.top.tank')
+  ) {
+    addV1ExposedArmUnderlay(result, appearance, bones, quality);
   }
 
   if (topless || presentation === 'tattoo') {
