@@ -595,6 +595,30 @@ describe('feminine breast size', () => {
     disposeModel(model);
   });
 
+  it('makes larger feminine breast sizes visibly deeper than smaller sizes', () => {
+    const chestFront = (size: number) => {
+      const appearance = defaultAppearance(`breast-visible-${size}`);
+      appearance.body.frame = 'feminine';
+      appearance.body.breastSize = size;
+      appearance.equipment.top.itemId = 'starter.top.casual';
+      const model = assemblePlayerModel(library, appearance);
+      let front = -Infinity;
+      model.traverse(node => {
+        if (!(node instanceof T.SkinnedMesh) || !Number(node.userData.avatarV1BreastSizeAffectedVertices)) return;
+        const position = node.geometry.getAttribute('position') as T.BufferAttribute;
+        for (let vertex = 0; vertex < position.count; vertex += 1) front = Math.max(front, position.getZ(vertex));
+      });
+      disposeModel(model);
+      return front;
+    };
+
+    const smallFront = chestFront(.75);
+    const largeFront = chestFront(1.35);
+    expect(Number.isFinite(smallFront)).toBe(true);
+    expect(Number.isFinite(largeFront)).toBe(true);
+    expect(largeFront - smallFront).toBeGreaterThan(.015);
+  });
+
   it('keeps the Rockmundo chest print surface-bound across feminine breast sizes', () => {
     for (const size of [.75, 1, 1.35]) {
       const appearance = defaultAppearance(`breast-logo-${size}`);

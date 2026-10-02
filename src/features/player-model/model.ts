@@ -55,15 +55,12 @@ function applyFeminineBreastSize(mesh: T.SkinnedMesh, size: number) {
   const skinWeight = geometry.getAttribute('skinWeight') as T.BufferAttribute | undefined;
   if (!position || !skinIndex || !skinWeight) return;
 
-  geometry.computeBoundingBox();
-  const bounds = geometry.boundingBox;
-  if (!bounds) return;
-  const centreZ = (bounds.min.z + bounds.max.z) * .5;
-  const frontDepth = Math.max(.001, bounds.max.z - centreZ);
-  const width = Math.max(.001, bounds.max.x - bounds.min.x);
-  const delta = T.MathUtils.clamp(size, .75, 1.35) - 1;
-  let affected = 0;
-
+  // Derive the deformation volume from chest-weighted vertices, not the
+  // whole body mesh. The V1 donor includes arms/hands in the same geometry and
+  // their Z extents can move the global midpoint in front of the torso. That
+  // made the slider save correctly while barely touching the visible chest.
+  let chestMinX = Infinity, chestMaxX = -Infinity, chestMinZ = Infinity, chestMaxZ = -Infinity;
+  const chestWeights = new Float32Array(position.count);
   for (let vertex = 0; vertex < position.count; vertex += 1) {
     let chestWeight = 0;
     for (let channel = 0; channel < 4; channel += 1) {
@@ -73,18 +70,37 @@ function applyFeminineBreastSize(mesh: T.SkinnedMesh, size: number) {
       if (/spine2|spine\.002|chest|upperchest/i.test(boneName)) chestWeight += weight;
       else if (/spine1|spine\.001/i.test(boneName)) chestWeight += weight * .35;
     }
+    chestWeights[vertex] = chestWeight;
+    if (chestWeight < .18) continue;
+    const x = position.getX(vertex), z = position.getZ(vertex);
+    chestMinX = Math.min(chestMinX, x); chestMaxX = Math.max(chestMaxX, x);
+    chestMinZ = Math.min(chestMinZ, z); chestMaxZ = Math.max(chestMaxZ, z);
+  }
+  if (!Number.isFinite(chestMinZ) || !Number.isFinite(chestMaxZ)) return;
+
+  const centreZ = (chestMinZ + chestMaxZ) * .5;
+  const frontDepth = Math.max(.001, chestMaxZ - centreZ);
+  const centreX = (chestMinX + chestMaxX) * .5;
+  const width = Math.max(.001, chestMaxX - chestMinX);
+  const delta = T.MathUtils.clamp(size, .75, 1.35) - 1;
+  let affected = 0;
+
+  for (let vertex = 0; vertex < position.count; vertex += 1) {
+    const chestWeight = chestWeights[vertex];
     if (chestWeight < .18) continue;
 
     const x = position.getX(vertex), z = position.getZ(vertex);
     const front = T.MathUtils.clamp((z - centreZ) / frontDepth, 0, 1);
     if (front <= .04) continue;
-    const centreX = (bounds.min.x + bounds.max.x) * .5;
     const lateral = 1 - T.MathUtils.clamp(Math.abs(x - centreX) / (width * .48), 0, 1);
-    const influence = T.MathUtils.clamp(chestWeight, 0, 1) * Math.pow(front, 1.35) * (.42 + .58 * lateral);
+    const influence = T.MathUtils.clamp(chestWeight, 0, 1) * Math.pow(front, 1.2) * (.48 + .52 * lateral);
     if (influence <= .02) continue;
 
-    position.setZ(vertex, z + frontDepth * delta * .72 * influence);
-    position.setX(vertex, centreX + (x - centreX) * (1 + delta * .08 * influence));
+    // Make the full slider range visually meaningful while retaining the donor
+    // rig, skin weights and garment fit. +Z is the established V1 front axis
+    // (also used by findFrontSurfaceAttachment).
+    position.setZ(vertex, z + frontDepth * delta * 1.15 * influence);
+    position.setX(vertex, centreX + (x - centreX) * (1 + delta * .12 * influence));
     affected += 1;
   }
 
