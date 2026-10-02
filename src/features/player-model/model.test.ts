@@ -269,6 +269,14 @@ describe('shipped modular stage models', () => {
       expect(trimmed.some(mesh => Number(mesh.userData.avatarV1ShortSleeveRemovedTriangles) > 0)).toBe(true);
       expect(model.getObjectByName('avatar-v1-skin-underlay-lower-arm-l')).toBeTruthy();
       expect(model.getObjectByName('avatar-v1-skin-underlay-lower-arm-r')).toBeTruthy();
+      const leftUpper = model.getObjectByName('avatar-v1-skin-underlay-upper-arm-l') as T.SkinnedMesh | undefined;
+      const rightUpper = model.getObjectByName('avatar-v1-skin-underlay-upper-arm-r') as T.SkinnedMesh | undefined;
+      expect(leftUpper).toBeTruthy();
+      expect(rightUpper).toBeTruthy();
+      const leftBounds = new T.Box3().setFromObject(leftUpper!);
+      const rightBounds = new T.Box3().setFromObject(rightUpper!);
+      expect(leftBounds.max.y - leftBounds.min.y).toBeLessThan(.24);
+      expect(rightBounds.max.y - rightBounds.min.y).toBeLessThan(.24);
       expect(model.getObjectByName('avatar-v1-fitted-long-sleeves')).toBeFalsy();
       expect(model.getObjectByName('avatar-v1-hoodie-hood')).toBeFalsy();
       expect(model.getObjectByName('avatar-v1-zip-hoodie-hood')).toBeFalsy();
@@ -500,11 +508,14 @@ describe('shipped modular stage models', () => {
     appearance.body.frame = frame;
     const model = assemblePlayerModel(library, appearance);
     let adjusted = 0;
+    let neutralWrists = 0;
     model.traverse(node => {
-      if (!(node instanceof T.Bone) || !/^(Index|Middle|Ring|Pinky|Thumb)1[._]?[LR]$/i.test(node.name)) return;
-      if (Math.abs(node.rotation.x) > .02) adjusted += 1;
+      if (!(node instanceof T.Bone)) return;
+      if (/^(Index|Middle|Ring|Pinky|Thumb)1[._]?[LR]$/i.test(node.name) && Math.abs(node.rotation.x) > .02) adjusted += 1;
+      if (/^(Hand|Wrist)[._]?[LR]$/i.test(node.name) && node.userData.avatarV1NeutralWristPose) neutralWrists += 1;
     });
     expect(adjusted).toBeGreaterThanOrEqual(4);
+    expect(neutralWrists).toBe(2);
     disposeModel(model);
   });
 
