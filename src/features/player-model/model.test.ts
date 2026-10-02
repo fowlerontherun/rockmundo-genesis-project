@@ -267,16 +267,12 @@ describe('shipped modular stage models', () => {
       });
       expect(trimmed.length).toBeGreaterThan(0);
       expect(trimmed.some(mesh => Number(mesh.userData.avatarV1ShortSleeveRemovedTriangles) > 0)).toBe(true);
-      expect(model.getObjectByName('avatar-v1-skin-underlay-lower-arm-l')).toBeTruthy();
-      expect(model.getObjectByName('avatar-v1-skin-underlay-lower-arm-r')).toBeTruthy();
-      const leftUpper = model.getObjectByName('avatar-v1-skin-underlay-upper-arm-l') as T.SkinnedMesh | undefined;
-      const rightUpper = model.getObjectByName('avatar-v1-skin-underlay-upper-arm-r') as T.SkinnedMesh | undefined;
-      expect(leftUpper).toBeTruthy();
-      expect(rightUpper).toBeTruthy();
-      const leftBounds = new T.Box3().setFromObject(leftUpper!);
-      const rightBounds = new T.Box3().setFromObject(rightUpper!);
-      expect(leftBounds.max.y - leftBounds.min.y).toBeLessThan(.24);
-      expect(rightBounds.max.y - rightBounds.min.y).toBeLessThan(.24);
+      expect(model.getObjectByName('avatar-v1-skin-underlay-upper-arm-l')).toBeFalsy();
+      expect(model.getObjectByName('avatar-v1-skin-underlay-upper-arm-r')).toBeFalsy();
+      expect(model.getObjectByName('avatar-v1-skin-underlay-lower-arm-l')).toBeFalsy();
+      expect(model.getObjectByName('avatar-v1-skin-underlay-lower-arm-r')).toBeFalsy();
+      expect(model.getObjectByName('avatar-v1-skin-underlay-elbow-l')).toBeFalsy();
+      expect(model.getObjectByName('avatar-v1-skin-underlay-elbow-r')).toBeFalsy();
       expect(model.getObjectByName('avatar-v1-fitted-long-sleeves')).toBeFalsy();
       expect(model.getObjectByName('avatar-v1-hoodie-hood')).toBeFalsy();
       expect(model.getObjectByName('avatar-v1-zip-hoodie-hood')).toBeFalsy();
@@ -508,14 +504,11 @@ describe('shipped modular stage models', () => {
     appearance.body.frame = frame;
     const model = assemblePlayerModel(library, appearance);
     let adjusted = 0;
-    let neutralWrists = 0;
     model.traverse(node => {
-      if (!(node instanceof T.Bone)) return;
-      if (/^(Index|Middle|Ring|Pinky|Thumb)1[._]?[LR]$/i.test(node.name) && Math.abs(node.rotation.x) > .02) adjusted += 1;
-      if (/^(Hand|Wrist)[._]?[LR]$/i.test(node.name) && node.userData.avatarV1NeutralWristPose) neutralWrists += 1;
+      if (!(node instanceof T.Bone) || !/^(Index|Middle|Ring|Pinky|Thumb)1[._]?[LR]$/i.test(node.name)) return;
+      if (Math.abs(node.rotation.x) > .02) adjusted += 1;
     });
     expect(adjusted).toBeGreaterThanOrEqual(4);
-    expect(neutralWrists).toBe(2);
     disposeModel(model);
   });
 
@@ -602,6 +595,30 @@ describe('feminine breast size', () => {
     const bounds = new T.Box3().setFromObject(model);
     expect(bounds.max.z - bounds.min.z).toBeLessThan(1.2);
     disposeModel(model);
+  });
+
+  it('makes larger feminine breast sizes visibly deeper than smaller sizes', () => {
+    const chestFront = (size: number) => {
+      const appearance = defaultAppearance(`breast-visible-${size}`);
+      appearance.body.frame = 'feminine';
+      appearance.body.breastSize = size;
+      appearance.equipment.top.itemId = 'starter.top.casual';
+      const model = assemblePlayerModel(library, appearance);
+      let front = -Infinity;
+      model.traverse(node => {
+        if (!(node instanceof T.SkinnedMesh) || !Number(node.userData.avatarV1BreastSizeAffectedVertices)) return;
+        const position = node.geometry.getAttribute('position') as T.BufferAttribute;
+        for (let vertex = 0; vertex < position.count; vertex += 1) front = Math.max(front, position.getZ(vertex));
+      });
+      disposeModel(model);
+      return front;
+    };
+
+    const smallFront = chestFront(.75);
+    const largeFront = chestFront(1.35);
+    expect(Number.isFinite(smallFront)).toBe(true);
+    expect(Number.isFinite(largeFront)).toBe(true);
+    expect(largeFront - smallFront).toBeGreaterThan(.015);
   });
 
   it('keeps the Rockmundo chest print surface-bound across feminine breast sizes', () => {

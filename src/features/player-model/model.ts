@@ -55,15 +55,12 @@ function applyFeminineBreastSize(mesh: T.SkinnedMesh, size: number) {
   const skinWeight = geometry.getAttribute('skinWeight') as T.BufferAttribute | undefined;
   if (!position || !skinIndex || !skinWeight) return;
 
-  geometry.computeBoundingBox();
-  const bounds = geometry.boundingBox;
-  if (!bounds) return;
-  const centreZ = (bounds.min.z + bounds.max.z) * .5;
-  const frontDepth = Math.max(.001, bounds.max.z - centreZ);
-  const width = Math.max(.001, bounds.max.x - bounds.min.x);
-  const delta = T.MathUtils.clamp(size, .75, 1.35) - 1;
-  let affected = 0;
-
+  // Derive the deformation volume from chest-weighted vertices, not the
+  // whole body mesh. The V1 donor includes arms/hands in the same geometry and
+  // their Z extents can move the global midpoint in front of the torso. That
+  // made the slider save correctly while barely touching the visible chest.
+  let chestMinX = Infinity, chestMaxX = -Infinity, chestMinZ = Infinity, chestMaxZ = -Infinity;
+  const chestWeights = new Float32Array(position.count);
   for (let vertex = 0; vertex < position.count; vertex += 1) {
     let chestWeight = 0;
     for (let channel = 0; channel < 4; channel += 1) {
@@ -73,18 +70,37 @@ function applyFeminineBreastSize(mesh: T.SkinnedMesh, size: number) {
       if (/spine2|spine\.002|chest|upperchest/i.test(boneName)) chestWeight += weight;
       else if (/spine1|spine\.001/i.test(boneName)) chestWeight += weight * .35;
     }
+    chestWeights[vertex] = chestWeight;
+    if (chestWeight < .18) continue;
+    const x = position.getX(vertex), z = position.getZ(vertex);
+    chestMinX = Math.min(chestMinX, x); chestMaxX = Math.max(chestMaxX, x);
+    chestMinZ = Math.min(chestMinZ, z); chestMaxZ = Math.max(chestMaxZ, z);
+  }
+  if (!Number.isFinite(chestMinZ) || !Number.isFinite(chestMaxZ)) return;
+
+  const centreZ = (chestMinZ + chestMaxZ) * .5;
+  const frontDepth = Math.max(.001, chestMaxZ - centreZ);
+  const centreX = (chestMinX + chestMaxX) * .5;
+  const width = Math.max(.001, chestMaxX - chestMinX);
+  const delta = T.MathUtils.clamp(size, .75, 1.35) - 1;
+  let affected = 0;
+
+  for (let vertex = 0; vertex < position.count; vertex += 1) {
+    const chestWeight = chestWeights[vertex];
     if (chestWeight < .18) continue;
 
     const x = position.getX(vertex), z = position.getZ(vertex);
     const front = T.MathUtils.clamp((z - centreZ) / frontDepth, 0, 1);
     if (front <= .04) continue;
-    const centreX = (bounds.min.x + bounds.max.x) * .5;
     const lateral = 1 - T.MathUtils.clamp(Math.abs(x - centreX) / (width * .48), 0, 1);
-    const influence = T.MathUtils.clamp(chestWeight, 0, 1) * Math.pow(front, 1.35) * (.42 + .58 * lateral);
+    const influence = T.MathUtils.clamp(chestWeight, 0, 1) * Math.pow(front, 1.2) * (.48 + .52 * lateral);
     if (influence <= .02) continue;
 
-    position.setZ(vertex, z + frontDepth * delta * .72 * influence);
-    position.setX(vertex, centreX + (x - centreX) * (1 + delta * .08 * influence));
+    // Make the full slider range visually meaningful while retaining the donor
+    // rig, skin weights and garment fit. +Z is the established V1 front axis
+    // (also used by findFrontSurfaceAttachment).
+    position.setZ(vertex, z + frontDepth * delta * 1.15 * influence);
+    position.setX(vertex, centreX + (x - centreX) * (1 + delta * .12 * influence));
     affected += 1;
   }
 
@@ -130,7 +146,8 @@ function trimV1TeeToShortSleeves(mesh: T.SkinnedMesh, materials: T.Material[]) {
   const position = geometry.getAttribute('position') as T.BufferAttribute | undefined;
   const skinIndex = geometry.getAttribute('skinIndex') as T.BufferAttribute | undefined;
   const skinWeight = geometry.getAttribute('skinWeight') as T.BufferAttribute | undefined;
-  if (!position || !skinIndex || !skinWeight || !geometry.groups.length) return;
+  if (!position || !skinIndex || !skinWeight) return;
+  const groups = geometry.groups.length ? geometry.groups : [{ start: 0, count: geometry.index?.count ?? position.count, materialIndex: 0 }];
 
   const garmentMaterialIndices = new Set<number>();
   materials.forEach((material, index) => {
@@ -199,7 +216,7 @@ function trimV1TeeToShortSleeves(mesh: T.SkinnedMesh, materials: T.Material[]) {
   const nextGroups: Array<{ start: number; count: number; materialIndex: number }> = [];
   let removed = 0;
 
-  for (const group of geometry.groups) {
+  for (const group of groups) {
     const start = nextIndices.length;
     const garment = garmentMaterialIndices.has(group.materialIndex ?? 0);
     for (let i = group.start; i + 2 < group.start + group.count; i += 3) {
@@ -240,7 +257,8 @@ function polishV1CrewTeeGeometry(
   const position = geometry.getAttribute('position') as T.BufferAttribute | undefined;
   const skinIndex = geometry.getAttribute('skinIndex') as T.BufferAttribute | undefined;
   const skinWeight = geometry.getAttribute('skinWeight') as T.BufferAttribute | undefined;
-  if (!position || !skinIndex || !skinWeight || !geometry.groups.length || !materials.length) return;
+  if (!position || !skinIndex || !skinWeight || !materials.length) return;
+  const groups = geometry.groups.length ? geometry.groups : [{ start: 0, count: geometry.index?.count ?? position.count, materialIndex: 0 }];
 
   const garmentMaterialIndices = new Set<number>();
   materials.forEach((material, index) => {
@@ -251,7 +269,7 @@ function polishV1CrewTeeGeometry(
 
   const garmentVertices = new Set<number>();
   const index = geometry.index;
-  for (const group of geometry.groups) {
+  for (const group of groups) {
     if (!garmentMaterialIndices.has(group.materialIndex ?? 0)) continue;
     const end = group.start + group.count;
     for (let i = group.start; i < end; i += 1) {
@@ -898,36 +916,6 @@ function applyV1HandProportionPolish(bones: Map<string, T.Bone>) {
   }
 }
 
-function applyRelaxedV1HandPose(bones: Map<string, T.Bone>) {
-  const joint = (digit: string, index: number, side: 'L' | 'R') =>
-    findPlayerBone(bones, [`${digit}${index}.${side}`, `${digit}${index}_${side}`, `${digit}${index}${side}`]);
-
-  for (const side of ['L', 'R'] as const) {
-    const sideSign = side === 'L' ? 1 : -1;
-    const hand = findPlayerBone(bones, [`Hand.${side}`, `Hand_${side}`, `Hand${side}`, `Wrist.${side}`, `Wrist_${side}`, `Wrist${side}`]);
-    if (hand) {
-      // The donor bind pose presents the palms too far towards the camera, which
-      // makes the thumbs/fingers read as reversed in the fitting room. Roll each
-      // wrist gently back towards a neutral inward-facing rest pose; keep the
-      // correction small so performer IK can continue to animate from it.
-      hand.rotateY(sideSign * .14);
-      hand.rotateZ(sideSign * -.035);
-      hand.userData.avatarV1NeutralWristPose = true;
-    }
-    const curls: Record<string, number> = { Index: .14, Middle: .18, Ring: .21, Pinky: .24, Thumb: .11 };
-    const splays: Record<string, number> = { Index: -.018, Middle: -.006, Ring: .008, Pinky: .018, Thumb: -.025 };
-    for (const digit of ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky']) {
-      for (const index of [1, 2, 3] as const) {
-        const bone = joint(digit, index, side);
-        if (!bone) continue;
-        const curl = curls[digit] * (index === 1 ? .55 : index === 2 ? .82 : 1);
-        bone.rotateX(curl);
-        if (index === 1) bone.rotateZ(splays[digit] * sideSign);
-      }
-    }
-  }
-}
-
 // Hotfix guard: the procedural starter garment meshes are preview-grade and
 // attach too rigidly to the V1 skeleton in the live fitting room (flat torso
 // panels / T-pose sleeves). Keep their definitions available for isolated
@@ -1235,7 +1223,6 @@ function addLegacyBareBodyUnderlay(
   quality: AvatarVisualQuality,
   fullBody: boolean,
   includeTorso = true,
-  shortSleeveArms = false,
 ) {
   root.updateMatrixWorld(true);
   const muscle = appearance.body.muscle ?? 'natural';
@@ -1267,12 +1254,10 @@ function addLegacyBareBodyUnderlay(
     radiusX: number,
     radiusZ: number,
     lengthScale = 1.08,
-    startAlong = 0,
   ) => {
     if (!driver || !from || !to) return;
     const start = from.getWorldPosition(new T.Vector3());
     const end = to.getWorldPosition(new T.Vector3());
-    if (startAlong > 0) start.lerp(end, T.MathUtils.clamp(startAlong, 0, .9));
     const direction = end.clone().sub(start);
     const length = direction.length();
     if (!Number.isFinite(length) || length < .015) return;
@@ -1314,17 +1299,8 @@ function addLegacyBareBodyUnderlay(
   for (const side of ['L', 'R'] as const) {
     const upperArm = bone(`UpperArm.${side}`, `UpperArm_${side}`, `UpperArm${side}`);
     const lowerArm = bone(`LowerArm.${side}`, `LowerArm_${side}`, `LowerArm${side}`);
-    const hand = bone(`Hand.${side}`, `Hand_${side}`, `Hand${side}`);
-    addEllipsoid(
-      `upper-arm-${side.toLowerCase()}`,
-      upperArm,
-      upperArm,
-      lowerArm,
-      .052 * frameScale * muscleScale,
-      .051 * muscleScale,
-      shortSleeveArms ? 1.0 : 1.08,
-      shortSleeveArms ? .48 : 0,
-    );
+    const hand = bone(`Hand.${side}`, `Hand_${side}`, `Hand${side}`, `Wrist.${side}`, `Wrist_${side}`, `Wrist${side}`);
+    addEllipsoid(`upper-arm-${side.toLowerCase()}`, upperArm, upperArm, lowerArm, .062 * frameScale * muscleScale, .061 * muscleScale);
     // Topless stage avatars hide the donor shirt material, including the sleeve/forearm
     // geometry on some V1 exports. Always rebuild the complete arm so hands never
     // appear detached. Tattoo mode still extends the same underlay to the legs/feet.
@@ -1706,11 +1682,6 @@ export function assemblePlayerModel(
     // The live avatar donor meshes are clothing-first, so this neutral skinned
     // underlay prevents holes for topless and tattoo presentation modes.
     addLegacyBareBodyUnderlay(result, appearance, bones, quality, presentation === 'tattoo');
-  } else if (presentation === 'stage' && V1_SKINNED_TEE_ITEMS.has(appearance.equipment.top.itemId)) {
-    // T-shirt donors were authored with long sleeves. After trimming the garment
-    // triangles, provide a fitted skin-only arm layer so the exposed forearms and
-    // lower upper-arms cannot disappear or leave holes.
-    addLegacyBareBodyUnderlay(result, appearance, bones, quality, false, false, true);
   }
 
   // Punk trousers were authored to meet tall boots. A skinned calf beneath
@@ -1750,7 +1721,6 @@ export function assemblePlayerModel(
   // Keep the original skin weights and animation chains but improve their
   // proportions and resting silhouette for creator/profile close-ups.
   applyV1HandProportionPolish(bones);
-  applyRelaxedV1HandPose(bones);
   result.userData.rockmundoAvatarPresentation = presentation;
   result.updateMatrixWorld(true);
   return result;
