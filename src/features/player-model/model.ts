@@ -904,7 +904,17 @@ function applyRelaxedV1HandPose(bones: Map<string, T.Bone>) {
 
   for (const side of ['L', 'R'] as const) {
     const sideSign = side === 'L' ? 1 : -1;
-    const curls: Record<string, number> = { Index: .10, Middle: .14, Ring: .17, Pinky: .20, Thumb: .08 };
+    const hand = findPlayerBone(bones, [`Hand.${side}`, `Hand_${side}`, `Hand${side}`, `Wrist.${side}`, `Wrist_${side}`, `Wrist${side}`]);
+    if (hand) {
+      // The donor bind pose presents the palms too far towards the camera, which
+      // makes the thumbs/fingers read as reversed in the fitting room. Roll each
+      // wrist gently back towards a neutral inward-facing rest pose; keep the
+      // correction small so performer IK can continue to animate from it.
+      hand.rotateY(sideSign * .14);
+      hand.rotateZ(sideSign * -.035);
+      hand.userData.avatarV1NeutralWristPose = true;
+    }
+    const curls: Record<string, number> = { Index: .14, Middle: .18, Ring: .21, Pinky: .24, Thumb: .11 };
     const splays: Record<string, number> = { Index: -.018, Middle: -.006, Ring: .008, Pinky: .018, Thumb: -.025 };
     for (const digit of ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky']) {
       for (const index of [1, 2, 3] as const) {
@@ -1225,6 +1235,7 @@ function addLegacyBareBodyUnderlay(
   quality: AvatarVisualQuality,
   fullBody: boolean,
   includeTorso = true,
+  shortSleeveArms = false,
 ) {
   root.updateMatrixWorld(true);
   const muscle = appearance.body.muscle ?? 'natural';
@@ -1256,10 +1267,12 @@ function addLegacyBareBodyUnderlay(
     radiusX: number,
     radiusZ: number,
     lengthScale = 1.08,
+    startAlong = 0,
   ) => {
     if (!driver || !from || !to) return;
     const start = from.getWorldPosition(new T.Vector3());
     const end = to.getWorldPosition(new T.Vector3());
+    if (startAlong > 0) start.lerp(end, T.MathUtils.clamp(startAlong, 0, .9));
     const direction = end.clone().sub(start);
     const length = direction.length();
     if (!Number.isFinite(length) || length < .015) return;
@@ -1302,7 +1315,16 @@ function addLegacyBareBodyUnderlay(
     const upperArm = bone(`UpperArm.${side}`, `UpperArm_${side}`, `UpperArm${side}`);
     const lowerArm = bone(`LowerArm.${side}`, `LowerArm_${side}`, `LowerArm${side}`);
     const hand = bone(`Hand.${side}`, `Hand_${side}`, `Hand${side}`);
-    addEllipsoid(`upper-arm-${side.toLowerCase()}`, upperArm, upperArm, lowerArm, .062 * frameScale * muscleScale, .061 * muscleScale);
+    addEllipsoid(
+      `upper-arm-${side.toLowerCase()}`,
+      upperArm,
+      upperArm,
+      lowerArm,
+      .052 * frameScale * muscleScale,
+      .051 * muscleScale,
+      shortSleeveArms ? 1.0 : 1.08,
+      shortSleeveArms ? .48 : 0,
+    );
     // Topless stage avatars hide the donor shirt material, including the sleeve/forearm
     // geometry on some V1 exports. Always rebuild the complete arm so hands never
     // appear detached. Tattoo mode still extends the same underlay to the legs/feet.
@@ -1688,7 +1710,7 @@ export function assemblePlayerModel(
     // T-shirt donors were authored with long sleeves. After trimming the garment
     // triangles, provide a fitted skin-only arm layer so the exposed forearms and
     // lower upper-arms cannot disappear or leave holes.
-    addLegacyBareBodyUnderlay(result, appearance, bones, quality, false, false);
+    addLegacyBareBodyUnderlay(result, appearance, bones, quality, false, false, true);
   }
 
   // Punk trousers were authored to meet tall boots. A skinned calf beneath
