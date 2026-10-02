@@ -225,6 +225,38 @@ describe('shipped modular stage models', () => {
     }
   });
 
+  it.each(['masculine', 'feminine'] as const)('adds construction detail to %s starter shorts', frame => {
+    for (const [itemId, detail] of [
+      ['starter.bottom.denim-shorts', 'Starter_Legs_garment-denim-short-fly-stitch'],
+      ['starter.bottom.cargo-shorts', 'Starter_Legs_garment-cargo-pocket-left'],
+      ['starter.bottom.athletic-shorts', 'Starter_Legs_garment-athletic-drawstring-left'],
+    ] as const) {
+      const appearance = defaultAppearance(itemId);
+      appearance.body.frame = frame;
+      appearance.equipment.bottom.itemId = itemId;
+      const model = assemblePlayerModel(library, appearance);
+      expect(model.getObjectByName(detail)).toBeTruthy();
+      disposeModel(model);
+    }
+  });
+
+  it.each(['masculine', 'feminine'] as const)('renders %s skirts and additional trouser silhouettes', frame => {
+    for (const [itemId, detail] of [
+      ['starter.bottom.pleated-skirt', 'Starter_Legs_garment-skirt-pleat-5'],
+      ['starter.bottom.mini-skirt', 'Starter_Legs_garment-skirt-waistband'],
+      ['starter.bottom.chinos', 'Starter_Legs_garment-chino-pocket-left'],
+      ['starter.bottom.wide-leg', 'Starter_Legs_garment-bottom-leg-left'],
+    ] as const) {
+      const appearance = defaultAppearance(itemId);
+      appearance.body.frame = frame;
+      appearance.equipment.bottom.itemId = itemId;
+      const model = assemblePlayerModel(library, appearance);
+      expect(model.getObjectByName(detail)).toBeTruthy();
+      if (itemId.includes('skirt')) expect(model.getObjectByName('avatar-v1-short-leg-underlay-lower-l')).toBeTruthy();
+      disposeModel(model);
+    }
+  });
+
   it.each(['masculine', 'feminine'] as const)('keeps the %s Rockmundo chest print nearly flush to the garment surface', frame => {
     const appearance = defaultAppearance('logo-surface');
     appearance.body.frame = frame;
@@ -318,7 +350,7 @@ describe('appearance boundaries', () => {
 
 describe('expanded starter wardrobe', () => {
   it.each(['masculine', 'feminine'] as const)('renders and preserves the full starter wardrobe on the %s gig rig', frame => {
-    const expectedCounts = { top: 17, bottom: 14, footwear: 10 } as const;
+    const expectedCounts = { top: 17, bottom: 18, footwear: 10 } as const;
     for (const slot of SLOTS) {
       expect(STARTER_ITEMS[slot]).toHaveLength(expectedCounts[slot]);
       expect(new Set(STARTER_ITEMS[slot].map(item => item.id)).size).toBe(STARTER_ITEMS[slot].length);
