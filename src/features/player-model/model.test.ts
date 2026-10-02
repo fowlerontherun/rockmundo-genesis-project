@@ -4,7 +4,7 @@ import * as T from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { assemblePlayerModel, disposeModel, type ModelLibrary } from './model';
-import { appearanceSchema, defaultAppearance, resolveAppearance, STYLES, modelFile, SLOTS, STARTER_ITEMS, resolveAppearance as roundTrip } from './appearance';
+import { appearanceSchema, defaultAppearance, resolveAppearance, STYLES, modelFile, SLOTS, STARTER_ITEMS, STARTER_VISUAL_FALLBACKS, starterItemsForWardrobe, visualEquipmentItem, resolveAppearance as roundTrip } from './appearance';
 import { Musician } from '@/features/gig-demo-3d/performers';
 
 const library: ModelLibrary = new Map();
@@ -421,6 +421,58 @@ describe('appearance boundaries', () => {
       (a: ReturnType<typeof defaultAppearance>) => { a.body.muscle = 'impossible' as never; },
     ]) { const value = defaultAppearance(); edit(value); expect(appearanceSchema.safeParse(value).success).toBe(false); expect(resolveAppearance(value, 'safe')).toEqual(defaultAppearance('safe')); }
     expect(appearanceSchema.safeParse({ ...defaultAppearance(), bonus: 100 }).success).toBe(false);
+  });
+});
+
+describe('V1 starter clothing safety gate', () => {
+  it('only exposes visually verified starter clothing in the live wardrobe', () => {
+    expect(starterItemsForWardrobe('top').map(item => item.id)).not.toEqual(expect.arrayContaining([
+      'starter.top.hoodie',
+      'starter.top.zip-hoodie',
+      'starter.top.denim-jacket',
+      'starter.top.flannel-shirt',
+      'starter.top.long-sleeve',
+      'starter.top.tank',
+    ]));
+    expect(starterItemsForWardrobe('bottom').map(item => item.id)).not.toEqual(expect.arrayContaining([
+      'starter.bottom.cargo-shorts',
+      'starter.bottom.athletic-shorts',
+      'starter.bottom.wide-leg',
+      'starter.bottom.pleated-skirt',
+      'starter.bottom.mini-skirt',
+    ]));
+    expect(starterItemsForWardrobe('bottom').map(item => item.id)).toEqual(expect.arrayContaining([
+      'starter.bottom.denim-shorts',
+      'starter.bottom.boxer-briefs',
+      'starter.bottom.briefs',
+      'starter.bottom.chinos',
+    ]));
+  });
+
+  it('keeps previously saved experimental clothing valid but renders a safe donor fallback', () => {
+    for (const [savedId, fallbackId] of Object.entries(STARTER_VISUAL_FALLBACKS)) {
+      const appearance = defaultAppearance(savedId);
+      const slot = savedId.includes('.top.') ? 'top' : 'bottom';
+      appearance.equipment[slot].itemId = savedId;
+      expect(appearanceSchema.safeParse(appearance).success).toBe(true);
+      expect(visualEquipmentItem(appearance, slot).id).toBe(fallbackId);
+    }
+  });
+
+  it.each(['masculine', 'feminine'] as const)('never injects experimental rigid garments for saved %s avatars', frame => {
+    for (const savedId of Object.keys(STARTER_VISUAL_FALLBACKS)) {
+      const appearance = defaultAppearance(savedId);
+      appearance.body.frame = frame;
+      const slot = savedId.includes('.top.') ? 'top' : 'bottom';
+      appearance.equipment[slot].itemId = savedId;
+      const model = assemblePlayerModel(library, appearance);
+      let procedural = 0;
+      model.traverse(node => {
+        if (node.name.startsWith('Starter_Body_') || node.name.startsWith('Starter_Legs_')) procedural += 1;
+      });
+      expect(procedural).toBe(0);
+      disposeModel(model);
+    }
   });
 });
 

@@ -34,6 +34,49 @@ export const STARTER_ITEMS: Record<EquipmentSlot, StarterItem[]> = {
     ['canvas', 'casual', 'Canvas shoes', 'canvas'], ['black-boots', 'punk', 'Black boots', 'plain'], ['brown-boots', 'casual', 'Brown boots', 'plain'], ['canvas-trainers', 'casual', 'Canvas trainers', 'canvas'], ['combat-boots', 'punk', 'Combat boots', 'plain'], ['two-tone', 'suit', 'Two-tone shoes', 'two-tone'], ['patent', 'suit', 'Patent shoes', 'patent'],
   ]),
 };
+export const LIVE_STARTER_ITEM_IDS = new Set([
+  // Tops backed by a donor silhouette we have visually verified in V1.
+  'starter.top.casual','starter.top.topless','starter.top.punk','starter.top.suit',
+  'starter.top.stripe','starter.top.plain-black','starter.top.plain-white','starter.top.vintage-charcoal',
+  'starter.top.plaid','starter.top.pinstripe','starter.top.v-neck',
+  // Bottoms backed by the three donor trouser families plus proven cropped variants.
+  'starter.bottom.casual','starter.bottom.punk','starter.bottom.suit','starter.bottom.denim',
+  'starter.bottom.blue-jeans','starter.bottom.black-jeans','starter.bottom.dark-slim-jeans',
+  'starter.bottom.plaid','starter.bottom.pinstripe','starter.bottom.denim-shorts',
+  'starter.bottom.boxer-briefs','starter.bottom.briefs','starter.bottom.chinos',
+  // All current footwear choices are donor-backed.
+  'starter.footwear.casual','starter.footwear.punk','starter.footwear.suit','starter.footwear.canvas',
+  'starter.footwear.black-boots','starter.footwear.brown-boots','starter.footwear.canvas-trainers',
+  'starter.footwear.combat-boots','starter.footwear.two-tone','starter.footwear.patent',
+]);
+
+/** Persisted appearances may contain an item that was temporarily exposed before
+ * its V1 visual was production-ready. Keep the save valid, but render a known-safe
+ * donor equivalent until a genuinely fitted/skinned asset is available. */
+export const STARTER_VISUAL_FALLBACKS: Record<string, string> = {
+  'starter.top.long-sleeve': 'starter.top.casual',
+  'starter.top.tank': 'starter.top.punk',
+  'starter.top.hoodie': 'starter.top.casual',
+  'starter.top.zip-hoodie': 'starter.top.casual',
+  'starter.top.denim-jacket': 'starter.top.punk',
+  'starter.top.flannel-shirt': 'starter.top.punk',
+  'starter.bottom.cargo-shorts': 'starter.bottom.denim-shorts',
+  'starter.bottom.athletic-shorts': 'starter.bottom.denim-shorts',
+  'starter.bottom.wide-leg': 'starter.bottom.casual',
+  'starter.bottom.pleated-skirt': 'starter.bottom.casual',
+  'starter.bottom.mini-skirt': 'starter.bottom.punk',
+};
+
+export function starterItemsForWardrobe(slot: EquipmentSlot) {
+  return STARTER_ITEMS[slot].filter(item => LIVE_STARTER_ITEM_IDS.has(item.id));
+}
+
+export function visualEquipmentItem(appearance: PlayerAppearance, slot: EquipmentSlot): StarterItem {
+  const selected = equipmentItem(appearance, slot);
+  const fallbackId = STARTER_VISUAL_FALLBACKS[selected.id];
+  return fallbackId ? STARTER_ITEMS[slot].find(item => item.id === fallbackId) ?? selected : selected;
+}
+
 export const SLOT_LABELS: Record<EquipmentSlot, string> = { top: 'Tops', bottom: 'Bottoms', footwear: 'Footwear' };
 export const CLOTHING_COLORS = [
   ['Black', '#20232b'], ['Chalk', '#eee8db'], ['Slate', '#657386'], ['Red', '#bd3548'],
@@ -146,7 +189,7 @@ export function resolveAppearance(value: unknown, seed = ''): PlayerAppearance {
   };
 }
 export function equipmentStyle(appearance: PlayerAppearance, slot: EquipmentSlot): Style {
-  return equipmentItem(appearance, slot).style;
+  return visualEquipmentItem(appearance, slot).style;
 }
 export function modelFile(frame: PlayerAppearance['body']['frame'], style: Style) {
   return `${frame === 'feminine' ? 'female-' : ''}${style}.glb`;

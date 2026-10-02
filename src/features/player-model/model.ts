@@ -2,7 +2,7 @@ import * as T from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { demoAssetUrl } from '@/features/gig-demo-3d/assets';
-import { headModelStyle, equipmentItem, equipmentStyle, modelFile, type PlayerAppearance } from './appearance';
+import { headModelStyle, equipmentItem, equipmentStyle, modelFile, visualEquipmentItem, type PlayerAppearance } from './appearance';
 
 import { addHair, isScalpHair } from './hair';
 import { addAccessories } from './accessories';
@@ -56,25 +56,18 @@ const V1_SKINNED_TEE_ITEMS = new Set([
   'starter.top.v-neck',
 ]);
 
-const V1_SKINNED_OUTERWEAR_ITEMS = new Set([
-  'starter.top.long-sleeve',
-  'starter.top.hoodie',
-  'starter.top.zip-hoodie',
-  'starter.top.denim-jacket',
-  'starter.top.flannel-shirt',
-]);
+// Keep unverified V1 silhouettes out of the live renderer. Their saved IDs remain
+// valid and resolve through visualEquipmentItem() to a safe donor fallback.
+const V1_SKINNED_OUTERWEAR_ITEMS = new Set<string>();
 
 const V1_CROPPED_BOTTOM_ITEMS = new Set([
   'starter.bottom.denim-shorts',
-  'starter.bottom.cargo-shorts',
-  'starter.bottom.athletic-shorts',
   'starter.bottom.boxer-briefs',
   'starter.bottom.briefs',
 ]);
 
 const V1_SHAPED_TROUSER_ITEMS = new Set([
   'starter.bottom.chinos',
-  'starter.bottom.wide-leg',
 ]);
 
 function polishV1CrewTeeGeometry(
@@ -1109,7 +1102,7 @@ export function assemblePlayerModel(
       style: curatedTop?.source.style ?? equipmentStyle(appearance, 'top'),
       dye: curatedTop?.source.color ?? appearance.equipment.top.color,
       secondaryColor: curatedTop?.source.secondaryColor,
-      fabric: curatedTop?.source.fabric ?? equipmentItem(appearance, 'top').fabric,
+      fabric: curatedTop?.source.fabric ?? visualEquipmentItem(appearance, 'top').fabric,
       finish: curatedTop?.source.finish,
       assetKey: curatedTop?.source.assetKey,
     },
@@ -1118,7 +1111,7 @@ export function assemblePlayerModel(
       style: curatedBottom?.source.style ?? equipmentStyle(appearance, 'bottom'),
       dye: curatedBottom?.source.color ?? appearance.equipment.bottom.color,
       secondaryColor: curatedBottom?.source.secondaryColor,
-      fabric: curatedBottom?.source.fabric ?? equipmentItem(appearance, 'bottom').fabric,
+      fabric: curatedBottom?.source.fabric ?? visualEquipmentItem(appearance, 'bottom').fabric,
       finish: curatedBottom?.source.finish,
       assetKey: curatedBottom?.source.assetKey,
     },
@@ -1127,7 +1120,7 @@ export function assemblePlayerModel(
       style: curatedFootwear?.source.style ?? equipmentStyle(appearance, 'footwear'),
       dye: curatedFootwear?.source.color ?? appearance.equipment.footwear.color,
       secondaryColor: curatedFootwear?.source.secondaryColor,
-      fabric: curatedFootwear?.source.fabric ?? equipmentItem(appearance, 'footwear').fabric,
+      fabric: curatedFootwear?.source.fabric ?? visualEquipmentItem(appearance, 'footwear').fabric,
       finish: curatedFootwear?.source.finish,
       assetKey: curatedFootwear?.source.assetKey,
     },
@@ -1170,7 +1163,7 @@ export function assemblePlayerModel(
         if (
           choice.part === 'body' &&
           !choice.assetKey &&
-          appearance.equipment.top.itemId === 'starter.top.tank'
+          false && appearance.equipment.top.itemId === 'starter.top.tank'
         ) {
           polishV1TankGeometry(
             clonedNode,
