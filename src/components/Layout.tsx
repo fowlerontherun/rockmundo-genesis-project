@@ -23,12 +23,6 @@ import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { BirthdayExperience } from "@/components/calendar/BirthdayExperience";
 import { FMShell } from "@/components/fm/FMShell";
 import { MobileShell } from "@/mobile/shell/MobileShell";
-import MobileHome from "@/mobile/pages/MobileHome";
-import MobileCareer from "@/mobile/pages/MobileCareer";
-import MobileSocial from "@/mobile/pages/MobileSocial";
-import MobileWorld from "@/mobile/pages/MobileWorld";
-import MobileMe from "@/mobile/pages/MobileMe";
-import { getMobileRouteMeta } from "@/mobile/routeRegistry";
 import { getMobileBridgeTarget } from "@/mobile/routeBridge";
 import { DesktopOnlyGate } from "@/components/DesktopOnlyGate";
 import { useGameCalendar } from "@/hooks/useGameCalendar";
@@ -174,33 +168,16 @@ const Layout = () => {
   // one build-time-gated route out of the product mobile shell so the test is
   // measuring the viewer, not mobile route bridging.
   if (isMobile && !gigViewerDemoTestAccess) {
-    const path = location.pathname;
-    const routeMeta = getMobileRouteMeta(path);
-    const bridgeTarget = getMobileBridgeTarget(path);
-
-    if (bridgeTarget && bridgeTarget !== path) {
+    const bridgeTarget = getMobileBridgeTarget(location.pathname);
+    if (bridgeTarget && bridgeTarget !== location.pathname) {
       return <Navigate to={`${bridgeTarget}${location.search}`} replace />;
     }
-
-    if (import.meta.env.DEV && routeMeta?.fallbackStatus === "wrapped-desktop") {
-      console.warn(`[RockMundo mobile] Contained desktop fallback rendered in MobileShell: ${path}`);
-    }
-
-    const dedicatedEntry = (() => {
-      if (path === "/" || path === "/home" || path === "/index") return <MobileHome />;
-      if (path === "/career" || path === "/career/overview") return <MobileCareer />;
-      if (path === "/social" || path === "/social/overview") return <MobileSocial />;
-      if (path === "/world" || path === "/world/overview") return <MobileWorld />;
-      if (path === "/me" || path === "/character" || path === "/character/overview") return <MobileMe />;
-      return null;
-    })();
-
     return (
       <MobileShell>
         <NoActiveCharacterGate>
           <CharacterGate>
             <BirthdayExperience />
-            {dedicatedEntry ?? <Outlet />}
+            <Outlet />
           </CharacterGate>
         </NoActiveCharacterGate>
       </MobileShell>
