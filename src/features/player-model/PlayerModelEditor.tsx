@@ -11,6 +11,12 @@ import { StarterWardrobe } from './StarterWardrobe';
 import './player-model.css';
 
 const SKIN_COLORS = ['#f3d3b7', '#dfb18c', '#c58c63', '#a96f46', '#805132', '#593a2d', '#382a24'];
+const BREAST_SIZE_PRESETS = [
+  ['Small', .82],
+  ['Medium', 1],
+  ['Full', 1.18],
+  ['Large', 1.32],
+] as const;
 const EDITOR_TABS = ['body', 'head', 'accessories', 'outfit'] as const;
 type EditorTab = typeof EDITOR_TABS[number];
 const TAB_LABELS: Record<EditorTab, string> = { body: 'Body', head: 'Face & hair', accessories: 'Accessories', outfit: 'Outfit' };
@@ -73,7 +79,13 @@ function EditorSession({ profileId, initial, model, richClothing, richClothingEr
           <div className="player-model-editor__choices" role="group" aria-label="Body frame">{(['masculine', 'feminine'] as const).map(frame => <button key={frame} type="button" aria-pressed={draft.body.frame === frame} onClick={() => setBody({ frame })}>{frame === 'masculine' ? 'Masculine' : 'Feminine'}</button>)}</div>
           <label className="player-model-editor__range">Height <output>{Math.round(draft.body.height * 178)} cm</output><input type="range" min="0.9" max="1.1" step="0.01" value={draft.body.height} onChange={event => setBody({ height: Number(event.target.value) })} /></label>
           <label className="player-model-editor__range">Build <output>{Math.round(draft.body.build * 100)}%</output><input type="range" min="0.85" max="1.15" step="0.01" value={draft.body.build} onChange={event => setBody({ build: Number(event.target.value) })} /></label>
-          {draft.body.frame === 'feminine' && <label className="player-model-editor__range">Breast size <output>{Math.round((draft.body.breastSize ?? 1) * 100)}%</output><input type="range" min="0.75" max="1.35" step="0.01" value={draft.body.breastSize ?? 1} onChange={event => setBody({ breastSize: Number(event.target.value) })} /></label>}
+          {draft.body.frame === 'feminine' && <div className="player-model-editor__body-option">
+            <label className="player-model-editor__range">Breast size <output>{Math.round((draft.body.breastSize ?? 1) * 100)}%</output><input type="range" min="0.75" max="1.35" step="0.01" value={draft.body.breastSize ?? 1} onChange={event => setBody({ breastSize: Number(event.target.value) })} /></label>
+            <div className="player-model-editor__choices" role="group" aria-label="Breast size presets">
+              {BREAST_SIZE_PRESETS.map(([label, value]) => <button key={label} type="button" aria-pressed={Math.abs((draft.body.breastSize ?? 1) - value) < .005} onClick={() => setBody({ breastSize: value })}>{label}</button>)}
+            </div>
+            <p className="player-model-editor__hint">Upper-body clothing follows this setting in the preview and during gigs.</p>
+          </div>}
           <div className="player-model-editor__body-option"><span>Muscle definition</span><div className="player-model-editor__choices" role="group" aria-label="Muscle definition">{BODY_MUSCLE_TYPES.map(muscle => <button key={muscle} type="button" aria-pressed={(draft.body.muscle ?? 'natural') === muscle} onClick={() => setBody({ muscle })}>{BODY_MUSCLE_LABELS[muscle]}</button>)}</div></div>
           <div className="player-model-editor__skin"><span>Skin tone</span><div role="group" aria-label="Skin tones">{SKIN_COLORS.map((color, index) => <button key={color} type="button" aria-label={`Skin tone ${index + 1}`} aria-pressed={draft.body.skin === color} style={{ backgroundColor: color }} onClick={() => setBody({ skin: color })} />)}<input type="color" aria-label="Custom skin tone" value={draft.body.skin} onChange={event => setBody({ skin: event.target.value })} /></div></div>
         </fieldset>}

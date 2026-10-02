@@ -23,3 +23,7 @@ RockMundo uses a single production avatar runtime: **Avatar V1**.
 ## Compatibility rule
 
 New avatar work must extend V1. Do not add version-selection UI, alternate avatar runtimes, duplicate garment ownership systems or hidden fallback engines.
+
+### Feminine body sizing
+
+Avatar V1 feminine frames support a saved `body.breastSize` value from 0.75–1.35. The creator exposes both a continuous slider and quick presets. The deformation is applied to the skinned chest and matching upper-body garment meshes before surface graphics are attached, so clothing and the Rockmundo chest print continue to follow the fitted body in previews and gigs. Older saved appearances resolve to 1.0.
