@@ -247,6 +247,60 @@ describe('shipped modular stage models', () => {
     }
   });
 
+  it.each(['masculine', 'feminine'] as const)('renders the %s T-shirt family with real short sleeves and exposed skinned arms', frame => {
+    for (const itemId of [
+      'starter.top.casual',
+      'starter.top.stripe',
+      'starter.top.plain-black',
+      'starter.top.plain-white',
+      'starter.top.vintage-charcoal',
+      'starter.top.v-neck',
+    ] as const) {
+      const appearance = defaultAppearance(itemId);
+      appearance.body.frame = frame;
+      appearance.equipment.top.itemId = itemId;
+      const model = assemblePlayerModel(library, appearance);
+      const trimmed: T.SkinnedMesh[] = [];
+      model.traverse(node => {
+        if (node instanceof T.SkinnedMesh && node.userData.avatarV1ShortSleeveTrim) trimmed.push(node);
+      });
+      expect(trimmed.length).toBeGreaterThan(0);
+      expect(trimmed.some(mesh => Number(mesh.userData.avatarV1ShortSleeveRemovedTriangles) > 0)).toBe(true);
+      expect(model.getObjectByName('avatar-v1-skin-underlay-lower-arm-l')).toBeTruthy();
+      expect(model.getObjectByName('avatar-v1-skin-underlay-lower-arm-r')).toBeTruthy();
+      expect(model.getObjectByName('avatar-v1-fitted-long-sleeves')).toBeFalsy();
+      expect(model.getObjectByName('avatar-v1-hoodie-hood')).toBeFalsy();
+      expect(model.getObjectByName('avatar-v1-zip-hoodie-hood')).toBeFalsy();
+      disposeModel(model);
+    }
+  });
+
+  it.each(['masculine', 'feminine'] as const)('never crops the %s full-length trouser and jeans catalogue', frame => {
+    for (const itemId of [
+      'starter.bottom.casual',
+      'starter.bottom.punk',
+      'starter.bottom.suit',
+      'starter.bottom.denim',
+      'starter.bottom.blue-jeans',
+      'starter.bottom.black-jeans',
+      'starter.bottom.dark-slim-jeans',
+      'starter.bottom.plaid',
+      'starter.bottom.pinstripe',
+      'starter.bottom.chinos',
+    ] as const) {
+      const appearance = defaultAppearance(itemId);
+      appearance.body.frame = frame;
+      appearance.equipment.bottom.itemId = itemId;
+      const model = assemblePlayerModel(library, appearance);
+      let cropped = 0;
+      model.traverse(node => {
+        if (node instanceof T.SkinnedMesh && node.userData.avatarV1CroppedBottom) cropped += 1;
+      });
+      expect(cropped).toBe(0);
+      disposeModel(model);
+    }
+  });
+
   it.each(['masculine', 'feminine'] as const)('crops %s shorts and underwear from the stable skinned donor geometry', frame => {
     for (const itemId of [
       'starter.bottom.denim-shorts',
@@ -272,8 +326,8 @@ describe('shipped modular stage models', () => {
     }
   });
 
-  it.each(['masculine', 'feminine'] as const)('shapes %s chinos and wide-leg trousers without replacing the donor rig', frame => {
-    for (const itemId of ['starter.bottom.chinos'] as const) {
+  it.each(['masculine', 'feminine'] as const)('shapes %s full-length trousers without replacing the donor rig', frame => {
+    for (const itemId of ['starter.bottom.chinos', 'starter.bottom.black-jeans', 'starter.bottom.dark-slim-jeans'] as const) {
       const appearance = defaultAppearance(itemId);
       appearance.body.frame = frame;
       appearance.equipment.bottom.itemId = itemId;
