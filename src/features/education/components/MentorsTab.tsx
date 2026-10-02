@@ -111,66 +111,6 @@ export const MentorsTab = () => {
               const availableDay = isAvailableToday(mentor.available_day);
 
               return (
-                  <Card key={mentor.id} className="flex flex-col opacity-60 bg-muted/30">
-                    <CardHeader className="space-y-2">
-                      <div className="flex items-start justify-between">
-                        <CardTitle className="text-lg text-muted-foreground">??? Unknown Master</CardTitle>
-                        <Badge variant="outline" className="text-xs">
-                          <EyeOff className="h-3 w-3 mr-1" />
-                          Undiscovered
-                        </Badge>
-                      </div>
-                      <CardDescription className="italic">
-                        {mentor.discovery_hint || (
-                          mentor.discovery_type === 'venue_gig' 
-                            ? "Play a legendary gig to catch this master's attention..."
-                            : mentor.discovery_type === 'studio_session'
-                            ? "Record at the right studio to discover this master..."
-                            : "Explore cities and talk to NPCs to find this master..."
-                        )}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex-1 space-y-4">
-                      <div className="space-y-2 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4" />
-                          <span>Location: ???</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          <span>Available: ???</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {mentor.discovery_type === 'venue_gig' ? (
-                            <Music className="h-4 w-4" />
-                          ) : mentor.discovery_type === 'studio_session' ? (
-                            <Building className="h-4 w-4" />
-                          ) : (
-                            <Sparkles className="h-4 w-4" />
-                          )}
-                          <span>
-                            {mentor.discovery_type === 'venue_gig' 
-                              ? "Discovered by playing a venue"
-                              : mentor.discovery_type === 'studio_session'
-                              ? "Discovered by using a studio"
-                              : "Discovered by exploring"
-                            }
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <TrendingUp className="h-4 w-4" />
-                          <span>Teaches: {formatFocusSkill(mentor.focus_skill)}</span>
-                        </div>
-                      </div>
-                      <Button className="w-full" variant="outline" disabled>
-                        Discover to Unlock
-                      </Button>
-                    </CardContent>
-                  </Card>
-                );
-              }
-
-              return (
                 <Card key={mentor.id} className="flex flex-col">
                   <CardHeader className="space-y-2">
                     <div className="flex items-start justify-between gap-2">
