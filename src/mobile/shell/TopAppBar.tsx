@@ -4,6 +4,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useGameData } from "@/hooks/useGameData";
 import { useUnifiedInboxUnreadCount } from "@/hooks/useUnifiedInbox";
 import { RMRadioButton } from "@/components/radio/RMRadioPlayer";
+import { VipBadge } from "@/components/VipBadge";
 
 const DETAIL_TITLES: Record<string, string> = {
   "/mobile/career/band": "Band",
