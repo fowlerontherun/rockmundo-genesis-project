@@ -670,7 +670,9 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
     const category = String(item.category || '').toLowerCase();
     const templateKey = String(garment.templateKey || garment.template_key || '').toLowerCase();
     const skirtLike = templateKey === 'skirt' || /skirt|dress|a-line|wide/.test(`${category} ${garment.silhouette || ''}`.toLowerCase());
-    const shortFactor = templateKey === 'shorts' || /short/.test(category) ? .52 : 1;
+    const isUnderwear = templateKey === 'underwear' || /underwear|brief/.test(category);
+    const isShorts = templateKey === 'shorts' || /short/.test(category);
+    const shortFactor = isUnderwear ? .29 : isShorts ? .52 : 1;
     if (skirtLike) {
       const waist = spec.scaleX * .39 * spec.waistScale;
       const hem = spec.scaleX * (.48 + spec.flare + spec.customFlare * .24);
@@ -688,10 +690,23 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
         leg.scale.z = .72;
         leg.position.set(side * spec.scaleX * .22, spec.y + (spec.scaleY - legHeight) * .24, spec.z);
         add(leg, anchor);
-        const crease = new T.Mesh(new T.BoxGeometry(.007, legHeight * .72, .006), garmentConstructionMaterial(spec));
-        crease.name = `garment-trouser-crease-${side > 0 ? 'left' : 'right'}`;
-        crease.position.set(side * spec.scaleX * .22, leg.position.y, spec.z + spec.scaleZ * .27);
-        add(crease, anchor);
+        leg.name = `garment-bottom-leg-${side > 0 ? 'left' : 'right'}`;
+        if (!isUnderwear && !isShorts) {
+          const crease = new T.Mesh(new T.BoxGeometry(.007, legHeight * .72, .006), garmentConstructionMaterial(spec));
+          crease.name = `garment-trouser-crease-${side > 0 ? 'left' : 'right'}`;
+          crease.position.set(side * spec.scaleX * .22, leg.position.y, spec.z + spec.scaleZ * .27);
+          add(crease, anchor);
+        }
+      }
+      if (isUnderwear || isShorts) {
+        const waistband = new T.Mesh(
+          new T.CylinderGeometry(spec.scaleX * .405 * spec.waistScale, spec.scaleX * .415 * spec.waistScale, .045, 28, 1, true),
+          garmentConstructionMaterial(spec, true),
+        );
+        waistband.name = isUnderwear ? 'garment-underwear-waistband' : 'garment-shorts-waistband';
+        waistband.scale.z = .72;
+        waistband.position.set(0, spec.y + spec.scaleY * .43, spec.z);
+        add(waistband, 'Hips');
       }
     }
     const flatDetails = Array.isArray(item.detail_layers) ? item.detail_layers.slice(0, 24) : [];
