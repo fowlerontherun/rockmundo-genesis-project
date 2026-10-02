@@ -117,12 +117,32 @@ function addStarterLogoTee(root: T.Object3D, appearance: PlayerAppearance, bones
   material.name = 'RockmundoLogoPrint';
 
   const mark = new T.Mesh(
-    curvedGraphicGeometry(appearance.body.frame === 'feminine' ? .305 : .33, .07, .009),
+    curvedGraphicGeometry(appearance.body.frame === 'feminine' ? .305 : .33, .07, .0025),
     material,
   );
   mark.name = 'avatar-rockmundo-logo';
   mark.renderOrder = 3;
-  attachSurfaceGraphic(root, chest, mark, attachment, .0018);
+  attachSurfaceGraphic(root, chest, mark, attachment, .00045);
+}
+
+function applyRelaxedV1HandPose(bones: Map<string, T.Bone>) {
+  const joint = (digit: string, index: number, side: 'L' | 'R') =>
+    findPlayerBone(bones, [`${digit}${index}.${side}`, `${digit}${index}_${side}`, `${digit}${index}${side}`]);
+
+  for (const side of ['L', 'R'] as const) {
+    const sideSign = side === 'L' ? 1 : -1;
+    const curls: Record<string, number> = { Index: .10, Middle: .14, Ring: .17, Pinky: .20, Thumb: .08 };
+    const splays: Record<string, number> = { Index: -.018, Middle: -.006, Ring: .008, Pinky: .018, Thumb: -.025 };
+    for (const digit of ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky']) {
+      for (const index of [1, 2, 3] as const) {
+        const bone = joint(digit, index, side);
+        if (!bone) continue;
+        const curl = curls[digit] * (index === 1 ? .55 : index === 2 ? .82 : 1);
+        bone.rotateX(curl);
+        if (index === 1) bone.rotateZ(splays[digit] * sideSign);
+      }
+    }
+  }
 }
 
 function addLegacyBareBodyUnderlay(
@@ -529,6 +549,10 @@ export function assemblePlayerModel(
     addCuratedSkinDetails(result, bones, richClothing, quality);
   }
   addTattoos(result, tattoos, bones);
+  // V1 donor hands have an exaggerated open/splayed bind pose. A restrained
+  // neutral curl makes creator/profile hands read naturally while preserving
+  // all finger bones for the gig-specific instrument posing system.
+  applyRelaxedV1HandPose(bones);
   result.userData.rockmundoAvatarPresentation = presentation;
   result.updateMatrixWorld(true);
   return result;
