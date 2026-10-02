@@ -4,7 +4,7 @@ import * as T from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { assemblePlayerModel, disposeModel, type ModelLibrary } from './model';
-import { appearanceSchema, defaultAppearance, resolveAppearance, STYLES, modelFile, SLOTS, STARTER_ITEMS, STARTER_VISUAL_FALLBACKS, starterItemsForWardrobe, visualEquipmentItem, resolveAppearance as roundTrip } from './appearance';
+import { appearanceSchema, defaultAppearance, resolveAppearance, STYLES, modelFile, SLOTS, STARTER_ITEMS, STARTER_VISUAL_FALLBACKS, starterItemsForWardrobe, visualEquipmentItem, equipmentStyle, resolveAppearance as roundTrip } from './appearance';
 import { Musician } from '@/features/gig-demo-3d/performers';
 
 const library: ModelLibrary = new Map();
@@ -242,6 +242,7 @@ describe('shipped modular stage models', () => {
         expect(mesh.geometry.getAttribute('skinWeight')).toBeTruthy();
         expect(mesh.geometry.getAttribute('skinIndex')).toBeTruthy();
       }
+      if (itemId === 'starter.top.vintage-charcoal') expect(equipmentStyle(appearance, 'top')).toBe('casual');
       if (itemId === 'starter.top.v-neck') expect(model.getObjectByName('avatar-v1-v-neck-trim')).toBeTruthy();
       disposeModel(model);
     }
@@ -297,6 +298,7 @@ describe('shipped modular stage models', () => {
         if (node instanceof T.SkinnedMesh && node.userData.avatarV1CroppedBottom) cropped += 1;
       });
       expect(cropped).toBe(0);
+      if (itemId === 'starter.bottom.punk') expect(equipmentStyle(appearance, 'bottom')).toBe('casual');
       disposeModel(model);
     }
   });
