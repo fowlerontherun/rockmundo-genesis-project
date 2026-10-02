@@ -10,8 +10,7 @@ WITH higher_tier AS (
            ELSE 'professional'
          END AS tier
   FROM public.skill_definitions sd
-  WHERE coalesce(sd.is_active, true)
-    AND (
+  WHERE (
       sd.slug::text ILIKE '%professional%'
       OR sd.slug::text ILIKE '%mastery%'
       OR coalesce(sd.display_name,'') ILIKE '%professional%'
@@ -49,8 +48,7 @@ WITH higher_tier AS (
          coalesce(sd.display_name, initcap(replace(sd.slug::text, '_', ' '))) AS display_name,
          CASE WHEN sd.slug::text ILIKE '%mastery%' OR coalesce(sd.display_name,'') ILIKE '%mastery%' THEN 'mastery' ELSE 'professional' END AS tier
   FROM public.skill_definitions sd
-  WHERE coalesce(sd.is_active,true)
-    AND (sd.slug::text ILIKE '%professional%' OR sd.slug::text ILIKE '%mastery%'
+  WHERE (sd.slug::text ILIKE '%professional%' OR sd.slug::text ILIKE '%mastery%'
       OR coalesce(sd.display_name,'') ILIKE '%professional%' OR coalesce(sd.display_name,'') ILIKE '%mastery%')
 ), chosen_university AS (
   SELECT u.id
@@ -89,8 +87,7 @@ WITH higher_tier AS (
          coalesce(sd.display_name, initcap(replace(sd.slug::text, '_', ' '))) AS display_name,
          CASE WHEN sd.slug::text ILIKE '%mastery%' OR coalesce(sd.display_name,'') ILIKE '%mastery%' THEN 'mastery' ELSE 'professional' END AS tier
   FROM public.skill_definitions sd
-  WHERE coalesce(sd.is_active,true)
-    AND (sd.slug::text ILIKE '%professional%' OR sd.slug::text ILIKE '%mastery%'
+  WHERE (sd.slug::text ILIKE '%professional%' OR sd.slug::text ILIKE '%mastery%'
       OR coalesce(sd.display_name,'') ILIKE '%professional%' OR coalesce(sd.display_name,'') ILIKE '%mastery%')
 )
 INSERT INTO public.education_youtube_resources (
@@ -119,8 +116,7 @@ WITH higher_tier AS (
          coalesce(sd.display_name, initcap(replace(sd.slug::text, '_', ' '))) AS display_name,
          CASE WHEN sd.slug::text ILIKE '%mastery%' OR coalesce(sd.display_name,'') ILIKE '%mastery%' THEN 'mastery' ELSE 'professional' END AS tier
   FROM public.skill_definitions sd
-  WHERE coalesce(sd.is_active,true)
-    AND (sd.slug::text ILIKE '%professional%' OR sd.slug::text ILIKE '%mastery%'
+  WHERE (sd.slug::text ILIKE '%professional%' OR sd.slug::text ILIKE '%mastery%'
       OR coalesce(sd.display_name,'') ILIKE '%professional%' OR coalesce(sd.display_name,'') ILIKE '%mastery%')
 )
 INSERT INTO public.education_mentors (
@@ -160,8 +156,7 @@ WITH higher_tier AS (
   SELECT sd.slug::text AS skill_slug,
          coalesce(sd.display_name, initcap(replace(sd.slug::text, '_', ' '))) AS display_name
   FROM public.skill_definitions sd
-  WHERE coalesce(sd.is_active,true)
-    AND (sd.slug::text ILIKE '%professional%' OR sd.slug::text ILIKE '%mastery%'
+  WHERE (sd.slug::text ILIKE '%professional%' OR sd.slug::text ILIKE '%mastery%'
       OR coalesce(sd.display_name,'') ILIKE '%professional%' OR coalesce(sd.display_name,'') ILIKE '%mastery%')
 )
 SELECT h.skill_slug, h.display_name,
