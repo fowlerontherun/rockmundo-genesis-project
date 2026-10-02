@@ -8,6 +8,7 @@ import { getFMStatusCopy } from "@/i18n/fmStatus";
 import { CharacterSwitcher } from "@/components/character/CharacterSwitcher";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { RMRadioButton } from "@/components/radio/RMRadioPlayer";
+import { VipBadge } from "@/components/VipBadge";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { HowToPlayDialog } from "@/components/HowToPlayDialog";
 import { ActivityStatusIndicator } from "@/components/ActivityStatusIndicator";
@@ -118,6 +119,8 @@ export const TopStatusBar = () => {
       <div className="hidden sm:block h-6 w-px bg-fm-border mx-1" />
 
       {/* Current activity stays prominent because it can block immediate actions. */}
+      {/* VIP status always visible when active; hover shows days remaining. */}
+      <VipBadge size="sm" />
       <PrisonStatusIndicator />
       <ActivityStatusIndicator />
 
