@@ -4,9 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, DollarSign, TrendingUp, Award, MapPin, Calendar, Eye, EyeOff, Plane, Sparkles, Music, Building, BookOpen } from "lucide-react";
+import { Clock, DollarSign, TrendingUp, Award, MapPin, Calendar, Plane, Sparkles } from "lucide-react";
 import { useMentorSessions } from "@/hooks/useMentorSessions";
 import { formatFocusSkill } from "@/pages/admin/mentors.helpers";
+import { isHigherTierSkill, useSkillTierAccess } from "../hooks/useSkillTierAccess";
 
 export const MentorsTab = () => {
   const { 
@@ -16,15 +17,15 @@ export const MentorsTab = () => {
     bookSession, 
     isBooking, 
     canBookSession,
-    isMentorDiscovered,
     isAvailableToday,
     isInMentorCity,
     getDayName,
-    discoveredCount,
     totalMentors,
   } = useMentorSessions();
 
   const [filter, setFilter] = useState<'all' | 'available'>('all');
+  const tierAccess = useSkillTierAccess(profile?.id, (mentors ?? []).map((mentor) => mentor.focus_skill));
+  const accessBySkill = tierAccess.data ?? new Map<string, boolean>();
 
   const getSkillLevel = (skillSlug: string) => {
     return skillProgress?.find((s) => s.skill_slug === skillSlug)?.current_level || 0;
@@ -37,10 +38,11 @@ export const MentorsTab = () => {
   };
 
   const filteredMentors = mentors?.filter(mentor => {
-    const discovered = isMentorDiscovered(mentor.id);
     const inCity = isInMentorCity(mentor.city_id);
     const availableDay = isAvailableToday(mentor.available_day);
+    const locked = isHigherTierSkill(mentor.focus_skill) && accessBySkill.get(mentor.focus_skill) === false;
 
+    if (locked) return false;
     if (filter === 'available') return inCity && availableDay;
     return true;
   });
@@ -95,7 +97,6 @@ export const MentorsTab = () => {
             Available Now
           </TabsTrigger>
           <TabsTrigger value="all" className="gap-1">
-            <EyeOff className="h-3 w-3" />
             All Mentors
           </TabsTrigger>
         </TabsList>
@@ -103,16 +104,13 @@ export const MentorsTab = () => {
         <TabsContent value={filter} className="mt-6">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {filteredMentors?.map((mentor) => {
-              const discovered = isMentorDiscovered(mentor.id);
               const { canBook, reason } = canBookSession(mentor.id);
               const skillLevel = getSkillLevel(mentor.focus_skill);
               const skillProgressPercent = getSkillProgress(mentor.focus_skill);
               const inCity = isInMentorCity(mentor.city_id);
               const availableDay = isAvailableToday(mentor.available_day);
 
-              // Undiscovered masters show as silhouettes
-              if (!discovered && filter === 'all') {
-                return (
+              return (
                   <Card key={mentor.id} className="flex flex-col opacity-60 bg-muted/30">
                     <CardHeader className="space-y-2">
                       <div className="flex items-start justify-between">
