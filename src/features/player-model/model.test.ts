@@ -247,6 +247,34 @@ describe('shipped modular stage models', () => {
     }
   });
 
+  it.each(['masculine', 'feminine'] as const)('refines the %s stable long-sleeve and outerwear family on the donor rig', frame => {
+    for (const [itemId, detail] of [
+      ['starter.top.long-sleeve', null],
+      ['starter.top.hoodie', null],
+      ['starter.top.zip-hoodie', 'avatar-v1-zip-hoodie-zip'],
+      ['starter.top.denim-jacket', 'avatar-v1-denim-jacket-seam'],
+      ['starter.top.flannel-shirt', 'avatar-v1-flannel-placket'],
+    ] as const) {
+      const appearance = defaultAppearance(itemId);
+      appearance.body.frame = frame;
+      appearance.equipment.top.itemId = itemId;
+      const model = assemblePlayerModel(library, appearance);
+      const polished: T.SkinnedMesh[] = [];
+      model.traverse(node => {
+        if (node instanceof T.SkinnedMesh && node.userData.avatarV1OuterwearVariant === itemId) polished.push(node);
+        expect(node.name.startsWith('Starter_Body_')).toBe(false);
+      });
+      expect(polished.length).toBeGreaterThan(0);
+      expect(polished.some(mesh => Number(mesh.userData.avatarV1OuterwearArmVertexCount) > 0)).toBe(true);
+      for (const mesh of polished) {
+        expect(mesh.geometry.getAttribute('skinWeight')).toBeTruthy();
+        expect(mesh.geometry.getAttribute('skinIndex')).toBeTruthy();
+      }
+      if (detail) expect(model.getObjectByName(detail)).toBeTruthy();
+      disposeModel(model);
+    }
+  });
+
   it.each(['masculine', 'feminine'] as const)('keeps the %s Rockmundo chest print nearly flush to the garment surface', frame => {
     const appearance = defaultAppearance('logo-surface');
     appearance.body.frame = frame;
