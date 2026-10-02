@@ -477,6 +477,11 @@ describe('V1 starter clothing safety gate', () => {
         if (node.name.startsWith('Starter_Body_') || node.name.startsWith('Starter_Legs_')) procedural += 1;
       });
       expect(procedural).toBe(0);
+      if (slot === 'top') {
+        expect(model.getObjectByName('avatar-v1-zip-hoodie-zip')).toBeFalsy();
+        expect(model.getObjectByName('avatar-v1-denim-jacket-seam')).toBeFalsy();
+        expect(model.getObjectByName('avatar-v1-flannel-placket')).toBeFalsy();
+      }
       disposeModel(model);
     }
   });
