@@ -185,6 +185,8 @@ export function resolveAppearance(value: unknown, seed = ''): PlayerAppearance {
   };
 }
 const STARTER_VISUAL_STYLE_OVERRIDES: Partial<Record<string, Style>> = {
+  'starter.top.vintage-charcoal': 'casual',
+  'starter.bottom.punk': 'casual',
   'starter.bottom.black-jeans': 'casual',
   'starter.bottom.dark-slim-jeans': 'casual',
 };
