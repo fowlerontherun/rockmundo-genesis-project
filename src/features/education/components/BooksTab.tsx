@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Loader2, Search, X } from "lucide-react";
+import { Loader2, Lock, Search, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ import { useBookReading } from "@/hooks/useBookReading";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/lib/supabase-types";
+import { isHigherTierSkill, useSkillTierAccess } from "../hooks/useSkillTierAccess";
 
 type SkillBook = Tables<"skill_books">;
 type EnrichedSkillBook = SkillBook & { skill_display_name?: string };
@@ -26,6 +27,10 @@ export const BooksTab = () => {
   const typedBooks = books as EnrichedSkillBook[] | undefined;
   const [selectedBook, setSelectedBook] = useState<EnrichedSkillBook | null>(null);
   const [autoRead, setAutoRead] = useState(false);
+  const tierAccess = useSkillTierAccess(profileId, (typedBooks ?? []).map((book) => book.skill_slug));
+  const accessBySkill = tierAccess.data ?? new Map<string, boolean>();
+  const isBookLocked = (book: EnrichedSkillBook) =>
+    Boolean(book.skill_slug && isHigherTierSkill(book.skill_slug) && accessBySkill.get(book.skill_slug) === false);
 
   const isPurchased = (bookId: string) => 
     purchases?.some((p) => p.book_id === bookId);
@@ -44,7 +49,11 @@ export const BooksTab = () => {
   };
 
   const canStartReading = () =>
-    !activeSession && selectedBook && isPurchased(selectedBook.id) && !isCompleted(selectedBook.id);
+    !activeSession &&
+    selectedBook &&
+    !isBookLocked(selectedBook) &&
+    isPurchased(selectedBook.id) &&
+    !isCompleted(selectedBook.id);
 
   const handlePurchase = async (book: SkillBook) => {
     if (!profileId || !userId) return;
@@ -233,6 +242,7 @@ export const BooksTab = () => {
               {booksInSkill.map((book) => {
                 const purchased = isPurchased(book.id);
                 const completed = isCompleted(book.id);
+                const locked = isBookLocked(book);
 
                 return (
                   <Card
@@ -253,8 +263,14 @@ export const BooksTab = () => {
                         variant={completed ? "outline" : purchased ? "default" : "secondary"} 
                         className="w-full justify-center"
                       >
-                        {completed ? "Completed Reading" : purchased ? "Owned" : `Requires Level ${book.required_skill_level}`}
+                        {completed ? "Completed Reading" : locked ? "Skill tier locked" : purchased ? "Owned" : `Requires Level ${book.required_skill_level}`}
                       </Badge>
+                      {locked && (
+                        <p className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+                          <Lock className="h-3 w-3" />
+                          Max the previous skill tier to unlock this book.
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
                 );
@@ -312,7 +328,12 @@ export const BooksTab = () => {
                 Completed Reading
               </Badge>
             )}
-            {selectedBook && !isPurchased(selectedBook.id) && !isCompleted(selectedBook.id) && (
+            {selectedBook && isBookLocked(selectedBook) && (
+              <Badge variant="outline" className="w-full justify-center py-2">
+                <Lock className="mr-1 h-3 w-3" /> Unlock the previous skill tier first
+              </Badge>
+            )}
+            {selectedBook && !isBookLocked(selectedBook) && !isPurchased(selectedBook.id) && !isCompleted(selectedBook.id) && (
               <Button onClick={() => handlePurchase(selectedBook)} className="w-full sm:w-auto">
                 Purchase for ${selectedBook.price}
               </Button>
