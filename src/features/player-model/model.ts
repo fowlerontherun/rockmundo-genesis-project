@@ -573,6 +573,10 @@ function addV1VNeckTrim(root: T.Object3D, appearance: PlayerAppearance, bones: M
 
 function addV1OuterwearFrontDetail(root: T.Object3D, appearance: PlayerAppearance, bones: Map<string, T.Bone>) {
   const itemId = appearance.equipment.top.itemId;
+  // Saved experimental items can resolve to a safe visual fallback. Never layer
+  // their old construction details over that fallback, or the supposedly safe
+  // outfit still contains misleading/broken geometry.
+  if (visualEquipmentItem(appearance, 'top').id !== itemId) return;
   if (!['starter.top.zip-hoodie','starter.top.denim-jacket','starter.top.flannel-shirt'].includes(itemId)) return;
   const chest = findPlayerBone(bones, ['Spine2','Spine.002','Chest','UpperChest'])
     ?? findPlayerBone(bones, ['Spine1','Spine.001']);
