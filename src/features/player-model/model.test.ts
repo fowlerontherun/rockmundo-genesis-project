@@ -170,6 +170,35 @@ describe('shipped modular stage models', () => {
     disposeModel(model);
   });
 
+  it.each(['masculine', 'feminine'] as const)('renders the %s starter crew tee without hoodie geometry', frame => {
+    const appearance = defaultAppearance('crew-tee');
+    appearance.body.frame = frame;
+    appearance.equipment.top.itemId = 'starter.top.casual';
+    const model = assemblePlayerModel(library, appearance);
+    expect(model.getObjectByName('Starter_Body_garment-hoodie-kangaroo-pocket')).toBeFalsy();
+    expect(model.getObjectByName('Starter_Body_garment-hoodie-drawstring-left')).toBeFalsy();
+    expect(model.getObjectByName('avatar-rockmundo-logo')).toBeTruthy();
+    let proceduralPieces = 0;
+    model.traverse(node => { if (node instanceof T.Mesh && node.name.startsWith('Starter_Body_')) proceduralPieces += 1; });
+    expect(proceduralPieces).toBeGreaterThan(3);
+    disposeModel(model);
+  });
+
+  it.each(['masculine', 'feminine'] as const)('gives the %s hoodie and jacket visibly distinct construction', frame => {
+    for (const [itemId, expectedName] of [
+      ['starter.top.hoodie', 'Starter_Body_garment-hoodie-kangaroo-pocket'],
+      ['starter.top.denim-jacket', 'Starter_Body_garment-jacket-lapel-left'],
+      ['starter.top.flannel-shirt', 'Starter_Body_garment-shirt-placket'],
+    ] as const) {
+      const appearance = defaultAppearance(itemId);
+      appearance.body.frame = frame;
+      appearance.equipment.top.itemId = itemId;
+      const model = assemblePlayerModel(library, appearance);
+      expect(model.getObjectByName(expectedName)).toBeTruthy();
+      disposeModel(model);
+    }
+  });
+
   it.each(['masculine', 'feminine'] as const)('keeps the %s Rockmundo chest print nearly flush to the garment surface', frame => {
     const appearance = defaultAppearance('logo-surface');
     appearance.body.frame = frame;
