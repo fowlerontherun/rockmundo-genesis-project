@@ -184,8 +184,18 @@ export function resolveAppearance(value: unknown, seed = ''): PlayerAppearance {
     },
   };
 }
+const STARTER_DONOR_STYLE_OVERRIDES: Record<string, Style> = {
+  // These are still punk-styled items, but the punk donor body/legs are not a
+  // correct base for a short-sleeve tee or full-length jeans.
+  'starter.top.vintage-charcoal': 'casual',
+  'starter.bottom.punk': 'casual',
+  'starter.bottom.black-jeans': 'casual',
+  'starter.bottom.dark-slim-jeans': 'casual',
+};
+
 export function equipmentStyle(appearance: PlayerAppearance, slot: EquipmentSlot): Style {
-  return visualEquipmentItem(appearance, slot).style;
+  const selected = equipmentItem(appearance, slot);
+  return STARTER_DONOR_STYLE_OVERRIDES[selected.id] ?? visualEquipmentItem(appearance, slot).style;
 }
 export function modelFile(frame: PlayerAppearance['body']['frame'], style: Style) {
   return `${frame === 'feminine' ? 'female-' : ''}${style}.glb`;
