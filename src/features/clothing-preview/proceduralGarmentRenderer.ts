@@ -669,21 +669,42 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
     const garment = (item.garment_config || {}) as Record<string, unknown>;
     const category = String(item.category || '').toLowerCase();
     const templateKey = String(garment.templateKey || garment.template_key || '').toLowerCase();
-    const skirtLike = templateKey === 'skirt' || /skirt|dress|a-line|wide/.test(`${category} ${garment.silhouette || ''}`.toLowerCase());
+    const skirtLike = templateKey === 'skirt' || /skirt|dress|a-line/.test(`${category} ${garment.silhouette || ''}`.toLowerCase());
+    const construction = String(garment.construction || '').toLowerCase();
+    const isWideLeg = templateKey === 'wide-leg';
     const isUnderwear = templateKey === 'underwear' || /underwear|brief/.test(category);
     const isShorts = templateKey === 'shorts' || /short/.test(category);
     const shortFactor = isUnderwear ? .29 : isShorts ? .52 : 1;
     if (skirtLike) {
       const waist = spec.scaleX * .39 * spec.waistScale;
       const hem = spec.scaleX * (.48 + spec.flare + spec.customFlare * .24);
-      const skirt = new T.Mesh(new T.CylinderGeometry(waist, hem, spec.scaleY, 40, 4, false), material);
+      const skirtHeight = /mini/.test(String(garment.length || spec.length).toLowerCase()) ? spec.scaleY * .62 : spec.scaleY * .78;
+      const skirt = new T.Mesh(new T.CylinderGeometry(waist, hem, skirtHeight, 40, 4, false), material);
+      skirt.name = 'garment-skirt-body';
       skirt.scale.z = .7;
-      skirt.position.set(0, spec.y, spec.z);
+      skirt.position.set(0, spec.y + (spec.scaleY - skirtHeight) * .18, spec.z);
       add(skirt, 'Hips');
+      const waistband = new T.Mesh(
+        new T.CylinderGeometry(waist * 1.01, waist * 1.02, .045, 28, 1, true),
+        garmentConstructionMaterial(spec, true),
+      );
+      waistband.name = 'garment-skirt-waistband';
+      waistband.scale.z = .72;
+      waistband.position.set(0, skirt.position.y + skirtHeight * .48, spec.z);
+      add(waistband, 'Hips');
+      if (construction === 'pleated-skirt') {
+        for (let i = -4; i <= 4; i++) {
+          const pleat = new T.Mesh(new T.BoxGeometry(.008, skirtHeight * .75, .01), garmentConstructionMaterial(spec));
+          pleat.name = `garment-skirt-pleat-${i + 5}`;
+          pleat.position.set(i * hem * .18, skirt.position.y - .02, spec.z + spec.scaleZ * .25);
+          pleat.rotation.z = i * .012;
+          add(pleat, 'Hips');
+        }
+      }
     } else {
       const legHeight = spec.scaleY * shortFactor;
       const topRadius = spec.scaleX * .18 * spec.waistScale;
-      const bottomRadius = topRadius * T.MathUtils.lerp(1.02, .74, spec.taper);
+      const bottomRadius = isWideLeg ? topRadius * 1.14 : topRadius * T.MathUtils.lerp(1.02, .74, spec.taper);
       for (const side of [-1, 1]) {
         const anchor = side > 0 ? 'UpperLeg.L' : 'UpperLeg.R';
         const leg = new T.Mesh(new T.CylinderGeometry(bottomRadius, topRadius, legHeight, 22, 4, false), material);
@@ -707,6 +728,57 @@ export function buildProceduralGarment(item: ClothingItem, variant?: ClothingPre
         waistband.scale.z = .72;
         waistband.position.set(0, spec.y + spec.scaleY * .43, spec.z);
         add(waistband, 'Hips');
+      }
+
+      if (construction === 'cargo-shorts') {
+        for (const side of [-1, 1]) {
+          const anchor = side > 0 ? 'UpperLeg.L' : 'UpperLeg.R';
+          const pocket = new T.Mesh(new T.BoxGeometry(spec.scaleX * .19, .13, .035), garmentConstructionMaterial(spec, true));
+          pocket.name = `garment-cargo-pocket-${side > 0 ? 'left' : 'right'}`;
+          pocket.position.set(side * spec.scaleX * .31, spec.y + .02, spec.z + spec.scaleZ * .27);
+          add(pocket, anchor);
+          const flap = new T.Mesh(new T.BoxGeometry(spec.scaleX * .2, .035, .012), garmentConstructionMaterial(spec));
+          flap.name = `garment-cargo-pocket-flap-${side > 0 ? 'left' : 'right'}`;
+          flap.position.set(side * spec.scaleX * .31, spec.y + .09, spec.z + spec.scaleZ * .295);
+          add(flap, anchor);
+        }
+      }
+
+      if (construction === 'denim-shorts') {
+        for (const side of [-1, 1]) {
+          const anchor = side > 0 ? 'UpperLeg.L' : 'UpperLeg.R';
+          const hem = new T.Mesh(new T.TorusGeometry(spec.scaleX * .105, .008, 7, 20), garmentConstructionMaterial(spec, true));
+          hem.name = `garment-denim-short-hem-${side > 0 ? 'left' : 'right'}`;
+          hem.rotation.x = Math.PI / 2;
+          hem.scale.z = .72;
+          hem.position.set(side * spec.scaleX * .22, spec.y - spec.scaleY * .13, spec.z);
+          add(hem, anchor);
+        }
+        const fly = new T.Mesh(new T.BoxGeometry(.012, .12, .008), garmentConstructionMaterial(spec));
+        fly.name = 'garment-denim-short-fly-stitch';
+        fly.position.set(0, spec.y + .14, spec.z + spec.scaleZ * .28);
+        add(fly, 'Hips');
+      }
+
+      if (construction === 'athletic-shorts') {
+        for (const side of [-1, 1]) {
+          const string = new T.Mesh(new T.CylinderGeometry(.0045, .0045, .12, 7), garmentConstructionMaterial(spec, true));
+          string.name = `garment-athletic-drawstring-${side > 0 ? 'left' : 'right'}`;
+          string.position.set(side * .025, spec.y + spec.scaleY * .4 - .055, spec.z + spec.scaleZ * .3);
+          string.rotation.z = side * .08;
+          add(string, 'Hips');
+        }
+      }
+
+      if (construction === 'chinos') {
+        for (const side of [-1, 1]) {
+          const anchor = side > 0 ? 'UpperLeg.L' : 'UpperLeg.R';
+          const pocket = new T.Mesh(new T.BoxGeometry(spec.scaleX * .13, .018, .012), garmentConstructionMaterial(spec, true));
+          pocket.name = `garment-chino-pocket-${side > 0 ? 'left' : 'right'}`;
+          pocket.position.set(side * spec.scaleX * .24, spec.y + spec.scaleY * .3, spec.z + spec.scaleZ * .28);
+          pocket.rotation.z = side * .28;
+          add(pocket, anchor);
+        }
       }
     }
     const flatDetails = Array.isArray(item.detail_layers) ? item.detail_layers.slice(0, 24) : [];
