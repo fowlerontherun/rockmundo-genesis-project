@@ -211,6 +211,24 @@ describe('shipped modular stage models', () => {
     disposeModel(model);
   });
 
+  it.each(['masculine', 'feminine'] as const)('shortens the %s V1 finger chains without removing their animation bones', frame => {
+    const appearance = defaultAppearance('hand-proportions');
+    appearance.body.frame = frame;
+    const model = assemblePlayerModel(library, appearance);
+    for (const side of ['L', 'R'] as const) {
+      const expected = { Thumb: .94, Index: .955, Middle: .95, Ring: .925, Pinky: .89 } as const;
+      for (const [digit, scale] of Object.entries(expected)) {
+        const bone = model.getObjectByName(`${digit}1.${side}`) as T.Bone | undefined;
+        if (!bone) continue;
+        expect(bone.scale.x).toBeCloseTo(scale, 3);
+        expect(bone.scale.y).toBeCloseTo(scale, 3);
+        expect(bone.scale.z).toBeCloseTo(scale, 3);
+        expect(bone.userData.avatarV1FingerScale).toBeCloseTo(scale, 3);
+      }
+    }
+    disposeModel(model);
+  });
+
   it.each(['masculine', 'feminine'] as const)('gives the %s V1 hand a relaxed neutral finger pose', frame => {
     const appearance = defaultAppearance('relaxed-hands');
     appearance.body.frame = frame;
