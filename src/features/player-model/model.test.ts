@@ -333,6 +333,37 @@ describe('shipped modular stage models', () => {
     }
   });
 
+  it.each(['masculine', 'feminine'] as const)('builds the %s long-sleeve from fitted skinned arm geometry', frame => {
+    const appearance = defaultAppearance('long-sleeve-fitted');
+    appearance.body.frame = frame;
+    appearance.equipment.top.itemId = 'starter.top.long-sleeve';
+    const model = assemblePlayerModel(library, appearance);
+    const sleeves = model.getObjectByName('avatar-v1-fitted-long-sleeves') as T.SkinnedMesh | undefined;
+    expect(sleeves).toBeTruthy();
+    expect(sleeves?.userData.avatarV1FittedSleeves).toBe(true);
+    expect(Number(sleeves?.userData.avatarV1FittedSleeveTriangleCount)).toBeGreaterThan(4);
+    expect(sleeves?.geometry.getAttribute('skinWeight')).toBeTruthy();
+    expect(sleeves?.geometry.getAttribute('skinIndex')).toBeTruthy();
+    expect(starterItemsForWardrobe('top').some(item => item.id === 'starter.top.long-sleeve')).toBe(true);
+    disposeModel(model);
+  });
+
+  it.each(['masculine', 'feminine'] as const)('makes the %s tank sleeveless by removing only garment sleeve triangles', frame => {
+    const appearance = defaultAppearance('tank-fitted');
+    appearance.body.frame = frame;
+    appearance.equipment.top.itemId = 'starter.top.tank';
+    const model = assemblePlayerModel(library, appearance);
+    const tanks: T.SkinnedMesh[] = [];
+    model.traverse(node => {
+      if (node instanceof T.SkinnedMesh && node.userData.avatarV1TankSleevesRemoved) tanks.push(node);
+      expect(node.name.startsWith('Starter_Body_')).toBe(false);
+    });
+    expect(tanks.length).toBeGreaterThan(0);
+    expect(tanks.some(mesh => Number(mesh.userData.avatarV1TankRemovedTriangleCount) > 0)).toBe(true);
+    expect(starterItemsForWardrobe('top').some(item => item.id === 'starter.top.tank')).toBe(true);
+    disposeModel(model);
+  });
+
   it.each(['masculine', 'feminine'] as const)('keeps the %s Rockmundo chest print nearly flush to the garment surface', frame => {
     const appearance = defaultAppearance('logo-surface');
     appearance.body.frame = frame;
