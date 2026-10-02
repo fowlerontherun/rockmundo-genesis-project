@@ -16,8 +16,10 @@ export interface StarterItem { id: string; style: Style; label: string; fabric: 
 const wardrobe = (slot: EquipmentSlot, rows: [string, Style, string, Fabric][]): StarterItem[] => rows.map(([key, style, label, fabric]) => ({ id: `starter.${slot}.${key}`, style, label, fabric }));
 export const STARTER_ITEMS: Record<EquipmentSlot, StarterItem[]> = {
   top: wardrobe('top', [
-    ['casual', 'casual', 'Rockmundo logo T-shirt', 'plain'], ['topless', 'casual', 'Topless', 'plain'], ['punk', 'punk', 'Punk top', 'plain'], ['suit', 'suit', 'Tailored jacket', 'plain'],
-    ['stripe', 'casual', 'Striped top', 'stripe'], ['plain-black', 'casual', 'Plain black T-shirt', 'plain'], ['plain-white', 'casual', 'Plain white T-shirt', 'plain'], ['vintage-charcoal', 'punk', 'Vintage charcoal T-shirt', 'plain'], ['plaid', 'punk', 'Plaid punk top', 'plaid'], ['pinstripe', 'suit', 'Pinstripe jacket', 'pinstripe'],
+    ['casual', 'casual', 'Rockmundo crew-neck T-shirt', 'plain'], ['topless', 'casual', 'Topless', 'plain'], ['punk', 'punk', 'Punk top', 'plain'], ['suit', 'suit', 'Tailored jacket', 'plain'],
+    ['stripe', 'casual', 'Striped T-shirt', 'stripe'], ['plain-black', 'casual', 'Plain black T-shirt', 'plain'], ['plain-white', 'casual', 'Plain white T-shirt', 'plain'], ['vintage-charcoal', 'punk', 'Vintage charcoal T-shirt', 'plain'], ['plaid', 'punk', 'Plaid punk top', 'plaid'], ['pinstripe', 'suit', 'Pinstripe jacket', 'pinstripe'],
+    ['v-neck', 'casual', 'V-neck T-shirt', 'plain'], ['long-sleeve', 'casual', 'Long-sleeve T-shirt', 'plain'], ['tank', 'punk', 'Tank top', 'plain'],
+    ['hoodie', 'casual', 'Pullover hoodie', 'plain'], ['zip-hoodie', 'casual', 'Zip hoodie', 'plain'], ['denim-jacket', 'punk', 'Denim jacket', 'denim'], ['flannel-shirt', 'punk', 'Flannel overshirt', 'plaid'],
   ]),
   bottom: wardrobe('bottom', [
     ['casual', 'casual', 'Everyday trousers', 'plain'], ['punk', 'punk', 'Punk trousers', 'plain'], ['suit', 'suit', 'Tailored trousers', 'plain'],
