@@ -58,7 +58,9 @@ const V1_SKINNED_TEE_ITEMS = new Set([
 
 // Keep unverified V1 silhouettes out of the live renderer. Their saved IDs remain
 // valid and resolve through visualEquipmentItem() to a safe donor fallback.
-const V1_SKINNED_OUTERWEAR_ITEMS = new Set<string>();
+const V1_SKINNED_OUTERWEAR_ITEMS = new Set<string>([
+  'starter.top.hoodie',
+]);
 
 const V1_CROPPED_BOTTOM_ITEMS = new Set([
   'starter.bottom.denim-shorts',
@@ -295,7 +297,7 @@ function removeV1TankSleeveTriangles(mesh: T.SkinnedMesh, materials: T.Material[
   mesh.userData.avatarV1TankRemovedTriangleCount = removed;
 }
 
-function addV1FittedLongSleeves(mesh: T.SkinnedMesh, materials: T.Material[]) {
+function addV1FittedLongSleeves(mesh: T.SkinnedMesh, materials: T.Material[], itemId: string) {
   const geometry = mesh.geometry;
   const skinIndex = geometry.getAttribute('skinIndex') as T.BufferAttribute | undefined;
   const skinWeight = geometry.getAttribute('skinWeight') as T.BufferAttribute | undefined;
@@ -344,22 +346,40 @@ function addV1FittedLongSleeves(mesh: T.SkinnedMesh, materials: T.Material[]) {
   sleeveGeometry.clearGroups();
   sleeveGeometry.addGroup(0, sleeveIndices.length, 0);
   sleeveGeometry.computeVertexNormals();
+
+  const sleevePosition = sleeveGeometry.getAttribute('position') as T.BufferAttribute;
+  const sleeveNormal = sleeveGeometry.getAttribute('normal') as T.BufferAttribute | undefined;
+  const usedVertices = new Set(sleeveIndices);
+  const surfaceOffset = itemId === 'starter.top.hoodie' ? .007 : .004;
+  if (sleeveNormal) {
+    for (const vertex of usedVertices) {
+      sleevePosition.setXYZ(
+        vertex,
+        sleevePosition.getX(vertex) + sleeveNormal.getX(vertex) * surfaceOffset,
+        sleevePosition.getY(vertex) + sleeveNormal.getY(vertex) * surfaceOffset,
+        sleevePosition.getZ(vertex) + sleeveNormal.getZ(vertex) * surfaceOffset,
+      );
+    }
+    sleevePosition.needsUpdate = true;
+    sleeveGeometry.computeVertexNormals();
+  }
   sleeveGeometry.computeBoundingBox();
   sleeveGeometry.computeBoundingSphere();
 
   const sleeveMaterial = garmentMaterial.clone();
-  sleeveMaterial.name = 'V1FittedLongSleeve';
+  sleeveMaterial.name = itemId === 'starter.top.hoodie' ? 'V1FittedHoodieSleeve' : 'V1FittedLongSleeve';
   sleeveMaterial.polygonOffset = true;
   sleeveMaterial.polygonOffsetFactor = -2;
   sleeveMaterial.polygonOffsetUnits = -2;
   sleeveMaterial.roughness = Math.max(.82, sleeveMaterial.roughness);
 
   const sleeves = new T.SkinnedMesh(sleeveGeometry, sleeveMaterial);
-  sleeves.name = 'avatar-v1-fitted-long-sleeves';
+  sleeves.name = itemId === 'starter.top.hoodie' ? 'avatar-v1-fitted-hoodie-sleeves' : 'avatar-v1-fitted-long-sleeves';
   sleeves.castShadow = true;
   sleeves.receiveShadow = true;
   sleeves.bind(mesh.skeleton, mesh.bindMatrix.clone());
   sleeves.userData.avatarV1FittedSleeves = true;
+  sleeves.userData.avatarV1FittedSleeveVariant = itemId;
   sleeves.userData.avatarV1FittedSleeveTriangleCount = sleeveIndices.length / 3;
   mesh.parent?.add(sleeves);
 }
@@ -608,6 +628,66 @@ function addV1OuterwearFrontDetail(root: T.Object3D, appearance: PlayerAppearanc
       : 'avatar-v1-flannel-placket';
   line.renderOrder = 2;
   attachSurfaceGraphic(root, chest, line, attachment, .0004);
+}
+
+function addV1HoodieDetails(root: T.Object3D, appearance: PlayerAppearance, bones: Map<string, T.Bone>) {
+  if (appearance.equipment.top.itemId !== 'starter.top.hoodie') return;
+  if (visualEquipmentItem(appearance, 'top').id !== 'starter.top.hoodie') return;
+
+  const chest = findPlayerBone(bones, ['Spine2','Spine.002','Chest','UpperChest'])
+    ?? findPlayerBone(bones, ['Spine1','Spine.001']);
+  const neck = findPlayerBone(bones, ['Neck']);
+  if (!chest || !neck) return;
+
+  root.updateMatrixWorld(true);
+  const fabric = new T.MeshStandardMaterial({
+    color: appearance.equipment.top.color,
+    roughness: .94,
+    metalness: 0,
+    side: T.DoubleSide,
+  });
+  fabric.name = 'V1HoodieDetail';
+
+  // Compact hood roll follows the neck rather than floating from the torso.
+  const hood = new T.Mesh(
+    new T.TorusGeometry(appearance.body.frame === 'feminine' ? .105 : .115, .027, 10, 32, Math.PI * 1.55),
+    fabric.clone(),
+  );
+  hood.name = 'avatar-v1-hoodie-hood';
+  hood.rotation.x = Math.PI / 2;
+  hood.rotation.z = Math.PI * .22;
+  hood.position.copy(neck.getWorldPosition(new T.Vector3())).add(new T.Vector3(0, -.025, -.035));
+  root.add(hood);
+  neck.attach(hood);
+
+  const attachment = findFrontSurfaceAttachment(
+    root,
+    'body',
+    chest.getWorldPosition(new T.Vector3()),
+    appearance.body.frame === 'feminine' ? .018 : .025,
+  );
+  if (!attachment) return;
+
+  const pocketShape = new T.Shape();
+  pocketShape.moveTo(-.105, .045);
+  pocketShape.quadraticCurveTo(-.125, .015, -.11, -.065);
+  pocketShape.lineTo(.11, -.065);
+  pocketShape.quadraticCurveTo(.125, .015, .105, .045);
+  pocketShape.lineTo(.06, .06);
+  pocketShape.lineTo(-.06, .06);
+  pocketShape.closePath();
+  const pocket = new T.Mesh(new T.ShapeGeometry(pocketShape), fabric.clone());
+  pocket.name = 'avatar-v1-hoodie-kangaroo-pocket';
+  pocket.renderOrder = 2;
+  attachSurfaceGraphic(root, chest, pocket, attachment, .00065);
+
+  for (const side of [-1, 1]) {
+    const drawstring = new T.Mesh(new T.PlaneGeometry(.006, .12), fabric.clone());
+    drawstring.name = `avatar-v1-hoodie-drawstring-${side < 0 ? 'left' : 'right'}`;
+    drawstring.position.x = side * .026;
+    drawstring.position.y = -.045;
+    pocket.add(drawstring);
+  }
 }
 
 function applyV1HandProportionPolish(bones: Map<string, T.Bone>) {
@@ -1377,11 +1457,12 @@ export function assemblePlayerModel(
         if (
           choice.part === 'body' &&
           !choice.assetKey &&
-          appearance.equipment.top.itemId === 'starter.top.long-sleeve'
+          (appearance.equipment.top.itemId === 'starter.top.long-sleeve' || appearance.equipment.top.itemId === 'starter.top.hoodie')
         ) {
           addV1FittedLongSleeves(
             clonedNode,
             Array.isArray(clonedNode.material) ? clonedNode.material : [clonedNode.material],
+            appearance.equipment.top.itemId,
           );
         }
         if (choice.part === 'head' && clonedNode.parent) {
@@ -1437,6 +1518,7 @@ export function assemblePlayerModel(
   if (presentation === 'stage') {
     addStarterLogoTee(result, appearance, bones, richClothing);
     addV1VNeckTrim(result, appearance, bones);
+    addV1HoodieDetails(result, appearance, bones);
     addV1OuterwearFrontDetail(result, appearance, bones);
     addCuratedSkinDetails(result, bones, richClothing, quality);
   }

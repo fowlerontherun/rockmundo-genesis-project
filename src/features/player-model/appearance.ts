@@ -38,7 +38,7 @@ export const LIVE_STARTER_ITEM_IDS = new Set([
   // Tops backed by a donor silhouette we have visually verified in V1.
   'starter.top.casual','starter.top.topless','starter.top.punk','starter.top.suit',
   'starter.top.stripe','starter.top.plain-black','starter.top.plain-white','starter.top.vintage-charcoal',
-  'starter.top.plaid','starter.top.pinstripe','starter.top.v-neck','starter.top.long-sleeve','starter.top.tank',
+  'starter.top.plaid','starter.top.pinstripe','starter.top.v-neck','starter.top.long-sleeve','starter.top.tank','starter.top.hoodie',
   // Bottoms backed by the three donor trouser families plus proven cropped variants.
   'starter.bottom.casual','starter.bottom.punk','starter.bottom.suit','starter.bottom.denim',
   'starter.bottom.blue-jeans','starter.bottom.black-jeans','starter.bottom.dark-slim-jeans',
@@ -54,7 +54,6 @@ export const LIVE_STARTER_ITEM_IDS = new Set([
  * its V1 visual was production-ready. Keep the save valid, but render a known-safe
  * donor equivalent until a genuinely fitted/skinned asset is available. */
 export const STARTER_VISUAL_FALLBACKS: Record<string, string> = {
-  'starter.top.hoodie': 'starter.top.casual',
   'starter.top.zip-hoodie': 'starter.top.casual',
   'starter.top.denim-jacket': 'starter.top.punk',
   'starter.top.flannel-shirt': 'starter.top.punk',
