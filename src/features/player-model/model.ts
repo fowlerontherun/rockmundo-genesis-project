@@ -47,6 +47,56 @@ function findPlayerBone(bones: Map<string, T.Bone>, names: string[]) {
   for (const bone of bones.values()) if (names.some(name => cleanBoneName(bone.name) === cleanBoneName(name))) return bone;
 }
 
+function applyFeminineBreastSize(mesh: T.SkinnedMesh, size: number) {
+  if (!Number.isFinite(size) || Math.abs(size - 1) < .001) return;
+  const geometry = mesh.geometry;
+  const position = geometry.getAttribute('position') as T.BufferAttribute | undefined;
+  const skinIndex = geometry.getAttribute('skinIndex') as T.BufferAttribute | undefined;
+  const skinWeight = geometry.getAttribute('skinWeight') as T.BufferAttribute | undefined;
+  if (!position || !skinIndex || !skinWeight) return;
+
+  geometry.computeBoundingBox();
+  const bounds = geometry.boundingBox;
+  if (!bounds) return;
+  const centreZ = (bounds.min.z + bounds.max.z) * .5;
+  const frontDepth = Math.max(.001, bounds.max.z - centreZ);
+  const width = Math.max(.001, bounds.max.x - bounds.min.x);
+  const delta = T.MathUtils.clamp(size, .75, 1.35) - 1;
+  let affected = 0;
+
+  for (let vertex = 0; vertex < position.count; vertex += 1) {
+    let chestWeight = 0;
+    for (let channel = 0; channel < 4; channel += 1) {
+      const weight = skinWeight.getComponent(vertex, channel);
+      if (weight <= 0) continue;
+      const boneName = mesh.skeleton.bones[skinIndex.getComponent(vertex, channel)]?.name ?? '';
+      if (/spine2|spine\.002|chest|upperchest/i.test(boneName)) chestWeight += weight;
+      else if (/spine1|spine\.001/i.test(boneName)) chestWeight += weight * .35;
+    }
+    if (chestWeight < .18) continue;
+
+    const x = position.getX(vertex), z = position.getZ(vertex);
+    const front = T.MathUtils.clamp((z - centreZ) / frontDepth, 0, 1);
+    if (front <= .04) continue;
+    const centreX = (bounds.min.x + bounds.max.x) * .5;
+    const lateral = 1 - T.MathUtils.clamp(Math.abs(x - centreX) / (width * .48), 0, 1);
+    const influence = T.MathUtils.clamp(chestWeight, 0, 1) * Math.pow(front, 1.35) * (.42 + .58 * lateral);
+    if (influence <= .02) continue;
+
+    position.setZ(vertex, z + frontDepth * delta * .72 * influence);
+    position.setX(vertex, centreX + (x - centreX) * (1 + delta * .08 * influence));
+    affected += 1;
+  }
+
+  if (!affected) return;
+  position.needsUpdate = true;
+  geometry.computeVertexNormals();
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  mesh.userData.avatarV1BreastSize = size;
+  mesh.userData.avatarV1BreastSizeAffectedVertices = affected;
+}
+
 const V1_SKINNED_TEE_ITEMS = new Set([
   'starter.top.casual',
   'starter.top.stripe',
@@ -1131,7 +1181,8 @@ function addLegacyBareBodyUnderlay(
   const torsoTop = neck ?? spine2;
   const torsoDriver = spine1 ?? spine2 ?? hips;
   if (hips && torsoTop && torsoDriver) {
-    addEllipsoid('torso', torsoDriver, hips, torsoTop, .185 * frameScale * muscleScale, .112 * (1 + (muscleScale - 1) * .55), 1.02);
+    const breastScale = appearance.body.frame === 'feminine' ? T.MathUtils.lerp(.9, 1.16, T.MathUtils.inverseLerp(.75, 1.35, appearance.body.breastSize ?? 1)) : 1;
+    addEllipsoid('torso', torsoDriver, hips, torsoTop, .185 * frameScale * muscleScale, .112 * (1 + (muscleScale - 1) * .55) * breastScale, 1.02);
   }
 
   for (const side of ['L', 'R'] as const) {
@@ -1313,6 +1364,9 @@ export function assemblePlayerModel(
         const original = (container === clonedNode ? container : container.getObjectByName(clonedNode.name)) as T.SkinnedMesh;
         if (!original?.isSkinnedMesh) throw new Error('Incompatible character geometry');
         clonedNode.geometry = original.geometry.clone();
+        if (choice.part === 'body' && appearance.body.frame === 'feminine') {
+          applyFeminineBreastSize(clonedNode, appearance.body.breastSize ?? 1);
+        }
         if (
           choice.part === 'body' &&
           !choice.assetKey &&
