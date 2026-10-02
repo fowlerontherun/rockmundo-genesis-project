@@ -473,6 +473,61 @@ describe('shipped modular stage models', () => {
     disposeModel(actor.root);
   });
 });
+describe('feminine breast size', () => {
+  it('defaults old appearances to a neutral breast size and validates the supported range', () => {
+    const old = defaultAppearance('legacy-breast-size');
+    delete old.body.breastSize;
+    const resolved = resolveAppearance(JSON.parse(JSON.stringify(old)), 'legacy-breast-size');
+    expect(resolved.body.breastSize).toBe(1);
+    const small = defaultAppearance('small-breast-size'); small.body.frame = 'feminine'; small.body.breastSize = .75;
+    const large = defaultAppearance('large-breast-size'); large.body.frame = 'feminine'; large.body.breastSize = 1.35;
+    expect(appearanceSchema.safeParse(small).success).toBe(true);
+    expect(appearanceSchema.safeParse(large).success).toBe(true);
+    large.body.breastSize = 1.36;
+    expect(appearanceSchema.safeParse(large).success).toBe(false);
+  });
+
+  it('changes feminine chest geometry while leaving masculine geometry neutral', () => {
+    const feminine = defaultAppearance('breast-geometry');
+    feminine.body.frame = 'feminine';
+    feminine.body.breastSize = 1.3;
+    const femaleModel = assemblePlayerModel(library, feminine);
+    const affected: T.SkinnedMesh[] = [];
+    femaleModel.traverse(node => {
+      if (node instanceof T.SkinnedMesh && Number(node.userData.avatarV1BreastSizeAffectedVertices) > 0) affected.push(node);
+    });
+    expect(affected.length).toBeGreaterThan(0);
+    expect(affected.some(mesh => mesh.userData.avatarV1BreastSize === 1.3)).toBe(true);
+    disposeModel(femaleModel);
+
+    const masculine = defaultAppearance('breast-geometry-m');
+    masculine.body.frame = 'masculine';
+    masculine.body.breastSize = 1.3;
+    const maleModel = assemblePlayerModel(library, masculine);
+    let maleAffected = 0;
+    maleModel.traverse(node => { if (node.userData.avatarV1BreastSizeAffectedVertices) maleAffected += 1; });
+    expect(maleAffected).toBe(0);
+    disposeModel(maleModel);
+  });
+
+  it.each([.78, 1, 1.32])('keeps feminine breast size %s stable through gig animation', size => {
+    const appearance = defaultAppearance(`breast-animation-${size}`);
+    appearance.body.frame = 'feminine';
+    appearance.body.breastSize = size;
+    const source = assemblePlayerModel(library, appearance);
+    const actor = new Musician(source, 'guitar', [0, 0, 0], 0, undefined, appearance);
+    disposeModel(source);
+    for (const time of [0, 3, 9, 18]) {
+      actor.update(time, .8, false);
+      const bounds = new T.Box3().setFromObject(actor.root);
+      expect(bounds.max.y).toBeLessThan(2.85);
+      expect(bounds.min.y).toBeGreaterThan(-.25);
+      expect(bounds.max.x - bounds.min.x).toBeLessThan(2.5);
+    }
+    disposeModel(actor.root);
+  });
+});
+
 describe('appearance boundaries', () => {
   it('upgrades saved appearances without a muscle field to the natural body type', () => {
     const old = defaultAppearance('legacy-muscle');

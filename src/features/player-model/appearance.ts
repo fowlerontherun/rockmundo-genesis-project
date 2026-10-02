@@ -118,7 +118,7 @@ const color = z.string().regex(/^#[0-9a-fA-F]{6}$/).transform(value => value.toL
 const item = (slot: EquipmentSlot) => z.string().refine(value => STARTER_ITEMS[slot].some(entry => entry.id === value), 'Choose an available starter item');
 export const appearanceSchema = z.object({
   version: z.literal(1),
-  body: z.object({ frame: z.enum(['masculine', 'feminine']), height: z.number().finite().min(0.9).max(1.1), build: z.number().finite().min(0.85).max(1.15), muscle: z.enum(BODY_MUSCLE_TYPES).optional(), skin: color }).strict(),
+  body: z.object({ frame: z.enum(['masculine', 'feminine']), height: z.number().finite().min(0.9).max(1.1), build: z.number().finite().min(0.85).max(1.15), breastSize: z.number().finite().min(0.75).max(1.35).optional(), muscle: z.enum(BODY_MUSCLE_TYPES).optional(), skin: color }).strict(),
   head: z.object({ style: z.enum(STYLES), hair: color, hairStyle: z.enum(HAIR_STYLES).optional(), facialHair: z.enum(FACIAL_HAIR_STYLES).optional(), facialHairColor: color.optional(), faceShape: z.enum(FACE_SHAPES).optional(), eyeColor: color.optional(), eyebrowStyle: z.enum(EYEBROW_STYLES).optional(), eyebrowColor: color.optional(), skinDetail: z.enum(SKIN_DETAILS).optional() }).strict(),
   equipment: z.object({
     top: z.object({ itemId: item('top'), color }).strict(),
@@ -146,7 +146,7 @@ export function defaultAppearance(seed = ''): PlayerAppearance {
   const style = STYLES[hash % STYLES.length];
   return {
     version: 1,
-    body: { frame: 'masculine', height: 1, build: 1, muscle: 'natural', skin: ['#d4a373', '#8d5524', '#edc7a5', '#593a2d'][hash % 4] },
+    body: { frame: 'masculine', height: 1, build: 1, breastSize: 1, muscle: 'natural', skin: ['#d4a373', '#8d5524', '#edc7a5', '#593a2d'][hash % 4] },
     head: { style, hair: '#282027', faceShape: 'classic', eyeColor: '#65442d', eyebrowStyle: 'natural', skinDetail: 'smooth' },
     equipment: {
       top: { itemId: 'starter.top.casual', color: '#eee8db' },
@@ -162,7 +162,7 @@ export function resolveAppearance(value: unknown, seed = ''): PlayerAppearance {
   if (!parsed.success) return defaultAppearance(seed);
   return {
     ...parsed.data,
-    body: { ...parsed.data.body, muscle: parsed.data.body.muscle ?? 'natural' },
+    body: { ...parsed.data.body, breastSize: parsed.data.body.breastSize ?? 1, muscle: parsed.data.body.muscle ?? 'natural' },
     head: {
       ...parsed.data.head,
       faceShape: parsed.data.head.faceShape ?? 'classic',
