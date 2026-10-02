@@ -7,7 +7,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Clock, DollarSign, TrendingUp, Award, MapPin, Calendar, Eye, EyeOff, Plane, Sparkles, Music, Building, BookOpen } from "lucide-react";
 import { useMentorSessions } from "@/hooks/useMentorSessions";
 import { formatFocusSkill } from "@/pages/admin/mentors.helpers";
-import { MentorDiscoveryJournal } from "./MentorDiscoveryJournal";
 
 export const MentorsTab = () => {
   const { 
@@ -25,7 +24,7 @@ export const MentorsTab = () => {
     totalMentors,
   } = useMentorSessions();
 
-  const [filter, setFilter] = useState<'all' | 'discovered' | 'available'>('discovered');
+  const [filter, setFilter] = useState<'all' | 'available'>('all');
 
   const getSkillLevel = (skillSlug: string) => {
     return skillProgress?.find((s) => s.skill_slug === skillSlug)?.current_level || 0;
@@ -42,44 +41,25 @@ export const MentorsTab = () => {
     const inCity = isInMentorCity(mentor.city_id);
     const availableDay = isAvailableToday(mentor.available_day);
 
-    if (filter === 'discovered') return discovered;
-    if (filter === 'available') return discovered && inCity && availableDay;
+    if (filter === 'available') return inCity && availableDay;
     return true;
   });
 
   return (
-    <Tabs defaultValue="masters" className="space-y-6">
-      <TabsList>
-        <TabsTrigger value="masters" className="gap-1">
-          <Sparkles className="h-3.5 w-3.5" />
-          Masters
-        </TabsTrigger>
-        <TabsTrigger value="journal" className="gap-1">
-          <BookOpen className="h-3.5 w-3.5" />
-          Discovery Journal
-        </TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="journal" className="mt-4 focus-visible:outline-none">
-        <MentorDiscoveryJournal />
-      </TabsContent>
-
-      <TabsContent value="masters" className="mt-4 focus-visible:outline-none">
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
-            Legendary Masters
+            Mentors
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Discover and train with the world's greatest musicians. Each master resides in a specific city and teaches on certain days.
+            Find a mentor for the skill you want to learn. Professional and Mastery mentors appear here as soon as their skill tier is unlocked.
           </p>
         </div>
         <Badge variant="outline" className="text-sm px-3 py-1 self-start">
-          <Eye className="h-3 w-3 mr-1" />
-          {discoveredCount} / {totalMentors} Discovered
+          {totalMentors} mentors
         </Badge>
       </div>
 
@@ -110,17 +90,13 @@ export const MentorsTab = () => {
       {/* Filter Tabs */}
       <Tabs value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
         <TabsList>
-          <TabsTrigger value="discovered" className="gap-1">
-            <Eye className="h-3 w-3" />
-            Discovered ({discoveredCount})
-          </TabsTrigger>
           <TabsTrigger value="available" className="gap-1">
             <MapPin className="h-3 w-3" />
             Available Now
           </TabsTrigger>
           <TabsTrigger value="all" className="gap-1">
             <EyeOff className="h-3 w-3" />
-            All Masters
+            All Mentors
           </TabsTrigger>
         </TabsList>
 
@@ -318,8 +294,7 @@ export const MentorsTab = () => {
         </TabsContent>
       </Tabs>
     </div>
-      </TabsContent>
-    </Tabs>
+    </div>
   );
 };
 
