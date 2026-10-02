@@ -184,8 +184,14 @@ export function resolveAppearance(value: unknown, seed = ''): PlayerAppearance {
     },
   };
 }
+const STARTER_VISUAL_STYLE_OVERRIDES: Partial<Record<string, Style>> = {
+  'starter.bottom.black-jeans': 'casual',
+  'starter.bottom.dark-slim-jeans': 'casual',
+};
+
 export function equipmentStyle(appearance: PlayerAppearance, slot: EquipmentSlot): Style {
-  return visualEquipmentItem(appearance, slot).style;
+  const item = visualEquipmentItem(appearance, slot);
+  return STARTER_VISUAL_STYLE_OVERRIDES[item.id] ?? item.style;
 }
 export function modelFile(frame: PlayerAppearance['body']['frame'], style: Style) {
   return `${frame === 'feminine' ? 'female-' : ''}${style}.glb`;
