@@ -198,6 +198,55 @@ describe('shipped modular stage models', () => {
     }
   });
 
+  it.each(['masculine', 'feminine'] as const)('polishes the %s Rockmundo tee on the existing skinned donor mesh', frame => {
+    const appearance = defaultAppearance('crew-tee-donor-polish');
+    appearance.body.frame = frame;
+    appearance.equipment.top.itemId = 'starter.top.casual';
+    const model = assemblePlayerModel(library, appearance);
+    const polished: T.SkinnedMesh[] = [];
+    model.traverse(node => {
+      if (node instanceof T.SkinnedMesh && node.userData.avatarV1CrewTeePolished) polished.push(node);
+      expect(node.name.startsWith('Starter_Body_')).toBe(false);
+    });
+    expect(polished.length).toBeGreaterThan(0);
+    expect(polished.some(mesh => Number(mesh.userData.avatarV1CrewTeeVertexCount) > 20)).toBe(true);
+    expect(polished.some(mesh => Number(mesh.userData.avatarV1CrewTeeSleeveVertexCount) > 0)).toBe(true);
+    for (const mesh of polished) {
+      expect(mesh.skeleton.bones.length).toBeGreaterThan(10);
+      expect(mesh.geometry.getAttribute('skinWeight')).toBeTruthy();
+      expect(mesh.geometry.getAttribute('skinIndex')).toBeTruthy();
+    }
+    disposeModel(model);
+  });
+
+  it.each(['masculine', 'feminine'] as const)('polishes the %s stable skinned tee family without enabling procedural clothing', frame => {
+    for (const itemId of [
+      'starter.top.casual',
+      'starter.top.stripe',
+      'starter.top.plain-black',
+      'starter.top.plain-white',
+      'starter.top.vintage-charcoal',
+      'starter.top.v-neck',
+    ] as const) {
+      const appearance = defaultAppearance(itemId);
+      appearance.body.frame = frame;
+      appearance.equipment.top.itemId = itemId;
+      const model = assemblePlayerModel(library, appearance);
+      const polished: T.SkinnedMesh[] = [];
+      model.traverse(node => {
+        if (node instanceof T.SkinnedMesh && node.userData.avatarV1CrewTeeVariant === itemId) polished.push(node);
+        expect(node.name.startsWith('Starter_Body_')).toBe(false);
+      });
+      expect(polished.length).toBeGreaterThan(0);
+      for (const mesh of polished) {
+        expect(mesh.geometry.getAttribute('skinWeight')).toBeTruthy();
+        expect(mesh.geometry.getAttribute('skinIndex')).toBeTruthy();
+      }
+      if (itemId === 'starter.top.v-neck') expect(model.getObjectByName('avatar-v1-v-neck-trim')).toBeTruthy();
+      disposeModel(model);
+    }
+  });
+
   it.each(['masculine', 'feminine'] as const)('keeps the %s Rockmundo chest print nearly flush to the garment surface', frame => {
     const appearance = defaultAppearance('logo-surface');
     appearance.body.frame = frame;

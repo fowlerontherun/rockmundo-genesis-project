@@ -47,6 +47,98 @@ function findPlayerBone(bones: Map<string, T.Bone>, names: string[]) {
   for (const bone of bones.values()) if (names.some(name => cleanBoneName(bone.name) === cleanBoneName(name))) return bone;
 }
 
+const V1_SKINNED_TEE_ITEMS = new Set([
+  'starter.top.casual',
+  'starter.top.stripe',
+  'starter.top.plain-black',
+  'starter.top.plain-white',
+  'starter.top.vintage-charcoal',
+  'starter.top.v-neck',
+]);
+
+function polishV1CrewTeeGeometry(
+  mesh: T.SkinnedMesh,
+  materials: T.Material[],
+  itemId: string,
+) {
+  const geometry = mesh.geometry;
+  const position = geometry.getAttribute('position') as T.BufferAttribute | undefined;
+  const skinIndex = geometry.getAttribute('skinIndex') as T.BufferAttribute | undefined;
+  const skinWeight = geometry.getAttribute('skinWeight') as T.BufferAttribute | undefined;
+  if (!position || !skinIndex || !skinWeight || !geometry.groups.length || !materials.length) return;
+
+  const garmentMaterialIndices = new Set<number>();
+  materials.forEach((material, index) => {
+    const name = material.name.toLowerCase();
+    if (!/skin|eye|earring|metal|hair/.test(name)) garmentMaterialIndices.add(index);
+  });
+  if (!garmentMaterialIndices.size) return;
+
+  const garmentVertices = new Set<number>();
+  const index = geometry.index;
+  for (const group of geometry.groups) {
+    if (!garmentMaterialIndices.has(group.materialIndex ?? 0)) continue;
+    const end = group.start + group.count;
+    for (let i = group.start; i < end; i += 1) {
+      garmentVertices.add(index ? index.getX(i) : i);
+    }
+  }
+  if (!garmentVertices.size) return;
+
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (const vertex of garmentVertices) {
+    const x = position.getX(vertex), y = position.getY(vertex), z = position.getZ(vertex);
+    minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+    minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z);
+  }
+  const centreX = (minX + maxX) * .5;
+  const centreZ = (minZ + maxZ) * .5;
+  const height = Math.max(.001, maxY - minY);
+  let sleeveVertices = 0;
+
+  for (const vertex of garmentVertices) {
+    const y = position.getY(vertex);
+    const yNorm = (y - minY) / height;
+    let armWeight = 0;
+    for (let channel = 0; channel < 4; channel += 1) {
+      const weight = skinWeight.getComponent(vertex, channel);
+      if (weight <= 0) continue;
+      const boneIndex = skinIndex.getComponent(vertex, channel);
+      const boneName = mesh.skeleton.bones[boneIndex]?.name ?? '';
+      if (/upperarm/i.test(boneName)) armWeight += weight;
+    }
+
+    const x = position.getX(vertex);
+    const z = position.getZ(vertex);
+    // Keep the proven donor skinning but make the casual body read as a fitted
+    // short-sleeve crew tee rather than the bulkier source top. These are small
+    // bind-space edits only; no bones, weights or inverse binds are replaced.
+    const vintage = itemId === 'starter.top.vintage-charcoal';
+    const vNeck = itemId === 'starter.top.v-neck';
+    const torsoXScale = yNorm < .24 ? (vintage ? .91 : .94) : (vintage ? .945 : .965);
+    const topDepthScale = yNorm > .68 ? (vNeck ? .83 : .86) : (vintage ? .9 : .93);
+    const xScale = armWeight > .42 ? (vintage ? .8 : .84) : torsoXScale;
+    const zScale = armWeight > .42 ? .89 : topDepthScale;
+    if (armWeight > .42) sleeveVertices += 1;
+    position.setXYZ(
+      vertex,
+      centreX + (x - centreX) * xScale,
+      y,
+      centreZ + (z - centreZ) * zScale,
+    );
+  }
+
+  position.needsUpdate = true;
+  geometry.computeVertexNormals();
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  mesh.userData.avatarV1CrewTeePolished = true;
+  mesh.userData.avatarV1CrewTeeVariant = itemId;
+  mesh.userData.avatarV1CrewTeeVertexCount = garmentVertices.size;
+  mesh.userData.avatarV1CrewTeeSleeveVertexCount = sleeveVertices;
+}
+
 function rockmundoWordmarkTexture() {
   const glyphs: Record<string, string[]> = {
     R:['11110','10001','10001','11110','10100','10010','10001'],
@@ -125,6 +217,43 @@ function addStarterLogoTee(root: T.Object3D, appearance: PlayerAppearance, bones
   mark.name = 'avatar-rockmundo-logo';
   mark.renderOrder = 3;
   attachSurfaceGraphic(root, chest, mark, attachment, .00045);
+}
+
+function addV1VNeckTrim(root: T.Object3D, appearance: PlayerAppearance, bones: Map<string, T.Bone>) {
+  if (appearance.equipment.top.itemId !== 'starter.top.v-neck') return;
+  const chest = findPlayerBone(bones, ['Spine2','Spine.002','Chest','UpperChest'])
+    ?? findPlayerBone(bones, ['Spine1','Spine.001']);
+  if (!chest) return;
+  const attachment = findFrontSurfaceAttachment(
+    root,
+    'body',
+    chest.getWorldPosition(new T.Vector3()),
+    appearance.body.frame === 'feminine' ? .018 : .025,
+  );
+  if (!attachment) return;
+
+  const shape = new T.Shape();
+  shape.moveTo(-.085, .035);
+  shape.lineTo(0, -.045);
+  shape.lineTo(.085, .035);
+  shape.lineTo(.071, .048);
+  shape.lineTo(0, -.022);
+  shape.lineTo(-.071, .048);
+  shape.closePath();
+  const material = new T.MeshStandardMaterial({
+    color: new T.Color(appearance.equipment.top.color).offsetHSL(0, 0, -.12),
+    roughness: .92,
+    metalness: 0,
+    side: T.DoubleSide,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1,
+  });
+  material.name = 'V1VNeckTrim';
+  const trim = new T.Mesh(new T.ShapeGeometry(shape), material);
+  trim.name = 'avatar-v1-v-neck-trim';
+  trim.renderOrder = 2;
+  attachSurfaceGraphic(root, chest, trim, attachment, .00035);
 }
 
 function applyV1HandProportionPolish(bones: Map<string, T.Bone>) {
@@ -729,6 +858,17 @@ export function assemblePlayerModel(
         const original = (container === clonedNode ? container : container.getObjectByName(clonedNode.name)) as T.SkinnedMesh;
         if (!original?.isSkinnedMesh) throw new Error('Incompatible character geometry');
         clonedNode.geometry = original.geometry.clone();
+        if (
+          choice.part === 'body' &&
+          !choice.assetKey &&
+          V1_SKINNED_TEE_ITEMS.has(appearance.equipment.top.itemId)
+        ) {
+          polishV1CrewTeeGeometry(
+            clonedNode,
+            Array.isArray(original.material) ? original.material : [original.material],
+            appearance.equipment.top.itemId,
+          );
+        }
         if (choice.fabric !== 'plain' || choice.finish) fabricUVs(clonedNode.geometry, choice.part === 'feet');
         if (choice.assetKey) applyCuratedMacroShading(clonedNode.geometry, choice.assetKey, choice.finish as CuratedFinish | undefined);
         if (choice.part === 'head' || (choice.part === 'body' && !choice.assetKey)) {
@@ -889,6 +1029,7 @@ export function assemblePlayerModel(
   }
   if (presentation === 'stage') {
     addStarterLogoTee(result, appearance, bones, richClothing);
+    addV1VNeckTrim(result, appearance, bones);
     addCuratedSkinDetails(result, bones, richClothing, quality);
   }
   addTattoos(result, tattoos, bones);
