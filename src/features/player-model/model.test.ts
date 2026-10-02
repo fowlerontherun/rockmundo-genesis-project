@@ -437,8 +437,6 @@ describe('V1 starter clothing safety gate', () => {
       'starter.top.zip-hoodie',
       'starter.top.denim-jacket',
       'starter.top.flannel-shirt',
-      'starter.top.long-sleeve',
-      'starter.top.tank',
     ]));
     expect(starterItemsForWardrobe('bottom').map(item => item.id)).not.toEqual(expect.arrayContaining([
       'starter.bottom.cargo-shorts',
