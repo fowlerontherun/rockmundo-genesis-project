@@ -291,10 +291,84 @@ function starterTopVisualItem(appearance: PlayerAppearance): ClothingItem | null
   return { ...common, garment_config } as ClothingItem;
 }
 
-function addStarterProceduralTop(
+const PROCEDURAL_STARTER_BOTTOMS = new Set([
+  'starter.bottom.denim-shorts',
+  'starter.bottom.cargo-shorts',
+  'starter.bottom.athletic-shorts',
+  'starter.bottom.boxer-briefs',
+  'starter.bottom.briefs',
+]);
+
+function starterBottomVisualItem(appearance: PlayerAppearance): ClothingItem | null {
+  const id = appearance.equipment.bottom.itemId;
+  if (!PROCEDURAL_STARTER_BOTTOMS.has(id)) return null;
+  const underwear = id === 'starter.bottom.boxer-briefs' || id === 'starter.bottom.briefs';
+  const denim = id === 'starter.bottom.denim-shorts';
+  const cargo = id === 'starter.bottom.cargo-shorts';
+  return {
+    id,
+    name: equipmentItem(appearance, 'bottom').label,
+    description: 'Built-in Avatar V1 starter garment',
+    category: underwear ? 'underwear' : 'shorts',
+    wearable_slot: 'bottom',
+    price: 0,
+    is_premium: false,
+    rarity: 'common',
+    color_variants: [],
+    collection_id: null,
+    release_date: null,
+    expiry_date: null,
+    is_limited_edition: false,
+    featured: false,
+    rpm_asset_id: null,
+    material_config: {
+      fabric: denim ? 'denim' : underwear ? 'cotton' : 'cotton',
+      primaryColor: appearance.equipment.bottom.color,
+      secondaryColor: underwear ? '#e9e4db' : '#b8b2a5',
+      roughness: denim ? .86 : .9,
+      thickness: underwear ? .28 : .48,
+    },
+    pattern_config: { type: 'solid' },
+    fit_config: {
+      fit: underwear || id === 'starter.bottom.athletic-shorts' ? 'slim' : 'regular',
+      drape: underwear ? .22 : .4,
+      taper: underwear ? .44 : .25,
+    },
+    wear_config: {},
+    garment_config: {
+      templateKey: underwear ? 'underwear' : 'shorts',
+      silhouette: underwear ? 'fitted' : cargo ? 'relaxed' : 'classic',
+      cut: underwear ? 'fitted' : cargo ? 'relaxed' : 'regular',
+      length: underwear ? 'mini' : 'short',
+      waistScale: underwear ? .94 : 1,
+    },
+    detail_layers: [],
+    render_config: {},
+    curated_asset_key: null,
+    curated_asset_status: 'legacy',
+    supported_frames: ['masculine', 'feminine'],
+    validation_notes: null,
+    bonus_enabled: false,
+    bonus_config: null,
+    customization_zones: null,
+    variant_matrix: null,
+    external_key: null,
+    schema_version: 1,
+    import_source: 'avatar-v1-starter',
+    import_batch_id: null,
+    preview_status: null,
+    preview_manifest: null,
+    preview_generated_at: null,
+    last_preview_error: null,
+    shape_config: null,
+  } as ClothingItem;
+}
+
+function addStarterProceduralGarment(
   root: T.Object3D,
   bones: Map<string, T.Bone>,
   item: ClothingItem,
+  prefix: 'Body' | 'Legs',
 ) {
   const garment = buildProceduralGarment(item);
   root.add(garment);
@@ -303,18 +377,77 @@ function addStarterProceduralTop(
   const pieces: T.Mesh[] = [];
   garment.traverse(node => {
     if (!(node instanceof T.Mesh)) return;
-    node.name = `Starter_Body_${node.name || 'garment-piece'}`;
+    node.name = `Starter_${prefix}_${node.name || 'garment-piece'}`;
     pieces.push(node);
   });
 
   for (const piece of pieces) {
-    const anchorName = String(piece.userData.rigAnchor || 'Torso') as GarmentRigAnchor;
+    const anchorName = String(piece.userData.rigAnchor || (prefix === 'Body' ? 'Torso' : 'Hips')) as GarmentRigAnchor;
     const anchor = bones.get(anchorName)
-      ?? (anchorName === 'Torso' ? findPlayerBone(bones, ['Spine2','Spine.002','Chest','UpperChest','Spine1','Spine.001']) : undefined);
+      ?? (anchorName === 'Torso' ? findPlayerBone(bones, ['Spine2','Spine.002','Chest','UpperChest','Spine1','Spine.001']) : undefined)
+      ?? (anchorName === 'Hips' ? findPlayerBone(bones, ['Hips','Pelvis']) : undefined);
     if (anchor) anchor.attach(piece);
     else root.attach(piece);
   }
   garment.removeFromParent();
+}
+
+function addV1BareLegUnderlay(
+  root: T.Object3D,
+  appearance: PlayerAppearance,
+  bones: Map<string, T.Bone>,
+  quality: AvatarVisualQuality,
+) {
+  root.updateMatrixWorld(true);
+  const muscle = appearance.body.muscle ?? 'natural';
+  const muscleScale = { natural: 1, toned: 1.035, athletic: 1.075, muscular: 1.13, bodybuilder: 1.2 }[muscle];
+  const frameScale = appearance.body.frame === 'feminine' ? .92 : 1;
+  const material = upgradeSkinMaterial(
+    Object.assign(new T.MeshStandardMaterial({
+      color: appearance.body.skin,
+      roughness: skinRoughness(appearance),
+      metalness: 0,
+    }), { name: 'Skin_Underlay' }),
+    appearance,
+    quality,
+  );
+  material.name = 'Skin_Underlay';
+
+  const bone = (...names: string[]) => findPlayerBone(bones, names);
+  const addSegment = (name: string, driver: T.Bone | undefined, from: T.Bone | undefined, to: T.Bone | undefined, radiusX: number, radiusZ: number) => {
+    if (!driver || !from || !to) return;
+    const start = from.getWorldPosition(new T.Vector3());
+    const end = to.getWorldPosition(new T.Vector3());
+    const direction = end.clone().sub(start);
+    const length = direction.length();
+    if (!Number.isFinite(length) || length < .015) return;
+    const geometry = new T.SphereGeometry(1, quality === 'cinematic' ? 26 : 18, quality === 'cinematic' ? 18 : 12);
+    geometry.applyMatrix4(new T.Matrix4().compose(
+      start.clone().add(end).multiplyScalar(.5),
+      new T.Quaternion().setFromUnitVectors(new T.Vector3(0, 1, 0), direction.normalize()),
+      new T.Vector3(radiusX, length * .54, radiusZ),
+    ));
+    const count = geometry.attributes.position.count;
+    const weights = new Float32Array(count * 4);
+    for (let i = 0; i < count; i += 1) weights[i * 4] = 1;
+    geometry.setAttribute('skinIndex', new T.Uint16BufferAttribute(new Uint16Array(count * 4), 4));
+    geometry.setAttribute('skinWeight', new T.Float32BufferAttribute(weights, 4));
+    geometry.computeVertexNormals();
+    const mesh = new T.SkinnedMesh(geometry, material);
+    mesh.name = `avatar-v1-short-leg-underlay-${name}`;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    root.add(mesh);
+    mesh.bind(new T.Skeleton([driver], [driver.matrixWorld.clone().invert()]), new T.Matrix4());
+  };
+
+  for (const side of ['L', 'R'] as const) {
+    const upperLeg = bone(`UpperLeg.${side}`, `UpperLeg_${side}`, `UpperLeg${side}`);
+    const lowerLeg = bone(`LowerLeg.${side}`, `LowerLeg_${side}`, `LowerLeg${side}`);
+    const foot = bone(`Foot.${side}`, `Foot_${side}`, `Foot${side}`);
+    addSegment(`upper-${side.toLowerCase()}`, upperLeg, upperLeg, lowerLeg, .083 * frameScale * muscleScale, .078 * muscleScale);
+    addSegment(`lower-${side.toLowerCase()}`, lowerLeg, lowerLeg, foot, .059 * frameScale * muscleScale, .057 * muscleScale);
+  }
 }
 
 function addLegacyBareBodyUnderlay(
@@ -526,6 +659,7 @@ export function assemblePlayerModel(
   const curatedFootwear = presentation === 'tattoo' ? undefined : curatedDonorForSlot(richClothing, 'footwear');
   const topless = presentation === 'stage' && appearance.equipment.top.itemId === 'starter.top.topless' && !curatedTop;
   const proceduralStarterTop = presentation === 'stage' && !curatedTop ? starterTopVisualItem(appearance) : null;
+  const proceduralStarterBottom = presentation === 'stage' && !curatedBottom ? starterBottomVisualItem(appearance) : null;
   const choices = [
     { part: 'head', style: headModelStyle(appearance), dye: appearance.head.hair, fabric: 'plain' as const },
     {
@@ -582,7 +716,8 @@ export function assemblePlayerModel(
           const hideForTattooView = presentation === 'tattoo' && choice.part !== 'head' && !skinMaterial;
           const hideForTopless = topless && choice.part === 'body' && !skinMaterial;
           const hideForProceduralStarterTop = !!proceduralStarterTop && choice.part === 'body' && !skinMaterial;
-          if (hideForTattooView || hideForTopless || hideForProceduralStarterTop) {
+          const hideForProceduralStarterBottom = !!proceduralStarterBottom && choice.part === 'legs' && !skinMaterial;
+          if (hideForTattooView || hideForTopless || hideForProceduralStarterTop || hideForProceduralStarterBottom) {
             material.visible = false;
             material.transparent = true;
             material.opacity = 0;
@@ -688,7 +823,11 @@ export function assemblePlayerModel(
     }
   }
   if (proceduralStarterTop) {
-    addStarterProceduralTop(result, bones, proceduralStarterTop);
+    addStarterProceduralGarment(result, bones, proceduralStarterTop, 'Body');
+  }
+  if (proceduralStarterBottom) {
+    addStarterProceduralGarment(result, bones, proceduralStarterBottom, 'Legs');
+    addV1BareLegUnderlay(result, appearance, bones, quality);
   }
 
   if (topless || presentation === 'tattoo') {
