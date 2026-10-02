@@ -21,7 +21,6 @@ import { applyAvatarEyeQuality, applyAvatarHairQuality, applyAvatarSkinQuality, 
 import type { AvatarVisualQuality } from './avatarVisualQuality';
 import { applyAvatarSkinMacroShading } from './avatarSkinMacroShading';
 import { createCorneaOverlay, upgradeCuratedGarmentMaterial, upgradeSkinMaterial, upgradeStarterFabricMaterial } from './avatarPhysicalMaterials';
-import { avatarV2AssetUrl, isAvatarV2AssetFile } from './v2/avatarV2Assets';
 
 export type ModelLibrary = Map<string, T.Object3D>;
 export type PlayerModelPresentation = 'stage' | 'tattoo';
@@ -32,7 +31,7 @@ export async function loadModelLibrary(files: string[], manager?: T.LoadingManag
   const loader = new GLTFLoader(manager), library: ModelLibrary = new Map();
   // Wait for every in-flight asset before releasing on failure.
   const results = await Promise.allSettled([...new Set(files)].map(async file => {
-    const url = isAvatarV2AssetFile(file) ? avatarV2AssetUrl(file) : demoAssetUrl(file);
+    const url = demoAssetUrl(file);
     const gltf = await loader.loadAsync(url);
     library.set(file, gltf.scene);
   }));
@@ -459,9 +458,8 @@ export function assemblePlayerModel(
     }
   }
   if (topless || presentation === 'tattoo') {
-    // Avatar V2 requires a complete authored bare body. V1 donor meshes were
-    // clothing-first, so this neutral skinned underlay prevents holes while V2
-    // remains behind its validation gate. It is deliberately presentation-only.
+    // The live avatar donor meshes are clothing-first, so this neutral skinned
+    // underlay prevents holes for topless and tattoo presentation modes.
     addLegacyBareBodyUnderlay(result, appearance, bones, quality, presentation === 'tattoo');
   }
 

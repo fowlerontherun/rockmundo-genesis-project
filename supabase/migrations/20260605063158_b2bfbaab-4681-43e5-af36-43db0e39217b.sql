@@ -119,7 +119,6 @@ INSERT INTO public.world_reset_preserve_list (table_name, reason) VALUES
   ('genres', 'catalog: genre taxonomy'),
   ('tutorials', 'catalog: tutorial steps'),
   ('random_events', 'catalog: random events'),
-  ('pov_clips', 'catalog: POV clip library'),
   ('page_graphics', 'catalog: UI graphics'),
   ('skin_collections', 'catalog: cosmetics collections'),
   ('producers', 'catalog: producer presets'),

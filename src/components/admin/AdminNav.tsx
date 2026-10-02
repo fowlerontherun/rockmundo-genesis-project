@@ -76,7 +76,6 @@ export const adminCategories: AdminCategory[] = [
       { path: "/admin/band-avatars", label: "Band Avatars", description: "Avatar presets" },
       { path: "/admin/crowd-behavior", label: "Crowd Behavior", description: "Audience animations" },
       { path: "/admin/crowd-sounds", label: "Crowd Sounds", description: "Gig audio effects" },
-      { path: "/admin/pov-clips", label: "POV Clip Manager", description: "AI-generated POV concert clips" },
     ],
   },
   {
@@ -164,7 +163,6 @@ export const adminCategories: AdminCategory[] = [
     icon: Sparkles,
     items: [
       { path: "/admin/skin-collections", label: "Curated Skin Packs", description: "Manage clothing packs, asset readiness, validation and publishing" },
-      { path: "/admin/avatar-v2", label: "Avatar V2 Mesh System", description: "View real Blender source previews side by side with V1, track rigging and rollout gates" },
     ],
   },
   {

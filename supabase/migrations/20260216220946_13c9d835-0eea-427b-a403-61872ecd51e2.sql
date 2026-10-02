@@ -1,1 +1,0 @@
-CREATE UNIQUE INDEX uq_pov_clip_templates_track_variant ON public.pov_clip_templates (instrument_track, variant);

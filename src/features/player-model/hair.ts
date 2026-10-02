@@ -3,7 +3,6 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import type { PlayerAppearance } from './appearance';
 import { avatarQualityProfile, type AvatarVisualQuality } from './avatarVisualQuality';
 import { applyAvatarHairQuality, type AvatarHairTextureCache } from './avatarMaterialQuality';
-import { isAvatarV2HeadSurfaceNode } from './v2/avatarV2Contract';
 import { buildEllipsoidStrandDetail, scalpStrandRibbonCount } from './hairStrands';
 
 /** Authored meshes split scalp hair from brows and eyes. New cuts use the
@@ -14,7 +13,7 @@ function isHeadSurfaceMesh(root: T.Object3D, node: T.SkinnedMesh) {
     if (/_Head(?:_|$)/i.test(parent.name)) return true;
     parent = parent.parent;
   }
-  return root.userData.rockmundoAvatarEngine === 'rockmundo-v2' && isAvatarV2HeadSurfaceNode(node);
+  return false;
 }
 export function isScalpHair(material: T.Material, frame: PlayerAppearance['body']['frame']) {
   return frame === 'feminine' ? material.name === 'Hair_Blond' : material.name === 'Hair';
@@ -35,10 +34,7 @@ export function addHair(
     if (!(node instanceof T.SkinnedMesh)) return;
     if (!isHeadSurfaceMesh(root, node)) return;
     const materials = Array.isArray(node.material) ? node.material : [node.material];
-    const isV2 = root.userData.rockmundoAvatarEngine === 'rockmundo-v2';
-    const hasUsableSkin = isV2
-      ? materials.some(m => /skin|face/i.test(m.name))
-      : materials.every(m => /skin/i.test(m.name));
+    const hasUsableSkin = materials.every(m => /skin/i.test(m.name));
     if (!hasUsableSkin) return;
     node.skeleton.update();
     const vertices = Array.from({ length: node.geometry.attributes.position.count }, (_, i) => node.getVertexPosition(i,new T.Vector3()).applyMatrix4(node.matrixWorld));

@@ -4,7 +4,6 @@ import { buildHeadAccessory, clearHairForHeadAccessories, tuckHair, type HeadAcc
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import { richGarmentSlot } from '@/features/clothing-preview/richGarmentVisuals';
 import { avatarQualityProfile, type AvatarVisualQuality } from './avatarVisualQuality';
-import { isAvatarV2HeadSurfaceNode } from './v2/avatarV2Contract';
 
 function isHeadSurfaceMesh(root: T.Object3D, node: T.SkinnedMesh) {
   let parent: T.Object3D | null = node;
@@ -12,7 +11,7 @@ function isHeadSurfaceMesh(root: T.Object3D, node: T.SkinnedMesh) {
     if (/_Head(?:_|$)/i.test(parent.name)) return true;
     parent = parent.parent;
   }
-  return root.userData.rockmundoAvatarEngine === 'rockmundo-v2' && isAvatarV2HeadSurfaceNode(node);
+  return false;
 }
 
 function headSkinSurface(root: T.Object3D) {

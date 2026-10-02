@@ -7,10 +7,7 @@ import type { InstrumentId } from '@/features/gig-demo-3d/instrumentCatalog';
 import type { StageRole } from '@/features/gig-demo-3d/liveTypes';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import { STYLES, modelFile, type PlayerAppearance } from './appearance';
-import { disposeModel, loadModelLibrary, type ModelLibrary, type PlayerModelPresentation } from './model';
-import { assembleAvatarMesh } from './v2/avatarMeshEngine';
-import { avatarV2LodForQuality, requiredAvatarV2ModelFiles } from './v2/avatarV2Model';
-import { requiredAvatarV2GarmentFiles } from './v2/avatarV2Garments';
+import { assemblePlayerModel, disposeModel, loadModelLibrary, type ModelLibrary, type PlayerModelPresentation } from './model';
 import { visibleTattoosForPresentation, type ResolvedTattooVisual } from './tattoos';
 import { avatarQualityProfile, recommendedAvatarPreviewQuality, type AvatarVisualQuality } from './avatarVisualQuality';
 
@@ -76,20 +73,8 @@ export function PlayerModelPreview({ appearance, role = 'other', instrument, ric
       observer.observe(element);
       element.addEventListener('webglcontextlost', onLost); document.addEventListener('visibilitychange', onVisibility);
       raf = requestAnimationFrame(frame);
-      const v2Appearances = (['masculine', 'feminine'] as const).map(frame => ({
-        ...latest.current.appearance,
-        body: { ...latest.current.appearance.body, frame },
-      }));
       const previewFiles = [
         ...(['masculine', 'feminine'] as const).flatMap(frame => STYLES.map(style => modelFile(frame, style))),
-        ...requiredAvatarV2ModelFiles(v2Appearances, visualQuality),
-        ...(latest.current.presentation === 'tattoo' ? [] : (['masculine', 'feminine'] as const).flatMap(frame =>
-          requiredAvatarV2GarmentFiles(
-            latest.current.richClothing,
-            frame,
-            avatarV2LodForQuality(visualQuality),
-          )
-        )),
       ];
       void loadModelLibrary(previewFiles).then(loaded => {
         if (!alive) { loaded.forEach(disposeModel); return; }
@@ -99,7 +84,7 @@ export function PlayerModelPreview({ appearance, role = 'other', instrument, ric
             if (actor) disposeModel(actor.root); if (equipment) disposeModel(equipment);
             const shownClothing = nextPresentation === 'tattoo' ? [] : nextRichClothing;
             const shownTattoos = visibleTattoosForPresentation(nextTattoos, { appearance: value, clothing: shownClothing, presentation: nextPresentation });
-            const assembled = assembleAvatarMesh(
+            const assembled = assemblePlayerModel(
               library!,
               value,
               shownTattoos,

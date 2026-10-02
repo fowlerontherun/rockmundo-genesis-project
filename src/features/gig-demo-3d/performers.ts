@@ -11,17 +11,9 @@ import { circlePitPosition, circlePitSlots, crowdEventPlan } from './crowdChoreo
 import { singerGesture, smoothMotion, vocalPhrase } from './performanceMotion';
 import { createVocalMouth } from './vocalFace';
 import { applyInstrumentFingerPose, fingerEnvelopeBones, handContactPoint } from './instrumentHandPose';
-import { createAvatarV2ExpressionController, type AvatarV2ExpressionController } from '@/features/player-model/v2/avatarV2Expressions';
-import { createAvatarV2PoseCorrectiveController, type AvatarV2PoseCorrectiveController } from '@/features/player-model/v2/avatarV2PoseCorrectives';
-import { createAvatarV2TwistController, type AvatarV2TwistController } from '@/features/player-model/v2/avatarV2TwistBones';
-import { createAvatarV2ShoulderController, type AvatarV2ShoulderController } from '@/features/player-model/v2/avatarV2Shoulder';
-import { createAvatarV2ToeController, type AvatarV2ToeController } from '@/features/player-model/v2/avatarV2Toe';
 import { seededRandom } from './config';
 import { visibleTattoosForPresentation } from '@/features/player-model/tattoos';
 import { assemblePlayerModel, disposeModel, loadModelLibrary, requiredModelFiles } from '@/features/player-model/model';
-import { assembleAvatarMesh } from '@/features/player-model/v2/avatarMeshEngine';
-import { avatarV2LodForQuality, requiredAvatarV2ModelFiles } from '@/features/player-model/v2/avatarV2Model';
-import { requiredAvatarV2GarmentFiles } from '@/features/player-model/v2/avatarV2Garments';
 import type { ModelLibrary } from '@/features/player-model/model';
 import type { PlayerAppearance } from '@/features/player-model/appearance';
 import type { AvatarVisualQuality } from '@/features/player-model/avatarVisualQuality';
@@ -101,11 +93,6 @@ export class Musician {
     private vocalRole: VocalRole = null;
     private mouth: T.Mesh | null = null;
     private guitarPick: T.Mesh | null = null;
-    private faceExpressions: AvatarV2ExpressionController | null = null;
-    private poseCorrectives: AvatarV2PoseCorrectiveController | null = null;
-    private twistDeformation: AvatarV2TwistController | null = null;
-    private shoulderGirdle: AvatarV2ShoulderController | null = null;
-    private toeArticulation: AvatarV2ToeController | null = null;
     constructor(source: T.Object3D, public role: Role, position: [
         number,
         number,
@@ -161,8 +148,7 @@ export class Musician {
         // procedural fallback so existing player inventories remain compatible.
         // A curated item that has not passed validation is never procedurally
         // reconstructed: skipping it is safer than showing malformed geometry.
-        const v2GarmentsPreassembled = this.model.userData.rockmundoAvatarEngine === 'rockmundo-v2';
-        if (richClothing.length && !v2GarmentsPreassembled) {
+        if (richClothing.length) {
             this.root.updateMatrixWorld(true);
             for (const resolved of richClothing) {
                 if (isCuratedClothing(resolved.item)) {
@@ -200,19 +186,12 @@ export class Musician {
                 garment.removeFromParent();
             }
         }
-        this.faceExpressions = createAvatarV2ExpressionController(this.model);
-        this.poseCorrectives = createAvatarV2PoseCorrectiveController(this.model);
-        this.twistDeformation = createAvatarV2TwistController(this.model);
-        this.shoulderGirdle = createAvatarV2ShoulderController(this.model);
-        this.toeArticulation = createAvatarV2ToeController(this.model);
-        if (this.hasVocals() && this.bones.has('Head') && !this.faceExpressions) {
+        if (this.hasVocals() && this.bones.has('Head')) {
             this.mouth = createVocalMouth(this.root, this.model, this.bones.get('Head')!);
         }
         if (appearance) {
             this.bodyBuild = appearance.body.build;
-            const authoredBuild = this.model.userData.rockmundoAvatarEngine === 'rockmundo-v2'
-                && this.model.userData.rockmundoV2UsesBuildMorph === true;
-            const widthScale = authoredBuild ? 1 : appearance.body.build;
+            const widthScale = appearance.body.build;
             this.root.scale.set(widthScale, appearance.body.height, widthScale);
         }
         const assignment = stageAssignment(instrument, role);
@@ -304,10 +283,6 @@ export class Musician {
         this.equipment.updateMatrixWorld(true);
     }
     private hand(side: 'L' | 'R', target: T.Vector3, pole: T.Vector3) {
-        // V2 clavicles take a bounded share of the reach before the legacy arm IK
-        // finishes the solve. This keeps hands on their exact targets while letting
-        // shoulder volume and silhouette follow guitar, drum and vocal gestures.
-        this.shoulderGirdle?.aim(side, target);
         reach(this.bones.get(`UpperArm.${side}`), this.bones.get(`LowerArm.${side}`), this.bones.get(`Hand.${side}`), target, pole);
     }
     update(seconds: number, energy: number, reduced: boolean) {
@@ -374,8 +349,6 @@ export class Musician {
                 torso.rotation.z += flourish * .028 * Math.sin(this.phase + .7);
             }
         }
-        let faceGazeYaw = 0;
-        let faceGazePitch = 0;
         const head = this.bones.get('Head');
         if (head) {
             const singingLean = this.vocalRole && this.instrumentRig?.family !== 'voice' ? -0.075 : vocalActive ? -0.025 : 0;
@@ -404,8 +377,6 @@ export class Musician {
                 const horizontal = Math.max(.001, Math.hypot(localTarget.x, localTarget.z));
                 interactionPitch = T.MathUtils.clamp(-Math.atan2(localTarget.y - 1.42, horizontal), -.14, .14) * this.interactionStrength;
             }
-            faceGazeYaw = glanceSide * glanceWindow * .11 + interactionYaw * .72;
-            faceGazePitch = fretLook * .10 + interactionPitch * .78 + drummerNod * .24;
             head.quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(
                 Math.sin(beat + this.phase) * 0.035 * energy + singingLean - vocalAccent * .025 + emphasis * (vocalActive ? -.035 : .07) + fretLook * .12 + drummerNod + sectionLook + interactionPitch,
                 Math.sin(t * 0.58 + this.phase) * (vocalActive ? .075 : .11) + glanceSide * glanceWindow * .18 + interactionYaw,
@@ -420,20 +391,8 @@ export class Musician {
             rightShoulder?.rotateZ(-.018 - shoulderPulse * .03);
         }
         const jaw = this.bones.get('Jaw') ?? this.bones.get('jaw') ?? this.bones.get('Mouth');
-        if (jaw && vocalActive && !reduced && !this.faceExpressions) {
+        if (jaw && vocalActive && !reduced) {
             jaw.rotation.x += vocals.opening * .13 * energy;
-        }
-        if (this.faceExpressions) {
-            this.faceExpressions.update({
-                seconds: t,
-                phase: this.phase,
-                vocalActive,
-                opening: vocals.opening,
-                energy,
-                reducedMotion: reduced,
-                gazeYaw: faceGazeYaw,
-                gazePitch: faceGazePitch,
-            });
         }
         if (this.mouth) {
             const restScale = this.mouth.userData.restScale as T.Vector3;
@@ -796,51 +755,6 @@ export class Musician {
             }
         }
 
-        // Use the V2 toe-base bones instead of leaving the forefoot rigid. The
-        // live leg IK still owns ankle placement; toe articulation only shapes the
-        // forefoot after that solve, so planted-foot and instrument targets remain
-        // stable. Walking gets a stronger push/swing roll, drum feet press pedals,
-        // and standing performers alternate subtle load between both feet.
-        if (this.toeArticulation) {
-            for (const side of ['L', 'R'] as const) {
-                const sidePhase = side === 'L' ? 0 : Math.PI;
-                let toeFlex = 0;
-
-                if (this.role === 'fan' && (this.fanPose === 'runLeft' || this.fanPose === 'runRight')) {
-                    const runDirection = this.fanPose === 'runLeft' ? 1 : -1;
-                    const sideSign = side === 'L' ? 1 : -1;
-                    toeFlex = sideSign * runDirection > 0 ? .55 : .28;
-                } else if (this.walking && !reduced) {
-                    const stride = Math.sin(t * 6.2 + sidePhase);
-                    const swing = Math.max(0, stride);
-                    const pushOff = Math.max(0, -stride);
-                    toeFlex = swing * .82 + pushOff * .32;
-                } else if (!reduced && performing && rig?.family === 'kit') {
-                    const pedalCycle = Math.pow(
-                        Math.max(0, Math.sin(t * Math.PI * (side === 'R' ? 4 : 2) + (side === 'L' ? 1.1 : 0))),
-                        2,
-                    );
-                    toeFlex = -.16 - pedalCycle * .72;
-                } else if (!reduced && performing && this.role !== 'fan') {
-                    const rate = this.role === 'vocals' ? .92 : this.role === 'bass' ? .52 : .68;
-                    const load = .5 + .5 * Math.sin(t * rate + this.phase + sidePhase);
-                    const accent = Math.max(0, Math.sin(t * 1.7 + this.phase + sidePhase));
-                    toeFlex = .18 - load * .32 + accent * .06 * motionEnergy;
-                }
-
-                this.toeArticulation.flex(side, toeFlex);
-            }
-        }
-
-        // Apply deform-only twist helpers after final IK, wrist/finger articulation
-        // and instrument clearance. They distribute axial roll without changing the
-        // control chain used by hands/feet or moving grip targets.
-        this.twistDeformation?.update();
-
-        // Apply pose-space deformation after all body IK, twist distribution and
-        // instrument-specific adjustments so authored V2 shoulders/elbows/hips/
-        // knees correct the final visible pose rather than an intermediate frame.
-        this.poseCorrectives?.update();
     }
 }
 /** Bake a posed rig once; the audience then uses inexpensive GPU instances. */
@@ -1073,17 +987,11 @@ export async function loadBand(
     const curatedFiles = lineup?.flatMap(p => requiredCuratedGarmentFiles(p.richClothing ?? [], p.appearance.body.frame)) ?? [];
     const donorFiles = lineup?.flatMap(p => requiredCuratedDonorModelFiles(p.richClothing ?? [], p.appearance.body.frame)) ?? [];
     const lineupAppearances = lineup?.map(p => p.appearance) ?? [];
-    const avatarV2Lod = avatarV2LodForQuality(avatarQuality);
-    const v2GarmentFiles = lineup?.flatMap(p =>
-        requiredAvatarV2GarmentFiles(p.richClothing ?? [], p.appearance.body.frame, avatarV2Lod)
-    ) ?? [];
     const library = await loadModelLibrary([
         'casual.glb',
         'punk.glb',
         'suit.glb',
         ...requiredModelFiles([...lineupAppearances, ...crowdAppearances(seed ?? 85043)]),
-        ...requiredAvatarV2ModelFiles(lineupAppearances, avatarQuality),
-        ...v2GarmentFiles,
         ...donorFiles,
     ], manager);
     await loadOptionalCuratedGarments(library, curatedFiles, manager);
@@ -1091,7 +999,7 @@ export async function loadBand(
     const cymbals: T.Object3D[] = [];
     try {
         const actors = lineup ? lineup.map(p => {
-            const assembled = assembleAvatarMesh(
+            const assembled = assemblePlayerModel(
                 library,
                 p.appearance,
                 visibleTattoosForPresentation(p.tattoos ?? [], { appearance: p.appearance, clothing: p.richClothing ?? [], presentation: 'stage' }),
