@@ -313,7 +313,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null; manual?: boolean }>(req);
+  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null; manual?: boolean; profileId?: string | null }>(req);
   const triggeredBy = payload?.triggeredBy ?? req.headers.get("x-triggered-by") ?? undefined;
 
   const supabaseClient = createClient(
@@ -329,8 +329,14 @@ serve(async (req) => {
     if (!authorization) return new Response(JSON.stringify({ error: "Please sign in again." }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     const { data: auth, error: authError } = await supabaseClient.auth.getUser(authorization.replace(/^Bearer\\s+/i, ""));
     if (authError || !auth.user) return new Response(JSON.stringify({ error: "Please sign in again." }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    const { data: profile, error: profileError } = await supabaseClient.from("profiles").select("id").eq("user_id", auth.user.id).limit(1).maybeSingle();
-    if (profileError || !profile) return new Response(JSON.stringify({ error: "No player profile found." }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (!payload?.profileId) return new Response(JSON.stringify({ error: "Select an active player character before recording reading." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const { data: profile, error: profileError } = await supabaseClient
+      .from("profiles")
+      .select("id")
+      .eq("id", payload.profileId)
+      .eq("user_id", auth.user.id)
+      .maybeSingle();
+    if (profileError || !profile) return new Response(JSON.stringify({ error: "The selected player character could not be verified." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     manualProfileId = profile.id;
   }
 
