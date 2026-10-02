@@ -55,11 +55,8 @@ import Sponsorships from "./pages/Sponsorships";
 const Layout = lazyWithRetry(() => import("./components/Layout"));
 const MobileLayout = lazyWithRetry(() => import("./mobile/shell/MobileLayout"));
 const MobileHome = lazyWithRetry(() => import("./mobile/pages/MobileHome"));
-const MobileCareer = lazyWithRetry(() => import("./mobile/pages/MobileCareerRoutes"));
 const MobileSocial = lazyWithRetry(() => import("./mobile/pages/MobileSocial"));
-const MobileWorld = lazyWithRetry(() => import("./mobile/pages/MobileWorld"));
-const MobileWorldPhase5 = lazyWithRetry(() => import("./mobile/pages/MobileWorldPhase5"));
-const MobileMe = lazyWithRetry(() => import("./mobile/pages/MobileMe"));
+const MobileProgression = lazyWithRetry(() => import("./mobile/pages/MobileProgression"));
 const Index = lazyWithRetry(() => import("./pages/Index"));
 const Landing = lazyWithRetry(() => import("./pages/Landing"));
 const Inbox = lazyWithRetry(() => import("./pages/Inbox"));
@@ -521,18 +518,10 @@ function App() {
                   <Route path="/song/:songId" element={<PublicSong />} />
                   <Route path="/mobile" element={<MobileLayout />}>
                     <Route index element={<MobileHome />} />
-                    <Route path="career" element={<MobileCareer />} />
-                    <Route path="career/:section" element={<MobileCareer />} />
-                    <Route path="career/:section/:id" element={<MobileCareer />} />
-                    <Route path="social" element={<MobileSocial />} />
-                    <Route path="social/:section" element={<MobileSocial />} />
-                    <Route path="social/:section/:id" element={<MobileSocial />} />
-                    <Route path="world" element={<MobileWorldPhase5 />} />
-                    <Route path="world/:section" element={<MobileWorldPhase5 />} />
-                    <Route path="world/:section/:id" element={<MobileWorldPhase5 />} />
-                    <Route path="me" element={<MobileMe />} />
-                    <Route path="me/:section" element={<MobileMe />} />
-                    <Route path="me/:section/:id" element={<MobileMe />} />
+                    <Route path="inbox" element={<MobileSocial />} />
+                    <Route path="chat" element={<MobileSocial />} />
+                    <Route path="progression" element={<MobileProgression />} />
+                    <Route path="*" element={<Navigate to="/mobile" replace />} />
                   </Route>
                   <Route element={<Layout />}>
                     <Route path="home" element={<Dashboard />} />
