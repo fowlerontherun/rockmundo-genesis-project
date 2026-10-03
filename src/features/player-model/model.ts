@@ -23,7 +23,7 @@ import { applyAvatarSkinMacroShading } from './avatarSkinMacroShading';
 import { createCorneaOverlay, upgradeCuratedGarmentMaterial, upgradeSkinMaterial, upgradeStarterFabricMaterial } from './avatarPhysicalMaterials';
 import { buildProceduralGarment, type GarmentRigAnchor } from '@/features/clothing-preview/proceduralGarmentRenderer';
 import type { ClothingItem } from '@/hooks/useSkinStore';
-import { merchFrontElements, merchHasRenderableFront, type ResolvedMerchWearable } from './merchWearables';
+import { merchElementPrintPosition, merchFrontElements, merchHasRenderableFront, type ResolvedMerchWearable } from './merchWearables';
 
 export type ModelLibrary = Map<string, T.Object3D>;
 export type PlayerModelPresentation = 'stage' | 'tattoo';
@@ -710,7 +710,8 @@ function merchCompositeTexture(merch: ResolvedMerchWearable): T.Texture | null {
   merchTextureCache.set(key, texture);
 
   const drawElement = (element: ReturnType<typeof merchFrontElements>[number], image?: HTMLImageElement) => {
-    const x = (Number(element.x ?? 50) / 100) * 512, y = (Number(element.y ?? 50) / 100) * 512;
+    const printPosition = merchElementPrintPosition(element, merch.product_type);
+    const x = printPosition.x * 512, y = printPosition.y * 512;
     ctx.save(); ctx.translate(x, y); ctx.rotate(Number(element.rotation ?? 0) * Math.PI / 180);
     ctx.scale(Number(element.scale ?? 1), Number(element.scale ?? 1));
     if (image) {
