@@ -1,6 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import maplibregl from 'maplibre-gl';
-import 'maplibre-gl/dist/maplibre-gl.css';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Loader2 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -23,11 +21,15 @@ interface InteractiveWorldMapProps {
 }
 
 const EMPTY_ROUTE_CITY_IDS: string[] = [];
+type MapLibreRuntime = typeof import('mapbox-gl');
+const MAPLIBRE_MODULE_URL = 'https://esm.sh/maplibre-gl@6.11.2';
+const MAPLIBRE_CSS_URL = 'https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.css';
 
 const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds = EMPTY_ROUTE_CITY_IDS, routeCities }: InteractiveWorldMapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<maplibregl.Map | null>(null);
-  const markers = useRef<maplibregl.Marker[]>([]);
+  const runtime = useRef<MapLibreRuntime | null>(null);
+  const map = useRef<import('mapbox-gl').Map | null>(null);
+  const markers = useRef<import('mapbox-gl').Marker[]>([]);
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -35,8 +37,20 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
   useEffect(() => {
     if (!mapContainer.current) return;
 
+    let disposed = false;
+    const initialize = async () => {
     try {
-      // Initialize map
+      if (!document.querySelector('link[data-rockmundo-maplibre]')) {
+        const stylesheet = document.createElement('link');
+        stylesheet.rel = 'stylesheet';
+        stylesheet.href = MAPLIBRE_CSS_URL;
+        stylesheet.dataset.rockmundoMaplibre = 'true';
+        document.head.appendChild(stylesheet);
+      }
+      const maplibregl = await import(/* @vite-ignore */ MAPLIBRE_MODULE_URL) as unknown as MapLibreRuntime;
+      if (disposed || !mapContainer.current) return;
+      runtime.current = maplibregl;
+      // Initialize token-free open-source map
       map.current = new maplibregl.Map({
         container: mapContainer.current,
         style: 'https://tiles.openfreemap.org/styles/liberty',
@@ -115,13 +129,17 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
       setMapError('Failed to initialize map. Please refresh the page.');
       setIsLoading(false);
     }
+    };
+    void initialize();
 
     // Cleanup
     return () => {
+      disposed = true;
       markers.current.forEach(marker => marker.remove());
       markers.current = [];
       map.current?.remove();
       map.current = null;
+      runtime.current = null;
     };
   }, []);
 
@@ -192,14 +210,14 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
         detail.style.fontSize = '12px';
         detail.textContent = city.dominant_genre ? 'Genre: ' + city.dominant_genre : 'Click to explore';
         popupContent.append(heading, detail);
-        const popup = new maplibregl.Popup({
+        const popup = new runtime.current!.Popup({
           offset: 15,
           closeButton: false,
           className: 'city-popup'
         }).setDOMContent(popupContent);
 
         // Create marker
-        const marker = new maplibregl.Marker({ element: el })
+        const marker = new runtime.current!.Marker({ element: el })
           .setLngLat([coordinates.lng, coordinates.lat])
           .setPopup(popup)
           .addTo(map.current!);
