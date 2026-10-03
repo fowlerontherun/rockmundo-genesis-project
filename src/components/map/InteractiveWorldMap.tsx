@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import maplibregl from 'maplibre-gl';
-import 'maplibre-gl/dist/maplibre-gl.css';
+import type maplibregl from 'mapbox-gl';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Loader2 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -23,9 +22,35 @@ interface InteractiveWorldMapProps {
 }
 
 const EMPTY_ROUTE_CITY_IDS: string[] = [];
+type MapLibreRuntime = typeof maplibregl;
+const MAPLIBRE_SCRIPT_URL = 'https://unpkg.com/maplibre-gl@5.7.1/dist/maplibre-gl.js';
+const MAPLIBRE_CSS_URL = 'https://unpkg.com/maplibre-gl@5.7.1/dist/maplibre-gl.css';
+
+declare global { interface Window { maplibregl?: MapLibreRuntime } }
+
+let mapLibrePromise: Promise<MapLibreRuntime> | null = null;
+function loadMapLibre(): Promise<MapLibreRuntime> {
+  if (window.maplibregl) return Promise.resolve(window.maplibregl);
+  if (mapLibrePromise) return mapLibrePromise;
+  mapLibrePromise = new Promise((resolve, reject) => {
+    if (!document.querySelector('link[data-rockmundo-maplibre]')) {
+      const css = document.createElement('link');
+      css.rel = 'stylesheet'; css.href = MAPLIBRE_CSS_URL; css.dataset.rockmundoMaplibre = 'true';
+      document.head.appendChild(css);
+    }
+    const existing = document.querySelector<HTMLScriptElement>('script[data-rockmundo-maplibre]');
+    const script = existing ?? document.createElement('script');
+    const ready = () => window.maplibregl ? resolve(window.maplibregl) : reject(new Error('MapLibre did not initialise'));
+    script.addEventListener('load', ready, { once: true });
+    script.addEventListener('error', () => reject(new Error('Could not load MapLibre')), { once: true });
+    if (!existing) { script.src = MAPLIBRE_SCRIPT_URL; script.async = true; script.dataset.rockmundoMaplibre = 'true'; document.head.appendChild(script); }
+  });
+  return mapLibrePromise;
+}
 
 const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds = EMPTY_ROUTE_CITY_IDS, routeCities }: InteractiveWorldMapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
+  const runtime = useRef<MapLibreRuntime | null>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const markers = useRef<maplibregl.Marker[]>([]);
   const navigate = useNavigate();
@@ -36,7 +61,12 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
   useEffect(() => {
     if (!mapContainer.current) return;
 
+    let disposed = false;
+    const initialize = async () => {
     try {
+      const maplibregl = await loadMapLibre();
+      if (disposed || !mapContainer.current) return;
+      runtime.current = maplibregl;
       // Initialize token-free open-source map
       map.current = new maplibregl.Map({
         container: mapContainer.current,
@@ -117,13 +147,17 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
       setMapError('Failed to initialize map. Please refresh the page.');
       setIsLoading(false);
     }
+    };
+    void initialize();
 
     // Cleanup
     return () => {
+      disposed = true;
       markers.current.forEach(marker => marker.remove());
       markers.current = [];
       map.current?.remove();
       map.current = null;
+      runtime.current = null;
     };
   }, []);
 
@@ -194,14 +228,14 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
         detail.style.fontSize = '12px';
         detail.textContent = city.dominant_genre ? 'Genre: ' + city.dominant_genre : 'Click to explore';
         popupContent.append(heading, detail);
-        const popup = new maplibregl.Popup({
+        const popup = new runtime.current!.Popup({
           offset: 15,
           closeButton: false,
           className: 'city-popup'
         }).setDOMContent(popupContent);
 
         // Create marker
-        const marker = new maplibregl.Marker({ element: el })
+        const marker = new runtime.current!.Marker({ element: el })
           .setLngLat([coordinates.lng, coordinates.lat])
           .setPopup(popup)
           .addTo(map.current!);
