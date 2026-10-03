@@ -1,6 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Loader2 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -23,6 +21,52 @@ interface InteractiveWorldMapProps {
 }
 
 const EMPTY_ROUTE_CITY_IDS: string[] = [];
+type MapLibreRuntime = typeof import('mapbox-gl');
+const MAPLIBRE_SCRIPT_URL = 'https://unpkg.com/maplibre-gl@5.7.1/dist/maplibre-gl.js';
+const MAPLIBRE_CSS_URL = 'https://unpkg.com/maplibre-gl@5.7.1/dist/maplibre-gl.css';
+
+declare global { interface Window { maplibregl?: MapLibreRuntime } }
+
+let mapLibrePromise: Promise<MapLibreRuntime> | null = null;
+function loadMapLibre(): Promise<MapLibreRuntime> {
+  if (window.maplibregl) return Promise.resolve(window.maplibregl);
+  if (mapLibrePromise) return mapLibrePromise;
+  mapLibrePromise = Promise.all([
+    new Promise<void>((resolve, reject) => {
+      const existing = document.querySelector<HTMLLinkElement>('link[data-rockmundo-maplibre]');
+      if (existing?.sheet) { resolve(); return; }
+      const css = existing ?? document.createElement('link');
+      css.addEventListener('load', () => resolve(), { once: true });
+      css.addEventListener('error', () => reject(new Error('MapLibre stylesheet failed to load')), { once: true });
+      if (!existing) {
+        css.rel = 'stylesheet';
+        css.href = MAPLIBRE_CSS_URL;
+        css.dataset.rockmundoMaplibre = 'true';
+        document.head.appendChild(css);
+      }
+    }),
+    new Promise<void>((resolve, reject) => {
+      if (window.maplibregl) { resolve(); return; }
+      const existing = document.querySelector<HTMLScriptElement>('script[data-rockmundo-maplibre]');
+      const script = existing ?? document.createElement('script');
+      script.addEventListener('load', () => window.maplibregl ? resolve() : reject(new Error('MapLibre runtime did not initialise')), { once: true });
+      script.addEventListener('error', () => reject(new Error('MapLibre runtime failed to load')), { once: true });
+      if (!existing) {
+        script.src = MAPLIBRE_SCRIPT_URL;
+        script.async = true;
+        script.dataset.rockmundoMaplibre = 'true';
+        document.head.appendChild(script);
+      }
+    }),
+  ]).then(() => {
+    if (!window.maplibregl) throw new Error('MapLibre runtime did not initialise');
+    return window.maplibregl;
+  }).catch(error => {
+    mapLibrePromise = null;
+    throw error;
+  });
+  return mapLibrePromise;
+}
 const OPEN_MAP_STYLE = {
   version: 8 as const,
   sources: {
@@ -39,8 +83,9 @@ const OPEN_MAP_STYLE = {
 
 const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds = EMPTY_ROUTE_CITY_IDS, routeCities }: InteractiveWorldMapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const markers = useRef<mapboxgl.Marker[]>([]);
+  const runtime = useRef<MapLibreRuntime | null>(null);
+  const map = useRef<InstanceType<MapLibreRuntime['Map']> | null>(null);
+  const markers = useRef<Array<InstanceType<MapLibreRuntime['Marker']>>>([]);
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [mapReady, setMapReady] = useState(false);
@@ -56,66 +101,76 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
   useEffect(() => {
     if (!mapContainer.current) return;
     const container = mapContainer.current;
-    const rect = container.getBoundingClientRect();
-    let webglSupported = false;
-    try {
-      const canvas = document.createElement('canvas');
-      webglSupported = Boolean(canvas.getContext('webgl2') || canvas.getContext('webgl'));
-    } catch {
-      webglSupported = false;
-    }
-    logDiagnostic(`initializing; container=${Math.round(rect.width)}x${Math.round(rect.height)}; webgl=${webglSupported}; cities=${cities.length}`);
+    let disposed = false;
+    let timeoutId: number | undefined;
 
-    try {
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: OPEN_MAP_STYLE,
-        zoom: 1.5,
-        center: [0, 20],
-        pitch: 0,
-      });
-      logDiagnostic('Map constructor succeeded');
-      map.current.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'top-right');
-      map.current.scrollZoom.disable();
-      map.current.on('style.load', () => logDiagnostic('style.load fired'));
-      map.current.on('sourcedata', event => {
-        if (event.sourceId === 'osm' && event.isSourceLoaded) logDiagnostic('OSM source loaded');
-      });
-      map.current.on('idle', () => logDiagnostic('map reached idle'));
-      map.current.on('load', () => {
-        logDiagnostic('load fired');
-        map.current?.resize();
-        setIsLoading(false);
-        setMapReady(true);
-      });
-      // Mapbox GL emits `error` for recoverable source/tile failures too.
-      // Do not replace the whole atlas because one raster tile failed; the renderer
-      // will retry and can continue displaying the rest of the world.
-      map.current.on('error', (event) => {
-        const message = event.error instanceof Error ? event.error.message : String(event.error ?? 'unknown map error');
-        console.warn('World map resource error:', event.error);
-        logDiagnostic('resource error', message);
-      });
-      window.setTimeout(() => {
-        if (!map.current?.loaded()) {
-          const currentRect = container.getBoundingClientRect();
-          logDiagnostic(`still not loaded after 8s; container=${Math.round(currentRect.width)}x${Math.round(currentRect.height)}; styleLoaded=${map.current?.isStyleLoaded() ?? false}`);
+    const initialize = async () => {
+      const rect = container.getBoundingClientRect();
+      let webglSupported = false;
+      try {
+        const canvas = document.createElement('canvas');
+        webglSupported = Boolean(canvas.getContext('webgl2') || canvas.getContext('webgl'));
+      } catch {
+        webglSupported = false;
+      }
+      logDiagnostic(`loading MapLibre; container=${Math.round(rect.width)}x${Math.round(rect.height)}; webgl=${webglSupported}; cities=${cities.length}`);
+
+      try {
+        const maplibregl = await loadMapLibre();
+        if (disposed) return;
+        runtime.current = maplibregl;
+        logDiagnostic('MapLibre runtime loaded');
+        map.current = new maplibregl.Map({
+          container,
+          style: OPEN_MAP_STYLE,
+          zoom: 1.5,
+          center: [0, 20],
+          pitch: 0,
+        });
+        logDiagnostic('MapLibre Map constructor succeeded');
+        map.current.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
+        map.current.scrollZoom.disable();
+        map.current.on('style.load', () => logDiagnostic('style.load fired'));
+        map.current.on('sourcedata', event => {
+          if (event.sourceId === 'osm' && event.isSourceLoaded) logDiagnostic('OSM source loaded');
+        });
+        map.current.on('idle', () => logDiagnostic('map reached idle'));
+        map.current.on('load', () => {
+          logDiagnostic('load fired');
+          map.current?.resize();
           setIsLoading(false);
-        }
-      }, 8000);
-    } catch (error) {
-      console.error('Error initializing map:', error);
-      const message = error instanceof Error ? error.message : String(error);
-      logDiagnostic('initialization failed', message);
-      setMapError(`Failed to initialize map: ${message}`);
-      setIsLoading(false);
-    }
+          setMapReady(true);
+        });
+        map.current.on('error', event => {
+          const message = event.error instanceof Error ? event.error.message : String(event.error ?? 'unknown map error');
+          console.warn('World map resource error:', event.error);
+          logDiagnostic('resource error', message);
+        });
+        timeoutId = window.setTimeout(() => {
+          if (!map.current?.loaded()) {
+            const currentRect = container.getBoundingClientRect();
+            logDiagnostic(`still not loaded after 8s; container=${Math.round(currentRect.width)}x${Math.round(currentRect.height)}; styleLoaded=${map.current?.isStyleLoaded() ?? false}`);
+            setIsLoading(false);
+          }
+        }, 8000);
+      } catch (error) {
+        console.error('Error initializing MapLibre:', error);
+        const message = error instanceof Error ? error.message : String(error);
+        logDiagnostic('MapLibre initialization failed', message);
+        setMapError(`Failed to initialize MapLibre: ${message}`);
+        setIsLoading(false);
+      }
+    };
+    void initialize();
 
     return () => {
+      disposed = true;
+      if (timeoutId) window.clearTimeout(timeoutId);
       markers.current.forEach(marker => marker.remove());
       markers.current = [];
       map.current?.remove();
       map.current = null;
+      runtime.current = null;
     };
   }, []);
 
@@ -186,14 +241,14 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
         detail.style.fontSize = '12px';
         detail.textContent = city.dominant_genre ? 'Genre: ' + city.dominant_genre : 'Click to explore';
         popupContent.append(heading, detail);
-        const popup = new mapboxgl.Popup({
+        const popup = new runtime.current!.Popup({
           offset: 15,
           closeButton: false,
           className: 'city-popup'
         }).setDOMContent(popupContent);
 
         // Create marker
-        const marker = new mapboxgl.Marker({ element: el })
+        const marker = new runtime.current!.Marker({ element: el })
           .setLngLat([coordinates.lng, coordinates.lat])
           .setPopup(popup)
           .addTo(map.current!);
