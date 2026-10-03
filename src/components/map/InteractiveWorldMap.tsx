@@ -18,6 +18,8 @@ interface InteractiveWorldMapProps {
   onCityClick?: (cityId: string) => void;
   routeCityIds?: string[];
   routeCities?: City[];
+  cityValues?: Record<string, number>;
+  valueMode?: "default" | "fame";
 }
 
 const EMPTY_ROUTE_CITY_IDS: string[] = [];
@@ -81,7 +83,7 @@ const OPEN_MAP_STYLE = {
   layers: [{ id: 'osm', type: 'raster' as const, source: 'osm' }],
 };
 
-const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds = EMPTY_ROUTE_CITY_IDS, routeCities }: InteractiveWorldMapProps) => {
+const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds = EMPTY_ROUTE_CITY_IDS, routeCities, cityValues = {}, valueMode = "default" }: InteractiveWorldMapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const runtime = useRef<MapLibreRuntime | null>(null);
   const map = useRef<InstanceType<MapLibreRuntime['Map']> | null>(null);
@@ -218,14 +220,20 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
             Math.abs(city.latitude) > 90 || Math.abs(city.longitude) > 180) return;
         const coordinates = { lat: city.latitude, lng: city.longitude };
         const isCurrentCity = city.id === currentCityId;
+        const fameValue = Math.max(0, cityValues[city.id] ?? 0);
+        const maxFame = Math.max(1, ...Object.values(cityValues));
+        const fameRatio = Math.min(1, fameValue / maxFame);
+        const fameHue = 220 - Math.round(fameRatio * 220);
+        const markerColor = valueMode === "fame" ? `hsl(${fameHue} 85% 55%)` : 'hsl(var(--primary))';
+        const markerSize = valueMode === "fame" ? 10 + Math.round(fameRatio * 12) : 10;
 
         // Create custom marker element
         const el = document.createElement('div');
         el.className = 'city-marker';
         el.style.cssText = `
-          width: ${isCurrentCity ? '12px' : '10px'};
-          height: ${isCurrentCity ? '12px' : '10px'};
-          background-color: ${isCurrentCity ? '#22c55e' : 'hsl(var(--primary))' };
+          width: ${isCurrentCity ? '14px' : `${markerSize}px`};
+          height: ${isCurrentCity ? '14px' : `${markerSize}px`};
+          background-color: ${isCurrentCity ? '#22c55e' : markerColor};
           border: 2px solid ${isCurrentCity ? '#86efac' : 'hsl(var(--primary) / 0.4)'};
           border-radius: 50%;
           cursor: pointer;
@@ -257,7 +265,9 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
         heading.textContent = city.name + (city.country ? ', ' + city.country : '') + (isCurrentCity ? ' 📍' : '');
         const detail = document.createElement('div');
         detail.style.fontSize = '12px';
-        detail.textContent = city.dominant_genre ? 'Genre: ' + city.dominant_genre : 'Click to explore';
+        detail.textContent = valueMode === 'fame'
+          ? `Local fame: ${fameValue.toLocaleString()}`
+          : city.dominant_genre ? 'Genre: ' + city.dominant_genre : 'Click to explore';
         popupContent.append(heading, detail);
         const popup = new runtime.current!.Popup({
           offset: 15,
@@ -288,7 +298,7 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
       markers.current.forEach(marker => marker.remove());
       markers.current = [];
     };
-  }, [cities, currentCityId, navigate, onCityClick, mapReady]);
+  }, [cities, currentCityId, navigate, onCityClick, mapReady, cityValues, valueMode]);
 
   // Draw the player's proposed tour directly on the globe, without changing bookings.
   useEffect(() => {
