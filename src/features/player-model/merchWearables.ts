@@ -101,3 +101,22 @@ export function merchHasRenderableFront(merch: Pick<ResolvedMerchWearable, 'artw
     (element.type === 'image' && typeof element.src === 'string' && element.src.length > 0)
     || (element.type === 'text' && typeof element.text === 'string' && element.text.trim().length > 0));
 }
+
+export interface MerchPrintZone { left: number; top: number; width: number; height: number; }
+
+/** Merch Studio stores apparel front elements in full mockup percentages. Avatar print textures use the printable front panel itself. */
+export function merchFrontPrintZone(productType: string | null | undefined): MerchPrintZone {
+  // Current wearable apparel and football shirts share the same full-front Merch Studio zone.
+  // Keep this helper beside the renderer so saved studio coordinates have one explicit conversion boundary.
+  return { left: 34, top: 29, width: 32, height: 45 };
+}
+
+export function merchElementPrintPosition(element: Pick<MerchDesignElement, 'x' | 'y'>, productType?: string | null) {
+  const zone = merchFrontPrintZone(productType);
+  const x = (Number(element.x ?? 50) - zone.left) / zone.width;
+  const y = (Number(element.y ?? 50) - zone.top) / zone.height;
+  return {
+    x: Math.max(-0.25, Math.min(1.25, x)),
+    y: Math.max(-0.25, Math.min(1.25, y)),
+  };
+}
