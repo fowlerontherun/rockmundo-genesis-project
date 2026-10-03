@@ -15,6 +15,8 @@ declare
   v_clothing jsonb;
   v_tattoos jsonb;
   v_merch jsonb;
+  v_band_id uuid;
+  v_crowd_signal jsonb;
 begin
   for v_member in select value from jsonb_array_elements(coalesce(new.payload #> '{band,members}', '[]'::jsonb))
   loop
@@ -52,7 +54,45 @@ begin
     )));
   end loop;
   new.payload := jsonb_set(new.payload,'{band,members}',v_members,true);
-  new.payload := new.payload || jsonb_build_object('visualSnapshotVersion',3,'visualSnapshotLockedAt',now());
+  v_band_id := null;
+  begin v_band_id := nullif(new.payload #>> '{band,id}','')::uuid;
+  exception when invalid_text_representation then v_band_id := null;
+  end;
+  v_crowd_signal := null;
+  if v_band_id is not null then
+    with equipped as (
+      select distinct on (td.id) td.id design_id
+      from public.band_members bm
+      join public.player_merch_wearables pmw on pmw.profile_id=bm.profile_id
+      join public.tshirt_designs td on td.id=pmw.design_id and td.band_id=v_band_id
+      where bm.band_id=v_band_id and bm.status='active'
+      order by td.id,pmw.equipped_at desc
+    ), products as (
+      select e.design_id,pm.id merchandise_id,
+        ((pm.drop_starts_at is null or pm.drop_starts_at<=now()) and (pm.available_until is null or pm.available_until>now())
+          and not coalesce(pm.superfan_only,false) and (coalesce(pm.stock_quantity,0)>0 or exists(
+            select 1 from public.merch_variants mv where mv.merchandise_id=pm.id and mv.is_active and coalesce(mv.stock_quantity,0)>0
+          ))) on_sale
+      from equipped e left join public.player_merchandise pm on pm.band_id=v_band_id and pm.custom_design_id=e.design_id
+    ), sales as (
+      select p.design_id,coalesce(sum(mo.quantity) filter(where mo.id is not null),0)::bigint units
+      from products p left join public.merch_orders mo on mo.merchandise_id=p.merchandise_id group by p.design_id
+    ), ranked as (
+      select p.design_id,bool_or(coalesce(p.on_sale,false)) on_sale,s.units,max(s.units) over() max_units
+      from products p join sales s using(design_id) group by p.design_id,s.units
+    )
+    select jsonb_build_object(
+      'designId',r.design_id,
+      'fameScore',least(100,round(100*ln(1+greatest(0,coalesce(b.fame,0))::numeric)/ln(1+50000000::numeric)))::integer,
+      'merchPopularityScore',case when r.max_units>0 then round(100*r.units::numeric/r.max_units)::integer else 0 end,
+      'onSale',r.on_sale
+    ) into v_crowd_signal
+    from ranked r cross join public.bands b
+    where b.id=v_band_id order by r.on_sale desc,r.units desc,r.design_id limit 1;
+  end if;
+  new.payload := new.payload || jsonb_build_object(
+    'visualSnapshotVersion',3,'visualSnapshotLockedAt',now(),'merchCrowdSignal',v_crowd_signal
+  );
   new.replay_version := greatest(4,new.replay_version);
   new.checksum := md5(new.payload::text);
   return new;

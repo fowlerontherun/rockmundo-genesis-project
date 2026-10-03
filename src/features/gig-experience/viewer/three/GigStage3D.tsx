@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { resolveVenueProfile } from '@/features/gig-demo-3d/venueProfile';
 import { ConcertScene } from '@/features/gig-demo-3d/ConcertScene';
+import type { MerchCrowdSignal } from '@/features/gig-demo-3d/liveTypes';
 import { DEFAULT_SETTINGS, type CameraShot, type DemoSettings } from '@/features/gig-demo-3d/config';
 import { useGigPlayerModels, type GigPlayerModelsData } from '@/features/player-model/usePlayerModel';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,7 +37,7 @@ const TOTP_CAMERAS: Record<TotpCameraShot, CameraShot> = {
   push_in: 'tv_push_in', pull_back: 'front', finale_wide: 'tv_crane',
 };
 
-export default function GigStage3D({ replay, experience, playbackState, reducedMotion, cameraMode, tier, archetype, tuning, pyrotechnics, pyroIntensity, presentationMode = 'gig', totpCameraShot, totpStage = 'main_stage', totpPresenterKey = 'alex_rayne', totpShowVariant = 'regular', totpAudienceReaction = 0, totpCueType = 'performance', totpMonitorPrimary = null, totpMonitorSecondary = null, playerModelsSnapshot = null }: {
+export default function GigStage3D({ replay, experience, playbackState, reducedMotion, cameraMode, tier, archetype, tuning, pyrotechnics, pyroIntensity, presentationMode = 'gig', totpCameraShot, totpStage = 'main_stage', totpPresenterKey = 'alex_rayne', totpShowVariant = 'regular', totpAudienceReaction = 0, totpCueType = 'performance', totpMonitorPrimary = null, totpMonitorSecondary = null, playerModelsSnapshot = null, merchCrowdSignalSnapshot = null }: {
   replay: GigViewerReplay; experience: GigExperienceDTO | null; playbackState: DerivedPlaybackState;
   reducedMotion: boolean; cameraMode: GigViewerCameraMode; tier: PerformanceTier; archetype: string;
   tuning: CrowdTuningOptions; pyrotechnics: boolean; pyroIntensity: number;
@@ -44,6 +45,7 @@ export default function GigStage3D({ replay, experience, playbackState, reducedM
   totpPresenterKey?: string | null; totpShowVariant?: string | null; totpAudienceReaction?: number | null; totpCueType?: 'presenter' | 'graphic' | 'performance' | 'audience'; totpMonitorPrimary?: string | null; totpMonitorSecondary?: string | null;
   /** Frozen render-only performer models, used by historical broadcasts instead of current player cosmetics. */
   playerModelsSnapshot?: GigPlayerModelsData | null;
+  merchCrowdSignalSnapshot?: MerchCrowdSignal | null;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null), renderer = useRef<ConcertScene | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading'), [message, setMessage] = useState(''), [attempt, setAttempt] = useState(0);
@@ -52,7 +54,7 @@ export default function GigStage3D({ replay, experience, playbackState, reducedM
   const resolvedPlayerModels = playerModelsSnapshot ?? livePlayerModels.data ?? null;
   const merchCrowdSignal = useQuery({
     queryKey: ['gig-merch-crowd-signal', experience?.gig.id],
-    enabled: !!experience?.gig.id && !playerModelsSnapshot,
+    enabled: !!experience?.gig.id && !playerModelsSnapshot && !merchCrowdSignalSnapshot,
     queryFn: async () => {
       const { data, error } = await (supabase as any).rpc('get_gig_merch_crowd_signal', { p_gig_id: experience!.gig.id });
       if (error) throw error;
@@ -75,14 +77,14 @@ export default function GigStage3D({ replay, experience, playbackState, reducedM
       resolvedPlayerModels?.instrumentSkins ?? EMPTY_INSTRUMENT_SKINS,
       resolvedPlayerModels?.merchWearables ?? {},
     );
-    base.merchCrowdSignal = merchCrowdSignal.data ?? null;
+    base.merchCrowdSignal = merchCrowdSignalSnapshot ?? merchCrowdSignal.data ?? null;
     if (presentationMode !== 'totp') return base;
     return {
       ...base,
       venue: { ...base.venue, presenterKey: totpPresenterKey ?? 'alex_rayne', showVariant: totpShowVariant ?? 'regular' },
       television: { presenterKey: totpPresenterKey ?? 'alex_rayne', showVariant: totpShowVariant ?? 'regular', stageKey: totpStage },
     };
-  }, [plan, resolvedPlayerModels, replay, experience, archetype, presentationMode, totpStage, totpPresenterKey, totpShowVariant, merchCrowdSignal.data]);
+  }, [plan, resolvedPlayerModels, replay, experience, archetype, presentationMode, totpStage, totpPresenterKey, totpShowVariant, merchCrowdSignal.data, merchCrowdSignalSnapshot]);
   const optionsKey = JSON.stringify(options);
   const venueProfile = resolveVenueProfile(options.venue);
   const baseFrame = concertFrame(plan, replay, experience, playbackState, reducedMotion, tuning, options.venue, presentationMode, totpStage);

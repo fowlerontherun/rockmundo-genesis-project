@@ -459,7 +459,7 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, presenterR
         presenterName={presenter.displayName}
         presenterText={cue?.type === "presenter" ? cue.presenterText : null}
       >
-        <TotpBroadcastCanvas replay={replay} experience={experience} playbackState={playback} cue={cue} audienceReaction={audienceReaction} presenterKey={presenterKey} showVariant={showVariant} playerModelsSnapshot={playerModelsSnapshot} captions={captions} showCaptions={captionsEnabled} className="h-full w-full" />
+        <TotpBroadcastCanvas replay={replay} experience={experience} playbackState={playback} cue={cue} audienceReaction={audienceReaction} presenterKey={presenterKey} showVariant={showVariant} playerModelsSnapshot={playerModelsSnapshot} merchCrowdSignalSnapshot={source.payload.merchCrowdSignal ?? null} captions={captions} showCaptions={captionsEnabled} className="h-full w-full" />
       </TotpBroadcastRecoveryBoundary>
       {audioLoading ? (
         <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 text-center text-sm font-semibold text-white" data-totp-audio-loading>

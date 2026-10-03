@@ -107,6 +107,12 @@ export interface TotpBroadcastReplayPayload {
   liveTv?: {
     audienceReaction?: number | null;
   } | null;
+  merchCrowdSignal?: {
+    designId: string;
+    fameScore: number;
+    merchPopularityScore: number;
+    onSale: boolean;
+  } | null;
   band: {
     id: string;
     name: string;
