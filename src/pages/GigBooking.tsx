@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Calendar, CheckCircle, CheckCircle2, Clock, DollarSign, Filter, Flag, MapPin, Music, PlayCircle, RefreshCw, Sparkles, Star, Ticket, Users, XCircle } from 'lucide-react';
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
@@ -57,6 +57,10 @@ const GigBooking = () => {
   const { toast } = useToast();
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const requestedCityId = searchParams.get('cityId');
+  const requestedCity = searchParams.get('city');
+  const requestedCountry = searchParams.get('country');
 
   const [loading, setLoading] = useState(true);
   const [venues, setVenues] = useState<VenueWithCity[]>([]);
@@ -149,6 +153,17 @@ const GigBooking = () => {
     }
 
     setVenues(venueData);
+
+    if (requestedCityId || requestedCity) {
+      const requestedVenue = venueData.find(v =>
+        (requestedCityId && v.city_id === requestedCityId) ||
+        (requestedCity && v.cities?.name === requestedCity && (!requestedCountry || v.cities?.country === requestedCountry))
+      );
+      if (requestedVenue?.cities) {
+        setSelectedCountry(requestedVenue.cities.country ?? 'all');
+        setSelectedCity(requestedVenue.cities.name ?? 'all');
+      }
+    }
     
     // Extract unique countries from venues
     const uniqueCountries = [...new Set(
@@ -157,7 +172,7 @@ const GigBooking = () => {
         .filter((c): c is string => !!c)
     )].sort();
     setCountries(uniqueCountries);
-  }, [toast]);
+  }, [toast, requestedCityId, requestedCity, requestedCountry]);
 
   // Cities available under the selected country
   const availableCities = useMemo(() => {

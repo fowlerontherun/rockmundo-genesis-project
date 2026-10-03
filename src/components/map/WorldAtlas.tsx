@@ -58,6 +58,7 @@ export default function WorldAtlas({ cities, currentCityId, bandId, mode = "expl
       lng: city.longitude, index, status: "scheduled" }];
   });
   const selectedFame = selected ? fame.get(selected.id) : null;
+  const cityFameValues = useMemo(() => Object.fromEntries(cityFans.map(row => [row.city_id, row.city_fame ?? 0])), [cityFans]);
   const choose = (id: string) => {
     setSelectedId(id);
     onCitySelect?.(id);
@@ -96,7 +97,8 @@ export default function WorldAtlas({ cities, currentCityId, bandId, mode = "expl
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
         <div className="h-[420px] md:h-[600px] min-w-0 overflow-hidden rounded-lg border">
           <InteractiveWorldMap cities={filtered} currentCityId={currentCityId}
-            routeCityIds={plannedStops} routeCities={cities} onCityClick={choose} />
+            routeCityIds={plannedStops} routeCities={cities} onCityClick={choose}
+            cityValues={cityFameValues} valueMode={mode === "fame" ? "fame" : "default"} />
         </div>
         <aside className="rounded-lg border p-3 space-y-3" aria-label="Map city details">
           <h3 className="font-semibold">{selected ? selected.name : "Choose a city"}</h3>
@@ -107,6 +109,7 @@ export default function WorldAtlas({ cities, currentCityId, bandId, mode = "expl
               <p>Local fame: {(selectedFame?.city_fame ?? 0).toLocaleString()}</p>
               <p>Fans: {(selectedFame?.total_fans ?? 0).toLocaleString()}</p>
               <p>Previous gigs: {selectedFame?.gigs_in_city ?? 0}</p>
+              {mode === "fame" && <p className="text-xs text-muted-foreground">Pin colour and size represent relative local fame: cool/small = low, warm/large = high.</p>}
               <p>{hasPlayed(selected.id) ? "Played before" : "Not played yet"}</p>
             </div>}
             <div className="flex flex-wrap gap-2">
@@ -116,6 +119,8 @@ export default function WorldAtlas({ cities, currentCityId, bandId, mode = "expl
                   Math.abs(selected.latitude) > 90 || Math.abs(selected.longitude) > 180}
                 onClick={() => setPlannedStops(stops => [...stops, selected.id])}>Add to route preview</Button>}
               <Button asChild size="sm" variant="outline"><Link to={`/cities/${encodeURIComponent(selected.id)}`}>City details</Link></Button>
+              <Button asChild size="sm" variant="secondary"><Link to={`/gig-booking?cityId=${encodeURIComponent(selected.id)}&city=${encodeURIComponent(selected.name)}&country=${encodeURIComponent(selected.country)}`}>Book show</Link></Button>
+              {mode !== "tour" && <Button asChild size="sm"><Link to={`/tour-manager?cityId=${encodeURIComponent(selected.id)}`}>Add tour leg</Link></Button>}
               <Button asChild size="sm"><Link to="/travel">Plan travel</Link></Button>
               <Button asChild size="sm" variant="outline"><Link to="/tour-manager">Tour manager</Link></Button>
             </div>
