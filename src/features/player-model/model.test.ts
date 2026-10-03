@@ -621,6 +621,31 @@ describe('feminine breast size', () => {
     expect(largeFront - smallFront).toBeGreaterThan(.015);
   });
 
+  it('renders dedicated rounded bust volumes that visibly scale with feminine breast size', () => {
+    const dimensions = (size: number) => {
+      const appearance = defaultAppearance(`bust-volume-${size}`);
+      appearance.body.frame = 'feminine';
+      appearance.body.breastSize = size;
+      appearance.equipment.top.itemId = 'starter.top.casual';
+      const model = assemblePlayerModel(library, appearance);
+      const left = model.getObjectByName('avatar-v1-feminine-bust-left') as T.Mesh | undefined;
+      const right = model.getObjectByName('avatar-v1-feminine-bust-right') as T.Mesh | undefined;
+      expect(left).toBeTruthy();
+      expect(right).toBeTruthy();
+      expect(left?.userData.avatarV1BustVolume).toBe(true);
+      const bounds = new T.Box3().setFromObject(left!);
+      const sizeVector = bounds.getSize(new T.Vector3());
+      disposeModel(model);
+      return sizeVector;
+    };
+
+    const small = dimensions(.7);
+    const large = dimensions(1.85);
+    expect(large.x).toBeGreaterThan(small.x * 1.35);
+    expect(large.y).toBeGreaterThan(small.y * 1.35);
+    expect(large.z).toBeGreaterThan(small.z * 2);
+  });
+
   it('keeps the Rockmundo chest print surface-bound across feminine breast sizes', () => {
     for (const size of [.7, 1, 1.85]) {
       const appearance = defaultAppearance(`breast-logo-${size}`);
