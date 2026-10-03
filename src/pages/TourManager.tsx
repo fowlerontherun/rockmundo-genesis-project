@@ -56,7 +56,7 @@ import {
   ListMusic,
   TrendingUp,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
@@ -141,14 +141,16 @@ interface TourVenue {
 const OTHER_TOURS_PER_PAGE = 10;
 
 const TourManager = () => {
+  const [searchParams] = useSearchParams();
+  const requestedCityId = searchParams.get("cityId");
   const { profileId } = useActiveProfile();
   const { data: primaryBand } = usePrimaryBand();
   const currentBandId = primaryBand?.band_id ?? primaryBand?.bands?.id;
   const { data: bandTotals } = useBandTourTotals(currentBandId);
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [wizardOpen, setWizardOpen] = useState(false);
-  const [draftRouteCityIds, setDraftRouteCityIds] = useState<string[]>([]);
+  const [wizardOpen, setWizardOpen] = useState(() => Boolean(requestedCityId));
+  const [draftRouteCityIds, setDraftRouteCityIds] = useState<string[]>(() => requestedCityId ? [requestedCityId] : []);
 
   // Other tours filters
   const [fameFilter, setFameFilter] = useState<string>("all");
