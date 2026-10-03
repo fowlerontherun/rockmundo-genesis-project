@@ -39,4 +39,10 @@ describe('merch wearables', () => {
     const second = Array.from({ length: 20 }, (_, index) => fanWearsBandMerch('gig-123', index, .35));
     expect(second).toEqual(first);
   });
+
+  it('maps Merch Studio full-mockup coordinates into the avatar print panel', () => {
+    expect(merchElementPrintPosition({ x: 50, y: 51.5 }, 'Graphic Tee')).toEqual({ x: 0.5, y: 0.5 });
+    expect(merchElementPrintPosition({ x: 34, y: 29 }, 'Premium Hoodie')).toEqual({ x: 0, y: 0 });
+    expect(merchElementPrintPosition({ x: 66, y: 74 }, 'Football Shirt')).toEqual({ x: 1, y: 1 });
+  });
 });
