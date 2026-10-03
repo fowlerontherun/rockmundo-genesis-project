@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { usePrimaryBand } from '@/hooks/usePrimaryBand';
-import { merchWearableKind, type MerchWearableDesign } from './merchWearables';
+import { merchGarmentColor, merchWearableKind, type MerchWearableDesign, type ResolvedMerchWearable } from './merchWearables';
 
 export const merchWearablesKey = (profileId: string | null | undefined) => ['avatar-merch-wearables', profileId] as const;
 
@@ -21,7 +21,18 @@ export function useAvatarMerchWearables(profileId: string | null | undefined) {
       if (designResult.error) throw designResult.error;
       if (equippedResult.error) throw equippedResult.error;
       const designs = ((designResult.data ?? []) as unknown as MerchWearableDesign[]).filter(design => !!merchWearableKind(design.product_type));
-      return { designs, equippedDesignId: equippedResult.data?.design_id as string | undefined };
+      const equippedDesignId = equippedResult.data?.design_id as string | undefined;
+      const selected = designs.find(design => design.id === equippedDesignId);
+      const equipped: ResolvedMerchWearable | null = selected ? {
+        design_id: selected.id,
+        band_id: selected.band_id,
+        design_name: selected.design_name,
+        product_type: selected.product_type,
+        artwork_url: selected.artwork_url,
+        garment_color: merchGarmentColor(selected),
+        design_data: selected.design_data,
+      } : null;
+      return { designs, equippedDesignId, equipped };
     },
   });
 
