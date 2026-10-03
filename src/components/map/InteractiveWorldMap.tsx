@@ -300,6 +300,69 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
     };
   }, [cities, currentCityId, navigate, onCityClick, mapReady, cityValues, valueMode]);
 
+  // Fame mode uses a real MapLibre heatmap layer beneath the clickable city markers.
+  useEffect(() => {
+    const activeMap = map.current;
+    if (!activeMap || valueMode !== "fame") return;
+    const sourceId = "atlas-fame-heat";
+    const layerId = "atlas-fame-heat-layer";
+    const values = Object.values(cityValues).filter(value => Number.isFinite(value) && value > 0);
+    const maxFame = Math.max(1, ...values);
+    const features = cities.flatMap(city => {
+      if (city.latitude == null || city.longitude == null ||
+          !Number.isFinite(city.latitude) || !Number.isFinite(city.longitude) ||
+          Math.abs(city.latitude) > 90 || Math.abs(city.longitude) > 180) return [];
+      const fame = Math.max(0, cityValues[city.id] ?? 0);
+      if (fame <= 0) return [];
+      return [{
+        type: "Feature" as const,
+        properties: { fame, weight: Math.max(0.04, Math.min(1, Math.sqrt(fame / maxFame))) },
+        geometry: { type: "Point" as const, coordinates: [city.longitude, city.latitude] },
+      }];
+    });
+    const updateHeatmap = () => {
+      if (!activeMap.isStyleLoaded()) return;
+      if (activeMap.getLayer(layerId)) activeMap.removeLayer(layerId);
+      if (activeMap.getSource(sourceId)) activeMap.removeSource(sourceId);
+      if (!features.length) return;
+      activeMap.addSource(sourceId, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features },
+      });
+      activeMap.addLayer({
+        id: layerId,
+        type: "heatmap",
+        source: sourceId,
+        maxzoom: 9,
+        paint: {
+          "heatmap-weight": ["get", "weight"],
+          "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 0, 1.15, 6, 2.2],
+          "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 0, 24, 3, 42, 6, 64],
+          "heatmap-opacity": ["interpolate", ["linear"], ["zoom"], 0, 0.82, 7, 0.58, 9, 0.18],
+          "heatmap-color": [
+            "interpolate", ["linear"], ["heatmap-density"],
+            0, "rgba(0,0,0,0)",
+            0.08, "rgba(37,99,235,0.30)",
+            0.22, "rgba(6,182,212,0.48)",
+            0.42, "rgba(34,197,94,0.58)",
+            0.62, "rgba(250,204,21,0.68)",
+            0.80, "rgba(249,115,22,0.78)",
+            1, "rgba(239,68,68,0.90)"
+          ],
+        },
+      });
+    };
+    if (activeMap.isStyleLoaded()) updateHeatmap();
+    activeMap.on("style.load", updateHeatmap);
+    return () => {
+      activeMap.off("style.load", updateHeatmap);
+      if (activeMap.isStyleLoaded()) {
+        if (activeMap.getLayer(layerId)) activeMap.removeLayer(layerId);
+        if (activeMap.getSource(sourceId)) activeMap.removeSource(sourceId);
+      }
+    };
+  }, [cities, cityValues, valueMode, mapReady]);
+
   // Draw the player's proposed tour directly on the globe, without changing bookings.
   useEffect(() => {
     const activeMap = map.current;
@@ -430,10 +493,17 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
           <div className="w-3 h-3 rounded-full bg-green-500 border-2 border-green-300 animate-pulse" />
           <span className="text-muted-foreground">Current City</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(var(--primary))', border: '2px solid hsl(var(--primary) / 0.4)' }} />
-          <span className="text-muted-foreground">Available Cities</span>
-        </div>
+        {valueMode === "fame" ? (
+          <div className="space-y-1.5">
+            <div className="h-2 w-32 rounded-full" style={{ background: "linear-gradient(90deg, #2563eb, #06b6d4, #22c55e, #facc15, #f97316, #ef4444)" }} />
+            <div className="flex w-32 justify-between text-[10px] text-muted-foreground"><span>Low fame</span><span>High fame</span></div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(var(--primary))', border: '2px solid hsl(var(--primary) / 0.4)' }} />
+            <span className="text-muted-foreground">Available Cities</span>
+          </div>
+        )}
       </div>
     </div>
   );
