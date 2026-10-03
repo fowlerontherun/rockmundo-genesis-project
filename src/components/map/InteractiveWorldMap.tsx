@@ -32,6 +32,7 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
   const markers = useRef<import('mapbox-gl').Marker[]>([]);
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
+  const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -74,6 +75,7 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
       // Add atmosphere and fog effects
       map.current.on('style.load', () => {
         setIsLoading(false);
+        setMapReady(true);
       });
 
       // Globe rotation animation
@@ -239,7 +241,7 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
       markers.current.forEach(marker => marker.remove());
       markers.current = [];
     };
-  }, [cities, currentCityId, navigate, onCityClick]);
+  }, [cities, currentCityId, navigate, onCityClick, mapReady]);
 
   // Draw the player's proposed tour directly on the globe, without changing bookings.
   useEffect(() => {
@@ -288,7 +290,7 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
         if (activeMap.getSource(sourceId)) activeMap.removeSource(sourceId);
       }
     };
-  }, [cities, routeCities, routeCityIds]);
+  }, [cities, routeCities, routeCityIds, mapReady]);
 
   // Add pulse animation styles
   useEffect(() => {
