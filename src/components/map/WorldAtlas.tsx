@@ -29,7 +29,7 @@ interface WorldAtlasProps {
 export default function WorldAtlas({ cities, currentCityId, bandId, mode = "explore", onCitySelect, onPlanRoute }: WorldAtlasProps) {
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [onlyReached, setOnlyReached] = useState(false);
+  const [playedFilter, setPlayedFilter] = useState<"all" | "played" | "unplayed">("all");
   const [plannedStops, setPlannedStops] = useState<string[]>([]);
   const { data: cityFans = [] } = useQuery({
     queryKey: ["atlas-city-fame", bandId],
@@ -43,10 +43,11 @@ export default function WorldAtlas({ cities, currentCityId, bandId, mode = "expl
     },
   });
   const fame = useMemo(() => new Map(cityFans.map(row => [row.city_id, row])), [cityFans]);
+  const hasPlayed = (cityId: string) => (fame.get(cityId)?.gigs_in_city ?? 0) > 0;
   const filtered = useMemo(() => cities.filter(city =>
-    (!onlyReached || (fame.get(city.id)?.total_fans ?? 0) > 0) &&
+    (playedFilter === "all" || (playedFilter === "played" ? hasPlayed(city.id) : !hasPlayed(city.id))) &&
     `${city.name} ${city.country}`.toLowerCase().includes(search.trim().toLowerCase())
-  ), [cities, search, onlyReached, fame]);
+  ), [cities, search, playedFilter, fame]);
   const selected = cities.find(city => city.id === selectedId);
   const routePoints: RoutePoint[] = plannedStops.flatMap((id, index) => {
     const city = cities.find(item => item.id === id);
@@ -66,9 +67,11 @@ export default function WorldAtlas({ cities, currentCityId, bandId, mode = "expl
       <div className="flex flex-wrap gap-2 items-center">
         <Input aria-label="Search cities or countries" placeholder="Search cities or countries" value={search}
           onChange={event => setSearch(event.target.value)} className="max-w-sm" />
-        {bandId && <Button variant={onlyReached ? "default" : "outline"} onClick={() => setOnlyReached(value => !value)}>
-          {onlyReached ? "Showing reached cities" : "Show reached cities"}
-        </Button>}
+        {bandId && <div className="flex flex-wrap gap-1" role="group" aria-label="Filter cities by gig history">
+          <Button size="sm" variant={playedFilter === "all" ? "default" : "outline"} onClick={() => setPlayedFilter("all")}>All cities</Button>
+          <Button size="sm" variant={playedFilter === "played" ? "default" : "outline"} onClick={() => setPlayedFilter("played")}>Played</Button>
+          <Button size="sm" variant={playedFilter === "unplayed" ? "default" : "outline"} onClick={() => setPlayedFilter("unplayed")}>Not played</Button>
+        </div>}
         <Badge variant="secondary">{filtered.length} cities</Badge>
       </div>
       {mode === "tour" && plannedStops.length > 0 && <section className="rounded-lg border p-3 space-y-3" aria-label="Draft tour route">
@@ -104,6 +107,7 @@ export default function WorldAtlas({ cities, currentCityId, bandId, mode = "expl
               <p>Local fame: {(selectedFame?.city_fame ?? 0).toLocaleString()}</p>
               <p>Fans: {(selectedFame?.total_fans ?? 0).toLocaleString()}</p>
               <p>Previous gigs: {selectedFame?.gigs_in_city ?? 0}</p>
+              <p>{hasPlayed(selected.id) ? "Played before" : "Not played yet"}</p>
             </div>}
             <div className="flex flex-wrap gap-2">
               {mode === "tour" && <Button size="sm" variant="secondary"
