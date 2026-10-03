@@ -190,25 +190,33 @@ const TourManager = () => {
     enabled: !!currentBandId,
   });
 
-  // Current tour: status is active OR (scheduled and start_date <= now and end_date >= now)
+  // Classify every owned tour instead of silently dropping legacy/booked lifecycle states.
+  // Tour dates are calendar dates, so the final day remains current until local end-of-day.
   const now = new Date();
+  const terminalTourStatuses = new Set(["completed", "cancelled"]);
+  const endOfTourDay = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return date;
+    date.setHours(23, 59, 59, 999);
+    return date;
+  };
   const currentTours = myTours.filter((t) => {
-    if (t.status === "active") return true;
-    if (t.status === "scheduled") {
-      const startDate = new Date(t.start_date);
-      const endDate = new Date(t.end_date);
-      return startDate <= now && endDate >= now;
-    }
-    return false;
+    if (terminalTourStatuses.has(t.status)) return false;
+    const startDate = new Date(t.start_date);
+    const endDate = endOfTourDay(t.end_date);
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return t.status === "active";
+    return startDate <= now && endDate >= now;
   });
   const upcomingTours = myTours.filter((t) => {
-    if (t.status !== "scheduled") return false;
+    if (terminalTourStatuses.has(t.status)) return false;
     const startDate = new Date(t.start_date);
-    return startDate > now;
+    return !Number.isNaN(startDate.getTime()) && startDate > now;
   });
-  const historicTours = myTours.filter(
-    (t) => t.status === "completed" || t.status === "cancelled",
-  );
+  const historicTours = myTours.filter((t) => {
+    if (terminalTourStatuses.has(t.status)) return true;
+    const endDate = endOfTourDay(t.end_date);
+    return !Number.isNaN(endDate.getTime()) && endDate < now;
+  });
 
   const { cancelTour } = useTourCancellation();
   const {
