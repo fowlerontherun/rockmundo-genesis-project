@@ -54,7 +54,8 @@ export const usePrimaryBand = () => {
           `
         )
         .eq("profile_id", profileId)
-        .eq("bands.status", "active")
+        .eq("member_status", "active")
+        .eq("is_touring_member", false)
         .order("joined_at", { ascending: false })
         .limit(1)
         .maybeSingle();
