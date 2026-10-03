@@ -22,10 +22,11 @@ interface WorldAtlasProps {
   bandId?: string | null;
   mode?: "explore" | "fame" | "tour";
   onCitySelect?: (cityId: string) => void;
+  onPlanRoute?: (cityIds: string[]) => void;
 }
 
 /** A shared city selection surface. Travel booking remains with the authoritative travel/tour flows. */
-export default function WorldAtlas({ cities, currentCityId, bandId, mode = "explore", onCitySelect }: WorldAtlasProps) {
+export default function WorldAtlas({ cities, currentCityId, bandId, mode = "explore", onCitySelect, onPlanRoute }: WorldAtlasProps) {
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [onlyReached, setOnlyReached] = useState(false);
@@ -49,7 +50,9 @@ export default function WorldAtlas({ cities, currentCityId, bandId, mode = "expl
   const selected = cities.find(city => city.id === selectedId);
   const routePoints: RoutePoint[] = plannedStops.flatMap((id, index) => {
     const city = cities.find(item => item.id === id);
-    if (!city || city.latitude == null || city.longitude == null) return [];
+    if (!city || city.latitude == null || city.longitude == null ||
+        !Number.isFinite(city.latitude) || !Number.isFinite(city.longitude) ||
+        Math.abs(city.latitude) > 90 || Math.abs(city.longitude) > 180) return [];
     return [{ cityName: city.name, country: city.country, lat: city.latitude,
       lng: city.longitude, index, status: "scheduled" }];
   });
@@ -85,11 +88,12 @@ export default function WorldAtlas({ cities, currentCityId, bandId, mode = "expl
           })}
         </ol>
         <TourRouteMap points={routePoints} />
+        {onPlanRoute && <Button onClick={() => onPlanRoute(plannedStops)}>Continue in tour planner</Button>}
       </section>}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
         <div className="h-[420px] md:h-[600px] min-w-0 overflow-hidden rounded-lg border">
           <InteractiveWorldMap cities={filtered} currentCityId={currentCityId}
-            onCityClick={choose} />
+            routeCityIds={plannedStops} routeCities={cities} onCityClick={choose} />
         </div>
         <aside className="rounded-lg border p-3 space-y-3" aria-label="Map city details">
           <h3 className="font-semibold">{selected ? selected.name : "Choose a city"}</h3>
@@ -103,7 +107,9 @@ export default function WorldAtlas({ cities, currentCityId, bandId, mode = "expl
             </div>}
             <div className="flex flex-wrap gap-2">
               {mode === "tour" && <Button size="sm" variant="secondary"
-                disabled={plannedStops.includes(selected.id) || selected.latitude == null || selected.longitude == null}
+                disabled={plannedStops.includes(selected.id) || selected.latitude == null || selected.longitude == null ||
+                  !Number.isFinite(selected.latitude) || !Number.isFinite(selected.longitude) ||
+                  Math.abs(selected.latitude) > 90 || Math.abs(selected.longitude) > 180}
                 onClick={() => setPlannedStops(stops => [...stops, selected.id])}>Add to route preview</Button>}
               <Button asChild size="sm" variant="outline"><Link to={`/cities/${encodeURIComponent(selected.id)}`}>City details</Link></Button>
               <Button asChild size="sm"><Link to="/travel">Plan travel</Link></Button>
