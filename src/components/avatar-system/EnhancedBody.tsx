@@ -121,6 +121,11 @@ export const EnhancedBody = ({
       </mesh>
 
       {/* === SHOULDERS === */}
+      {/*
+        Keep the body arms independent from the shirt geometry.  Short-sleeve
+        garments only cover the shoulder/upper-arm cap; the skin meshes below
+        must always remain mounted so selecting a tee cannot remove the arms.
+      */}
       {/* Left shoulder */}
       <group position={[-dims.shoulderW * 0.9, 1.22 * torsoLength, 0]}>
         <mesh castShadow>
@@ -145,9 +150,23 @@ export const EnhancedBody = ({
         </mesh>
       </group>
 
+      {/* Short-sleeve cuffs bridge the shirt into the exposed arms. */}
+      {!hasJacket && (
+        <>
+          <mesh position={[-dims.shoulderW * 0.98, 1.12 * torsoLength, 0]} rotation={[0, 0, 0.25]} castShadow>
+            <cylinderGeometry args={[dims.armRadius * 1.16, dims.armRadius * 1.08, dims.armLength * 0.22, 12]} />
+            <meshStandardMaterial color={shirtColor} roughness={0.68} />
+          </mesh>
+          <mesh position={[dims.shoulderW * 0.98, 1.12 * torsoLength, 0]} rotation={[0, 0, -0.25]} castShadow>
+            <cylinderGeometry args={[dims.armRadius * 1.16, dims.armRadius * 1.08, dims.armLength * 0.22, 12]} />
+            <meshStandardMaterial color={shirtColor} roughness={0.68} />
+          </mesh>
+        </>
+      )}
+
       {/* === ARMS === */}
       {/* Left arm */}
-      <group position={[-dims.shoulderW, 1.05 * torsoLength, 0]}>
+      <group position={[-dims.shoulderW, 1.03 * torsoLength, 0]}>
         {/* Upper arm */}
         <mesh position={[0, 0, 0]} rotation={[0, 0, 0.25]} castShadow>
           <capsuleGeometry args={[dims.armRadius, dims.armLength * 0.5, 8, 16]} />
@@ -190,7 +209,7 @@ export const EnhancedBody = ({
       </group>
 
       {/* Right arm */}
-      <group position={[dims.shoulderW, 1.05 * torsoLength, 0]}>
+      <group position={[dims.shoulderW, 1.03 * torsoLength, 0]}>
         <mesh position={[0, 0, 0]} rotation={[0, 0, -0.25]} castShadow>
           <capsuleGeometry args={[dims.armRadius, dims.armLength * 0.5, 8, 16]} />
           <meshStandardMaterial color={skinColor} roughness={0.5} />
