@@ -140,6 +140,7 @@ export class ConcertScene {
         this.options?.venue.seed,
         this.venueProfile ?? undefined,
         avatarQuality,
+        this.options?.merchCrowdSignal ?? null,
       ), this.assetsReady]);
       if (this.disposed) { this.disposeScene(); return; }
       if (this.assetsFailed) throw new Error('Missing demo material');

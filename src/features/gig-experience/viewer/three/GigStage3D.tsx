@@ -4,6 +4,8 @@ import { resolveVenueProfile } from '@/features/gig-demo-3d/venueProfile';
 import { ConcertScene } from '@/features/gig-demo-3d/ConcertScene';
 import { DEFAULT_SETTINGS, type CameraShot, type DemoSettings } from '@/features/gig-demo-3d/config';
 import { useGigPlayerModels, type GigPlayerModelsData } from '@/features/player-model/usePlayerModel';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 import type { PlayerAppearance } from '@/features/player-model/appearance';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import type { ResolvedTattooVisual } from '@/features/player-model/tattoos';
@@ -48,6 +50,17 @@ export default function GigStage3D({ replay, experience, playbackState, reducedM
   const plan = useMemo(() => buildStagePlan(replay, experience), [replay, experience]);
   const livePlayerModels = useGigPlayerModels(playerModelsSnapshot ? [] : plan.entities.flatMap(p => p.profileId ? [p.profileId] : []));
   const resolvedPlayerModels = playerModelsSnapshot ?? livePlayerModels.data ?? null;
+  const merchCrowdSignal = useQuery({
+    queryKey: ['gig-merch-crowd-signal', experience?.gig.id],
+    enabled: !!experience?.gig.id && !playerModelsSnapshot,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).rpc('get_gig_merch_crowd_signal', { p_gig_id: experience!.gig.id });
+      if (error) throw error;
+      const row = data?.[0];
+      return row ? { designId: row.design_id, fameScore: row.fame_score, merchPopularityScore: row.merch_popularity_score, onSale: row.on_sale } : null;
+    },
+    staleTime: 5 * 60_000,
+  });
   const options = useMemo(() => {
     const base = concertOptions(
       plan,
@@ -62,13 +75,14 @@ export default function GigStage3D({ replay, experience, playbackState, reducedM
       resolvedPlayerModels?.instrumentSkins ?? EMPTY_INSTRUMENT_SKINS,
       resolvedPlayerModels?.merchWearables ?? {},
     );
+    base.merchCrowdSignal = merchCrowdSignal.data ?? null;
     if (presentationMode !== 'totp') return base;
     return {
       ...base,
       venue: { ...base.venue, presenterKey: totpPresenterKey ?? 'alex_rayne', showVariant: totpShowVariant ?? 'regular' },
       television: { presenterKey: totpPresenterKey ?? 'alex_rayne', showVariant: totpShowVariant ?? 'regular', stageKey: totpStage },
     };
-  }, [plan, resolvedPlayerModels, replay, experience, archetype, presentationMode, totpStage, totpPresenterKey, totpShowVariant]);
+  }, [plan, resolvedPlayerModels, replay, experience, archetype, presentationMode, totpStage, totpPresenterKey, totpShowVariant, merchCrowdSignal.data]);
   const optionsKey = JSON.stringify(options);
   const venueProfile = resolveVenueProfile(options.venue);
   const baseFrame = concertFrame(plan, replay, experience, playbackState, reducedMotion, tuning, options.venue, presentationMode, totpStage);

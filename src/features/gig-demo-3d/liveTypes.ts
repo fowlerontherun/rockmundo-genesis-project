@@ -53,6 +53,7 @@ export interface ConcertFrame {
   effect: { type: string; intensity: number; progress: number } | null;
   performers: { id: string; position: [number, number, number]; visible: boolean; walking: boolean; action: string | null; actionProgress: number }[];
 }
+export interface MerchCrowdSignal { designId: string; fameScore: number; merchPopularityScore: number; onSale: boolean; }
 export interface ConcertOptions {
   performers: ConcertPerformer[];
   venue: ConcertVenue;
