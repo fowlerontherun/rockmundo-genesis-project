@@ -55,21 +55,17 @@ export const usePrimaryBand = () => {
         )
         .eq("profile_id", profileId)
         .or("member_status.is.null,member_status.eq.active")
-        .or("is_touring_member.is.null,is_touring_member.eq.false")
-        .order("joined_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .order("joined_at", { ascending: false });
 
       if (error && error.code !== "PGRST116") {
         throw error;
       }
 
-      if (!data) return null;
-      if (data.is_touring_member) return null;
-      if (data.member_status && data.member_status !== "active") return null;
-      if (data.bands?.status && data.bands.status !== "active") return null;
-
-      return data as PrimaryBandRecord;
+      const memberships = (data ?? []) as PrimaryBandRecord[];
+      const primary = memberships.find(
+        row => !row.is_touring_member && (!row.bands?.status || row.bands.status === "active"),
+      );
+      return primary ?? null;
     },
     enabled: !!profileId,
     staleTime: 60 * 1000,
