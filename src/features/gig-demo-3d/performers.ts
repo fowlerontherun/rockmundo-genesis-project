@@ -25,6 +25,7 @@ import type { ResolvedInstrumentSkinVisual } from '@/features/instrument-skins/i
 import type { CrowdTuningOptions } from '@/features/gig-experience/viewer/engine/CrowdTuning';
 import type { VenueProfile } from './venueProfile';
 import type { ConcertPerformer, PerformanceSection, StageRole } from './liveTypes';
+import { crowdMerchChance, fanWearsBandMerch, type ResolvedMerchWearable } from '@/features/player-model/merchWearables';
 type Role = StageRole;
 
 interface RestBone {
@@ -821,8 +822,10 @@ export class DemoCrowd {
     private time = { value: 0 };
     private televisionStage: 'main_stage' | 'stage_b' | 'rock_stage' | 'studio_floor' = 'main_stage';
     setTelevisionStage(stage: 'main_stage' | 'stage_b' | 'rock_stage' | 'studio_floor') { this.televisionStage = stage; }
-    constructor(sources: T.Object3D[], scene: T.Scene, seed = 85043, private venue?: VenueProfile, library?: ModelLibrary) {
+    constructor(sources: T.Object3D[], scene: T.Scene, seed = 85043, private venue?: VenueProfile, library?: ModelLibrary, merch: ResolvedMerchWearable | null = null) {
         const random = seededRandom(seed), material = crowdMaterial(this.time), appearances = crowdAppearances(seed);
+        const merchChance = merch ? crowdMerchChance({ fanLoyalty: 55, bandFame: 45, merchPopularity: 50, onSale: true }) : 0;
+        if (merch) appearances.forEach((appearance, kind) => { if (fanWearsBandMerch(String(seed), kind, merchChance)) { appearance.equipment.top.itemId = merch.product_type.toLowerCase().includes('hoodie') ? 'starter.top.hoodie' : merch.product_type.toLowerCase().includes('long sleeve') || merch.product_type.toLowerCase().includes('crewneck') ? 'starter.top.long-sleeve' : 'starter.top.casual'; appearance.equipment.top.color = merch.garment_color; } });
         this.transform.rotation.order = 'YXZ';
         this.phones = new T.InstancedMesh(new T.BoxGeometry(.075, .13, .012), new T.MeshBasicMaterial({ color: '#b5e6ff', toneMapped: false }), CROWD_LIMIT);
         this.phones.name = 'crowd-phone-screens';
@@ -835,7 +838,7 @@ export class DemoCrowd {
             [places[i], places[j]] = [places[j], places[i]];
         }
         for (let kind = 0; kind < CROWD_VARIANTS; kind++) {
-            const appearance = appearances[kind], assembled = library ? assemblePlayerModel(library, appearance, [], [], 'crowd') : null;
+            const appearance = appearances[kind], wearsMerch = !!merch && fanWearsBandMerch(String(seed), kind, merchChance), assembled = library ? assemblePlayerModel(library, appearance, [], [], 'crowd', 'stage', wearsMerch ? merch : null) : null;
             const actor = new Musician(assembled ?? sources[kind % sources.length], 'fan', [0, 0, 0], 0, undefined, assembled ? appearance : undefined);
             if (assembled)
                 disposeModel(assembled);
@@ -1017,7 +1020,8 @@ export async function loadBand(
         }) : [new Musician(punk, 'vocals', [0, .9, -.97], 0, '#5f354a'), new Musician(casual, 'guitar', [-2.65, .9, -1.35], 1.2, '#577386'), new Musician(suit, 'bass', [2.7, .9, -1.65], 2.6, '#254c47'), new Musician(casual, 'drums', [.8, 1.16, -3.58], .8, '#874a47')];
         actors.forEach(actor => { scene.add(actor.root); if (actor.equipment)
             scene.add(actor.equipment); });
-        const crowd = new DemoCrowd([casual, library.get('female-casual.glb') ?? suit, punk], scene, seed, venue, library);
+        const crowdMerch = lineup?.find(p => p.merchWearable)?.merchWearable ?? null;
+        const crowd = new DemoCrowd([casual, library.get('female-casual.glb') ?? suit, punk], scene, seed, venue, library, crowdMerch);
         return { actors, crowd, cymbals };
     }
     finally {
