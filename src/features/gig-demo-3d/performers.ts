@@ -1005,6 +1005,8 @@ export async function loadBand(
                 visibleTattoosForPresentation(p.tattoos ?? [], { appearance: p.appearance, clothing: p.richClothing ?? [], presentation: 'stage' }),
                 p.richClothing,
                 avatarQuality,
+                'stage',
+                p.merchWearable ?? null,
             );
             const actor = new Musician(assembled, p.role, p.position, p.phase, undefined, p.appearance, p.instrument, p.vocal, p.richClothing, p.instrumentSkin, library);
             disposeModel(assembled);
