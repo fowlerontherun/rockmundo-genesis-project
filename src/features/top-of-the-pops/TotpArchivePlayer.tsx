@@ -68,6 +68,7 @@ export function archivedPlayerModels(source: TotpBroadcastReplay): GigPlayerMode
   const appearances: GigPlayerModelsData["appearances"] = {};
   const richClothing: GigPlayerModelsData["richClothing"] = {};
   const tattoos: NonNullable<GigPlayerModelsData["tattoos"]> = {};
+  const merchWearables: NonNullable<GigPlayerModelsData["merchWearables"]> = {};
   let frozen = 0;
   for (const member of source.payload.band.members) {
     const profileId = member.profile_id ? String(member.profile_id) : "";
@@ -90,9 +91,10 @@ export function archivedPlayerModels(source: TotpBroadcastReplay): GigPlayerMode
       if (tattoo) frozenTattoos.push(tattoo);
     }
     tattoos[profileId] = frozenTattoos;
+    if (snapshot.merchWearable?.design_id) merchWearables[profileId] = snapshot.merchWearable;
     frozen++;
   }
-  return frozen > 0 ? { appearances, richClothing, tattoos } : null;
+  return frozen > 0 ? { appearances, richClothing, tattoos, merchWearables } : null;
 }
 
 export function archivedReplay(source: TotpBroadcastReplay): GigViewerReplay {
@@ -457,7 +459,7 @@ export function TotpArchivePlayer({ replay: source, autoPlay = false, presenterR
         presenterName={presenter.displayName}
         presenterText={cue?.type === "presenter" ? cue.presenterText : null}
       >
-        <TotpBroadcastCanvas replay={replay} experience={experience} playbackState={playback} cue={cue} audienceReaction={audienceReaction} presenterKey={presenterKey} showVariant={showVariant} playerModelsSnapshot={playerModelsSnapshot} captions={captions} showCaptions={captionsEnabled} className="h-full w-full" />
+        <TotpBroadcastCanvas replay={replay} experience={experience} playbackState={playback} cue={cue} audienceReaction={audienceReaction} presenterKey={presenterKey} showVariant={showVariant} playerModelsSnapshot={playerModelsSnapshot} merchCrowdSignalSnapshot={source.payload.merchCrowdSignal ?? null} captions={captions} showCaptions={captionsEnabled} className="h-full w-full" />
       </TotpBroadcastRecoveryBoundary>
       {audioLoading ? (
         <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 text-center text-sm font-semibold text-white" data-totp-audio-loading>
