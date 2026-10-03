@@ -1021,7 +1021,9 @@ export async function loadBand(
         }) : [new Musician(punk, 'vocals', [0, .9, -.97], 0, '#5f354a'), new Musician(casual, 'guitar', [-2.65, .9, -1.35], 1.2, '#577386'), new Musician(suit, 'bass', [2.7, .9, -1.65], 2.6, '#254c47'), new Musician(casual, 'drums', [.8, 1.16, -3.58], .8, '#874a47')];
         actors.forEach(actor => { scene.add(actor.root); if (actor.equipment)
             scene.add(actor.equipment); });
-        const crowdMerch = lineup?.find(p => p.merchWearable)?.merchWearable ?? null;
+        const crowdMerch = lineup?.find(p => p.merchWearable?.design_id === merchCrowdSignal?.designId)?.merchWearable
+            ?? lineup?.find(p => p.merchWearable)?.merchWearable
+            ?? null;
         const crowd = new DemoCrowd([casual, library.get('female-casual.glb') ?? suit, punk], scene, seed, venue, library, crowdMerch, merchCrowdSignal);
         return { actors, crowd, cymbals };
     }
