@@ -138,6 +138,15 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
         map.current.on('load', () => {
           logDiagnostic('load fired');
           map.current?.resize();
+          const canvas = map.current?.getCanvas();
+          const canvasRect = canvas?.getBoundingClientRect();
+          const canvasStyle = canvas ? window.getComputedStyle(canvas) : null;
+          logDiagnostic(
+            `canvas=${Math.round(canvasRect?.width ?? 0)}x${Math.round(canvasRect?.height ?? 0)}; position=${canvasStyle?.position ?? 'missing'}; display=${canvasStyle?.display ?? 'missing'}; opacity=${canvasStyle?.opacity ?? 'missing'}`,
+          );
+          const mapRoot = container.querySelector<HTMLElement>('.maplibregl-map') ?? container;
+          logDiagnostic(`map DOM children=${container.children.length}; canvas=${Boolean(canvas)}; controls=${Boolean(container.querySelector('.maplibregl-control-container'))}`);
+          mapRoot.style.visibility = 'visible';
           setIsLoading(false);
           setMapReady(true);
         });
@@ -325,6 +334,16 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
   useEffect(() => {
     const style = document.createElement('style');
     style.textContent = `
+      /* Critical MapLibre layout rules kept locally so the map remains visible
+         even if an external stylesheet is cached/blocked/stripped. */
+      .maplibregl-map { overflow: hidden; position: relative; -webkit-tap-highlight-color: transparent; }
+      .maplibregl-canvas-container { height: 100%; width: 100%; }
+      .maplibregl-canvas { position: absolute; left: 0; top: 0; }
+      .maplibregl-control-container { position: absolute; inset: 0; pointer-events: none; }
+      .maplibregl-ctrl-top-right { position: absolute; top: 0; right: 0; pointer-events: none; }
+      .maplibregl-ctrl { clear: both; pointer-events: auto; transform: translate(0); }
+      .maplibregl-marker { position: absolute; top: 0; left: 0; will-change: transform; }
+      .maplibregl-popup { position: absolute; top: 0; left: 0; display: flex; pointer-events: none; }
       @keyframes pulse {
         0%, 100% {
           opacity: 1;
