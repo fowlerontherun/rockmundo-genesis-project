@@ -4,6 +4,7 @@ import type { DerivedPlaybackState } from "@/features/gig-experience/viewer/engi
 import { GigCanvas } from "@/features/gig-experience/viewer/GigCanvas";
 import type { PerformancePreference } from "@/features/gig-experience/viewer/hooks/useGigViewerPreferences";
 import type { GigPlayerModelsData } from "@/features/player-model/usePlayerModel";
+import type { MerchCrowdSignal } from "@/features/gig-demo-3d/liveTypes";
 import type { TotpBroadcastCue } from "./broadcastTimeline";
 import { formatTotpChartGraphic } from "./broadcastTimeline";
 import { resolveTotpPresenter, totpVariantLabel } from "./presenters";
@@ -17,11 +18,11 @@ import { TotpBroadcastPictureBoundary } from "./TotpBroadcastPictureBoundary";
 export interface TotpBroadcastCanvasProps {
   replay: GigViewerReplay; experience: GigExperienceDTO | null; playbackState: DerivedPlaybackState; cue?: TotpBroadcastCue | null;
   audienceReaction?: number | null; presenterKey?: string | null; showVariant?: string | null; reducedMotion?: boolean;
-  performancePreference?: PerformancePreference; className?: string; playerModelsSnapshot?: GigPlayerModelsData | null;
+  performancePreference?: PerformancePreference; className?: string; playerModelsSnapshot?: GigPlayerModelsData | null; merchCrowdSignalSnapshot?: MerchCrowdSignal | null;
   captions?: TotpCaptionCue[]; showCaptions?: boolean; showSafeAreaGuides?: boolean; enableAudienceAudio?: boolean;
 }
 
-export function TotpBroadcastCanvas({ replay, experience, playbackState, cue, audienceReaction = 0, presenterKey = "alex_rayne", showVariant = "regular", reducedMotion = false, performancePreference = "auto", className, playerModelsSnapshot = null, captions, showCaptions = false, showSafeAreaGuides = false, enableAudienceAudio = true }: TotpBroadcastCanvasProps) {
+export function TotpBroadcastCanvas({ replay, experience, playbackState, cue, audienceReaction = 0, presenterKey = "alex_rayne", showVariant = "regular", reducedMotion = false, performancePreference = "auto", className, playerModelsSnapshot = null, merchCrowdSignalSnapshot = null, captions, showCaptions = false, showSafeAreaGuides = false, enableAudienceAudio = true }: TotpBroadcastCanvasProps) {
   const directedShot = reducedMotion ? "studio_master" : cue?.cameraShot ?? "studio_master";
   const directedStage = cue?.stage ?? "main_stage";
   const lowerThird = cue?.type === "graphic" ? cue.graphic : null;
@@ -62,7 +63,7 @@ export function TotpBroadcastCanvas({ replay, experience, playbackState, cue, au
       resetKey={`${replay.id}:${directedStage}`}
       programmeLabel={variantLabel ? `Top of the Pops · ${variantLabel}` : "Top of the Pops"}
     >
-      <GigCanvas replay={replay} experience={experience} playbackState={playbackState} reducedMotion={reducedMotion} pyrotechnics crowdTuning={crowdTuning} fill immersive cameraMode="auto" performancePreference={performancePreference} presentationMode="totp" totpCameraShot={directedShot} totpStage={directedStage} totpPresenterKey={presenter.key} totpShowVariant={showVariant} totpAudienceReaction={lockedAudienceReaction} totpCueType={cue?.type ?? "performance"} totpMonitorPrimary={monitorPrimary} totpMonitorSecondary={monitorSecondary} playerModelsSnapshot={playerModelsSnapshot} capability={{ audience: "player", subjectId: `totp:${replay.id}` }} />
+      <GigCanvas replay={replay} experience={experience} playbackState={playbackState} reducedMotion={reducedMotion} pyrotechnics crowdTuning={crowdTuning} fill immersive cameraMode="auto" performancePreference={performancePreference} presentationMode="totp" totpCameraShot={directedShot} totpStage={directedStage} totpPresenterKey={presenter.key} totpShowVariant={showVariant} totpAudienceReaction={lockedAudienceReaction} totpCueType={cue?.type ?? "performance"} totpMonitorPrimary={monitorPrimary} totpMonitorSecondary={monitorSecondary} playerModelsSnapshot={playerModelsSnapshot} merchCrowdSignalSnapshot={merchCrowdSignalSnapshot} capability={{ audience: "player", subjectId: `totp:${replay.id}` }} />
     </TotpBroadcastPictureBoundary>
     <div
       key={`dip:${cue?.id ?? "default"}`}
