@@ -8,6 +8,8 @@ import { HeadStyling } from './HeadStyling';
 import { AccessoryStyling } from './AccessoryStyling';
 import { OwnedAccessories } from './OwnedAccessories';
 import { StarterWardrobe } from './StarterWardrobe';
+import { BandMerchWardrobe } from './BandMerchWardrobe';
+import { useAvatarMerchWearables } from './useAvatarMerchWearables';
 import './player-model.css';
 
 const SKIN_COLORS = ['#f3d3b7', '#dfb18c', '#c58c63', '#a96f46', '#805132', '#593a2d', '#382a24'];
@@ -30,13 +32,14 @@ export default function PlayerModelEditor() {
   const model = usePlayerModel();
   const richClothing = useEquippedRichClothing(model.profileId);
   const tattoos = usePlayerStageTattoos(model.profileId);
+  const merch = useAvatarMerchWearables(model.profileId);
   if (model.isLoading || (model.profileId && model.query.isPending)) return <p role="status" className="p-8">Loading your character’s stage model…</p>;
   if (model.error || model.query.isError) return <div role="alert" className="p-8"><p>Your saved model could not load.</p><button type="button" className="underline" onClick={() => void model.query.refetch()}>Try again</button></div>;
   if (!model.profileId || !model.query.data) return <p className="p-8">Select a character to create a stage model.</p>;
-  return <EditorSession key={model.profileId} profileId={model.profileId} initial={model.query.data} model={model} richClothing={richClothing.data ?? []} richClothingError={richClothing.isError} tattoos={tattoos.data ?? []} tattooError={tattoos.isError} />;
+  return <EditorSession key={model.profileId} profileId={model.profileId} initial={model.query.data} model={model} richClothing={richClothing.data ?? []} richClothingError={richClothing.isError} tattoos={tattoos.data ?? []} tattooError={tattoos.isError} merchWearable={merch.query.data?.equipped ?? null} />;
 }
 
-function EditorSession({ profileId, initial, model, richClothing, richClothingError, tattoos, tattooError }: { profileId: string; initial: { appearance: PlayerAppearance; revision: number | null }; model: ReturnType<typeof usePlayerModel>; richClothing: ResolvedEquippedClothing[]; richClothingError: boolean; tattoos: import('./tattoos').ResolvedTattooVisual[]; tattooError: boolean }) {
+function EditorSession({ profileId, initial, model, richClothing, richClothingError, tattoos, tattooError, merchWearable }: { profileId: string; initial: { appearance: PlayerAppearance; revision: number | null }; model: ReturnType<typeof usePlayerModel>; richClothing: ResolvedEquippedClothing[]; richClothingError: boolean; tattoos: import('./tattoos').ResolvedTattooVisual[]; tattooError: boolean; merchWearable: import('./merchWearables').ResolvedMerchWearable | null }) {
   const [draft, setDraft] = useState(initial.appearance), [baseline, setBaseline] = useState(initial), [role, setRole] = useState('other'), [activeTab, setActiveTab] = useState<EditorTab>('body');
   const [feedback, setFeedback] = useState(''), [error, setError] = useState('');
   const dirty = JSON.stringify(draft) !== JSON.stringify(baseline.appearance);
@@ -63,7 +66,7 @@ function EditorSession({ profileId, initial, model, richClothing, richClothingEr
     <div className="player-model-editor__intro"><div><span className="player-model-editor__eyebrow">YOUR LOOK. YOUR STAGE.</span><h2>Create your full-body avatar</h2><p>Shape your face and character, dress them head to toe, add accessories and tattoos, and take the same look on stage.</p></div><span className="player-model-editor__badge">LIVE AVATAR · VERSION 1</span></div>
     <div className="player-model-editor__layout">
       <div className="player-model-editor__showcase">
-        <PlayerModelPreview appearance={draft} role={stageAssignment(role).role} instrument={role in STAGE_INSTRUMENTS ? role as InstrumentId : undefined} richClothing={richClothing} tattoos={tattoos} />
+        <PlayerModelPreview appearance={draft} role={stageAssignment(role).role} instrument={role in STAGE_INSTRUMENTS ? role as InstrumentId : undefined} richClothing={richClothing} tattoos={tattoos} merchWearable={merchWearable} />
         {richClothing.length > 0 && <p className="player-model-editor__hint">Your currently equipped Skin Store clothing is layered over the base avatar and will also appear in 3D gigs.</p>}
         {richClothingError && <p role="status" className="player-model-editor__hint">Your equipped Skin Store clothing could not be loaded; the starter base outfit is shown.</p>}
         {tattoos.length > 0 && <p className="player-model-editor__hint">{tattoos.length} tattoo{tattoos.length === 1 ? '' : 's'} from the Tattoo Parlour {tattoos.length === 1 ? 'is' : 'are'} rendered directly on this stage model.</p>}
@@ -99,6 +102,7 @@ function EditorSession({ profileId, initial, model, richClothing, richClothingEr
           <div className="player-model-editor__choices" role="group" aria-label="Outfit presets">{STYLES.map(style => <button key={style} type="button" onClick={() => outfit(style)}>{STYLE_LABELS[style]}</button>)}</div>
           <p className="player-model-editor__hint">Starter pieces update the live preview immediately. Equipped Skin Store items remain layered over matching areas.</p>
           {SLOTS.map(slot => <StarterWardrobe key={slot} slot={slot} appearance={draft} onChange={change} />)}
+          <BandMerchWardrobe profileId={profileId} />
           <div className="player-model-editor__item"><label htmlFor="instrument-finish">Instrument finish</label><span>Standard</span><input id="instrument-finish" type="color" value={draft.equipment.instrument.color} onChange={event => change({ ...draft, equipment: { ...draft.equipment, instrument: { ...draft.equipment.instrument, color: event.target.value } } })} /></div>
         </fieldset>}
         <div className="player-model-editor__save">
