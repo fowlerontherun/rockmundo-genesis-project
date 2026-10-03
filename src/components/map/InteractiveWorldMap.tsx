@@ -302,11 +302,12 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
         icon={MapPin}
         title="Map unavailable right now"
         description={`We can't load the interactive world map at the moment. ${mapError}`}
-      >
-        <pre className="mt-4 max-w-full overflow-auto whitespace-pre-wrap text-left text-xs text-muted-foreground">
-          {diagnostics.join('\n')}
-        </pre>
-      </EmptyState>
+        action={
+          <pre className="mt-2 max-w-full overflow-auto whitespace-pre-wrap text-left text-xs text-muted-foreground">
+            {diagnostics.join('\n')}
+          </pre>
+        }
+      />
     );
   }
 
