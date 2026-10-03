@@ -16,8 +16,9 @@ const SKIN_COLORS = ['#f3d3b7', '#dfb18c', '#c58c63', '#a96f46', '#805132', '#59
 const BREAST_SIZE_PRESETS = [
   ['Small', .82],
   ['Medium', 1],
-  ['Full', 1.18],
-  ['Large', 1.32],
+  ['Full', 1.22],
+  ['Large', 1.48],
+  ['Very large', 1.75],
 ] as const;
 const EDITOR_TABS = ['body', 'head', 'accessories', 'outfit'] as const;
 type EditorTab = typeof EDITOR_TABS[number];
@@ -83,7 +84,7 @@ function EditorSession({ profileId, initial, model, richClothing, richClothingEr
           <label className="player-model-editor__range">Height <output>{Math.round(draft.body.height * 178)} cm</output><input type="range" min="0.9" max="1.1" step="0.01" value={draft.body.height} onChange={event => setBody({ height: Number(event.target.value) })} /></label>
           <label className="player-model-editor__range">Build <output>{Math.round(draft.body.build * 100)}%</output><input type="range" min="0.85" max="1.15" step="0.01" value={draft.body.build} onChange={event => setBody({ build: Number(event.target.value) })} /></label>
           {draft.body.frame === 'feminine' && <div className="player-model-editor__body-option">
-            <label className="player-model-editor__range">Breast size <output>{Math.round((draft.body.breastSize ?? 1) * 100)}%</output><input type="range" min="0.75" max="1.35" step="0.01" value={draft.body.breastSize ?? 1} onChange={event => setBody({ breastSize: Number(event.target.value) })} /></label>
+            <label className="player-model-editor__range">Breast size <output>{Math.round((draft.body.breastSize ?? 1) * 100)}%</output><input type="range" min="0.7" max="1.85" step="0.01" value={draft.body.breastSize ?? 1} onChange={event => setBody({ breastSize: Number(event.target.value) })} /></label>
             <div className="player-model-editor__choices" role="group" aria-label="Breast size presets">
               {BREAST_SIZE_PRESETS.map(([label, value]) => <button key={label} type="button" aria-pressed={Math.abs((draft.body.breastSize ?? 1) - value) < .005} onClick={() => setBody({ breastSize: value })}>{label}</button>)}
             </div>

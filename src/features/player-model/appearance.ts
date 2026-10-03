@@ -118,7 +118,7 @@ const color = z.string().regex(/^#[0-9a-fA-F]{6}$/).transform(value => value.toL
 const item = (slot: EquipmentSlot) => z.string().refine(value => STARTER_ITEMS[slot].some(entry => entry.id === value), 'Choose an available starter item');
 export const appearanceSchema = z.object({
   version: z.literal(1),
-  body: z.object({ frame: z.enum(['masculine', 'feminine']), height: z.number().finite().min(0.9).max(1.1), build: z.number().finite().min(0.85).max(1.15), breastSize: z.number().finite().min(0.75).max(1.35).optional(), muscle: z.enum(BODY_MUSCLE_TYPES).optional(), skin: color }).strict(),
+  body: z.object({ frame: z.enum(['masculine', 'feminine']), height: z.number().finite().min(0.9).max(1.1), build: z.number().finite().min(0.85).max(1.15), breastSize: z.number().finite().min(0.7).max(1.85).optional(), muscle: z.enum(BODY_MUSCLE_TYPES).optional(), skin: color }).strict(),
   head: z.object({ style: z.enum(STYLES), hair: color, hairStyle: z.enum(HAIR_STYLES).optional(), facialHair: z.enum(FACIAL_HAIR_STYLES).optional(), facialHairColor: color.optional(), faceShape: z.enum(FACE_SHAPES).optional(), eyeColor: color.optional(), eyebrowStyle: z.enum(EYEBROW_STYLES).optional(), eyebrowColor: color.optional(), skinDetail: z.enum(SKIN_DETAILS).optional() }).strict(),
   equipment: z.object({
     top: z.object({ itemId: item('top'), color }).strict(),

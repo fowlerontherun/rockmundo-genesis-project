@@ -539,11 +539,11 @@ describe('feminine breast size', () => {
     delete old.body.breastSize;
     const resolved = resolveAppearance(JSON.parse(JSON.stringify(old)), 'legacy-breast-size');
     expect(resolved.body.breastSize).toBe(1);
-    const small = defaultAppearance('small-breast-size'); small.body.frame = 'feminine'; small.body.breastSize = .75;
-    const large = defaultAppearance('large-breast-size'); large.body.frame = 'feminine'; large.body.breastSize = 1.35;
+    const small = defaultAppearance('small-breast-size'); small.body.frame = 'feminine'; small.body.breastSize = .7;
+    const large = defaultAppearance('large-breast-size'); large.body.frame = 'feminine'; large.body.breastSize = 1.85;
     expect(appearanceSchema.safeParse(small).success).toBe(true);
     expect(appearanceSchema.safeParse(large).success).toBe(true);
-    large.body.breastSize = 1.36;
+    large.body.breastSize = 1.86;
     expect(appearanceSchema.safeParse(large).success).toBe(false);
   });
 
@@ -614,15 +614,15 @@ describe('feminine breast size', () => {
       return front;
     };
 
-    const smallFront = chestFront(.75);
-    const largeFront = chestFront(1.35);
+    const smallFront = chestFront(.7);
+    const largeFront = chestFront(1.85);
     expect(Number.isFinite(smallFront)).toBe(true);
     expect(Number.isFinite(largeFront)).toBe(true);
     expect(largeFront - smallFront).toBeGreaterThan(.015);
   });
 
   it('keeps the Rockmundo chest print surface-bound across feminine breast sizes', () => {
-    for (const size of [.75, 1, 1.35]) {
+    for (const size of [.7, 1, 1.85]) {
       const appearance = defaultAppearance(`breast-logo-${size}`);
       appearance.body.frame = 'feminine';
       appearance.body.breastSize = size;
@@ -636,7 +636,7 @@ describe('feminine breast size', () => {
     }
   });
 
-  it.each([.78, 1, 1.32])('keeps feminine breast size %s stable through gig animation', size => {
+  it.each([.72, 1, 1.75])('keeps feminine breast size %s stable through gig animation', size => {
     const appearance = defaultAppearance(`breast-animation-${size}`);
     appearance.body.frame = 'feminine';
     appearance.body.breastSize = size;
