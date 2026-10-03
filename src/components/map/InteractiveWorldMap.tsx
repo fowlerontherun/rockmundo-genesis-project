@@ -32,18 +32,39 @@ let mapLibrePromise: Promise<MapLibreRuntime> | null = null;
 function loadMapLibre(): Promise<MapLibreRuntime> {
   if (window.maplibregl) return Promise.resolve(window.maplibregl);
   if (mapLibrePromise) return mapLibrePromise;
-  mapLibrePromise = new Promise((resolve, reject) => {
-    if (!document.querySelector('link[data-rockmundo-maplibre]')) {
-      const css = document.createElement('link');
-      css.rel = 'stylesheet'; css.href = MAPLIBRE_CSS_URL; css.dataset.rockmundoMaplibre = 'true';
-      document.head.appendChild(css);
-    }
-    const existing = document.querySelector<HTMLScriptElement>('script[data-rockmundo-maplibre]');
-    const script = existing ?? document.createElement('script');
-    const ready = () => window.maplibregl ? resolve(window.maplibregl) : reject(new Error('MapLibre did not initialise'));
-    script.addEventListener('load', ready, { once: true });
-    script.addEventListener('error', () => reject(new Error('Could not load MapLibre')), { once: true });
-    if (!existing) { script.src = MAPLIBRE_SCRIPT_URL; script.async = true; script.dataset.rockmundoMaplibre = 'true'; document.head.appendChild(script); }
+  mapLibrePromise = Promise.all([
+    new Promise<void>((resolve, reject) => {
+      const existing = document.querySelector<HTMLLinkElement>('link[data-rockmundo-maplibre]');
+      if (existing?.sheet) { resolve(); return; }
+      const css = existing ?? document.createElement('link');
+      css.addEventListener('load', () => resolve(), { once: true });
+      css.addEventListener('error', () => reject(new Error('Could not load MapLibre styles')), { once: true });
+      if (!existing) {
+        css.rel = 'stylesheet';
+        css.href = MAPLIBRE_CSS_URL;
+        css.dataset.rockmundoMaplibre = 'true';
+        document.head.appendChild(css);
+      }
+    }),
+    new Promise<void>((resolve, reject) => {
+      if (window.maplibregl) { resolve(); return; }
+      const existing = document.querySelector<HTMLScriptElement>('script[data-rockmundo-maplibre]');
+      const script = existing ?? document.createElement('script');
+      script.addEventListener('load', () => window.maplibregl ? resolve() : reject(new Error('MapLibre did not initialise')), { once: true });
+      script.addEventListener('error', () => reject(new Error('Could not load MapLibre')), { once: true });
+      if (!existing) {
+        script.src = MAPLIBRE_SCRIPT_URL;
+        script.async = true;
+        script.dataset.rockmundoMaplibre = 'true';
+        document.head.appendChild(script);
+      }
+    }),
+  ]).then(() => {
+    if (!window.maplibregl) throw new Error('MapLibre did not initialise');
+    return window.maplibregl;
+  }).catch(error => {
+    mapLibrePromise = null;
+    throw error;
   });
   return mapLibrePromise;
 }
