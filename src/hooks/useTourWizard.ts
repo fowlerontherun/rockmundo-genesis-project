@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
@@ -41,9 +41,11 @@ import {
 import { createBandScheduledActivities } from '@/utils/bandActivityScheduling';
 import { getGigBookingPlayerError } from '@/utils/gigBookingErrors';
 import { reduceTravelDurationHours } from '@/utils/dynamicTravel';
+import { findUnmatchedRouteStops, orderRouteVenues } from '@/utils/tourAtlasRoute';
 
 export interface UseTourWizardOptions {
   bandId?: string;
+  initialRouteCityIds?: string[];
 }
 
 type CreatedTourGig = Pick<
@@ -76,6 +78,17 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
   });
   
   const [currentStep, setCurrentStep] = useState(0);
+  const routeCityIds = useMemo(() => [...new Set(options.initialRouteCityIds ?? [])], [options.initialRouteCityIds]);
+  const { data: routeCities = [], isLoading: routeCitiesLoading, isError: routeCitiesError } = useQuery({
+    queryKey: ['tour-map-route-cities', routeCityIds],
+    enabled: routeCityIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('cities')
+        .select('id, country').in('id', routeCityIds);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
   // Fetch band data
   const { data: band } = useQuery({
@@ -130,9 +143,15 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
     },
   });
 
+  // Route handoff does not override fame-based scope restrictions.
+  // Countries are suggested only; the player still chooses their tour scope.
+  const routeCountries = useMemo(() =>
+    [...new Set(routeCities.map(city => city.country).filter(Boolean))],
+    [routeCities]);
+
   // Fetch available venues based on filters
-  const { data: availableVenues, isLoading: venuesLoading } = useQuery({
-    queryKey: ['tour-venues', state.selectedCountries, state.venueTypes, state.maxVenueCapacity, state.venueGenreFilter, state.venueCityFilter, state.venueCountryFilter],
+  const { data: availableVenues, isLoading: venuesLoading, isError: venuesError } = useQuery({
+    queryKey: ['tour-venues', state.selectedCountries, state.venueTypes, state.maxVenueCapacity, state.venueGenreFilter, state.venueCityFilter, state.venueCountryFilter, routeCityIds],
     queryFn: async () => {
       if (state.selectedCountries.length === 0) return [];
       
@@ -149,6 +168,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
       if (state.venueCityFilter) {
         citiesQuery = citiesQuery.eq('id', state.venueCityFilter);
       }
+      if (routeCityIds.length > 0) citiesQuery = citiesQuery.in('id', routeCityIds);
       
       const { data: cities, error: citiesError } = await citiesQuery;
       
@@ -189,6 +209,16 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
     },
     enabled: state.selectedCountries.length > 0,
   });
+
+  // Apply the imported route countries when the player has not made a selection.
+  // Avoid changing the selection once they begin editing it.
+  const [routeCountriesApplied, setRouteCountriesApplied] = useState(false);
+  useEffect(() => {
+    if (routeCountriesApplied || routeCountries.length === 0) return;
+    setRouteCountriesApplied(true);
+    setState(prev => prev.selectedCountries.length > 0
+      ? prev : { ...prev, selectedCountries: routeCountries });
+  }, [routeCountriesApplied, routeCountries]);
 
   // Fetch city coordinates for geographic sorting
   const { data: cityCoordinates } = useQuery({
@@ -321,17 +351,23 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
   const venueMatches = useMemo((): VenueMatch[] => {
     if (!availableVenues || availableVenues.length === 0) return [];
     
-    const showCount = state.targetShowCount || Math.min(
+    const showCount = routeCityIds.length > 0 ? routeCityIds.length : (state.targetShowCount || Math.min(
       Math.floor((state.durationDays || 30) / (1 + state.minRestDays)),
       availableVenues.length
-    );
+    ));
     
     let rawMatches: VenueMatch[];
     
     // If user manually selected venues, use those
     if (state.selectedVenueIds.length > 0) {
       const selectedVenues = availableVenues.filter(v => state.selectedVenueIds.includes(v.id));
-      rawMatches = selectedVenues.map((v) => ({
+      // Imported map routes represent one show per destination. Do not silently
+      // book multiple shows in the same city when manual venue IDs are selected.
+      const uniqueSelectedVenues = routeCityIds.length > 0
+        ? selectedVenues.filter((venue, index, all) =>
+            all.findIndex(other => other.city_id === venue.city_id) === index)
+        : selectedVenues;
+      rawMatches = uniqueSelectedVenues.map((v) => ({
         venueId: v.id,
         venueName: v.name,
         cityId: v.city_id || '',
@@ -356,7 +392,9 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
         return aScore - bScore;
       });
       
-      for (const venue of sortedVenues) {
+      for (const venue of (routeCityIds.length > 0
+        ? [...sortedVenues].sort((a, b) => routeCityIds.indexOf(a.city_id || '') - routeCityIds.indexOf(b.city_id || ''))
+        : sortedVenues)) {
         if (rawMatches.length >= showCount) break;
         if (citiesUsed.has(venue.city_id || '')) continue;
         
@@ -379,7 +417,9 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
     }
 
     // Apply geographic sorting
-    const sorted = sortGeographically(rawMatches, state.startingCityId);
+    const sorted = routeCityIds.length > 0
+      ? orderRouteVenues(rawMatches, routeCityIds)
+      : sortGeographically(rawMatches, state.startingCityId);
 
     // Assign dates after geographic ordering
     const schedule = state.startDate 
@@ -390,7 +430,9 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
       ...v,
       date: schedule[i]?.toISOString().split('T')[0] || '',
     }));
-  }, [availableVenues, state.targetShowCount, state.durationDays, state.minRestDays, state.startDate, state.selectedVenueIds, band?.total_fans, state.startingCityId, sortGeographically]);
+  }, [availableVenues, state.targetShowCount, state.durationDays, state.minRestDays, state.startDate, state.selectedVenueIds, band?.total_fans, state.startingCityId, sortGeographically, routeCityIds]);
+
+  const missingRouteCityIds = findUnmatchedRouteStops(routeCityIds, venueMatches);
 
   // Calculate recommended ticket price
   const recommendedTicketPrice = useMemo(() => {
@@ -531,6 +573,9 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
   const bookTourMutation = useMutation({
     mutationFn: async () => {
       if (!profileId || !userId || !state.bandId) throw new Error('Missing user, profile or band');
+      if (routeCitiesLoading || venuesLoading) throw new Error('Please wait for the map destinations and venue checks to finish.');
+      if (routeCitiesError || venuesError) throw new Error('Could not verify all destinations and venues. Retry after the data loads.');
+      if (missingRouteCityIds.length > 0) throw new Error('Some map destinations have no eligible venue. Update the route or venue filters before booking.');
       
       const endDate = state.startDate 
         ? calculateTourEndDate(
@@ -909,7 +954,7 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
       case 2: // Countries
         return state.selectedCountries.length > 0;
       case 3: // Venues
-        return state.venueTypes.length > 0 && venueMatches.length > 0;
+        return !routeCitiesLoading && !venuesLoading && !routeCitiesError && !venuesError && state.venueTypes.length > 0 && venueMatches.length > 0 && missingRouteCityIds.length === 0;
       case 4: // Tickets
         return true; // Always valid, uses recommended if not set
       case 5: // Stage Production
@@ -919,11 +964,11 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
       case 7: // Support Artist
         return true; // Optional step
       case 8: // Review
-        return venueMatches.length > 0 && (band?.band_balance || 0) >= costEstimate.netUpfrontCost;
+        return !routeCitiesLoading && !venuesLoading && !routeCitiesError && !venuesError && venueMatches.length > 0 && missingRouteCityIds.length === 0 && (band?.band_balance || 0) >= costEstimate.netUpfrontCost;
       default:
         return false;
     }
-  }, [currentStep, state, scopeAccess, venueMatches.length, band?.band_balance, band?.fame, costEstimate.netUpfrontCost]);
+  }, [currentStep, state, scopeAccess, venueMatches.length, band?.band_balance, band?.fame, costEstimate.netUpfrontCost, missingRouteCityIds.length, routeCitiesLoading, venuesLoading, routeCitiesError, venuesError]);
 
   return {
     state,
@@ -946,6 +991,9 @@ export function useTourWizard(options: UseTourWizardOptions = {}) {
     venuesLoading,
     setlists,
     venueMatches,
+    missingRouteCityIds,
+    routeCitiesLoading,
+    routeValidationError: routeCitiesError || venuesError,
     costEstimate,
     maxAllowedCapacity,
     scopeAccess,
