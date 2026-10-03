@@ -73,8 +73,9 @@ as $$
     least(100, round(100 * ln(1 + r.fame::numeric) / ln(1 + 50000000::numeric)))::integer fame_score,
     case when r.max_units > 0 then round(100 * r.units::numeric / r.max_units)::integer else 0 end merch_popularity_score,
     r.on_sale
-  from ranked r;
-$$;
+  from ranked r
+  order by r.on_sale desc, r.units desc, r.design_id;
+$;
 
 revoke all on function public.get_gig_merch_crowd_signal(uuid) from public, anon;
 grant execute on function public.get_gig_merch_crowd_signal(uuid) to authenticated;
