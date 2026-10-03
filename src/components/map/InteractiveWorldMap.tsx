@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Loader2 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -26,8 +26,8 @@ const EMPTY_ROUTE_CITY_IDS: string[] = [];
 
 const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds = EMPTY_ROUTE_CITY_IDS, routeCities }: InteractiveWorldMapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const markers = useRef<mapboxgl.Marker[]>([]);
+  const map = useRef<maplibregl.Map | null>(null);
+  const markers = useRef<maplibregl.Marker[]>([]);
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -35,21 +35,11 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
   useEffect(() => {
     if (!mapContainer.current) return;
 
-    const token = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN;
-    
-    if (!token) {
-      setMapError('Mapbox token not configured. Please add VITE_MAPBOX_PUBLIC_TOKEN to your environment.');
-      setIsLoading(false);
-      return;
-    }
-
-    mapboxgl.accessToken = token;
-
     try {
       // Initialize map
-      map.current = new mapboxgl.Map({
+      map.current = new maplibregl.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/dark-v11',
+        style: 'https://tiles.openfreemap.org/styles/liberty',
         projection: { name: 'globe' },
         zoom: 1.5,
         center: [0, 20],
@@ -58,7 +48,7 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
 
       // Add navigation controls
       map.current.addControl(
-        new mapboxgl.NavigationControl({
+        new maplibregl.NavigationControl({
           visualizePitch: true,
         }),
         'top-right'
@@ -69,11 +59,6 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
 
       // Add atmosphere and fog effects
       map.current.on('style.load', () => {
-        map.current?.setFog({
-          color: 'rgb(25, 25, 40)',
-          'high-color': 'rgb(15, 15, 25)',
-          'horizon-blend': 0.1,
-        });
         setIsLoading(false);
       });
 
@@ -207,14 +192,14 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
         detail.style.fontSize = '12px';
         detail.textContent = city.dominant_genre ? 'Genre: ' + city.dominant_genre : 'Click to explore';
         popupContent.append(heading, detail);
-        const popup = new mapboxgl.Popup({
+        const popup = new maplibregl.Popup({
           offset: 15,
           closeButton: false,
           className: 'city-popup'
         }).setDOMContent(popupContent);
 
         // Create marker
-        const marker = new mapboxgl.Marker({ element: el })
+        const marker = new maplibregl.Marker({ element: el })
           .setLngLat([coordinates.lng, coordinates.lat])
           .setPopup(popup)
           .addTo(map.current!);
@@ -299,14 +284,14 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
           opacity: 0.7;
         }
       }
-      .mapboxgl-popup-content {
+      .maplibregl-popup-content {
         background-color: hsl(var(--popover)) !important;
         border: 1px solid hsl(var(--border)) !important;
         border-radius: 8px !important;
         padding: 8px 12px !important;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
       }
-      .mapboxgl-popup-tip {
+      .maplibregl-popup-tip {
         border-top-color: hsl(var(--popover)) !important;
       }
     `;
