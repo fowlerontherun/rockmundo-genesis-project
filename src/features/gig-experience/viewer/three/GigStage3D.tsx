@@ -60,6 +60,7 @@ export default function GigStage3D({ replay, experience, playbackState, reducedM
       totpStage,
       resolvedPlayerModels?.tattoos ?? EMPTY_TATTOOS,
       resolvedPlayerModels?.instrumentSkins ?? EMPTY_INSTRUMENT_SKINS,
+      resolvedPlayerModels?.merchWearables ?? {},
     );
     if (presentationMode !== 'totp') return base;
     return {
