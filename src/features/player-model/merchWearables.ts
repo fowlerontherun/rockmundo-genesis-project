@@ -71,3 +71,33 @@ export interface ResolvedMerchWearable {
   garment_color: string;
   design_data?: Record<string, unknown> | null;
 }
+
+
+export interface MerchDesignElement {
+  type?: 'image' | 'text';
+  src?: string;
+  text?: string;
+  x?: number;
+  y?: number;
+  scale?: number;
+  rotation?: number;
+  color?: string;
+  fontSize?: number;
+}
+
+export function merchFrontElements(merch: Pick<ResolvedMerchWearable, 'artwork_url' | 'design_data'>): MerchDesignElement[] {
+  const data = merch.design_data ?? {};
+  const areas = data.areaElements;
+  if (areas && typeof areas === 'object' && !Array.isArray(areas)) {
+    const front = (areas as Record<string, unknown>).front;
+    if (Array.isArray(front)) return front as MerchDesignElement[];
+  }
+  if (Array.isArray(data.frontElements)) return data.frontElements as MerchDesignElement[];
+  return merch.artwork_url ? [{ type: 'image', src: merch.artwork_url, x: 50, y: 50, scale: 1, rotation: 0 }] : [];
+}
+
+export function merchHasRenderableFront(merch: Pick<ResolvedMerchWearable, 'artwork_url' | 'design_data'>): boolean {
+  return merchFrontElements(merch).some(element =>
+    (element.type === 'image' && typeof element.src === 'string' && element.src.length > 0)
+    || (element.type === 'text' && typeof element.text === 'string' && element.text.trim().length > 0));
+}
