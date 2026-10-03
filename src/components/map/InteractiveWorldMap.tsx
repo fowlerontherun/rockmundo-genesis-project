@@ -45,9 +45,26 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
   const [isLoading, setIsLoading] = useState(true);
   const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [diagnostics, setDiagnostics] = useState<string[]>([]);
+  const logDiagnostic = (message: string, detail?: unknown) => {
+    const suffix = detail instanceof Error ? `: ${detail.message}` : detail ? `: ${String(detail)}` : '';
+    const line = `[world-map] ${message}${suffix}`;
+    console.info(line, detail ?? '');
+    setDiagnostics(previous => [...previous.slice(-11), line]);
+  };
 
   useEffect(() => {
     if (!mapContainer.current) return;
+    const container = mapContainer.current;
+    const rect = container.getBoundingClientRect();
+    let webglSupported = false;
+    try {
+      const canvas = document.createElement('canvas');
+      webglSupported = Boolean(canvas.getContext('webgl2') || canvas.getContext('webgl'));
+    } catch {
+      webglSupported = false;
+    }
+    logDiagnostic(`initializing; container=${Math.round(rect.width)}x${Math.round(rect.height)}; webgl=${webglSupported}; cities=${cities.length}`);
 
     try {
       map.current = new mapboxgl.Map({
@@ -57,9 +74,16 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
         center: [0, 20],
         pitch: 0,
       });
+      logDiagnostic('Map constructor succeeded');
       map.current.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'top-right');
       map.current.scrollZoom.disable();
+      map.current.on('style.load', () => logDiagnostic('style.load fired'));
+      map.current.on('sourcedata', event => {
+        if (event.sourceId === 'osm' && event.isSourceLoaded) logDiagnostic('OSM source loaded');
+      });
+      map.current.on('idle', () => logDiagnostic('map reached idle'));
       map.current.on('load', () => {
+        logDiagnostic('load fired');
         map.current?.resize();
         setIsLoading(false);
         setMapReady(true);
@@ -68,11 +92,22 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
       // Do not replace the whole atlas because one raster tile failed; the renderer
       // will retry and can continue displaying the rest of the world.
       map.current.on('error', (event) => {
+        const message = event.error instanceof Error ? event.error.message : String(event.error ?? 'unknown map error');
         console.warn('World map resource error:', event.error);
+        logDiagnostic('resource error', message);
       });
+      window.setTimeout(() => {
+        if (!map.current?.loaded()) {
+          const currentRect = container.getBoundingClientRect();
+          logDiagnostic(`still not loaded after 8s; container=${Math.round(currentRect.width)}x${Math.round(currentRect.height)}; styleLoaded=${map.current?.isStyleLoaded() ?? false}`);
+          setIsLoading(false);
+        }
+      }, 8000);
     } catch (error) {
       console.error('Error initializing map:', error);
-      setMapError('Failed to initialize map. Please refresh the page.');
+      const message = error instanceof Error ? error.message : String(error);
+      logDiagnostic('initialization failed', message);
+      setMapError(`Failed to initialize map: ${message}`);
       setIsLoading(false);
     }
 
@@ -266,8 +301,12 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
       <EmptyState
         icon={MapPin}
         title="Map unavailable right now"
-        description="We can't load the interactive world map at the moment. You can still travel between cities from the World hub."
-      />
+        description={`We can't load the interactive world map at the moment. ${mapError}`}
+      >
+        <pre className="mt-4 max-w-full overflow-auto whitespace-pre-wrap text-left text-xs text-muted-foreground">
+          {diagnostics.join('\n')}
+        </pre>
+      </EmptyState>
     );
   }
 
@@ -282,6 +321,10 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
         </div>
       )}
       <div ref={mapContainer} className="absolute inset-0" />
+      <details className="absolute right-3 bottom-3 z-20 max-w-[min(90%,32rem)] rounded-md border border-border bg-card/95 p-2 text-xs shadow-lg">
+        <summary className="cursor-pointer font-medium">Map diagnostics ({diagnostics.length})</summary>
+        <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap text-muted-foreground">{diagnostics.join('\n')}</pre>
+      </details>
       <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent to-background/5 rounded-lg" />
       
       {/* Legend */}
