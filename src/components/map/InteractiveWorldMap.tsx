@@ -146,7 +146,16 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
           );
           const mapRoot = container.querySelector<HTMLElement>('.maplibregl-map') ?? container;
           logDiagnostic(`map DOM children=${container.children.length}; canvas=${Boolean(canvas)}; controls=${Boolean(container.querySelector('.maplibregl-control-container'))}`);
+          const canvasContainer = container.querySelector<HTMLElement>('.maplibregl-canvas-container');
+          const canvasContainerRect = canvasContainer?.getBoundingClientRect();
+          logDiagnostic(`canvas-container=${Math.round(canvasContainerRect?.width ?? 0)}x${Math.round(canvasContainerRect?.height ?? 0)}; parent=${Math.round(container.clientWidth)}x${Math.round(container.clientHeight)}`);
           mapRoot.style.visibility = 'visible';
+          requestAnimationFrame(() => map.current?.resize());
+
+          const tileProbe = new Image();
+          tileProbe.onload = () => logDiagnostic(`OSM tile probe loaded; natural=${tileProbe.naturalWidth}x${tileProbe.naturalHeight}`);
+          tileProbe.onerror = () => logDiagnostic('OSM tile probe FAILED');
+          tileProbe.src = 'https://tile.openstreetmap.org/1/1/1.png';
           setIsLoading(false);
           setMapReady(true);
         });
@@ -337,8 +346,8 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
       /* Critical MapLibre layout rules kept locally so the map remains visible
          even if an external stylesheet is cached/blocked/stripped. */
       .maplibregl-map { overflow: hidden; position: relative; width: 100%; height: 100%; -webkit-tap-highlight-color: transparent; }
-      .maplibregl-canvas-container { height: 100%; width: 100%; }
-      .maplibregl-canvas { position: absolute; left: 0; top: 0; }
+      .maplibregl-canvas-container { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }
+      .maplibregl-canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }
       .maplibregl-control-container { position: absolute; inset: 0; pointer-events: none; }
       .maplibregl-ctrl-top-right { position: absolute; top: 0; right: 0; pointer-events: none; }
       .maplibregl-ctrl { clear: both; pointer-events: auto; transform: translate(0); }
