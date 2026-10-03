@@ -23,6 +23,7 @@ import { applyAvatarSkinMacroShading } from './avatarSkinMacroShading';
 import { createCorneaOverlay, upgradeCuratedGarmentMaterial, upgradeSkinMaterial, upgradeStarterFabricMaterial } from './avatarPhysicalMaterials';
 import { buildProceduralGarment, type GarmentRigAnchor } from '@/features/clothing-preview/proceduralGarmentRenderer';
 import type { ClothingItem } from '@/hooks/useSkinStore';
+import type { ResolvedMerchWearable } from './merchWearables';
 
 export type ModelLibrary = Map<string, T.Object3D>;
 export type PlayerModelPresentation = 'stage' | 'tattoo';
@@ -692,6 +693,28 @@ function rockmundoWordmarkTexture() {
   return texture;
 }
 
+
+function addBandMerchGraphic(root: T.Object3D, appearance: PlayerAppearance, bones: Map<string, T.Bone>, merch: ResolvedMerchWearable | null) {
+  if (!merch || !merch.artwork_url) return;
+  const chest = findPlayerBone(bones, ['Spine2','Spine.002','Chest','UpperChest']) ?? findPlayerBone(bones, ['Spine1','Spine.001']);
+  if (!chest) return;
+  const attachment = findFrontSurfaceAttachment(root, 'body', chest.getWorldPosition(new T.Vector3()), appearance.body.frame === 'feminine' ? .018 : .025);
+  if (!attachment) return;
+
+  const texture = new T.TextureLoader().load(merch.artwork_url);
+  texture.colorSpace = T.SRGBColorSpace;
+  texture.wrapS = texture.wrapT = T.ClampToEdgeWrapping;
+  const material = new T.MeshStandardMaterial({
+    map: texture, transparent: true, alphaTest: .08, roughness: .84, metalness: 0,
+    side: T.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
+  });
+  material.name = 'BandMerchPrint';
+  const mark = new T.Mesh(curvedGraphicGeometry(appearance.body.frame === 'feminine' ? .28 : .31, .30, .003), material);
+  mark.name = `avatar-band-merch-${merch.design_id}`;
+  mark.renderOrder = 4;
+  attachSurfaceGraphic(root, chest, mark, attachment, .0005);
+}
+
 function addStarterLogoTee(root: T.Object3D, appearance: PlayerAppearance, bones: Map<string, T.Bone>, richClothing: ResolvedEquippedClothing[]) {
   const curatedLogo = richClothing.some(row => row.item.curated_asset_key === 'clothing.starter.logo-tee');
   const hasOtherTop = richClothing.some(row => richGarmentSlot(row.item) === 'top' && row.item.curated_asset_key !== 'clothing.starter.logo-tee');
@@ -1359,6 +1382,7 @@ export function assemblePlayerModel(
   richClothing: ResolvedEquippedClothing[] = [],
   quality: AvatarVisualQuality = 'balanced',
   presentation: PlayerModelPresentation = 'stage',
+  merchWearable: ResolvedMerchWearable | null = null,
 ): T.Object3D {
   const source = (style: Parameters<typeof modelFile>[1]) => {
     const model = library.get(modelFile(appearance.body.frame, style));
@@ -1710,7 +1734,8 @@ export function assemblePlayerModel(
     addAccessories(result, appearance, headBone, richClothing, quality);
   }
   if (presentation === 'stage') {
-    addStarterLogoTee(result, appearance, bones, richClothing);
+    if (!merchWearable) addStarterLogoTee(result, appearance, bones, richClothing);
+    addBandMerchGraphic(result, appearance, bones, merchWearable);
     addV1VNeckTrim(result, appearance, bones);
     addV1HoodieDetails(result, appearance, bones);
     addV1OuterwearFrontDetail(result, appearance, bones);
