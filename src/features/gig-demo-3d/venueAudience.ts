@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { fanWearsBandMerch } from '@/features/player-model/merchWearables';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { seededRandom } from './config';
 import { productionLayout } from './venueProduction';
@@ -81,13 +82,19 @@ export function audienceFloorPlaces(p: VenueProfile): AudiencePlace[] {
     return places;
 }
 
-export function buildVenueAudience(parent: T.Group, p: VenueProfile, seed: number, seats: AudiencePlace[], merchColor?: string | null) {
+export function buildVenueAudience(parent: T.Group, p: VenueProfile, seed: number, seats: AudiencePlace[], merchColor?: string | null, merchChance = 0) {
     const random = seededRandom(seed), root = new T.Group(); root.name = 'venue-distant-audience'; parent.add(root);
     const television = p.kind === 'tv_studio';
     const all = [...audienceFloorPlaces(p).map(point => ({ point, seated: false })), ...seats.map(point => ({ point, seated: true }))];
     for (let i = all.length - 1; i > 0; i--) { const j = Math.floor(random() * (i + 1)); [all[i], all[j]] = [all[j], all[i]]; }
-    const maximum = Math.min(AUDIENCE_BUDGET, Math.max(0, p.capacity - 160), all.length), buckets: ({ point: AudiencePlace; rank: number; })[][] = Array.from({ length: 8 }, () => []);
-    for (let i = 0; i < maximum; i++) { const entry = all[Math.floor(i * all.length / maximum)]; buckets[(entry.seated ? 4 : 0) + i % 4].push({ point: entry.point, rank: i }); }
+    const maximum = Math.min(AUDIENCE_BUDGET, Math.max(0, p.capacity - 160), all.length);
+    const validMerch = !!merchColor && /^#[0-9a-f]{6}$/i.test(merchColor) && merchChance > 0;
+    const buckets: ({ point: AudiencePlace; rank: number; })[][] = Array.from({ length: 16 }, () => []);
+    for (let i = 0; i < maximum; i++) {
+        const entry = all[Math.floor(i * all.length / maximum)], kind = (entry.seated ? 4 : 0) + i % 4;
+        const wearsMerch = validMerch && fanWearsBandMerch(String(seed), i, merchChance);
+        buckets[kind + (wearsMerch ? 8 : 0)].push({ point: entry.point, rank: i });
+    }
     const clock = { value: 0 }, strength = { value: 0 }, televisionMix = { value: television ? 1 : 0 };
     root.userData.clock = clock; root.userData.strength = strength; root.userData.televisionAudience = television; root.userData.maxCount = maximum; root.userData.capacity = p.capacity;
     if (merchColor && /^#[0-9a-f]{6}$/i.test(merchColor)) root.userData.merchColor = merchColor;
@@ -100,10 +107,10 @@ export function buildVenueAudience(parent: T.Group, p: VenueProfile, seed: numbe
         shader.vertexShader = 'uniform float audienceTime;\nuniform float audienceMotion;\nuniform float audienceTelevision;\n' + shader.vertexShader;
         shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `vec3 transformed=position;\nfloat phase=instanceMatrix[3].x*1.73+instanceMatrix[3].z*.91;\nfloat weight=smoothstep(.6,1.7,position.y);\nfloat tvPulse=(sin(audienceTime*2.1+phase)*.5+.5);\nfloat sway=.028+audienceTelevision*.022;\nfloat bounce=.035+audienceTelevision*.035;\ntransformed.x+=sin(audienceTime*(1.5+audienceTelevision*.55)+phase)*sway*weight*audienceMotion;\ntransformed.y+=max(0.,sin(audienceTime*(4.0+audienceTelevision*1.2)+phase))*bounce*audienceMotion;\ntransformed.z+=cos(audienceTime*1.25+phase)*.018*audienceTelevision*weight*audienceMotion;\ntransformed.x+=sin(audienceTime*3.4+phase*1.7)*.018*tvPulse*audienceTelevision*weight*audienceMotion;\n`);
     };
-    for (let kind = 0; kind < 8; kind++) {
-        const rows = buckets[kind]; if (!rows.length) continue;
-        const merch = merchColor && /^#[0-9a-f]{6}$/i.test(merchColor) && kind % 4 === 0 ? new T.Color(merchColor) : null;
-        const mesh = new T.InstancedMesh(audienceHumanGeometry(kind % 4, kind >= 4, merch), material, rows.length); mesh.name = `audience-humans-${kind}`; mesh.userData.ranks = rows.map(row => row.rank); mesh.userData.maxCount = rows.length; mesh.frustumCulled = false;
+    for (let bucket = 0; bucket < 16; bucket++) {
+        const rows = buckets[bucket]; if (!rows.length) continue;
+        const merch = bucket >= 8 && merchColor ? new T.Color(merchColor) : null, kind = bucket % 8;
+        const mesh = new T.InstancedMesh(audienceHumanGeometry(kind % 4, kind >= 4, merch), material, rows.length); mesh.name = `audience-humans-${kind}-${merch ? 'merch' : 'regular'}`; mesh.userData.ranks = rows.map(row => row.rank); mesh.userData.maxCount = rows.length; mesh.frustumCulled = false;
         const transform = new T.Object3D();
         rows.forEach(({ point: [x, y, z, yaw] }, i) => { transform.position.set(x + (random() - .5) * .08, y, z + (random() - .5) * .08); transform.rotation.y = yaw + (random() - .5) * .16; const height = .9 + random() * .15; transform.scale.set(.9 + random() * .17, height, .9 + random() * .1); transform.updateMatrix(); mesh.setMatrixAt(i, transform.matrix); });
         mesh.count = 0; root.add(mesh);
