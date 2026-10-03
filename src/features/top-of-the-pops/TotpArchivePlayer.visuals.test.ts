@@ -59,6 +59,19 @@ describe('Top of the Pops archived performer visuals', () => {
     }]);
   });
 
+  it('restores the exact frozen Merch Studio wearable', () => {
+    const merchWearable = {
+      profile_id: PROFILE_ID, design_id: 'design-1', band_id: 'band-1', design_name: 'Frozen Tour Tee',
+      product_type: 'Graphic Tee', artwork_url: null, garment_color: '#171717',
+      design_data: { areaElements: { front: [{ type: 'text', text: '2026 TOUR', x: 50, y: 44 }] } },
+    };
+    const result = archivedPlayerModels(replayWithMember({
+      profile_id: PROFILE_ID, display_name: 'Merch Player', role: 'vocals',
+      visual_snapshot: { appearance: null, legacyAvatar: { gender: 'male' }, richClothing: [], merchWearable },
+    }));
+    expect(result?.merchWearables?.[PROFILE_ID]).toEqual(merchWearable);
+  });
+
   it('reconstructs a legacy avatar when no stage appearance existed at broadcast time', () => {
     const result = archivedPlayerModels(replayWithMember({
       profile_id: PROFILE_ID,
