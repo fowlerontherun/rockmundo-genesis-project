@@ -838,7 +838,7 @@ export class DemoCrowd {
             [places[i], places[j]] = [places[j], places[i]];
         }
         for (let kind = 0; kind < CROWD_VARIANTS; kind++) {
-            const appearance = appearances[kind], assembled = library ? assemblePlayerModel(library, appearance, [], [], 'crowd') : null;
+            const appearance = appearances[kind], wearsMerch = !!merch && fanWearsBandMerch(String(seed), kind, merchChance), assembled = library ? assemblePlayerModel(library, appearance, [], [], 'crowd', 'stage', wearsMerch ? merch : null) : null;
             const actor = new Musician(assembled ?? sources[kind % sources.length], 'fan', [0, 0, 0], 0, undefined, assembled ? appearance : undefined);
             if (assembled)
                 disposeModel(assembled);
