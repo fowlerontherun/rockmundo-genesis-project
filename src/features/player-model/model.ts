@@ -1753,10 +1753,22 @@ export function assemblePlayerModel(
     if (starterBottomExposesLegs(proceduralStarterBottom)) addV1BareLegUnderlay(result, appearance, bones, quality);
   }
 
+  const shortSleeveTop =
+    presentation === 'stage' &&
+    !curatedTop &&
+    (merchTopItemId === 'starter.top.casual' || V1_SKINNED_TEE_ITEMS.has(appearance.equipment.top.itemId));
+
   if (topless || presentation === 'tattoo') {
     // The live avatar donor meshes are clothing-first, so this neutral skinned
     // underlay prevents holes for topless and tattoo presentation modes.
     addLegacyBareBodyUnderlay(result, appearance, bones, quality, presentation === 'tattoo');
+  } else if (shortSleeveTop) {
+    // V1 donor T-shirts share their body mesh with the skin. Trimming the donor
+    // sleeves can therefore remove the arm surface as well as the garment.
+    // Rebuild only the exposed arms underneath short-sleeve tops. Keeping the
+    // torso disabled avoids skin z-fighting through the shirt while guaranteeing
+    // continuous shoulders, upper arms, forearms and hands in the live creator.
+    addLegacyBareBodyUnderlay(result, appearance, bones, quality, false, false);
   }
 
   // Punk trousers were authored to meet tall boots. A skinned calf beneath
