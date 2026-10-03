@@ -72,6 +72,16 @@ export interface TotpArchivedVisualSnapshot {
     is_infected?: unknown;
     category?: unknown;
   }>;
+  merchWearable?: {
+    profile_id?: string;
+    design_id: string;
+    band_id: string;
+    design_name: string;
+    product_type: string;
+    artwork_url?: string | null;
+    garment_color: string;
+    design_data?: Record<string, unknown> | null;
+  } | null;
 }
 
 export interface TotpArchivedBandMember {
