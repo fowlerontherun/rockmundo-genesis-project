@@ -64,10 +64,11 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
         setIsLoading(false);
         setMapReady(true);
       });
+      // Mapbox GL emits `error` for recoverable source/tile failures too.
+      // Do not replace the whole atlas because one raster tile failed; the renderer
+      // will retry and can continue displaying the rest of the world.
       map.current.on('error', (event) => {
-        console.error('World map rendering error:', event.error);
-        setMapError('Failed to load the world map tiles. Please refresh the page.');
-        setIsLoading(false);
+        console.warn('World map resource error:', event.error);
       });
     } catch (error) {
       console.error('Error initializing map:', error);
