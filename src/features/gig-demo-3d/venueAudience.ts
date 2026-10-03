@@ -81,7 +81,7 @@ export function audienceFloorPlaces(p: VenueProfile): AudiencePlace[] {
     return places;
 }
 
-export function buildVenueAudience(parent: T.Group, p: VenueProfile, seed: number, seats: AudiencePlace[]) {
+export function buildVenueAudience(parent: T.Group, p: VenueProfile, seed: number, seats: AudiencePlace[], merchColor?: string | null) {
     const random = seededRandom(seed), root = new T.Group(); root.name = 'venue-distant-audience'; parent.add(root);
     const television = p.kind === 'tv_studio';
     const all = [...audienceFloorPlaces(p).map(point => ({ point, seated: false })), ...seats.map(point => ({ point, seated: true }))];
@@ -90,6 +90,7 @@ export function buildVenueAudience(parent: T.Group, p: VenueProfile, seed: numbe
     for (let i = 0; i < maximum; i++) { const entry = all[Math.floor(i * all.length / maximum)]; buckets[(entry.seated ? 4 : 0) + i % 4].push({ point: entry.point, rank: i }); }
     const clock = { value: 0 }, strength = { value: 0 }, televisionMix = { value: television ? 1 : 0 };
     root.userData.clock = clock; root.userData.strength = strength; root.userData.televisionAudience = television; root.userData.maxCount = maximum; root.userData.capacity = p.capacity;
+    if (merchColor && /^#[0-9a-f]{6}$/i.test(merchColor)) root.userData.merchColor = merchColor;
     const material = new T.MeshStandardMaterial({ vertexColors: true, roughness: .92, flatShading: true });
     material.customProgramCacheKey = () => television ? 'anatomical-audience-tv-v2' : 'anatomical-audience-v2';
     material.onBeforeCompile = shader => {
