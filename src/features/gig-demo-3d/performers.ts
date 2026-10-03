@@ -24,7 +24,7 @@ import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equip
 import type { ResolvedInstrumentSkinVisual } from '@/features/instrument-skins/instrumentSkin';
 import type { CrowdTuningOptions } from '@/features/gig-experience/viewer/engine/CrowdTuning';
 import type { VenueProfile } from './venueProfile';
-import type { ConcertPerformer, PerformanceSection, StageRole } from './liveTypes';
+import type { ConcertPerformer, MerchCrowdSignal, PerformanceSection, StageRole } from './liveTypes';
 import { crowdMerchChance, fanWearsBandMerch, type ResolvedMerchWearable } from '@/features/player-model/merchWearables';
 type Role = StageRole;
 
@@ -822,9 +822,9 @@ export class DemoCrowd {
     private time = { value: 0 };
     private televisionStage: 'main_stage' | 'stage_b' | 'rock_stage' | 'studio_floor' = 'main_stage';
     setTelevisionStage(stage: 'main_stage' | 'stage_b' | 'rock_stage' | 'studio_floor') { this.televisionStage = stage; }
-    constructor(sources: T.Object3D[], scene: T.Scene, seed = 85043, private venue?: VenueProfile, library?: ModelLibrary, merch: ResolvedMerchWearable | null = null) {
+    constructor(sources: T.Object3D[], scene: T.Scene, seed = 85043, private venue?: VenueProfile, library?: ModelLibrary, merch: ResolvedMerchWearable | null = null, merchSignal: MerchCrowdSignal | null = null) {
         const random = seededRandom(seed), material = crowdMaterial(this.time), appearances = crowdAppearances(seed);
-        const merchChance = merch ? crowdMerchChance({ fanLoyalty: 55, bandFame: 45, merchPopularity: 50, onSale: true }) : 0;
+        const merchChance = merch ? crowdMerchChance({ fanLoyalty: 0, bandFame: merchSignal?.fameScore ?? 0, merchPopularity: merchSignal?.merchPopularityScore ?? 0, onSale: merchSignal?.onSale ?? false }) : 0;
         if (merch) appearances.forEach((appearance, kind) => { if (fanWearsBandMerch(String(seed), kind, merchChance)) { appearance.equipment.top.itemId = merch.product_type.toLowerCase().includes('hoodie') ? 'starter.top.hoodie' : merch.product_type.toLowerCase().includes('long sleeve') || merch.product_type.toLowerCase().includes('crewneck') ? 'starter.top.long-sleeve' : 'starter.top.casual'; appearance.equipment.top.color = merch.garment_color; } });
         this.transform.rotation.order = 'YXZ';
         this.phones = new T.InstancedMesh(new T.BoxGeometry(.075, .13, .012), new T.MeshBasicMaterial({ color: '#b5e6ff', toneMapped: false }), CROWD_LIMIT);
@@ -986,6 +986,7 @@ export async function loadBand(
     seed?: number,
     venue?: VenueProfile,
     avatarQuality: AvatarVisualQuality = 'high',
+    merchCrowdSignal: MerchCrowdSignal | null = null,
 ) {
     const curatedFiles = lineup?.flatMap(p => requiredCuratedGarmentFiles(p.richClothing ?? [], p.appearance.body.frame)) ?? [];
     const donorFiles = lineup?.flatMap(p => requiredCuratedDonorModelFiles(p.richClothing ?? [], p.appearance.body.frame)) ?? [];
@@ -1021,7 +1022,7 @@ export async function loadBand(
         actors.forEach(actor => { scene.add(actor.root); if (actor.equipment)
             scene.add(actor.equipment); });
         const crowdMerch = lineup?.find(p => p.merchWearable)?.merchWearable ?? null;
-        const crowd = new DemoCrowd([casual, library.get('female-casual.glb') ?? suit, punk], scene, seed, venue, library, crowdMerch);
+        const crowd = new DemoCrowd([casual, library.get('female-casual.glb') ?? suit, punk], scene, seed, venue, library, crowdMerch, merchCrowdSignal);
         return { actors, crowd, cymbals };
     }
     finally {
