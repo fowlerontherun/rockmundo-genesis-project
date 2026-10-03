@@ -34,7 +34,7 @@ export const musicHubNavigation: HubNavigationItem[] = [
 ];
 
 export const worldHubNavigation: HubNavigationItem[] = [
-  { id: "overview", label: "Overview", path: "/world", icon: Globe2, matchPaths: ["/world/overview", "/hub/world", "/hub/world-social"] },
+  { id: "overview", label: "Map", path: "/world-map", icon: Globe2, matchPaths: ["/world", "/world/overview", "/hub/world", "/hub/world-social"] },
   { id: "current-city", label: "Location", path: "/world/current-city", icon: MapPin },
   { id: "travel", label: "Travel", path: "/world/travel", icon: Plane, matchPaths: ["/travel"] },
   { id: "cities", label: "Cities", path: "/world/cities", icon: MapPin, matchPaths: ["/cities", "/cities/:cityId", "/cities/treasury"] },

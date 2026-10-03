@@ -445,7 +445,7 @@ export const FM_MODULES: FMModule[] = [
     id: "world",
     label: "World",
     icon: Globe,
-    rootPath: "/world",
+    rootPath: "/world-map",
     matchPaths: [
       "/world", "/world/*", "/hub/world", "/hub/world-social",
       "/world-map", "/world-pulse", "/world-environment",
@@ -453,7 +453,7 @@ export const FM_MODULES: FMModule[] = [
       "/world-parliament", "/political-party", "/politics-career",
     ],
     subTabs: [
-      { label: "Overview", path: "/world", icon: Globe },
+      { label: "Map", path: "/world-map", icon: Globe },
       { label: "Cities", path: "/world/cities", icon: MapPin },
       { label: "Travel", path: "/world/travel", icon: Plane },
       { label: "Pulse", path: "/world/pulse", icon: Radio },

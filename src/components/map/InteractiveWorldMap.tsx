@@ -1,6 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Loader2 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -23,33 +21,40 @@ interface InteractiveWorldMapProps {
 }
 
 const EMPTY_ROUTE_CITY_IDS: string[] = [];
+type MapLibreRuntime = typeof import('mapbox-gl');
+const MAPLIBRE_MODULE_URL = 'https://esm.sh/maplibre-gl@6.11.2';
+const MAPLIBRE_CSS_URL = 'https://unpkg.com/maplibre-gl@6.11.2/dist/maplibre-gl.css';
 
 const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds = EMPTY_ROUTE_CITY_IDS, routeCities }: InteractiveWorldMapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const markers = useRef<mapboxgl.Marker[]>([]);
+  const runtime = useRef<MapLibreRuntime | null>(null);
+  const map = useRef<import('mapbox-gl').Map | null>(null);
+  const markers = useRef<import('mapbox-gl').Marker[]>([]);
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
+  const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!mapContainer.current) return;
 
-    const token = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN;
-    
-    if (!token) {
-      setMapError('Mapbox token not configured. Please add VITE_MAPBOX_PUBLIC_TOKEN to your environment.');
-      setIsLoading(false);
-      return;
-    }
-
-    mapboxgl.accessToken = token;
-
+    let disposed = false;
+    const initialize = async () => {
     try {
-      // Initialize map
-      map.current = new mapboxgl.Map({
+      if (!document.querySelector('link[data-rockmundo-maplibre]')) {
+        const stylesheet = document.createElement('link');
+        stylesheet.rel = 'stylesheet';
+        stylesheet.href = MAPLIBRE_CSS_URL;
+        stylesheet.dataset.rockmundoMaplibre = 'true';
+        document.head.appendChild(stylesheet);
+      }
+      const maplibregl = await import(/* @vite-ignore */ MAPLIBRE_MODULE_URL) as unknown as MapLibreRuntime;
+      if (disposed || !mapContainer.current) return;
+      runtime.current = maplibregl;
+      // Initialize token-free open-source map
+      map.current = new maplibregl.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/dark-v11',
+        style: 'https://tiles.openfreemap.org/styles/liberty',
         projection: { name: 'globe' },
         zoom: 1.5,
         center: [0, 20],
@@ -58,7 +63,7 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
 
       // Add navigation controls
       map.current.addControl(
-        new mapboxgl.NavigationControl({
+        new maplibregl.NavigationControl({
           visualizePitch: true,
         }),
         'top-right'
@@ -69,12 +74,8 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
 
       // Add atmosphere and fog effects
       map.current.on('style.load', () => {
-        map.current?.setFog({
-          color: 'rgb(25, 25, 40)',
-          'high-color': 'rgb(15, 15, 25)',
-          'horizon-blend': 0.1,
-        });
         setIsLoading(false);
+        setMapReady(true);
       });
 
       // Globe rotation animation
@@ -130,13 +131,17 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
       setMapError('Failed to initialize map. Please refresh the page.');
       setIsLoading(false);
     }
+    };
+    void initialize();
 
     // Cleanup
     return () => {
+      disposed = true;
       markers.current.forEach(marker => marker.remove());
       markers.current = [];
       map.current?.remove();
       map.current = null;
+      runtime.current = null;
     };
   }, []);
 
@@ -207,14 +212,14 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
         detail.style.fontSize = '12px';
         detail.textContent = city.dominant_genre ? 'Genre: ' + city.dominant_genre : 'Click to explore';
         popupContent.append(heading, detail);
-        const popup = new mapboxgl.Popup({
+        const popup = new runtime.current!.Popup({
           offset: 15,
           closeButton: false,
           className: 'city-popup'
         }).setDOMContent(popupContent);
 
         // Create marker
-        const marker = new mapboxgl.Marker({ element: el })
+        const marker = new runtime.current!.Marker({ element: el })
           .setLngLat([coordinates.lng, coordinates.lat])
           .setPopup(popup)
           .addTo(map.current!);
@@ -236,7 +241,7 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
       markers.current.forEach(marker => marker.remove());
       markers.current = [];
     };
-  }, [cities, currentCityId, navigate, onCityClick]);
+  }, [cities, currentCityId, navigate, onCityClick, mapReady]);
 
   // Draw the player's proposed tour directly on the globe, without changing bookings.
   useEffect(() => {
@@ -285,7 +290,7 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
         if (activeMap.getSource(sourceId)) activeMap.removeSource(sourceId);
       }
     };
-  }, [cities, routeCities, routeCityIds]);
+  }, [cities, routeCities, routeCityIds, mapReady]);
 
   // Add pulse animation styles
   useEffect(() => {
@@ -299,14 +304,14 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
           opacity: 0.7;
         }
       }
-      .mapboxgl-popup-content {
+      .maplibregl-popup-content {
         background-color: hsl(var(--popover)) !important;
         border: 1px solid hsl(var(--border)) !important;
         border-radius: 8px !important;
         padding: 8px 12px !important;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
       }
-      .mapboxgl-popup-tip {
+      .maplibregl-popup-tip {
         border-top-color: hsl(var(--popover)) !important;
       }
     `;

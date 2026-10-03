@@ -442,7 +442,7 @@ const HUB_TITLE_CONFIGS = [
   { title: "Music", overviewPath: "/music", items: musicHubNavigation },
   { title: "Band", overviewPath: "/band", items: bandHubNavigation },
   { title: "Schedule", overviewPath: "/schedule", items: scheduleHubNavigation },
-  { title: "World", overviewPath: "/world", items: worldHubNavigation },
+  { title: "World", overviewPath: "/world-map", items: worldHubNavigation },
   { title: "Business", overviewPath: "/business", items: businessHubNavigation },
   { title: "Career", overviewPath: "/career", items: careerHubNavigation },
   { title: "Social", overviewPath: "/social", items: socialHubNavigation },
@@ -662,8 +662,8 @@ function App() {
                     <Route path="media/self-promotion" element={<SelfPromotionBrowser />} />
                     <Route path="media/pr-history" element={<PRSubmissionsHistory />} />
                     
-                    <Route path="world" element={<WorldOverview />} />
-                    <Route path="world/overview" element={<PreserveQueryRedirect to="/world" />} />
+                    <Route path="world" element={<PreserveQueryRedirect to="/world-map" />} />
+                    <Route path="world/overview" element={<PreserveQueryRedirect to="/world-map" />} />
                     <Route path="world/current-city" element={<CurrentCityRedirect />} />
                     <Route path="world/travel" element={<PreserveQueryRedirect to="/travel" />} />
                     <Route path="world/cities" element={<PreserveQueryRedirect to="/cities" />} />
@@ -863,7 +863,7 @@ function App() {
                     {/* Bare /hub goes to dashboard (no hub index page exists) */}
                     <Route path="hub" element={<Navigate to="/home" replace />} />
                     {/* New split hubs */}
-                    <Route path="hub/world" element={<PreserveQueryRedirect to="/world" />} />
+                    <Route path="hub/world" element={<PreserveQueryRedirect to="/world-map" />} />
                     <Route path="hub/social" element={<PreserveQueryRedirect to="/social" />} />
                     <Route path="media" element={<MediaHub />} />
                     <Route path="hub/media" element={<PreserveQueryRedirect to="/media" />} />
@@ -871,7 +871,7 @@ function App() {
                     <Route path="hub/band" element={<Navigate to="/hub/band-live" replace />} />
                     <Route path="hub/live" element={<Navigate to="/hub/band-live" replace />} />
                     <Route path="hub/events" element={<Navigate to="/hub/band-live" replace />} />
-                    <Route path="hub/world-social" element={<PreserveQueryRedirect to="/world" />} />
+                    <Route path="hub/world-social" element={<PreserveQueryRedirect to="/world-map" />} />
                     <Route path="hub/career" element={<PreserveQueryRedirect to="/career" />} />
                     <Route path="hub/commerce" element={<PreserveQueryRedirect to="/business" />} />
                     <Route path="modeling" element={<Modeling />} />
