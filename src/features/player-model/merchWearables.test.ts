@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { crowdMerchChance, fanWearsBandMerch, merchFrontElements, merchGarmentColor, merchHasRenderableFront, merchWearableDonorItem, merchWearableKind } from './merchWearables';
+import { crowdMerchChance, fanWearsBandMerch, merchElementPrintPosition, merchFrontElements, merchGarmentColor, merchHasRenderableFront, merchWearableDonorItem, merchWearableKind } from './merchWearables';
 
 describe('merch wearables', () => {
   it('maps Merch Studio apparel onto approved V1 donor silhouettes', () => {

@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.761",
+    date: "2026-10-03",
+    changes: [
+      { type: "fix", description: "Record sales now reflect where a band has actually played: a broken duplicate in the country-fame tracker meant no band ever built up country fame, so sales everywhere were calculated as if the band was unknown. Fixed the tracker and backfilled every band's country fame from their gig history — Shockmaster's UK sales should now match their 18 completed UK shows" },
+    ],
+  },
+  {
     version: "1.1.760",
     date: "2026-10-02",
     changes: [
