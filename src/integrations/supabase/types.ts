@@ -64311,26 +64311,16 @@ export type Database = {
         Args: { p_contract_id: string }
         Returns: Json
       }
-      add_band_country_fame:
-        | {
-            Args: {
-              p_band_id: string
-              p_country: string
-              p_fame_amount?: number
-              p_fans_amount?: number
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              p_band_id: string
-              p_country: string
-              p_fame_amount?: number
-              p_fans_amount?: number
-              p_mark_performed?: boolean
-            }
-            Returns: undefined
-          }
+      add_band_country_fame: {
+        Args: {
+          p_band_id: string
+          p_country: string
+          p_fame_amount?: number
+          p_fans_amount?: number
+          p_mark_performed?: boolean
+        }
+        Returns: undefined
+      }
       add_band_support_availability: {
         Args: {
           p_available_from: string
