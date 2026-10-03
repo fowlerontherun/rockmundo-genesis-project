@@ -708,6 +708,20 @@ function rockmundoWordmarkTexture() {
 
 const MERCH_TEXTURE_CACHE_LIMIT = 96;
 const merchTextureCache = new Map<string, T.Texture>();
+const merchArtworkLoads = new Map<string, Promise<HTMLImageElement | null>>();
+
+function loadMerchArtwork(src: string): Promise<HTMLImageElement | null> {
+  const existing = merchArtworkLoads.get(src);
+  if (existing) return existing;
+  const pending = new Promise<HTMLImageElement | null>(resolve => {
+    const image = new Image(); image.crossOrigin = 'anonymous';
+    image.onload = () => resolve(image);
+    image.onerror = () => resolve(null);
+    image.src = src;
+  });
+  merchArtworkLoads.set(src, pending);
+  return pending;
+}
 
 function rememberMerchTexture(key: string, texture: T.Texture) {
   // Keep a bounded LRU of composite canvases. Do not dispose evicted textures here:
@@ -768,10 +782,10 @@ function merchCompositeTexture(merch: ResolvedMerchWearable): T.Texture | null {
   redraw();
   elements.forEach((element, index) => {
     if (element.type !== 'image' || !element.src) return;
-    const image = new Image(); image.crossOrigin = 'anonymous';
-    image.onload = () => { images.set(index, image); redraw(); };
-    image.onerror = () => redraw();
-    image.src = element.src;
+    void loadMerchArtwork(element.src).then(image => {
+      if (image) images.set(index, image);
+      redraw();
+    });
   });
   return texture;
 }
