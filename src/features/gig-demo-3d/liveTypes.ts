@@ -68,4 +68,6 @@ export interface ConcertOptions {
     monitorPrimary?: string | null;
     monitorSecondary?: string | null;
   };
+  /** Optional crowd merch signal; drives how many audience members wear band merch. */
+  merchCrowdSignal?: MerchCrowdSignal | null;
 }
