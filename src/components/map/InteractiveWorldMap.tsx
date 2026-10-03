@@ -336,7 +336,7 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
     style.textContent = `
       /* Critical MapLibre layout rules kept locally so the map remains visible
          even if an external stylesheet is cached/blocked/stripped. */
-      .maplibregl-map { overflow: hidden; position: relative; -webkit-tap-highlight-color: transparent; }
+      .maplibregl-map { overflow: hidden; position: relative; width: 100%; height: 100%; -webkit-tap-highlight-color: transparent; }
       .maplibregl-canvas-container { height: 100%; width: 100%; }
       .maplibregl-canvas { position: absolute; left: 0; top: 0; }
       .maplibregl-control-container { position: absolute; inset: 0; pointer-events: none; }
@@ -395,7 +395,9 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
           </div>
         </div>
       )}
-      <div ref={mapContainer} className="absolute inset-0" />
+      <div className="absolute inset-0 min-h-0 min-w-0">
+        <div ref={mapContainer} className="h-full w-full" />
+      </div>
       <details className="absolute right-3 bottom-3 z-20 max-w-[min(90%,32rem)] rounded-md border border-border bg-card/95 p-2 text-xs shadow-lg">
         <summary className="cursor-pointer font-medium">Map diagnostics ({diagnostics.length})</summary>
         <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap text-muted-foreground">{diagnostics.join('\n')}</pre>
