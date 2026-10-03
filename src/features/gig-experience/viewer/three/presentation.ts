@@ -12,6 +12,7 @@ import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equip
 import type { ResolvedTattooVisual } from '@/features/player-model/tattoos';
 import type { CrowdTuningOptions } from '../engine/CrowdTuning';
 import type { TotpStageKey } from '@/features/top-of-the-pops/broadcastProfile';
+import type { ResolvedMerchWearable } from '@/features/player-model/merchWearables';
 import type { ResolvedInstrumentSkinVisual } from '@/features/instrument-skins/instrumentSkin';
 
 const clamp = (n: number, min = 0, max = 1) => Math.max(min, Math.min(max, Number.isFinite(n) ? n : min));
@@ -348,6 +349,7 @@ export function concertOptions(
   totpStage: TotpStageKey = 'main_stage',
   tattoos: Record<string, ResolvedTattooVisual[]> = {},
   instrumentSkins: Record<string, ResolvedInstrumentSkinVisual[]> = {},
+  merchWearables: Record<string, ResolvedMerchWearable> = {},
 ): ConcertOptions {
   const totp = presentationMode === 'totp';
   const seedSource = totp ? `totp:${replay.simulationSeed}` : String(experience?.gig.venue.id ?? replay.simulationSeed);
@@ -393,6 +395,7 @@ export function concertOptions(
         richClothing: richClothing[profileId] ?? [],
         tattoos: tattoos[profileId] ?? [],
         instrumentSkin: instrumentSkins[profileId]?.find(skin => skin.instrumentId === assignment.instrument) ?? null,
+        merchWearable: merchWearables[profileId] ?? null,
       };
     }),
   };
