@@ -57,7 +57,7 @@ function label(text: string, width: number, height: number, color = '#e4d7bd', b
   return new T.Mesh(new T.PlaneGeometry(width, height), new T.MeshStandardMaterial({ map, transparent: true, roughness: 0.8, side: T.DoubleSide, emissive: color, emissiveMap: map, emissiveIntensity: 0.08 }));
 }
 
-export function buildVenue(scene: T.Scene, manager: T.LoadingManager, venue?: ConcertVenue) {
+export function buildVenue(scene: T.Scene, manager: T.LoadingManager, venue?: ConcertVenue, distantMerch?: { color: string; chance: number } | null) {
   const loader = new T.TextureLoader(manager);
   const surface = (name: string, diffuse: string, repeat: [number, number], color: string) => new T.MeshStandardMaterial({
     map: texture(loader, demoAssetUrl(`${name}_${diffuse}_1k.jpg`), repeat),
@@ -76,7 +76,7 @@ export function buildVenue(scene: T.Scene, manager: T.LoadingManager, venue?: Co
     root.removeFromParent();
     const grille = new T.MeshStandardMaterial({ map: texture(loader, grilleUrl, [2, 2]), color: '#616774', roughness: .65, metalness: .45 });
     const production = buildVenueProduction(scene, profile, oak, grille, label, venue.bandName || 'ROCKMUNDO');
-    buildVenueEnvironment(scene, profile, venue.seed, oak, brick);
+    buildVenueEnvironment(scene, profile, venue.seed, oak, brick, distantMerch?.color ?? null, distantMerch?.chance ?? 0);
     buildVenueIdentitySignage(scene, profile, venue, label);
     return production;
   }
