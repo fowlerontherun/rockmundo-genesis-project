@@ -977,6 +977,68 @@ function addV1HoodieDetails(root: T.Object3D, appearance: PlayerAppearance, bone
   }
 }
 
+
+function addV1FeminineBustVolume(
+  root: T.Object3D,
+  appearance: PlayerAppearance,
+  bones: Map<string, T.Bone>,
+  quality: AvatarVisualQuality,
+  bare: boolean,
+) {
+  if (appearance.body.frame !== 'feminine') return;
+  const size = T.MathUtils.clamp(appearance.body.breastSize ?? 1, .7, 1.85);
+  const normalized = T.MathUtils.inverseLerp(.7, 1.85, size);
+  // Keep the neutral setting subtle, then let the upper half of the slider
+  // create a clearly visible silhouette instead of relying on sparse donor
+  // chest vertices.
+  const projection = T.MathUtils.lerp(.035, .155, normalized);
+  const radiusX = T.MathUtils.lerp(.075, .125, normalized);
+  const radiusY = T.MathUtils.lerp(.082, .14, normalized);
+  const radiusZ = T.MathUtils.lerp(.045, .135, normalized);
+  const separation = T.MathUtils.lerp(.064, .092, normalized);
+  const drop = T.MathUtils.lerp(.018, .052, normalized);
+
+  const chest = findPlayerBone(bones, ['Spine2','Spine.002','Chest','UpperChest'])
+    ?? findPlayerBone(bones, ['Spine1','Spine.001']);
+  if (!chest) return;
+
+  root.updateMatrixWorld(true);
+  const chestWorld = chest.getWorldPosition(new T.Vector3());
+  const material = bare
+    ? upgradeSkinMaterial(
+        Object.assign(new T.MeshStandardMaterial({
+          color: appearance.body.skin,
+          roughness: skinRoughness(appearance),
+          metalness: 0,
+        }), { name: 'Skin_Bust' }),
+        appearance,
+        quality,
+      )
+    : new T.MeshStandardMaterial({
+        color: appearance.equipment.top.color,
+        roughness: .86,
+        metalness: 0,
+      });
+  material.name = bare ? 'Skin_Bust' : 'V1FittedBustFabric';
+
+  for (const side of [-1, 1] as const) {
+    const geometry = new T.SphereGeometry(1, quality === 'cinematic' ? 30 : 22, quality === 'cinematic' ? 22 : 16);
+    geometry.scale(radiusX, radiusY, radiusZ);
+    // Sink most of each ellipsoid into the torso. Only the rounded forward
+    // hemisphere defines the silhouette, avoiding detached or spherical cups.
+    const bust = new T.Mesh(geometry, material.clone());
+    bust.name = `avatar-v1-feminine-bust-${side < 0 ? 'left' : 'right'}`;
+    bust.position.copy(chestWorld).add(new T.Vector3(side * separation, -drop, projection));
+    bust.castShadow = true;
+    bust.receiveShadow = true;
+    bust.userData.avatarV1BustVolume = true;
+    bust.userData.avatarV1BreastSize = size;
+    root.add(bust);
+    root.updateMatrixWorld(true);
+    chest.attach(bust);
+  }
+}
+
 function applyV1HandProportionPolish(bones: Map<string, T.Bone>) {
   const joint = (digit: string, index: number, side: 'L' | 'R') =>
     findPlayerBone(bones, [`${digit}${index}.${side}`, `${digit}${index}_${side}`, `${digit}${index}${side}`]);
@@ -1810,6 +1872,14 @@ export function assemblePlayerModel(
     addHair(result, appearance, headBone, quality, hairTextureCache);
     addAccessories(result, appearance, headBone, richClothing, quality);
   }
+  // The legacy feminine donor has too little dedicated chest topology for
+  // vertex-only breast morphing to reliably alter the visible silhouette.
+  // Add a chest-bone-driven rounded volume for starter clothing/bare previews.
+  // Curated donor tops keep their authored fit and are not overlaid.
+  if (appearance.body.frame === 'feminine' && !curatedTop) {
+    addV1FeminineBustVolume(result, appearance, bones, quality, topless || presentation === 'tattoo');
+  }
+
   if (presentation === 'stage') {
     if (!merchWearable) addStarterLogoTee(result, appearance, bones, richClothing);
     addBandMerchGraphic(result, appearance, bones, merchWearable);
