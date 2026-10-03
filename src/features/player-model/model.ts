@@ -706,7 +706,20 @@ function rockmundoWordmarkTexture() {
 }
 
 
+const MERCH_TEXTURE_CACHE_LIMIT = 96;
 const merchTextureCache = new Map<string, T.Texture>();
+
+function rememberMerchTexture(key: string, texture: T.Texture) {
+  // Keep a bounded LRU of composite canvases. Do not dispose evicted textures here:
+  // already-assembled avatar materials can still reference them for the lifetime of a scene.
+  if (merchTextureCache.has(key)) merchTextureCache.delete(key);
+  rememberMerchTexture(key, texture);
+  while (merchTextureCache.size > MERCH_TEXTURE_CACHE_LIMIT) {
+    const oldest = merchTextureCache.keys().next().value;
+    if (oldest === undefined) break;
+    merchTextureCache.delete(oldest);
+  }
+}
 
 function merchCompositeTexture(merch: ResolvedMerchWearable): T.Texture | null {
   if (typeof document === 'undefined') return null;
@@ -714,7 +727,11 @@ function merchCompositeTexture(merch: ResolvedMerchWearable): T.Texture | null {
   if (!elements.length) return null;
   const key = merch.design_id + ':' + JSON.stringify(elements);
   const cached = merchTextureCache.get(key);
-  if (cached) return cached;
+  if (cached) {
+    merchTextureCache.delete(key);
+    merchTextureCache.set(key, cached);
+    return cached;
+  }
   const canvas = document.createElement('canvas'); canvas.width = canvas.height = 512;
   const ctx = canvas.getContext('2d'); if (!ctx) return null;
   const texture = new T.CanvasTexture(canvas); texture.colorSpace = T.SRGBColorSpace;
