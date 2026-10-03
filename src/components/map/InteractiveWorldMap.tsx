@@ -39,8 +39,8 @@ const OPEN_MAP_STYLE = {
 
 const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds = EMPTY_ROUTE_CITY_IDS, routeCities }: InteractiveWorldMapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<maplibregl.Map | null>(null);
-  const markers = useRef<maplibregl.Marker[]>([]);
+  const map = useRef<mapboxgl.Map | null>(null);
+  const markers = useRef<mapboxgl.Marker[]>([]);
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [mapReady, setMapReady] = useState(false);
@@ -59,9 +59,15 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
       });
       map.current.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'top-right');
       map.current.scrollZoom.disable();
-      map.current.on('style.load', () => {
+      map.current.on('load', () => {
+        map.current?.resize();
         setIsLoading(false);
         setMapReady(true);
+      });
+      map.current.on('error', (event) => {
+        console.error('World map rendering error:', event.error);
+        setMapError('Failed to load the world map tiles. Please refresh the page.');
+        setIsLoading(false);
       });
     } catch (error) {
       console.error('Error initializing map:', error);
