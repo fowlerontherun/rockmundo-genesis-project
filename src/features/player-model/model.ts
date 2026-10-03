@@ -705,26 +705,43 @@ function merchCompositeTexture(merch: ResolvedMerchWearable): T.Texture | null {
   if (cached) return cached;
   const canvas = document.createElement('canvas'); canvas.width = canvas.height = 512;
   const ctx = canvas.getContext('2d'); if (!ctx) return null;
-  const drawText = (element: ReturnType<typeof merchFrontElements>[number]) => {
-    const size = Math.max(10, Math.min(72, Number(element.fontSize ?? 24))) * 2;
-    ctx.save(); ctx.translate((Number(element.x ?? 50) / 100) * 512, (Number(element.y ?? 50) / 100) * 512);
-    ctx.rotate(Number(element.rotation ?? 0) * Math.PI / 180); ctx.scale(Number(element.scale ?? 1), Number(element.scale ?? 1));
-    ctx.fillStyle = typeof element.color === 'string' ? element.color : '#ffffff';
-    ctx.font = `900 ${size}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(String(element.text ?? '').toUpperCase(), 0, 0, 480); ctx.restore();
+  const texture = new T.CanvasTexture(canvas); texture.colorSpace = T.SRGBColorSpace;
+  texture.name = `BandMerchComposite-${merch.design_id}`; texture.wrapS = texture.wrapT = T.ClampToEdgeWrapping;
+  merchTextureCache.set(key, texture);
+
+  const drawElement = (element: ReturnType<typeof merchFrontElements>[number], image?: HTMLImageElement) => {
+    const x = (Number(element.x ?? 50) / 100) * 512, y = (Number(element.y ?? 50) / 100) * 512;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(Number(element.rotation ?? 0) * Math.PI / 180);
+    ctx.scale(Number(element.scale ?? 1), Number(element.scale ?? 1));
+    if (image) {
+      const size = 180, ratio = Math.min(size / image.width, size / image.height);
+      ctx.drawImage(image, -image.width * ratio / 2, -image.height * ratio / 2, image.width * ratio, image.height * ratio);
+    } else {
+      const size = Math.max(10, Math.min(72, Number(element.fontSize ?? 24))) * 2;
+      ctx.fillStyle = typeof element.color === 'string' ? element.color : '#ffffff';
+      ctx.font = `900 ${size}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(String(element.text ?? '').toUpperCase(), 0, 0, 480);
+    }
+    ctx.restore();
   };
-  elements.filter(e => e.type === 'text').forEach(drawText);
-  const texture = new T.CanvasTexture(canvas); texture.colorSpace = T.SRGBColorSpace; texture.name = `BandMerchComposite-${merch.design_id}`;
-  texture.wrapS = texture.wrapT = T.ClampToEdgeWrapping; merchTextureCache.set(key, texture);
-  elements.filter(e => e.type === 'image' && e.src).forEach(element => {
+
+  const images = new Map<number, HTMLImageElement>();
+  const redraw = () => {
+    ctx.clearRect(0, 0, 512, 512);
+    elements.forEach((element, index) => {
+      if (element.type === 'image') {
+        const image = images.get(index); if (image) drawElement(element, image);
+      } else if (element.type === 'text') drawElement(element);
+    });
+    texture.needsUpdate = true;
+  };
+  redraw();
+  elements.forEach((element, index) => {
+    if (element.type !== 'image' || !element.src) return;
     const image = new Image(); image.crossOrigin = 'anonymous';
-    image.onload = () => {
-      const scale = Number(element.scale ?? 1), size = 180 * scale, x = (Number(element.x ?? 50) / 100) * 512, y = (Number(element.y ?? 50) / 100) * 512;
-      ctx.save(); ctx.translate(x, y); ctx.rotate(Number(element.rotation ?? 0) * Math.PI / 180);
-      const ratio = Math.min(size / image.width, size / image.height); ctx.drawImage(image, -image.width * ratio / 2, -image.height * ratio / 2, image.width * ratio, image.height * ratio);
-      ctx.restore(); texture.needsUpdate = true;
-    };
-    image.src = element.src!;
+    image.onload = () => { images.set(index, image); redraw(); };
+    image.onerror = () => redraw();
+    image.src = element.src;
   });
   return texture;
 }
