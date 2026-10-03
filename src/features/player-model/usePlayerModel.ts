@@ -5,6 +5,7 @@ import type { ClothingItem } from '@/hooks/useSkinStore';
 import { resolveEquippedClothingVisual, type ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import { appearanceFromLegacy, appearanceSchema, resolveAppearance, type PlayerAppearance } from './appearance';
 import { normalizeTattooVisual, type ResolvedTattooVisual, type TattooVisualInput } from './tattoos';
+import type { ResolvedMerchWearable } from './merchWearables';
 import { resolveStageInstrumentSkin, type EquippedInstrumentSkinRow, type ResolvedInstrumentSkinVisual } from '@/features/instrument-skins/instrumentSkin';
 
 export const playerModelKey = (profileId: string | null) => ['player-stage-appearance', profileId] as const;
@@ -18,6 +19,8 @@ export interface GigPlayerModelsData {
   tattoos?: Record<string, ResolvedTattooVisual[]>;
   /** Optional so replay snapshots captured before instrument skins remain compatible. */
   instrumentSkins?: Record<string, ResolvedInstrumentSkinVisual[]>;
+  /** Equipped Merch Studio apparel resolved once with the performer batch. */
+  merchWearables?: Record<string, ResolvedMerchWearable>;
 }
 
 interface EquippedClothingRow {
@@ -59,7 +62,7 @@ export function resolveGigStageAppearances(
   return appearances;
 }
 
-type StageRpcName = 'get_stage_tattoo_visuals' | 'get_equipped_stage_clothing' | 'get_equipped_stage_instrument_skins';
+type StageRpcName = 'get_stage_tattoo_visuals' | 'get_equipped_stage_clothing' | 'get_equipped_stage_instrument_skins' | 'get_stage_merch_wearables';
 type StageRpcArgs = { p_profile_ids: string[] };
 type StageRpcResult = { data: unknown; error: { message?: string } | null };
 
@@ -175,12 +178,13 @@ export function useGigPlayerModels(profileIds: string[]) {
     enabled: ids.length > 0,
     staleTime: 60_000,
     queryFn: async (): Promise<GigPlayerModelsData> => {
-      const [appearanceSettled, legacySettled, clothingSettled, tattooSettled, instrumentSettled] = await Promise.allSettled([
+      const [appearanceSettled, legacySettled, clothingSettled, tattooSettled, instrumentSettled, merchSettled] = await Promise.allSettled([
         supabase.from('player_stage_appearances').select('profile_id,appearance').in('profile_id', ids),
         supabase.from('player_avatar_config').select('profile_id,gender,skin_tone,hair_color,height,shirt_color,pants_color,shoes_color').in('profile_id', ids),
         callStageRpc('get_equipped_stage_clothing', { p_profile_ids: ids }),
         callStageRpc('get_stage_tattoo_visuals', { p_profile_ids: ids }),
         callStageRpc('get_equipped_stage_instrument_skins', { p_profile_ids: ids }),
+        callStageRpc('get_stage_merch_wearables', { p_profile_ids: ids }),
       ]);
 
       if (appearanceSettled.status === 'rejected') throw appearanceSettled.reason;
@@ -199,6 +203,7 @@ export function useGigPlayerModels(profileIds: string[]) {
       const clothingResult = optionalStageResult('equipped rich clothing', clothingSettled);
       const tattooResult = optionalStageResult('tattoo visuals', tattooSettled);
       const instrumentResult = optionalStageResult('instrument skins', instrumentSettled);
+      const merchResult = optionalStageResult('band merch wearables', merchSettled);
 
       let legacyRows: LegacyStageAppearanceRow[] = [];
       if (legacySettled.status === 'fulfilled' && !legacySettled.value.error) {
@@ -224,7 +229,11 @@ export function useGigPlayerModels(profileIds: string[]) {
 
       const tattoos = tattooResult.error ? {} : resolveTattooRows((tattooResult.data || []) as TattooVisualInput[]);
       const instrumentSkins = instrumentResult.error ? {} : resolveInstrumentSkinRows((instrumentResult.data || []) as EquippedInstrumentSkinRow[]);
-      return { appearances, richClothing, tattoos, instrumentSkins };
+      const merchWearables: Record<string, ResolvedMerchWearable> = {};
+      if (!merchResult.error) for (const row of (merchResult.data || []) as ResolvedMerchWearable[]) {
+        if (row.profile_id) merchWearables[row.profile_id] = row;
+      }
+      return { appearances, richClothing, tattoos, instrumentSkins, merchWearables };
     },
   });
 }

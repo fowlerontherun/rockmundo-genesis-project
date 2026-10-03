@@ -2,6 +2,7 @@ import type { InstrumentId, VocalRole } from './instrumentCatalog';
 import type { PlayerAppearance } from '@/features/player-model/appearance';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import type { ResolvedTattooVisual } from '@/features/player-model/tattoos';
+import type { ResolvedMerchWearable } from '@/features/player-model/merchWearables';
 import type { ResolvedInstrumentSkinVisual } from '@/features/instrument-skins/instrumentSkin';
 
 export type StageRole = 'vocals' | 'guitar' | 'bass' | 'drums' | 'keyboard' | 'dj' | 'strings' | 'brass' | 'woodwind' | 'percussion' | 'other' | 'fan';
@@ -16,6 +17,7 @@ export interface ConcertPerformer {
   richClothing?: ResolvedEquippedClothing[];
   tattoos?: ResolvedTattooVisual[];
   instrumentSkin?: ResolvedInstrumentSkinVisual | null;
+  merchWearable?: ResolvedMerchWearable | null;
   phase: number;
 }
 export interface ConcertVenue {
