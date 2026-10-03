@@ -48,8 +48,8 @@ export function isTvStudioAudienceBlocked(x: number, z: number, p: VenueProfile)
 }
 
 /** Complete low-poly anatomy and separate skin, hair and clothing colours. */
-export function audienceHumanGeometry(kind: number, seated = false) {
-    const parts: T.BufferGeometry[] = [], skin = new T.Color(['#d7a67e', '#915d3e', '#b88360', '#593b2c'][kind % 4]), shirt = new T.Color(['#335369', '#873f47', '#3d6652', '#786080'][kind % 4]), trousers = new T.Color(['#283340', '#393237', '#283131', '#3b3549'][kind % 4]), hair = new T.Color(['#342923', '#272229', '#98734d', '#432d25'][kind % 4]), shoe = new T.Color('#20232a');
+export function audienceHumanGeometry(kind: number, seated = false, shirtOverride?: T.Color | null) {
+    const parts: T.BufferGeometry[] = [], skin = new T.Color(['#d7a67e', '#915d3e', '#b88360', '#593b2c'][kind % 4]), shirt = shirtOverride?.clone() ?? new T.Color(['#335369', '#873f47', '#3d6652', '#786080'][kind % 4]), trousers = new T.Color(['#283340', '#393237', '#283131', '#3b3549'][kind % 4]), hair = new T.Color(['#342923', '#272229', '#98734d', '#432d25'][kind % 4]), shoe = new T.Color('#20232a');
     const add = (g: T.BufferGeometry, colour: T.Color) => { const geometry = g.index ? g.toNonIndexed() : g; const n = geometry.attributes.position.count, colors = new Float32Array(n * 3); for (let i = 0; i < n; i++) colors.set(colour.toArray(), i * 3); geometry.setAttribute('color', new T.BufferAttribute(colors, 3)); geometry.deleteAttribute('uv'); parts.push(geometry); if (g !== geometry) g.dispose(); };
     const limb = (a: number[], b: number[], radius: number, colour: T.Color) => { const av = new T.Vector3(...a), bv = new T.Vector3(...b), g = new T.CylinderGeometry(radius, radius * .9, av.distanceTo(bv), 5, 1, true); g.applyQuaternion(new T.Quaternion().setFromUnitVectors(new T.Vector3(0, 1, 0), bv.clone().sub(av).normalize())); g.translate(...av.add(bv).multiplyScalar(.5).toArray()); add(g, colour); };
     const hips = seated ? .52 : .84, shoulder = hips + .49;
@@ -102,7 +102,8 @@ export function buildVenueAudience(parent: T.Group, p: VenueProfile, seed: numbe
     };
     for (let kind = 0; kind < 8; kind++) {
         const rows = buckets[kind]; if (!rows.length) continue;
-        const mesh = new T.InstancedMesh(audienceHumanGeometry(kind % 4, kind >= 4), material, rows.length); mesh.name = `audience-humans-${kind}`; mesh.userData.ranks = rows.map(row => row.rank); mesh.userData.maxCount = rows.length; mesh.frustumCulled = false;
+        const merch = merchColor && /^#[0-9a-f]{6}$/i.test(merchColor) && kind % 4 === 0 ? new T.Color(merchColor) : null;
+        const mesh = new T.InstancedMesh(audienceHumanGeometry(kind % 4, kind >= 4, merch), material, rows.length); mesh.name = `audience-humans-${kind}`; mesh.userData.ranks = rows.map(row => row.rank); mesh.userData.maxCount = rows.length; mesh.frustumCulled = false;
         const transform = new T.Object3D();
         rows.forEach(({ point: [x, y, z, yaw] }, i) => { transform.position.set(x + (random() - .5) * .08, y, z + (random() - .5) * .08); transform.rotation.y = yaw + (random() - .5) * .16; const height = .9 + random() * .15; transform.scale.set(.9 + random() * .17, height, .9 + random() * .1); transform.updateMatrix(); mesh.setMatrixAt(i, transform.matrix); });
         mesh.count = 0; root.add(mesh);
