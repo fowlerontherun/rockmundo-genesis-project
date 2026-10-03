@@ -1,4 +1,5 @@
 import { productionLayout, stageLightPositions } from './venueProduction';
+import { crowdMerchChance } from '@/features/player-model/merchWearables';
 import { planVenueLighting, venueBeamCue } from './venueLightShow';
 import { aimMotorizedHead } from './venueProductionQuality';
 import { updateTvStudioMonitors } from './tvStudioProduction';
@@ -114,23 +115,17 @@ export class ConcertScene {
     this.scene.add(new T.HemisphereLight('#526070', '#050406', 0.18));
     const key = new T.DirectionalLight('#f4d5b3', 0.22); key.position.set(0, 5, 6); this.scene.add(key);
     const backFill = new T.DirectionalLight('#5f7390', 0.08); backFill.position.set(0, 5, -7); this.scene.add(backFill);
-    buildVenue(this.scene, this.assetManager, options?.venue);
+    const crowdSignal = options?.merchCrowdSignal ?? null;
+    const distantMerch = crowdSignal
+      ? options?.performers?.find(p => p.merchWearable?.design_id === crowdSignal.designId)?.merchWearable ?? null
+      : null;
+    const distantChance = crowdSignal ? crowdMerchChance({
+      bandFame: crowdSignal.fameScore,
+      merchPopularity: crowdSignal.merchPopularityScore,
+      onSale: crowdSignal.onSale,
+    }) : 0;
+    buildVenue(this.scene, this.assetManager, options?.venue, distantMerch ? { color: distantMerch.garment_color, chance: distantChance } : null);
     this.distantAudience = this.scene.getObjectByName('venue-distant-audience') as T.Group ?? null;
-    const distantMerch = options?.performers?.find(p => p.merchWearable?.design_id === options?.merchCrowdSignal?.designId)?.merchWearable
-      ?? options?.performers?.find(p => p.merchWearable)?.merchWearable
-      ?? null;
-    if (this.distantAudience && distantMerch) {
-      const colour = new T.Color(distantMerch.garment_color);
-      this.distantAudience.children.forEach((child, index) => {
-        if (!(child instanceof T.InstancedMesh) || index % 4 !== 0) return;
-        const geometry = child.geometry;
-        const colors = geometry.getAttribute('color');
-        if (!colors) return;
-        const position = geometry.getAttribute('position');
-        for (let i = 0; i < colors.count; i++) if (position.getY(i) > .75 && position.getY(i) < 1.42) colors.setXYZ(i, colour.r, colour.g, colour.b);
-        colors.needsUpdate = true;
-      });
-    }
     this.buildLighting(); this.particles = this.buildParticles();
     this.composer = new EffectComposer(this.renderer); this.composer.addPass(new RenderPass(this.scene, this.camera));
     this.bloom = new UnrealBloomPass(new T.Vector2(1, 1), 0.2, 0.4, 1.18); this.composer.addPass(this.bloom); this.composer.addPass(new OutputPass());

@@ -12,7 +12,7 @@ import { buildVenueMicroDetail } from './venueMicroDetail';
 
 /** Architecture surrounds the human-scale performance area. Detail is batched
  * by material; distant spectators use bounded instance batches for standing and seated people. */
-export function buildVenueEnvironment(scene: T.Scene, p: VenueProfile, seed: number, wood: T.Material, brick: T.Material) {
+export function buildVenueEnvironment(scene: T.Scene, p: VenueProfile, seed: number, wood: T.Material, brick: T.Material, merchColor?: string | null, merchChance = 0) {
   const root = new T.Group(); root.name = `environment-${p.kind}`; root.userData.profile = p; scene.add(root);
   const random = seededRandom(seed), half = p.roomWidth / 2, back = .65 - p.stageDepth - 1.4;
   const surfaces = buildVenueSurfaceMaterials(p, wood, brick);
@@ -155,6 +155,6 @@ export function buildVenueEnvironment(scene: T.Scene, p: VenueProfile, seed: num
   buildLargeVenueDressing(root,p,surfaces);
   buildVenueMicroDetail(root,p,seed,surfaces);
   batchStaticMeshes(root);
-  buildVenueAudience(root,p,seed,places);
+  buildVenueAudience(root,p,seed,places,merchColor,merchChance);
   return root;
 }
