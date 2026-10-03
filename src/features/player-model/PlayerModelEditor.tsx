@@ -8,6 +8,7 @@ import { HeadStyling } from './HeadStyling';
 import { AccessoryStyling } from './AccessoryStyling';
 import { OwnedAccessories } from './OwnedAccessories';
 import { StarterWardrobe } from './StarterWardrobe';
+import { BandMerchWardrobe } from './BandMerchWardrobe';
 import './player-model.css';
 
 const SKIN_COLORS = ['#f3d3b7', '#dfb18c', '#c58c63', '#a96f46', '#805132', '#593a2d', '#382a24'];
@@ -99,6 +100,7 @@ function EditorSession({ profileId, initial, model, richClothing, richClothingEr
           <div className="player-model-editor__choices" role="group" aria-label="Outfit presets">{STYLES.map(style => <button key={style} type="button" onClick={() => outfit(style)}>{STYLE_LABELS[style]}</button>)}</div>
           <p className="player-model-editor__hint">Starter pieces update the live preview immediately. Equipped Skin Store items remain layered over matching areas.</p>
           {SLOTS.map(slot => <StarterWardrobe key={slot} slot={slot} appearance={draft} onChange={change} />)}
+          <BandMerchWardrobe profileId={profileId} />
           <div className="player-model-editor__item"><label htmlFor="instrument-finish">Instrument finish</label><span>Standard</span><input id="instrument-finish" type="color" value={draft.equipment.instrument.color} onChange={event => change({ ...draft, equipment: { ...draft.equipment, instrument: { ...draft.equipment.instrument, color: event.target.value } } })} /></div>
         </fieldset>}
         <div className="player-model-editor__save">
