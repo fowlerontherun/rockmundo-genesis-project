@@ -143,7 +143,7 @@ const OTHER_TOURS_PER_PAGE = 10;
 const TourManager = () => {
   const { profileId } = useActiveProfile();
   const { data: primaryBand } = usePrimaryBand();
-  const currentBandId = primaryBand?.bands?.id;
+  const currentBandId = primaryBand?.band_id ?? primaryBand?.bands?.id;
   const { data: bandTotals } = useBandTourTotals(currentBandId);
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
