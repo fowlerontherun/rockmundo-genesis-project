@@ -107,3 +107,10 @@
   .player-model-editor__tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .player-model-editor__outfit-presets { grid-template-columns: 1fr; }
 }
+
+.player-model-wardrobe__filters { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; font-size: 12px; }
+.player-model-wardrobe__filters label { display: flex; align-items: center; gap: 7px; }
+.player-model-wardrobe__filters select { background: #1b2839; color: #edf4fa; padding: 6px; border: 1px solid #617083; border-radius: 6px; }
+.player-model-look-swatches { display: flex; overflow: hidden; border-radius: 6px; border: 1px solid #617083; }
+.player-model-look-swatches i { width: 26px; height: 26px; }
+.player-model-wardrobe button:focus-visible { outline: 2px solid #93d9ca; outline-offset: 3px; }

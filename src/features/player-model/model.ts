@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { clipGarmentHem } from './garmentHem';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { demoAssetUrl } from '@/features/gig-demo-3d/assets';
@@ -23,7 +24,7 @@ import { applyAvatarSkinMacroShading } from './avatarSkinMacroShading';
 import { createCorneaOverlay, upgradeCuratedGarmentMaterial, upgradeSkinMaterial, upgradeStarterFabricMaterial } from './avatarPhysicalMaterials';
 import { buildProceduralGarment, type GarmentRigAnchor } from '@/features/clothing-preview/proceduralGarmentRenderer';
 import type { ClothingItem } from '@/hooks/useSkinStore';
-import { merchElementPrintPosition, merchFrontElements, merchHasRenderableFront, type ResolvedMerchWearable } from './merchWearables';
+import { merchWearableDonorItem, merchElementPrintPosition, merchFrontElements, merchHasRenderableFront, type ResolvedMerchWearable } from './merchWearables';
 
 export type ModelLibrary = Map<string, T.Object3D>;
 export type PlayerModelPresentation = 'stage' | 'tattoo';
@@ -41,6 +42,21 @@ export async function loadModelLibrary(files: string[], manager?: T.LoadingManag
   const failed = results.find(result => result.status === 'rejected');
   if (failed?.status === 'rejected') { library.forEach(disposeModel); throw failed.reason; }
   return library;
+}
+
+function garmentGroups(geometry: T.BufferGeometry) {
+  return geometry.groups.length ? geometry.groups : [{ start: 0, count: geometry.index?.count ?? geometry.getAttribute('position').count, materialIndex: 0 }];
+}
+
+/** Donors differ: masculine exports are centimetre-scaled Z-up, feminine
+ * exports are metre-scaled Y-up. Fit in the common bind frame, then restore. */
+function fitInBodySpace(mesh: T.SkinnedMesh, donorFrame: T.Matrix4, fit: () => T.BufferGeometry | void) {
+  mesh.geometry.applyMatrix4(donorFrame);
+  try {
+    const extra = fit();
+    if (extra) extra.applyMatrix4(donorFrame.clone().invert());
+    return extra;
+  } finally { mesh.geometry.applyMatrix4(donorFrame.clone().invert()); }
 }
 
 const cleanBoneName = (value: string) => value.replace(/[_.]/g, '').toLowerCase();
@@ -356,7 +372,7 @@ function polishV1OuterwearGeometry(
   const position = geometry.getAttribute('position') as T.BufferAttribute | undefined;
   const skinIndex = geometry.getAttribute('skinIndex') as T.BufferAttribute | undefined;
   const skinWeight = geometry.getAttribute('skinWeight') as T.BufferAttribute | undefined;
-  if (!position || !skinIndex || !skinWeight || !geometry.groups.length || !materials.length) return;
+  if (!position || !skinIndex || !skinWeight || !materials.length) return;
 
   const garmentMaterialIndices = new Set<number>();
   materials.forEach((material, index) => {
@@ -367,7 +383,7 @@ function polishV1OuterwearGeometry(
 
   const garmentVertices = new Set<number>();
   const index = geometry.index;
-  for (const group of geometry.groups) {
+  for (const group of garmentGroups(geometry)) {
     if (!garmentMaterialIndices.has(group.materialIndex ?? 0)) continue;
     for (let i = group.start; i < group.start + group.count; i += 1) {
       garmentVertices.add(index ? index.getX(i) : i);
@@ -442,7 +458,7 @@ function removeV1TankSleeveTriangles(mesh: T.SkinnedMesh, materials: T.Material[
   const geometry = mesh.geometry;
   const skinIndex = geometry.getAttribute('skinIndex') as T.BufferAttribute | undefined;
   const skinWeight = geometry.getAttribute('skinWeight') as T.BufferAttribute | undefined;
-  if (!skinIndex || !skinWeight || !geometry.groups.length) return;
+  if (!skinIndex || !skinWeight) return;
 
   const garmentMaterialIndices = new Set<number>();
   materials.forEach((material, index) => {
@@ -466,7 +482,7 @@ function removeV1TankSleeveTriangles(mesh: T.SkinnedMesh, materials: T.Material[
   const nextIndices: number[] = [];
   const nextGroups: Array<{ start: number; count: number; materialIndex: number }> = [];
   let removed = 0;
-  for (const group of geometry.groups) {
+  for (const group of garmentGroups(geometry)) {
     const start = nextIndices.length;
     const garment = garmentMaterialIndices.has(group.materialIndex ?? 0);
     for (let i = group.start; i + 2 < group.start + group.count; i += 3) {
@@ -489,14 +505,14 @@ function removeV1TankSleeveTriangles(mesh: T.SkinnedMesh, materials: T.Material[
   mesh.userData.avatarV1TankRemovedTriangleCount = removed;
 }
 
-function addV1FittedLongSleeves(mesh: T.SkinnedMesh, materials: T.Material[], itemId: string) {
+function addV1FittedLongSleeves(mesh: T.SkinnedMesh, materials: T.Material[], itemId: string, siblingGarmentMaterial?: T.MeshStandardMaterial, donorScale = 1) {
   const geometry = mesh.geometry;
   const skinIndex = geometry.getAttribute('skinIndex') as T.BufferAttribute | undefined;
   const skinWeight = geometry.getAttribute('skinWeight') as T.BufferAttribute | undefined;
-  if (!skinIndex || !skinWeight || !geometry.groups.length) return;
+  if (!skinIndex || !skinWeight) return;
 
   const skinMaterialIndices = new Set<number>();
-  let garmentMaterial: T.MeshStandardMaterial | undefined;
+  let garmentMaterial: T.MeshStandardMaterial | undefined = siblingGarmentMaterial;
   materials.forEach((material, index) => {
     if (/skin/i.test(material.name)) skinMaterialIndices.add(index);
     else if (!garmentMaterial && (material as T.MeshStandardMaterial).isMeshStandardMaterial && !/eye|earring|metal|hair/i.test(material.name)) {
@@ -521,7 +537,7 @@ function addV1FittedLongSleeves(mesh: T.SkinnedMesh, materials: T.Material[], it
   };
 
   const sleeveIndices: number[] = [];
-  for (const group of geometry.groups) {
+  for (const group of garmentGroups(geometry)) {
     if (!skinMaterialIndices.has(group.materialIndex ?? 0)) continue;
     for (let i = group.start; i + 2 < group.start + group.count; i += 3) {
       const a = indexAt(i), b = indexAt(i + 1), c = indexAt(i + 2);
@@ -542,7 +558,7 @@ function addV1FittedLongSleeves(mesh: T.SkinnedMesh, materials: T.Material[], it
   const sleevePosition = sleeveGeometry.getAttribute('position') as T.BufferAttribute;
   const sleeveNormal = sleeveGeometry.getAttribute('normal') as T.BufferAttribute | undefined;
   const usedVertices = new Set(sleeveIndices);
-  const surfaceOffset = itemId === 'starter.top.hoodie' || itemId === 'starter.top.zip-hoodie' ? .007 : .004;
+  const surfaceOffset = (itemId === 'starter.top.hoodie' || itemId === 'starter.top.zip-hoodie' ? .007 : .004) / donorScale;
   if (sleeveNormal) {
     for (const vertex of usedVertices) {
       sleevePosition.setXYZ(
@@ -571,6 +587,9 @@ function addV1FittedLongSleeves(mesh: T.SkinnedMesh, materials: T.Material[], it
     : itemId === 'starter.top.zip-hoodie'
       ? 'avatar-v1-fitted-zip-hoodie-sleeves'
       : 'avatar-v1-fitted-long-sleeves';
+  sleeves.position.copy(mesh.position);
+  sleeves.quaternion.copy(mesh.quaternion);
+  sleeves.scale.copy(mesh.scale);
   sleeves.castShadow = true;
   sleeves.receiveShadow = true;
   sleeves.bind(mesh.skeleton, mesh.bindMatrix.clone());
@@ -583,7 +602,7 @@ function addV1FittedLongSleeves(mesh: T.SkinnedMesh, materials: T.Material[], it
 function cropV1BottomGarmentGeometry(mesh: T.SkinnedMesh, materials: T.Material[], itemId: string) {
   const geometry = mesh.geometry;
   const position = geometry.getAttribute('position') as T.BufferAttribute | undefined;
-  if (!position || !geometry.groups.length) return;
+  if (!position) return;
 
   const garmentMaterialIndices = new Set<number>();
   materials.forEach((material, index) => {
@@ -594,7 +613,7 @@ function cropV1BottomGarmentGeometry(mesh: T.SkinnedMesh, materials: T.Material[
   const sourceIndex = geometry.index;
   const indexAt = (offset: number) => sourceIndex ? sourceIndex.getX(offset) : offset;
   let minY = Infinity, maxY = -Infinity;
-  for (const group of geometry.groups) {
+  for (const group of garmentGroups(geometry)) {
     if (!garmentMaterialIndices.has(group.materialIndex ?? 0)) continue;
     for (let i = group.start; i < group.start + group.count; i += 1) {
       const y = position.getY(indexAt(i));
@@ -604,49 +623,28 @@ function cropV1BottomGarmentGeometry(mesh: T.SkinnedMesh, materials: T.Material[
   if (!Number.isFinite(minY) || !Number.isFinite(maxY) || maxY <= minY) return;
 
   const underwear = itemId === 'starter.bottom.boxer-briefs' || itemId === 'starter.bottom.briefs';
-  const cropY = minY + (maxY - minY) * (underwear ? .69 : .48);
-  const nextIndices: number[] = [];
-  const nextGroups: Array<{ start: number; count: number; materialIndex: number }> = [];
-
-  for (const group of geometry.groups) {
-    const start = nextIndices.length;
-    const garment = garmentMaterialIndices.has(group.materialIndex ?? 0);
-    for (let i = group.start; i + 2 < group.start + group.count; i += 3) {
-      const a = indexAt(i), b = indexAt(i + 1), c = indexAt(i + 2);
-      if (garment) {
-        const lowest = Math.min(position.getY(a), position.getY(b), position.getY(c));
-        if (lowest < cropY) continue;
-      }
-      nextIndices.push(a, b, c);
-    }
-    const count = nextIndices.length - start;
-    if (count) nextGroups.push({ start, count, materialIndex: group.materialIndex ?? 0 });
-  }
-
-  if (!nextIndices.length) return;
-  geometry.setIndex(nextIndices);
-  geometry.clearGroups();
-  nextGroups.forEach(group => geometry.addGroup(group.start, group.count, group.materialIndex));
-  geometry.computeVertexNormals();
-  geometry.computeBoundingBox();
-  geometry.computeBoundingSphere();
+  const cropY = minY + (maxY - minY) * (itemId === 'starter.bottom.briefs' ? .80 : underwear ? .69 : .48);
+  const exposed = clipGarmentHem(geometry, cropY, garmentMaterialIndices, false);
+  mesh.geometry = clipGarmentHem(geometry, cropY, garmentMaterialIndices, true);
+  geometry.dispose();
   mesh.userData.avatarV1CroppedBottom = true;
   mesh.userData.avatarV1CroppedBottomVariant = itemId;
   mesh.userData.avatarV1CroppedBottomCutY = cropY;
-  mesh.userData.avatarV1CroppedBottomIndexCount = nextIndices.length;
+  mesh.userData.avatarV1CroppedBottomIndexCount = mesh.geometry.index?.count ?? 0;
+  return exposed;
 }
 
 function shapeV1TrouserGeometry(mesh: T.SkinnedMesh, materials: T.Material[], itemId: string) {
   const geometry = mesh.geometry;
   const position = geometry.getAttribute('position') as T.BufferAttribute | undefined;
-  if (!position || !geometry.groups.length) return;
+  if (!position) return;
   const garmentMaterialIndices = new Set<number>();
   materials.forEach((material, index) => {
     if (!/skin|eye|earring|metal|hair/i.test(material.name)) garmentMaterialIndices.add(index);
   });
   const vertices = new Set<number>();
   const index = geometry.index;
-  for (const group of geometry.groups) {
+  for (const group of garmentGroups(geometry)) {
     if (!garmentMaterialIndices.has(group.materialIndex ?? 0)) continue;
     for (let i = group.start; i < group.start + group.count; i += 1) vertices.add(index ? index.getX(i) : i);
   }
@@ -1509,6 +1507,27 @@ export function assemblePlayerModel(
   presentation: PlayerModelPresentation = 'stage',
   merchWearable: ResolvedMerchWearable | null = null,
 ): T.Object3D {
+  // Resolve the visible garment once. Geometry, exposed skin, fabric and trim
+  // must all use the same identity, including saved fallbacks and band merch.
+  // Build a render-only copy so changing presentation never changes the save.
+  const merchItem = presentation === 'stage' && merchWearable
+    ? merchWearableDonorItem(merchWearable.product_type) : null;
+  if (!merchItem) merchWearable = null;
+  appearance = {
+    ...appearance,
+    equipment: {
+      ...appearance.equipment,
+      ...Object.fromEntries((['top', 'bottom', 'footwear'] as const).map(slot => [slot, {
+        ...appearance.equipment[slot], itemId: visualEquipmentItem(appearance, slot).id,
+      }])),
+      top: {
+        ...appearance.equipment.top,
+        itemId: merchItem ?? visualEquipmentItem(appearance, 'top').id,
+        color: merchWearable?.garment_color ?? appearance.equipment.top.color,
+      },
+    },
+  };
+  if (merchItem) richClothing = richClothing.filter(row => richGarmentSlot(row.item) !== 'top');
   const source = (style: Parameters<typeof modelFile>[1]) => {
     const model = library.get(modelFile(appearance.body.frame, style));
     if (!model) throw new Error('The selected character model could not load.');
@@ -1572,8 +1591,6 @@ export function assemblePlayerModel(
   };
 
   const curatedTop = presentation === 'tattoo' ? undefined : curatedDonorForSlot(richClothing, 'top');
-  const merchTopItemId = presentation === 'stage' && merchWearable ? (merchWearable.product_type.toLowerCase().includes('hoodie') ? 'starter.top.hoodie' : merchWearable.product_type.toLowerCase().includes('long sleeve') || merchWearable.product_type.toLowerCase().includes('crewneck') ? 'starter.top.long-sleeve' : 'starter.top.casual') : null;
-  const merchTopStyle = merchTopItemId ? equipmentStyle({ ...appearance, equipment: { ...appearance.equipment, top: { ...appearance.equipment.top, itemId: merchTopItemId } } }, 'top') : null;
   const curatedBottom = presentation === 'tattoo' ? undefined : curatedDonorForSlot(richClothing, 'bottom');
   const curatedFootwear = presentation === 'tattoo' ? undefined : curatedDonorForSlot(richClothing, 'footwear');
   const topless = presentation === 'stage' && appearance.equipment.top.itemId === 'starter.top.topless' && !curatedTop;
@@ -1587,7 +1604,7 @@ export function assemblePlayerModel(
     { part: 'head', style: headModelStyle(appearance), dye: appearance.head.hair, fabric: 'plain' as const },
     {
       part: 'body',
-      style: merchTopStyle ?? curatedTop?.source.style ?? equipmentStyle(appearance, 'top'),
+      style: curatedTop?.source.style ?? equipmentStyle(appearance, 'top'),
       dye: merchWearable?.garment_color ?? curatedTop?.source.color ?? appearance.equipment.top.color,
       secondaryColor: curatedTop?.source.secondaryColor,
       fabric: curatedTop?.source.fabric ?? visualEquipmentItem(appearance, 'top').fabric,
@@ -1620,11 +1637,14 @@ export function assemblePlayerModel(
     if (!containers.length) throw new Error(`Missing character part: ${choice.part}`);
     for (const container of containers) {
       const part = container.clone(true), removeHair: T.Object3D[] = [];
+      const detachedOverlays: T.SkinnedMesh[] = [];
+      const exposedLegs: Array<{ mesh: T.SkinnedMesh; geometry: T.BufferGeometry }> = [];
       const corneaOverlays: Array<{ parent: T.Object3D; overlay: T.SkinnedMesh }> = [];
       part.traverse(clonedNode => {
         if (!(clonedNode instanceof T.SkinnedMesh)) return;
         const original = (container === clonedNode ? container : container.getObjectByName(clonedNode.name)) as T.SkinnedMesh;
         if (!original?.isSkinnedMesh) throw new Error('Incompatible character geometry');
+        original.updateWorldMatrix(true, false);
         clonedNode.geometry = original.geometry.clone();
         if (choice.part === 'body' && appearance.body.frame === 'feminine') {
           applyFeminineBreastSize(clonedNode, appearance.body.breastSize ?? 1);
@@ -1634,11 +1654,11 @@ export function assemblePlayerModel(
           !choice.assetKey &&
           V1_SKINNED_TEE_ITEMS.has(appearance.equipment.top.itemId)
         ) {
-          polishV1CrewTeeGeometry(
+          fitInBodySpace(clonedNode, original.matrixWorld, () => polishV1CrewTeeGeometry(
             clonedNode,
             Array.isArray(original.material) ? original.material : [original.material],
             appearance.equipment.top.itemId,
-          );
+          ));
           trimV1TeeToShortSleeves(
             clonedNode,
             Array.isArray(original.material) ? original.material : [original.material],
@@ -1649,11 +1669,11 @@ export function assemblePlayerModel(
           !choice.assetKey &&
           V1_SKINNED_OUTERWEAR_ITEMS.has(appearance.equipment.top.itemId)
         ) {
-          polishV1OuterwearGeometry(
+          fitInBodySpace(clonedNode, original.matrixWorld, () => polishV1OuterwearGeometry(
             clonedNode,
             Array.isArray(original.material) ? original.material : [original.material],
             appearance.equipment.top.itemId,
-          );
+          ));
         }
         if (
           choice.part === 'body' &&
@@ -1670,22 +1690,23 @@ export function assemblePlayerModel(
           !choice.assetKey &&
           V1_CROPPED_BOTTOM_ITEMS.has(appearance.equipment.bottom.itemId)
         ) {
-          cropV1BottomGarmentGeometry(
+          const exposed = fitInBodySpace(clonedNode, original.matrixWorld, () => cropV1BottomGarmentGeometry(
             clonedNode,
             Array.isArray(original.material) ? original.material : [original.material],
             appearance.equipment.bottom.itemId,
-          );
+          ));
+          if (exposed) exposedLegs.push({ mesh: clonedNode, geometry: exposed });
         }
         if (
           choice.part === 'legs' &&
           !choice.assetKey &&
           V1_SHAPED_TROUSER_ITEMS.has(appearance.equipment.bottom.itemId)
         ) {
-          shapeV1TrouserGeometry(
+          fitInBodySpace(clonedNode, original.matrixWorld, () => shapeV1TrouserGeometry(
             clonedNode,
             Array.isArray(original.material) ? original.material : [original.material],
             appearance.equipment.bottom.itemId,
-          );
+          ));
         }
         if (choice.fabric !== 'plain' || choice.finish) fabricUVs(clonedNode.geometry, choice.part === 'feet');
         if (choice.assetKey) applyCuratedMacroShading(clonedNode.geometry, choice.assetKey, choice.finish as CuratedFinish | undefined);
@@ -1795,30 +1816,42 @@ export function assemblePlayerModel(
           const match = bones.get(bone.name); if (!match) throw new Error(`Incompatible character part: ${bone.name}`); return match;
         });
         clonedNode.bind(new T.Skeleton(boundBones, original.skeleton.boneInverses.map(matrix => matrix.clone())), original.bindMatrix.clone());
-        if (
-          choice.part === 'body' &&
-          !choice.assetKey &&
-          (
-            appearance.equipment.top.itemId === 'starter.top.long-sleeve' ||
-            appearance.equipment.top.itemId === 'starter.top.hoodie' ||
-            appearance.equipment.top.itemId === 'starter.top.zip-hoodie'
-          )
-        ) {
-          addV1FittedLongSleeves(
-            clonedNode,
-            Array.isArray(clonedNode.material) ? clonedNode.material : [clonedNode.material],
-            appearance.equipment.top.itemId,
-          );
-        }
         if (choice.part === 'head' && clonedNode.parent) {
           const overlay = createCorneaOverlay(clonedNode, appearance.body.frame, quality);
           if (overlay) corneaOverlays.push({ parent: clonedNode.parent, overlay });
         }
       });
+      for (const { mesh, geometry } of exposedLegs) {
+        // Preserve the lower-leg surface with its exact weights and hem
+        // intersections so changing trouser length never opens the body.
+        const material = new T.MeshStandardMaterial({ color: appearance.body.skin, roughness: skinRoughness(appearance) });
+        material.name = 'Skin_ExposedLegs';
+        const arms = new T.SkinnedMesh(geometry, upgradeSkinMaterial(material, appearance, quality));
+        arms.name = 'avatar-v1-exposed-skinned-legs';
+        arms.position.copy(mesh.position); arms.quaternion.copy(mesh.quaternion); arms.scale.copy(mesh.scale);
+        arms.bind(mesh.skeleton, mesh.bindMatrix.clone());
+        arms.castShadow = true; arms.receiveShadow = true;
+        if (mesh.parent) mesh.parent.add(arms);
+        else detachedOverlays.push(arms);
+      }
+      // Wait until all sibling primitives are dyed and rebound. GLTF separates
+      // skin and fabric into different meshes, so skin alone has no fabric material.
+      if (choice.part === 'body' && !choice.assetKey && presentation === 'stage' &&
+          ['starter.top.long-sleeve', 'starter.top.hoodie', 'starter.top.zip-hoodie'].includes(appearance.equipment.top.itemId)) {
+        const meshes: T.SkinnedMesh[] = [];
+        part.traverse(node => { if (node instanceof T.SkinnedMesh) meshes.push(node); });
+        const garment = meshes.flatMap(mesh => Array.isArray(mesh.material) ? mesh.material : [mesh.material])
+          .find(material => (material as T.MeshStandardMaterial).isMeshStandardMaterial && !/skin|eye|earring|metal|hair/i.test(material.name)) as T.MeshStandardMaterial | undefined;
+        for (const mesh of meshes) {
+          const donor = container.getObjectByName(mesh.name) ?? container;
+          donor.updateWorldMatrix(true, false);
+          addV1FittedLongSleeves(mesh, Array.isArray(mesh.material) ? mesh.material : [mesh.material], appearance.equipment.top.itemId, garment, donor.matrixWorld.getMaxScaleOnAxis());
+        }
+      }
       corneaOverlays.forEach(({ parent, overlay }) => parent.add(overlay));
       removeHair.forEach(disposeModel);
       const parent = container.parent?.name ? result.getObjectByName(container.parent.name) : result;
-      (parent ?? result).add(part);
+      (parent ?? result).add(part, ...detachedOverlays);
     }
   }
   if (proceduralStarterTop) {
@@ -1832,7 +1865,7 @@ export function assemblePlayerModel(
   const shortSleeveTop =
     presentation === 'stage' &&
     !curatedTop &&
-    (merchTopItemId === 'starter.top.casual' || V1_SKINNED_TEE_ITEMS.has(appearance.equipment.top.itemId));
+    (merchItem === 'starter.top.casual' || V1_SKINNED_TEE_ITEMS.has(appearance.equipment.top.itemId));
 
   if (topless || presentation === 'tattoo') {
     // The live avatar donor meshes are clothing-first, so this neutral skinned
@@ -1883,9 +1916,11 @@ export function assemblePlayerModel(
   if (presentation === 'stage') {
     if (!merchWearable) addStarterLogoTee(result, appearance, bones, richClothing);
     addBandMerchGraphic(result, appearance, bones, merchWearable);
-    addV1VNeckTrim(result, appearance, bones);
-    addV1HoodieDetails(result, appearance, bones);
-    addV1OuterwearFrontDetail(result, appearance, bones);
+    if (!curatedTop) {
+      addV1VNeckTrim(result, appearance, bones);
+      addV1HoodieDetails(result, appearance, bones);
+      addV1OuterwearFrontDetail(result, appearance, bones);
+    }
     addCuratedSkinDetails(result, bones, richClothing, quality);
   }
   addTattoos(result, tattoos, bones);

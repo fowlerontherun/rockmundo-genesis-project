@@ -78,6 +78,9 @@ export const CLOTHING_COLORS = [
   ['Black', '#20232b'], ['Chalk', '#eee8db'], ['Slate', '#657386'], ['Red', '#bd3548'],
   ['Rust', '#ad6241'], ['Gold', '#d8ad49'], ['Green', '#3d795b'], ['Teal', '#338b8d'],
   ['Blue', '#426baa'], ['Navy', '#283954'], ['Purple', '#8055a2'], ['Pink', '#d376a1'],
+  ['White', '#ffffff'], ['Graphite', '#44464e'], ['Burgundy', '#722f46'], ['Orange', '#ed7836'],
+  ['Lemon', '#f5df65'], ['Olive', '#727c42'], ['Mint', '#a5dfbf'], ['Sky', '#90c9eb'],
+  ['Cobalt', '#3159d6'], ['Lilac', '#ba9bd9'], ['Hot pink', '#ed4495'], ['Sand', '#cbb38b'],
 ] as const;
 export function equipmentItem(appearance: PlayerAppearance, slot: EquipmentSlot): StarterItem {
   return STARTER_ITEMS[slot].find(item => item.id === appearance.equipment[slot].itemId) ?? STARTER_ITEMS[slot][0];
@@ -193,6 +196,9 @@ const STARTER_VISUAL_STYLE_OVERRIDES: Partial<Record<string, Style>> = {
 
 export function equipmentStyle(appearance: PlayerAppearance, slot: EquipmentSlot): Style {
   const item = visualEquipmentItem(appearance, slot);
+  // The masculine casual donor wears knee-length shorts, not trousers.
+  if (slot === 'bottom' && appearance.body.frame === 'masculine') return 'suit';
+  if (slot === 'footwear' && /boots$/.test(item.id)) return 'punk';
   return STARTER_VISUAL_STYLE_OVERRIDES[item.id] ?? item.style;
 }
 export function modelFile(frame: PlayerAppearance['body']['frame'], style: Style) {

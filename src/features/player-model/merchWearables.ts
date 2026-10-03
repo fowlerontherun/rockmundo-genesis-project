@@ -27,7 +27,7 @@ export function merchWearableKind(productType: string | null | undefined): Merch
 
 export function merchWearableDonorItem(productType: string | null | undefined): string | null {
   const kind = merchWearableKind(productType);
-  if (kind === 'hoodie') return 'starter.top.hoodie';
+  if (kind === 'hoodie') return productType?.trim().toLowerCase() === 'zip hoodie' ? 'starter.top.zip-hoodie' : 'starter.top.hoodie';
   if (kind === 'long_sleeve' || kind === 'crewneck') return 'starter.top.long-sleeve';
   if (kind === 'tee') return 'starter.top.casual';
   return null;

@@ -302,7 +302,7 @@ describe('shipped modular stage models', () => {
         if (node instanceof T.SkinnedMesh && node.userData.avatarV1CroppedBottom) cropped += 1;
       });
       expect(cropped).toBe(0);
-      if (itemId === 'starter.bottom.punk') expect(equipmentStyle(appearance, 'bottom')).toBe('casual');
+      if (itemId === 'starter.bottom.punk') expect(equipmentStyle(appearance, 'bottom')).toBe(frame === 'masculine' ? 'suit' : 'casual');
       disposeModel(model);
     }
   });
@@ -782,6 +782,53 @@ describe('expanded starter wardrobe', () => {
         const bounds = new T.Box3().setFromObject(actor.root); expect(bounds.max.y).toBeLessThan(2.8); expect(bounds.min.y).toBeGreaterThan(-.25);
         disposeModel(actor.root);
       }
+    }
+  });
+});
+
+describe('visible garment fitting regressions', () => {
+  it.each(['masculine', 'feminine'] as const)('uses the merch silhouette and dye independently of the saved %s top', frame => {
+    for (const [product, sleeveName, detailName] of [
+      ['Premium Hoodie', 'avatar-v1-fitted-hoodie-sleeves', 'avatar-v1-hoodie-hood'],
+      ['Zip Hoodie', 'avatar-v1-fitted-zip-hoodie-sleeves', 'avatar-v1-zip-hoodie-zip'],
+      ['Long Sleeve Tee', 'avatar-v1-fitted-long-sleeves', null],
+      ['Graphic Tee', null, null],
+    ] as const) {
+      for (const savedTop of ['topless', 'stripe', 'zip-hoodie']) {
+        const appearance = defaultAppearance();
+        appearance.body = { ...appearance.body, frame, build: 1.15, breastSize: 1.35 };
+        appearance.equipment.top.itemId = `starter.top.${savedTop}`;
+        const before = structuredClone(appearance);
+        const model = assemblePlayerModel(library, appearance, [], [], 'balanced', 'stage', {
+          design_id: 'test-merch', band_id: 'band', design_name: 'Test', product_type: product, garment_color: '#ed4495',
+        });
+        expect(appearance).toEqual(before);
+        if (sleeveName) {
+          const sleeve = model.getObjectByName(sleeveName) as T.SkinnedMesh;
+          expect(sleeve).toBeTruthy();
+          expect((sleeve.material as T.MeshStandardMaterial).color.getHexString()).toBe('ed4495');
+        } else {
+          expect(model.getObjectByName('avatar-v1-fitted-zip-hoodie-sleeves')).toBeFalsy();
+          expect(model.getObjectByName('avatar-v1-hoodie-hood')).toBeFalsy();
+        }
+        if (detailName) expect(model.getObjectByName(detailName)).toBeTruthy();
+        expect(model.getObjectByName('avatar-v1-skin-underlay-torso')).toBeFalsy();
+        disposeModel(model);
+      }
+    }
+  });
+
+  it.each(['masculine', 'feminine'] as const)('keeps exposed %s legs present for shorts, underwear and saved shorts fallbacks', frame => {
+    for (const item of ['denim-shorts', 'cargo-shorts', 'athletic-shorts', 'boxer-briefs', 'briefs']) {
+      const appearance = defaultAppearance(); appearance.body.frame = frame;
+      appearance.equipment.bottom.itemId = `starter.bottom.${item}`;
+      const model = assemblePlayerModel(library, appearance);
+      expect(model.getObjectByName('avatar-v1-exposed-skinned-legs')).toBeTruthy();
+      const cropped: T.SkinnedMesh[] = [];
+      model.traverse(node => { if (node instanceof T.SkinnedMesh && node.userData.avatarV1CroppedBottom) cropped.push(node); });
+      expect(cropped.length).toBeGreaterThan(0);
+      expect(appearance.equipment.bottom.itemId).toBe(`starter.bottom.${item}`);
+      disposeModel(model);
     }
   });
 });
