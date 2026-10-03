@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { crowdMerchChance, fanWearsBandMerch, merchGarmentColor, merchWearableDonorItem, merchWearableKind } from './merchWearables';
+import { crowdMerchChance, fanWearsBandMerch, merchFrontElements, merchGarmentColor, merchHasRenderableFront, merchWearableDonorItem, merchWearableKind } from './merchWearables';
 
 describe('merch wearables', () => {
   it('maps Merch Studio apparel onto approved V1 donor silhouettes', () => {
@@ -19,6 +19,19 @@ describe('merch wearables', () => {
     const engaged = crowdMerchChance({ fanLoyalty: 80, bandFame: 70, merchPopularity: 90, onSale: true });
     expect(engaged).toBeGreaterThan(baseline);
     expect(engaged).toBeLessThanOrEqual(.72);
+  });
+
+  it('resolves layered front designs including text-only merch', () => {
+    const merch = { artwork_url: null, design_data: { areaElements: { front: [{ type: 'text' as const, text: 'WORLD TOUR', x: 50, y: 44 }] } } };
+    expect(merchFrontElements(merch)).toHaveLength(1);
+    expect(merchHasRenderableFront(merch)).toBe(true);
+    expect(merchHasRenderableFront({ artwork_url: null, design_data: { areaElements: { front: [] } } })).toBe(false);
+  });
+
+  it('falls back to legacy artwork when layered design data is absent', () => {
+    expect(merchFrontElements({ artwork_url: 'https://example.test/art.png', design_data: null })).toEqual([
+      { type: 'image', src: 'https://example.test/art.png', x: 50, y: 50, scale: 1, rotation: 0 },
+    ]);
   });
 
   it('assigns crowd merch deterministically for replay stability', () => {

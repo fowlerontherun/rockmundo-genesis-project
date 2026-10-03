@@ -23,7 +23,7 @@ import { applyAvatarSkinMacroShading } from './avatarSkinMacroShading';
 import { createCorneaOverlay, upgradeCuratedGarmentMaterial, upgradeSkinMaterial, upgradeStarterFabricMaterial } from './avatarPhysicalMaterials';
 import { buildProceduralGarment, type GarmentRigAnchor } from '@/features/clothing-preview/proceduralGarmentRenderer';
 import type { ClothingItem } from '@/hooks/useSkinStore';
-import type { ResolvedMerchWearable } from './merchWearables';
+import { merchFrontElements, merchHasRenderableFront, type ResolvedMerchWearable } from './merchWearables';
 
 export type ModelLibrary = Map<string, T.Object3D>;
 export type PlayerModelPresentation = 'stage' | 'tattoo';
@@ -694,24 +694,72 @@ function rockmundoWordmarkTexture() {
 }
 
 
+const merchTextureCache = new Map<string, T.Texture>();
+
+function merchCompositeTexture(merch: ResolvedMerchWearable): T.Texture | null {
+  if (typeof document === 'undefined') return null;
+  const elements = merchFrontElements(merch);
+  if (!elements.length) return null;
+  const key = merch.design_id + ':' + JSON.stringify(elements);
+  const cached = merchTextureCache.get(key);
+  if (cached) return cached;
+  const canvas = document.createElement('canvas'); canvas.width = canvas.height = 512;
+  const ctx = canvas.getContext('2d'); if (!ctx) return null;
+  const texture = new T.CanvasTexture(canvas); texture.colorSpace = T.SRGBColorSpace;
+  texture.name = `BandMerchComposite-${merch.design_id}`; texture.wrapS = texture.wrapT = T.ClampToEdgeWrapping;
+  merchTextureCache.set(key, texture);
+
+  const drawElement = (element: ReturnType<typeof merchFrontElements>[number], image?: HTMLImageElement) => {
+    const x = (Number(element.x ?? 50) / 100) * 512, y = (Number(element.y ?? 50) / 100) * 512;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(Number(element.rotation ?? 0) * Math.PI / 180);
+    ctx.scale(Number(element.scale ?? 1), Number(element.scale ?? 1));
+    if (image) {
+      const size = 180, ratio = Math.min(size / image.width, size / image.height);
+      ctx.drawImage(image, -image.width * ratio / 2, -image.height * ratio / 2, image.width * ratio, image.height * ratio);
+    } else {
+      const size = Math.max(10, Math.min(72, Number(element.fontSize ?? 24))) * 2;
+      ctx.fillStyle = typeof element.color === 'string' ? element.color : '#ffffff';
+      ctx.font = `900 ${size}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(String(element.text ?? '').toUpperCase(), 0, 0, 480);
+    }
+    ctx.restore();
+  };
+
+  const images = new Map<number, HTMLImageElement>();
+  const redraw = () => {
+    ctx.clearRect(0, 0, 512, 512);
+    elements.forEach((element, index) => {
+      if (element.type === 'image') {
+        const image = images.get(index); if (image) drawElement(element, image);
+      } else if (element.type === 'text') drawElement(element);
+    });
+    texture.needsUpdate = true;
+  };
+  redraw();
+  elements.forEach((element, index) => {
+    if (element.type !== 'image' || !element.src) return;
+    const image = new Image(); image.crossOrigin = 'anonymous';
+    image.onload = () => { images.set(index, image); redraw(); };
+    image.onerror = () => redraw();
+    image.src = element.src;
+  });
+  return texture;
+}
+
 function addBandMerchGraphic(root: T.Object3D, appearance: PlayerAppearance, bones: Map<string, T.Bone>, merch: ResolvedMerchWearable | null) {
-  if (!merch || !merch.artwork_url) return;
+  if (!merch || !merchHasRenderableFront(merch)) return;
   const chest = findPlayerBone(bones, ['Spine2','Spine.002','Chest','UpperChest']) ?? findPlayerBone(bones, ['Spine1','Spine.001']);
   if (!chest) return;
   const attachment = findFrontSurfaceAttachment(root, 'body', chest.getWorldPosition(new T.Vector3()), appearance.body.frame === 'feminine' ? .018 : .025);
   if (!attachment) return;
-
-  const texture = new T.TextureLoader().load(merch.artwork_url);
-  texture.colorSpace = T.SRGBColorSpace;
-  texture.wrapS = texture.wrapT = T.ClampToEdgeWrapping;
+  const texture = merchCompositeTexture(merch); if (!texture) return;
   const material = new T.MeshStandardMaterial({
     map: texture, transparent: true, alphaTest: .08, roughness: .84, metalness: 0,
     side: T.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
   });
   material.name = 'BandMerchPrint';
   const mark = new T.Mesh(curvedGraphicGeometry(appearance.body.frame === 'feminine' ? .28 : .31, .30, .003), material);
-  mark.name = `avatar-band-merch-${merch.design_id}`;
-  mark.renderOrder = 4;
+  mark.name = `avatar-band-merch-${merch.design_id}`; mark.renderOrder = 4;
   attachSurfaceGraphic(root, chest, mark, attachment, .0005);
 }
 
