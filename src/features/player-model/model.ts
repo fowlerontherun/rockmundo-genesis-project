@@ -1447,6 +1447,8 @@ export function assemblePlayerModel(
   };
 
   const curatedTop = presentation === 'tattoo' ? undefined : curatedDonorForSlot(richClothing, 'top');
+  const merchTopItemId = presentation === 'stage' && merchWearable ? (merchWearable.product_type.toLowerCase().includes('hoodie') ? 'starter.top.hoodie' : merchWearable.product_type.toLowerCase().includes('long sleeve') || merchWearable.product_type.toLowerCase().includes('crewneck') ? 'starter.top.long-sleeve' : 'starter.top.casual') : null;
+  const merchTopStyle = merchTopItemId ? equipmentStyle({ ...appearance, equipment: { ...appearance.equipment, top: { ...appearance.equipment.top, itemId: merchTopItemId } } }, 'top') : null;
   const curatedBottom = presentation === 'tattoo' ? undefined : curatedDonorForSlot(richClothing, 'bottom');
   const curatedFootwear = presentation === 'tattoo' ? undefined : curatedDonorForSlot(richClothing, 'footwear');
   const topless = presentation === 'stage' && appearance.equipment.top.itemId === 'starter.top.topless' && !curatedTop;
@@ -1460,8 +1462,8 @@ export function assemblePlayerModel(
     { part: 'head', style: headModelStyle(appearance), dye: appearance.head.hair, fabric: 'plain' as const },
     {
       part: 'body',
-      style: curatedTop?.source.style ?? equipmentStyle(appearance, 'top'),
-      dye: curatedTop?.source.color ?? appearance.equipment.top.color,
+      style: merchTopStyle ?? curatedTop?.source.style ?? equipmentStyle(appearance, 'top'),
+      dye: merchWearable?.garment_color ?? curatedTop?.source.color ?? appearance.equipment.top.color,
       secondaryColor: curatedTop?.source.secondaryColor,
       fabric: curatedTop?.source.fabric ?? visualEquipmentItem(appearance, 'top').fabric,
       finish: curatedTop?.source.finish,
