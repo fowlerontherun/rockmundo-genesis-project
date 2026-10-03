@@ -68,6 +68,7 @@ export function archivedPlayerModels(source: TotpBroadcastReplay): GigPlayerMode
   const appearances: GigPlayerModelsData["appearances"] = {};
   const richClothing: GigPlayerModelsData["richClothing"] = {};
   const tattoos: NonNullable<GigPlayerModelsData["tattoos"]> = {};
+  const merchWearables: NonNullable<GigPlayerModelsData["merchWearables"]> = {};
   let frozen = 0;
   for (const member of source.payload.band.members) {
     const profileId = member.profile_id ? String(member.profile_id) : "";
@@ -90,9 +91,10 @@ export function archivedPlayerModels(source: TotpBroadcastReplay): GigPlayerMode
       if (tattoo) frozenTattoos.push(tattoo);
     }
     tattoos[profileId] = frozenTattoos;
+    if (snapshot.merchWearable?.design_id) merchWearables[profileId] = snapshot.merchWearable;
     frozen++;
   }
-  return frozen > 0 ? { appearances, richClothing, tattoos } : null;
+  return frozen > 0 ? { appearances, richClothing, tattoos, merchWearables } : null;
 }
 
 export function archivedReplay(source: TotpBroadcastReplay): GigViewerReplay {
