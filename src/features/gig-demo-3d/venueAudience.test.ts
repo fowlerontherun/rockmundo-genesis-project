@@ -71,16 +71,22 @@ describe('dense anatomical audiences', () => {
         expect(isTvStudioAudienceBlocked(5.4, 2.05, club)).toBe(false);
     });
 
-    it('uses merch colour on a bounded distant-crowd variant without changing geometry budgets', () => {
-        const p = resolveVenueProfile({ type: 'stadium' }), plainRoot = new T.Group(), merchRoot = new T.Group();
-        const plain = buildVenueAudience(plainRoot, p, 321, []), merch = buildVenueAudience(merchRoot, p, 321, [], '#12ab34');
-        const plainMesh = plain.children[0] as T.InstancedMesh, merchMesh = merch.children[0] as T.InstancedMesh;
-        expect(merchMesh.count).toBe(plainMesh.count);
-        expect(merch.userData.merchColor).toBe('#12ab34');
-        const plainColours = plainMesh.geometry.getAttribute('color'), merchColours = merchMesh.geometry.getAttribute('color');
-        expect(Array.from(merchColours.array)).not.toEqual(Array.from(plainColours.array));
-        expect(merch.children.length).toBe(plain.children.length);
-        disposeModel(plainRoot); disposeModel(merchRoot);
+    it('assigns distant merch deterministically without changing the audience budget', () => {
+        const p = resolveVenueProfile({ type: 'stadium' }), aRoot = new T.Group(), bRoot = new T.Group(), zeroRoot = new T.Group();
+        const a = buildVenueAudience(aRoot, p, 321, [], '#12ab34', .35);
+        const b = buildVenueAudience(bRoot, p, 321, [], '#12ab34', .35);
+        const zero = buildVenueAudience(zeroRoot, p, 321, [], '#12ab34', 0);
+        const ranks = (root: T.Group, merch: boolean) => root.children
+          .filter(child => child.name.endsWith(merch ? '-merch' : '-regular'))
+          .flatMap(child => child.userData.ranks as number[]).sort((x, y) => x - y);
+        const total = (root: T.Group) => root.children.reduce((sum, child) => sum + (child.userData.maxCount ?? 0), 0);
+        expect(ranks(a, true).length).toBeGreaterThan(0);
+        expect(ranks(a, true).length).toBeLessThan(total(a));
+        expect(ranks(a, true)).toEqual(ranks(b, true));
+        expect(ranks(zero, true)).toEqual([]);
+        expect(total(a)).toBe(total(zero));
+        expect(total(a)).toBeLessThanOrEqual(AUDIENCE_BUDGET);
+        disposeModel(aRoot); disposeModel(bRoot); disposeModel(zeroRoot);
     });
 
     it('renders thousands of complete humans at full attendance with no quality-dependent holes and never invents fans', () => {
