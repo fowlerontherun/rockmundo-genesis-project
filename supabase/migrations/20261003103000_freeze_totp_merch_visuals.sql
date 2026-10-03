@@ -65,7 +65,7 @@ begin
       from public.band_members bm
       join public.player_merch_wearables pmw on pmw.profile_id=bm.profile_id
       join public.tshirt_designs td on td.id=pmw.design_id and td.band_id=v_band_id
-      where bm.band_id=v_band_id and bm.status='active'
+      where bm.band_id=v_band_id and bm.member_status='active'
       order by td.id,pmw.equipped_at desc
     ), products as (
       select e.design_id,pm.id merchandise_id,
