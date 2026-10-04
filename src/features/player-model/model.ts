@@ -1085,7 +1085,8 @@ function applyV1HandProportionPolish(bones: Map<string, T.Bone>) {
   };
   for (const side of ['L', 'R'] as const) {
     for (const digit of ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky']) {
-      const proximal = joint(digit, 1, side);
+      // Masculine donors start at joint 2; feminine donors include joint 1.
+      const proximal = joint(digit, 1, side) ?? joint(digit, 2, side);
       if (!proximal) continue;
       proximal.scale.multiplyScalar(baseScale[digit]);
       proximal.userData.avatarV1FingerScale = baseScale[digit];
@@ -1739,7 +1740,7 @@ export function assemblePlayerModel(
             appearance.equipment.bottom.itemId,
           ));
         }
-        if (choice.fabric !== 'plain' || choice.finish) fabricUVs(clonedNode.geometry, choice.part === 'feet');
+        if (choice.fabric !== 'plain' || choice.finish) fabricUVs(clonedNode.geometry, choice.part === 'feet', original.matrixWorld);
         if (choice.assetKey) applyCuratedMacroShading(clonedNode.geometry, choice.assetKey, choice.finish as CuratedFinish | undefined);
         if (choice.part === 'head' || (choice.part === 'body' && !choice.assetKey)) {
           applyAvatarSkinMacroShading(clonedNode.geometry, choice.part, appearance, quality);
