@@ -5,7 +5,7 @@ import { useGameData } from "@/hooks/useGameData";
 import { getUtcWeekStart, formatUtcDate } from "@/utils/week";
 import { toast } from "@/hooks/use-toast";
 
-const TICKET_COST = 500;
+const TICKET_COST = 2;
 
 export function useCurrentDraw() {
   const weekStart = formatUtcDate(getUtcWeekStart(new Date(), 1));
@@ -103,8 +103,8 @@ export function useBuyTicket() {
     }) => {
       if (!profileId || !profile?.id) throw new Error("Not authenticated");
       if ((profile as any).cash < TICKET_COST) throw new Error("Not enough cash");
-      if (selectedNumbers.length !== 7) throw new Error("Select 7 numbers");
-      if (bonusNumber < 1 || bonusNumber > 10) throw new Error("Invalid bonus number");
+      if (selectedNumbers.length !== 5) throw new Error("Select 5 numbers");
+      if (selectedNumbers.some((n) => n < 1 || n > 30) || new Set(selectedNumbers).size !== 5) throw new Error("Select 5 unique numbers from 1 to 30");
 
       // Check ticket count for this draw
       const { count } = await supabase
