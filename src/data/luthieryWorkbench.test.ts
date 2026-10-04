@@ -81,14 +81,14 @@ describe("Luthiery workbench rules", () => {
     const warAxe = LUTHIERY_SHAPES.find((shape) => shape.id === "war-axe");
     expect(warAxe).toBeDefined();
 
-    const basicOnly = [skill("luthiery_basic_technical", 250)];
+    const basicOnly = [skill("luthiery_basic_technical", 20)];
     const professionalLow = [
-      skill("luthiery_basic_technical", 250),
-      skill("luthiery_professional_technical", 399),
+      skill("luthiery_basic_technical", 20),
+      skill("luthiery_professional_technical", 11),
     ];
     const professionalReady = [
-      skill("luthiery_basic_technical", 250),
-      skill("luthiery_professional_technical", 400),
+      skill("luthiery_basic_technical", 20),
+      skill("luthiery_professional_technical", 12),
     ];
 
     expect(isLuthieryRequirementMet(warAxe!.requirement, basicOnly)).toBe(false);
@@ -113,7 +113,7 @@ describe("Luthiery workbench rules", () => {
     const starter = calculateProjectedLuthieryOutcome(
       DEFAULT_LUTHIERY_SELECTION,
       catalog,
-      [skill("luthiery_basic_technical", 40)],
+      [skill("luthiery_basic_technical", 4)],
     );
 
     const premiumSelection: LuthieryBuildSelection = {
@@ -132,9 +132,9 @@ describe("Luthiery workbench rules", () => {
       },
     };
     const premium = calculateProjectedLuthieryOutcome(premiumSelection, catalog, [
-      skill("luthiery_basic_technical", 250),
-      skill("luthiery_professional_technical", 650),
-      skill("luthiery_mastery_technical", 650),
+      skill("luthiery_basic_technical", 20),
+      skill("luthiery_professional_technical", 20),
+      skill("luthiery_mastery_technical", 20),
     ]);
 
     expect(premium.materialQuality).toBeGreaterThan(starter.materialQuality);
@@ -155,7 +155,7 @@ describe("Luthiery workbench rules", () => {
 
   it("blocks review when stock is short and accepts a fully stocked named build", () => {
     const selection = { ...DEFAULT_LUTHIERY_SELECTION, instrumentName: "Road One" };
-    const skills = [skill("luthiery_basic_technical", 250)];
+    const skills = [skill("luthiery_basic_technical", 20)];
     const requirements = getLuthieryBuildRequirements(selection, catalog).requirements;
     const stocked = requirements.map((entry, index) => ({
       id: `stock-${index}`,
