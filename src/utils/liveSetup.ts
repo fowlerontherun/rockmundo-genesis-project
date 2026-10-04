@@ -91,6 +91,20 @@ export interface BandEquipmentLiveSetupSummary {
   selectedIds: string[];
 }
 
+export interface MemberInstrumentLiveSetupItem {
+  quality_score?: number | null;
+  condition_score?: number | null;
+  reliability_score?: number | null;
+  is_primary?: boolean | null;
+  is_spare?: boolean | null;
+}
+
+export interface CombinedEquipmentLiveSetupSummary extends BandEquipmentLiveSetupSummary {
+  bandEquipmentScore: number;
+  memberInstrumentScore: number | null;
+  memberInstrumentCount: number;
+}
+
 const clamp = (value: number, min = 0, max = 100) =>
   Math.max(min, Math.min(max, Number.isFinite(value) ? value : 0));
 
@@ -200,6 +214,41 @@ export function resolveBandEquipmentLiveSetup(
     selectedCount: chosen.length,
     ownedCount: equipment.length,
     selectedIds: chosen.map((item) => item.id).filter((id): id is string => Boolean(id)),
+  };
+}
+
+export function getMemberInstrumentEffectiveScore(item: MemberInstrumentLiveSetupItem): number {
+  const quality = clamp(Number(item.quality_score ?? 0));
+  const condition = clamp(Number(item.condition_score ?? 100));
+  const snapshotted = Number(item.reliability_score);
+  if (Number.isFinite(snapshotted)) return Math.round(clamp(snapshotted));
+  return Math.round(quality * 0.45 + condition * 0.55);
+}
+
+/**
+ * Personal instruments affect preparation reliability, but their craft stat
+ * boosts are intentionally excluded here. Those boosts are applied once in
+ * the member-role performance path, preventing double counting.
+ */
+export function combineBandAndMemberEquipmentLiveSetup(
+  band: BandEquipmentLiveSetupSummary,
+  memberItems: MemberInstrumentLiveSetupItem[] | null | undefined,
+): CombinedEquipmentLiveSetupSummary {
+  const selected = (memberItems ?? []).filter(
+    (item) => item.is_primary !== false && !item.is_spare,
+  );
+  const memberInstrumentScore = selected.length
+    ? Math.round(selected.reduce((sum, item) => sum + getMemberInstrumentEffectiveScore(item), 0) / selected.length)
+    : null;
+  const score = memberInstrumentScore == null
+    ? band.score
+    : Math.round(clamp(band.score * 0.75 + memberInstrumentScore * 0.25));
+  return {
+    ...band,
+    score,
+    bandEquipmentScore: band.score,
+    memberInstrumentScore,
+    memberInstrumentCount: selected.length,
   };
 }
 
