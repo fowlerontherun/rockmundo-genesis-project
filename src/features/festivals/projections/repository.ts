@@ -370,3 +370,70 @@ export async function sendFestivalEditionArtistOffer(input: {
   }
   return parseFestivalArtistActionResult(data);
 }
+
+
+export async function withdrawFestivalEditionArtistInvitation(input: {
+  festivalCompanyId: string;
+  festivalEditionId: string;
+  invitationId: string;
+  expectedVersion: number;
+  idempotencyKey: string;
+}): Promise<FestivalArtistActionResult> {
+  assertIdentity(input.festivalCompanyId, input.festivalEditionId);
+  if (!UUID.test(input.invitationId) || !UUID.test(input.idempotencyKey)) {
+    throw new Error("festival_artist_invitation_invalid");
+  }
+  const { data, error } = await projectionRpc(
+    "withdraw_festival_edition_artist_invitation",
+    {
+      p_festival_company_id: input.festivalCompanyId,
+      p_festival_edition_id: input.festivalEditionId,
+      p_invitation_id: input.invitationId,
+      p_expected_version: input.expectedVersion,
+      p_idempotency_key: input.idempotencyKey,
+    },
+  );
+  if (error) {
+    throw normalize(error, [
+      "festival_artist_action_forbidden",
+      "festival_artist_programme_incomplete",
+      "festival_artist_invitation_invalid",
+      "festival_artist_invitation_stale",
+      "festival_artist_invitation_invalid_transition",
+    ]);
+  }
+  return parseFestivalArtistActionResult(data);
+}
+
+export async function withdrawFestivalEditionArtistOffer(input: {
+  festivalCompanyId: string;
+  festivalEditionId: string;
+  offerId: string;
+  expectedVersion: number;
+  idempotencyKey: string;
+}): Promise<FestivalArtistActionResult> {
+  assertIdentity(input.festivalCompanyId, input.festivalEditionId);
+  if (!UUID.test(input.offerId) || !UUID.test(input.idempotencyKey)) {
+    throw new Error("festival_artist_offer_invalid");
+  }
+  const { data, error } = await projectionRpc(
+    "withdraw_festival_edition_artist_offer",
+    {
+      p_festival_company_id: input.festivalCompanyId,
+      p_festival_edition_id: input.festivalEditionId,
+      p_offer_id: input.offerId,
+      p_expected_version: input.expectedVersion,
+      p_idempotency_key: input.idempotencyKey,
+    },
+  );
+  if (error) {
+    throw normalize(error, [
+      "festival_artist_action_forbidden",
+      "festival_artist_programme_incomplete",
+      "festival_artist_offer_invalid",
+      "festival_artist_offer_stale",
+      "festival_artist_offer_invalid_transition",
+    ]);
+  }
+  return parseFestivalArtistActionResult(data);
+}

@@ -5,6 +5,8 @@ import {
   searchFestivalEditionArtistCandidates,
   sendFestivalEditionArtistInvitation,
   sendFestivalEditionArtistOffer,
+  withdrawFestivalEditionArtistInvitation,
+  withdrawFestivalEditionArtistOffer,
 } from "@/features/festivals/projections/repository";
 
 export const festivalArtistOpportunitiesKey = [
@@ -79,6 +81,8 @@ const editionFactories = {
   sendInvitation: sendFestivalEditionArtistInvitation,
   createOffer: createFestivalEditionArtistOffer,
   sendOffer: sendFestivalEditionArtistOffer,
+  withdrawInvitation: withdrawFestivalEditionArtistInvitation,
+  withdrawOffer: withdrawFestivalEditionArtistOffer,
 };
 
 export const useFestivalEditionArtistAction = (
