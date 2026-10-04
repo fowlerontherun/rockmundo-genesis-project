@@ -14,6 +14,7 @@ import type { CrowdTuningOptions } from '../engine/CrowdTuning';
 import type { TotpStageKey } from '@/features/top-of-the-pops/broadcastProfile';
 import type { ResolvedMerchWearable } from '@/features/player-model/merchWearables';
 import type { ResolvedInstrumentSkinVisual } from '@/features/instrument-skins/instrumentSkin';
+import type { LuthieryInstrumentVisual } from '@/features/luthiery/luthieryInstrument';
 
 const clamp = (n: number, min = 0, max = 1) => Math.max(min, Math.min(max, Number.isFinite(n) ? n : min));
 const roleMap: Record<PresentationRole, StageRole> = { vocalist: 'vocals', backing_vocals: 'vocals', lead_guitar: 'guitar', rhythm_guitar: 'guitar', guitar: 'guitar', bass: 'bass', drums: 'drums', keyboard: 'keyboard', piano: 'keyboard', dj: 'dj', electronic: 'dj', percussion: 'percussion', strings: 'strings', brass: 'brass', woodwind: 'woodwind', other: 'other', unknown: 'other' };
@@ -350,6 +351,7 @@ export function concertOptions(
   tattoos: Record<string, ResolvedTattooVisual[]> = {},
   instrumentSkins: Record<string, ResolvedInstrumentSkinVisual[]> = {},
   merchWearables: Record<string, ResolvedMerchWearable> = {},
+  luthieryInstruments: Record<string, LuthieryInstrumentVisual> = {},
 ): ConcertOptions {
   const totp = presentationMode === 'totp';
   const seedSource = totp ? `totp:${replay.simulationSeed}` : String(experience?.gig.venue.id ?? replay.simulationSeed);
@@ -395,6 +397,7 @@ export function concertOptions(
         richClothing: richClothing[profileId] ?? [],
         tattoos: tattoos[profileId] ?? [],
         instrumentSkin: instrumentSkins[profileId]?.find(skin => skin.instrumentId === assignment.instrument) ?? null,
+        luthieryInstrument: luthieryInstruments[profileId] ?? null,
         merchWearable: merchWearables[profileId] ?? null,
       };
     }),
