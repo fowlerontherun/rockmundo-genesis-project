@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  getLuthieryPerformanceBonusPercent,
   getPersonalGearFitLabel,
   getPersonalGearRoleBonusPercent,
   personalGearMatchesRole,
@@ -27,6 +28,29 @@ describe("personal gear role fit", () => {
         "Lead Guitar",
       ),
     ).toBe(25);
+  });
+
+  it("converts crafted Luthiery stats to a bounded bonus exactly once", () => {
+    const boosts = {
+      luthiery_tone: 100,
+      luthiery_sustain: 100,
+      luthiery_stability: 100,
+      luthiery_output: 100,
+      luthiery_stage_presence: 100,
+      luthiery_quality: 100,
+    };
+    expect(getLuthieryPerformanceBonusPercent(boosts)).toBe(8);
+    expect(
+      getPersonalGearRoleBonusPercent(
+        {
+          category: "guitar",
+          subcategory: "custom_luthiery",
+          rarity: "rare",
+          stat_boosts: boosts,
+        },
+        "Lead Guitar",
+      ),
+    ).toBe(26);
   });
 
   it("does not advertise a performance bonus when the item does not fit the role", () => {
