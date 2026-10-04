@@ -25,6 +25,7 @@ export interface LuthieryShop {
   cancelled_listings: number;
   gross_sales: number;
   is_open: boolean;
+  updated_at?: string;
   city?: LuthieryShopCity | null;
 }
 
