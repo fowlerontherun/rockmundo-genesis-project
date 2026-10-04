@@ -29,7 +29,7 @@ import {
   type LuthieryPartSlot,
   type LuthieryProjectedStats,
 } from "@/data/luthieryWorkbench";
-import type { CraftingMaterial, PlayerCraftingMaterial } from "@/hooks/useCraftingSystem";
+import type { CraftingMaterial, LuthieryCraftResult, PlayerCraftingMaterial } from "@/hooks/useCraftingSystem";
 import { useSkillSystem } from "@/hooks/useSkillSystem";
 import { LuthieryInstrumentPreview } from "@/components/crafting/LuthieryInstrumentPreview";
 import { LuthieryBuildReviewDialog } from "@/components/crafting/LuthieryBuildReviewDialog";
@@ -37,7 +37,14 @@ import { LuthieryBuildReviewDialog } from "@/components/crafting/LuthieryBuildRe
 interface LuthieryWorkbenchProps {
   materialsCatalog: CraftingMaterial[];
   playerMaterials: PlayerCraftingMaterial[];
+  isCrafting?: boolean;
+  onCraft?: (selection: LuthieryBuildSelection, idempotencyKey: string) => Promise<LuthieryCraftResult>;
+  onCrafted?: (result: LuthieryCraftResult) => void;
 }
+
+const createCraftRequestKey = () =>
+  globalThis.crypto?.randomUUID?.() ??
+  `luthiery-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 const STAT_LABELS: Array<[keyof LuthieryProjectedStats, string]> = [
   ["tone", "Tone"],
@@ -59,6 +66,9 @@ const qualityTone = (quality: number) => {
 export const LuthieryWorkbench = ({
   materialsCatalog,
   playerMaterials,
+  isCrafting = false,
+  onCraft,
+  onCrafted,
 }: LuthieryWorkbenchProps) => {
   const { progress } = useSkillSystem();
   const [selection, setSelection] = useState<LuthieryBuildSelection>(DEFAULT_LUTHIERY_SELECTION);
@@ -66,6 +76,8 @@ export const LuthieryWorkbench = ({
   const [reviewOpen, setReviewOpen] = useState(false);
   const [confirmedSpec, setConfirmedSpec] = useState<LuthieryBuildPreviewSpec | null>(null);
   const [confirmedFingerprint, setConfirmedFingerprint] = useState<string | null>(null);
+  const [confirmedCraftKey, setConfirmedCraftKey] = useState<string | null>(null);
+  const [craftedFingerprint, setCraftedFingerprint] = useState<string | null>(null);
 
   const luthieryProgress = useMemo(() => getLuthieryProgress(progress), [progress]);
   const shape = useMemo(() => getShapeForSelection(selection), [selection]);
@@ -76,6 +88,19 @@ export const LuthieryWorkbench = ({
   const quality = getQualityLabel(outcome.quality);
   const selectionFingerprint = JSON.stringify(selection);
   const confirmedCurrent = confirmedFingerprint === selectionFingerprint && confirmedSpec !== null;
+  const craftedCurrent = craftedFingerprint === selectionFingerprint;
+
+  const handleCraft = async () => {
+    if (!onCraft || !confirmedCurrent || !confirmedCraftKey || craftedCurrent || isCrafting) return;
+    try {
+      const result = await onCraft(selection, confirmedCraftKey);
+      setCraftedFingerprint(selectionFingerprint);
+      onCrafted?.(result);
+    } catch {
+      // The mutation owns player-facing error feedback; keep the confirmed request key
+      // so a network retry remains idempotent.
+    }
+  };
 
   const ownedQuantity = (material: CraftingMaterial | undefined) => {
     if (!material) return 0;
@@ -531,7 +556,7 @@ export const LuthieryWorkbench = ({
               ))}
 
               <p className="rounded-md border border-border/60 bg-background/70 p-2 text-[11px] leading-relaxed text-muted-foreground">
-                Preview estimate only. Phase 3 does not consume materials or mint equipment. Final item creation remains server-authoritative so quality and boosts cannot be chosen by the browser.
+                Preview estimate only. The final quality roll, boosts, inventory consumption and equipment creation are resolved by the server when you craft.
               </p>
 
               {confirmedCurrent && (
@@ -541,14 +566,26 @@ export const LuthieryWorkbench = ({
                     Design confirmed: {confirmedSpec?.instrumentName}
                   </p>
                   <p className="mt-1 text-[10px] text-muted-foreground">
-                    This confirms the reviewed Phase 3 design only; no materials have been consumed.
+                    {craftedCurrent
+                      ? "This exact design has been crafted and added to this character's equipment."
+                      : "No materials are consumed until you press Craft instrument below."}
                   </p>
                 </div>
               )}
 
-              <Button type="button" className="w-full" onClick={() => setReviewOpen(true)}>
+              <Button type="button" className="w-full" variant={confirmedCurrent ? "outline" : "default"} onClick={() => setReviewOpen(true)}>
                 Review build
               </Button>
+              {confirmedCurrent && onCraft && (
+                <Button
+                  type="button"
+                  className="w-full"
+                  disabled={isCrafting || craftedCurrent}
+                  onClick={handleCraft}
+                >
+                  {craftedCurrent ? "Instrument crafted" : isCrafting ? "Crafting instrument..." : "Craft instrument"}
+                </Button>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -564,6 +601,8 @@ export const LuthieryWorkbench = ({
         onConfirm={(spec) => {
           setConfirmedSpec(spec);
           setConfirmedFingerprint(selectionFingerprint);
+          setConfirmedCraftKey(createCraftRequestKey());
+          setCraftedFingerprint(null);
         }}
       />
     </div>
