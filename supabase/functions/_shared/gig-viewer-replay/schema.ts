@@ -1,5 +1,5 @@
-import { GIG_EVENT_SCHEMA_VERSION, GIG_REPLAY_MAX_EVENTS, GIG_REPLAY_MAX_MESSAGE_PARAM_LENGTH, GIG_REPLAY_STATUSES, GIG_VIEWER_EVENT_TYPES, GIG_VIEWER_PHASES, GIG_VIEWER_VERSION } from "./constants";
-import type { GigViewerEvent, GigViewerEventType, GigVisualPayload, GigViewerReplay } from "./types";
+import { GIG_EVENT_SCHEMA_VERSION, GIG_REPLAY_MAX_EVENTS, GIG_REPLAY_MAX_MESSAGE_PARAM_LENGTH, GIG_REPLAY_STATUSES, GIG_VIEWER_EVENT_TYPES, GIG_VIEWER_PHASES, GIG_VIEWER_VERSION } from "./constants.ts";
+import type { GigViewerEvent, GigViewerEventType, GigVisualPayload, GigViewerReplay } from "./types.ts";
 
 export interface GigReplayValidationResult { valid: boolean; errors: string[] }
 
