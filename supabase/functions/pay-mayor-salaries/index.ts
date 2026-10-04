@@ -52,44 +52,16 @@ Deno.serve(async (req) => {
 
     for (const mayor of mayors ?? []) {
       try {
-        // Skip if already paid this week
-        const { data: existing } = await supabase
-          .from("mayor_salary_payments")
-          .select("id")
-          .eq("mayor_id", mayor.id)
-          .eq("week_of", weekOf)
-          .maybeSingle();
-        if (existing) {
+        const { data: wasPaid, error: payErr } = await supabase.rpc("pay_mayor_salary_atomic", {
+          p_mayor_id: mayor.id,
+          p_week_of: weekOf,
+          p_amount: weeklySalary,
+        });
+        if (payErr) throw payErr;
+        if (!wasPaid) {
           skipped++;
           continue;
         }
-
-        // Insert audit row + credit profile cash
-        const { error: insErr } = await supabase
-          .from("mayor_salary_payments")
-          .insert({
-            mayor_id: mayor.id,
-            profile_id: mayor.profile_id,
-            city_id: mayor.city_id,
-            amount: weeklySalary,
-            week_of: weekOf,
-          });
-        if (insErr) throw insErr;
-
-        // Credit player cash (cents stored in profiles.cash as integer cents
-        // is not standard here — we use profiles.cash in dollars per existing
-        // schema, so divide by 100). If the column is in cents, adjust.
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("cash")
-          .eq("id", mayor.profile_id)
-          .maybeSingle();
-        const currentCash = Number(profile?.cash ?? 0);
-        const dollars = weeklySalary / 100;
-        await supabase
-          .from("profiles")
-          .update({ cash: currentCash + dollars })
-          .eq("id", mayor.profile_id);
 
         paid++;
       } catch (e) {
