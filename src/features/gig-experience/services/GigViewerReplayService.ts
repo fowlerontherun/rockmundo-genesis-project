@@ -5,6 +5,7 @@ import { isSupportedReplayVersion, validateGigViewerReplay } from "../events/sch
 import type { GigReplayStatus, GigViewerReplay, GigViewerReplayLoadState } from "../events/types";
 import { normalizeCrowdTuning } from "../viewer/engine/CrowdTuning";
 import logger from "@/lib/logger";
+import { normalizeReplayLuthieryInstrument } from "@/features/luthiery/luthieryInstrument";
 import {
   createGigExperienceLoadError,
   isGigSchemaCompatibilityError,
@@ -16,6 +17,7 @@ type ReplayPayload = {
   crowdTuning?: unknown;
   crowdTuningRevision?: unknown;
   commerce?: unknown;
+  luthieryInstruments?: unknown;
 };
 type ReplayRow = { id: string; gig_id: string; gig_outcome_id: string; viewer_version: number; event_schema_version: number; simulation_seed: string; duration_ms: number; event_payload: ReplayPayload | unknown[]; generated_at: string; generation_status: GigReplayStatus; checksum: string | null };
 export interface GigViewerReplayResult { state: GigViewerReplayLoadState; replay: GigViewerReplay | null; reason?: string }
@@ -61,6 +63,15 @@ export async function getGigViewerReplay(gigId: string): Promise<GigViewerReplay
   const events = Array.isArray(row.event_payload) ? row.event_payload : payload?.events;
   const revision = Number(payload?.crowdTuningRevision);
   const commerce = normalizeGigReplayCommerceSnapshot(payload?.commerce);
+  const luthieryInstruments = (() => {
+    if (!payload?.luthieryInstruments || typeof payload.luthieryInstruments !== "object" || Array.isArray(payload.luthieryInstruments)) return null;
+    const resolved: NonNullable<GigViewerReplay["luthieryInstruments"]> = {};
+    for (const [profileId, raw] of Object.entries(payload.luthieryInstruments as Record<string, unknown>)) {
+      const visual = normalizeReplayLuthieryInstrument(raw);
+      if (visual) resolved[profileId] = visual;
+    }
+    return Object.keys(resolved).length ? resolved : null;
+  })();
   if (payload?.commerce != null && !commerce) {
     logGigExperienceFallback(
       gigId,
@@ -86,6 +97,7 @@ export async function getGigViewerReplay(gigId: string): Promise<GigViewerReplay
     crowdTuning: payload?.crowdTuning ? normalizeCrowdTuning(payload.crowdTuning as any) : null,
     crowdTuningRevision: Number.isFinite(revision) && revision > 0 ? revision : null,
     commerce,
+    luthieryInstruments,
   };
   const validation = validateGigViewerReplay(replay);
   if (!validation.valid) {
