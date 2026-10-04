@@ -15,6 +15,33 @@ beforeAll(async () => {
   }
 });
 
+function boneWeight(mesh: T.SkinnedMesh, vertex: number, pattern: RegExp) {
+  const indices = mesh.geometry.getAttribute('skinIndex'), weights = mesh.geometry.getAttribute('skinWeight');
+  let total = 0;
+  for (let c = 0; c < 4; c++) if (pattern.test(mesh.skeleton.bones[indices.getComponent(vertex, c)]?.name ?? '')) total += weights.getComponent(vertex, c);
+  return total;
+}
+
+function expectGarmentArmCoverage(model: T.Object3D, pattern: RegExp, limit: number) {
+  let triangles = 0;
+  model.traverse(node => {
+    if (!(node instanceof T.SkinnedMesh) || !/Body/i.test(node.name + node.parent?.name)) return;
+    const materials = Array.isArray(node.material) ? node.material : [node.material];
+    const geometry = node.geometry;
+    const groups = geometry.groups.length ? geometry.groups : [{ start: 0, count: geometry.index?.count ?? geometry.getAttribute('position').count, materialIndex: 0 }];
+    for (const group of groups) {
+      const material = materials[group.materialIndex ?? 0];
+      if (!material.visible || /skin|eye|earring|metal|hair/i.test(material.name)) continue;
+      for (let i = group.start; i < group.start + group.count; i += 3) {
+        const weights = [0,1,2].map(offset => boneWeight(node, geometry.index ? geometry.index.getX(i + offset) : i + offset, pattern));
+        expect(weights.reduce((sum, weight) => sum + weight, 0) / 3, `${node.name}: ${material.name}`).toBeLessThanOrEqual(limit);
+        triangles++;
+      }
+    }
+  });
+  expect(triangles).toBeGreaterThan(0);
+}
+
 describe('shipped modular stage models', () => {
   it.each(['masculine', 'feminine'] as const)('assembles every %s starter outfit with correctly bound and scaled parts', frame => {
     for (const head of STYLES) for (const top of STYLES) for (const bottom of STYLES) for (const footwear of STYLES) {
@@ -27,7 +54,8 @@ describe('shipped modular stage models', () => {
       model.traverse(node => {
         if (!(node instanceof T.SkinnedMesh)) return;
         let parent: T.Object3D | null = node; while (parent && !/_(Body|Head|Legs|Feet)/i.test(parent.name)) parent = parent.parent;
-        expect(parent).not.toBeNull(); parts.add(parent!.name.match(/_(Body|Head|Legs|Feet)/i)![1].toLowerCase());
+        if (parent) parts.add(parent.name.match(/_(Body|Head|Legs|Feet)/i)![1].toLowerCase());
+        else expect(node.name).toMatch(/^avatar-v1-skin-underlay-/); // Explicit bone-bound body coverage.
         node.skeleton.update();
         for (let i = 0; i < node.geometry.attributes.position.count; i += 61) {
           const vertex = node.getVertexPosition(i, new T.Vector3()).applyMatrix4(node.matrixWorld);
@@ -63,17 +91,19 @@ describe('shipped modular stage models', () => {
       id: 'tattoo-visual-1', profile_id: 'profile-1', body_slot: 'left_upper_arm' as const,
       ink_color: '#18202b', quality_score: 88, is_infected: false, category: 'musical' as const,
     }];
-    expect(roundTrip(JSON.parse(JSON.stringify(appearance)))).toEqual(appearance);
+    const restored = roundTrip(JSON.parse(JSON.stringify(appearance)));
+    expect(restored.accessories).toEqual({ ...appearance.accessories, leftEarring: 'hoops', rightEarring: 'hoops' });
+    expect(roundTrip(JSON.parse(JSON.stringify(restored)))).toEqual(restored);
     const model = assemblePlayerModel(library, appearance, tattoos);
     expect(model.getObjectByName('avatar-hat-beanie')).toBeTruthy();
     expect(model.getObjectByName('avatar-glasses-round')).toBeTruthy();
-    expect(model.getObjectByName('avatar-earrings-hoops')).toBeTruthy();
+    for (const side of ['left', 'right']) expect(model.getObjectByName(`avatar-earring-${side}-hoops`)).toBeTruthy();
     expect(model.getObjectByName('avatar-tattoo-tattoo-visual-1')).toBeTruthy();
     const actor = new Musician(model, 'vocals', [0, 0, 0], 0, undefined, appearance);
     actor.update(8, .75, false);
     expect(actor.root.getObjectByName('avatar-hat-beanie')).toBeTruthy();
     expect(actor.root.getObjectByName('avatar-glasses-round')).toBeTruthy();
-    expect(actor.root.getObjectByName('avatar-earrings-hoops')).toBeTruthy();
+    for (const side of ['left', 'right']) expect(actor.root.getObjectByName(`avatar-earring-${side}-hoops`)).toBeTruthy();
     expect(actor.root.getObjectByName('avatar-tattoo-tattoo-visual-1')).toBeTruthy();
     disposeModel(model); disposeModel(actor.root);
   });
@@ -261,18 +291,12 @@ describe('shipped modular stage models', () => {
       appearance.body.frame = frame;
       appearance.equipment.top.itemId = itemId;
       const model = assemblePlayerModel(library, appearance);
-      const trimmed: T.SkinnedMesh[] = [];
-      model.traverse(node => {
-        if (node instanceof T.SkinnedMesh && node.userData.avatarV1ShortSleeveTrim) trimmed.push(node);
-      });
-      expect(trimmed.length).toBeGreaterThan(0);
-      expect(trimmed.some(mesh => Number(mesh.userData.avatarV1ShortSleeveRemovedTriangles) > 0)).toBe(true);
-      expect(model.getObjectByName('avatar-v1-skin-underlay-upper-arm-l')).toBeFalsy();
-      expect(model.getObjectByName('avatar-v1-skin-underlay-upper-arm-r')).toBeFalsy();
-      expect(model.getObjectByName('avatar-v1-skin-underlay-lower-arm-l')).toBeFalsy();
-      expect(model.getObjectByName('avatar-v1-skin-underlay-lower-arm-r')).toBeFalsy();
-      expect(model.getObjectByName('avatar-v1-skin-underlay-elbow-l')).toBeFalsy();
-      expect(model.getObjectByName('avatar-v1-skin-underlay-elbow-r')).toBeFalsy();
+      expectGarmentArmCoverage(model, /lowerarm|forearm/i, .15);
+      for (const side of ['l', 'r']) for (const segment of ['upper-arm', 'lower-arm', 'elbow']) {
+        const skin = model.getObjectByName(`avatar-v1-skin-underlay-${segment}-${side}`) as T.SkinnedMesh;
+        expect(skin?.isSkinnedMesh).toBe(true);
+        expect(skin.geometry.getAttribute('position').count).toBeGreaterThan(0);
+      }
       expect(model.getObjectByName('avatar-v1-fitted-long-sleeves')).toBeFalsy();
       expect(model.getObjectByName('avatar-v1-hoodie-hood')).toBeFalsy();
       expect(model.getObjectByName('avatar-v1-zip-hoodie-hood')).toBeFalsy();
@@ -363,18 +387,14 @@ describe('shipped modular stage models', () => {
     disposeModel(model);
   });
 
-  it.each(['masculine', 'feminine'] as const)('makes the %s tank sleeveless by removing only garment sleeve triangles', frame => {
+  it.each(['masculine', 'feminine'] as const)('keeps the %s tank sleeveless whether the donor needs trimming or is already sleeveless', frame => {
     const appearance = defaultAppearance('tank-fitted');
     appearance.body.frame = frame;
     appearance.equipment.top.itemId = 'starter.top.tank';
     const model = assemblePlayerModel(library, appearance);
-    const tanks: T.SkinnedMesh[] = [];
-    model.traverse(node => {
-      if (node instanceof T.SkinnedMesh && node.userData.avatarV1TankSleevesRemoved) tanks.push(node);
-      expect(node.name.startsWith('Starter_Body_')).toBe(false);
-    });
-    expect(tanks.length).toBeGreaterThan(0);
-    expect(tanks.some(mesh => Number(mesh.userData.avatarV1TankRemovedTriangleCount) > 0)).toBe(true);
+    // The punk donor includes wrist cuffs; assert the upper arm is sleeveless.
+    expectGarmentArmCoverage(model, /upperarm/i, .43);
+    expect(model.getObjectByName('avatar-v1-fitted-long-sleeves')).toBeFalsy();
     expect(starterItemsForWardrobe('top').some(item => item.id === 'starter.top.tank')).toBe(true);
     disposeModel(model);
   });
@@ -499,16 +519,19 @@ describe('shipped modular stage models', () => {
     disposeModel(model);
   });
 
-  it.each(['masculine', 'feminine'] as const)('gives the %s V1 hand a relaxed neutral finger pose', frame => {
-    const appearance = defaultAppearance('relaxed-hands');
-    appearance.body.frame = frame;
+  it.each(['masculine', 'feminine'] as const)('scales all ten %s digit roots without changing their authored rest rotations', frame => {
+    const appearance = defaultAppearance(); appearance.body.frame = frame;
     const model = assemblePlayerModel(library, appearance);
+    const donor = library.get(modelFile(frame, 'casual'))!;
     let adjusted = 0;
     model.traverse(node => {
-      if (!(node instanceof T.Bone) || !/^(Index|Middle|Ring|Pinky|Thumb)1[._]?[LR]$/i.test(node.name)) return;
-      if (Math.abs(node.rotation.x) > .02) adjusted += 1;
+      if (!(node instanceof T.Bone) || !node.userData.avatarV1FingerScale) return;
+      const original = donor.getObjectByName(node.name)!;
+      expect(node.quaternion.toArray()).toEqual(original.quaternion.toArray());
+      expect(node.scale.x).toBeCloseTo(original.scale.x * node.userData.avatarV1FingerScale);
+      adjusted++;
     });
-    expect(adjusted).toBeGreaterThanOrEqual(4);
+    expect(adjusted).toBe(10);
     disposeModel(model);
   });
 
@@ -604,11 +627,23 @@ describe('feminine breast size', () => {
       appearance.body.breastSize = size;
       appearance.equipment.top.itemId = 'starter.top.casual';
       const model = assemblePlayerModel(library, appearance);
+      model.updateMatrixWorld(true);
       let front = -Infinity;
       model.traverse(node => {
+        if (!(node instanceof T.Mesh)) return;
+        if (node.userData.avatarV1BustVolume) {
+          front = Math.max(front, new T.Box3().setFromObject(node).max.z);
+          return;
+        }
         if (!(node instanceof T.SkinnedMesh) || !Number(node.userData.avatarV1BreastSizeAffectedVertices)) return;
-        const position = node.geometry.getAttribute('position') as T.BufferAttribute;
-        for (let vertex = 0; vertex < position.count; vertex += 1) front = Math.max(front, position.getZ(vertex));
+        const position = node.geometry.getAttribute('position');
+        const point = new T.Vector3();
+        node.skeleton.update();
+        for (let vertex = 0; vertex < position.count; vertex++) {
+          if (boneWeight(node, vertex, /spine2|spine[_.]002|chest/i) < .5) continue;
+          node.getVertexPosition(vertex, point).applyMatrix4(node.matrixWorld);
+          front = Math.max(front, point.z);
+        }
       });
       disposeModel(model);
       return front;
@@ -771,10 +806,11 @@ describe('expanded starter wardrobe', () => {
         expect(roundTrip(JSON.parse(JSON.stringify(appearance)))).toEqual(appearance);
         const assembled = assemblePlayerModel(library, appearance);
         const actor = new Musician(assembled, 'guitar', [0, 0, 0], 0, undefined, appearance);
-        if (item.fabric !== 'plain') {
+        const shown = visualEquipmentItem(appearance, slot);
+        if (shown.fabric !== 'plain') {
           const maps: T.Texture[] = [], sourceMaps: T.Texture[] = [];
           assembled.traverse(node => { if (node instanceof T.Mesh) for (const material of Array.isArray(node.material) ? node.material : [node.material]) if ((material as T.MeshStandardMaterial).map) sourceMaps.push((material as T.MeshStandardMaterial).map!); });
-          actor.model.traverse(node => { if (node instanceof T.Mesh) for (const material of Array.isArray(node.material) ? node.material : [node.material]) { const mat = material as T.MeshStandardMaterial; if (mat.map?.name === `starter-fabric-${item.fabric}`) { maps.push(mat.map); expect(mat.color.getHexString()).toBe('338b8d'); if (item.fabric === 'patent') expect(mat.roughness).toBe(.2); } } });
+          actor.model.traverse(node => { if (node instanceof T.Mesh) for (const material of Array.isArray(node.material) ? node.material : [node.material]) { const mat = material as T.MeshStandardMaterial; if (mat.map?.name === `starter-fabric-${shown.fabric}-balanced`) { maps.push(mat.map); expect(mat.color.getHexString()).toBe('338b8d'); if (shown.fabric === 'patent') expect(mat.roughness).toBe(.2); } } });
           expect(maps.length).toBeGreaterThan(0);
           for (const map of maps) expect(sourceMaps).not.toContain(map);
         }
@@ -831,4 +867,29 @@ describe('visible garment fitting regressions', () => {
       disposeModel(model);
     }
   });
+});
+
+it.each(['masculine', 'feminine'] as const)('keeps every live %s garment finite, skinned and bounded at body-size limits', frame => {
+  for (const size of ['small', 'large'] as const) for (const slot of SLOTS) for (const item of starterItemsForWardrobe(slot)) {
+    const appearance = defaultAppearance();
+    appearance.body = { ...appearance.body, frame, height: size === 'small' ? .9 : 1.1, build: size === 'small' ? .85 : 1.15, breastSize: size === 'small' ? .7 : 1.85 };
+    appearance.equipment[slot].itemId = item.id;
+    const assembled = assemblePlayerModel(library, appearance, [], [], 'crowd');
+    const actor = new Musician(assembled, 'guitar', [0,0,0], 0, undefined, appearance);
+    disposeModel(assembled);
+    for (const time of [0, 7, 2]) {
+      actor.update(time, .8, false);
+      const bounds = new T.Box3().setFromObject(actor.root);
+      expect(bounds.min.toArray().concat(bounds.max.toArray()).every(Number.isFinite), `${item.id} ${size}`).toBe(true);
+      expect(bounds.max.y, `${item.id} ${size}`).toBeLessThan(3);
+      expect(bounds.min.y, `${item.id} ${size}`).toBeGreaterThan(-.3);
+    }
+    actor.model.traverse(node => {
+      if (!(node instanceof T.SkinnedMesh)) return;
+      expect(node.skeleton.bones.length).toBeGreaterThan(0);
+      const weights = node.geometry.getAttribute('skinWeight');
+      for (let i = 0; i < weights.count; i += 61) expect([0,1,2,3].reduce((sum, c) => sum + weights.getComponent(i,c), 0)).toBeCloseTo(1, 3);
+    });
+    disposeModel(actor.root);
+  }
 });

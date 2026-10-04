@@ -110,11 +110,16 @@ export function fabricNormalTexture(fabric: Fabric, quality: AvatarVisualQuality
   return buildTexture(`starter-fabric-normal-${fabric}-${quality}`, pixels, size, quality, T.NoColorSpace);
 }
 
-export function fabricUVs(geometry: T.BufferGeometry, footwear: boolean) {
+/** Project in the shared metre/Y-up body frame, not each export's local units.
+ * Only UVs change; bind positions and skin weights stay untouched. */
+export function fabricUVs(geometry: T.BufferGeometry, footwear: boolean, donorFrame?: T.Matrix4) {
   const position = geometry.attributes.position, uv = new Float32Array(position.count * 2);
+  const point = new T.Vector3();
   for (let i = 0; i < position.count; i++) {
-    uv[i * 2] = (position.getX(i) + position.getZ(i) * .35) * 2;
-    uv[i * 2 + 1] = (footwear ? position.getZ(i) : position.getY(i)) * 2;
+    point.fromBufferAttribute(position, i);
+    if (donorFrame) point.applyMatrix4(donorFrame);
+    uv[i * 2] = (point.x + point.z * .35) * 2;
+    uv[i * 2 + 1] = (footwear ? point.z : point.y) * 2;
   }
   geometry.setAttribute('uv', new T.BufferAttribute(uv, 2));
 }
