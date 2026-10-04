@@ -105,12 +105,6 @@ export const LuthieryWorkbench = ({
     });
   };
 
-  const selectedFinish = getMaterialOption(selection.finishId);
-  const neckLength = selection.instrumentKind === "electric_bass" ? 244 : 211;
-  const fretLength = neckLength - 8;
-  const pickupCount = selection.instrumentKind === "electric_bass" ? 2 : 2;
-  const stringCount = selection.instrumentKind === "electric_bass" ? 4 : 6;
-
   return (
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-3">
