@@ -1,6 +1,6 @@
-import { GIG_EVENT_SCHEMA_VERSION, GIG_REPLAY_MAX_EVENTS, GIG_REPLAY_MAX_PAYLOAD_BYTES, GIG_REPLAY_TARGET_DURATION_MS, GIG_VIEWER_VERSION } from "./constants";
-import { validateGigViewerReplay } from "./schema";
-import type { GigViewerEvent, GigViewerReplay, PerformanceItemVisualAction, StagePosition } from "./types";
+import { GIG_EVENT_SCHEMA_VERSION, GIG_REPLAY_MAX_EVENTS, GIG_REPLAY_MAX_PAYLOAD_BYTES, GIG_REPLAY_TARGET_DURATION_MS, GIG_VIEWER_VERSION } from "./constants.ts";
+import { validateGigViewerReplay } from "./schema.ts";
+import type { GigViewerEvent, GigViewerReplay, PerformanceItemVisualAction, StagePosition } from "./types.ts";
 
 export interface ReplayGigInput { id: string; completedAt: string | null; resultReadyAt?: string | null; venueCapacity?: number | null; actualAttendance?: number | null; overallRating?: number | null; netProfit?: number | null }
 export interface ReplaySongInput { id: string; songId: string | null; position: number; title: string; performanceScore: number | null; crowdResponse?: string | null; itemType?: "song" | "performance_item" | null; performanceItemId?: string | null; performanceItemCategory?: string | null; performanceItemRequiredSkill?: string | null }
