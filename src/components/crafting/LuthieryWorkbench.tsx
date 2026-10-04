@@ -70,7 +70,7 @@ export const LuthieryWorkbench = ({
   onCraft,
   onCrafted,
 }: LuthieryWorkbenchProps) => {
-  const { progress } = useSkillSystem();
+  const { progress, refreshProgress } = useSkillSystem();
   const [selection, setSelection] = useState<LuthieryBuildSelection>(DEFAULT_LUTHIERY_SELECTION);
   const [activePart, setActivePart] = useState<LuthieryPartSlot>("body");
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -95,6 +95,7 @@ export const LuthieryWorkbench = ({
     try {
       const result = await onCraft(selection, confirmedCraftKey);
       setCraftedFingerprint(selectionFingerprint);
+      await refreshProgress();
       onCrafted?.(result);
     } catch {
       // The mutation owns player-facing error feedback; keep the confirmed request key

@@ -5,6 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LuthieryWorkbench } from "./LuthieryWorkbench";
 import type { CraftingMaterial, PlayerCraftingMaterial } from "@/hooks/useCraftingSystem";
 
+const refreshProgress = vi.fn().mockResolvedValue(undefined);
+
 const progress = [
   { id: "basic", profile_id: "profile", skill_slug: "luthiery_basic_technical", current_level: 20, current_xp: 0, required_xp: 100 },
   { id: "professional", profile_id: "profile", skill_slug: "luthiery_professional_technical", current_level: 20, current_xp: 0, required_xp: 100 },
@@ -18,7 +20,7 @@ vi.mock("@/hooks/useSkillSystem", () => ({
     progress,
     loading: false,
     error: null,
-    refreshProgress: vi.fn(),
+    refreshProgress,
     updateSkillProgress: vi.fn(),
   }),
 }));
@@ -124,6 +126,8 @@ describe("LuthieryWorkbench interactions", () => {
       qualityRoll: 2,
       finalQuality: 68,
       finalStats: { tone: 55, sustain: 54, stability: 58, output: 50, stagePresence: 44 },
+      xpAwarded: 10,
+      xpSkillSlug: "luthiery_basic_technical",
       buildSpec: {},
     };
     const onCraft = vi.fn().mockResolvedValue(result);
@@ -151,6 +155,7 @@ describe("LuthieryWorkbench interactions", () => {
     });
     expect(onCraft.mock.calls[0][1]).toEqual(expect.any(String));
     expect(onCraft.mock.calls[0][1].length).toBeGreaterThanOrEqual(8);
+    expect(refreshProgress).toHaveBeenCalledTimes(1);
     expect(onCrafted).toHaveBeenCalledWith(result);
     expect(screen.getByRole("button", { name: "Instrument crafted" })).toBeDisabled();
   });

@@ -72,6 +72,9 @@ export interface LuthieryCraftResult {
   qualityRoll: number;
   finalQuality: number;
   finalStats: Record<string, number>;
+  xpAwarded?: number;
+  xpSkillSlug?: string;
+  skillProgress?: Record<string, unknown>;
   buildSpec: Record<string, unknown>;
 }
 
@@ -356,7 +359,10 @@ export const useCraftingSystem = () => {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["player-crafting-materials", profileId] });
       queryClient.invalidateQueries({ queryKey: ["player-equipment", profileId] });
-      toast.success(`${result.instrumentName} crafted successfully!`);
+      queryClient.invalidateQueries({ queryKey: ["skill-progress"] });
+      queryClient.invalidateQueries({ queryKey: ["progression-snapshot"] });
+      const xpSuffix = result.xpAwarded ? ` +${result.xpAwarded} Luthiery XP` : "";
+      toast.success(`${result.instrumentName} crafted successfully!${xpSuffix}`);
     },
     onError: (err: any) => toast.error(err.message),
   });
