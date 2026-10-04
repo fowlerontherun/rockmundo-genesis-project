@@ -23,7 +23,7 @@ export interface GigPlayerModelsData {
   /** Equipped Merch Studio apparel resolved once with the performer batch. */
   merchWearables?: Record<string, ResolvedMerchWearable>;
   /** Current equipped player-crafted guitar/bass. Historical replays override this with their immutable snapshot. */
-  luthieryInstruments?: Record<string, LuthieryInstrumentVisual>;
+  luthieryInstruments?: Record<string, LuthieryInstrumentVisual[]>;
 }
 
 interface EquippedClothingRow {
@@ -239,11 +239,11 @@ export function useGigPlayerModels(profileIds: string[]) {
         if (row.profile_id) merchWearables[row.profile_id] = row;
       }
 
-      const luthieryInstruments: Record<string, LuthieryInstrumentVisual> = {};
+      const luthieryInstruments: Record<string, LuthieryInstrumentVisual[]> = {};
       if (!luthieryResult.error) {
         for (const row of (luthieryResult.data || []) as StageLuthieryInstrumentRow[]) {
           const visual = normalizeStageLuthieryInstrument(row);
-          if (visual) luthieryInstruments[row.profile_id] = visual;
+          if (visual) (luthieryInstruments[row.profile_id] ??= []).push(visual);
         }
       }
 
