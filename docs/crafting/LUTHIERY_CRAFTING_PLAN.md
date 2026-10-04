@@ -185,6 +185,21 @@ Remaining carry-over before the whole crafting foundation is considered complete
 - live migrations applied: `20261004215150_luthiery_phase5_player_instrument_shops`, `20261004215337_harden_luthiery_phase5_browsing`, `20261004215545_use_finance_ledger_for_luthiery_shop_sales`, `20261004215752_allow_authoritative_luthiery_shop_transfer`, `20261004220404_allow_luthiery_shop_inventory_ownership_transfer`, `20261004220712_hide_closed_luthiery_shop_listings`, and `20261004220910_index_luthiery_phase5_foreign_keys`;
 - a dedicated Phase 5 UI test suite and GitHub Actions verification workflow cover customer browsing, shop qualification/setup, typecheck, lint and build.
 
+
+### Phase 5 final audit — 2026-10-04
+
+- fixed resale royalty manipulation: the original-maker commission is now snapshotted on the listing and cannot be changed by editing the shop commission after the item is listed;
+- existing first-party listings snapshot a 0% maker royalty, while resale listings snapshot the shop's configured 0–15% royalty at listing time;
+- customer storefront browsing no longer relies on direct SELECT access to raw shop/listing rows, so auth user IDs, inventory-row IDs, maker/seller profile IDs and other internal identifiers are not exposed to unrelated customers;
+- `browse_luthiery_shop_listings()` is the authenticated sanitized storefront contract and returns only customer-facing listing/shop/city data plus a server-computed `is_own_listing` flag;
+- the `is_own_listing` flag also fixes same-account alternate-character UX by disabling purchases of the player's own listing before the authoritative RPC rejects it;
+- closed shops remain hidden from the storefront and cannot be purchased from; reopening restores the same listing with its original royalty terms unchanged;
+- shop logo URLs are restricted to HTTPS and branding logos are now actually rendered in the storefront/owner view with no-referrer image requests;
+- original makers can read sale records that paid them a resale commission, while unrelated customers cannot read raw sale history;
+- the expanded rollback harness passes against the live database and covers sanitized browsing, internal-ID isolation, active inventory locks, fixed royalty terms, insecure-logo rejection, closed-shop blocking, reopening, ledger settlement, resale commission, maker history, provenance, reputation and idempotent retry;
+- live audit migrations applied: `20261004224727_harden_luthiery_phase5_storefront_and_royalty_terms` and `20261004225122_minimize_luthiery_phase5_storefront_identity`;
+- the Phase 5 GitHub Actions workflow now includes a disposable local-Supabase database lifecycle job that runs the checked-in Phase 5 SQL harness, closing the previous gap where database regression coverage existed but was not part of CI.
+
 ## Phase 6 — Equipment and gig integration
 
 - [ ] Make player-crafted guitars/basses equippable everywhere normal instruments are used.
