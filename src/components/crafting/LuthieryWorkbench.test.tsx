@@ -6,9 +6,9 @@ import { LuthieryWorkbench } from "./LuthieryWorkbench";
 import type { CraftingMaterial, PlayerCraftingMaterial } from "@/hooks/useCraftingSystem";
 
 const progress = [
-  { id: "basic", profile_id: "profile", skill_slug: "luthiery_basic_technical", current_level: 250, current_xp: 0, required_xp: 100 },
-  { id: "professional", profile_id: "profile", skill_slug: "luthiery_professional_technical", current_level: 650, current_xp: 0, required_xp: 100 },
-  { id: "mastery", profile_id: "profile", skill_slug: "luthiery_mastery_technical", current_level: 650, current_xp: 0, required_xp: 100 },
+  { id: "basic", profile_id: "profile", skill_slug: "luthiery_basic_technical", current_level: 20, current_xp: 0, required_xp: 100 },
+  { id: "professional", profile_id: "profile", skill_slug: "luthiery_professional_technical", current_level: 20, current_xp: 0, required_xp: 100 },
+  { id: "mastery", profile_id: "profile", skill_slug: "luthiery_mastery_technical", current_level: 20, current_xp: 0, required_xp: 100 },
 ];
 
 vi.mock("@/hooks/useSkillSystem", () => ({
