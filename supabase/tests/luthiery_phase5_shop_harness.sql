@@ -400,11 +400,11 @@ BEGIN
   END IF;
 
   IF NOT EXISTS (
-    SELECT 1 FROM public.luthiery_shops
-    WHERE owner_profile_id='c5200000-0000-4000-8000-000000000002'
-      AND completed_sales=1
-      AND gross_sales=200000
-      AND reputation BETWEEN 0 AND 100
+    SELECT 1
+    FROM public.luthiery_shop_sales
+    WHERE listing_id=v_listing_id
+      AND sale_price=200000
+      AND reputation_after BETWEEN 0 AND 100
   ) THEN
     RAISE EXCEPTION 'Shop sales/reputation aggregation failed';
   END IF;
