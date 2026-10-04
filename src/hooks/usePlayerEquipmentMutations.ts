@@ -8,6 +8,7 @@ import { useGameData } from "@/hooks/useGameData";
 interface EquipGearVariables {
   playerEquipmentId: string;
   equip: boolean;
+  inventorySource?: "catalog" | "luthiery";
   unequipIds?: string[];
   activityMessage?: string | null;
   activityMetadata?: Record<string, unknown> | null;
@@ -24,8 +25,9 @@ export const useEquipPlayerEquipment = () => {
     mutationFn: async (variables) => {
       if (!profileId) throw new Error("You must have an active character to update equipment");
       const targetId = variables.playerEquipmentId;
+      const inventorySource = variables.inventorySource ?? "catalog";
       const unequipIds = (variables.unequipIds ?? []).filter((id) => id && id !== targetId);
-      if (unequipIds.length > 0) {
+      if (unequipIds.length > 0 && inventorySource === "catalog") {
         const { error: unequipError } = await supabase
           .from("player_equipment_inventory")
           .update({ is_equipped: false })
@@ -33,9 +35,16 @@ export const useEquipPlayerEquipment = () => {
           .eq("profile_id", profileId);
         if (unequipError) throw unequipError;
       }
-      const { data, error } = await supabase
-        .from("player_equipment_inventory")
-        .update({ is_equipped: variables.equip })
+
+      const table = inventorySource === "luthiery"
+        ? "player_equipment"
+        : "player_equipment_inventory";
+      const payload = inventorySource === "luthiery"
+        ? { is_equipped: variables.equip, equipped: variables.equip }
+        : { is_equipped: variables.equip };
+      const { data, error } = await (supabase as any)
+        .from(table)
+        .update(payload)
         .eq("id", targetId)
         .eq("profile_id", profileId)
         .select("id, is_equipped")
