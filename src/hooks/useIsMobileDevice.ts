@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 const MOBILE_BREAKPOINT = 768;
 const FLAG_KEY = "rm-mobile-ui";
@@ -31,14 +31,12 @@ export function useIsMobileDevice(): boolean {
     return window.innerWidth < MOBILE_BREAKPOINT;
   };
 
-  const [isMobile, setIsMobile] = useState<boolean>(compute);
-
-  useEffect(() => {
-    const onResize = () => setIsMobile(compute());
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Pick the application shell once for this page session. Mobile browsers can
+  // report transient viewport-width changes as browser chrome appears/disappears
+  // or when "desktop site" mode is active. Switching between MobileShell and
+  // FMShell during those resizes unmounts the active route and can make React
+  // reconcile against DOM nodes that the previous shell already removed.
+  const [isMobile] = useState<boolean>(compute);
 
   return isMobile;
 }
