@@ -78,6 +78,17 @@ const deadlineFromInput = (value: string, festivalDates: string[]) => {
 const deadlineLabel = (value: string | null) =>
   value ? new Date(value).toLocaleString() : "No deadline";
 
+const deadlineAwareStatus = (
+  status: string,
+  deadline: string | null,
+  activeStatuses: string[],
+) =>
+  deadline &&
+  activeStatuses.includes(status) &&
+  new Date(deadline).getTime() <= Date.now()
+    ? "expired"
+    : status;
+
 const offerVersionFromAction = (value: unknown) => {
   if (!value || typeof value !== "object") return null;
   const offer = (value as { offer?: unknown }).offer;
@@ -587,7 +598,11 @@ export function SimplifiedFestivalLineupManager({
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <strong>{nameFor(invitation.identity)}</strong>
                     <Badge variant="outline" className="capitalize">
-                      Invite: {invitation.status.replaceAll("_", " ")}
+                      Invite: {deadlineAwareStatus(
+                        invitation.status,
+                        invitation.expiresAt,
+                        ["draft", "sent", "viewed", "interested"],
+                      ).replaceAll("_", " ")}
                     </Badge>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
@@ -658,7 +673,11 @@ export function SimplifiedFestivalLineupManager({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <strong>{nameFor(offer.identity)}</strong>
                   <Badge variant="outline" className="capitalize">
-                    Offer: {offer.status.replaceAll("_", " ")}
+                    Offer: {deadlineAwareStatus(
+                      offer.status,
+                      offer.responseDeadline,
+                      ["draft", "sent", "countered"],
+                    ).replaceAll("_", " ")}
                   </Badge>
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
