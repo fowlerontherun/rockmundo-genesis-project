@@ -10,20 +10,21 @@ import { STYLES, modelFile, type PlayerAppearance } from './appearance';
 import { assemblePlayerModel, disposeModel, loadModelLibrary, type ModelLibrary, type PlayerModelPresentation } from './model';
 import { visibleTattoosForPresentation, type ResolvedTattooVisual } from './tattoos';
 import type { ResolvedMerchWearable } from './merchWearables';
+import type { LuthieryInstrumentVisual } from '@/features/luthiery/luthieryInstrument';
 import { avatarQualityProfile, recommendedAvatarPreviewQuality, type AvatarVisualQuality } from './avatarVisualQuality';
 
 type TattooCameraPreset = 'neck' | 'torsoFront' | 'torsoBack' | 'leftArm' | 'rightArm' | 'legs';
 
 interface PreviewApi {
-  replace: (appearance: PlayerAppearance, role: StageRole, instrument?: InstrumentId, richClothing?: ResolvedEquippedClothing[], tattoos?: ResolvedTattooVisual[], presentation?: PlayerModelPresentation, merchWearable?: ResolvedMerchWearable | null) => void;
+  replace: (appearance: PlayerAppearance, role: StageRole, instrument?: InstrumentId, richClothing?: ResolvedEquippedClothing[], tattoos?: ResolvedTattooVisual[], presentation?: PlayerModelPresentation, merchWearable?: ResolvedMerchWearable | null, luthieryInstrument?: LuthieryInstrumentVisual | null) => void;
   rotate: (angle: number) => void;
   zoom: (factor: number) => void;
   reset: () => void;
   focusHead: () => void;
   focusTattoo: (preset: TattooCameraPreset) => void;
 }
-export function PlayerModelPreview({ appearance, role = 'other', instrument, richClothing = [], tattoos = [], presentation = 'stage', merchWearable = null }: { appearance: PlayerAppearance; role?: StageRole; instrument?: InstrumentId; richClothing?: ResolvedEquippedClothing[]; tattoos?: ResolvedTattooVisual[]; presentation?: PlayerModelPresentation; merchWearable?: ResolvedMerchWearable | null }) {
-  const canvas = useRef<HTMLCanvasElement>(null), api = useRef<PreviewApi | null>(null), latest = useRef({ appearance, role, instrument, richClothing, tattoos, presentation, merchWearable }); latest.current = { appearance, role, instrument, richClothing, tattoos, presentation, merchWearable };
+export function PlayerModelPreview({ appearance, role = 'other', instrument, richClothing = [], tattoos = [], presentation = 'stage', merchWearable = null, luthieryInstrument = null }: { appearance: PlayerAppearance; role?: StageRole; instrument?: InstrumentId; richClothing?: ResolvedEquippedClothing[]; tattoos?: ResolvedTattooVisual[]; presentation?: PlayerModelPresentation; merchWearable?: ResolvedMerchWearable | null; luthieryInstrument?: LuthieryInstrumentVisual | null }) {
+  const canvas = useRef<HTMLCanvasElement>(null), api = useRef<PreviewApi | null>(null), latest = useRef({ appearance, role, instrument, richClothing, tattoos, presentation, merchWearable, luthieryInstrument }); latest.current = { appearance, role, instrument, richClothing, tattoos, presentation, merchWearable, luthieryInstrument };
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading'), [attempt, setAttempt] = useState(0);
   useEffect(() => {
     if (!canvas.current) return;
@@ -81,7 +82,7 @@ export function PlayerModelPreview({ appearance, role = 'other', instrument, ric
         if (!alive) { loaded.forEach(disposeModel); return; }
         library = loaded;
         api.current = {
-          replace: (value, nextRole, nextInstrument, nextRichClothing = [], nextTattoos = [], nextPresentation = 'stage', nextMerchWearable = null) => {
+          replace: (value, nextRole, nextInstrument, nextRichClothing = [], nextTattoos = [], nextPresentation = 'stage', nextMerchWearable = null, nextLuthieryInstrument = null) => {
             if (actor) disposeModel(actor.root); if (equipment) disposeModel(equipment);
             const shownClothing = nextPresentation === 'tattoo' ? [] : nextRichClothing;
             const shownTattoos = visibleTattoosForPresentation(nextTattoos, { appearance: value, clothing: shownClothing, presentation: nextPresentation });
@@ -94,7 +95,7 @@ export function PlayerModelPreview({ appearance, role = 'other', instrument, ric
               nextPresentation,
               nextMerchWearable,
             );
-            actor = new Musician(assembled, nextRole, [0, 0, 0], 0, undefined, value, nextInstrument, undefined, shownClothing); disposeModel(assembled); scene.add(actor.root);
+            actor = new Musician(assembled, nextRole, [0, 0, 0], 0, undefined, value, nextInstrument, undefined, shownClothing, undefined, undefined, nextLuthieryInstrument); disposeModel(assembled); scene.add(actor.root);
             equipment = actor.equipment; if(equipment)scene.add(equipment);
           },
           rotate: angle => { camera.position.sub(controls!.target).applyAxisAngle(new T.Vector3(0, 1, 0), angle).add(controls!.target); controls!.update(); },
@@ -138,7 +139,7 @@ export function PlayerModelPreview({ appearance, role = 'other', instrument, ric
             controls!.update();
           },
         };
-        api.current.replace(latest.current.appearance, latest.current.role, latest.current.instrument, latest.current.richClothing, latest.current.tattoos, latest.current.presentation, latest.current.merchWearable); setStatus('ready');
+        api.current.replace(latest.current.appearance, latest.current.role, latest.current.instrument, latest.current.richClothing, latest.current.tattoos, latest.current.presentation, latest.current.merchWearable, latest.current.luthieryInstrument); setStatus('ready');
       }).catch(() => { if (alive) setStatus('error'); });
     } catch { setStatus('error'); }
     return () => {
@@ -148,7 +149,7 @@ export function PlayerModelPreview({ appearance, role = 'other', instrument, ric
       disposeModel(scene); library?.forEach(disposeModel); environment?.dispose(); renderer?.dispose();
     };
   }, [attempt]);
-  useEffect(() => { try { api.current?.replace(appearance, role, instrument, richClothing, tattoos, presentation, merchWearable); } catch { setStatus('error'); } }, [appearance, role, instrument, richClothing, tattoos, presentation, merchWearable]);
+  useEffect(() => { try { api.current?.replace(appearance, role, instrument, richClothing, tattoos, presentation, merchWearable, luthieryInstrument); } catch { setStatus('error'); } }, [appearance, role, instrument, richClothing, tattoos, presentation, merchWearable, luthieryInstrument]);
   return <div className="player-model-preview">
     <canvas ref={canvas} tabIndex={0} role="img" aria-label="Your animated 3D stage model. Drag to rotate, scroll to zoom, or use the buttons below." onKeyDown={event => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); api.current?.rotate(event.key === 'ArrowLeft' ? -.25 : .25); } if (event.key === '+' || event.key === '-') { event.preventDefault(); api.current?.zoom(event.key === '+' ? .9 : 1.1); } }} />
     <div className="player-model-preview__label" aria-hidden="true">ROCKMUNDO <span>{presentation === 'tattoo' ? 'TATTOO PARLOUR / UNCLOTHED PREVIEW' : 'BACKSTAGE / FITTING ROOM'}</span></div>
