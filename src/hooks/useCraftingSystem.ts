@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 import { computeSalvageYields } from "@/utils/salvageYields";
+import type { LuthieryBuildSelection } from "@/data/luthieryWorkbench";
 
 export interface CraftingMaterial {
   id: string;
@@ -58,6 +59,25 @@ export interface CraftingBlueprint {
   unlocked_at: string;
   source: string;
   recipe?: CraftingRecipe;
+}
+
+export interface LuthieryCraftResult {
+  status: "completed" | "already_completed";
+  craftId: string;
+  equipmentId: string;
+  playerEquipmentId: string;
+  instrumentName: string;
+  instrumentKind: "electric_guitar" | "electric_bass";
+  rarity: string;
+  qualityRoll: number;
+  finalQuality: number;
+  finalStats: Record<string, number>;
+  buildSpec: Record<string, unknown>;
+}
+
+export interface CreateLuthieryCraftInput {
+  selection: LuthieryBuildSelection;
+  idempotencyKey: string;
 }
 
 export const useCraftingSystem = () => {
@@ -288,6 +308,59 @@ export const useCraftingSystem = () => {
     onError: (err: any) => toast.error(err.message),
   });
 
+  // Authoritative custom Luthiery craft. The client submits design choices only;
+  // inventory, unlocks, quality and final stats are resolved in one server transaction.
+  const craftCustomLuthieryInstrument = useMutation({
+    mutationFn: async ({ selection, idempotencyKey }: CreateLuthieryCraftInput) => {
+      if (!profileId) throw new Error("No active character selected");
+      if (!idempotencyKey) throw new Error("Missing craft request key");
+
+      const design = {
+        instrumentName: selection.instrumentName,
+        instrumentKind: selection.instrumentKind,
+        shapeId: selection.shapeId,
+        colour: selection.colour,
+        finishId: selection.finishId,
+        decal: selection.decal,
+        parts: selection.parts,
+      };
+
+      const { data, error } = await (supabase as any).rpc("create_custom_luthiery_instrument", {
+        p_profile_id: profileId,
+        p_design: design,
+        p_idempotency_key: idempotencyKey,
+      });
+
+      if (error) {
+        const code = String(error.message ?? "");
+        const friendly = code.includes("luthiery_material_stock_insufficient")
+          ? "You no longer have enough of the selected materials."
+          : code.includes("luthiery_active_profile_required")
+            ? "This craft belongs to a different character. Refresh the workshop and try again."
+            : code.includes("luthiery_shape_locked") || code.includes("luthiery_part_locked") || code.includes("luthiery_finish_locked")
+              ? "Your Luthiery level no longer unlocks part of this build."
+              : code.includes("luthiery_idempotency_key_conflict")
+                ? "This craft request changed after confirmation. Review the build again."
+                : code.includes("luthiery_client_outcome_not_allowed")
+                  ? "Invalid craft request."
+                  : error.message;
+        throw new Error(friendly);
+      }
+
+      if (!data || typeof data !== "object") {
+        throw new Error("The Luthiery service returned an invalid result");
+      }
+
+      return data as LuthieryCraftResult;
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["player-crafting-materials", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["player-equipment", profileId] });
+      toast.success(`${result.instrumentName} crafted successfully!`);
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
   // Salvage equipment into crafting materials
   const salvageEquipment = useMutation({
     mutationFn: async ({ equipmentId }: { equipmentId: string }) => {
@@ -368,6 +441,8 @@ export const useCraftingSystem = () => {
     isCrafting: startCrafting.isPending,
     collectCraft: collectCraft.mutate,
     isCollecting: collectCraft.isPending,
+    craftCustomLuthieryInstrument: craftCustomLuthieryInstrument.mutateAsync,
+    isCraftingCustomLuthiery: craftCustomLuthieryInstrument.isPending,
     salvageEquipment: salvageEquipment.mutate,
     isSalvaging: salvageEquipment.isPending,
   };
