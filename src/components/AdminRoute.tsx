@@ -3,6 +3,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { hasGigViewerDemoTestAccess } from '@/lib/gigViewerDemoTestAccess';
+import { hasLuthieryWorkbenchDemoTestAccess } from '@/lib/luthieryWorkbenchDemoTestAccess';
 
 interface AdminRouteProps {
   children: ReactNode;
@@ -11,7 +12,7 @@ interface AdminRouteProps {
 
 export const AdminRoute = ({ children, requiredRole = 'admin' }: AdminRouteProps) => {
   const { hasRole, loading } = useUserRole();
-  const hasTestAccess = hasGigViewerDemoTestAccess(window.location);
+  const hasTestAccess = hasGigViewerDemoTestAccess(window.location) || hasLuthieryWorkbenchDemoTestAccess(window.location);
 
   if (hasTestAccess) return <>{children}</>;
 
