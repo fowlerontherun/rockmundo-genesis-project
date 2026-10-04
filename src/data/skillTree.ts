@@ -1,4 +1,5 @@
 import { type SkillDefinitionRecord, type SkillRelationshipRecord } from "@/hooks/useSkillSystem.types";
+import { MAX_SKILL_LEVEL } from "@/data/skillConstants";
 
 export type TierName = "Basic" | "Professional" | "Mastery";
 
@@ -3759,10 +3760,12 @@ const luthieryConfigs: TieredSkillConfig[] = [
       Professional: {
         name: "Professional Luthiery",
         description: "Build quality instruments with advanced techniques. Unlocks rare recipes and better quality rolls.",
+        requiredValue: MAX_SKILL_LEVEL,
       },
       Mastery: {
         name: "Master Luthier",
         description: "Create legendary masterwork instruments. Maximum quality floor and access to all blueprints.",
+        requiredValue: MAX_SKILL_LEVEL,
       },
     },
   },
