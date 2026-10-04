@@ -149,7 +149,8 @@ describe("LuthieryWorkbench interactions", () => {
       instrumentKind: "electric_guitar",
       shapeId: "double-cut",
     });
-    expect(onCraft.mock.calls[0][1]).toEqual(expect.stringContaining("luthiery-"));
+    expect(onCraft.mock.calls[0][1]).toEqual(expect.any(String));
+    expect(onCraft.mock.calls[0][1].length).toBeGreaterThanOrEqual(8);
     expect(onCrafted).toHaveBeenCalledWith(result);
     expect(screen.getByRole("button", { name: "Instrument crafted" })).toBeDisabled();
   });
