@@ -347,8 +347,15 @@ export const LuthieryWorkbench = ({
                       className="h-auto min-h-10 whitespace-normal px-2 py-2 text-xs"
                       title={!unlocked ? formatLuthieryRequirement(candidate.requirement) : candidate.name}
                     >
-                      {!unlocked && <Lock className="mr-1 h-3 w-3 shrink-0" />}
-                      {candidate.name}
+                      <span className="flex min-w-0 flex-col items-center leading-tight">
+                        <span className="flex items-center gap-1">
+                          {!unlocked && <Lock className="h-3 w-3 shrink-0" />}
+                          <span>{candidate.name}</span>
+                        </span>
+                        <span className="mt-0.5 text-[9px] opacity-70">
+                          {unlocked ? "Unlocked" : formatLuthieryRequirement(candidate.requirement)}
+                        </span>
+                      </span>
                     </Button>
                   );
                 })}
