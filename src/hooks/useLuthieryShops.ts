@@ -33,7 +33,7 @@ export interface LuthieryShopListing {
   id: string;
   shop_id: string;
   seller_profile_id: string;
-  player_equipment_id: string;
+  player_equipment_id: string | null;
   equipment_id: string;
   craft_id: string;
   maker_profile_id: string;
