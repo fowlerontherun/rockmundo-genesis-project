@@ -1,6 +1,6 @@
 # RockMundo Luthiery Crafting Plan
 
-Status: Phase 4 authoritative crafting implemented; canonical Luthiery XP award remains open
+Status: Phase 5 player instrument shops implemented; canonical Luthiery XP award remains open
 Reviewed against main: 2026-10-04 at 0d4cccefafc544b4d9e8f48035e06c66f819a418
 Phase 4 branch: `feat/luthiery-phase-4-authoritative-crafting`
 
@@ -147,13 +147,29 @@ Remaining carry-over before the whole crafting foundation is considered complete
 
 ## Phase 5 — Player instrument shop
 
-- [ ] Let qualified Luthiers open an instrument shop.
-- [ ] Add shop name, branding, city and reputation.
-- [ ] Let owners list player-made instruments.
-- [ ] Add pricing, stock, sales history and commission controls.
-- [ ] Preserve maker identity and build provenance on resale.
-- [ ] Add customer browsing and purchase flow.
-- [ ] Add shop reputation effects from quality, value and reliability.
+- [x] Let qualified Luthiers open an instrument shop.
+- [x] Add shop name, branding, city and reputation.
+- [x] Let owners list player-made instruments.
+- [x] Add pricing, stock, sales history and commission controls.
+- [x] Preserve maker identity and build provenance on resale.
+- [x] Add customer browsing and purchase flow.
+- [x] Add shop reputation effects from quality, value and reliability.
+
+### Phase 5 implementation review — 2026-10-04
+
+- qualified characters can open one instrument shop once Basic Luthiery reaches level 20 (or a higher Luthiery tier is active), and the shop is anchored to the active character's current city;
+- shop owners can configure the shop name, tagline, brand colour, optional logo, open/closed state, city relocation and a 0–15% original-maker resale commission;
+- only canonical Phase 4 `custom_luthiery` equipment with immutable `luthiery_crafts` provenance can be listed, and equipped instruments cannot be listed;
+- active listing inventory is protected from client mutation while for-sale, then ownership is transferred by moving the same `equipment_items.id` into the buyer's `player_equipment` row so maker identity and build provenance survive every resale;
+- listing snapshots store maker name, quality, condition, stats and immutable build provenance; sold listings release their obsolete seller inventory-row reference with `ON DELETE SET NULL`;
+- purchases use the canonical `finance_transfer` ledger path rather than direct cash mutation, with idempotent seller and maker transfer keys and automatic `profiles.cash` projection updates;
+- first-party sales pay the full asking price to the maker/seller; resales split the configured commission to the original maker and the remainder to the current seller;
+- customer browsing shows shop/city/reputation, price versus suggested value, quality, condition, maker and build materials before purchase;
+- shop reputation is recalculated from average sold-item quality (50%), value-for-money (30%) and listing reliability (20%), while cancelled listings reduce reliability;
+- direct client INSERT/UPDATE access is revoked, mutation RPCs are authenticated SECURITY DEFINER functions with fixed search paths, anonymous shop browsing/mutations are blocked, and RLS limits non-public history to participants/shop owners;
+- a rollback integration harness passed against the live database for craft provenance, listing locks, ledger settlement, first sale, resale, maker commission, identity preservation and idempotent purchase retry;
+- live migrations applied: `20261004215150_luthiery_phase5_player_instrument_shops`, `20261004215337_harden_luthiery_phase5_browsing`, `20261004215545_use_finance_ledger_for_luthiery_shop_sales`, `20261004215752_allow_authoritative_luthiery_shop_transfer`, and `20261004220404_allow_luthiery_shop_inventory_ownership_transfer`;
+- a dedicated Phase 5 UI test suite and GitHub Actions verification workflow cover customer browsing, shop qualification/setup, typecheck, lint and build.
 
 ## Phase 6 — Equipment and gig integration
 
