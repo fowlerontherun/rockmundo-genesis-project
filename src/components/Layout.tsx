@@ -27,6 +27,7 @@ import { getMobileBridgeTarget } from "@/mobile/routeBridge";
 import { DesktopOnlyGate } from "@/components/DesktopOnlyGate";
 import { useGameCalendar } from "@/hooks/useGameCalendar";
 import { hasGigViewerDemoTestAccess } from "@/lib/gigViewerDemoTestAccess";
+import { hasLuthieryWorkbenchDemoTestAccess } from "@/lib/luthieryWorkbenchDemoTestAccess";
 import { useMyFestivalAttendance } from "@/features/festival-company/attendance/useFestivalAttendance";
 import { FestivalModeShell } from "@/features/festival-company/attendance/FestivalModeShell";
 import { FestivalModeHome } from "@/features/festival-company/attendance/FestivalModeHome";
@@ -68,7 +69,7 @@ const Layout = () => {
   void calendar;
 
   const devGuestBypass = import.meta.env.DEV;
-  const gigViewerDemoTestAccess = hasGigViewerDemoTestAccess(location);
+  const gigViewerDemoTestAccess = hasGigViewerDemoTestAccess(location) || hasLuthieryWorkbenchDemoTestAccess(location);
 
   useEffect(() => {
     if (!authLoading && !user && !devGuestBypass && !gigViewerDemoTestAccess) {
