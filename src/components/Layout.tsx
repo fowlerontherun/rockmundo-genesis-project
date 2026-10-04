@@ -65,7 +65,6 @@ const Layout = () => {
   useGigDayReminders();
   useReachMilestoneReminders();
   const { data: calendar } = useGameCalendar();
-  void profile;
   void calendar;
 
   const devGuestBypass = import.meta.env.DEV;
@@ -116,7 +115,7 @@ const Layout = () => {
 
   if (
     authLoading ||
-    (dataLoading && user) ||
+    (dataLoading && user && !profile) ||
     (Boolean(user && profileId) && festivalAttendanceLoading)
   ) {
     return (
