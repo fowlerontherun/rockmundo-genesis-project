@@ -61,6 +61,23 @@ const responseDeadline = (festivalDates: string[]) => {
 const preferredDate = (festivalDates: string[], requested: string[] = []) =>
   requested.find((date) => festivalDates.includes(date)) ?? festivalDates[0] ?? null;
 
+const toDateTimeLocalInput = (iso: string) => {
+  const date = new Date(iso);
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+};
+
+const deadlineFromInput = (value: string, festivalDates: string[]) => {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime()) || parsed.getTime() <= Date.now()) {
+    return responseDeadline(festivalDates);
+  }
+  return parsed.toISOString();
+};
+
+const deadlineLabel = (value: string | null) =>
+  value ? new Date(value).toLocaleString() : "No deadline";
+
 const offerVersionFromAction = (value: unknown) => {
   if (!value || typeof value !== "object") return null;
   const offer = (value as { offer?: unknown }).offer;
@@ -91,6 +108,9 @@ export function SimplifiedFestivalLineupManager({
   const [search, setSearch] = useState("");
   const [feeInputs, setFeeInputs] = useState<Record<string, string>>({});
   const [billingInputs, setBillingInputs] = useState<Record<string, (typeof billingPositions)[number]>>({});
+  const [responseDeadlineInput, setResponseDeadlineInput] = useState(() =>
+    toDateTimeLocalInput(responseDeadline(data.festivalDates)),
+  );
   const queryClient = useQueryClient();
   const changeBilling = useMutation({
     mutationFn: async ({ bookingId, position }: { bookingId: string; position: (typeof billingPositions)[number] }) => {
@@ -127,6 +147,8 @@ export function SimplifiedFestivalLineupManager({
   const inviteArtist = useFestivalEditionArtistAction("sendInvitation");
   const createOffer = useFestivalEditionArtistAction("createOffer");
   const sendOffer = useFestivalEditionArtistAction("sendOffer");
+  const withdrawInvitation = useFestivalEditionArtistAction("withdrawInvitation");
+  const withdrawOffer = useFestivalEditionArtistAction("withdrawOffer");
 
   const candidateNames = useMemo(
     () =>
@@ -148,12 +170,16 @@ export function SimplifiedFestivalLineupManager({
     reviewApplication.error ??
     inviteArtist.error ??
     createOffer.error ??
-    sendOffer.error;
+    sendOffer.error ??
+    withdrawInvitation.error ??
+    withdrawOffer.error;
   const workflowPending =
     reviewApplication.isPending ||
     inviteArtist.isPending ||
     createOffer.isPending ||
-    sendOffer.isPending;
+    sendOffer.isPending ||
+    withdrawInvitation.isPending ||
+    withdrawOffer.isPending;
 
   const review = (
     application: FestivalArtistApplication,
@@ -188,7 +214,7 @@ export function SimplifiedFestivalLineupManager({
       setMinutes: Math.max(10, Math.min(240, input.setMinutes)),
       preferredDate: preferredDate(data.festivalDates, input.requestedDates),
       billingPosition: input.billingPosition ?? "support",
-      responseDeadline: responseDeadline(data.festivalDates),
+      responseDeadline: deadlineFromInput(responseDeadlineInput, data.festivalDates),
       message: "Festival performance offer",
       idempotencyKey: crypto.randomUUID(),
     });
@@ -231,7 +257,7 @@ export function SimplifiedFestivalLineupManager({
       suggestedFeeMinor: chosenFeeMinor,
       suggestedSetMinutes: 60,
       suggestedDates: data.festivalDates[0] ? [data.festivalDates[0]] : [],
-      responseDeadline: responseDeadline(data.festivalDates),
+      responseDeadline: deadlineFromInput(responseDeadlineInput, data.festivalDates),
       message: `We would like to invite you to perform at this year\'s Festival. Proposed billing: ${billingLabel(billingInputs[key] ?? "support")}.`,
       idempotencyKey: crypto.randomUUID(),
     });
@@ -276,8 +302,64 @@ export function SimplifiedFestivalLineupManager({
       idempotencyKey: crypto.randomUUID(),
     });
 
+  const withdrawInvite = (invitation: FestivalArtistInvitation) =>
+    withdrawInvitation.mutate(
+      {
+        festivalCompanyId,
+        festivalEditionId,
+        invitationId: invitation.id,
+        expectedVersion: invitation.version,
+        idempotencyKey: crypto.randomUUID(),
+      },
+      {
+        onSuccess: () => toast.success("Festival invitation withdrawn"),
+        onError: (error: Error) =>
+          toast.error(`Could not withdraw invitation: ${error.message}`),
+      },
+    );
+
+  const withdrawCurrentOffer = (offer: FestivalArtistOffer) =>
+    withdrawOffer.mutate(
+      {
+        festivalCompanyId,
+        festivalEditionId,
+        offerId: offer.id,
+        expectedVersion: offer.offerVersion,
+        idempotencyKey: crypto.randomUUID(),
+      },
+      {
+        onSuccess: () => toast.success("Festival offer withdrawn"),
+        onError: (error: Error) =>
+          toast.error(`Could not withdraw offer: ${error.message}`),
+      },
+    );
+
   return (
     <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Invitation and offer deadline</CardTitle>
+          <CardDescription>
+            New invitations and performance offers expire at this date and time.
+            You can also withdraw a pending invite or offer at any time.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="max-w-sm space-y-1">
+          <label
+            htmlFor="festival-response-deadline"
+            className="text-xs font-medium text-muted-foreground"
+          >
+            Response deadline
+          </label>
+          <Input
+            id="festival-response-deadline"
+            type="datetime-local"
+            value={responseDeadlineInput}
+            onChange={(event) => setResponseDeadlineInput(event.target.value)}
+          />
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -513,8 +595,22 @@ export function SimplifiedFestivalLineupManager({
                     {formatMinorMoney(
                       suggestedFeeMinor,
                       data.programme?.currencyCode ?? "GBP",
-                    )}
+                    )}{" "}
+                    · expires {deadlineLabel(invitation.expiresAt)}
                   </p>
+                  {["draft", "sent", "viewed", "interested"].includes(
+                    invitation.status,
+                  ) ? (
+                    <Button
+                      className="mt-2"
+                      size="sm"
+                      variant="ghost"
+                      disabled={workflowPending}
+                      onClick={() => withdrawInvite(invitation)}
+                    >
+                      Withdraw invite
+                    </Button>
+                  ) : null}
                   {invitation.status === "interested" ? (
                     <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
                       <div className="flex-1 space-y-1">
@@ -568,18 +664,30 @@ export function SimplifiedFestivalLineupManager({
                 <p className="mt-1 text-xs text-muted-foreground">
                   {formatMinorMoney(offer.offeredFeeMinor, offer.currencyCode)} ·{" "}
                   {offer.setMinutes} minute set · {billingLabel(offer.billingPosition)}
+                  {" · expires "}{deadlineLabel(offer.responseDeadline)}
                 </p>
-                {offer.status === "draft" || offer.status === "countered" ? (
-                  <Button
-                    className="mt-2"
-                    size="sm"
-                    variant="outline"
-                    disabled={workflowPending}
-                    onClick={() => resendOffer(offer)}
-                  >
-                    <Send className="mr-2 h-4 w-4" /> Send offer
-                  </Button>
-                ) : null}
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {offer.status === "draft" || offer.status === "countered" ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={workflowPending}
+                      onClick={() => resendOffer(offer)}
+                    >
+                      <Send className="mr-2 h-4 w-4" /> Send offer
+                    </Button>
+                  ) : null}
+                  {["draft", "sent", "countered"].includes(offer.status) ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={workflowPending}
+                      onClick={() => withdrawCurrentOffer(offer)}
+                    >
+                      Withdraw offer
+                    </Button>
+                  ) : null}
+                </div>
               </div>
             ))}
           </CardContent>
