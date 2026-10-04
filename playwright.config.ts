@@ -25,6 +25,7 @@ export default defineConfig({
       VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL ?? 'http://127.0.0.1:54321',
       VITE_SUPABASE_PUBLISHABLE_KEY: process.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? 'phase-5-playwright-anon-key',
       VITE_GIG_VIEWER_DEMO_TEST_ADMIN: 'true',
+      VITE_LUTHIERY_WORKBENCH_TEST_ADMIN: 'true',
     },
   },
   projects: [
