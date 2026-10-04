@@ -312,6 +312,40 @@ serve(async (req) => {
       }
     }
 
+    // Pre-fetch data previously queried once per release.
+    const cityIds = [...new Set((releases || []).map((r: any) => r.bands?.[0]?.home_city_id).filter(Boolean))];
+    const cityTaxMap = new Map<string, number>();
+    if (cityIds.length > 0) {
+      const { data: cities } = await supabaseClient.from("cities").select("id, sales_tax_rate").in("id", cityIds);
+      for (const city of cities || []) cityTaxMap.set(city.id, city.sales_tax_rate != null ? city.sales_tax_rate / 100 : defaultSalesTaxRate);
+    }
+
+    const countryFansByBand = new Map<string, any[]>();
+    if (saleBandIds.length > 0) {
+      const { data: countryFans } = await supabaseClient
+        .from("band_country_fans")
+        .select("band_id, country, fame, has_performed, total_fans")
+        .in("band_id", saleBandIds);
+      for (const fan of countryFans || []) {
+        const rows = countryFansByBand.get(fan.band_id) || [];
+        rows.push(fan);
+        countryFansByBand.set(fan.band_id, rows);
+      }
+    }
+
+    const campaignsByRelease = new Map<string, any[]>();
+    if (releaseIds.length > 0) {
+      const { data: campaigns } = await (supabaseClient.from("promotional_campaigns" as any) as any)
+        .select("release_id, effects")
+        .in("release_id", releaseIds)
+        .eq("status", "active");
+      for (const campaign of campaigns || []) {
+        const rows = campaignsByRelease.get(campaign.release_id) || [];
+        rows.push(campaign);
+        campaignsByRelease.set(campaign.release_id, rows);
+      }
+    }
+
     for (const release of releases || []) {
       try {
         releasesProcessed += 1;
@@ -331,7 +365,7 @@ serve(async (req) => {
         const homeCityId = band?.home_city_id || null;
 
         // Get city sales tax rate
-        const salesTaxRate = await getCitySalesTaxRate(homeCityId, supabaseClient);
+        const salesTaxRate = homeCityId ? (cityTaxMap.get(homeCityId) ?? defaultSalesTaxRate) : defaultSalesTaxRate;
 
         // Get territories for this release
         const releaseTerritories = allTerritories.filter(t => t.release_id === release.id);
@@ -342,12 +376,9 @@ serve(async (req) => {
         let globalFame = artistFame;
         
         if (release.band_id) {
-          const { data: countryFans } = await supabaseClient
-            .from("band_country_fans")
-            .select("country, fame, has_performed, total_fans")
-            .eq("band_id", release.band_id);
+          const countryFans = countryFansByBand.get(release.band_id) || [];
           
-          if (countryFans && countryFans.length > 0) {
+          if (countryFans.length > 0) {
             for (const cf of countryFans) {
               countryFansMap.set(cf.country, cf);
             }
@@ -730,10 +761,7 @@ serve(async (req) => {
         }
 
         // Apply active campaign hype boosts
-        const { data: activeCampaigns } = await (supabaseClient.from("promotional_campaigns" as any) as any)
-          .select("effects")
-          .eq("release_id", release.id)
-          .eq("status", "active");
+        const activeCampaigns = campaignsByRelease.get(release.id) || [];
         
         if (activeCampaigns && activeCampaigns.length > 0) {
           let campaignHypeBoost = 0;
