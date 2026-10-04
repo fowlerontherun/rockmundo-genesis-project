@@ -1,6 +1,6 @@
 # RockMundo Luthiery Crafting Plan
 
-Status: Phase 5 player instrument shops implemented; Phase 4 re-audited, hardened and complete
+Status: Phase 6 equipment and gig integration implemented; Phases 4–5 re-audited and hardened
 Reviewed against main: 2026-10-04 at 61154f29b86f228aa3ad42276c2d6756ed09570d
 Phase 4 branch: `feat/luthiery-phase-4-authoritative-crafting`
 
@@ -202,11 +202,31 @@ Remaining carry-over before the whole crafting foundation is considered complete
 
 ## Phase 6 — Equipment and gig integration
 
-- [ ] Make player-crafted guitars/basses equippable everywhere normal instruments are used.
-- [ ] Feed their boosts into the existing equipment/readiness calculations without double counting.
-- [ ] Show maker, shape, materials, colour and quality on equipment detail.
-- [ ] Render the selected custom shape/colour in supported avatar/gig instrument views.
-- [ ] Preserve the immutable build snapshot in historical gig replays where required.
+- [x] Make player-crafted guitars/basses equippable everywhere normal instruments are used.
+- [x] Feed their boosts into the existing equipment/readiness calculations without double counting.
+- [x] Show maker, shape, materials, colour and quality on equipment detail.
+- [x] Render the selected custom shape/colour in supported avatar/gig instrument views.
+- [x] Preserve the immutable build snapshot in historical gig replays where required.
+
+### Phase 6 implementation review — 2026-10-04
+
+- player-crafted guitars and basses remain canonical `equipment_items` / `player_equipment` assets with one permanent item identity and are now bridged into Personal Gear instead of being duplicated into the legacy shop catalogue;
+- Personal Gear can display, maintain and equip custom Luthiery instruments, including verified maker, shape, materials, finish, colour, quality and preserved craft stats;
+- repaired the production My Gear compatibility drift that referenced absent `player_equipment` pool columns/view, keeping the screen on the canonical character inventory rather than allowing the whole gear query to fail;
+- equipped custom guitars/basses feed the existing musician-role gear multiplier exactly once: the five 0–100 craft characteristics are converted to a bounded 0–8% Luthiery bonus, while shared band equipment remains the separate existing contribution;
+- gig readiness uses only a snapshotted quality/condition reliability score for assigned custom instruments, blended 25% with shared band equipment, so craft boosts are not counted a second time;
+- band members can assign an equipped custom guitar/bass to a specific scheduled gig through an authoritative RPC; the assignment snapshots permanent equipment ID, owner, maker/provenance, shape, colour, finish, quality, condition, craft stats and build specification;
+- the same permanent instrument cannot be committed to overlapping non-terminal gigs within four hours, and assigned instruments are protected from mutation/deletion until the assignment is removed or the gig reaches a terminal state;
+- gig preparation shows assigned player-instrument quality, condition, reliability, maker, shape, colour and materials alongside Band Equipment and Show Crew readiness;
+- live song scoring is now character-safe by `band_members.profile_id` and no longer allows another character on the same account to contribute equipped gear accidentally;
+- custom shapes and colours render on the normal 3D electric guitar/bass rig; the stage loader keeps both equipped guitar and bass builds and matches the correct crafted instrument to the performer role;
+- the V1 avatar designer performance preview also renders the matching equipped crafted guitar/bass;
+- completed-gig replay generation persists the gig-specific immutable Luthiery snapshot and the viewer prefers that historical snapshot over current inventory, so later resale, equipment changes or new builds do not rewrite an old show;
+- restored the missing live `generate-gig-viewer-replay` Edge Function and fixed its extensionless Deno shared imports so it bundles under Supabase;
+- live Edge Functions updated: `process-gig-song` v390, `preview-live-setup` v38, and restored `generate-gig-viewer-replay` v1 with JWT verification;
+- live migrations applied: `20261004230730_luthiery_phase6_equipment_gig_integration`, `20261004231831_lock_luthiery_phase6_gig_instrument_snapshots`, `20261004232033_fix_luthiery_phase6_equipment_detail_types`, and `20261004232134_return_all_equipped_luthiery_stage_instruments`;
+- the Phase 6 rollback database harness passes against live Supabase and certifies owner provenance, stage projection, authoritative assignment, quality/condition snapshots, overlap blocking, assigned-instrument mutation locks, live-gig locking and cross-account inventory isolation;
+- dedicated Phase 6 tests cover bounded craft-stat scoring, readiness blending, custom 3D geometry/colour and replay snapshot validation, with a GitHub Actions workflow for tests, typecheck, lint, build and disposable-Supabase database lifecycle.
 
 ## Phase 7 — Balance and content expansion
 
