@@ -3,6 +3,7 @@ import { batchStaticMeshes, box, cylinder, rod, matte, metal, buildGuitar, build
 import { STAGE_INSTRUMENTS, type InstrumentId, type PlayingStyle } from './instrumentCatalog';
 import { fretPosition, smoothMotion } from './performanceMotion';
 import type { ResolvedInstrumentSkinVisual } from '@/features/instrument-skins/instrumentSkin';
+import type { LuthieryInstrumentVisual } from '@/features/luthiery/luthieryInstrument';
 type Point = [
     number,
     number,
@@ -63,8 +64,67 @@ function applyElectricInstrumentSkin(root: T.Group, skin?: ResolvedInstrumentSki
     }
 }
 
+function luthieryBodyShape(shapeId: string) {
+    const s = new T.Shape();
+    if (shapeId === 'v-shape') {
+        s.moveTo(0, .33); s.lineTo(-.12, .11); s.lineTo(-.38, -.40); s.lineTo(-.06, -.22);
+        s.lineTo(0, -.02); s.lineTo(.06, -.22); s.lineTo(.38, -.40); s.lineTo(.12, .11); s.closePath();
+    } else if (shapeId === 'angular' || shapeId === 'razor' || shapeId === 'war-axe') {
+        const wide = shapeId === 'war-axe' ? .42 : shapeId === 'razor' ? .31 : .36;
+        const point = shapeId === 'razor' ? -.46 : -.39;
+        s.moveTo(0, .35); s.lineTo(-.18, .24); s.lineTo(-wide, .02); s.lineTo(-.18, -.12);
+        s.lineTo(-wide * .8, point); s.lineTo(0, -.28); s.lineTo(wide * .92, point + .02);
+        s.lineTo(.2, -.08); s.lineTo(wide, .08); s.lineTo(.15, .25); s.closePath();
+    } else if (shapeId === 'single-cut') {
+        s.moveTo(.02, .36); s.bezierCurveTo(-.10,.31,-.19,.26,-.18,.14);
+        s.bezierCurveTo(-.40,.05,-.36,-.35,-.04,-.40); s.bezierCurveTo(.34,-.43,.42,-.12,.28,.03);
+        s.bezierCurveTo(.12,.15,.20,.27,.02,.36);
+    } else if (shapeId === 'offset') {
+        s.moveTo(-.03,.36); s.bezierCurveTo(-.24,.30,-.31,.18,-.19,.07);
+        s.bezierCurveTo(-.44,-.08,-.31,-.39,.03,-.36); s.bezierCurveTo(.39,-.33,.43,-.08,.24,.04);
+        s.bezierCurveTo(.32,.21,.17,.33,-.03,.36);
+    } else if (shapeId === 'monolith-bass') {
+        s.moveTo(0,.38); s.lineTo(-.23,.28); s.lineTo(-.31,.08); s.lineTo(-.27,-.36);
+        s.lineTo(0,-.43); s.lineTo(.27,-.36); s.lineTo(.31,.08); s.lineTo(.23,.28); s.closePath();
+    } else {
+        // double-cut/classic-bass and unknown legacy shapes keep a familiar
+        // double-cut silhouette while still preserving the crafted colour.
+        s.moveTo(0,.36); s.bezierCurveTo(-.06,.25,-.12,.23,-.17,.31);
+        s.bezierCurveTo(-.30,.28,-.16,.12,-.28,.01); s.bezierCurveTo(-.43,-.18,-.27,-.42,0,-.39);
+        s.bezierCurveTo(.30,-.42,.43,-.17,.28,.01); s.bezierCurveTo(.16,.12,.22,.24,.12,.32);
+        s.bezierCurveTo(.04,.23,.07,.27,0,.36);
+    }
+    return s;
+}
+
+function applyLuthieryInstrumentVisual(root: T.Group, visual?: LuthieryInstrumentVisual | null) {
+    if (!visual) return;
+    const body = root.getObjectByName('instrument-body') as T.Mesh<T.BufferGeometry, T.MeshStandardMaterial> | undefined;
+    if (!body) return;
+    const previous = body.geometry;
+    body.geometry = new T.ExtrudeGeometry(luthieryBodyShape(visual.shapeId), {
+        depth: .095,
+        bevelEnabled: true,
+        bevelSegments: 3,
+        steps: 1,
+        bevelSize: .025,
+        bevelThickness: .025,
+        curveSegments: 16,
+    });
+    previous.dispose();
+    if (body.material?.isMeshStandardMaterial) body.material.color.set(visual.colour);
+    if (visual.instrumentKind === 'electric_bass' || visual.shapeId.includes('bass')) body.scale.y *= 1.05;
+    root.userData.luthieryInstrument = {
+        instrumentName: visual.instrumentName,
+        shapeId: visual.shapeId,
+        shapeName: visual.shapeName,
+        colour: visual.colour,
+        finalQuality: visual.finalQuality,
+    };
+}
+
 /** Stage-sized, locally generated instruments. Grip markers drive the same IK as the avatar preview. */
-export function buildInstrument(id: InstrumentId, colour = '#ab713d', skin?: ResolvedInstrumentSkinVisual | null): InstrumentRig {
+export function buildInstrument(id: InstrumentId, colour = '#ab713d', skin?: ResolvedInstrumentSkinVisual | null, luthiery?: LuthieryInstrumentVisual | null): InstrumentRig {
     const spec = STAGE_INSTRUMENTS[id], root = new T.Group();
     root.name = `instrument-${id}`;
     root.userData.instrumentId = id;
@@ -203,8 +263,12 @@ export function buildInstrument(id: InstrumentId, colour = '#ab713d', skin?: Res
         }
         if (electric) {
             const body = g.getObjectByName('instrument-body') as T.Mesh<T.BufferGeometry, T.MeshStandardMaterial>;
-            body.material.color.set(skin?.bodyColor || colour);
+            body.material.color.set(skin?.bodyColor || luthiery?.colour || colour);
             applyElectricInstrumentSkin(g, skin);
+            // The crafted body silhouette/paint are part of the immutable build.
+            // Apply them after optional store skins so the selected instrument
+            // remains recognisably the player's custom Luthiery build.
+            applyLuthieryInstrumentVisual(g, luthiery);
         }
         // Keep the instrument body in front of the torso. The previous .16 depth
         // could put acoustic/electric bodies inside broader player-model chests.
