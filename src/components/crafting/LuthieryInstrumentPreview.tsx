@@ -65,6 +65,9 @@ const PartGroup = ({
     aria-pressed={activePart === part}
     data-testid={`instrument-part-${part}`}
     onClick={() => onSelectPart(part)}
+    onPointerUp={(event) => {
+      if (event.pointerType === "touch") onSelectPart(part);
+    }}
     onKeyDown={(event) => activate(event, part, onSelectPart)}
     className="cursor-pointer outline-none focus-visible:[filter:drop-shadow(0_0_5px_hsl(var(--primary)))]"
   >
