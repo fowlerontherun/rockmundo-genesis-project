@@ -134,3 +134,56 @@ WHERE edge_function_name IN (
   'process-daily-updates'
 )
 AND is_active=true;
+
+
+-- Edge Functions can be terminated by the runtime before their catch/finally path
+-- can update cron_job_runs. Reconcile abandoned "running" rows so the admin
+-- monitor reports interrupted executions as errors instead of running forever.
+CREATE OR REPLACE FUNCTION public.reconcile_stale_cron_job_runs(
+  p_stale_after interval DEFAULT interval '10 minutes'
+)
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public', 'pg_temp'
+AS $function$
+DECLARE
+  v_count integer;
+BEGIN
+  UPDATE public.cron_job_runs
+  SET status = 'error',
+      completed_at = COALESCE(completed_at, now()),
+      duration_ms = COALESCE(
+        duration_ms,
+        GREATEST(0, (extract(epoch FROM (now() - started_at)) * 1000)::bigint)
+      ),
+      error_count = GREATEST(COALESCE(error_count, 0), 1),
+      error_message = COALESCE(
+        error_message,
+        'Execution interrupted or timed out before completion was recorded'
+      ),
+      result_summary = COALESCE(
+        result_summary,
+        '{"error":"Execution interrupted or timed out before completion was recorded","reconciled":true}'::jsonb
+      )
+  WHERE status = 'running'
+    AND started_at < now() - p_stale_after;
+
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+  RETURN v_count;
+END;
+$function$;
+
+REVOKE ALL ON FUNCTION public.reconcile_stale_cron_job_runs(interval)
+FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.reconcile_stale_cron_job_runs(interval)
+TO service_role;
+
+SELECT cron.schedule(
+  'reconcile-stale-cron-job-runs',
+  '*/10 * * * *',
+  $$SELECT public.reconcile_stale_cron_job_runs(interval '10 minutes');$$
+)
+WHERE NOT EXISTS (
+  SELECT 1 FROM cron.job WHERE jobname = 'reconcile-stale-cron-job-runs'
+);
