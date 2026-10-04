@@ -31,8 +31,14 @@ test("completes the Phase 3 five-part Luthiery design journey without mutations"
   await page.getByRole("button", { name: /Custom Artwork/ }).click();
   await page.getByRole("button", { name: "Lightning", exact: true }).click();
   await expect(page.getByTestId("instrument-decal")).toBeVisible();
-  await page.getByRole("slider", { name: "Decal horizontal position" }).fill("72");
-  await page.getByRole("slider", { name: "Decal rotation" }).fill("25");
+  for (const [name, value] of [["Decal horizontal position", "72"], ["Decal rotation", "25"]] as const) {
+    await page.getByRole("slider", { name }).evaluate((element, nextValue) => {
+      const input = element as HTMLInputElement;
+      input.value = nextValue;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    }, value);
+  }
 
   await page.getByRole("button", { name: "Review build" }).click();
   const dialog = page.getByRole("dialog");
