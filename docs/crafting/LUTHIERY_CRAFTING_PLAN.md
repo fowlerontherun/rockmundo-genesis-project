@@ -168,7 +168,7 @@ Remaining carry-over before the whole crafting foundation is considered complete
 - shop reputation is recalculated from average sold-item quality (50%), value-for-money (30%) and listing reliability (20%), while cancelled listings reduce reliability;
 - direct client INSERT/UPDATE access is revoked, mutation RPCs are authenticated SECURITY DEFINER functions with fixed search paths, anonymous shop browsing/mutations are blocked, and RLS limits non-public history to participants/shop owners;
 - a rollback integration harness passed against the live database for craft provenance, listing locks, ledger settlement, first sale, resale, maker commission, identity preservation and idempotent purchase retry;
-- live migrations applied: `20261004215150_luthiery_phase5_player_instrument_shops`, `20261004215337_harden_luthiery_phase5_browsing`, `20261004215545_use_finance_ledger_for_luthiery_shop_sales`, `20261004215752_allow_authoritative_luthiery_shop_transfer`, and `20261004220404_allow_luthiery_shop_inventory_ownership_transfer`;
+- live migrations applied: `20261004215150_luthiery_phase5_player_instrument_shops`, `20261004215337_harden_luthiery_phase5_browsing`, `20261004215545_use_finance_ledger_for_luthiery_shop_sales`, `20261004215752_allow_authoritative_luthiery_shop_transfer`, `20261004220404_allow_luthiery_shop_inventory_ownership_transfer`, `20261004220712_hide_closed_luthiery_shop_listings`, and `20261004220910_index_luthiery_phase5_foreign_keys`;
 - a dedicated Phase 5 UI test suite and GitHub Actions verification workflow cover customer browsing, shop qualification/setup, typecheck, lint and build.
 
 ## Phase 6 — Equipment and gig integration
