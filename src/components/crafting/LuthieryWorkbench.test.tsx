@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -6,9 +6,9 @@ import { LuthieryWorkbench } from "./LuthieryWorkbench";
 import type { CraftingMaterial, PlayerCraftingMaterial } from "@/hooks/useCraftingSystem";
 
 const progress = [
-  { id: "basic", profile_id: "profile", skill_slug: "luthiery_basic_technical", current_level: 250, current_xp: 0, required_xp: 100 },
-  { id: "professional", profile_id: "profile", skill_slug: "luthiery_professional_technical", current_level: 650, current_xp: 0, required_xp: 100 },
-  { id: "mastery", profile_id: "profile", skill_slug: "luthiery_mastery_technical", current_level: 650, current_xp: 0, required_xp: 100 },
+  { id: "basic", profile_id: "profile", skill_slug: "luthiery_basic_technical", current_level: 20, current_xp: 0, required_xp: 100 },
+  { id: "professional", profile_id: "profile", skill_slug: "luthiery_professional_technical", current_level: 20, current_xp: 0, required_xp: 100 },
+  { id: "mastery", profile_id: "profile", skill_slug: "luthiery_mastery_technical", current_level: 20, current_xp: 0, required_xp: 100 },
 ];
 
 vi.mock("@/hooks/useSkillSystem", () => ({
@@ -54,7 +54,7 @@ const stock: PlayerCraftingMaterial[] = [
   { id: "s7", profile_id: "profile", material_id: "boutique", quantity: 2, acquired_at: "2026-10-04T00:00:00Z", material: materials[6] },
 ];
 
-describe("LuthieryWorkbench Phase 3 interactions", () => {
+describe("LuthieryWorkbench interactions", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("supports keyboard and touch selection directly on the instrument preview", () => {
@@ -108,6 +108,51 @@ describe("LuthieryWorkbench Phase 3 interactions", () => {
     expect(screen.getByText("Design confirmed: Thunder Road")).toBeInTheDocument();
 
     expect(stock.find((entry) => entry.material_id === "maple")?.quantity).toBe(3);
+  });
+
+
+  it("submits a confirmed design through the Phase 4 craft action and surfaces the server result", async () => {
+    const user = userEvent.setup();
+    const result = {
+      status: "completed" as const,
+      craftId: "craft-1",
+      equipmentId: "equipment-1",
+      playerEquipmentId: "player-equipment-1",
+      instrumentName: "Server Axe",
+      instrumentKind: "electric_guitar" as const,
+      rarity: "rare",
+      qualityRoll: 2,
+      finalQuality: 68,
+      finalStats: { tone: 55, sustain: 54, stability: 58, output: 50, stagePresence: 44 },
+      buildSpec: {},
+    };
+    const onCraft = vi.fn().mockResolvedValue(result);
+    const onCrafted = vi.fn();
+
+    render(
+      <LuthieryWorkbench
+        materialsCatalog={materials}
+        playerMaterials={stock}
+        onCraft={onCraft}
+        onCrafted={onCrafted}
+      />,
+    );
+
+    await user.type(screen.getByLabelText("Instrument name"), "Server Axe");
+    await user.click(screen.getByRole("button", { name: "Review build" }));
+    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Confirm design" }));
+    await user.click(screen.getByRole("button", { name: "Craft instrument" }));
+
+    await waitFor(() => expect(onCraft).toHaveBeenCalledTimes(1));
+    expect(onCraft.mock.calls[0][0]).toMatchObject({
+      instrumentName: "Server Axe",
+      instrumentKind: "electric_guitar",
+      shapeId: "double-cut",
+    });
+    expect(onCraft.mock.calls[0][1]).toEqual(expect.any(String));
+    expect(onCraft.mock.calls[0][1].length).toBeGreaterThanOrEqual(8);
+    expect(onCrafted).toHaveBeenCalledWith(result);
+    expect(screen.getByRole("button", { name: "Instrument crafted" })).toBeDisabled();
   });
 
   it("blocks confirmation when required inventory is missing", async () => {

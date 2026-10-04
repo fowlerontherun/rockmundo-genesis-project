@@ -47,7 +47,7 @@ export const LuthieryBuildReviewDialog = ({
         <DialogHeader>
           <DialogTitle>Review instrument build</DialogTitle>
           <DialogDescription>
-            Check the five parts, finish, artwork and material stock before confirming this Phase 3 design.
+            Check the five parts, finish, artwork and current material stock before confirming this design for authoritative crafting.
           </DialogDescription>
         </DialogHeader>
 
@@ -126,7 +126,7 @@ export const LuthieryBuildReviewDialog = ({
                 Design ready for crafting
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Confirming Phase 3 locks the reviewed design in the UI only. Material consumption and equipment creation remain server-authoritative Phase 4 work.
+                Confirmation keeps the reviewed design unchanged in the workbench. Materials are only consumed when you submit the confirmed build to the server.
               </p>
             </div>
           )}

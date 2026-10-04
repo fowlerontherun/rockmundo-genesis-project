@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Guitar, Hammer, Package, ScrollText, Recycle, ShoppingCart, Sparkles } from "lucide-react";
+import { Guitar, Hammer, Package, ScrollText, Recycle, ShoppingCart, Sparkles, Store } from "lucide-react";
 import { useCraftingSystem } from "@/hooks/useCraftingSystem";
 import { usePlayerEquipment } from "@/hooks/usePlayerEquipment";
 import { CraftingRecipeCard } from "@/components/crafting/CraftingRecipeCard";
@@ -12,6 +12,7 @@ import { SalvagePanel } from "@/components/crafting/SalvagePanel";
 import { CraftedItemReveal } from "@/components/crafting/CraftedItemReveal";
 import { EnchantmentPanel } from "@/components/crafting/EnchantmentPanel";
 import { LuthieryWorkbench } from "@/components/crafting/LuthieryWorkbench";
+import { LuthieryShopPanel } from "@/components/crafting/LuthieryShopPanel";
 import { SkillSystemProvider } from "@/hooks/SkillSystemProvider";
 
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
@@ -30,6 +31,8 @@ const CraftingWorkshopInner = () => {
     isCrafting,
     collectCraft,
     isCollecting,
+    craftCustomLuthieryInstrument,
+    isCraftingCustomLuthiery,
     salvageEquipment,
     isSalvaging,
   } = useCraftingSystem();
@@ -98,7 +101,10 @@ const CraftingWorkshopInner = () => {
             <Package className="w-3.5 h-3.5 mr-1" /> Materials
           </TabsTrigger>
           <TabsTrigger value="shop" className="text-xs">
-            <ShoppingCart className="w-3.5 h-3.5 mr-1" /> Shop
+            <ShoppingCart className="w-3.5 h-3.5 mr-1" /> Materials Shop
+          </TabsTrigger>
+          <TabsTrigger value="instrument-shop" className="text-xs">
+            <Store className="w-3.5 h-3.5 mr-1" /> Instrument Shop
           </TabsTrigger>
           <TabsTrigger value="progress" className="text-xs">
             <Hammer className="w-3.5 h-3.5 mr-1" /> Active
@@ -120,6 +126,18 @@ const CraftingWorkshopInner = () => {
           <LuthieryWorkbench
             materialsCatalog={materialsCatalog}
             playerMaterials={playerMaterials}
+            isCrafting={isCraftingCustomLuthiery}
+            onCraft={(selection, idempotencyKey) =>
+              craftCustomLuthieryInstrument({ selection, idempotencyKey })
+            }
+            onCrafted={(result) =>
+              setRevealData({
+                open: true,
+                recipeName: result.instrumentName,
+                qualityRoll: result.finalQuality,
+                bonusStats: result.finalStats,
+              })
+            }
           />
         </TabsContent>
 
@@ -163,6 +181,10 @@ const CraftingWorkshopInner = () => {
             isPurchasing={isPurchasing}
             mode="shop"
           />
+        </TabsContent>
+
+        <TabsContent value="instrument-shop">
+          <LuthieryShopPanel />
         </TabsContent>
 
         <TabsContent value="progress">

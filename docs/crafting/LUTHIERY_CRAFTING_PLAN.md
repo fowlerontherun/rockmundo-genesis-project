@@ -1,7 +1,8 @@
 # RockMundo Luthiery Crafting Plan
 
-Status: Phase 3 implementation complete; focused release gate added
-Reviewed against main: 2026-10-04 at f2a2ca6843a19311493f6dee46092b9e31c1ecec
+Status: Phase 5 player instrument shops implemented; canonical Luthiery XP award remains open
+Reviewed against main: 2026-10-04 at 0d4cccefafc544b4d9e8f48035e06c66f819a418
+Phase 4 branch: `feat/luthiery-phase-4-authoritative-crafting`
 
 ## Product goal
 
@@ -55,10 +56,10 @@ Acceptance gate: the UI can determine whether a shape or material is available f
 - [x] Guitar and bass are the first instrument families.
 - [x] Existing finish materials can be used as the visual finish layer.
 - [x] Existing player material inventory can be surfaced beside choices.
-- [ ] Move final craft resolution to one authoritative server transaction.
-- [ ] Consume all five selected materials atomically.
-- [ ] Persist the exact build specification on the created equipment item.
-- [ ] Replace the legacy Math.random-only quality roll for custom instruments.
+- [x] Move final custom-instrument craft resolution to one authoritative server transaction.
+- [x] Consume all five selected part materials plus the finish atomically.
+- [x] Persist the exact build specification in immutable provenance linked to the created equipment item.
+- [x] Replace the legacy Math.random-only quality path for custom workbench instruments with a server-derived bounded deterministic roll.
 - [ ] Award Luthiery XP through the canonical progression service.
 
 Acceptance gate: the final server result is deterministic from the submitted build inputs plus an authoritative bounded quality roll/seed, and cannot be forged or duplicated by the client.
@@ -117,25 +118,58 @@ Acceptance gate: a player can assemble a guitar or bass visually, choose all fiv
 
 ## Phase 4 — Authoritative crafting and item persistence
 
-- [ ] Add a server-side create-custom-instrument action/RPC.
-- [ ] Validate active profile, skill unlocks, shape unlocks and all material ownership server-side.
-- [ ] Lock inventory rows and consume the five part materials plus finish atomically.
-- [ ] Calculate final quality and boosts server-side.
-- [ ] Create the equipment item and immutable build specification in the same transaction.
-- [ ] Make retries idempotent.
-- [ ] Reject client-supplied quality/stats.
-- [ ] Return the created item to the reveal screen.
-- [ ] Add DB/RLS/integration tests.
+- [x] Add a server-side create-custom-instrument action/RPC.
+- [x] Validate active profile, skill unlocks, shape unlocks and all material ownership server-side.
+- [x] Lock inventory rows and consume the five part materials plus finish atomically.
+- [x] Calculate final quality and boosts server-side.
+- [x] Create the equipment item and immutable build specification in the same transaction.
+- [x] Make retries idempotent.
+- [x] Reject client-supplied quality/stats.
+- [x] Return the created item to the reveal screen.
+- [x] Add DB/RLS/integration tests.
+
+### Phase 4 implementation review — 2026-10-04
+
+- the live Luthiery tier scale was corrected from obsolete 250/650-style values to the canonical 20-level tier model before server enforcement was enabled;
+- authoritative shape/component catalogues now live in the non-exposed `private` schema, with all 9 shapes and 32 component/finish options validated server-side;
+- `create_custom_luthiery_instrument` accepts design choices only and rejects client quality/stat fields;
+- the RPC requires the authenticated user's active living character, validates skill/shape/component unlocks, resolves production material aliases, locks stock rows and consumes aggregated requirements atomically;
+- final quality uses material quality, canonical Luthiery levels, shape difficulty and a bounded deterministic server roll derived from the request identity;
+- the equipment row, active-character inventory grant and immutable `luthiery_crafts` provenance are created in the same transaction;
+- idempotency uses a per-character request key plus payload hash and a transaction advisory lock, so retries return the existing item and changed payloads are rejected;
+- provenance has RLS, clients have read-only access for the active character, anonymous RPC access is revoked and authenticated execution is intentionally limited to the validated SECURITY DEFINER RPC;
+- the workbench now exposes a Craft instrument action after review/confirmation and feeds authoritative final quality/stats to the existing reveal dialog;
+- the checked-in SQL harness passed against the live database inside a rollback transaction, covering permissions, consumption, equipment minting, six-material provenance, retry idempotency, outcome injection rejection and idempotency conflicts;
+- live migrations applied: `20261004211805_luthiery_phase4_authoritative_crafting`, `20261004212003_fix_luthiery_phase4_parts_validation`, and `20261004212140_index_luthiery_phase4_crafts_user`;
+- a dedicated Phase 4 CI workflow runs focused tests, typecheck, lint, build and the existing Chromium workbench journey.
+
+Remaining carry-over before the whole crafting foundation is considered complete: award Luthiery XP through the canonical progression service, retire or migrate the legacy recipe collection path, add dedicated neck-stock materials, and balance material prices once enough live crafting data exists.
 
 ## Phase 5 — Player instrument shop
 
-- [ ] Let qualified Luthiers open an instrument shop.
-- [ ] Add shop name, branding, city and reputation.
-- [ ] Let owners list player-made instruments.
-- [ ] Add pricing, stock, sales history and commission controls.
-- [ ] Preserve maker identity and build provenance on resale.
-- [ ] Add customer browsing and purchase flow.
-- [ ] Add shop reputation effects from quality, value and reliability.
+- [x] Let qualified Luthiers open an instrument shop.
+- [x] Add shop name, branding, city and reputation.
+- [x] Let owners list player-made instruments.
+- [x] Add pricing, stock, sales history and commission controls.
+- [x] Preserve maker identity and build provenance on resale.
+- [x] Add customer browsing and purchase flow.
+- [x] Add shop reputation effects from quality, value and reliability.
+
+### Phase 5 implementation review — 2026-10-04
+
+- qualified characters can open one instrument shop once Basic Luthiery reaches level 20 (or a higher Luthiery tier is active), and the shop is anchored to the active character's current city;
+- shop owners can configure the shop name, tagline, brand colour, optional logo, open/closed state, city relocation and a 0–15% original-maker resale commission;
+- only canonical Phase 4 `custom_luthiery` equipment with immutable `luthiery_crafts` provenance can be listed, and equipped instruments cannot be listed;
+- active listing inventory is protected from client mutation while for-sale, then ownership is transferred by moving the same `equipment_items.id` into the buyer's `player_equipment` row so maker identity and build provenance survive every resale;
+- listing snapshots store maker name, quality, condition, stats and immutable build provenance; sold listings release their obsolete seller inventory-row reference with `ON DELETE SET NULL`;
+- purchases use the canonical `finance_transfer` ledger path rather than direct cash mutation, with idempotent seller and maker transfer keys and automatic `profiles.cash` projection updates;
+- first-party sales pay the full asking price to the maker/seller; resales split the configured commission to the original maker and the remainder to the current seller;
+- customer browsing shows shop/city/reputation, price versus suggested value, quality, condition, maker and build materials before purchase;
+- shop reputation is recalculated from average sold-item quality (50%), value-for-money (30%) and listing reliability (20%), while cancelled listings reduce reliability;
+- direct client INSERT/UPDATE access is revoked, mutation RPCs are authenticated SECURITY DEFINER functions with fixed search paths, anonymous shop browsing/mutations are blocked, and RLS limits non-public history to participants/shop owners;
+- a rollback integration harness passed against the live database for craft provenance, listing locks, ledger settlement, first sale, resale, maker commission, identity preservation and idempotent purchase retry;
+- live migrations applied: `20261004215150_luthiery_phase5_player_instrument_shops`, `20261004215337_harden_luthiery_phase5_browsing`, `20261004215545_use_finance_ledger_for_luthiery_shop_sales`, `20261004215752_allow_authoritative_luthiery_shop_transfer`, `20261004220404_allow_luthiery_shop_inventory_ownership_transfer`, `20261004220712_hide_closed_luthiery_shop_listings`, and `20261004220910_index_luthiery_phase5_foreign_keys`;
+- a dedicated Phase 5 UI test suite and GitHub Actions verification workflow cover customer browsing, shop qualification/setup, typecheck, lint and build.
 
 ## Phase 6 — Equipment and gig integration
 
@@ -169,4 +203,4 @@ The merged first Phase 3 slice was reviewed again and the following gaps/bugs we
 - focused Vitest and real Chromium Playwright coverage are included in a dedicated Luthiery Phase 3 workflow;
 - the live production material catalogue was reconciled after the UI review exposed missing finish/hardware/advanced material rows; all 32 workbench material-choice groups now resolve against production.
 
-The legacy recipe collection flow still uses its historical client-side random quality roll. It is not used as the authority for the custom Luthiery workbench and will be replaced/retired when Phase 4 introduces the server-authoritative custom-instrument transaction.
+The legacy recipe collection flow still uses its historical client-side random quality roll. The custom Luthiery workbench no longer uses that path: Phase 4 now resolves custom instruments through the authoritative server transaction. The legacy recipe flow remains scheduled for retirement/migration.
