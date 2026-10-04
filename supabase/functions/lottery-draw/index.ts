@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
     const { data: pendingDraws, error: drawError } = await supabase
       .from("lottery_draws")
       .select("*")
-      .eq("status", "pending")
+      .in("status", ["pending", "drawn"])
       .order("week_start", { ascending: false })
       .limit(1);
 
@@ -70,8 +70,8 @@ Deno.serve(async (req) => {
     const draw = pendingDraws[0];
 
     // Generate winning numbers
-    const winningNumbers = generateUniqueNumbers(7, 49);
-    const bonusNumber = Math.floor(Math.random() * 10) + 1;
+    const winningNumbers: number[] = draw.winning_numbers?.length === 7 ? draw.winning_numbers : generateUniqueNumbers(7, 49);
+    const bonusNumber = draw.bonus_number ?? (Math.floor(Math.random() * 10) + 1);
 
     // Update draw with winning numbers
     const { error: updateDrawError } = await supabase
@@ -104,71 +104,16 @@ Deno.serve(async (req) => {
 
       const prize = getPrize(matchCount, bonusMatched);
 
-      // Update ticket
-      await supabase
-        .from("lottery_tickets")
-        .update({
-          matches: matchCount,
-          bonus_matched: bonusMatched,
-          prize_cash: prize.cash,
-          prize_xp: prize.xp,
-          prize_fame: prize.fame,
-        })
-        .eq("id", ticket.id);
-
-      // Credit profile with prizes
-      if (prize.cash > 0 || prize.xp > 0 || prize.fame > 0) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("cash, xp, fame, user_id")
-          .eq("id", ticket.profile_id)
-          .single();
-
-        if (profile) {
-          await supabase
-            .from("profiles")
-            .update({
-              cash: (profile.cash || 0) + prize.cash,
-              xp: (profile.xp || 0) + prize.xp,
-              fame: (profile.fame || 0) + prize.fame,
-            })
-            .eq("id", ticket.profile_id);
-
-          // Mark as auto-claimed since prizes are awarded directly
-          await supabase
-            .from("lottery_tickets")
-            .update({ claimed: true })
-            .eq("id", ticket.id);
-
-          // === LOTTERY WIN → MORALE (v1.0.971) ===
-          // Winning the lottery boosts band morale based on prize tier
-          if (prize.cash >= 500 && (profile as any).user_id) {
-            try {
-              const { data: bm } = await supabase
-                .from('band_members')
-                .select('band_id')
-                .eq('user_id', (profile as any).user_id)
-                .eq('is_touring_member', false)
-                .limit(1)
-                .maybeSingle();
-              if (bm?.band_id) {
-                const { data: band } = await supabase.from('bands').select('morale').eq('id', bm.band_id).single();
-                if (band) {
-                  const curM = (band as any).morale ?? 50;
-                  const moraleBoost = prize.cash >= 250000 ? 12 : prize.cash >= 10000 ? 8 : prize.cash >= 1000 ? 5 : 3;
-                  const newMorale = Math.min(100, curM + moraleBoost);
-                  await supabase.from('bands').update({ morale: newMorale } as any).eq('id', bm.band_id);
-                  console.log(`Lottery win morale: $${prize.cash} → morale +${moraleBoost} for band ${bm.band_id}`);
-                  // Health event log
-                  try { await supabase.from('band_health_events').insert({ band_id: bm.band_id, event_type: 'morale', delta: moraleBoost, new_value: newMorale, source: 'lottery_win', description: `Lottery win: $${prize.cash.toLocaleString()} prize` }); } catch (_) {}
-                }
-              }
-            } catch (_e) { /* non-critical */ }
-          }
-        }
-
-        totalPrizesPaid += prize.cash;
-      }
+      const { data: settled, error: settleError } = await supabase.rpc("settle_lottery_ticket_atomic", {
+        p_ticket_id: ticket.id,
+        p_matches: matchCount,
+        p_bonus_matched: bonusMatched,
+        p_prize_cash: prize.cash,
+        p_prize_xp: prize.xp,
+        p_prize_fame: prize.fame,
+      });
+      if (settleError) throw settleError;
+      if (settled) totalPrizesPaid += prize.cash;
     }
 
     // Mark draw as paid out
