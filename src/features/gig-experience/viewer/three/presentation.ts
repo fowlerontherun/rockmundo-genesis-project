@@ -351,7 +351,7 @@ export function concertOptions(
   tattoos: Record<string, ResolvedTattooVisual[]> = {},
   instrumentSkins: Record<string, ResolvedInstrumentSkinVisual[]> = {},
   merchWearables: Record<string, ResolvedMerchWearable> = {},
-  luthieryInstruments: Record<string, LuthieryInstrumentVisual> = {},
+  luthieryInstruments: Record<string, LuthieryInstrumentVisual[]> = {},
 ): ConcertOptions {
   const totp = presentationMode === 'totp';
   const seedSource = totp ? `totp:${replay.simulationSeed}` : String(experience?.gig.venue.id ?? replay.simulationSeed);
@@ -387,6 +387,13 @@ export function concertOptions(
     performers: plan.entities.map(p => {
       const profileId = p.profileId ?? p.id;
       const assignment = stageAssignment(p.instrument, roleMap[p.role]);
+      const luthieryInstrument = luthieryInstruments[profileId]?.find((visual) =>
+        assignment.instrument === 'bass_guitar'
+          ? visual.instrumentKind === 'electric_bass'
+          : assignment.instrument === 'electric_guitar'
+            ? visual.instrumentKind === 'electric_guitar'
+            : false,
+      ) ?? null;
       return {
         id: p.id,
         displayName: p.displayName,
@@ -397,7 +404,7 @@ export function concertOptions(
         richClothing: richClothing[profileId] ?? [],
         tattoos: tattoos[profileId] ?? [],
         instrumentSkin: instrumentSkins[profileId]?.find(skin => skin.instrumentId === assignment.instrument) ?? null,
-        luthieryInstrument: luthieryInstruments[profileId] ?? null,
+        luthieryInstrument,
         merchWearable: merchWearables[profileId] ?? null,
       };
     }),
