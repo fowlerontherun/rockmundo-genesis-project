@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Hammer, Package, ScrollText, Recycle, ShoppingCart, Sparkles } from "lucide-react";
+import { Guitar, Hammer, Package, ScrollText, Recycle, ShoppingCart, Sparkles } from "lucide-react";
 import { useCraftingSystem } from "@/hooks/useCraftingSystem";
 import { usePlayerEquipment } from "@/hooks/usePlayerEquipment";
 import { CraftingRecipeCard } from "@/components/crafting/CraftingRecipeCard";
@@ -11,10 +11,12 @@ import { CraftingProgress } from "@/components/crafting/CraftingProgress";
 import { SalvagePanel } from "@/components/crafting/SalvagePanel";
 import { CraftedItemReveal } from "@/components/crafting/CraftedItemReveal";
 import { EnchantmentPanel } from "@/components/crafting/EnchantmentPanel";
+import { LuthieryWorkbench } from "@/components/crafting/LuthieryWorkbench";
+import { SkillSystemProvider } from "@/hooks/SkillSystemProvider";
 
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
-const CraftingWorkshop = () => {
+const CraftingWorkshopInner = () => {
   const {
     materialsCatalog,
     playerMaterials,
@@ -84,8 +86,11 @@ const CraftingWorkshop = () => {
       }
     >
 
-      <Tabs defaultValue="blueprints">
-        <TabsList className="w-full">
+      <Tabs defaultValue="workbench">
+        <TabsList className="w-full justify-start overflow-x-auto">
+          <TabsTrigger value="workbench" className="text-xs">
+            <Guitar className="w-3.5 h-3.5 mr-1" /> Workbench
+          </TabsTrigger>
           <TabsTrigger value="blueprints" className="text-xs">
             <ScrollText className="w-3.5 h-3.5 mr-1" /> Blueprints
           </TabsTrigger>
@@ -110,6 +115,13 @@ const CraftingWorkshop = () => {
             <Sparkles className="w-3.5 h-3.5 mr-1" /> Enchant
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="workbench">
+          <LuthieryWorkbench
+            materialsCatalog={materialsCatalog}
+            playerMaterials={playerMaterials}
+          />
+        </TabsContent>
 
         <TabsContent value="blueprints">
           {recipes.length === 0 ? (
@@ -185,5 +197,11 @@ const CraftingWorkshop = () => {
     </FMPageScaffold>
   );
 };
+
+const CraftingWorkshop = () => (
+  <SkillSystemProvider>
+    <CraftingWorkshopInner />
+  </SkillSystemProvider>
+);
 
 export default CraftingWorkshop;
