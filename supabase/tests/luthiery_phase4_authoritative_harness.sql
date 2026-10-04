@@ -36,26 +36,55 @@ BEGIN
   IF (SELECT count(*) FROM private.luthiery_component_options WHERE is_active) <> 32 THEN
     RAISE EXCEPTION 'authoritative Luthiery component catalogue is incomplete';
   END IF;
+  IF to_regprocedure('private.award_luthiery_craft_xp(uuid,text,integer)') IS NULL THEN
+    RAISE EXCEPTION 'private Luthiery craft XP helper missing';
+  END IF;
+  IF has_function_privilege(
+       'authenticated',
+       'private.award_luthiery_craft_xp(uuid,text,integer)',
+       'EXECUTE'
+     )
+     OR has_function_privilege(
+       'anon',
+       'private.award_luthiery_craft_xp(uuid,text,integer)',
+       'EXECUTE'
+     ) THEN
+    RAISE EXCEPTION 'Luthiery craft XP helper must not be directly callable by clients';
+  END IF;
 END
 $contract$;
 
 SET LOCAL session_replication_role = replica;
 
 INSERT INTO auth.users (id,email,role)
-VALUES (
-  '9a000000-0000-4000-8000-000000000001',
-  'luthiery-phase4@example.test',
-  'authenticated'
-);
+VALUES
+  (
+    '9a000000-0000-4000-8000-000000000001',
+    'luthiery-phase4@example.test',
+    'authenticated'
+  ),
+  (
+    '9a000000-0000-4000-8000-000000000002',
+    'luthiery-phase4-attacker@example.test',
+    'authenticated'
+  );
 
 INSERT INTO public.profiles (id,user_id,username,display_name,is_active)
-VALUES (
-  '9b000000-0000-4000-8000-000000000001',
-  '9a000000-0000-4000-8000-000000000001',
-  'luthiery_phase4_test',
-  'Luthiery Phase 4 Test',
-  true
-);
+VALUES
+  (
+    '9b000000-0000-4000-8000-000000000001',
+    '9a000000-0000-4000-8000-000000000001',
+    'luthiery_phase4_test',
+    'Luthiery Phase 4 Test',
+    true
+  ),
+  (
+    '9b000000-0000-4000-8000-000000000002',
+    '9a000000-0000-4000-8000-000000000002',
+    'luthiery_phase4_attacker',
+    'Luthiery Phase 4 Attacker',
+    true
+  );
 
 WITH selected(option_id) AS (
   VALUES
@@ -137,6 +166,21 @@ BEGIN
      OR jsonb_typeof(v_first->'finalStats') <> 'object' THEN
     RAISE EXCEPTION 'server outcome is invalid: %',v_first;
   END IF;
+  IF (v_first->>'xpAwarded')::integer <> 10
+     OR v_first->>'xpSkillSlug' <> 'luthiery_basic_technical'
+     OR jsonb_typeof(v_first->'skillProgress') <> 'object' THEN
+    RAISE EXCEPTION 'Luthiery craft XP result is invalid: %',v_first;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.skill_progress
+    WHERE profile_id='9b000000-0000-4000-8000-000000000001'
+      AND skill_slug='luthiery_basic_technical'
+      AND current_level=0
+      AND current_xp=10
+  ) THEN
+    RAISE EXCEPTION 'successful starter craft did not award Basic Luthiery XP';
+  END IF;
 
   v_equipment_id := (v_first->>'equipmentId')::uuid;
 
@@ -188,6 +232,14 @@ BEGIN
      OR v_retry->>'equipmentId' <> v_first->>'equipmentId' THEN
     RAISE EXCEPTION 'idempotent retry did not return the original item';
   END IF;
+  IF (
+    SELECT current_xp
+    FROM public.skill_progress
+    WHERE profile_id='9b000000-0000-4000-8000-000000000001'
+      AND skill_slug='luthiery_basic_technical'
+  ) <> 10 THEN
+    RAISE EXCEPTION 'idempotent retry awarded Luthiery XP twice';
+  END IF;
 
   BEGIN
     PERFORM public.create_custom_luthiery_instrument(
@@ -218,6 +270,50 @@ BEGIN
   END;
 END
 $craft$;
+
+RESET ROLE;
+
+SELECT set_config(
+  'request.jwt.claim.sub',
+  '9a000000-0000-4000-8000-000000000002',
+  true
+);
+SELECT set_config('request.jwt.claim.role','authenticated',true);
+SET LOCAL ROLE authenticated;
+
+DO $cross_character_retry$
+DECLARE
+  v_design jsonb := '{
+    "instrumentName":"Phase Four Test",
+    "instrumentKind":"electric_guitar",
+    "shapeId":"double-cut",
+    "colour":"#141821",
+    "finishId":"finish-satin",
+    "decal":{"id":"none","x":50,"y":50,"scale":100,"rotation":0,"colour":"#f5f5f5"},
+    "parts":{
+      "body":"body-alder",
+      "neck":"neck-maple",
+      "fretboard":"fret-maple",
+      "electronics":"elec-single",
+      "hardware":"hw-standard"
+    }
+  }'::jsonb;
+BEGIN
+  BEGIN
+    PERFORM public.create_custom_luthiery_instrument(
+      '9b000000-0000-4000-8000-000000000001',
+      v_design,
+      'phase4-regression-key-001'
+    );
+    RAISE EXCEPTION 'cross-character retry exposed another character craft';
+  EXCEPTION
+    WHEN SQLSTATE 'P0001' THEN
+      IF SQLERRM <> 'luthiery_active_profile_required' THEN
+        RAISE;
+      END IF;
+  END;
+END
+$cross_character_retry$;
 
 RESET ROLE;
 ROLLBACK;
