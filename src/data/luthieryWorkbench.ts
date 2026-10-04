@@ -1,4 +1,4 @@
-import type { CraftingMaterial } from "@/hooks/useCraftingSystem";
+import type { CraftingMaterial, PlayerCraftingMaterial } from "@/hooks/useCraftingSystem";
 import type { SkillProgressRecord } from "@/hooks/useSkillSystem.types";
 
 export type LuthieryInstrumentKind = "electric_guitar" | "electric_bass";
@@ -36,12 +36,52 @@ export interface LuthieryProjectedStats {
   stagePresence: number;
 }
 
+export type LuthieryDecalId = "none" | "lightning" | "star" | "stripes" | "target";
+
+export interface LuthieryDecalSelection {
+  id: LuthieryDecalId;
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+  colour: string;
+}
+
 export interface LuthieryBuildSelection {
+  instrumentName: string;
   instrumentKind: LuthieryInstrumentKind;
   shapeId: string;
   colour: string;
   finishId: string;
+  decal: LuthieryDecalSelection;
   parts: Record<LuthieryPartSlot, string>;
+}
+
+export interface LuthieryBuildRequirement {
+  material: CraftingMaterial;
+  quantity: number;
+  sources: string[];
+}
+
+export interface LuthieryBuildReadiness {
+  ready: boolean;
+  blockers: string[];
+  warnings: string[];
+  requirements: LuthieryBuildRequirement[];
+}
+
+export interface LuthieryBuildPreviewSpec {
+  instrumentName: string;
+  instrumentKind: LuthieryInstrumentKind;
+  shapeId: string;
+  shapeName: string;
+  colour: string;
+  finishId: string;
+  finishName: string;
+  decal: LuthieryDecalSelection;
+  parts: Record<LuthieryPartSlot, { optionId: string; label: string; materialId: string | null; materialName: string | null }>;
+  projectedQuality: number;
+  projectedStats: LuthieryProjectedStats;
 }
 
 export const LUTHIERY_SKILL_SLUGS: Record<LuthieryTier, string> = {
@@ -143,6 +183,14 @@ export const LUTHIERY_SHAPES: LuthieryShape[] = [
   },
 ];
 
+export const LUTHIERY_DECALS: Array<{ id: LuthieryDecalId; label: string }> = [
+  { id: "none", label: "None" },
+  { id: "lightning", label: "Lightning" },
+  { id: "star", label: "Star" },
+  { id: "stripes", label: "Racing Stripes" },
+  { id: "target", label: "Target" },
+];
+
 export const LUTHIERY_COLOURS = [
   { id: "midnight", label: "Midnight Black", value: "#141821" },
   { id: "ivory", label: "Ivory", value: "#e7e0cf" },
@@ -159,7 +207,7 @@ export const LUTHIERY_MATERIAL_OPTIONS: LuthieryMaterialOption[] = [
   // Body
   { id: "body-pine", label: "Pine", slot: "body", catalogNames: ["Pine Body Blank"], requirement: req("basic", 0), traits: { tone: -2, sustain: -2, stagePresence: 1 } },
   { id: "body-poplar", label: "Poplar", slot: "body", catalogNames: ["Poplar Body Blank"], requirement: req("basic", 40), traits: { tone: 0, sustain: 0, stability: 1 } },
-  { id: "body-alder", label: "Alder", slot: "body", catalogNames: ["Alder Body Blank"], requirement: req("basic", 90), traits: { tone: 3, sustain: 1, stability: 2 } },
+  { id: "body-alder", label: "Alder", slot: "body", catalogNames: ["Alder Body Blank"], requirement: req("basic", 0), traits: { tone: 3, sustain: 1, stability: 2 } },
   { id: "body-ash", label: "Ash", slot: "body", catalogNames: ["Ash Body Blank"], requirement: req("basic", 160), traits: { tone: 4, sustain: 2, stagePresence: 1 } },
   { id: "body-mahogany", label: "Mahogany", slot: "body", catalogNames: ["Mahogany Body Blank"], requirement: req("professional", 80), traits: { tone: 5, sustain: 5, stability: 2 } },
   { id: "body-korina", label: "Korina", slot: "body", catalogNames: ["Korina Body Blank"], requirement: req("professional", 400), traits: { tone: 6, sustain: 5, stagePresence: 3 } },
@@ -178,15 +226,15 @@ export const LUTHIERY_MATERIAL_OPTIONS: LuthieryMaterialOption[] = [
   { id: "fret-brazilian", label: "Brazilian Rosewood", slot: "fretboard", catalogNames: ["Brazilian Rosewood Set"], requirement: req("mastery", 500), traits: { tone: 7, sustain: 5, stagePresence: 2 } },
 
   // Electronics
-  { id: "elec-single", label: "Single Coil", slot: "electronics", catalogNames: ["Single Coil Pickup", "Single-Coil Pickup Set"], requirement: req("basic", 0), traits: { tone: 2, output: 1 } },
-  { id: "elec-humbucker", label: "Humbucker", slot: "electronics", catalogNames: ["Humbucker Pickup", "Humbucker Pickup Set"], requirement: req("basic", 80), traits: { tone: 3, output: 4 } },
+  { id: "elec-single", label: "Single Coil", slot: "electronics", catalogNames: ["Single-Coil Pickup Set", "Single Coil Pickup"], requirement: req("basic", 0), traits: { tone: 2, output: 1 } },
+  { id: "elec-humbucker", label: "Humbucker", slot: "electronics", catalogNames: ["Humbucker Pickup Set", "Humbucker Pickup"], requirement: req("basic", 80), traits: { tone: 3, output: 4 } },
   { id: "elec-alnico", label: "Alnico V", slot: "electronics", catalogNames: ["Alnico V Pickup"], requirement: req("basic", 170), traits: { tone: 4, output: 4 } },
   { id: "elec-paf", label: "PAF-style", slot: "electronics", catalogNames: ["PAF Clone Pickup"], requirement: req("professional", 150), traits: { tone: 6, output: 4 } },
-  { id: "elec-active", label: "Active High Output", slot: "electronics", catalogNames: ["Active EMG Pickup", "Active EMG Pickup Set"], requirement: req("professional", 350), traits: { tone: 3, output: 8, stagePresence: 2 } },
+  { id: "elec-active", label: "Active High Output", slot: "electronics", catalogNames: ["Active EMG Pickup Set", "Active EMG Pickup"], requirement: req("professional", 350), traits: { tone: 3, output: 8, stagePresence: 2 } },
   { id: "elec-boutique", label: "Hand-wound Boutique", slot: "electronics", catalogNames: ["Hand-Wound Boutique Pickup"], requirement: req("mastery", 350), traits: { tone: 8, output: 6, stagePresence: 2 } },
 
   // Hardware
-  { id: "hw-standard", label: "Standard Hardware", slot: "hardware", catalogNames: ["Standard Tuners Set", "Bridge and Hardware Kit"], requirement: req("basic", 0), traits: { stability: 1, sustain: 1 } },
+  { id: "hw-standard", label: "Standard Hardware", slot: "hardware", catalogNames: ["Bridge and Hardware Kit", "Standard Tuners Set"], requirement: req("basic", 0), traits: { stability: 1, sustain: 1 } },
   { id: "hw-locking", label: "Locking Hardware", slot: "hardware", catalogNames: ["Locking Tuners Set"], requirement: req("basic", 100), traits: { stability: 4, sustain: 1 } },
   { id: "hw-tom", label: "Fixed Bridge", slot: "hardware", catalogNames: ["Tune-O-Matic Bridge", "Bridge and Hardware Kit"], requirement: req("basic", 160), traits: { stability: 3, sustain: 4 } },
   { id: "hw-trem", label: "Tremolo", slot: "hardware", catalogNames: ["Tremolo Bridge"], requirement: req("professional", 100), traits: { stability: 1, sustain: 2, stagePresence: 3 } },
@@ -202,12 +250,21 @@ export const LUTHIERY_MATERIAL_OPTIONS: LuthieryMaterialOption[] = [
 ];
 
 export const DEFAULT_LUTHIERY_SELECTION: LuthieryBuildSelection = {
+  instrumentName: "",
   instrumentKind: "electric_guitar",
   shapeId: "double-cut",
   colour: "#141821",
   finishId: "finish-satin",
+  decal: {
+    id: "none",
+    x: 50,
+    y: 50,
+    scale: 100,
+    rotation: 0,
+    colour: "#f5f5f5",
+  },
   parts: {
-    body: "body-pine",
+    body: "body-alder",
     neck: "neck-maple",
     fretboard: "fret-maple",
     electronics: "elec-single",
@@ -320,4 +377,148 @@ export function calculateProjectedLuthieryOutcome(
   stats.stagePresence = clamp(stats.stagePresence + Math.round(qualityLift / 2));
 
   return { quality, materialQuality, skillScore, stats };
+}
+
+
+export const LUTHIERY_INSTRUMENT_NAME_MAX_LENGTH = 40;
+
+export function normalizeLuthieryInstrumentName(value: string): string {
+  return value.replace(/\s+/g, " ").trim().slice(0, LUTHIERY_INSTRUMENT_NAME_MAX_LENGTH);
+}
+
+export function validateLuthieryInstrumentName(value: string): string | null {
+  const normalized = normalizeLuthieryInstrumentName(value);
+  if (!normalized) return "Name your instrument before confirming the design.";
+  if (normalized.length < 2) return "Instrument name must be at least 2 characters.";
+  return null;
+}
+
+export function getLuthieryBuildRequirements(
+  selection: LuthieryBuildSelection,
+  catalog: CraftingMaterial[],
+): { requirements: LuthieryBuildRequirement[]; missingCatalogOptions: string[] } {
+  const options = [
+    ...LUTHIERY_PART_ORDER.map((slot) => getMaterialOption(selection.parts[slot])),
+    getMaterialOption(selection.finishId),
+  ].filter((option): option is LuthieryMaterialOption => Boolean(option));
+
+  const byMaterial = new Map<string, LuthieryBuildRequirement>();
+  const missingCatalogOptions: string[] = [];
+
+  for (const option of options) {
+    const material = resolveCatalogMaterial(option, catalog);
+    if (!material) {
+      missingCatalogOptions.push(option.label);
+      continue;
+    }
+    const existing = byMaterial.get(material.id);
+    const source = option.slot === "finish" ? "Finish" : LUTHIERY_PART_LABELS[option.slot];
+    if (existing) {
+      existing.quantity += 1;
+      existing.sources.push(source);
+    } else {
+      byMaterial.set(material.id, { material, quantity: 1, sources: [source] });
+    }
+  }
+
+  return { requirements: [...byMaterial.values()], missingCatalogOptions };
+}
+
+export function getLuthieryBuildReadiness(
+  selection: LuthieryBuildSelection,
+  catalog: CraftingMaterial[],
+  playerMaterials: PlayerCraftingMaterial[],
+  progress: SkillProgressRecord[],
+): LuthieryBuildReadiness {
+  const blockers: string[] = [];
+  const warnings: string[] = [];
+
+  const nameError = validateLuthieryInstrumentName(selection.instrumentName);
+  if (nameError) blockers.push(nameError);
+
+  const shape = getShapeForSelection(selection);
+  if (shape.id !== selection.shapeId) blockers.push("Choose a body shape supported by this instrument type.");
+  if (!isLuthieryRequirementMet(shape.requirement, progress)) {
+    blockers.push(`Body shape requires ${formatLuthieryRequirement(shape.requirement)}.`);
+  }
+
+  for (const slot of LUTHIERY_PART_ORDER) {
+    const option = getMaterialOption(selection.parts[slot]);
+    if (!option || option.slot !== slot) {
+      blockers.push(`Choose a valid ${LUTHIERY_PART_LABELS[slot].toLowerCase()} material.`);
+      continue;
+    }
+    if (!isLuthieryRequirementMet(option.requirement, progress)) {
+      blockers.push(`${option.label} requires ${formatLuthieryRequirement(option.requirement)}.`);
+    }
+  }
+
+  const finish = getMaterialOption(selection.finishId);
+  if (!finish || finish.slot !== "finish") {
+    blockers.push("Choose a valid finish.");
+  } else if (!isLuthieryRequirementMet(finish.requirement, progress)) {
+    blockers.push(`${finish.label} requires ${formatLuthieryRequirement(finish.requirement)}.`);
+  }
+
+  if (selection.decal.id !== "none" && selection.finishId !== "finish-artwork") {
+    blockers.push("Choose Custom Artwork finish before placing a decal.");
+  }
+
+  const { requirements, missingCatalogOptions } = getLuthieryBuildRequirements(selection, catalog);
+  for (const option of missingCatalogOptions) blockers.push(`${option} is not stocked in the crafting catalogue.`);
+
+  for (const requirement of requirements) {
+    const owned = playerMaterials.find((item) => item.material_id === requirement.material.id)?.quantity ?? 0;
+    if (owned < requirement.quantity) {
+      blockers.push(
+        `Need ${requirement.quantity} × ${requirement.material.name}; you own ${owned}.`,
+      );
+    }
+  }
+
+  if (selection.decal.id === "none" && selection.finishId === "finish-artwork") {
+    warnings.push("Custom Artwork finish is selected without a decal.");
+  }
+
+  return { ready: blockers.length === 0, blockers, warnings, requirements };
+}
+
+export function createLuthieryBuildPreviewSpec(
+  selection: LuthieryBuildSelection,
+  catalog: CraftingMaterial[],
+  progress: SkillProgressRecord[],
+): LuthieryBuildPreviewSpec {
+  const shape = getShapeForSelection(selection);
+  const finish = getMaterialOption(selection.finishId);
+  const outcome = calculateProjectedLuthieryOutcome(selection, catalog, progress);
+
+  const parts = Object.fromEntries(
+    LUTHIERY_PART_ORDER.map((slot) => {
+      const option = getMaterialOption(selection.parts[slot]);
+      const material = option ? resolveCatalogMaterial(option, catalog) : undefined;
+      return [
+        slot,
+        {
+          optionId: option?.id ?? selection.parts[slot],
+          label: option?.label ?? "Unknown",
+          materialId: material?.id ?? null,
+          materialName: material?.name ?? null,
+        },
+      ];
+    }),
+  ) as LuthieryBuildPreviewSpec["parts"];
+
+  return {
+    instrumentName: normalizeLuthieryInstrumentName(selection.instrumentName),
+    instrumentKind: selection.instrumentKind,
+    shapeId: shape.id,
+    shapeName: shape.name,
+    colour: selection.colour,
+    finishId: finish?.id ?? selection.finishId,
+    finishName: finish?.label ?? "Unknown",
+    decal: { ...selection.decal },
+    parts,
+    projectedQuality: outcome.quality,
+    projectedStats: { ...outcome.stats },
+  };
 }

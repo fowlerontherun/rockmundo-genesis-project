@@ -4,6 +4,8 @@ import {
   DEFAULT_LUTHIERY_SELECTION,
   LUTHIERY_SHAPES,
   calculateProjectedLuthieryOutcome,
+  getLuthieryBuildReadiness,
+  getLuthieryBuildRequirements,
   isLuthieryRequirementMet,
   resolveCatalogMaterial,
   type LuthieryBuildSelection,
@@ -115,10 +117,12 @@ describe("Luthiery workbench rules", () => {
     );
 
     const premiumSelection: LuthieryBuildSelection = {
+      instrumentName: "Razor Queen",
       instrumentKind: "electric_guitar",
       shapeId: "razor",
       colour: "#c8377d",
       finishId: "finish-artwork",
+      decal: { id: "lightning", x: 50, y: 50, scale: 100, rotation: 0, colour: "#f5f5f5" },
       parts: {
         body: "body-korina",
         neck: "neck-mahogany",
@@ -138,6 +142,35 @@ describe("Luthiery workbench rules", () => {
     expect(premium.quality).toBeGreaterThan(starter.quality);
     expect(premium.stats.tone).toBeGreaterThan(starter.stats.tone);
     expect(premium.stats.stagePresence).toBeGreaterThan(starter.stats.stagePresence);
+  });
+
+  it("aggregates shared material requirements across the five-part build", () => {
+    const named = { ...DEFAULT_LUTHIERY_SELECTION, instrumentName: "Starter One" };
+    const result = getLuthieryBuildRequirements(named, catalog);
+    const maple = result.requirements.find((entry) => entry.material.name === "Maple Neck Blank");
+
+    expect(maple?.quantity).toBe(2);
+    expect(maple?.sources).toEqual(expect.arrayContaining(["Neck", "Fretboard"]));
+  });
+
+  it("blocks review when stock is short and accepts a fully stocked named build", () => {
+    const selection = { ...DEFAULT_LUTHIERY_SELECTION, instrumentName: "Road One" };
+    const skills = [skill("luthiery_basic_technical", 250)];
+    const requirements = getLuthieryBuildRequirements(selection, catalog).requirements;
+    const stocked = requirements.map((entry, index) => ({
+      id: `stock-${index}`,
+      profile_id: "profile",
+      material_id: entry.material.id,
+      quantity: entry.quantity,
+      acquired_at: "2026-10-04T00:00:00.000Z",
+      material: entry.material,
+    }));
+
+    expect(getLuthieryBuildReadiness(selection, catalog, [], skills).ready).toBe(false);
+    expect(getLuthieryBuildReadiness(selection, catalog, stocked, skills)).toMatchObject({
+      ready: true,
+      blockers: [],
+    });
   });
 
   it("uses exactly five structural parts for every custom instrument selection", () => {

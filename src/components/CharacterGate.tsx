@@ -7,6 +7,7 @@ import { useTravelStatus } from "@/hooks/useTravelStatus";
 import { TravelProgressOverlay } from "@/components/travel/TravelProgressOverlay";
 import { Lock } from "lucide-react";
 import { hasGigViewerDemoTestAccess } from "@/lib/gigViewerDemoTestAccess";
+import { hasLuthieryWorkbenchDemoTestAccess } from "@/lib/luthieryWorkbenchDemoTestAccess";
 
 interface CharacterGateProps {
   children: ReactNode;
@@ -22,7 +23,7 @@ export const CharacterGate = ({ children }: CharacterGateProps) => {
   // build-time gated access exception. It must not require a game character,
   // otherwise the character creation screen intercepts the fixture before the
   // read-only admin viewer can render.
-  if (hasGigViewerDemoTestAccess(location)) {
+  if (hasGigViewerDemoTestAccess(location) || hasLuthieryWorkbenchDemoTestAccess(location)) {
     return <>{children}</>;
   }
 

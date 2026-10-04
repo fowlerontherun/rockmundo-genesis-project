@@ -144,6 +144,7 @@ const TouringSystem = lazyWithRetry(() => import("./pages/TouringSystem"));
 const Travel = lazyWithRetry(() => import("./pages/Travel"));
 const Admin = lazyWithRetry(() => import("./pages/Admin"));
 const AdminGigViewerDemo = lazyWithRetry(() => import("./pages/admin/GigViewerDemo"));
+const AdminLuthieryWorkbenchDemo = lazyWithRetry(() => import("./pages/admin/LuthieryWorkbenchDemo"));
 const AdminGigViewerReplayAudit = lazyWithRetry(() => import("./pages/admin/GigViewerReplayAudit"));
 const TopOfThePopsAdmin = lazyWithRetry(() => import("./pages/admin/TopOfThePopsAdmin"));
 const TopOfThePopsSchedule = lazyWithRetry(() => import("./pages/admin/TopOfThePopsSchedule"));
@@ -952,6 +953,7 @@ function App() {
                     <Route path="admin/ai-song-generation" element={<AISongGeneration />} />
                     <Route path="admin/gigs" element={<GigsAdmin />} />
                     <Route path="admin/gig-viewer-demo" element={<AdminGigViewerDemo />} />
+                    <Route path="admin/luthiery-workbench-demo" element={<AdminLuthieryWorkbenchDemo />} />
                     <Route path="admin/gig-viewer-replays" element={<AdminGigViewerReplayAudit />} />
                     <Route path="admin/top-of-the-pops" element={<TopOfThePopsAdmin />} />
                     <Route path="admin/top-of-the-pops/schedule" element={<TopOfThePopsSchedule />} />

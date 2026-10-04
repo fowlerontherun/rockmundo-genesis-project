@@ -1,6 +1,6 @@
 # RockMundo Luthiery Crafting Plan
 
-Status: Phase 3 in progress
+Status: Phase 3 implementation complete; focused release gate added
 Reviewed against main: 2026-10-04 at f2a2ca6843a19311493f6dee46092b9e31c1ecec
 
 ## Product goal
@@ -90,22 +90,24 @@ Goal: make instrument construction visible and understandable on screen before c
 - [x] Add a colour palette.
 - [x] Add finish selection.
 - [x] Apply the selected colour/finish treatment to the live preview.
-- [ ] Add custom artwork/decal placement in a later Phase 3 slice.
+- [x] Add custom artwork/decal placement with selectable decals, colour, position, scale and rotation.
 
 ### 3.5 Previewed outcome
 - [x] Show projected build quality from selected material quality plus Luthiery skill.
 - [x] Show projected tone, sustain, stability, output and stage-presence tendencies.
 - [x] Label the number as a preview estimate until Phase 2 server settlement is authoritative.
-- [ ] Add item naming.
-- [ ] Add final review / confirm-build step.
-- [ ] Connect confirm-build to the authoritative custom-instrument RPC from Phase 2 hardening.
+- [x] Add item naming with bounded validation.
+- [x] Add final review / confirm-design step with aggregated material-stock validation.
+- [x] Produce a validated immutable preview specification on confirmation without mutating inventory.
+- Phase boundary: the actual craft/mint action is intentionally owned by Phase 4 because it requires the authoritative transaction listed there; Phase 3 must remain read-only.
 
 ### 3.6 Tests
 - [x] Add pure tests for unlock rules and projected-quality calculations.
-- [ ] Add component interaction tests for keyboard/touch part selection.
-- [ ] Add browser coverage for the complete five-part assembly journey.
+- [x] Add component interaction tests for keyboard/touch part selection, visible part changes, artwork and confirmation blockers.
+- [x] Add real Playwright browser coverage for the complete five-part assembly journey and verify the fixture performs no game-data mutations.
+- [x] Add a dedicated Phase 3 CI/release-gate workflow covering focused tests, typecheck, lint, build and Chromium.
 
-Acceptance gate: a player can assemble a guitar or bass visually, choose all five part materials, choose an unlocked shape and colour/finish, understand locks and owned stock, and see a stable projected outcome without changing inventory.
+Acceptance gate: a player can assemble a guitar or bass visually, choose all five part materials, choose an unlocked shape and colour/finish, place artwork, name the instrument, understand locks and aggregated owned stock, review the complete design, and confirm a read-only build specification without changing inventory.
 
 ## Phase 4 — Authoritative crafting and item persistence
 
@@ -147,6 +149,17 @@ Acceptance gate: a player can assemble a guitar or bass visually, choose all fiv
 - [ ] Add commissions/custom orders between players.
 - [ ] Review economy sinks/sources and prevent material/shop exploits.
 
-## Current review notes
+## Phase 3 completion review — 2026-10-04
 
-The current main branch already has a useful crafting foundation, but the legacy recipe path is not yet the final Luthiery system. In particular, the existing collection flow derives quality from a client-side random roll and does not create the requested five-part custom instrument from the selected materials. Phase 3 is therefore being implemented as an additive visual workbench while Phase 4 will make final crafting authoritative and transactional.
+The merged first Phase 3 slice was reviewed again and the following gaps/bugs were corrected:
+
+- starter builds now default to the catalogue-backed Alder body instead of a Pine body that may not exist in the live material catalogue;
+- both guitar and bass retain a level-zero usable body shape;
+- neck, fretboard, electronics and hardware selections now visibly change the instrument preview instead of only changing projected numbers;
+- the SVG preview exposes interactive parts to keyboard and touch input rather than hiding controls behind an image semantic;
+- repeated use of the same material is aggregated at review time, so two parts cannot pass stock validation against one inventory unit;
+- item naming, artwork placement and a complete review/confirm-design journey are implemented;
+- confirmation remains read-only and returns a deterministic preview specification; Phase 4 owns material consumption and equipment creation;
+- focused Vitest and real Chromium Playwright coverage are included in a dedicated Luthiery Phase 3 workflow.
+
+The legacy recipe collection flow still uses its historical client-side random quality roll. It is not used as the authority for the custom Luthiery workbench and will be replaced/retired when Phase 4 introduces the server-authoritative custom-instrument transaction.
