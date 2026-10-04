@@ -20,7 +20,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { useGameData } from "@/hooks/useGameData";
-import { useEquipmentStore } from "@/hooks/useEquipmentStore";
+import { useEquipmentStore, type PlayerEquipment } from "@/hooks/useEquipmentStore";
 import { useEquipPlayerEquipment } from "@/hooks/usePlayerEquipmentMutations";
 import { GearMarketplaceBrowser } from "@/components/gear/marketplace/GearMarketplaceBrowser";
 import { GearMarketplaceListings } from "@/components/gear/marketplace/GearMarketplaceListings";
@@ -113,6 +113,40 @@ function RoleFit({ item, role, compact = false }: { item: any; role?: string | n
     </div>
   );
 }
+
+function LuthieryBuildDetails({ item }: { item: PlayerEquipment }) {
+  const detail = item.luthiery;
+  if (!detail) return null;
+  const materialNames = detail.material_snapshot
+    .map((entry) => String(entry.materialName ?? ""))
+    .filter(Boolean);
+
+  return (
+    <div className="space-y-2 rounded-md border border-primary/20 bg-primary/5 p-3 text-xs">
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-semibold text-foreground">Verified player-crafted instrument</span>
+        <Badge variant="secondary">Quality {detail.final_quality}</Badge>
+      </div>
+      <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-muted-foreground">
+        <span>Maker</span><span className="text-right font-medium text-foreground">{detail.maker_name}</span>
+        <span>Shape</span><span className="text-right font-medium text-foreground">{detail.shape_name}</span>
+        <span>Finish</span><span className="text-right font-medium text-foreground">{detail.finish_name}</span>
+        <span>Colour</span>
+        <span className="flex items-center justify-end gap-1.5 font-medium text-foreground">
+          <span className="h-3 w-3 rounded-full border" style={{ backgroundColor: detail.colour }} />
+          {detail.colour}
+        </span>
+      </div>
+      {materialNames.length > 0 && (
+        <div>
+          <div className="text-muted-foreground">Materials</div>
+          <div className="mt-1 text-foreground">{materialNames.join(" · ")}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 export default function Gear() {
   const { profile } = useGameData();
@@ -233,10 +267,11 @@ export default function Gear() {
     );
   };
 
-  const handleEquip = (inventoryId: string, equip: boolean) => {
+  const handleEquip = (item: PlayerEquipment, equip: boolean) => {
     equipGear({
-      playerEquipmentId: inventoryId,
+      playerEquipmentId: item.id,
       equip,
+      inventorySource: item.inventory_source ?? "catalog",
       activityMessage: equip ? "Equipped personal gear" : "Unequipped personal gear",
     });
   };
@@ -396,9 +431,10 @@ export default function Gear() {
                     <RoleFit item={item.equipment} role={bandRole} />
                     <div><div className="mb-1 flex justify-between text-sm"><span className="text-muted-foreground">Condition</span><span className="font-semibold">{item.condition || 100}%</span></div><Progress value={item.condition || 100} /></div>
                     {renderStatBoosts(item.equipment.stat_boosts)}
+                    <LuthieryBuildDetails item={item} />
                     <Separator />
                     <div className="flex gap-2">
-                      <Button className="flex-1" size="sm" variant={item.is_equipped ? "outline" : "default"} onClick={() => handleEquip(item.id, !item.is_equipped)} disabled={isUpdating}>{item.is_equipped ? "Unequip" : "Equip"}</Button>
+                      <Button className="flex-1" size="sm" variant={item.is_equipped ? "outline" : "default"} onClick={() => handleEquip(item, !item.is_equipped)} disabled={isUpdating}>{item.is_equipped ? "Unequip" : "Equip"}</Button>
                       {(item.condition || 100) < 100 && <Button size="sm" variant="outline" onClick={() => maintainEquipment(item.id)} disabled={isMaintaining}><Wrench className="h-4 w-4" /></Button>}
                     </div>
                   </CardContent>
@@ -428,6 +464,7 @@ export default function Gear() {
                   <CardContent className="space-y-3">
                     <RoleFit item={item.equipment} role={bandRole} />
                     {renderStatBoosts(item.equipment.stat_boosts)}
+                    <LuthieryBuildDetails item={item} />
                     <Button size="sm" variant="outline" className="w-full" onClick={() => handleEquip(item.id, false)} disabled={isUpdating}>Unequip</Button>
                   </CardContent>
                 </Card>
