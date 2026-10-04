@@ -13,7 +13,7 @@ const corsHeaders = {
 };
 
 // Wall-clock safety: if we approach the edge function timeout, finish gracefully
-const WALL_CLOCK_LIMIT_MS = 140_000; // 140s (edge fn limit is ~150s)
+const WALL_CLOCK_LIMIT_MS = 95_000; // leave time to flush batches and record completion
 const functionStartedAt = Date.now();
 function isNearTimeout() {
   return Date.now() - functionStartedAt > WALL_CLOCK_LIMIT_MS;
@@ -39,6 +39,8 @@ Deno.serve(async (req) => {
   // Accumulate per-band streaming revenue for morale boosts (v1.0.978)
   const bandStreamingRevenueAccumulator = new Map<string, number>();
   const errorSamples: string[] = [];
+  const analyticsRows: Record<string, unknown>[] = [];
+  const earningsRows: Record<string, unknown>[] = [];
 
   // Accumulate label revenue for batch crediting
   const labelRevenueAccumulator = new Map<string, { labelRevenue: number; recoupmentApplied: number; contractId: string }>();
@@ -394,7 +396,7 @@ Deno.serve(async (req) => {
             }
           }
 
-          await supabase.from('streaming_analytics_daily').insert({
+          analyticsRows.push({
             song_release_id: release.id,
             analytics_date: analyticsDate,
             daily_streams: rb.streams,
@@ -443,7 +445,7 @@ Deno.serve(async (req) => {
           labelRevenueAccumulator.set(labelKey, existing);
 
           if (bandShareDollars > 0) {
-            await supabase.from('band_earnings').insert({
+            earningsRows.push({
               band_id: bandId,
               amount: bandShareDollars,
               source: 'streaming',
@@ -459,7 +461,7 @@ Deno.serve(async (req) => {
             bandStreamingRevenueAccumulator.set(bandId, (bandStreamingRevenueAccumulator.get(bandId) || 0) + bandShareDollars);
           }
         } else if (bandId && dailyRevenueDollars > 0) {
-          await supabase.from('band_earnings').insert({
+          earningsRows.push({
             band_id: bandId,
             amount: dailyRevenueDollars,
             source: 'streaming',
@@ -482,6 +484,16 @@ Deno.serve(async (req) => {
         }
         console.error(`Error processing streaming release ${release.id}:`, streamError);
       }
+    }
+
+    // Batch high-volume writes to avoid one PostgREST request per release/region.
+    if (analyticsRows.length > 0) {
+      const { error } = await supabase.from('streaming_analytics_daily').insert(analyticsRows);
+      if (error) throw error;
+    }
+    if (earningsRows.length > 0) {
+      const { error } = await supabase.from('band_earnings').insert(earningsRows);
+      if (error) throw error;
     }
 
     // === DAILY STREAMING REVENUE → MORALE (v1.0.978) ===
