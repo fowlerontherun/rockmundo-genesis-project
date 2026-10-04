@@ -30,6 +30,8 @@ const CraftingWorkshopInner = () => {
     isCrafting,
     collectCraft,
     isCollecting,
+    craftCustomLuthieryInstrument,
+    isCraftingCustomLuthiery,
     salvageEquipment,
     isSalvaging,
   } = useCraftingSystem();
@@ -120,6 +122,18 @@ const CraftingWorkshopInner = () => {
           <LuthieryWorkbench
             materialsCatalog={materialsCatalog}
             playerMaterials={playerMaterials}
+            isCrafting={isCraftingCustomLuthiery}
+            onCraft={(selection, idempotencyKey) =>
+              craftCustomLuthieryInstrument({ selection, idempotencyKey })
+            }
+            onCrafted={(result) =>
+              setRevealData({
+                open: true,
+                recipeName: result.instrumentName,
+                qualityRoll: result.finalQuality,
+                bonusStats: result.finalStats,
+              })
+            }
           />
         </TabsContent>
 
