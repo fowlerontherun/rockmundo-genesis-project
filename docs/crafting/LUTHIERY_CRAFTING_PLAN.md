@@ -109,6 +109,12 @@ Goal: make instrument construction visible and understandable on screen before c
 
 Acceptance gate: a player can assemble a guitar or bass visually, choose all five part materials, choose an unlocked shape and colour/finish, place artwork, name the instrument, understand locks and aggregated owned stock, review the complete design, and confirm a read-only build specification without changing inventory.
 
+### 3.7 Production catalogue verification
+- [x] Verify every workbench material choice resolves against the live production crafting catalogue.
+- [x] Seed missing woods, electronics, hardware and finishes idempotently without overwriting existing balanced production rows.
+- [x] Verify there are no duplicate rows for the newly reconciled material names.
+- [x] Apply the catalogue migration directly to the live RockMundo database and keep the migration in source control.
+
 ## Phase 4 — Authoritative crafting and item persistence
 
 - [ ] Add a server-side create-custom-instrument action/RPC.
@@ -160,6 +166,7 @@ The merged first Phase 3 slice was reviewed again and the following gaps/bugs we
 - repeated use of the same material is aggregated at review time, so two parts cannot pass stock validation against one inventory unit;
 - item naming, artwork placement and a complete review/confirm-design journey are implemented;
 - confirmation remains read-only and returns a deterministic preview specification; Phase 4 owns material consumption and equipment creation;
-- focused Vitest and real Chromium Playwright coverage are included in a dedicated Luthiery Phase 3 workflow.
+- focused Vitest and real Chromium Playwright coverage are included in a dedicated Luthiery Phase 3 workflow;
+- the live production material catalogue was reconciled after the UI review exposed missing finish/hardware/advanced material rows; all 32 workbench material-choice groups now resolve against production.
 
 The legacy recipe collection flow still uses its historical client-side random quality roll. It is not used as the authority for the custom Luthiery workbench and will be replaced/retired when Phase 4 introduces the server-authoritative custom-instrument transaction.
