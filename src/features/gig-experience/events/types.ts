@@ -17,6 +17,19 @@ export interface GigReplayCrowdTuning {
   arrivalSpeed: number;
 }
 
+export interface GigReplayLuthieryInstrumentSnapshot {
+  instrumentName: string;
+  instrumentKind: "electric_guitar" | "electric_bass";
+  makerName?: string | null;
+  shapeId: string;
+  shapeName: string;
+  colour: string;
+  finalQuality: number;
+  materialSnapshot?: Array<Record<string, unknown>>;
+  finalStats?: Record<string, number>;
+  buildSpec?: Record<string, unknown>;
+}
+
 export interface GigReplayCommerceSnapshot {
   formulaVersion: string;
   settlementId: string;
@@ -107,6 +120,8 @@ export interface GigViewerReplay {
   crowdTuningRevision?: number | null;
   /** Immutable settlement facts. Absent on legacy replays. */
   commerce?: GigReplayCommerceSnapshot | null;
+  /** Immutable player-crafted instrument visuals captured for this specific gig. */
+  luthieryInstruments?: Record<string, GigReplayLuthieryInstrumentSnapshot> | null;
 }
 
 export type GigViewerReplayLoadState = "loading" | "ready" | "unavailable" | "generating" | "failed" | "unsupported_version";
