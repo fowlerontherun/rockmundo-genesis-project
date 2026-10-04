@@ -158,6 +158,21 @@ export function usePlayerStageTattoos(profileId: string | null | undefined) {
   });
 }
 
+export function useEquippedStageLuthieryInstruments(profileId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['equipped-stage-luthiery-instruments', profileId ?? null],
+    enabled: !!profileId,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await callStageRpc('get_equipped_stage_luthiery_instruments', { p_profile_ids: [profileId!] });
+      if (error) throw error;
+      return ((data || []) as StageLuthieryInstrumentRow[])
+        .map(normalizeStageLuthieryInstrument)
+        .filter((visual): visual is LuthieryInstrumentVisual => !!visual);
+    },
+  });
+}
+
 export function useEquippedRichClothing(profileId: string | null | undefined) {
   return useQuery({
     queryKey: equippedRichClothingKey(profileId ?? null),
