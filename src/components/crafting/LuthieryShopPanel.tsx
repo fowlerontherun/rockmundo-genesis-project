@@ -124,6 +124,7 @@ const ShopSettingsForm = ({
           <Label htmlFor="luthiery-shop-logo">Logo image URL (optional)</Label>
           <Input
             id="luthiery-shop-logo"
+            type="url"
             value={logoUrl}
             onChange={(event) => setLogoUrl(event.target.value)}
             maxLength={500}
@@ -286,11 +287,22 @@ export const LuthieryShopPanel = () => {
                   <div className="h-1.5" style={{ backgroundColor: shop?.brand_colour ?? "#b8892f" }} />
                   <CardHeader className="space-y-2">
                     <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div>
+                      <div className="flex min-w-0 items-center gap-3">
+                        {shop?.brand_logo_url && (
+                          <img
+                            src={shop.brand_logo_url}
+                            alt={`${shop.name} logo`}
+                            loading="lazy"
+                            referrerPolicy="no-referrer"
+                            className="h-10 w-10 shrink-0 rounded-md border object-cover"
+                          />
+                        )}
+                        <div>
                         <CardTitle className="text-lg">{listing.instrument_name}</CardTitle>
                         <CardDescription>
                           Built by {listing.maker_name} · {listing.instrument_kind === "electric_bass" ? "Electric bass" : "Electric guitar"}
                         </CardDescription>
+                        </div>
                       </div>
                       <Badge className="capitalize">{listing.rarity}</Badge>
                     </div>
@@ -338,6 +350,13 @@ export const LuthieryShopPanel = () => {
                     </div>
 
                     {listing.description && <p className="text-sm">{listing.description}</p>}
+
+                    {Number(listing.commission_rate_at_listing ?? 0) > 0 && (
+                      <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-muted-foreground">
+                        Original-maker royalty: <span className="font-semibold text-foreground">{Number(listing.commission_rate_at_listing).toFixed(1)}%</span>.
+                        This rate was locked when the instrument was listed and cannot be changed for this sale.
+                      </div>
+                    )}
 
                     <div className="flex flex-wrap items-end justify-between gap-3">
                       <div>
@@ -419,6 +438,7 @@ export const LuthieryShopPanel = () => {
                       <Label htmlFor="new-luthiery-shop-logo">Logo image URL (optional)</Label>
                       <Input
                         id="new-luthiery-shop-logo"
+                        type="url"
                         value={openLogo}
                         onChange={(event) => setOpenLogo(event.target.value)}
                         maxLength={500}
@@ -458,7 +478,17 @@ export const LuthieryShopPanel = () => {
               <CardHeader>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <CardTitle>{myShop.name}</CardTitle>
+                    <div className="flex items-center gap-3">
+                      {myShop.brand_logo_url && (
+                        <img
+                          src={myShop.brand_logo_url}
+                          alt={`${myShop.name} logo`}
+                          referrerPolicy="no-referrer"
+                          className="h-10 w-10 rounded-md border object-cover"
+                        />
+                      )}
+                      <CardTitle>{myShop.name}</CardTitle>
+                    </div>
                     <CardDescription>
                       {myShop.brand_tagline || "Player-owned Luthiery shop"} · {myShop.city?.name}, {myShop.city?.country}
                     </CardDescription>
@@ -582,6 +612,7 @@ export const LuthieryShopPanel = () => {
                         <div className="font-medium">{listing.instrument_name}</div>
                         <div className="text-xs text-muted-foreground">
                           {formatCurrency(listing.asking_price)} · Quality {listing.final_quality} · Maker {listing.maker_name}
+                          {Number(listing.commission_rate_at_listing ?? 0) > 0 ? ` · Maker royalty ${Number(listing.commission_rate_at_listing).toFixed(1)}%` : ""}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
