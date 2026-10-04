@@ -52,31 +52,29 @@ export const usePlayerEquipment = () => {
     queryFn: async () => {
       if (!profileId) return { items: [], poolStatus: [] };
 
-      const [equipmentResult, poolResult] = await Promise.all([
-        (supabase as any)
-          .from("player_equipment")
-          .select(
-            `id, equipment_id, condition, is_equipped, created_at, available_for_loadout, available_at, loadout_slot_kind, pool_category,
-             equipment:equipment_items!equipment_id (id, name, category, subcategory, price, rarity, description, stat_boosts, stock)`
-          )
-          .eq("profile_id", profileId)
-          .order("created_at", { ascending: false }),
-        (supabase as any)
-          .from("player_gear_pool_status")
-          .select("user_id, category, slot_kind, capacity, used_count, available_slots, default_capacity, catalog_slot_kind, updated_at")
-          .eq("user_id", profileId),
-      ]);
+      const equipmentResult = await (supabase as any)
+        .from("player_equipment")
+        .select(
+          `id, equipment_id, condition, is_equipped, created_at,
+           equipment:equipment_items!equipment_id (id, name, category, subcategory, price, rarity, description, stat_boosts, stock)`
+        )
+        .eq("profile_id", profileId)
+        .order("created_at", { ascending: false });
 
       if (equipmentResult.error) throw equipmentResult.error;
-      if (poolResult.error) throw poolResult.error;
 
       return {
         items: ((equipmentResult.data as PlayerEquipmentWithItem[] | null) ?? []).map((entry) => ({
           ...entry,
-          available_at: entry.available_at ?? null,
-          available_for_loadout: Boolean(entry.available_for_loadout),
+          available_at: entry.created_at ?? null,
+          available_for_loadout: true,
+          loadout_slot_kind: null,
+          pool_category: entry.equipment?.category ?? null,
         })),
-        poolStatus: (poolResult.data as PlayerGearPoolStatus[] | null) ?? [],
+        // The historical gear-pool migration is not present in production.
+        // Keep My Gear usable with the canonical character inventory rather
+        // than failing the entire query on a missing compatibility view.
+        poolStatus: [],
       };
     },
     enabled: !!profileId,
