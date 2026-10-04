@@ -1,7 +1,7 @@
 # RockMundo Luthiery Crafting Plan
 
 Status: Phase 5 player instrument shops implemented; Phase 4 re-audited, hardened and complete
-Reviewed against main: 2026-10-04 at 0d4cccefafc544b4d9e8f48035e06c66f819a418
+Reviewed against main: 2026-10-04 at 61154f29b86f228aa3ad42276c2d6756ed09570d
 Phase 4 branch: `feat/luthiery-phase-4-authoritative-crafting`
 
 ## Product goal
