@@ -62,6 +62,19 @@ const skill = (slug: string, level: number): SkillProgressRecord => ({
 });
 
 describe("Luthiery workbench rules", () => {
+  it("has a level-zero starter shape for both guitars and basses", () => {
+    for (const instrumentKind of ["electric_guitar", "electric_bass"] as const) {
+      expect(
+        LUTHIERY_SHAPES.some(
+          (shape) =>
+            shape.instrumentKinds.includes(instrumentKind) &&
+            shape.requirement.tier === "basic" &&
+            shape.requirement.value === 0,
+        ),
+      ).toBe(true);
+    }
+  });
+
   it("keeps advanced body shapes locked until the required Luthiery tier and value", () => {
     const warAxe = LUTHIERY_SHAPES.find((shape) => shape.id === "war-axe");
     expect(warAxe).toBeDefined();
