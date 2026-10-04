@@ -22,6 +22,7 @@ import { buildCuratedGarment, isCuratedClothing, isCuratedClothingRenderable, lo
 import { curatedDonorSource, requiredCuratedDonorModelFiles } from '@/features/clothing-preview/curatedDonorGarments';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import type { ResolvedInstrumentSkinVisual } from '@/features/instrument-skins/instrumentSkin';
+import type { LuthieryInstrumentVisual } from '@/features/luthiery/luthieryInstrument';
 import type { CrowdTuningOptions } from '@/features/gig-experience/viewer/engine/CrowdTuning';
 import type { VenueProfile } from './venueProfile';
 import type { ConcertPerformer, MerchCrowdSignal, PerformanceSection, StageRole } from './liveTypes';
@@ -98,7 +99,7 @@ export class Musician {
         number,
         number,
         number
-    ], public phase = 0, tint = '#728092', appearance?: PlayerAppearance, instrument?: InstrumentId | null, vocal?: VocalRole, richClothing: ResolvedEquippedClothing[] = [], instrumentSkin?: ResolvedInstrumentSkinVisual | null, curatedLibrary?: ModelLibrary) {
+    ], public phase = 0, tint = '#728092', appearance?: PlayerAppearance, instrument?: InstrumentId | null, vocal?: VocalRole, richClothing: ResolvedEquippedClothing[] = [], instrumentSkin?: ResolvedInstrumentSkinVisual | null, curatedLibrary?: ModelLibrary, luthieryInstrument?: LuthieryInstrumentVisual | null) {
         this.vocalRole = vocal ?? null;
         this.model = clone(source);
         this.root.add(this.model);
@@ -197,7 +198,7 @@ export class Musician {
         }
         const assignment = stageAssignment(instrument, role);
         if (assignment.instrument && role !== 'fan') {
-            this.instrumentRig = buildInstrument(assignment.instrument, appearance?.equipment.instrument.color, instrumentSkin);
+            this.instrumentRig = buildInstrument(assignment.instrument, appearance?.equipment.instrument.color, instrumentSkin, luthieryInstrument);
             if (this.instrumentRig.stationary) {
                 this.equipment = new T.Group();
                 this.equipment.add(this.instrumentRig.root);
@@ -1012,7 +1013,7 @@ export async function loadBand(
                 'stage',
                 p.merchWearable ?? null,
             );
-            const actor = new Musician(assembled, p.role, p.position, p.phase, undefined, p.appearance, p.instrument, p.vocal, p.richClothing, p.instrumentSkin, library);
+            const actor = new Musician(assembled, p.role, p.position, p.phase, undefined, p.appearance, p.instrument, p.vocal, p.richClothing, p.instrumentSkin, library, p.luthieryInstrument);
             disposeModel(assembled);
             actor.id = p.id;
             actor.root.name = p.displayName;
