@@ -73,6 +73,7 @@ describe("LuthieryShopPanel", () => {
           asking_price: 125000,
           material_cost_basis: 60000,
           suggested_value: 130000,
+          commission_rate_at_listing: 7.5,
           description: "Stage-ready custom build",
           provenance_snapshot: {
             shapeId: "double-cut",
@@ -93,7 +94,7 @@ describe("LuthieryShopPanel", () => {
             name: "Ava Custom Works",
             brand_tagline: "Built loud",
             brand_colour: "#b8892f",
-            brand_logo_url: null,
+            brand_logo_url: "https://example.test/ava-logo.png",
             city_id: "city-1",
             commission_rate: 7.5,
             reputation: 84.5,
@@ -113,6 +114,11 @@ describe("LuthieryShopPanel", () => {
     expect(screen.getByText(/Built by Ava Strings/)).toBeInTheDocument();
     expect(screen.getByText(/Alder Body Blank/)).toBeInTheDocument();
     expect(screen.getByText(/Ava Custom Works/)).toBeInTheDocument();
+    expect(screen.getByText(/7.5%/)).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Ava Custom Works logo" })).toHaveAttribute(
+      "src",
+      "https://example.test/ava-logo.png",
+    );
 
     await user.click(screen.getByRole("button", { name: /Buy for/ }));
     expect(purchaseListing).toHaveBeenCalledWith("listing-1");
