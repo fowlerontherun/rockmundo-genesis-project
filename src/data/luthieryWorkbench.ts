@@ -226,15 +226,15 @@ export const LUTHIERY_MATERIAL_OPTIONS: LuthieryMaterialOption[] = [
   { id: "fret-brazilian", label: "Brazilian Rosewood", slot: "fretboard", catalogNames: ["Brazilian Rosewood Set"], requirement: req("mastery", 500), traits: { tone: 7, sustain: 5, stagePresence: 2 } },
 
   // Electronics
-  { id: "elec-single", label: "Single Coil", slot: "electronics", catalogNames: ["Single Coil Pickup", "Single-Coil Pickup Set"], requirement: req("basic", 0), traits: { tone: 2, output: 1 } },
-  { id: "elec-humbucker", label: "Humbucker", slot: "electronics", catalogNames: ["Humbucker Pickup", "Humbucker Pickup Set"], requirement: req("basic", 80), traits: { tone: 3, output: 4 } },
+  { id: "elec-single", label: "Single Coil", slot: "electronics", catalogNames: ["Single-Coil Pickup Set", "Single Coil Pickup"], requirement: req("basic", 0), traits: { tone: 2, output: 1 } },
+  { id: "elec-humbucker", label: "Humbucker", slot: "electronics", catalogNames: ["Humbucker Pickup Set", "Humbucker Pickup"], requirement: req("basic", 80), traits: { tone: 3, output: 4 } },
   { id: "elec-alnico", label: "Alnico V", slot: "electronics", catalogNames: ["Alnico V Pickup"], requirement: req("basic", 170), traits: { tone: 4, output: 4 } },
   { id: "elec-paf", label: "PAF-style", slot: "electronics", catalogNames: ["PAF Clone Pickup"], requirement: req("professional", 150), traits: { tone: 6, output: 4 } },
-  { id: "elec-active", label: "Active High Output", slot: "electronics", catalogNames: ["Active EMG Pickup", "Active EMG Pickup Set"], requirement: req("professional", 350), traits: { tone: 3, output: 8, stagePresence: 2 } },
+  { id: "elec-active", label: "Active High Output", slot: "electronics", catalogNames: ["Active EMG Pickup Set", "Active EMG Pickup"], requirement: req("professional", 350), traits: { tone: 3, output: 8, stagePresence: 2 } },
   { id: "elec-boutique", label: "Hand-wound Boutique", slot: "electronics", catalogNames: ["Hand-Wound Boutique Pickup"], requirement: req("mastery", 350), traits: { tone: 8, output: 6, stagePresence: 2 } },
 
   // Hardware
-  { id: "hw-standard", label: "Standard Hardware", slot: "hardware", catalogNames: ["Standard Tuners Set", "Bridge and Hardware Kit"], requirement: req("basic", 0), traits: { stability: 1, sustain: 1 } },
+  { id: "hw-standard", label: "Standard Hardware", slot: "hardware", catalogNames: ["Bridge and Hardware Kit", "Standard Tuners Set"], requirement: req("basic", 0), traits: { stability: 1, sustain: 1 } },
   { id: "hw-locking", label: "Locking Hardware", slot: "hardware", catalogNames: ["Locking Tuners Set"], requirement: req("basic", 100), traits: { stability: 4, sustain: 1 } },
   { id: "hw-tom", label: "Fixed Bridge", slot: "hardware", catalogNames: ["Tune-O-Matic Bridge", "Bridge and Hardware Kit"], requirement: req("basic", 160), traits: { stability: 3, sustain: 4 } },
   { id: "hw-trem", label: "Tremolo", slot: "hardware", catalogNames: ["Tremolo Bridge"], requirement: req("professional", 100), traits: { stability: 1, sustain: 2, stagePresence: 3 } },
