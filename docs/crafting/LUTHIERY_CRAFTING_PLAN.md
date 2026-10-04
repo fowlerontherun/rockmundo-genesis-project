@@ -161,5 +161,6 @@ The merged first Phase 3 slice was reviewed again and the following gaps/bugs we
 - item naming, artwork placement and a complete review/confirm-design journey are implemented;
 - confirmation remains read-only and returns a deterministic preview specification; Phase 4 owns material consumption and equipment creation;
 - focused Vitest and real Chromium Playwright coverage are included in a dedicated Luthiery Phase 3 workflow.
+- the live production crafting catalogue was audited after merge; 18 missing Phase 3 materials/finishes were inserted idempotently and the same reconciliation is captured in migration `20261004205000_complete_luthiery_phase3_material_catalogue.sql`.
 
 The legacy recipe collection flow still uses its historical client-side random quality roll. It is not used as the authority for the custom Luthiery workbench and will be replaced/retired when Phase 4 introduces the server-authoritative custom-instrument transaction.
