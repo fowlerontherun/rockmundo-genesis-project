@@ -65,7 +65,7 @@ describe("LuthieryWorkbench Phase 3 interactions", () => {
     expect(screen.getByText("Part 4 / 5")).toBeInTheDocument();
 
     const neck = screen.getByRole("button", { name: "Select neck" });
-    fireEvent.pointerUp(neck, { pointerType: "touch" });
+    fireEvent.touchEnd(neck);
     expect(screen.getByText("Part 2 / 5")).toBeInTheDocument();
   });
 
