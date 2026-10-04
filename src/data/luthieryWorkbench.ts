@@ -70,6 +70,14 @@ const req = (tier: LuthieryTier, value: number): LuthieryRequirement => ({ tier,
 
 export const LUTHIERY_SHAPES: LuthieryShape[] = [
   {
+    id: "classic-bass",
+    name: "Classic Bass",
+    instrumentKinds: ["electric_bass"],
+    requirement: req("basic", 0),
+    bodyPath: "M92 44 C66 38 43 48 35 69 C28 88 37 108 55 118 C73 128 93 132 113 124 C136 115 151 96 148 75 C145 57 129 48 111 51 C103 48 99 46 92 44 Z",
+    difficultyPenalty: 0,
+  },
+  {
     id: "double-cut",
     name: "Classic Double Cut",
     instrumentKinds: ["electric_guitar"],
