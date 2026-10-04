@@ -145,12 +145,18 @@ describe("simplified company-owned Festival owner flow", () => {
     const migration = source(
       "supabase/migrations/20291218245800_complete_simplified_festival_lineup.sql",
     );
+    const withdrawalMigration = source(
+      "supabase/migrations/20300101010000_festival_offer_withdraw_and_expiry.sql",
+    );
 
     expect(sections).toContain("FestivalLineupWorkflowManager");
     expect(manager).toContain("Applications");
     expect(manager).toContain("Invite an act");
     expect(manager).toContain("Send offer");
     expect(manager).toContain("Confirmed acts");
+    expect(manager).toContain("Invitation and offer deadline");
+    expect(manager).toContain("Withdraw invite");
+    expect(manager).toContain("Withdraw offer");
     expect(manager).toContain('useFestivalArtistAction("reviewApplication")');
     expect(manager).toContain('useFestivalEditionArtistAction("sendInvitation")');
     expect(manager).toContain('useFestivalEditionArtistAction("createOffer")');
@@ -158,11 +164,19 @@ describe("simplified company-owned Festival owner flow", () => {
     expect(repository).toContain("send_festival_edition_artist_invitation");
     expect(repository).toContain("create_festival_edition_artist_offer");
     expect(repository).toContain("send_festival_edition_artist_offer");
+    expect(repository).toContain("withdraw_festival_edition_artist_invitation");
+    expect(repository).toContain("withdraw_festival_edition_artist_offer");
     expect(migration).toContain(
       "festival_edition_id = p_festival_edition_id",
     );
     expect(migration).toContain("_festival_artist_committed_minor(programme.id)");
     expect(migration).toContain("FROM public.bands band");
+    expect(withdrawalMigration).toContain(
+      "withdraw_festival_edition_artist_invitation",
+    );
+    expect(withdrawalMigration).toContain(
+      "withdraw_festival_edition_artist_offer",
+    );
   });
 
   it("runs an edition-native automatic Festival simulation", () => {
