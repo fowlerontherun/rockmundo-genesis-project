@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { refineSkinnedSurface } from './refineSkinnedSurface';
 import { clipGarmentHem } from './garmentHem';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
@@ -104,7 +105,7 @@ function applyFeminineBreastSize(mesh: T.SkinnedMesh, size: number) {
 
   for (let vertex = 0; vertex < position.count; vertex += 1) {
     const chestWeight = chestWeights[vertex];
-    if (chestWeight < .18) continue;
+    if (chestWeight <= 0) continue;
 
     const x = position.getX(vertex), y = position.getY(vertex), z = position.getZ(vertex);
     const front = T.MathUtils.clamp((z - centreZ) / frontDepth, 0, 1);
@@ -121,15 +122,17 @@ function applyFeminineBreastSize(mesh: T.SkinnedMesh, size: number) {
     const nx = (x - breastCentreX) / radiusX;
     const ny = (y - breastCentreY) / radiusY;
     const radial = Math.max(0, 1 - nx * nx - ny * ny);
-    const dome = Math.pow(radial, .62);
+    // Zero slope at the edge avoids a sharp crease where the chest meets fabric.
+    const dome = radial * radial;
     const centreBlend = T.MathUtils.smoothstep(Math.abs(x - centreX), width * .025, width * .16);
-    const weight = T.MathUtils.clamp(chestWeight, 0, 1);
+    const weight = T.MathUtils.smoothstep(chestWeight, 0, .8);
     const influence = weight * Math.pow(front, .82) * dome * (.72 + .28 * centreBlend);
-    if (influence <= .015) continue;
+    if (influence <= .00001) continue;
 
-    const projection = frontDepth * delta * (delta > 0 ? 1.62 : 1.05) * influence;
+    const projection = frontDepth * delta * (delta > 0 ? 2.6 : 1.05) * influence;
     position.setZ(vertex, z + projection);
-    position.setX(vertex, x + side * width * growth * .055 * influence);
+    // Continuous across the centre seam; a signed offset tears it apart.
+    position.setX(vertex, x + (x - centreX) * growth * .22 * influence);
     // A small lower-hemisphere drop at larger settings keeps the silhouette
     // rounded rather than pointed while avoiding an exaggerated sag.
     position.setY(vertex, y - height * growth * .022 * influence * T.MathUtils.clamp((breastCentreY - y) / radiusY + .35, 0, 1));
@@ -1679,6 +1682,11 @@ export function assemblePlayerModel(
         original.updateWorldMatrix(true, false);
         clonedNode.geometry = original.geometry.clone();
         if (choice.part === 'body' && appearance.body.frame === 'feminine') {
+          if (!choice.assetKey && Math.abs((appearance.body.breastSize ?? 1) - 1) > .001) {
+            const coarse = clonedNode.geometry;
+            clonedNode.geometry = refineSkinnedSurface(coarse, quality === 'crowd' ? 1 : 2);
+            coarse.dispose();
+          }
           applyFeminineBreastSize(clonedNode, appearance.body.breastSize ?? 1);
         }
         if (
@@ -1939,9 +1947,9 @@ export function assemblePlayerModel(
   }
   // The legacy feminine donor has too little dedicated chest topology for
   // vertex-only breast morphing to reliably alter the visible silhouette.
-  // Add a chest-bone-driven rounded volume for starter clothing/bare previews.
-  // Curated donor tops keep their authored fit and are not overlaid.
-  if (appearance.body.frame === 'feminine' && !curatedTop) {
+  // Bare previews retain their skin volume. Clothed avatars deform the actual
+  // skinned garment so patterns, necklines and graphics stay on the clothing.
+  if (appearance.body.frame === 'feminine' && !curatedTop && (topless || presentation === 'tattoo')) {
     addV1FeminineBustVolume(result, appearance, bones, quality, topless || presentation === 'tattoo');
   }
 

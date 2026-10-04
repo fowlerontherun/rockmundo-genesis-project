@@ -656,12 +656,12 @@ describe('feminine breast size', () => {
     expect(largeFront - smallFront).toBeGreaterThan(.015);
   });
 
-  it('renders dedicated rounded bust volumes that visibly scale with feminine breast size', () => {
+  it('keeps rounded skin volumes for the bare feminine torso', () => {
     const dimensions = (size: number) => {
       const appearance = defaultAppearance(`bust-volume-${size}`);
       appearance.body.frame = 'feminine';
       appearance.body.breastSize = size;
-      appearance.equipment.top.itemId = 'starter.top.casual';
+      appearance.equipment.top.itemId = 'starter.top.topless';
       const model = assemblePlayerModel(library, appearance);
       const left = model.getObjectByName('avatar-v1-feminine-bust-left') as T.Mesh | undefined;
       const right = model.getObjectByName('avatar-v1-feminine-bust-right') as T.Mesh | undefined;
@@ -679,6 +679,19 @@ describe('feminine breast size', () => {
     expect(large.x).toBeGreaterThan(small.x * 1.35);
     expect(large.y).toBeGreaterThan(small.y * 1.35);
     expect(large.z).toBeGreaterThan(small.z * 2);
+  });
+
+  it.each(['stripe', 'plaid', 'v-neck', 'hoodie'])('keeps %s fabric on the skinned chest without plain overlays', top => {
+    for (const size of [.7, 1, 1.85]) {
+      const appearance = defaultAppearance(`clothed-chest-${top}-${size}`);
+      appearance.body.frame = 'feminine';
+      appearance.body.breastSize = size;
+      appearance.equipment.top.itemId = `starter.top.${top}`;
+      const model = assemblePlayerModel(library, appearance);
+      expect(model.getObjectByName('avatar-v1-feminine-bust-left')).toBeUndefined();
+      expect(model.getObjectByName('avatar-v1-feminine-bust-right')).toBeUndefined();
+      disposeModel(model);
+    }
   });
 
   it('keeps the Rockmundo chest print surface-bound across feminine breast sizes', () => {
