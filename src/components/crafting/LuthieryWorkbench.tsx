@@ -253,7 +253,13 @@ export const LuthieryWorkbench = ({
                       size="sm"
                       variant={selection.finishId === option.id ? "default" : "outline"}
                       disabled={!unlocked || !material}
-                      onClick={() => setSelection((current) => ({ ...current, finishId: option.id }))}
+                      onClick={() =>
+                        setSelection((current) => ({
+                          ...current,
+                          finishId: option.id,
+                          decal: option.id === "finish-artwork" ? current.decal : { ...current.decal, id: "none" },
+                        }))
+                      }
                       className="h-auto min-h-12 flex-col items-start px-2 py-2 text-left"
                     >
                       <span className="flex w-full items-center gap-1 text-xs font-medium">
