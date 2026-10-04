@@ -277,7 +277,7 @@ export const LuthieryShopPanel = () => {
         ) : (
           <div className="grid gap-4 lg:grid-cols-2">
             {listings.map((listing) => {
-              const ownListing = listing.seller_profile_id === profile?.id;
+              const ownListing = listing.is_own_listing ?? listing.seller_profile_id === profile?.id;
               const canAfford = (profile?.cash ?? 0) >= listing.asking_price;
               const materials = materialNames(listing);
               const shop = listing.shop;
