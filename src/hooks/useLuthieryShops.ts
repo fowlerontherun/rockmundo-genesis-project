@@ -33,9 +33,9 @@ export interface LuthieryShopListing {
   id: string;
   shop_id: string;
   seller_profile_id: string;
-  player_equipment_id: string | null;
-  equipment_id: string;
-  craft_id: string;
+  player_equipment_id?: string | null;
+  equipment_id?: string;
+  craft_id?: string;
   maker_profile_id: string;
   maker_name: string;
   instrument_name: string;
@@ -46,6 +46,7 @@ export interface LuthieryShopListing {
   asking_price: number;
   material_cost_basis: number;
   suggested_value: number;
+  commission_rate_at_listing: number;
   description: string | null;
   provenance_snapshot: Record<string, any>;
   stat_snapshot: Record<string, number>;
@@ -116,6 +117,9 @@ const friendlyShopError = (error: any) => {
   if (message.includes("luthiery_shop_city_required")) {
     return "Travel to a city before opening or relocating your shop.";
   }
+  if (message.includes("luthiery_shop_logo_invalid")) {
+    return "Shop logo URLs must use HTTPS and cannot contain spaces.";
+  }
   if (message.includes("luthiery_shop_insufficient_funds") || message.includes("insufficient funds")) {
     return "You do not have enough cash for this instrument.";
   }
@@ -171,29 +175,12 @@ export const useLuthieryShops = () => {
     enabled: !!profileId,
   });
 
-  const { data: shops = [], isLoading: shopsLoading } = useQuery({
-    queryKey: ["luthiery-shops"],
-    queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("luthiery_shops")
-        .select("*, city:cities!luthiery_shops_city_id_fkey(id,name,country)")
-        .eq("is_open", true)
-        .order("reputation", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as LuthieryShop[];
-    },
-  });
-
   const { data: listings = [], isLoading: listingsLoading } = useQuery({
     queryKey: ["luthiery-shop-listings"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("luthiery_shop_listings")
-        .select("*, shop:luthiery_shops!luthiery_shop_listings_shop_id_fkey(*, city:cities!luthiery_shops_city_id_fkey(id,name,country))")
-        .eq("status", "active")
-        .order("listed_at", { ascending: false });
+      const { data, error } = await (supabase as any).rpc("browse_luthiery_shop_listings");
       if (error) throw error;
-      return (data ?? []) as LuthieryShopListing[];
+      return (Array.isArray(data) ? data : []) as LuthieryShopListing[];
     },
   });
 
@@ -422,7 +409,6 @@ export const useLuthieryShops = () => {
     profile,
     levels,
     isQualified,
-    shops,
     listings,
     myShop,
     myListings,
@@ -432,7 +418,6 @@ export const useLuthieryShops = () => {
     isLoading:
       profileLoading ||
       skillsLoading ||
-      shopsLoading ||
       listingsLoading ||
       myShopLoading ||
       myListingsLoading ||
