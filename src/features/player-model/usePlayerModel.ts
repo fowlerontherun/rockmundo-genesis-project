@@ -7,6 +7,7 @@ import { appearanceFromLegacy, appearanceSchema, resolveAppearance, type PlayerA
 import { normalizeTattooVisual, type ResolvedTattooVisual, type TattooVisualInput } from './tattoos';
 import type { ResolvedMerchWearable } from './merchWearables';
 import { resolveStageInstrumentSkin, type EquippedInstrumentSkinRow, type ResolvedInstrumentSkinVisual } from '@/features/instrument-skins/instrumentSkin';
+import { normalizeStageLuthieryInstrument, type LuthieryInstrumentVisual, type StageLuthieryInstrumentRow } from '@/features/luthiery/luthieryInstrument';
 
 export const playerModelKey = (profileId: string | null) => ['player-stage-appearance', profileId] as const;
 export const equippedRichClothingKey = (profileId: string | null) => ['equipped-rich-clothing', profileId] as const;
@@ -21,6 +22,8 @@ export interface GigPlayerModelsData {
   instrumentSkins?: Record<string, ResolvedInstrumentSkinVisual[]>;
   /** Equipped Merch Studio apparel resolved once with the performer batch. */
   merchWearables?: Record<string, ResolvedMerchWearable>;
+  /** Current equipped player-crafted guitar/bass. Historical replays override this with their immutable snapshot. */
+  luthieryInstruments?: Record<string, LuthieryInstrumentVisual>;
 }
 
 interface EquippedClothingRow {
@@ -62,7 +65,7 @@ export function resolveGigStageAppearances(
   return appearances;
 }
 
-type StageRpcName = 'get_stage_tattoo_visuals' | 'get_equipped_stage_clothing' | 'get_equipped_stage_instrument_skins' | 'get_stage_merch_wearables';
+type StageRpcName = 'get_stage_tattoo_visuals' | 'get_equipped_stage_clothing' | 'get_equipped_stage_instrument_skins' | 'get_stage_merch_wearables' | 'get_equipped_stage_luthiery_instruments';
 type StageRpcArgs = { p_profile_ids: string[] };
 type StageRpcResult = { data: unknown; error: { message?: string } | null };
 
@@ -178,13 +181,14 @@ export function useGigPlayerModels(profileIds: string[]) {
     enabled: ids.length > 0,
     staleTime: 60_000,
     queryFn: async (): Promise<GigPlayerModelsData> => {
-      const [appearanceSettled, legacySettled, clothingSettled, tattooSettled, instrumentSettled, merchSettled] = await Promise.allSettled([
+      const [appearanceSettled, legacySettled, clothingSettled, tattooSettled, instrumentSettled, merchSettled, luthierySettled] = await Promise.allSettled([
         supabase.from('player_stage_appearances').select('profile_id,appearance').in('profile_id', ids),
         supabase.from('player_avatar_config').select('profile_id,gender,skin_tone,hair_color,height,shirt_color,pants_color,shoes_color').in('profile_id', ids),
         callStageRpc('get_equipped_stage_clothing', { p_profile_ids: ids }),
         callStageRpc('get_stage_tattoo_visuals', { p_profile_ids: ids }),
         callStageRpc('get_equipped_stage_instrument_skins', { p_profile_ids: ids }),
         callStageRpc('get_stage_merch_wearables', { p_profile_ids: ids }),
+        callStageRpc('get_equipped_stage_luthiery_instruments', { p_profile_ids: ids }),
       ]);
 
       if (appearanceSettled.status === 'rejected') throw appearanceSettled.reason;
@@ -204,6 +208,7 @@ export function useGigPlayerModels(profileIds: string[]) {
       const tattooResult = optionalStageResult('tattoo visuals', tattooSettled);
       const instrumentResult = optionalStageResult('instrument skins', instrumentSettled);
       const merchResult = optionalStageResult('band merch wearables', merchSettled);
+      const luthieryResult = optionalStageResult('player-crafted instruments', luthierySettled);
 
       let legacyRows: LegacyStageAppearanceRow[] = [];
       if (legacySettled.status === 'fulfilled' && !legacySettled.value.error) {
@@ -233,7 +238,16 @@ export function useGigPlayerModels(profileIds: string[]) {
       if (!merchResult.error) for (const row of (merchResult.data || []) as ResolvedMerchWearable[]) {
         if (row.profile_id) merchWearables[row.profile_id] = row;
       }
-      return { appearances, richClothing, tattoos, instrumentSkins, merchWearables };
+
+      const luthieryInstruments: Record<string, LuthieryInstrumentVisual> = {};
+      if (!luthieryResult.error) {
+        for (const row of (luthieryResult.data || []) as StageLuthieryInstrumentRow[]) {
+          const visual = normalizeStageLuthieryInstrument(row);
+          if (visual) luthieryInstruments[row.profile_id] = visual;
+        }
+      }
+
+      return { appearances, richClothing, tattoos, instrumentSkins, merchWearables, luthieryInstruments };
     },
   });
 }
