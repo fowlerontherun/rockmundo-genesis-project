@@ -1,6 +1,6 @@
 # RockMundo Luthiery Crafting Plan
 
-Status: Phase 5 player instrument shops implemented; canonical Luthiery XP award remains open
+Status: Phase 5 player instrument shops implemented; Phase 4 re-audited, hardened and complete
 Reviewed against main: 2026-10-04 at 0d4cccefafc544b4d9e8f48035e06c66f819a418
 Phase 4 branch: `feat/luthiery-phase-4-authoritative-crafting`
 
@@ -60,7 +60,7 @@ Acceptance gate: the UI can determine whether a shape or material is available f
 - [x] Consume all five selected part materials plus the finish atomically.
 - [x] Persist the exact build specification in immutable provenance linked to the created equipment item.
 - [x] Replace the legacy Math.random-only quality path for custom workbench instruments with a server-derived bounded deterministic roll.
-- [ ] Award Luthiery XP through the canonical progression service.
+- [x] Award Luthiery XP through the canonical progression rules in the authoritative craft transaction.
 
 Acceptance gate: the final server result is deterministic from the submitted build inputs plus an authoritative bounded quality roll/seed, and cannot be forged or duplicated by the client.
 
@@ -143,7 +143,21 @@ Acceptance gate: a player can assemble a guitar or bass visually, choose all fiv
 - live migrations applied: `20261004211805_luthiery_phase4_authoritative_crafting`, `20261004212003_fix_luthiery_phase4_parts_validation`, and `20261004212140_index_luthiery_phase4_crafts_user`;
 - a dedicated Phase 4 CI workflow runs focused tests, typecheck, lint, build and the existing Chromium workbench journey.
 
-Remaining carry-over before the whole crafting foundation is considered complete: award Luthiery XP through the canonical progression service, retire or migrate the legacy recipe collection path, add dedicated neck-stock materials, and balance material prices once enough live crafting data exists.
+### Phase 4 final audit — 2026-10-04
+
+- fixed an authorization ordering bug in the SECURITY DEFINER craft RPC: active-character ownership is now validated before any idempotent-retry lookup, and the lookup is additionally scoped to the authenticated user;
+- successful custom crafts now award Luthiery progression XP atomically with the item mint, inventory consumption and provenance write;
+- XP is routed to the highest Luthiery tier actually used by the submitted build, preventing Basic-only builds from farming Professional or Mastery progression;
+- Basic builds award 10 XP, Professional builds 15 XP and Mastery builds 20 XP, capped by the canonical tier maximum using `progression_skill_max_level` and `progression_skill_required_xp`;
+- starter builds can create a level-0 Basic Luthiery progress row when one does not yet exist, so crafting can legitimately begin progression without inventing a level jump;
+- craft retries return the stored result and do not award XP a second time;
+- the workbench refreshes its Skill System context after a successful craft and the success message surfaces awarded Luthiery XP;
+- the admin Luthiery workbench demo was corrected from obsolete 250/650 progression fixtures to the canonical level-20 tier scale;
+- the Phase 4 SQL harness now covers starter XP, retry no-double-XP, cross-character retry isolation, Professional XP routing and Mastery XP routing;
+- the expanded harness passed against the live database inside rollback transactions;
+- live hardening migration applied: `20261004223323_complete_luthiery_phase4_xp_and_retry_authorization`.
+
+Remaining carry-over before the whole crafting foundation is considered complete: retire or migrate the legacy recipe collection path, add dedicated neck-stock materials, and balance material prices once enough live crafting data exists.
 
 ## Phase 5 — Player instrument shop
 
