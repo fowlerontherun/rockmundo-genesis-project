@@ -1,3 +1,4 @@
+import { isDress } from './skirtGeometry';
 import { useState } from 'react';
 import { garmentCategory } from './wardrobeStyling';
 import { Shirt, Footprints } from 'lucide-react';
@@ -28,10 +29,12 @@ export function StarterWardrobe({ slot, appearance, onChange }: { slot: Equipmen
       <label>Item type <select aria-label={`${SLOT_LABELS[slot]} item type`} value={category} onChange={event => setCategory(event.target.value)}>{categories.map(value => <option key={value}>{value}</option>)}</select></label>
       <label><input type="checkbox" checked={keepColour} onChange={event => setKeepColour(event.target.checked)} />Keep my colour when switching items</label>
     </div>
+    {slot === 'bottom' && isDress(appearance.equipment.top.itemId) && <p>A dress covers your bottoms. Your selection will reappear when you switch to a separate top.</p>}
+    {slot === 'top' && isDress(equipped.itemId) && <p>Dress colour applies to the bodice and skirt.</p>}
     <div className="player-model-wardrobe__grid">
       {items.filter(item => category === 'All' || garmentCategory(slot, item.id) === category).map(item => <button key={item.id} type="button" aria-pressed={equipped.itemId === item.id} onClick={() => edit({ itemId: item.id, ...(!keepColour && ITEM_DEFAULT_COLOURS[item.id] ? { color: ITEM_DEFAULT_COLOURS[item.id] } : {}) })}>
         <span aria-hidden="true" className={`player-model-wardrobe__tile fabric-${item.fabric}`} style={{ color: item.id === equipped.itemId || keepColour ? equipped.color : ITEM_DEFAULT_COLOURS[item.id] ?? equipped.color }}>
-          {slot === 'top' ? <Shirt size={34} strokeWidth={1.5} /> : slot === 'footwear' ? <Footprints size={34} strokeWidth={1.5} /> : <svg width="34" height="34" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M9 3h14l2 25h-7l-2-16-2 16H7L9 3Z" /><path d="M9 7h14M16 3v9" /></svg>}
+          {/dress|skirt/.test(item.id) ? <svg width="34" height="34" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.5"><path d={slot === 'top' ? 'M11 3h3l2 3 2-3h3l-2 11 8 15H5l8-15-2-11Z' : 'M11 7h10l7 22H4L11 7Z'} /><path d="M12 14h8" /></svg> : /vest/.test(item.id) ? <svg width="34" height="34" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M9 3h4c0 7 6 7 6 0h4v8l3 18H6l3-18V3Z" /></svg> : slot === 'top' ? <Shirt size={34} strokeWidth={1.5} /> : slot === 'footwear' ? <Footprints size={34} strokeWidth={1.5} /> : <svg width="34" height="34" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M9 3h14l2 25h-7l-2-16-2 16H7L9 3Z" /><path d="M9 7h14M16 3v9" /></svg>}
         </span><span>{item.label}</span>
       </button>)}
     </div>

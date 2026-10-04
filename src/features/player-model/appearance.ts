@@ -16,6 +16,8 @@ export interface StarterItem { id: string; style: Style; label: string; fabric: 
 const wardrobe = (slot: EquipmentSlot, rows: [string, Style, string, Fabric][]): StarterItem[] => rows.map(([key, style, label, fabric]) => ({ id: `starter.${slot}.${key}`, style, label, fabric }));
 export const STARTER_ITEMS: Record<EquipmentSlot, StarterItem[]> = {
   top: wardrobe('top', [
+    ['vest', 'casual', 'Classic vest top', 'plain'], ['striped-vest', 'casual', 'Striped vest top', 'stripe'],
+    ['sundress', 'casual', 'Sleeveless sundress', 'plain'], ['skater-dress', 'casual', 'Skater dress', 'plain'],
     ['casual', 'casual', 'Rockmundo crew-neck T-shirt', 'plain'], ['topless', 'casual', 'Topless', 'plain'], ['punk', 'punk', 'Punk top', 'plain'], ['suit', 'suit', 'Tailored jacket', 'plain'],
     ['stripe', 'casual', 'Striped T-shirt', 'stripe'], ['plain-black', 'casual', 'Plain black T-shirt', 'plain'], ['plain-white', 'casual', 'Plain white T-shirt', 'plain'], ['vintage-charcoal', 'punk', 'Vintage charcoal T-shirt', 'plain'], ['plaid', 'punk', 'Plaid punk top', 'plaid'], ['pinstripe', 'suit', 'Pinstripe jacket', 'pinstripe'],
     ['v-neck', 'casual', 'V-neck T-shirt', 'plain'], ['long-sleeve', 'casual', 'Long-sleeve T-shirt', 'plain'], ['tank', 'punk', 'Tank top', 'plain'],
@@ -35,6 +37,8 @@ export const STARTER_ITEMS: Record<EquipmentSlot, StarterItem[]> = {
   ]),
 };
 export const LIVE_STARTER_ITEM_IDS = new Set([
+  'starter.top.vest', 'starter.top.striped-vest', 'starter.top.sundress', 'starter.top.skater-dress',
+  'starter.bottom.pleated-skirt', 'starter.bottom.mini-skirt',
   // Tops backed by a donor silhouette we have visually verified in V1.
   'starter.top.casual','starter.top.topless','starter.top.punk','starter.top.suit',
   'starter.top.stripe','starter.top.plain-black','starter.top.plain-white','starter.top.vintage-charcoal',
@@ -59,8 +63,6 @@ export const STARTER_VISUAL_FALLBACKS: Record<string, string> = {
   'starter.bottom.cargo-shorts': 'starter.bottom.denim-shorts',
   'starter.bottom.athletic-shorts': 'starter.bottom.denim-shorts',
   'starter.bottom.wide-leg': 'starter.bottom.casual',
-  'starter.bottom.pleated-skirt': 'starter.bottom.casual',
-  'starter.bottom.mini-skirt': 'starter.bottom.punk',
 };
 
 export function starterItemsForWardrobe(slot: EquipmentSlot) {

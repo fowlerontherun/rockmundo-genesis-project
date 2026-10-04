@@ -203,7 +203,7 @@ describe('shipped modular stage models', () => {
   it.each(['masculine', 'feminine'] as const)('uses stable donor-skinned V1 clothing on the %s live avatar', frame => {
     for (const [slot, itemIds] of [
       ['top', ['starter.top.casual','starter.top.v-neck','starter.top.long-sleeve','starter.top.hoodie','starter.top.denim-jacket']],
-      ['bottom', ['starter.bottom.denim-shorts','starter.bottom.boxer-briefs','starter.bottom.pleated-skirt','starter.bottom.chinos','starter.bottom.wide-leg']],
+      ['bottom', ['starter.bottom.denim-shorts','starter.bottom.boxer-briefs','starter.bottom.chinos','starter.bottom.wide-leg']],
     ] as const) {
       for (const itemId of itemIds) {
         const appearance = defaultAppearance(itemId);
@@ -754,6 +754,46 @@ describe('appearance boundaries', () => {
   });
 });
 
+describe('dresses, skirts and vest tops', () => {
+  it.each(['masculine', 'feminine'] as const)('fits skirts and dresses to the %s performance rig', frame => {
+    for (const id of ['starter.bottom.mini-skirt', 'starter.bottom.pleated-skirt', 'starter.top.sundress', 'starter.top.skater-dress']) {
+      const appearance = defaultAppearance(id);
+      appearance.body.frame = frame;
+      const slot = id.includes('.top.') ? 'top' : 'bottom';
+      appearance.equipment[slot] = { itemId: id, color: '#d376a1' };
+      const before = JSON.stringify(appearance);
+      const source = assemblePlayerModel(library, appearance);
+      const skirt = source.getObjectByName('avatar-v1-fitted-skirt') as T.SkinnedMesh;
+      expect(skirt).toBeInstanceOf(T.SkinnedMesh);
+      expect((skirt.material as T.MeshStandardMaterial).color.getHexString()).toBe('d376a1');
+      expect(skirt.skeleton.bones).toHaveLength(3);
+      expect(JSON.stringify(appearance)).toBe(before);
+      let visibleLegs = 0;
+      source.traverse(node => { if (node instanceof T.Mesh) for (const material of Array.isArray(node.material) ? node.material : [node.material]) { if (material.name === 'Skin_SkirtLegs' && material.visible) visibleLegs++; } });
+      expect(visibleLegs).toBeGreaterThan(0);
+      const actor = new Musician(source, 'guitar', [0,0,0], 0, undefined, appearance);
+      disposeModel(source);
+      for (const time of [0, 2, 7]) {
+        actor.update(time, .8, false);
+        const bounds = new T.Box3().setFromObject(actor.root);
+        expect(bounds.min.y).toBeGreaterThan(-.25);
+        expect(bounds.max.y).toBeLessThan(2.85);
+      }
+      disposeModel(actor.root);
+    }
+  });
+
+  it.each(['vest', 'striped-vest', 'sundress', 'skater-dress'])('keeps %s sleeveless and supplies visible arms', top => {
+    const appearance = defaultAppearance(top);
+    appearance.body.frame = 'feminine';
+    appearance.equipment.top.itemId = `starter.top.${top}`;
+    const model = assemblePlayerModel(library, appearance);
+    expectGarmentArmCoverage(model, /upperarm/i, .26);
+    expect(model.getObjectByName('avatar-v1-skin-underlay-upper-arm-l')).toBeTruthy();
+    disposeModel(model);
+  });
+});
+
 describe('V1 starter clothing safety gate', () => {
   it('only exposes visually verified starter clothing in the live wardrobe', () => {
     expect(starterItemsForWardrobe('top').map(item => item.id)).not.toEqual(expect.arrayContaining([
@@ -764,8 +804,6 @@ describe('V1 starter clothing safety gate', () => {
       'starter.bottom.cargo-shorts',
       'starter.bottom.athletic-shorts',
       'starter.bottom.wide-leg',
-      'starter.bottom.pleated-skirt',
-      'starter.bottom.mini-skirt',
     ]));
     expect(starterItemsForWardrobe('bottom').map(item => item.id)).toEqual(expect.arrayContaining([
       'starter.bottom.denim-shorts',
@@ -809,7 +847,7 @@ describe('V1 starter clothing safety gate', () => {
 
 describe('expanded starter wardrobe', () => {
   it.each(['masculine', 'feminine'] as const)('renders and preserves the full starter wardrobe on the %s gig rig', frame => {
-    const expectedCounts = { top: 17, bottom: 18, footwear: 10 } as const;
+    const expectedCounts = { top: 21, bottom: 18, footwear: 10 } as const;
     for (const slot of SLOTS) {
       expect(STARTER_ITEMS[slot]).toHaveLength(expectedCounts[slot]);
       expect(new Set(STARTER_ITEMS[slot].map(item => item.id)).size).toBe(STARTER_ITEMS[slot].length);

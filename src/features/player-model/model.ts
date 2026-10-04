@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { addFittedSkirt, isDress, isVest, isSkirt } from './skirtGeometry';
 import { refineSkinnedSurface } from './refineSkinnedSurface';
 import { clipGarmentHem } from './garmentHem';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -148,6 +149,7 @@ function applyFeminineBreastSize(mesh: T.SkinnedMesh, size: number) {
   mesh.userData.avatarV1BreastSizeAffectedVertices = affected;
 }
 const V1_SKINNED_TEE_ITEMS = new Set([
+  'starter.top.vest', 'starter.top.striped-vest', 'starter.top.sundress', 'starter.top.skater-dress',
   'starter.top.casual',
   'starter.top.stripe',
   'starter.top.plain-black',
@@ -457,7 +459,7 @@ function polishV1OuterwearGeometry(
   mesh.userData.avatarV1OuterwearArmVertexCount = armVertices;
 }
 
-function removeV1TankSleeveTriangles(mesh: T.SkinnedMesh, materials: T.Material[]) {
+function removeV1TankSleeveTriangles(mesh: T.SkinnedMesh, materials: T.Material[], cutoff = .42) {
   const geometry = mesh.geometry;
   const skinIndex = geometry.getAttribute('skinIndex') as T.BufferAttribute | undefined;
   const skinWeight = geometry.getAttribute('skinWeight') as T.BufferAttribute | undefined;
@@ -490,7 +492,7 @@ function removeV1TankSleeveTriangles(mesh: T.SkinnedMesh, materials: T.Material[
     const garment = garmentMaterialIndices.has(group.materialIndex ?? 0);
     for (let i = group.start; i + 2 < group.start + group.count; i += 3) {
       const a = indexAt(i), b = indexAt(i + 1), c = indexAt(i + 2);
-      const sleeveTriangle = garment && Math.max(upperArmWeight(a), upperArmWeight(b), upperArmWeight(c)) > .42;
+      const sleeveTriangle = garment && Math.max(upperArmWeight(a), upperArmWeight(b), upperArmWeight(c)) > cutoff;
       if (sleeveTriangle) { removed += 1; continue; }
       nextIndices.push(a, b, c);
     }
@@ -1481,6 +1483,9 @@ function addLegacyBareBodyUnderlay(
     const upperArm = bone(`UpperArm.${side}`, `UpperArm_${side}`, `UpperArm${side}`);
     const lowerArm = bone(`LowerArm.${side}`, `LowerArm_${side}`, `LowerArm${side}`);
     const hand = bone(`Hand.${side}`, `Hand_${side}`, `Hand${side}`, `Wrist.${side}`, `Wrist_${side}`, `Wrist${side}`);
+    if ((isVest(appearance.equipment.top.itemId) || isDress(appearance.equipment.top.itemId)) && upperArm?.parent instanceof T.Bone) {
+      addEllipsoid(`shoulder-${side.toLowerCase()}`, upperArm.parent, upperArm.parent, upperArm, .055 * frameScale, .06, 1.2);
+    }
     addEllipsoid(`upper-arm-${side.toLowerCase()}`, upperArm, upperArm, lowerArm, .062 * frameScale * muscleScale, .061 * muscleScale);
     // Topless stage avatars hide the donor shirt material, including the sleeve/forearm
     // geometry on some V1 exports. Always rebuild the complete arm so hands never
@@ -1635,6 +1640,8 @@ export function assemblePlayerModel(
   const proceduralStarterBottom = USE_PROCEDURAL_STARTER_GARMENTS && presentation === 'stage' && !curatedBottom
     ? starterBottomVisualItem(appearance)
     : null;
+  const dress = presentation === 'stage' && !curatedTop && isDress(appearance.equipment.top.itemId);
+  const skirt = presentation === 'stage' && (dress || (!curatedBottom && isSkirt(appearance.equipment.bottom.itemId)));
   const choices = [
     { part: 'head', style: headModelStyle(appearance), dye: appearance.head.hair, fabric: 'plain' as const },
     {
@@ -1648,12 +1655,12 @@ export function assemblePlayerModel(
     },
     {
       part: 'legs',
-      style: curatedBottom?.source.style ?? equipmentStyle(appearance, 'bottom'),
-      dye: curatedBottom?.source.color ?? appearance.equipment.bottom.color,
-      secondaryColor: curatedBottom?.source.secondaryColor,
-      fabric: curatedBottom?.source.fabric ?? visualEquipmentItem(appearance, 'bottom').fabric,
-      finish: curatedBottom?.source.finish,
-      assetKey: curatedBottom?.source.assetKey,
+      style: skirt ? (appearance.body.frame === 'feminine' ? 'casual' : 'suit') : curatedBottom?.source.style ?? equipmentStyle(appearance, 'bottom'),
+      dye: skirt ? appearance.body.skin : curatedBottom?.source.color ?? appearance.equipment.bottom.color,
+      secondaryColor: skirt ? undefined : curatedBottom?.source.secondaryColor,
+      fabric: skirt ? 'plain' as const : curatedBottom?.source.fabric ?? visualEquipmentItem(appearance, 'bottom').fabric,
+      finish: skirt ? undefined : curatedBottom?.source.finish,
+      assetKey: skirt ? undefined : curatedBottom?.source.assetKey,
     },
     {
       part: 'feet',
@@ -1718,17 +1725,18 @@ export function assemblePlayerModel(
         if (
           choice.part === 'body' &&
           !choice.assetKey &&
-          appearance.equipment.top.itemId === 'starter.top.tank'
+          (appearance.equipment.top.itemId === 'starter.top.tank' || isVest(appearance.equipment.top.itemId) || isDress(appearance.equipment.top.itemId))
         ) {
           removeV1TankSleeveTriangles(
             clonedNode,
             Array.isArray(original.material) ? original.material : [original.material],
+            appearance.equipment.top.itemId === 'starter.top.tank' ? .42 : .25,
           );
         }
         if (
           choice.part === 'legs' &&
           !choice.assetKey &&
-          V1_CROPPED_BOTTOM_ITEMS.has(appearance.equipment.bottom.itemId)
+          !skirt && V1_CROPPED_BOTTOM_ITEMS.has(appearance.equipment.bottom.itemId)
         ) {
           const exposed = fitInBodySpace(clonedNode, original.matrixWorld, () => cropV1BottomGarmentGeometry(
             clonedNode,
@@ -1740,7 +1748,7 @@ export function assemblePlayerModel(
         if (
           choice.part === 'legs' &&
           !choice.assetKey &&
-          V1_SHAPED_TROUSER_ITEMS.has(appearance.equipment.bottom.itemId)
+          !skirt && V1_SHAPED_TROUSER_ITEMS.has(appearance.equipment.bottom.itemId)
         ) {
           fitInBodySpace(clonedNode, original.matrixWorld, () => shapeV1TrouserGeometry(
             clonedNode,
@@ -1757,7 +1765,9 @@ export function assemblePlayerModel(
           const material = originalMaterial.clone() as T.MeshStandardMaterial;
           if (!material.isMeshStandardMaterial) return material;
           const name = material.name.toLowerCase();
-          const skinMaterial = /skin/.test(name);
+          const skirtLeg = skirt && choice.part === 'legs';
+          const skinMaterial = /skin/.test(name) || skirtLeg;
+          if (skirtLeg) material.name = 'Skin_SkirtLegs';
           const hideForTattooView = presentation === 'tattoo' && choice.part !== 'head' && !skinMaterial;
           const hideForTopless = topless && choice.part === 'body' && !skinMaterial;
           const hideForProceduralStarterTop = !!proceduralStarterTop && choice.part === 'body' && !skinMaterial;
@@ -1780,7 +1790,7 @@ export function assemblePlayerModel(
             if (choice.finish === 'leather') { material.roughness = .38; material.metalness = .03; }
             if (choice.finish === 'polished-leather') { material.roughness = .24; material.metalness = .04; }
           }
-          if (/skin/.test(name)) {
+          if (skinMaterial) {
             material.color.set(appearance.body.skin);
             if (clonedNode.geometry.getAttribute('color') && (choice.part === 'head' || !choice.assetKey)) material.vertexColors = true;
             applyAvatarSkinQuality(material, appearance, quality, skinTextureCache);
@@ -1828,7 +1838,7 @@ export function assemblePlayerModel(
               material.needsUpdate = true;
             }
           }
-          if (/skin/.test(name)) {
+          if (skinMaterial) {
             return upgradeSkinMaterial(material, appearance, quality);
           }
           if (!choice.assetKey && choice.fabric !== 'plain' && !/earring|metal/.test(name)) {
@@ -1902,6 +1912,10 @@ export function assemblePlayerModel(
     if (starterBottomExposesLegs(proceduralStarterBottom)) addV1BareLegUnderlay(result, appearance, bones, quality);
   }
 
+  if (skirt) {
+    addFittedSkirt(result, bones, dress ? appearance.equipment.top.itemId : appearance.equipment.bottom.itemId, dress ? appearance.equipment.top.color : appearance.equipment.bottom.color);
+  }
+
   const shortSleeveTop =
     presentation === 'stage' &&
     !curatedTop &&
@@ -1922,7 +1936,7 @@ export function assemblePlayerModel(
 
   // Punk trousers were authored to meet tall boots. A skinned calf beneath
   // them closes the exposed ankle when a player equips low shoes instead.
-  if (appearance.body.frame === 'feminine' && equipmentStyle(appearance, 'bottom') === 'punk' && equipmentStyle(appearance, 'footwear') !== 'punk') {
+  if (!skirt && appearance.body.frame === 'feminine' && equipmentStyle(appearance, 'bottom') === 'punk' && equipmentStyle(appearance, 'footwear') !== 'punk') {
     result.updateMatrixWorld(true);
     for (const side of ['L', 'R']) {
       const bone = (name: string) => [...bones.values()].find(value => value.name.replace(/[_.]/g, '') === `${name}${side}`);
