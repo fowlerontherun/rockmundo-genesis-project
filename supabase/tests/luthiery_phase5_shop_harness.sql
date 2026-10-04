@@ -197,13 +197,15 @@ BEGIN
   v_storefront := public.browse_luthiery_shop_listings();
   SELECT value INTO v_listing
   FROM jsonb_array_elements(v_storefront)
-  WHERE value->>'seller_profile_id'='c5200000-0000-4000-8000-000000000001'
+  WHERE value->>'instrument_name'='Phase 5 Guitar'
   LIMIT 1;
 
   IF v_listing IS NULL THEN
     RAISE EXCEPTION 'Sanitized storefront did not return the active listing';
   END IF;
   IF v_listing ? 'seller_user_id'
+     OR v_listing ? 'seller_profile_id'
+     OR v_listing ? 'maker_profile_id'
      OR v_listing ? 'player_equipment_id'
      OR COALESCE(v_listing->'shop','{}'::jsonb) ? 'owner_user_id' THEN
     RAISE EXCEPTION 'Sanitized storefront exposed internal auth/inventory identifiers';
@@ -216,7 +218,8 @@ SELECT public.purchase_luthiery_shop_listing(
   (
     SELECT (value->>'id')::uuid
     FROM jsonb_array_elements(public.browse_luthiery_shop_listings())
-    WHERE value->>'seller_profile_id'='c5200000-0000-4000-8000-000000000001'
+    WHERE value->>'instrument_name'='Phase 5 Guitar'
+      AND COALESCE((value->>'is_own_listing')::boolean,false) IS FALSE
     LIMIT 1
   )
 );
