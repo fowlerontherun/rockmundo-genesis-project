@@ -59,6 +59,7 @@ describe("LuthieryShopPanel", () => {
         {
           id: "listing-1",
           shop_id: "shop-1",
+          is_own_listing: false,
           seller_profile_id: "profile-seller",
           player_equipment_id: "owned-1",
           equipment_id: "equipment-1",
