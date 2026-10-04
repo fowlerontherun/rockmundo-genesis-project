@@ -32,11 +32,12 @@ export interface LuthieryShop {
 export interface LuthieryShopListing {
   id: string;
   shop_id: string;
-  seller_profile_id: string;
+  is_own_listing?: boolean;
+  seller_profile_id?: string;
   player_equipment_id?: string | null;
   equipment_id?: string;
   craft_id?: string;
-  maker_profile_id: string;
+  maker_profile_id?: string;
   maker_name: string;
   instrument_name: string;
   instrument_kind: "electric_guitar" | "electric_bass";
