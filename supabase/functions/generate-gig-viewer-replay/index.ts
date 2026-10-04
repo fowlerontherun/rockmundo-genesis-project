@@ -201,15 +201,21 @@ serve(async (req) => {
     replayId = claim.replayId;
     console.log("[gig-viewer-replay] generation started", { gigId, outcomeId: outcome.id, replayId });
 
-    const [songsRes, performersRes, crowdSettingsRes, supportSlotRes] = await Promise.all([
+    const [songsRes, performersRes, crowdSettingsRes, supportSlotRes, luthieryLoadoutsRes] = await Promise.all([
       supabase.from("gig_song_performances").select("id,song_id,performance_item_id,item_type,position,performance_score,crowd_response,song_title,performance_item_name").eq("gig_outcome_id", outcome.id).order("position"),
       supabase.from("gig_performers").select("profile_id,role_or_instrument,lineup_status,profiles:profiles!gig_performers_profile_id_fkey(display_name,username)").eq("gig_id", gigId).order("created_at", { ascending: true }),
       supabase.from("gig_viewer_crowd_settings").select("revision,settings").eq("id", true).maybeSingle(),
       supabase.from("gig_support_slots").select("support_band_id,bands:bands!gig_support_slots_support_band_id_fkey(id,name)").eq("gig_id", gigId).in("status", ["accepted", "completed"]).maybeSingle(),
+      supabase.from("gig_equipment_loadouts")
+        .select("assigned_profile_id,luthiery_snapshot")
+        .eq("gig_id", gigId)
+        .eq("source_type", "member_owned")
+        .not("luthiery_snapshot", "is", null),
     ]);
     if (songsRes.error) throw songsRes.error;
     if (performersRes.error) throw performersRes.error;
     if (supportSlotRes.error) throw supportSlotRes.error;
+    if (luthieryLoadoutsRes.error) throw luthieryLoadoutsRes.error;
     if (!songsRes.data?.length) throw new Error("MISSING_SONGS");
 
     const performanceItemIds = [...new Set(songsRes.data.filter((row: any) => row.performance_item_id).map((row: any) => row.performance_item_id))];
@@ -266,9 +272,20 @@ serve(async (req) => {
     replay.crowdTuning = crowdTuning;
     replay.crowdTuningRevision = crowdTuningRevision;
     replay.commerce = settlement.commerce_snapshot;
+    replay.luthieryInstruments = Object.fromEntries(
+      (luthieryLoadoutsRes.data ?? [])
+        .filter((row: any) => row.assigned_profile_id && row.luthiery_snapshot)
+        .map((row: any) => [row.assigned_profile_id, row.luthiery_snapshot]),
+    );
 
     const { error: updateError } = await supabase.from("gig_viewer_replays").update({
-      event_payload: { events: replay.events, crowdTuning: replay.crowdTuning, crowdTuningRevision: replay.crowdTuningRevision, commerce: replay.commerce },
+      event_payload: {
+        events: replay.events,
+        crowdTuning: replay.crowdTuning,
+        crowdTuningRevision: replay.crowdTuningRevision,
+        commerce: replay.commerce,
+        luthieryInstruments: replay.luthieryInstruments,
+      },
       event_count: replay.events.length,
       duration_ms: replay.durationMs,
       simulation_seed: replay.simulationSeed,
@@ -280,7 +297,16 @@ serve(async (req) => {
     }).eq("id", replayId);
     if (updateError) throw updateError;
 
-    console.log("[gig-viewer-replay] generation succeeded", { gigId, outcomeId: outcome.id, replayId, eventCount: replay.events.length, durationMs: replay.durationMs, crowdTuningRevision, supportAct: supportSlotRes.data?.bands?.name ?? null });
+    console.log("[gig-viewer-replay] generation succeeded", {
+      gigId,
+      outcomeId: outcome.id,
+      replayId,
+      eventCount: replay.events.length,
+      durationMs: replay.durationMs,
+      crowdTuningRevision,
+      luthieryInstrumentCount: Object.keys(replay.luthieryInstruments ?? {}).length,
+      supportAct: supportSlotRes.data?.bands?.name ?? null,
+    });
     return response({ success: true, existing: false, replayId, eventCount: replay.events.length, durationMs: replay.durationMs, checksum: replay.checksum, crowdTuningRevision, supportAct: supportSlotRes.data?.bands?.name ?? null });
   } catch (error) {
     const code = error instanceof Error && error.message.startsWith("INVALID_REPLAY") ? "validation_failed" : error instanceof Error ? error.message.slice(0, 64) : "unknown_error";
