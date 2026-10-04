@@ -1,14 +1,17 @@
 import { useMemo, useState } from "react";
-import { Guitar, Lock, PackageCheck, Sparkles, Wrench } from "lucide-react";
+import { CheckCircle2, Guitar, Lock, PackageCheck, Sparkles, Wrench } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { getQualityLabel } from "@/data/craftingMaterials";
 import {
   DEFAULT_LUTHIERY_SELECTION,
   LUTHIERY_COLOURS,
+  LUTHIERY_DECALS,
   LUTHIERY_MATERIAL_OPTIONS,
   LUTHIERY_PART_LABELS,
   LUTHIERY_PART_ORDER,
@@ -20,6 +23,7 @@ import {
   getShapeForSelection,
   isLuthieryRequirementMet,
   resolveCatalogMaterial,
+  type LuthieryBuildPreviewSpec,
   type LuthieryBuildSelection,
   type LuthieryInstrumentKind,
   type LuthieryPartSlot,
@@ -27,6 +31,8 @@ import {
 } from "@/data/luthieryWorkbench";
 import type { CraftingMaterial, PlayerCraftingMaterial } from "@/hooks/useCraftingSystem";
 import { useSkillSystem } from "@/hooks/useSkillSystem";
+import { LuthieryInstrumentPreview } from "@/components/crafting/LuthieryInstrumentPreview";
+import { LuthieryBuildReviewDialog } from "@/components/crafting/LuthieryBuildReviewDialog";
 
 interface LuthieryWorkbenchProps {
   materialsCatalog: CraftingMaterial[];
@@ -57,6 +63,9 @@ export const LuthieryWorkbench = ({
   const { progress } = useSkillSystem();
   const [selection, setSelection] = useState<LuthieryBuildSelection>(DEFAULT_LUTHIERY_SELECTION);
   const [activePart, setActivePart] = useState<LuthieryPartSlot>("body");
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [confirmedSpec, setConfirmedSpec] = useState<LuthieryBuildPreviewSpec | null>(null);
+  const [confirmedFingerprint, setConfirmedFingerprint] = useState<string | null>(null);
 
   const luthieryProgress = useMemo(() => getLuthieryProgress(progress), [progress]);
   const shape = useMemo(() => getShapeForSelection(selection), [selection]);
@@ -65,6 +74,8 @@ export const LuthieryWorkbench = ({
     [selection, materialsCatalog, progress],
   );
   const quality = getQualityLabel(outcome.quality);
+  const selectionFingerprint = JSON.stringify(selection);
+  const confirmedCurrent = confirmedFingerprint === selectionFingerprint && confirmedSpec !== null;
 
   const ownedQuantity = (material: CraftingMaterial | undefined) => {
     if (!material) return 0;
@@ -154,176 +165,29 @@ export const LuthieryWorkbench = ({
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-lg border border-border/60 bg-gradient-to-b from-muted/20 to-background p-3">
-              <svg
-                viewBox="0 0 440 220"
-                role="img"
-                aria-label={`Preview of ${shape.name} ${selection.instrumentKind === "electric_bass" ? "bass" : "guitar"}`}
-                className="mx-auto h-auto w-full max-w-[680px]"
-              >
-                <defs>
-                  <linearGradient id="luthiery-finish" x1="0" x2="1" y1="0" y2="1">
-                    <stop offset="0%" stopColor={selection.colour} />
-                    <stop
-                      offset="60%"
-                      stopColor={selection.colour}
-                      stopOpacity={selectedFinish?.id === "finish-metalflake" ? 0.74 : 0.92}
-                    />
-                    <stop offset="100%" stopColor="#ffffff" stopOpacity={selectedFinish?.id === "finish-gloss" ? 0.2 : 0.06} />
-                  </linearGradient>
-                </defs>
+              <LuthieryInstrumentPreview
+                selection={selection}
+                shape={shape}
+                activePart={activePart}
+                onSelectPart={setActivePart}
+              />
+            </div>
 
-                <g
-                  role="button"
-                  tabIndex={0}
-                  aria-label="Select body"
-                  onClick={() => setActivePart("body")}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") setActivePart("body");
-                  }}
-                  className="cursor-pointer"
-                >
-                  <path
-                    d={shape.bodyPath}
-                    transform="translate(12 38) scale(0.96)"
-                    fill="url(#luthiery-finish)"
-                    stroke={activePart === "body" ? "hsl(var(--primary))" : "hsl(var(--border))"}
-                    strokeWidth={activePart === "body" ? 4 : 2}
-                  />
-                  {selectedFinish?.id === "finish-burst" && (
-                    <path
-                      d={shape.bodyPath}
-                      transform="translate(12 38) scale(0.96)"
-                      fill="none"
-                      stroke="#24170f"
-                      strokeOpacity="0.65"
-                      strokeWidth="11"
-                    />
-                  )}
-                  {selectedFinish?.id === "finish-artwork" && (
-                    <path d="M52 130 C72 103 105 154 139 111" fill="none" stroke="#ffffff" strokeOpacity="0.55" strokeWidth="5" />
-                  )}
-                </g>
-
-                <g
-                  role="button"
-                  tabIndex={0}
-                  aria-label="Select neck"
-                  onClick={() => setActivePart("neck")}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") setActivePart("neck");
-                  }}
-                  className="cursor-pointer"
-                >
-                  <rect
-                    x="124"
-                    y="100"
-                    width={neckLength}
-                    height="29"
-                    rx="4"
-                    fill="#b9844d"
-                    stroke={activePart === "neck" ? "hsl(var(--primary))" : "hsl(var(--border))"}
-                    strokeWidth={activePart === "neck" ? 4 : 2}
-                  />
-                  <path
-                    d={`M${123 + neckLength} 97 L${157 + neckLength} 91 L${173 + neckLength} 102 L${167 + neckLength} 132 L${125 + neckLength} 132 Z`}
-                    fill="#a36d39"
-                    stroke="hsl(var(--border))"
-                    strokeWidth="2"
-                  />
-                </g>
-
-                <g
-                  role="button"
-                  tabIndex={0}
-                  aria-label="Select fretboard"
-                  onClick={() => setActivePart("fretboard")}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") setActivePart("fretboard");
-                  }}
-                  className="cursor-pointer"
-                >
-                  <rect
-                    x="131"
-                    y="104"
-                    width={fretLength}
-                    height="20"
-                    rx="2"
-                    fill="#422b22"
-                    stroke={activePart === "fretboard" ? "hsl(var(--primary))" : "#5e4438"}
-                    strokeWidth={activePart === "fretboard" ? 4 : 1}
-                  />
-                  {Array.from({ length: 13 }).map((_, index) => {
-                    const x = 145 + index * (fretLength / 14);
-                    return <line key={x} x1={x} y1="104" x2={x} y2="124" stroke="#b8a89a" strokeOpacity="0.7" strokeWidth="1" />;
-                  })}
-                </g>
-
-                <g
-                  role="button"
-                  tabIndex={0}
-                  aria-label="Select electronics"
-                  onClick={() => setActivePart("electronics")}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") setActivePart("electronics");
-                  }}
-                  className="cursor-pointer"
-                >
-                  {Array.from({ length: pickupCount }).map((_, index) => (
-                    <rect
-                      key={index}
-                      x={82 + index * 27}
-                      y="108"
-                      width="15"
-                      height="25"
-                      rx="2"
-                      fill="#1d2229"
-                      stroke={activePart === "electronics" ? "hsl(var(--primary))" : "#6b7280"}
-                      strokeWidth={activePart === "electronics" ? 3 : 1.5}
-                    />
-                  ))}
-                </g>
-
-                <g
-                  role="button"
-                  tabIndex={0}
-                  aria-label="Select hardware"
-                  onClick={() => setActivePart("hardware")}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") setActivePart("hardware");
-                  }}
-                  className="cursor-pointer"
-                >
-                  <rect
-                    x="116"
-                    y="105"
-                    width="10"
-                    height="32"
-                    rx="2"
-                    fill={selection.parts.hardware === "hw-gold" ? "#cfaa4b" : "#a7adb5"}
-                    stroke={activePart === "hardware" ? "hsl(var(--primary))" : "#555d68"}
-                    strokeWidth={activePart === "hardware" ? 3 : 1.5}
-                  />
-                  <circle cx="70" cy="142" r="4" fill="#c8ccd2" />
-                  <circle cx="92" cy="149" r="4" fill="#c8ccd2" />
-                </g>
-
-                {Array.from({ length: stringCount }).map((_, index) => {
-                  const startY = 109 + (index * 18) / Math.max(1, stringCount - 1);
-                  return (
-                    <line
-                      key={index}
-                      x1="76"
-                      y1={startY}
-                      x2={292 + (selection.instrumentKind === "electric_bass" ? 31 : 0)}
-                      y2={110 + (index * 10) / Math.max(1, stringCount - 1)}
-                      stroke="#d8d8d8"
-                      strokeOpacity="0.75"
-                      strokeWidth="0.9"
-                      pointerEvents="none"
-                    />
-                  );
-                })}
-              </svg>
+            <div className="space-y-2">
+              <Label htmlFor="luthiery-instrument-name" className="text-xs">Instrument name</Label>
+              <Input
+                id="luthiery-instrument-name"
+                value={selection.instrumentName}
+                onChange={(event) =>
+                  setSelection((current) => ({ ...current, instrumentName: event.target.value.slice(0, 40) }))
+                }
+                maxLength={40}
+                placeholder={selection.instrumentKind === "electric_bass" ? "Name your bass..." : "Name your guitar..."}
+                aria-describedby="luthiery-instrument-name-help"
+              />
+              <p id="luthiery-instrument-name-help" className="text-[10px] text-muted-foreground">
+                2–40 characters. The reviewed name will be part of the future immutable crafted-item specification.
+              </p>
             </div>
 
             <div>
@@ -413,6 +277,131 @@ export const LuthieryWorkbench = ({
                   );
                 })}
               </div>
+            </div>
+
+            <div className="space-y-3 rounded-md border border-border/60 p-3">
+              <div>
+                <p className="text-xs font-medium">Artwork / decal placement</p>
+                <p className="mt-0.5 text-[10px] text-muted-foreground">
+                  Select Custom Artwork finish to place an on-body decal and tune its position, size and rotation.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                {LUTHIERY_DECALS.map((decal) => (
+                  <Button
+                    key={decal.id}
+                    type="button"
+                    size="sm"
+                    variant={selection.decal.id === decal.id ? "default" : "outline"}
+                    disabled={decal.id !== "none" && selection.finishId !== "finish-artwork"}
+                    onClick={() =>
+                      setSelection((current) => ({
+                        ...current,
+                        decal: { ...current.decal, id: decal.id },
+                      }))
+                    }
+                    className="h-auto min-h-9 whitespace-normal px-2 py-1.5 text-xs"
+                  >
+                    {decal.label}
+                  </Button>
+                ))}
+              </div>
+
+              {selection.finishId === "finish-artwork" && selection.decal.id !== "none" && (
+                <div className="grid gap-3 sm:grid-cols-2" data-testid="decal-placement-controls">
+                  <label className="space-y-1 text-[10px] text-muted-foreground">
+                    <span className="flex justify-between"><span>Horizontal</span><span>{selection.decal.x}%</span></span>
+                    <input
+                      aria-label="Decal horizontal position"
+                      className="w-full accent-primary"
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={selection.decal.x}
+                      onChange={(event) =>
+                        setSelection((current) => ({
+                          ...current,
+                          decal: { ...current.decal, x: Number(event.target.value) },
+                        }))
+                      }
+                    />
+                  </label>
+                  <label className="space-y-1 text-[10px] text-muted-foreground">
+                    <span className="flex justify-between"><span>Vertical</span><span>{selection.decal.y}%</span></span>
+                    <input
+                      aria-label="Decal vertical position"
+                      className="w-full accent-primary"
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={selection.decal.y}
+                      onChange={(event) =>
+                        setSelection((current) => ({
+                          ...current,
+                          decal: { ...current.decal, y: Number(event.target.value) },
+                        }))
+                      }
+                    />
+                  </label>
+                  <label className="space-y-1 text-[10px] text-muted-foreground">
+                    <span className="flex justify-between"><span>Size</span><span>{selection.decal.scale}%</span></span>
+                    <input
+                      aria-label="Decal size"
+                      className="w-full accent-primary"
+                      type="range"
+                      min="50"
+                      max="160"
+                      value={selection.decal.scale}
+                      onChange={(event) =>
+                        setSelection((current) => ({
+                          ...current,
+                          decal: { ...current.decal, scale: Number(event.target.value) },
+                        }))
+                      }
+                    />
+                  </label>
+                  <label className="space-y-1 text-[10px] text-muted-foreground">
+                    <span className="flex justify-between"><span>Rotation</span><span>{selection.decal.rotation}°</span></span>
+                    <input
+                      aria-label="Decal rotation"
+                      className="w-full accent-primary"
+                      type="range"
+                      min="-180"
+                      max="180"
+                      value={selection.decal.rotation}
+                      onChange={(event) =>
+                        setSelection((current) => ({
+                          ...current,
+                          decal: { ...current.decal, rotation: Number(event.target.value) },
+                        }))
+                      }
+                    />
+                  </label>
+                  <div className="sm:col-span-2">
+                    <p className="mb-1 text-[10px] text-muted-foreground">Decal colour</p>
+                    <div className="flex flex-wrap gap-2">
+                      {["#f5f5f5", "#111827", "#e11d48", "#f59e0b", "#38bdf8"].map((colour) => (
+                        <button
+                          key={colour}
+                          type="button"
+                          aria-label={`Decal colour ${colour}`}
+                          onClick={() =>
+                            setSelection((current) => ({
+                              ...current,
+                              decal: { ...current.decal, colour },
+                            }))
+                          }
+                          className={`h-7 w-7 rounded-full border-2 ${
+                            selection.decal.colour === colour ? "border-primary ring-2 ring-primary/30" : "border-border"
+                          }`}
+                          style={{ backgroundColor: colour }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -542,12 +531,41 @@ export const LuthieryWorkbench = ({
               ))}
 
               <p className="rounded-md border border-border/60 bg-background/70 p-2 text-[11px] leading-relaxed text-muted-foreground">
-                Preview estimate only. Phase 3 does not consume materials or mint equipment. The final confirm step will use the server-authoritative crafting transaction so quality and boosts cannot be chosen by the browser.
+                Preview estimate only. Phase 3 does not consume materials or mint equipment. Final item creation remains server-authoritative so quality and boosts cannot be chosen by the browser.
               </p>
+
+              {confirmedCurrent && (
+                <div className="rounded-md border border-green-500/40 bg-green-500/10 p-2 text-xs" role="status">
+                  <p className="flex items-center gap-2 font-semibold">
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    Design confirmed: {confirmedSpec?.instrumentName}
+                  </p>
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    This confirms the reviewed Phase 3 design only; no materials have been consumed.
+                  </p>
+                </div>
+              )}
+
+              <Button type="button" className="w-full" onClick={() => setReviewOpen(true)}>
+                Review build
+              </Button>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      <LuthieryBuildReviewDialog
+        open={reviewOpen}
+        onOpenChange={setReviewOpen}
+        selection={selection}
+        materialsCatalog={materialsCatalog}
+        playerMaterials={playerMaterials}
+        progress={progress}
+        onConfirm={(spec) => {
+          setConfirmedSpec(spec);
+          setConfirmedFingerprint(selectionFingerprint);
+        }}
+      />
     </div>
   );
 };
