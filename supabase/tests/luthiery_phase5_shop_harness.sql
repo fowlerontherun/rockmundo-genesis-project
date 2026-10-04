@@ -25,13 +25,19 @@ BEGIN
     RAISE EXCEPTION 'Anonymous users must not browse player shop identity data';
   END IF;
 
-  IF NOT has_function_privilege('authenticated','public.open_luthiery_shop(uuid,text,text,text,text,numeric)','EXECUTE')
+  IF to_regprocedure('public.browse_luthiery_shop_listings()') IS NULL THEN
+    RAISE EXCEPTION 'Sanitized Luthiery storefront RPC is missing';
+  END IF;
+
+  IF NOT has_function_privilege('authenticated','public.browse_luthiery_shop_listings()','EXECUTE')
+     OR NOT has_function_privilege('authenticated','public.open_luthiery_shop(uuid,text,text,text,text,numeric)','EXECUTE')
      OR NOT has_function_privilege('authenticated','public.create_luthiery_shop_listing(uuid,uuid,bigint,text)','EXECUTE')
      OR NOT has_function_privilege('authenticated','public.purchase_luthiery_shop_listing(uuid,uuid)','EXECUTE') THEN
     RAISE EXCEPTION 'Authenticated Luthiery shop RPC permissions are missing';
   END IF;
 
-  IF has_function_privilege('anon','public.open_luthiery_shop(uuid,text,text,text,text,numeric)','EXECUTE')
+  IF has_function_privilege('anon','public.browse_luthiery_shop_listings()','EXECUTE')
+     OR has_function_privilege('anon','public.open_luthiery_shop(uuid,text,text,text,text,numeric)','EXECUTE')
      OR has_function_privilege('anon','public.create_luthiery_shop_listing(uuid,uuid,bigint,text)','EXECUTE')
      OR has_function_privilege('anon','public.purchase_luthiery_shop_listing(uuid,uuid)','EXECUTE') THEN
     RAISE EXCEPTION 'Anonymous users must not execute Luthiery shop mutations';
@@ -129,6 +135,20 @@ SELECT public.create_luthiery_shop_listing(
   'First sale'
 );
 
+DO $first_party_terms$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.luthiery_shop_listings
+    WHERE seller_profile_id='c5200000-0000-4000-8000-000000000001'
+      AND status='active'
+      AND commission_rate_at_listing=0
+  ) THEN
+    RAISE EXCEPTION 'First-party listing should not charge an original-maker royalty';
+  END IF;
+END
+$first_party_terms$;
+
 DO $listed_lock$
 DECLARE v_player_equipment_id uuid;
 BEGIN
@@ -155,13 +175,49 @@ RESET ROLE;
 SELECT set_config('request.jwt.claim.sub','c5000000-0000-4000-8000-000000000002',true);
 SET LOCAL ROLE authenticated;
 
+DO $safe_storefront$
+DECLARE
+  v_storefront jsonb;
+  v_listing jsonb;
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM public.luthiery_shops
+    WHERE owner_profile_id='c5200000-0000-4000-8000-000000000001'
+  ) THEN
+    RAISE EXCEPTION 'Customer can read another player''s raw shop row';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM public.luthiery_shop_listings
+    WHERE seller_profile_id='c5200000-0000-4000-8000-000000000001'
+  ) THEN
+    RAISE EXCEPTION 'Customer can read another player''s raw listing row';
+  END IF;
+
+  v_storefront := public.browse_luthiery_shop_listings();
+  SELECT value INTO v_listing
+  FROM jsonb_array_elements(v_storefront)
+  WHERE value->>'seller_profile_id'='c5200000-0000-4000-8000-000000000001'
+  LIMIT 1;
+
+  IF v_listing IS NULL THEN
+    RAISE EXCEPTION 'Sanitized storefront did not return the active listing';
+  END IF;
+  IF v_listing ? 'seller_user_id'
+     OR v_listing ? 'player_equipment_id'
+     OR COALESCE(v_listing->'shop','{}'::jsonb) ? 'owner_user_id' THEN
+    RAISE EXCEPTION 'Sanitized storefront exposed internal auth/inventory identifiers';
+  END IF;
+END
+$safe_storefront$;
+
 SELECT public.purchase_luthiery_shop_listing(
   'c5200000-0000-4000-8000-000000000002',
   (
-    SELECT id
-    FROM public.luthiery_shop_listings
-    WHERE seller_profile_id='c5200000-0000-4000-8000-000000000001'
-      AND status='active'
+    SELECT (value->>'id')::uuid
+    FROM jsonb_array_elements(public.browse_luthiery_shop_listings())
+    WHERE value->>'seller_profile_id'='c5200000-0000-4000-8000-000000000001'
+    LIMIT 1
   )
 );
 
@@ -182,18 +238,119 @@ SELECT public.create_luthiery_shop_listing(
   'Verified resale'
 );
 
+DO $resale_terms$
+DECLARE
+  v_listing_id uuid;
+BEGIN
+  SELECT id INTO v_listing_id
+  FROM public.luthiery_shop_listings
+  WHERE seller_profile_id='c5200000-0000-4000-8000-000000000002'
+    AND status='active';
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.luthiery_shop_listings
+    WHERE id=v_listing_id
+      AND commission_rate_at_listing=10
+  ) THEN
+    RAISE EXCEPTION 'Resale did not snapshot the shop''s 10%% maker royalty';
+  END IF;
+
+  PERFORM set_config('app.phase5_resale_listing_id',v_listing_id::text,true);
+
+  BEGIN
+    PERFORM public.update_luthiery_shop(
+      'c5200000-0000-4000-8000-000000000002',
+      'Resale Shop',NULL,'#235f9f','http://insecure.example/logo.png',10,true,false
+    );
+    RAISE EXCEPTION 'Insecure shop logo URL was accepted';
+  EXCEPTION
+    WHEN SQLSTATE 'P0001' THEN
+      IF SQLERRM <> 'luthiery_shop_logo_invalid' THEN
+        RAISE;
+      END IF;
+  END;
+
+  PERFORM public.update_luthiery_shop(
+    'c5200000-0000-4000-8000-000000000002',
+    'Resale Shop',NULL,'#235f9f',NULL,0,false,false
+  );
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.luthiery_shop_listings
+    WHERE id=v_listing_id
+      AND commission_rate_at_listing=10
+  ) THEN
+    RAISE EXCEPTION 'Changing shop settings rewrote an existing listing royalty';
+  END IF;
+END
+$resale_terms$;
+
 RESET ROLE;
 SELECT set_config('request.jwt.claim.sub','c5000000-0000-4000-8000-000000000003',true);
 SET LOCAL ROLE authenticated;
 
+DO $closed_shop$
+DECLARE
+  v_listing_id uuid := current_setting('app.phase5_resale_listing_id')::uuid;
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM jsonb_array_elements(public.browse_luthiery_shop_listings())
+    WHERE (value->>'id')::uuid=v_listing_id
+  ) THEN
+    RAISE EXCEPTION 'Closed-shop listing remained visible in the storefront';
+  END IF;
+
+  BEGIN
+    PERFORM public.purchase_luthiery_shop_listing(
+      'c5200000-0000-4000-8000-000000000003',
+      v_listing_id
+    );
+    RAISE EXCEPTION 'Purchase succeeded while shop was closed';
+  EXCEPTION
+    WHEN SQLSTATE 'P0001' THEN
+      IF SQLERRM <> 'luthiery_shop_closed' THEN
+        RAISE;
+      END IF;
+  END;
+END
+$closed_shop$;
+
+RESET ROLE;
+SELECT set_config('request.jwt.claim.sub','c5000000-0000-4000-8000-000000000002',true);
+SET LOCAL ROLE authenticated;
+
+SELECT public.update_luthiery_shop(
+  'c5200000-0000-4000-8000-000000000002',
+  'Resale Shop',NULL,'#235f9f',NULL,0,true,false
+);
+
+RESET ROLE;
+SELECT set_config('request.jwt.claim.sub','c5000000-0000-4000-8000-000000000003',true);
+SET LOCAL ROLE authenticated;
+
+DO $reopened_storefront$
+DECLARE
+  v_listing_id uuid := current_setting('app.phase5_resale_listing_id')::uuid;
+  v_listing jsonb;
+BEGIN
+  SELECT value INTO v_listing
+  FROM jsonb_array_elements(public.browse_luthiery_shop_listings())
+  WHERE (value->>'id')::uuid=v_listing_id
+  LIMIT 1;
+
+  IF v_listing IS NULL
+     OR (v_listing->>'commission_rate_at_listing')::numeric <> 10 THEN
+    RAISE EXCEPTION 'Reopened storefront lost the fixed resale royalty';
+  END IF;
+END
+$reopened_storefront$;
+
 SELECT public.purchase_luthiery_shop_listing(
   'c5200000-0000-4000-8000-000000000003',
-  (
-    SELECT id
-    FROM public.luthiery_shop_listings
-    WHERE seller_profile_id='c5200000-0000-4000-8000-000000000002'
-      AND status='active'
-  )
+  current_setting('app.phase5_resale_listing_id')::uuid
 );
 
 DO $verify$
@@ -217,6 +374,7 @@ BEGIN
     FROM public.luthiery_shop_sales
     WHERE listing_id=v_listing_id
       AND maker_commission=20000
+      AND commission_rate=10
       AND maker_profile_id='c5200000-0000-4000-8000-000000000001'
       AND provenance_snapshot->>'shapeId'='double-cut'
   ) THEN
@@ -265,6 +423,26 @@ BEGIN
   END IF;
 END
 $verify$;
+
+RESET ROLE;
+SELECT set_config('request.jwt.claim.sub','c5000000-0000-4000-8000-000000000001',true);
+SET LOCAL ROLE authenticated;
+
+DO $maker_history$
+DECLARE
+  v_listing_id uuid := current_setting('app.phase5_resale_listing_id')::uuid;
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.luthiery_shop_sales
+    WHERE listing_id=v_listing_id
+      AND maker_profile_id='c5200000-0000-4000-8000-000000000001'
+      AND maker_commission=20000
+  ) THEN
+    RAISE EXCEPTION 'Original maker cannot view their resale commission history';
+  END IF;
+END
+$maker_history$;
 
 RESET ROLE;
 ROLLBACK;
