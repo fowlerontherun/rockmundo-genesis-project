@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 
 import {
   type LuthieryBuildSelection,
@@ -56,7 +56,7 @@ const PartGroup = ({
   part: LuthieryPartSlot;
   activePart: LuthieryPartSlot;
   onSelectPart: (part: LuthieryPartSlot) => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }) => (
   <g
     role="button"
