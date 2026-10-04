@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
     const { data: pendingDraws, error: drawError } = await supabase
       .from("lottery_draws")
       .select("*")
-      .eq("status", "pending")
+      .in("status", ["pending", "drawn"])
       .order("week_start", { ascending: false })
       .limit(1);
 
@@ -70,8 +70,8 @@ Deno.serve(async (req) => {
     const draw = pendingDraws[0];
 
     // Generate winning numbers
-    const winningNumbers = generateUniqueNumbers(7, 49);
-    const bonusNumber = Math.floor(Math.random() * 10) + 1;
+    const winningNumbers: number[] = draw.winning_numbers?.length === 7 ? draw.winning_numbers : generateUniqueNumbers(7, 49);
+    const bonusNumber = draw.bonus_number ?? (Math.floor(Math.random() * 10) + 1);
 
     // Update draw with winning numbers
     const { error: updateDrawError } = await supabase
