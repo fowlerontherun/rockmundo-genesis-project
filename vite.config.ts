@@ -15,6 +15,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
 
   resolve: {
+    dedupe: ["react", "react-dom"],
     alias: {
       "@/components/gig/GigBookingDialog": path.resolve(__dirname, "./src/components/gig/StableGigBookingDialog.tsx"),
       "@/hooks/useRecordingData": path.resolve(__dirname, "./src/hooks/useRecordingDataAtomic.tsx"),
