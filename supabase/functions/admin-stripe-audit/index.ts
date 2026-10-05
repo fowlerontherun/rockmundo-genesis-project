@@ -25,16 +25,6 @@ export default {
     if (from) created.gte = Math.floor(new Date(`${from}T00:00:00Z`).getTime() / 1000);
     if (to) created.lte = Math.floor(new Date(`${to}T23:59:59.999Z`).getTime() / 1000);
 
-    if (from && Number.isNaN(Date.parse(`${from}T00:00:00Z`))) {
-      return Response.json({ error: "Invalid from date" }, { status: 400 });
-    }
-    if (to && Number.isNaN(Date.parse(`${to}T23:59:59.999Z`))) {
-      return Response.json({ error: "Invalid to date" }, { status: 400 });
-    }
-    if (from && to && from > to) {
-      return Response.json({ error: "From date must be on or before to date" }, { status: 400 });
-    }
-
     const page = await stripe.balanceTransactions.list({
       limit: 100,
       ...(Object.keys(created).length ? { created } : {}),
