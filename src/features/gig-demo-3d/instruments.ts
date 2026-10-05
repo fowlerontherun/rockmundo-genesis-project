@@ -114,6 +114,7 @@ function applyLuthieryInstrumentVisual(root: T.Group, visual?: LuthieryInstrumen
         return typeof value === 'string' ? value : value && typeof value === 'object' ? String((value as Record<string, unknown>).optionId ?? '') : '';
     };
     const finish = String(spec.finishId ?? '');
+    if (finish === 'finish-natural') body.material.color.set(option('body').includes('mahogany') ? '#74452f' : option('body').includes('korina') ? '#a67849' : '#9a6949');
     body.material.roughness = finish === 'finish-worn' ? .75 : finish === 'finish-satin' ? .55 : .24;
     const neck = root.getObjectByName('instrument-neck') as T.Mesh<T.BufferGeometry, T.MeshStandardMaterial> | undefined;
     if (neck) {

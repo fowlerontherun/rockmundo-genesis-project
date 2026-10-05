@@ -32,6 +32,8 @@ export const LuthieryInstrumentPreview = ({ selection, shape, activePart, onSele
   const ebony = selection.parts.fretboard.startsWith("fret-ebony");
   const maple = selection.parts.fretboard === "fret-maple";
   const fretFill = `var(--luth-${maple ? "maple" : ebony ? "ebony" : "rosewood"})`;
+  const heelTop = selection.parts.neck === "neck-slim-maple" ? 105 : selection.parts.neck === "neck-chunky-mahogany" ? 101 : 103;
+  const heelBottom = 229 - heelTop;
   const neckFill = `var(--luth-${selection.parts.neck.includes("mahogany") ? "mahogany" : selection.parts.neck.includes("korina") ? "korina" : "maple"})`;
   const hardware = selection.parts.hardware;
   const hardwareFill = `var(--luth-${hardware === "hw-gold" ? "gold" : hardware === "hw-black" ? "black" : hardware === "hw-aged" ? "nickel" : "chrome"})`;
@@ -75,7 +77,7 @@ export const LuthieryInstrumentPreview = ({ selection, shape, activePart, onSele
       </g>
     </PartGroup>
     <PartGroup part="neck" {...{ activePart, onSelectPart }}>
-      <path d={`M137 103 L${nut} 107 L${nut} 122 L137 126 Z`} fill={neckFill} stroke={stroke("neck")} strokeWidth="1.5" />
+      <path d={`M137 ${heelTop} L${nut} 107 L${nut} 122 L137 ${heelBottom} Z`} fill={neckFill} stroke={stroke("neck")} strokeWidth="1.5" />
       <path d={`M${nut} 107 L${nut + 12} 100 L${nut + 55} 101 Q${nut + 66} 113 ${nut + 53} 130 L${nut + 13} 125 L${nut} 122 Z`} fill={neckFill} stroke={stroke("neck")} strokeWidth="1.5" />
     </PartGroup>
     <PartGroup part="fretboard" {...{ activePart, onSelectPart }}>
