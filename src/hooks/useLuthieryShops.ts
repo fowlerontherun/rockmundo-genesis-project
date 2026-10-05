@@ -267,7 +267,7 @@ export const useLuthieryShops = () => {
   );
 
   const levels = useMemo(() => {
-    const map = new Map(skillProgress.map((entry: any) => [entry.skill_slug, Number(entry.current_level ?? 0)]));
+    const map = new Map<string, number>(skillProgress.map((entry: any) => [entry.skill_slug, Number(entry.current_level ?? 0)]));
     return {
       basic: map.get("luthiery_basic_technical") ?? 0,
       professional: map.get("luthiery_professional_technical") ?? 0,

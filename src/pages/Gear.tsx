@@ -465,7 +465,7 @@ export default function Gear() {
                     <RoleFit item={item.equipment} role={bandRole} />
                     {renderStatBoosts(item.equipment.stat_boosts)}
                     <LuthieryBuildDetails item={item} />
-                    <Button size="sm" variant="outline" className="w-full" onClick={() => handleEquip(item.id, false)} disabled={isUpdating}>Unequip</Button>
+                    <Button size="sm" variant="outline" className="w-full" onClick={() => handleEquip(item, false)} disabled={isUpdating}>Unequip</Button>
                   </CardContent>
                 </Card>
               ))}

@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.762",
+    date: "2026-10-05",
+    changes: [
+      { type: "fix", description: "Fixed the build: a typo in the admin dashboard menu, luthiery skill level types, and the gear unequip button" },
+    ],
+  },
+  {
     version: "1.1.761",
     date: "2026-10-03",
     changes: [
