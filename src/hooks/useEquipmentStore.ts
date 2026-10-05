@@ -21,6 +21,19 @@ export interface EquipmentItem {
   is_available: boolean;
 }
 
+export interface LuthieryEquipmentDetail {
+  maker_name: string;
+  shape_id: string;
+  shape_name: string;
+  colour: string;
+  finish_id: string;
+  finish_name: string;
+  final_quality: number;
+  material_snapshot: Array<Record<string, unknown>>;
+  final_stats: Record<string, number>;
+  build_spec: Record<string, unknown>;
+}
+
 export interface PlayerEquipment {
   id: string;
   profile_id: string;
@@ -30,6 +43,8 @@ export interface PlayerEquipment {
   last_maintained: string | null;
   maintenance_cost: number;
   is_equipped: boolean;
+  inventory_source?: "catalog" | "luthiery";
+  luthiery?: LuthieryEquipmentDetail | null;
   equipment: EquipmentItem;
 }
 
@@ -55,13 +70,66 @@ export const useEquipmentStore = (_profileId?: string) => {
     queryKey: ["player-equipment", profileId],
     queryFn: async () => {
       if (!profileId) return [];
-      const { data, error } = await supabase
-        .from("player_equipment_inventory")
-        .select(`*, equipment:equipment_catalog(*)`)
-        .eq("profile_id", profileId)
-        .order("purchased_at", { ascending: false });
-      if (error) throw error;
-      return data as any as PlayerEquipment[];
+      const [catalogResult, luthieryResult] = await Promise.all([
+        supabase
+          .from("player_equipment_inventory")
+          .select(`*, equipment:equipment_catalog(*)`)
+          .eq("profile_id", profileId)
+          .order("purchased_at", { ascending: false }),
+        (supabase as any).rpc("get_owned_luthiery_equipment_details", {
+          p_profile_id: profileId,
+        }),
+      ]);
+      if (catalogResult.error) throw catalogResult.error;
+      if (luthieryResult.error) throw luthieryResult.error;
+
+      const catalogInventory = ((catalogResult.data ?? []) as any[]).map((row) => ({
+        ...row,
+        inventory_source: "catalog" as const,
+        luthiery: null,
+      })) as PlayerEquipment[];
+
+      const craftedInventory = ((luthieryResult.data ?? []) as any[]).map((row) => ({
+        id: row.player_equipment_id,
+        profile_id: profileId,
+        equipment_id: row.equipment_id,
+        condition: Number(row.condition ?? 100),
+        purchased_at: row.purchased_at ?? new Date(0).toISOString(),
+        last_maintained: null,
+        maintenance_cost: 0,
+        is_equipped: Boolean(row.is_equipped),
+        inventory_source: "luthiery" as const,
+        luthiery: {
+          maker_name: row.maker_name,
+          shape_id: row.shape_id,
+          shape_name: row.shape_name,
+          colour: row.colour,
+          finish_id: row.finish_id,
+          finish_name: row.finish_name,
+          final_quality: Number(row.final_quality ?? 0),
+          material_snapshot: Array.isArray(row.material_snapshot) ? row.material_snapshot : [],
+          final_stats: row.final_stats ?? {},
+          build_spec: row.build_spec ?? {},
+        },
+        equipment: {
+          id: row.equipment_id,
+          name: row.instrument_name,
+          category: row.category,
+          subcategory: row.subcategory,
+          brand: "Player Crafted",
+          description: row.description,
+          base_price: Number(row.estimated_value ?? 1000),
+          quality_rating: Number(row.final_quality ?? 0),
+          durability: 100,
+          stat_boosts: row.stat_boosts ?? {},
+          rarity: row.rarity ?? "common",
+          required_level: 1,
+          image_url: null,
+          is_available: false,
+        },
+      })) as PlayerEquipment[];
+
+      return [...craftedInventory, ...catalogInventory];
     },
     enabled: !!profileId,
   });
@@ -95,9 +163,15 @@ export const useEquipmentStore = (_profileId?: string) => {
       if (!profile || profile.cash < maintenanceCost) throw new Error("Insufficient funds for maintenance");
       const { error: cashError } = await supabase.from("profiles").update({ cash: profile.cash - maintenanceCost }).eq("id", profileId);
       if (cashError) throw cashError;
-      const { error } = await supabase
-        .from("player_equipment_inventory")
-        .update({ condition: 100, last_maintained: new Date().toISOString(), maintenance_cost: maintenanceCost })
+      const equipmentTable = item.inventory_source === "luthiery"
+        ? "player_equipment"
+        : "player_equipment_inventory";
+      const updatePayload = item.inventory_source === "luthiery"
+        ? { condition: 100 }
+        : { condition: 100, last_maintained: new Date().toISOString(), maintenance_cost: maintenanceCost };
+      const { error } = await (supabase as any)
+        .from(equipmentTable)
+        .update(updatePayload)
         .eq("id", inventoryId)
         .eq("profile_id", profileId);
       if (error) throw error;

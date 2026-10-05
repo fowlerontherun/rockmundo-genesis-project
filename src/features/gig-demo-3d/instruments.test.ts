@@ -8,6 +8,7 @@ import { SKILL_TREE_DEFINITIONS } from '@/data/skillTree';
 import { disposeModel } from '@/features/player-model/model';
 import { STAGE_INSTRUMENTS, stageAssignment, type InstrumentId } from './instrumentCatalog';
 import { Musician } from './performers';
+import { buildInstrument } from './instruments';
 const models: T.Object3D[] = [];
 beforeAll(async () => { for (const name of ['casual', 'female-casual']) {
     const file = readFileSync(resolve(`public/gig-demo-3d/${name}.glb`));
@@ -89,6 +90,36 @@ describe('complete stage instrument coverage', () => {
                 .toBeGreaterThan(id === 'acoustic_guitar' ? .25 : id === 'bass_guitar' ? .21 : .22);
         }
         disposeModel(actor.root);
+    });
+
+    it('renders player-crafted guitar shape and colour on the normal stage instrument rig', () => {
+        const rig = buildInstrument(
+            'electric_guitar',
+            '#ab713d',
+            null,
+            {
+                instrumentName: 'Phase 6 Razor',
+                instrumentKind: 'electric_guitar',
+                shapeId: 'razor',
+                shapeName: 'Razor',
+                colour: '#e11d48',
+                finalQuality: 93,
+            },
+        );
+        const body = rig.root.getObjectByName('instrument-body') as T.Mesh<T.BufferGeometry, T.MeshStandardMaterial>;
+        expect(body).toBeTruthy();
+        expect(body.material.color.getHexString()).toBe('e11d48');
+        const instrument = body.parent!;
+        expect(instrument.userData.luthieryInstrument).toMatchObject({
+            instrumentName: 'Phase 6 Razor',
+            shapeId: 'razor',
+            colour: '#e11d48',
+            finalQuality: 93,
+        });
+        const bounds = new T.Box3().setFromObject(body);
+        expect(bounds.isEmpty()).toBe(false);
+        expect(bounds.getSize(new T.Vector3()).x).toBeGreaterThan(.25);
+        disposeModel(rig.root);
     });
 
     it.each(['rock_drums', 'jazz_drums', 'electronic_drums'] as const)('%s always has two visible sticks outside the palms', id => {

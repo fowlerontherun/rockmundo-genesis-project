@@ -77,6 +77,30 @@ describe("gig viewer replay schema", () => {
     await expect(buildGigViewerReplay(performanceInput)).resolves.toEqual(replay);
   });
 
+  it("validates immutable player-crafted instrument replay snapshots", async () => {
+    const replay = await buildGigViewerReplay(input);
+    replay.luthieryInstruments = {
+      "11111111-1111-4111-8111-111111111111": {
+        instrumentName: "Replay Razor",
+        instrumentKind: "electric_guitar",
+        makerName: "Ava",
+        shapeId: "razor",
+        shapeName: "Razor",
+        colour: "#e11d48",
+        finalQuality: 93,
+        materialSnapshot: [{ materialName: "Mahogany Body Blank" }],
+        finalStats: { tone: 91 },
+        buildSpec: { shapeId: "razor" },
+      },
+    };
+    expect(validateGigViewerReplay(replay)).toEqual({ valid: true, errors: [] });
+
+    replay.luthieryInstruments["11111111-1111-4111-8111-111111111111"].colour = "red";
+    expect(validateGigViewerReplay(replay).errors).toContain(
+      "invalid luthiery colour for 11111111-1111-4111-8111-111111111111",
+    );
+  });
+
   it("rejects invalid payload discriminators, unknown phases, duplicate sequence, out-of-order offsets, invalid energy, missing reveal, and non-last completed", async () => {
     const replay = await buildGigViewerReplay(input);
     replay.events[0] = { ...replay.events[0], visualPayload: { type: "pyrotechnics" } as never, phase: "bad_phase" as never, sequence: 1, crowdEnergyAfter: 101 };

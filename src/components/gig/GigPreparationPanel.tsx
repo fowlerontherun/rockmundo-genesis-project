@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, CheckCircle2, ListMusic, Music, Users, Volume2, Wrench } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Guitar, ListMusic, Music, Users, Volume2, Wrench } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { useSetlists } from '@/hooks/useSetlists';
 import { SOUNDCHECK_TYPES, validateSoundcheckPlan, type SoundcheckType } from '@/utils/gigStageProduction';
 import { validateGigSetlist } from '@/utils/gigSetlistValidation';
 import { GigCrewAssignmentCard } from './GigCrewAssignmentCard';
+import { LuthieryGigLoadoutCard } from './LuthieryGigLoadoutCard';
 
 interface GigSetlistItem {
   id: string;
@@ -290,7 +291,7 @@ export function GigPreparationPanel({ gigId, bandId, status, scheduledDate, slot
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base"><Wrench className="h-4 w-4" />Live Setup</CardTitle>
-            <CardDescription>Shared stage equipment and show crew readiness.</CardDescription>
+            <CardDescription>Shared stage equipment, assigned player-crafted instruments and show crew readiness.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {liveSetupQuery.isLoading ? (
@@ -301,12 +302,21 @@ export function GigPreparationPanel({ gigId, bandId, status, scheduledDate, slot
               <>
                 <div className="flex items-center justify-between"><span className="text-sm">Overall readiness</span><strong>{liveSetupQuery.data.score}/100</strong></div>
                 <Progress value={liveSetupQuery.data.score} className="h-2" />
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2 sm:grid-cols-3">
                   <div className="rounded-md border p-3">
                     <div className="flex items-center justify-between">
                       <span className="flex items-center gap-2 text-sm font-medium"><Volume2 className="h-4 w-4" />Band Equipment</span>
-                      <span className="font-semibold">{liveSetupQuery.data.equipmentScore}/100</span>
+                      <span className="font-semibold">{liveSetupQuery.data.bandEquipmentScore ?? liveSetupQuery.data.equipmentScore}/100</span>
                     </div>
+                  </div>
+                  <div className="rounded-md border p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-2 text-sm font-medium"><Guitar className="h-4 w-4" />Player Instruments</span>
+                      <span className="font-semibold">
+                        {liveSetupQuery.data.memberInstrumentScore == null ? "—" : `${liveSetupQuery.data.memberInstrumentScore}/100`}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">{liveSetupQuery.data.memberInstrumentCount ?? 0} assigned</p>
                   </div>
                   <div className="rounded-md border p-3">
                     <div className="flex items-center justify-between">
@@ -319,6 +329,8 @@ export function GigPreparationPanel({ gigId, bandId, status, scheduledDate, slot
             ) : null}
           </CardContent>
         </Card>
+
+        <LuthieryGigLoadoutCard gigId={gigId} locked={locked} />
 
         <GigCrewAssignmentCard gigId={gigId} bandId={bandId} locked={locked} />
 

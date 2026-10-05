@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   calculateLiveSetup,
+  combineBandAndMemberEquipmentLiveSetup,
   getBandEquipmentEffectiveScore,
+  getMemberInstrumentEffectiveScore,
   getBandEquipmentRepairCost,
   getCrewRoleInfo,
   getVenueSetupTarget,
@@ -92,6 +94,29 @@ describe("liveSetup", () => {
     expect(result.selectedIds).toEqual(["pa-best", "lights"]);
     expect(result.selectedCount).toBe(2);
     expect(result.score).toBe(80);
+  });
+
+  it("uses crafted instrument quality and condition in readiness without adding craft boosts twice", () => {
+    expect(getMemberInstrumentEffectiveScore({
+      quality_score: 90,
+      condition_score: 80,
+      reliability_score: null,
+    })).toBe(85);
+
+    const combined = combineBandAndMemberEquipmentLiveSetup(
+      {
+        score: 60,
+        selectionMode: "selected",
+        selectedCount: 2,
+        ownedCount: 3,
+        selectedIds: ["pa", "lights"],
+      },
+      [{ quality_score: 90, condition_score: 100, reliability_score: 96, is_primary: true }],
+    );
+    expect(combined.bandEquipmentScore).toBe(60);
+    expect(combined.memberInstrumentScore).toBe(96);
+    expect(combined.memberInstrumentCount).toBe(1);
+    expect(combined.score).toBe(69);
   });
 
   it("points the player to the weakest part of an undersized setup", () => {

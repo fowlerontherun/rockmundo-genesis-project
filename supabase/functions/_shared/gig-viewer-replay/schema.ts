@@ -1,5 +1,5 @@
-import { GIG_EVENT_SCHEMA_VERSION, GIG_REPLAY_MAX_EVENTS, GIG_REPLAY_MAX_MESSAGE_PARAM_LENGTH, GIG_REPLAY_STATUSES, GIG_VIEWER_EVENT_TYPES, GIG_VIEWER_PHASES, GIG_VIEWER_VERSION } from "./constants";
-import type { GigViewerEvent, GigViewerEventType, GigVisualPayload, GigViewerReplay } from "./types";
+import { GIG_EVENT_SCHEMA_VERSION, GIG_REPLAY_MAX_EVENTS, GIG_REPLAY_MAX_MESSAGE_PARAM_LENGTH, GIG_REPLAY_STATUSES, GIG_VIEWER_EVENT_TYPES, GIG_VIEWER_PHASES, GIG_VIEWER_VERSION } from "./constants.ts";
+import type { GigViewerEvent, GigViewerEventType, GigVisualPayload, GigViewerReplay } from "./types.ts";
 
 export interface GigReplayValidationResult { valid: boolean; errors: string[] }
 
@@ -40,6 +40,19 @@ export function validateGigViewerReplay(replay: GigViewerReplay): GigReplayValid
   }
   if (replay.events.length === 0) errors.push("events are required");
   if (replay.events.length > GIG_REPLAY_MAX_EVENTS) errors.push(`event count exceeds maximum ${GIG_REPLAY_MAX_EVENTS}`);
+  if (replay.luthieryInstruments != null) {
+    if (typeof replay.luthieryInstruments !== "object" || Array.isArray(replay.luthieryInstruments)) {
+      errors.push("invalid luthiery instrument snapshot");
+    } else {
+      for (const [profileId, snapshot] of Object.entries(replay.luthieryInstruments)) {
+        if (!/^[0-9a-f-]{36}$/i.test(profileId)) errors.push(`invalid luthiery profile ${profileId}`);
+        if (!snapshot || !["electric_guitar", "electric_bass"].includes(snapshot.instrumentKind)) errors.push(`invalid luthiery instrument kind for ${profileId}`);
+        if (!snapshot?.shapeId || !snapshot?.shapeName) errors.push(`invalid luthiery shape for ${profileId}`);
+        if (!/^#[0-9a-f]{6}$/i.test(snapshot?.colour ?? "")) errors.push(`invalid luthiery colour for ${profileId}`);
+        if (!Number.isFinite(snapshot?.finalQuality) || snapshot.finalQuality < 0 || snapshot.finalQuality > 100) errors.push(`invalid luthiery quality for ${profileId}`);
+      }
+    }
+  }
   const seenIds = new Set<string>();
   const seenSequences = new Set<number>();
   let previousOffset = -1;

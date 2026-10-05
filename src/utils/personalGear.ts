@@ -32,6 +32,32 @@ export interface PersonalGearItemLike {
   stat_boosts?: Record<string, unknown> | null;
 }
 
+const LUTHIERY_PERFORMANCE_KEYS = [
+  "luthiery_tone",
+  "luthiery_sustain",
+  "luthiery_stability",
+  "luthiery_output",
+  "luthiery_stage_presence",
+] as const;
+
+/**
+ * Crafted Luthiery stats are absolute 0-100 craft characteristics, not direct
+ * percentage modifiers. Convert their average to a small, bounded role bonus
+ * so they matter without being counted again in the shared-equipment score.
+ */
+export function getLuthieryPerformanceBonusPercent(
+  boosts: Record<string, unknown> | null | undefined,
+): number {
+  if (!boosts) return 0;
+  const values = LUTHIERY_PERFORMANCE_KEYS
+    .map((key) => Number(boosts[key]))
+    .filter((value) => Number.isFinite(value))
+    .map((value) => Math.max(0, Math.min(100, value)));
+  if (!values.length) return 0;
+  const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+  return Math.max(0, Math.min(8, Math.round(average / 12.5)));
+}
+
 export function personalGearMatchesRole(
   category: string | null | undefined,
   subcategory: string | null | undefined,
@@ -72,7 +98,17 @@ export function getPersonalGearRoleBonusPercent(
 
   const rarityBonus = PERSONAL_GEAR_RARITY_BONUS[(item.rarity || "common").toLowerCase()] ?? 5;
   const performance = Number(item.stat_boosts?.performance || 0);
-  return Math.max(0, Math.round(rarityBonus + (Number.isFinite(performance) ? performance : 0)));
+  const craftedLuthieryBonus = item.subcategory === "custom_luthiery"
+    ? getLuthieryPerformanceBonusPercent(item.stat_boosts)
+    : 0;
+  return Math.max(
+    0,
+    Math.round(
+      rarityBonus +
+      (Number.isFinite(performance) ? performance : 0) +
+      craftedLuthieryBonus,
+    ),
+  );
 }
 
 export function getPersonalGearFitLabel(

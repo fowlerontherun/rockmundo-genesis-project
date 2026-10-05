@@ -87,6 +87,25 @@ const RARITY_BONUSES: Record<string, number> = {
   common: 0.05, uncommon: 0.10, rare: 0.18, epic: 0.25, legendary: 0.35
 };
 
+const LUTHIERY_PERFORMANCE_KEYS = [
+  "luthiery_tone",
+  "luthiery_sustain",
+  "luthiery_stability",
+  "luthiery_output",
+  "luthiery_stage_presence",
+] as const;
+
+function getLuthieryPerformanceBonusFraction(boosts: Record<string, unknown> | null | undefined): number {
+  if (!boosts) return 0;
+  const values = LUTHIERY_PERFORMANCE_KEYS
+    .map((key) => Number(boosts[key]))
+    .filter((value) => Number.isFinite(value))
+    .map((value) => Math.max(0, Math.min(100, value)));
+  if (!values.length) return 0;
+  const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+  return Math.min(0.08, Math.max(0, Math.round(average / 12.5) / 100));
+}
+
 // Only production-facing staff contribute to the song-performance crew score.
 // Touring, security, merchandise and wardrobe roles have their own gameplay domains.
 // ── Tiered bonus (matches client-side tieredSkillBonus.ts) ──
@@ -312,16 +331,22 @@ async function fetchLiveMemberSkillAverage(
       continue;
     }
 
-    // Get profile_id for this user
-    const { data: profile } = await supabaseClient
-      .from('profiles')
-      .select('id')
-      .eq('user_id', member.user_id)
-      .single();
+    // Band membership is character-scoped. Prefer its profile_id so another
+    // character on the same account can never contribute skills or gear here.
+    let profileId = member.profile_id as string | null | undefined;
+    if (!profileId) {
+      const { data: profile } = await supabaseClient
+        .from('profiles')
+        .select('id')
+        .eq('user_id', member.user_id)
+        .eq('is_active', true)
+        .maybeSingle();
+      profileId = profile?.id ?? null;
+    }
 
-    if (!profile) {
-      console.log(`[process-gig-song] No profile found for user ${member.user_id}`);
-      totalEffective += 50; // Default baseline
+    if (!profileId) {
+      console.log(`[process-gig-song] No character profile found for band member ${member.user_id}`);
+      totalEffective += 50;
       counted++;
       continue;
     }
@@ -340,7 +365,7 @@ async function fetchLiveMemberSkillAverage(
       const { data: skillData } = await supabaseClient
         .from('skill_progress')
         .select('skill_slug, current_level')
-        .eq('profile_id', profile.id)
+        .eq('profile_id', profileId)
         .in('skill_slug', relevantSlugs);
 
       skillLevel = getSkillLevelFromProgress(skillData || [], relevantSlugs);
@@ -352,7 +377,7 @@ async function fetchLiveMemberSkillAverage(
       const { data: allSkills } = await supabaseClient
         .from('skill_progress')
         .select('skill_slug, current_level')
-        .eq('profile_id', profile.id)
+        .eq('profile_id', profileId)
         .like('skill_slug', 'instruments_%');
 
       if (allSkills && allSkills.length > 0) {
@@ -367,7 +392,7 @@ async function fetchLiveMemberSkillAverage(
     const { data: attrsByProfile } = await supabaseClient
       .from('player_attributes')
       .select('musical_ability, technical_mastery, rhythm_sense')
-      .eq('profile_id', profile.id)
+      .eq('profile_id', profileId)
       .maybeSingle();
     
     if (attrsByProfile) {
@@ -403,9 +428,9 @@ async function fetchLiveMemberSkillAverage(
     let gearMultiplier = 1.0;
     const { data: equipment } = await supabaseClient
       .from('player_equipment')
-      .select('equipment_id, is_equipped')
-      .eq('user_id', member.user_id)
-      .eq('is_equipped', true);
+      .select('equipment_id, is_equipped, equipped')
+      .eq('profile_id', profileId)
+      .or('is_equipped.eq.true,equipped.eq.true');
 
     if (equipment && equipment.length > 0) {
       const equipIds = equipment.map((e: any) => e.equipment_id);
@@ -420,8 +445,12 @@ async function fetchLiveMemberSkillAverage(
           if (doesCategoryMatchRole(item.category, item.subcategory, role)) {
             totalBonus += RARITY_BONUSES[item.rarity || 'common'] || 0.05;
             if (item.stat_boosts && typeof item.stat_boosts === 'object') {
-              const perfBoost = (item.stat_boosts as Record<string, number>)['performance'] || 0;
-              totalBonus += perfBoost / 100;
+              const boosts = item.stat_boosts as Record<string, unknown>;
+              const perfBoost = Number(boosts.performance || 0);
+              if (Number.isFinite(perfBoost)) totalBonus += perfBoost / 100;
+              if (item.subcategory === 'custom_luthiery') {
+                totalBonus += getLuthieryPerformanceBonusFraction(boosts);
+              }
             }
           }
         }
@@ -468,7 +497,7 @@ async function fetchStageSkillAverage(
       const { data: a } = await supabaseClient
         .from('player_attributes')
         .select('stage_presence, charisma, crowd_engagement')
-        .eq('profile_id', profile.id)
+        .eq('profile_id', profileId)
         .maybeSingle();
       attrs = a;
     }

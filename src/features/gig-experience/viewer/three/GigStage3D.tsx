@@ -11,6 +11,7 @@ import type { PlayerAppearance } from '@/features/player-model/appearance';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import type { ResolvedTattooVisual } from '@/features/player-model/tattoos';
 import type { ResolvedInstrumentSkinVisual } from '@/features/instrument-skins/instrumentSkin';
+import type { LuthieryInstrumentVisual } from '@/features/luthiery/luthieryInstrument';
 import type { TotpCameraShot, TotpStageKey } from '@/features/top-of-the-pops/broadcastProfile';
 import { resolveTotpPresenter, totpVariantLabel } from '@/features/top-of-the-pops/presenters';
 import { totpAudienceChoreography } from '@/features/top-of-the-pops/studioAudience';
@@ -26,6 +27,7 @@ const EMPTY_APPEARANCES: Record<string, PlayerAppearance> = {};
 const EMPTY_RICH_CLOTHING: Record<string, ResolvedEquippedClothing[]> = {};
 const EMPTY_TATTOOS: Record<string, ResolvedTattooVisual[]> = {};
 const EMPTY_INSTRUMENT_SKINS: Record<string, ResolvedInstrumentSkinVisual[]> = {};
+const EMPTY_LUTHIERY_INSTRUMENTS: Record<string, LuthieryInstrumentVisual[]> = {};
 const CAMERAS: Record<GigViewerCameraMode, CameraShot> = {
   venue_wide: 'front', stage_focus: 'band_medium', auto: 'director', drums: 'drums', band_pov: 'stage',
   lead_close: 'lead_close', pit_view: 'side_pit', crane_view: 'crane',
@@ -76,6 +78,9 @@ export default function GigStage3D({ replay, experience, playbackState, reducedM
       resolvedPlayerModels?.tattoos ?? EMPTY_TATTOOS,
       resolvedPlayerModels?.instrumentSkins ?? EMPTY_INSTRUMENT_SKINS,
       resolvedPlayerModels?.merchWearables ?? {},
+      replay.luthieryInstruments
+        ? Object.fromEntries(Object.entries(replay.luthieryInstruments).map(([profileId, visual]) => [profileId, [visual]]))
+        : resolvedPlayerModels?.luthieryInstruments ?? EMPTY_LUTHIERY_INSTRUMENTS,
     );
     base.merchCrowdSignal = merchCrowdSignalSnapshot ?? merchCrowdSignal.data ?? null;
     if (presentationMode !== 'totp') return base;

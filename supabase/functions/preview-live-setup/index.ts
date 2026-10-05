@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { calculateLiveSetup, resolveBandEquipment } from '../_shared/live-setup.ts';
+import { calculateLiveSetup, combineBandAndMemberEquipment, resolveBandEquipment } from '../_shared/live-setup.ts';
 import { scoreAssignedShowCrew } from '../_shared/crew-score.ts';
 
 const corsHeaders = {
@@ -48,11 +48,17 @@ serve(async (req) => {
     if (membershipError) throw membershipError;
     if (!membership) throw new Error('You are not a member of this band');
 
-    const [equipmentRes, crewRes, assignmentsRes] = await Promise.all([
+    const [equipmentRes, memberInstrumentRes, crewRes, assignmentsRes] = await Promise.all([
       supabase
         .from('band_stage_equipment')
         .select('id,equipment_type,quality_rating,condition_rating,is_active')
         .eq('band_id', gig.band_id),
+      supabase
+        .from('gig_equipment_loadouts')
+        .select('quality_score,condition_score,reliability_score,is_primary,is_spare')
+        .eq('gig_id', gigId)
+        .eq('source_type', 'member_owned')
+        .not('luthiery_snapshot', 'is', null),
       supabase
         .from('band_crew_members')
         .select('id,crew_type,skill_level,cohesion_rating')
@@ -64,10 +70,15 @@ serve(async (req) => {
     ]);
 
     if (equipmentRes.error) throw equipmentRes.error;
+    if (memberInstrumentRes.error) throw memberInstrumentRes.error;
     if (crewRes.error) throw crewRes.error;
     if (assignmentsRes.error) throw assignmentsRes.error;
 
-    const equipmentResolution = resolveBandEquipment(equipmentRes.data || []);
+    const bandEquipmentResolution = resolveBandEquipment(equipmentRes.data || []);
+    const equipmentResolution = combineBandAndMemberEquipment(
+      bandEquipmentResolution,
+      memberInstrumentRes.data || [],
+    );
     const assignedCrew = scoreAssignedShowCrew(crewRes.data || [], assignmentsRes.data || []);
     const crewSkill = assignedCrew.score;
 
@@ -85,6 +96,9 @@ serve(async (req) => {
         ownedEquipmentCount: equipmentResolution.ownedCount,
         equipmentSelectionMode: equipmentResolution.selectionMode,
         selectedEquipmentIds: equipmentResolution.selectedIds,
+        bandEquipmentScore: equipmentResolution.bandEquipmentScore,
+        memberInstrumentScore: equipmentResolution.memberInstrumentScore,
+        memberInstrumentCount: equipmentResolution.memberInstrumentCount,
         showCrewCount: assignedCrew.filledRoles,
         attendingCrewCount: assignedCrew.assignedCount,
       }),
