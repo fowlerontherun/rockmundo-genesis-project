@@ -55,6 +55,7 @@ The practical guide set covers systems players are likely to revisit regularly o
 6. `guides/charts-and-world-pulse.html` — combined/format/country charts, time periods, World Pulse and reading trends.
 7. `guides/covers-rights-and-royalties.html` — repertoire covers, recording permission, co-writing splits and royalties.
 8. `guides/education-and-teaching.html` — practice, lessons, formal education, mentors, teaching and band learning.
+9. `guides/luthiery-and-crafting.html` — Luthiery skills, workshop upgrades, five-part guitar/bass recipes, materials, quality, traits, maintenance, sales and provenance.
 
 ## Mechanics explainers
 
@@ -75,7 +76,7 @@ The specialist set covers deeper career, commercial and character-life systems t
 5. `guides/relationships-and-social.html` — friendship, romance, rivalry, mentorship, interactions, privacy and shared history.
 6. `guides/housing-and-property.html` — rentals, property ownership, recovery, wellness, creativity, housing market and personal finances.
 
-There are now **30 long-form Compendium guides** across the starter, deep-dive, practical, mechanics and specialist sets.
+There are now **31 long-form Compendium guides** across the starter, deep-dive, practical, mechanics and specialist sets.
 
 The Compendium home page also provides a goal-based directory. `wiki-directory.js` adds the specialist group into that directory, makes the pages available to long-form search, adds a Specialist guides section to desktop/mobile browsing, and connects appropriate short reference articles to the relevant specialist deep dive.
 
