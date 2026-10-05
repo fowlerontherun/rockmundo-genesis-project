@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.763",
+    date: "2026-10-05",
+    changes: [
+      { type: "fix", description: "Fixed a blank screen caused by two copies of the React library loading at once in the preview" },
+    ],
+  },
+  {
     version: "1.1.762",
     date: "2026-10-05",
     changes: [
