@@ -1,10 +1,5 @@
-import type { KeyboardEvent, ReactNode } from "react";
-
-import {
-  type LuthieryBuildSelection,
-  type LuthieryPartSlot,
-  type LuthieryShape,
-} from "@/data/luthieryWorkbench";
+import { useId, type KeyboardEvent, type ReactNode } from "react";
+import { type LuthieryBuildSelection, type LuthieryPartSlot, type LuthieryShape } from "@/data/luthieryWorkbench";
 
 interface LuthieryInstrumentPreviewProps {
   selection: LuthieryBuildSelection;
@@ -13,261 +8,104 @@ interface LuthieryInstrumentPreviewProps {
   onSelectPart: (part: LuthieryPartSlot) => void;
 }
 
-const NECK_COLOURS: Record<string, string> = {
-  "neck-maple": "#c4935d",
-  "neck-pine": "#d0a16b",
-  "neck-alder": "#b9875e",
-  "neck-mahogany": "#74452f",
-  "neck-korina": "#a67849",
-};
-
-const FRETBOARD_COLOURS: Record<string, string> = {
-  "fret-maple": "#c89a62",
-  "fret-rosewood": "#56372b",
-  "fret-ebony": "#211f23",
-  "fret-brazilian": "#40251e",
-};
-
-const BODY_GRAIN: Record<string, string> = {
-  "body-pine": "#d7b17a",
-  "body-poplar": "#b8a578",
-  "body-alder": "#9a6949",
-  "body-ash": "#d4bd8d",
-  "body-mahogany": "#5d3426",
-  "body-korina": "#bc9156",
-};
-
-const activate = (
-  event: KeyboardEvent<SVGGElement>,
-  part: LuthieryPartSlot,
-  onSelectPart: (part: LuthieryPartSlot) => void,
-) => {
-  if (event.key !== "Enter" && event.key !== " ") return;
-  event.preventDefault();
-  onSelectPart(part);
-};
-
-const PartGroup = ({
-  part,
-  activePart,
-  onSelectPart,
-  children,
-}: {
-  part: LuthieryPartSlot;
-  activePart: LuthieryPartSlot;
-  onSelectPart: (part: LuthieryPartSlot) => void;
-  children: ReactNode;
-}) => (
-  <g
-    role="button"
-    tabIndex={0}
-    aria-label={`Select ${part}`}
-    aria-pressed={activePart === part}
-    data-testid={`instrument-part-${part}`}
-    onClick={() => onSelectPart(part)}
-    onTouchEnd={() => onSelectPart(part)}
-    onKeyDown={(event) => activate(event, part, onSelectPart)}
-    className="cursor-pointer outline-none focus-visible:[filter:drop-shadow(0_0_5px_hsl(var(--primary)))]"
-  >
-    {children}
-  </g>
-);
-
-const Decal = ({ selection }: { selection: LuthieryBuildSelection }) => {
-  if (selection.finishId !== "finish-artwork" || selection.decal.id === "none") return null;
-
-  const x = 57 + selection.decal.x * 0.72;
-  const y = 88 + selection.decal.y * 0.68;
-  const scale = Math.max(0.45, selection.decal.scale / 100);
-  const transform = `translate(${x} ${y}) rotate(${selection.decal.rotation}) scale(${scale})`;
-  const common = {
-    fill: selection.decal.colour,
-    stroke: selection.decal.colour,
-    strokeWidth: 3,
+const PartGroup = ({ part, activePart, onSelectPart, children }: {
+  part: LuthieryPartSlot; activePart: LuthieryPartSlot;
+  onSelectPart: (part: LuthieryPartSlot) => void; children: ReactNode;
+}) => {
+  const activate = (event: KeyboardEvent<SVGGElement>) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault(); onSelectPart(part);
   };
-
-  return (
-    <g transform={transform} pointerEvents="none" data-testid="instrument-decal" opacity="0.92">
-      {selection.decal.id === "lightning" && (
-        <path d="M-4 -19 L11 -4 L4 -3 L11 19 L-12 3 L-3 1 Z" {...common} />
-      )}
-      {selection.decal.id === "star" && (
-        <polygon points="0,-19 5,-6 19,-6 8,2 12,17 0,8 -12,17 -8,2 -19,-6 -5,-6" {...common} />
-      )}
-      {selection.decal.id === "stripes" && (
-        <g fill={selection.decal.colour}>
-          <rect x="-18" y="-13" width="9" height="31" rx="2" transform="rotate(-18)" />
-          <rect x="-4" y="-15" width="9" height="34" rx="2" transform="rotate(-18)" />
-          <rect x="10" y="-13" width="9" height="31" rx="2" transform="rotate(-18)" />
-        </g>
-      )}
-      {selection.decal.id === "target" && (
-        <g fill="none" stroke={selection.decal.colour} strokeWidth="4">
-          <circle cx="0" cy="0" r="18" />
-          <circle cx="0" cy="0" r="10" />
-          <circle cx="0" cy="0" r="2" fill={selection.decal.colour} />
-        </g>
-      )}
-    </g>
-  );
+  return <g role="button" tabIndex={0} aria-label={`Select ${part}`} aria-pressed={activePart === part}
+    data-testid={`instrument-part-${part}`} onClick={() => onSelectPart(part)}
+    onTouchEnd={() => onSelectPart(part)} onKeyDown={activate}
+    className="cursor-pointer outline-none focus-visible:[filter:drop-shadow(0_0_5px_hsl(var(--primary)))]">{children}</g>;
 };
 
-export const LuthieryInstrumentPreview = ({
-  selection,
-  shape,
-  activePart,
-  onSelectPart,
-}: LuthieryInstrumentPreviewProps) => {
+export const LuthieryInstrumentPreview = ({ selection, shape, activePart, onSelectPart }: LuthieryInstrumentPreviewProps) => {
+  const id = useId().replace(/:/g, "");
   const bass = selection.instrumentKind === "electric_bass";
-  const neckLength = bass ? 244 : 211;
-  const fretLength = neckLength - 8;
-  const stringCount = bass ? 4 : 6;
-
-  const bodyGrain = BODY_GRAIN[selection.parts.body] ?? "#9a6949";
-  const neckFill = NECK_COLOURS[selection.parts.neck] ?? "#b9844d";
-  const fretFill = FRETBOARD_COLOURS[selection.parts.fretboard] ?? "#422b22";
-
-  const electronics = selection.parts.electronics;
-  const singleCoil = electronics === "elec-single" || electronics === "elec-alnico";
-  const active = electronics === "elec-active";
-  const boutique = electronics === "elec-boutique";
-  const pickupCount = singleCoil && !bass ? 3 : 2;
-  const pickupWidth = singleCoil ? 8 : 15;
-  const pickupFill = active ? "#111318" : boutique ? "#b58a3e" : singleCoil ? "#e7dfca" : "#3d4249";
-
+  const nut = shape.id === "short-scale-bass" ? 328 : bass ? 370 : 344;
+  const bridge = 72;
+  const scaleLength = nut - bridge;
+  const count = bass ? 4 : 6;
+  const ebony = selection.parts.fretboard.startsWith("fret-ebony");
+  const maple = selection.parts.fretboard === "fret-maple";
+  const fretFill = `var(--luth-${maple ? "maple" : ebony ? "ebony" : "rosewood"})`;
+  const neckFill = `var(--luth-${selection.parts.neck.includes("mahogany") ? "mahogany" : selection.parts.neck.includes("korina") ? "korina" : "maple"})`;
   const hardware = selection.parts.hardware;
-  const hardwareFill = hardware === "hw-gold" ? "#cfaa4b" : "#a7adb5";
-  const bridgeWidth = hardware === "hw-floyd" ? 19 : hardware === "hw-trem" ? 16 : hardware === "hw-tom" ? 13 : 10;
-
-  return (
-    <svg
-      viewBox="0 0 440 220"
-      role="group"
-      aria-label={`Interactive preview of ${shape.name} ${bass ? "bass" : "guitar"}`}
-      className="mx-auto h-auto w-full max-w-[680px]"
-      data-testid="luthiery-instrument-preview"
-    >
-      <defs>
-        <linearGradient id="luthiery-finish" x1="0" x2="1" y1="0" y2="1">
-          <stop offset="0%" stopColor={selection.colour} />
-          <stop offset="62%" stopColor={selection.colour} stopOpacity={selection.finishId === "finish-metalflake" ? 0.74 : 0.94} />
-          <stop offset="100%" stopColor="#ffffff" stopOpacity={selection.finishId === "finish-gloss" ? 0.22 : 0.06} />
-        </linearGradient>
-        <pattern id="luthiery-grain" width="15" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(9)">
-          <path d="M0 3 C4 0 9 7 15 3 M0 8 C5 5 10 12 15 8" fill="none" stroke={bodyGrain} strokeOpacity="0.33" strokeWidth="1.2" />
-        </pattern>
-      </defs>
-
-      <PartGroup part="body" activePart={activePart} onSelectPart={onSelectPart}>
-        <path
-          d={shape.bodyPath}
-          transform="translate(12 38) scale(0.96)"
-          fill="url(#luthiery-finish)"
-          stroke={activePart === "body" ? "hsl(var(--primary))" : "hsl(var(--border))"}
-          strokeWidth={activePart === "body" ? 4 : 2}
-        />
-        <path d={shape.bodyPath} transform="translate(12 38) scale(0.96)" fill="url(#luthiery-grain)" pointerEvents="none" />
-        {selection.finishId === "finish-burst" && (
-          <path
-            d={shape.bodyPath}
-            transform="translate(12 38) scale(0.96)"
-            fill="none"
-            stroke="#24170f"
-            strokeOpacity="0.68"
-            strokeWidth="11"
-            pointerEvents="none"
-          />
-        )}
-      </PartGroup>
-
-      <PartGroup part="neck" activePart={activePart} onSelectPart={onSelectPart}>
-        <rect
-          x="124"
-          y="100"
-          width={neckLength}
-          height="29"
-          rx="4"
-          fill={neckFill}
-          stroke={activePart === "neck" ? "hsl(var(--primary))" : "hsl(var(--border))"}
-          strokeWidth={activePart === "neck" ? 4 : 2}
-        />
-        <path
-          d={`M${123 + neckLength} 97 L${157 + neckLength} 91 L${173 + neckLength} 102 L${167 + neckLength} 132 L${125 + neckLength} 132 Z`}
-          fill={neckFill}
-          stroke="hsl(var(--border))"
-          strokeWidth="2"
-        />
-      </PartGroup>
-
-      <PartGroup part="fretboard" activePart={activePart} onSelectPart={onSelectPart}>
-        <rect
-          x="131"
-          y="104"
-          width={fretLength}
-          height="20"
-          rx="2"
-          fill={fretFill}
-          stroke={activePart === "fretboard" ? "hsl(var(--primary))" : "#5e4438"}
-          strokeWidth={activePart === "fretboard" ? 4 : 1}
-        />
-        {Array.from({ length: 13 }).map((_, index) => {
-          const x = 145 + index * (fretLength / 14);
-          return <line key={x} x1={x} y1="104" x2={x} y2="124" stroke="#c7b6a6" strokeOpacity="0.7" strokeWidth="1" />;
-        })}
-      </PartGroup>
-
-      <PartGroup part="electronics" activePart={activePart} onSelectPart={onSelectPart}>
-        {Array.from({ length: pickupCount }).map((_, index) => (
-          <rect
-            key={index}
-            x={78 + index * 27}
-            y="108"
-            width={pickupWidth}
-            height="25"
-            rx={active ? 1 : 2}
-            fill={pickupFill}
-            stroke={activePart === "electronics" ? "hsl(var(--primary))" : "#6b7280"}
-            strokeWidth={activePart === "electronics" ? 3 : 1.5}
-          />
-        ))}
-      </PartGroup>
-
-      <PartGroup part="hardware" activePart={activePart} onSelectPart={onSelectPart}>
-        <rect
-          x={121 - bridgeWidth}
-          y="105"
-          width={bridgeWidth}
-          height="32"
-          rx="2"
-          fill={hardwareFill}
-          stroke={activePart === "hardware" ? "hsl(var(--primary))" : "#555d68"}
-          strokeWidth={activePart === "hardware" ? 3 : 1.5}
-        />
-        {(hardware === "hw-trem" || hardware === "hw-floyd") && (
-          <path d="M112 133 L133 154" stroke={hardwareFill} strokeWidth="3" strokeLinecap="round" />
-        )}
-        <circle cx="70" cy="142" r="4" fill={hardwareFill} />
-        <circle cx="92" cy="149" r="4" fill={hardwareFill} />
-      </PartGroup>
-
-      {Array.from({ length: stringCount }).map((_, index) => {
-        const startY = 109 + (index * 18) / Math.max(1, stringCount - 1);
-        return (
-          <line
-            key={index}
-            x1="76"
-            y1={startY}
-            x2={292 + (bass ? 31 : 0)}
-            y2={110 + (index * 10) / Math.max(1, stringCount - 1)}
-            stroke="#d8d8d8"
-            strokeOpacity="0.75"
-            strokeWidth="0.9"
-            pointerEvents="none"
-          />
-        );
+  const hardwareFill = `var(--luth-${hardware === "hw-gold" ? "gold" : hardware === "hw-black" ? "black" : hardware === "hw-aged" ? "nickel" : "chrome"})`;
+  const single = ["elec-single", "elec-alnico", "elec-jazz"].includes(selection.parts.electronics);
+  const p90 = selection.parts.electronics === "elec-p90";
+  const pickupCount = single && !bass && selection.parts.electronics !== "elec-jazz" ? 3 : 2;
+  const pickupFill = selection.parts.electronics === "elec-boutique" ? "var(--luth-gold)" : single || p90 ? "var(--luth-ivory)" : "var(--luth-black)";
+  const stroke = (part: LuthieryPartSlot) => activePart === part ? "hsl(var(--primary))" : "var(--luth-edge)";
+  const natural = selection.finishId === "finish-natural";
+  const worn = selection.finishId === "finish-worn";
+  const grainFill = `var(--luth-${selection.parts.body.includes("mahogany") ? "mahogany" : selection.parts.body.includes("korina") ? "korina" : "alder"})`;
+  return <svg viewBox="10 28 435 165" role="group" aria-label={`Interactive preview of ${shape.name} ${bass ? "bass" : "guitar"}`}
+    className="mx-auto h-auto w-full max-w-[680px]" data-testid="luthiery-instrument-preview">
+    <defs>
+      <clipPath id={`${id}-body`}><path d={shape.bodyPath} /></clipPath>
+      <linearGradient id={`${id}-paint`} x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0" stopColor="var(--luth-highlight)" stopOpacity=".45" />
+        <stop offset=".35" stopColor={natural ? grainFill : selection.colour} />
+        <stop offset="1" stopColor={natural ? grainFill : selection.colour} stopOpacity=".85" />
+      </linearGradient>
+      <radialGradient id={`${id}-burst`}><stop offset=".45" stopColor="var(--luth-amber)" /><stop offset=".8" stopColor={selection.colour} /><stop offset="1" stopColor="var(--luth-edge)" /></radialGradient>
+      <pattern id={`${id}-grain`} width="11" height="22" patternUnits="userSpaceOnUse">
+        <path d="M0 2 C9 6 1 14 11 20 M0 8 C6 12 5 18 11 22" fill="none" stroke={grainFill} strokeOpacity={natural ? .8 : .24} strokeWidth=".7" />
+      </pattern>
+      <pattern id={`${id}-flake`} width="5" height="7" patternUnits="userSpaceOnUse"><circle cx="1" cy="2" r=".5" fill="var(--luth-highlight)" opacity=".6" /></pattern>
+    </defs>
+    <PartGroup part="body" {...{ activePart, onSelectPart }}>
+      <path d={shape.bodyPath} fill={selection.finishId === "finish-burst" ? `url(#${id}-burst)` : `url(#${id}-paint)`} stroke={stroke("body")} strokeWidth={activePart === "body" ? 2 : 1.2} />
+      <g clipPath={`url(#${id}-body)`} pointerEvents="none">
+        <path d={shape.bodyPath} fill={`url(#${id}-grain)`} />
+        {selection.finishId === "finish-metalflake" && <path d={shape.bodyPath} fill={`url(#${id}-flake)`} />}
+        {worn && <path d="M34 119 Q43 151 72 157 M39 91 L42 104 M77 151 L86 151" fill="none" stroke={grainFill} strokeWidth="4" />}
+        {(selection.finishId === "finish-gloss" || natural || selection.parts.body === "body-carved-mahogany") && <path d={shape.bodyPath} transform="translate(9 9) scale(.91)" fill="none" stroke="var(--luth-highlight)" strokeWidth="1.2" opacity=".35" />}
+        {selection.finishId === "finish-artwork" && selection.decal.id !== "none" && <g data-testid="instrument-decal" transform={`translate(${40 + selection.decal.x * .95} ${65 + selection.decal.y * .95}) rotate(${selection.decal.rotation}) scale(${selection.decal.scale / 100})`} fill={selection.decal.colour}>
+          {selection.decal.id === "lightning" && <path d="M-4 -19 L11 -4 L4 -3 L11 19 L-12 3 L-3 1 Z" />}
+          {selection.decal.id === "star" && <polygon points="0,-19 5,-6 19,-6 8,2 12,17 0,8 -12,17 -8,2 -19,-6 -5,-6" />}
+          {selection.decal.id === "stripes" && <g transform="rotate(-18)"><rect x="-15" y="-22" width="7" height="44" /><rect x="0" y="-22" width="7" height="44" /></g>}
+          {selection.decal.id === "target" && <g fill="none" stroke={selection.decal.colour} strokeWidth="3"><circle r="18" /><circle r="10" /><circle r="2" /></g>}
+        </g>}
+        {(shape.id === "semi-hollow" || selection.parts.body === "body-chambered-alder") && <path d="M74 76 C66 66 61 82 71 86 Q82 89 78 100 M65 139 C58 135 58 147 68 149 Q77 150 74 159" fill="none" stroke="var(--luth-edge)" strokeWidth="3" />}
+      </g>
+    </PartGroup>
+    <PartGroup part="neck" {...{ activePart, onSelectPart }}>
+      <path d={`M137 103 L${nut} 107 L${nut} 122 L137 126 Z`} fill={neckFill} stroke={stroke("neck")} strokeWidth="1.5" />
+      <path d={`M${nut} 107 L${nut + 12} 100 L${nut + 55} 101 Q${nut + 66} 113 ${nut + 53} 130 L${nut + 13} 125 L${nut} 122 Z`} fill={neckFill} stroke={stroke("neck")} strokeWidth="1.5" />
+    </PartGroup>
+    <PartGroup part="fretboard" {...{ activePart, onSelectPart }}>
+      <path d={`M139 105 L${nut} 108 L${nut} 121 L139 124 Z`} fill={fretFill} stroke={stroke("fretboard")} />
+      {Array.from({ length: 22 }, (_, i) => {
+        const fret = i + 1; const x = nut - scaleLength * (1 - Math.pow(2, -fret / 12));
+        const half = 6.5 + (nut - x) / scaleLength * 4;
+        const inlay = [3, 5, 7, 9, 12, 15, 17, 19, 21].includes(fret);
+        const previous = nut - scaleLength * (1 - Math.pow(2, -(fret - 1) / 12));
+        return <g key={fret}><line data-fret={fret} x1={x} x2={x} y1={114.5 - half} y2={114.5 + half} stroke="var(--luth-chrome)" strokeWidth=".8" />
+          {inlay && selection.parts.fretboard !== "fret-ebony-clean" && (selection.parts.fretboard === "fret-rosewood-block" ? <rect x={x + 2} y="109.5" width={Math.max(2, previous - x - 4)} height="10" fill="var(--luth-ivory)" /> : <g fill={maple ? "var(--luth-edge)" : "var(--luth-ivory)"}><circle cx={(x + previous) / 2} cy={fret === 12 ? 111.5 : 114.5} r="1.5" />{fret === 12 && <circle cx={(x + previous) / 2} cy="117.5" r="1.5" />}</g>)}
+        </g>;
       })}
-
-      <Decal selection={selection} />
-    </svg>
-  );
+      <path d={`M${nut} 106 L${nut} 123`} stroke="var(--luth-ivory)" strokeWidth="2" />
+    </PartGroup>
+    <PartGroup part="electronics" {...{ activePart, onSelectPart }}>
+      {Array.from({ length: pickupCount }, (_, i) => <g key={i}>
+        <rect x={pickupCount === 3 ? 90 + i * 18 : 92 + i * 30} y="102" width={single ? 7 : p90 ? 11 : 14} height="25" rx="2" fill={pickupFill} stroke={stroke("electronics")} strokeWidth="1.5" />
+        {selection.parts.electronics !== "elec-active" && Array.from({ length: count }, (_, pole) => <circle key={pole} cx={(pickupCount === 3 ? 90 + i * 18 : 92 + i * 30) + (single ? 3.5 : 7)} cy={105 + pole * 19 / (count - 1)} r=".9" fill="var(--luth-chrome)" />)}
+      </g>)}
+      <path d="M95 138 L99 143" stroke={hardwareFill} strokeWidth="2" />
+    </PartGroup>
+    <PartGroup part="hardware" {...{ activePart, onSelectPart }}>
+      <rect x="67" y="101" width={hardware === "hw-floyd" ? 17 : 11} height="27" rx="2" fill={hardwareFill} stroke={stroke("hardware")} strokeWidth="1.5" />
+      {Array.from({ length: count }, (_, i) => <g key={i}><rect x="69" y={104 + i * 21 / (count - 1)} width="7" height="1.6" fill="var(--luth-edge)" /><path d={`M${nut + 13 + i * 7} 103 v-7`} stroke={hardwareFill} strokeWidth="2" /><ellipse cx={nut + 13 + i * 7} cy="94" rx="3" ry="2.5" fill={hardwareFill} /></g>)}
+      {[84, 104].map((x, i) => <g key={x}><circle cx={x} cy={145 + i * 3} r="3.8" fill={hardwareFill} stroke="var(--luth-edge)" /><path d={`M${x} ${141 + i * 3} v3`} stroke="var(--luth-edge)" /></g>)}
+      {(hardware === "hw-trem" || hardware === "hw-floyd") && <path d="M78 126 L95 149 L112 149" fill="none" stroke={hardwareFill} strokeWidth="2" />}
+    </PartGroup>
+    <g pointerEvents="none" data-testid="instrument-strings">
+      {Array.from({ length: count }, (_, i) => <path key={i} d={`M${bridge} ${104 + i * 21 / (count - 1)} L${nut} ${109 + i * 11 / (count - 1)} L${nut + 13 + i * 7} 103`} fill="none" stroke="var(--luth-string)" strokeOpacity=".85" strokeWidth={bass ? .8 + i * .12 : .45 + i * .08} />)}
+    </g>
+  </svg>;
 };

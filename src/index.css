@@ -6,6 +6,22 @@
 
 @layer base {
   :root {
+    /* Instrument material tokens: shared artwork colours, not UI surfaces. */
+    --luth-maple: #c4935d;
+    --luth-mahogany: #74452f;
+    --luth-korina: #a67849;
+    --luth-alder: #9a6949;
+    --luth-rosewood: #56372b;
+    --luth-ebony: #211f23;
+    --luth-gold: #b58a3e;
+    --luth-black: #111318;
+    --luth-nickel: #8f9189;
+    --luth-chrome: #a7adb5;
+    --luth-ivory: #e7dfca;
+    --luth-edge: #24170f;
+    --luth-highlight: #ffffff;
+    --luth-amber: #dca657;
+    --luth-string: #d8d8d8;
     /* RockMundo Unified Dark Palette
        Surfaces: #121212 bg / #1E1E1E surface / #2A2A2A elevated
        Accent: #6C5CE7  Success: #00C853  Warning: #FFB300  Danger: #FF5252 */
