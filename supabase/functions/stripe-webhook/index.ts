@@ -53,10 +53,18 @@ serve(async (req) => {
 
     let event: Stripe.Event;
     try {
-      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+      const cryptoProvider = Stripe.createSubtleCryptoProvider();
+      event = await stripe.webhooks.constructEventAsync(
+        body,
+        signature,
+        webhookSecret,
+        undefined,
+        cryptoProvider,
+      );
       logStep("Webhook signature verified");
     } catch (err) {
-      logStep("Webhook signature verification failed", { error: err });
+      const verificationError = err instanceof Error ? err.message : String(err);
+      logStep("Webhook signature verification failed", { message: verificationError });
       return new Response(JSON.stringify({ error: "Invalid signature" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 400,
@@ -76,7 +84,18 @@ serve(async (req) => {
           break;
         }
 
-        const subscriptionId = session.subscription as string;
+        if (session.mode !== "subscription" || !session.subscription) {
+          logStep("Checkout session does not require subscription handling", {
+            sessionId: session.id,
+            mode: session.mode,
+            purchaseType: session.metadata?.purchase_type ?? null,
+          });
+          break;
+        }
+
+        const subscriptionId = typeof session.subscription === "string"
+          ? session.subscription
+          : session.subscription.id;
         const subscription = await stripe.subscriptions.retrieve(subscriptionId);
         const currentPeriodEnd = periodEndOf(subscription);
 
@@ -95,7 +114,8 @@ serve(async (req) => {
           : await supabaseClient.from("vip_subscriptions").insert(row);
 
         if (error) {
-          logStep("Error creating VIP subscription", { error });
+          logStep("Error creating VIP subscription", { message: error.message });
+          throw new Error(`Failed to persist VIP subscription: ${error.message}`);
         } else {
           logStep("VIP subscription created/updated", { userId, expiresAt: currentPeriodEnd.toISOString() });
         }
@@ -140,7 +160,8 @@ serve(async (req) => {
         });
 
         if (error) {
-          logStep("Failed to mark referral VIP payment", { error, userId, invoiceId: invoice.id });
+          logStep("Failed to mark referral VIP payment", { message: error.message, userId, invoiceId: invoice.id });
+          throw new Error(`Failed to persist referral VIP payment: ${error.message}`);
         } else {
           logStep("Referral VIP payment processed", { userId, invoiceId: invoice.id, referralFound: data });
         }
@@ -170,7 +191,8 @@ serve(async (req) => {
           .eq("stripe_subscription_id", subscription.id);
 
         if (error) {
-          logStep("Error updating subscription", { error });
+          logStep("Error updating subscription", { message: error.message });
+          throw new Error(`Failed to update VIP subscription: ${error.message}`);
         } else {
           logStep("Subscription updated in DB", { status, expiresAt: currentPeriodEnd.toISOString() });
         }
@@ -189,7 +211,8 @@ serve(async (req) => {
           .eq("stripe_subscription_id", subscription.id);
 
         if (error) {
-          logStep("Error marking subscription cancelled", { error });
+          logStep("Error marking subscription cancelled", { message: error.message });
+          throw new Error(`Failed to cancel VIP subscription: ${error.message}`);
         } else {
           logStep("Subscription marked as cancelled");
         }
