@@ -349,6 +349,7 @@ export const FM_MODULES: FMModule[] = [
       { label: "Finances", path: "/business/finances", icon: DollarSign },
       { label: "Advertising", path: "/business/advertising", icon: Megaphone },
       { label: "Labels", path: "/business/labels", icon: Disc3 },
+      { label: "Luthiery", path: "/crafting", icon: Hammer },
     ],
     sidebar: [
       { label: "Operations", items: [

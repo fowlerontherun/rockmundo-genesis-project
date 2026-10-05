@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.764",
+    date: "2026-10-05",
+    changes: [
+      { type: "improvement", description: "Added a Luthiery tab to the Business menu and a Luthiery Workbench link to the admin menu and dashboard next to Stripe Audit" },
+    ],
+  },
+  {
     version: "1.1.763",
     date: "2026-10-05",
     changes: [
