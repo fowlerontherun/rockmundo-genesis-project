@@ -183,16 +183,19 @@ export function buildGuitar(bass = false) {
   body.name = 'instrument-body'; root.add(body);
   const guard = new T.Mesh(new T.CircleGeometry(0.175, 24), matte(bass ? '#101113' : '#e0d2aa', 0.28)); guard.name = 'instrument-pickguard'; guard.scale.set(0.75, 1.4, 1); guard.position.set(0.075, -0.005, 0.125); root.add(guard);
   const length = bass ? 0.81 : 0.68;
-  box(root, [0.09, length, 0.045], [0, 0.3 + length / 2, 0.09], neck);
+  box(root, [0.09, length, 0.045], [0, 0.3 + length / 2, 0.09], neck).name = 'instrument-neck';
   box(root, [0.082, length, 0.012], [0, 0.3 + length / 2, 0.12], matte('#30271f', 0.45)).name = 'fretboard';
-  for (let i = 0; i < 16; i++) rod(root, [-0.041, 0.33 + i * length / 17, 0.13], [0.041, 0.33 + i * length / 17, 0.13], 0.002, chrome);
-  for (const y of [-0.04, 0.11]) box(root, [0.14, 0.037, 0.025], [0, y, 0.15], black);
-  box(root, [0.14, 0.05, 0.025], [0, -0.19, 0.15], chrome);
+  for (let fret = 1; fret <= 22; fret++) {
+    const y = .3 + length - (length + .49) * (1 - Math.pow(2, -fret / 12));
+    rod(root, [-.041, y, .13], [.041, y, .13], .002, chrome);
+  }
+  for (const y of [-0.04, 0.11]) box(root, [0.14, 0.037, 0.025], [0, y, 0.15], black.clone()).name = `instrument-pickup-${y}`;
+  box(root, [0.14, 0.05, 0.025], [0, -0.19, 0.15], chrome.clone()).name = 'instrument-hardware-bridge';
   const head = box(root, [0.13, 0.25, 0.05], [0.025, 0.42 + length, 0.085], neck); head.rotation.z = -0.18;
   for (let i = 0; i < (bass ? 4 : 6); i++) {
     const x = -0.03 + i * 0.06 / (bass ? 3 : 5);
-    rod(root, [x, -0.21, 0.17], [x, 0.51 + length, 0.14], 0.001, chrome);
-    cylinder(root, 0.013, 0.013, 0.045, [0.095, 0.33 + length + i * 0.034, 0.085], chrome, 8).rotation.z = Math.PI / 2;
+    rod(root, [x, -0.19, 0.17], [x, 0.3 + length, 0.14], bass ? .0015 : .001, chrome);
+    cylinder(root, 0.013, 0.013, 0.045, [0.095, 0.33 + length + i * 0.034, 0.085], chrome.clone(), 8).rotation.z = Math.PI / 2;
   }
   for (const y of [-0.17, -0.25]) cylinder(root, 0.018, 0.018, 0.02, [0.18, y, 0.145], chrome, 12).rotation.x = Math.PI / 2;
   root.traverse(child => { if (child instanceof T.Mesh) child.castShadow = true; });

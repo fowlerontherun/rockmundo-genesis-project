@@ -232,6 +232,7 @@ export const LuthieryWorkbench = ({
                       title={!unlocked ? formatLuthieryRequirement(candidate.requirement) : candidate.name}
                     >
                       <span className="flex min-w-0 flex-col items-center leading-tight">
+                        <svg viewBox="15 35 150 145" className="mb-1 h-9 w-12" aria-hidden="true"><path d={candidate.bodyPath} fill="currentColor" opacity=".75" /></svg>
                         <span className="flex items-center gap-1">
                           {!unlocked && <Lock className="h-3 w-3 shrink-0" />}
                           <span>{candidate.name}</span>
@@ -286,7 +287,7 @@ export const LuthieryWorkbench = ({
                           decal: option.id === "finish-artwork" ? current.decal : { ...current.decal, id: "none" },
                         }))
                       }
-                      className="h-auto min-h-12 flex-col items-start px-2 py-2 text-left"
+                      className="h-auto min-h-12 whitespace-normal flex-col items-start px-2 py-2 text-left"
                     >
                       <span className="flex w-full items-center gap-1 text-xs font-medium">
                         {!unlocked && <Lock className="h-3 w-3" />}
@@ -477,7 +478,8 @@ export const LuthieryWorkbench = ({
                     const owned = ownedQuantity(material);
                     const selected = selection.parts[activePart] === option.id;
                     return (
-                      <button
+                      <Button
+                        variant="outline"
                         key={option.id}
                         type="button"
                         disabled={!unlocked || !material}
@@ -487,14 +489,14 @@ export const LuthieryWorkbench = ({
                             parts: { ...current.parts, [activePart]: option.id },
                           }))
                         }
-                        className={`flex items-center justify-between gap-3 rounded-md border p-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                        className={`h-auto whitespace-normal flex items-center justify-between gap-3 rounded-md border p-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                           selected ? "border-primary bg-primary/10" : "border-border/60 hover:bg-muted/40"
                         }`}
                       >
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
                             {!unlocked && <Lock className="h-3 w-3 shrink-0" />}
-                            <span className="truncate text-xs font-medium">{option.label}</span>
+                            <span className="text-xs font-medium">{option.label}</span>
                             {material && (
                               <Badge variant="outline" className="h-5 text-[10px]">
                                 Tier {material.quality_tier}
@@ -507,7 +509,7 @@ export const LuthieryWorkbench = ({
                               : !unlocked
                                 ? `Unlock: ${formatLuthieryRequirement(option.requirement)}`
                                 : owned > 0
-                                  ? `${owned} in material inventory`
+                                  ? `${material.name} · ${owned} owned`
                                   : "Available to design with — buy this material before final crafting."}
                           </p>
                         </div>
@@ -516,7 +518,7 @@ export const LuthieryWorkbench = ({
                         ) : (
                           <span className="shrink-0 text-[10px] text-muted-foreground">{material ? `$${material.base_cost}` : "—"}</span>
                         )}
-                      </button>
+                      </Button>
                     );
                   })}
                 </div>
