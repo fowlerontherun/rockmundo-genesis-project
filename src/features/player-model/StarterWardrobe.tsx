@@ -1,4 +1,5 @@
 import { isDress } from './skirtGeometry';
+import { patternPreview } from './patternPreview';
 import { useState } from 'react';
 import { garmentCategory } from './wardrobeStyling';
 import { Shirt, Footprints } from 'lucide-react';
@@ -19,6 +20,8 @@ export function StarterWardrobe({ slot, appearance, onChange, topIsOverridden = 
   const [keepColour, setKeepColour] = useState(false);
   const [category, setCategory] = useState('All');
   const equipped = appearance.equipment[slot];
+  const accent = equipped.secondaryColor ?? '#eee8db';
+  const patterned = !!equipped.pattern && equipped.pattern !== 'solid';
   const items = starterItemsForWardrobe(slot);
   const categories = ['All', ...new Set(items.map(item => garmentCategory(slot, item.id)))];
   const selectedCategory = garmentCategory(slot, equipped.itemId);
@@ -47,7 +50,15 @@ export function StarterWardrobe({ slot, appearance, onChange, topIsOverridden = 
         <option value="original">Original design</option>
         {CLOTHING_PATTERNS.map(pattern => <option key={pattern} value={pattern}>{({ solid: 'Solid colour', stripes: 'Stripes', checks: 'Checks', dots: 'Polka dots', 'two-tone': 'Two-tone' })[pattern]}</option>)}
       </select></label>
-      {equipped.pattern && equipped.pattern !== 'solid' && <label>Second colour<input type="color" aria-label={`${slot} second colour`} value={equipped.secondaryColor ?? '#eee8db'} onChange={event => edit({ secondaryColor: event.target.value })} /></label>}
+      {equipped.pattern && <div className="player-model-pattern-preview" role="img" aria-label={`${SLOT_LABELS[slot]} ${equipped.pattern} preview`} style={{ background: patternPreview(equipped.pattern, equipped.color, accent), width: '100%', height: 64, borderRadius: 8, border: '1px solid currentColor' }} />}
+      {patterned && <>
+        <div className="player-model-wardrobe__colours" role="group" aria-label={`${SLOT_LABELS[slot]} second colours`}>
+          {CLOTHING_COLORS.map(([name, color]) => <button key={color} type="button" title={name} aria-label={`${SLOT_LABELS[slot]} second colour: ${name}`} aria-pressed={accent === color} style={{ backgroundColor: color }} onClick={() => edit({ secondaryColor: color })} />)}
+          <label>Second colour<input type="color" aria-label={`${slot} second colour`} value={accent} onChange={event => edit({ secondaryColor: event.target.value })} /></label>
+        </div>
+        <button type="button" className="player-model-pattern-swap" onClick={() => edit({ color: accent, secondaryColor: equipped.color })} aria-label={`Swap ${slot} colours`}>Swap colours</button>
+      </>}
+
     </div>}
   </div>;
 }

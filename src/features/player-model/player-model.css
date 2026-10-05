@@ -114,3 +114,5 @@
 .player-model-look-swatches { display: flex; overflow: hidden; border-radius: 6px; border: 1px solid #617083; }
 .player-model-look-swatches i { width: 26px; height: 26px; }
 .player-model-wardrobe button:focus-visible { outline: 2px solid #93d9ca; outline-offset: 3px; }
+
+.player-model-wardrobe__colours > .player-model-pattern-swap { width: auto; height: auto; padding: 8px 12px; border-radius: 6px; background: #1b2839; color: #edf4fa; font-size: 12px; }
