@@ -29976,50 +29976,92 @@ export type Database = {
       }
       gig_equipment_loadouts: {
         Row: {
+          assigned_profile_id: string | null
           band_stage_equipment_id: string | null
+          condition_score: number | null
           created_at: string
           equipment_role: string
           gig_id: string
           id: string
           is_primary: boolean
           is_spare: boolean
+          luthiery_snapshot: Json | null
+          player_equipment_id: string | null
+          quality_score: number | null
+          reliability_score: number | null
           rental_cost: number
           rented_item_name: string | null
           source_type: string
+          stat_boost_snapshot: Json
           updated_at: string
         }
         Insert: {
+          assigned_profile_id?: string | null
           band_stage_equipment_id?: string | null
+          condition_score?: number | null
           created_at?: string
           equipment_role: string
           gig_id: string
           id?: string
           is_primary?: boolean
           is_spare?: boolean
+          luthiery_snapshot?: Json | null
+          player_equipment_id?: string | null
+          quality_score?: number | null
+          reliability_score?: number | null
           rental_cost?: number
           rented_item_name?: string | null
           source_type?: string
+          stat_boost_snapshot?: Json
           updated_at?: string
         }
         Update: {
+          assigned_profile_id?: string | null
           band_stage_equipment_id?: string | null
+          condition_score?: number | null
           created_at?: string
           equipment_role?: string
           gig_id?: string
           id?: string
           is_primary?: boolean
           is_spare?: boolean
+          luthiery_snapshot?: Json | null
+          player_equipment_id?: string | null
+          quality_score?: number | null
+          reliability_score?: number | null
           rental_cost?: number
           rented_item_name?: string | null
           source_type?: string
+          stat_boost_snapshot?: Json
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "gig_equipment_loadouts_assigned_profile_id_fkey"
+            columns: ["assigned_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gig_equipment_loadouts_assigned_profile_id_fkey"
+            columns: ["assigned_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "gig_equipment_loadouts_gig_id_fkey"
             columns: ["gig_id"]
             isOneToOne: false
             referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gig_equipment_loadouts_player_equipment_id_fkey"
+            columns: ["player_equipment_id"]
+            isOneToOne: false
+            referencedRelation: "player_equipment"
             referencedColumns: ["id"]
           },
         ]
@@ -35602,6 +35644,505 @@ export type Database = {
             foreignKeyName: "lottery_tickets_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      luthiery_crafts: {
+        Row: {
+          colour: string
+          created_at: string
+          decal: Json
+          equipment_id: string
+          final_quality: number
+          final_stats: Json
+          finish_id: string
+          id: string
+          idempotency_key: string
+          instrument_kind: string
+          instrument_name: string
+          material_snapshot: Json
+          parts: Json
+          player_equipment_id: string | null
+          profile_id: string
+          quality_roll: number
+          request_hash: string
+          result: Json
+          shape_id: string
+          skill_snapshot: Json
+          user_id: string
+        }
+        Insert: {
+          colour: string
+          created_at?: string
+          decal: Json
+          equipment_id: string
+          final_quality: number
+          final_stats: Json
+          finish_id: string
+          id?: string
+          idempotency_key: string
+          instrument_kind: string
+          instrument_name: string
+          material_snapshot: Json
+          parts: Json
+          player_equipment_id?: string | null
+          profile_id: string
+          quality_roll: number
+          request_hash: string
+          result: Json
+          shape_id: string
+          skill_snapshot: Json
+          user_id: string
+        }
+        Update: {
+          colour?: string
+          created_at?: string
+          decal?: Json
+          equipment_id?: string
+          final_quality?: number
+          final_stats?: Json
+          finish_id?: string
+          id?: string
+          idempotency_key?: string
+          instrument_kind?: string
+          instrument_name?: string
+          material_snapshot?: Json
+          parts?: Json
+          player_equipment_id?: string | null
+          profile_id?: string
+          quality_roll?: number
+          request_hash?: string
+          result?: Json
+          shape_id?: string
+          skill_snapshot?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "luthiery_crafts_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: true
+            referencedRelation: "equipment_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "luthiery_crafts_player_equipment_id_fkey"
+            columns: ["player_equipment_id"]
+            isOneToOne: true
+            referencedRelation: "player_equipment"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "luthiery_crafts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "luthiery_crafts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      luthiery_shop_listings: {
+        Row: {
+          asking_price: number
+          buyer_profile_id: string | null
+          buyer_user_id: string | null
+          cancelled_at: string | null
+          commission_rate_at_listing: number
+          condition_at_listing: number
+          craft_id: string
+          description: string | null
+          equipment_id: string
+          final_quality: number
+          final_sale_price: number | null
+          id: string
+          instrument_kind: string
+          instrument_name: string
+          listed_at: string
+          maker_name: string
+          maker_profile_id: string
+          material_cost_basis: number
+          player_equipment_id: string | null
+          provenance_snapshot: Json
+          rarity: string
+          seller_profile_id: string
+          seller_user_id: string
+          shop_id: string
+          sold_at: string | null
+          stat_snapshot: Json
+          status: string
+          suggested_value: number
+          updated_at: string
+        }
+        Insert: {
+          asking_price: number
+          buyer_profile_id?: string | null
+          buyer_user_id?: string | null
+          cancelled_at?: string | null
+          commission_rate_at_listing?: number
+          condition_at_listing: number
+          craft_id: string
+          description?: string | null
+          equipment_id: string
+          final_quality: number
+          final_sale_price?: number | null
+          id?: string
+          instrument_kind: string
+          instrument_name: string
+          listed_at?: string
+          maker_name: string
+          maker_profile_id: string
+          material_cost_basis?: number
+          player_equipment_id?: string | null
+          provenance_snapshot: Json
+          rarity: string
+          seller_profile_id: string
+          seller_user_id: string
+          shop_id: string
+          sold_at?: string | null
+          stat_snapshot?: Json
+          status?: string
+          suggested_value: number
+          updated_at?: string
+        }
+        Update: {
+          asking_price?: number
+          buyer_profile_id?: string | null
+          buyer_user_id?: string | null
+          cancelled_at?: string | null
+          commission_rate_at_listing?: number
+          condition_at_listing?: number
+          craft_id?: string
+          description?: string | null
+          equipment_id?: string
+          final_quality?: number
+          final_sale_price?: number | null
+          id?: string
+          instrument_kind?: string
+          instrument_name?: string
+          listed_at?: string
+          maker_name?: string
+          maker_profile_id?: string
+          material_cost_basis?: number
+          player_equipment_id?: string | null
+          provenance_snapshot?: Json
+          rarity?: string
+          seller_profile_id?: string
+          seller_user_id?: string
+          shop_id?: string
+          sold_at?: string | null
+          stat_snapshot?: Json
+          status?: string
+          suggested_value?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "luthiery_shop_listings_buyer_profile_id_fkey"
+            columns: ["buyer_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "luthiery_shop_listings_buyer_profile_id_fkey"
+            columns: ["buyer_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "luthiery_shop_listings_craft_id_fkey"
+            columns: ["craft_id"]
+            isOneToOne: false
+            referencedRelation: "luthiery_crafts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "luthiery_shop_listings_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "luthiery_shop_listings_maker_profile_id_fkey"
+            columns: ["maker_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "luthiery_shop_listings_maker_profile_id_fkey"
+            columns: ["maker_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "luthiery_shop_listings_player_equipment_id_fkey"
+            columns: ["player_equipment_id"]
+            isOneToOne: false
+            referencedRelation: "player_equipment"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "luthiery_shop_listings_seller_profile_id_fkey"
+            columns: ["seller_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "luthiery_shop_listings_seller_profile_id_fkey"
+            columns: ["seller_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "luthiery_shop_listings_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "luthiery_shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      luthiery_shop_sales: {
+        Row: {
+          buyer_player_equipment_id: string | null
+          buyer_profile_id: string
+          buyer_user_id: string
+          commission_rate: number
+          equipment_id: string
+          id: string
+          listing_id: string
+          maker_commission: number
+          maker_name: string
+          maker_profile_id: string
+          provenance_snapshot: Json
+          quality_score: number
+          reliability_score: number
+          reputation_after: number
+          sale_price: number
+          seller_profile_id: string
+          seller_received: number
+          seller_user_id: string
+          shop_id: string
+          sold_at: string
+          stat_snapshot: Json
+          value_score: number
+        }
+        Insert: {
+          buyer_player_equipment_id?: string | null
+          buyer_profile_id: string
+          buyer_user_id: string
+          commission_rate: number
+          equipment_id: string
+          id?: string
+          listing_id: string
+          maker_commission?: number
+          maker_name: string
+          maker_profile_id: string
+          provenance_snapshot: Json
+          quality_score: number
+          reliability_score: number
+          reputation_after: number
+          sale_price: number
+          seller_profile_id: string
+          seller_received: number
+          seller_user_id: string
+          shop_id: string
+          sold_at?: string
+          stat_snapshot?: Json
+          value_score: number
+        }
+        Update: {
+          buyer_player_equipment_id?: string | null
+          buyer_profile_id?: string
+          buyer_user_id?: string
+          commission_rate?: number
+          equipment_id?: string
+          id?: string
+          listing_id?: string
+          maker_commission?: number
+          maker_name?: string
+          maker_profile_id?: string
+          provenance_snapshot?: Json
+          quality_score?: number
+          reliability_score?: number
+          reputation_after?: number
+          sale_price?: number
+          seller_profile_id?: string
+          seller_received?: number
+          seller_user_id?: string
+          shop_id?: string
+          sold_at?: string
+          stat_snapshot?: Json
+          value_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "luthiery_shop_sales_buyer_player_equipment_id_fkey"
+            columns: ["buyer_player_equipment_id"]
+            isOneToOne: false
+            referencedRelation: "player_equipment"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "luthiery_shop_sales_buyer_profile_id_fkey"
+            columns: ["buyer_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "luthiery_shop_sales_buyer_profile_id_fkey"
+            columns: ["buyer_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "luthiery_shop_sales_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "luthiery_shop_sales_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: true
+            referencedRelation: "luthiery_shop_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "luthiery_shop_sales_maker_profile_id_fkey"
+            columns: ["maker_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "luthiery_shop_sales_maker_profile_id_fkey"
+            columns: ["maker_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "luthiery_shop_sales_seller_profile_id_fkey"
+            columns: ["seller_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "luthiery_shop_sales_seller_profile_id_fkey"
+            columns: ["seller_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "luthiery_shop_sales_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "luthiery_shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      luthiery_shops: {
+        Row: {
+          brand_colour: string
+          brand_logo_url: string | null
+          brand_tagline: string | null
+          cancelled_listings: number
+          city_id: string
+          commission_rate: number
+          completed_sales: number
+          created_at: string
+          gross_sales: number
+          id: string
+          is_open: boolean
+          name: string
+          owner_profile_id: string
+          owner_user_id: string
+          quality_score_total: number
+          reputation: number
+          updated_at: string
+          value_score_total: number
+        }
+        Insert: {
+          brand_colour?: string
+          brand_logo_url?: string | null
+          brand_tagline?: string | null
+          cancelled_listings?: number
+          city_id: string
+          commission_rate?: number
+          completed_sales?: number
+          created_at?: string
+          gross_sales?: number
+          id?: string
+          is_open?: boolean
+          name: string
+          owner_profile_id: string
+          owner_user_id: string
+          quality_score_total?: number
+          reputation?: number
+          updated_at?: string
+          value_score_total?: number
+        }
+        Update: {
+          brand_colour?: string
+          brand_logo_url?: string | null
+          brand_tagline?: string | null
+          cancelled_listings?: number
+          city_id?: string
+          commission_rate?: number
+          completed_sales?: number
+          created_at?: string
+          gross_sales?: number
+          id?: string
+          is_open?: boolean
+          name?: string
+          owner_profile_id?: string
+          owner_user_id?: string
+          quality_score_total?: number
+          reputation?: number
+          updated_at?: string
+          value_score_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "luthiery_shops_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "luthiery_shops_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "luthiery_shops_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: true
             referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
@@ -65402,6 +65943,7 @@ export type Database = {
         Args: { p_band_id: string; p_event_id: string }
         Returns: Json
       }
+      browse_luthiery_shop_listings: { Args: never; Returns: Json }
       calculate_bail_amount: {
         Args: { p_imprisonment_id: string }
         Returns: number
@@ -65905,6 +66447,10 @@ export type Database = {
           p_idempotency_key: string
           p_reason: string
         }
+        Returns: Json
+      }
+      cancel_luthiery_shop_listing: {
+        Args: { p_listing_id: string; p_profile_id: string }
         Returns: Json
       }
       cancel_music_collaboration_contract: {
@@ -66635,6 +67181,14 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      create_custom_luthiery_instrument: {
+        Args: {
+          p_design: Json
+          p_idempotency_key: string
+          p_profile_id: string
+        }
+        Returns: Json
+      }
       create_default_habits_for_user: {
         Args: { p_user_id: string }
         Returns: undefined
@@ -66929,6 +67483,15 @@ export type Database = {
           p_start_date: string
         }
         Returns: string
+      }
+      create_luthiery_shop_listing: {
+        Args: {
+          p_asking_price: number
+          p_description?: string
+          p_player_equipment_id: string
+          p_profile_id: string
+        }
+        Returns: Json
       }
       create_music_collaboration_contract: {
         Args: { p_client_idempotency_key: string; p_payload: Json }
@@ -67241,6 +67804,7 @@ export type Database = {
         Args: { p_context_id: string; p_context_type: string }
         Returns: Json
       }
+      ensure_current_lottery_draw: { Args: never; Returns: string }
       ensure_festival_owner_schedule_bridge: {
         Args: { p_festival_company_id: string; p_festival_edition_id: string }
         Returns: string
@@ -68319,6 +68883,19 @@ export type Database = {
           variant_matrix: Json
         }[]
       }
+      get_equipped_stage_luthiery_instruments: {
+        Args: { p_profile_ids: string[] }
+        Returns: {
+          build_spec: Json
+          colour: string
+          final_quality: number
+          instrument_kind: string
+          instrument_name: string
+          profile_id: string
+          shape_id: string
+          shape_name: string
+        }[]
+      }
       get_fame_fans_attribution: {
         Args: { p_day: string; p_profile_id: string }
         Returns: {
@@ -68756,6 +69333,34 @@ export type Database = {
         }
       }
       get_owned_festival_companies: { Args: never; Returns: Json }
+      get_owned_luthiery_equipment_details: {
+        Args: { p_profile_id: string }
+        Returns: {
+          build_spec: Json
+          category: string
+          colour: string
+          condition: number
+          description: string
+          equipment_id: string
+          estimated_value: number
+          final_quality: number
+          final_stats: Json
+          finish_id: string
+          finish_name: string
+          instrument_kind: string
+          instrument_name: string
+          is_equipped: boolean
+          maker_name: string
+          material_snapshot: Json
+          player_equipment_id: string
+          purchased_at: string
+          rarity: string
+          shape_id: string
+          shape_name: string
+          stat_boosts: Json
+          subcategory: string
+        }[]
+      }
       get_player_discovery_filter_options: { Args: never; Returns: Json }
       get_player_education_classes: {
         Args: { p_profile_id: string }
@@ -69825,6 +70430,17 @@ export type Database = {
         }
         Returns: Json
       }
+      open_luthiery_shop: {
+        Args: {
+          p_brand_colour?: string
+          p_brand_logo_url?: string
+          p_brand_tagline?: string
+          p_commission_rate?: number
+          p_name: string
+          p_profile_id: string
+        }
+        Returns: Json
+      }
       open_my_bank_account: {
         Args: {
           p_account_type: string
@@ -69866,6 +70482,10 @@ export type Database = {
       pay_festival_settlement_payable: {
         Args: { p_idempotency_key: string; p_line_id: string }
         Returns: Json
+      }
+      pay_mayor_salary_atomic: {
+        Args: { p_amount: number; p_mayor_id: string; p_week_of: string }
+        Returns: boolean
       }
       perform_authoritative_busking: {
         Args: {
@@ -70085,6 +70705,8 @@ export type Database = {
         Args: { p_profile_id: string }
         Returns: Json
       }
+      process_weekly_lottery_draw: { Args: never; Returns: Json }
+      process_weekly_mayor_salaries: { Args: never; Returns: number }
       profile_belongs_to_current_user: {
         Args: { _profile_id: string }
         Returns: boolean
@@ -70327,6 +70949,10 @@ export type Database = {
         Args: { p_label_id: string; p_upgrade_type: string }
         Returns: Json
       }
+      purchase_luthiery_shop_listing: {
+        Args: { p_listing_id: string; p_profile_id: string }
+        Returns: Json
+      }
       purchase_release_format: {
         Args: {
           p_format_type: string
@@ -70404,6 +71030,10 @@ export type Database = {
       reconcile_my_festival_attendance: { Args: never; Returns: Json }
       reconcile_profile_achievements: {
         Args: { p_profile_id: string }
+        Returns: number
+      }
+      reconcile_stale_cron_job_runs: {
+        Args: { p_stale_after?: string }
         Returns: number
       }
       reconcile_unsettled_completed_gig_crew: {
@@ -70536,6 +71166,10 @@ export type Database = {
       release_merch_variant_stock: {
         Args: { p_quantity: number; p_variant_id: string }
         Returns: Json
+      }
+      remove_gig_member_luthiery_loadout: {
+        Args: { p_gig_id: string }
+        Returns: boolean
       }
       remove_social_community_member: {
         Args: {
@@ -71516,6 +72150,10 @@ export type Database = {
         }
         Returns: Json
       }
+      save_gig_member_luthiery_loadout: {
+        Args: { p_gig_id: string; p_player_equipment_id: string }
+        Returns: Json
+      }
       save_gig_production_plan: {
         Args: {
           p_effects_package: string
@@ -72092,6 +72730,17 @@ export type Database = {
           p_songs_performed?: number
         }
         Returns: Json
+      }
+      settle_lottery_ticket_atomic: {
+        Args: {
+          p_bonus_matched: boolean
+          p_matches: number
+          p_prize_cash: number
+          p_prize_fame: number
+          p_prize_xp: number
+          p_ticket_id: string
+        }
+        Returns: boolean
       }
       settle_music_collaboration_contract: {
         Args: { p_contract_id: string; p_idempotency_key: string }
@@ -74054,6 +74703,19 @@ export type Database = {
               isSetofReturn: false
             }
           }
+      update_luthiery_shop: {
+        Args: {
+          p_brand_colour?: string
+          p_brand_logo_url?: string
+          p_brand_tagline?: string
+          p_commission_rate?: number
+          p_is_open?: boolean
+          p_move_to_current_city?: boolean
+          p_name: string
+          p_profile_id: string
+        }
+        Returns: Json
+      }
       update_player_health: {
         Args: { p_health_change: number; p_user_id: string }
         Returns: number
@@ -74242,6 +74904,26 @@ export type Database = {
         Args: {
           p_expected_version?: number
           p_idempotency_key?: string
+          p_offer_id: string
+        }
+        Returns: Json
+      }
+      withdraw_festival_edition_artist_invitation: {
+        Args: {
+          p_expected_version: number
+          p_festival_company_id: string
+          p_festival_edition_id: string
+          p_idempotency_key: string
+          p_invitation_id: string
+        }
+        Returns: Json
+      }
+      withdraw_festival_edition_artist_offer: {
+        Args: {
+          p_expected_version: number
+          p_festival_company_id: string
+          p_festival_edition_id: string
+          p_idempotency_key: string
           p_offer_id: string
         }
         Returns: Json
