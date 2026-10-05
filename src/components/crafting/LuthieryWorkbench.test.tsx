@@ -79,7 +79,7 @@ describe("LuthieryWorkbench interactions", () => {
     await user.click(screen.getByRole("button", { name: /Hand-wound Boutique/i }));
 
     const group = screen.getByTestId("instrument-part-electronics");
-    expect(group.querySelector("rect")).toHaveAttribute("fill", "#b58a3e");
+    expect(group.querySelector("rect")).toHaveAttribute("fill", "var(--luth-gold)");
   });
 
   it("places and moves artwork on the live preview", async () => {

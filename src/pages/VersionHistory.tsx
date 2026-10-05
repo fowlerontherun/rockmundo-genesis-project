@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.765",
+    date: "2026-10-05",
+    changes: [
+      { type: "improvement", description: "Reworked luthiery guitar and bass silhouettes, aligned strings, bridges and tuners, added realistic fret spacing and inlays, body-clipped artwork and distinct finishes. Crafted stage instruments use the same body silhouettes." },
+      { type: "feature", description: "Added six guitar/bass shapes and twelve body, neck, fretboard, pickup, hardware and finish variations backed by the crafting catalogue. Existing instruments, stock and skill rules are preserved." },
+    ],
+  },
+  {
     version: "1.1.764",
     date: "2026-10-05",
     changes: [

@@ -1,3 +1,4 @@
+import { LUTHIERY_BODY_PATHS } from "@/features/luthiery/bodyShapes";
 import * as T from 'three';
 import { batchStaticMeshes, box, cylinder, rod, matte, metal, buildGuitar, buildHandInstrument } from './stage';
 import { STAGE_INSTRUMENTS, type InstrumentId, type PlayingStyle } from './instrumentCatalog';
@@ -65,36 +66,26 @@ function applyElectricInstrumentSkin(root: T.Group, skin?: ResolvedInstrumentSki
 }
 
 function luthieryBodyShape(shapeId: string) {
-    const s = new T.Shape();
-    if (shapeId === 'v-shape') {
-        s.moveTo(0, .33); s.lineTo(-.12, .11); s.lineTo(-.38, -.40); s.lineTo(-.06, -.22);
-        s.lineTo(0, -.02); s.lineTo(.06, -.22); s.lineTo(.38, -.40); s.lineTo(.12, .11); s.closePath();
-    } else if (shapeId === 'angular' || shapeId === 'razor' || shapeId === 'war-axe') {
-        const wide = shapeId === 'war-axe' ? .42 : shapeId === 'razor' ? .31 : .36;
-        const point = shapeId === 'razor' ? -.46 : -.39;
-        s.moveTo(0, .35); s.lineTo(-.18, .24); s.lineTo(-wide, .02); s.lineTo(-.18, -.12);
-        s.lineTo(-wide * .8, point); s.lineTo(0, -.28); s.lineTo(wide * .92, point + .02);
-        s.lineTo(.2, -.08); s.lineTo(wide, .08); s.lineTo(.15, .25); s.closePath();
-    } else if (shapeId === 'single-cut') {
-        s.moveTo(.02, .36); s.bezierCurveTo(-.10,.31,-.19,.26,-.18,.14);
-        s.bezierCurveTo(-.40,.05,-.36,-.35,-.04,-.40); s.bezierCurveTo(.34,-.43,.42,-.12,.28,.03);
-        s.bezierCurveTo(.12,.15,.20,.27,.02,.36);
-    } else if (shapeId === 'offset') {
-        s.moveTo(-.03,.36); s.bezierCurveTo(-.24,.30,-.31,.18,-.19,.07);
-        s.bezierCurveTo(-.44,-.08,-.31,-.39,.03,-.36); s.bezierCurveTo(.39,-.33,.43,-.08,.24,.04);
-        s.bezierCurveTo(.32,.21,.17,.33,-.03,.36);
-    } else if (shapeId === 'monolith-bass') {
-        s.moveTo(0,.38); s.lineTo(-.23,.28); s.lineTo(-.31,.08); s.lineTo(-.27,-.36);
-        s.lineTo(0,-.43); s.lineTo(.27,-.36); s.lineTo(.31,.08); s.lineTo(.23,.28); s.closePath();
-    } else {
-        // double-cut/classic-bass and unknown legacy shapes keep a familiar
-        // double-cut silhouette while still preserving the crafted colour.
-        s.moveTo(0,.36); s.bezierCurveTo(-.06,.25,-.12,.23,-.17,.31);
-        s.bezierCurveTo(-.30,.28,-.16,.12,-.28,.01); s.bezierCurveTo(-.43,-.18,-.27,-.42,0,-.39);
-        s.bezierCurveTo(.30,-.42,.43,-.17,.28,.01); s.bezierCurveTo(.16,.12,.22,.24,.12,.32);
-        s.bezierCurveTo(.04,.23,.07,.27,0,.36);
+    const path = LUTHIERY_BODY_PATHS[shapeId] ?? LUTHIERY_BODY_PATHS['double-cut'];
+    const tokens = path.match(/[MLCZ]|-?\d+(?:\.\d+)?/g) ?? [];
+    const shape = new T.Shape();
+    // Rotate the horizontal workbench body into the stage's vertical neck axis.
+    const point = (x: number, y: number) => [(y - 114.5) * .006, (x - 91) * .006] as const;
+    let i = 0;
+    while (i < tokens.length) {
+        const command = tokens[i++];
+        if (command === 'Z') { shape.closePath(); continue; }
+        if (command === 'M' || command === 'L') {
+            const p = point(Number(tokens[i++]), Number(tokens[i++]));
+            if (command === 'M') shape.moveTo(...p); else shape.lineTo(...p);
+        } else if (command === 'C') {
+            const a = point(Number(tokens[i++]), Number(tokens[i++]));
+            const b = point(Number(tokens[i++]), Number(tokens[i++]));
+            const c = point(Number(tokens[i++]), Number(tokens[i++]));
+            shape.bezierCurveTo(...a, ...b, ...c);
+        }
     }
-    return s;
+    return shape;
 }
 
 function applyLuthieryInstrumentVisual(root: T.Group, visual?: LuthieryInstrumentVisual | null) {
@@ -113,7 +104,35 @@ function applyLuthieryInstrumentVisual(root: T.Group, visual?: LuthieryInstrumen
     });
     previous.dispose();
     if (body.material?.isMeshStandardMaterial) body.material.color.set(visual.colour);
-    if (visual.instrumentKind === 'electric_bass' || visual.shapeId.includes('bass')) body.scale.y *= 1.05;
+    // Generic oval pickguards can protrude beyond V/offset/compact bodies.
+    const guard = root.getObjectByName('instrument-pickguard');
+    if (guard) guard.visible = false;
+    const spec = visual.buildSpec ?? {};
+    const parts = spec.parts && typeof spec.parts === 'object' ? spec.parts as Record<string, unknown> : {};
+    const option = (slot: string) => {
+        const value = parts[slot];
+        return typeof value === 'string' ? value : value && typeof value === 'object' ? String((value as Record<string, unknown>).optionId ?? '') : '';
+    };
+    const finish = String(spec.finishId ?? '');
+    if (finish === 'finish-natural') body.material.color.set(option('body').includes('mahogany') ? '#74452f' : option('body').includes('korina') ? '#a67849' : '#9a6949');
+    body.material.roughness = finish === 'finish-worn' ? .75 : finish === 'finish-satin' ? .55 : .24;
+    const neck = root.getObjectByName('instrument-neck') as T.Mesh<T.BufferGeometry, T.MeshStandardMaterial> | undefined;
+    if (neck) {
+        neck.material.color.set(option('neck').includes('mahogany') ? '#74452f' : '#c4935d');
+        neck.scale.x = option('neck') === 'neck-slim-maple' ? .9 : option('neck') === 'neck-chunky-mahogany' ? 1.1 : 1;
+    }
+    const board = root.getObjectByName('fretboard') as T.Mesh<T.BufferGeometry, T.MeshStandardMaterial> | undefined;
+    if (board) board.material.color.set(option('fretboard').includes('ebony') ? '#211f23' : option('fretboard').includes('maple') ? '#c89a62' : '#56372b');
+    root.traverse(object => {
+        if (!(object instanceof T.Mesh) || !object.name.startsWith('instrument-pickup-')) return;
+        const material = object.material as T.MeshStandardMaterial;
+        material.color.set(option('electronics') === 'elec-boutique' ? '#b58a3e' : ['elec-single', 'elec-alnico', 'elec-jazz', 'elec-p90'].includes(option('electronics')) ? '#e7dfca' : '#111318');
+        object.scale.y = ['elec-single', 'elec-alnico', 'elec-jazz'].includes(option('electronics')) ? .6 : 1;
+    });
+    for (const object of root.children) {
+        if (!(object instanceof T.Mesh) || !object.name.startsWith('instrument-hardware-')) continue;
+        (object.material as T.MeshStandardMaterial).color.set(option('hardware') === 'hw-black' ? '#111318' : option('hardware') === 'hw-gold' ? '#b58a3e' : option('hardware') === 'hw-aged' ? '#8f9189' : '#bdc2cb');
+    }
     root.userData.luthieryInstrument = {
         instrumentName: visual.instrumentName,
         shapeId: visual.shapeId,
