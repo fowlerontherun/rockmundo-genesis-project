@@ -2,7 +2,7 @@ import { isDress } from './skirtGeometry';
 import { useState } from 'react';
 import { garmentCategory } from './wardrobeStyling';
 import { Shirt, Footprints } from 'lucide-react';
-import { CLOTHING_COLORS, LIVE_STARTER_ITEM_IDS, SLOT_LABELS, equipmentItem, starterItemsForWardrobe, type EquipmentSlot, type PlayerAppearance } from './appearance';
+import { CLOTHING_COLORS, CLOTHING_PATTERNS, type ClothingPattern, LIVE_STARTER_ITEM_IDS, SLOT_LABELS, equipmentItem, starterItemsForWardrobe, type EquipmentSlot, type PlayerAppearance } from './appearance';
 
 const ITEM_DEFAULT_COLOURS: Record<string, string> = {
   'starter.top.plain-black': '#20232b',
@@ -15,7 +15,7 @@ const ITEM_DEFAULT_COLOURS: Record<string, string> = {
   'starter.footwear.brown-boots': '#ad6241',
 };
 
-export function StarterWardrobe({ slot, appearance, onChange }: { slot: EquipmentSlot; appearance: PlayerAppearance; onChange: (next: PlayerAppearance) => void }) {
+export function StarterWardrobe({ slot, appearance, onChange, topIsOverridden = false }: { slot: EquipmentSlot; appearance: PlayerAppearance; onChange: (next: PlayerAppearance) => void; topIsOverridden?: boolean }) {
   const [keepColour, setKeepColour] = useState(false);
   const [category, setCategory] = useState('All');
   const equipped = appearance.equipment[slot];
@@ -29,8 +29,8 @@ export function StarterWardrobe({ slot, appearance, onChange }: { slot: Equipmen
       <label>Item type <select aria-label={`${SLOT_LABELS[slot]} item type`} value={category} onChange={event => setCategory(event.target.value)}>{categories.map(value => <option key={value}>{value}</option>)}</select></label>
       <label><input type="checkbox" checked={keepColour} onChange={event => setKeepColour(event.target.checked)} />Keep my colour when switching items</label>
     </div>
-    {slot === 'bottom' && isDress(appearance.equipment.top.itemId) && <p>A dress covers your bottoms. Your selection will reappear when you switch to a separate top.</p>}
-    {slot === 'top' && isDress(equipped.itemId) && <p>Dress colour applies to the bodice and skirt.</p>}
+    {slot === 'bottom' && !topIsOverridden && isDress(appearance.equipment.top.itemId) && <p>A dress covers your bottoms. Your selection will reappear when you switch to a separate top.</p>}
+    {slot === 'top' && !topIsOverridden && isDress(equipped.itemId) && <p>Style applies to the whole dress. Two-tone uses the second colour for the skirt.</p>}
     <div className="player-model-wardrobe__grid">
       {items.filter(item => category === 'All' || garmentCategory(slot, item.id) === category).map(item => <button key={item.id} type="button" aria-pressed={equipped.itemId === item.id} onClick={() => edit({ itemId: item.id, ...(!keepColour && ITEM_DEFAULT_COLOURS[item.id] ? { color: ITEM_DEFAULT_COLOURS[item.id] } : {}) })}>
         <span aria-hidden="true" className={`player-model-wardrobe__tile fabric-${item.fabric}`} style={{ color: item.id === equipped.itemId || keepColour ? equipped.color : ITEM_DEFAULT_COLOURS[item.id] ?? equipped.color }}>
@@ -43,6 +43,11 @@ export function StarterWardrobe({ slot, appearance, onChange }: { slot: Equipmen
     {selectedCategory !== 'No top' && <div className="player-model-wardrobe__colours" role="group" aria-label={`${SLOT_LABELS[slot]} colours`}>
       {CLOTHING_COLORS.map(([name, color]) => <button key={color} type="button" title={name} aria-label={`${SLOT_LABELS[slot]} colour: ${name}`} aria-pressed={equipped.color === color} style={{ backgroundColor: color }} onClick={() => edit({ color })} />)}
       <label>Custom<input type="color" aria-label={`Custom ${slot} colour`} value={equipped.color} onChange={event => edit({ color: event.target.value })} /></label>
+      <label>Pattern<select aria-label={`${slot} pattern`} value={equipped.pattern ?? 'original'} onChange={event => edit({ pattern: event.target.value === 'original' ? undefined : event.target.value as ClothingPattern })}>
+        <option value="original">Original design</option>
+        {CLOTHING_PATTERNS.map(pattern => <option key={pattern} value={pattern}>{({ solid: 'Solid colour', stripes: 'Stripes', checks: 'Checks', dots: 'Polka dots', 'two-tone': 'Two-tone' })[pattern]}</option>)}
+      </select></label>
+      {equipped.pattern && equipped.pattern !== 'solid' && <label>Second colour<input type="color" aria-label={`${slot} second colour`} value={equipped.secondaryColor ?? '#eee8db'} onChange={event => edit({ secondaryColor: event.target.value })} /></label>}
     </div>}
   </div>;
 }

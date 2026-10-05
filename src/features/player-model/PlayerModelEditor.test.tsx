@@ -2,10 +2,13 @@ vi.mock('./OwnedAccessories', () => ({ OwnedAccessories: () => <div>Your collect
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import PlayerModelEditor from './PlayerModelEditor';
-import { defaultAppearance, SLOTS, SLOT_LABELS, STARTER_ITEMS } from './appearance';
+import { useAvatarMerchWearables } from './useAvatarMerchWearables';
+vi.mock('./useAvatarMerchWearables', () => ({ useAvatarMerchWearables: vi.fn() }));
+const removeMerch = vi.fn();
+import { defaultAppearance, SLOTS, SLOT_LABELS, STARTER_ITEMS, starterItemsForWardrobe } from './appearance';
 import { useEquippedRichClothing, usePlayerModel, usePlayerStageTattoos } from './usePlayerModel';
 
-vi.mock('./usePlayerModel', () => ({ usePlayerModel: vi.fn(), useEquippedRichClothing: vi.fn(), usePlayerStageTattoos: vi.fn() }));
+vi.mock('./usePlayerModel', () => ({ usePlayerModel: vi.fn(), useEquippedRichClothing: vi.fn(), usePlayerStageTattoos: vi.fn(), useEquippedStageLuthieryInstruments: () => ({ data: [] }) }));
 const preview = vi.fn();
 vi.mock('./PlayerModelPreview', () => ({ PlayerModelPreview: (props: unknown) => { preview(props); return <div>Model preview</div>; } }));
 const save = vi.fn();
@@ -23,6 +26,7 @@ function tattooQuery(data: unknown[] = [], isError = false) {
 }
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(useAvatarMerchWearables).mockReturnValue({ band: { data: null, isPending: false }, query: { data: { designs: [], equipped: null }, isPending: false }, equip: { isPending: false, error: null, mutate: removeMerch } } as unknown as ReturnType<typeof useAvatarMerchWearables>);
   vi.mocked(usePlayerModel).mockReturnValue(model());
   vi.mocked(useEquippedRichClothing).mockReturnValue(clothing());
   vi.mocked(usePlayerStageTattoos).mockReturnValue(tattooQuery());
@@ -55,13 +59,13 @@ it('gives every character the full free starter wardrobe and persists new design
   fireEvent.click(screen.getByRole('button', { name: 'Outfit' }));
   for (const slot of SLOTS) {
     const group = screen.getByRole('group', { name: SLOT_LABELS[slot] });
-    for (const item of STARTER_ITEMS[slot]) expect(within(group).getByRole('button', { name: item.label })).toBeEnabled();
-    fireEvent.click(within(group).getByRole('button', { name: STARTER_ITEMS[slot][5].label }));
+    for (const item of starterItemsForWardrobe(slot)) expect(within(group).getByRole('button', { name: item.label })).toBeEnabled();
+    fireEvent.click(within(group).getByRole('button', { name: starterItemsForWardrobe(slot)[0].label }));
     fireEvent.click(within(group).getByRole('button', { name: `${SLOT_LABELS[slot]} colour: Teal` }));
   }
   fireEvent.click(screen.getByRole('button', { name: 'Save avatar' }));
   await waitFor(() => expect(save).toHaveBeenCalled());
-  for (const slot of SLOTS) expect(save.mock.calls[0][0].appearance.equipment[slot]).toEqual({ itemId: STARTER_ITEMS[slot][5].id, color: '#338b8d' });
+  for (const slot of SLOTS) expect(save.mock.calls[0][0].appearance.equipment[slot]).toEqual({ itemId: starterItemsForWardrobe(slot)[0].id, color: '#338b8d' });
 });
 it('saves topless and muscle definition as independent avatar choices', async () => {
   render(<PlayerModelEditor />);
@@ -124,7 +128,7 @@ it('saves hats, glasses, lens choices and earrings as one shared stage appearanc
   fireEvent.change(screen.getByLabelText('Glasses'), { target: { value: 'aviator' } });
   fireEvent.change(screen.getByLabelText('Lenses'), { target: { value: 'tinted' } });
   fireEvent.click(screen.getByRole('button', { name: 'Lens colour: Blue' }));
-  fireEvent.change(screen.getByLabelText('Earrings'), { target: { value: 'drops' } });
+  fireEvent.change(screen.getByLabelText('Left earring'), { target: { value: 'drops' } });
   fireEvent.click(screen.getByRole('button', { name: 'Hat colour: Red' }));
   fireEvent.click(screen.getByRole('button', { name: 'Glasses colour: Gold' }));
   fireEvent.click(screen.getByRole('button', { name: 'Earrings colour: Purple' }));
@@ -138,7 +142,9 @@ it('saves hats, glasses, lens choices and earrings as one shared stage appearanc
         glassesColor: '#d8ad49',
         lensTint: 'tinted',
         lensColor: '#426baa',
-        earrings: 'drops',
+        earrings: 'none',
+        leftEarring: 'drops',
+        rightEarring: 'none',
         earringColor: '#8055a2',
       },
     }),
@@ -166,4 +172,35 @@ it('applies complete basic outfit presets to the live draft', async () => {
       footwear: { itemId: 'starter.footwear.black-boots', color: '#20232b' },
     }) }),
   })));
+});
+
+it('explains merch overriding a dress and restores the selected dress without changing the draft', () => {
+  const state = model();
+  state.query.data!.appearance.equipment.top.itemId = 'starter.top.sundress';
+  vi.mocked(usePlayerModel).mockReturnValue(state);
+  const merch = useAvatarMerchWearables('character-one');
+  vi.mocked(useAvatarMerchWearables).mockReturnValue({ ...merch, query: { ...merch.query, data: { designs: [], equipped: { design_id: 'design', band_id: 'band', design_name: 'Tour tee', product_type: 'Graphic Tee', garment_color: '#ffffff' } } } } as ReturnType<typeof useAvatarMerchWearables>);
+  const view = render(<PlayerModelEditor />);
+  fireEvent.click(screen.getByRole('button', { name: 'Outfit' }));
+  expect(screen.getByText(/Band merch “Tour tee” replaces/)).toBeVisible();
+  expect(screen.queryByText(/A dress covers your bottoms/)).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Use my selected top or dress' }));
+  expect(removeMerch).toHaveBeenCalledWith(null);
+  expect(save).not.toHaveBeenCalled();
+  vi.mocked(useAvatarMerchWearables).mockReturnValue(merch);
+  view.rerender(<PlayerModelEditor />);
+  expect(screen.getByText(/A dress covers your bottoms/)).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Sleeveless sundress' })).toHaveAttribute('aria-pressed', 'true');
+});
+
+it('saves independent pattern colours for a dress without changing the selected bottoms', async () => {
+  render(<PlayerModelEditor />);
+  fireEvent.click(screen.getByRole('button', { name: 'Outfit' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Sleeveless sundress' }));
+  fireEvent.change(screen.getByLabelText('top pattern'), { target: { value: 'dots' } });
+  fireEvent.change(screen.getByLabelText('top second colour'), { target: { value: '#ffbb33' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save avatar' }));
+  await waitFor(() => expect(save).toHaveBeenCalled());
+  expect(save.mock.calls[0][0].appearance.equipment.top).toMatchObject({ itemId: 'starter.top.sundress', pattern: 'dots', secondaryColor: '#ffbb33' });
+  expect(save.mock.calls[0][0].appearance.equipment.bottom).toEqual(defaultAppearance('character-one').equipment.bottom);
 });

@@ -881,7 +881,7 @@ describe('visible garment fitting regressions', () => {
       ['Long Sleeve Tee', 'avatar-v1-fitted-long-sleeves', null],
       ['Graphic Tee', null, null],
     ] as const) {
-      for (const savedTop of ['topless', 'stripe', 'zip-hoodie']) {
+      for (const savedTop of ['topless', 'stripe', 'zip-hoodie', 'sundress', 'skater-dress', 'vest']) {
         const appearance = defaultAppearance();
         appearance.body = { ...appearance.body, frame, build: 1.15, breastSize: 1.35 };
         appearance.equipment.top.itemId = `starter.top.${savedTop}`;
@@ -890,6 +890,7 @@ describe('visible garment fitting regressions', () => {
           design_id: 'test-merch', band_id: 'band', design_name: 'Test', product_type: product, garment_color: '#ed4495',
         });
         expect(appearance).toEqual(before);
+        expect(model.getObjectByName('avatar-v1-fitted-skirt')).toBeFalsy();
         if (sleeveName) {
           const sleeve = model.getObjectByName(sleeveName) as T.SkinnedMesh;
           expect(sleeve).toBeTruthy();
@@ -943,4 +944,25 @@ it.each(['masculine', 'feminine'] as const)('keeps every live %s garment finite,
     });
     disposeModel(actor.root);
   }
+});
+
+it.each(['masculine', 'feminine'] as const)('preserves both dyes on %s patterned dresses and skips skin materials', frame => {
+  const appearance = defaultAppearance(); appearance.body.frame = frame;
+  appearance.equipment.top = { itemId: 'starter.top.sundress', color: '#ff0000', secondaryColor: '#00ff00', pattern: 'dots' };
+  const model = assemblePlayerModel(library, appearance);
+  const skirt = model.getObjectByName('avatar-v1-fitted-skirt') as T.SkinnedMesh;
+  const fabric = skirt.material as T.MeshStandardMaterial;
+  expect(fabric.color.getHexString()).toBe('ffffff');
+  expect(fabric.map?.name).toContain('clothing-pattern-dots-#ff0000-#00ff00');
+  let patternedBodice = false;
+  model.traverse(node => {
+    if (!(node instanceof T.Mesh)) return;
+    for (const material of Array.isArray(node.material) ? node.material : [node.material]) {
+      const map = (material as T.MeshStandardMaterial).map;
+      if (/skin/i.test(material.name)) expect(map?.name ?? '').not.toContain('clothing-pattern');
+      else if (node !== skirt && map?.name.includes('clothing-pattern-dots')) patternedBodice = true;
+    }
+  });
+  expect(patternedBodice).toBe(true);
+  disposeModel(model);
 });

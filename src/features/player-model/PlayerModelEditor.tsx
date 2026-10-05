@@ -39,10 +39,11 @@ export default function PlayerModelEditor() {
   if (model.isLoading || (model.profileId && model.query.isPending)) return <p role="status" className="p-8">Loading your character’s stage model…</p>;
   if (model.error || model.query.isError) return <div role="alert" className="p-8"><p>Your saved model could not load.</p><button type="button" className="underline" onClick={() => void model.query.refetch()}>Try again</button></div>;
   if (!model.profileId || !model.query.data) return <p className="p-8">Select a character to create a stage model.</p>;
-  return <EditorSession key={model.profileId} profileId={model.profileId} initial={model.query.data} model={model} richClothing={richClothing.data ?? []} richClothingError={richClothing.isError} tattoos={tattoos.data ?? []} tattooError={tattoos.isError} luthieryInstruments={luthieryInstruments.data ?? []} merchWearable={merch.query.data?.equipped ?? null} />;
+  return <EditorSession key={model.profileId} profileId={model.profileId} initial={model.query.data} model={model} richClothing={richClothing.data ?? []} richClothingError={richClothing.isError} tattoos={tattoos.data ?? []} tattooError={tattoos.isError} luthieryInstruments={luthieryInstruments.data ?? []} merchWearable={merch.query.data?.equipped ?? null} merchControl={{ pending: merch.equip.isPending, error: merch.equip.error, remove: () => merch.equip.mutate(null) }} />;
 }
 
-function EditorSession({ profileId, initial, model, richClothing, richClothingError, tattoos, tattooError, luthieryInstruments, merchWearable }: { profileId: string; initial: { appearance: PlayerAppearance; revision: number | null }; model: ReturnType<typeof usePlayerModel>; richClothing: ResolvedEquippedClothing[]; richClothingError: boolean; tattoos: import('./tattoos').ResolvedTattooVisual[]; tattooError: boolean; luthieryInstruments: import('@/features/luthiery/luthieryInstrument').LuthieryInstrumentVisual[]; merchWearable: import('./merchWearables').ResolvedMerchWearable | null }) {
+function EditorSession({ profileId, initial, model, richClothing, richClothingError, tattoos, tattooError, luthieryInstruments, merchWearable, merchControl }: { profileId: string; initial: { appearance: PlayerAppearance; revision: number | null }; model: ReturnType<typeof usePlayerModel>; richClothing: ResolvedEquippedClothing[]; richClothingError: boolean; tattoos: import('./tattoos').ResolvedTattooVisual[]; tattooError: boolean; luthieryInstruments: import('@/features/luthiery/luthieryInstrument').LuthieryInstrumentVisual[]; merchWearable: import('./merchWearables').ResolvedMerchWearable | null; merchControl: { pending: boolean; error: Error | null; remove: () => void } }) {
+
   const [draft, setDraft] = useState(initial.appearance), [baseline, setBaseline] = useState(initial), [role, setRole] = useState('other'), [activeTab, setActiveTab] = useState<EditorTab>('body');
   const [feedback, setFeedback] = useState(''), [error, setError] = useState('');
   const dirty = JSON.stringify(draft) !== JSON.stringify(baseline.appearance);
@@ -113,8 +114,14 @@ function EditorSession({ profileId, initial, model, richClothing, richClothingEr
           <h3 className="player-model-editor__section-title">Style presets</h3>
           <div className="player-model-editor__choices" role="group" aria-label="Outfit presets">{STYLES.map(style => <button key={style} type="button" onClick={() => outfit(style)}>{STYLE_LABELS[style]}</button>)}</div>
           <p className="player-model-editor__hint">Starter pieces update the live preview immediately. Equipped Skin Store items remain layered over matching areas.</p>
+          {merchWearable && <div role="status" className="player-model-editor__hint">
+            <p>Band merch “{merchWearable.design_name}” replaces your selected top or dress, including its colour. Your selected bottoms remain visible.</p>
+            <button type="button" disabled={merchControl.pending} onClick={merchControl.remove}>{merchControl.pending ? 'Removing band merch…' : 'Use my selected top or dress'}</button>
+            <p>Removing merch takes effect immediately. Save avatar to keep any outfit edits.</p>
+            {merchControl.error && <p role="alert">{merchControl.error.message}</p>}
+          </div>}
           <OutfitLooks appearance={draft} onChange={change} />
-          {SLOTS.map(slot => <StarterWardrobe key={slot} slot={slot} appearance={draft} onChange={change} />)}
+          {SLOTS.map(slot => <StarterWardrobe key={slot} slot={slot} appearance={draft} onChange={change} topIsOverridden={!!merchWearable} />)}
           <BandMerchWardrobe profileId={profileId} />
           <div className="player-model-editor__item"><label htmlFor="instrument-finish">Instrument finish</label><span>Standard</span><input id="instrument-finish" type="color" value={draft.equipment.instrument.color} onChange={event => change({ ...draft, equipment: { ...draft.equipment, instrument: { ...draft.equipment.instrument, color: event.target.value } } })} /></div>
         </fieldset>}

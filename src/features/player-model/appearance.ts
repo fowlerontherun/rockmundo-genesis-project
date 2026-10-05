@@ -119,6 +119,9 @@ export const FACIAL_HAIR_LABELS: Record<typeof FACIAL_HAIR_STYLES[number], strin
 export const HAIR_COLORS = [['Black', '#221f24'], ['Brown', '#54372a'], ['Chestnut', '#854b32'], ['Ginger', '#b75e32'], ['Blond', '#d5b474'], ['Silver', '#aeb5bd'], ['White', '#eee8db'], ['Pink', '#d376a1'], ['Blue', '#426baa'], ['Purple', '#8055a2']] as const;
 export const EYE_COLORS = [['Dark brown', '#402a22'], ['Brown', '#65442d'], ['Hazel', '#8a713d'], ['Green', '#4f755a'], ['Blue', '#4d79a8'], ['Grey', '#7b8794'], ['Amber', '#a16b2f']] as const;
 export function headModelStyle(appearance: PlayerAppearance): Style { return appearance.head.hairStyle && appearance.head.hairStyle !== 'original' ? 'casual' : appearance.head.style; }
+export const CLOTHING_PATTERNS = ['solid', 'stripes', 'checks', 'dots', 'two-tone'] as const;
+export type ClothingPattern = typeof CLOTHING_PATTERNS[number];
+
 const color = z.string().regex(/^#[0-9a-fA-F]{6}$/).transform(value => value.toLowerCase());
 const item = (slot: EquipmentSlot) => z.string().refine(value => STARTER_ITEMS[slot].some(entry => entry.id === value), 'Choose an available starter item');
 export const appearanceSchema = z.object({
@@ -126,9 +129,9 @@ export const appearanceSchema = z.object({
   body: z.object({ frame: z.enum(['masculine', 'feminine']), height: z.number().finite().min(0.9).max(1.1), build: z.number().finite().min(0.85).max(1.15), breastSize: z.number().finite().min(0.7).max(1.85).optional(), muscle: z.enum(BODY_MUSCLE_TYPES).optional(), skin: color }).strict(),
   head: z.object({ style: z.enum(STYLES), hair: color, hairStyle: z.enum(HAIR_STYLES).optional(), facialHair: z.enum(FACIAL_HAIR_STYLES).optional(), facialHairColor: color.optional(), faceShape: z.enum(FACE_SHAPES).optional(), eyeColor: color.optional(), eyebrowStyle: z.enum(EYEBROW_STYLES).optional(), eyebrowColor: color.optional(), skinDetail: z.enum(SKIN_DETAILS).optional() }).strict(),
   equipment: z.object({
-    top: z.object({ itemId: item('top'), color }).strict(),
-    bottom: z.object({ itemId: item('bottom'), color }).strict(),
-    footwear: z.object({ itemId: item('footwear'), color }).strict(),
+    top: z.object({ itemId: item('top'), color, secondaryColor: color.optional(), pattern: z.enum(CLOTHING_PATTERNS).optional() }).strict(),
+    bottom: z.object({ itemId: item('bottom'), color, secondaryColor: color.optional(), pattern: z.enum(CLOTHING_PATTERNS).optional() }).strict(),
+    footwear: z.object({ itemId: item('footwear'), color, secondaryColor: color.optional(), pattern: z.enum(CLOTHING_PATTERNS).optional() }).strict(),
     instrument: z.object({ itemId: z.literal('starter.instrument.standard'), color }).strict(),
   }).strict(),
   accessories: z.object({
