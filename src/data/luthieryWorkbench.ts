@@ -1,3 +1,4 @@
+import { LUTHIERY_BODY_PATHS } from "@/features/luthiery/bodyShapes";
 import { MAX_SKILL_LEVEL } from "@/data/skillConstants";
 import type { CraftingMaterial, PlayerCraftingMaterial } from "@/hooks/useCraftingSystem";
 import type { SkillProgressRecord } from "@/hooks/useSkillSystem.types";
@@ -115,7 +116,7 @@ export const LUTHIERY_SHAPES: LuthieryShape[] = [
     name: "Classic Bass",
     instrumentKinds: ["electric_bass"],
     requirement: req("basic", 0),
-    bodyPath: "M92 44 C66 38 43 48 35 69 C28 88 37 108 55 118 C73 128 93 132 113 124 C136 115 151 96 148 75 C145 57 129 48 111 51 C103 48 99 46 92 44 Z",
+    bodyPath: LUTHIERY_BODY_PATHS["classic-bass"],
     difficultyPenalty: 0,
   },
   {
@@ -123,7 +124,7 @@ export const LUTHIERY_SHAPES: LuthieryShape[] = [
     name: "Classic Double Cut",
     instrumentKinds: ["electric_guitar"],
     requirement: req("basic", 0),
-    bodyPath: "M92 47 C60 39 37 49 32 69 C24 93 42 113 64 111 C78 110 84 123 99 129 C115 137 137 127 146 109 C156 89 150 62 127 51 C116 46 104 46 92 47 Z",
+    bodyPath: LUTHIERY_BODY_PATHS["double-cut"],
     difficultyPenalty: 0,
   },
   {
@@ -131,7 +132,7 @@ export const LUTHIERY_SHAPES: LuthieryShape[] = [
     name: "Offset",
     instrumentKinds: ["electric_guitar", "electric_bass"],
     requirement: req("basic", 6),
-    bodyPath: "M93 43 C62 31 35 48 31 71 C27 91 38 111 58 119 C78 127 93 137 116 130 C141 122 154 104 151 82 C147 60 128 49 111 52 C105 48 100 45 93 43 Z",
+    bodyPath: LUTHIERY_BODY_PATHS["offset"],
     difficultyPenalty: 1,
   },
   {
@@ -139,7 +140,7 @@ export const LUTHIERY_SHAPES: LuthieryShape[] = [
     name: "Single Cut",
     instrumentKinds: ["electric_guitar", "electric_bass"],
     requirement: req("basic", 12),
-    bodyPath: "M95 43 C65 39 39 50 33 72 C27 96 43 118 67 123 C91 128 124 133 141 111 C153 95 155 71 140 58 C128 48 115 48 108 55 C103 49 100 46 95 43 Z",
+    bodyPath: LUTHIERY_BODY_PATHS["single-cut"],
     difficultyPenalty: 2,
   },
   {
@@ -147,7 +148,7 @@ export const LUTHIERY_SHAPES: LuthieryShape[] = [
     name: "V",
     instrumentKinds: ["electric_guitar"],
     requirement: req("basic", 18),
-    bodyPath: "M91 49 L36 65 L74 126 L96 96 L119 126 L151 65 L103 49 Z",
+    bodyPath: LUTHIERY_BODY_PATHS["v-shape"],
     difficultyPenalty: 4,
   },
   {
@@ -155,7 +156,7 @@ export const LUTHIERY_SHAPES: LuthieryShape[] = [
     name: "Angular",
     instrumentKinds: ["electric_guitar", "electric_bass"],
     requirement: req("professional", 5),
-    bodyPath: "M86 43 L35 57 L55 86 L32 117 L82 112 L105 132 L120 99 L153 87 L128 63 L148 43 L106 51 Z",
+    bodyPath: LUTHIERY_BODY_PATHS["angular"],
     difficultyPenalty: 5,
   },
   {
@@ -163,7 +164,7 @@ export const LUTHIERY_SHAPES: LuthieryShape[] = [
     name: "War Axe",
     instrumentKinds: ["electric_guitar", "electric_bass"],
     requirement: req("professional", 12),
-    bodyPath: "M88 43 L30 53 L51 78 L24 96 L63 103 L48 132 L91 113 L111 134 L121 103 L157 93 L132 76 L153 48 L108 57 Z",
+    bodyPath: LUTHIERY_BODY_PATHS["war-axe"],
     difficultyPenalty: 7,
   },
   {
@@ -171,7 +172,7 @@ export const LUTHIERY_SHAPES: LuthieryShape[] = [
     name: "Razor",
     instrumentKinds: ["electric_guitar"],
     requirement: req("mastery", 8),
-    bodyPath: "M91 41 L28 61 L65 77 L31 115 L81 105 L97 136 L111 101 L158 116 L130 79 L158 58 L108 61 Z",
+    bodyPath: LUTHIERY_BODY_PATHS["razor"],
     difficultyPenalty: 8,
   },
   {
@@ -179,9 +180,15 @@ export const LUTHIERY_SHAPES: LuthieryShape[] = [
     name: "Monolith Bass",
     instrumentKinds: ["electric_bass"],
     requirement: req("mastery", 15),
-    bodyPath: "M91 39 L50 44 L31 75 L45 121 L79 132 L104 114 L126 132 L151 111 L148 66 L119 45 Z",
+    bodyPath: LUTHIERY_BODY_PATHS["monolith-bass"],
     difficultyPenalty: 8,
   },
+  { id: "compact-double", name: "Compact Double Cut", instrumentKinds: ["electric_guitar"], requirement: req("basic", 4), bodyPath: LUTHIERY_BODY_PATHS["compact-double"], difficultyPenalty: 1 },
+  { id: "slab-single", name: "Slab Single Cut", instrumentKinds: ["electric_guitar"], requirement: req("basic", 8), bodyPath: LUTHIERY_BODY_PATHS["slab-single"], difficultyPenalty: 1 },
+  { id: "semi-hollow", name: "Semi-Hollow", instrumentKinds: ["electric_guitar"], requirement: req("professional", 8), bodyPath: LUTHIERY_BODY_PATHS["semi-hollow"], difficultyPenalty: 4 },
+  { id: "jazz-bass", name: "Jazz Offset Bass", instrumentKinds: ["electric_bass"], requirement: req("basic", 6), bodyPath: LUTHIERY_BODY_PATHS["jazz-bass"], difficultyPenalty: 1 },
+  { id: "modern-bass", name: "Sculpted Bass", instrumentKinds: ["electric_bass"], requirement: req("professional", 6), bodyPath: LUTHIERY_BODY_PATHS["modern-bass"], difficultyPenalty: 3 },
+  { id: "short-scale-bass", name: "Short-Scale Bass", instrumentKinds: ["electric_bass"], requirement: req("basic", 3), bodyPath: LUTHIERY_BODY_PATHS["short-scale-bass"], difficultyPenalty: 1 },
 ];
 
 export const LUTHIERY_DECALS: Array<{ id: LuthieryDecalId; label: string }> = [
@@ -249,6 +256,20 @@ export const LUTHIERY_MATERIAL_OPTIONS: LuthieryMaterialOption[] = [
   { id: "finish-metalflake", label: "Metallic Flake", slot: "finish", catalogNames: ["Metallic Flake Finish"], requirement: req("professional", 9), traits: { stagePresence: 7 } },
   { id: "finish-artwork", label: "Custom Artwork", slot: "finish", catalogNames: ["Custom Artwork Finish"], requirement: req("mastery", 11), traits: { stagePresence: 10 } },
 ];
+
+// Construction variants consume the same stock and preserve their base option’s skill/stat rules.
+{ const base = LUTHIERY_MATERIAL_OPTIONS.find(option => option.id === "body-alder"); if (base) LUTHIERY_MATERIAL_OPTIONS.push({ ...base, id: "body-chambered-alder", label: "Chambered Alder" }); }
+{ const base = LUTHIERY_MATERIAL_OPTIONS.find(option => option.id === "body-mahogany"); if (base) LUTHIERY_MATERIAL_OPTIONS.push({ ...base, id: "body-carved-mahogany", label: "Carved Mahogany" }); }
+{ const base = LUTHIERY_MATERIAL_OPTIONS.find(option => option.id === "neck-maple"); if (base) LUTHIERY_MATERIAL_OPTIONS.push({ ...base, id: "neck-slim-maple", label: "Slim C Maple" }); }
+{ const base = LUTHIERY_MATERIAL_OPTIONS.find(option => option.id === "neck-mahogany"); if (base) LUTHIERY_MATERIAL_OPTIONS.push({ ...base, id: "neck-chunky-mahogany", label: "Rounded C Mahogany" }); }
+{ const base = LUTHIERY_MATERIAL_OPTIONS.find(option => option.id === "fret-rosewood"); if (base) LUTHIERY_MATERIAL_OPTIONS.push({ ...base, id: "fret-rosewood-block", label: "Rosewood / Block Inlays" }); }
+{ const base = LUTHIERY_MATERIAL_OPTIONS.find(option => option.id === "fret-ebony"); if (base) LUTHIERY_MATERIAL_OPTIONS.push({ ...base, id: "fret-ebony-clean", label: "Ebony / No Inlays" }); }
+{ const base = LUTHIERY_MATERIAL_OPTIONS.find(option => option.id === "elec-single"); if (base) LUTHIERY_MATERIAL_OPTIONS.push({ ...base, id: "elec-p90", label: "P-90 Soapbar" }); }
+{ const base = LUTHIERY_MATERIAL_OPTIONS.find(option => option.id === "elec-single"); if (base) LUTHIERY_MATERIAL_OPTIONS.push({ ...base, id: "elec-jazz", label: "Vintage Twin Single Coils" }); }
+{ const base = LUTHIERY_MATERIAL_OPTIONS.find(option => option.id === "hw-locking"); if (base) LUTHIERY_MATERIAL_OPTIONS.push({ ...base, id: "hw-black", label: "Black Locking Hardware" }); }
+{ const base = LUTHIERY_MATERIAL_OPTIONS.find(option => option.id === "hw-tom"); if (base) LUTHIERY_MATERIAL_OPTIONS.push({ ...base, id: "hw-aged", label: "Aged Nickel Fixed Bridge" }); }
+{ const base = LUTHIERY_MATERIAL_OPTIONS.find(option => option.id === "finish-satin"); if (base) LUTHIERY_MATERIAL_OPTIONS.push({ ...base, id: "finish-worn", label: "Worn Satin" }); }
+{ const base = LUTHIERY_MATERIAL_OPTIONS.find(option => option.id === "finish-gloss"); if (base) LUTHIERY_MATERIAL_OPTIONS.push({ ...base, id: "finish-natural", label: "Natural Clear Gloss" }); }
 
 export const DEFAULT_LUTHIERY_SELECTION: LuthieryBuildSelection = {
   instrumentName: "",
