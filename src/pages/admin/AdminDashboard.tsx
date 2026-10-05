@@ -128,7 +128,8 @@ const AdminDashboard = () => {
     { label: "Offer Automation", path: "/admin/offer-automation", icon: Gauge },
     { label: "Release Config", path: "/admin/release-config", icon: Settings },
     { label: "Experience Rewards", path: "/admin/experience-rewards", icon: Star },
-    { label: "VIP Management", path: "/admin/vip", icon: Star },\n    { label: "Stripe Audit", path: "/admin/stripe-audit", icon: DollarSign },
+    { label: "VIP Management", path: "/admin/vip", icon: Star },
+    { label: "Stripe Audit", path: "/admin/stripe-audit", icon: DollarSign },
   ];
 
   const statCards = [
