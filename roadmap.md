@@ -1,5 +1,9 @@
 # Roadmap
 
+- [ ] Improve luthiery guitar/bass silhouettes and correctly aligned strings, frets, pickups and hardware.
+- [ ] Add compatible workshop component variations while preserving existing crafted instruments and crafting rules.
+- [ ] Verify workshop/stage tests and visuals; update the banner version and version history.
+
 - [x] Review the existing Top of the Pops production and broadcast foundations.
 - [x] Approve the broadcast-quality roadmap and acceptance gates.
 - [x] Phase 0: typed calls, lifecycle checks, health monitoring and immutable broadcast contract.
