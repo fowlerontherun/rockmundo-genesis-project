@@ -219,4 +219,5 @@ verify_jwt = false
 [functions.totp-render-broker]
 verify_jwt = false
 
-\n[functions.admin-stripe-audit]\nverify_jwt = true\n
+[functions.admin-stripe-audit]
+verify_jwt = true
