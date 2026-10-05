@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { clothingPatternTexture, twoToneUVs } from './clothingPatterns';
 import { addFittedSkirt, isDress, isVest, isSkirt } from './skirtGeometry';
 import { refineSkinnedSurface } from './refineSkinnedSurface';
 import { clipGarmentHem } from './garmentHem';
@@ -1642,10 +1643,13 @@ export function assemblePlayerModel(
     : null;
   const dress = presentation === 'stage' && !curatedTop && isDress(appearance.equipment.top.itemId);
   const skirt = presentation === 'stage' && (dress || (!curatedBottom && isSkirt(appearance.equipment.bottom.itemId)));
+  const customTop = !merchWearable && !curatedTop ? appearance.equipment.top : undefined;
+  const customBottom = !skirt && !curatedBottom ? appearance.equipment.bottom : undefined;
   const choices = [
     { part: 'head', style: headModelStyle(appearance), dye: appearance.head.hair, fabric: 'plain' as const },
     {
       part: 'body',
+      custom: customTop,
       style: curatedTop?.source.style ?? equipmentStyle(appearance, 'top'),
       dye: merchWearable?.garment_color ?? curatedTop?.source.color ?? appearance.equipment.top.color,
       secondaryColor: curatedTop?.source.secondaryColor,
@@ -1655,6 +1659,7 @@ export function assemblePlayerModel(
     },
     {
       part: 'legs',
+      custom: customBottom,
       style: skirt ? (appearance.body.frame === 'feminine' ? 'casual' : 'suit') : curatedBottom?.source.style ?? equipmentStyle(appearance, 'bottom'),
       dye: skirt ? appearance.body.skin : curatedBottom?.source.color ?? appearance.equipment.bottom.color,
       secondaryColor: skirt ? undefined : curatedBottom?.source.secondaryColor,
@@ -1664,6 +1669,7 @@ export function assemblePlayerModel(
     },
     {
       part: 'feet',
+      custom: !curatedFootwear ? appearance.equipment.footwear : undefined,
       style: curatedFootwear?.source.style ?? equipmentStyle(appearance, 'footwear'),
       dye: curatedFootwear?.source.color ?? appearance.equipment.footwear.color,
       secondaryColor: curatedFootwear?.source.secondaryColor,
@@ -1756,7 +1762,8 @@ export function assemblePlayerModel(
             appearance.equipment.bottom.itemId,
           ));
         }
-        if (choice.fabric !== 'plain' || choice.finish) fabricUVs(clonedNode.geometry, choice.part === 'feet', original.matrixWorld);
+        if (choice.fabric !== 'plain' || choice.finish || choice.custom?.pattern) fabricUVs(clonedNode.geometry, choice.part === 'feet', original.matrixWorld);
+        if (choice.custom?.pattern === 'two-tone') twoToneUVs(clonedNode.geometry, original.matrixWorld, choice.part === 'feet');
         if (choice.assetKey) applyCuratedMacroShading(clonedNode.geometry, choice.assetKey, choice.finish as CuratedFinish | undefined);
         if (choice.part === 'head' || (choice.part === 'body' && !choice.assetKey)) {
           applyAvatarSkinMacroShading(clonedNode.geometry, choice.part, appearance, quality);
@@ -1841,6 +1848,11 @@ export function assemblePlayerModel(
           if (skinMaterial) {
             return upgradeSkinMaterial(material, appearance, quality);
           }
+          if (choice.custom?.pattern && !/earring|metal/.test(name)) {
+            const pattern = choice.part === 'body' && dress && choice.custom.pattern === 'two-tone' ? 'solid' : choice.custom.pattern;
+            material.map = clothingPatternTexture(pattern, choice.custom.color, choice.custom.secondaryColor ?? '#eee8db');
+            material.color.set('#ffffff');
+          }
           if (!choice.assetKey && choice.fabric !== 'plain' && !/earring|metal/.test(name)) {
             const upgraded = upgradeStarterFabricMaterial(material, choice.fabric, quality);
             if (upgraded !== material) return upgraded;
@@ -1913,7 +1925,16 @@ export function assemblePlayerModel(
   }
 
   if (skirt) {
-    addFittedSkirt(result, bones, dress ? appearance.equipment.top.itemId : appearance.equipment.bottom.itemId, dress ? appearance.equipment.top.color : appearance.equipment.bottom.color);
+    const selection = dress ? appearance.equipment.top : appearance.equipment.bottom;
+    const fitted = addFittedSkirt(result, bones, selection.itemId, selection.color);
+    if (fitted && selection.pattern) {
+      const accent = selection.secondaryColor ?? '#eee8db';
+      if (selection.pattern !== 'two-tone') fabricUVs(fitted.geometry, false);
+      fitted.material.map = dress && selection.pattern === 'two-tone'
+        ? clothingPatternTexture('solid', accent, accent)
+        : clothingPatternTexture(selection.pattern, selection.color, accent);
+      fitted.material.color.set('#ffffff');
+    }
   }
 
   const shortSleeveTop =
