@@ -11,7 +11,7 @@ import { useGameData } from "@/hooks/useGameData";
 import { useTwaaterAccount } from "@/hooks/useTwaaterAccount";
 import { useToast } from "@/hooks/use-toast";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
-import { hydrateQuotedTwaats } from "@/hooks/useTwaats";
+import { hydrateTwaaterFeedExtras } from "@/hooks/useTwaats";
 
 const TwaaterProfileView = () => {
   const { handle } = useParams();
@@ -53,7 +53,7 @@ const TwaaterProfileView = () => {
         .order("created_at", { ascending: false })
         .limit(50);
       if (error) throw error;
-      return hydrateQuotedTwaats(data || []);
+      return hydrateTwaaterFeedExtras(data || []);
     },
     enabled: !!profileAccount,
   });
