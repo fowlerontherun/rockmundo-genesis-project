@@ -30,9 +30,7 @@ const TwaaterAdmin = () => {
 
   // Engagement mechanics
   const [xpPerTwaat, setXpPerTwaat] = useState(5);
-  const [xpPerLike, setXpPerLike] = useState(1);
-  const [dailyTwaatLimit, setDailyTwaatLimit] = useState(10);
-  const [followerFameMultiplier, setFollowerFameMultiplier] = useState(0.01);
+  const [dailyTwaatLimit, setDailyTwaatLimit] = useState(3);
   const [verifiedBonusMultiplier, setVerifiedBonusMultiplier] = useState(2);
 
   // Platform features
@@ -43,8 +41,6 @@ const TwaaterAdmin = () => {
 
   // Limits
   const [maxTwaatLength, setMaxTwaatLength] = useState(280);
-  const [maxFollowersGainedDaily, setMaxFollowersGainedDaily] = useState(100);
-  const [followerGainBaseChance, setFollowerGainBaseChance] = useState(5);
 
   const { data: config, isLoading } = useQuery({
     queryKey: ["twaater-balance-config"],
@@ -134,18 +130,14 @@ const TwaaterAdmin = () => {
       setRetwaatsWeight(getVal("twaater_retwaats_weight", 30));
       setTrendingDecayHours(getVal("twaater_trending_decay_hours", 24));
       setViralThreshold(getVal("twaater_viral_threshold", 100));
-      setXpPerTwaat(getVal("twaater_xp_per_twaat", 5));
-      setXpPerLike(getVal("twaater_xp_per_like", 1));
-      setDailyTwaatLimit(getVal("twaater_daily_limit", 10));
-      setFollowerFameMultiplier(getVal("twaater_follower_fame_mult", 0.01));
+      setXpPerTwaat(getVal("twaater_xp_per_rewarded_post", 5));
+      setDailyTwaatLimit(getVal("twaater_daily_reward_limit", 3));
       setVerifiedBonusMultiplier(getVal("twaater_verified_bonus", 2));
       setHashtagsEnabled(getBool("twaater_hashtags_enabled", true));
       setPollsEnabled(getBool("twaater_polls_enabled", true));
       setVerifiedBadgesEnabled(getBool("twaater_verified_enabled", true));
       setMediaUploadsEnabled(getBool("twaater_media_enabled", true));
       setMaxTwaatLength(getVal("twaater_max_length", 280));
-      setMaxFollowersGainedDaily(getVal("twaater_max_followers_daily", 100));
-      setFollowerGainBaseChance(getVal("twaater_follower_gain_chance", 5));
     }
   }, [config]);
 
@@ -214,18 +206,14 @@ const TwaaterAdmin = () => {
       { key: "twaater_retwaats_weight", value: retwaatsWeight, category: "twaater_trending", description: "Weight of retwaats in trending" },
       { key: "twaater_trending_decay_hours", value: trendingDecayHours, category: "twaater_trending", description: "Hours before trending decays" },
       { key: "twaater_viral_threshold", value: viralThreshold, category: "twaater_trending", description: "Engagement needed for viral status" },
-      { key: "twaater_xp_per_twaat", value: xpPerTwaat, category: "twaater_engagement", description: "XP earned per twaat" },
-      { key: "twaater_xp_per_like", value: xpPerLike, category: "twaater_engagement", description: "XP earned per like received" },
-      { key: "twaater_daily_limit", value: dailyTwaatLimit, category: "twaater_engagement", description: "Max twaats per day for XP" },
-      { key: "twaater_follower_fame_mult", value: followerFameMultiplier, category: "twaater_engagement", description: "Fame per follower multiplier" },
+      { key: "twaater_xp_per_rewarded_post", value: xpPerTwaat, category: "twaater_engagement", description: "XP awarded for each rewarded Twaat" },
+      { key: "twaater_daily_reward_limit", value: dailyTwaatLimit, category: "twaater_engagement", description: "Number of Twaats per day that earn posting XP" },
       { key: "twaater_verified_bonus", value: verifiedBonusMultiplier, category: "twaater_engagement", description: "Verified account bonus multiplier" },
       { key: "twaater_hashtags_enabled", value: hashtagsEnabled ? 1 : 0, category: "twaater_features", description: "Hashtags feature toggle" },
       { key: "twaater_polls_enabled", value: pollsEnabled ? 1 : 0, category: "twaater_features", description: "Polls feature toggle" },
       { key: "twaater_verified_enabled", value: verifiedBadgesEnabled ? 1 : 0, category: "twaater_features", description: "Verified badges toggle" },
       { key: "twaater_media_enabled", value: mediaUploadsEnabled ? 1 : 0, category: "twaater_features", description: "Media uploads toggle" },
       { key: "twaater_max_length", value: maxTwaatLength, category: "twaater_limits", description: "Max twaat character length" },
-      { key: "twaater_max_followers_daily", value: maxFollowersGainedDaily, category: "twaater_limits", description: "Max followers gained per day" },
-      { key: "twaater_follower_gain_chance", value: followerGainBaseChance, category: "twaater_limits", description: "Base % chance to gain follower" },
     ]);
   };
 
@@ -536,23 +524,14 @@ const TwaaterAdmin = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Engagement Mechanics</CardTitle>
-                <CardDescription>XP gains, fame conversion, and follower mechanics</CardDescription>
+                <CardDescription>Posting rewards and verified-account weighting</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label>XP per Twaat</Label>
+                    <Label>XP per Rewarded Twaat</Label>
                     <Input type="number" value={xpPerTwaat} onChange={(e) => setXpPerTwaat(Number(e.target.value))} min={0} max={50} />
                     <p className="text-xs text-muted-foreground">XP earned for posting (first {dailyTwaatLimit} per day)</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>XP per Like Received</Label>
-                    <Input type="number" value={xpPerLike} onChange={(e) => setXpPerLike(Number(e.target.value))} min={0} max={10} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Follower → Fame Multiplier: {followerFameMultiplier}</Label>
-                    <Slider value={[followerFameMultiplier * 100]} onValueChange={([v]) => setFollowerFameMultiplier(v / 100)} min={0} max={10} step={0.1} />
-                    <p className="text-xs text-muted-foreground">Fame gained per follower</p>
                   </div>
                   <div className="space-y-2">
                     <Label>Verified Bonus: {verifiedBonusMultiplier}x</Label>
@@ -619,20 +598,12 @@ const TwaaterAdmin = () => {
                     <p className="text-xs text-muted-foreground">Character limit per post</p>
                   </div>
                   <div className="space-y-2">
-                    <Label>Daily XP Twaat Limit</Label>
+                    <Label>Rewarded Twaats per Day</Label>
                     <Input type="number" value={dailyTwaatLimit} onChange={(e) => setDailyTwaatLimit(Number(e.target.value))} min={1} max={50} />
                     <p className="text-xs text-muted-foreground">Posts per day that give XP</p>
                   </div>
                   <div className="space-y-2">
                     <Label>Max Followers/Day</Label>
-                    <Input type="number" value={maxFollowersGainedDaily} onChange={(e) => setMaxFollowersGainedDaily(Number(e.target.value))} min={10} max={1000} />
-                    <p className="text-xs text-muted-foreground">Cap on daily follower gains</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Base Follower Gain Chance: {followerGainBaseChance}%</Label>
-                    <Slider value={[followerGainBaseChance]} onValueChange={([v]) => setFollowerGainBaseChance(v)} min={1} max={20} step={1} />
-                    <p className="text-xs text-muted-foreground">Chance to gain follower per engagement</p>
-                  </div>
                 </div>
               </CardContent>
             </Card>
