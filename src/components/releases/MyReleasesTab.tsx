@@ -18,7 +18,7 @@ import {
 import { 
   Music, Calendar, DollarSign, Image, Disc, Radio, 
   TrendingUp, Package, Clock, CheckCircle2, AlertCircle,
-  Play, Users, BarChart3, XCircle, Plus, Search, Filter, PartyPopper, Megaphone, RefreshCw
+  Play, Users, BarChart3, XCircle, Plus, Search, Filter, PartyPopper, Megaphone, RefreshCw, Share2
 } from "lucide-react";
 import { ReleasePredictions } from "./ReleasePredictions";
 import { HypeMeter } from "./HypeMeter";
@@ -172,6 +172,21 @@ export function MyReleasesTab({ userId, authUserId }: MyReleasesTabProps) {
   // Fetch aggregated financial data from release_sales
   const releaseIds = releases?.map(r => r.id) || [];
   const formatIds = releases?.flatMap(r => r.release_formats?.map((f: any) => f.id) || []) || [];
+
+  const { data: chartEntries = [] } = useQuery({
+    queryKey: ["release-share-chart-positions", releaseIds.join(",")],
+    enabled: releaseIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).from("chart_entries").select("release_id, rank").in("release_id", releaseIds);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+  const bestChartByRelease = new Map<string, number>();
+  chartEntries.forEach((entry: any) => {
+    if (!entry.release_id || !entry.rank) return;
+    bestChartByRelease.set(entry.release_id, Math.min(bestChartByRelease.get(entry.release_id) ?? Infinity, Number(entry.rank)));
+  });
 
   // Fetch label contracts referenced by these releases (for label-cut math)
   const contractIds = Array.from(
@@ -477,6 +492,8 @@ export function MyReleasesTab({ userId, authUserId }: MyReleasesTabProps) {
             onParty={() => setPartyRelease(release)}
             onReleaseNow={() => releaseNow.mutate(release)}
             isReleasing={releaseNow.isPending && releaseNow.variables?.id === release.id}
+            bestChartPosition={bestChartByRelease.get(release.id)}
+            profileId={userId}
           />
         ))}
       </div>
@@ -549,9 +566,11 @@ interface ReleaseCardProps {
   onParty?: () => void;
   onReleaseNow?: () => void;
   isReleasing?: boolean;
+  bestChartPosition?: number;
+  profileId?: string;
 }
 
-function ReleaseCard({ release, financials, financeAvailable = false, labelCutPct = 0, onEdit, onCancel, onViewDetails, onPromo, onAddPhysical, onAnalytics, onReorder, onParty, onReleaseNow, isReleasing }: ReleaseCardProps) {
+function ReleaseCard({ release, financials, financeAvailable = false, labelCutPct = 0, onEdit, onCancel, onViewDetails, onPromo, onAddPhysical, onAnalytics, onReorder, onParty, onReleaseNow, isReleasing, bestChartPosition, profileId }: ReleaseCardProps) {
   const statusConfig = STATUS_CONFIG[release.release_status] || STATUS_CONFIG.draft;
   const typeConfig = RELEASE_TYPE_CONFIG[release.release_type] || RELEASE_TYPE_CONFIG.single;
   const StatusIcon = statusConfig.icon;
@@ -569,6 +588,23 @@ function ReleaseCard({ release, financials, financeAvailable = false, labelCutPc
   ) || [];
   
   const totalUnitsOrdered = physicalFormats.reduce((sum: number, f: any) => sum + (f.quantity || 0), 0);
+  const shareRelease = release.release_status === "released" && (bestChartPosition != null && bestChartPosition <= 10);
+  const handleShareRelease = async () => {
+    if (!profileId || !shareRelease) return;
+    const key = "rockmundo_release_referral_share_at";
+    const last = Number(localStorage.getItem(key) || 0);
+    if (Date.now() - last < 7 * 24 * 60 * 60 * 1000) return;
+    const { data, error } = await (supabase as any).rpc("get_referral_dashboard", { p_profile_id: profileId });
+    if (error || !data?.code) return;
+    const url = `${window.location.origin}/auth?ref=${encodeURIComponent(data.code)}`;
+    const text = `${release.title} just reached #${bestChartPosition} in RockMundo. Start your own music career and join me.`;
+    if (navigator.share) {
+      try { await navigator.share({ title: `${release.title} — RockMundo`, text, url }); localStorage.setItem(key, String(Date.now())); return; }
+      catch (error) { if ((error as DOMException)?.name === "AbortError") return; }
+    }
+    await navigator.clipboard.writeText(`${text} ${url}`);
+    localStorage.setItem(key, String(Date.now()));
+  };
   
   return (
     <Card className="overflow-hidden">
@@ -637,6 +673,11 @@ function ReleaseCard({ release, financials, financeAvailable = false, labelCutPc
           )}
           {(release.hype_score > 0 || release.release_status === "manufacturing" || release.release_status === "released") && (
             <HypeMeter hypeScore={release.hype_score || 0} />
+          )}
+          {shareRelease && (
+            <Button variant="outline" size="sm" className="h-7 text-xs" onClick={(e) => { e.stopPropagation(); void handleShareRelease(); }}>
+              <Share2 className="mr-1.5 h-3.5 w-3.5" />Share #{bestChartPosition} chart milestone
+            </Button>
           )}
           {release.release_status === "manufacturing" && (
             <ManufacturingProgress createdAt={release.created_at} manufacturingCompleteAt={release.manufacturing_complete_at} status={release.release_status} />
