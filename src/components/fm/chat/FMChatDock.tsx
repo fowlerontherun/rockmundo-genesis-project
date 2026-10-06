@@ -33,7 +33,7 @@ type RoomId = "world" | "help" | "recruit" | "band" | "friends";
 
 export function FMChatDock() {
   const { pathname } = useLocation();
-  const { profileId: myProfileId } = useActiveProfile();
+  const { profileId: myProfileId, userId: authUserId } = useActiveProfile();
   const { language } = useTranslation();
   const { open, setOpen, threads, openThread, closeThread, reset } = useChatDock();
   const { friendships, loading } = useFriendships(myProfileId);
@@ -203,7 +203,7 @@ export function FMChatDock() {
     if (!myProfileId) return;
     const channels = ["help", "recruit", ...(bandId ? [`band:${bandId}`] : [])];
     const handle = (row: { profile_id?: string | null; user_id?: string; channel?: string }) => {
-      if (row.profile_id === myProfileId) return;
+      if (row.profile_id === myProfileId || (!row.profile_id && row.user_id === authUserId)) return;
       const room = row.channel === "help" ? "help" : row.channel === "recruit" ? "recruit" : row.channel === `band:${bandId}` ? "band" : null;
       if (!room || (openRef.current && activeRoomRef.current === room)) return;
       setUnreadRooms((current) => ({ ...current, [room]: current[room] + 1 }));
@@ -214,7 +214,7 @@ export function FMChatDock() {
         (payload) => handle(payload.new as { profile_id?: string | null; user_id?: string; channel?: string }))
       .subscribe());
     return () => { subscriptions.forEach((subscription) => { void supabase.removeChannel(subscription); }); };
-  }, [bandId, myProfileId]);
+  }, [authUserId, bandId, myProfileId]);
 
   const rooms = useMemo(
     () => [
