@@ -86,7 +86,7 @@ function SocialOverview({ profileId }: { profileId: string | null | undefined })
 
 export default function SocialHub() {
   const { pathname, search } = useLocation();
-  const { profileId } = useActiveProfile();
+  const { profileId, profile } = useActiveProfile();
   useInviteRealtime(profileId);
 
   const legacyParams = new URLSearchParams(search);
@@ -116,7 +116,7 @@ export default function SocialHub() {
   }
 
   const child = pathname.replace(/\/$/, "").split("/")[2] ?? "overview";
-  const content = isRewardsTab ? <CommunityRewards profileId={profileId} />
+  const content = isRewardsTab ? <CommunityRewards profileId={profileId} profileName={profile?.display_name ?? profile?.username ?? profile?.name ?? "selected character"} />
     : child === "friends" ? <Suspense fallback={<Fallback />}><Relationships /></Suspense>
     : child === "messages" ? <MessagesTab myProfileId={profileId} />
     : child === "players" ? <Suspense fallback={<Fallback />}><PlayerSearch /></Suspense>
