@@ -278,7 +278,7 @@ export const FM_MODULES: FMModule[] = [
       "/education", "/offers-dashboard", "/finance", "/jobs", "/university",
       "/progression", "/achievements",
       "/public-relations", "/pr",
-      "/producer-career", "/modeling", "/acting", "/clothing-designer",
+      "/producer-career", "/modeling", "/luthier", "/acting", "/clothing-designer",
     ],
     subTabs: [
       { label: "Overview", path: "/career", icon: Trophy },
@@ -313,6 +313,7 @@ export const FM_MODULES: FMModule[] = [
           { label: "Public Relations", path: "/pr", icon: Megaphone },
           { label: "Producer Career", path: "/producer-career", icon: Headphones },
           { label: "Modeling", path: "/modeling", icon: Sparkles },
+          { label: "Luthier", path: "/luthier", icon: Hammer },
           { label: "Acting", path: "/acting", icon: Film },
           { label: "Clothing Designer", path: "/clothing-designer", icon: Scissors },
         ],

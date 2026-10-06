@@ -8,6 +8,20 @@ describe("Luthier career discovery", () => {
     expect(source.indexOf('path: "/luthier"')).toBeLessThan(source.indexOf('path: "/clothing-designer"'));
   });
 
+  it("shows Luthier directly beneath Modeling in the Career sidebar and matches the route to Career", () => {
+    const source = fs.readFileSync("src/config/fmNavigation.ts", "utf8");
+    const careerStart = source.indexOf('id: "career"');
+    const businessStart = source.indexOf('id: "business"');
+    const careerSource = source.slice(careerStart, businessStart);
+    expect(careerSource).toContain('"/luthier"');
+    expect(careerSource.indexOf('{ label: "Luthier", path: "/luthier", icon: Hammer }')).toBeGreaterThan(
+      careerSource.indexOf('{ label: "Modeling", path: "/modeling", icon: Sparkles }'),
+    );
+    expect(careerSource.indexOf('{ label: "Luthier", path: "/luthier", icon: Hammer }')).toBeLessThan(
+      careerSource.indexOf('{ label: "Acting", path: "/acting", icon: Film }'),
+    );
+  });
+
   it("shows locked state and all four learning routes", () => {
     const source = fs.readFileSync("src/pages/LuthierCareer.tsx", "utf8");
     expect(source).toContain("Luthier career locked");
