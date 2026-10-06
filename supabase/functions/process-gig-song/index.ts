@@ -139,29 +139,112 @@ function getSkillLevelFromProgress(
   return Math.min(100, Math.round((tieredPercent / 28) * 100));
 }
 
+const normalizeEquipmentKey = (value: string | null | undefined) =>
+  (value ?? '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+
+const MICROPHONE_SUBCATEGORIES = new Set([
+  'microphone', 'dynamic_mic', 'condenser_mic', 'condenser',
+  'ribbon_mic', 'tube_mic', 'wireless_mic',
+]);
+const GUITAR_EFFECT_SUBCATEGORIES = new Set([
+  'overdrive', 'distortion', 'fuzz', 'delay', 'reverb', 'chorus',
+  'flanger', 'phaser', 'tremolo', 'vibe', 'compressor', 'noise_gate',
+  'tuner', 'wah', 'volume', 'pitch', 'octave', 'modulation', 'multi',
+]);
+
+function canonicalEquipmentType(category: string | null | undefined, subcategory: string | null | undefined): string | null {
+  const cat = normalizeEquipmentKey(category);
+  const sub = normalizeEquipmentKey(subcategory);
+  if (!cat && !sub) return null;
+
+  if (cat === 'instrument') {
+    if (['guitar', 'electric', 'electric_guitar', 'lead_guitar'].includes(sub)) return 'electric_guitar';
+    if (['acoustic', 'acoustic_guitar', '12_string_guitar', 'dobro', 'resonator'].includes(sub)) return 'acoustic_guitar';
+    if (['classical', 'classical_guitar', 'nylon_string_guitar'].includes(sub)) return 'classical_guitar';
+    if (['bass', 'bass_guitar', 'upright_bass'].includes(sub)) return sub === 'upright_bass' ? 'upright_bass' : 'bass_guitar';
+    if (['drums', 'drum_kit', 'kit'].includes(sub)) return 'drums';
+    if (sub === 'electronic_drums') return 'electronic_drums';
+    if (sub === 'cymbals') return 'cymbals';
+    if (['keyboard', 'piano', 'classical_piano', 'jazz_piano', 'rhodes', 'wurlitzer'].includes(sub)) return 'keyboard';
+    if (['synth', 'synthesizer', 'analog_synth', 'digital_synth', 'eurorack'].includes(sub)) return 'synthesizer';
+    if (sub === 'midi_controller') return 'midi_controller';
+    return sub || null;
+  }
+
+  if (cat === 'guitar') {
+    if (['acoustic', 'acoustic_guitar', '12_string_guitar'].includes(sub)) return 'acoustic_guitar';
+    if (['classical', 'classical_guitar', 'nylon_string_guitar'].includes(sub)) return 'classical_guitar';
+    if (['bass', 'bass_guitar', 'upright_bass'].includes(sub)) return sub === 'upright_bass' ? 'upright_bass' : 'bass_guitar';
+    return 'electric_guitar';
+  }
+  if (cat === 'bass') return sub === 'upright_bass' ? 'upright_bass' : 'bass_guitar';
+  if (cat === 'drums') return sub === 'electronic_drums' ? 'electronic_drums' : sub === 'cymbals' ? 'cymbals' : 'drums';
+  if (cat === 'microphone' || cat === 'vocal') return 'microphone';
+  if (cat === 'keyboard' || cat === 'piano') return 'keyboard';
+  if (cat === 'synth' || cat === 'synthesizer') return 'synthesizer';
+
+  if (cat === 'recording') {
+    if (MICROPHONE_SUBCATEGORIES.has(sub)) return 'microphone';
+    if (['audio_interface', 'interface'].includes(sub)) return 'audio_interface';
+    return sub || 'recording';
+  }
+  if (cat === 'amplifier') {
+    if (sub === 'bass_amp') return 'bass_amp';
+    if (['guitar_amp', 'tube_combo', 'tube_head', 'modeler'].includes(sub)) return 'guitar_amp';
+    return sub || 'amplifier';
+  }
+  if (cat === 'effects') return GUITAR_EFFECT_SUBCATEGORIES.has(sub) ? 'guitar_effect' : sub || 'effects';
+  if (cat === 'stage') {
+    if (sub === 'wireless_mic') return 'microphone';
+    if (sub === 'wireless_guitar') return 'wireless_guitar';
+    return sub || 'stage';
+  }
+  return sub || cat || null;
+}
+
+const ROLE_GEAR_TYPES: Record<string, string[]> = {
+  'Lead Guitar': ['electric_guitar', 'guitar_amp', 'guitar_effect', 'wireless_guitar'],
+  'Rhythm Guitar': ['electric_guitar', 'acoustic_guitar', 'classical_guitar', 'guitar_amp', 'guitar_effect', 'wireless_guitar'],
+  'Acoustic Guitar': ['acoustic_guitar'],
+  'Classical Guitar': ['classical_guitar'],
+  'Electric Guitar': ['electric_guitar', 'guitar_amp', 'guitar_effect', 'wireless_guitar'],
+  'Bass': ['bass_guitar', 'upright_bass', 'bass_amp', 'wireless_guitar'],
+  'Drums': ['drums', 'electronic_drums', 'cymbals'],
+  'Vocals': ['microphone'],
+  'Lead Vocals': ['microphone'],
+  'Keys': ['keyboard', 'midi_controller'],
+  'Keyboard': ['keyboard', 'synthesizer', 'midi_controller'],
+  'Synth': ['synthesizer', 'keyboard', 'midi_controller'],
+  'DJ': ['dj', 'controller', 'turntablism', 'mpc'],
+  'Saxophone': ['wind', 'saxophone', 'alto_sax', 'tenor_sax', 'soprano_sax', 'bari_sax'],
+  'Trumpet': ['brass', 'trumpet'],
+  'Trombone': ['brass', 'trombone'],
+  'Violin': ['strings', 'violin'],
+  'Cello': ['strings', 'cello'],
+  'Percussion': ['percussion', 'latin_percussion', 'african_drums', 'cajon', 'tabla'],
+};
+
+function resolveRoleKey(role: string): string | null {
+  if (ROLE_GEAR_TYPES[role]) return role;
+  const normalized = role.trim().toLowerCase();
+  const aliases: Array<[RegExp, string]> = [
+    [/\blead guitar\b/, 'Lead Guitar'], [/\brhythm guitar\b/, 'Rhythm Guitar'],
+    [/\bacoustic guitar\b/, 'Acoustic Guitar'], [/\bclassical guitar\b/, 'Classical Guitar'],
+    [/\belectric guitar\b/, 'Electric Guitar'], [/\bbass( guitar|ist)?\b/, 'Bass'],
+    [/\b(drums?|drummer)\b/, 'Drums'], [/\b(lead vocals?|lead singer|frontperson)\b/, 'Lead Vocals'],
+    [/\b(vocals?|vocalist|singer)\b/, 'Vocals'], [/\b(synth|synthesizer)\b/, 'Synth'],
+    [/\b(keyboard|keyboardist)\b/, 'Keyboard'], [/\b(keys|piano|pianist)\b/, 'Keys'],
+    [/\b(dj|turntablist)\b/, 'DJ'], [/\b(sax|saxophone)\b/, 'Saxophone'],
+    [/\btrumpet\b/, 'Trumpet'], [/\btrombone\b/, 'Trombone'], [/\bviolin\b/, 'Violin'],
+    [/\bcello\b/, 'Cello'], [/\bpercussion\b/, 'Percussion'],
+  ];
+  return aliases.find(([pattern]) => pattern.test(normalized))?.[1] ?? null;
+}
+
 function doesCategoryMatchRole(category: string, subcategory: string | null, role: string): boolean {
-  const roleCategories: Record<string, string[]> = {
-    "Lead Guitar": ["guitar", "electric_guitar"],
-    "Rhythm Guitar": ["guitar", "acoustic_guitar", "electric_guitar"],
-    "Bass": ["bass"],
-    "Drums": ["drums"],
-    "Vocals": ["microphone"],
-    "Lead Vocals": ["microphone"],
-    "Keys": ["keyboard", "piano"],
-    "Keyboard": ["keyboard", "piano", "synth"],
-    "Synth": ["synth", "keyboard"],
-    "DJ": ["dj", "controller"],
-    "Saxophone": ["wind", "saxophone"],
-    "Trumpet": ["brass", "trumpet"],
-    "Trombone": ["brass", "trombone"],
-    "Violin": ["strings", "violin"],
-    "Cello": ["strings", "cello"],
-    "Percussion": ["percussion", "drums"]
-  };
-  const validCategories = roleCategories[role] || [];
-  const catLower = category.toLowerCase();
-  const subLower = (subcategory || "").toLowerCase();
-  return validCategories.some(vc => catLower.includes(vc) || subLower.includes(vc) || vc.includes(catLower));
+  const roleKey = resolveRoleKey(role);
+  const equipmentType = canonicalEquipmentType(category, subcategory);
+  return !!roleKey && !!equipmentType && (ROLE_GEAR_TYPES[roleKey]?.includes(equipmentType) ?? false);
 }
 
 // ── Stage Behavior Modifiers (mirrored from client stageBehaviors.ts) ──
@@ -424,38 +507,62 @@ async function fetchLiveMemberSkillAverage(
       console.log(`[process-gig-song] After attribute blend: skillLevel=${skillLevel}, attrs musical=${rawMusical} technical=${rawTechnical} rhythm=${rawRhythm}`);
     }
 
-    // Fetch equipped gear bonus
+    // Fetch both equipment generations. Current store purchases live in
+    // player_equipment_inventory/equipment_catalog; crafted and legacy items
+    // live in player_equipment/equipment_items.
     let gearMultiplier = 1.0;
-    const { data: equipment } = await supabaseClient
-      .from('player_equipment')
-      .select('equipment_id, is_equipped, equipped')
-      .eq('profile_id', profileId)
-      .or('is_equipped.eq.true,equipped.eq.true');
+    const [legacyOwnedResult, catalogOwnedResult] = await Promise.all([
+      supabaseClient
+        .from('player_equipment')
+        .select('equipment_id, is_equipped, equipped')
+        .eq('profile_id', profileId)
+        .or('is_equipped.eq.true,equipped.eq.true'),
+      supabaseClient
+        .from('player_equipment_inventory')
+        .select('equipment_id, is_equipped')
+        .eq('profile_id', profileId)
+        .eq('is_equipped', true),
+    ]);
 
-    if (equipment && equipment.length > 0) {
-      const equipIds = equipment.map((e: any) => e.equipment_id);
-      const { data: items } = await supabaseClient
-        .from('equipment_items')
-        .select('id, name, category, subcategory, rarity, stat_boosts')
-        .in('id', equipIds);
+    const legacyIds = (legacyOwnedResult.data || []).map((row: any) => row.equipment_id);
+    const catalogIds = (catalogOwnedResult.data || []).map((row: any) => row.equipment_id);
 
-      if (items && items.length > 0) {
-        let totalBonus = 0;
-        for (const item of items) {
-          if (doesCategoryMatchRole(item.category, item.subcategory, role)) {
-            totalBonus += RARITY_BONUSES[item.rarity || 'common'] || 0.05;
-            if (item.stat_boosts && typeof item.stat_boosts === 'object') {
-              const boosts = item.stat_boosts as Record<string, unknown>;
-              const perfBoost = Number(boosts.performance || 0);
-              if (Number.isFinite(perfBoost)) totalBonus += perfBoost / 100;
-              if (item.subcategory === 'custom_luthiery') {
-                totalBonus += getLuthieryPerformanceBonusFraction(boosts);
-              }
+    const [legacyItemsResult, catalogItemsResult] = await Promise.all([
+      legacyIds.length
+        ? supabaseClient
+            .from('equipment_items')
+            .select('id, name, category, subcategory, rarity, stat_boosts')
+            .in('id', legacyIds)
+        : Promise.resolve({ data: [], error: null }),
+      catalogIds.length
+        ? supabaseClient
+            .from('equipment_catalog')
+            .select('id, name, category, subcategory, rarity, stat_boosts')
+            .in('id', catalogIds)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+    const items = [
+      ...(legacyItemsResult.data || []),
+      ...(catalogItemsResult.data || []),
+    ];
+
+    if (items.length > 0) {
+      let totalBonus = 0;
+      for (const item of items) {
+        if (doesCategoryMatchRole(item.category, item.subcategory, role)) {
+          totalBonus += RARITY_BONUSES[item.rarity || 'common'] || 0.05;
+          if (item.stat_boosts && typeof item.stat_boosts === 'object') {
+            const boosts = item.stat_boosts as Record<string, unknown>;
+            const perfBoost = Number(boosts.performance || 0);
+            if (Number.isFinite(perfBoost)) totalBonus += perfBoost / 100;
+            if (normalizeEquipmentKey(item.subcategory) === 'custom_luthiery') {
+              totalBonus += getLuthieryPerformanceBonusFraction(boosts);
             }
           }
         }
-        gearMultiplier = 1 + Math.min(totalBonus, 0.5);
       }
+      gearMultiplier = 1 + Math.min(totalBonus, 0.5);
     }
 
     const effectiveLevel = Math.min(150, Math.round(skillLevel * gearMultiplier));
