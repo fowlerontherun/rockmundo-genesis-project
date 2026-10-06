@@ -63,30 +63,63 @@ INSERT INTO public.education_youtube_resources (title, description, video_url, c
 -- ============================================================
 INSERT INTO public.university_courses (university_id, skill_slug, name, description, base_price, base_duration_days, required_skill_level, xp_per_day_min, xp_per_day_max, class_start_hour, class_end_hour) VALUES
 -- Cambridge University (London)
-('e732c5e2-4eea-40a3-91c2-10ecb0f563ed','basic_public_speaking','Rhetoric & Oratory I','Foundations of persuasive public speaking in the Cambridge tradition.',1200,5,0,4,8,10,13),
-('e732c5e2-4eea-40a3-91c2-10ecb0f563ed','basic_governance','Constitutional Government','Comparative constitutions, parliamentary procedure, and the rule of law.',1500,7,10,5,9,10,14),
-('e732c5e2-4eea-40a3-91c2-10ecb0f563ed','basic_negotiation','Principled Negotiation','The Harvard-Cambridge method for high-stakes bargaining.',1400,6,0,4,8,10,13),
-('e732c5e2-4eea-40a3-91c2-10ecb0f563ed','professional_diplomacy','International Diplomacy','Treaty-craft, multilateralism, and the modern diplomatic service.',2200,9,30,6,10,10,14),
-('e732c5e2-4eea-40a3-91c2-10ecb0f563ed','professional_campaign_strategy','Election Campaign Management','Strategy, messaging, and field operations for modern campaigns.',1800,7,20,5,9,10,14),
-('e732c5e2-4eea-40a3-91c2-10ecb0f563ed','master_oratory','Advanced Oratory','Master class on movement-defining speech.',2500,10,40,7,12,10,14),
-('e732c5e2-4eea-40a3-91c2-10ecb0f563ed','master_statecraft','Grand Strategy & Statecraft','Long-horizon thinking for those who would lead nations.',2800,10,50,8,13,10,14),
+((SELECT id FROM public.universities WHERE lower(name)=lower('Cambridge University') LIMIT 1),'basic_public_speaking','Rhetoric & Oratory I','Foundations of persuasive public speaking in the Cambridge tradition.',1200,5,0,4,8,10,13),
+((SELECT id FROM public.universities WHERE lower(name)=lower('Cambridge University') LIMIT 1),'basic_governance','Constitutional Government','Comparative constitutions, parliamentary procedure, and the rule of law.',1500,7,10,5,9,10,14),
+((SELECT id FROM public.universities WHERE lower(name)=lower('Cambridge University') LIMIT 1),'basic_negotiation','Principled Negotiation','The Harvard-Cambridge method for high-stakes bargaining.',1400,6,0,4,8,10,13),
+((SELECT id FROM public.universities WHERE lower(name)=lower('Cambridge University') LIMIT 1),'professional_diplomacy','International Diplomacy','Treaty-craft, multilateralism, and the modern diplomatic service.',2200,9,30,6,10,10,14),
+((SELECT id FROM public.universities WHERE lower(name)=lower('Cambridge University') LIMIT 1),'professional_campaign_strategy','Election Campaign Management','Strategy, messaging, and field operations for modern campaigns.',1800,7,20,5,9,10,14),
+((SELECT id FROM public.universities WHERE lower(name)=lower('Cambridge University') LIMIT 1),'master_oratory','Advanced Oratory','Master class on movement-defining speech.',2500,10,40,7,12,10,14),
+((SELECT id FROM public.universities WHERE lower(name)=lower('Cambridge University') LIMIT 1),'master_statecraft','Grand Strategy & Statecraft','Long-horizon thinking for those who would lead nations.',2800,10,50,8,13,10,14),
 
 -- Manchester University
-('7a2a6433-3604-4aeb-bbec-1295d8c3a128','basic_public_speaking','Speaking on the Stump','Practical campaign speaking for first-time candidates.',700,4,0,3,6,11,14),
-('7a2a6433-3604-4aeb-bbec-1295d8c3a128','basic_governance','Local Government in Practice','How councils, committees, and budgets actually work.',850,5,0,3,7,11,14),
-('7a2a6433-3604-4aeb-bbec-1295d8c3a128','basic_negotiation','Negotiation for Council','Settling disputes and brokering deals at the local level.',800,4,0,3,6,11,14),
-('7a2a6433-3604-4aeb-bbec-1295d8c3a128','professional_campaign_strategy','Grassroots Campaigning','Door-to-door, ground game, and volunteer leadership.',1100,6,15,4,8,11,14),
+((SELECT id FROM public.universities WHERE lower(name)=lower('Manchester University') LIMIT 1),'basic_public_speaking','Speaking on the Stump','Practical campaign speaking for first-time candidates.',700,4,0,3,6,11,14),
+((SELECT id FROM public.universities WHERE lower(name)=lower('Manchester University') LIMIT 1),'basic_governance','Local Government in Practice','How councils, committees, and budgets actually work.',850,5,0,3,7,11,14),
+((SELECT id FROM public.universities WHERE lower(name)=lower('Manchester University') LIMIT 1),'basic_negotiation','Negotiation for Council','Settling disputes and brokering deals at the local level.',800,4,0,3,6,11,14),
+((SELECT id FROM public.universities WHERE lower(name)=lower('Manchester University') LIMIT 1),'professional_campaign_strategy','Grassroots Campaigning','Door-to-door, ground game, and volunteer leadership.',1100,6,15,4,8,11,14),
 
 -- Chicago Conservatory of Arts
-('0b98bca8-b0cf-488a-a0dc-06c8f1734881','basic_public_speaking','American Political Speech','From the State of the Union to the stump speech.',1100,5,0,4,8,10,14),
-('0b98bca8-b0cf-488a-a0dc-06c8f1734881','basic_governance','American Government','Federalism, checks and balances, and the modern presidency.',1300,6,5,4,8,10,14),
-('0b98bca8-b0cf-488a-a0dc-06c8f1734881','professional_campaign_strategy','Modern Campaign Operations','Data, targeting, and message discipline in U.S. campaigns.',1700,7,20,5,9,10,14),
-('0b98bca8-b0cf-488a-a0dc-06c8f1734881','professional_diplomacy','U.S. Foreign Service Track','Preparing for a career in American diplomacy.',2100,9,30,6,10,10,14),
-('0b98bca8-b0cf-488a-a0dc-06c8f1734881','master_oratory','Presidential Oratory','Studying and crafting speech worthy of the Oval.',2400,10,40,7,12,10,14),
+((SELECT id FROM public.universities WHERE lower(name)=lower('Chicago Conservatory of Arts') LIMIT 1),'basic_public_speaking','American Political Speech','From the State of the Union to the stump speech.',1100,5,0,4,8,10,14),
+((SELECT id FROM public.universities WHERE lower(name)=lower('Chicago Conservatory of Arts') LIMIT 1),'basic_governance','American Government','Federalism, checks and balances, and the modern presidency.',1300,6,5,4,8,10,14),
+((SELECT id FROM public.universities WHERE lower(name)=lower('Chicago Conservatory of Arts') LIMIT 1),'professional_campaign_strategy','Modern Campaign Operations','Data, targeting, and message discipline in U.S. campaigns.',1700,7,20,5,9,10,14),
+((SELECT id FROM public.universities WHERE lower(name)=lower('Chicago Conservatory of Arts') LIMIT 1),'professional_diplomacy','U.S. Foreign Service Track','Preparing for a career in American diplomacy.',2100,9,30,6,10,10,14),
+((SELECT id FROM public.universities WHERE lower(name)=lower('Chicago Conservatory of Arts') LIMIT 1),'master_oratory','Presidential Oratory','Studying and crafting speech worthy of the Oval.',2400,10,40,7,12,10,14),
 
 -- London Conservatory of Arts
-('3330cd55-2305-476e-bb8a-60bbd08fbc60','basic_negotiation','The Whitehall Bargain','Negotiation inside the British political machine.',1000,5,0,3,7,10,13),
-('3330cd55-2305-476e-bb8a-60bbd08fbc60','professional_diplomacy','Foreign Office Foundations','First steps toward a diplomatic career.',1600,7,25,5,9,10,14);
+((SELECT id FROM public.universities WHERE lower(name)=lower('London Conservatory of Arts') LIMIT 1),'basic_negotiation','The Whitehall Bargain','Negotiation inside the British political machine.',1000,5,0,3,7,10,13),
+((SELECT id FROM public.universities WHERE lower(name)=lower('London Conservatory of Arts') LIMIT 1),'professional_diplomacy','Foreign Office Foundations','First steps toward a diplomatic career.',1600,7,25,5,9,10,14);
+
+-- Historical education seeds must resolve canonical rows by name rather than
+-- environment-specific production UUIDs.
+DO $politics_education_dependencies$
+DECLARE
+  v_missing_cities text[];
+  v_missing_universities text[];
+BEGIN
+  SELECT array_agg(required_name ORDER BY required_name)
+    INTO v_missing_cities
+    FROM (VALUES ('London'), ('Manchester'), ('Edinburgh'), ('Washington DC'), ('New York'), ('Chicago'), ('Los Angeles')) AS required(required_name)
+   WHERE NOT EXISTS (
+     SELECT 1 FROM public.cities c
+     WHERE lower(c.name) = lower(required.required_name)
+   );
+
+  IF v_missing_cities IS NOT NULL THEN
+    RAISE EXCEPTION 'Politics mentor seed requires canonical cities: %', v_missing_cities;
+  END IF;
+
+  SELECT array_agg(required_name ORDER BY required_name)
+    INTO v_missing_universities
+    FROM (VALUES ('Cambridge University'), ('Manchester University'), ('Chicago Conservatory of Arts'), ('London Conservatory of Arts')) AS required(required_name)
+   WHERE NOT EXISTS (
+     SELECT 1 FROM public.universities u
+     WHERE lower(u.name) = lower(required.required_name)
+   );
+
+  IF v_missing_universities IS NOT NULL THEN
+    RAISE EXCEPTION 'Politics course seed requires canonical universities: %', v_missing_universities;
+  END IF;
+END
+$politics_education_dependencies$;
 
 -- ============================================================
 -- POLITICS MENTORS — UK & USA
@@ -103,7 +136,7 @@ VALUES
  18000, 24, 160, 'beginner',
  '["charisma","discipline"]'::jsonb, 0, 0.18,
  'Despatch-box confidence',
- '9f26ad86-51ed-4477-856d-610f14979310', 1,
+ (SELECT id FROM public.cities WHERE lower(name)=lower('London') LIMIT 1), 1,
  'A retired Westminster speech coach who turned three nervous backbenchers into Prime Ministers. She still holds private sessions in a quiet Pimlico townhouse.',
  'Coached three sitting Prime Ministers through their first PMQs.',
  'Tuesdays in London, ask after the coach who whispers from the gallery.',
@@ -115,7 +148,7 @@ VALUES
  32000, 48, 260, 'advanced',
  '["intellect","discipline"]'::jsonb, 40, 0.22,
  'Whitehall strategic thinking',
- '9f26ad86-51ed-4477-856d-610f14979310', 3,
+ (SELECT id FROM public.cities WHERE lower(name)=lower('London') LIMIT 1), 3,
  'Once the most powerful unelected man in Britain. Ran the Civil Service through two crises and a referendum, and now teaches the few who can keep up.',
  'Drafted the strategic doctrine that survived four governments.',
  'Thursdays in London, the mandarins still know where he takes tea.',
@@ -127,7 +160,7 @@ VALUES
  22000, 24, 200, 'intermediate',
  '["charisma","stamina"]'::jsonb, 15, 0.20,
  'Door-to-door turnout uplift',
- '8bb73a75-bd57-49b3-9a03-a68f37a19f56', 5,
+ (SELECT id FROM public.cities WHERE lower(name)=lower('Manchester') LIMIT 1), 5,
  'Built her reputation flipping marginal Northern seats by knocking on every single door. Her phonebank scripts are passed around like sacred texts.',
  'Won 11 marginal constituencies with double-digit swings.',
  'Saturdays in Manchester, follow the leaflets to the loudest committee room.',
@@ -139,7 +172,7 @@ VALUES
  15000, 24, 150, 'beginner',
  '["intellect","charisma"]'::jsonb, 0, 0.16,
  'Settling impossible disputes',
- '8bb73a75-bd57-49b3-9a03-a68f37a19f56', 2,
+ (SELECT id FROM public.cities WHERE lower(name)=lower('Manchester') LIMIT 1), 2,
  'Spent thirty years brokering deals between unions and government. Every minister of either party has at some point quietly asked for his help.',
  'Settled the 1998 dock strike in a single weekend.',
  'Wednesdays in Manchester, the back room of the old Labour club.',
@@ -151,7 +184,7 @@ VALUES
  17000, 24, 180, 'intermediate',
  '["intellect","discipline"]'::jsonb, 10, 0.18,
  'Constitutional procedure mastery',
- 'f082fb21-717b-4abb-af6e-8cb5556dd072', 4,
+ (SELECT id FROM public.cities WHERE lower(name)=lower('Edinburgh') LIMIT 1), 4,
  'A Scottish constitutional scholar whose textbook is required reading in every law faculty north of the border. Quietly drafted half of devolution.',
  'Co-authored the Scotland Act 1998.',
  'Fridays in Edinburgh, the Old Town pubs near the Parliament.',
@@ -163,7 +196,7 @@ VALUES
  28000, 48, 240, 'advanced',
  '["charisma","intellect"]'::jsonb, 30, 0.20,
  'Treaty-craft and back-channel etiquette',
- '9f26ad86-51ed-4477-856d-610f14979310', 0,
+ (SELECT id FROM public.cities WHERE lower(name)=lower('London') LIMIT 1), 0,
  'Britain''s top diplomat for two decades. Negotiated peace agreements on three continents and is rumoured to have prevented two wars no one ever heard about.',
  'Lead negotiator on three landmark UN treaties.',
  'Sundays in London, ask at the right gentleman''s club in St James''s.',
@@ -176,7 +209,7 @@ VALUES
  26000, 24, 230, 'advanced',
  '["intellect","charisma"]'::jsonb, 20, 0.22,
  'Microtargeting and message discipline',
- '11001f1b-fc01-4ad4-b8e4-96ec86a1a70c', 3,
+ (SELECT id FROM public.cities WHERE lower(name)=lower('Washington DC') LIMIT 1), 3,
  'A legendary Beltway operator. If a senator is in trouble, Marcus is the first call. He has run more winning races than anyone of his generation.',
  'Managed 14 winning Senate campaigns across both parties.',
  'Thursdays in Washington DC, the steakhouses near K Street.',
@@ -188,7 +221,7 @@ VALUES
  35000, 48, 280, 'advanced',
  '["intellect","discipline"]'::jsonb, 50, 0.24,
  'National-security strategic thinking',
- '11001f1b-fc01-4ad4-b8e4-96ec86a1a70c', 5,
+ (SELECT id FROM public.cities WHERE lower(name)=lower('Washington DC') LIMIT 1), 5,
  'Served two Presidents at the National Security Council. Quietly steered American grand strategy through a decade most people would rather forget.',
  'Architect of the doctrine that defines current U.S. foreign policy.',
  'Saturdays in Washington DC, lectures occasionally at Georgetown.',
@@ -200,7 +233,7 @@ VALUES
  20000, 24, 190, 'intermediate',
  '["intellect","charisma"]'::jsonb, 10, 0.20,
  'Reading the room and closing the deal',
- 'a6d76b84-df38-4efb-9fc1-4bd882e31d1a', 2,
+ (SELECT id FROM public.cities WHERE lower(name)=lower('New York') LIMIT 1), 2,
  'Closed billion-dollar mergers before pivoting to coaching mayors and senators. He says politics is just M&A with worse coffee.',
  'Closed a $40B merger and a city budget deadlock in the same month.',
  'Tuesdays in New York, a corner booth at a Midtown bar.',
@@ -212,7 +245,7 @@ VALUES
  19000, 24, 170, 'beginner',
  '["charisma","discipline"]'::jsonb, 0, 0.18,
  'Voice projection and audience command',
- 'a6d76b84-df38-4efb-9fc1-4bd882e31d1a', 1,
+ (SELECT id FROM public.cities WHERE lower(name)=lower('New York') LIMIT 1), 1,
  'A Broadway voice coach who discovered that politicians needed her even more than actors. Her studio in the West Village is by referral only.',
  'Coached the most-quoted convention speech of the last decade.',
  'Mondays in New York, look for the green door in the West Village.',
@@ -224,7 +257,7 @@ VALUES
  16000, 24, 170, 'intermediate',
  '["intellect","stamina"]'::jsonb, 5, 0.18,
  'Urban governance and political machines',
- '29809134-e947-408b-9786-6d7b51181548', 4,
+ (SELECT id FROM public.cities WHERE lower(name)=lower('Chicago') LIMIT 1), 4,
  'Five terms on the Chicago city council and never once lost a vote she actually cared about. She knows where every body in city hall is buried, and which ones still vote.',
  'Passed the city''s landmark housing reform after seven years of trying.',
  'Fridays in Chicago, ward office on the South Side, doors open Friday afternoons.',
@@ -236,7 +269,7 @@ VALUES
  23000, 24, 210, 'intermediate',
  '["charisma","stamina"]'::jsonb, 15, 0.20,
  'Turning out the base when it matters',
- '29809134-e947-408b-9786-6d7b51181548', 6,
+ (SELECT id FROM public.cities WHERE lower(name)=lower('Chicago') LIMIT 1), 6,
  'Inherited the family operation in the 1990s and modernised it without losing a single ward. Mayors come and go; Tony stays.',
  'Delivered Chicago for every winning mayoral candidate since 1995.',
  'Sundays in Chicago, the family restaurant in Bridgeport.',
@@ -248,7 +281,7 @@ VALUES
  30000, 48, 270, 'advanced',
  '["charisma","intellect"]'::jsonb, 35, 0.22,
  'Cadence, conviction, and crowd movement',
- 'cb7bdfa8-5558-4ffd-9d0f-235920ac269a', 0,
+ (SELECT id FROM public.cities WHERE lower(name)=lower('Los Angeles') LIMIT 1), 0,
  'Marched in the 1960s, preached through the 1980s, and now teaches a small handful of students at a time the cadence of speech that moves people to act.',
  'His sermon at the 1992 reconciliation rally is studied in three countries.',
  'Sundays in Los Angeles, the church on Crenshaw, after the second service.',
@@ -260,7 +293,7 @@ VALUES
  28000, 48, 240, 'advanced',
  '["charisma","intellect"]'::jsonb, 30, 0.20,
  'Crisis-room diplomacy',
- '11001f1b-fc01-4ad4-b8e4-96ec86a1a70c', 1,
+ (SELECT id FROM public.cities WHERE lower(name)=lower('Washington DC') LIMIT 1), 1,
  'Forty years in the Foreign Service. Reportedly talked an entire region back from the brink of war over a single dinner.',
  'Lead negotiator on the Treaty of Algiers (II).',
  'Tuesdays in Washington DC, lunches at the Cosmos Club.',
