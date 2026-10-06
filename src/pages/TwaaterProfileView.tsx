@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TwaatCard } from "@/components/twaater/TwaatCard";
-import { ArrowLeft, MapPin, Calendar, Music, Users, CheckCircle2, Loader2 } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, Music, Users, CheckCircle2, Loader2, MessageCircle } from "lucide-react";
 import { useGameData } from "@/hooks/useGameData";
 import { useTwaaterAccount } from "@/hooks/useTwaaterAccount";
 import { useToast } from "@/hooks/use-toast";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { hydrateTwaaterFeedExtras } from "@/hooks/useTwaats";
+import { useTwaaterMessages } from "@/hooks/useTwaaterMessages";
 
 const TwaaterProfileView = () => {
   const { handle } = useParams();
@@ -21,6 +22,7 @@ const TwaaterProfileView = () => {
   const { profile } = useGameData();
 
   const { account: viewerAccount } = useTwaaterAccount("persona", profile?.id);
+  const { getOrCreateConversation, isCreatingConversation } = useTwaaterMessages(viewerAccount?.id, false);
 
   const { data: profileAccount, isLoading: accountLoading } = useQuery({
     queryKey: ["twaater-profile", handle],
@@ -167,6 +169,20 @@ const TwaaterProfileView = () => {
 
   const isOwnProfile = viewerAccount?.id === profileAccount.id;
 
+  const handleMessage = async () => {
+    if (!viewerAccount?.id || !profileAccount?.id) return;
+    try {
+      const conversation = await getOrCreateConversation({ otherAccountId: profileAccount.id });
+      navigate(`/twaater/messages?conversation=${conversation.id}`);
+    } catch (error: any) {
+      toast({
+        title: "Unable to start conversation",
+        description: error?.message || "This account is unavailable for direct messages.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <FMPageScaffold
       title={profileAccount.display_name}
@@ -191,13 +207,25 @@ const TwaaterProfileView = () => {
                 </Badge>
               </div>
               {!isOwnProfile && viewerAccount && (
-                <Button
-                  onClick={() => followMutation.mutate()}
-                  disabled={followMutation.isPending || followLoading}
-                  variant={isFollowing ? "outline" : "default"}
-                >
-                  {isFollowing ? "Following" : "Follow"}
-                </Button>
+                <div className="flex items-center gap-2">
+                  {profileAccount.owner_type === "persona" && (
+                    <Button
+                      variant="outline"
+                      onClick={handleMessage}
+                      disabled={isCreatingConversation}
+                    >
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      Message
+                    </Button>
+                  )}
+                  <Button
+                    onClick={() => followMutation.mutate()}
+                    disabled={followMutation.isPending || followLoading}
+                    variant={isFollowing ? "outline" : "default"}
+                  >
+                    {isFollowing ? "Following" : "Follow"}
+                  </Button>
+                </div>
               )}
             </div>
 
