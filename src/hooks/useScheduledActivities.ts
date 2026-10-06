@@ -189,7 +189,7 @@ export function useScheduledActivities(date: Date, userId?: string) {
         .lte('scheduled_start', dayEnd.toISOString())
         .in('status', ['scheduled', 'in_progress', 'completed']);
 
-      // TODO(beta): Jam-session and lesson-specific tables should be integrated here once their canonical booked-data source is confirmed.
+      // TODO(release): Jam-session and lesson-specific tables should be integrated here once their canonical booked-data source is confirmed.
 
       // Fetch tour travel legs for user's bands
       let travelLegs: any[] = [];
