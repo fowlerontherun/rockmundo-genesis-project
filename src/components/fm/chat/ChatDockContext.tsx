@@ -8,6 +8,7 @@ type Ctx = {
   openThread: (t: OpenThread) => void;
   closeThread: (profileId: string) => void;
   minimize: () => void;
+  reset: () => void;
 };
 
 const ChatDockContext = createContext<Ctx | null>(null);
@@ -30,10 +31,11 @@ export function ChatDockProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const minimize = useCallback(() => setOpen(false), []);
+  const reset = useCallback(() => { setOpen(false); setThreads([]); }, []);
 
   const value = useMemo(
-    () => ({ open, setOpen, threads, openThread, closeThread, minimize }),
-    [open, threads, openThread, closeThread, minimize],
+    () => ({ open, setOpen, threads, openThread, closeThread, minimize, reset }),
+    [open, threads, openThread, closeThread, minimize, reset],
   );
 
   return <ChatDockContext.Provider value={value}>{children}</ChatDockContext.Provider>;
