@@ -32,7 +32,7 @@ const quotedTwaatSelect = `
   account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, owner_type)
 `;
 
-export const hydrateQuotedTwaats = async <T extends { quoted_twaat_id?: string | null }>(rows: T[]): Promise<T[]> => {
+export const hydrateQuotedTwaats = async <T extends { id: string; quoted_twaat_id?: string | null }>(rows: T[]): Promise<T[]> => {
   const quotedIds = Array.from(new Set(rows.map((row) => row.quoted_twaat_id).filter(Boolean))) as string[];
   if (quotedIds.length === 0) return rows;
 
@@ -55,6 +55,34 @@ export const hydrateQuotedTwaats = async <T extends { quoted_twaat_id?: string |
   }));
 };
 
+export const hydrateTwaaterFeedExtras = async <T extends { id: string; quoted_twaat_id?: string | null }>(rows: T[]): Promise<T[]> => {
+  const hydratedQuotes = await hydrateQuotedTwaats(rows);
+  if (hydratedQuotes.length === 0) return hydratedQuotes;
+
+  const twaatIds = hydratedQuotes.map((row) => row.id);
+  const { data: polls, error } = await supabase
+    .from("twaater_polls")
+    .select(`
+      id,
+      twaat_id,
+      question,
+      expires_at,
+      options:twaater_poll_options(*)
+    `)
+    .in("twaat_id", twaatIds);
+
+  if (error) {
+    console.warn("Unable to batch hydrate Twaater polls:", error);
+    return hydratedQuotes;
+  }
+
+  const pollByTwaatId = new Map((polls || []).map((poll: any) => [poll.twaat_id, poll]));
+  return hydratedQuotes.map((row: any) => ({
+    ...row,
+    poll: pollByTwaatId.get(row.id) || null,
+  }));
+};
+
 export const useTwaats = (accountId?: string) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -74,7 +102,7 @@ export const useTwaats = (accountId?: string) => {
 
       const { data, error } = await query;
       if (error) throw error;
-      return await hydrateQuotedTwaats((data || []) as unknown as TwaatWithDetails[]);
+      return await hydrateTwaaterFeedExtras((data || []) as unknown as TwaatWithDetails[]);
     },
   });
 
@@ -176,7 +204,7 @@ export const useTwaaterFeed = (viewerAccountId?: string, enabled = true) => {
           .limit(50);
 
         if (error) throw error;
-        return await hydrateQuotedTwaats((data || []) as unknown as TwaatWithDetails[]);
+        return await hydrateTwaaterFeedExtras((data || []) as unknown as TwaatWithDetails[]);
       }
 
       const { data: follows, error: followsError } = await supabase
@@ -199,7 +227,7 @@ export const useTwaaterFeed = (viewerAccountId?: string, enabled = true) => {
         .limit(50);
 
       if (error) throw error;
-      return await hydrateQuotedTwaats((data || []) as unknown as TwaatWithDetails[]);
+      return await hydrateTwaaterFeedExtras((data || []) as unknown as TwaatWithDetails[]);
     },
     enabled,
     staleTime: 60 * 1000,
