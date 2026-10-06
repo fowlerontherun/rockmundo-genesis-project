@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
-export const useTwaaterReplies = (twaatId: string) => {
+export const useTwaaterReplies = (twaatId: string, loadReplies = true) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -21,6 +21,7 @@ export const useTwaaterReplies = (twaatId: string) => {
       if (error) throw error;
       return data;
     },
+    enabled: loadReplies && !!twaatId,
   });
 
   const postReplyMutation = useMutation({
