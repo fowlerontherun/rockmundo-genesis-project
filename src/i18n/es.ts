@@ -65,7 +65,7 @@ export const es = {
   },
   
   nav: {
-    beta: "BETA",
+    beta: "LIVE V1",
     version: "Versión",
     inbox: "Bandeja",
     dashboard: "Panel",
