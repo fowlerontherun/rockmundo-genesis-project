@@ -86,6 +86,7 @@ export default function CommunityRewards({ profileId }: { profileId?: string | n
   const totalClaimable = (dashboard?.pending.signup ?? 0) + (dashboard?.pending.vip ?? 0) + (dashboard?.discord.verified && !dashboard.discord.rewarded ? 1 : 0);
   const qualified = dashboard?.stats.qualified ?? 0;
   const promoterMilestones = [5, 10, 25];
+  const promoterLabels: Record<number, string> = { 5: "Street Promoter", 10: "Scene Builder", 25: "RockMundo Ambassador" };
   const nextMilestone = promoterMilestones.find((value) => qualified < value);
   const nextProgress = nextMilestone ? Math.min(100, Math.round((qualified / nextMilestone) * 100)) : 100;
   const shareText = `Join me in RockMundo — create a musician, form a band and build your music career. Use my invite so we both get credit: ${referralUrl}`;
@@ -228,13 +229,13 @@ export default function CommunityRewards({ profileId }: { profileId?: string | n
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5" />Promoter progression</CardTitle>
-          <CardDescription>Qualified recruits count toward permanent 5, 10 and 25-player promoter milestones. Fake or inactive accounts do not count.</CardDescription>
+          <CardDescription>Qualified recruits unlock permanent promoter titles and profile badges at 5, 10 and 25 players, alongside the XP, AP, cash and fame rewards. Fake or inactive accounts do not count.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between text-sm"><span>{qualified} qualified recruit{qualified === 1 ? "" : "s"}</span><span>{nextMilestone ? `Next reward: ${nextMilestone}` : "All current milestones complete"}</span></div>
           <div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary transition-all" style={{ width: `${nextProgress}%` }} /></div>
           <div className="flex flex-wrap gap-2">
-            {[5, 10, 25].map((milestone) => <Badge key={milestone} variant={qualified >= milestone ? "default" : "outline"}>{milestone} recruits</Badge>)}
+            {[5, 10, 25].map((milestone) => <Badge key={milestone} variant={qualified >= milestone ? "default" : "outline"}>{promoterLabels[milestone]} · {milestone}</Badge>)}
           </div>
           <Button variant="outline" onClick={claimMilestones} disabled={claiming}><Gift className="mr-2 h-4 w-4" />Check promoter rewards</Button>
         </CardContent>
