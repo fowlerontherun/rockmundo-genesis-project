@@ -29,22 +29,47 @@ export const LuthieryInstrumentPreview = ({ selection, shape, activePart, onSele
   const bridge = 72;
   const scaleLength = nut - bridge;
   const count = bass ? 4 : 6;
-  const ebony = selection.parts.fretboard.startsWith("fret-ebony");
-  const maple = selection.parts.fretboard === "fret-maple";
+  const fretboard = selection.parts.fretboard;
+  const ebony = fretboard.startsWith("fret-ebony") || fretboard === "fret-macassar" || fretboard === "fret-richlite";
+  const maple = fretboard === "fret-maple";
   const fretFill = `var(--luth-${maple ? "maple" : ebony ? "ebony" : "rosewood"})`;
   const heelTop = selection.parts.neck === "neck-slim-maple" ? 105 : selection.parts.neck === "neck-chunky-mahogany" ? 101 : 103;
   const heelBottom = 229 - heelTop;
-  const neckFill = `var(--luth-${selection.parts.neck.includes("mahogany") ? "mahogany" : selection.parts.neck.includes("korina") ? "korina" : "maple"})`;
+  const neckFill = `var(--luth-${
+    selection.parts.neck.includes("mahogany")
+      ? "mahogany"
+      : selection.parts.neck.includes("korina")
+        ? "korina"
+        : selection.parts.neck.includes("wenge")
+          ? "ebony"
+          : "maple"
+  })`;
   const hardware = selection.parts.hardware;
-  const hardwareFill = `var(--luth-${hardware === "hw-gold" ? "gold" : hardware === "hw-black" ? "black" : hardware === "hw-aged" ? "nickel" : "chrome"})`;
-  const single = ["elec-single", "elec-alnico", "elec-jazz"].includes(selection.parts.electronics);
-  const p90 = selection.parts.electronics === "elec-p90";
+  const hardwareFill = `var(--luth-${
+    hardware === "hw-gold" || hardware === "hw-brass"
+      ? "gold"
+      : hardware === "hw-black" || hardware === "hw-black-chrome"
+        ? "black"
+        : hardware === "hw-aged"
+          ? "nickel"
+          : "chrome"
+  })`;
+  const single = ["elec-single", "elec-alnico", "elec-jazz", "elec-noiseless", "elec-bass-pj"].includes(selection.parts.electronics);
+  const p90 = ["elec-p90", "elec-p90-set"].includes(selection.parts.electronics);
   const pickupCount = single && !bass && selection.parts.electronics !== "elec-jazz" ? 3 : 2;
   const pickupFill = selection.parts.electronics === "elec-boutique" ? "var(--luth-gold)" : single || p90 ? "var(--luth-ivory)" : "var(--luth-black)";
   const stroke = (part: LuthieryPartSlot) => activePart === part ? "hsl(var(--primary))" : "var(--luth-edge)";
-  const natural = selection.finishId === "finish-natural";
-  const worn = selection.finishId === "finish-worn";
-  const grainFill = `var(--luth-${selection.parts.body.includes("mahogany") ? "mahogany" : selection.parts.body.includes("korina") ? "korina" : "alder"})`;
+  const natural = selection.finishId === "finish-natural" || selection.finishId === "finish-tru-oil";
+  const worn = selection.finishId === "finish-worn" || selection.finishId === "finish-relic";
+  const grainFill = `var(--luth-${
+    selection.parts.body.includes("mahogany") || selection.parts.body.includes("walnut") || selection.parts.body.includes("bubinga")
+      ? "mahogany"
+      : selection.parts.body.includes("korina")
+        ? "korina"
+        : selection.parts.body.includes("maple")
+          ? "maple"
+          : "alder"
+  })`;
   return <svg viewBox="10 28 435 165" role="group" aria-label={`Interactive preview of ${shape.name} ${bass ? "bass" : "guitar"}`}
     className="mx-auto h-auto w-full max-w-[680px]" data-testid="luthiery-instrument-preview">
     <defs>
@@ -64,7 +89,7 @@ export const LuthieryInstrumentPreview = ({ selection, shape, activePart, onSele
       <path d={shape.bodyPath} fill={selection.finishId === "finish-burst" ? `url(#${id}-burst)` : `url(#${id}-paint)`} stroke={stroke("body")} strokeWidth={activePart === "body" ? 2 : 1.2} />
       <g clipPath={`url(#${id}-body)`} pointerEvents="none">
         <path d={shape.bodyPath} fill={`url(#${id}-grain)`} />
-        {selection.finishId === "finish-metalflake" && <path d={shape.bodyPath} fill={`url(#${id}-flake)`} />}
+        {["finish-metalflake", "finish-pearl", "finish-holographic"].includes(selection.finishId) && <path d={shape.bodyPath} fill={`url(#${id}-flake)`} />}
         {worn && <path d="M34 119 Q43 151 72 157 M39 91 L42 104 M77 151 L86 151" fill="none" stroke={grainFill} strokeWidth="4" />}
         {(selection.finishId === "finish-gloss" || natural || selection.parts.body === "body-carved-mahogany") && <path d={shape.bodyPath} transform="translate(9 9) scale(.91)" fill="none" stroke="var(--luth-highlight)" strokeWidth="1.2" opacity=".35" />}
         {selection.finishId === "finish-artwork" && selection.decal.id !== "none" && <g data-testid="instrument-decal" transform={`translate(${40 + selection.decal.x * .95} ${65 + selection.decal.y * .95}) rotate(${selection.decal.rotation}) scale(${selection.decal.scale / 100})`} fill={selection.decal.colour}>

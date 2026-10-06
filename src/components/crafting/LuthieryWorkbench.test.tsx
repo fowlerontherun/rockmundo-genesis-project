@@ -71,6 +71,22 @@ describe("LuthieryWorkbench interactions", () => {
     expect(screen.getByText("Part 2 / 5")).toBeInTheDocument();
   });
 
+  it("filters material choices by quality tier and can restore all tiers", async () => {
+    const user = userEvent.setup();
+    render(<LuthieryWorkbench materialsCatalog={materials} playerMaterials={stock} />);
+
+    await user.click(screen.getByRole("button", { name: "Select electronics" }));
+    expect(screen.getByRole("button", { name: /Single Coil/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Hand-wound Boutique/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Tier 4" }));
+    expect(screen.queryByRole("button", { name: /Single Coil/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Hand-wound Boutique/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "All tiers" }));
+    expect(screen.getByRole("button", { name: /Single Coil/i })).toBeInTheDocument();
+  });
+
   it("visibly changes pickups when a different electronics assembly is selected", async () => {
     const user = userEvent.setup();
     render(<LuthieryWorkbench materialsCatalog={materials} playerMaterials={stock} />);

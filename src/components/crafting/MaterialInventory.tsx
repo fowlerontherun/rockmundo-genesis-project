@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,12 +39,16 @@ export const MaterialInventory = ({
   mode = "inventory",
 }: MaterialInventoryProps) => {
   const categories = ["wood", "electronics", "hardware", "strings", "finish", "pedal_components", "amp_components"];
+  const [tierFilter, setTierFilter] = useState<number | "all">("all");
 
-  const displayMaterials = mode === "inventory"
+  const availableMaterials = mode === "inventory"
     ? materialsCatalog.filter((m) => playerMaterials.some((pm) => pm.material_id === m.id && pm.quantity > 0))
     : materialsCatalog;
+  const displayMaterials = availableMaterials.filter((material) =>
+    tierFilter === "all" || material.quality_tier === tierFilter
+  );
 
-  if (mode === "inventory" && displayMaterials.length === 0) {
+  if (mode === "inventory" && availableMaterials.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
         <p className="text-sm">No materials in inventory yet.</p>
@@ -54,6 +59,31 @@ export const MaterialInventory = ({
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2 rounded-md border border-border/60 p-3">
+        <div className="mr-2">
+          <p className="text-xs font-medium">Material tier</p>
+          <p className="text-[10px] text-muted-foreground">Filter by quality tier.</p>
+        </div>
+        {(["all", 1, 2, 3, 4, 5] as const).map((tier) => (
+          <Button
+            key={tier}
+            type="button"
+            size="sm"
+            variant={tierFilter === tier ? "default" : "outline"}
+            aria-pressed={tierFilter === tier}
+            onClick={() => setTierFilter(tier)}
+          >
+            {tier === "all" ? "All tiers" : `Tier ${tier}`}
+          </Button>
+        ))}
+      </div>
+
+      {displayMaterials.length === 0 && (
+        <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+          No materials match this tier.
+        </div>
+      )}
+
       {categories.map((cat) => {
         const catMaterials = displayMaterials.filter((m) => m.category === cat);
         if (catMaterials.length === 0) return null;
@@ -76,6 +106,9 @@ export const MaterialInventory = ({
                           <span className="text-sm font-medium truncate">{mat.name}</span>
                           <Badge className={RARITY_COLORS[mat.rarity] || RARITY_COLORS.common} variant="outline">
                             {mat.rarity}
+                          </Badge>
+                          <Badge variant="secondary" className="text-[10px]">
+                            Tier {mat.quality_tier}
                           </Badge>
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{mat.description}</p>

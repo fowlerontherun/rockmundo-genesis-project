@@ -10,7 +10,9 @@ describe('Luthiery realism and compatibility', () => {
     expect(LUTHIERY_SHAPES).toHaveLength(15);
     expect(new Set(LUTHIERY_SHAPES.map(shape => shape.bodyPath)).size).toBe(15);
     for (const slot of ['body', 'neck', 'fretboard', 'electronics', 'hardware', 'finish']) {
-      expect(LUTHIERY_MATERIAL_OPTIONS.filter(option => option.slot === slot).length).toBeGreaterThanOrEqual(6);
+      const options = LUTHIERY_MATERIAL_OPTIONS.filter(option => option.slot === slot);
+      expect(options.length).toBeGreaterThanOrEqual(9);
+      expect(new Set(options.map(option => option.requirement.tier))).toEqual(new Set(['basic', 'professional', 'mastery']));
     }
     expect(new Set(LUTHIERY_MATERIAL_OPTIONS.map(option => option.id)).size).toBe(LUTHIERY_MATERIAL_OPTIONS.length);
   });

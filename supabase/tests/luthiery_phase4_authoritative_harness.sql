@@ -30,11 +30,24 @@ BEGIN
   IF NOT (SELECT relrowsecurity FROM pg_class WHERE oid='public.luthiery_crafts'::regclass) THEN
     RAISE EXCEPTION 'Luthiery provenance RLS is disabled';
   END IF;
-  IF (SELECT count(*) FROM private.luthiery_shape_options WHERE is_active) <> 9 THEN
+  IF (SELECT count(*) FROM private.luthiery_shape_options WHERE is_active) <> 15 THEN
     RAISE EXCEPTION 'authoritative Luthiery shape catalogue is incomplete';
   END IF;
-  IF (SELECT count(*) FROM private.luthiery_component_options WHERE is_active) <> 32 THEN
+  IF (SELECT count(*) FROM private.luthiery_component_options WHERE is_active) <> 72 THEN
     RAISE EXCEPTION 'authoritative Luthiery component catalogue is incomplete';
+  END IF;
+  IF EXISTS (
+    SELECT 1
+    FROM private.luthiery_component_options option_row
+    WHERE option_row.is_active
+      AND NOT EXISTS (
+        SELECT 1
+        FROM unnest(option_row.catalog_names) candidate(material_name)
+        JOIN public.crafting_materials material
+          ON lower(material.name)=lower(candidate.material_name)
+      )
+  ) THEN
+    RAISE EXCEPTION 'authoritative Luthiery component has no resolvable crafting material';
   END IF;
   IF to_regprocedure('private.award_luthiery_craft_xp(uuid,text,integer)') IS NULL THEN
     RAISE EXCEPTION 'private Luthiery craft XP helper missing';
