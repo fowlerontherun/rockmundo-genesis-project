@@ -26,7 +26,6 @@ const TwaaterAdmin = () => {
   const [repliesWeight, setRepliesWeight] = useState(40);
   const [retwaatsWeight, setRetwaatsWeight] = useState(30);
   const [trendingDecayHours, setTrendingDecayHours] = useState(24);
-  const [viralThreshold, setViralThreshold] = useState(100);
 
   // Engagement mechanics
   const [xpPerTwaat, setXpPerTwaat] = useState(5);
@@ -129,7 +128,6 @@ const TwaaterAdmin = () => {
       setRepliesWeight(getVal("twaater_replies_weight", 40));
       setRetwaatsWeight(getVal("twaater_retwaats_weight", 30));
       setTrendingDecayHours(getVal("twaater_trending_decay_hours", 24));
-      setViralThreshold(getVal("twaater_viral_threshold", 100));
       setXpPerTwaat(getVal("twaater_xp_per_rewarded_post", 5));
       setDailyTwaatLimit(getVal("twaater_daily_reward_limit", 3));
       setVerifiedBonusMultiplier(getVal("twaater_verified_bonus", 2));
@@ -152,6 +150,7 @@ const TwaaterAdmin = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["twaater-balance-config"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-runtime-config"] });
       toast({ title: "Twaater settings saved successfully" });
     },
     onError: () => {
@@ -205,7 +204,6 @@ const TwaaterAdmin = () => {
       { key: "twaater_replies_weight", value: repliesWeight, category: "twaater_trending", description: "Weight of replies in trending" },
       { key: "twaater_retwaats_weight", value: retwaatsWeight, category: "twaater_trending", description: "Weight of retwaats in trending" },
       { key: "twaater_trending_decay_hours", value: trendingDecayHours, category: "twaater_trending", description: "Hours before trending decays" },
-      { key: "twaater_viral_threshold", value: viralThreshold, category: "twaater_trending", description: "Engagement needed for viral status" },
       { key: "twaater_xp_per_rewarded_post", value: xpPerTwaat, category: "twaater_engagement", description: "XP awarded for each rewarded Twaat" },
       { key: "twaater_daily_reward_limit", value: dailyTwaatLimit, category: "twaater_engagement", description: "Number of Twaats per day that earn posting XP" },
       { key: "twaater_verified_bonus", value: verifiedBonusMultiplier, category: "twaater_engagement", description: "Verified account bonus multiplier" },
@@ -504,11 +502,6 @@ const TwaaterAdmin = () => {
                     <Input type="number" value={trendingDecayHours} onChange={(e) => setTrendingDecayHours(Number(e.target.value))} min={1} max={168} />
                     <p className="text-xs text-muted-foreground">How long posts stay trending</p>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Viral Threshold</Label>
-                    <Input type="number" value={viralThreshold} onChange={(e) => setViralThreshold(Number(e.target.value))} min={10} />
-                    <p className="text-xs text-muted-foreground">Engagement score needed for viral status</p>
-                  </div>
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Current total: {likesWeight + repliesWeight + retwaatsWeight}%
@@ -602,8 +595,6 @@ const TwaaterAdmin = () => {
                     <Input type="number" value={dailyTwaatLimit} onChange={(e) => setDailyTwaatLimit(Number(e.target.value))} min={1} max={50} />
                     <p className="text-xs text-muted-foreground">Posts per day that give XP</p>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Max Followers/Day</Label>
                 </div>
               </CardContent>
             </Card>
