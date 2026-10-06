@@ -18,7 +18,7 @@ import { TrendingHashtags } from "@/components/twaater/TrendingHashtags";
 import { WhoToFollow } from "@/components/twaater/WhoToFollow";
 import { TwaaterSearch } from "@/components/twaater/TwaaterSearch";
 import { TwaaterScheduledFeed } from "@/components/twaater/TwaaterScheduledFeed";
-import { Home, TrendingUp, AtSign, Bookmark, Search, Users, Compass, BarChart3, Clock } from "lucide-react";
+import { Home, TrendingUp, AtSign, Bookmark, Search, Users, Compass, BarChart3, Clock, MessageCircle } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTwaaterRouteAccount } from "@/hooks/useTwaaterRouteAccount";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
@@ -144,6 +144,15 @@ export default function Twaater() {
                     profileId={profile.id}
                     onSwitch={handleAccountSwitch}
                   />
+                )}
+                {displayAccount?.owner_type === "persona" && (
+                  <button
+                    onClick={() => navigate("/twaater/messages")}
+                    className="flex items-center gap-1 px-2 py-1 rounded-full hover:bg-[hsl(var(--twaater-purple)_/_0.1)] transition-colors text-sm"
+                    title="Direct messages"
+                  >
+                    <MessageCircle className="h-4 w-4 text-[hsl(var(--twaater-purple))]" />
+                  </button>
                 )}
                 {currentAccountId && (
                   <button
