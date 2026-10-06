@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +32,7 @@ export const TwaaterAccountSwitcher = ({
   profileId,
   onSwitch,
 }: TwaaterAccountSwitcherProps) => {
+  const [open, setOpen] = useState(false);
   const { data: accounts = [] } = useQuery({
     queryKey: ["twaater-accounts-for-user", userId, profileId],
     queryFn: async () => {
@@ -117,11 +119,12 @@ export const TwaaterAccountSwitcher = ({
       }
       return Array.from(uniqueAccounts.values());
     },
-    enabled: !!userId && !!profileId,
+    enabled: open && !!userId && !!profileId,
+    staleTime: 5 * 60 * 1000,
   });
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" className="gap-2 border-[hsl(var(--twaater-border))]">
           {currentAccount.owner_type === "persona" ? (
