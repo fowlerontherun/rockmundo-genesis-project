@@ -182,10 +182,15 @@ const OnboardingWizard = () => {
 
   useEffect(() => {
     const bandId = localStorage.getItem("rockmundo_referral_band");
-    if (!bandId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bandId)) return;
+    if (!bandId) return;
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bandId)) {
+      localStorage.removeItem("rockmundo_referral_band");
+      return;
+    }
     let cancelled = false;
     void supabase.from("bands").select("id, name").eq("id", bandId).maybeSingle().then(({ data }) => {
       if (!cancelled && data?.id && data?.name) setRecruitingBand({ id: data.id, name: data.name });
+      else if (!cancelled) localStorage.removeItem("rockmundo_referral_band");
     });
     return () => { cancelled = true; };
   }, []);
