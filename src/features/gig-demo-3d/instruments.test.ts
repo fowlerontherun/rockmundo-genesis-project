@@ -76,8 +76,10 @@ describe('complete stage instrument coverage', () => {
             expect(leftForearm.z, `${id} fretting forearm clearance`).toBeGreaterThan(id === 'acoustic_guitar' ? .12 : .105);
             expect(rightForearm.z, `${id} picking forearm clearance`).toBeGreaterThan(id === 'acoustic_guitar' ? .17 : .145);
 
-            const firstKnuckleZ = (side: 'L' | 'R') => ['Index1', 'Middle1', 'Ring1', 'Pinky1', 'Thumb1']
-                .map(name => actor.bones.get(`${name}.${side}`))
+            // Use each digit's first exported joint: the masculine frame starts its
+            // finger chains at joint 2, the feminine frame at joint 1.
+            const firstKnuckleZ = (side: 'L' | 'R') => ['Index', 'Middle', 'Ring', 'Pinky', 'Thumb']
+                .map(digit => actor.bones.get(`${digit}1.${side}`) ?? actor.bones.get(`${digit}2.${side}`))
                 .filter((bone): bone is T.Bone => !!bone)
                 .map(bone => instrument.worldToLocal(bone.getWorldPosition(new T.Vector3())).z);
             const leftKnuckles = firstKnuckleZ('L');

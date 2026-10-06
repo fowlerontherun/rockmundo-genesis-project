@@ -49,3 +49,5 @@
   - [x] Export and publish gated on a clean screening report matching the current running sheet.
 - [ ] Phase 6: redundant RTMPS live transmission.
 - [ ] Phase 7: production operations, analytics and audience growth.
+- [ ] Fix gig poses (drums, acoustic, guitars) so they look realistic and gig checks pass
+- [ ] Add more gig animations, poses and player movement on stage

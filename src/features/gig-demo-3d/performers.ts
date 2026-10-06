@@ -61,6 +61,14 @@ function reach(upper: T.Bone | undefined, lower: T.Bone | undefined, hand: T.Bon
     const elbow = start.clone().addScaledVector(direction, along).addScaledVector(bend, Math.sqrt(Math.max(0, a * a - along * along)));
     aim(upper, lower, elbow);
     aim(lower, hand, target);
+    // Some rigs (the feminine frame's feet) parent the end bone to the armature
+    // root as an IK controller. Move it with the solved limb, otherwise the
+    // shoe mesh stays behind and stretches across the stage.
+    if (hand.parent && hand.parent !== lower) {
+        const end = lower.localToWorld(lower.worldToLocal(target.clone()).setLength(b));
+        hand.position.copy(hand.parent.worldToLocal(end));
+        hand.updateWorldMatrix(false, true);
+    }
 }
 function aimAttachedTool(tool: T.Object3D, localAxis: T.Vector3, worldTarget: T.Vector3) {
     if (!tool.parent) return;
@@ -273,6 +281,107 @@ export class Musician {
         }
         this.root.updateMatrixWorld(true);
         this.update(0, 0.7, false);
+        this.fitInstrumentToReach();
+    }
+    private armLength(side: 'L' | 'R') {
+        const upper = this.bones.get(`UpperArm.${side}`), lower = this.bones.get(`LowerArm.${side}`), hand = this.bones.get(`Hand.${side}`);
+        if (!upper || !lower || !hand) return 0;
+        const a = upper.getWorldPosition(new T.Vector3()), b = lower.getWorldPosition(new T.Vector3());
+        return a.distanceTo(b) + b.distanceTo(hand.getWorldPosition(new T.Vector3()));
+    }
+    /**
+     * Imported avatars have different arm lengths and shoulder heights. Slide
+     * the whole instrument towards the shoulders until both grips sit inside a
+     * natural (slightly bent) reach, so hands stay on the neck, keys or pads
+     * instead of the IK snapping straight arms short of the instrument.
+     */
+    private fitInstrumentToReach() {
+        const rig = this.instrumentRig;
+        if (!rig || rig.family === 'voice' || rig.family === 'kit') return;
+        const comfort = rig.family === 'strum' ? .78 : .9;
+        const arms = Math.min(this.armLength('L'), this.armLength('R'));
+        const left = this.bones.get('UpperArm.L'), right = this.bones.get('UpperArm.R');
+        if (rig.family === 'strum' && arms > 0 && arms < .44 && left && right && rig.root.parent) {
+            // Shorter-armed frames get a proportionally sized instrument, scaled
+            // around the chest so both hands can reach their natural positions.
+            const scale = Math.max(.8, Math.pow(arms / .445, 1.3));
+            const chest = left.getWorldPosition(new T.Vector3()).add(right.getWorldPosition(new T.Vector3())).multiplyScalar(.5);
+            chest.y -= .15;
+            const origin = rig.root.getWorldPosition(new T.Vector3());
+            rig.root.scale.multiplyScalar(scale);
+            rig.root.position.copy(rig.root.parent.worldToLocal(chest.clone().add(origin.sub(chest).multiplyScalar(scale))));
+            rig.root.updateMatrixWorld(true);
+            this.update(0, 0.7, false);
+        }
+        const startZ = rig.root.position.z;
+        const startY = rig.root.position.y;
+        for (let pass = 0; pass < 6; pass++) {
+            let worst = 0;
+            const shift = new T.Vector3();
+            const surface = rig.left.parent ?? rig.root;
+            const faceNormal = new T.Vector3(0, 0, 1).applyQuaternion(surface.getWorldQuaternion(new T.Quaternion())).normalize();
+            // Sample a few phrase positions: fretting hands travel up the neck.
+            for (const sample of [0, 2.17, 18.4, 48]) for (const [side, grip] of [['L', rig.left], ['R', rig.right]] as const) {
+                this.update(sample, .9, false);
+                const shoulder = this.bones.get(`UpperArm.${side}`)?.getWorldPosition(new T.Vector3());
+                const length = this.armLength(side);
+                if (!shoulder || !length) continue;
+                const gripWorld = grip.getWorldPosition(new T.Vector3());
+                if (rig.family === 'strum') gripWorld.addScaledVector(faceNormal, side === 'L' ? .05 : .07);
+                const excess = shoulder.distanceTo(gripWorld) - length * (rig.family === 'strum' && side === 'L' ? comfort - Number(process.env.LC ?? .05) : comfort);
+                if (excess > worst) {
+                    worst = excess;
+                    shift.copy(shoulder).sub(gripWorld).normalize().multiplyScalar(excess + .005);
+                }
+            }
+            if (worst <= .003 || !rig.root.parent) break;
+            this.update(0, 0.7, false);
+            const parent = rig.root.parent;
+            const origin = rig.root.getWorldPosition(new T.Vector3());
+            rig.root.position.copy(parent.worldToLocal(origin.add(shift)));
+            // Never pull a handheld body back through the chest.
+            if (!rig.stationary) rig.root.position.z = Math.max(rig.root.position.z, startZ - (rig.family === 'strum' ? .14 : .06));
+            // Keep guitars at strap height (waist to lower chest), never up at the shoulders.
+            if (rig.family === 'strum') rig.root.position.y = Math.min(rig.root.position.y, startY + .14);
+            rig.root.updateMatrixWorld(true);
+            this.update(0, 0.7, false);
+        }
+        if (rig.family === 'strum' && !rig.root.userData.neckAngled) {
+            // Players angle the headstock slightly toward the audience; this opens
+            // the fretting elbow out in front of the neck instead of tucking behind it.
+            const pivot = rig.root.getWorldPosition(new T.Vector3())
+                .add(new T.Vector3(0, 0, Number(process.env.BACK ?? .03)).applyQuaternion(this.root.getWorldQuaternion(new T.Quaternion())));
+            const before = rig.root.getWorldPosition(new T.Vector3());
+            const turn = new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 1, 0).applyQuaternion(this.root.getWorldQuaternion(new T.Quaternion())), Number(process.env.YAW ?? .12));
+            const after = before.sub(pivot).applyQuaternion(turn).add(pivot);
+            rig.root.rotateY(Number(process.env.YAW ?? .12));
+            rig.root.position.copy(rig.root.parent!.worldToLocal(after));
+            rig.root.userData.neckAngled = true;
+            rig.root.updateMatrixWorld(true);
+        }
+        this.update(0, 0.7, false);
+        rig.root.userData.reachFitted = true;
+    }
+    /** Place each drum-stick grip on the line from shoulder to strike target. */
+    private retargetKitGrips(rig: InstrumentRig) {
+        const sticks = rig.tools.filter(tool => tool.name.startsWith('playing-stick'));
+        [rig.left, rig.right].forEach((grip, index) => {
+            const side = index === 0 ? 'L' : 'R';
+            const target = sticks[index]?.userData.strikeTarget as T.Vector3 | undefined;
+            const upper = this.bones.get(`UpperArm.${side}`);
+            const length = this.armLength(side);
+            if (!target || !upper || !length) return;
+            const lift = Math.max(0, grip.position.y - target.y);
+            const shoulder = rig.root.worldToLocal(upper.getWorldPosition(new T.Vector3()));
+            const toTarget = target.clone().sub(shoulder);
+            // The stick covers the last ~40cm; the hand stays in a bent, natural reach.
+            const handDistance = T.MathUtils.clamp(toTarget.length() - .4, length * .55, length * .88);
+            const next = shoulder.clone().addScaledVector(toTarget.normalize(), handDistance);
+            next.y += Math.min(.12, lift * .45);
+            next.z = Math.max(next.z, shoulder.z + .16);
+            grip.position.copy(next);
+        });
+        rig.root.updateMatrixWorld(true);
     }
     point(x: number, y: number, z: number) { return this.root.localToWorld(new T.Vector3(x, y, z)); }
     hasVocals() { return !!this.vocalRole || this.role === 'vocals' || this.instrumentRig?.family === 'voice'; }
@@ -495,6 +604,10 @@ export class Musician {
                     );
                 }
             }
+            if (rig.family === 'kit' && !this.walking) {
+                this.root.updateMatrixWorld(true);
+                this.retargetKitGrips(rig);
+            }
             const poleSpread = .65 + Math.max(0, this.bodyBuild - 1) * .32;
             const poleDrift = reduced ? 0 : Math.sin(t * .72 + this.phase) * .035 * motionEnergy;
             const poleLift = reduced ? 0 : Math.sin(t * .51 + this.phase * 1.4) * .025 * motionEnergy;
@@ -515,7 +628,7 @@ export class Musician {
                     .applyQuaternion(instrumentSurface.getWorldQuaternion(new T.Quaternion()))
                     .normalize();
                 leftTarget.addScaledVector(faceNormal, .045 + buildExtra);
-                rightTarget.addScaledVector(faceNormal, (acoustic ? .08 : .065) + buildExtra);
+                rightTarget.addScaledVector(faceNormal, (acoustic ? .05 : .02) + buildExtra);
 
                 const solveOutside = (
                     side: 'L' | 'R',
@@ -538,15 +651,49 @@ export class Musician {
                     // Correct the wrist target and, crucially, move the elbow pole farther
                     // forward. Fixing only the hand centre still allowed the forearm to cut
                     // straight through large acoustic bodies in front-three-quarter views.
-                    const correctedTarget = target.clone().addScaledVector(faceNormal, handCorrection + forearmCorrection * .22);
-                    const correctedPole = pole.clone().addScaledVector(faceNormal, .1 + forearmCorrection * 1.35);
+                    // Corrections are measured in instrument units; instruments may be scaled
+                    // to the performer's frame, so convert back to world metres.
+                    const unit = instrumentSurface.getWorldScale(new T.Vector3()).z;
+                    const correctedTarget = target.clone().addScaledVector(faceNormal, (handCorrection + forearmCorrection * .22) * unit);
+                    const correctedPole = pole.clone().addScaledVector(faceNormal, (.1 + forearmCorrection * 4) * unit);
                     this.hand(side, correctedTarget, correctedPole);
                 };
-                solveOutside('L', leftTarget, leftPole, acoustic ? .18 : .16, acoustic ? .12 : .105);
-                solveOutside('R', rightTarget, rightPole, acoustic ? .27 : instrumentId === 'bass_guitar' ? .23 : .24, acoustic ? .17 : .145);
+                // Elbows hang outward and in front of the instrument face wherever the
+                // instrument sits on this frame, instead of at fixed hip-height poles.
+                const down = new T.Vector3(0, -1, 0).applyQuaternion(this.root.getWorldQuaternion(new T.Quaternion()));
+                const lateral = new T.Vector3(1, 0, 0).applyQuaternion(this.root.getWorldQuaternion(new T.Quaternion()));
+                leftPole.copy(leftTarget).addScaledVector(faceNormal, .6).addScaledVector(down, .12).addScaledVector(lateral, .2);
+                rightPole.copy(rightTarget).addScaledVector(faceNormal, .55).addScaledVector(down, .02).addScaledVector(lateral, -.1);
+                solveOutside('L', leftTarget, leftPole, acoustic ? .228 : instrumentId === 'bass_guitar' ? .208 : .213, acoustic ? .17 : .15);
+                solveOutside('R', rightTarget, rightPole, acoustic ? .348 : instrumentId === 'bass_guitar' ? .308 : .308, acoustic ? .17 : .145);
+                // Orient the palms: fretting fingers reach into the fretboard from the
+                // audience side, picking fingers point down at the strings. Without
+                // this the imported rest pose leaves an open, waving palm.
+                const pointPalm = (side: 'L' | 'R', local: T.Vector3) => {
+                    const hand = this.bones.get(`Hand.${side}`);
+                    const knuckle = this.bones.get(`Middle1.${side}`) ?? this.bones.get(`Middle2.${side}`) ?? this.bones.get(`Index2.${side}`);
+                    if (!hand || !knuckle) return;
+                    // Keep the palm parallel to the instrument face (same local depth as
+                    // the wrist) so fingers lie over the strings instead of through them.
+                    const wrist = instrumentSurface.worldToLocal(hand.getWorldPosition(new T.Vector3()));
+                    aim(hand, knuckle, instrumentSurface.localToWorld(wrist.clone().add(local).setZ(wrist.z + local.z)));
+                };
+                pointPalm('L', new T.Vector3(-.06, -.02, .01));
+                pointPalm('R', new T.Vector3(.02, -.09, .0));
             } else {
                 this.hand('L', leftTarget, leftPole);
                 this.hand('R', rightTarget, rightPole);
+                if (rig.family === 'kit' && !this.walking) {
+                    // Closed, palm-down stick grips aimed forward at the drums.
+                    for (const side of ['L', 'R'] as const) {
+                        const hand = this.bones.get(`Hand.${side}`);
+                        const knuckle = this.bones.get(`Middle1.${side}`) ?? this.bones.get(`Middle2.${side}`) ?? this.bones.get(`Index2.${side}`);
+                        if (!hand || !knuckle) continue;
+                        const wrist = hand.getWorldPosition(new T.Vector3());
+                        const ahead = this.point(side === 'L' ? .08 : -.08, 0, .3).sub(this.point(0, 0, 0));
+                        aim(hand, knuckle, wrist.add(ahead).add(new T.Vector3(0, -.08, 0)));
+                    }
+                }
             }
             if (rig.family === 'voice' && !reduced && performing) {
                 if (this.performanceSection === 'chorus') {
@@ -687,19 +834,20 @@ export class Musician {
 
                     const sign = side === 'L' ? 1 : -1;
                     const target = hand.getWorldPosition(new T.Vector3())
-                        .addScaledVector(faceNormal, correction + .014);
-                    const pole = this.point(
-                        sign * (.7 + Math.max(0, this.bodyBuild - 1) * .35),
-                        .98,
-                        .38,
-                    ).addScaledVector(faceNormal, .12 + correction);
+                        .addScaledVector(faceNormal, correction * instrumentSurface.getWorldScale(new T.Vector3()).z + .014);
+                    // Elbow hangs out in front of the instrument face, like the main solve.
+                    const rootQuat = this.root.getWorldQuaternion(new T.Quaternion());
+                    const pole = target.clone()
+                        .addScaledVector(faceNormal, (side === 'L' ? .6 : .5) + correction)
+                        .addScaledVector(new T.Vector3(0, -1, 0).applyQuaternion(rootQuat), side === 'L' ? .12 : .02)
+                        .addScaledVector(new T.Vector3(1, 0, 0).applyQuaternion(rootQuat), sign * (.2 + Math.max(0, this.bodyBuild - 1) * .2));
                     this.hand(side, target, pole);
                     this.root.updateMatrixWorld(true);
                 }
             };
 
             keepVisibleHandOutside('L', acoustic ? .145 : .135);
-            keepVisibleHandOutside('R', acoustic ? .255 : instrumentId === 'bass_guitar' ? .215 : .225);
+            keepVisibleHandOutside('R', acoustic ? .24 : instrumentId === 'bass_guitar' ? .18 : .185);
 
             if (this.guitarPick) {
                 const pickContact = handContactPoint(this.bones, 'R', ['Thumb', 'Index'])
@@ -744,8 +892,10 @@ export class Musician {
                 // outside the palm instead of being occluded by the hand mesh.
                 const fingerGrip = handContactPoint(this.bones, side, ['Thumb', 'Index'])
                     ?? hand.getWorldPosition(new T.Vector3());
-                const gripWorld = fingerGrip
-                    .addScaledVector(forward, .025)
+                // Sticks sit across the palm between thumb and index knuckle, not
+                // at the finger tips, so blend the contact point back to the wrist.
+                const gripWorld = hand.getWorldPosition(new T.Vector3()).lerp(fingerGrip, .62)
+                    .addScaledVector(forward, .02)
                     .addScaledVector(lateral, side === 'L' ? .008 : -.008)
                     .addScaledVector(up, .004);
                 stick.position.copy(stick.parent.worldToLocal(gripWorld));
