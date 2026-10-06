@@ -60,6 +60,7 @@ if (typeof window !== "undefined") {
         data: {
           ...credentials.options?.data,
           referral_code: pendingCode,
+          referral_band_id: localStorage.getItem(REFERRAL_BAND_STORAGE_KEY) || undefined,
         },
       },
     });
