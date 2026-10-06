@@ -8,7 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Heart, Repeat2, MessageCircle, UserPlus, Quote, CheckCheck, Bell, ArrowLeft } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTwaaterRouteAccount } from "@/hooks/useTwaaterRouteAccount";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const notificationIcons: Record<string, typeof Heart> = {
@@ -32,7 +33,10 @@ const notificationColors: Record<string, string> = {
 export default function TwaaterNotifications() {
   const { profile } = useGameData();
   const navigate = useNavigate();
-  const { account, isLoading: accountLoading } = useTwaaterAccount("persona", profile?.id);
+  const [searchParams] = useSearchParams();
+  const { account: personaAccount, isLoading: personaLoading } = useTwaaterAccount("persona", profile?.id);
+  const { account, isLoading: routeAccountLoading } = useTwaaterRouteAccount(personaAccount, searchParams.get("account"));
+  const accountLoading = personaLoading || routeAccountLoading;
   const { notifications, isLoading, error, refetch, markAsRead, markAllAsRead, unreadCount } = useTwaaterNotifications(account?.id);
 
   if (!profile || accountLoading || isLoading) {
@@ -135,7 +139,7 @@ export default function TwaaterNotifications() {
     <FMPageScaffold
       title="Notifications"
       icon={Bell}
-      backTo="/twaater"
+      backTo={account?.id ? `/twaater?account=${account.id}` : "/twaater"}
       backLabel="Back to Twaater"
       headerActions={
         unreadCount > 0 ? (
