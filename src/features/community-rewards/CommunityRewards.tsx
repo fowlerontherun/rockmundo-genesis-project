@@ -91,8 +91,18 @@ export default function CommunityRewards({ profileId, profileName }: { profileId
   const shareText = `Join me in RockMundo — create a musician, form a band and build your music career. Use my invite so we both get credit: ${referralUrl}`;
 
   const copy = async (value: string, label: string) => {
-    await navigator.clipboard.writeText(value);
-    toast({ title: `${label} copied` });
+    if (!value) {
+      toast({ title: `${label} unavailable`, description: "Please refresh and try again.", variant: "destructive" });
+      return false;
+    }
+    try {
+      await navigator.clipboard.writeText(value);
+      toast({ title: `${label} copied` });
+      return true;
+    } catch {
+      toast({ title: `Couldn't copy ${label.toLowerCase()}`, description: "Your browser blocked clipboard access. Use Share invite instead, or select and copy the link manually.", variant: "destructive" });
+      return false;
+    }
   };
 
   const share = async () => {
