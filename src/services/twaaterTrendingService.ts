@@ -7,7 +7,7 @@ type TwaatMetrics = {
   likes?: number | null;
   retwaats?: number | null;
   replies?: number | null;
-  views?: number | null;
+  impressions?: number | null;
 };
 
 type TrendingTwaatRow = {
@@ -42,7 +42,7 @@ export const fetchRecentTwaatsForTrending = async (): Promise<TrendingTwaatRow[]
         likes,
         retwaats,
         replies,
-        views
+        impressions
       )
     `)
     .is("scheduled_for", null)
@@ -62,12 +62,12 @@ export const scoreTrendingTwaats = <T extends TrendingTwaatRow>(twaats: T[]) => 
   return twaats
     .map((twaat) => {
       const metricsData = Array.isArray(twaat.metrics) ? twaat.metrics[0] : twaat.metrics;
-      const metrics = metricsData || { likes: 0, retwaats: 0, replies: 0, views: 0 };
+      const metrics = metricsData || { likes: 0, retwaats: 0, replies: 0, impressions: 0 };
       const baseScore =
         (metrics.likes || 0) * 2 +
         (metrics.retwaats || 0) * 3 +
         (metrics.replies || 0) * 1.5 +
-        (metrics.views || 0) * 0.1;
+        (metrics.impressions || 0) * 0.1;
       const createdAtTime = new Date(twaat.created_at).getTime();
       const hoursOld = Number.isFinite(createdAtTime) ? (now - createdAtTime) / (1000 * 60 * 60) : 24;
       const timeDecay = Math.exp(-hoursOld / 12);
