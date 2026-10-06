@@ -7,6 +7,7 @@ import { TrendingUp, TrendingDown, Minus, Trophy, Music, Radio, Video, Share2 } 
 import { SongPlayer } from "@/components/audio/SongPlayer";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface MyChartPositionsProps {
   userId: string;
@@ -185,8 +186,13 @@ export function MyChartPositions({ userId }: MyChartPositionsProps) {
                         try { await navigator.share({ title: "RockMundo chart milestone", text, url }); localStorage.setItem(key, String(Date.now())); return; }
                         catch (error) { if ((error as DOMException)?.name === "AbortError") return; }
                       }
-                      await navigator.clipboard.writeText(`${text} ${url}`);
-                      localStorage.setItem(key, String(Date.now()));
+                      try {
+                        await navigator.clipboard.writeText(`${text} ${url}`);
+                        localStorage.setItem(key, String(Date.now()));
+                        toast.success("Chart invite copied");
+                      } catch {
+                        toast.error("Could not share chart result", { description: "Your browser blocked clipboard access. Try sharing again from a supported browser." });
+                      }
                     }}><Share2 className="mr-1.5 h-3.5 w-3.5" />Share chart result</Button>
                   )}
                 </div>
