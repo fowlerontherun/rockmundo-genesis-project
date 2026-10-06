@@ -100,6 +100,8 @@ import {
   Music2,
   Pen,
   UserPlus,
+  Save,
+  Loader2,
   Zap,
 } from "lucide-react";
 import logger from "@/lib/logger";
@@ -194,6 +196,82 @@ const DEFAULT_FORM_STATE: ProjectFormState = {
   inspirationModifiers: [],
   moodModifiers: [],
   instruments: [],
+};
+
+type LyricsSaveStatus =
+  | "idle"
+  | "saving"
+  | "saved"
+  | "saved_local"
+  | "recovered"
+  | "error";
+
+type CachedLyricsDraft = {
+  lyrics: string;
+  updatedAt: string;
+};
+
+const LYRICS_AUTOSAVE_DELAY_MS = 1500;
+const LYRICS_DRAFT_STORAGE_PREFIX = "rockmundo:songwriting-lyrics-draft:v1";
+
+const getLyricsDraftStorageKey = (
+  profileId: string | null | undefined,
+  projectId?: string | null,
+) =>
+  profileId
+    ? `${LYRICS_DRAFT_STORAGE_PREFIX}:${profileId}:${projectId ?? "new"}`
+    : null;
+
+const readCachedLyricsDraft = (
+  storageKey: string | null,
+): CachedLyricsDraft | null => {
+  if (!storageKey || typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as Partial<CachedLyricsDraft>;
+    if (
+      typeof parsed.lyrics !== "string" ||
+      typeof parsed.updatedAt !== "string"
+    ) {
+      return null;
+    }
+
+    return {
+      lyrics: parsed.lyrics,
+      updatedAt: parsed.updatedAt,
+    };
+  } catch {
+    return null;
+  }
+};
+
+const writeCachedLyricsDraft = (storageKey: string | null, lyrics: string) => {
+  if (!storageKey || typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(
+      storageKey,
+      JSON.stringify({
+        lyrics,
+        updatedAt: new Date().toISOString(),
+      } satisfies CachedLyricsDraft),
+    );
+  } catch {
+    // The database autosave remains available if browser storage is blocked.
+  }
+};
+
+const clearCachedLyricsDraft = (storageKey: string | null) => {
+  if (!storageKey || typeof window === "undefined") return;
+
+  try {
+    window.localStorage.removeItem(storageKey);
+  } catch {
+    // Ignore browser storage cleanup failures.
+  }
 };
 
 // Simplified song select - only use existing columns
@@ -591,6 +669,14 @@ const Songwriting = () => {
   const [formState, setFormState] =
     useState<ProjectFormState>(DEFAULT_FORM_STATE);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [lyricsSaveStatus, setLyricsSaveStatus] =
+    useState<LyricsSaveStatus>("idle");
+  const [lyricsSavedAt, setLyricsSavedAt] = useState<Date | null>(null);
+  const lyricsAutosaveTimerRef = useRef<number | null>(null);
+  const lyricsSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const lastPersistedLyricsRef = useRef("");
+  const latestLyricsRef = useRef("");
+  latestLyricsRef.current = formState.initial_lyrics;
   const [effortSelections, setEffortSelections] = useState<
     Record<string, SessionEffortOption["id"]>
   >({});
@@ -1182,6 +1268,13 @@ const Songwriting = () => {
   );
 
   const resetForm = useCallback(() => {
+    if (lyricsAutosaveTimerRef.current !== null) {
+      window.clearTimeout(lyricsAutosaveTimerRef.current);
+      lyricsAutosaveTimerRef.current = null;
+    }
+    lastPersistedLyricsRef.current = "";
+    setLyricsSaveStatus("idle");
+    setLyricsSavedAt(null);
     setFormState(DEFAULT_FORM_STATE);
     setSelectedProject(null);
     setFormErrors({});
@@ -1221,8 +1314,138 @@ const Songwriting = () => {
     },
     [toggleSelection],
   );
+  const currentLyricsDraftKey = useMemo(
+    () => getLyricsDraftStorageKey(profileId, selectedProject?.id ?? null),
+    [profileId, selectedProject?.id],
+  );
+
+  const persistLyricsDraft = useCallback(
+    async (lyrics: string, notify = false) => {
+      if (!currentLyricsDraftKey) {
+        if (notify) {
+          toast.error("Select an active character before saving lyrics.");
+        }
+        return;
+      }
+
+      writeCachedLyricsDraft(currentLyricsDraftKey, lyrics);
+
+      const projectId = selectedProject?.id;
+      if (!projectId) {
+        const savedAt = new Date();
+        setLyricsSaveStatus("saved_local");
+        setLyricsSavedAt(savedAt);
+        if (notify) {
+          toast.success("Lyrics draft saved in this browser");
+        }
+        return;
+      }
+
+      setLyricsSaveStatus("saving");
+
+      const queuedSave = lyricsSaveQueueRef.current
+        .catch(() => undefined)
+        .then(async () => {
+          const { error } = await supabase
+            .from("songwriting_projects")
+            .update({
+              lyrics: lyrics || null,
+              initial_lyrics: lyrics || null,
+            })
+            .eq("id", projectId);
+
+          if (error) throw error;
+
+          lastPersistedLyricsRef.current = lyrics;
+          const savedAt = new Date();
+          setLyricsSavedAt(savedAt);
+          setLyricsSaveStatus(
+            latestLyricsRef.current === lyrics ? "saved" : "saving",
+          );
+
+          if (notify) {
+            toast.success("Lyrics saved");
+          }
+        })
+        .catch((error) => {
+          setLyricsSaveStatus("error");
+          logger.warn("Failed to autosave songwriting lyrics", {
+            projectId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          if (notify) {
+            toast.error(
+              "Could not save lyrics to the project. A browser recovery copy is still kept.",
+            );
+          }
+          throw error;
+        });
+
+      lyricsSaveQueueRef.current = queuedSave.catch(() => undefined);
+      await queuedSave;
+    },
+    [currentLyricsDraftKey, selectedProject?.id],
+  );
+
+  useEffect(() => {
+    if (!isDialogOpen || !currentLyricsDraftKey) return;
+
+    const lyrics = formState.initial_lyrics;
+    writeCachedLyricsDraft(currentLyricsDraftKey, lyrics);
+
+    if (!selectedProject?.id) {
+      setLyricsSaveStatus("saved_local");
+      setLyricsSavedAt(new Date());
+      return;
+    }
+
+    if (lyrics === lastPersistedLyricsRef.current) {
+      return;
+    }
+
+    setLyricsSaveStatus("saving");
+
+    if (lyricsAutosaveTimerRef.current !== null) {
+      window.clearTimeout(lyricsAutosaveTimerRef.current);
+    }
+
+    lyricsAutosaveTimerRef.current = window.setTimeout(() => {
+      lyricsAutosaveTimerRef.current = null;
+      void persistLyricsDraft(lyrics).catch(() => undefined);
+    }, LYRICS_AUTOSAVE_DELAY_MS);
+
+    return () => {
+      if (lyricsAutosaveTimerRef.current !== null) {
+        window.clearTimeout(lyricsAutosaveTimerRef.current);
+        lyricsAutosaveTimerRef.current = null;
+      }
+    };
+  }, [
+    currentLyricsDraftKey,
+    formState.initial_lyrics,
+    isDialogOpen,
+    persistLyricsDraft,
+    selectedProject?.id,
+  ]);
+
   const handleOpenCreate = () => {
     resetForm();
+
+    const draftKey = getLyricsDraftStorageKey(profileId, null);
+    const cachedDraft = readCachedLyricsDraft(draftKey);
+    if (cachedDraft?.lyrics) {
+      setFormState((previous) => ({
+        ...previous,
+        initial_lyrics: cachedDraft.lyrics,
+        lyricsSections: parseLyricsToSections(cachedDraft.lyrics),
+      }));
+      setLyricsSaveStatus("recovered");
+      const recoveredAt = new Date(cachedDraft.updatedAt);
+      setLyricsSavedAt(
+        Number.isNaN(recoveredAt.getTime()) ? null : recoveredAt,
+      );
+    }
+
     setIsDialogOpen(true);
   };
 
@@ -1285,7 +1508,30 @@ const Songwriting = () => {
   const handleEdit = (project: SongwritingProject) => {
     setSelectedProject(project);
     const creativeBrief = project.creative_brief ?? null;
-    const existingLyrics = project.lyrics ?? project.initial_lyrics ?? "";
+    const persistedLyrics = project.lyrics ?? project.initial_lyrics ?? "";
+    const draftKey = getLyricsDraftStorageKey(profileId, project.id);
+    const cachedDraft = readCachedLyricsDraft(draftKey);
+    const projectUpdatedAt = Date.parse(project.updated_at ?? "");
+    const cachedUpdatedAt = cachedDraft
+      ? Date.parse(cachedDraft.updatedAt)
+      : Number.NaN;
+    const shouldRecoverCachedDraft =
+      Boolean(cachedDraft) &&
+      cachedDraft?.lyrics !== persistedLyrics &&
+      !Number.isNaN(cachedUpdatedAt) &&
+      (Number.isNaN(projectUpdatedAt) || cachedUpdatedAt > projectUpdatedAt);
+    const existingLyrics = shouldRecoverCachedDraft
+      ? cachedDraft?.lyrics ?? persistedLyrics
+      : persistedLyrics;
+
+    lastPersistedLyricsRef.current = persistedLyrics;
+    setLyricsSaveStatus(shouldRecoverCachedDraft ? "recovered" : "idle");
+    setLyricsSavedAt(
+      shouldRecoverCachedDraft && cachedDraft
+        ? new Date(cachedDraft.updatedAt)
+        : null,
+    );
+
     setFormState({
       title: project.title,
       theme_id: project.theme_id ?? "",
@@ -1313,6 +1559,7 @@ const Songwriting = () => {
 
     try {
       await deleteProject.mutateAsync(project.id);
+      clearCachedLyricsDraft(getLyricsDraftStorageKey(profileId, project.id));
     } catch (error) {
       logger.error("Failed to delete songwriting project", {
         projectId: project.id,
@@ -1385,9 +1632,21 @@ const Songwriting = () => {
       initial_lyrics: formState.initial_lyrics,
       creative_brief: creativeBrief,
     };
+    const submittedDraftKey = getLyricsDraftStorageKey(
+      profileId,
+      selectedProject?.id ?? null,
+    );
+
+    if (lyricsAutosaveTimerRef.current !== null) {
+      window.clearTimeout(lyricsAutosaveTimerRef.current);
+      lyricsAutosaveTimerRef.current = null;
+    }
 
     try {
       if (selectedProject) {
+        // Drain any older autosave before the full project update so a slower
+        // request cannot overwrite the lyrics the player is submitting now.
+        await persistLyricsDraft(payload.initial_lyrics).catch(() => undefined);
         await updateProject.mutateAsync({
           id: selectedProject.id,
           title: payload.title,
@@ -1417,6 +1676,7 @@ const Songwriting = () => {
         }
       }
 
+      clearCachedLyricsDraft(submittedDraftKey);
       setInviteAfterCreateRequested(false);
     } catch (error) {
       setInviteAfterCreateRequested(false);
@@ -2058,6 +2318,57 @@ const Songwriting = () => {
                           }));
                         }}
                       />
+
+                      <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/30 px-3 py-2">
+                        <p
+                          className={`text-xs ${
+                            lyricsSaveStatus === "error"
+                              ? "text-destructive"
+                              : "text-muted-foreground"
+                          }`}
+                          aria-live="polite"
+                        >
+                          {lyricsSaveStatus === "saving"
+                            ? "Saving lyrics…"
+                            : lyricsSaveStatus === "saved"
+                              ? `Lyrics autosaved${
+                                  lyricsSavedAt
+                                    ? ` at ${lyricsSavedAt.toLocaleTimeString([], {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })}`
+                                    : ""
+                                }.`
+                              : lyricsSaveStatus === "saved_local"
+                                ? "Draft saved in this browser. It will be kept if the page refreshes."
+                                : lyricsSaveStatus === "recovered"
+                                  ? "Recovered a newer lyrics draft after the last page load."
+                                  : lyricsSaveStatus === "error"
+                                    ? "Project autosave failed. A browser recovery copy is still kept."
+                                    : selectedProject
+                                      ? "Lyrics autosave to this project while you type."
+                                      : "Lyrics are kept as a browser recovery draft until this project is created."}
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={lyricsSaveStatus === "saving"}
+                          onClick={() => {
+                            void persistLyricsDraft(
+                              formState.initial_lyrics,
+                              true,
+                            ).catch(() => undefined);
+                          }}
+                        >
+                          {lyricsSaveStatus === "saving" ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Save className="mr-2 h-4 w-4" />
+                          )}
+                          Save lyrics
+                        </Button>
+                      </div>
 
                       {/* AI Lyrics Generator */}
                       <div className="pt-2">
