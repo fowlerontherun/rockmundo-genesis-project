@@ -11,7 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { BAND_PERFORMANCE_ROLES, BAND_VOCAL_ASSIGNMENTS, DEFAULT_BAND_PERFORMANCE_ROLE } from '@/data/bandPerformanceRoles';
 import { useToast } from '@/hooks/use-toast';
 import { useBandInvitationsRealtime } from '@/hooks/useBandInvitationsRealtime';
-import { UserPlus, Loader2, X, Search } from 'lucide-react';
+import { UserPlus, Loader2, X, Search, Share2, Copy } from 'lucide-react';
 import { searchPublicProfiles, type PublicProfileSearchResult } from '@/services/publicProfileSearch';
 import { bandInviteUnavailability } from '@/services/bandInviteEligibility';
 import { cancelBandInvitation, sendBandInvitation, friendlyBandInvitationError } from '@/services/bandInvitations';
@@ -66,7 +66,35 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
   const [instrumentRole, setInstrumentRole] = useState<string>(DEFAULT_BAND_PERFORMANCE_ROLE);
   const [vocalRole, setVocalRole] = useState<string | undefined>(undefined);
   const [message, setMessage] = useState('');
+  const [referralCode, setReferralCode] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const externalRecruitmentUrl = referralCode
+    ? `https://rockmundo.uk/auth?ref=${encodeURIComponent(referralCode)}&band=${encodeURIComponent(bandId)}`
+    : '';
+  const externalRecruitmentText = `Join me in RockMundo and help build ${bandName}. Create your musician with my invite, then I can recruit you into the band: ${externalRecruitmentUrl}`;
+
+  const loadReferralCode = useCallback(async () => {
+    const { data, error } = await (supabase as any).rpc('get_referral_dashboard', { p_profile_id: currentUserId });
+    if (!error && data?.code) setReferralCode(data.code);
+  }, [currentUserId]);
+
+  const shareExternalRecruitment = async () => {
+    if (!externalRecruitmentUrl) {
+      toast({ title: 'Invite link unavailable', description: 'Open Invite Friends once to initialise your referral link.', variant: 'destructive' });
+      return;
+    }
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `Join ${bandName} in RockMundo`, text: externalRecruitmentText, url: externalRecruitmentUrl });
+        return;
+      } catch (error) {
+        if ((error as DOMException)?.name === 'AbortError') return;
+      }
+    }
+    await navigator.clipboard.writeText(externalRecruitmentUrl);
+    toast({ title: 'Recruitment link copied' });
+  };
 
   useEffect(() => {
     const handleHubAction = (event: Event) => {
@@ -162,7 +190,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
       setLoading(true);
       try {
         if (!currentUserId) throw new Error('Select an active character before inviting a band member.');
-        await loadRecruitmentOptions(currentUserId);
+        await Promise.all([loadRecruitmentOptions(currentUserId), loadReferralCode()]);
       } catch (error) {
         toast({ title: 'Could not load invitations', description: error instanceof Error ? error.message : 'Failed to prepare band invitations', variant: 'destructive' });
         setFriends([]);
@@ -175,7 +203,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
       }
     };
     void prepare();
-  }, [open, currentUserId, loadRecruitmentOptions, toast]);
+  }, [open, currentUserId, loadRecruitmentOptions, loadReferralCode, toast]);
 
   // Refresh pending invitations and response history while the manager keeps
   // the dialog open, including changes made by the invited player elsewhere.
@@ -407,6 +435,24 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
                 <Button type="button" onClick={handleInvite} disabled={submitting || !selectedPlayer}>
                   {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending...</> : 'Send Invitation'}
                 </Button>
+
+                <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+                  <div>
+                    <p className="text-sm font-medium">Recruit someone who doesn't play RockMundo yet</p>
+                    <p className="text-xs text-muted-foreground">Share a band recruitment link. Their signup is attributed to you, and once they create a musician you can invite them into {bandName} normally.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="secondary" size="sm" onClick={shareExternalRecruitment} disabled={!referralCode}>
+                      <Share2 className="mr-2 h-4 w-4" />Share recruitment link
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" disabled={!externalRecruitmentUrl} onClick={async () => {
+                      await navigator.clipboard.writeText(externalRecruitmentUrl);
+                      toast({ title: 'Recruitment link copied' });
+                    }}>
+                      <Copy className="mr-2 h-4 w-4" />Copy link
+                    </Button>
+                  </div>
+                </div>
               </section>
 
               <section className="space-y-3 border-t pt-4">
