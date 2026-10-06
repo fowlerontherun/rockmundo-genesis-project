@@ -6,23 +6,163 @@ export const PERSONAL_GEAR_RARITY_BONUS: Record<string, number> = {
   legendary: 35,
 };
 
-const ROLE_GEAR_CATEGORIES: Record<string, string[]> = {
-  "Lead Guitar": ["guitar", "electric_guitar"],
-  "Rhythm Guitar": ["guitar", "acoustic_guitar", "electric_guitar"],
-  Bass: ["bass"],
-  Drums: ["drums"],
+const normalizeEquipmentKey = (value: string | null | undefined) =>
+  (value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+const MICROPHONE_SUBCATEGORIES = new Set([
+  "microphone",
+  "dynamic_mic",
+  "condenser_mic",
+  "condenser",
+  "ribbon_mic",
+  "tube_mic",
+  "wireless_mic",
+]);
+
+const GUITAR_EFFECT_SUBCATEGORIES = new Set([
+  "overdrive",
+  "distortion",
+  "fuzz",
+  "delay",
+  "reverb",
+  "chorus",
+  "flanger",
+  "phaser",
+  "tremolo",
+  "vibe",
+  "compressor",
+  "noise_gate",
+  "tuner",
+  "wah",
+  "volume",
+  "pitch",
+  "octave",
+  "modulation",
+  "multi",
+]);
+
+/**
+ * Canonical equipment type used by role-fit and performance scoring.
+ *
+ * The game has equipment data from multiple generations, so equivalent items
+ * can arrive as e.g. instrument/acoustic_guitar or guitar/acoustic. Resolve
+ * those aliases here instead of relying on substring matching.
+ */
+export function getCanonicalEquipmentType(
+  category: string | null | undefined,
+  subcategory: string | null | undefined,
+): string | null {
+  const cat = normalizeEquipmentKey(category);
+  const sub = normalizeEquipmentKey(subcategory);
+
+  if (!cat && !sub) return null;
+
+  if (cat === "instrument") {
+    if (["guitar", "electric", "electric_guitar", "lead_guitar"].includes(sub)) return "electric_guitar";
+    if (["acoustic", "acoustic_guitar", "12_string_guitar", "dobro", "resonator"].includes(sub)) return "acoustic_guitar";
+    if (["classical", "classical_guitar", "nylon_string_guitar"].includes(sub)) return "classical_guitar";
+    if (["bass", "bass_guitar", "upright_bass"].includes(sub)) return sub === "upright_bass" ? "upright_bass" : "bass_guitar";
+    if (["drums", "drum_kit", "kit"].includes(sub)) return "drums";
+    if (sub === "electronic_drums") return "electronic_drums";
+    if (sub === "cymbals") return "cymbals";
+    if (["keyboard", "piano", "classical_piano", "jazz_piano", "rhodes", "wurlitzer"].includes(sub)) return "keyboard";
+    if (["synth", "synthesizer", "analog_synth", "digital_synth", "eurorack"].includes(sub)) return "synthesizer";
+    if (sub === "midi_controller") return "midi_controller";
+    return sub || null;
+  }
+
+  // Historical equipment_items rows used the instrument family as category.
+  if (cat === "guitar") {
+    if (["acoustic", "acoustic_guitar", "12_string_guitar"].includes(sub)) return "acoustic_guitar";
+    if (["classical", "classical_guitar", "nylon_string_guitar"].includes(sub)) return "classical_guitar";
+    if (["bass", "bass_guitar", "upright_bass"].includes(sub)) return sub === "upright_bass" ? "upright_bass" : "bass_guitar";
+    return "electric_guitar";
+  }
+  if (cat === "bass") return sub === "upright_bass" ? "upright_bass" : "bass_guitar";
+  if (cat === "drums") return sub === "electronic_drums" ? "electronic_drums" : sub === "cymbals" ? "cymbals" : "drums";
+  if (cat === "microphone" || cat === "vocal") return "microphone";
+  if (cat === "keyboard" || cat === "piano") return "keyboard";
+  if (cat === "synth" || cat === "synthesizer") return "synthesizer";
+
+  if (cat === "recording") {
+    if (MICROPHONE_SUBCATEGORIES.has(sub)) return "microphone";
+    if (["audio_interface", "interface"].includes(sub)) return "audio_interface";
+    return sub || "recording";
+  }
+
+  if (cat === "amplifier") {
+    if (sub === "bass_amp") return "bass_amp";
+    if (["guitar_amp", "tube_combo", "tube_head", "modeler"].includes(sub)) return "guitar_amp";
+    return sub || "amplifier";
+  }
+
+  if (cat === "effects") {
+    return GUITAR_EFFECT_SUBCATEGORIES.has(sub) ? "guitar_effect" : sub || "effects";
+  }
+
+  if (cat === "stage") {
+    if (sub === "wireless_mic") return "microphone";
+    if (sub === "wireless_guitar") return "wireless_guitar";
+    return sub || "stage";
+  }
+
+  // Preserve future/legacy instrument-family categories so exact role aliases
+  // (saxophone, trumpet, violin, etc.) can still be matched safely.
+  return sub || cat || null;
+}
+
+const ROLE_GEAR_TYPES: Record<string, string[]> = {
+  "Lead Guitar": ["electric_guitar", "guitar_amp", "guitar_effect", "wireless_guitar"],
+  "Rhythm Guitar": ["electric_guitar", "acoustic_guitar", "classical_guitar", "guitar_amp", "guitar_effect", "wireless_guitar"],
+  "Acoustic Guitar": ["acoustic_guitar"],
+  "Classical Guitar": ["classical_guitar"],
+  "Electric Guitar": ["electric_guitar", "guitar_amp", "guitar_effect", "wireless_guitar"],
+  Bass: ["bass_guitar", "upright_bass", "bass_amp", "wireless_guitar"],
+  Drums: ["drums", "electronic_drums", "cymbals"],
   Vocals: ["microphone"],
   "Lead Vocals": ["microphone"],
-  Keys: ["keyboard", "piano"],
-  Keyboard: ["keyboard", "piano", "synth"],
-  Synth: ["synth", "keyboard"],
-  DJ: ["dj", "controller"],
-  Saxophone: ["wind", "saxophone"],
+  Keys: ["keyboard", "midi_controller"],
+  Keyboard: ["keyboard", "synthesizer", "midi_controller"],
+  Synth: ["synthesizer", "keyboard", "midi_controller"],
+  DJ: ["dj", "controller", "turntablism", "mpc"],
+  Saxophone: ["wind", "saxophone", "alto_sax", "tenor_sax", "soprano_sax", "bari_sax"],
   Trumpet: ["brass", "trumpet"],
   Trombone: ["brass", "trombone"],
   Violin: ["strings", "violin"],
   Cello: ["strings", "cello"],
-  Percussion: ["percussion", "drums"],
+  Percussion: ["percussion", "latin_percussion", "african_drums", "cajon", "tabla"],
+};
+
+const resolveRoleKey = (role: string): string | null => {
+  const normalized = role.trim().toLowerCase();
+
+  const orderedAliases: Array<[RegExp, string]> = [
+    [/\blead guitar\b/, "Lead Guitar"],
+    [/\brhythm guitar\b/, "Rhythm Guitar"],
+    [/\bacoustic guitar\b/, "Acoustic Guitar"],
+    [/\bclassical guitar\b/, "Classical Guitar"],
+    [/\belectric guitar\b/, "Electric Guitar"],
+    [/\bbass( guitar|ist)?\b/, "Bass"],
+    [/\b(drums?|drummer)\b/, "Drums"],
+    [/\b(lead vocals?|lead singer|frontperson)\b/, "Lead Vocals"],
+    [/\b(vocals?|vocalist|singer)\b/, "Vocals"],
+    [/\b(synth|synthesizer)\b/, "Synth"],
+    [/\b(keyboard|keyboardist)\b/, "Keyboard"],
+    [/\b(keys|piano|pianist)\b/, "Keys"],
+    [/\b(dj|turntablist)\b/, "DJ"],
+    [/\b(sax|saxophone)\b/, "Saxophone"],
+    [/\btrumpet\b/, "Trumpet"],
+    [/\btrombone\b/, "Trombone"],
+    [/\bviolin\b/, "Violin"],
+    [/\bcello\b/, "Cello"],
+    [/\bpercussion\b/, "Percussion"],
+  ];
+
+  return orderedAliases.find(([pattern]) => pattern.test(normalized))?.[1] ?? null;
 };
 
 export interface PersonalGearItemLike {
@@ -63,27 +203,15 @@ export function personalGearMatchesRole(
   subcategory: string | null | undefined,
   role: string | null | undefined,
 ): boolean {
-  if (!role || !category) return false;
+  if (!role) return false;
 
-  const direct = ROLE_GEAR_CATEGORIES[role];
-  const matchedRole = direct
-    ? role
-    : Object.keys(ROLE_GEAR_CATEGORIES).find(
-        (candidate) =>
-          role.toLowerCase().includes(candidate.toLowerCase()) ||
-          candidate.toLowerCase().includes(role.toLowerCase()),
-      );
+  const roleKey = ROLE_GEAR_TYPES[role] ? role : resolveRoleKey(role);
+  if (!roleKey) return false;
 
-  const validCategories = matchedRole ? ROLE_GEAR_CATEGORIES[matchedRole] : [];
-  const categoryLower = category.toLowerCase();
-  const subcategoryLower = (subcategory || "").toLowerCase();
+  const equipmentType = getCanonicalEquipmentType(category, subcategory);
+  if (!equipmentType) return false;
 
-  return validCategories.some(
-    (valid) =>
-      categoryLower.includes(valid) ||
-      subcategoryLower.includes(valid) ||
-      valid.includes(categoryLower),
-  );
+  return ROLE_GEAR_TYPES[roleKey]?.includes(equipmentType) ?? false;
 }
 
 /**
@@ -98,7 +226,7 @@ export function getPersonalGearRoleBonusPercent(
 
   const rarityBonus = PERSONAL_GEAR_RARITY_BONUS[(item.rarity || "common").toLowerCase()] ?? 5;
   const performance = Number(item.stat_boosts?.performance || 0);
-  const craftedLuthieryBonus = item.subcategory === "custom_luthiery"
+  const craftedLuthieryBonus = normalizeEquipmentKey(item.subcategory) === "custom_luthiery"
     ? getLuthieryPerformanceBonusPercent(item.stat_boosts)
     : 0;
   return Math.max(
