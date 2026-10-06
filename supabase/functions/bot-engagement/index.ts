@@ -120,6 +120,8 @@ serve(async (req) => {
       .select("id, body, account_id, created_at")
       .gte("created_at", twoDaysAgo)
       .eq("visibility", "public")
+      .is("deleted_at", null)
+      .is("scheduled_for", null)
       .order("created_at", { ascending: false })
       .limit(100);
 
@@ -170,7 +172,7 @@ serve(async (req) => {
         const { data: existingReaction } = await supabase
           .from("twaat_reactions")
           .select("id")
-          .eq("twaat_id", twaat.id)
+          .eq("parent_twaat_id", twaat.id)
           .eq("account_id", bot.account_id)
           .limit(1);
 
@@ -186,17 +188,6 @@ serve(async (req) => {
 
           if (!likeError) {
             likesCreated++;
-            
-            // Create notification for the player
-            await supabase
-              .from("twaater_notifications")
-              .insert({
-                account_id: twaat.account_id,
-                type: "like",
-                actor_account_id: bot.account_id,
-                twaat_id: twaat.id,
-                message: `@${bot.account?.handle} liked your twaat`,
-              });
           }
         }
 
@@ -204,7 +195,7 @@ serve(async (req) => {
         const { data: existingReply } = await supabase
           .from("twaat_replies")
           .select("id")
-          .eq("twaat_id", twaat.id)
+          .eq("parent_twaat_id", twaat.id)
           .eq("account_id", bot.account_id)
           .limit(1);
 
@@ -215,24 +206,13 @@ serve(async (req) => {
           const { error: replyError } = await supabase
             .from("twaat_replies")
             .insert({
-              twaat_id: twaat.id,
+              parent_twaat_id: twaat.id,
               account_id: bot.account_id,
               body: replyBody,
             });
 
           if (!replyError) {
             repliesCreated++;
-            
-            // Create notification for the player
-            await supabase
-              .from("twaater_notifications")
-              .insert({
-                account_id: twaat.account_id,
-                type: "reply",
-                actor_account_id: bot.account_id,
-                twaat_id: twaat.id,
-                message: `@${bot.account?.handle} replied to your twaat`,
-              });
           }
         }
       }
@@ -283,16 +263,6 @@ serve(async (req) => {
             followsCreated++;
             followsThisBot++;
             console.log(`[bot-engagement] @${bot.account?.handle} followed account ${playerAccount.id} (fame: ${fame}, fans: ${fans})`);
-
-            // Create notification for the player
-            await supabase
-              .from("twaater_notifications")
-              .insert({
-                account_id: playerAccount.id,
-                type: "follow",
-                actor_account_id: bot.account_id,
-                message: `@${bot.account?.handle} started following you`,
-              });
           }
         }
       }
