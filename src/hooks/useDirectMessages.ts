@@ -95,9 +95,26 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
           queryClient.invalidateQueries({ queryKey: ["mobile-conversations", myProfileId] });
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          void queryClient.invalidateQueries({ queryKey: ["direct-messages", conversationId ?? channelId] });
+          void queryClient.invalidateQueries({ queryKey: ["dm-unread", myProfileId] });
+        }
+      });
+    const timer = window.setInterval(() => {
+      void queryClient.invalidateQueries({ queryKey: ["direct-messages", conversationId ?? channelId] });
+    }, 15000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        void queryClient.invalidateQueries({ queryKey: ["direct-messages", conversationId ?? channelId] });
+        void queryClient.invalidateQueries({ queryKey: ["dm-unread", myProfileId] });
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
-      supabase.removeChannel(channel);
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+      void supabase.removeChannel(channel);
     };
   }, [channelId, conversationId, directChannelId, directOtherProfileId, groupConversationId, queryClient, myProfileId]);
 
