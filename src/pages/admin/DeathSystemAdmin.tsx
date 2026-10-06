@@ -24,6 +24,33 @@ interface ComaEventDisplay extends ComaEventRow {
   username: string | null;
 }
 
+interface ComaSystemHealth {
+  healthy: boolean;
+  current_inactivity_comas: number;
+  recent_active_users_in_coma: number;
+  entries_last_7_days: number;
+  revivals_last_7_days: number;
+  cron: {
+    active: boolean;
+    schedule: string | null;
+    last_status: string | null;
+    last_started_at: string | null;
+    last_completed_at: string | null;
+    last_message: string | null;
+  };
+}
+
+interface RpcResult {
+  data: unknown;
+  error: { message?: string } | null;
+}
+
+interface RpcClient {
+  rpc: (name: string) => Promise<RpcResult>;
+}
+
+const rpcClient = supabase as unknown as RpcClient;
+
 const formatDateTime = (value: string | null) =>
   value
     ? new Date(value).toLocaleString(undefined, {
@@ -105,6 +132,21 @@ const DeathSystemAdmin = () => {
   });
 
   const {
+    data: comaHealth,
+    isLoading: healthLoading,
+    isFetching: healthFetching,
+    refetch: refetchHealth,
+  } = useQuery({
+    queryKey: ["coma-system-health"],
+    queryFn: async (): Promise<ComaSystemHealth> => {
+      const { data, error } = await rpcClient.rpc("admin_get_coma_system_health");
+      if (error) throw new Error(error.message || "Unable to load coma system health");
+      return data as ComaSystemHealth;
+    },
+    refetchInterval: 60_000,
+  });
+
+  const {
     data: recentEvents,
     isLoading: eventsLoading,
     isFetching: eventsFetching,
@@ -156,8 +198,11 @@ const DeathSystemAdmin = () => {
 
   const refreshAll = () => {
     void refetchStats();
+    void refetchHealth();
     void refetchEvents();
   };
+
+  const refreshing = statsFetching || healthFetching || eventsFetching;
 
   return (
     <AdminRoute>
@@ -174,8 +219,8 @@ const DeathSystemAdmin = () => {
               </p>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={refreshAll} disabled={statsFetching || eventsFetching}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${statsFetching || eventsFetching ? "animate-spin" : ""}`} />
+          <Button variant="outline" size="sm" onClick={refreshAll} disabled={refreshing}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
             Refresh
           </Button>
         </div>
@@ -228,6 +273,53 @@ const DeathSystemAdmin = () => {
           </AlertDescription>
         </Alert>
 
+        <Alert variant={comaHealth && !comaHealth.healthy ? "destructive" : "default"}>
+          <HeartPulse className="h-4 w-4" />
+          <AlertTitle>
+            {healthLoading
+              ? "Checking coma-system health…"
+              : comaHealth?.healthy
+                ? "Coma system healthy"
+                : "Coma system needs attention"}
+          </AlertTitle>
+          <AlertDescription>
+            {healthLoading ? (
+              "Loading the live cron and account-safety checks."
+            ) : comaHealth ? (
+              `Cron: ${comaHealth.cron.last_status || "unknown"} · Active: ${comaHealth.cron.active ? "yes" : "no"} · Recently active users still in coma: ${comaHealth.recent_active_users_in_coma}`
+            ) : (
+              "Unable to load the live coma-system health summary."
+            )}
+          </AlertDescription>
+        </Alert>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Operational health</CardTitle>
+            <CardDescription>Live safeguards for the inactivity-coma system.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-lg border p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Safety conflicts</p>
+              <p className="mt-1 text-2xl font-bold">{healthLoading ? "…" : comaHealth?.recent_active_users_in_coma ?? "—"}</p>
+              <p className="mt-1 text-xs text-muted-foreground">Signed in within 30 days but still comatose</p>
+            </div>
+            <div className="rounded-lg border p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Entries · 7 days</p>
+              <p className="mt-1 text-2xl font-bold">{healthLoading ? "…" : comaHealth?.entries_last_7_days ?? "—"}</p>
+            </div>
+            <div className="rounded-lg border p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Revivals · 7 days</p>
+              <p className="mt-1 text-2xl font-bold">{healthLoading ? "…" : comaHealth?.revivals_last_7_days ?? "—"}</p>
+            </div>
+            <div className="rounded-lg border p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Last cron run</p>
+              <p className="mt-1 text-sm font-semibold">{healthLoading ? "Loading…" : formatDateTime(comaHealth?.cron.last_started_at ?? null)}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{comaHealth?.cron.last_status || "Unknown status"}</p>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Inactivity coma policy</CardTitle>
@@ -252,7 +344,9 @@ const DeathSystemAdmin = () => {
             </div>
             <div className="rounded-lg border p-4">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Scheduled check</p>
-              <p className="mt-1 text-sm">Daily at 03:30 UTC via the existing inactivity-coma cron job.</p>
+              <p className="mt-1 text-sm">
+                {comaHealth?.cron.schedule ? `Cron ${comaHealth.cron.schedule}` : "Daily at 03:30 UTC"} · latest run {comaHealth?.cron.last_status || "unknown"}
+              </p>
             </div>
           </CardContent>
         </Card>
