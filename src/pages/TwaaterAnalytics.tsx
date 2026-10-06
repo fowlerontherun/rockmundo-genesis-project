@@ -4,7 +4,8 @@ import { useTwaaterAnalytics } from "@/hooks/useTwaaterAnalytics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, BarChart3, Eye, Heart, MessageCircle, Repeat2, TrendingUp, Users, Clock } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { useTwaaterRouteAccount } from "@/hooks/useTwaaterRouteAccount";
 import { Button } from "@/components/ui/button";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
@@ -23,8 +24,18 @@ const StatCard = ({ icon: Icon, label, value, hint }: { icon: any; label: string
 
 export default function TwaaterAnalytics() {
   const { profile } = useGameData();
-  const { account } = useTwaaterAccount("persona", profile?.id);
+  const [searchParams] = useSearchParams();
+  const { account: personaAccount, isLoading: personaLoading } = useTwaaterAccount("persona", profile?.id);
+  const { account, isLoading: routeAccountLoading } = useTwaaterRouteAccount(personaAccount, searchParams.get("account"));
   const { data, isLoading, error, refetch } = useTwaaterAnalytics(account?.id);
+
+  if (personaLoading || routeAccountLoading) {
+    return (
+      <FMPageScaffold title="Twaater Analytics" icon={BarChart3} backTo="/twaater">
+        <Card><CardContent className="p-6 text-center text-muted-foreground">Loading…</CardContent></Card>
+      </FMPageScaffold>
+    );
+  }
 
   if (!account) {
     return (
@@ -39,7 +50,7 @@ export default function TwaaterAnalytics() {
       title="Twaater Analytics"
       subtitle={`@${account.handle} · Last 30 days`}
       icon={BarChart3}
-      backTo="/twaater"
+      backTo={account?.id ? `/twaater?account=${account.id}` : "/twaater"}
       backLabel="Back to Twaater"
     >
       <div className="rounded-sm border border-fm-border p-4 space-y-4" style={{ backgroundColor: "hsl(var(--twaater-bg))" }}>
