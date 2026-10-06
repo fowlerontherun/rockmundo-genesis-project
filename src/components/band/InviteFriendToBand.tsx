@@ -102,8 +102,12 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
         if ((error as DOMException)?.name === 'AbortError') return;
       }
     }
-    await navigator.clipboard.writeText(externalRecruitmentUrl);
-    toast({ title: 'Recruitment link copied' });
+    try {
+      await navigator.clipboard.writeText(externalRecruitmentUrl);
+      toast({ title: 'Recruitment link copied' });
+    } catch {
+      toast({ title: 'Could not copy recruitment link', description: 'Your browser blocked clipboard access. Copy the visible link manually or try Share again.', variant: 'destructive' });
+    }
   };
 
   useEffect(() => {
