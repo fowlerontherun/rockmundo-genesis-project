@@ -20,20 +20,25 @@ export function SocialStats() {
         .eq("owner_type", "persona")
         .single();
 
-      // Get twaat count
-      const { count: twaatCount } = await supabase
-        .from("twaats")
-        .select("*", { count: "exact", head: true })
-        .eq("account_id", account?.id || "");
+      const { data: accountTwaats } = account?.id
+        ? await supabase
+            .from("twaats")
+            .select(`
+              id,
+              metrics:twaat_metrics(likes, replies, retwaats)
+            `)
+            .eq("account_id", account.id)
+            .is("deleted_at", null)
+            .is("scheduled_for", null)
+        : { data: [] as any[] };
 
-      // Get total likes received
-      const { data: twaatMetrics } = await supabase
-        .from("twaat_metrics")
-        .select("likes, replies, retwaats");
-
-      const totalLikes = twaatMetrics?.reduce((sum, m) => sum + ((m as any).likes || 0), 0) || 0;
-      const totalReplies = twaatMetrics?.reduce((sum, m) => sum + ((m as any).replies || 0), 0) || 0;
-      const totalRetwaats = twaatMetrics?.reduce((sum, m) => sum + ((m as any).retwaats || 0), 0) || 0;
+      const metrics = (accountTwaats || [])
+        .map((twaat: any) => Array.isArray(twaat.metrics) ? twaat.metrics[0] : twaat.metrics)
+        .filter(Boolean);
+      const twaatCount = accountTwaats?.length || 0;
+      const totalLikes = metrics.reduce((sum: number, m: any) => sum + (m.likes || 0), 0);
+      const totalReplies = metrics.reduce((sum: number, m: any) => sum + (m.replies || 0), 0);
+      const totalRetwaats = metrics.reduce((sum: number, m: any) => sum + (m.retwaats || 0), 0);
 
       // Get DikCok stats
       const { data: videos } = await supabase
