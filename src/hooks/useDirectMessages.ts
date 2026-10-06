@@ -148,7 +148,8 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
 }
 
 export function useUnreadDirectMessageCount(myProfileId?: string | null) {
-  return useQuery({
+  const queryClient = useQueryClient();
+  const query = useQuery({
     queryKey: ["dm-unread", myProfileId],
     enabled: !!myProfileId,
     queryFn: async () => {
@@ -157,4 +158,33 @@ export function useUnreadDirectMessageCount(myProfileId?: string | null) {
       return conversations.reduce((total, conversation) => total + conversation.unread_count, 0);
     },
   });
+
+  useEffect(() => {
+    if (!myProfileId) return;
+    const channel = supabase
+      .channel(`dm-unread-${myProfileId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "direct_messages" }, (payload) => {
+        const row = (payload.new ?? payload.old) as Partial<DirectMessageRow>;
+        if (row.sender_profile_id === myProfileId || row.recipient_profile_id === myProfileId) {
+          void queryClient.invalidateQueries({ queryKey: ["dm-unread", myProfileId] });
+        }
+      })
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") void queryClient.invalidateQueries({ queryKey: ["dm-unread", myProfileId] });
+      });
+    const timer = window.setInterval(() => {
+      void queryClient.invalidateQueries({ queryKey: ["dm-unread", myProfileId] });
+    }, 15000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void queryClient.invalidateQueries({ queryKey: ["dm-unread", myProfileId] });
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+      void supabase.removeChannel(channel);
+    };
+  }, [myProfileId, queryClient]);
+
+  return query;
 }
