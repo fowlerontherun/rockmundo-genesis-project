@@ -8,7 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Heart, Repeat2, MessageCircle, UserPlus, Quote, CheckCheck, Bell, ArrowLeft } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTwaaterRouteAccount } from "@/hooks/useTwaaterRouteAccount";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const notificationIcons: Record<string, typeof Heart> = {
@@ -32,13 +33,28 @@ const notificationColors: Record<string, string> = {
 export default function TwaaterNotifications() {
   const { profile } = useGameData();
   const navigate = useNavigate();
-  const { account, isLoading: accountLoading } = useTwaaterAccount("persona", profile?.id);
+  const [searchParams] = useSearchParams();
+  const { account: personaAccount, isLoading: personaLoading } = useTwaaterAccount("persona", profile?.id);
+  const { account, isLoading: routeAccountLoading } = useTwaaterRouteAccount(personaAccount, searchParams.get("account"));
+  const accountLoading = personaLoading || routeAccountLoading;
   const { notifications, isLoading, error, refetch, markAsRead, markAllAsRead, unreadCount } = useTwaaterNotifications(account?.id);
 
   if (!profile || accountLoading || isLoading) {
     return (
       <FMPageScaffold title="Notifications" icon={Bell} backTo="/twaater">
         <div className="flex items-center justify-center py-16"><p>Loading...</p></div>
+      </FMPageScaffold>
+    );
+  }
+
+  if (!account) {
+    return (
+      <FMPageScaffold title="Notifications" icon={Bell} backTo="/twaater">
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground">You need a Twaater account to view notifications.</p>
+          </CardContent>
+        </Card>
       </FMPageScaffold>
     );
   }
@@ -94,9 +110,11 @@ export default function TwaaterNotifications() {
             <span className="font-medium text-sm">
               {notification.source_account?.display_name || "Someone"}
             </span>
-            <span className="text-xs text-muted-foreground">
-              @{notification.source_account?.handle}
-            </span>
+            {notification.source_account?.handle && (
+              <span className="text-xs text-muted-foreground">
+                @{notification.source_account.handle}
+              </span>
+            )}
           </div>
           <p className="text-sm text-muted-foreground mt-1">
             {notification.type === "like" && "liked your twaat"}
@@ -121,7 +139,7 @@ export default function TwaaterNotifications() {
     <FMPageScaffold
       title="Notifications"
       icon={Bell}
-      backTo="/twaater"
+      backTo={account?.id ? `/twaater?account=${account.id}` : "/twaater"}
       backLabel="Back to Twaater"
       headerActions={
         unreadCount > 0 ? (

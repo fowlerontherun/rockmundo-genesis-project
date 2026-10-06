@@ -40,7 +40,7 @@ export const TwaaterNotificationsBell = ({ accountId }: TwaaterNotificationsBell
           <Button 
             variant="ghost" 
             className="w-full text-[hsl(var(--twaater-purple))] hover:bg-[hsl(var(--twaater-purple)_/_0.1)]"
-            onClick={() => navigate("/twaater/notifications")}
+            onClick={() => navigate(`/twaater/notifications?account=${accountId}`)}
           >
             View all notifications
           </Button>

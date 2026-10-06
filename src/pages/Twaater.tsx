@@ -18,9 +18,8 @@ import { TrendingHashtags } from "@/components/twaater/TrendingHashtags";
 import { WhoToFollow } from "@/components/twaater/WhoToFollow";
 import { TwaaterSearch } from "@/components/twaater/TwaaterSearch";
 import { Home, TrendingUp, AtSign, Bookmark, Search, Users, Compass, BarChart3 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTwaaterRouteAccount } from "@/hooks/useTwaaterRouteAccount";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const TwaaterBookmarksTab = ({ accountId }: { accountId?: string }) => {
@@ -73,13 +72,22 @@ export default function Twaater() {
   const { profile } = useGameData();
   const ownerType = "persona" as const;
   const { account, isLoading: accountLoading } = useTwaaterAccount(ownerType, profile?.id);
-  const [activeAccountId, setActiveAccountId] = useState<string | null>(null);
   const [showDesktopSidebar, setShowDesktopSidebar] = useState(false);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedAccountId = searchParams.get("account");
+  const {
+    account: displayAccount,
+    isLoading: routeAccountLoading,
+    requestedAccountValid,
+  } = useTwaaterRouteAccount(account, requestedAccountId);
 
   useEffect(() => {
-    setActiveAccountId(null);
-  }, [profile?.id]);
+    if (!requestedAccountId || routeAccountLoading || requestedAccountValid) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("account");
+    setSearchParams(next, { replace: true });
+  }, [requestedAccountId, routeAccountLoading, requestedAccountValid, searchParams, setSearchParams]);
 
   useEffect(() => {
     const media = window.matchMedia("(min-width: 1024px)");
@@ -89,26 +97,16 @@ export default function Twaater() {
     return () => media.removeEventListener("change", sync);
   }, []);
 
-  const currentAccountId = activeAccountId || account?.id;
+  const currentAccountId = displayAccount?.id;
 
-  const { data: currentAccount } = useQuery({
-    queryKey: ["twaater-account-detail", currentAccountId],
-    queryFn: async () => {
-      if (!currentAccountId) return null;
-      const { data, error } = await supabase
-        .from("twaater_accounts")
-        .select("id, owner_type, display_name, handle, follower_count")
-        .eq("id", currentAccountId)
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!currentAccountId,
-  });
+  const handleAccountSwitch = (accountId: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (accountId === account?.id) next.delete("account");
+    else next.set("account", accountId);
+    setSearchParams(next, { replace: true });
+  };
 
-  const displayAccount = currentAccount || account;
-
-  if (!profile || accountLoading) return (
+  if (!profile || accountLoading || routeAccountLoading) return (
     <FMPageScaffold title="Twaater" icon={Home} backTo="/hub/world-social">
       <div className="flex items-center justify-center py-16"><p>Loading...</p></div>
     </FMPageScaffold>
@@ -143,12 +141,12 @@ export default function Twaater() {
                     currentAccount={displayAccount}
                     userId={profile.user_id}
                     profileId={profile.id}
-                    onSwitch={setActiveAccountId}
+                    onSwitch={handleAccountSwitch}
                   />
                 )}
                 {currentAccountId && (
                   <button
-                    onClick={() => navigate("/twaater/analytics")}
+                    onClick={() => navigate(`/twaater/analytics?account=${currentAccountId}`)}
                     className="flex items-center gap-1 px-2 py-1 rounded-full hover:bg-[hsl(var(--twaater-purple)_/_0.1)] transition-colors text-sm"
                     title="Analytics"
                   >

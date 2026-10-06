@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, User, Users } from "lucide-react";
+import { ChevronDown, Plus, User, Users } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 interface TwaaterAccountSwitcherProps {
   currentAccount: {
@@ -33,7 +34,9 @@ export const TwaaterAccountSwitcher = ({
   onSwitch,
 }: TwaaterAccountSwitcherProps) => {
   const [open, setOpen] = useState(false);
-  const { data: accounts = [] } = useQuery({
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { data: switcherData } = useQuery({
     queryKey: ["twaater-accounts-for-user", userId, profileId],
     queryFn: async () => {
       const { data: personalAccount, error: personalError } = await supabase
@@ -72,55 +75,76 @@ export const TwaaterAccountSwitcher = ({
 
         if (bandAccountsError) throw bandAccountsError;
         bandAccounts = existingBandAccounts || [];
-
-        for (const membership of manageableMemberships) {
-          const band = membership.band as any;
-          if (!band || bandAccounts.some((account) => account.owner_id === band.id)) continue;
-
-          const baseHandle = String(band.name || "band")
-            .toLowerCase()
-            .replace(/[^a-z0-9_]/g, "")
-            .slice(0, 40) || "band";
-          const suffix = String(band.id).replace(/-/g, "").slice(0, 6);
-
-          const { data: newAccount, error: createError } = await supabase
-            .from("twaater_accounts")
-            .insert({
-              owner_type: "band",
-              owner_id: band.id,
-              handle: `${baseHandle}_${suffix}`.slice(0, 50),
-              display_name: band.name,
-            })
-            .select("id, owner_type, display_name, handle, owner_id")
-            .maybeSingle();
-
-          if (createError) {
-            if (createError.code !== "23505") throw createError;
-
-            const { data: racedAccount, error: racedAccountError } = await supabase
-              .from("twaater_accounts")
-              .select("id, owner_type, display_name, handle, owner_id")
-              .eq("owner_type", "band")
-              .eq("owner_id", band.id)
-              .maybeSingle();
-
-            if (racedAccountError) throw racedAccountError;
-            if (racedAccount) bandAccounts.push(racedAccount);
-            continue;
-          }
-
-          if (newAccount) bandAccounts.push(newAccount);
-        }
       }
 
       const uniqueAccounts = new Map<string, any>();
       for (const account of [personalAccount, ...bandAccounts].filter(Boolean)) {
         uniqueAccounts.set(account.id, account);
       }
-      return Array.from(uniqueAccounts.values());
+
+      const existingBandIds = new Set(bandAccounts.map((account) => account.owner_id));
+      const uniqueMissingBands = new Map<string, any>();
+      for (const membership of manageableMemberships) {
+        const band = membership.band as any;
+        if (band?.id && !existingBandIds.has(band.id)) uniqueMissingBands.set(band.id, band);
+      }
+
+      return {
+        accounts: Array.from(uniqueAccounts.values()),
+        missingBands: Array.from(uniqueMissingBands.values()),
+      };
     },
     enabled: open && !!userId && !!profileId,
     staleTime: 5 * 60 * 1000,
+  });
+
+  const accounts = switcherData?.accounts || [];
+  const missingBands = switcherData?.missingBands || [];
+
+  const createBandAccount = useMutation({
+    mutationFn: async (band: { id: string; name: string }) => {
+      const baseHandle = String(band.name || "band")
+        .toLowerCase()
+        .replace(/[^a-z0-9_]/g, "")
+        .slice(0, 40) || "band";
+      const suffix = String(band.id).replace(/-/g, "").slice(0, 6);
+
+      const { data, error } = await supabase
+        .from("twaater_accounts")
+        .insert({
+          owner_type: "band",
+          owner_id: band.id,
+          handle: `${baseHandle}_${suffix}`.slice(0, 50),
+          display_name: band.name,
+        })
+        .select("id, owner_type, display_name, handle, owner_id")
+        .maybeSingle();
+
+      if (!error && data) return data;
+      if (error?.code !== "23505") throw error || new Error("Band account was not created");
+
+      const { data: existing, error: existingError } = await supabase
+        .from("twaater_accounts")
+        .select("id, owner_type, display_name, handle, owner_id")
+        .eq("owner_type", "band")
+        .eq("owner_id", band.id)
+        .maybeSingle();
+
+      if (existingError || !existing) throw existingError || new Error("Band account was not created");
+      return existing;
+    },
+    onSuccess: (account) => {
+      queryClient.invalidateQueries({ queryKey: ["twaater-accounts-for-user", userId, profileId] });
+      onSwitch(account.id);
+      setOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Couldn't create band Twaater account",
+        description: error?.message || "Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 
   return (
@@ -154,6 +178,23 @@ export const TwaaterAccountSwitcher = ({
             <span className="text-xs text-muted-foreground ml-auto">@{account.handle}</span>
           </DropdownMenuItem>
         ))}
+        {missingBands.length > 0 && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>Create band account</DropdownMenuLabel>
+            {missingBands.map((band: any) => (
+              <DropdownMenuItem
+                key={band.id}
+                className="gap-2 cursor-pointer"
+                disabled={createBandAccount.isPending}
+                onClick={() => createBandAccount.mutate({ id: band.id, name: band.name })}
+              >
+                <Plus className="h-4 w-4" />
+                <span className="truncate">{band.name}</span>
+              </DropdownMenuItem>
+            ))}
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
