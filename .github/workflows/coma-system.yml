@@ -1,0 +1,85 @@
+name: Coma System Regression Gate
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "src/components/character/**"
+      - "src/hooks/useCharacterDeath.ts"
+      - "src/hooks/usePlaytimeTracker.ts"
+      - "src/mobile/shell/MobileLayout.tsx"
+      - "src/pages/Characters.tsx"
+      - "src/pages/admin/CharacterRecoveryAdmin.tsx"
+      - "src/pages/admin/DeathSystemAdmin.tsx"
+      - "supabase/migrations/*coma*"
+      - "supabase/migrations/20260308133646_d51526b9-536b-4b2c-a99e-0ac48012d7d7.sql"
+      - "supabase/tests/character_coma_inactivity_harness.sql"
+      - ".github/workflows/coma-system.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/components/character/**"
+      - "src/hooks/useCharacterDeath.ts"
+      - "src/hooks/usePlaytimeTracker.ts"
+      - "src/mobile/shell/MobileLayout.tsx"
+      - "src/pages/Characters.tsx"
+      - "src/pages/admin/CharacterRecoveryAdmin.tsx"
+      - "src/pages/admin/DeathSystemAdmin.tsx"
+      - "supabase/migrations/*coma*"
+      - "supabase/migrations/20260308133646_d51526b9-536b-4b2c-a99e-0ac48012d7d7.sql"
+      - "supabase/tests/character_coma_inactivity_harness.sql"
+      - ".github/workflows/coma-system.yml"
+
+jobs:
+  database:
+    name: Coma database lifecycle
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      SUPABASE_CLI_VERSION: "2.31.8"
+      SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      SUPABASE_STARTED: "false"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify Docker
+        run: |
+          command -v docker
+          docker info
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.31.8
+
+      - name: Print database tool versions
+        run: |
+          supabase --version
+          psql --version
+
+      - name: Start local Supabase stack
+        run: |
+          supabase stop --no-backup || true
+          supabase start
+          echo "SUPABASE_STARTED=true" >> "$GITHUB_ENV"
+          db_url="$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')"
+          test -n "$db_url"
+          case "$db_url" in
+            postgresql://postgres:*@127.0.0.1:54322/postgres|postgres://postgres:*@127.0.0.1:54322/postgres) ;;
+            *) echo "Refusing non-disposable database URL" >&2; exit 2 ;;
+          esac
+          echo "SUPABASE_DB_URL=$db_url" >> "$GITHUB_ENV"
+
+      - name: Reset migrated test database
+        run: supabase db reset
+
+      - name: Run coma regression harness
+        run: psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/character_coma_inactivity_harness.sql
+
+      - name: Stop local Supabase stack
+        if: ${{ always() && env.SUPABASE_STARTED == 'true' }}
+        run: supabase stop --no-backup
