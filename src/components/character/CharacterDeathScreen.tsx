@@ -103,6 +103,10 @@ export function CharacterDeathScreen({
   const diedAgo = deadCharacter.died_at
     ? formatDistanceToNow(new Date(deadCharacter.died_at), { addSuffix: true })
     : "recently";
+  const isInactivityComa = /inactivity/i.test(deadCharacter.cause_of_death ?? "");
+  const causeLabel = isInactivityComa
+    ? "30 days without account activity"
+    : deadCharacter.cause_of_death || "Unknown reason";
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-stage px-4 py-8">
@@ -137,8 +141,9 @@ export function CharacterDeathScreen({
                 Welcome back to RockMundo
               </CardTitle>
               <p className="text-sm text-muted-foreground pt-2">
-                Your last character fell into a coma {diedAgo}. Revive them to
-                pick up where you left off, or start a new chapter.
+                Your character entered a coma {diedAgo}. {isInactivityComa
+                  ? "This happened because your RockMundo account had no activity for 30 days."
+                  : `Reason: ${causeLabel}.`} Revive them to pick up where you left off.
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -152,7 +157,7 @@ export function CharacterDeathScreen({
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold truncate">{deadCharacter.character_name}</h3>
                   <p className="text-xs text-muted-foreground">
-                    Status: In a coma ({deadCharacter.cause_of_death})
+                    Status: In a coma ({causeLabel})
                   </p>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {deadCharacter.generation_number > 1 && (
@@ -166,6 +171,15 @@ export function CharacterDeathScreen({
                   </div>
                 </div>
               </div>
+
+              {isInactivityComa && (
+                <div className="flex gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-muted-foreground">
+                  <HeartPulse className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                  <p>
+                    Inactivity coma is not permanent death. Reviving is free, keeps your career progress, and restores your character so you can continue playing immediately.
+                  </p>
+                </div>
+              )}
 
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="rounded-lg bg-muted/50 p-3">
