@@ -17,7 +17,6 @@ import { TwaatCard } from "@/components/twaater/TwaatCard";
 import { TrendingHashtags } from "@/components/twaater/TrendingHashtags";
 import { WhoToFollow } from "@/components/twaater/WhoToFollow";
 import { TwaaterSearch } from "@/components/twaater/TwaaterSearch";
-import { TwaaterFeedSuggestions } from "@/components/twaater/TwaaterFeedSuggestions";
 import { Home, TrendingUp, AtSign, Bookmark, Search, Users, Compass, BarChart3 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -180,7 +179,6 @@ export default function Twaater() {
                 <div className="border-b p-4" style={{ borderColor: "hsl(var(--twaater-border))" }}>
                   {currentAccountId && <TwaaterComposer accountId={currentAccountId} />}
                 </div>
-                {currentAccountId && <TwaaterFeedSuggestions currentAccountId={currentAccountId} />}
                 <TwaaterFeed viewerAccountId={currentAccountId} feedType="feed" />
               </TabsContent>
 
