@@ -2353,8 +2353,13 @@ const Songwriting = () => {
                           type="button"
                           variant="outline"
                           size="sm"
-                          disabled={lyricsSaveStatus === "saving"}
                           onClick={() => {
+                            if (lyricsAutosaveTimerRef.current !== null) {
+                              window.clearTimeout(
+                                lyricsAutosaveTimerRef.current,
+                              );
+                              lyricsAutosaveTimerRef.current = null;
+                            }
                             void persistLyricsDraft(
                               formState.initial_lyrics,
                               true,
