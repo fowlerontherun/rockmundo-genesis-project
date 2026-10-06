@@ -388,7 +388,7 @@ export const awardShows: AwardShow[] = [
       winnerFameBoost: "+1,480 fame and global editorial coverage",
       additionalPerks: [
         "Camden residency support package",
-        "AI stage designer beta access",
+        "AI stage designer early access",
         "Featured slot on Rockmundo's Skyline podcast series",
       ],
     },
