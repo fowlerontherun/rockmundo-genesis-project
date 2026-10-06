@@ -15,6 +15,7 @@ import { PromoteTwaatDialog } from "./PromoteTwaatDialog";
 import { ReportSocialTargetDialog } from "@/features/social-safety/components/ReportSocialTargetDialog";
 import { Heart, MessageCircle, Repeat2, Bookmark, BookmarkCheck, Quote, Rocket } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useTwaaterConfig } from "@/hooks/useTwaaterConfig";
 
 interface TwaatCardProps {
   twaat: any;
@@ -28,6 +29,7 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
   const [showReplyBox, setShowReplyBox] = useState(false);
   const [replyBody, setReplyBody] = useState("");
   const navigate = useNavigate();
+  const { data: twaaterConfig } = useTwaaterConfig();
 
   const handleReply = async () => {
     if (!replyBody.trim() || !viewerAccountId) return;
@@ -41,6 +43,7 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
   };
 
   const makeHashtagsClickable = (text: string) => {
+    if (!twaaterConfig?.hashtagsEnabled) return text;
     const parts = text.split(/(#\w+)/g);
     return parts.map((part, i) => {
       if (part.startsWith("#")) {
@@ -90,7 +93,7 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
             <span className="font-semibold cursor-pointer hover:underline" onClick={() => navigate(`/twaater/${twaat.account.handle}`)}>
               {twaat.account.display_name}
             </span>
-            {twaat.account.verified && <VerifiedBadge accountId={twaat.account.id} />}
+            {twaaterConfig?.verifiedBadgesEnabled && twaat.account.verified && <VerifiedBadge accountId={twaat.account.id} />}
             <span className="text-muted-foreground text-sm">@{twaat.account.handle}</span>
             <span className="text-muted-foreground text-sm">·</span>
             <span className="text-muted-foreground text-sm">{formatDistanceToNow(new Date(twaat.created_at), { addSuffix: true })}</span>
