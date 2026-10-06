@@ -244,7 +244,33 @@ export const useTwaaterFeed = (viewerAccountId?: string, enabled = true) => {
         .limit(50);
 
       if (error) throw error;
-      return await hydrateTwaaterFeedExtras((data || []) as unknown as TwaatWithDetails[]);
+
+      let feedRows = (data || []) as unknown as TwaatWithDetails[];
+
+      // New/lightly-connected players should not land on an empty home feed.
+      // Only pay for a discovery query when the followed feed is sparse.
+      if (feedRows.length < 20) {
+        const { data: discovery, error: discoveryError } = await supabase
+          .from("twaats")
+          .select(twaatDetailsSelect)
+          .eq("visibility", "public")
+          .is("deleted_at", null)
+          .is("scheduled_for", null)
+          .order("created_at", { ascending: false })
+          .limit(20);
+
+        if (discoveryError) throw discoveryError;
+
+        const merged = new Map<string, TwaatWithDetails>();
+        for (const twaat of [...feedRows, ...((discovery || []) as unknown as TwaatWithDetails[])]) {
+          merged.set(twaat.id, twaat);
+        }
+        feedRows = Array.from(merged.values())
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, 50);
+      }
+
+      return await hydrateTwaaterFeedExtras(feedRows);
     },
     enabled,
     staleTime: 60 * 1000,
