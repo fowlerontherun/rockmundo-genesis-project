@@ -18,7 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChatDock } from "./ChatDockContext";
 import { ChatRoomView } from "./ChatRoomView";
-import { useGameData } from "@/hooks/useGameData";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { useTranslation } from "@/hooks/useTranslation";
 import { translateFMLabel } from "@/i18n/fm";
@@ -32,10 +32,9 @@ type RoomId = "world" | "help" | "recruit" | "band" | "friends";
 
 export function FMChatDock() {
   const { pathname } = useLocation();
-  const { profile } = useGameData();
+  const { profileId: myProfileId } = useActiveProfile();
   const { language } = useTranslation();
-  const myProfileId = (profile as any)?.id ?? null;
-  const { open, setOpen, threads, openThread, closeThread } = useChatDock();
+  const { open, setOpen, threads, openThread, closeThread, reset } = useChatDock();
   const { friendships, loading } = useFriendships(myProfileId);
   const { data: primaryBand } = usePrimaryBand();
   const [activeRoom, setActiveRoom] = useState<RoomId>("world");
@@ -60,6 +59,19 @@ export function FMChatDock() {
   activeRoomRef.current = activeRoom;
   modeRef.current = notificationMode;
   profileRef.current = myProfileId;
+
+  const previousProfileId = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (previousProfileId.current && previousProfileId.current !== myProfileId) {
+      reset();
+      setActiveRoom("world");
+      setUnreadWorld(0);
+      setWorldActivity(false);
+      setShowChatSettings(false);
+    }
+    previousProfileId.current = myProfileId;
+  }, [myProfileId, reset]);
 
   useEffect(() => {
     try { localStorage.setItem("rockmundo-world-chat-notifications", notificationMode); } catch { /* Storage unavailable. */ }

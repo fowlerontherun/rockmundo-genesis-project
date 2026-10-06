@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Globe, HelpCircle, Loader2, MessageSquare, UserPlus, Users } from "lucide-react";
 import { ChatRoomView } from "@/components/fm/chat/ChatRoomView";
@@ -27,6 +27,10 @@ export function MobileInstantChat() {
   const [activeRoom, setActiveRoom] = useState<RoomId>("world");
   const bandId = (primaryBand as any)?.band_id ?? null;
   const bandName = (primaryBand as any)?.bands?.name ?? "Band";
+
+  useEffect(() => {
+    setActiveRoom("world");
+  }, [profileId]);
 
   const accepted = useMemo(
     () => friendships.filter((f) => f.friendship.status === "accepted" && f.otherProfile),
