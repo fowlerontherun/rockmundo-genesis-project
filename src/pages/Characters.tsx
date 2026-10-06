@@ -52,10 +52,11 @@ export default function Characters() {
         description: isComatose ? "Your character is awake and ready to continue." : "Game state updated.",
       });
       navigate("/home", { replace: true });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const fallbackMessage = isComatose ? "Failed to revive character" : "Failed to switch character";
       toast({
         title: "Error",
-        description: err?.message || (isComatose ? "Failed to revive character" : "Failed to switch character"),
+        description: err instanceof Error ? err.message : fallbackMessage,
         variant: "destructive",
       });
     } finally {
