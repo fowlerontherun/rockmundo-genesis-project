@@ -77,6 +77,12 @@ export const useTwaaterModeration = (viewerAccountId?: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["twaater-feed"] });
       queryClient.invalidateQueries({ queryKey: ["twaats"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-ai-feed"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-trending"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-explore"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-profile-twaats"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-mentions"] });
       toast({
         title: "User blocked",
         description: "You won't see posts from this account anymore.",
@@ -110,6 +116,14 @@ export const useTwaaterModeration = (viewerAccountId?: string) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["blocked-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-feed"] });
+      queryClient.invalidateQueries({ queryKey: ["twaats"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-ai-feed"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-trending"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-explore"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-profile-twaats"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-mentions"] });
       toast({
         title: "User unblocked",
         description: "You can now see posts from this account again.",
