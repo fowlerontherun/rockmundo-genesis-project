@@ -50,6 +50,7 @@ export function FMChatDock() {
   });
   const [showChatSettings, setShowChatSettings] = useState(false);
   const [unreadWorld, setUnreadWorld] = useState(0);
+  const [unreadRooms, setUnreadRooms] = useState<Record<"help" | "recruit" | "band", number>>({ help: 0, recruit: 0, band: 0 });
   const [worldActivity, setWorldActivity] = useState(false);
   const seenWorldIds = useRef(new Set<string>());
   const worldReady = useRef(false);
@@ -187,6 +188,33 @@ export function FMChatDock() {
 
   const bandId = (primaryBand as any)?.band_id ?? null;
   const bandName = (primaryBand as any)?.bands?.name ?? translateFMLabel(language, "Band");
+
+  useEffect(() => {
+    setUnreadRooms({ help: 0, recruit: 0, band: 0 });
+  }, [myProfileId, bandId]);
+
+  useEffect(() => {
+    if (open && (activeRoom === "help" || activeRoom === "recruit" || activeRoom === "band")) {
+      setUnreadRooms((current) => current[activeRoom] ? { ...current, [activeRoom]: 0 } : current);
+    }
+  }, [open, activeRoom]);
+
+  useEffect(() => {
+    if (!myProfileId) return;
+    const channels = ["help", "recruit", ...(bandId ? [`band:${bandId}`] : [])];
+    const handle = (row: { profile_id?: string | null; user_id?: string; channel?: string }) => {
+      if (row.profile_id === myProfileId) return;
+      const room = row.channel === "help" ? "help" : row.channel === "recruit" ? "recruit" : row.channel === `band:${bandId}` ? "band" : null;
+      if (!room || (openRef.current && activeRoomRef.current === room)) return;
+      setUnreadRooms((current) => ({ ...current, [room]: current[room] + 1 }));
+    };
+    const subscriptions = channels.map((channelKey) => supabase
+      .channel(`chat-dock-unread-${myProfileId}-${channelKey}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "global_chat", filter: `channel=eq.${channelKey}` },
+        (payload) => handle(payload.new as { profile_id?: string | null; user_id?: string; channel?: string }))
+      .subscribe());
+    return () => { subscriptions.forEach((subscription) => { void supabase.removeChannel(subscription); }); };
+  }, [bandId, myProfileId]);
 
   const rooms = useMemo(
     () => [
