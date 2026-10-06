@@ -66,36 +66,77 @@ INSERT INTO skill_books (skill_slug, title, author, description, price, base_rea
 ('clothing_basic_branding', 'Building a Clothing Brand', 'Alexander Wu', 'Create brand identity, logo design, and positioning strategy from scratch.', 350, 4, 0.15, 0, 'Clothing Design'),
 ('clothing_basic_genre_aesthetics', 'Music & Fashion Crossover', 'DJ Fashionista', 'Study the visual identities of music genres and design for subcultures.', 300, 3, 0.15, 0, 'Clothing Design');
 
+-- These seeds originally used production UUIDs. Resolve canonical rows by name so
+-- a clean local Supabase reset is reproducible across environments.
+DO $seed_dependencies$
+DECLARE
+  v_missing_cities text[];
+  v_missing_universities text[];
+BEGIN
+  SELECT array_agg(required_name ORDER BY required_name)
+    INTO v_missing_cities
+    FROM (
+      VALUES ('London'), ('Paris'), ('Milan'), ('Tokyo'), ('New York'), ('Los Angeles'), ('Seoul')
+    ) AS required(required_name)
+   WHERE NOT EXISTS (
+     SELECT 1 FROM public.cities c WHERE lower(c.name) = lower(required.required_name)
+   );
+
+  IF v_missing_cities IS NOT NULL THEN
+    RAISE EXCEPTION 'Modeling/fashion mentor seed requires canonical cities: %', v_missing_cities;
+  END IF;
+
+  SELECT array_agg(required_name ORDER BY required_name)
+    INTO v_missing_universities
+    FROM (
+      VALUES
+        ('London School of Music'),
+        ('London Conservatory of Arts'),
+        ('Milan School of Music'),
+        ('Milan Conservatory of Arts'),
+        ('Seoul School of Music'),
+        ('Seoul Conservatory of Arts')
+    ) AS required(required_name)
+   WHERE NOT EXISTS (
+     SELECT 1 FROM public.universities u WHERE lower(u.name) = lower(required.required_name)
+   );
+
+  IF v_missing_universities IS NOT NULL THEN
+    RAISE EXCEPTION 'Modeling/fashion course seed requires canonical universities: %', v_missing_universities;
+  END IF;
+END
+$seed_dependencies$;
+
 -- Seed mentors
 INSERT INTO education_mentors (name, focus_skill, description, specialty, cost, base_xp, difficulty, required_skill_value, skill_gain_ratio, is_active, city_id, lore_biography, lore_achievement) VALUES
-('Naomi Fierce', 'modeling_mastery_posing', 'The queen of the catwalk teaches posing at its absolute pinnacle.', 'Posing & Presence', 50000, 200, 'master', 500, 2.0, true, '9f26ad86-51ed-4477-856d-610f14979310', 'Former top supermodel who walked for every major fashion house in her 20-year career.', 'Named Model of the Century by Vogue International'),
-('Karl Stein', 'fashion_mastery_fundamentals', 'Legendary designer who shaped modern fashion theory and trend forecasting.', 'Fashion Design Theory', 100000, 250, 'master', 500, 2.0, true, '13d450a9-eab3-430c-b5d1-377e5d3f2539', 'Revolutionary fashion designer who founded three iconic fashion houses and mentored dozens of industry leaders.', 'Won the Lifetime Achievement Award at Paris Fashion Week'),
-('Valentina Rossi', 'fashion_mastery_textiles', 'Master textile innovator who has revolutionized fabric technology in haute couture.', 'Textile & Material Science', 75000, 220, 'master', 500, 2.0, true, 'f9f69906-15a6-4db9-8b7d-1987eb3cd722', 'Third-generation Italian textile artisan who combines traditional weaving with cutting-edge materials.', 'Developed the proprietary silk-carbon blend used by top fashion houses'),
-('Alexander Wu', 'clothing_mastery_construction', 'Master tailor and garment engineer whose construction techniques are studied worldwide.', 'Garment Engineering', 80000, 230, 'master', 500, 2.0, true, '89b8b930-4fce-4776-a470-8943364ea120', 'Tokyo-born master tailor who trained in Savile Row before founding his own atelier in Shibuya.', 'His bespoke suits are worn by world leaders and A-list celebrities'),
-('Tyra LaRue', 'modeling_professional_runway', 'Retired supermodel turned runway coach who trains the next generation of catwalk stars.', 'Runway & Presentation', 30000, 150, 'advanced', 200, 1.5, true, 'a6d76b84-df38-4efb-9fc1-4bd882e31d1a', 'Opened and closed more fashion shows than any other model in the past decade.', 'Created the signature power stride taught at top modeling schools'),
-('Isabella Fontaine', 'fashion_professional_styling', 'Celebrity stylist who has dressed everyone from pop stars to presidents.', 'Style & Aesthetics', 45000, 180, 'advanced', 200, 1.5, true, '13d450a9-eab3-430c-b5d1-377e5d3f2539', 'Parisian stylist known for her impeccable taste and ability to create viral red carpet moments.', 'Styled 15 Met Gala best-dressed winners'),
-('Marcus Blackwell', 'clothing_mastery_branding', 'Built a streetwear empire from nothing — now teaches brand building at the highest level.', 'Fashion Branding & Commerce', 60000, 200, 'master', 500, 2.0, true, 'cb7bdfa8-5558-4ffd-9d0f-235920ac269a', 'Started screen-printing t-shirts in his garage; now runs a $500M streetwear empire.', 'His brand collab with a major rapper broke every sales record in fashion history'),
-('Yuki Shimada', 'clothing_professional_genre_aesthetics', 'Genre fashion specialist who designs for musicians and understands the intersection of music and style.', 'Genre Aesthetics & Music Fashion', 40000, 170, 'advanced', 200, 1.5, true, '65b3346d-0fc9-4319-b711-84a3d553d22b', 'K-pop stylist turned fashion designer whose genre-specific collections sell out within hours.', 'Dressed 3 of the top 10 best-selling K-pop groups');
+('Naomi Fierce', 'modeling_mastery_posing', 'The queen of the catwalk teaches posing at its absolute pinnacle.', 'Posing & Presence', 50000, 200, 'master', 500, 2.0, true, (SELECT id FROM public.cities WHERE lower(name)=lower('London') LIMIT 1), 'Former top supermodel who walked for every major fashion house in her 20-year career.', 'Named Model of the Century by Vogue International'),
+('Karl Stein', 'fashion_mastery_fundamentals', 'Legendary designer who shaped modern fashion theory and trend forecasting.', 'Fashion Design Theory', 100000, 250, 'master', 500, 2.0, true, (SELECT id FROM public.cities WHERE lower(name)=lower('Paris') LIMIT 1), 'Revolutionary fashion designer who founded three iconic fashion houses and mentored dozens of industry leaders.', 'Won the Lifetime Achievement Award at Paris Fashion Week'),
+('Valentina Rossi', 'fashion_mastery_textiles', 'Master textile innovator who has revolutionized fabric technology in haute couture.', 'Textile & Material Science', 75000, 220, 'master', 500, 2.0, true, (SELECT id FROM public.cities WHERE lower(name)=lower('Milan') LIMIT 1), 'Third-generation Italian textile artisan who combines traditional weaving with cutting-edge materials.', 'Developed the proprietary silk-carbon blend used by top fashion houses'),
+('Alexander Wu', 'clothing_mastery_construction', 'Master tailor and garment engineer whose construction techniques are studied worldwide.', 'Garment Engineering', 80000, 230, 'master', 500, 2.0, true, (SELECT id FROM public.cities WHERE lower(name)=lower('Tokyo') LIMIT 1), 'Tokyo-born master tailor who trained in Savile Row before founding his own atelier in Shibuya.', 'His bespoke suits are worn by world leaders and A-list celebrities'),
+('Tyra LaRue', 'modeling_professional_runway', 'Retired supermodel turned runway coach who trains the next generation of catwalk stars.', 'Runway & Presentation', 30000, 150, 'advanced', 200, 1.5, true, (SELECT id FROM public.cities WHERE lower(name)=lower('New York') LIMIT 1), 'Opened and closed more fashion shows than any other model in the past decade.', 'Created the signature power stride taught at top modeling schools'),
+('Isabella Fontaine', 'fashion_professional_styling', 'Celebrity stylist who has dressed everyone from pop stars to presidents.', 'Style & Aesthetics', 45000, 180, 'advanced', 200, 1.5, true, (SELECT id FROM public.cities WHERE lower(name)=lower('Paris') LIMIT 1), 'Parisian stylist known for her impeccable taste and ability to create viral red carpet moments.', 'Styled 15 Met Gala best-dressed winners'),
+('Marcus Blackwell', 'clothing_mastery_branding', 'Built a streetwear empire from nothing — now teaches brand building at the highest level.', 'Fashion Branding & Commerce', 60000, 200, 'master', 500, 2.0, true, (SELECT id FROM public.cities WHERE lower(name)=lower('Los Angeles') LIMIT 1), 'Started screen-printing t-shirts in his garage; now runs a $500M streetwear empire.', 'His brand collab with a major rapper broke every sales record in fashion history'),
+('Yuki Shimada', 'clothing_professional_genre_aesthetics', 'Genre fashion specialist who designs for musicians and understands the intersection of music and style.', 'Genre Aesthetics & Music Fashion', 40000, 170, 'advanced', 200, 1.5, true, (SELECT id FROM public.cities WHERE lower(name)=lower('Seoul') LIMIT 1), 'K-pop stylist turned fashion designer whose genre-specific collections sell out within hours.', 'Dressed 3 of the top 10 best-selling K-pop groups');
 
 -- Seed university courses
 INSERT INTO university_courses (university_id, skill_slug, name, description, base_price, base_duration_days, required_skill_level, xp_per_day_min, xp_per_day_max) VALUES
-('853b1073-ff7a-4d3a-ad3a-4ab408b6da95', 'modeling_basic_posing', 'Introduction to Modeling', 'Learn the foundations of posing, angles, and camera awareness.', 500, 14, 0, 2, 4),
-('853b1073-ff7a-4d3a-ad3a-4ab408b6da95', 'modeling_basic_runway', 'Runway Fundamentals', 'Master walking techniques, pacing, and catwalk confidence.', 600, 14, 0, 2, 4),
-('3330cd55-2305-476e-bb8a-60bbd08fbc60', 'modeling_professional_posing', 'Advanced Posing & Expression', 'Develop versatile posing that conveys mood and brand identity.', 1200, 21, 250, 3, 5),
-('3330cd55-2305-476e-bb8a-60bbd08fbc60', 'modeling_professional_camera', 'Camera Presence Masterclass', 'Engage the lens with magnetism and effortless emotion.', 1200, 21, 250, 3, 5),
-('3330cd55-2305-476e-bb8a-60bbd08fbc60', 'fashion_basic_fundamentals', 'Fashion Design Foundations', 'Study fashion history, silhouettes, and core design principles.', 800, 14, 0, 2, 4),
-('3330cd55-2305-476e-bb8a-60bbd08fbc60', 'fashion_basic_styling', 'Styling & Visual Narrative', 'Coordinate outfits, build mood boards, and curate aesthetic visions.', 750, 14, 0, 2, 4),
-('11de453a-8be7-40c8-b08e-f6eb203e75d9', 'fashion_basic_textiles', 'Italian Textile Traditions', 'Learn from Milans centuries-old textile heritage and modern fabric innovations.', 900, 14, 0, 2, 5),
-('11de453a-8be7-40c8-b08e-f6eb203e75d9', 'fashion_professional_fundamentals', 'Advanced Fashion Theory', 'Trend forecasting, seasonal planning, and design philosophy at the professional level.', 1800, 21, 250, 3, 6),
-('53bc823a-a313-4254-ab4c-be3d6f6bc69b', 'fashion_basic_patterns', 'Pattern Making & Draping', 'Master pattern drafting, measurements, and garment templates in the Italian tradition.', 900, 14, 0, 2, 5),
-('53bc823a-a313-4254-ab4c-be3d6f6bc69b', 'fashion_professional_textiles', 'Professional Materials & Sourcing', 'Source premium fabrics and work with exotic textiles from global suppliers.', 1600, 21, 250, 3, 6),
-('53bc823a-a313-4254-ab4c-be3d6f6bc69b', 'clothing_basic_construction', 'Garment Construction Workshop', 'Hands-on sewing, zipper setting, and basic garment assembly techniques.', 1000, 14, 0, 2, 4),
-('0e3427f1-6e4c-41e7-b200-98104d5750c4', 'modeling_basic_commercial', 'Commercial Modeling Basics', 'Learn approachability, product selling, and commercial shoot techniques.', 500, 14, 0, 2, 4),
-('0e3427f1-6e4c-41e7-b200-98104d5750c4', 'modeling_basic_editorial', 'Editorial Modeling & Art Direction', 'Interpret artistic concepts and collaborate with creative teams.', 600, 14, 0, 2, 4),
-('0e3427f1-6e4c-41e7-b200-98104d5750c4', 'clothing_basic_genre_aesthetics', 'K-Pop & Genre Fashion Design', 'Study the visual identities of music genres with a focus on K-pop aesthetics.', 700, 14, 0, 2, 5),
-('2c0cb136-4796-4934-868a-87a288cc8a6b', 'fashion_basic_business', 'Fashion Business Fundamentals', 'Understand fashion supply chains, pricing, and retail economics.', 800, 14, 0, 2, 4),
-('2c0cb136-4796-4934-868a-87a288cc8a6b', 'clothing_basic_branding', 'Building a Fashion Brand', 'Brand identity creation, logo design, and market positioning strategies.', 750, 14, 0, 2, 4),
-('2c0cb136-4796-4934-868a-87a288cc8a6b', 'clothing_basic_retail', 'Retail & Commerce Foundations', 'Shop setup, pricing strategies, and inventory management basics.', 700, 14, 0, 2, 4),
-('3330cd55-2305-476e-bb8a-60bbd08fbc60', 'clothing_professional_construction', 'Advanced Garment Engineering', 'Construct tailored pieces with precision finishing and quality control.', 2000, 28, 250, 3, 6),
-('3330cd55-2305-476e-bb8a-60bbd08fbc60', 'clothing_professional_branding', 'Fashion Brand Management', 'Build brand recognition through marketing, collaborations, and storytelling.', 1800, 21, 250, 3, 5),
-('3330cd55-2305-476e-bb8a-60bbd08fbc60', 'modeling_basic_brand', 'Brand Collaboration & Partnerships', 'Represent brands authentically and build early industry partnerships.', 600, 14, 0, 2, 4);
+((SELECT id FROM public.universities WHERE lower(name)=lower('London School of Music') LIMIT 1), 'modeling_basic_posing', 'Introduction to Modeling', 'Learn the foundations of posing, angles, and camera awareness.', 500, 14, 0, 2, 4),
+((SELECT id FROM public.universities WHERE lower(name)=lower('London School of Music') LIMIT 1), 'modeling_basic_runway', 'Runway Fundamentals', 'Master walking techniques, pacing, and catwalk confidence.', 600, 14, 0, 2, 4),
+((SELECT id FROM public.universities WHERE lower(name)=lower('London Conservatory of Arts') LIMIT 1), 'modeling_professional_posing', 'Advanced Posing & Expression', 'Develop versatile posing that conveys mood and brand identity.', 1200, 21, 250, 3, 5),
+((SELECT id FROM public.universities WHERE lower(name)=lower('London Conservatory of Arts') LIMIT 1), 'modeling_professional_camera', 'Camera Presence Masterclass', 'Engage the lens with magnetism and effortless emotion.', 1200, 21, 250, 3, 5),
+((SELECT id FROM public.universities WHERE lower(name)=lower('London Conservatory of Arts') LIMIT 1), 'fashion_basic_fundamentals', 'Fashion Design Foundations', 'Study fashion history, silhouettes, and core design principles.', 800, 14, 0, 2, 4),
+((SELECT id FROM public.universities WHERE lower(name)=lower('London Conservatory of Arts') LIMIT 1), 'fashion_basic_styling', 'Styling & Visual Narrative', 'Coordinate outfits, build mood boards, and curate aesthetic visions.', 750, 14, 0, 2, 4),
+((SELECT id FROM public.universities WHERE lower(name)=lower('Milan School of Music') LIMIT 1), 'fashion_basic_textiles', 'Italian Textile Traditions', 'Learn from Milans centuries-old textile heritage and modern fabric innovations.', 900, 14, 0, 2, 5),
+((SELECT id FROM public.universities WHERE lower(name)=lower('Milan School of Music') LIMIT 1), 'fashion_professional_fundamentals', 'Advanced Fashion Theory', 'Trend forecasting, seasonal planning, and design philosophy at the professional level.', 1800, 21, 250, 3, 6),
+((SELECT id FROM public.universities WHERE lower(name)=lower('Milan Conservatory of Arts') LIMIT 1), 'fashion_basic_patterns', 'Pattern Making & Draping', 'Master pattern drafting, measurements, and garment templates in the Italian tradition.', 900, 14, 0, 2, 5),
+((SELECT id FROM public.universities WHERE lower(name)=lower('Milan Conservatory of Arts') LIMIT 1), 'fashion_professional_textiles', 'Professional Materials & Sourcing', 'Source premium fabrics and work with exotic textiles from global suppliers.', 1600, 21, 250, 3, 6),
+((SELECT id FROM public.universities WHERE lower(name)=lower('Milan Conservatory of Arts') LIMIT 1), 'clothing_basic_construction', 'Garment Construction Workshop', 'Hands-on sewing, zipper setting, and basic garment assembly techniques.', 1000, 14, 0, 2, 4),
+((SELECT id FROM public.universities WHERE lower(name)=lower('Seoul School of Music') LIMIT 1), 'modeling_basic_commercial', 'Commercial Modeling Basics', 'Learn approachability, product selling, and commercial shoot techniques.', 500, 14, 0, 2, 4),
+((SELECT id FROM public.universities WHERE lower(name)=lower('Seoul School of Music') LIMIT 1), 'modeling_basic_editorial', 'Editorial Modeling & Art Direction', 'Interpret artistic concepts and collaborate with creative teams.', 600, 14, 0, 2, 4),
+((SELECT id FROM public.universities WHERE lower(name)=lower('Seoul School of Music') LIMIT 1), 'clothing_basic_genre_aesthetics', 'K-Pop & Genre Fashion Design', 'Study the visual identities of music genres with a focus on K-pop aesthetics.', 700, 14, 0, 2, 5),
+((SELECT id FROM public.universities WHERE lower(name)=lower('Seoul Conservatory of Arts') LIMIT 1), 'fashion_basic_business', 'Fashion Business Fundamentals', 'Understand fashion supply chains, pricing, and retail economics.', 800, 14, 0, 2, 4),
+((SELECT id FROM public.universities WHERE lower(name)=lower('Seoul Conservatory of Arts') LIMIT 1), 'clothing_basic_branding', 'Building a Fashion Brand', 'Brand identity creation, logo design, and market positioning strategies.', 750, 14, 0, 2, 4),
+((SELECT id FROM public.universities WHERE lower(name)=lower('Seoul Conservatory of Arts') LIMIT 1), 'clothing_basic_retail', 'Retail & Commerce Foundations', 'Shop setup, pricing strategies, and inventory management basics.', 700, 14, 0, 2, 4),
+((SELECT id FROM public.universities WHERE lower(name)=lower('London Conservatory of Arts') LIMIT 1), 'clothing_professional_construction', 'Advanced Garment Engineering', 'Construct tailored pieces with precision finishing and quality control.', 2000, 28, 250, 3, 6),
+((SELECT id FROM public.universities WHERE lower(name)=lower('London Conservatory of Arts') LIMIT 1), 'clothing_professional_branding', 'Fashion Brand Management', 'Build brand recognition through marketing, collaborations, and storytelling.', 1800, 21, 250, 3, 5),
+((SELECT id FROM public.universities WHERE lower(name)=lower('London Conservatory of Arts') LIMIT 1), 'modeling_basic_brand', 'Brand Collaboration & Partnerships', 'Represent brands authentically and build early industry partnerships.', 600, 14, 0, 2, 4);

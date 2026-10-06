@@ -27,7 +27,9 @@ interface ComaEventDisplay extends ComaEventRow {
 interface ComaSystemHealth {
   healthy: boolean;
   current_inactivity_comas: number;
-  recent_active_users_in_coma: number;
+  inactivity_snapshot_conflicts: number;
+  missing_activity_snapshots: number;
+  recent_returners_in_coma: number;
   entries_last_7_days: number;
   revivals_last_7_days: number;
   cron: {
@@ -286,7 +288,7 @@ const DeathSystemAdmin = () => {
             {healthLoading ? (
               "Loading the live cron and account-safety checks."
             ) : comaHealth ? (
-              `Cron: ${comaHealth.cron.last_status || "unknown"} · Active: ${comaHealth.cron.active ? "yes" : "no"} · Recently active users still in coma: ${comaHealth.recent_active_users_in_coma}`
+              `Cron: ${comaHealth.cron.last_status || "unknown"} · Active: ${comaHealth.cron.active ? "yes" : "no"} · Invalid inactivity snapshots: ${comaHealth.inactivity_snapshot_conflicts} · Missing snapshots: ${comaHealth.missing_activity_snapshots}`
             ) : (
               "Unable to load the live coma-system health summary."
             )}
@@ -300,17 +302,19 @@ const DeathSystemAdmin = () => {
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-lg border p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Safety conflicts</p>
-              <p className="mt-1 text-2xl font-bold">{healthLoading ? "…" : comaHealth?.recent_active_users_in_coma ?? "—"}</p>
-              <p className="mt-1 text-xs text-muted-foreground">Signed in within 30 days but still comatose</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Decision conflicts</p>
+              <p className="mt-1 text-2xl font-bold">{healthLoading ? "…" : comaHealth?.inactivity_snapshot_conflicts ?? "—"}</p>
+              <p className="mt-1 text-xs text-muted-foreground">Coma entered despite less than 30 days of recorded inactivity</p>
             </div>
             <div className="rounded-lg border p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Entries · 7 days</p>
-              <p className="mt-1 text-2xl font-bold">{healthLoading ? "…" : comaHealth?.entries_last_7_days ?? "—"}</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Awaiting revival</p>
+              <p className="mt-1 text-2xl font-bold">{healthLoading ? "…" : comaHealth?.recent_returners_in_coma ?? "—"}</p>
+              <p className="mt-1 text-xs text-muted-foreground">Returned after coma entry with no living character and have not revived yet</p>
             </div>
             <div className="rounded-lg border p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Revivals · 7 days</p>
-              <p className="mt-1 text-2xl font-bold">{healthLoading ? "…" : comaHealth?.revivals_last_7_days ?? "—"}</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Missing snapshots</p>
+              <p className="mt-1 text-2xl font-bold">{healthLoading ? "…" : comaHealth?.missing_activity_snapshots ?? "—"}</p>
+              <p className="mt-1 text-xs text-muted-foreground">Inactivity comas without an auditable activity snapshot</p>
             </div>
             <div className="rounded-lg border p-4">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Last cron run</p>
