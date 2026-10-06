@@ -130,6 +130,7 @@ const AdminDashboard = () => {
     { label: "Experience Rewards", path: "/admin/experience-rewards", icon: Star },
     { label: "VIP Management", path: "/admin/vip", icon: Star },
     { label: "Stripe Audit", path: "/admin/stripe-audit", icon: DollarSign },
+    { label: "Referral Audit", path: "/admin/referrals", icon: Gift },
     { label: "Luthiery Workbench", path: "/admin/luthiery-workbench-demo", icon: Wrench },
   ];
 
