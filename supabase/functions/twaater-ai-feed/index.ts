@@ -102,13 +102,7 @@ Deno.serve(async (req) => {
       .select(`
         *,
         account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, fame_score, owner_type),
-        metrics:twaat_metrics(*),
-        quoted_twaat:twaats!twaats_quoted_twaat_id_fkey(
-          id,
-          body,
-          created_at,
-          account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, owner_type)
-        )
+        metrics:twaat_metrics(*)
       `)
       .in("visibility", ["public", "followers"])
       .is("deleted_at", null)
@@ -118,7 +112,36 @@ Deno.serve(async (req) => {
       .limit(200);
 
     if (twaatsError) throw twaatsError;
-    const twaats = (twaatsData || []).filter((twaat: any) => {
+
+    const quotedIds = Array.from(new Set(
+      (twaatsData || []).map((twaat: any) => twaat.quoted_twaat_id).filter(Boolean),
+    )) as string[];
+    const quotedById = new Map<string, any>();
+
+    if (quotedIds.length > 0) {
+      const { data: quotedTwaats, error: quotedError } = await supabase
+        .from("twaats")
+        .select(`
+          id,
+          body,
+          created_at,
+          account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, owner_type)
+        `)
+        .in("id", quotedIds)
+        .is("deleted_at", null)
+        .is("scheduled_for", null);
+
+      if (quotedError) {
+        console.warn("[twaater-ai-feed] quoted Twaat hydration failed", quotedError);
+      } else {
+        for (const quoted of quotedTwaats || []) quotedById.set(quoted.id, quoted);
+      }
+    }
+
+    const twaats = (twaatsData || []).map((twaat: any) => ({
+      ...twaat,
+      quoted_twaat: twaat.quoted_twaat_id ? quotedById.get(twaat.quoted_twaat_id) : undefined,
+    })).filter((twaat: any) => {
       if (blockedIds.has(twaat.account_id)) return false;
       return twaat.visibility === "public" || permittedFollowerOnlyIds.has(twaat.account_id);
     });
