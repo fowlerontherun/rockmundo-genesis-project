@@ -12,9 +12,10 @@ import { QuotedTwaat } from "./QuotedTwaat";
 import { LinkedContentEmbed } from "./LinkedContentEmbed";
 import { VerifiedBadge } from "./VerifiedBadge";
 import { PromoteTwaatDialog } from "./PromoteTwaatDialog";
-import { Heart, MessageCircle, Repeat2, Bookmark, BookmarkCheck, Quote, Rocket } from "lucide-react";
+import { Heart, MessageCircle, Repeat2, Bookmark, BookmarkCheck, Quote, Rocket, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTwaaterRuntimeConfig } from "@/hooks/useTwaaterRuntimeConfig";
+import { useDeleteTwaat } from "@/hooks/useDeleteTwaat";
 
 interface TwaatCardProps {
   twaat: any;
@@ -29,6 +30,7 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
   const [replyBody, setReplyBody] = useState("");
   const navigate = useNavigate();
   const { config } = useTwaaterRuntimeConfig();
+  const { deleteTwaat, isDeleting } = useDeleteTwaat();
 
   const handleReply = async () => {
     if (!replyBody.trim() || !viewerAccountId) return;
@@ -154,6 +156,22 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
             </Button>
 
             {isOwn && !isPromoted && <PromoteTwaatDialog twaatId={twaat.id} />}
+            {isOwn && (
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={isDeleting}
+                className="hover:text-destructive"
+                onClick={() => {
+                  if (window.confirm("Delete this Twaat? This cannot be undone.")) {
+                    deleteTwaat(twaat.id);
+                  }
+                }}
+                title="Delete Twaat"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
 
           {showReplyBox && (
