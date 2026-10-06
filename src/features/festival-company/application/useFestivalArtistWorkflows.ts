@@ -45,6 +45,7 @@ const factories = {
   reviewApplication: repository.reviewFestivalArtistApplication,
   sendInvitation: repository.sendFestivalArtistInvitation,
   respondInvitation: repository.respondToFestivalArtistInvitation,
+  withdrawInvitation: repository.withdrawFestivalArtistInvitation,
   createOffer: repository.createFestivalArtistOffer,
   sendOffer: repository.sendFestivalArtistOffer,
   counterOffer: repository.counterFestivalArtistOffer,

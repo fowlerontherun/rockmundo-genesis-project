@@ -74900,6 +74900,14 @@ export type Database = {
         }
         Returns: Json
       }
+      withdraw_festival_artist_invitation: {
+        Args: {
+          p_expected_version: number
+          p_idempotency_key: string
+          p_invitation_id: string
+        }
+        Returns: Json
+      }
       withdraw_festival_artist_offer: {
         Args: {
           p_expected_version?: number

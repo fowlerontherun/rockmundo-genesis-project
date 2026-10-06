@@ -243,6 +243,7 @@ export const withdrawFestivalArtistApplication=(i:Record<string,unknown>)=>rpcAc
 export const reviewFestivalArtistApplication=(i:Record<string,unknown>)=>rpcAction("review_festival_artist_application",i);
 export const sendFestivalArtistInvitation=(i:Record<string,unknown>)=>rpcAction("send_festival_artist_invitation",i);
 export const respondToFestivalArtistInvitation=(i:Record<string,unknown>)=>rpcAction("respond_to_festival_artist_invitation",i);
+export const withdrawFestivalArtistInvitation=(i:Record<string,unknown>)=>rpcAction("withdraw_festival_artist_invitation",i);
 export const createFestivalArtistOffer=(i:Record<string,unknown>)=>rpcAction("create_festival_artist_offer",i);
 export const sendFestivalArtistOffer=(i:Record<string,unknown>)=>rpcAction("send_festival_artist_offer",i);
 export const counterFestivalArtistOffer=(i:Record<string,unknown>)=>rpcAction("counter_festival_artist_offer",i);

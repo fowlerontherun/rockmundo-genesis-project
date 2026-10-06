@@ -1,5 +1,7 @@
 # Project rules
 
+- Festival invitation withdrawals use authenticated server actions with band/organiser permission checks, version locks and audit history; never mutate invitation rows from the browser.
+
 - Reuse the shared character switcher in both shells with a shell-specific return destination; this keeps ownership and switching behavior consistent.
 - Keep mobile shell and character-control translations in the typed playerControls locale catalogue merged into i18n; this ensures all supported languages expose the same controls.
 

@@ -114,10 +114,12 @@ export default function FestivalArtistOpportunitiesPage() {
   const submit = useFestivalArtistAction("submitApplication");
   const withdraw = useFestivalArtistAction("withdrawApplication");
   const respondInvitation = useFestivalArtistAction("respondInvitation");
+  const withdrawInvitation = useFestivalArtistAction("withdrawInvitation");
   const respondOffer = useFestivalArtistAction("respondOffer");
   const [search, setSearch] = useState("");
   const [artist, setArtist] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   const run = async (action: () => Promise<unknown>) => {
     setError("");
@@ -218,6 +220,19 @@ export default function FestivalArtistOpportunitiesPage() {
         p_idempotency_key: id(),
       }),
     );
+
+  const withdrawInterest = (row: WorkflowRow) => {
+    if (withdrawInvitation.isPending || !window.confirm("Withdraw your band's interest in this festival invitation? This does not cancel a confirmed booking.")) return;
+    setNotice("");
+    return run(async () => {
+      await withdrawInvitation.mutateAsync({
+        p_invitation_id: row.id,
+        p_expected_version: number(row, "version", "version", 1),
+        p_idempotency_key: id(),
+      });
+      setNotice("Festival invitation interest withdrawn.");
+    });
+  };
 
   return (
     <main className="mx-auto max-w-5xl space-y-5 p-4">
@@ -383,6 +398,7 @@ export default function FestivalArtistOpportunitiesPage() {
           <CardDescription>{data.invitations.length} invitation(s)</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3">
+          {notice ? <p role="status" className="text-sm text-muted-foreground">{notice}</p> : null}
           {data.invitations.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               No invitations right now.
@@ -432,6 +448,18 @@ export default function FestivalArtistOpportunitiesPage() {
                       Interest sent. Festival management can now send you a formal
                       performance offer.
                     </p>
+                  ) : null}
+                  {status === "interested" &&
+                    text(row, "artistType", "artist_type") === "band" &&
+                    data.permissions.managedBandIds.includes(text(row, "bandId", "band_id")) ? (
+                    <Button
+                      className="mt-3"
+                      variant="outline"
+                      disabled={withdrawInvitation.isPending || respondInvitation.isPending}
+                      onClick={() => void withdrawInterest(row)}
+                    >
+                      {withdrawInvitation.isPending ? "Withdrawing…" : "Withdraw interest"}
+                    </Button>
                   ) : null}
                 </article>
               );

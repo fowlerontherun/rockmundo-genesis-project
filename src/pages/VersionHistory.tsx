@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.767",
+    date: "2026-10-06",
+    changes: [
+      { type: "feature", description: "Real bands can withdraw festival invitation interest before a formal offer, with confirmation and status feedback; organiser withdrawal is more visible and also requires confirmation. Invitation history and confirmed bookings are preserved." },
+    ],
+  },
+  {
     version: "1.1.766",
     date: "2026-10-06",
     changes: [
