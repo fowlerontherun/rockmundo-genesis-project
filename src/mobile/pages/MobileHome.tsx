@@ -1,6 +1,8 @@
 import { AlertTriangle, CalendarDays, CalendarPlus, Clock3, Sparkles } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useGameData } from "@/hooks/useGameData";
+import { DailyStipendCard } from "@/components/attributes/DailyStipendCard";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { MobileBook } from "../components/MobileBook";
 import { EmptyState } from "../components/EmptyState";
@@ -32,6 +34,7 @@ export default function MobileHome() {
   const { userId, profileId } = useActiveProfile();
   const [params, setParams] = useSearchParams();
   const today = useMobileDaySchedule(new Date(), userId, profileId);
+  const { xpWallet, dailyXpGrant, refetch } = useGameData();
   const mode = params.get("view") === "book" ? "book" : "schedule";
   if (mode === "book") return <MobileBook profileId={profileId} onBack={() => setParams({}, { replace: true })} />;
 
@@ -41,6 +44,7 @@ export default function MobileHome() {
       <Button variant="outline" className="min-h-14 justify-start gap-2" onClick={() => setParams({}, { replace: true })}><CalendarDays className="h-5 w-5" />My Schedule</Button>
       <Button className="min-h-14 justify-start gap-2" onClick={() => setParams({ view: "book" })}><CalendarPlus className="h-5 w-5" />Book Activity</Button>
     </div>
+    {xpWallet ? <DailyStipendCard lastClaimDate={xpWallet.last_stipend_claim_date ?? dailyXpGrant?.created_at} streak={xpWallet.stipend_claim_streak ?? 0} lifetimeSxp={xpWallet.skill_xp_lifetime ?? xpWallet.lifetime_xp ?? 0} onClaimed={async () => { await refetch(); }} /> : null}
     <MobileSectionCard title="Today" subtitle="Scheduled activities for your active character." action={<Button size="sm" onClick={() => setParams({ view: "book" })}>Book</Button>}>
       <div className="space-y-3"><ScheduleWarnings schedule={today} /><ScheduleList schedule={today} /></div>
     </MobileSectionCard>
