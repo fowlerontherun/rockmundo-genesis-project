@@ -1,5 +1,5 @@
 import {
-  FileSignature, Award, Backpack, BarChart3, BookOpen, Briefcase, Globe2, Building2, Calendar, CalendarDays, Compass, Disc3, DollarSign, GraduationCap, Guitar, Heart, History, Inbox, Landmark, ListMusic, MapPin, Megaphone, MessageSquare, Mic2, Music, Newspaper, Package, Palette, Plane, Radio, ReceiptText, Search, Settings, Sparkles, Star, Trophy, Users, Zap } from "lucide-react";
+  FileSignature, Gift, Award, Backpack, BarChart3, BookOpen, Briefcase, Globe2, Building2, Calendar, CalendarDays, Compass, Disc3, DollarSign, GraduationCap, Guitar, Heart, History, Inbox, Landmark, ListMusic, MapPin, Megaphone, MessageSquare, Mic2, Music, Newspaper, Package, Palette, Plane, Radio, ReceiptText, Search, Settings, Sparkles, Star, Trophy, Users, Zap } from "lucide-react";
 import type { HubNavigationItem } from "@/components/hub/HubLayout";
 
 export const characterHubNavigation: HubNavigationItem[] = [
@@ -55,6 +55,7 @@ export const socialHubNavigation: HubNavigationItem[] = [
   { id: "messages", label: "Messages", path: "/social/messages", icon: MessageSquare, matchPaths: ["/twaater/messages", "/social?tab=messages"] },
   { id: "twaater", label: "Twaater", path: "/social/twaater", icon: Newspaper, matchPaths: ["/twaater", "/twaater/:handle", "/twaater/tag/:hashtag", "/twaater/twaat/:twaatId", "/twaater/notifications", "/twaater/analytics"] },
   { id: "recruitment", label: "Recruitment", path: "/social/recruitment", icon: Compass, matchPaths: ["/bands/finder", "/bands/browse", "/bands/search", "/band/:bandId"] },
+  { id: "invite-friends", label: "Invite Friends", path: "/social/referrals", icon: Gift, matchPaths: ["/social?tab=rewards"] },
   { id: "invitations", label: "Invitations", path: "/social/invitations", icon: Inbox, matchPaths: ["/social?tab=invites"] },
   { id: "activities", label: "Activities", path: "/social/activities", icon: CalendarDays, matchPaths: ["/social/activities/new", "/social/activities/:activityId"] },
   { id: "contracts", label: "Contracts", path: "/social/contracts", icon: FileSignature, matchPaths: ["/social?tab=contracts"] },

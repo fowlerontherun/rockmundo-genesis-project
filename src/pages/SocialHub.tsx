@@ -53,7 +53,7 @@ function SocialOverview({ profileId }: { profileId: string | null | undefined })
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           <Button asChild><Link to="/social/players"><Compass className="mr-2 h-4 w-4" />Find players</Link></Button>
-          <Button asChild variant="outline"><Link to="/social?tab=rewards"><Gift className="mr-2 h-4 w-4" />Rewards & referrals</Link></Button>
+          <Button asChild variant="outline"><Link to="/social/referrals"><Gift className="mr-2 h-4 w-4" />Invite friends</Link></Button>
           <Button asChild variant="outline"><Link to="/social/messages"><MessageSquare className="mr-2 h-4 w-4" />Open messages</Link></Button>
           <Button asChild variant="outline"><Link to="/social/friends"><Users className="mr-2 h-4 w-4" />View friends</Link></Button>
           <Button asChild variant="outline"><Link to="/social/contracts"><FileSignature className="mr-2 h-4 w-4" />Contracts</Link></Button>
@@ -91,7 +91,13 @@ export default function SocialHub() {
 
   const legacyParams = new URLSearchParams(search);
   const legacyTab = legacyParams.get("tab");
-  const isRewardsTab = pathname === "/social" && legacyTab === "rewards";
+  const isRewardsTab = (pathname === "/social" && legacyTab === "rewards") || pathname === "/social/referrals";
+
+  if (pathname === "/social" && legacyTab === "rewards") {
+    legacyParams.delete("tab");
+    const preservedSearch = legacyParams.toString();
+    return <Navigate to={`/social/referrals${preservedSearch ? `?${preservedSearch}` : ""}`} replace />;
+  }
 
   if (pathname === "/social" && legacyTab && !isRewardsTab) {
     const tabTargets: Record<string, string> = {
@@ -126,7 +132,7 @@ export default function SocialHub() {
       icon={Users}
       overviewPath="/social"
       navigation={socialHubNavigation}
-      actions={[{ label: "Rewards & referrals", path: "/social?tab=rewards", icon: Gift }, { label: "Find players", path: "/social/players", icon: Compass }, { label: "Messages", path: "/social/messages", icon: MessageSquare }]}
+      actions={[{ label: "Invite friends", path: "/social/referrals", icon: Gift }, { label: "Find players", path: "/social/players", icon: Compass }, { label: "Messages", path: "/social/messages", icon: MessageSquare }]}
     >
       {content}
     </HubLayout>
