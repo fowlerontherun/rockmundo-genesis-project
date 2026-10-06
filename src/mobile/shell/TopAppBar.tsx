@@ -1,39 +1,38 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { Inbox as InboxIcon, MessageSquare, Sparkles } from "lucide-react";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { useGameData } from "@/hooks/useGameData";
+import { CharacterSwitcher } from "@/components/character/CharacterSwitcher";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/hooks/useTranslation";
 import { useUnifiedInboxUnreadCount } from "@/hooks/useUnifiedInbox";
 
-const titleFor = (pathname: string, search: string) => {
+const titleFor = (pathname: string, search: string, t: (key: string) => string) => {
   if (pathname === "/mobile") {
     const view = new URLSearchParams(search).get("view");
-    if (view === "book") return "Book Activity";
-    return "Schedule";
+    if (view === "book") return t("playerControls.bookActivity");
+    return t("nav.schedule");
   }
-  if (pathname === "/mobile/inbox") return "Inbox";
-  if (pathname === "/mobile/chat") return "Game Chat";
-  if (pathname === "/mobile/progression") return "XP & AP";
+  if (pathname === "/mobile/inbox") return t("nav.inbox");
+  if (pathname === "/mobile/chat") return t("playerControls.gameChat");
+  if (pathname === "/mobile/progression") return t("playerControls.progression");
   return "RockMundo Mobile";
 };
 
 export const TopAppBar = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const { profile } = useGameData();
   const unreadCount = useUnifiedInboxUnreadCount();
-  const displayName = profile?.display_name || profile?.username || "Player";
-  const avatarUrl = profile?.avatar_url ?? undefined;
   return <header className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border" style={{ paddingTop: "var(--m-safe-t)" }}>
     <div className="flex items-center gap-1.5 px-3" style={{ height: "var(--m-appbar-h)" }}>
-      <button onClick={() => navigate("/mobile")} className="rm-tap flex items-center gap-2 min-w-0" aria-label="Open schedule">
-        <Avatar className="h-9 w-9 ring-1 ring-border"><AvatarImage src={avatarUrl} alt={displayName} /><AvatarFallback>{displayName.charAt(0).toUpperCase()}</AvatarFallback></Avatar>
-      </button>
-      <div className="flex-1 min-w-0"><div className="text-[10px] uppercase tracking-wider text-muted-foreground leading-none">RockMundo</div><div className="font-bold text-[16px] leading-tight truncate">{titleFor(location.pathname, location.search)}</div></div>
-      <button onClick={() => navigate("/mobile/progression")} className="rm-tap h-10 w-10 flex items-center justify-center rounded-full hover:bg-muted" aria-label="Spend XP and AP"><Sparkles className="h-5 w-5" /></button>
-      <button onClick={() => navigate("/mobile/chat")} className="rm-tap h-10 w-10 flex items-center justify-center rounded-full hover:bg-muted" aria-label="Game chat"><MessageSquare className="h-5 w-5" /></button>
-      <button onClick={() => navigate("/mobile/inbox")} className="rm-tap relative h-10 w-10 flex items-center justify-center rounded-full hover:bg-muted" aria-label={`Inbox${unreadCount ? `, ${unreadCount} unread` : ""}`}>
+      <CharacterSwitcher mobile />
+      <div className="flex-1 min-w-0"><div className="text-[10px] uppercase tracking-wider text-muted-foreground leading-none">RockMundo</div><div className="font-bold text-[16px] leading-tight truncate">{titleFor(location.pathname, location.search, t)}</div></div>
+      <LanguageSwitcher />
+      <Button variant="ghost" size="icon" onClick={() => navigate("/mobile/progression")} className="rm-tap h-9 w-9 shrink-0 flex items-center justify-center rounded-full hover:bg-muted" aria-label={t("playerControls.spendPoints")}><Sparkles className="h-5 w-5" /></Button>
+      <Button variant="ghost" size="icon" onClick={() => navigate("/mobile/chat")} className="rm-tap h-9 w-9 shrink-0 flex items-center justify-center rounded-full hover:bg-muted" aria-label={t("playerControls.gameChat")}><MessageSquare className="h-5 w-5" /></Button>
+      <Button variant="ghost" size="icon" onClick={() => navigate("/mobile/inbox")} className="rm-tap relative h-9 w-9 shrink-0 flex items-center justify-center rounded-full hover:bg-muted" aria-label={`${t("nav.inbox")}${unreadCount ? `, ${unreadCount} ${t("playerControls.unread")}` : ""}`}>
         <InboxIcon className="h-5 w-5" />{unreadCount > 0 && <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">{unreadCount > 9 ? "9+" : unreadCount}</span>}
-      </button>
+      </Button>
     </div>
   </header>;
 };

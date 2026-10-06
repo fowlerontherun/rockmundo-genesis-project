@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.766",
+    date: "2026-10-06",
+    changes: [
+      { type: "improvement", description: "Reviewed all nine maintained languages and translated mobile navigation, quick actions, activity status and character-switching menus. Added a language selector to the mobile top bar." },
+      { type: "feature", description: "Players can switch characters from the mobile avatar menu without leaving the mobile experience; switching shows progress and blocks repeated selections." },
+    ],
+  },
+  {
     version: "1.1.765",
     date: "2026-10-05",
     changes: [
