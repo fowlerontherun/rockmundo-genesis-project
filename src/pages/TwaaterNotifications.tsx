@@ -43,6 +43,18 @@ export default function TwaaterNotifications() {
     );
   }
 
+  if (!account) {
+    return (
+      <FMPageScaffold title="Notifications" icon={Bell} backTo="/twaater">
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground">You need a Twaater account to view notifications.</p>
+          </CardContent>
+        </Card>
+      </FMPageScaffold>
+    );
+  }
+
   if (error) {
     return (
       <FMPageScaffold title="Notifications" icon={Bell} backTo="/twaater">
@@ -94,9 +106,11 @@ export default function TwaaterNotifications() {
             <span className="font-medium text-sm">
               {notification.source_account?.display_name || "Someone"}
             </span>
-            <span className="text-xs text-muted-foreground">
-              @{notification.source_account?.handle}
-            </span>
+            {notification.source_account?.handle && (
+              <span className="text-xs text-muted-foreground">
+                @{notification.source_account.handle}
+              </span>
+            )}
           </div>
           <p className="text-sm text-muted-foreground mt-1">
             {notification.type === "like" && "liked your twaat"}
