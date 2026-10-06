@@ -25,7 +25,7 @@ export const useTwaaterUnreadCount = (accountId?: string) => {
 export const useTwaaterNotifications = (accountId?: string) => {
   const queryClient = useQueryClient();
 
-  const { data: notifications, isLoading } = useQuery({
+  const { data: notifications, isLoading, error, refetch } = useQuery({
     queryKey: ["twaater-notifications", accountId],
     queryFn: async () => {
       if (!accountId) return [];
@@ -85,6 +85,8 @@ export const useTwaaterNotifications = (accountId?: string) => {
   return {
     notifications,
     isLoading,
+    error,
+    refetch,
     unreadCount,
     markAsRead: markAsReadMutation.mutate,
     markAllAsRead: markAllAsReadMutation.mutate,
