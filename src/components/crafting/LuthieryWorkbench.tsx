@@ -247,9 +247,12 @@ export const LuthieryWorkbench = ({
               </div>
             </div>
 
-            <div>
-              <p className="mb-2 text-xs font-medium">Body colour</p>
-              <div className="flex flex-wrap gap-2">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="luthiery-body-colour" className="text-xs font-medium">Body colour</Label>
+                <span className="font-mono text-[10px] uppercase text-muted-foreground">{selection.colour}</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
                 {LUTHIERY_COLOURS.map((colour) => (
                   <button
                     key={colour.id}
@@ -263,7 +266,23 @@ export const LuthieryWorkbench = ({
                     style={{ backgroundColor: colour.value }}
                   />
                 ))}
+                <label className="flex items-center gap-2 rounded-md border border-border/60 px-2 py-1.5 text-xs">
+                  <span>Custom</span>
+                  <Input
+                    id="luthiery-body-colour"
+                    type="color"
+                    value={selection.colour}
+                    onChange={(event) =>
+                      setSelection((current) => ({ ...current, colour: event.target.value.toLowerCase() }))
+                    }
+                    className="h-8 w-12 cursor-pointer border-0 bg-transparent p-0"
+                    aria-label="Custom body colour"
+                  />
+                </label>
               </div>
+              <p className="text-[10px] text-muted-foreground">
+                Choose a preset or use the colour picker for any custom finish colour.
+              </p>
             </div>
 
             <div>
