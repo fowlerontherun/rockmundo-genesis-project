@@ -264,6 +264,7 @@ export async function sendDirectMessage(
   channel: string,
   userId: string,
   message: string,
+  profileId?: string | null,
 ): Promise<void> {
   const trimmed = message.trim();
   if (!trimmed) {
@@ -273,6 +274,7 @@ export async function sendDirectMessage(
   const { error } = await supabase.from("global_chat").insert({
     channel,
     user_id: userId,
+    profile_id: profileId ?? null,
     message: trimmed,
   });
 
