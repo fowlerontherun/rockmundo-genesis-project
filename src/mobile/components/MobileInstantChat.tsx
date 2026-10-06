@@ -5,6 +5,7 @@ import { ChatRoomView } from "@/components/fm/chat/ChatRoomView";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { useFriendships } from "@/features/relationships/hooks/useFriendships";
+import { useUnreadDirectMessageCount } from "@/hooks/useDirectMessages";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { EmptyState } from "./EmptyState";
@@ -24,6 +25,7 @@ export function MobileInstantChat() {
   const { profileId } = useActiveProfile();
   const { friendships, loading } = useFriendships(profileId);
   const { data: primaryBand } = usePrimaryBand();
+  const { data: unreadDirectMessages = 0 } = useUnreadDirectMessageCount(profileId);
   const [activeRoom, setActiveRoom] = useState<RoomId>("world");
   const bandId = (primaryBand as any)?.band_id ?? null;
   const bandName = (primaryBand as any)?.bands?.name ?? "Band";
@@ -51,7 +53,7 @@ export function MobileInstantChat() {
             >
               <Icon className="h-4 w-4" />
               {room.label}
-              {room.id === "friends" && accepted.length > 0 ? ` (${accepted.length})` : ""}
+              {room.id === "friends" && unreadDirectMessages > 0 ? ` (${unreadDirectMessages > 99 ? "99+" : unreadDirectMessages})` : ""}
             </button>
           );
         })}
