@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { User, Users, Check, UserPlus } from "lucide-react";
 import { useTwaaterFollow } from "@/hooks/useTwaaterFollow";
+import { useNavigate } from "react-router-dom";
 
 interface TwaaterAccountCardProps {
   account: {
@@ -18,6 +19,7 @@ interface TwaaterAccountCardProps {
 
 export const TwaaterAccountCard = ({ account, currentAccountId }: TwaaterAccountCardProps) => {
   const { isFollowing, follow, unfollow, isFollowPending } = useTwaaterFollow(currentAccountId);
+  const navigate = useNavigate();
   const following = isFollowing(account.id);
 
   const handleFollowClick = () => {
@@ -30,7 +32,11 @@ export const TwaaterAccountCard = ({ account, currentAccountId }: TwaaterAccount
 
   return (
     <div className="flex items-center justify-between gap-3 p-3 rounded-lg hover:bg-accent/50 transition-colors">
-      <div className="flex items-center gap-3 flex-1 min-w-0">
+      <button
+        type="button"
+        onClick={() => navigate(`/twaater/${account.handle}`)}
+        className="flex items-center gap-3 flex-1 min-w-0 text-left"
+      >
         <div className="flex-shrink-0">
           {account.owner_type === "persona" ? (
             <User className="h-10 w-10 text-muted-foreground" />
@@ -50,7 +56,7 @@ export const TwaaterAccountCard = ({ account, currentAccountId }: TwaaterAccount
             {account.follower_count?.toLocaleString() || 0} followers
           </p>
         </div>
-      </div>
+      </button>
       <Button
         size="sm"
         variant={following ? "secondary" : "default"}

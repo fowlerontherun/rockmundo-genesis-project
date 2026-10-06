@@ -10,7 +10,7 @@ const socialMessageError = (error: unknown) => {
   return "We couldn't complete that message action. Please try again.";
 };
 
-export const useTwaaterMessages = (accountId?: string) => {
+export const useTwaaterMessages = (accountId?: string, loadConversations = true) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -32,7 +32,7 @@ export const useTwaaterMessages = (accountId?: string) => {
       if (error) throw error;
       return data;
     },
-    enabled: !!accountId,
+    enabled: loadConversations && !!accountId,
   });
 
   const getOrCreateConversationMutation = useMutation({
@@ -41,13 +41,14 @@ export const useTwaaterMessages = (accountId?: string) => {
 
       const [lower, higher] = [accountId, otherAccountId].sort();
 
-      const { data: existing } = await supabase
+      const { data: existing, error: existingError } = await supabase
         .from("twaater_conversations")
         .select("*")
         .eq("participant_1_id", lower)
         .eq("participant_2_id", higher)
-        .single();
+        .maybeSingle();
 
+      if (existingError) throw new Error(socialMessageError(existingError));
       if (existing) return existing;
 
       const { data, error } = await supabase
@@ -59,8 +60,22 @@ export const useTwaaterMessages = (accountId?: string) => {
         .select()
         .single();
 
-      if (error) throw new Error(socialMessageError(error));
-      return data;
+      if (!error) return data;
+
+      // If two tabs/users race to create the same conversation, reuse the
+      // row that won instead of surfacing a duplicate-key error.
+      if (error.code === "23505") {
+        const { data: racedConversation, error: racedError } = await supabase
+          .from("twaater_conversations")
+          .select("*")
+          .eq("participant_1_id", lower)
+          .eq("participant_2_id", higher)
+          .maybeSingle();
+
+        if (!racedError && racedConversation) return racedConversation;
+      }
+
+      throw new Error(socialMessageError(error));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["twaater-conversations"] });
@@ -71,6 +86,7 @@ export const useTwaaterMessages = (accountId?: string) => {
     conversations,
     isLoading,
     getOrCreateConversation: getOrCreateConversationMutation.mutateAsync,
+    isCreatingConversation: getOrCreateConversationMutation.isPending,
   };
 };
 

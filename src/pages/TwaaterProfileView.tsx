@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TwaatCard } from "@/components/twaater/TwaatCard";
-import { ArrowLeft, MapPin, Calendar, Music, Users, CheckCircle2, Loader2 } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, Music, Users, CheckCircle2, Loader2, MessageCircle } from "lucide-react";
 import { useGameData } from "@/hooks/useGameData";
 import { useTwaaterAccount } from "@/hooks/useTwaaterAccount";
 import { useToast } from "@/hooks/use-toast";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { hydrateTwaaterFeedExtras } from "@/hooks/useTwaats";
+import { useTwaaterMessages } from "@/hooks/useTwaaterMessages";
 
 const TwaaterProfileView = () => {
   const { handle } = useParams();
@@ -21,22 +22,23 @@ const TwaaterProfileView = () => {
   const { profile } = useGameData();
 
   const { account: viewerAccount } = useTwaaterAccount("persona", profile?.id);
+  const { getOrCreateConversation, isCreatingConversation } = useTwaaterMessages(viewerAccount?.id, false);
 
-  const { data: profileAccount, isLoading: accountLoading } = useQuery({
+  const { data: profileAccount, isLoading: accountLoading, error: accountError, refetch: refetchAccount } = useQuery({
     queryKey: ["twaater-profile", handle],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("twaater_accounts")
         .select("*")
         .eq("handle", handle)
-        .single();
+        .maybeSingle();
       if (error) throw error;
       return data;
     },
     enabled: !!handle,
   });
 
-  const { data: twaats, isLoading: twaatsLoading } = useQuery({
+  const { data: twaats, isLoading: twaatsLoading, error: twaatsError, refetch: refetchTwaats } = useQuery({
     queryKey: ["twaater-profile-twaats", profileAccount?.id],
     queryFn: async () => {
       if (!profileAccount) return [];
@@ -150,6 +152,17 @@ const TwaaterProfileView = () => {
     );
   }
 
+  if (accountError) {
+    return (
+      <FMPageScaffold title="Profile" icon={Users} backTo="/twaater">
+        <Card className="p-6 text-center space-y-3">
+          <p className="text-muted-foreground">This Twaater profile couldn't load.</p>
+          <Button variant="outline" size="sm" onClick={() => refetchAccount()}>Retry</Button>
+        </Card>
+      </FMPageScaffold>
+    );
+  }
+
   if (!profileAccount) {
     return (
       <FMPageScaffold title="Profile" icon={Users} backTo="/twaater">
@@ -166,6 +179,20 @@ const TwaaterProfileView = () => {
   }
 
   const isOwnProfile = viewerAccount?.id === profileAccount.id;
+
+  const handleMessage = async () => {
+    if (!viewerAccount?.id || !profileAccount?.id) return;
+    try {
+      const conversation = await getOrCreateConversation({ otherAccountId: profileAccount.id });
+      navigate(`/twaater/messages?conversation=${conversation.id}`);
+    } catch (error: any) {
+      toast({
+        title: "Unable to start conversation",
+        description: error?.message || "This account is unavailable for direct messages.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <FMPageScaffold
@@ -187,17 +214,29 @@ const TwaaterProfileView = () => {
                 <p className="text-muted-foreground">@{profileAccount.handle}</p>
                 <Badge variant={profileAccount.owner_type === "band" ? "default" : "secondary"} className="mt-2">
                   {profileAccount.owner_type === "band" ? <Users className="h-3 w-3 mr-1" /> : <Music className="h-3 w-3 mr-1" />}
-                  {profileAccount.owner_type === "band" ? "Band" : "Artist"}
+                  {profileAccount.owner_type === "band" ? "Band" : profileAccount.owner_type === "bot" ? "Twaater NPC" : "Artist"}
                 </Badge>
               </div>
               {!isOwnProfile && viewerAccount && (
-                <Button
-                  onClick={() => followMutation.mutate()}
-                  disabled={followMutation.isPending || followLoading}
-                  variant={isFollowing ? "outline" : "default"}
-                >
-                  {isFollowing ? "Following" : "Follow"}
-                </Button>
+                <div className="flex items-center gap-2">
+                  {profileAccount.owner_type === "persona" && (
+                    <Button
+                      variant="outline"
+                      onClick={handleMessage}
+                      disabled={isCreatingConversation}
+                    >
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      Message
+                    </Button>
+                  )}
+                  <Button
+                    onClick={() => followMutation.mutate()}
+                    disabled={followMutation.isPending || followLoading}
+                    variant={isFollowing ? "outline" : "default"}
+                  >
+                    {isFollowing ? "Following" : "Follow"}
+                  </Button>
+                </div>
               )}
             </div>
 
@@ -209,7 +248,7 @@ const TwaaterProfileView = () => {
                 <span className="ml-1 text-muted-foreground">Following</span>
               </div>
               <div>
-                <span className="font-bold">{profileAccount.follower_count.toLocaleString()}</span>
+                <span className="font-bold">{(profileAccount.follower_count || 0).toLocaleString()}</span>
                 <span className="ml-1 text-muted-foreground">Followers</span>
               </div>
               <div>
@@ -246,6 +285,11 @@ const TwaaterProfileView = () => {
           <div className="p-4"><h3 className="font-bold text-lg mb-4">Twaats</h3></div>
           {twaatsLoading ? (
             <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin" /></div>
+          ) : twaatsError ? (
+            <div className="py-12 text-center space-y-3">
+              <p className="text-muted-foreground">This account's Twaats couldn't load.</p>
+              <Button variant="outline" size="sm" onClick={() => refetchTwaats()}>Retry</Button>
+            </div>
           ) : twaats && twaats.length > 0 ? (
             <div>
               {twaats.map((twaat: any) => (

@@ -7,14 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Loader2, MessageCircle, ArrowLeft } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { TwaaterConversation } from "@/components/twaater/TwaaterConversation";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export default function TwaaterMessagesPage() {
   const { profile } = useGameData();
   const { account, isLoading: accountLoading } = useTwaaterAccount("persona", profile?.id);
   const { conversations, isLoading } = useTwaaterMessages(account?.id);
-  const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const [selectedConversation, setSelectedConversation] = useState<string | null>(() => searchParams.get("conversation"));
   const navigate = useNavigate();
 
   if (accountLoading || isLoading) {
@@ -46,7 +47,15 @@ export default function TwaaterMessagesPage() {
         icon={MessageCircle}
         backTo="/twaater/messages"
         headerActions={
-          <Button variant="outline" size="sm" onClick={() => setSelectedConversation(null)} className="gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setSelectedConversation(null);
+              navigate("/twaater/messages", { replace: true });
+            }}
+            className="gap-1"
+          >
             <ArrowLeft className="h-4 w-4" /> Conversations
           </Button>
         }
@@ -84,7 +93,10 @@ export default function TwaaterMessagesPage() {
                 return (
                   <button
                     key={conversation.id}
-                    onClick={() => setSelectedConversation(conversation.id)}
+                    onClick={() => {
+                      setSelectedConversation(conversation.id);
+                      navigate(`/twaater/messages?conversation=${conversation.id}`, { replace: true });
+                    }}
                     className="w-full p-4 border rounded-lg hover:bg-accent transition-colors text-left"
                   >
                     <div className="flex items-center justify-between">

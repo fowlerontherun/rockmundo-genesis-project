@@ -7,7 +7,7 @@ export const useTwaaterBookmarks = (accountId?: string) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: bookmarks, isLoading } = useQuery({
+  const { data: bookmarks, isLoading, error, refetch } = useQuery({
     queryKey: ["twaater-bookmarks", accountId],
     queryFn: async () => {
       if (!accountId) return [];
@@ -32,10 +32,12 @@ export const useTwaaterBookmarks = (accountId?: string) => {
       const hydrated = await hydrateTwaaterFeedExtras(twaats);
       const hydratedById = new Map(hydrated.map((twaat: any) => [twaat.id, twaat]));
 
-      return rows.map((bookmark: any) => ({
-        ...bookmark,
-        twaat: bookmark.twaat ? hydratedById.get(bookmark.twaat.id) || bookmark.twaat : null,
-      }));
+      return rows
+        .filter((bookmark: any) => Boolean(bookmark.twaat))
+        .map((bookmark: any) => ({
+          ...bookmark,
+          twaat: hydratedById.get(bookmark.twaat.id) || bookmark.twaat,
+        }));
     },
     enabled: !!accountId,
   });
@@ -89,6 +91,8 @@ export const useTwaaterBookmarks = (accountId?: string) => {
   return {
     bookmarks,
     isLoading,
+    error,
+    refetch,
     toggleBookmark: toggleBookmarkMutation.mutate,
     isBookmarked,
   };

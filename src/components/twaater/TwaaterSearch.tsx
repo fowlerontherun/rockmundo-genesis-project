@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, Users, AtSign } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -17,14 +17,31 @@ interface TwaaterSearchProps {
 
 export const TwaaterSearch = ({ currentAccountId }: TwaaterSearchProps) => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [searchMode, setSearchMode] = useState<"accounts" | "players">("accounts");
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const safeQuery = searchQuery
+        .trim()
+        .toLowerCase()
+        .replace(/^@+/, "")
+        .replace(/[,%()]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      setDebouncedQuery(safeQuery);
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [searchQuery]);
 
   // Search Twaater accounts
   const { data: accountResults, isLoading: accountsLoading } = useQuery({
-    queryKey: ["twaater-search-accounts", searchQuery],
+    queryKey: ["twaater-search-accounts", debouncedQuery],
     queryFn: async () => {
-      if (!searchQuery || searchQuery.length < 2) return [];
-      const query = searchQuery.toLowerCase().replace('@', '');
+      if (debouncedQuery.length < 2) return [];
+      const query = debouncedQuery;
       
       const { data, error } = await supabase
         .from("twaater_accounts")
@@ -37,15 +54,16 @@ export const TwaaterSearch = ({ currentAccountId }: TwaaterSearchProps) => {
       if (error) throw error;
       return data;
     },
-    enabled: searchQuery.length >= 2,
+    enabled: searchMode === "accounts" && debouncedQuery.length >= 2,
+    staleTime: 60 * 1000,
   });
 
   // Search Players (profiles)
   const { data: playerResults, isLoading: playersLoading } = useQuery({
-    queryKey: ["twaater-search-players", searchQuery],
+    queryKey: ["twaater-search-players", debouncedQuery],
     queryFn: async () => {
-      if (!searchQuery || searchQuery.length < 2) return [];
-      const query = searchQuery.toLowerCase();
+      if (debouncedQuery.length < 2) return [];
+      const query = debouncedQuery;
       
       const { data, error } = await supabase
         .from("profiles")
@@ -57,7 +75,8 @@ export const TwaaterSearch = ({ currentAccountId }: TwaaterSearchProps) => {
       if (error) throw error;
       return data;
     },
-    enabled: searchQuery.length >= 2,
+    enabled: searchMode === "players" && debouncedQuery.length >= 2,
+    staleTime: 60 * 1000,
   });
 
   return (
@@ -75,7 +94,7 @@ export const TwaaterSearch = ({ currentAccountId }: TwaaterSearchProps) => {
       </div>
 
       {searchQuery.length >= 2 && (
-        <Tabs defaultValue="accounts" className="w-full">
+        <Tabs value={searchMode} onValueChange={(value) => setSearchMode(value as "accounts" | "players")} className="w-full">
           <TabsList className="grid w-full grid-cols-2" style={{ backgroundColor: "hsl(var(--twaater-card))" }}>
             <TabsTrigger value="accounts" className="gap-1 data-[state=active]:bg-[hsl(var(--twaater-purple)_/_0.2)] data-[state=active]:text-[hsl(var(--twaater-purple))]">
               <AtSign className="h-4 w-4" />

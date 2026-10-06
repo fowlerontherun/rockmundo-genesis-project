@@ -3,13 +3,16 @@ import { Badge } from "@/components/ui/badge";
 import { TrendingUp, Hash } from "lucide-react";
 import { useTwaaterTrending } from "@/hooks/useTwaaterTrending";
 import { TwaatCard } from "./TwaatCard";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 interface TrendingSectionProps {
   viewerAccountId?: string;
 }
 
 export const TrendingSection = ({ viewerAccountId }: TrendingSectionProps) => {
-  const { trendingTwaats, trendingTopics, isLoading } = useTwaaterTrending();
+  const navigate = useNavigate();
+  const { trendingTwaats, trendingTopics, isLoading, error, refetch } = useTwaaterTrending();
 
   if (isLoading) {
     return (
@@ -20,6 +23,17 @@ export const TrendingSection = ({ viewerAccountId }: TrendingSectionProps) => {
           </CardContent>
         </Card>
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="pt-6 text-center space-y-3">
+          <p className="text-muted-foreground">Trending content couldn't load.</p>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -36,9 +50,11 @@ export const TrendingSection = ({ viewerAccountId }: TrendingSectionProps) => {
           </CardHeader>
           <CardContent className="space-y-2">
             {trendingTopics.map((topic, index) => (
-              <div
+              <button
+                type="button"
                 key={topic.tag}
-                className="flex items-center justify-between p-2 rounded-lg hover:bg-accent transition-colors cursor-pointer"
+                onClick={() => navigate(`/twaater/tag/${topic.tag.replace(/^#/, "")}`)}
+                className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-accent transition-colors text-left"
               >
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary" className="text-xs">
@@ -49,7 +65,7 @@ export const TrendingSection = ({ viewerAccountId }: TrendingSectionProps) => {
                 <span className="text-sm text-muted-foreground">
                   {topic.count} {topic.count === 1 ? "twaat" : "twaats"}
                 </span>
-              </div>
+              </button>
             ))}
           </CardContent>
         </Card>

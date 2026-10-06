@@ -33,12 +33,25 @@ export default function TwaaterNotifications() {
   const { profile } = useGameData();
   const navigate = useNavigate();
   const { account, isLoading: accountLoading } = useTwaaterAccount("persona", profile?.id);
-  const { notifications, isLoading, markAsRead, markAllAsRead, unreadCount } = useTwaaterNotifications(account?.id);
+  const { notifications, isLoading, error, refetch, markAsRead, markAllAsRead, unreadCount } = useTwaaterNotifications(account?.id);
 
   if (!profile || accountLoading || isLoading) {
     return (
       <FMPageScaffold title="Notifications" icon={Bell} backTo="/twaater">
         <div className="flex items-center justify-center py-16"><p>Loading...</p></div>
+      </FMPageScaffold>
+    );
+  }
+
+  if (error) {
+    return (
+      <FMPageScaffold title="Notifications" icon={Bell} backTo="/twaater">
+        <Card>
+          <CardContent className="py-12 text-center space-y-3">
+            <p className="text-muted-foreground">Notifications couldn't load.</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+          </CardContent>
+        </Card>
       </FMPageScaffold>
     );
   }
@@ -64,7 +77,7 @@ export default function TwaaterNotifications() {
           if (notification.related_twaat_id) {
             navigate(`/twaater/twaat/${notification.related_twaat_id}`);
           } else if (notification.source_account?.handle) {
-            navigate(`/twaater/profile/${notification.source_account.handle}`);
+            navigate(`/twaater/${notification.source_account.handle}`);
           }
         }}
       >
