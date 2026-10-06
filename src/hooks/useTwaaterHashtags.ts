@@ -36,7 +36,7 @@ export const useTwaaterHashtags = () => {
         .is("scheduled_for", null)
         .gte("created_at", oneWeekAgo.toISOString())
         .order("created_at", { ascending: false })
-        .limit(500);
+        .limit(150);
 
       if (error) throw error;
 
@@ -74,7 +74,8 @@ export const useTwaaterHashtags = () => {
 
       return trending;
     },
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 10 * 60 * 1000, // Cache for 10 minutes
+    refetchOnWindowFocus: false,
   });
 
   // Search twaats by hashtag
