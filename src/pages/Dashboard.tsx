@@ -10,7 +10,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow, addDays, startOfWeek, format as formatDate } from "date-fns";
-import { User, Trophy, Calendar, ChevronLeft, ChevronRight, CalendarDays, Star, Flame, BarChart3, Activity as ActivityIcon, Sparkles, Bell, Target } from "lucide-react";
+import { User, Trophy, Calendar, ChevronLeft, ChevronRight, CalendarDays, Star, Flame, BarChart3, Activity as ActivityIcon, Sparkles, Bell, Target, UserPlus } from "lucide-react";
 import { StandardPageLayout } from "@/components/ui/StandardPageLayout";
 import { PageEmptyState, PageErrorState, PageLoadingState } from "@/components/ui/page-state";
 
@@ -164,6 +164,41 @@ const GoalsProgressPanel = ({ profile, userId }: { profile: any; userId?: string
             </div>
           );
         })}
+      </CardContent>
+    </Card>
+  );
+};
+
+const InviteFriendsCard = ({ profileId }: { profileId?: string }) => {
+  const { data } = useQuery({
+    queryKey: ["dashboard-referral-summary", profileId],
+    enabled: !!profileId,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).rpc("get_referral_dashboard", { p_profile_id: profileId });
+      if (error) throw error;
+      return data as { stats?: { qualified?: number; joined?: number } };
+    },
+  });
+  const qualified = data?.stats?.qualified ?? 0;
+  const next = qualified < 5 ? 5 : qualified < 10 ? 10 : qualified < 25 ? 25 : null;
+
+  return (
+    <Card>
+      <CardHeader className="gap-3 pb-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <CardTitle className="flex items-center gap-2 text-base"><UserPlus className="h-4 w-4 text-primary" />Grow the RockMundo scene</CardTitle>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Invite musicians you know. Qualified recruits earn rewards and unlock permanent promoter titles.
+          </p>
+        </div>
+        <Button asChild size="sm"><Link to="/social/referrals">Invite friends</Link></Button>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <Badge variant="secondary">{qualified} qualified</Badge>
+          {next ? <span className="text-muted-foreground">{next - qualified} more to your next promoter milestone.</span> : <span className="text-muted-foreground">RockMundo Ambassador milestone reached.</span>}
+        </div>
       </CardContent>
     </Card>
   );
@@ -362,6 +397,7 @@ const Dashboard = () => {
         <TabsContent value="profile" className="space-y-4">
           <DashboardHero profile={profile} userId={user?.id} />
           <GettingStartedPanel profile={profile} userId={user?.id} />
+          <InviteFriendsCard profileId={profile?.id} />
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
             <TodaysBriefing profile={profile} userId={user?.id} />
             <UpcomingSchedulePanel currentDate={currentDate} userId={user?.id} />
