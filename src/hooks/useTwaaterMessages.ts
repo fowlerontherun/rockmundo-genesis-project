@@ -10,7 +10,7 @@ const socialMessageError = (error: unknown) => {
   return "We couldn't complete that message action. Please try again.";
 };
 
-export const useTwaaterMessages = (accountId?: string) => {
+export const useTwaaterMessages = (accountId?: string, loadConversations = true) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -32,7 +32,7 @@ export const useTwaaterMessages = (accountId?: string) => {
       if (error) throw error;
       return data;
     },
-    enabled: !!accountId,
+    enabled: loadConversations && !!accountId,
   });
 
   const getOrCreateConversationMutation = useMutation({
@@ -71,6 +71,7 @@ export const useTwaaterMessages = (accountId?: string) => {
     conversations,
     isLoading,
     getOrCreateConversation: getOrCreateConversationMutation.mutateAsync,
+    isCreatingConversation: getOrCreateConversationMutation.isPending,
   };
 };
 
