@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 type CollaborationStatus = Database["public"]["Enums"]["collaboration_status"];
 type CompensationType = Database["public"]["Enums"]["collaboration_compensation_type"];
@@ -27,6 +28,11 @@ export interface Collaboration {
     username: string;
     avatar_url: string | null;
   };
+  inviter_profile?: {
+    id: string;
+    username: string;
+    avatar_url: string | null;
+  };
   project?: {
     id: string;
     title: string;
@@ -44,37 +50,9 @@ interface InviteCollaboratorParams {
   royaltyPercentage?: number;
 }
 
-const createInboxNotification = async ({
-  userId,
-  title,
-  message,
-  actionType,
-  actionData,
-}: {
-  userId: string;
-  title: string;
-  message: string;
-  actionType?: string;
-  actionData?: Record<string, unknown>;
-}) => {
-  const { error } = await supabase.from("player_inbox").insert({
-    user_id: userId,
-    category: "social" as any,
-    priority: "high",
-    title,
-    message,
-    action_type: actionType ?? null,
-    action_data: actionData ?? null,
-    metadata: { source: "songwriting_collaboration" },
-  } as any);
-
-  if (error) {
-    console.error("Failed to create collaboration inbox notification:", error);
-  }
-};
-
 export const useCollaborationInvites = (projectId?: string) => {
   const queryClient = useQueryClient();
+  const { profileId: activeProfileId } = useActiveProfile();
 
   // Fetch collaborators for a specific project
   const { data: collaborators, isLoading: loadingCollaborators } = useQuery({
@@ -103,21 +81,9 @@ export const useCollaborationInvites = (projectId?: string) => {
 
   // Fetch pending invitations for the current user (as invitee)
   const { data: pendingInvitations, isLoading: loadingInvitations } = useQuery({
-    queryKey: ["pending-collaboration-invitations"],
+    queryKey: ["pending-collaboration-invitations", activeProfileId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-
-      // Get the user's active profile id
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .is("died_at", null)
-        .single();
-
-      if (!profile) return [];
+      if (!activeProfileId) return [];
 
       const { data, error } = await supabase
         .from("songwriting_collaborations")
@@ -128,20 +94,44 @@ export const useCollaborationInvites = (projectId?: string) => {
             title,
             genres,
             quality_score
-          ),
-          inviter_profile:profiles!songwriting_collaborations_inviter_user_id_fkey (
-            id,
-            username,
-            avatar_url
           )
         `)
-        .eq("invitee_profile_id", profile.id)
+        .eq("invitee_profile_id", activeProfileId)
         .eq("status", "pending")
         .order("invited_at", { ascending: false });
 
       if (error) throw error;
-      return data;
+
+      const inviterUserIds = Array.from(
+        new Set((data || []).map((invitation) => invitation.inviter_user_id)),
+      );
+      const { data: inviterProfiles, error: inviterProfilesError } = inviterUserIds.length
+        ? await supabase
+            .from("profiles")
+            .select("id, user_id, username, avatar_url, is_active, died_at")
+            .in("user_id", inviterUserIds)
+            .eq("is_active", true)
+            .is("died_at", null)
+        : { data: [], error: null };
+
+      if (inviterProfilesError) throw inviterProfilesError;
+
+      const inviterByUserId = new Map(
+        (inviterProfiles || []).map((inviter) => [inviter.user_id, inviter]),
+      );
+
+      return (data || []).map((invitation) => ({
+        ...invitation,
+        inviter_profile: inviterByUserId.get(invitation.inviter_user_id)
+          ? {
+              id: inviterByUserId.get(invitation.inviter_user_id)!.id,
+              username: inviterByUserId.get(invitation.inviter_user_id)!.username,
+              avatar_url: inviterByUserId.get(invitation.inviter_user_id)!.avatar_url,
+            }
+          : undefined,
+      })) as Collaboration[];
     },
+    enabled: !!activeProfileId,
   });
 
   // Invite a collaborator
@@ -150,14 +140,16 @@ export const useCollaborationInvites = (projectId?: string) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Validate flat fee - check if user has enough cash
+      // Validate against the currently selected character. The database
+      // performs the authoritative balance check again when the invite is accepted.
       if (params.compensationType === "flat_fee" && params.flatFeeAmount) {
+        if (!activeProfileId) throw new Error("Select a character before sending an invitation");
+
         const { data: profile } = await supabase
           .from("profiles")
           .select("cash")
+          .eq("id", activeProfileId)
           .eq("user_id", user.id)
-          .eq("is_active", true)
-          .is("died_at", null)
           .single();
 
         if (!profile || (profile.cash || 0) < params.flatFeeAmount) {
@@ -181,45 +173,6 @@ export const useCollaborationInvites = (projectId?: string) => {
 
       if (error) throw error;
 
-      const [{ data: inviteeProfile }, { data: inviterProfile }, { data: project }] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("user_id, username")
-          .eq("id", params.inviteeProfileId)
-          .single(),
-        supabase
-          .from("profiles")
-          .select("username")
-          .eq("user_id", user.id)
-          .eq("is_active", true)
-          .is("died_at", null)
-          .single(),
-        supabase
-          .from("songwriting_projects")
-          .select("title")
-          .eq("id", params.projectId)
-          .single(),
-      ]);
-
-      if (inviteeProfile?.user_id) {
-        const compensationLabel = params.compensationType === "flat_fee"
-          ? `for $${(params.flatFeeAmount || 0).toLocaleString()}`
-          : params.compensationType === "royalty"
-            ? `for a ${params.royaltyPercentage || 0}% royalty split`
-            : "as a band collaborator";
-
-        await createInboxNotification({
-          userId: inviteeProfile.user_id,
-          title: "Songwriting collaboration invite",
-          message: `${inviterProfile?.username || "A player"} invited you to co-write \"${project?.title || "Untitled"}\" ${compensationLabel}.`,
-          actionType: "collaboration_invite",
-          actionData: {
-            collaborationId: data.id,
-            projectId: params.projectId,
-          },
-        });
-      }
-
       return data;
     },
     onSuccess: () => {
@@ -231,118 +184,35 @@ export const useCollaborationInvites = (projectId?: string) => {
     },
   });
 
-  // Respond to an invitation (accept or decline)
+  // Respond to an invitation (accept or decline).
+  // The database trigger owns validation, flat-fee settlement, inbox cleanup,
+  // and the response notification so the whole transition is atomic.
   const respondToInvitation = useMutation({
     mutationFn: async ({ collaborationId, accept }: { collaborationId: string; accept: boolean }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Get the collaboration details
-      const { data: collaboration, error: fetchError } = await supabase
+      const { data, error } = await supabase
         .from("songwriting_collaborations")
-        .select("*")
+        .update({
+          status: accept ? "accepted" : "declined",
+          responded_at: new Date().toISOString(),
+        })
         .eq("id", collaborationId)
+        .eq("status", "pending")
+        .select("id, status, fee_paid")
         .single();
 
-      if (fetchError) throw fetchError;
+      if (error) throw error;
+      if (!data) throw new Error("Invitation is no longer pending");
 
-      // If accepting a flat fee offer, process the payment
-      if (accept && collaboration.compensation_type === "flat_fee" && collaboration.flat_fee_amount) {
-        // Get inviter's profile
-        const { data: inviterProfile } = await supabase
-          .from("profiles")
-          .select("id, cash")
-          .eq("user_id", collaboration.inviter_user_id)
-          .single();
-
-        if (!inviterProfile || (inviterProfile.cash || 0) < collaboration.flat_fee_amount) {
-          throw new Error("Inviter has insufficient funds");
-        }
-
-        // Get invitee's profile (current user)
-        const { data: inviteeProfile } = await supabase
-          .from("profiles")
-          .select("id, cash, user_id")
-          .eq("id", collaboration.invitee_profile_id)
-          .single();
-
-        if (!inviteeProfile) throw new Error("Profile not found");
-
-        // Deduct from inviter
-        const { error: deductError } = await supabase
-          .from("profiles")
-          .update({ cash: (inviterProfile.cash || 0) - collaboration.flat_fee_amount })
-          .eq("id", inviterProfile.id);
-
-        if (deductError) throw deductError;
-
-        // Add to invitee
-        const { error: addError } = await supabase
-          .from("profiles")
-          .update({ cash: (inviteeProfile.cash || 0) + collaboration.flat_fee_amount })
-          .eq("id", inviteeProfile.id);
-
-        if (addError) throw addError;
-
-        // Record the payment
-        await supabase.from("collaboration_payments").insert({
-          collaboration_id: collaborationId,
-          payer_user_id: collaboration.inviter_user_id,
-          payee_profile_id: collaboration.invitee_profile_id,
-          amount: collaboration.flat_fee_amount,
-          payment_type: "flat_fee",
-        });
-
-        // Update collaboration to mark fee as paid
-        const { error: updateError } = await supabase
-          .from("songwriting_collaborations")
-          .update({
-            status: "accepted",
-            fee_paid: true,
-            responded_at: new Date().toISOString(),
-          })
-          .eq("id", collaborationId);
-
-        if (updateError) throw updateError;
-      } else {
-        // Just update status for royalty or band member invitations
-        const { error: updateError } = await supabase
-          .from("songwriting_collaborations")
-          .update({
-            status: accept ? "accepted" : "declined",
-            responded_at: new Date().toISOString(),
-          })
-          .eq("id", collaborationId);
-
-        if (updateError) throw updateError;
-      }
-
-      const [{ data: inviteeProfile }, { data: project }] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("username")
-          .eq("id", collaboration.invitee_profile_id)
-          .single(),
-        supabase
-          .from("songwriting_projects")
-          .select("title")
-          .eq("id", collaboration.project_id)
-          .single(),
-      ]);
-
-      await createInboxNotification({
-        userId: collaboration.inviter_user_id,
-        title: `Collaboration invite ${accept ? "accepted" : "declined"}`,
-        message: `${inviteeProfile?.username || "A player"} ${accept ? "accepted" : "declined"} your co-writing invitation for \"${project?.title || "Untitled"}\".`,
-        actionType: "navigate",
-        actionData: { route: "/songwriting" },
-      });
-
-      return { accepted: accept };
+      return { accepted: data.status === "accepted" };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["pending-collaboration-invitations"] });
       queryClient.invalidateQueries({ queryKey: ["project-collaborators"] });
+      queryClient.invalidateQueries({ queryKey: ["inbox"] });
+      queryClient.invalidateQueries({ queryKey: ["inbox-unread-count"] });
       toast.success(data.accepted ? "Invitation accepted!" : "Invitation declined");
     },
     onError: (error: Error) => {
