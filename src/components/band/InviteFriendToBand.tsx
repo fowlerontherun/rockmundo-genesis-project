@@ -225,7 +225,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
     filterColumn: 'band_id',
     filterValue: open ? bandId : null,
     onChange: () => {
-      void loadRecruitmentOptions(currentUserId).catch(() => {
+      void Promise.all([loadRecruitmentOptions(currentUserId), loadReferredRecruits()]).catch(() => {
         // An explicit close/reopen retains the normal load-and-retry feedback.
       });
     },
