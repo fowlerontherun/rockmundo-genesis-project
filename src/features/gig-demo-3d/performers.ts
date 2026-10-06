@@ -328,7 +328,7 @@ export class Musician {
                 if (!shoulder || !length) continue;
                 const gripWorld = grip.getWorldPosition(new T.Vector3());
                 if (rig.family === 'strum') gripWorld.addScaledVector(faceNormal, side === 'L' ? .05 : .07);
-                const excess = shoulder.distanceTo(gripWorld) - length * (rig.family === 'strum' && side === 'L' ? comfort - Number(process.env.LC ?? .05) : comfort);
+                const excess = shoulder.distanceTo(gripWorld) - length * (rig.family === 'strum' && side === 'L' ? comfort - .05 : comfort);
                 if (excess > worst) {
                     worst = excess;
                     shift.copy(shoulder).sub(gripWorld).normalize().multiplyScalar(excess + .005);
@@ -345,19 +345,6 @@ export class Musician {
             if (rig.family === 'strum') rig.root.position.y = Math.min(rig.root.position.y, startY + .14);
             rig.root.updateMatrixWorld(true);
             this.update(0, 0.7, false);
-        }
-        if (rig.family === 'strum' && !rig.root.userData.neckAngled) {
-            // Players angle the headstock slightly toward the audience; this opens
-            // the fretting elbow out in front of the neck instead of tucking behind it.
-            const pivot = rig.root.getWorldPosition(new T.Vector3())
-                .add(new T.Vector3(0, 0, Number(process.env.BACK ?? .03)).applyQuaternion(this.root.getWorldQuaternion(new T.Quaternion())));
-            const before = rig.root.getWorldPosition(new T.Vector3());
-            const turn = new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 1, 0).applyQuaternion(this.root.getWorldQuaternion(new T.Quaternion())), Number(process.env.YAW ?? .12));
-            const after = before.sub(pivot).applyQuaternion(turn).add(pivot);
-            rig.root.rotateY(Number(process.env.YAW ?? .12));
-            rig.root.position.copy(rig.root.parent!.worldToLocal(after));
-            rig.root.userData.neckAngled = true;
-            rig.root.updateMatrixWorld(true);
         }
         this.update(0, 0.7, false);
         rig.root.userData.reachFitted = true;
