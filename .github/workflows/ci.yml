@@ -37,7 +37,7 @@ jobs:
         run: npm run typecheck
       - name: Lint
         run: npm run lint:ci
-      - name: Critical beta journeys
+      - name: Critical Live V1 journeys
         run: npm run test:critical-journeys -- --reporter=default
       - name: Unit tests
         run: npm run test:unit -- --reporter=default
