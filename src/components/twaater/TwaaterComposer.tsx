@@ -29,6 +29,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/components/ui/use-toast";
+import { useTwaaterConfig } from "@/hooks/useTwaaterConfig";
 
 interface TwaaterComposerProps {
   accountId: string;
@@ -85,6 +86,7 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [scheduledFor, setScheduledFor] = useState("");
   const { createTwaatAsync, isPosting } = useTwaats();
+  const { data: twaaterConfig } = useTwaaterConfig();
 
   const [showSongDialog, setShowSongDialog] = useState(false);
   const [showReleaseDialog, setShowReleaseDialog] = useState(false);
@@ -106,6 +108,17 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
     },
     enabled: !!profileId,
   });
+
+  useEffect(() => {
+    if (!twaaterConfig?.mediaEnabled) {
+      setMediaUrl("");
+      setMediaType(null);
+    }
+    if (!twaaterConfig?.pollsEnabled) {
+      setPollDraft(null);
+      setShowPollDialog(false);
+    }
+  }, [twaaterConfig?.mediaEnabled, twaaterConfig?.pollsEnabled]);
 
   useEffect(() => {
     const stored = sessionStorage.getItem("quoteTwaat");
@@ -178,13 +191,13 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
         linked_type: linkedType || undefined,
         linked_id: linkedId || undefined,
         visibility,
-        media_url: mediaUrl || undefined,
-        media_type: mediaType || undefined,
+        media_url: twaaterConfig?.mediaEnabled && mediaUrl ? mediaUrl : undefined,
+        media_type: twaaterConfig?.mediaEnabled && mediaType ? mediaType : undefined,
         quoted_twaat_id: quotedTwaat?.id || undefined,
         scheduled_for: scheduledIso,
       });
 
-      if (pollDraft) {
+      if (pollDraft && twaaterConfig?.pollsEnabled) {
         try {
           await createPoll(twaat.id, pollDraft, twaat.scheduled_for);
         } catch (error: any) {
@@ -248,7 +261,7 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
   };
 
   const charCount = body.length;
-  const maxChars = 500;
+  const maxChars = twaaterConfig?.maxLength ?? 280;
   const isOverLimit = charCount > maxChars;
   const scheduledDate = scheduledFor ? new Date(scheduledFor) : null;
 
@@ -293,17 +306,19 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
         disabled={isPosting}
       />
 
-      <TwaatMediaUpload
-        onMediaUploaded={(url, type) => {
-          setMediaUrl(url);
-          setMediaType(type);
-        }}
-        onMediaRemoved={() => {
-          setMediaUrl("");
-          setMediaType(null);
-        }}
-        currentMediaUrl={mediaUrl}
-      />
+      {twaaterConfig?.mediaEnabled && (
+        <TwaatMediaUpload
+          onMediaUploaded={(url, type) => {
+            setMediaUrl(url);
+            setMediaType(type);
+          }}
+          onMediaRemoved={() => {
+            setMediaUrl("");
+            setMediaType(null);
+          }}
+          currentMediaUrl={mediaUrl}
+        />
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap gap-1">
@@ -320,26 +335,30 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
             <Route className="h-4 w-4" /><span className="hidden sm:inline ml-1">Tour</span>
           </Button>
 
-          {userBands.length === 1 ? (
-            <Button variant="ghost" size="sm" onClick={() => handleBandHashtag((userBands[0] as any)?.name || "")} className="h-8">
-              <Hash className="h-4 w-4" /><span className="hidden sm:inline ml-1">Band</span>
-            </Button>
-          ) : userBands.length > 1 ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8"><Hash className="h-4 w-4" /><span className="hidden sm:inline ml-1">Band</span></Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                {userBands.map((band: any) => (
-                  <DropdownMenuItem key={band.id} onClick={() => handleBandHashtag(band.name)}>{formatBandHashtag(band.name)}</DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
+          {twaaterConfig?.hashtagsEnabled && (
+            userBands.length === 1 ? (
+              <Button variant="ghost" size="sm" onClick={() => handleBandHashtag((userBands[0] as any)?.name || "")} className="h-8">
+                <Hash className="h-4 w-4" /><span className="hidden sm:inline ml-1">Band</span>
+              </Button>
+            ) : userBands.length > 1 ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8"><Hash className="h-4 w-4" /><span className="hidden sm:inline ml-1">Band</span></Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  {userBands.map((band: any) => (
+                    <DropdownMenuItem key={band.id} onClick={() => handleBandHashtag(band.name)}>{formatBandHashtag(band.name)}</DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null
+          )}
 
-          <Button variant="ghost" size="sm" className="h-8" onClick={() => setShowPollDialog(true)}>
-            <BarChart3 className="h-4 w-4" /><span className="hidden sm:inline ml-1">Poll</span>
-          </Button>
+          {twaaterConfig?.pollsEnabled && (
+            <Button variant="ghost" size="sm" className="h-8" onClick={() => setShowPollDialog(true)}>
+              <BarChart3 className="h-4 w-4" /><span className="hidden sm:inline ml-1">Poll</span>
+            </Button>
+          )}
 
           <Button variant="ghost" size="sm" className="h-8" onClick={() => setShowScheduleDialog(true)}>
             <Clock className="h-4 w-4" /><span className="hidden sm:inline ml-1">Schedule</span>
@@ -361,7 +380,7 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
 
         <div className="flex items-center gap-2 ml-auto">
           <span className={`text-xs ${isOverLimit ? "text-destructive" : "text-muted-foreground"}`}>
-            {charCount > 450 && `${charCount}/${maxChars}`}
+            {charCount > Math.max(0, maxChars - 50) && `${charCount}/${maxChars}`}
           </span>
           <Button
             onClick={handlePost}
@@ -390,7 +409,7 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
         </Badge>
       )}
 
-      <Dialog open={showPollDialog} onOpenChange={setShowPollDialog}>
+      {twaaterConfig?.pollsEnabled && <Dialog open={showPollDialog} onOpenChange={setShowPollDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Add a poll</DialogTitle></DialogHeader>
           <TwaaterPollCreator
@@ -401,7 +420,7 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
             }}
           />
         </DialogContent>
-      </Dialog>
+      </Dialog>}
 
       <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
         <DialogContent className="max-w-md">
