@@ -666,7 +666,7 @@ export class Musician {
                     aim(hand, knuckle, instrumentSurface.localToWorld(wrist.clone().add(local).setZ(wrist.z + local.z)));
                 };
                 pointPalm('L', new T.Vector3(-.06, -.02, .01));
-                pointPalm('R', new T.Vector3(.02, -.09, .0));
+                pointPalm('R', new T.Vector3(.02, -.09, .012));
             } else {
                 this.hand('L', leftTarget, leftPole);
                 this.hand('R', rightTarget, rightPole);
