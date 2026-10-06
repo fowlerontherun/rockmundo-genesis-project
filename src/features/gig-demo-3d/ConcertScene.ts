@@ -595,7 +595,7 @@ export class ConcertScene {
       actor.sectionProgress = this.playback?.sectionProgress ?? 0;
       const focused = !!this.playback?.focusId && actor.id === this.playback.focusId;
 
-      if (!this.settings.reducedMotion && actor.performing && !actor.walking) {
+      if (!this.options?.television && !this.settings.reducedMotion && actor.performing && !actor.walking) {
         if (section === 'solo' && focused && !actor.instrumentRig?.stationary) {
           const step = smoothMotion(Math.min(1, (this.playback?.sectionProgress ?? 0) / .18))
             * (1 - smoothMotion(((this.playback?.sectionProgress ?? 0) - .82) / .18));
