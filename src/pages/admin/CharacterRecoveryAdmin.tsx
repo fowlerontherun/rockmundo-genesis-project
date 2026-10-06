@@ -19,7 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ArrowLeft, HeartPulse, Loader2, Search, Skull, Trash2, User } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
 interface AdminCharacterRow {
@@ -47,11 +47,13 @@ const formatDate = (value: string | null) =>
 
 const CharacterRecoveryAdmin = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
+  const initialSearch = searchParams.get("search")?.trim() ?? "";
+  const [searchInput, setSearchInput] = useState(initialSearch);
+  const [search, setSearch] = useState(initialSearch);
   const [onlyDead, setOnlyDead] = useState(true);
 
   const [target, setTarget] = useState<AdminCharacterRow | null>(null);
@@ -97,6 +99,7 @@ const CharacterRecoveryAdmin = () => {
       setReason("");
       queryClient.invalidateQueries({ queryKey: ["admin-character-search"] });
       queryClient.invalidateQueries({ queryKey: ["death-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["coma-events"] });
       queryClient.invalidateQueries({ queryKey: ["active-profile"] });
     },
     onError: (err: any) => {
