@@ -10,6 +10,7 @@ import { formatDistanceToNow } from "date-fns";
 import { useTwaaterAccount } from "@/hooks/useTwaaterAccount";
 import { useGameData } from "@/hooks/useGameData";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { hydrateTwaaterFeedExtras } from "@/hooks/useTwaats";
 
 export default function TwaaterTwaatView() {
   const { twaatId } = useParams();
@@ -36,7 +37,8 @@ export default function TwaaterTwaatView() {
         .single();
 
       if (error) throw error;
-      return data;
+      const hydrated = await hydrateTwaaterFeedExtras(data ? [data] : []);
+      return hydrated[0] || null;
     },
     enabled: !!twaatId,
   });
