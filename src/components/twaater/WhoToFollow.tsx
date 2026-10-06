@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { UserPlus, BadgeCheck, Users } from "lucide-react";
@@ -19,7 +18,7 @@ export const WhoToFollow = ({ currentAccountId }: WhoToFollowProps) => {
   const navigate = useNavigate();
 
   // Fetch suggested accounts to follow
-  const { data: suggestions, isLoading } = useQuery({
+  const { data: suggestions, isLoading, error, refetch } = useQuery({
     queryKey: ["twaater-suggestions", currentAccountId],
     queryFn: async () => {
       const [{ data: following, error: followingError }, { data: generated, error: generatedError }] = await Promise.all([
@@ -100,6 +99,23 @@ export const WhoToFollow = ({ currentAccountId }: WhoToFollowProps) => {
               <div key={i} className="h-12 bg-muted rounded" />
             ))}
           </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Who to Follow
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-center space-y-2">
+          <p className="text-xs text-muted-foreground">Suggestions couldn't load.</p>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
         </CardContent>
       </Card>
     );
