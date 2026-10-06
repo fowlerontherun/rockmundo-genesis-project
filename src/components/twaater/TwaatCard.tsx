@@ -12,6 +12,7 @@ import { QuotedTwaat } from "./QuotedTwaat";
 import { LinkedContentEmbed } from "./LinkedContentEmbed";
 import { VerifiedBadge } from "./VerifiedBadge";
 import { PromoteTwaatDialog } from "./PromoteTwaatDialog";
+import { ReportSocialTargetDialog } from "@/features/social-safety/components/ReportSocialTargetDialog";
 import { Heart, MessageCircle, Repeat2, Bookmark, BookmarkCheck, Quote, Rocket } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -150,6 +151,15 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
             <Button variant="ghost" size="sm" onClick={() => toggleBookmark({ twaatId: twaat.id })} disabled={!viewerAccountId} className="hover:text-[hsl(var(--twaater-purple))]">
               {isBookmarked(twaat.id) ? <BookmarkCheck className="h-4 w-4 text-[hsl(var(--twaater-purple))]" /> : <Bookmark className="h-4 w-4" />}
             </Button>
+
+            {!isOwn && viewerAccountId && (
+              <ReportSocialTargetDialog
+                targetType="twaater_post"
+                targetId={twaat.id}
+                triggerLabel="Report"
+                context={{ surface: "twaater_twaat_card" }}
+              />
+            )}
 
             {isOwn && !isPromoted && <PromoteTwaatDialog twaatId={twaat.id} />}
           </div>
