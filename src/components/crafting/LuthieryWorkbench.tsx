@@ -73,6 +73,7 @@ export const LuthieryWorkbench = ({
   const { progress, refreshProgress } = useSkillSystem();
   const [selection, setSelection] = useState<LuthieryBuildSelection>(DEFAULT_LUTHIERY_SELECTION);
   const [activePart, setActivePart] = useState<LuthieryPartSlot>("body");
+  const [materialTierFilter, setMaterialTierFilter] = useState<number | "all">("all");
   const [reviewOpen, setReviewOpen] = useState(false);
   const [confirmedSpec, setConfirmedSpec] = useState<LuthieryBuildPreviewSpec | null>(null);
   const [confirmedFingerprint, setConfirmedFingerprint] = useState<string | null>(null);
@@ -106,6 +107,11 @@ export const LuthieryWorkbench = ({
   const ownedQuantity = (material: CraftingMaterial | undefined) => {
     if (!material) return 0;
     return playerMaterials.find((item) => item.material_id === material.id)?.quantity ?? 0;
+  };
+
+  const matchesMaterialTier = (option: (typeof LUTHIERY_MATERIAL_OPTIONS)[number]) => {
+    if (materialTierFilter === "all") return true;
+    return resolveCatalogMaterial(option, materialsCatalog)?.quality_tier === materialTierFilter;
   };
 
   const changeInstrument = (instrumentKind: LuthieryInstrumentKind) => {
@@ -149,6 +155,27 @@ export const LuthieryWorkbench = ({
           </Card>
         ))}
       </div>
+
+      <Card className="border-border/60">
+        <CardContent className="flex flex-wrap items-center gap-2 p-3">
+          <div className="mr-2 min-w-40">
+            <p className="text-xs font-medium">Material quality tier</p>
+            <p className="text-[10px] text-muted-foreground">Filter all workbench materials and finishes.</p>
+          </div>
+          {(["all", 1, 2, 3, 4, 5] as const).map((tier) => (
+            <Button
+              key={tier}
+              type="button"
+              size="sm"
+              variant={materialTierFilter === tier ? "default" : "outline"}
+              aria-pressed={materialTierFilter === tier}
+              onClick={() => setMaterialTierFilter(tier)}
+            >
+              {tier === "all" ? "All tiers" : `Tier ${tier}`}
+            </Button>
+          ))}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <Card className="overflow-hidden">
@@ -288,7 +315,7 @@ export const LuthieryWorkbench = ({
             <div>
               <p className="mb-2 text-xs font-medium">Finish</p>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {LUTHIERY_MATERIAL_OPTIONS.filter((option) => option.slot === "finish").map((option) => {
+                {LUTHIERY_MATERIAL_OPTIONS.filter((option) => option.slot === "finish" && matchesMaterialTier(option)).map((option) => {
                   const unlocked = isLuthieryRequirementMet(option.requirement, progress);
                   const material = resolveCatalogMaterial(option, materialsCatalog);
                   const owned = ownedQuantity(material);
@@ -311,6 +338,11 @@ export const LuthieryWorkbench = ({
                       <span className="flex w-full items-center gap-1 text-xs font-medium">
                         {!unlocked && <Lock className="h-3 w-3" />}
                         {option.label}
+                        {material && (
+                          <Badge variant="outline" className="ml-auto h-5 text-[10px]">
+                            Tier {material.quality_tier}
+                          </Badge>
+                        )}
                       </span>
                       <span className="text-[10px] opacity-70">
                         {!material
@@ -491,7 +523,7 @@ export const LuthieryWorkbench = ({
                 </div>
 
                 <div className="grid gap-2">
-                  {LUTHIERY_MATERIAL_OPTIONS.filter((option) => option.slot === activePart).map((option) => {
+                  {LUTHIERY_MATERIAL_OPTIONS.filter((option) => option.slot === activePart && matchesMaterialTier(option)).map((option) => {
                     const unlocked = isLuthieryRequirementMet(option.requirement, progress);
                     const material = resolveCatalogMaterial(option, materialsCatalog);
                     const owned = ownedQuantity(material);
