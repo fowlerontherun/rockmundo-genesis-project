@@ -16,7 +16,10 @@ export type TotpCameraShot =
   | "overhead"
   | "push_in"
   | "pull_back"
-  | "finale_wide";
+  | "finale_wide"
+  | "instrument_right"
+  | "band_two"
+  | "orbit";
 
 export interface TotpBroadcastProfile {
   key: "totp_classic";
@@ -50,6 +53,7 @@ export const TOTP_CLASSIC_BROADCAST_PROFILE: TotpBroadcastProfile = {
     "lead_medium",
     "instrument_close",
     "drummer_close",
+    "instrument_right",
     "side_tracking",
     "low_angle",
     "audience_reverse",
@@ -57,6 +61,8 @@ export const TOTP_CLASSIC_BROADCAST_PROFILE: TotpBroadcastProfile = {
     "overhead",
     "push_in",
     "pull_back",
+    "band_two",
+    "orbit",
     "finale_wide",
   ],
   cutOnMusicalSections: true,
@@ -97,6 +103,9 @@ export function buildTotpShotGrammar(context: TotpDirectionContext): TotpCameraS
       "lead_close",
       "instrument_close",
       "side_tracking",
+      "instrument_right",
+      "band_two",
+      "orbit",
       "drummer_close",
       "audience_reverse",
       "low_angle",
@@ -115,6 +124,8 @@ export function buildTotpShotGrammar(context: TotpDirectionContext): TotpCameraS
     "push_in",
     "lead_close",
     "pull_back",
+    "band_two",
+    "orbit",
     "finale_wide",
   ];
 }

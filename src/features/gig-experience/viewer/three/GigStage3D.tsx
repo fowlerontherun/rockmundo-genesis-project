@@ -36,14 +36,15 @@ const TOTP_CAMERAS: Record<TotpCameraShot, CameraShot> = {
   presenter_wide: 'tv_presenter_wide', presenter_close: 'tv_presenter_close', crane_sweep: 'tv_crane', studio_master: 'front',
   lead_close: 'tv_lead_close', lead_medium: 'tv_lead_medium', instrument_close: 'tv_instrument_left', drummer_close: 'tv_drummer_close', side_tracking: 'tv_tracking',
   low_angle: 'tv_low_angle', audience_reverse: 'tv_audience_reverse', audience_dance: 'tv_audience_reverse', overhead: 'tv_overhead',
-  push_in: 'tv_push_in', pull_back: 'front', finale_wide: 'tv_crane',
+  push_in: 'tv_push_in', pull_back: 'tv_pull_back', finale_wide: 'tv_crane',
+  instrument_right: 'tv_instrument_right', band_two: 'tv_band_two', orbit: 'tv_orbit',
 };
 
-export default function GigStage3D({ replay, experience, playbackState, reducedMotion, cameraMode, tier, archetype, tuning, pyrotechnics, pyroIntensity, presentationMode = 'gig', totpCameraShot, totpStage = 'main_stage', totpPresenterKey = 'alex_rayne', totpShowVariant = 'regular', totpAudienceReaction = 0, totpCueType = 'performance', totpMonitorPrimary = null, totpMonitorSecondary = null, playerModelsSnapshot = null, merchCrowdSignalSnapshot = null }: {
+export default function GigStage3D({ replay, experience, playbackState, reducedMotion, cameraMode, tier, archetype, tuning, pyrotechnics, pyroIntensity, presentationMode = 'gig', totpCameraShot, totpShotProgress = 0, totpStage = 'main_stage', totpPresenterKey = 'alex_rayne', totpShowVariant = 'regular', totpAudienceReaction = 0, totpCueType = 'performance', totpMonitorPrimary = null, totpMonitorSecondary = null, playerModelsSnapshot = null, merchCrowdSignalSnapshot = null }: {
   replay: GigViewerReplay; experience: GigExperienceDTO | null; playbackState: DerivedPlaybackState;
   reducedMotion: boolean; cameraMode: GigViewerCameraMode; tier: PerformanceTier; archetype: string;
   tuning: CrowdTuningOptions; pyrotechnics: boolean; pyroIntensity: number;
-  presentationMode?: ConcertPresentationMode; totpCameraShot?: TotpCameraShot | null; totpStage?: TotpStageKey;
+  presentationMode?: ConcertPresentationMode; totpCameraShot?: TotpCameraShot | null; totpShotProgress?: number; totpStage?: TotpStageKey;
   totpPresenterKey?: string | null; totpShowVariant?: string | null; totpAudienceReaction?: number | null; totpCueType?: 'presenter' | 'graphic' | 'performance' | 'audience'; totpMonitorPrimary?: string | null; totpMonitorSecondary?: string | null;
   /** Frozen render-only performer models, used by historical broadcasts instead of current player cosmetics. */
   playerModelsSnapshot?: GigPlayerModelsData | null;
@@ -119,7 +120,7 @@ export default function GigStage3D({ replay, experience, playbackState, reducedM
         : totpStage === 'studio_floor'
           ? 'encore'
           : 'electric';
-  const settings: DemoSettings = { ...DEFAULT_SETTINGS, playing: playbackState.isPlaying, camera: resolvedCamera, reducedMotion, quality: tier === 'high' ? 'high' : tier === 'low' ? 'low' : 'balanced', look: totpLook, energy: totpEnergy, crowd: frame.crowd, haze: tier !== 'low' };
+  const settings: DemoSettings = { ...DEFAULT_SETTINGS, playing: playbackState.isPlaying, camera: reducedMotion && presentationMode === 'totp' ? 'front' : resolvedCamera, televisionShotProgress: totpShotProgress, reducedMotion, quality: tier === 'high' ? 'high' : tier === 'low' ? 'low' : 'balanced', look: totpLook, energy: totpEnergy, crowd: frame.crowd, haze: tier !== 'low' };
   const latest = useRef({ settings, frame, pyrotechnics, pyroIntensity, tuning }); latest.current = { settings, frame, pyrotechnics, pyroIntensity, tuning };
   const waiting = !playerModelsSnapshot && livePlayerModels.isFetching && !livePlayerModels.data && !livePlayerModels.isError;
 

@@ -53,10 +53,13 @@ export function deriveTotpCameraFrame(context: TotpCameraContext): TotpCameraFra
       return frame(context.shot, focus(lead?.position ?? stageCenter, 1.2), lead?.id ?? null, false, false);
     case "lead_medium":
       return frame(context.shot, focus(lead?.position ?? stageCenter, 1.14), lead?.id ?? null, false, false);
+    case "instrument_right":
     case "instrument_close":
       return frame(context.shot, focus(instrument?.position ?? stageCenter, 1.18), instrument?.id ?? null, false, false);
     case "drummer_close":
       return frame(context.shot, focus(drummer?.position ?? stageCenter, 1.18), drummer?.id ?? null, false, false);
+    case "band_two":
+    case "orbit":
     case "side_tracking":
       return frame(context.shot, focus({ x: stageCenter.x + stage.width * 0.12, y: stageCenter.y }, 1.12), null, false, true);
     case "low_angle":
