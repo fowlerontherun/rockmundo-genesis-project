@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Add withdrawal for pending real-band festival invitations and verify permissions, status updates and version history.
+
 - [x] Review maintained translations and translate mobile navigation and character switching.
 - [x] Add mobile character and language controls using the existing account switching flow.
 - [x] Verify translation parity and mobile switching; update banner and version history. All 69 focused tests pass and French controls work in the preview; authenticated end-to-end switching is unavailable with the project's external account service.
