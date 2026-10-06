@@ -63,7 +63,7 @@ export function TotpBroadcastCanvas({ replay, experience, playbackState, cue, au
       resetKey={`${replay.id}:${directedStage}`}
       programmeLabel={variantLabel ? `Top of the Pops · ${variantLabel}` : "Top of the Pops"}
     >
-      <GigCanvas replay={replay} experience={experience} playbackState={playbackState} reducedMotion={reducedMotion} pyrotechnics crowdTuning={crowdTuning} fill immersive cameraMode="auto" performancePreference={performancePreference} presentationMode="totp" totpCameraShot={directedShot} totpStage={directedStage} totpPresenterKey={presenter.key} totpShowVariant={showVariant} totpAudienceReaction={lockedAudienceReaction} totpCueType={cue?.type ?? "performance"} totpMonitorPrimary={monitorPrimary} totpMonitorSecondary={monitorSecondary} playerModelsSnapshot={playerModelsSnapshot} merchCrowdSignalSnapshot={merchCrowdSignalSnapshot} capability={{ audience: "player", subjectId: `totp:${replay.id}` }} />
+      <GigCanvas replay={replay} experience={experience} playbackState={playbackState} reducedMotion={reducedMotion} pyrotechnics crowdTuning={crowdTuning} fill immersive cameraMode="auto" performancePreference={performancePreference} presentationMode="totp" totpCameraShot={directedShot} totpShotProgress={cueProgress} totpStage={directedStage} totpPresenterKey={presenter.key} totpShowVariant={showVariant} totpAudienceReaction={lockedAudienceReaction} totpCueType={cue?.type ?? "performance"} totpMonitorPrimary={monitorPrimary} totpMonitorSecondary={monitorSecondary} playerModelsSnapshot={playerModelsSnapshot} merchCrowdSignalSnapshot={merchCrowdSignalSnapshot} capability={{ audience: "player", subjectId: `totp:${replay.id}` }} />
     </TotpBroadcastPictureBoundary>
     <div
       key={`dip:${cue?.id ?? "default"}`}

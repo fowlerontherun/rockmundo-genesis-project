@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.770",
+    date: "2026-10-06",
+    changes: [
+      { type: "improvement", description: "TV-studio performances now use moving performer close-ups, tracking and crane sweeps, true push-ins and pull-backs, plus instrument-right, band two-shot and orbit coverage for new broadcasts." },
+      { type: "improvement", description: "Added restrained rhythmic studio movement within each stage footprint while keeping seated musicians and fixed equipment anchored. Camera motion follows replay cue timing and respects reduced motion." },
+    ],
+  },
+  {
     version: "1.1.768",
     date: "2026-10-06",
     changes: [

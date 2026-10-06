@@ -21,6 +21,7 @@ import type { AvatarVisualQuality } from '@/features/player-model/avatarVisualQu
 import { DEFAULT_SETTINGS, LOOKS, seededRandom, type DemoSettings, type DemoStats, type CameraShot } from './config';
 import { directGigCamera } from './gigCameraSequence';
 import { frameVenuePerformer } from './venueCameraAngles';
+import { frameTvPerformance, studioPerformerMotion, TV_PERFORMANCE_SHOTS } from './tvPerformanceDirection';
 
 const CAMERAS = {
   front: { position: [0.4, 2.8, 6.7], target: [0, 2.4, -1.9], fov: 42 },
@@ -46,12 +47,17 @@ const CAMERAS = {
   tv_instrument_left: { position: [-3.0, 1.95, 3.1], target: [-1.45, 1.35, -1.5], fov: 34 },
   tv_drummer_close: { position: [2.15, 2.55, 1.0], target: [0, 1.55, -3.0], fov: 36 },
   tv_push_in: { position: [0, 2.0, 3.95], target: [0, 1.58, -1.55], fov: 35 },
+  tv_pull_back: { position: [0, 3.1, 6.4], target: [0, 1.58, -1.55], fov: 48 },
+  tv_instrument_right: { position: [3, 1.95, 3.1], target: [1.45, 1.35, -1.5], fov: 34 },
+  tv_band_two: { position: [1.1, 2.8, 5.5], target: [0, 1.75, -1.6], fov: 46 },
+  tv_orbit: { position: [0, 2.1, 3.8], target: [0, 1.7, -1.55], fov: 39 },
 } as const;
 
 const TV_CAMERA_SHOTS = new Set<CameraShot>([
   'tv_presenter_wide', 'tv_presenter_close', 'tv_crane', 'tv_overhead',
   'tv_audience_reverse', 'tv_tracking', 'tv_low_angle', 'tv_lead_close',
   'tv_lead_medium', 'tv_instrument_left', 'tv_drummer_close', 'tv_push_in',
+  'tv_pull_back', 'tv_instrument_right', 'tv_band_two', 'tv_orbit',
 ]);
 
 export class ConcertScene {
@@ -277,10 +283,10 @@ export class ConcertScene {
     const { camera, reducedMotion } = this.settings;
     // TV broadcasts have their own shot cues. Ordinary gigs use a faster,
     // deterministic grammar with recurring close-ups in large venues.
-    const tvSequence: Exclude<CameraShot, 'director'>[] = ['front', 'guitar', 'front', 'drums', 'guitar', 'stage'];
+    const tvSequence = TV_PERFORMANCE_SHOTS;
     let selected = camera === 'director'
       ? this.options?.television
-        ? reducedMotion ? 'front' : tvSequence[Math.floor(this.seconds / 16) % tvSequence.length]
+        ? reducedMotion ? 'front' : tvSequence[Math.floor(this.seconds / 6) % tvSequence.length]
         : directGigCamera(this.seconds, this.playback?.section, this.playback?.sectionProgress,
             this.venueProfile?.size === 'large' || this.venueProfile?.size === 'landmark', reducedMotion)
       : camera;
@@ -288,6 +294,7 @@ export class ConcertScene {
       selected = (this.playback.sectionProgress ?? 0) < .5 ? 'front' : 'tv_audience_reverse';
     }
     const shot = CAMERAS[selected];
+    let shotFov: number = shot.fov;
     this.cameraPos.fromArray(shot.position); this.targetPos.fromArray(shot.target);
     if (this.options && (selected === 'guitar' || selected === 'drums')) {
       const actor = selected === 'drums' ? this.actors.find(p => p.role === 'drums' && p.root.visible) : this.actors.find(p => p.id === this.playback?.focusId && p.root.visible) ?? this.actors.find(p => p.role === 'guitar' && p.root.visible) ?? this.actors.find(p => p.id === 'preview-1' && p.root.visible);
@@ -418,7 +425,7 @@ export class ConcertScene {
       const instrumentPlayers = visible.filter(actor => actor.role === 'guitar' || actor.role === 'bass');
       const drummer = visible.find(actor => actor.role === 'drums');
       const instrumentSubject = instrumentPlayers.length
-        ? instrumentPlayers[Math.floor(this.seconds / 8) % instrumentPlayers.length]
+        ? instrumentPlayers[selected === 'tv_instrument_right' ? instrumentPlayers.length - 1 : 0]
         : visible.find(actor => actor.role !== 'drums' && !actor.hasVocals());
 
       const frameActor = (actor: Musician | undefined, offset: T.Vector3, targetHeight = 1.42) => {
@@ -441,11 +448,30 @@ export class ConcertScene {
       }
     }
 
+    if (this.options?.television && this.venueProfile?.kind === 'tv_studio') {
+      const geometry = resolveTotpStudioStageGeometry(this.options.television.stageKey ?? 'main_stage', this.venueProfile);
+      const visible = this.actors.filter(actor => actor.root.visible);
+      const strings = visible.filter(actor => actor.role === 'guitar' || actor.role === 'bass');
+      const subject = selected === 'tv_drummer_close' ? visible.find(actor => actor.role === 'drums')
+        : selected === 'tv_instrument_left' ? strings[0]
+        : selected === 'tv_instrument_right' ? strings[strings.length - 1]
+        : visible.find(actor => actor.hasVocals()) ?? visible[0];
+      const fallback: [number, number, number] = [geometry.centerX, geometry.floorY, geometry.centerZ];
+      const subjectPosition = subject ? subject.root.position.toArray() as [number, number, number] : fallback;
+      const pose = frameTvPerformance(selected, geometry, subjectPosition,
+        this.settings.televisionShotProgress ?? (this.seconds % 6) / 6, this.camera.aspect, reducedMotion);
+      if (pose) {
+        this.targetPos.fromArray(pose.target);
+        this.cameraPos.fromArray(pose.position);
+        shotFov = pose.fov;
+      }
+    }
+
     // Television cameras cut between pre-planned positions instead of flying through
     // the stage. Keep every TOTP lens outside a performer safety bubble as a final
     // presentation-only guard against clipping through heads, torsos or instruments.
     if (this.options?.television) {
-      const closeShot = ['tv_lead_close','tv_lead_medium','tv_instrument_left','tv_drummer_close','tv_push_in'].includes(selected);
+      const closeShot = ['tv_lead_close','tv_lead_medium','tv_instrument_left','tv_instrument_right','tv_drummer_close','tv_push_in','tv_orbit'].includes(selected);
       const minSubjectDistance = selected === 'guitar' || selected === 'drums' || closeShot ? 1.65 : 1.35;
       for (const actor of this.actors) {
         if (!actor.root.visible) continue;
@@ -481,9 +507,9 @@ export class ConcertScene {
     }
 
     const televisionCut = !!this.options?.television && selected !== this.sceneKey;
-    const lerp = televisionCut || this.options?.externalClock ? 1 : reducedMotion || this.seconds === 0 ? 1 : 1 - Math.exp(-dt * (selected === this.sceneKey ? 2 : 1.1));
+    const lerp = televisionCut || this.options?.television || this.options?.externalClock ? 1 : reducedMotion || this.seconds === 0 ? 1 : 1 - Math.exp(-dt * (selected === this.sceneKey ? 2 : 1.1));
     this.camera.position.lerp(this.cameraPos, lerp); this.lookAt.lerp(this.targetPos, lerp);
-    this.camera.fov = T.MathUtils.lerp(this.camera.fov, shot.fov, lerp); this.camera.updateProjectionMatrix(); this.camera.lookAt(this.lookAt); this.sceneKey = selected;
+    this.camera.fov = T.MathUtils.lerp(this.camera.fov, shotFov, lerp); this.camera.updateProjectionMatrix(); this.camera.lookAt(this.lookAt); this.sceneKey = selected;
   }
   private frame = (now: number) => {
     if (this.disposed || !this.hasContext || document.hidden) { this.raf = 0; return; }
@@ -569,7 +595,7 @@ export class ConcertScene {
       actor.sectionProgress = this.playback?.sectionProgress ?? 0;
       const focused = !!this.playback?.focusId && actor.id === this.playback.focusId;
 
-      if (!this.settings.reducedMotion && actor.performing && !actor.walking) {
+      if (!this.options?.television && !this.settings.reducedMotion && actor.performing && !actor.walking) {
         if (section === 'solo' && focused && !actor.instrumentRig?.stationary) {
           const step = smoothMotion(Math.min(1, (this.playback?.sectionProgress ?? 0) / .18))
             * (1 - smoothMotion(((this.playback?.sectionProgress ?? 0) - .82) / .18));
@@ -593,6 +619,14 @@ export class ConcertScene {
         : section === 'outro' && actor.role === 'drums' ? 1.08
         : 1;
       const actorEnergy = T.MathUtils.clamp(energy * sectionScale * soloScale * roleScale, 0, 1.25);
+      if (this.options?.television && this.venueProfile && state && !actor.walking && actor.performing) {
+        const geometry = resolveTotpStudioStageGeometry(this.options.television.stageKey ?? 'main_stage', this.venueProfile);
+        const move = studioPerformerMotion(state.position, geometry, t, actor.phase, actorEnergy, section,
+          !!actor.equipment || !!actor.instrumentRig?.stationary || !!actor.instrumentRig?.seated, this.settings.reducedMotion);
+        actor.root.position.x += move.dx;
+        actor.root.position.z += move.dz;
+        actor.root.rotation.y += move.yaw;
+      }
       actor.update(this.playback && !this.playback.performing && !actor.walking ? 0 : t, actorEnergy, this.settings.reducedMotion);
     });
     if (this.options?.television?.stageKey) this.crowd?.setTelevisionStage(this.options.television.stageKey);

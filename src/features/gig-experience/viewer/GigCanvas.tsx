@@ -21,10 +21,10 @@ import type { PerformancePreference } from "./hooks/useGigViewerPreferences";
 import { resolveViewerCapabilities, type ViewerCapabilityContext } from "./config/viewerCapabilityFlags";
 import type { ConcertPresentationMode } from "./three/presentation";
 
-export function GigCanvas({ replay, experience, playbackState, reducedMotion = false, pyrotechnics = true, pyroIntensity = 1, crowdTuning, fill = false, immersive = false, cameraMode = "venue_wide", performancePreference = "auto", capability, className, presentationMode = "gig", totpCameraShot, totpStage = "main_stage", totpPresenterKey = "alex_rayne", totpShowVariant = "regular", totpAudienceReaction = 0, totpCueType = "performance", totpMonitorPrimary = null, totpMonitorSecondary = null, playerModelsSnapshot = null, merchCrowdSignalSnapshot = null }: {
+export function GigCanvas({ replay, experience, playbackState, reducedMotion = false, pyrotechnics = true, pyroIntensity = 1, crowdTuning, fill = false, immersive = false, cameraMode = "venue_wide", performancePreference = "auto", capability, className, presentationMode = "gig", totpCameraShot, totpShotProgress = 0, totpStage = "main_stage", totpPresenterKey = "alex_rayne", totpShowVariant = "regular", totpAudienceReaction = 0, totpCueType = "performance", totpMonitorPrimary = null, totpMonitorSecondary = null, playerModelsSnapshot = null, merchCrowdSignalSnapshot = null }: {
   replay: GigViewerReplay; experience: GigExperienceDTO | null; playbackState: DerivedPlaybackState; reducedMotion?: boolean; pyrotechnics?: boolean; pyroIntensity?: number;
   crowdTuning?: Partial<CrowdTuningOptions> | null; fill?: boolean; immersive?: boolean; cameraMode?: GigViewerCameraMode; performancePreference?: PerformancePreference;
-  capability?: Partial<ViewerCapabilityContext>; className?: string; presentationMode?: ConcertPresentationMode; totpCameraShot?: TotpCameraShot | null; totpStage?: TotpStageKey;
+  capability?: Partial<ViewerCapabilityContext>; className?: string; presentationMode?: ConcertPresentationMode; totpCameraShot?: TotpCameraShot | null; totpShotProgress?: number; totpStage?: TotpStageKey;
   totpPresenterKey?: string | null; totpShowVariant?: string | null; totpAudienceReaction?: number | null; totpCueType?: "presenter" | "graphic" | "performance" | "audience"; totpMonitorPrimary?: string | null; totpMonitorSecondary?: string | null; playerModelsSnapshot?: GigPlayerModelsData | null; merchCrowdSignalSnapshot?: MerchCrowdSignal | null;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -55,7 +55,7 @@ export function GigCanvas({ replay, experience, playbackState, reducedMotion = f
       <Suspense fallback={<div role="status" className="p-8 text-slate-200">Loading 3D stage…</div>}>
         <GigStage3D replay={replay} experience={experience} playbackState={playbackState} reducedMotion={reducedMotion} cameraMode={cameraMode} tier={diagnostics.performanceTier}
           archetype={presentationMode === "totp" ? "tv_studio" : diagnostics.venueArchetype} tuning={normalizeCrowdTuning(resolved.tuning)} pyrotechnics={pyrotechnics} pyroIntensity={pyroIntensity}
-          presentationMode={presentationMode} totpCameraShot={totpCameraShot} totpStage={totpStage} totpPresenterKey={totpPresenterKey} totpShowVariant={totpShowVariant} totpAudienceReaction={totpAudienceReaction} totpCueType={totpCueType} totpMonitorPrimary={totpMonitorPrimary} totpMonitorSecondary={totpMonitorSecondary} playerModelsSnapshot={playerModelsSnapshot} merchCrowdSignalSnapshot={merchCrowdSignalSnapshot} />
+          presentationMode={presentationMode} totpCameraShot={totpCameraShot} totpShotProgress={totpShotProgress} totpStage={totpStage} totpPresenterKey={totpPresenterKey} totpShowVariant={totpShowVariant} totpAudienceReaction={totpAudienceReaction} totpCueType={totpCueType} totpMonitorPrimary={totpMonitorPrimary} totpMonitorSecondary={totpMonitorSecondary} playerModelsSnapshot={playerModelsSnapshot} merchCrowdSignalSnapshot={merchCrowdSignalSnapshot} />
       </Suspense>
     </div>
   </div>;

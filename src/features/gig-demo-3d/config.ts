@@ -23,7 +23,11 @@ export type CameraShot =
   | 'tv_lead_medium'
   | 'tv_instrument_left'
   | 'tv_drummer_close'
-  | 'tv_push_in';
+  | 'tv_push_in'
+  | 'tv_pull_back'
+  | 'tv_instrument_right'
+  | 'tv_band_two'
+  | 'tv_orbit';
 export type LightingLook = 'electric' | 'amber' | 'encore';
 export type DemoQuality = 'balanced' | 'high' | 'low';
 export interface DemoSettings {
@@ -35,6 +39,8 @@ export interface DemoSettings {
   haze: boolean;
   reducedMotion: boolean;
   quality: DemoQuality;
+  /** Cue-local progress from the immutable TV timeline. */
+  televisionShotProgress?: number;
 }
 export interface DemoStats { fps: number; drawCalls: number; triangles: number; seconds: number }
 export const DEFAULT_SETTINGS: DemoSettings = {

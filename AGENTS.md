@@ -6,4 +6,5 @@
 - Keep mobile shell and character-control translations in the typed playerControls locale catalogue merged into i18n; this ensures all supported languages expose the same controls.
 
 - Luthiery shape and component variants must preserve existing selection IDs and use materials accepted by the authoritative crafting catalogue, so saved instruments and inventory remain compatible.
+- TV performance camera paths and restrained performer motion are pure replay-time presentation helpers bounded by shared studio geometry; this preserves seeking, export consistency and gameplay isolation.
 - Define luthiery body outlines once for both workshop SVG previews and stage geometry so the crafted silhouette cannot drift between views.
