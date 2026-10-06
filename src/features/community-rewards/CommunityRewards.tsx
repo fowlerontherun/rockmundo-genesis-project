@@ -37,7 +37,7 @@ const rewardSummary = (reward?: Reward) => {
   return `${reward.xp.toLocaleString()} XP · ${reward.ap} AP · $${reward.cash.toLocaleString()} · +${reward.player_fame} player fame · +${reward.band_fame} band fame`;
 };
 
-export default function CommunityRewards({ profileId }: { profileId?: string | null }) {
+export default function CommunityRewards({ profileId, profileName }: { profileId?: string | null; profileName?: string | null }) {
   const { toast } = useToast();
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [loading, setLoading] = useState(true);
@@ -127,7 +127,7 @@ export default function CommunityRewards({ profileId }: { profileId?: string | n
     const claimed = data?.claimed ?? {};
     const milestoneCount = Array.isArray(milestoneData?.claimed) ? milestoneData.claimed.length : 0;
     const count = Number(claimed.signup ?? 0) + Number(claimed.vip ?? 0) + Number(claimed.discord ?? 0) + milestoneCount;
-    toast({ title: count > 0 ? "Rewards claimed" : "Nothing ready yet", description: count > 0 ? `${count} reward${count === 1 ? "" : "s"} added to this character.` : "Pending referrals will become claimable once they meet the qualification rules." });
+    toast({ title: count > 0 ? "Rewards claimed" : "Nothing ready yet", description: count > 0 ? `${count} reward${count === 1 ? "" : "s"} added to ${profileName || "this character"}.` : "Pending referrals will become claimable once they meet the qualification rules." });
     await loadDashboard();
   };
 
@@ -174,9 +174,11 @@ export default function CommunityRewards({ profileId }: { profileId?: string | n
         </div>
         <Button onClick={claim} disabled={claiming || totalClaimable === 0}>
           {claiming ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Gift className="mr-2 h-4 w-4" />}
-          Claim rewards {totalClaimable > 0 ? `(${totalClaimable})` : ""}
+          Claim for {profileName || "selected character"} {totalClaimable > 0 ? `(${totalClaimable})` : ""}
         </Button>
       </div>
+
+      {totalClaimable > 0 && <Card className="border-primary/30 bg-primary/5"><CardContent className="p-4 text-sm"><strong>{totalClaimable} account-earned reward{totalClaimable === 1 ? "" : "s"} ready.</strong> Claiming now permanently awards the character-bound XP, AP, cash, fame and promoter prestige to <strong>{profileName || "the selected character"}</strong>. Switch character before claiming if you want these rewards on someone else.</CardContent></Card>}
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
