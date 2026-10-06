@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Copy, Gift, Loader2, ShieldCheck, Users, ExternalLink, CheckCircle2 } from "lucide-react";
+import { Copy, Gift, Loader2, ShieldCheck, Users, ExternalLink, CheckCircle2, Share2, MessageCircle, Trophy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -84,10 +84,45 @@ export default function CommunityRewards({ profileId }: { profileId?: string | n
 
   const referralUrl = useMemo(() => dashboard?.code ? `${ROCKMUNDO_BASE_URL}/auth?ref=${encodeURIComponent(dashboard.code)}` : "", [dashboard?.code]);
   const totalClaimable = (dashboard?.pending.signup ?? 0) + (dashboard?.pending.vip ?? 0) + (dashboard?.discord.verified && !dashboard.discord.rewarded ? 1 : 0);
+  const qualified = dashboard?.stats.qualified ?? 0;
+  const promoterMilestones = [5, 10, 25];
+  const nextMilestone = promoterMilestones.find((value) => qualified < value);
+  const nextProgress = nextMilestone ? Math.min(100, Math.round((qualified / nextMilestone) * 100)) : 100;
+  const shareText = `Join me in RockMundo — create a musician, form a band and build your music career. Use my invite so we both get credit: ${referralUrl}`;
 
   const copy = async (value: string, label: string) => {
     await navigator.clipboard.writeText(value);
     toast({ title: `${label} copied` });
+  };
+
+  const share = async () => {
+    if (!referralUrl) return;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Join me in RockMundo", text: shareText, url: referralUrl });
+        return;
+      } catch (error) {
+        if ((error as DOMException)?.name === "AbortError") return;
+      }
+    }
+    await copy(referralUrl, "Invite link");
+  };
+
+  const claimMilestones = async () => {
+    if (!profileId) return;
+    setClaiming(true);
+    const { data, error } = await (supabase as any).rpc("claim_referral_milestones", { p_profile_id: profileId });
+    setClaiming(false);
+    if (error) {
+      toast({ title: "Promoter reward check failed", description: error.message, variant: "destructive" });
+      return;
+    }
+    const claimed = (data?.claimed ?? []) as string[];
+    toast({
+      title: claimed.length ? "Promoter rewards claimed" : "Promoter progress checked",
+      description: claimed.length ? `Unlocked milestone reward${claimed.length === 1 ? "" : "s"} for ${claimed.join(", ")} qualified recruits.` : nextMilestone ? `${qualified}/${nextMilestone} qualified recruits toward your next reward.` : "All current promoter milestones are complete.",
+    });
+    await loadDashboard();
   };
 
   const claim = async () => {
@@ -132,7 +167,7 @@ export default function CommunityRewards({ profileId }: { profileId?: string | n
   };
 
   if (!profileId) {
-    return <Card><CardHeader><CardTitle>Rewards & referrals</CardTitle><CardDescription>Select or create a character before claiming account rewards.</CardDescription></CardHeader></Card>;
+    return <Card><CardHeader><CardTitle>Invite friends</CardTitle><CardDescription>Select or create a character to access your invite link and promoter rewards.</CardDescription></CardHeader></Card>;
   }
 
   if (loading) {
@@ -143,8 +178,8 @@ export default function CommunityRewards({ profileId }: { profileId?: string | n
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-semibold">Rewards & referrals</h2>
-          <p className="text-sm text-muted-foreground">Grow the RockMundo community and earn rewards without creating an easy farm for fake accounts.</p>
+          <h2 className="text-xl font-semibold">Invite friends</h2>
+          <p className="text-sm text-muted-foreground">Bring friends into RockMundo, help them become active musicians and earn promoter rewards as they progress.</p>
         </div>
         <Button onClick={claim} disabled={claiming || totalClaimable === 0}>
           {claiming ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Gift className="mr-2 h-4 w-4" />}
@@ -155,8 +190,8 @@ export default function CommunityRewards({ profileId }: { profileId?: string | n
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" />Your referral code</CardTitle>
-            <CardDescription>Share the link or code. A signup only qualifies after email confirmation, 24 hours and genuine game progress.</CardDescription>
+            <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" />Invite your friends</CardTitle>
+            <CardDescription>Share your personal invite. Rewards unlock only after friends confirm their account and make genuine game progress.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col gap-2 sm:flex-row">
@@ -165,7 +200,11 @@ export default function CommunityRewards({ profileId }: { profileId?: string | n
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Input readOnly value={referralUrl} className="text-xs" />
-              <Button variant="outline" onClick={() => copy(referralUrl, "Referral link")}><Copy className="mr-2 h-4 w-4" />Copy link</Button>
+              <Button variant="outline" onClick={() => copy(referralUrl, "Invite link")}><Copy className="mr-2 h-4 w-4" />Copy link</Button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={share}><Share2 className="mr-2 h-4 w-4" />Share invite</Button>
+              <Button asChild variant="outline"><a href={`https://wa.me/?text=${encodeURIComponent(shareText)}`} target="_blank" rel="noreferrer"><MessageCircle className="mr-2 h-4 w-4" />WhatsApp</a></Button>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
               <div><div className="text-2xl font-semibold">{dashboard?.stats.joined ?? 0}</div><div className="text-xs text-muted-foreground">Joined</div></div>
@@ -178,13 +217,28 @@ export default function CommunityRewards({ profileId }: { profileId?: string | n
         </Card>
 
         <Card>
-          <CardHeader><CardTitle>Enter a referral code</CardTitle><CardDescription>For new accounts that received a code directly. Codes can only be linked in the first 7 days.</CardDescription></CardHeader>
+          <CardHeader><CardTitle>Were you invited?</CardTitle><CardDescription>New accounts can recover a missed invite for up to 30 days by entering the code here.</CardDescription></CardHeader>
           <CardContent className="space-y-2">
             <Input value={manualCode} onChange={(event) => setManualCode(event.target.value.toUpperCase())} placeholder="RMXXXXXXXX" maxLength={20} />
             <Button className="w-full" variant="outline" onClick={bindManualCode} disabled={binding || !manualCode.trim()}>{binding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Link code</Button>
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5" />Promoter progression</CardTitle>
+          <CardDescription>Qualified recruits count toward permanent 5, 10 and 25-player promoter milestones. Fake or inactive accounts do not count.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center justify-between text-sm"><span>{qualified} qualified recruit{qualified === 1 ? "" : "s"}</span><span>{nextMilestone ? `Next reward: ${nextMilestone}` : "All current milestones complete"}</span></div>
+          <div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary transition-all" style={{ width: `${nextProgress}%` }} /></div>
+          <div className="flex flex-wrap gap-2">
+            {[5, 10, 25].map((milestone) => <Badge key={milestone} variant={qualified >= milestone ? "default" : "outline"}>{milestone} recruits</Badge>)}
+          </div>
+          <Button variant="outline" onClick={claimMilestones} disabled={claiming}><Gift className="mr-2 h-4 w-4" />Check promoter rewards</Button>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
