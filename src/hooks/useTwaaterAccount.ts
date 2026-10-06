@@ -5,6 +5,22 @@ import type { Database } from "@/lib/supabase-types";
 
 type TwaaterAccount = Database["public"]["Tables"]["twaater_accounts"]["Row"];
 type TwaaterAccountInsert = Database["public"]["Tables"]["twaater_accounts"]["Insert"];
+type TwaaterAccountUpdate = Partial<Pick<
+  TwaaterAccount,
+  "handle" | "display_name" | "bio" | "location" | "website_url" | "banner_url"
+>>;
+
+const accountErrorMessage = (error: any) => {
+  const message = String(error?.message || "");
+  if (error?.code === "23505" && /handle/i.test(message)) return "That Twaater handle is already taken.";
+  if (error?.code === "23514" || /handle_format/i.test(message)) {
+    return "Handles can only contain letters, numbers and underscores.";
+  }
+  if (/row-level security|permission denied/i.test(message)) {
+    return "You don't have permission to manage that Twaater account.";
+  }
+  return message || "Please try again.";
+};
 
 export const useTwaaterAccount = (ownerType: "persona" | "band", ownerId?: string) => {
   const { toast } = useToast();
@@ -49,14 +65,14 @@ export const useTwaaterAccount = (ownerType: "persona" | "band", ownerId?: strin
     onError: (error: any) => {
       toast({
         title: "Failed to create account",
-        description: error.message,
+        description: accountErrorMessage(error),
         variant: "destructive",
       });
     },
   });
 
   const updateAccountMutation = useMutation({
-    mutationFn: async (updates: Partial<TwaaterAccount>) => {
+    mutationFn: async (updates: TwaaterAccountUpdate) => {
       if (!account?.id) throw new Error("No account to update");
 
       const { data, error } = await supabase
@@ -79,7 +95,7 @@ export const useTwaaterAccount = (ownerType: "persona" | "band", ownerId?: strin
     onError: (error: any) => {
       toast({
         title: "Update failed",
-        description: error.message,
+        description: accountErrorMessage(error),
         variant: "destructive",
       });
     },
