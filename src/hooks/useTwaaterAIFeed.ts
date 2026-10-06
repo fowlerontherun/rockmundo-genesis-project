@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { hydrateQuotedTwaats } from "@/hooks/useTwaats";
+import { hydrateTwaaterFeedExtras } from "@/hooks/useTwaats";
 
 const twaatSelect = `
   *,
@@ -19,7 +19,7 @@ const fetchChronologicalFeed = async (accountId?: string) => {
       .order("created_at", { ascending: false })
       .limit(50);
     if (error) throw error;
-    return hydrateQuotedTwaats(data || []);
+    return hydrateTwaaterFeedExtras(data || []);
   }
 
   const { data: follows, error: followsError } = await supabase
@@ -40,7 +40,7 @@ const fetchChronologicalFeed = async (accountId?: string) => {
     .limit(50);
 
   if (error) throw error;
-  return hydrateQuotedTwaats(data || []);
+  return hydrateTwaaterFeedExtras(data || []);
 };
 
 export const useTwaaterAIFeed = (accountId?: string, enabled = true) => {
@@ -64,7 +64,7 @@ export const useTwaaterAIFeed = (accountId?: string, enabled = true) => {
           return fetchChronologicalFeed(accountId);
         }
 
-        return rankedFeed;
+        return hydrateTwaaterFeedExtras(rankedFeed);
       } catch (error) {
         console.error("AI feed exception:", error);
         return fetchChronologicalFeed(accountId);
