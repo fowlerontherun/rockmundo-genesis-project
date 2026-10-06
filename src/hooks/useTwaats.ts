@@ -25,6 +25,23 @@ const twaatDetailsSelect = `
   metrics:twaat_metrics(*)
 `;
 
+const getTwaatPostErrorMessage = (error: any) => {
+  const message = String(error?.message || "");
+  if (message.includes("twaat_exceeds_max_length")) {
+    return "Your Twaat is longer than the current character limit.";
+  }
+  if (message.includes("twaater_media_disabled")) {
+    return "Media uploads are currently disabled on Twaater.";
+  }
+  if (message.includes("twaat_rejected_by_content_filter")) {
+    return "This Twaat was blocked by the content filter. Edit the text and try again.";
+  }
+  if (/row-level security|permission denied/i.test(message)) {
+    return "This Twaater account is not allowed to post that content.";
+  }
+  return message || "We couldn't publish that Twaat. Please try again.";
+};
+
 const quotedTwaatSelect = `
   id,
   body,
@@ -152,7 +169,7 @@ export const useTwaats = (accountId?: string) => {
     onError: (error: any) => {
       toast({
         title: "Failed to post",
-        description: error?.message || "We couldn't publish that Twaat. Please try again.",
+        description: getTwaatPostErrorMessage(error),
         variant: "destructive",
       });
     },
