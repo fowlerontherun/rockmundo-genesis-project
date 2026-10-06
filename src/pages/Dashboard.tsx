@@ -32,6 +32,7 @@ import { CharacterUnreadWidget } from "@/components/dashboard/CharacterUnreadWid
 import { TodaysBriefing } from "@/components/dashboard/TodaysBriefing";
 import { ManagerRecommendationsPanel } from "@/components/dashboard/ManagerRecommendationsPanel";
 import { GettingStartedPanel } from "@/components/dashboard/GettingStartedPanel";
+import { ReferralWelcomeCard } from "@/components/dashboard/ReferralWelcomeCard";
 import { WorldNewsList } from "@/components/world/WorldNewsList";
 
 import { Link } from "react-router-dom";
@@ -396,6 +397,7 @@ const Dashboard = () => {
         {/* Today — snapshot, briefing and what to do next */}
         <TabsContent value="profile" className="space-y-4">
           <DashboardHero profile={profile} userId={user?.id} />
+          <ReferralWelcomeCard profileId={profile?.id} />
           <GettingStartedPanel profile={profile} userId={user?.id} />
           <InviteFriendsCard profileId={profile?.id} />
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
