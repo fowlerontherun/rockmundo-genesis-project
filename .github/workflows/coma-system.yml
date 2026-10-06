@@ -14,6 +14,7 @@ on:
       - "supabase/migrations/*coma*"
       - "supabase/migrations/20260216103554_cd91b281-6a49-45d7-9052-8f589da8234a.sql"
       - "supabase/migrations/20260308133646_d51526b9-536b-4b2c-a99e-0ac48012d7d7.sql"
+      - "supabase/migrations/20260417110658_73af6428-53fe-4356-8a4e-c0779e4483a6.sql"
       - "supabase/tests/character_coma_inactivity_harness.sql"
       - ".github/workflows/coma-system.yml"
   push:
@@ -29,6 +30,7 @@ on:
       - "supabase/migrations/*coma*"
       - "supabase/migrations/20260216103554_cd91b281-6a49-45d7-9052-8f589da8234a.sql"
       - "supabase/migrations/20260308133646_d51526b9-536b-4b2c-a99e-0ac48012d7d7.sql"
+      - "supabase/migrations/20260417110658_73af6428-53fe-4356-8a4e-c0779e4483a6.sql"
       - "supabase/tests/character_coma_inactivity_harness.sql"
       - ".github/workflows/coma-system.yml"
 
