@@ -83,6 +83,9 @@ export const useTwaaterModeration = (viewerAccountId?: string) => {
       queryClient.invalidateQueries({ queryKey: ["twaater-profile-twaats"] });
       queryClient.invalidateQueries({ queryKey: ["twaater-notifications"] });
       queryClient.invalidateQueries({ queryKey: ["twaater-mentions"] });
+      queryClient.invalidateQueries({ queryKey: ["is-following"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-following"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-account"] });
       toast({
         title: "User blocked",
         description: "You won't see posts from this account anymore.",
@@ -124,6 +127,9 @@ export const useTwaaterModeration = (viewerAccountId?: string) => {
       queryClient.invalidateQueries({ queryKey: ["twaater-profile-twaats"] });
       queryClient.invalidateQueries({ queryKey: ["twaater-notifications"] });
       queryClient.invalidateQueries({ queryKey: ["twaater-mentions"] });
+      queryClient.invalidateQueries({ queryKey: ["is-following"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-following"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-account"] });
       toast({
         title: "User unblocked",
         description: "You can now see posts from this account again.",
