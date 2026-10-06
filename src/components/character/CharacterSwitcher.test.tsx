@@ -42,6 +42,17 @@ describe('character menu', () => {
     await user.click(screen.getByRole('menuitem', { name: /Wardog/ }));
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/home'));
   });
+  it('blocks more selections while the switch is pending', async () => {
+    let complete: (() => void) | undefined;
+    mocks.switch.mockImplementationOnce(() => new Promise<void>((resolve) => { complete = resolve; }));
+    const user = userEvent.setup(); mount();
+    await user.click(screen.getByRole('button', { name: 'Switch character' }));
+    await user.click(screen.getByRole('menuitem', { name: /Wardog/ }));
+    expect(screen.getByRole('button', { name: 'Switching character…' })).toBeDisabled();
+    expect(mocks.switch).toHaveBeenCalledOnce();
+    complete?.();
+    await waitFor(() => expect(mocks.refetch).toHaveBeenCalledOnce());
+  });
   it('shows failure without navigating or refreshing and allows retry', async () => {
     mocks.switch.mockRejectedValueOnce(new Error('Unavailable'));
     const user = userEvent.setup(); mount();

@@ -24,7 +24,7 @@ export const FabMenu = () => {
       {open ? <X className="h-6 w-6" /> : <Plus className="h-6 w-6" />}
     </Button>
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetContent side="bottom" className="rounded-t-2xl p-4 pb-8">
+      <SheetContent side="bottom" aria-describedby={undefined} className="rounded-t-2xl p-4 pb-8">
         <SheetHeader className="text-left mb-3"><SheetTitle>{t("playerControls.quickActions")}</SheetTitle></SheetHeader>
         <div className="grid grid-cols-2 gap-3">
           {companionActions.map((action) => <Button variant="ghost" key={action.key} onClick={() => { setOpen(false); navigate(action.to); }} className="rm-mcard rm-tap h-auto whitespace-normal flex flex-col items-center justify-center gap-1.5 py-3 active:scale-95"><div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">{action.icon}</div><div className="text-[11px] font-medium text-center leading-tight">{labels[action.key]}</div></Button>)}
