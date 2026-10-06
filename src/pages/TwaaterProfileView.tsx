@@ -6,13 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TwaatCard } from "@/components/twaater/TwaatCard";
-import { ArrowLeft, MapPin, Calendar, Music, Users, CheckCircle2, Loader2, MessageCircle } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, Music, Users, CheckCircle2, Loader2, MessageCircle, Ban } from "lucide-react";
 import { useGameData } from "@/hooks/useGameData";
 import { useTwaaterAccount } from "@/hooks/useTwaaterAccount";
 import { useToast } from "@/hooks/use-toast";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { hydrateTwaaterFeedExtras } from "@/hooks/useTwaats";
 import { useTwaaterMessages } from "@/hooks/useTwaaterMessages";
+import { useTwaaterModeration } from "@/hooks/useTwaaterModeration";
 
 const TwaaterProfileView = () => {
   const { handle } = useParams();
@@ -23,6 +24,13 @@ const TwaaterProfileView = () => {
 
   const { account: viewerAccount } = useTwaaterAccount("persona", profile?.id);
   const { getOrCreateConversation, isCreatingConversation } = useTwaaterMessages(viewerAccount?.id, false);
+  const {
+    blockAccount,
+    unblockAccount,
+    isAccountBlocked,
+    isBlocking,
+    isUnblocking,
+  } = useTwaaterModeration(viewerAccount?.id);
 
   const { data: profileAccount, isLoading: accountLoading, error: accountError, refetch: refetchAccount } = useQuery({
     queryKey: ["twaater-profile", handle],
@@ -179,6 +187,7 @@ const TwaaterProfileView = () => {
   }
 
   const isOwnProfile = viewerAccount?.id === profileAccount.id;
+  const blockedByViewer = isAccountBlocked(profileAccount.id);
 
   const handleMessage = async () => {
     if (!viewerAccount?.id || !profileAccount?.id) return;
@@ -219,7 +228,7 @@ const TwaaterProfileView = () => {
               </div>
               {!isOwnProfile && viewerAccount && (
                 <div className="flex items-center gap-2">
-                  {profileAccount.owner_type === "persona" && (
+                  {profileAccount.owner_type === "persona" && !blockedByViewer && (
                     <Button
                       variant="outline"
                       onClick={handleMessage}
@@ -229,12 +238,38 @@ const TwaaterProfileView = () => {
                       Message
                     </Button>
                   )}
+                  {!blockedByViewer && (
+                    <Button
+                      onClick={() => followMutation.mutate()}
+                      disabled={followMutation.isPending || followLoading}
+                      variant={isFollowing ? "outline" : "default"}
+                    >
+                      {isFollowing ? "Following" : "Follow"}
+                    </Button>
+                  )}
                   <Button
-                    onClick={() => followMutation.mutate()}
-                    disabled={followMutation.isPending || followLoading}
-                    variant={isFollowing ? "outline" : "default"}
+                    variant="outline"
+                    disabled={isBlocking || isUnblocking}
+                    className={blockedByViewer ? "" : "text-destructive hover:text-destructive"}
+                    onClick={() => {
+                      if (!viewerAccount) return;
+                      if (blockedByViewer) {
+                        unblockAccount({
+                          blockerAccountId: viewerAccount.id,
+                          blockedAccountId: profileAccount.id,
+                        });
+                        return;
+                      }
+                      if (window.confirm(`Block @${profileAccount.handle}? You will stop seeing each other's Twaats and direct messages.`)) {
+                        blockAccount({
+                          blockerAccountId: viewerAccount.id,
+                          blockedAccountId: profileAccount.id,
+                        });
+                      }
+                    }}
                   >
-                    {isFollowing ? "Following" : "Follow"}
+                    <Ban className="h-4 w-4 mr-2" />
+                    {blockedByViewer ? "Unblock" : "Block"}
                   </Button>
                 </div>
               )}
