@@ -11,7 +11,6 @@ import type { Database } from "@/lib/supabase-types";
 import type {
   DecoratedFriendship,
   RelationshipEvent,
-  DirectMessage,
   ProfileRow,
 } from "./types";
 import { RELATIONSHIP_EVENT_WEIGHTS, RELATIONSHIP_MILESTONES, FRIENDSHIP_TIERS } from "./config";
@@ -242,64 +241,6 @@ export function calculateRelationshipSummary(events: RelationshipEvent[]): {
     tierMaximum: tier.maxAffinity,
     progressToNextTier,
     milestoneProgress,
-  };
-}
-
-export async function fetchDirectMessages(channel: string): Promise<DirectMessage[]> {
-  const { data, error } = await supabase
-    .from("global_chat")
-    .select("id, channel, message, created_at, user_id")
-    .eq("channel", channel)
-    .order("created_at", { ascending: true })
-    .limit(200);
-
-  if (error) {
-    throw error;
-  }
-
-  return (data ?? []) as DirectMessage[];
-}
-
-export async function sendDirectMessage(
-  channel: string,
-  userId: string,
-  message: string,
-  profileId?: string | null,
-): Promise<void> {
-  const trimmed = message.trim();
-  if (!trimmed) {
-    return;
-  }
-
-  const { error } = await supabase.from("global_chat").insert({
-    channel,
-    user_id: userId,
-    profile_id: profileId ?? null,
-    message: trimmed,
-  });
-
-  if (error) {
-    throw error;
-  }
-}
-
-export function subscribeToDirectMessages(
-  channel: string,
-  onMessage: (message: DirectMessage) => void,
-) {
-  const subscription = supabase
-    .channel(`relationship-dm:${channel}`)
-    .on(
-      "postgres_changes",
-      { event: "INSERT", schema: "public", table: "global_chat", filter: `channel=eq.${channel}` },
-      (payload) => {
-        onMessage(payload.new as DirectMessage);
-      },
-    )
-    .subscribe();
-
-  return () => {
-    supabase.removeChannel(subscription);
   };
 }
 
