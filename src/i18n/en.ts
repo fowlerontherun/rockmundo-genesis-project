@@ -181,6 +181,7 @@ export const en = {
     bandRiders: "Band Riders",
     playerSearch: "Player Search",
     modeling: "Modeling",
+    luthier: "Luthier",
     competitiveCharts: "Competitive Charts",
     producerCareer: "Producer Career",
     clothingDesigner: "Fashion Designer",
