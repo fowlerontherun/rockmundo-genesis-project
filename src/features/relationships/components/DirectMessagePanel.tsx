@@ -8,6 +8,7 @@ import { fetchDirectMessages, sendDirectMessage, subscribeToDirectMessages } fro
 import type { DirectMessage } from "../types";
 import { Loader2, SendHorizontal } from "lucide-react";
 import { format } from "date-fns";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 interface DirectMessagePanelProps {
   channel: string;
@@ -17,6 +18,7 @@ interface DirectMessagePanelProps {
 
 export function DirectMessagePanel({ channel, currentUserId, otherDisplayName }: DirectMessagePanelProps) {
   const { toast } = useToast();
+  const { profileId } = useActiveProfile();
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -70,7 +72,7 @@ export function DirectMessagePanel({ channel, currentUserId, otherDisplayName }:
 
     setSending(true);
     try {
-      await sendDirectMessage(channel, currentUserId, draft);
+      await sendDirectMessage(channel, currentUserId, draft, profileId);
       setDraft("");
     } catch (error: unknown) {
       toast({
