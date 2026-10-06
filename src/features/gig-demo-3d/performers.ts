@@ -652,7 +652,7 @@ export class Musician {
                 leftPole.copy(leftTarget).addScaledVector(faceNormal, .6).addScaledVector(down, .12).addScaledVector(lateral, .2);
                 rightPole.copy(rightTarget).addScaledVector(faceNormal, .55).addScaledVector(down, .02).addScaledVector(lateral, -.1);
                 solveOutside('L', leftTarget, leftPole, acoustic ? .228 : instrumentId === 'bass_guitar' ? .208 : .213, acoustic ? .17 : .15);
-                solveOutside('R', rightTarget, rightPole, acoustic ? .348 : instrumentId === 'bass_guitar' ? .308 : .308, acoustic ? .21 : .18);
+                solveOutside('R', rightTarget, rightPole, acoustic ? .348 : instrumentId === 'bass_guitar' ? .308 : .308, acoustic ? .17 : .145);
                 // Orient the palms: fretting fingers reach into the fretboard from the
                 // audience side, picking fingers point down at the strings. Without
                 // this the imported rest pose leaves an open, waving palm.
