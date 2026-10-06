@@ -5,6 +5,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { getTieredBonusPercent } from "./tieredSkillBonus";
+import { getPersonalGearRoleBonusPercent } from "./personalGear";
 
 const normalizeInstrumentSkillKey = (slug: string) => slug.replace(/^instruments_(basic|professional|mastery)_/, "");
 
@@ -43,6 +44,26 @@ export const ROLE_SKILL_MAP: Record<string, string[]> = {
     "instruments_professional_acoustic_guitar",
     "instruments_basic_electric_guitar",
     "instruments_professional_electric_guitar"
+  ],
+  "Electric Guitar": [
+    "instruments_basic_electric_guitar",
+    "instruments_professional_electric_guitar",
+    "instruments_mastery_electric_guitar"
+  ],
+  "Acoustic Guitar": [
+    "instruments_basic_acoustic_guitar",
+    "instruments_professional_acoustic_guitar",
+    "instruments_mastery_acoustic_guitar"
+  ],
+  "Classical Guitar": [
+    "instruments_basic_classical_guitar",
+    "instruments_professional_classical_guitar",
+    "instruments_mastery_classical_guitar"
+  ],
+  "Bass Guitar": [
+    "instruments_basic_bass_guitar",
+    "instruments_professional_bass_guitar",
+    "instruments_mastery_bass_guitar"
   ],
   "Bass": [
     "instruments_basic_bass_guitar",
@@ -211,35 +232,6 @@ function calculateGearBonus(
 /**
  * Helper to check if equipment category matches a role
  */
-function doesCategoryMatchRole(category: string, subcategory: string | null, role: string): boolean {
-  const roleCategories: Record<string, string[]> = {
-    "Lead Guitar": ["guitar", "electric_guitar"],
-    "Rhythm Guitar": ["guitar", "acoustic_guitar", "electric_guitar"],
-    "Bass": ["bass"],
-    "Drums": ["drums"],
-    "Vocals": ["microphone"],
-    "Lead Vocals": ["microphone"],
-    "Keys": ["keyboard", "piano"],
-    "Keyboard": ["keyboard", "piano", "synth"],
-    "Synth": ["synth", "keyboard"],
-    "DJ": ["dj", "controller"],
-    "Saxophone": ["wind", "saxophone"],
-    "Trumpet": ["brass", "trumpet"],
-    "Trombone": ["brass", "trombone"],
-    "Violin": ["strings", "violin"],
-    "Cello": ["strings", "cello"],
-    "Percussion": ["percussion", "drums"]
-  };
-
-  const validCategories = roleCategories[role] || [];
-  const catLower = category.toLowerCase();
-  const subLower = (subcategory || "").toLowerCase();
-
-  return validCategories.some(vc => 
-    catLower.includes(vc) || subLower.includes(vc) || vc.includes(catLower)
-  );
-}
-
 /**
  * Calculate performance modifiers for a profile based on role
  */
@@ -295,78 +287,73 @@ export async function calculatePerformanceModifiers(
 
     const skillLevel = getSkillLevelFromProgress(skillProgress, relevantSkills);
 
-    // Fetch equipped gear - use any to bypass TS2589 complex type inference
-    let playerEquipment: Array<{ equipment_id: string; is_equipped: boolean }> = [];
-    let equipError: Error | null = null;
-    
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const query = (supabase as any)
+    // Fetch both generations of character equipment. The current Gear store
+    // owns equipment_catalog rows through player_equipment_inventory, while
+    // Luthiery and a small amount of legacy gear live in player_equipment.
+    const [legacyOwnedResult, catalogOwnedResult] = await Promise.all([
+      (supabase as any)
         .from('player_equipment')
+        .select('equipment_id, is_equipped, equipped')
+        .eq('profile_id', profileId)
+        .or('is_equipped.eq.true,equipped.eq.true'),
+      (supabase as any)
+        .from('player_equipment_inventory')
         .select('equipment_id, is_equipped')
         .eq('profile_id', profileId)
-        .eq('is_equipped', true);
-      
-      const result = await query;
-      playerEquipment = (result.data || []) as typeof playerEquipment;
-      equipError = result.error;
-    } catch (e) {
-      equipError = e as Error;
+        .eq('is_equipped', true),
+    ]);
+
+    if (legacyOwnedResult.error) {
+      console.error('Error fetching legacy/crafted equipment:', legacyOwnedResult.error);
+    }
+    if (catalogOwnedResult.error) {
+      console.error('Error fetching catalog equipment:', catalogOwnedResult.error);
     }
 
-    if (equipError) {
-      console.error('Error fetching equipment:', equipError);
+    const legacyEquipmentIds = (legacyOwnedResult.data || []).map((row: any) => row.equipment_id);
+    const catalogEquipmentIds = (catalogOwnedResult.data || []).map((row: any) => row.equipment_id);
+
+    const [legacyItemsResult, catalogItemsResult] = await Promise.all([
+      legacyEquipmentIds.length
+        ? (supabase as any)
+            .from('equipment_items')
+            .select('id, name, category, subcategory, rarity, stat_boosts')
+            .in('id', legacyEquipmentIds)
+        : Promise.resolve({ data: [], error: null }),
+      catalogEquipmentIds.length
+        ? (supabase as any)
+            .from('equipment_catalog')
+            .select('id, name, category, subcategory, rarity, stat_boosts')
+            .in('id', catalogEquipmentIds)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+    if (legacyItemsResult.error) {
+      console.error('Error resolving legacy/crafted equipment:', legacyItemsResult.error);
     }
+    if (catalogItemsResult.error) {
+      console.error('Error resolving catalog equipment:', catalogItemsResult.error);
+    }
+
+    const items = [
+      ...(legacyItemsResult.data || []),
+      ...(catalogItemsResult.data || []),
+    ] as Array<{
+      id: string;
+      name: string;
+      category: string;
+      subcategory: string | null;
+      rarity: string | null;
+      stat_boosts: Record<string, number> | null;
+    }>;
 
     let gearMultiplier = 1.0;
-
-    if (playerEquipment.length > 0) {
-      const equipmentIds = playerEquipment.map(pe => pe.equipment_id);
-      
-      // Get equipment items - use explicit typing
-      const { data: itemsData } = await supabase
-        .from('equipment_items')
-        .select('id, name, category, subcategory, rarity, stat_boosts')
-        .in('id', equipmentIds);
-
-      const items = (itemsData || []) as Array<{
-        id: string;
-        name: string;
-        category: string;
-        subcategory: string | null;
-        rarity: string | null;
-        stat_boosts: Record<string, number> | null;
-      }>;
-
-      if (items.length > 0) {
-        // Calculate gear bonus based on rarity and stat_boosts
-        const rarityBonuses: Record<string, number> = {
-          'common': 0.05,
-          'uncommon': 0.10,
-          'rare': 0.18,
-          'epic': 0.25,
-          'legendary': 0.35
-        };
-
-        let totalBonus = 0;
-        for (const item of items) {
-          const rarityBonus = rarityBonuses[item.rarity || 'common'] || 0.05;
-          
-          // Check if item matches role (category-based matching)
-          const categoryMatches = doesCategoryMatchRole(item.category, item.subcategory, role);
-          if (categoryMatches) {
-            totalBonus += rarityBonus;
-            
-            // Add performance stat boost if exists
-            if (item.stat_boosts && typeof item.stat_boosts === 'object') {
-              const perfBoost = item.stat_boosts['performance'] || 0;
-              totalBonus += perfBoost / 100; // Convert to multiplier
-            }
-          }
-        }
-        
-        gearMultiplier = 1 + Math.min(totalBonus, 0.5); // Cap at 50% bonus
-      }
+    if (items.length > 0) {
+      const totalBonusPercent = items.reduce(
+        (total, item) => total + getPersonalGearRoleBonusPercent(item, role),
+        0,
+      );
+      gearMultiplier = 1 + Math.min(totalBonusPercent / 100, 0.5);
     }
 
     const effectiveLevel = Math.round(skillLevel * gearMultiplier);
