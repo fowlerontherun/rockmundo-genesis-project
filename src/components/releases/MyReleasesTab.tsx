@@ -602,8 +602,13 @@ function ReleaseCard({ release, financials, financeAvailable = false, labelCutPc
       try { await navigator.share({ title: `${release.title} — RockMundo`, text, url }); localStorage.setItem(key, String(Date.now())); return; }
       catch (error) { if ((error as DOMException)?.name === "AbortError") return; }
     }
-    await navigator.clipboard.writeText(`${text} ${url}`);
-    localStorage.setItem(key, String(Date.now()));
+    try {
+      await navigator.clipboard.writeText(`${text} ${url}`);
+      localStorage.setItem(key, String(Date.now()));
+      toast.success("Invite copied");
+    } catch {
+      toast.error("Could not share invite", { description: "Your browser blocked clipboard access. Try the share button again from a supported browser." });
+    }
   };
   
   return (
