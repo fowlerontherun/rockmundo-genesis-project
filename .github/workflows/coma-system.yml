@@ -1,5 +1,9 @@
 name: Coma System Regression Gate
 
+concurrency:
+  group: coma-system-${{ github.event_name }}
+  cancel-in-progress: true
+
 on:
   workflow_dispatch:
   pull_request:
