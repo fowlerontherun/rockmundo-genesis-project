@@ -60,6 +60,7 @@ import { SongwritingInstrumentSelector } from "@/components/songwriting/Songwrit
 import { SimplifiedProjectCard } from "@/components/songwriting/SimplifiedProjectCard";
 import { SongwritingScheduleDialog } from "@/components/songwriting/SongwritingScheduleDialog";
 import { CollaboratorInviteDialog } from "@/components/songwriting/CollaboratorInviteDialog";
+import { PendingCollaborationInvites } from "@/components/songwriting/PendingCollaborationInvites";
 import {
   Dialog,
   DialogContent,
@@ -1961,6 +1962,9 @@ const Songwriting = () => {
           </div>
         </CardContent>
       </Card>
+
+      <PendingCollaborationInvites />
+
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <div className="flex items-center gap-2">
           <Button
