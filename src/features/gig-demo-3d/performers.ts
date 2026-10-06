@@ -834,7 +834,7 @@ export class Musician {
             };
 
             keepVisibleHandOutside('L', acoustic ? .145 : .135);
-            keepVisibleHandOutside('R', acoustic ? .24 : instrumentId === 'bass_guitar' ? .18 : .185);
+            keepVisibleHandOutside('R', acoustic ? .24 : instrumentId === 'bass_guitar' ? .18 : .192);
 
             if (this.guitarPick) {
                 const pickContact = handContactPoint(this.bones, 'R', ['Thumb', 'Index'])
