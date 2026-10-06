@@ -64,7 +64,7 @@ export const zh = {
     max: "最大",
   },
   nav: {
-    beta: "测试版",
+    beta: "LIVE V1",
     version: "版本",
     inbox: "收件箱",
     dashboard: "仪表盘",
