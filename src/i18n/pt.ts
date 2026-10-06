@@ -67,7 +67,7 @@ export const pt = {
 
   // Navigation
   nav: {
-    beta: "BETA",
+    beta: "LIVE V1",
     version: "Versão",
     inbox: "Caixa de Entrada",
     dashboard: "Painel",
