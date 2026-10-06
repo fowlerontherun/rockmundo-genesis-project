@@ -213,7 +213,7 @@ const AdminDashboard = () => {
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Gauge className="h-5 w-5 text-primary" />
-              Beta Health Overview
+              Live V1 Health Overview
             </CardTitle>
             <CardDescription>Lightweight support signals from existing logs, activity statuses, economy totals, and cron runs.</CardDescription>
           </CardHeader>
