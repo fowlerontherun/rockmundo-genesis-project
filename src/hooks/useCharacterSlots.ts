@@ -17,6 +17,7 @@ export interface CharacterProfile {
   avatar_url: string | null;
   is_active: boolean;
   died_at: string | null;
+  death_cause: string | null;
   slot_number: number;
   generation_number: number;
   fame: number;
@@ -216,7 +217,7 @@ export function useCharacterSlots() {
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, user_id, display_name, username, avatar_url, is_active, died_at, slot_number, generation_number, fame, level, health")
+        .select("id, user_id, display_name, username, avatar_url, is_active, died_at, death_cause, slot_number, generation_number, fame, level, health")
         .eq("user_id", user.id)
         .is("deleted_at", null)
         .order("slot_number", { ascending: true });
