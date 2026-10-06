@@ -17,7 +17,8 @@ import { TwaatCard } from "@/components/twaater/TwaatCard";
 import { TrendingHashtags } from "@/components/twaater/TrendingHashtags";
 import { WhoToFollow } from "@/components/twaater/WhoToFollow";
 import { TwaaterSearch } from "@/components/twaater/TwaaterSearch";
-import { Home, TrendingUp, AtSign, Bookmark, Search, Users, Compass, BarChart3 } from "lucide-react";
+import { TwaaterScheduledFeed } from "@/components/twaater/TwaaterScheduledFeed";
+import { Home, TrendingUp, AtSign, Bookmark, Search, Users, Compass, BarChart3, Clock } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTwaaterRouteAccount } from "@/hooks/useTwaaterRouteAccount";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
@@ -158,7 +159,7 @@ export default function Twaater() {
             </div>
 
             <Tabs defaultValue="feed" className="w-full">
-              <TabsList className="grid w-full grid-cols-6" style={{ backgroundColor: "hsl(var(--twaater-card))" }}>
+              <TabsList className="grid w-full grid-cols-7" style={{ backgroundColor: "hsl(var(--twaater-card))" }}>
                 <TabsTrigger value="feed" className="gap-1 data-[state=active]:bg-[hsl(var(--twaater-purple)_/_0.2)] data-[state=active]:text-[hsl(var(--twaater-purple))]">
                   <Home className="h-4 w-4" />
                   <span className="hidden sm:inline">Feed</span>
@@ -183,6 +184,10 @@ export default function Twaater() {
                   <Bookmark className="h-4 w-4" />
                   <span className="hidden sm:inline">Saved</span>
                 </TabsTrigger>
+                <TabsTrigger value="scheduled" className="gap-1 data-[state=active]:bg-[hsl(var(--twaater-purple)_/_0.2)] data-[state=active]:text-[hsl(var(--twaater-purple))]">
+                  <Clock className="h-4 w-4" />
+                  <span className="hidden sm:inline">Scheduled</span>
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="feed" className="mt-0">
@@ -205,6 +210,10 @@ export default function Twaater() {
 
               <TabsContent value="bookmarks" className="mt-0">
                 <TwaaterBookmarksTab accountId={currentAccountId} />
+              </TabsContent>
+
+              <TabsContent value="scheduled" className="mt-0">
+                {currentAccountId && <TwaaterScheduledFeed accountId={currentAccountId} />}
               </TabsContent>
             </Tabs>
           </div>
