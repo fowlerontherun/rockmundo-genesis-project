@@ -1,3 +1,36 @@
+-- Historical education seeds must resolve canonical rows by name rather than
+-- environment-specific production UUIDs.
+DO $politics_education_dependencies$
+DECLARE
+  v_missing_cities text[];
+  v_missing_universities text[];
+BEGIN
+  SELECT array_agg(required_name ORDER BY required_name)
+    INTO v_missing_cities
+    FROM (VALUES ('London'), ('Manchester'), ('Edinburgh'), ('Washington DC'), ('New York'), ('Chicago'), ('Los Angeles')) AS required(required_name)
+   WHERE NOT EXISTS (
+     SELECT 1 FROM public.cities c
+     WHERE lower(c.name) = lower(required.required_name)
+   );
+
+  IF v_missing_cities IS NOT NULL THEN
+    RAISE EXCEPTION 'Politics mentor seed requires canonical cities: %', v_missing_cities;
+  END IF;
+
+  SELECT array_agg(required_name ORDER BY required_name)
+    INTO v_missing_universities
+    FROM (VALUES ('Cambridge University'), ('Manchester University'), ('Chicago Conservatory of Arts'), ('London Conservatory of Arts')) AS required(required_name)
+   WHERE NOT EXISTS (
+     SELECT 1 FROM public.universities u
+     WHERE lower(u.name) = lower(required.required_name)
+   );
+
+  IF v_missing_universities IS NOT NULL THEN
+    RAISE EXCEPTION 'Politics course seed requires canonical universities: %', v_missing_universities;
+  END IF;
+END
+$politics_education_dependencies$;
+
 -- ============================================================
 -- POLITICS SKILL BOOKS  (base_reading_days must be between 2 and 4)
 -- ============================================================
@@ -88,38 +121,7 @@ INSERT INTO public.university_courses (university_id, skill_slug, name, descript
 ((SELECT id FROM public.universities WHERE lower(name)=lower('London Conservatory of Arts') LIMIT 1),'basic_negotiation','The Whitehall Bargain','Negotiation inside the British political machine.',1000,5,0,3,7,10,13),
 ((SELECT id FROM public.universities WHERE lower(name)=lower('London Conservatory of Arts') LIMIT 1),'professional_diplomacy','Foreign Office Foundations','First steps toward a diplomatic career.',1600,7,25,5,9,10,14);
 
--- Historical education seeds must resolve canonical rows by name rather than
--- environment-specific production UUIDs.
-DO $politics_education_dependencies$
-DECLARE
-  v_missing_cities text[];
-  v_missing_universities text[];
-BEGIN
-  SELECT array_agg(required_name ORDER BY required_name)
-    INTO v_missing_cities
-    FROM (VALUES ('London'), ('Manchester'), ('Edinburgh'), ('Washington DC'), ('New York'), ('Chicago'), ('Los Angeles')) AS required(required_name)
-   WHERE NOT EXISTS (
-     SELECT 1 FROM public.cities c
-     WHERE lower(c.name) = lower(required.required_name)
-   );
 
-  IF v_missing_cities IS NOT NULL THEN
-    RAISE EXCEPTION 'Politics mentor seed requires canonical cities: %', v_missing_cities;
-  END IF;
-
-  SELECT array_agg(required_name ORDER BY required_name)
-    INTO v_missing_universities
-    FROM (VALUES ('Cambridge University'), ('Manchester University'), ('Chicago Conservatory of Arts'), ('London Conservatory of Arts')) AS required(required_name)
-   WHERE NOT EXISTS (
-     SELECT 1 FROM public.universities u
-     WHERE lower(u.name) = lower(required.required_name)
-   );
-
-  IF v_missing_universities IS NOT NULL THEN
-    RAISE EXCEPTION 'Politics course seed requires canonical universities: %', v_missing_universities;
-  END IF;
-END
-$politics_education_dependencies$;
 
 -- ============================================================
 -- POLITICS MENTORS — UK & USA
