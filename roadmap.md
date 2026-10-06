@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Add withdrawal for pending real-band festival invitations and verify permissions, status updates and version history.
+- [x] Add withdrawal for pending real-band festival invitations and verify permissions, status updates and version history. 17 focused tests pass; build OK and anonymous server access denied. Live-account verification is unavailable with the external account service; three older festival source-expectation tests still fail.
 
 - [x] Review maintained translations and translate mobile navigation and character switching.
 - [x] Add mobile character and language controls using the existing account switching flow.
