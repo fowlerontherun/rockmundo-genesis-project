@@ -58,22 +58,38 @@ export const fetchRecentTwaatsForTrending = async (): Promise<TrendingTwaatRow[]
   });
 };
 
-export const scoreTrendingTwaats = <T extends TrendingTwaatRow>(twaats: T[]) => {
+type TrendingScoreConfig = {
+  likesWeight?: number;
+  repliesWeight?: number;
+  retwaatsWeight?: number;
+  decayHours?: number;
+  verifiedBoost?: number;
+};
+
+export const scoreTrendingTwaats = <T extends TrendingTwaatRow>(
+  twaats: T[],
+  config: TrendingScoreConfig = {},
+) => {
   const now = Date.now();
+  const likesWeight = Math.max(0, config.likesWeight ?? 20) / 10;
+  const repliesWeight = Math.max(0, config.repliesWeight ?? 15) / 10;
+  const retwaatsWeight = Math.max(0, config.retwaatsWeight ?? 30) / 10;
+  const decayHours = Math.max(1, config.decayHours ?? 12);
+  const verifiedBoostMultiplier = Math.max(1, config.verifiedBoost ?? 1.5);
 
   return twaats
     .map((twaat) => {
       const metricsData = Array.isArray(twaat.metrics) ? twaat.metrics[0] : twaat.metrics;
       const metrics = metricsData || { likes: 0, retwaats: 0, replies: 0, impressions: 0 };
       const baseScore =
-        (metrics.likes || 0) * 2 +
-        (metrics.retwaats || 0) * 3 +
-        (metrics.replies || 0) * 1.5 +
+        (metrics.likes || 0) * likesWeight +
+        (metrics.retwaats || 0) * retwaatsWeight +
+        (metrics.replies || 0) * repliesWeight +
         (metrics.impressions || 0) * 0.1;
       const createdAtTime = new Date(twaat.created_at).getTime();
       const hoursOld = Number.isFinite(createdAtTime) ? (now - createdAtTime) / (1000 * 60 * 60) : 24;
-      const timeDecay = Math.exp(-hoursOld / 12);
-      const verifiedBoost = twaat.account?.verified ? 1.5 : 1;
+      const timeDecay = Math.exp(-hoursOld / decayHours);
+      const verifiedBoost = twaat.account?.verified ? verifiedBoostMultiplier : 1;
       const promotedActive =
         Boolean(twaat.is_promoted) &&
         Boolean(twaat.promoted_until) &&
