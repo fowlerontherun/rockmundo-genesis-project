@@ -227,8 +227,12 @@ const Landing = () => {
             <img src={logo} alt="RockMundo" className="h-8 w-8 shrink-0 object-contain" width={32} height={32} />
             <span className="pt-0.5 font-bebas text-xl leading-none tracking-wide">ROCKMUNDO</span>
           </Link>
-          <Badge variant="outline" className="hidden bg-warning/10 px-1.5 py-0 font-oswald text-[10px] text-warning sm:inline-flex">
-            Live V1
+          <Badge variant="outline" className="hidden items-center gap-1.5 border-emerald-500/40 bg-emerald-500/10 px-2 py-1 font-oswald text-[10px] font-semibold tracking-widest text-emerald-500 shadow-[0_0_14px_hsl(142_71%_45%/0.16)] sm:inline-flex">
+            <span className="relative flex h-2 w-2" aria-hidden="true">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-50" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+            </span>
+            LIVE · V1
           </Badge>
           <div className="flex-1" />
           <a href="#how-it-works" className="hidden px-2 py-1 font-oswald text-xs text-muted-foreground hover:text-foreground md:inline-block">How it works</a>
