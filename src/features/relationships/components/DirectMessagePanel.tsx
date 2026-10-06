@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { fetchDirectMessages, sendDirectMessage, subscribeToDirectMessages } from "../api";
-import type { DirectMessage } from "../types";
+import { useDirectMessages } from "@/hooks/useDirectMessages";
 import { Loader2, SendHorizontal } from "lucide-react";
 import { format } from "date-fns";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -19,70 +18,35 @@ interface DirectMessagePanelProps {
 export function DirectMessagePanel({ channel, currentUserId, otherDisplayName }: DirectMessagePanelProps) {
   const { toast } = useToast();
   const { profileId } = useActiveProfile();
-  const [messages, setMessages] = useState<DirectMessage[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [sending, setSending] = useState(false);
+  const otherProfileId = useMemo(() => {
+    if (!profileId || !channel.startsWith("dm:")) return null;
+    const participants = channel.slice(3).split(":").filter(Boolean);
+    return participants.find((id) => id !== profileId) ?? null;
+  }, [channel, profileId]);
+  const { messages, isLoading: loading, sendMessage, markRead } = useDirectMessages(profileId, otherProfileId);
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    let unsubscribe: (() => void) | null = null;
-
-    const load = async () => {
-      setLoading(true);
-      try {
-        const history = await fetchDirectMessages(channel);
-        setMessages(history);
-        unsubscribe = subscribeToDirectMessages(channel, (message) => {
-          setMessages((prev) => [...prev, message]);
-        });
-      } catch (error: unknown) {
-        console.error("Failed to load DMs", error);
-        toast({
-          title: "Unable to load messages",
-          description:
-            error instanceof Error
-              ? error.message
-              : "Something went wrong while fetching the DM history.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    load();
-
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
-  }, [channel, toast]);
-
-  useEffect(() => {
     if (!scrollRef.current) return;
     scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages]);
+  }, [messages.length]);
 
-  const handleSend = async () => {
-    if (!draft.trim()) {
-      return;
-    }
+  useEffect(() => {
+    if (messages.length) markRead.mutate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages.length]);
 
-    setSending(true);
-    try {
-      await sendDirectMessage(channel, currentUserId, draft, profileId);
-      setDraft("");
-    } catch (error: unknown) {
-      toast({
+  const handleSend = () => {
+    if (!draft.trim() || sendMessage.isPending || !otherProfileId) return;
+    sendMessage.mutate(draft, {
+      onSuccess: () => setDraft(""),
+      onError: (error: unknown) => toast({
         title: "Unable to send message",
         description: error instanceof Error ? error.message : "Something went wrong while sending your DM.",
         variant: "destructive",
-      });
-    } finally {
-      setSending(false);
-    }
+      }),
+    });
   };
 
   return (
@@ -104,7 +68,7 @@ export function DirectMessagePanel({ channel, currentUserId, otherDisplayName }:
               </p>
             ) : (
               messages.map((message) => {
-                const isSelf = message.user_id === currentUserId;
+                const isSelf = message.sender_profile_id === profileId;
                 return (
                   <div key={message.id} className={`flex ${isSelf ? "justify-end" : "justify-start"}`}>
                     <div
@@ -112,7 +76,7 @@ export function DirectMessagePanel({ channel, currentUserId, otherDisplayName }:
                         isSelf ? "bg-primary text-primary-foreground" : "bg-muted"
                       }`}
                     >
-                      <p className="whitespace-pre-wrap break-words">{message.message}</p>
+                      <p className="whitespace-pre-wrap break-words">{message.body}</p>
                       <p className="mt-1 text-right text-xs opacity-70">
                         {message.created_at ? format(new Date(message.created_at), "MMM d, HH:mm") : "Just now"}
                       </p>
@@ -132,8 +96,8 @@ export function DirectMessagePanel({ channel, currentUserId, otherDisplayName }:
           className="min-h-[80px]"
         />
         <div className="flex w-full justify-end">
-          <Button onClick={handleSend} disabled={sending || !draft.trim()}>
-            {sending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button onClick={handleSend} disabled={sendMessage.isPending || !draft.trim() || !otherProfileId}>
+            {sendMessage.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             <SendHorizontal className="mr-1 h-4 w-4" /> Send
           </Button>
         </div>
