@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Users, TrendingUp, Music, User } from "lucide-react";
+import { Users, TrendingUp, Music, User, Mail, CheckCircle2, Clock3 } from "lucide-react";
 import { format } from "date-fns";
 import { BandSongsSection } from "@/components/band/BandSongsSection";
 import { BandMerchStore } from "@/components/band/BandMerchStore";
@@ -24,7 +24,8 @@ export default function BandProfile() {
   const { t } = useTranslation();
   const { bandId } = useParams();
   const navigate = useNavigate();
-  const { profileId } = useActiveProfile();
+  const [searchParams] = useSearchParams();
+  const { profileId, userId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [submittedApplication, setSubmittedApplication] = useState<any | null>(null);
@@ -78,6 +79,27 @@ export default function BandProfile() {
   const isMember = band?.band_members?.some(
     (m: any) => m.profile_id === profileId
   );
+
+  const isRecruitmentLanding = searchParams.get("recruited") === "1";
+
+  const { data: recruitmentInvitation, isLoading: recruitmentInvitationLoading } = useQuery({
+    queryKey: ["recruited-band-invitation", bandId, userId, profileId],
+    queryFn: async () => {
+      if (!bandId || !userId || !profileId) return null;
+      const { data, error } = await supabase
+        .from("band_invitations")
+        .select("id, status, instrument_role, vocal_role, message, created_at, responded_at")
+        .eq("band_id", bandId)
+        .eq("invited_user_id", userId)
+        .or(`invited_profile_id.eq.${profileId},invited_profile_id.is.null`)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: isRecruitmentLanding && !!bandId && !!userId && !!profileId,
+  });
 
   const { data: applicationHistory, isLoading: isApplicationHistoryLoading, isError: isApplicationHistoryError } = useQuery({
     queryKey: ["band-application-history", profileId],
@@ -163,6 +185,28 @@ export default function BandProfile() {
 
   return (
     <FMPageScaffold title={band.name} subtitle={band.genre || undefined} icon={Users} backTo="/hub/band">
+      {isRecruitmentLanding && !isMember && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex gap-3">
+              {recruitmentInvitation?.status === "pending" ? <Mail className="mt-0.5 h-5 w-5 text-primary" /> : recruitmentInvitation?.status === "accepted" ? <CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-500" /> : <Clock3 className="mt-0.5 h-5 w-5 text-primary" />}
+              <div>
+                <p className="font-semibold">This is the band that recruited you to RockMundo</p>
+                {recruitmentInvitationLoading ? (
+                  <p className="text-sm text-muted-foreground">Checking your band invitation…</p>
+                ) : recruitmentInvitation?.status === "pending" ? (
+                  <p className="text-sm text-muted-foreground">Your in-game invitation is ready. Open Band Manager to accept or decline it; membership is never automatic.</p>
+                ) : recruitmentInvitation?.status === "accepted" ? (
+                  <p className="text-sm text-muted-foreground">You accepted this band's invitation. Refreshing membership status may take a moment.</p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">You arrived through this band's recruitment link, but they have not sent your in-game invitation yet. You can explore the band while you wait.</p>
+                )}
+              </div>
+            </div>
+            {recruitmentInvitation?.status === "pending" && <Button size="sm" onClick={() => navigate("/band?tab=members")}>Review invitation</Button>}
+          </CardContent>
+        </Card>
+      )}
       <Card>
         <CardContent className="p-6">
           <div className="flex items-start gap-6">
