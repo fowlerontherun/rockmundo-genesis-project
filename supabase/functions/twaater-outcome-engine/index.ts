@@ -215,12 +215,55 @@ serve(async (req) => {
 
     if (effects.follower_pct) {
       try {
-        const followerGain = Math.max(0, Math.ceil((Number(twaat.account.follower_count) || 0) * (effects.follower_pct / 100)));
-        if (followerGain > 0) {
-          await supabase
-            .from("twaater_accounts")
-            .update({ follower_count: (Number(twaat.account.follower_count) || 0) + followerGain })
-            .eq("id", twaat.account_id);
+        const currentFollowerCount = Number(twaat.account.follower_count) || 0;
+        const requestedFollowerGain = Math.max(
+          0,
+          Math.ceil(currentFollowerCount * (effects.follower_pct / 100)),
+        );
+
+        if (requestedFollowerGain > 0) {
+          // Keep follower_count authoritative by creating real follow rows.
+          // The twaater_follows trigger updates the cached follower/following
+          // counters, so this avoids drifting follower_count away from reality.
+          const { data: activeBots, error: botsError } = await supabase
+            .from("twaater_bot_accounts")
+            .select("account_id")
+            .eq("is_active", true);
+
+          if (botsError) throw botsError;
+
+          const botIds = (activeBots || [])
+            .map((bot: any) => bot.account_id)
+            .filter((accountId: string) => accountId && accountId !== twaat.account_id);
+
+          if (botIds.length > 0) {
+            const { data: existingBotFollows, error: followsError } = await supabase
+              .from("twaater_follows")
+              .select("follower_account_id")
+              .eq("followed_account_id", twaat.account_id)
+              .in("follower_account_id", botIds);
+
+            if (followsError) throw followsError;
+
+            const existingBotIds = new Set(
+              (existingBotFollows || []).map((follow: any) => follow.follower_account_id),
+            );
+            const availableBots = botIds.filter((botId: string) => !existingBotIds.has(botId));
+            const botsToAdd = availableBots.slice(0, requestedFollowerGain);
+
+            if (botsToAdd.length > 0) {
+              const { error: insertFollowsError } = await supabase
+                .from("twaater_follows")
+                .insert(
+                  botsToAdd.map((botId: string) => ({
+                    follower_account_id: botId,
+                    followed_account_id: twaat.account_id,
+                  })),
+                );
+
+              if (insertFollowsError) throw insertFollowsError;
+            }
+          }
         }
       } catch (followerError) {
         console.error("[twaater-outcome-engine] follower effect failed", followerError);
