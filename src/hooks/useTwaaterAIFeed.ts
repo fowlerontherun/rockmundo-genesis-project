@@ -1,16 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { hydrateQuotedTwaats } from "@/hooks/useTwaats";
 
 const twaatSelect = `
   *,
   account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, owner_type, fame_score),
-  metrics:twaat_metrics(*),
-  quoted_twaat:twaats!twaats_quoted_twaat_id_fkey(
-    id,
-    body,
-    created_at,
-    account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, owner_type)
-  )
+  metrics:twaat_metrics(*)
 `;
 
 const fetchChronologicalFeed = async (accountId?: string) => {
@@ -24,7 +19,7 @@ const fetchChronologicalFeed = async (accountId?: string) => {
       .order("created_at", { ascending: false })
       .limit(50);
     if (error) throw error;
-    return data || [];
+    return hydrateQuotedTwaats(data || []);
   }
 
   const { data: follows, error: followsError } = await supabase
@@ -45,10 +40,10 @@ const fetchChronologicalFeed = async (accountId?: string) => {
     .limit(50);
 
   if (error) throw error;
-  return data || [];
+  return hydrateQuotedTwaats(data || []);
 };
 
-export const useTwaaterAIFeed = (accountId?: string) => {
+export const useTwaaterAIFeed = (accountId?: string, enabled = true) => {
   return useQuery({
     queryKey: ["twaater-ai-feed", accountId],
     queryFn: async () => {
@@ -75,7 +70,7 @@ export const useTwaaterAIFeed = (accountId?: string) => {
         return fetchChronologicalFeed(accountId);
       }
     },
-    enabled: true,
+    enabled,
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
