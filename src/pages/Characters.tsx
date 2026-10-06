@@ -154,7 +154,9 @@ export default function Characters() {
                       <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
                         {/inactivity/i.test(character.death_cause ?? "")
                           ? "In a coma after 30 days without account activity. Revive to continue — your progress is kept."
-                          : `In a coma${character.death_cause ? ` — ${character.death_cause}` : ""}. Revive to continue.`}
+                          : /^neglect$/i.test(character.death_cause ?? "")
+                            ? "Legacy health / wellness coma from older rules. Revive to continue — your progress is kept."
+                            : `In a coma${character.death_cause ? ` — ${character.death_cause}` : ""}. Revive to continue.`}
                       </p>
                     )}
                   </div>
