@@ -24,16 +24,17 @@ export function clothingPatternTexture(pattern: ClothingPattern, primary: string
 }
 
 /** One colour split over the full garment height, independent of donor units. */
-export function twoToneUVs(geometry: T.BufferGeometry, frame: T.Matrix4, footwear: boolean) {
+export function twoToneUVs(geometry: T.BufferGeometry, frame: T.Matrix4, footwear: boolean, range?: { low: number; high: number }) {
   const positions = geometry.getAttribute('position');
   const values: number[] = [], point = new T.Vector3();
-  let low = Infinity, high = -Infinity;
+  let low = range?.low ?? Infinity, high = range?.high ?? -Infinity;
   for (let i = 0; i < positions.count; i++) {
     point.fromBufferAttribute(positions, i).applyMatrix4(frame);
     const value = footwear ? point.z : point.y;
-    values.push(value); low = Math.min(low, value); high = Math.max(high, value);
+    values.push(value);
+    if (!range) { low = Math.min(low, value); high = Math.max(high, value); }
   }
   const uv = new Float32Array(positions.count * 2);
-  values.forEach((value, i) => { uv[i * 2] = .5; uv[i * 2 + 1] = .001 + .998 * (value - low) / Math.max(.001, high - low); });
+  values.forEach((value, i) => { uv[i * 2] = .5; uv[i * 2 + 1] = .999 - .998 * T.MathUtils.clamp((value - low) / Math.max(.001, high - low), 0, 1); });
   geometry.setAttribute('uv', new T.BufferAttribute(uv, 2));
 }
