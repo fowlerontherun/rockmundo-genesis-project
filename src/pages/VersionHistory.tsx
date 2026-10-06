@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.768",
+    date: "2026-10-06",
+    changes: [
+      { type: "feature", description: "The daily stipend can now be claimed from the mobile home screen, showing streak and reward." },
+    ],
+  },
+  {
     version: "1.1.767",
     date: "2026-10-06",
     changes: [
