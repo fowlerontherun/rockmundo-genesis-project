@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 interface SupabaseMessage {
   id: string;
   user_id: string;
+  profile_id: string | null;
   channel: string;
   message: string;
   created_at: string;
@@ -24,6 +25,7 @@ interface Message extends SupabaseMessage {
 }
 
 interface ProfileRecord {
+  id: string;
   user_id: string;
   display_name: string | null;
   username: string | null;
@@ -63,6 +65,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
         .select(`
           id,
           user_id,
+          profile_id,
           channel,
           message,
           created_at
@@ -75,19 +78,27 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
 
       const typedMessageData = (messageData || []) as SupabaseMessage[];
 
-      const uniqueUserIds = Array.from(
-        new Set(typedMessageData.map((msg) => msg.user_id))
-      );
+      const profileIds = Array.from(new Set(typedMessageData.map((msg) => msg.profile_id).filter(Boolean))) as string[];
+      const missingProfileIds = profileIds.filter((id) => !profileCacheRef.current[id]);
+      const missingUserIds = Array.from(new Set(
+        typedMessageData.filter((msg) => !msg.profile_id).map((msg) => msg.user_id)
+      )).filter((id) => !profileCacheRef.current[id]);
 
-      const missingUserIds = uniqueUserIds.filter(
-        (id) => !profileCacheRef.current[id]
-      );
-
-      if (missingUserIds.length > 0) {
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('user_id, display_name, username')
-          .in('user_id', missingUserIds);
+      if (missingProfileIds.length > 0 || missingUserIds.length > 0) {
+        let profileData: any[] = [];
+        let profileError: any = null;
+        if (missingProfileIds.length > 0) {
+          const result = await supabase.from('profiles')
+            .select('id, user_id, display_name, username').in('id', missingProfileIds);
+          profileData = [...profileData, ...(result.data ?? [])];
+          profileError = result.error;
+        }
+        if (!profileError && missingUserIds.length > 0) {
+          const result = await supabase.from('profiles')
+            .select('id, user_id, display_name, username').in('user_id', missingUserIds);
+          profileData = [...profileData, ...(result.data ?? [])];
+          profileError = result.error;
+        }
 
         if (profileError) {
           console.error('Error fetching profiles:', profileError);
@@ -105,10 +116,11 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
             (typeof profile.username === 'string' && profile.username.trim()) ||
             profile.user_id.slice(0, 8);
 
-          newCacheEntries[profile.user_id] = displayName;
+          newCacheEntries[profile.id] = displayName;
+          if (!newCacheEntries[profile.user_id]) newCacheEntries[profile.user_id] = displayName;
         });
 
-        missingUserIds.forEach((id) => {
+        [...missingProfileIds, ...missingUserIds].forEach((id) => {
           if (!newCacheEntries[id]) {
             newCacheEntries[id] = id.slice(0, 8);
           }
@@ -123,11 +135,12 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
       }
 
       const hydratedMessages: Message[] = typedMessageData.map((msg) => {
-        const cachedDisplayName = profileCacheRef.current[msg.user_id];
-        const displayName = cachedDisplayName || msg.user_id.slice(0, 8);
+        const identityKey = msg.profile_id ?? msg.user_id;
+        const cachedDisplayName = profileCacheRef.current[identityKey];
+        const displayName = cachedDisplayName || identityKey.slice(0, 8);
 
         if (!cachedDisplayName) {
-          profileCacheRef.current[msg.user_id] = displayName;
+          profileCacheRef.current[identityKey] = displayName;
         }
 
         return {
@@ -151,6 +164,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
         .from('global_chat')
         .insert({
           user_id: userId,
+          profile_id: profileId,
           channel: channelKey,
           message: message.trim()
         } as any);
@@ -163,7 +177,7 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
       console.error('Error sending message:', error);
       toast.error('Failed to send message');
     }
-  }, [channelKey, fetchMessages, message, userId]);
+  }, [channelKey, fetchMessages, message, profileId, userId]);
 
   useEffect(() => {
     if (profileId) {
@@ -254,7 +268,15 @@ export const RealtimeChatPanel: React.FC<RealtimeChatPanelProps> = ({
         }
       });
 
+    const timer = window.setInterval(() => void fetchMessages(), 15000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void fetchMessages();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
     return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
       isMounted = false;
       setIsConnected(false);
       setParticipantCount(0);
