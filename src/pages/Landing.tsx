@@ -42,7 +42,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { version } from "@/components/VersionHeader";
+import { releaseLabel } from "@/components/VersionHeader";
 import { usePlayerPresenceStats } from "@/hooks/usePlayerPresenceStats";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
 import { supabase } from "@/integrations/supabase/client";
@@ -228,7 +228,7 @@ const Landing = () => {
             <span className="pt-0.5 font-bebas text-xl leading-none tracking-wide">ROCKMUNDO</span>
           </Link>
           <Badge variant="outline" className="hidden bg-warning/10 px-1.5 py-0 font-oswald text-[10px] text-warning sm:inline-flex">
-            Beta V2
+            Live V1
           </Badge>
           <div className="flex-1" />
           <a href="#how-it-works" className="hidden px-2 py-1 font-oswald text-xs text-muted-foreground hover:text-foreground md:inline-block">How it works</a>
@@ -290,7 +290,7 @@ const Landing = () => {
           <div className="mb-8 text-center sm:mb-10">
             <img src={logo} alt="RockMundo" className="mx-auto mb-5 h-24 w-auto object-contain drop-shadow-2xl sm:h-32 md:h-40" />
             <div className="mb-4 flex items-center justify-center gap-2 font-oswald text-[10px] text-primary sm:text-xs">
-              <Activity className="h-3 w-3" /> Season 2026 · Open Beta · v{version}
+              <Activity className="h-3 w-3" /> Season 2026 · {releaseLabel}
             </div>
             <h1 className="mb-4 font-bebas text-4xl leading-[0.95] tracking-wide sm:text-6xl md:text-7xl">
               Live the dream.<br />
