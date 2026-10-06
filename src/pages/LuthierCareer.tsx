@@ -54,9 +54,11 @@ function LuthierCareerInner() {
             </div>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-3">
-            <Button asChild disabled={!unlocked}>
-              <Link to={unlocked ? "/crafting" : "#"}><Hammer className="mr-2 h-4 w-4" />Open Luthiery Workshop</Link>
-            </Button>
+            {unlocked ? (
+              <Button asChild><Link to="/crafting"><Hammer className="mr-2 h-4 w-4" />Open Luthiery Workshop</Link></Button>
+            ) : (
+              <Button disabled><Lock className="mr-2 h-4 w-4" />Learn Luthiery Basics first</Button>
+            )}
             <Button asChild variant="outline">
               <a href="/wiki/guides/luthiery-and-crafting.html">Read the Compendium guide</a>
             </Button>
