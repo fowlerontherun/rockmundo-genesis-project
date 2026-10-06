@@ -10,7 +10,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow, addDays, startOfWeek, format as formatDate } from "date-fns";
-import { User, Trophy, Calendar, ChevronLeft, ChevronRight, CalendarDays, Star, Flame, BarChart3, Activity as ActivityIcon, Sparkles, Bell, Target, UserPlus } from "lucide-react";
+import { User, Trophy, Calendar, ChevronLeft, ChevronRight, CalendarDays, Star, Flame, BarChart3, Activity as ActivityIcon, Sparkles, Bell, Target, UserPlus, Share2 } from "lucide-react";
 import { StandardPageLayout } from "@/components/ui/StandardPageLayout";
 import { PageEmptyState, PageErrorState, PageLoadingState } from "@/components/ui/page-state";
 
@@ -314,7 +314,7 @@ const Dashboard = () => {
       const client: any = supabase;
       const result = await client
         .from("player_achievements")
-        .select("id, unlocked_at, achievements(name, description, icon)")
+        .select("id, unlocked_at, achievements(name, description, icon, rarity)")
         .eq("profile_id", profile.id)
         .order("unlocked_at", { ascending: false })
         .limit(30);
@@ -556,6 +556,23 @@ const Dashboard = () => {
                         addSuffix: true
                       })}
                           </p>
+                          {["epic", "legendary", "mythic"].includes(String(achievement.achievements?.rarity || "").toLowerCase()) && (
+                            <Button size="sm" variant="ghost" className="mt-2 h-7 px-2" onClick={async () => {
+                              const key = "rockmundo_achievement_referral_share_at";
+                              const last = Number(localStorage.getItem(key) || 0);
+                              if (Date.now() - last < 7 * 24 * 60 * 60 * 1000) return;
+                              const { data, error } = await (supabase as any).rpc("get_referral_dashboard", { p_profile_id: profile?.id });
+                              if (error || !data?.code) return;
+                              const url = `https://rockmundo.uk/auth?ref=${encodeURIComponent(data.code)}`;
+                              const text = `I just unlocked “${achievement.achievements?.name}” in RockMundo. Start your own music career and join me.`;
+                              if (navigator.share) {
+                                try { await navigator.share({ title: "RockMundo achievement", text, url }); localStorage.setItem(key, String(Date.now())); return; }
+                                catch (error) { if ((error as DOMException)?.name === "AbortError") return; }
+                              }
+                              await navigator.clipboard.writeText(`${text} ${url}`);
+                              localStorage.setItem(key, String(Date.now()));
+                            }}><Share2 className="mr-1.5 h-3.5 w-3.5" />Share milestone</Button>
+                          )}
                         </div>
                       </div>
                     </div>)}
