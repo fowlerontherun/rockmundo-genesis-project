@@ -14,7 +14,7 @@ interface TwaaterFeedProps {
 }
 
 export const TwaaterFeed = ({ viewerAccountId, feedType = "feed" }: TwaaterFeedProps) => {
-  const [useAI, setUseAI] = useState(true);
+  const [useAI, setUseAI] = useState(false);
   const [newTwaatsCount, setNewTwaatsCount] = useState(0);
 
   const regularEnabled = feedType === "feed" && !useAI;
