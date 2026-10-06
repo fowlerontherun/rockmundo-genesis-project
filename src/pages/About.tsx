@@ -49,7 +49,7 @@ const About = () => {
           <div className="flex items-center justify-center gap-2 mb-2">
             <h1 className="text-4xl font-bebas tracking-wide">RockMundo</h1>
             <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 text-lg px-3 py-1">
-              BETA
+              LIVE V1
             </Badge>
           </div>
           <p className="text-xl text-muted-foreground font-oswald">
@@ -57,7 +57,7 @@ const About = () => {
           </p>
         </div>
 
-        {/* Beta Warning */}
+        {/* Live V1 status */}
         <Alert className="mb-8 border-warning/50 bg-warning/10">
           <Bug className="h-5 w-5 text-warning" />
           <AlertTitle className="text-warning font-bold">Beta Version</AlertTitle>
