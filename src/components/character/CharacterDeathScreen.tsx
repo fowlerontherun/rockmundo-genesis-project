@@ -104,9 +104,12 @@ export function CharacterDeathScreen({
     ? formatDistanceToNow(new Date(deadCharacter.died_at), { addSuffix: true })
     : "recently";
   const isInactivityComa = /inactivity/i.test(deadCharacter.cause_of_death ?? "");
+  const isLegacyNeglectComa = /^neglect$/i.test(deadCharacter.cause_of_death ?? "");
   const causeLabel = isInactivityComa
     ? "30 days without account activity"
-    : deadCharacter.cause_of_death || "Unknown reason";
+    : isLegacyNeglectComa
+      ? "legacy health / wellness neglect"
+      : deadCharacter.cause_of_death || "Unknown reason";
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-stage px-4 py-8">
@@ -143,7 +146,9 @@ export function CharacterDeathScreen({
               <p className="text-sm text-muted-foreground pt-2">
                 Your character entered a coma {diedAgo}. {isInactivityComa
                   ? "This happened because your RockMundo account had no activity for 30 days."
-                  : `Reason: ${causeLabel}.`} Revive them to pick up where you left off.
+                  : isLegacyNeglectComa
+                    ? "This is a legacy coma from RockMundo's older health and neglect rules; those offline health-decay rules are no longer used."
+                    : `Reason: ${causeLabel}.`} Revive them to pick up where you left off.
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -172,11 +177,13 @@ export function CharacterDeathScreen({
                 </div>
               </div>
 
-              {isInactivityComa && (
+              {(isInactivityComa || isLegacyNeglectComa) && (
                 <div className="flex gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-muted-foreground">
                   <HeartPulse className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
                   <p>
-                    Inactivity coma is not permanent death. Reviving is free, keeps your career progress, and restores your character so you can continue playing immediately.
+                    {isLegacyNeglectComa
+                      ? "This is an older coma state rather than a current offline penalty. Reviving is free, keeps your career progress, and lets you continue immediately."
+                      : "Inactivity coma is not permanent death. Reviving is free, keeps your career progress, and restores your character so you can continue playing immediately."}
                   </p>
                 </div>
               )}
