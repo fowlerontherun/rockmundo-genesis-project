@@ -19,7 +19,7 @@ SELECT
             ELSE 'Master-level instrument design, material judgement, precision construction and artisan finishing.' END,
   slug,
   CASE tier WHEN 'basic' THEN 0.10 WHEN 'professional' THEN 0.14 ELSE 0.18 END,
-  CASE tier WHEN 'basic' THEN 3 WHEN 'professional' THEN 5 ELSE 7 END,
+  CASE tier WHEN 'basic' THEN 3 WHEN 'professional' THEN 4 ELSE 4 END,
   0,
   CASE tier WHEN 'basic' THEN 80 WHEN 'professional' THEN 160 ELSE 260 END,
   true,'Luthiery',
