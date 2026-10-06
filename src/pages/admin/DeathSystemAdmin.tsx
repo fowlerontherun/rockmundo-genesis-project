@@ -309,7 +309,7 @@ const DeathSystemAdmin = () => {
             <div className="rounded-lg border p-4">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Awaiting revival</p>
               <p className="mt-1 text-2xl font-bold">{healthLoading ? "…" : comaHealth?.recent_returners_in_coma ?? "—"}</p>
-              <p className="mt-1 text-xs text-muted-foreground">Returned after coma entry but have not revived yet</p>
+              <p className="mt-1 text-xs text-muted-foreground">Returned after coma entry with no living character and have not revived yet</p>
             </div>
             <div className="rounded-lg border p-4">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Missing snapshots</p>
