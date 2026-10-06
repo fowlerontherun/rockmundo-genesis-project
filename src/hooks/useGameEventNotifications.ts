@@ -544,14 +544,20 @@ export const useGameEventNotifications = () => {
         async (payload) => {
           const notif = payload.new;
           
-          // Check if this notification is for the user's account
+          // Check if this notification belongs to the active persona or
+          // one of their current band accounts. Twaater owner_id stores the
+          // profile/band id, not the auth user id.
           const { data: account } = await supabase
             .from('twaater_accounts')
-            .select('owner_id')
+            .select('owner_type, owner_id')
             .eq('id', notif.account_id)
-            .single();
-          
-          if (account?.owner_id === user.id) {
+            .maybeSingle();
+
+          const ownsNotificationAccount =
+            (account?.owner_type === 'persona' && account.owner_id === profileId) ||
+            (account?.owner_type === 'band' && userBandIdsRef.current.includes(account.owner_id));
+
+          if (ownsNotificationAccount) {
             const typeMessages: Record<string, { title: string; message: string }> = {
               'follow': { title: 'New Follower!', message: 'Someone started following you on Twaater' },
               'like': { title: 'New Like!', message: 'Someone liked your twaat' },
