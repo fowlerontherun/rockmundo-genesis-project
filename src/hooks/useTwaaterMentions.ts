@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { hydrateTwaaterFeedExtras } from "@/hooks/useTwaats";
 
 export const useTwaaterMentions = (accountId?: string) => {
-  const { data: mentions, isLoading } = useQuery({
+  const { data: mentions, isLoading, error, refetch } = useQuery({
     queryKey: ["twaater-mentions", accountId],
     queryFn: async () => {
       if (!accountId) return [];
@@ -29,13 +29,15 @@ export const useTwaaterMentions = (accountId?: string) => {
       const hydrated = await hydrateTwaaterFeedExtras(twaats);
       const hydratedById = new Map(hydrated.map((twaat: any) => [twaat.id, twaat]));
 
-      return rows.map((mention: any) => ({
-        ...mention,
-        twaat: mention.twaat ? hydratedById.get(mention.twaat.id) || mention.twaat : null,
-      }));
+      return rows
+        .filter((mention: any) => Boolean(mention.twaat))
+        .map((mention: any) => ({
+          ...mention,
+          twaat: hydratedById.get(mention.twaat.id) || mention.twaat,
+        }));
     },
     enabled: !!accountId,
   });
 
-  return { mentions, isLoading };
+  return { mentions, isLoading, error, refetch };
 };
