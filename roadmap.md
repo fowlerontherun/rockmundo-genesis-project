@@ -1,5 +1,8 @@
 # Roadmap
 
+- [ ] Add TV-studio camera variety and replay-time camera movement without changing archived broadcast cues.
+- [ ] Add safe studio performer movement, verify stage/equipment constraints and visuals, and update version history.
+
 - [x] Add withdrawal for pending real-band festival invitations and verify permissions, status updates and version history. 17 focused tests pass; build OK and anonymous server access denied. Live-account verification is unavailable with the external account service; three older festival source-expectation tests still fail.
 
 - [x] Review maintained translations and translate mobile navigation and character switching.
