@@ -3,9 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TrendingUp, TrendingDown, Minus, Trophy, Music, Radio, Video } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Trophy, Music, Radio, Video, Share2 } from "lucide-react";
 import { SongPlayer } from "@/components/audio/SongPlayer";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { Button } from "@/components/ui/button";
 
 interface MyChartPositionsProps {
   userId: string;
@@ -162,12 +163,33 @@ export function MyChartPositions({ userId }: MyChartPositionsProps) {
                     Highest position: #{highestRank}
                   </CardDescription>
                 </div>
-                {highestRank <= 10 && (
-                  <Badge className="bg-amber-500">
-                    <Trophy className="h-3 w-3 mr-1" />
-                    Top 10
-                  </Badge>
-                )}
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  {highestRank <= 10 && (
+                    <Badge className="bg-amber-500">
+                      <Trophy className="h-3 w-3 mr-1" />
+                      Top 10
+                    </Badge>
+                  )}
+                  {highestRank <= 10 && (
+                    <Button size="sm" variant="outline" onClick={async () => {
+                      const key = "rockmundo_chart_referral_share_at";
+                      const last = Number(localStorage.getItem(key) || 0);
+                      if (Date.now() - last < 7 * 24 * 60 * 60 * 1000) return;
+                      const { data, error } = await (supabase as any).rpc("get_referral_dashboard", { p_profile_id: profileId });
+                      if (error || !data?.code) return;
+                      const url = `${window.location.origin}/auth?ref=${encodeURIComponent(data.code)}`;
+                      const text = highestRank === 1
+                        ? `My song “${firstPos.songTitle}” hit #1 in RockMundo. Start your own music career and join me.`
+                        : `My song “${firstPos.songTitle}” reached #${highestRank} in RockMundo. Start your own music career and join me.`;
+                      if (navigator.share) {
+                        try { await navigator.share({ title: "RockMundo chart milestone", text, url }); localStorage.setItem(key, String(Date.now())); return; }
+                        catch (error) { if ((error as DOMException)?.name === "AbortError") return; }
+                      }
+                      await navigator.clipboard.writeText(`${text} ${url}`);
+                      localStorage.setItem(key, String(Date.now()));
+                    }}><Share2 className="mr-1.5 h-3.5 w-3.5" />Share chart result</Button>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
