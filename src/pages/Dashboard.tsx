@@ -563,7 +563,7 @@ const Dashboard = () => {
                               if (Date.now() - last < 7 * 24 * 60 * 60 * 1000) return;
                               const { data, error } = await (supabase as any).rpc("get_referral_dashboard", { p_profile_id: profile?.id });
                               if (error || !data?.code) return;
-                              const url = `https://rockmundo.uk/auth?ref=${encodeURIComponent(data.code)}`;
+                              const url = `${window.location.origin}/auth?ref=${encodeURIComponent(data.code)}`;
                               const text = `I just unlocked “${achievement.achievements?.name}” in RockMundo. Start your own music career and join me.`;
                               if (navigator.share) {
                                 try { await navigator.share({ title: "RockMundo achievement", text, url }); localStorage.setItem(key, String(Date.now())); return; }

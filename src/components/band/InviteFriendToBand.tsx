@@ -70,7 +70,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
   const { toast } = useToast();
 
   const externalRecruitmentUrl = referralCode
-    ? `https://rockmundo.uk/auth?ref=${encodeURIComponent(referralCode)}&band=${encodeURIComponent(bandId)}`
+    ? `${window.location.origin}/auth?ref=${encodeURIComponent(referralCode)}&band=${encodeURIComponent(bandId)}`
     : '';
   const externalRecruitmentText = `Join me in RockMundo and help build ${bandName}. Create your musician with my invite, then I can recruit you into the band: ${externalRecruitmentUrl}`;
 

@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 
-const ROCKMUNDO_BASE_URL = "https://rockmundo.uk";
 const DISCORD_INVITE_URL = "https://discord.gg/KB45k3XJuZ";
 const FACEBOOK_URL = import.meta.env.VITE_ROCKMUNDO_FACEBOOK_URL as string | undefined;
 
@@ -28,7 +27,7 @@ type Dashboard = {
     vip_paid: number;
     vip_rewarded: number;
   };
-  pending: { signup: number; vip: number };
+  pending: { signup: number; vip: number; milestones?: number };
   rewards: Record<string, Reward>;
   discord: { verified: boolean; rewarded: boolean; verified_at?: string | null };
 };
@@ -82,8 +81,8 @@ export default function CommunityRewards({ profileId }: { profileId?: string | n
     if (status === "verified") void loadDashboard();
   }, []);
 
-  const referralUrl = useMemo(() => dashboard?.code ? `${ROCKMUNDO_BASE_URL}/auth?ref=${encodeURIComponent(dashboard.code)}` : "", [dashboard?.code]);
-  const totalClaimable = (dashboard?.pending.signup ?? 0) + (dashboard?.pending.vip ?? 0) + (dashboard?.discord.verified && !dashboard.discord.rewarded ? 1 : 0);
+  const referralUrl = useMemo(() => dashboard?.code ? `${window.location.origin}/auth?ref=${encodeURIComponent(dashboard.code)}` : "", [dashboard?.code]);
+  const totalClaimable = (dashboard?.pending.signup ?? 0) + (dashboard?.pending.vip ?? 0) + (dashboard?.pending.milestones ?? 0) + (dashboard?.discord.verified && !dashboard.discord.rewarded ? 1 : 0);
   const qualified = dashboard?.stats.qualified ?? 0;
   const promoterMilestones = [5, 10, 25];
   const promoterLabels: Record<number, string> = { 5: "Street Promoter", 10: "Scene Builder", 25: "RockMundo Ambassador" };
@@ -113,13 +112,21 @@ export default function CommunityRewards({ profileId }: { profileId?: string | n
     if (!profileId) return;
     setClaiming(true);
     const { data, error } = await (supabase as any).rpc("claim_referral_rewards", { p_profile_id: profileId });
-    setClaiming(false);
     if (error) {
+      setClaiming(false);
       toast({ title: "Reward claim failed", description: error.message, variant: "destructive" });
       return;
     }
+    const { data: milestoneData, error: milestoneError } = await (supabase as any).rpc("claim_referral_milestones", { p_profile_id: profileId });
+    setClaiming(false);
+    if (milestoneError) {
+      toast({ title: "Promoter reward claim failed", description: milestoneError.message, variant: "destructive" });
+      await loadDashboard();
+      return;
+    }
     const claimed = data?.claimed ?? {};
-    const count = Number(claimed.signup ?? 0) + Number(claimed.vip ?? 0) + Number(claimed.discord ?? 0);
+    const milestoneCount = Array.isArray(milestoneData?.claimed) ? milestoneData.claimed.length : 0;
+    const count = Number(claimed.signup ?? 0) + Number(claimed.vip ?? 0) + Number(claimed.discord ?? 0) + milestoneCount;
     toast({ title: count > 0 ? "Rewards claimed" : "Nothing ready yet", description: count > 0 ? `${count} reward${count === 1 ? "" : "s"} added to this character.` : "Pending referrals will become claimable once they meet the qualification rules." });
     await loadDashboard();
   };
@@ -220,7 +227,7 @@ export default function CommunityRewards({ profileId }: { profileId?: string | n
           <div className="flex flex-wrap gap-2">
             {[5, 10, 25].map((milestone) => <Badge key={milestone} variant={qualified >= milestone ? "default" : "outline"}>{promoterLabels[milestone]} · {milestone}</Badge>)}
           </div>
-          <p className="text-xs text-muted-foreground">Promoter milestone rewards unlock automatically when qualified recruits reach each target.</p>
+          <p className="text-xs text-muted-foreground">Promoter milestones become claimable at each target. Claiming is explicit so rewards go to the character you have selected.</p>
         </CardContent>
       </Card>
 

@@ -39,7 +39,7 @@ if (typeof window !== "undefined") {
   if (referralParam && REFERRAL_CODE_PATTERN.test(referralParam)) {
     localStorage.setItem(REFERRAL_STORAGE_KEY, referralParam);
     const bandParam = new URLSearchParams(window.location.search).get("band")?.trim();
-    if (bandParam && /^[0-9a-f-]{36}$/i.test(bandParam)) {
+    if (bandParam && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bandParam)) {
       localStorage.setItem(REFERRAL_BAND_STORAGE_KEY, bandParam);
     }
   }

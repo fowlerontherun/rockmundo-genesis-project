@@ -16,6 +16,7 @@ import { calculateLiveSetup } from "@/utils/liveSetup";
 import type { GigExperienceDTO, GigExperienceSongDTO } from "@/features/gig-experience/types";
 import { metricValue } from "@/features/gig-experience/reportMetric";
 import { supabase } from "@/integrations/supabase/client";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useEffect, useState } from "react";
 import { LessonsPanel } from "./outcome/LessonsPanel";
 import { GigCrewProgressReport } from "./GigCrewProgressReport";
@@ -41,26 +42,24 @@ const legacyPostConsequences: GigExperienceDTO["postConsequences"] = {
 };
 
 export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCapacity, songs = [], experience, xpSummary, fanConversion, momentHighlights, venueRelationship, chemistryMoments, chemistryLevel = 50, chemistryChange = 0, merchItemsSold = 0, ticketPrice = 20, stageBehaviorUsed, gigId }: Props) => {
+  const { profileId } = useActiveProfile();
   const report = experience ?? legacyToExperience(outcome, venueName, venueCapacity, songs, merchItemsSold, chemistryChange, stageBehaviorUsed);
   if (!report) return null;
   const processing = report.viewer.ready === false || report.gig.status === "processing";
   const [shareInvite, setShareInvite] = useState<{ url: string; text: string } | null>(null);
   useEffect(() => {
     if (!isOpen || processing || ["cancelled", "canceled", "abandoned"].includes(report.gig.status)) return;
-    const key = "rockmundo_gig_referral_prompt_at";
+    if (!profileId) return;
+    const key = "rockmundo_gig_referral_share_at";
     const last = Number(localStorage.getItem(key) || 0);
     if (Date.now() - last < 7 * 24 * 60 * 60 * 1000) return;
     void (async () => {
-      const { data: profiles } = await (supabase as any).from("profiles").select("id").eq("user_id", (await supabase.auth.getUser()).data.user?.id).eq("is_active", true).limit(1);
-      const profileId = profiles?.[0]?.id;
-      if (!profileId) return;
       const { data, error } = await (supabase as any).rpc("get_referral_dashboard", { p_profile_id: profileId });
       if (error || !data?.code) return;
-      const url = `https://rockmundo.uk/auth?ref=${encodeURIComponent(data.code)}`;
+      const url = `${window.location.origin}/auth?ref=${encodeURIComponent(data.code)}`;
       setShareInvite({ url, text: `I just played ${report.gig.venue.name} in RockMundo. Start your own music career and join me.` });
-      localStorage.setItem(key, String(Date.now()));
     })();
-  }, [isOpen, processing, report.gig.status, report.gig.venue.name]);
+  }, [isOpen, processing, profileId, report.gig.status, report.gig.venue.name]);
   const cancelled = ["cancelled", "canceled", "abandoned"].includes(report.gig.status);
 
   return <Dialog open={isOpen} onOpenChange={onClose}>
@@ -93,7 +92,7 @@ function HeadlineResult({ experience, onClose, processing, cancelled, shareInvit
         <Metric icon={<TrendingUp />} label="Growth" value={`+${numberFormat.format(metricValue(experience.headline.fansGained, 0))} fans`} detail={`+${numberFormat.format(metricValue(experience.headline.fameGained, 0))} fame`} />
         <Metric icon={<Music />} label="Best song" value={best?.title ?? metricValue(experience.headline.bestSongTitle, "Unknown")} detail={best ? score(songScore(best)) : "Missing songs"} />
         <Metric icon={<Sparkles />} label="Weakest moment" value={weak ? `${weak.title} struggled` : "None recorded"} detail={weak ? score(songScore(weak)) : "Evidence from setlist scores"} />
-        <div className="col-span-2 flex flex-wrap gap-2 md:col-span-2"><Button onClick={onClose}>Continue</Button><Button variant="secondary" asChild><a href="#performance-story">Performance Story</a></Button><Button variant="outline" asChild><a href="#detailed-analysis">Detailed Analysis</a></Button><Button variant="outline" disabled={!experience.viewer.replayAvailable}>Replay (placeholder)</Button>{shareInvite ? <Button variant="outline" onClick={async () => { if (navigator.share) { try { await navigator.share({ title: "My RockMundo gig", text: shareInvite.text, url: shareInvite.url }); return; } catch (error) { if ((error as DOMException)?.name === "AbortError") return; } } await navigator.clipboard.writeText(`${shareInvite.text} ${shareInvite.url}`); }}><Share2 className="mr-2 h-4 w-4" />Invite a friend</Button> : null}</div>
+        <div className="col-span-2 flex flex-wrap gap-2 md:col-span-2"><Button onClick={onClose}>Continue</Button><Button variant="secondary" asChild><a href="#performance-story">Performance Story</a></Button><Button variant="outline" asChild><a href="#detailed-analysis">Detailed Analysis</a></Button><Button variant="outline" disabled={!experience.viewer.replayAvailable}>Replay (placeholder)</Button>{shareInvite ? <Button variant="outline" onClick={async () => { if (navigator.share) { try { await navigator.share({ title: "My RockMundo gig", text: shareInvite.text, url: shareInvite.url }); localStorage.setItem("rockmundo_gig_referral_share_at", String(Date.now())); return; } catch (error) { if ((error as DOMException)?.name === "AbortError") return; } } await navigator.clipboard.writeText(`${shareInvite.text} ${shareInvite.url}`); localStorage.setItem("rockmundo_gig_referral_share_at", String(Date.now())); }}><Share2 className="mr-2 h-4 w-4" />Invite a friend</Button> : null}</div>
       </div>
     </div>
   </section>;
