@@ -12,10 +12,11 @@ import { QuotedTwaat } from "./QuotedTwaat";
 import { LinkedContentEmbed } from "./LinkedContentEmbed";
 import { VerifiedBadge } from "./VerifiedBadge";
 import { PromoteTwaatDialog } from "./PromoteTwaatDialog";
-import { Heart, MessageCircle, Repeat2, Bookmark, BookmarkCheck, Quote, Rocket, Trash2 } from "lucide-react";
+import { Heart, MessageCircle, Repeat2, Bookmark, BookmarkCheck, Quote, Rocket, Trash2, MoreHorizontal, Flag, Ban } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTwaaterRuntimeConfig } from "@/hooks/useTwaaterRuntimeConfig";
 import { useDeleteTwaat } from "@/hooks/useDeleteTwaat";
+import { useTwaaterModeration } from "@/hooks/useTwaaterModeration";
 
 interface TwaatCardProps {
   twaat: any;
@@ -31,6 +32,7 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
   const navigate = useNavigate();
   const { config } = useTwaaterRuntimeConfig();
   const { deleteTwaat, isDeleting } = useDeleteTwaat();
+  const { reportTwaat, blockAccount, isReporting, isBlocking } = useTwaaterModeration(viewerAccountId);
 
   const handleReply = async () => {
     if (!replyBody.trim() || !viewerAccountId) return;
@@ -97,6 +99,48 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
             <span className="text-muted-foreground text-sm">@{twaat.account.handle}</span>
             <span className="text-muted-foreground text-sm">·</span>
             <span className="text-muted-foreground text-sm">{formatDistanceToNow(new Date(twaat.created_at), { addSuffix: true })}</span>
+            {viewerAccountId && !isOwn && twaat.account?.id && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="ml-auto h-7 w-7" aria-label="Twaat actions">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    disabled={isReporting}
+                    onClick={() => {
+                      const details = window.prompt("Why are you reporting this Twaat?");
+                      if (details === null) return;
+                      reportTwaat({
+                        twaatId: twaat.id,
+                        reporterAccountId: viewerAccountId,
+                        reason: "other",
+                        details: details.trim() || undefined,
+                      });
+                    }}
+                  >
+                    <Flag className="h-4 w-4 mr-2" />
+                    Report Twaat
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={isBlocking}
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => {
+                      if (window.confirm(`Block @${twaat.account.handle}? Their Twaats and messages will be hidden.`)) {
+                        blockAccount({
+                          blockerAccountId: viewerAccountId,
+                          blockedAccountId: twaat.account.id,
+                        });
+                      }
+                    }}
+                  >
+                    <Ban className="h-4 w-4 mr-2" />
+                    Block @{twaat.account.handle}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
 
           <p className="text-sm mt-1 whitespace-pre-wrap break-words">{makeMentionsClickable(twaat.body)}</p>
