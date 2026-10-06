@@ -25,6 +25,7 @@ import { translateFMLabel } from "@/i18n/fm";
 import { fmChatText } from "@/i18n/fmChat";
 import { useFriendships } from "@/features/relationships/hooks/useFriendships";
 import { DirectMessageThread } from "@/features/social-hub/components/DirectMessageThread";
+import { useUnreadDirectMessageCount } from "@/hooks/useDirectMessages";
 
 const HIDDEN_PATHS = ["/auth", "/onboarding", "/create-character"];
 
@@ -38,6 +39,7 @@ export function FMChatDock() {
   const { open, setOpen, threads, openThread, closeThread } = useChatDock();
   const { friendships, loading } = useFriendships(myProfileId);
   const { data: primaryBand } = usePrimaryBand();
+  const { data: unreadDirectMessages = 0 } = useUnreadDirectMessageCount(myProfileId);
   const [activeRoom, setActiveRoom] = useState<RoomId>("world");
   const [notificationMode, setNotificationMode] = useState<"auto" | "badge" | "off">(() => {
     try {
@@ -230,9 +232,9 @@ export function FMChatDock() {
           <span className="flex items-center gap-1.5 text-[11px] tracking-tight text-fm-fg font-medium">
             <MessageSquare className="h-3.5 w-3.5 text-fm-accent" />
             {fmChatText(language, "chat")}
-            {worldActivity && notificationMode !== "off" && (
+            {(worldActivity || unreadDirectMessages > 0) && notificationMode !== "off" && (
               <span className="rounded-full bg-fm-accent px-1.5 text-[10px] text-fm-panel" aria-label={`${unreadWorld} unread world chat messages`}>
-                {unreadWorld > 99 ? "99+" : unreadWorld}
+                {unreadWorld + unreadDirectMessages > 99 ? "99+" : unreadWorld + unreadDirectMessages}
               </span>
             )}
             <span className="text-fm-fg-muted">
@@ -277,6 +279,7 @@ export function FMChatDock() {
                   >
                     <Icon className="h-3 w-3" />
                     {room.id === "world" && unreadWorld > 0 && <span className="rounded-full bg-fm-accent px-1 text-[9px] text-fm-panel">{unreadWorld > 99 ? "99+" : unreadWorld}</span>}
+                    {room.id === "friends" && unreadDirectMessages > 0 && <span className="rounded-full bg-fm-accent px-1 text-[9px] text-fm-panel">{unreadDirectMessages > 99 ? "99+" : unreadDirectMessages}</span>}
                     {room.label}
                   </button>
                 );
