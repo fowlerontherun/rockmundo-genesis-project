@@ -6,6 +6,7 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import CharacterGate from "@/components/CharacterGate";
 import NoActiveCharacterGate from "@/components/character/NoActiveCharacterGate";
 import { useTravelLifecycleRefresh } from "@/mobile/hooks/useTravelLifecycleRefresh";
+import { usePlaytimeTracker } from "@/hooks/usePlaytimeTracker";
 import { MobileShell } from "./MobileShell";
 
 /**
@@ -18,6 +19,9 @@ export default function MobileLayout() {
   const { loading: dataLoading, refetch: refetchGameData } = useGameData();
   const { profileId } = useActiveProfile();
   const devGuestBypass = import.meta.env.DEV;
+
+  // Keep mobile-only sessions visible to the account-wide inactivity policy.
+  usePlaytimeTracker(profileId);
 
   // The server owns travel departure/arrival transitions. This lightweight
   // watcher only refreshes mobile state when that authoritative row changes.
