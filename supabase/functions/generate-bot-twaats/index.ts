@@ -470,16 +470,15 @@ serve(async (req) => {
         continue;
       }
 
-      // Create initial metrics for the twaat
+      // The Twaat insert trigger creates the metrics row first. Seed only
+      // impressions here; likes/replies/retwaats are maintained by their
+      // authoritative reaction/reply triggers.
       await supabase
         .from("twaat_metrics")
-        .insert({
+        .upsert({
           twaat_id: newTwaat.id,
           impressions: Math.floor(Math.random() * 100) + 10,
-          likes: Math.floor(Math.random() * 20),
-          replies: Math.floor(Math.random() * 5),
-          retwaats: Math.floor(Math.random() * 5),
-        });
+        }, { onConflict: "twaat_id" });
 
       // Update last_posted_at
       await supabase
@@ -518,13 +517,10 @@ serve(async (req) => {
         if (!twaatError && newTwaat) {
           await supabase
             .from("twaat_metrics")
-            .insert({
+            .upsert({
               twaat_id: newTwaat.id,
               impressions: Math.floor(Math.random() * 100) + 10,
-              likes: Math.floor(Math.random() * 20),
-              replies: Math.floor(Math.random() * 5),
-              retwaats: Math.floor(Math.random() * 5),
-                });
+            }, { onConflict: "twaat_id" });
 
           await supabase
             .from("twaater_bot_accounts")

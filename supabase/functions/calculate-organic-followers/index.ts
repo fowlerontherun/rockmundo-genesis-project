@@ -35,14 +35,6 @@ serve(async (req) => {
       );
     }
 
-    // Get bot account handles for notifications
-    const { data: botHandles } = await supabase
-      .from("twaater_accounts")
-      .select("id, handle")
-      .in("id", botAccountIds);
-    
-    const handleById = new Map(botHandles?.map(b => [b.id, b.handle]) || []);
-
     // Get all player accounts with their owner info (uses owner_type and owner_id)
     const { data: playerAccounts, error: accountsError } = await supabase
       .from("twaater_accounts")
@@ -133,17 +125,6 @@ serve(async (req) => {
 
         if (!insertError) {
           totalFollowersAdded++;
-
-          // Create notification
-          const botHandle = handleById.get(botId) || 'someone';
-          await supabase
-            .from("twaater_notifications")
-            .insert({
-              account_id: account.id,
-              type: "follow",
-              actor_account_id: botId,
-              message: `@${botHandle} started following you`,
-            });
 
           console.log(`[calculate-organic-followers] Bot ${botId} now follows account ${account.id} (fame: ${fame}, fans: ${fans})`);
         }

@@ -57,11 +57,20 @@ export default function Twaater() {
   const ownerType = "persona" as const;
   const { account, isLoading: accountLoading } = useTwaaterAccount(ownerType, profile?.id);
   const [activeAccountId, setActiveAccountId] = useState<string | null>(null);
+  const [showDesktopSidebar, setShowDesktopSidebar] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     setActiveAccountId(null);
   }, [profile?.id]);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    const sync = () => setShowDesktopSidebar(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
 
   const currentAccountId = activeAccountId || account?.id;
 
@@ -71,25 +80,11 @@ export default function Twaater() {
       if (!currentAccountId) return null;
       const { data, error } = await supabase
         .from("twaater_accounts")
-        .select("id, owner_type, display_name, handle")
+        .select("id, owner_type, display_name, handle, follower_count")
         .eq("id", currentAccountId)
         .single();
       if (error) throw error;
       return data;
-    },
-    enabled: !!currentAccountId,
-  });
-
-  const { data: followerCount } = useQuery({
-    queryKey: ["twaater-follower-count", currentAccountId],
-    queryFn: async () => {
-      if (!currentAccountId) return 0;
-      const { count, error } = await supabase
-        .from("twaater_follows")
-        .select("*", { count: "exact", head: true })
-        .eq("followed_account_id", currentAccountId);
-      if (error) throw error;
-      return count || 0;
     },
     enabled: !!currentAccountId,
   });
@@ -122,7 +117,7 @@ export default function Twaater() {
                     className="flex items-center gap-1.5 px-2 py-1 rounded-full hover:bg-[hsl(var(--twaater-purple)_/_0.1)] transition-colors text-sm"
                   >
                     <Users className="h-4 w-4 text-[hsl(var(--twaater-purple))]" />
-                    <span className="font-medium">{followerCount?.toLocaleString() || 0}</span>
+                    <span className="font-medium">{(displayAccount?.follower_count || 0).toLocaleString()}</span>
                     <span className="text-muted-foreground hidden sm:inline">followers</span>
                   </button>
                 )}
@@ -199,10 +194,12 @@ export default function Twaater() {
             </Tabs>
           </div>
 
-          <div className="hidden lg:block w-80 space-y-4 sticky top-0 h-fit pt-4">
-            <TrendingHashtags />
-            {currentAccountId && <WhoToFollow currentAccountId={currentAccountId} />}
-          </div>
+          {showDesktopSidebar && (
+            <div className="hidden lg:block w-80 space-y-4 sticky top-0 h-fit pt-4">
+              <TrendingHashtags />
+              {currentAccountId && <WhoToFollow currentAccountId={currentAccountId} />}
+            </div>
+          )}
         </div>
       </div>
     </FMPageScaffold>
