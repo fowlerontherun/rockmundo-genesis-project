@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useCharacterSlots } from "@/hooks/useCharacterSlots";
+import { useCharacterDeath } from "@/hooks/useCharacterDeath";
 import { useGameData } from "@/hooks/useGameData";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
@@ -21,6 +22,7 @@ export function CharacterSwitcher({ mobile = false }: { mobile?: boolean }) {
   const [switching, setSwitching] = useState(false);
   const switchLock = useRef(false);
   const { slots, characters, switchCharacter } = useCharacterSlots();
+  const { resurrectCharacter } = useCharacterDeath();
   const { refetch: refetchGameData } = useGameData();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -32,14 +34,18 @@ export function CharacterSwitcher({ mobile = false }: { mobile?: boolean }) {
     return null;
   }
 
-  const handleSwitch = async (profileId: string) => {
-    if (profileId === activeChar?.id || switchLock.current) return;
+  const handleSwitch = async (profileId: string, isComatose = false) => {
+    if ((!isComatose && profileId === activeChar?.id) || switchLock.current) return;
     switchLock.current = true;
     setSwitching(true);
     try {
-      await switchCharacter.mutateAsync(profileId);
+      if (isComatose) {
+        await resurrectCharacter.mutateAsync(profileId);
+      } else {
+        await switchCharacter.mutateAsync(profileId);
+      }
       await refetchGameData();
-      toast({ title: t("playerControls.switched"), description: t("playerControls.updated") });
+      toast({ title: isComatose ? t("playerControls.revive") : t("playerControls.switched"), description: t("playerControls.updated") });
       navigate(mobile ? "/mobile" : "/home", { replace: true });
     } catch {
       toast({ title: t("common.error"), description: t("playerControls.switchFailed"), variant: "destructive" });
@@ -80,8 +86,8 @@ export function CharacterSwitcher({ mobile = false }: { mobile?: boolean }) {
         {characters.map((char) => (
           <DropdownMenuItem
             key={char.id}
-            disabled={switching || char.id === activeChar.id}
-            onSelect={() => void handleSwitch(char.id)}
+            disabled={switching || (char.id === activeChar.id && !char.died_at)}
+            onSelect={() => void handleSwitch(char.id, Boolean(char.died_at))}
             className="gap-2 cursor-pointer"
           >
             <Avatar className="h-7 w-7">
