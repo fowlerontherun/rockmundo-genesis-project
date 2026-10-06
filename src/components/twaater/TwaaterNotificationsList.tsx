@@ -9,7 +9,7 @@ interface TwaaterNotificationsListProps {
 }
 
 export const TwaaterNotificationsList = ({ accountId }: TwaaterNotificationsListProps) => {
-  const { notifications, isLoading, markAsRead, markAllAsRead, unreadCount } = useTwaaterNotifications(accountId);
+  const { notifications, isLoading, error, refetch, markAsRead, markAllAsRead, unreadCount } = useTwaaterNotifications(accountId);
   const navigate = useNavigate();
 
   const getNotificationIcon = (type: string) => {
@@ -25,15 +25,16 @@ export const TwaaterNotificationsList = ({ accountId }: TwaaterNotificationsList
   };
 
   const getNotificationText = (notification: any) => {
-    const account = notification.source_account;
+    const handle = notification.source_account?.handle;
+    const actor = handle ? `@${handle}` : "Someone";
     switch (notification.type) {
-      case "like": return `@${account.handle} liked your twaat`;
-      case "retwaat": return `@${account.handle} retwaated your twaat`;
-      case "reply": return `@${account.handle} replied to your twaat`;
-      case "follow": return `@${account.handle} followed you`;
-      case "quote": return `@${account.handle} quoted your twaat`;
-      case "mention": return `@${account.handle} mentioned you`;
-      default: return "New notification";
+      case "like": return `${actor} liked your twaat`;
+      case "retwaat": return `${actor} retwaated your twaat`;
+      case "reply": return `${actor} replied to your twaat`;
+      case "follow": return `${actor} followed you`;
+      case "quote": return `${actor} quoted your twaat`;
+      case "mention": return `${actor} mentioned you`;
+      default: return "New Twaater notification";
     }
   };
 
@@ -42,7 +43,7 @@ export const TwaaterNotificationsList = ({ accountId }: TwaaterNotificationsList
       markAsRead(notification.id);
     }
     
-    if (notification.type === "follow") {
+    if (notification.type === "follow" && notification.source_account?.handle) {
       navigate(`/twaater/${notification.source_account.handle}`);
     } else if (notification.related_twaat_id) {
       navigate(`/twaater/twaat/${notification.related_twaat_id}`);
@@ -53,6 +54,17 @@ export const TwaaterNotificationsList = ({ accountId }: TwaaterNotificationsList
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 text-center space-y-3">
+        <p className="text-sm font-medium">Notifications couldn't load.</p>
+        <Button variant="outline" size="sm" onClick={() => refetch()}>
+          Retry
+        </Button>
       </div>
     );
   }
