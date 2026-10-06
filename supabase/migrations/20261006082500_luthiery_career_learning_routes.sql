@@ -74,7 +74,7 @@ SELECT
               WHEN 'professional' THEN 'professional+luthiery+guitar+building'
               ELSE 'master+luthier+guitar+building' END,
   'RockMundo Luthiery Learning',NULL,
-  CASE tier WHEN 'basic' THEN 2 WHEN 'professional' THEN 4 ELSE 5 END,
+  CASE tier WHEN 'basic' THEN 1 WHEN 'professional' THEN 2 ELSE 3 END,
   slug,'Luthiery',ARRAY['luthiery',tier,'instrument-building']::text[],tier='basic'
 FROM skills s
 WHERE NOT EXISTS (SELECT 1 FROM public.education_youtube_resources y WHERE y.skill_slug=s.slug);
