@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { useTranslation } from "@/hooks/useTranslation";
+import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow, addDays, startOfWeek, format as formatDate } from "date-fns";
@@ -571,8 +572,13 @@ const Dashboard = () => {
                                 try { await navigator.share({ title: "RockMundo achievement", text, url }); localStorage.setItem(key, String(Date.now())); return; }
                                 catch (error) { if ((error as DOMException)?.name === "AbortError") return; }
                               }
-                              await navigator.clipboard.writeText(`${text} ${url}`);
-                              localStorage.setItem(key, String(Date.now()));
+                              try {
+                                await navigator.clipboard.writeText(`${text} ${url}`);
+                                localStorage.setItem(key, String(Date.now()));
+                                toast.success("Achievement invite copied");
+                              } catch {
+                                toast.error("Could not share achievement", { description: "Your browser blocked clipboard access. Try sharing again from a supported browser." });
+                              }
                             }}><Share2 className="mr-1.5 h-3.5 w-3.5" />Share milestone</Button>
                           )}
                         </div>
