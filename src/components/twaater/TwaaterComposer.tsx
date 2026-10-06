@@ -367,7 +367,7 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
 
         <div className="flex items-center gap-2 ml-auto">
           <span className={`text-xs ${isOverLimit ? "text-destructive" : "text-muted-foreground"}`}>
-            {charCount > 450 && `${charCount}/${maxChars}`}
+            {charCount > Math.max(0, maxChars - 50) && `${charCount}/${maxChars}`}
           </span>
           <Button
             onClick={handlePost}
