@@ -125,10 +125,22 @@ export function useChatRoom(channelKey: string | null) {
           void fetchMessages();
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") void fetchMessages();
+      });
+
+    // Reconcile periodically and whenever the tab becomes visible again so a
+    // temporary websocket disconnect cannot leave chat silently stale.
+    const timer = window.setInterval(() => void fetchMessages(), 15000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void fetchMessages();
+    };
+    document.addEventListener("visibilitychange", onVisible);
 
     return () => {
-      supabase.removeChannel(channel);
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+      void supabase.removeChannel(channel);
     };
   }, [channelKey, fetchMessages]);
 
