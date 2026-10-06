@@ -11,37 +11,32 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertTriangle, Shield, Eye, EyeOff, CheckCircle, XCircle, Filter } from "lucide-react";
+import { AlertTriangle, Shield, EyeOff, CheckCircle, XCircle, Filter } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+
+const REPORT_STATUSES = ["submitted", "triage", "under_review", "awaiting_information", "action_taken", "no_action", "duplicate", "closed"] as const;
+const REPORT_PRIORITIES = ["low", "normal", "high", "urgent"] as const;
 
 const TwaaterModeration = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [filterStatus, setFilterStatus] = useState<string>("pending");
+  const [filterStatus, setFilterStatus] = useState<string>("submitted");
   const [newFilterWord, setNewFilterWord] = useState("");
   const [filterSeverity, setFilterSeverity] = useState<"low" | "medium" | "high">("medium");
   const [filterAction, setFilterAction] = useState<"flag" | "hide" | "reject">("flag");
 
-  // Fetch reports
-  const { data: reports, isLoading: reportsLoading } = useQuery({
-    queryKey: ["twaat_reports", filterStatus],
+  // Twaater reports use the unified, audited moderation queue.
+  const { data: reports, isLoading: reportsLoading, error: reportsError, refetch: refetchReports } = useQuery({
+    queryKey: ["twaater-unified-reports", filterStatus],
     queryFn: async () => {
-      let query = supabase
-        .from("twaat_reports" as any)
-        .select(`
-          *,
-          twaat:twaats!twaat_reports_twaat_id_fkey(id, body, created_at),
-          reporter:twaater_accounts!twaat_reports_reporter_account_id_fkey(handle, display_name)
-        `)
-        .order("created_at", { ascending: false });
+      const { data, error } = await (supabase as any).rpc("get_moderation_report_queue", {
+        p_status: filterStatus === "all" ? null : filterStatus,
+        p_limit: 100,
+      });
 
-      if (filterStatus !== "all") {
-        query = query.eq("status", filterStatus);
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
-      return data || [];
+      const queue = Array.isArray(data) ? data : [];
+      return queue.filter((report: any) => report.target_type === "twaater_post");
     },
   });
 
@@ -59,43 +54,64 @@ const TwaaterModeration = () => {
     },
   });
 
-  // Update report status
-  const updateReportMutation = useMutation({
-    mutationFn: async ({ reportId, status }: { reportId: string; status: string }) => {
-      const { error } = await supabase
-        .from("twaat_reports" as any)
-        .update({ 
-          status,
-          reviewed_at: new Date().toISOString(),
-          reviewed_by: (await supabase.auth.getUser()).data.user?.id
-        })
-        .eq("id", reportId);
+  const resolveReportMutation = useMutation({
+    mutationFn: async ({
+      report,
+      action,
+      priority,
+      assignToSelf,
+    }: {
+      report: any;
+      action?: "hide" | "dismiss" | "review";
+      priority?: string;
+      assignToSelf?: boolean;
+    }) => {
+      if (action === "hide") {
+        const { error: hideError } = await supabase
+          .from("twaats")
+          .update({
+            moderation_status: "hidden",
+            moderated_at: new Date().toISOString(),
+            moderated_by: (await supabase.auth.getUser()).data.user?.id,
+          } as any)
+          .eq("id", report.target_id);
+
+        if (hideError) throw hideError;
+      }
+
+      const status =
+        action === "hide" ? "action_taken" :
+        action === "dismiss" ? "no_action" :
+        action === "review" ? "under_review" :
+        null;
+
+      const { error } = await (supabase as any).rpc("moderate_player_report", {
+        p_report_id: report.id,
+        p_status: status,
+        p_priority: priority ?? null,
+        p_resolution_summary:
+          action === "hide" ? "Reported Twaater post hidden." :
+          action === "dismiss" ? "No moderation action required." :
+          null,
+        p_note: null,
+        p_assign_to_self: assignToSelf ?? false,
+        p_duplicate_of_report_id: null,
+      });
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["twaat_reports"] });
-      toast({ title: "Report updated" });
-    },
-  });
-
-  // Hide/show twaat
-  const moderateTwaatMutation = useMutation({
-    mutationFn: async ({ twaatId, action }: { twaatId: string; action: "hide" | "approve" }) => {
-      const { error } = await supabase
-        .from("twaats" as any)
-        .update({ 
-          moderation_status: action === "hide" ? "hidden" : "approved",
-          moderated_at: new Date().toISOString(),
-          moderated_by: (await supabase.auth.getUser()).data.user?.id
-        })
-        .eq("id", twaatId);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["twaat_reports"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-unified-reports"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-player-reports"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-feed"] });
       toast({ title: "Moderation action applied" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Moderation action failed",
+        description: error?.message || "Please try again.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -171,10 +187,9 @@ const TwaaterModeration = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Reports</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="reviewed">Reviewed</SelectItem>
-                      <SelectItem value="actioned">Actioned</SelectItem>
-                      <SelectItem value="dismissed">Dismissed</SelectItem>
+                      {REPORT_STATUSES.map((status) => (
+                        <SelectItem key={status} value={status}>{status.replace(/_/g, " ")}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -182,6 +197,11 @@ const TwaaterModeration = () => {
               <CardContent>
                 {reportsLoading ? (
                   <div className="text-center py-8 text-muted-foreground">Loading reports...</div>
+                ) : reportsError ? (
+                  <div className="text-center py-8 space-y-3">
+                    <p className="text-destructive">Twaater moderation queue unavailable.</p>
+                    <Button variant="outline" size="sm" onClick={() => refetchReports()}>Retry</Button>
+                  </div>
                 ) : reports?.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">No reports found</div>
                 ) : (
@@ -196,65 +216,93 @@ const TwaaterModeration = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {reports?.map((report: any) => (
+                      {reports?.map((report: any) => {
+                      const snapshot = report.evidence
+                        ?.find((item: any) => item.evidence_type === "twaater_post")
+                        ?.snapshot?.twaater_post;
+
+                      return (
                         <TableRow key={report.id}>
                           <TableCell>
                             <div className="space-y-1">
                               <Badge variant="outline" className="capitalize">
-                                {report.report_reason}
+                                {String(report.category || "other").replace(/_/g, " ")}
                               </Badge>
                               <p className="text-xs text-muted-foreground">
-                                {formatDistanceToNow(new Date(report.created_at), { addSuffix: true })}
+                                {report.submitted_at
+                                  ? formatDistanceToNow(new Date(report.submitted_at), { addSuffix: true })
+                                  : "Unknown time"}
                               </p>
-                              {report.report_details && (
-                                <p className="text-sm mt-1">{report.report_details}</p>
-                              )}
+                              <p className="text-sm mt-1">{report.description}</p>
                             </div>
                           </TableCell>
                           <TableCell className="max-w-md">
-                            <p className="text-sm line-clamp-2">{report.twaat?.body}</p>
+                            <p className="text-sm line-clamp-3">{snapshot?.body || "Post snapshot unavailable"}</p>
+                            {snapshot?.account?.handle && (
+                              <p className="text-xs text-muted-foreground mt-1">@{snapshot.account.handle}</p>
+                            )}
                           </TableCell>
                           <TableCell>
                             <div className="text-sm">
-                              <div className="font-medium">{report.reporter?.display_name}</div>
-                              <div className="text-muted-foreground">@{report.reporter?.handle}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={report.status === "pending" ? "destructive" : "secondary"}>
-                              {report.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              {report.status === "pending" && (
-                                <>
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    onClick={() => {
-                                      moderateTwaatMutation.mutate({ twaatId: report.twaat_id, action: "hide" });
-                                      updateReportMutation.mutate({ reportId: report.id, status: "actioned" });
-                                    }}
-                                  >
-                                    <EyeOff className="h-4 w-4 mr-1" />
-                                    Hide
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => updateReportMutation.mutate({ reportId: report.id, status: "dismissed" })}
-                                  >
-                                    <XCircle className="h-4 w-4 mr-1" />
-                                    Dismiss
-                                  </Button>
-                                </>
+                              <div className="font-medium">{report.reporter?.display_name || report.reporter?.username || "Unknown"}</div>
+                              {report.reported?.display_name && (
+                                <div className="text-xs text-muted-foreground">Reported: {report.reported.display_name}</div>
                               )}
                             </div>
                           </TableCell>
+                          <TableCell>
+                            <div className="space-y-2">
+                              <Badge variant={report.status === "submitted" ? "destructive" : "secondary"}>
+                                {String(report.status || "submitted").replace(/_/g, " ")}
+                              </Badge>
+                              <Select
+                                value={report.priority || "normal"}
+                                onValueChange={(priority) => resolveReportMutation.mutate({ report, priority })}
+                                disabled={resolveReportMutation.isPending}
+                              >
+                                <SelectTrigger className="h-8 w-28"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  {REPORT_PRIORITIES.map((priority) => (
+                                    <SelectItem key={priority} value={priority}>{priority}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={resolveReportMutation.isPending}
+                                onClick={() => resolveReportMutation.mutate({ report, action: "review", assignToSelf: true })}
+                              >
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                Review
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                disabled={resolveReportMutation.isPending || !report.target_id}
+                                onClick={() => resolveReportMutation.mutate({ report, action: "hide", assignToSelf: true })}
+                              >
+                                <EyeOff className="h-4 w-4 mr-1" />
+                                Hide
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={resolveReportMutation.isPending}
+                                onClick={() => resolveReportMutation.mutate({ report, action: "dismiss" })}
+                              >
+                                <XCircle className="h-4 w-4 mr-1" />
+                                Dismiss
+                              </Button>
+                            </div>
+                          </TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
+                      );
+                    })}                 </TableBody>
                   </Table>
                 )}
               </CardContent>
