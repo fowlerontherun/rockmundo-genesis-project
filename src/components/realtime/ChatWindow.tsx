@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useActiveProfile } from '@/hooks/useActiveProfile';
+import { useAuth } from '@/hooks/use-auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +31,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   onConnectionStatusChange,
 }) => {
   const { profileId } = useActiveProfile();
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState('');
   const selectedChannel = channel ?? 'general';
@@ -61,13 +64,14 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   }, [profileId, selectedChannel]);
 
   const sendMessage = async () => {
-    if (!profileId || !message.trim()) return;
+    if (!profileId || !userId || !message.trim()) return;
 
     try {
       const { error } = await supabase
         .from('global_chat')
         .insert({
-          user_id: profileId,
+          user_id: userId,
+          profile_id: profileId,
           channel: selectedChannel,
           message: message.trim()
         } as any);
