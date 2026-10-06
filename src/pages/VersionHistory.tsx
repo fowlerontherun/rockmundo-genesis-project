@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.769",
+    date: "2026-10-06",
+    changes: [
+      { type: "fix", description: "Gig poses look more natural: guitarists' hands now grip the neck and strings, drummers hold sticks palm-down, and the feminine avatar's shoe no longer stretches across the stage." },
+      { type: "feature", description: "New gig stage movement: performers roam their area, guitar and bass face off, singers lean out to the crowd, chorus jumps, headbanging in breakdowns, solo lean-backs and end-of-show poses." },
+    ],
+  },
+  {
     version: "1.1.768",
     date: "2026-10-06",
     changes: [

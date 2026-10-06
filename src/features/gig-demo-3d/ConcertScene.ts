@@ -1,3 +1,4 @@
+import { stageMove } from './stageMoves';
 import { productionLayout, stageLightPositions } from './venueProduction';
 import { crowdMerchChance } from '@/features/player-model/merchWearables';
 import { planVenueLighting, venueBeamCue } from './venueLightShow';
@@ -586,6 +587,21 @@ export class ConcertScene {
             actor.root.position.z += .05 * (1 - release);
           }
         }
+      }
+      // Layered stage movement: roaming, face-offs, crowd leans, jumps, headbangs.
+      actor.stagePose = 'none';
+      actor.stagePoseWeight = 0;
+      if (!this.settings.reducedMotion && actor.performing && !actor.walking && !this.options?.television && !/stage_dive|crowd_surf/.test(state?.action ?? '')) {
+        const move = stageMove({
+          role: actor.role, t, phase: actor.phase, section, sectionProgress: this.playback?.sectionProgress ?? 0,
+          energy, stationary: !!actor.instrumentRig?.stationary || !!actor.instrumentRig?.seated, baseX: actor.root.position.x, focused,
+        });
+        actor.root.position.x += move.dx;
+        actor.root.position.y += move.dy;
+        actor.root.position.z += move.dz;
+        actor.root.rotation.y += move.yaw;
+        actor.stagePose = move.pose;
+        actor.stagePoseWeight = move.weight;
       }
       const soloScale = section === 'solo' ? (focused ? 1.2 : .78) : 1;
       const roleScale = section === 'breakdown' && actor.role === 'drums' ? .82
