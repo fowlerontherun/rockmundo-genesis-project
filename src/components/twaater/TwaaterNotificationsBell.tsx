@@ -6,7 +6,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useTwaaterNotifications } from "@/hooks/useTwaaterNotifications";
+import { useTwaaterUnreadCount } from "@/hooks/useTwaaterNotifications";
 import { TwaaterNotificationsList } from "./TwaaterNotificationsList";
 import { useNavigate } from "react-router-dom";
 
@@ -15,7 +15,7 @@ interface TwaaterNotificationsBellProps {
 }
 
 export const TwaaterNotificationsBell = ({ accountId }: TwaaterNotificationsBellProps) => {
-  const { unreadCount } = useTwaaterNotifications(accountId);
+  const { data: unreadCount = 0 } = useTwaaterUnreadCount(accountId);
   const navigate = useNavigate();
 
   return (
