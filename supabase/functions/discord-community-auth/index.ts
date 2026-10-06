@@ -68,7 +68,7 @@ const readState = async (state: string) => {
 const redirect = (siteUrl: string, status: string) =>
   new Response(null, {
     status: 302,
-    headers: { Location: `${siteUrl.replace(/\/$/, "")}/social?tab=rewards&discord=${encodeURIComponent(status)}` },
+    headers: { Location: `${siteUrl.replace(/\/$/, "")}/social/referrals?discord=${encodeURIComponent(status)}` },
   });
 
 serve(async (req) => {
