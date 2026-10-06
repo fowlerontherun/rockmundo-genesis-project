@@ -1,5 +1,5 @@
 import { CategoryHub } from "@/components/CategoryHub";
-import { Briefcase, DollarSign, Building2, Handshake, Disc, Sparkles, Megaphone, Building, Headphones, Scissors, Trophy } from "lucide-react";
+import { Briefcase, DollarSign, Building2, Handshake, Disc, Sparkles, Megaphone, Building, Headphones, Scissors, Trophy, Hammer } from "lucide-react";
 
 export default function CareerHub() {
   return (
@@ -13,6 +13,7 @@ export default function CareerHub() {
         { icon: Handshake, labelKey: "nav.sponsorships", path: "/sponsorships", imagePrompt: "A handshake between a musician and a corporate sponsor with brand logos and contracts" },
         { icon: Disc, labelKey: "nav.recordLabels", path: "/labels", imagePrompt: "A record label office with gold records on walls, vinyl pressing machines, and contracts" },
         { icon: Sparkles, labelKey: "nav.modeling", path: "/modeling", imagePrompt: "A fashion runway with a musician posing for cameras, flashbulbs and spotlights" },
+        { icon: Hammer, labelKey: "nav.luthier", path: "/luthier", imagePrompt: "A guitar maker at a wooden workbench assembling a custom electric guitar with hand tools and timber" },
         { icon: Scissors, labelKey: "nav.clothingDesigner", path: "/clothing-designer", imagePrompt: "A fashion design studio with clothing sketches, fabric swatches, and sewing machines" },
         { icon: Megaphone, labelKey: "nav.pr", path: "/pr", imagePrompt: "A PR agency office with press releases, magazine covers, and a megaphone" },
         { icon: Handshake, labelKey: "nav.offers", path: "/offers-dashboard", imagePrompt: "A desk covered with contract offers, pen, and decision-making documents" },

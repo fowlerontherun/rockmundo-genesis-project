@@ -1,4 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useSearchParams } from "react-router-dom";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useTranslation } from "@/hooks/useTranslation";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
@@ -14,9 +16,12 @@ import { useEducationTabs } from "@/features/education/hooks/useEducationTabs";
 
 const Education = () => {
   const { t } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const baseTabs = useEducationTabs();
   const tabs = [...baseTabs, { value: "players", label: "Player Learning", icon: Users }];
-  const defaultValue = tabs[0]?.value ?? "summary";
+  const requestedTab = searchParams.get("tab");
+  const defaultValue = tabs.some((tab) => tab.value === requestedTab) ? requestedTab! : (tabs[0]?.value ?? "summary");
+  const luthieryFocus = searchParams.get("skill") === "luthiery";
 
   const tabContentMap: Record<string, JSX.Element> = {
     summary: <SummaryTab />,
@@ -36,7 +41,14 @@ const Education = () => {
       backLabel="Back to Character Hub"
     >
 
-      <Tabs defaultValue={defaultValue} className="mt-6 sm:mt-8 space-y-6">
+      {luthieryFocus && (
+        <Alert className="mt-6 border-primary/30 bg-primary/5">
+          <AlertTitle>Learning Luthiery</AlertTitle>
+          <AlertDescription>Look for Luthiery Basics first. Professional Luthiery unlocks after Basic reaches level 20, followed by Master Luthier after Professional reaches level 20. Books, University, Videos and Mentors each contain a route for every available tier.</AlertDescription>
+        </Alert>
+      )}
+
+      <Tabs value={defaultValue} onValueChange={(value) => { const next = new URLSearchParams(searchParams); next.set("tab", value); setSearchParams(next, { replace: true }); }} className="mt-6 sm:mt-8 space-y-6">
         <div className="lg:hidden overflow-x-auto">
           <ScrollArea className="w-full whitespace-nowrap pb-2">
             <TabsList className="inline-flex h-auto w-max gap-1 bg-transparent p-0">
