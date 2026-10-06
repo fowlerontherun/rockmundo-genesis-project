@@ -4,12 +4,14 @@ import {
   fetchRecentTwaatsForTrending,
   scoreTrendingTwaats,
 } from "@/services/twaaterTrendingService";
+import { useTwaaterRuntimeConfig } from "@/hooks/useTwaaterRuntimeConfig";
 import { hydrateTwaaterFeedExtras } from "@/hooks/useTwaats";
 
 const TWAATER_TRENDING_QUERY_KEY = ["twaater-trending"] as const;
 const TWAATER_TRENDING_REFETCH_MS = 5 * 60 * 1000;
 
 export const useTwaaterTrending = () => {
+  const { config } = useTwaaterRuntimeConfig();
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: TWAATER_TRENDING_QUERY_KEY,
     queryFn: async () => {
@@ -17,8 +19,8 @@ export const useTwaaterTrending = () => {
       const hydratedTwaats = await hydrateTwaaterFeedExtras(recentTwaats as any[]);
 
       return {
-        trendingTwaats: scoreTrendingTwaats(hydratedTwaats as any[]),
-        trendingTopics: extractTrendingTopics(recentTwaats),
+        recentTwaats,
+        hydratedTwaats,
       };
     },
     refetchInterval: TWAATER_TRENDING_REFETCH_MS,
@@ -27,8 +29,14 @@ export const useTwaaterTrending = () => {
   });
 
   return {
-    trendingTwaats: data?.trendingTwaats ?? [],
-    trendingTopics: data?.trendingTopics ?? [],
+    trendingTwaats: scoreTrendingTwaats((data?.hydratedTwaats || []) as any[], {
+      likesWeight: config.likesWeight,
+      repliesWeight: config.repliesWeight,
+      retwaatsWeight: config.retwaatsWeight,
+      decayHours: config.trendingDecayHours,
+      verifiedBoost: config.verifiedBonusMultiplier,
+    }),
+    trendingTopics: config.hashtagsEnabled ? extractTrendingTopics(data?.recentTwaats || []) : [],
     isLoading,
     error,
     refetch,
