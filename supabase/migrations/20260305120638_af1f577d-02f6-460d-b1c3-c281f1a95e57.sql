@@ -4,7 +4,7 @@ SET band_id = (
   SELECT bm.band_id
   FROM band_members bm
   JOIN bands b ON b.id = bm.band_id AND b.status = 'active'
-  WHERE bm.user_id = s.user_id
+  WHERE bm.user_id = s.artist_id
   AND bm.member_status = 'active'
   ORDER BY bm.joined_at ASC
   LIMIT 1
@@ -14,7 +14,7 @@ AND s.status IN ('recorded', 'released', 'draft', 'completed', 'mastered')
 AND EXISTS (
   SELECT 1 FROM band_members bm 
   JOIN bands b ON b.id = bm.band_id AND b.status = 'active'
-  WHERE bm.user_id = s.user_id 
+  WHERE bm.user_id = s.artist_id 
   AND bm.member_status = 'active'
 );
 
@@ -71,7 +71,7 @@ BEGIN
       END IF;
       
       INSERT INTO public.songs (
-        user_id, band_id, title, genre, duration_seconds,
+        artist_id, band_id, title, genre, duration_seconds,
         quality_score, songwriting_project_id, status, lyrics, created_at
       ) VALUES (
         NEW.user_id, project_band_id, NEW.title, song_genre, duration_seconds,
