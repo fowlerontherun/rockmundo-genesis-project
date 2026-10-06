@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SUPPORTED_LANGUAGES, translations, type SupportedLanguage } from '@/i18n';
+import { playerControls } from '@/i18n/playerControls';
 
 const nonEnglish = SUPPORTED_LANGUAGES.filter(
   (language): language is Exclude<SupportedLanguage, 'en'> => language !== 'en',
@@ -43,6 +44,14 @@ const getNestedString = (value: unknown, path: string): string | undefined => {
 };
 
 describe('locale parity', () => {
+  it.each(SUPPORTED_LANGUAGES)('%s has complete, non-empty mobile and character copy', (language) => {
+    expect(Object.keys(playerControls[language])).toEqual(Object.keys(playerControls.en));
+    expect(Object.values(playerControls[language]).every((value) => typeof value === 'string' && value.trim().length > 0)).toBe(true);
+    if (language !== 'en') {
+      expect(playerControls[language].switchCharacter).not.toBe(playerControls.en.switchCharacter);
+      expect(playerControls[language].bookActivity).not.toBe(playerControls.en.bookActivity);
+    }
+  });
   const englishPaths = collectStringPaths(translations.en).sort();
 
   it.each(nonEnglish)('%s contains every maintained English translation key', (language) => {

@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, X, CalendarDays, CalendarPlus, Inbox, MessageSquare, Sparkles } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/hooks/useTranslation";
 import { cn } from "@/lib/utils";
 
 const companionActions = [
@@ -13,18 +15,19 @@ const companionActions = [
 ];
 
 export const FabMenu = () => {
+  const { t } = useTranslation();
+  const labels: Record<string, string> = { schedule: t("playerControls.mySchedule"), book: t("playerControls.bookActivity"), inbox: t("nav.inbox"), chat: t("playerControls.gameChat"), progression: t("playerControls.spendPoints") };
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   return <>
-    <button onClick={() => setOpen((value) => !value)} aria-label={open ? "Close quick actions" : "Open quick actions"} className={cn("fixed z-40 right-4 rounded-full h-14 w-14 flex items-center justify-center shadow-lg","bg-primary text-primary-foreground active:scale-95 transition-transform")} style={{ bottom: "calc(var(--m-nav-h) + var(--m-safe-b) + 12px)" }}>
+    <Button variant="ghost" onClick={() => setOpen((value) => !value)} aria-label={t(open ? "playerControls.closeActions" : "playerControls.openActions")} className={cn("fixed z-40 right-4 rounded-full h-14 w-14 flex items-center justify-center shadow-lg","bg-primary text-primary-foreground active:scale-95 transition-transform")} style={{ bottom: "calc(var(--m-nav-h) + var(--m-safe-b) + 12px)" }}>
       {open ? <X className="h-6 w-6" /> : <Plus className="h-6 w-6" />}
-    </button>
+    </Button>
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetContent side="bottom" className="rounded-t-2xl p-4 pb-8">
-        <SheetHeader className="text-left mb-3"><SheetTitle>Quick Actions</SheetTitle></SheetHeader>
-        <p className="mb-4 text-sm text-muted-foreground">Mobile access is limited to scheduling, inbox, game chat and progression.</p>
+      <SheetContent side="bottom" aria-describedby={undefined} className="rounded-t-2xl p-4 pb-8">
+        <SheetHeader className="text-left mb-3"><SheetTitle>{t("playerControls.quickActions")}</SheetTitle></SheetHeader>
         <div className="grid grid-cols-2 gap-3">
-          {companionActions.map((action) => <button key={action.key} onClick={() => { setOpen(false); navigate(action.to); }} className="rm-mcard rm-tap flex flex-col items-center justify-center gap-1.5 py-3 active:scale-95"><div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">{action.icon}</div><div className="text-[11px] font-medium text-center leading-tight">{action.label}</div></button>)}
+          {companionActions.map((action) => <Button variant="ghost" key={action.key} onClick={() => { setOpen(false); navigate(action.to); }} className="rm-mcard rm-tap h-auto whitespace-normal flex flex-col items-center justify-center gap-1.5 py-3 active:scale-95"><div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">{action.icon}</div><div className="text-[11px] font-medium text-center leading-tight">{labels[action.key]}</div></Button>)}
         </div>
       </SheetContent>
     </Sheet>
