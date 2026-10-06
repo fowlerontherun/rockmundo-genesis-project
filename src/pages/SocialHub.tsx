@@ -116,7 +116,7 @@ export default function SocialHub() {
   }
 
   const child = pathname.replace(/\/$/, "").split("/")[2] ?? "overview";
-  const content = isRewardsTab ? <CommunityRewards profileId={profileId} profileName={profile?.display_name ?? profile?.username ?? profile?.name ?? "selected character"} />
+  const content = isRewardsTab ? <CommunityRewards profileId={profileId} profileName={profile?.display_name ?? profile?.username ?? "selected character"} />
     : child === "friends" ? <Suspense fallback={<Fallback />}><Relationships /></Suspense>
     : child === "messages" ? <MessagesTab myProfileId={profileId} />
     : child === "players" ? <Suspense fallback={<Fallback />}><PlayerSearch /></Suspense>
