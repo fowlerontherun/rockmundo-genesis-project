@@ -35,26 +35,38 @@ export const useTwaaterAnalytics = (accountId?: string) => {
       const since = new Date();
       since.setDate(since.getDate() - 30);
 
-      const { data: twaats } = await supabase
-        .from("twaats")
-        .select(`id, body, created_at, metrics:twaat_metrics(likes, retwaats, replies, impressions)`)
-        .eq("account_id", accountId!)
-        .is("deleted_at", null)
-        .gte("created_at", since.toISOString())
-        .order("created_at", { ascending: false });
+      const sinceIso = since.toISOString();
 
-      const { count: followers } = await supabase
-        .from("twaater_follows")
-        .select("*", { count: "exact", head: true })
-        .eq("followed_account_id", accountId!);
+      const [twaatsResult, followersResult, followsResult] = await Promise.all([
+        supabase
+          .from("twaats")
+          .select(`id, body, created_at, metrics:twaat_metrics(likes, retwaats, replies, impressions)`)
+          .eq("account_id", accountId!)
+          .is("deleted_at", null)
+          .is("scheduled_for", null)
+          .gte("created_at", sinceIso)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("twaater_follows")
+          .select("*", { count: "exact", head: true })
+          .eq("followed_account_id", accountId!),
+        supabase
+          .from("twaater_follows")
+          .select("created_at")
+          .eq("followed_account_id", accountId!)
+          .gte("created_at", sinceIso)
+          .order("created_at", { ascending: true }),
+      ]);
 
-      const { data: followsRows } = await supabase
-        .from("twaater_follows")
-        .select("created_at")
-        .eq("followed_account_id", accountId!)
-        .order("created_at", { ascending: true });
+      if (twaatsResult.error) throw twaatsResult.error;
+      if (followersResult.error) throw followersResult.error;
+      if (followsResult.error) throw followsResult.error;
 
-      const totals = { twaats: 0, likes: 0, retwaats: 0, replies: 0, views: 0, followers: followers || 0 };
+      const twaats = twaatsResult.data || [];
+      const followers = followersResult.count || 0;
+      const followsRows = followsResult.data || [];
+
+      const totals = { twaats: 0, likes: 0, retwaats: 0, replies: 0, views: 0, followers };
       const hourBuckets: Record<number, { sum: number; count: number }> = {};
       const scored: TwaaterAnalytics["topTwaats"] = [];
 
@@ -92,7 +104,8 @@ export const useTwaaterAnalytics = (accountId?: string) => {
         growthMap[day] = (growthMap[day] || 0) + 1;
       });
       const sortedDays = Object.keys(growthMap).sort();
-      let cumulative = 0;
+      const recentFollowCount = followsRows.length;
+      let cumulative = Math.max(0, followers - recentFollowCount);
       const followerGrowth = sortedDays.map((day) => {
         cumulative += growthMap[day];
         return { date: day, followers: cumulative };
@@ -119,5 +132,7 @@ export const useTwaaterAnalytics = (accountId?: string) => {
         hourlyEngagement,
       };
     },
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 };
