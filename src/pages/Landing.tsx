@@ -480,7 +480,7 @@ const Landing = () => {
 
       <footer className="border-t border-border/40 bg-card/50">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-4 py-4 font-oswald text-[10px] text-muted-foreground sm:flex-row sm:px-6 sm:text-xs">
-          <div className="flex items-center gap-2"><img src={logo} alt="" className="h-4 w-4 object-contain" />© {new Date().getFullYear()} RockMundo · v{version}</div>
+          <div className="flex items-center gap-2"><img src={logo} alt="" className="h-4 w-4 object-contain" />© {new Date().getFullYear()} RockMundo · {releaseLabel}</div>
           <div className="flex items-center gap-3">
             <Link to="/about" className="hover:text-foreground">About · Press · Contact</Link>
             <span aria-hidden="true">·</span>
