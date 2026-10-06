@@ -45,6 +45,26 @@ export const ROLE_SKILL_MAP: Record<string, string[]> = {
     "instruments_basic_electric_guitar",
     "instruments_professional_electric_guitar"
   ],
+  "Electric Guitar": [
+    "instruments_basic_electric_guitar",
+    "instruments_professional_electric_guitar",
+    "instruments_mastery_electric_guitar"
+  ],
+  "Acoustic Guitar": [
+    "instruments_basic_acoustic_guitar",
+    "instruments_professional_acoustic_guitar",
+    "instruments_mastery_acoustic_guitar"
+  ],
+  "Classical Guitar": [
+    "instruments_basic_classical_guitar",
+    "instruments_professional_classical_guitar",
+    "instruments_mastery_classical_guitar"
+  ],
+  "Bass Guitar": [
+    "instruments_basic_bass_guitar",
+    "instruments_professional_bass_guitar",
+    "instruments_mastery_bass_guitar"
+  ],
   "Bass": [
     "instruments_basic_bass_guitar",
     "instruments_professional_bass_guitar",
