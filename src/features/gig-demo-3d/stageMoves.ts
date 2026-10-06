@@ -43,7 +43,7 @@ export function stageMove(options: {
         const heavy = section === 'breakdown' || section === 'chorus' ? 1 : 0;
         return { ...still, pose: heavy ? 'headbang' : 'none', weight: heavy * e * .8 };
     }
-    const wide = section === 'chorus' ? 1.5 : section === 'breakdown' ? .6 : section === 'solo' ? .8 : 1;
+    const wide = section === 'chorus' ? 1.3 : section === 'breakdown' ? .6 : section === 'solo' ? .8 : 1;
     // Slow figure-of-eight wander around the mark: never more than ~40 cm.
     const roamX = (Math.sin(t * .23 + phase) * .26 + Math.sin(t * .11 + phase * 2.3) * .1) * wide * e;
     const roamZ = Math.sin(t * .46 + phase * 1.3) * .12 * wide * e;
