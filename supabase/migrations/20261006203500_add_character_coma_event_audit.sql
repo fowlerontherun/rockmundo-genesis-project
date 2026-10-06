@@ -69,7 +69,16 @@ UPDATE public.profiles p
          WHEN p.death_cause ILIKE '%inactivity%'
            THEN COALESCE(
              p.coma_last_account_activity_at,
-             LEAST(a.last_activity_at, p.died_at),
+             CASE
+               WHEN a.last_activity_at <= p.died_at THEN a.last_activity_at
+               ELSE (
+                 SELECT MAX(s.last_login_at)
+                 FROM public.profiles s
+                 WHERE s.user_id = p.user_id
+                   AND s.deleted_at IS NULL
+                   AND s.last_login_at <= p.died_at
+               )
+             END,
              p.last_login_at
            )
          ELSE p.coma_last_account_activity_at
