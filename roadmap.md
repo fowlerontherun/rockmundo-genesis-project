@@ -1,8 +1,8 @@
 # Roadmap
 
-- [ ] Review maintained translations and translate mobile navigation and character switching.
-- [ ] Add mobile character and language controls using the existing account switching flow.
-- [ ] Verify translation parity and mobile switching; update banner and version history.
+- [x] Review maintained translations and translate mobile navigation and character switching.
+- [x] Add mobile character and language controls using the existing account switching flow.
+- [x] Verify translation parity and mobile switching; update banner and version history. All 69 focused tests pass and French controls work in the preview; authenticated end-to-end switching is unavailable with the project's external account service.
 
 - [x] Improve luthiery guitar/bass silhouettes and correctly aligned strings, frets, pickups and hardware.
 - [x] Add compatible workshop component variations while preserving existing crafted instruments and crafting rules.
