@@ -219,6 +219,11 @@ export const LUTHIERY_MATERIAL_OPTIONS: LuthieryMaterialOption[] = [
   { id: "body-ash", label: "Ash", slot: "body", catalogNames: ["Ash Body Blank"], requirement: req("basic", 13), traits: { tone: 4, sustain: 2, stagePresence: 1 } },
   { id: "body-mahogany", label: "Mahogany", slot: "body", catalogNames: ["Mahogany Body Blank"], requirement: req("professional", 2), traits: { tone: 5, sustain: 5, stability: 2 } },
   { id: "body-korina", label: "Korina", slot: "body", catalogNames: ["Korina Body Blank"], requirement: req("professional", 12), traits: { tone: 6, sustain: 5, stagePresence: 3 } },
+  { id: "body-basswood", label: "Basswood", slot: "body", catalogNames: ["Basswood Body Blank"], requirement: req("basic", 2), traits: { tone: 1, sustain: 0, stability: 1 } },
+  { id: "body-hard-maple", label: "Hard Maple", slot: "body", catalogNames: ["Hard Maple Body Blank"], requirement: req("basic", 10), traits: { tone: 4, sustain: 3, stability: 4 } },
+  { id: "body-walnut", label: "Walnut", slot: "body", catalogNames: ["Walnut Body Blank"], requirement: req("professional", 4), traits: { tone: 5, sustain: 4, stability: 3 } },
+  { id: "body-bubinga", label: "Bubinga", slot: "body", catalogNames: ["Bubinga Body Blank"], requirement: req("mastery", 6), traits: { tone: 7, sustain: 7, stability: 5, stagePresence: 2 } },
+  { id: "body-flamed-maple", label: "Flamed Maple", slot: "body", catalogNames: ["Flamed Maple Body Blank"], requirement: req("mastery", 14), traits: { tone: 7, sustain: 5, stability: 5, stagePresence: 5 } },
 
   // Neck
   { id: "neck-maple", label: "Maple", slot: "neck", catalogNames: ["Maple Neck Blank"], requirement: req("basic", 0), traits: { sustain: 2, stability: 4 } },
@@ -226,12 +231,17 @@ export const LUTHIERY_MATERIAL_OPTIONS: LuthieryMaterialOption[] = [
   { id: "neck-alder", label: "Alder stock", slot: "neck", catalogNames: ["Alder Body Blank"], requirement: req("basic", 12), traits: { stability: 1, sustain: 1 } },
   { id: "neck-mahogany", label: "Mahogany stock", slot: "neck", catalogNames: ["Mahogany Body Blank"], requirement: req("professional", 5), traits: { tone: 2, sustain: 4, stability: 2 } },
   { id: "neck-korina", label: "Korina stock", slot: "neck", catalogNames: ["Korina Body Blank"], requirement: req("mastery", 8), traits: { tone: 3, sustain: 4, stability: 4 } },
+  { id: "neck-roasted-maple", label: "Roasted Maple", slot: "neck", catalogNames: ["Roasted Maple Neck Blank"], requirement: req("professional", 3), traits: { tone: 3, sustain: 3, stability: 6 } },
+  { id: "neck-wenge", label: "Wenge", slot: "neck", catalogNames: ["Wenge Neck Blank"], requirement: req("mastery", 5), traits: { tone: 5, sustain: 6, stability: 7 } },
 
   // Fretboard
   { id: "fret-maple", label: "Maple", slot: "fretboard", catalogNames: ["Maple Neck Blank"], requirement: req("basic", 0), traits: { tone: 2, stability: 2 } },
   { id: "fret-rosewood", label: "Rosewood", slot: "fretboard", catalogNames: ["Rosewood Fretboard"], requirement: req("basic", 8), traits: { tone: 4, sustain: 2 } },
   { id: "fret-ebony", label: "Ebony", slot: "fretboard", catalogNames: ["Ebony Fretboard"], requirement: req("professional", 8), traits: { tone: 4, sustain: 4, stability: 4 } },
   { id: "fret-brazilian", label: "Brazilian Rosewood", slot: "fretboard", catalogNames: ["Brazilian Rosewood Set"], requirement: req("mastery", 15), traits: { tone: 7, sustain: 5, stagePresence: 2 } },
+  { id: "fret-pau-ferro", label: "Pau Ferro", slot: "fretboard", catalogNames: ["Pau Ferro Fretboard"], requirement: req("basic", 10), traits: { tone: 4, sustain: 3, stability: 3 } },
+  { id: "fret-richlite", label: "Richlite Composite", slot: "fretboard", catalogNames: ["Richlite Fretboard"], requirement: req("basic", 14), traits: { tone: 2, sustain: 3, stability: 6 } },
+  { id: "fret-macassar", label: "Macassar Ebony", slot: "fretboard", catalogNames: ["Macassar Ebony Fretboard"], requirement: req("mastery", 10), traits: { tone: 6, sustain: 6, stability: 7, stagePresence: 2 } },
 
   // Electronics
   { id: "elec-single", label: "Single Coil", slot: "electronics", catalogNames: ["Single-Coil Pickup Set", "Single Coil Pickup"], requirement: req("basic", 0), traits: { tone: 2, output: 1 } },
@@ -240,6 +250,13 @@ export const LUTHIERY_MATERIAL_OPTIONS: LuthieryMaterialOption[] = [
   { id: "elec-paf", label: "PAF-style", slot: "electronics", catalogNames: ["PAF Clone Pickup"], requirement: req("professional", 5), traits: { tone: 6, output: 4 } },
   { id: "elec-active", label: "Active High Output", slot: "electronics", catalogNames: ["Active EMG Pickup Set", "Active EMG Pickup"], requirement: req("professional", 11), traits: { tone: 3, output: 8, stagePresence: 2 } },
   { id: "elec-boutique", label: "Hand-wound Boutique", slot: "electronics", catalogNames: ["Hand-Wound Boutique Pickup"], requirement: req("mastery", 11), traits: { tone: 8, output: 6, stagePresence: 2 } },
+  { id: "elec-ceramic", label: "Ceramic Humbucker", slot: "electronics", catalogNames: ["Ceramic Humbucker Set"], requirement: req("basic", 2), traits: { tone: 1, output: 5 } },
+  { id: "elec-p90-set", label: "Dedicated P-90 Set", slot: "electronics", catalogNames: ["P-90 Pickup Set"], requirement: req("basic", 8), traits: { tone: 4, output: 3 } },
+  { id: "elec-bass-pj", label: "P/J Bass Set", slot: "electronics", catalogNames: ["Bass P/J Pickup Set"], requirement: req("basic", 5), traits: { tone: 3, output: 4, stability: 1 } },
+  { id: "elec-noiseless", label: "Noiseless Single Coils", slot: "electronics", catalogNames: ["Noiseless Single-Coil Set"], requirement: req("professional", 4), traits: { tone: 5, output: 4, stability: 2 } },
+  { id: "elec-mini-humbucker", label: "Mini Humbucker", slot: "electronics", catalogNames: ["Mini Humbucker Set"], requirement: req("professional", 7), traits: { tone: 5, output: 5, stagePresence: 1 } },
+  { id: "elec-active-bass", label: "Active Bass Preamp", slot: "electronics", catalogNames: ["Active Bass Preamp Set"], requirement: req("professional", 13), traits: { tone: 4, output: 9, stability: 2 } },
+  { id: "elec-piezo", label: "Piezo Bridge System", slot: "electronics", catalogNames: ["Piezo Bridge Pickup System"], requirement: req("mastery", 8), traits: { tone: 8, output: 5, stagePresence: 3 } },
 
   // Hardware
   { id: "hw-standard", label: "Standard Hardware", slot: "hardware", catalogNames: ["Bridge and Hardware Kit", "Standard Tuners Set"], requirement: req("basic", 0), traits: { stability: 1, sustain: 1 } },
@@ -248,6 +265,11 @@ export const LUTHIERY_MATERIAL_OPTIONS: LuthieryMaterialOption[] = [
   { id: "hw-trem", label: "Tremolo", slot: "hardware", catalogNames: ["Tremolo Bridge"], requirement: req("professional", 3), traits: { stability: 1, sustain: 2, stagePresence: 3 } },
   { id: "hw-floyd", label: "Double-locking Tremolo", slot: "hardware", catalogNames: ["Floyd Rose Tremolo"], requirement: req("professional", 11), traits: { stability: 6, sustain: 2, stagePresence: 5 } },
   { id: "hw-gold", label: "Gold Hardware", slot: "hardware", catalogNames: ["Gold Hardware Set"], requirement: req("mastery", 8), traits: { stability: 4, sustain: 3, stagePresence: 8 } },
+  { id: "hw-brass", label: "Brass Bridge & Nut", slot: "hardware", catalogNames: ["Brass Bridge and Nut Set"], requirement: req("basic", 6), traits: { stability: 2, sustain: 5, tone: 2 } },
+  { id: "hw-aluminium", label: "Lightweight Aluminium", slot: "hardware", catalogNames: ["Lightweight Aluminum Hardware Set"], requirement: req("basic", 10), traits: { stability: 3, sustain: 1, stagePresence: 2 } },
+  { id: "hw-stainless", label: "Stainless Steel Hardware", slot: "hardware", catalogNames: ["Stainless Hardware Set"], requirement: req("professional", 4), traits: { stability: 6, sustain: 4 } },
+  { id: "hw-black-chrome", label: "Black Chrome Hardware", slot: "hardware", catalogNames: ["Black Chrome Hardware Set"], requirement: req("professional", 8), traits: { stability: 5, sustain: 3, stagePresence: 5 } },
+  { id: "hw-titanium", label: "Titanium Hardware", slot: "hardware", catalogNames: ["Titanium Hardware Set"], requirement: req("mastery", 12), traits: { stability: 8, sustain: 6, stagePresence: 6 } },
 
   // Finish
   { id: "finish-satin", label: "Satin Lacquer", slot: "finish", catalogNames: ["Satin Lacquer"], requirement: req("basic", 0), traits: { stagePresence: 0 } },
@@ -255,6 +277,12 @@ export const LUTHIERY_MATERIAL_OPTIONS: LuthieryMaterialOption[] = [
   { id: "finish-burst", label: "Burst Sunburst", slot: "finish", catalogNames: ["Burst Sunburst Finish"], requirement: req("professional", 5), traits: { stagePresence: 4 } },
   { id: "finish-metalflake", label: "Metallic Flake", slot: "finish", catalogNames: ["Metallic Flake Finish"], requirement: req("professional", 9), traits: { stagePresence: 7 } },
   { id: "finish-artwork", label: "Custom Artwork", slot: "finish", catalogNames: ["Custom Artwork Finish"], requirement: req("mastery", 11), traits: { stagePresence: 10 } },
+  { id: "finish-tru-oil", label: "Tru-Oil", slot: "finish", catalogNames: ["Tru-Oil Finish"], requirement: req("basic", 2), traits: { tone: 1, sustain: 1 } },
+  { id: "finish-poly", label: "Polyurethane Gloss", slot: "finish", catalogNames: ["Polyurethane Gloss Finish"], requirement: req("basic", 6), traits: { stability: 2, stagePresence: 2 } },
+  { id: "finish-relic", label: "Relic / Aged", slot: "finish", catalogNames: ["Relic Finish"], requirement: req("professional", 3), traits: { stagePresence: 5 } },
+  { id: "finish-candy", label: "Candy Colour", slot: "finish", catalogNames: ["Candy Colour Finish"], requirement: req("professional", 6), traits: { stagePresence: 6 } },
+  { id: "finish-pearl", label: "Pearlescent", slot: "finish", catalogNames: ["Pearlescent Finish"], requirement: req("professional", 14), traits: { stagePresence: 9 } },
+  { id: "finish-holographic", label: "Holographic", slot: "finish", catalogNames: ["Holographic Finish"], requirement: req("mastery", 14), traits: { stagePresence: 12 } },
 ];
 
 // Construction variants consume the same stock and preserve their base option’s skill/stat rules.
