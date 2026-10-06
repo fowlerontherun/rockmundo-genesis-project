@@ -308,6 +308,7 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
             setMediaType(null);
           }}
           currentMediaUrl={mediaUrl}
+          currentMediaType={mediaType}
         />
       )}
 
