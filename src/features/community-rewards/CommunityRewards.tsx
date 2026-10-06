@@ -109,23 +109,6 @@ export default function CommunityRewards({ profileId }: { profileId?: string | n
     await copy(referralUrl, "Invite link");
   };
 
-  const claimMilestones = async () => {
-    if (!profileId) return;
-    setClaiming(true);
-    const { data, error } = await (supabase as any).rpc("claim_referral_milestones", { p_profile_id: profileId });
-    setClaiming(false);
-    if (error) {
-      toast({ title: "Promoter reward check failed", description: error.message, variant: "destructive" });
-      return;
-    }
-    const claimed = (data?.claimed ?? []) as string[];
-    toast({
-      title: claimed.length ? "Promoter rewards claimed" : "Promoter progress checked",
-      description: claimed.length ? `Unlocked milestone reward${claimed.length === 1 ? "" : "s"} for ${claimed.join(", ")} qualified recruits.` : nextMilestone ? `${qualified}/${nextMilestone} qualified recruits toward your next reward.` : "All current promoter milestones are complete.",
-    });
-    await loadDashboard();
-  };
-
   const claim = async () => {
     if (!profileId) return;
     setClaiming(true);
@@ -237,7 +220,7 @@ export default function CommunityRewards({ profileId }: { profileId?: string | n
           <div className="flex flex-wrap gap-2">
             {[5, 10, 25].map((milestone) => <Badge key={milestone} variant={qualified >= milestone ? "default" : "outline"}>{promoterLabels[milestone]} · {milestone}</Badge>)}
           </div>
-          <Button variant="outline" onClick={claimMilestones} disabled={claiming}><Gift className="mr-2 h-4 w-4" />Check promoter rewards</Button>
+          <p className="text-xs text-muted-foreground">Promoter milestone rewards unlock automatically when qualified recruits reach each target.</p>
         </CardContent>
       </Card>
 
