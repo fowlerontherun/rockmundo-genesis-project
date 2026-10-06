@@ -117,7 +117,7 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
             />
           )}
           {twaat.quoted_twaat_id && twaat.quoted_twaat && <QuotedTwaat twaat={twaat.quoted_twaat} />}
-          <TwaatPoll twaatId={twaat.id} accountId={viewerAccountId} />
+          <TwaatPoll twaatId={twaat.id} accountId={viewerAccountId} preloadedPoll={twaat.poll} />
 
           <div className="flex items-center gap-4 mt-3">
             <Button variant="ghost" size="sm" onClick={() => setShowReplyBox(!showReplyBox)} disabled={!viewerAccountId} className="hover:text-[hsl(var(--twaater-purple))]">
