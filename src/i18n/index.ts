@@ -7,6 +7,7 @@ import { pt } from './pt';
 import { it } from './it';
 import { ja } from './ja';
 import { zh } from './zh';
+import { playerControls } from './playerControls';
 
 export type Language = 'en' | 'es' | 'zh' | 'hi' | 'ar' | 'pt' | 'bn' | 'ru' | 'ja' | 'pa' | 'de' | 'jv' | 'ko' | 'fr' | 'te' | 'mr' | 'tr' | 'ta' | 'vi' | 'it';
 export type SupportedLanguage = 'en' | 'es' | 'zh' | 'pt' | 'ja' | 'de' | 'fr' | 'tr' | 'it';
@@ -19,7 +20,7 @@ export const isSupportedLanguage = (language: string): language is SupportedLang
 // Keep the wider Language union for backwards compatibility with previously
 // persisted preferences. Only locales backed by real translation files are
 // exposed in the language switcher.
-export const translations: Record<Language, TranslationKeys> = {
+const baseTranslations: Record<Language, TranslationKeys> = {
   en,
   es: es as unknown as TranslationKeys,
   tr: tr as unknown as TranslationKeys,
@@ -43,5 +44,12 @@ export const translations: Record<Language, TranslationKeys> = {
   ta: en,
   vi: en,
 };
+
+export const translations = Object.fromEntries(
+  Object.entries(baseTranslations).map(([language, locale]) => [language, {
+    ...locale,
+    playerControls: playerControls[isSupportedLanguage(language) ? language : 'en'],
+  }]),
+) as Record<Language, TranslationKeys & { playerControls: typeof playerControls.en }>;
 
 export type { TranslationKeys };
