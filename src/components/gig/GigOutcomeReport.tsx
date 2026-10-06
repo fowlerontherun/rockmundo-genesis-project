@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Activity, Banknote, CalendarClock, CircleDot, Clock, DollarSign, DoorOpen, Flag, Mic2, Music, Sparkles, Star, TrendingUp, Users } from "lucide-react";
+import { Activity, Banknote, CalendarClock, CircleDot, Clock, DollarSign, DoorOpen, Flag, Mic2, Music, Share2, Sparkles, Star, TrendingUp, Users } from "lucide-react";
 import type { GearModifierEffects } from "@/utils/gearModifiers";
 import type { GearOutcomeNarrative } from "@/utils/gigNarrative";
 import type { GigXpSummary } from "@/utils/gigXpCalculator";
@@ -15,6 +15,8 @@ import type { ChemistryMoment } from "@/utils/bandChemistryEffects";
 import { calculateLiveSetup } from "@/utils/liveSetup";
 import type { GigExperienceDTO, GigExperienceSongDTO } from "@/features/gig-experience/types";
 import { metricValue } from "@/features/gig-experience/reportMetric";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
 import { LessonsPanel } from "./outcome/LessonsPanel";
 import { GigCrewProgressReport } from "./GigCrewProgressReport";
 import { bestSong, contributionTotal, crowdLabel, headlineFromExperience, money, numberFormat, pct, score, songScore, weakestSong } from "./outcome/reportUtils";
@@ -42,13 +44,30 @@ export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCap
   const report = experience ?? legacyToExperience(outcome, venueName, venueCapacity, songs, merchItemsSold, chemistryChange, stageBehaviorUsed);
   if (!report) return null;
   const processing = report.viewer.ready === false || report.gig.status === "processing";
+  const [shareInvite, setShareInvite] = useState<{ url: string; text: string } | null>(null);
+  useEffect(() => {
+    if (!isOpen || processing || ["cancelled", "canceled", "abandoned"].includes(report.gig.status)) return;
+    const key = "rockmundo_gig_referral_prompt_at";
+    const last = Number(localStorage.getItem(key) || 0);
+    if (Date.now() - last < 7 * 24 * 60 * 60 * 1000) return;
+    void (async () => {
+      const { data: profiles } = await (supabase as any).from("profiles").select("id").eq("user_id", (await supabase.auth.getUser()).data.user?.id).eq("is_active", true).limit(1);
+      const profileId = profiles?.[0]?.id;
+      if (!profileId) return;
+      const { data, error } = await (supabase as any).rpc("get_referral_dashboard", { p_profile_id: profileId });
+      if (error || !data?.code) return;
+      const url = `https://rockmundo.uk/auth?ref=${encodeURIComponent(data.code)}`;
+      setShareInvite({ url, text: `I just played ${report.gig.venue.name} in RockMundo. Start your own music career and join me.` });
+      localStorage.setItem(key, String(Date.now()));
+    })();
+  }, [isOpen, processing, report.gig.status, report.gig.venue.name]);
   const cancelled = ["cancelled", "canceled", "abandoned"].includes(report.gig.status);
 
   return <Dialog open={isOpen} onOpenChange={onClose}>
     <DialogContent className="w-[96vw] max-w-6xl max-h-[92vh] overflow-y-auto p-0 sm:p-6" aria-describedby="gig-report-summary">
       <DialogHeader className="sr-only"><DialogTitle>Gig Performance Report</DialogTitle></DialogHeader>
       <main className="space-y-4 p-3 sm:p-0">
-        <HeadlineResult experience={report} onClose={onClose} processing={processing} cancelled={cancelled} />
+        <HeadlineResult experience={report} onClose={onClose} processing={processing} cancelled={cancelled} shareInvite={shareInvite} />
         <p id="gig-report-summary" className="sr-only">Post-gig report with headline result, performance story, lessons, timeline, and detailed analysis.</p>
         {processing ? <EmptyState title="Results processing" body="The authoritative outcome is still being prepared. Rewards and progression will appear when processing finishes." /> : cancelled ? <EmptyState title="Gig did not complete" body="This report is limited because the gig was cancelled or abandoned before a full outcome could be recorded." /> : <>
           <PerformanceStory experience={report} momentHighlights={momentHighlights} />
@@ -61,7 +80,7 @@ export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCap
   </Dialog>;
 };
 
-function HeadlineResult({ experience, onClose, processing, cancelled }: { experience: GigExperienceDTO; onClose: () => void; processing: boolean; cancelled: boolean }) {
+function HeadlineResult({ experience, onClose, processing, cancelled, shareInvite }: { experience: GigExperienceDTO; onClose: () => void; processing: boolean; cancelled: boolean; shareInvite: { url: string; text: string } | null }) {
   const h = headlineFromExperience(experience); const best = bestSong(experience.songs); const weak = weakestSong(experience.songs);
   const verdict = cancelled ? "Gig cancelled" : processing ? "Outcome processing" : experience.headline.verdict;
   return <section className="sticky top-0 z-10 -mx-3 rounded-b-2xl border bg-background/95 p-4 shadow-sm backdrop-blur sm:static sm:mx-0 sm:rounded-2xl" aria-labelledby="headline-result-heading">
@@ -74,7 +93,7 @@ function HeadlineResult({ experience, onClose, processing, cancelled }: { experi
         <Metric icon={<TrendingUp />} label="Growth" value={`+${numberFormat.format(metricValue(experience.headline.fansGained, 0))} fans`} detail={`+${numberFormat.format(metricValue(experience.headline.fameGained, 0))} fame`} />
         <Metric icon={<Music />} label="Best song" value={best?.title ?? metricValue(experience.headline.bestSongTitle, "Unknown")} detail={best ? score(songScore(best)) : "Missing songs"} />
         <Metric icon={<Sparkles />} label="Weakest moment" value={weak ? `${weak.title} struggled` : "None recorded"} detail={weak ? score(songScore(weak)) : "Evidence from setlist scores"} />
-        <div className="col-span-2 flex flex-wrap gap-2 md:col-span-2"><Button onClick={onClose}>Continue</Button><Button variant="secondary" asChild><a href="#performance-story">Performance Story</a></Button><Button variant="outline" asChild><a href="#detailed-analysis">Detailed Analysis</a></Button><Button variant="outline" disabled={!experience.viewer.replayAvailable}>Replay (placeholder)</Button></div>
+        <div className="col-span-2 flex flex-wrap gap-2 md:col-span-2"><Button onClick={onClose}>Continue</Button><Button variant="secondary" asChild><a href="#performance-story">Performance Story</a></Button><Button variant="outline" asChild><a href="#detailed-analysis">Detailed Analysis</a></Button><Button variant="outline" disabled={!experience.viewer.replayAvailable}>Replay (placeholder)</Button>{shareInvite ? <Button variant="outline" onClick={async () => { if (navigator.share) { try { await navigator.share({ title: "My RockMundo gig", text: shareInvite.text, url: shareInvite.url }); return; } catch (error) { if ((error as DOMException)?.name === "AbortError") return; } } await navigator.clipboard.writeText(`${shareInvite.text} ${shareInvite.url}`); }}><Share2 className="mr-2 h-4 w-4" />Invite a friend</Button> : null}</div>
       </div>
     </div>
   </section>;
