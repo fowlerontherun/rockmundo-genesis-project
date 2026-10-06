@@ -19,7 +19,7 @@ export default function TwaaterTwaatView() {
   const { account } = useTwaaterAccount("persona", profile?.id);
 
   // Fetch main twaat
-  const { data: twaat, isLoading } = useQuery({
+  const { data: twaat, isLoading, error: twaatError, refetch: refetchTwaat } = useQuery({
     queryKey: ["twaat-detail", twaatId],
     queryFn: async (): Promise<any> => {
       if (!twaatId) return null;
@@ -34,7 +34,7 @@ export default function TwaaterTwaatView() {
         .eq("id", twaatId)
         .is("deleted_at", null)
         .is("scheduled_for", null)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       const hydrated = await hydrateTwaaterFeedExtras(data ? [data] : []);
@@ -44,7 +44,7 @@ export default function TwaaterTwaatView() {
   });
 
   // Fetch replies
-  const { data: replies } = useQuery<any[]>({
+  const { data: replies, isLoading: repliesLoading, error: repliesError, refetch: refetchReplies } = useQuery<any[]>({
     queryKey: ["twaat-replies", twaatId],
     queryFn: async () => {
       if (!twaatId) return [];
@@ -73,6 +73,19 @@ export default function TwaaterTwaatView() {
         <div className="flex items-center justify-center py-16">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
+      </FMPageScaffold>
+    );
+  }
+
+  if (twaatError) {
+    return (
+      <FMPageScaffold title="Twaat" icon={MessageCircle} backTo="/twaater">
+        <Card>
+          <CardContent className="py-12 text-center space-y-3">
+            <p className="text-muted-foreground">This Twaat couldn't load.</p>
+            <Button variant="outline" size="sm" onClick={() => refetchTwaat()}>Retry</Button>
+          </CardContent>
+        </Card>
       </FMPageScaffold>
     );
   }
@@ -108,7 +121,18 @@ export default function TwaaterTwaatView() {
             </span>
           </div>
 
-          {replies && replies.length > 0 ? (
+          {repliesLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : repliesError ? (
+            <Card className="mx-4 mb-4" style={{ backgroundColor: "hsl(var(--twaater-card))" }}>
+              <CardContent className="py-8 text-center space-y-3">
+                <p className="text-muted-foreground">Replies couldn't load.</p>
+                <Button variant="outline" size="sm" onClick={() => refetchReplies()}>Retry</Button>
+              </CardContent>
+            </Card>
+          ) : replies && replies.length > 0 ? (
             <div>
               {replies.map((reply: any) => (
                 <div
