@@ -213,6 +213,12 @@ export const useCollaborationInvites = (projectId?: string) => {
       queryClient.invalidateQueries({ queryKey: ["project-collaborators"] });
       queryClient.invalidateQueries({ queryKey: ["inbox"] });
       queryClient.invalidateQueries({ queryKey: ["inbox-unread-count"] });
+      if (data.accepted) {
+        queryClient.invalidateQueries({ queryKey: ["profile"] });
+        queryClient.invalidateQueries({ queryKey: ["game-data"] });
+        queryClient.invalidateQueries({ queryKey: ["user-cash-balance"] });
+        queryClient.invalidateQueries({ queryKey: ["profile-cash"] });
+      }
       toast.success(data.accepted ? "Invitation accepted!" : "Invitation declined");
     },
     onError: (error: Error) => {
