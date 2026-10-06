@@ -14,6 +14,7 @@ import { VerifiedBadge } from "./VerifiedBadge";
 import { PromoteTwaatDialog } from "./PromoteTwaatDialog";
 import { Heart, MessageCircle, Repeat2, Bookmark, BookmarkCheck, Quote, Rocket } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useTwaaterRuntimeConfig } from "@/hooks/useTwaaterRuntimeConfig";
 
 interface TwaatCardProps {
   twaat: any;
@@ -27,6 +28,7 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
   const [showReplyBox, setShowReplyBox] = useState(false);
   const [replyBody, setReplyBody] = useState("");
   const navigate = useNavigate();
+  const { config } = useTwaaterRuntimeConfig();
 
   const handleReply = async () => {
     if (!replyBody.trim() || !viewerAccountId) return;
@@ -42,7 +44,7 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
   const makeHashtagsClickable = (text: string) => {
     const parts = text.split(/(#\w+)/g);
     return parts.map((part, i) => {
-      if (part.startsWith("#")) {
+      if (config.hashtagsEnabled && part.startsWith("#")) {
         const hashtag = part.slice(1);
         return (
           <span key={i} onClick={(e) => { e.stopPropagation(); navigate(`/twaater/tag/${hashtag}`); }} className="text-[hsl(var(--twaater-purple))] hover:underline cursor-pointer">
@@ -89,7 +91,7 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
             <span className="font-semibold cursor-pointer hover:underline" onClick={() => navigate(`/twaater/${twaat.account.handle}`)}>
               {twaat.account.display_name}
             </span>
-            {twaat.account.verified && <VerifiedBadge accountId={twaat.account.id} />}
+            {twaat.account.verified && config.verifiedBadgesEnabled && <VerifiedBadge accountId={twaat.account.id} />}
             <span className="text-muted-foreground text-sm">@{twaat.account.handle}</span>
             <span className="text-muted-foreground text-sm">·</span>
             <span className="text-muted-foreground text-sm">{formatDistanceToNow(new Date(twaat.created_at), { addSuffix: true })}</span>
