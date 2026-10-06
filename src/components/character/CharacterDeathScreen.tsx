@@ -110,6 +110,12 @@ export function CharacterDeathScreen({
     : isLegacyNeglectComa
       ? "legacy health / wellness neglect"
       : deadCharacter.cause_of_death || "Unknown reason";
+  const lastAccountActivityLabel = deadCharacter.coma_last_account_activity_at
+    ? new Date(deadCharacter.coma_last_account_activity_at).toLocaleString(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short",
+      })
+    : null;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-stage px-4 py-8">
@@ -183,7 +189,7 @@ export function CharacterDeathScreen({
                   <p>
                     {isLegacyNeglectComa
                       ? "This is an older coma state rather than a current offline penalty. Reviving is free, keeps your career progress, and lets you continue immediately."
-                      : "Inactivity coma is not permanent death. Reviving is free, keeps your career progress, and restores your character so you can continue playing immediately."}
+                      : `Inactivity coma is not permanent death. Reviving is free and keeps your career progress.${lastAccountActivityLabel ? ` Your last recorded account activity was ${lastAccountActivityLabel}.` : ""}`}
                   </p>
                 </div>
               )}
