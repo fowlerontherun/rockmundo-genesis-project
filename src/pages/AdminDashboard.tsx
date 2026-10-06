@@ -141,7 +141,7 @@ const AdminDashboard = () => {
                 <Skull className="h-5 w-5 text-destructive" />
                 Death System
               </CardTitle>
-              <CardDescription>Configure permadeath, resurrection & inheritance</CardDescription>
+              <CardDescription>Monitor inactivity coma policy, legacy states & recovery</CardDescription>
             </CardHeader>
           </Card>
           <Card className="hover:border-primary transition-colors cursor-pointer" onClick={() => window.location.href = '/admin/character-recovery'}>
