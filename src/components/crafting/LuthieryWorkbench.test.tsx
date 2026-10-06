@@ -82,6 +82,42 @@ describe("LuthieryWorkbench interactions", () => {
     expect(group.querySelector("rect")).toHaveAttribute("fill", "var(--luth-gold)");
   });
 
+  it("accepts any custom body colour and carries it into the reviewed craft selection", async () => {
+    const user = userEvent.setup();
+    const onCraft = vi.fn().mockResolvedValue({
+      status: "completed" as const,
+      craftId: "craft-colour",
+      equipmentId: "equipment-colour",
+      playerEquipmentId: "player-equipment-colour",
+      instrumentName: "Colour Axe",
+      instrumentKind: "electric_guitar" as const,
+      rarity: "rare",
+      qualityRoll: 0,
+      finalQuality: 60,
+      finalStats: { tone: 50, sustain: 50, stability: 50, output: 50, stagePresence: 50 },
+      buildSpec: {},
+    });
+
+    render(
+      <LuthieryWorkbench
+        materialsCatalog={materials}
+        playerMaterials={stock}
+        onCraft={onCraft}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Custom body colour"), { target: { value: "#12abef" } });
+    expect(screen.getByText("#12abef")).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Instrument name"), "Colour Axe");
+    await user.click(screen.getByRole("button", { name: "Review build" }));
+    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Confirm design" }));
+    await user.click(screen.getByRole("button", { name: "Craft instrument" }));
+
+    await waitFor(() => expect(onCraft).toHaveBeenCalledTimes(1));
+    expect(onCraft.mock.calls[0][0].colour).toBe("#12abef");
+  });
+
   it("places and moves artwork on the live preview", async () => {
     const user = userEvent.setup();
     render(<LuthieryWorkbench materialsCatalog={materials} playerMaterials={stock} />);

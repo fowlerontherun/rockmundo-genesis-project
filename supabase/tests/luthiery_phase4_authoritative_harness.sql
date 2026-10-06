@@ -137,7 +137,7 @@ DECLARE
     "instrumentName":"Phase Four Test",
     "instrumentKind":"electric_guitar",
     "shapeId":"double-cut",
-    "colour":"#141821",
+    "colour":"#12abef",
     "finishId":"finish-satin",
     "decal":{"id":"none","x":50,"y":50,"scale":100,"rotation":0,"colour":"#f5f5f5"},
     "parts":{
@@ -218,8 +218,10 @@ BEGIN
     FROM public.luthiery_crafts
     WHERE equipment_id=v_equipment_id
       AND jsonb_array_length(material_snapshot)=6
+      AND colour='#12abef'
+      AND result->'buildSpec'->>'colour'='#12abef'
   ) THEN
-    RAISE EXCEPTION 'immutable six-material build provenance is missing';
+    RAISE EXCEPTION 'immutable six-material build provenance or custom body colour is missing';
   END IF;
 
   v_retry := public.create_custom_luthiery_instrument(
