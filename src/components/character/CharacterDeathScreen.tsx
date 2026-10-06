@@ -24,6 +24,8 @@ import type { DeadCharacter } from "@/hooks/useCharacterDeath";
 
 interface CharacterDeathScreenProps {
   deadCharacter: DeadCharacter;
+  availableDeadCharacters?: DeadCharacter[];
+  onSelectDeadCharacter?: (profileId: string) => void;
   onResurrect: (profileId: string) => void;
   onCreateChild: (parentId: string, opts: { displayName: string; username: string }) => void;
   onCreateFresh: (opts: { displayName: string; username: string }) => void;
@@ -43,6 +45,8 @@ const slugifyUsername = (input: string) =>
 
 export function CharacterDeathScreen({
   deadCharacter,
+  availableDeadCharacters = [],
+  onSelectDeadCharacter,
   onResurrect,
   onCreateChild,
   onCreateFresh,
@@ -110,6 +114,12 @@ export function CharacterDeathScreen({
     : isLegacyNeglectComa
       ? "legacy health / wellness neglect"
       : deadCharacter.cause_of_death || "Unknown reason";
+  const lastAccountActivityLabel = deadCharacter.coma_last_account_activity_at
+    ? new Date(deadCharacter.coma_last_account_activity_at).toLocaleString(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short",
+      })
+    : null;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-stage px-4 py-8">
@@ -132,6 +142,39 @@ export function CharacterDeathScreen({
             style={{ width: `${(currentStepNum / totalSteps) * 100}%` }}
           />
         </div>
+
+        {step === "welcome" && availableDeadCharacters.length > 1 && onSelectDeadCharacter && (
+          <Card className="border-amber-500/30 bg-card/95">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Choose which character to recover</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Your account has multiple characters in a coma. Select the career you want to continue.
+              </p>
+            </CardHeader>
+            <CardContent className="grid gap-2">
+              {availableDeadCharacters.map((character) => {
+                const isSelected = character.profile_id === deadCharacter.profile_id;
+                return (
+                  <Button
+                    key={character.profile_id}
+                    type="button"
+                    variant={isSelected ? "default" : "outline"}
+                    className="h-auto justify-between gap-3 px-3 py-2 text-left"
+                    onClick={() => onSelectDeadCharacter(character.profile_id)}
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate font-semibold">{character.character_name}</span>
+                      <span className="block text-xs opacity-80">
+                        Gen {character.generation_number} · {(character.total_fame || 0).toLocaleString()} fame
+                      </span>
+                    </span>
+                    {isSelected && <CheckCircle2 className="h-4 w-4 shrink-0" />}
+                  </Button>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Step 1: Welcome / Memorial */}
         {step === "welcome" && (
@@ -183,7 +226,7 @@ export function CharacterDeathScreen({
                   <p>
                     {isLegacyNeglectComa
                       ? "This is an older coma state rather than a current offline penalty. Reviving is free, keeps your career progress, and lets you continue immediately."
-                      : "Inactivity coma is not permanent death. Reviving is free, keeps your career progress, and restores your character so you can continue playing immediately."}
+                      : `Inactivity coma is not permanent death. Reviving is free and keeps your career progress.${lastAccountActivityLabel ? ` Your last recorded account activity was ${lastAccountActivityLabel}.` : ""}`}
                   </p>
                 </div>
               )}

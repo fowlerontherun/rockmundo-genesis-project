@@ -14,6 +14,8 @@ export interface DeadCharacter {
   final_skills: Record<string, number>;
   generation_number: number;
   resurrection_lives: number;
+  coma_started_at: string | null;
+  coma_last_account_activity_at: string | null;
 }
 
 export function useCharacterDeath() {
@@ -29,7 +31,7 @@ export function useCharacterDeath() {
       // Get dead profiles directly - these always exist even if hall_of_immortals entry is missing
       const { data: deadProfiles, error: profileError } = await supabase
         .from("profiles")
-        .select("id, username, display_name, avatar_url, died_at, death_cause, fame, cash, level, generation_number, resurrection_lives")
+        .select("id, username, display_name, avatar_url, died_at, death_cause, coma_started_at, coma_last_account_activity_at, fame, cash, level, generation_number, resurrection_lives")
         .eq("user_id", user.id)
         .not("died_at", "is", null)
         .is("deleted_at", null)
@@ -62,6 +64,8 @@ export function useCharacterDeath() {
           final_skills: (memorial?.final_skills as Record<string, number>) ?? {},
           generation_number: p.generation_number ?? 1,
           resurrection_lives: (p as any).resurrection_lives ?? 0,
+          coma_started_at: p.coma_started_at ?? null,
+          coma_last_account_activity_at: p.coma_last_account_activity_at ?? null,
         };
       });
     },
