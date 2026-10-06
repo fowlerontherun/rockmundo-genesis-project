@@ -14,14 +14,27 @@ interface TwaaterFeedProps {
 }
 
 export const TwaaterFeed = ({ viewerAccountId, feedType = "feed" }: TwaaterFeedProps) => {
-  const [useAI, setUseAI] = useState(true);
+  const [useAI, setUseAI] = useState(false);
   const [newTwaatsCount, setNewTwaatsCount] = useState(0);
 
-  const { feed: regularFeed, isLoading: feedLoading, refetch: refetchRegular } = useTwaaterFeed(feedType === "feed" ? viewerAccountId : undefined);
-  const { data: aiFeed, isLoading: aiLoading, refetch: refetchAI } = useTwaaterAIFeed(useAI && feedType === "feed" ? viewerAccountId : undefined);
+  const regularEnabled = feedType === "feed" && !useAI;
+  const aiEnabled = feedType === "feed" && useAI && !!viewerAccountId;
+  const {
+    feed: regularFeed,
+    isLoading: feedLoading,
+    error: feedError,
+    refetch: refetchRegular,
+  } = useTwaaterFeed(viewerAccountId, regularEnabled);
+  const {
+    data: aiFeed,
+    isLoading: aiLoading,
+    error: aiError,
+    refetch: refetchAI,
+  } = useTwaaterAIFeed(viewerAccountId, aiEnabled);
   const { mentions, isLoading: mentionsLoading } = useTwaaterMentions(feedType === "mentions" ? viewerAccountId : undefined);
 
   const isLoading = feedType === "feed" ? (useAI ? aiLoading : feedLoading) : mentionsLoading;
+  const feedErrorState = feedType === "feed" ? (useAI ? aiError : feedError) : null;
   const items = feedType === "feed" ? (useAI ? aiFeed : regularFeed) : mentions?.map((mention) => mention.twaat).filter(Boolean);
 
   useEffect(() => {
@@ -55,6 +68,18 @@ export const TwaaterFeed = ({ viewerAccountId, feedType = "feed" }: TwaaterFeedP
     <Card style={{ backgroundColor: "hsl(var(--twaater-card))" }}>
       <CardContent className="flex items-center justify-center py-12">
         <Loader2 className="h-6 w-6 animate-spin text-[hsl(var(--twaater-purple))]" />
+      </CardContent>
+    </Card>
+  );
+
+  if (feedErrorState) return (
+    <Card style={{ backgroundColor: "hsl(var(--twaater-card))" }}>
+      <CardContent className="py-10 text-center space-y-3">
+        <p className="font-medium">Twaater couldn't load this feed.</p>
+        <p className="text-sm text-muted-foreground">Please retry. Your account and posts are safe.</p>
+        <Button variant="outline" onClick={handleRefresh}>
+          <RefreshCw className="h-4 w-4 mr-2" /> Retry
+        </Button>
       </CardContent>
     </Card>
   );

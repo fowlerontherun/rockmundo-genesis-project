@@ -37,7 +37,7 @@ export const useTwaaterAnalytics = (accountId?: string) => {
 
       const { data: twaats } = await supabase
         .from("twaats")
-        .select(`id, body, created_at, metrics:twaat_metrics(likes, retwaats, replies, views)`)
+        .select(`id, body, created_at, metrics:twaat_metrics(likes, retwaats, replies, impressions)`)
         .eq("account_id", accountId!)
         .is("deleted_at", null)
         .gte("created_at", since.toISOString())
@@ -63,7 +63,7 @@ export const useTwaaterAnalytics = (accountId?: string) => {
         const likes = m?.likes || 0;
         const retwaats = m?.retwaats || 0;
         const replies = m?.replies || 0;
-        const views = m?.views || 0;
+        const views = m?.impressions || 0;
         totals.twaats += 1;
         totals.likes += likes;
         totals.retwaats += retwaats;

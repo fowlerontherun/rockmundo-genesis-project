@@ -7,6 +7,7 @@ import { Loader2, Hash } from "lucide-react";
 import { useTwaaterAccount } from "@/hooks/useTwaaterAccount";
 import { useGameData } from "@/hooks/useGameData";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { hydrateTwaaterFeedExtras } from "@/hooks/useTwaats";
 
 export default function TwaaterHashtagView() {
   const { hashtag } = useParams();
@@ -33,7 +34,7 @@ export default function TwaaterHashtagView() {
         .limit(50);
 
       if (error) throw error;
-      return data;
+      return hydrateTwaaterFeedExtras(data || []);
     },
     enabled: !!hashtag,
   });

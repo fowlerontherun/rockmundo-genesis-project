@@ -22,14 +22,66 @@ interface TwaatWithDetails extends Twaat {
 const twaatDetailsSelect = `
   *,
   account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, owner_type, fame_score),
-  metrics:twaat_metrics(*),
-  quoted_twaat:twaats!twaats_quoted_twaat_id_fkey(
-    id,
-    body,
-    created_at,
-    account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, owner_type)
-  )
+  metrics:twaat_metrics(*)
 `;
+
+const quotedTwaatSelect = `
+  id,
+  body,
+  created_at,
+  account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, owner_type)
+`;
+
+export const hydrateQuotedTwaats = async <T extends { id: string; quoted_twaat_id?: string | null }>(rows: T[]): Promise<T[]> => {
+  const quotedIds = Array.from(new Set(rows.map((row) => row.quoted_twaat_id).filter(Boolean))) as string[];
+  if (quotedIds.length === 0) return rows;
+
+  const { data, error } = await supabase
+    .from("twaats")
+    .select(quotedTwaatSelect)
+    .in("id", quotedIds)
+    .is("deleted_at", null)
+    .is("scheduled_for", null);
+
+  if (error) {
+    console.warn("Unable to hydrate quoted Twaats:", error);
+    return rows;
+  }
+
+  const quotedById = new Map((data || []).map((quoted: any) => [quoted.id, quoted]));
+  return rows.map((row: any) => ({
+    ...row,
+    quoted_twaat: row.quoted_twaat_id ? quotedById.get(row.quoted_twaat_id) : undefined,
+  }));
+};
+
+export const hydrateTwaaterFeedExtras = async <T extends { id: string; quoted_twaat_id?: string | null }>(rows: T[]): Promise<T[]> => {
+  const hydratedQuotes = await hydrateQuotedTwaats(rows);
+  if (hydratedQuotes.length === 0) return hydratedQuotes;
+
+  const twaatIds = hydratedQuotes.map((row) => row.id);
+  const { data: polls, error } = await supabase
+    .from("twaater_polls")
+    .select(`
+      id,
+      twaat_id,
+      question,
+      expires_at,
+      options:twaater_poll_options(*)
+    `)
+    .in("twaat_id", twaatIds);
+
+  if (error) {
+    console.warn("Unable to batch hydrate Twaater polls:", error);
+    return hydratedQuotes;
+  }
+
+  const pollByTwaatId = new Map((polls || []).map((poll: any) => [poll.twaat_id, poll]));
+  return hydratedQuotes.map((row: any) => ({
+    ...row,
+    poll: pollByTwaatId.get(row.id) || null,
+  }));
+};
 
 export const useTwaats = (accountId?: string) => {
   const { toast } = useToast();
@@ -50,7 +102,7 @@ export const useTwaats = (accountId?: string) => {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as unknown as TwaatWithDetails[];
+      return await hydrateTwaaterFeedExtras((data || []) as unknown as TwaatWithDetails[]);
     },
   });
 
@@ -137,8 +189,8 @@ export const useTwaats = (accountId?: string) => {
   };
 };
 
-export const useTwaaterFeed = (viewerAccountId?: string) => {
-  const { data: feed, isLoading, refetch } = useQuery({
+export const useTwaaterFeed = (viewerAccountId?: string, enabled = true) => {
+  const { data: feed, isLoading, error, refetch } = useQuery({
     queryKey: ["twaater-feed", viewerAccountId],
     queryFn: async () => {
       if (!viewerAccountId) {
@@ -149,10 +201,10 @@ export const useTwaaterFeed = (viewerAccountId?: string) => {
           .is("deleted_at", null)
           .is("scheduled_for", null)
           .order("created_at", { ascending: false })
-          .limit(100);
+          .limit(50);
 
         if (error) throw error;
-        return data as unknown as TwaatWithDetails[];
+        return await hydrateTwaaterFeedExtras((data || []) as unknown as TwaatWithDetails[]);
       }
 
       const { data: follows, error: followsError } = await supabase
@@ -172,13 +224,15 @@ export const useTwaaterFeed = (viewerAccountId?: string) => {
         .is("deleted_at", null)
         .is("scheduled_for", null)
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(50);
 
       if (error) throw error;
-      return data as unknown as TwaatWithDetails[];
+      return await hydrateTwaaterFeedExtras((data || []) as unknown as TwaatWithDetails[]);
     },
-    enabled: true,
+    enabled,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
-  return { feed, isLoading, refetch };
+  return { feed, isLoading, error, refetch };
 };

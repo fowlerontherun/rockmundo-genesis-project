@@ -475,11 +475,10 @@ serve(async (req) => {
         .from("twaat_metrics")
         .insert({
           twaat_id: newTwaat.id,
-          views: Math.floor(Math.random() * 100) + 10,
+          impressions: Math.floor(Math.random() * 100) + 10,
           likes: Math.floor(Math.random() * 20),
           replies: Math.floor(Math.random() * 5),
           retwaats: Math.floor(Math.random() * 5),
-          engagement_rate: Math.random() * 0.1,
         });
 
       // Update last_posted_at
@@ -521,12 +520,11 @@ serve(async (req) => {
             .from("twaat_metrics")
             .insert({
               twaat_id: newTwaat.id,
-              views: Math.floor(Math.random() * 100) + 10,
+              impressions: Math.floor(Math.random() * 100) + 10,
               likes: Math.floor(Math.random() * 20),
               replies: Math.floor(Math.random() * 5),
               retwaats: Math.floor(Math.random() * 5),
-              engagement_rate: Math.random() * 0.1,
-            });
+                });
 
           await supabase
             .from("twaater_bot_accounts")

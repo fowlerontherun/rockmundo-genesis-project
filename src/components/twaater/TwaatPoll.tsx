@@ -7,10 +7,11 @@ import { CheckCircle2 } from "lucide-react";
 interface TwaatPollProps {
   twaatId: string;
   accountId?: string;
+  preloadedPoll?: any;
 }
 
-export const TwaatPoll = ({ twaatId, accountId }: TwaatPollProps) => {
-  const { poll, userVote, isLoading, vote, isVoting } = useTwaaterPolls(twaatId, accountId);
+export const TwaatPoll = ({ twaatId, accountId, preloadedPoll }: TwaatPollProps) => {
+  const { poll, userVote, isLoading, vote, isVoting } = useTwaaterPolls(twaatId, accountId, preloadedPoll);
 
   if (isLoading || !poll) return null;
 

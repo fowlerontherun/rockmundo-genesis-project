@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { hydrateTwaaterFeedExtras } from "@/hooks/useTwaats";
 
 interface ExploreTwaat {
   id: string;
@@ -44,6 +45,10 @@ export const useTwaaterExploreFeed = (excludeAccountId?: string) => {
           linked_id,
           parent_twaat_id,
           quoted_twaat_id,
+          media_url,
+          media_type,
+          is_promoted,
+          promoted_until,
           account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, owner_type, fame_score),
           metrics:twaat_metrics(likes, replies, retwaats, impressions)
         `)
@@ -62,7 +67,7 @@ export const useTwaaterExploreFeed = (excludeAccountId?: string) => {
         const likes = metrics.likes || 0;
         const replies = metrics.replies || 0;
         const retwaats = metrics.retwaats || 0;
-        const views = metrics.views || 1;
+        const views = metrics.impressions || 1;
 
         // Engagement score: likes * 1 + replies * 2 + retwaats * 3
         let engagementScore = (likes * 1) + (replies * 2) + (retwaats * 3);
@@ -108,8 +113,8 @@ export const useTwaaterExploreFeed = (excludeAccountId?: string) => {
       // Sort by engagement score descending
       filtered.sort((a: any, b: any) => (b.engagement_score || 0) - (a.engagement_score || 0));
 
-      // Return top 50
-      return filtered.slice(0, 50) as ExploreTwaat[];
+      // Return top 50 with quotes/polls hydrated in batches.
+      return await hydrateTwaaterFeedExtras(filtered.slice(0, 50) as any[]) as ExploreTwaat[];
     },
     staleTime: 2 * 60 * 1000, // 2 minutes
     refetchOnWindowFocus: false,

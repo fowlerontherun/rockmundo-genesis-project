@@ -33,15 +33,8 @@ export const TwaaterExploreFeed = ({ viewerAccountId }: TwaaterExploreFeedProps)
     );
   }
 
-  // Transform to timeline format
-  const timelineTwaats = exploreFeed.map((twaat) => ({
-    id: twaat.id,
-    body: twaat.body,
-    created_at: twaat.created_at,
-    linked_type: twaat.linked_type,
-    linked_id: twaat.linked_id,
-    parent_twaat_id: twaat.parent_twaat_id,
-    quoted_twaat_id: twaat.quoted_twaat_id,
+  const timelineTwaats = exploreFeed.map((twaat: any) => ({
+    ...twaat,
     account: {
       id: twaat.account?.id,
       handle: twaat.account?.handle,

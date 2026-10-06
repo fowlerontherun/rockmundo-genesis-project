@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { hydrateTwaaterFeedExtras } from "@/hooks/useTwaats";
 
 export const useTwaaterBookmarks = (accountId?: string) => {
   const { toast } = useToast();
@@ -25,7 +26,16 @@ export const useTwaaterBookmarks = (accountId?: string) => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data;
+
+      const rows = data || [];
+      const twaats = rows.map((bookmark: any) => bookmark.twaat).filter(Boolean);
+      const hydrated = await hydrateTwaaterFeedExtras(twaats);
+      const hydratedById = new Map(hydrated.map((twaat: any) => [twaat.id, twaat]));
+
+      return rows.map((bookmark: any) => ({
+        ...bookmark,
+        twaat: bookmark.twaat ? hydratedById.get(bookmark.twaat.id) || bookmark.twaat : null,
+      }));
     },
     enabled: !!accountId,
   });

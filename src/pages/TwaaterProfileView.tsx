@@ -11,6 +11,7 @@ import { useGameData } from "@/hooks/useGameData";
 import { useTwaaterAccount } from "@/hooks/useTwaaterAccount";
 import { useToast } from "@/hooks/use-toast";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { hydrateTwaaterFeedExtras } from "@/hooks/useTwaats";
 
 const TwaaterProfileView = () => {
   const { handle } = useParams();
@@ -44,20 +45,15 @@ const TwaaterProfileView = () => {
         .select(`
           *,
           account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, owner_type),
-          metrics:twaat_metrics(*),
-          quoted_twaat:twaats!twaats_quoted_twaat_id_fkey(
-            id,
-            body,
-            created_at,
-            account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, owner_type)
-          )
+          metrics:twaat_metrics(*)
         `)
         .eq("account_id", profileAccount.id)
         .is("deleted_at", null)
+        .is("scheduled_for", null)
         .order("created_at", { ascending: false })
         .limit(50);
       if (error) throw error;
-      return data;
+      return hydrateTwaaterFeedExtras(data || []);
     },
     enabled: !!profileAccount,
   });

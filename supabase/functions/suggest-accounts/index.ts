@@ -125,15 +125,27 @@ serve(async (req) => {
         }
       }
 
-      // Sort by score and take top 20
-      const topSuggestions = suggestions
+      // Keep one row per suggested account. The same account can match multiple
+      // signals (for example similar fame + same genre), which previously caused
+      // duplicate-key failures in the daily refresh.
+      const uniqueSuggestions = new Map<string, (typeof suggestions)[number]>();
+      for (const suggestion of suggestions) {
+        const existing = uniqueSuggestions.get(suggestion.suggested_account_id);
+        if (!existing || suggestion.score > existing.score) {
+          uniqueSuggestions.set(suggestion.suggested_account_id, suggestion);
+        }
+      }
+
+      const topSuggestions = Array.from(uniqueSuggestions.values())
         .sort((a, b) => b.score - a.score)
         .slice(0, 20);
 
       if (topSuggestions.length > 0) {
         const { error: insertError } = await supabase
           .from('twaater_suggested_follows')
-          .insert(topSuggestions);
+          .upsert(topSuggestions, {
+            onConflict: 'account_id,suggested_account_id',
+          });
 
         if (insertError) {
           console.error(`Error inserting suggestions for ${account.id}:`, insertError);

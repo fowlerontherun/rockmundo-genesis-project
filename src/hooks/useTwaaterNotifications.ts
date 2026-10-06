@@ -1,6 +1,27 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+export const useTwaaterUnreadCount = (accountId?: string) => {
+  return useQuery({
+    queryKey: ["twaater-notifications-unread-count", accountId],
+    queryFn: async () => {
+      if (!accountId) return 0;
+
+      const { count, error } = await supabase
+        .from("twaater_notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("account_id", accountId)
+        .is("read_at", null);
+
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!accountId,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: false,
+  });
+};
+
 export const useTwaaterNotifications = (accountId?: string) => {
   const queryClient = useQueryClient();
 
@@ -39,6 +60,7 @@ export const useTwaaterNotifications = (accountId?: string) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["twaater-notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-notifications-unread-count"] });
     },
   });
 
@@ -56,6 +78,7 @@ export const useTwaaterNotifications = (accountId?: string) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["twaater-notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-notifications-unread-count"] });
     },
   });
 

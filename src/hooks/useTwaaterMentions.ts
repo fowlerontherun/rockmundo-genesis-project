@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { hydrateTwaaterFeedExtras } from "@/hooks/useTwaats";
 
 export const useTwaaterMentions = (accountId?: string) => {
   const { data: mentions, isLoading } = useQuery({
@@ -22,7 +23,16 @@ export const useTwaaterMentions = (accountId?: string) => {
         .limit(50);
 
       if (error) throw error;
-      return data;
+
+      const rows = data || [];
+      const twaats = rows.map((mention: any) => mention.twaat).filter(Boolean);
+      const hydrated = await hydrateTwaaterFeedExtras(twaats);
+      const hydratedById = new Map(hydrated.map((twaat: any) => [twaat.id, twaat]));
+
+      return rows.map((mention: any) => ({
+        ...mention,
+        twaat: mention.twaat ? hydratedById.get(mention.twaat.id) || mention.twaat : null,
+      }));
     },
     enabled: !!accountId,
   });

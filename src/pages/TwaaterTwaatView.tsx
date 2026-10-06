@@ -6,9 +6,11 @@ import { TwaaterLogo } from "@/components/twaater/TwaaterLogo";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2, MessageCircle } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 import { useTwaaterAccount } from "@/hooks/useTwaaterAccount";
 import { useGameData } from "@/hooks/useGameData";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { hydrateTwaaterFeedExtras } from "@/hooks/useTwaats";
 
 export default function TwaaterTwaatView() {
   const { twaatId } = useParams();
@@ -31,10 +33,12 @@ export default function TwaaterTwaatView() {
         `)
         .eq("id", twaatId)
         .is("deleted_at", null)
+        .is("scheduled_for", null)
         .single();
 
       if (error) throw error;
-      return data;
+      const hydrated = await hydrateTwaaterFeedExtras(data ? [data] : []);
+      return hydrated[0] || null;
     },
     enabled: !!twaatId,
   });
@@ -45,10 +49,15 @@ export default function TwaaterTwaatView() {
     queryFn: async () => {
       if (!twaatId) return [];
 
-      const { data, error } = await (supabase
-        .from("twaats") as any)
-        .select("*, account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, owner_type, fame_score), metrics:twaat_metrics(*)")
-        .eq("reply_to_id", twaatId)
+      const { data, error } = await supabase
+        .from("twaat_replies")
+        .select(`
+          id,
+          body,
+          created_at,
+          account:twaater_accounts!twaat_replies_account_id_fkey(id, handle, display_name, verified)
+        `)
+        .eq("parent_twaat_id", twaatId)
         .is("deleted_at", null)
         .order("created_at", { ascending: true });
 
@@ -102,7 +111,21 @@ export default function TwaaterTwaatView() {
           {replies && replies.length > 0 ? (
             <div>
               {replies.map((reply: any) => (
-                <TwaatCard key={reply.id} twaat={reply} viewerAccountId={account?.id} />
+                <div
+                  key={reply.id}
+                  className="border-b p-4 last:border-b-0"
+                  style={{ borderColor: "hsl(var(--twaater-border))", backgroundColor: "hsl(var(--twaater-card))" }}
+                >
+                  <div className="flex items-center gap-2 text-sm mb-2">
+                    <span className="font-semibold">{reply.account?.display_name || "Unknown account"}</span>
+                    {reply.account?.handle && <span className="text-muted-foreground">@{reply.account.handle}</span>}
+                    <span className="text-muted-foreground">·</span>
+                    <span className="text-muted-foreground">
+                      {formatDistanceToNow(new Date(reply.created_at), { addSuffix: true })}
+                    </span>
+                  </div>
+                  <p className="text-sm whitespace-pre-wrap break-words">{reply.body}</p>
+                </div>
               ))}
             </div>
           ) : (

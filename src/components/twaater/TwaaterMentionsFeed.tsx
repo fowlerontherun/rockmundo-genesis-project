@@ -27,7 +27,7 @@ export const TwaaterMentionsFeed = ({ accountId }: TwaaterMentionsFeedProps) => 
           <div className="text-center space-y-2">
             <p className="text-muted-foreground">No mentions yet</p>
             <p className="text-sm text-muted-foreground">
-              When others mention @{accountId} in their twaats, they'll appear here!
+              When others mention you in their twaats, they'll appear here!
             </p>
           </div>
         </CardContent>

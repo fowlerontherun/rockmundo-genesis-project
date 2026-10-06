@@ -17,19 +17,46 @@ import { TwaatCard } from "@/components/twaater/TwaatCard";
 import { TrendingHashtags } from "@/components/twaater/TrendingHashtags";
 import { WhoToFollow } from "@/components/twaater/WhoToFollow";
 import { TwaaterSearch } from "@/components/twaater/TwaaterSearch";
-import { TwaaterFeedSuggestions } from "@/components/twaater/TwaaterFeedSuggestions";
 import { Home, TrendingUp, AtSign, Bookmark, Search, Users, Compass, BarChart3 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
+const TwaaterBookmarksTab = ({ accountId }: { accountId?: string }) => {
+  const { bookmarks, isLoading } = useTwaaterBookmarks(accountId);
+
+  if (isLoading) {
+    return (
+      <Card style={{ backgroundColor: "hsl(var(--twaater-card))" }}>
+        <CardContent className="py-12 text-center text-muted-foreground">Loading saved Twaats…</CardContent>
+      </Card>
+    );
+  }
+
+  if (!bookmarks || bookmarks.length === 0) {
+    return (
+      <Card style={{ backgroundColor: "hsl(var(--twaater-card))" }}>
+        <CardContent className="py-12"><p className="text-center text-muted-foreground">No bookmarks yet</p></CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-2 p-2">
+      {bookmarks.map((bookmark: any) => (
+        <TwaatCard key={bookmark.id} twaat={bookmark.twaat} viewerAccountId={accountId} />
+      ))}
+    </div>
+  );
+};
+
+
 export default function Twaater() {
   const { profile } = useGameData();
   const ownerType = "persona" as const;
   const { account, isLoading: accountLoading } = useTwaaterAccount(ownerType, profile?.id);
   const [activeAccountId, setActiveAccountId] = useState<string | null>(null);
-  const { bookmarks } = useTwaaterBookmarks(activeAccountId || account?.id);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -152,7 +179,6 @@ export default function Twaater() {
                 <div className="border-b p-4" style={{ borderColor: "hsl(var(--twaater-border))" }}>
                   {currentAccountId && <TwaaterComposer accountId={currentAccountId} />}
                 </div>
-                {currentAccountId && <TwaaterFeedSuggestions currentAccountId={currentAccountId} />}
                 <TwaaterFeed viewerAccountId={currentAccountId} feedType="feed" />
               </TabsContent>
 
@@ -168,11 +194,7 @@ export default function Twaater() {
               <TabsContent value="mentions" className="mt-0">{currentAccountId && <TwaaterMentionsFeed accountId={currentAccountId} />}</TabsContent>
 
               <TabsContent value="bookmarks" className="mt-0">
-                {!bookmarks || bookmarks.length === 0 ? (
-                  <Card style={{ backgroundColor: "hsl(var(--twaater-card))" }}><CardContent className="py-12"><p className="text-center text-muted-foreground">No bookmarks yet</p></CardContent></Card>
-                ) : (
-                  <div className="space-y-2 p-2">{bookmarks.map((b: any) => <TwaatCard key={b.id} twaat={b.twaat} viewerAccountId={currentAccountId} />)}</div>
-                )}
+                <TwaaterBookmarksTab accountId={currentAccountId} />
               </TabsContent>
             </Tabs>
           </div>

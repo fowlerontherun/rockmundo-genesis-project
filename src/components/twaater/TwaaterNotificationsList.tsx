@@ -45,7 +45,7 @@ export const TwaaterNotificationsList = ({ accountId }: TwaaterNotificationsList
     if (notification.type === "follow") {
       navigate(`/twaater/${notification.source_account.handle}`);
     } else if (notification.related_twaat_id) {
-      navigate("/twaater");
+      navigate(`/twaater/twaat/${notification.related_twaat_id}`);
     }
   };
 
