@@ -24,7 +24,7 @@ const StatCard = ({ icon: Icon, label, value, hint }: { icon: any; label: string
 export default function TwaaterAnalytics() {
   const { profile } = useGameData();
   const { account } = useTwaaterAccount("persona", profile?.id);
-  const { data, isLoading } = useTwaaterAnalytics(account?.id);
+  const { data, isLoading, error, refetch } = useTwaaterAnalytics(account?.id);
 
   if (!account) {
     return (
@@ -45,8 +45,17 @@ export default function TwaaterAnalytics() {
       <div className="rounded-sm border border-fm-border p-4 space-y-4" style={{ backgroundColor: "hsl(var(--twaater-bg))" }}>
 
 
-        {isLoading || !data ? (
+        {isLoading ? (
           <Card><CardContent className="p-6 text-center text-muted-foreground">Loading…</CardContent></Card>
+        ) : error ? (
+          <Card>
+            <CardContent className="p-6 text-center space-y-3">
+              <p className="text-muted-foreground">Twaater analytics couldn't load.</p>
+              <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+            </CardContent>
+          </Card>
+        ) : !data ? (
+          <Card><CardContent className="p-6 text-center text-muted-foreground">No analytics data yet.</CardContent></Card>
         ) : (
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
