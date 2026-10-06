@@ -14,7 +14,7 @@ export default function TwaaterHashtagView() {
   const { profile } = useGameData();
   const { account } = useTwaaterAccount("persona", profile?.id);
 
-  const { data: twaats, isLoading } = useQuery({
+  const { data: twaats, isLoading, error, refetch } = useQuery({
     queryKey: ["hashtag-feed", hashtag],
     queryFn: async () => {
       if (!hashtag) return [];
@@ -45,6 +45,25 @@ export default function TwaaterHashtagView() {
         <div className="flex items-center justify-center py-16">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
+      </FMPageScaffold>
+    );
+  }
+
+  if (error) {
+    return (
+      <FMPageScaffold title={`#${hashtag}`} icon={Hash} backTo="/twaater">
+        <Card>
+          <CardContent className="py-12 text-center space-y-3">
+            <p className="text-muted-foreground">This hashtag feed couldn't load.</p>
+            <button
+              type="button"
+              onClick={() => refetch()}
+              className="text-sm font-medium text-[hsl(var(--twaater-purple))] hover:underline"
+            >
+              Retry
+            </button>
+          </CardContent>
+        </Card>
       </FMPageScaffold>
     );
   }
