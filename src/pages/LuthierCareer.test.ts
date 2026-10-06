@@ -34,5 +34,6 @@ describe("Luthier career discovery", () => {
     for (const slug of ["luthiery_basic_technical", "luthiery_professional_technical", "luthiery_mastery_technical"]) expect(sql).toContain(slug);
     for (const table of ["skill_books", "university_courses", "education_youtube_resources", "education_mentors"]) expect(sql).toContain(table);
     expect(sql).toContain("luthiery_learning_source_gaps");
+    expect(sql).toContain("CASE tier WHEN 'basic' THEN 3 WHEN 'professional' THEN 4 ELSE 4 END");
   });
 });
