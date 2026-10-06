@@ -2,11 +2,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
-export const useTwaaterPolls = (twaatId?: string, accountId?: string) => {
+export const useTwaaterPolls = (twaatId?: string, accountId?: string, preloadedPoll?: any) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: poll, isLoading } = useQuery({
+  const { data: queriedPoll, isLoading: pollLoading } = useQuery({
     queryKey: ["twaat-poll", twaatId],
     queryFn: async () => {
       if (!twaatId) return null;
@@ -23,8 +23,10 @@ export const useTwaaterPolls = (twaatId?: string, accountId?: string) => {
       if (error) throw error;
       return data;
     },
-    enabled: !!twaatId,
+    enabled: !!twaatId && preloadedPoll === undefined,
   });
+
+  const poll = preloadedPoll !== undefined ? preloadedPoll : queriedPoll;
 
   const { data: userVote } = useQuery({
     queryKey: ["poll-vote", poll?.id, accountId],
@@ -79,7 +81,7 @@ export const useTwaaterPolls = (twaatId?: string, accountId?: string) => {
   return {
     poll,
     userVote,
-    isLoading,
+    isLoading: preloadedPoll === undefined ? pollLoading : false,
     vote: voteMutation.mutate,
     isVoting: voteMutation.isPending,
   };
