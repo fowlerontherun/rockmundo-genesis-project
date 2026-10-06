@@ -30,8 +30,6 @@ export const TwaaterAccountSetup = ({
       owner_id: ownerId,
       handle: handle.toLowerCase().replace(/[^a-z0-9_]/g, ""),
       display_name: displayName || handle,
-      verified: false,
-      fame_score: 0,
     });
   };
 
