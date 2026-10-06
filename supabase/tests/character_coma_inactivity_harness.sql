@@ -10,6 +10,8 @@ DECLARE
   v_active_profile_a constant uuid := 'ca200000-0000-4000-8000-000000000001';
   v_active_profile_b constant uuid := 'ca200000-0000-4000-8000-000000000002';
   v_result jsonb;
+  v_admin_revive_definition text;
+  v_health_definition text;
 BEGIN
   INSERT INTO auth.users (id, email, role, last_sign_in_at)
   VALUES
@@ -91,6 +93,24 @@ BEGIN
      OR has_table_privilege('anon', 'public.character_coma_events', 'SELECT')
   THEN
     RAISE EXCEPTION 'Coma audit table privileges are not read-only for authenticated players';
+  END IF;
+
+  SELECT pg_get_functiondef(
+    'public.admin_revive_character(uuid,integer,integer,integer,boolean,text)'::regprocedure
+  )
+  INTO v_admin_revive_definition;
+
+  IF position('DELETE FROM public.hall_of_immortals' IN v_admin_revive_definition) = 0 THEN
+    RAISE EXCEPTION 'Admin character recovery does not remove stale Hall of Immortals memorials';
+  END IF;
+
+  SELECT pg_get_functiondef('public.admin_get_coma_system_health()'::regprocedure)
+  INTO v_health_definition;
+
+  IF position('MAX(COALESCE(p.coma_started_at, p.died_at))' IN v_health_definition) = 0
+     OR position('u.last_sign_in_at > b.latest_coma_started_at' IN v_health_definition) = 0
+  THEN
+    RAISE EXCEPTION 'Coma health monitor is not using the latest account coma transition for returners';
   END IF;
 
   PERFORM set_config('request.jwt.claim.sub', v_inactive_user::text, true);
