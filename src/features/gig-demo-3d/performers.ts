@@ -9,6 +9,7 @@ import { stageAssignment, type InstrumentId, type VocalRole } from './instrument
 import { crowdAppearances, crowdMaterial, crowdMotion, CROWD_LIMIT, CROWD_VARIANTS } from './crowdAnimation';
 import { circlePitPosition, circlePitSlots, crowdEventPlan } from './crowdChoreography';
 import { singerGesture, smoothMotion, vocalPhrase } from './performanceMotion';
+import type { StageMovePose } from './stageMoves';
 import { createVocalMouth } from './vocalFace';
 import { applyInstrumentFingerPose, fingerEnvelopeBones, handContactPoint } from './instrumentHandPose';
 import { seededRandom } from './config';
@@ -98,6 +99,9 @@ export class Musician {
     interactionStrength = 0;
     performanceSection: PerformanceSection = 'idle';
     sectionProgress = 0;
+    /** Named stage move layered on the torso/head (set by the scene each frame). */
+    stagePose: StageMovePose = 'none';
+    stagePoseWeight = 0;
     private scale: number;
     private bodyBuild = 1;
     private vocalRole: VocalRole = null;
@@ -430,6 +434,14 @@ export class Musician {
                     torso.rotation.x += .025 * settle;
                 }
             }
+            const poseWeight = T.MathUtils.clamp(this.stagePoseWeight, 0, 1.2);
+            if (poseWeight > 0) {
+                if (this.stagePose === 'headbang') torso.rotation.x += Math.pow(Math.max(0, Math.sin(beat / 2 + this.phase)), 2) * .14 * poseWeight;
+                else if (this.stagePose === 'lean_back') torso.rotation.x -= .16 * poseWeight;
+                else if (this.stagePose === 'crowd_lean') torso.rotation.x += .1 * poseWeight;
+                else if (this.stagePose === 'jump') torso.rotation.x -= .06 * poseWeight;
+                else if (this.stagePose === 'spotlight_pose') { torso.rotation.x -= .12 * poseWeight; torso.rotation.z += Math.sin(this.phase) * .05 * poseWeight; }
+            }
             const flourishClock = ((t + this.phase * 1.7) % 13 + 13) % 13;
             const flourish = smoothMotion((flourishClock - 9.7) / .35) * (1 - smoothMotion((flourishClock - 11.15) / .45));
             if (this.interactionTarget && this.interactionStrength > 0) {
@@ -476,7 +488,8 @@ export class Musician {
                 interactionPitch = T.MathUtils.clamp(-Math.atan2(localTarget.y - 1.42, horizontal), -.14, .14) * this.interactionStrength;
             }
             head.quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(
-                Math.sin(beat + this.phase) * 0.035 * energy + singingLean - vocalAccent * .025 + emphasis * (vocalActive ? -.035 : .07) + fretLook * .12 + drummerNod + sectionLook + interactionPitch,
+                (this.stagePose === 'headbang' && performing && !reduced ? Math.pow(Math.max(0, Math.sin(beat + this.phase)), 2) * .28 * this.stagePoseWeight : 0)
+                + Math.sin(beat + this.phase) * 0.035 * energy + singingLean - vocalAccent * .025 + emphasis * (vocalActive ? -.035 : .07) + fretLook * .12 + drummerNod + sectionLook + interactionPitch,
                 Math.sin(t * 0.58 + this.phase) * (vocalActive ? .075 : .11) + glanceSide * glanceWindow * .18 + interactionYaw,
                 (vocalActive ? Math.sin(t * .42 + this.phase) * .018 : 0) + glanceSide * glanceWindow * .025,
             )));
