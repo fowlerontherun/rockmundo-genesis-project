@@ -64,7 +64,7 @@ export const ja = {
     max: "最大",
   },
   nav: {
-    beta: "ベータ",
+    beta: "LIVE V1",
     version: "バージョン",
     inbox: "受信箱",
     dashboard: "ダッシュボード",

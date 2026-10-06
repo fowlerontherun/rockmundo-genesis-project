@@ -67,7 +67,7 @@ export const tr = {
   
   // Navigation
   nav: {
-    beta: "BETA",
+    beta: "LIVE V1",
     version: "Sürüm",
     inbox: "Gelen Kutusu",
     dashboard: "Kontrol Paneli",

@@ -141,7 +141,7 @@ export default function PlayerManagement() {
       <div className="container mx-auto p-6 space-y-6">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2"><Users className="h-8 w-8" /> Player Support</h1>
-          <p className="text-muted-foreground">Search players, inspect read-only support state, and run audited beta corrections.</p>
+          <p className="text-muted-foreground">Search players, inspect read-only support state, and run audited Live V1 corrections.</p>
         </div>
 
         <Alert>
@@ -249,11 +249,11 @@ export default function PlayerManagement() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Audited cash adjustment</DialogTitle>
-              <DialogDescription>Use only for beta support corrections. A reason and before/after values are recorded in the admin audit log.</DialogDescription>
+              <DialogDescription>Use only for Live V1 support corrections. A reason and before/after values are recorded in the admin audit log.</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2"><Label>Amount</Label><Input type="number" value={cashAmount} onChange={(event) => setCashAmount(event.target.value)} placeholder="e.g. 500 or -250" /></div>
-              <div className="space-y-2"><Label>Reason</Label><Textarea value={actionReason} onChange={(event) => setActionReason(event.target.value)} placeholder="Describe the support ticket or beta issue being corrected..." /></div>
+              <div className="space-y-2"><Label>Reason</Label><Textarea value={actionReason} onChange={(event) => setActionReason(event.target.value)} placeholder="Describe the support ticket or Live V1 issue being corrected..." /></div>
               <Alert><AlertCircle className="h-4 w-4" /><AlertDescription>Confirm the selected player and reason before applying. This action changes economy state.</AlertDescription></Alert>
             </div>
             <DialogFooter><Button variant="outline" onClick={() => setCashDialogOpen(false)}>Cancel</Button><Button onClick={() => adjustCash.mutate()} disabled={adjustCash.isPending}>Confirm adjustment</Button></DialogFooter>

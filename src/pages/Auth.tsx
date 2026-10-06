@@ -482,7 +482,7 @@ const Auth = () => {
             variant="outline"
             className="bg-warning/10 text-warning border-warning/30 text-sm px-3 py-1 mb-2"
           >
-            BETA V1
+            LIVE V1
           </Badge>
           <Button
             variant="link"

@@ -208,7 +208,7 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Beta Health Overview */}
+        {/* Live V1 Health Overview */}
         <Card className="border-primary/20">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">

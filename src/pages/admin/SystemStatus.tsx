@@ -192,7 +192,7 @@ export default function SystemStatusAdmin() {
                 value={annBody}
                 onChange={(e) => setAnnBody(e.target.value)}
                 rows={3}
-                placeholder="A 1-week public play test starts Friday 17 July 2026 — no Beta code needed. Check Discord for details."
+                placeholder="A 1-week public play test starts Friday 17 July 2026 — no access code needed. Check Discord for details."
                 disabled={isLoading}
               />
             </div>
