@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Navigate, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Music2 } from "lucide-react";
 
 import { AvatarPreview } from "@/components/onboarding/AvatarPreview";
 import { BiographyInput } from "@/components/onboarding/BiographyInput";
@@ -176,6 +178,17 @@ const OnboardingWizard = () => {
 
   const [currentStep, setCurrentStep] = useState(0);
   const [formState, setFormState] = useState<FormState>(defaultFormState);
+  const [recruitingBand, setRecruitingBand] = useState<{ id: string; name: string } | null>(null);
+
+  useEffect(() => {
+    const bandId = localStorage.getItem("rockmundo_referral_band");
+    if (!bandId || !/^[0-9a-f-]{36}$/i.test(bandId)) return;
+    let cancelled = false;
+    void supabase.from("bands").select("id, name").eq("id", bandId).maybeSingle().then(({ data }) => {
+      if (!cancelled && data?.id && data?.name) setRecruitingBand({ id: data.id, name: data.name });
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const profileQuery = useQuery<PlayerProfile>({
     queryKey: ["player-profile", user?.id],
@@ -222,7 +235,12 @@ const OnboardingWizard = () => {
         title: "Onboarding saved",
         description: "Your profile is ready. Welcome to Rockmundo!",
       });
-      navigate("/home");
+      if (recruitingBand) {
+        localStorage.removeItem("rockmundo_referral_band");
+        navigate(`/band/${recruitingBand.id}?recruited=1`);
+      } else {
+        navigate("/home");
+      }
     },
     onError: (error: unknown) => {
       console.error("onboarding.save.error", error);
@@ -345,6 +363,18 @@ const OnboardingWizard = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-8 py-8">
+          {recruitingBand && (
+            <div className="rounded-lg border border-primary/30 bg-primary/10 p-4">
+              <div className="flex items-start gap-3">
+                <Music2 className="mt-0.5 h-5 w-5 text-primary" />
+                <div>
+                  <p className="font-semibold">You were recruited to play with {recruitingBand.name}</p>
+                  <p className="text-sm text-muted-foreground">Finish creating your musician and we’ll take you to the band. Joining still requires the normal RockMundo band invitation and your acceptance.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <StepIndicator currentStep={currentStep} />
 
           {isLoading ? (
