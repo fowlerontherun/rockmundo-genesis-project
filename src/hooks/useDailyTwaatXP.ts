@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useTwaaterRuntimeConfig } from "@/hooks/useTwaaterRuntimeConfig";
 
 export const useDailyTwaatXP = (accountId?: string) => {
+  const { config } = useTwaaterRuntimeConfig();
   const { data: dailyAward, isLoading } = useQuery({
     queryKey: ["daily-twaat-xp", accountId],
     queryFn: async () => {
@@ -24,12 +26,14 @@ export const useDailyTwaatXP = (accountId?: string) => {
 
   const twaatsPostedToday = dailyAward?.twaats_awarded || 0;
   const xpEarnedToday = dailyAward?.xp_awarded || 0;
-  const canEarnMore = twaatsPostedToday < 3;
+  const canEarnMore = twaatsPostedToday < config.dailyRewardLimit;
 
   return {
     twaatsPostedToday,
     xpEarnedToday,
     canEarnMore,
+    dailyRewardLimit: config.dailyRewardLimit,
+    xpPerRewardedPost: config.xpPerRewardedPost,
     isLoading,
   };
 };
