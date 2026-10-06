@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { UserPlus, BadgeCheck, Users } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface WhoToFollowProps {
   currentAccountId: string;
@@ -15,20 +16,42 @@ interface WhoToFollowProps {
 export const WhoToFollow = ({ currentAccountId }: WhoToFollowProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   // Fetch suggested accounts to follow
   const { data: suggestions, isLoading } = useQuery({
     queryKey: ["twaater-suggestions", currentAccountId],
     queryFn: async () => {
-      // Get accounts we're already following
-      const { data: following } = await supabase
-        .from("twaater_follows")
-        .select("followed_account_id")
-        .eq("follower_account_id", currentAccountId);
+      const [{ data: following, error: followingError }, { data: generated, error: generatedError }] = await Promise.all([
+        supabase
+          .from("twaater_follows")
+          .select("followed_account_id")
+          .eq("follower_account_id", currentAccountId),
+        supabase
+          .from("twaater_suggested_follows")
+          .select(`
+            suggested_account_id,
+            score,
+            account:twaater_accounts!twaater_suggested_follows_suggested_account_id_fkey(
+              id, handle, display_name, verified, follower_count
+            )
+          `)
+          .eq("account_id", currentAccountId)
+          .order("score", { ascending: false })
+          .limit(10),
+      ]);
 
-      const followedIds = following?.map(f => f.followed_account_id) || [];
+      if (followingError) throw followingError;
+      if (generatedError) throw generatedError;
 
-      // Get popular accounts we're not following
+      const followedIds = new Set((following || []).map((follow) => follow.followed_account_id));
+      const generatedAccounts = (generated || [])
+        .map((row: any) => row.account)
+        .filter((account: any) => account && account.id !== currentAccountId && !followedIds.has(account.id))
+        .slice(0, 5);
+
+      if (generatedAccounts.length > 0) return generatedAccounts;
+
       const { data: accounts, error } = await supabase
         .from("twaater_accounts")
         .select("id, handle, display_name, verified, follower_count")
@@ -37,11 +60,11 @@ export const WhoToFollow = ({ currentAccountId }: WhoToFollowProps) => {
         .limit(10);
 
       if (error) throw error;
-      
-      // Filter out already followed accounts client-side
-      return accounts?.filter(a => !followedIds.includes(a.id)).slice(0, 5) || [];
+      return (accounts || []).filter((account) => !followedIds.has(account.id)).slice(0, 5);
     },
     enabled: !!currentAccountId,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const followMutation = useMutation({
@@ -95,18 +118,24 @@ export const WhoToFollow = ({ currentAccountId }: WhoToFollowProps) => {
       <CardContent className="space-y-3">
         {suggestions.map((account) => (
           <div key={account.id} className="flex items-center gap-3">
-            <Avatar className="h-10 w-10">
-              <AvatarFallback>{(account.display_name || account.handle)?.[0]?.toUpperCase()}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
+            <button
+              type="button"
+              onClick={() => navigate(`/twaater/${account.handle}`)}
+              className="flex items-center gap-3 flex-1 min-w-0 text-left"
+            >
+              <Avatar className="h-10 w-10">
+                <AvatarFallback>{(account.display_name || account.handle)?.[0]?.toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1">
                 <span className="font-medium text-sm truncate">{account.display_name || account.handle}</span>
                 {account.verified && (
                   <BadgeCheck className="h-3 w-3 text-[hsl(var(--twaater-purple))]" />
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">@{account.handle}</p>
-            </div>
+                <p className="text-xs text-muted-foreground">@{account.handle}</p>
+              </div>
+            </button>
             <Button
               variant="outline"
               size="sm"
