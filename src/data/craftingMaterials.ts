@@ -35,6 +35,16 @@ export const CRAFTING_MATERIALS: CraftingMaterialSeed[] = [
   { name: "Spruce Top Plate", category: "wood", rarity: "uncommon", quality_tier: 2, base_cost: 130, description: "Light, responsive top wood for acoustic instruments." },
   { name: "Korina Body Blank", category: "wood", rarity: "epic", quality_tier: 4, base_cost: 400, description: "Rare African wood with legendary tone." },
   { name: "Brazilian Rosewood Set", category: "wood", rarity: "legendary", quality_tier: 5, base_cost: 1200, description: "The holy grail of tonewoods — extremely rare and coveted." },
+  { name: "Basswood Body Blank", category: "wood", rarity: "common", quality_tier: 1, base_cost: 80, description: "Lightweight, easy-working body wood with a balanced midrange." },
+  { name: "Hard Maple Body Blank", category: "wood", rarity: "uncommon", quality_tier: 2, base_cost: 180, description: "Dense bright body wood with strong attack and sustain." },
+  { name: "Walnut Body Blank", category: "wood", rarity: "rare", quality_tier: 3, base_cost: 300, description: "Rich dark tonewood with a focused low-mid response." },
+  { name: "Bubinga Body Blank", category: "wood", rarity: "epic", quality_tier: 4, base_cost: 520, description: "Dense exotic body wood with huge sustain and striking grain." },
+  { name: "Flamed Maple Body Blank", category: "wood", rarity: "legendary", quality_tier: 5, base_cost: 850, description: "Highly figured premium maple reserved for showpiece instruments." },
+  { name: "Roasted Maple Neck Blank", category: "wood", rarity: "rare", quality_tier: 3, base_cost: 260, description: "Heat-treated maple with excellent dimensional stability." },
+  { name: "Wenge Neck Blank", category: "wood", rarity: "epic", quality_tier: 4, base_cost: 460, description: "Stiff open-grained neck stock with strong sustain and stability." },
+  { name: "Pau Ferro Fretboard", category: "wood", rarity: "uncommon", quality_tier: 2, base_cost: 105, description: "Smooth, articulate fretboard wood between maple and rosewood in response." },
+  { name: "Richlite Fretboard", category: "wood", rarity: "uncommon", quality_tier: 2, base_cost: 95, description: "Stable engineered fretboard material with consistent feel." },
+  { name: "Macassar Ebony Fretboard", category: "wood", rarity: "epic", quality_tier: 4, base_cost: 400, description: "Premium striped ebony with fast attack and exceptional stability." },
 
   // Electronics
   { name: "Single Coil Pickup", category: "electronics", rarity: "common", quality_tier: 1, base_cost: 40, description: "Bright, twangy pickup for clean tones." },
@@ -44,6 +54,13 @@ export const CRAFTING_MATERIALS: CraftingMaterialSeed[] = [
   { name: "Active EMG Pickup", category: "electronics", rarity: "rare", quality_tier: 3, base_cost: 220, description: "Battery-powered pickup with high output and clarity." },
   { name: "Hand-Wound Boutique Pickup", category: "electronics", rarity: "epic", quality_tier: 4, base_cost: 450, description: "Artisan-crafted pickup with unique character." },
   { name: "Wiring Harness", category: "electronics", rarity: "common", quality_tier: 1, base_cost: 25, description: "Pots, caps, and wiring for guitar electronics." },
+  { name: "Ceramic Humbucker Set", category: "electronics", rarity: "common", quality_tier: 1, base_cost: 120, description: "Aggressive ceramic-magnet humbuckers with strong output." },
+  { name: "P-90 Pickup Set", category: "electronics", rarity: "uncommon", quality_tier: 2, base_cost: 190, description: "Broad single-coil voice with extra midrange bite." },
+  { name: "Bass P/J Pickup Set", category: "electronics", rarity: "uncommon", quality_tier: 2, base_cost: 180, description: "Versatile precision-and-jazz style bass pickup pairing." },
+  { name: "Noiseless Single-Coil Set", category: "electronics", rarity: "rare", quality_tier: 3, base_cost: 320, description: "Single-coil clarity with reduced hum for professional builds." },
+  { name: "Mini Humbucker Set", category: "electronics", rarity: "rare", quality_tier: 3, base_cost: 340, description: "Compact humbuckers with a tighter, brighter response." },
+  { name: "Active Bass Preamp Set", category: "electronics", rarity: "epic", quality_tier: 4, base_cost: 500, description: "High-headroom active bass electronics with onboard shaping." },
+  { name: "Piezo Bridge Pickup System", category: "electronics", rarity: "epic", quality_tier: 4, base_cost: 520, description: "Bridge-mounted piezo system for detailed acoustic-like attack." },
 
   // Hardware
   { name: "Standard Tuners Set", category: "hardware", rarity: "common", quality_tier: 1, base_cost: 30, description: "Basic sealed tuning machines." },
@@ -54,6 +71,11 @@ export const CRAFTING_MATERIALS: CraftingMaterialSeed[] = [
   { name: "Brass Nut", category: "hardware", rarity: "uncommon", quality_tier: 2, base_cost: 35, description: "Dense nut material for bright sustain." },
   { name: "Bone Nut", category: "hardware", rarity: "rare", quality_tier: 3, base_cost: 60, description: "Natural bone nut for warm, balanced tone." },
   { name: "Gold Hardware Set", category: "hardware", rarity: "epic", quality_tier: 4, base_cost: 300, description: "Premium gold-plated knobs, pickup rings, and jack plate." },
+  { name: "Brass Bridge and Nut Set", category: "hardware", rarity: "uncommon", quality_tier: 2, base_cost: 160, description: "Dense brass contact points for extra sustain and brightness." },
+  { name: "Lightweight Aluminum Hardware Set", category: "hardware", rarity: "uncommon", quality_tier: 2, base_cost: 170, description: "Low-mass bridge and fittings that keep the instrument light." },
+  { name: "Stainless Hardware Set", category: "hardware", rarity: "rare", quality_tier: 3, base_cost: 280, description: "Corrosion-resistant premium hardware with excellent stability." },
+  { name: "Black Chrome Hardware Set", category: "hardware", rarity: "rare", quality_tier: 3, base_cost: 300, description: "Professional black-chrome bridge, tuners and fittings." },
+  { name: "Titanium Hardware Set", category: "hardware", rarity: "legendary", quality_tier: 5, base_cost: 950, description: "Ultra-premium low-mass titanium hardware for masterwork builds." },
 
   // Strings
   { name: "Nickel Wound Strings", category: "strings", rarity: "common", quality_tier: 1, base_cost: 10, description: "Standard electric guitar strings." },
@@ -67,6 +89,12 @@ export const CRAFTING_MATERIALS: CraftingMaterialSeed[] = [
   { name: "Burst Sunburst Finish", category: "finish", rarity: "rare", quality_tier: 3, base_cost: 150, description: "Iconic gradient finish from amber to black." },
   { name: "Metallic Flake Finish", category: "finish", rarity: "rare", quality_tier: 3, base_cost: 180, description: "Eye-catching sparkle finish for stage presence." },
   { name: "Custom Artwork Finish", category: "finish", rarity: "epic", quality_tier: 4, base_cost: 500, description: "Hand-painted custom artwork by a master luthier." },
+  { name: "Tru-Oil Finish", category: "finish", rarity: "common", quality_tier: 1, base_cost: 60, description: "Thin hand-rubbed oil finish that keeps the wood feeling natural." },
+  { name: "Polyurethane Gloss Finish", category: "finish", rarity: "uncommon", quality_tier: 2, base_cost: 150, description: "Durable high-gloss finish suited to hard-working instruments." },
+  { name: "Relic Finish", category: "finish", rarity: "rare", quality_tier: 3, base_cost: 240, description: "Professionally aged finish with controlled wear and patina." },
+  { name: "Candy Colour Finish", category: "finish", rarity: "rare", quality_tier: 3, base_cost: 280, description: "Deep translucent colour over a reflective base coat." },
+  { name: "Pearlescent Finish", category: "finish", rarity: "epic", quality_tier: 4, base_cost: 480, description: "Multi-angle pearl finish that shifts under stage lighting." },
+  { name: "Holographic Finish", category: "finish", rarity: "legendary", quality_tier: 5, base_cost: 900, description: "Master-level prismatic finish with dramatic light-shifting effects." },
 
   // Pedal Components
   { name: "Basic Enclosure", category: "pedal_components", rarity: "common", quality_tier: 1, base_cost: 15, description: "Standard aluminum pedal enclosure." },
