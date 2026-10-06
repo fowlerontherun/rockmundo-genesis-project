@@ -9,6 +9,7 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
 import { useCharacterSlots } from "@/hooks/useCharacterSlots";
+import { useCharacterDeath } from "@/hooks/useCharacterDeath";
 import { useGameData } from "@/hooks/useGameData";
 import {
   AlertDialog,
@@ -23,6 +24,7 @@ import {
 
 export default function Characters() {
   const { slots, slotsLoading, characters, switchCharacter, deleteCharacter } = useCharacterSlots();
+  const { resurrectCharacter } = useCharacterDeath();
   const { refetch: refetchGameData } = useGameData();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -34,17 +36,28 @@ export default function Characters() {
   const livingCharacters = characters.filter((character) => !character.died_at);
   const emptySlotCount = Math.max(maxSlots - livingCharacters.length, 0);
 
-  const handleSwitch = async (profileId: string) => {
-    if (profileId === activeCharacter?.id) return;
+  const handleSwitch = async (profileId: string, isComatose = false) => {
+    if (!isComatose && profileId === activeCharacter?.id) return;
 
     setSwitchingToId(profileId);
     try {
-      await switchCharacter.mutateAsync(profileId);
+      if (isComatose) {
+        await resurrectCharacter.mutateAsync(profileId);
+      } else {
+        await switchCharacter.mutateAsync(profileId);
+      }
       await refetchGameData();
-      toast({ title: "Character switched", description: "Game state updated." });
+      toast({
+        title: isComatose ? "Character revived" : "Character switched",
+        description: isComatose ? "Your character is awake and ready to continue." : "Game state updated.",
+      });
       navigate("/home", { replace: true });
-    } catch {
-      toast({ title: "Error", description: "Failed to switch character", variant: "destructive" });
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err?.message || (isComatose ? "Failed to revive character" : "Failed to switch character"),
+        variant: "destructive",
+      });
     } finally {
       setSwitchingToId(null);
     }
@@ -117,7 +130,7 @@ export default function Characters() {
             <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
               <Badge className="bg-primary/20 text-primary border-primary/30 text-[10px] py-0">Active</Badge>
               <Badge variant="outline" className="text-[10px] py-0">Inactive — switchable</Badge>
-              <Badge variant="outline" className="text-[10px] py-0 border-emerald-500/40 text-emerald-500">Coma — revivable</Badge>
+              <Badge variant="outline" className="text-[10px] py-0 border-emerald-500/40 text-emerald-500">Coma — revivable, inactivity after 30 days</Badge>
               <Badge variant="outline" className="text-[10px] py-0 border-dashed">Empty slot</Badge>
             </div>
             {characters.map((character) => {
@@ -137,6 +150,13 @@ export default function Characters() {
                     <p className="text-xs text-muted-foreground">
                       Level {character.level} • {(character.fame || 0).toLocaleString()} fame
                     </p>
+                    {isComatose && (
+                      <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
+                        {/inactivity/i.test(character.death_cause ?? "")
+                          ? "In a coma after 30 days without account activity. Revive to continue — your progress is kept."
+                          : `In a coma${character.death_cause ? ` — ${character.death_cause}` : ""}. Revive to continue.`}
+                      </p>
+                    )}
                   </div>
                   {character.generation_number > 1 && (
                     <Badge variant="outline" className="text-[10px]">Gen {character.generation_number}</Badge>
@@ -148,8 +168,8 @@ export default function Characters() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleSwitch(character.id)}
-                        disabled={isSwitching || switchCharacter.isPending}
+                        onClick={() => handleSwitch(character.id, isComatose)}
+                        disabled={isSwitching || switchCharacter.isPending || resurrectCharacter.isPending}
                       >
                         {isSwitching ? <Loader2 className="h-4 w-4 animate-spin" /> : <><RefreshCw className="mr-1 h-3.5 w-3.5" /> {isComatose ? "Revive" : "Switch"}</>}
                       </Button>
