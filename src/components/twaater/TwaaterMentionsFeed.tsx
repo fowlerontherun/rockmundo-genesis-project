@@ -1,4 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { TwaatCard } from "./TwaatCard";
 import { Loader2 } from "lucide-react";
 import { useTwaaterMentions } from "@/hooks/useTwaaterMentions";
@@ -8,13 +9,24 @@ interface TwaaterMentionsFeedProps {
 }
 
 export const TwaaterMentionsFeed = ({ accountId }: TwaaterMentionsFeedProps) => {
-  const { mentions, isLoading } = useTwaaterMentions(accountId);
+  const { mentions, isLoading, error, refetch } = useTwaaterMentions(accountId);
 
   if (isLoading) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-12">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center space-y-3">
+          <p className="text-muted-foreground">Mentions couldn't load.</p>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
         </CardContent>
       </Card>
     );
