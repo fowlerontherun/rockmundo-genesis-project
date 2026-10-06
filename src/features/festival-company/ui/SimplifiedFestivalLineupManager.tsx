@@ -313,7 +313,8 @@ export function SimplifiedFestivalLineupManager({
       idempotencyKey: crypto.randomUUID(),
     });
 
-  const withdrawInvite = (invitation: FestivalArtistInvitation) =>
+  const withdrawInvite = (invitation: FestivalArtistInvitation) => {
+    if (!data.canWrite || withdrawInvitation.isPending || !window.confirm(`Withdraw the festival invitation for ${nameFor(invitation.identity)}?`)) return;
     withdrawInvitation.mutate(
       {
         festivalCompanyId,
@@ -328,6 +329,7 @@ export function SimplifiedFestivalLineupManager({
           toast.error(`Could not withdraw invitation: ${error.message}`),
       },
     );
+  };
 
   const withdrawCurrentOffer = (offer: FestivalArtistOffer) =>
     withdrawOffer.mutate(
@@ -619,11 +621,11 @@ export function SimplifiedFestivalLineupManager({
                     <Button
                       className="mt-2"
                       size="sm"
-                      variant="ghost"
-                      disabled={workflowPending}
+                      variant="outline"
+                      disabled={workflowPending || !data.canWrite}
                       onClick={() => withdrawInvite(invitation)}
                     >
-                      Withdraw invite
+                      {withdrawInvitation.isPending ? "Withdrawing…" : "Withdraw invite"}
                     </Button>
                   ) : null}
                   {invitation.status === "interested" ? (
