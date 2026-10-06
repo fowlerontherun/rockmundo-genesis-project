@@ -24,12 +24,29 @@ import { useNavigate } from "react-router-dom";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const TwaaterBookmarksTab = ({ accountId }: { accountId?: string }) => {
-  const { bookmarks, isLoading } = useTwaaterBookmarks(accountId);
+  const { bookmarks, isLoading, error, refetch } = useTwaaterBookmarks(accountId);
 
   if (isLoading) {
     return (
       <Card style={{ backgroundColor: "hsl(var(--twaater-card))" }}>
         <CardContent className="py-12 text-center text-muted-foreground">Loading saved Twaats…</CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card style={{ backgroundColor: "hsl(var(--twaater-card))" }}>
+        <CardContent className="py-12 text-center space-y-3">
+          <p className="text-muted-foreground">Saved Twaats couldn't load.</p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="text-sm font-medium text-[hsl(var(--twaater-purple))] hover:underline"
+          >
+            Retry
+          </button>
+        </CardContent>
       </Card>
     );
   }
