@@ -46,8 +46,9 @@ CREATE POLICY "Admins read coma history"
   TO authenticated
   USING (public.has_role(auth.uid(), 'admin'::public.app_role));
 
+REVOKE ALL PRIVILEGES ON TABLE public.character_coma_events FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON public.character_coma_events TO authenticated;
-GRANT ALL ON public.character_coma_events TO service_role;
+GRANT ALL PRIVILEGES ON TABLE public.character_coma_events TO service_role;
 
 -- Backfill the current coma snapshot so existing dormant characters get a
 -- useful support trail. For old neglect comas there is no reliable account
