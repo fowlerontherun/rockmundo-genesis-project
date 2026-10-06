@@ -76,9 +76,16 @@ if (typeof window !== "undefined") {
     setTimeout(async () => {
       try {
         const { error } = await (supabase as any).rpc("bind_referral_code", { p_code: pendingCode });
-        if (!error) {
-          localStorage.removeItem(REFERRAL_STORAGE_KEY);
-        } else if (/already_bound/i.test(error.message ?? "")) {
+        if (!error || /already_bound/i.test(error?.message ?? "")) {
+          const pendingBand = localStorage.getItem(REFERRAL_BAND_STORAGE_KEY)?.trim();
+          if (pendingBand && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pendingBand)) {
+            const { error: bandError } = await (supabase as any).rpc("attach_my_referral_band", { p_band_id: pendingBand });
+            if (!bandError) {
+              localStorage.removeItem(REFERRAL_BAND_STORAGE_KEY);
+            } else {
+              console.warn("[REFERRAL] Unable to attach pending referral band", bandError.message);
+            }
+          }
           localStorage.removeItem(REFERRAL_STORAGE_KEY);
         } else {
           console.warn("[REFERRAL] Unable to bind pending referral code", error.message);
