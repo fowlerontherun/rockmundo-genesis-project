@@ -1,5 +1,9 @@
 # Roadmap
 
+- [ ] Review maintained translations and translate mobile navigation and character switching.
+- [ ] Add mobile character and language controls using the existing account switching flow.
+- [ ] Verify translation parity and mobile switching; update banner and version history.
+
 - [x] Improve luthiery guitar/bass silhouettes and correctly aligned strings, frets, pickups and hardware.
 - [x] Add compatible workshop component variations while preserving existing crafted instruments and crafting rules.
 - [x] Verify workshop and new silhouette tests and visuals; update the banner version and version history. The broader musician suite reports existing grip/pose failures, including unrelated drums and acoustic instruments; these are not certified by this change.
