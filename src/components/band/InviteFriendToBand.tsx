@@ -67,6 +67,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
   const [vocalRole, setVocalRole] = useState<string | undefined>(undefined);
   const [message, setMessage] = useState('');
   const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [referredRecruits, setReferredRecruits] = useState<Array<{ referral_id: string; profile_id: string; profile_name: string; signup_qualified_at: string | null; invitation_status: string | null }>>([]);
   const { toast } = useToast();
 
   const externalRecruitmentUrl = referralCode
@@ -78,6 +79,15 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
     const { data, error } = await (supabase as any).rpc('get_referral_dashboard', { p_profile_id: currentUserId });
     if (!error && data?.code) setReferralCode(data.code);
   }, [currentUserId]);
+
+  const loadReferredRecruits = useCallback(async () => {
+    const { data, error } = await (supabase as any).rpc('get_band_referral_recruits', { p_band_id: bandId });
+    if (error) {
+      setReferredRecruits([]);
+      return;
+    }
+    setReferredRecruits(Array.isArray(data) ? data : []);
+  }, [bandId]);
 
   const shareExternalRecruitment = async () => {
     if (!externalRecruitmentUrl) {
@@ -190,7 +200,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
       setLoading(true);
       try {
         if (!currentUserId) throw new Error('Select an active character before inviting a band member.');
-        await Promise.all([loadRecruitmentOptions(currentUserId), loadReferralCode()]);
+        await Promise.all([loadRecruitmentOptions(currentUserId), loadReferralCode(), loadReferredRecruits()]);
       } catch (error) {
         toast({ title: 'Could not load invitations', description: error instanceof Error ? error.message : 'Failed to prepare band invitations', variant: 'destructive' });
         setFriends([]);
@@ -203,7 +213,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
       }
     };
     void prepare();
-  }, [open, currentUserId, loadRecruitmentOptions, loadReferralCode, toast]);
+  }, [open, currentUserId, loadRecruitmentOptions, loadReferralCode, loadReferredRecruits, toast]);
 
   // Refresh pending invitations and response history while the manager keeps
   // the dialog open, including changes made by the invited player elsewhere.
@@ -453,6 +463,32 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
                     </Button>
                   </div>
                 </div>
+
+                {referredRecruits.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Players who joined from your band link</p>
+                    {referredRecruits.map((recruit) => (
+                      <div key={recruit.referral_id} className="flex items-center justify-between gap-3 rounded-md border p-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{recruit.profile_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {recruit.invitation_status === 'pending' ? 'Band invitation pending' : recruit.invitation_status === 'accepted' ? 'Joined the band' : recruit.signup_qualified_at ? 'Referral qualified · ready to invite' : 'New recruit · ready to invite'}
+                          </p>
+                        </div>
+                        {!recruit.invitation_status && (
+                          <Button type="button" size="sm" variant="outline" onClick={() => {
+                            setSelectedPlayer(recruit.profile_id);
+                            setSelectedPlayerLabel(recruit.profile_name);
+                            setPlayerQuery(recruit.profile_name);
+                          }}>
+                            Invite
+                          </Button>
+                        )}
+                        {recruit.invitation_status && <Badge variant={recruit.invitation_status === 'accepted' ? 'default' : 'secondary'} className="capitalize">{recruit.invitation_status}</Badge>}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </section>
 
               <section className="space-y-3 border-t pt-4">
