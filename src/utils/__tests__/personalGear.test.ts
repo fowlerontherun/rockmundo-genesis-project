@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  getCanonicalEquipmentType,
   getLuthieryPerformanceBonusPercent,
   getPersonalGearFitLabel,
   getPersonalGearRoleBonusPercent,
@@ -7,9 +8,46 @@ import {
 } from "../personalGear";
 
 describe("personal gear role fit", () => {
-  it("matches guitars to guitar roles", () => {
+  it("normalizes legacy and current guitar catalogue types", () => {
+    expect(getCanonicalEquipmentType("instrument", "guitar")).toBe("electric_guitar");
+    expect(getCanonicalEquipmentType("guitar", "electric")).toBe("electric_guitar");
+    expect(getCanonicalEquipmentType("instrument", "acoustic_guitar")).toBe("acoustic_guitar");
+    expect(getCanonicalEquipmentType("guitar", "acoustic")).toBe("acoustic_guitar");
+    expect(getCanonicalEquipmentType("instrument", "classical_guitar")).toBe("classical_guitar");
+  });
+
+  it("keeps acoustic and classical guitars distinct from lead electric-guitar gear", () => {
     expect(personalGearMatchesRole("instrument", "electric_guitar", "Lead Guitar")).toBe(true);
+    expect(personalGearMatchesRole("instrument", "acoustic_guitar", "Lead Guitar")).toBe(false);
+    expect(personalGearMatchesRole("instrument", "acoustic_guitar", "Rhythm Guitar")).toBe(true);
+    expect(personalGearMatchesRole("guitar", "acoustic", "Rhythm Guitar")).toBe(true);
+    expect(personalGearMatchesRole("instrument", "classical_guitar", "Rhythm Guitar")).toBe(true);
     expect(personalGearMatchesRole("instrument", "electric_guitar", "Drums")).toBe(false);
+  });
+
+  it("maps drum kits, electronic drums and cymbals to drummers", () => {
+    expect(personalGearMatchesRole("instrument", "drums", "Drums")).toBe(true);
+    expect(personalGearMatchesRole("instrument", "electronic_drums", "Drummer")).toBe(true);
+    expect(personalGearMatchesRole("instrument", "cymbals", "Drums")).toBe(true);
+  });
+
+  it("maps microphone variants to vocals but excludes audio interfaces", () => {
+    for (const subcategory of ["microphone", "dynamic_mic", "condenser_mic", "condenser", "ribbon_mic", "tube_mic"]) {
+      expect(personalGearMatchesRole("recording", subcategory, "Lead Vocals")).toBe(true);
+    }
+    expect(personalGearMatchesRole("recording", "audio_interface", "Lead Vocals")).toBe(false);
+  });
+
+  it("maps bass, keyboard, synth and personal rig aliases explicitly", () => {
+    expect(personalGearMatchesRole("instrument", "bass", "Bass")).toBe(true);
+    expect(personalGearMatchesRole("instrument", "bass_guitar", "Bass Guitar")).toBe(true);
+    expect(personalGearMatchesRole("instrument", "keyboard", "Keys")).toBe(true);
+    expect(personalGearMatchesRole("instrument", "synthesizer", "Synth")).toBe(true);
+    expect(personalGearMatchesRole("instrument", "midi_controller", "Keyboard")).toBe(true);
+    expect(personalGearMatchesRole("amplifier", "guitar_amp", "Lead Guitar")).toBe(true);
+    expect(personalGearMatchesRole("amplifier", "bass_amp", "Bass")).toBe(true);
+    expect(personalGearMatchesRole("effects", "overdrive", "Rhythm Guitar")).toBe(true);
+    expect(personalGearMatchesRole("stage", "wireless_mic", "Vocals")).toBe(true);
   });
 
   it("supports role aliases used by band membership", () => {
