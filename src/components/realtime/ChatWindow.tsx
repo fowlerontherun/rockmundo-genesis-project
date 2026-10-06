@@ -92,6 +92,43 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   }, [profileId, fetchMessages]);
 
+  useEffect(() => {
+    if (!profileId) return;
+
+    const realtimeChannel = supabase
+      .channel(`chat-window-${selectedChannel}-${profileId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'global_chat',
+          filter: `channel=eq.${selectedChannel}`,
+        },
+        () => void fetchMessages(),
+      )
+      .subscribe((status) => {
+        const connected = status === 'SUBSCRIBED';
+        onConnectionStatusChange?.(connected);
+        if (connected) void fetchMessages();
+      });
+
+    channelRef.current = realtimeChannel;
+    const timer = window.setInterval(() => void fetchMessages(), 15000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void fetchMessages();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+      channelRef.current = null;
+      onConnectionStatusChange?.(false);
+      void supabase.removeChannel(realtimeChannel);
+    };
+  }, [fetchMessages, onConnectionStatusChange, profileId, selectedChannel]);
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
