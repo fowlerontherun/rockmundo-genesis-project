@@ -966,3 +966,45 @@ it.each(['masculine', 'feminine'] as const)('preserves both dyes on %s patterned
   expect(patternedBodice).toBe(true);
   disposeModel(model);
 });
+
+it.each(['hoodie', 'zip-hoodie'])('continues custom fabric over %s details without recolouring merch', item => {
+  const appearance = defaultAppearance();
+  appearance.body.frame = 'feminine';
+  appearance.equipment.top = { itemId: `starter.top.${item}`, color: '#426baa', secondaryColor: '#ed4495', pattern: 'checks' };
+  const model = assemblePlayerModel(library, appearance);
+  const detailNames = item === 'hoodie'
+    ? ['avatar-v1-hoodie-hood', 'avatar-v1-hoodie-kangaroo-pocket']
+    : ['avatar-v1-zip-hoodie-hood', 'avatar-v1-zip-hoodie-pocket-left', 'avatar-v1-zip-hoodie-pocket-right'];
+  const maps = detailNames.map(name => {
+    const detail = model.getObjectByName(name) as T.Mesh<T.BufferGeometry, T.MeshStandardMaterial>;
+    expect(detail.material.color.getHexString()).toBe('ffffff');
+    expect(detail.material.map?.name).toBe('clothing-pattern-checks-#426baa-#ed4495');
+    return detail.material.map;
+  });
+  expect(new Set(maps).size).toBe(1);
+  const cord = model.getObjectByName('avatar-v1-hoodie-drawstring-left') as T.Mesh<T.BufferGeometry, T.MeshStandardMaterial> | undefined;
+  if (cord) { expect(cord.material.map).toBeNull(); expect(cord.material.color.getHexString()).toBe('ed4495'); }
+  disposeModel(model);
+  const merch = assemblePlayerModel(library, appearance, [], [], 'balanced', 'stage', {
+    design_id: 'merch', band_id: 'band', design_name: 'Tour', product_type: item === 'hoodie' ? 'Premium Hoodie' : 'Zip Hoodie', garment_color: '#20232b',
+  });
+  for (const name of detailNames) {
+    const detail = merch.getObjectByName(name) as T.Mesh<T.BufferGeometry, T.MeshStandardMaterial>;
+    expect(detail.material.map).toBeNull();
+    expect(detail.material.color.getHexString()).toBe('20232b');
+  }
+  disposeModel(merch);
+});
+
+it('uses one two-tone split for separate feminine torso and arm meshes', () => {
+  const appearance = defaultAppearance(); appearance.body.frame = 'feminine';
+  appearance.equipment.top = { itemId: 'starter.top.hoodie', color: '#426baa', secondaryColor: '#ed4495', pattern: 'two-tone' };
+  const model = assemblePlayerModel(library, appearance);
+  const ranges: string[] = [];
+  model.traverse(node => {
+    if (node instanceof T.SkinnedMesh && node.userData.avatarV1TwoToneRange) ranges.push(JSON.stringify(node.userData.avatarV1TwoToneRange));
+  });
+  expect(ranges.length).toBeGreaterThan(1);
+  expect(new Set(ranges).size).toBe(1);
+  disposeModel(model);
+});

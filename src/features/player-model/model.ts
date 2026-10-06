@@ -936,7 +936,7 @@ function addV1OuterwearFrontDetail(root: T.Object3D, appearance: PlayerAppearanc
   attachSurfaceGraphic(root, chest, line, attachment, .0004);
 }
 
-function addV1HoodieDetails(root: T.Object3D, appearance: PlayerAppearance, bones: Map<string, T.Bone>) {
+function addV1HoodieDetails(root: T.Object3D, appearance: PlayerAppearance, bones: Map<string, T.Bone>, styling?: PlayerAppearance['equipment']['top']) {
   const itemId = appearance.equipment.top.itemId;
   const zip = itemId === 'starter.top.zip-hoodie';
   if (itemId !== 'starter.top.hoodie' && !zip) return;
@@ -975,6 +975,24 @@ function addV1HoodieDetails(root: T.Object3D, appearance: PlayerAppearance, bone
   );
   if (!attachment) return;
 
+  // Project in the same rest-pose coordinates as the body, after attachment.
+  // A shared texture keeps pocket seams continuous instead of restarting the print.
+  const patternMap = styling?.pattern ? clothingPatternTexture(styling.pattern, styling.color, styling.secondaryColor ?? '#eee8db') : null;
+  attachment.mesh.geometry.computeBoundingBox();
+  const bodyBounds = attachment.mesh.geometry.boundingBox?.clone().applyMatrix4(attachment.mesh.matrixWorld);
+  const applyPattern = (piece: T.Mesh<T.BufferGeometry, T.MeshStandardMaterial>) => {
+    if (!patternMap) return;
+    piece.updateWorldMatrix(true, false);
+    if (styling?.pattern === 'two-tone' && bodyBounds) {
+      twoToneUVs(piece.geometry, piece.matrixWorld, false, attachment.mesh.userData.avatarV1TwoToneRange ?? { low: bodyBounds.min.y, high: bodyBounds.max.y });
+    } else {
+      fabricUVs(piece.geometry, false, piece.matrixWorld);
+    }
+    piece.material.map = patternMap;
+    piece.material.color.set('#ffffff');
+  };
+  applyPattern(hood);
+
   if (zip) {
     for (const side of [-1, 1]) {
       const pocketShape = new T.Shape();
@@ -987,6 +1005,7 @@ function addV1HoodieDetails(root: T.Object3D, appearance: PlayerAppearance, bone
       pocket.name = `avatar-v1-zip-hoodie-pocket-${side < 0 ? 'left' : 'right'}`;
       pocket.renderOrder = 2;
       attachSurfaceGraphic(root, chest, pocket, attachment, .00062);
+      applyPattern(pocket);
     }
   } else {
     const pocketShape = new T.Shape();
@@ -1001,9 +1020,11 @@ function addV1HoodieDetails(root: T.Object3D, appearance: PlayerAppearance, bone
     pocket.name = 'avatar-v1-hoodie-kangaroo-pocket';
     pocket.renderOrder = 2;
     attachSurfaceGraphic(root, chest, pocket, attachment, .00065);
+    applyPattern(pocket);
 
     for (const side of [-1, 1]) {
       const drawstring = new T.Mesh(new T.PlaneGeometry(.006, .12), fabric.clone());
+      if (styling?.pattern && styling.pattern !== 'solid') drawstring.material.color.set(styling.secondaryColor ?? '#eee8db');
       drawstring.name = `avatar-v1-hoodie-drawstring-${side < 0 ? 'left' : 'right'}`;
       drawstring.position.x = side * .026;
       drawstring.position.y = -.045;
@@ -1683,6 +1704,26 @@ export function assemblePlayerModel(
     const containers: T.Object3D[] = [];
     source(choice.style).traverse(node => { if (matches(node) && (!node.parent || !matches(node.parent))) containers.push(node); });
     if (!containers.length) throw new Error(`Missing character part: ${choice.part}`);
+    let patternRange: { low: number; high: number } | undefined;
+    if (choice.custom?.pattern === 'two-tone') {
+      let low = Infinity, high = -Infinity;
+      const point = new T.Vector3();
+      for (const container of containers) container.traverse(node => {
+        if (!(node instanceof T.SkinnedMesh)) return;
+        node.updateWorldMatrix(true, false);
+        const materials = Array.isArray(node.material) ? node.material : [node.material];
+        const geometry = node.geometry, position = geometry.getAttribute('position');
+        for (const group of garmentGroups(geometry)) {
+          if (/skin|eye|earring|metal|hair/i.test(materials[group.materialIndex ?? 0]?.name ?? '')) continue;
+          for (let i = group.start; i < group.start + group.count; i++) {
+            point.fromBufferAttribute(position, geometry.index?.getX(i) ?? i).applyMatrix4(node.matrixWorld);
+            const value = choice.part === 'feet' ? point.z : point.y;
+            low = Math.min(low, value); high = Math.max(high, value);
+          }
+        }
+      });
+      if (Number.isFinite(low) && high > low) patternRange = { low, high };
+    }
     for (const container of containers) {
       const part = container.clone(true), removeHair: T.Object3D[] = [];
       const detachedOverlays: T.SkinnedMesh[] = [];
@@ -1763,7 +1804,10 @@ export function assemblePlayerModel(
           ));
         }
         if (choice.fabric !== 'plain' || choice.finish || choice.custom?.pattern) fabricUVs(clonedNode.geometry, choice.part === 'feet', original.matrixWorld);
-        if (choice.custom?.pattern === 'two-tone') twoToneUVs(clonedNode.geometry, original.matrixWorld, choice.part === 'feet');
+        if (choice.custom?.pattern === 'two-tone') {
+          twoToneUVs(clonedNode.geometry, original.matrixWorld, choice.part === 'feet', patternRange);
+          clonedNode.userData.avatarV1TwoToneRange = patternRange;
+        }
         if (choice.assetKey) applyCuratedMacroShading(clonedNode.geometry, choice.assetKey, choice.finish as CuratedFinish | undefined);
         if (choice.part === 'head' || (choice.part === 'body' && !choice.assetKey)) {
           applyAvatarSkinMacroShading(clonedNode.geometry, choice.part, appearance, quality);
@@ -1993,7 +2037,7 @@ export function assemblePlayerModel(
     addBandMerchGraphic(result, appearance, bones, merchWearable);
     if (!curatedTop) {
       addV1VNeckTrim(result, appearance, bones);
-      addV1HoodieDetails(result, appearance, bones);
+      addV1HoodieDetails(result, appearance, bones, customTop);
       addV1OuterwearFrontDetail(result, appearance, bones);
     }
     addCuratedSkinDetails(result, bones, richClothing, quality);
