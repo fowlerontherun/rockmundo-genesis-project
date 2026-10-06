@@ -429,6 +429,7 @@ serve(async (req) => {
     };
 
     let twaatsCreated = 0;
+    const postedBotIds = new Set<string>();
     const now = Date.now();
 
     // Generate twaats for eligible bots
@@ -488,15 +489,21 @@ serve(async (req) => {
 
       console.log(`[generate-bot-twaats] Created twaat for @${bot.account?.handle}: "${twaatContent.body.substring(0, 50)}..."`);
       twaatsCreated++;
+      postedBotIds.add(bot.id);
     }
 
-    // GUARANTEE MINIMUM: If we still have very few twaats, create more
-    if (twaatsCreated < 3 && bots && bots.length > 0) {
+    // GUARANTEE MINIMUM: only top up when the recent feed itself is actually
+    // sparse. Previously this ran whenever fewer than 3 bots posted in the
+    // current invocation, which defeated cooldowns and could force 5 posts
+    // every 30-minute cron run even when the feed was healthy.
+    if (feedIsEmpty && twaatsCreated < 3 && bots && bots.length > 0) {
       console.log("[generate-bot-twaats] Forcing additional twaats to meet minimum...");
       
       // Pick random bots to post
-      const shuffledBots = [...bots].sort(() => Math.random() - 0.5);
-      const botsToForce = shuffledBots.slice(0, Math.min(5, shuffledBots.length));
+      const shuffledBots = bots
+        .filter((bot) => !postedBotIds.has(bot.id))
+        .sort(() => Math.random() - 0.5);
+      const botsToForce = shuffledBots.slice(0, Math.min(3 - twaatsCreated, shuffledBots.length));
       
       for (const bot of botsToForce) {
         const personality = Array.isArray(bot.personality_traits) ? bot.personality_traits : [];
@@ -528,6 +535,7 @@ serve(async (req) => {
             .eq("id", bot.id);
 
           twaatsCreated++;
+          postedBotIds.add(bot.id);
           console.log(`[generate-bot-twaats] Forced twaat for @${bot.account?.handle}`);
         }
       }
