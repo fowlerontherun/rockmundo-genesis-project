@@ -192,9 +192,11 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
         } catch (error: any) {
           toast({
             title: twaat.scheduled_for ? "Twaat scheduled, poll failed" : "Twaat posted, poll failed",
-            description: error?.message || (twaat.scheduled_for
-              ? "The Twaat is queued but its poll could not be attached."
-              : "The post is live but the poll could not be attached."),
+            description: String(error?.message || "").includes("twaater_polls_disabled")
+              ? "Poll creation is currently disabled on Twaater."
+              : error?.message || (twaat.scheduled_for
+                ? "The Twaat is queued but its poll could not be attached."
+                : "The post is live but the poll could not be attached."),
             variant: "destructive",
           });
         }
