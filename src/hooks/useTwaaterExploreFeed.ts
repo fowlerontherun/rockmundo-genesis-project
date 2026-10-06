@@ -67,7 +67,7 @@ export const useTwaaterExploreFeed = (excludeAccountId?: string) => {
         const likes = metrics.likes || 0;
         const replies = metrics.replies || 0;
         const retwaats = metrics.retwaats || 0;
-        const views = metrics.views || 1;
+        const views = metrics.impressions || 1;
 
         // Engagement score: likes * 1 + replies * 2 + retwaats * 3
         let engagementScore = (likes * 1) + (replies * 2) + (retwaats * 3);
