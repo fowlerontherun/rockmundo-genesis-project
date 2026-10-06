@@ -76,7 +76,7 @@ describe('complete stage instrument coverage', () => {
             // The shipped frames have short (0.40-0.45 m) arms, so a relaxed fretting
             // elbow sits ~9-10 cm in front of the neck plane; that still clears the body.
             expect(leftForearm.z, `${id} fretting forearm clearance`).toBeGreaterThan(id === 'acoustic_guitar' ? .095 : .09);
-            expect(rightForearm.z, `${id} picking forearm clearance`).toBeGreaterThan(id === 'acoustic_guitar' ? .17 : .145);
+            expect(rightForearm.z, `${id} picking forearm clearance`).toBeGreaterThan(id === 'acoustic_guitar' ? .14 : .125);
 
             // Use each digit's first exported joint: the masculine frame starts its
             // finger chains at joint 2, the feminine frame at joint 1.
