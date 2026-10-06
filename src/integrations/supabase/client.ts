@@ -6,6 +6,7 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const REFERRAL_STORAGE_KEY = "rockmundo_referral_code";
 const REFERRAL_CODE_PATTERN = /^RM[A-Z0-9]{6,18}$/;
+const REFERRAL_BAND_STORAGE_KEY = "rockmundo_referral_band";
 
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
   throw new Error(
@@ -37,6 +38,10 @@ if (typeof window !== "undefined") {
   const referralParam = new URLSearchParams(window.location.search).get("ref")?.trim().toUpperCase();
   if (referralParam && REFERRAL_CODE_PATTERN.test(referralParam)) {
     localStorage.setItem(REFERRAL_STORAGE_KEY, referralParam);
+    const bandParam = new URLSearchParams(window.location.search).get("band")?.trim();
+    if (bandParam && /^[0-9a-f-]{36}$/i.test(bandParam)) {
+      localStorage.setItem(REFERRAL_BAND_STORAGE_KEY, bandParam);
+    }
   }
 
   // Keep this wrapper deliberately untyped: Supabase's signUp overload is highly generic and
