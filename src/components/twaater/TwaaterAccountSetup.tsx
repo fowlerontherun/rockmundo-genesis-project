@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useTwaaterAccount } from "@/hooks/useTwaaterAccount";
+import { useTwaaterRuntimeConfig } from "@/hooks/useTwaaterRuntimeConfig";
 
 interface TwaaterAccountSetupProps {
   ownerType: "persona" | "band";
@@ -19,6 +20,7 @@ export const TwaaterAccountSetup = ({
   const [handle, setHandle] = useState(profileUsername);
   const [displayName, setDisplayName] = useState("");
   const { createAccount, isCreating } = useTwaaterAccount(ownerType, ownerId);
+  const { config } = useTwaaterRuntimeConfig();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +83,10 @@ export const TwaaterAccountSetup = ({
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="flex items-start gap-2">
                 <span className="text-primary">✓</span>
-                <span>Daily XP rewards for your first 3 posts (+2 XP bonus for campaign posts)</span>
+                <span>
+                  {config.xpPerRewardedPost} XP for your first {config.dailyRewardLimit} posts each day
+                  (+2 XP for posts linked to music, gigs or tours)
+                </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary">✓</span>
