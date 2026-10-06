@@ -203,7 +203,7 @@ export default function BandProfile() {
                 )}
               </div>
             </div>
-            {recruitmentInvitation?.status === "pending" && <Button size="sm" onClick={() => navigate("/band?tab=members")}>Review invitation</Button>}
+            {recruitmentInvitation?.status === "pending" && <Button size="sm" onClick={() => navigate("/band/members")}>Review invitation</Button>}
           </CardContent>
         </Card>
       )}

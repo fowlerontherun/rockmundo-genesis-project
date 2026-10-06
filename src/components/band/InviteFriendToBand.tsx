@@ -225,7 +225,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
     filterColumn: 'band_id',
     filterValue: open ? bandId : null,
     onChange: () => {
-      void loadRecruitmentOptions(currentUserId).catch(() => {
+      void Promise.all([loadRecruitmentOptions(currentUserId), loadReferredRecruits()]).catch(() => {
         // An explicit close/reopen retains the normal load-and-retry feedback.
       });
     },
@@ -284,7 +284,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
       setVocalRole(undefined);
       setMessage('');
       try {
-        await loadRecruitmentOptions(currentUserId);
+        await Promise.all([loadRecruitmentOptions(currentUserId), loadReferredRecruits()]);
       } catch {
         toast({ title: 'Invitation sent, but the pending list could not refresh', description: 'Reopen this dialog to load the latest invitations.' });
       }
@@ -460,8 +460,13 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
                       <Share2 className="mr-2 h-4 w-4" />Share recruitment link
                     </Button>
                     <Button type="button" variant="outline" size="sm" disabled={!externalRecruitmentUrl} onClick={async () => {
-                      await navigator.clipboard.writeText(externalRecruitmentUrl);
-                      toast({ title: 'Recruitment link copied' });
+                      if (!externalRecruitmentUrl) return;
+                      try {
+                        await navigator.clipboard.writeText(externalRecruitmentUrl);
+                        toast({ title: 'Recruitment link copied' });
+                      } catch {
+                        toast({ title: 'Could not copy recruitment link', description: 'Your browser blocked clipboard access. Try Share recruitment link instead.', variant: 'destructive' });
+                      }
                     }}>
                       <Copy className="mr-2 h-4 w-4" />Copy link
                     </Button>
