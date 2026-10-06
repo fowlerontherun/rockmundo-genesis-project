@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 
 import { useAuth } from "@/hooks/use-auth-context";
@@ -17,6 +17,7 @@ interface NoActiveCharacterGateProps {
  */
 export const NoActiveCharacterGate = ({ children }: NoActiveCharacterGateProps) => {
   const { user, loading: authLoading } = useAuth();
+  const [selectedDeadProfileId, setSelectedDeadProfileId] = useState<string | null>(null);
   const {
     deadCharacters,
     deadCharactersLoading,
@@ -44,9 +45,14 @@ export const NoActiveCharacterGate = ({ children }: NoActiveCharacterGateProps) 
     resurrectCharacter.isPending || createChildCharacter.isPending || createFreshCharacter.isPending;
 
   if (deadCharacters.length > 0) {
+    const selectedDeadCharacter =
+      deadCharacters.find((character) => character.profile_id === selectedDeadProfileId) ?? deadCharacters[0];
+
     return (
       <CharacterDeathScreen
-        deadCharacter={deadCharacters[0]}
+        deadCharacter={selectedDeadCharacter}
+        availableDeadCharacters={deadCharacters}
+        onSelectDeadCharacter={setSelectedDeadProfileId}
         onResurrect={(profileId) => {
           resurrectCharacter.mutate(profileId, {
             onSuccess: () => {
