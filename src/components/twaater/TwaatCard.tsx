@@ -22,7 +22,7 @@ interface TwaatCardProps {
 
 export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
   const { toggleLike, toggleRetwaat } = useTwaaterReactions();
-  const { postReplyAsync, isPosting } = useTwaaterReplies(twaat.id);
+  const { postReplyAsync, isPosting } = useTwaaterReplies(twaat.id, false);
   const { toggleBookmark, isBookmarked } = useTwaaterBookmarks(viewerAccountId);
   const [showReplyBox, setShowReplyBox] = useState(false);
   const [replyBody, setReplyBody] = useState("");
