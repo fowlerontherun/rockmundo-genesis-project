@@ -45,6 +45,8 @@ export const fetchRecentTwaatsForTrending = async (): Promise<TrendingTwaatRow[]
         impressions
       )
     `)
+    .eq("visibility", "public")
+    .is("deleted_at", null)
     .is("scheduled_for", null)
     .gte("created_at", getYesterdayIso())
     .order("created_at", { ascending: false })
