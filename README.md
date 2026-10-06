@@ -1,5 +1,4 @@
-# Rockmundo Beta 
-
+# Rockmundo Live V1
 ## Project info
 
 **Use your preferred IDE**
