@@ -83,6 +83,7 @@ export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCap
             { label: "Fame gained", value: "+" + numberFormat.format(metricValue(report.headline.fameGained, 0)) },
           ],
           destinationUrl: shareInvite.url,
+          shareCooldownKey: "rockmundo_gig_referral_share_at",
           createdAt: new Date().toISOString(),
         } satisfies ShareMoment} />
         <p id="gig-report-summary" className="sr-only">Post-gig report with headline result, performance story, lessons, timeline, and detailed analysis.</p>
