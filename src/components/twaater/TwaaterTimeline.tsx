@@ -1,9 +1,13 @@
 import { format, isToday, isYesterday, isThisWeek } from "date-fns";
 import { RefreshCw } from "lucide-react";
-import { TwaatCard } from "./TwaatCard";
+import { TwaatCardView } from "./TwaatCard";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useTwaaterReactions } from "@/hooks/useTwaaterReactions";
+import { useTwaaterReplyActions } from "@/hooks/useTwaaterReplies";
+import { useTwaaterBookmarkState } from "@/hooks/useTwaaterBookmarks";
+import { useTwaaterRuntimeConfig } from "@/hooks/useTwaaterRuntimeConfig";
 
 interface TwaatData {
   id: string;
@@ -77,6 +81,11 @@ export default function TwaaterTimeline({
   currentAccountId,
   showDateSeparators = true,
 }: TwaaterTimelineProps) {
+  const { toggleLike, toggleRetwaat } = useTwaaterReactions();
+  const replyActions = useTwaaterReplyActions();
+  const bookmarks = useTwaaterBookmarkState(currentAccountId);
+  const { config } = useTwaaterRuntimeConfig();
+
   const pollIds = Array.from(
     new Set(
       twaats
@@ -137,10 +146,20 @@ export default function TwaaterTimeline({
         </div>
       )}
 
-      <TwaatCard
+      <TwaatCardView
         twaat={twaat}
         viewerAccountId={currentAccountId}
         preloadedPollVote={twaat.poll?.id ? pollVoteByPollId.get(twaat.poll.id) ?? null : undefined}
+        config={config}
+        bookmarked={bookmarks.isBookmarked(twaat.id)}
+        toggleLike={toggleLike}
+        toggleRetwaat={toggleRetwaat}
+        toggleBookmark={bookmarks.toggleBookmark}
+        postReplyAsync={({ accountId, body }) =>
+          replyActions.postReplyAsync({ twaatId: twaat.id, accountId, body })
+        }
+        isPosting={replyActions.isPosting}
+        isBookmarkPending={bookmarks.isBookmarkPending}
       />
     </div>
   );
