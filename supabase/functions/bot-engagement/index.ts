@@ -132,12 +132,16 @@ serve(async (req) => {
     console.log(`[bot-engagement] Found ${playerTwaats.length} recent player twaats`);
 
     // Get ALL player accounts for follows (uses owner_type and owner_id)
-    const { data: allPlayerAccounts } = await supabase
+    const { data: allPlayerAccounts, error: accountsError } = await supabase
       .from("twaater_accounts")
       .select("id, owner_type, owner_id");
+    if (accountsError) throw accountsError;
 
     // Filter out bot accounts
     const nonBotAccounts = allPlayerAccounts?.filter(a => !botAccountIds.includes(a.id)) || [];
+    const accountById = new Map(nonBotAccounts.map((account: any) => [account.id, account]));
+    const playerTwaatIds = playerTwaats.map((twaat: any) => twaat.id);
+    const nonBotAccountIds = nonBotAccounts.map((account: any) => account.id);
 
     // Get fame data for all players
     const personaOwnerIds = nonBotAccounts.filter(a => a.owner_type === 'persona' && a.owner_id).map(a => a.owner_id);
@@ -156,6 +160,46 @@ serve(async (req) => {
     const fameByOwnerId = new Map(profiles?.map(p => [p.id, p.fame || 0]));
     const bandDataById = new Map(bands?.map(b => [b.id, { fame: b.fame || 0, fans: b.total_fans || 0 }]));
 
+    // Preload existing bot activity once instead of issuing per-bot/per-twaat existence queries.
+    const [existingReactionsResult, existingRepliesResult, existingFollowsResult] = await Promise.all([
+      playerTwaatIds.length > 0 && botAccountIds.length > 0
+        ? supabase
+            .from("twaater_reactions")
+            .select("twaat_id, account_id")
+            .in("twaat_id", playerTwaatIds)
+            .in("account_id", botAccountIds)
+        : Promise.resolve({ data: [], error: null }),
+      playerTwaatIds.length > 0 && botAccountIds.length > 0
+        ? supabase
+            .from("twaat_replies")
+            .select("parent_twaat_id, account_id")
+            .in("parent_twaat_id", playerTwaatIds)
+            .in("account_id", botAccountIds)
+        : Promise.resolve({ data: [], error: null }),
+      nonBotAccountIds.length > 0 && botAccountIds.length > 0
+        ? supabase
+            .from("twaater_follows")
+            .select("follower_account_id, followed_account_id")
+            .in("follower_account_id", botAccountIds)
+            .in("followed_account_id", nonBotAccountIds)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+    if (existingReactionsResult.error) throw existingReactionsResult.error;
+    if (existingRepliesResult.error) throw existingRepliesResult.error;
+    if (existingFollowsResult.error) throw existingFollowsResult.error;
+
+    const reactionKeys = new Set(
+      (existingReactionsResult.data || []).map((row: any) => `${row.account_id}:${row.twaat_id}`),
+    );
+    const replyKeys = new Set(
+      (existingRepliesResult.data || []).map((row: any) => `${row.account_id}:${row.parent_twaat_id}`),
+    );
+    const followKeys = new Set(
+      (existingFollowsResult.data || []).map((row: any) => `${row.follower_account_id}:${row.followed_account_id}`),
+    );
+    const engagedBandOwnerIds = new Set<string>();
+
     let repliesCreated = 0;
     let likesCreated = 0;
     let followsCreated = 0;
@@ -168,18 +212,14 @@ serve(async (req) => {
 
       // Process each player twaat for likes/replies
       for (const twaat of playerTwaats) {
-        // Skip if bot already reacted to this twaat
-        const { data: existingReaction } = await supabase
-          .from("twaat_reactions")
-          .select("id")
-          .eq("twaat_id", twaat.id)
-          .eq("account_id", bot.account_id)
-          .limit(1);
+        const reactionKey = `${bot.account_id}:${twaat.id}`;
+        const replyKey = `${bot.account_id}:${twaat.id}`;
+        const targetAccount = accountById.get(twaat.account_id) as any;
 
         // Random chance to like
-        if ((!existingReaction || existingReaction.length === 0) && Math.random() < likeProbability) {
+        if (!reactionKeys.has(reactionKey) && Math.random() < likeProbability) {
           const { error: likeError } = await supabase
-            .from("twaat_reactions")
+            .from("twaater_reactions")
             .insert({
               twaat_id: twaat.id,
               account_id: bot.account_id,
@@ -187,20 +227,16 @@ serve(async (req) => {
             });
 
           if (!likeError) {
+            reactionKeys.add(reactionKey);
             likesCreated++;
+            if (targetAccount?.owner_type === "band" && targetAccount.owner_id) {
+              engagedBandOwnerIds.add(targetAccount.owner_id);
+            }
           }
         }
 
-        // Check for existing reply
-        const { data: existingReply } = await supabase
-          .from("twaat_replies")
-          .select("id")
-          .eq("parent_twaat_id", twaat.id)
-          .eq("account_id", bot.account_id)
-          .limit(1);
-
         // Random chance to reply
-        if ((!existingReply || existingReply.length === 0) && Math.random() < replyProbability) {
+        if (!replyKeys.has(replyKey) && Math.random() < replyProbability) {
           const replyBody = templates[Math.floor(Math.random() * templates.length)];
           
           const { error: replyError } = await supabase
@@ -212,7 +248,11 @@ serve(async (req) => {
             });
 
           if (!replyError) {
+            replyKeys.add(replyKey);
             repliesCreated++;
+            if (targetAccount?.owner_type === "band" && targetAccount.owner_id) {
+              engagedBandOwnerIds.add(targetAccount.owner_id);
+            }
           }
         }
       }
@@ -227,15 +267,8 @@ serve(async (req) => {
         if (followsThisBot >= maxFollowsPerBot) break;
         if (playerAccount.id === bot.account_id) continue;
 
-        // Check if already following
-        const { data: existingFollow } = await supabase
-          .from("twaater_follows")
-          .select("id")
-          .eq("follower_account_id", bot.account_id)
-          .eq("followed_account_id", playerAccount.id)
-          .limit(1);
-
-        if (existingFollow && existingFollow.length > 0) continue;
+        const followKey = `${bot.account_id}:${playerAccount.id}`;
+        if (followKeys.has(followKey)) continue;
 
         // Calculate fame and fans
         let fame = 0;
@@ -260,8 +293,12 @@ serve(async (req) => {
             });
 
           if (!followError) {
+            followKeys.add(followKey);
             followsCreated++;
             followsThisBot++;
+            if (playerAccount.owner_type === "band" && playerAccount.owner_id) {
+              engagedBandOwnerIds.add(playerAccount.owner_id);
+            }
             console.log(`[bot-engagement] @${bot.account?.handle} followed account ${playerAccount.id} (fame: ${fame}, fans: ${fans})`);
           }
         }
@@ -273,12 +310,8 @@ serve(async (req) => {
     const totalEngagement = repliesCreated + likesCreated + followsCreated;
     if (totalEngagement >= 5) {
       try {
-        // Find band accounts that received engagement
-        const bandAccountIds = new Set<string>();
-        for (const pa of nonBotAccounts || []) {
-          if (pa.owner_type === 'band' && pa.owner_id) bandAccountIds.add(pa.owner_id);
-        }
-        for (const bandId of bandAccountIds) {
+        // Only bands that actually received a like, reply, or follow in this run get morale.
+        for (const bandId of engagedBandOwnerIds) {
           const { data: bd } = await supabase.from('bands').select('morale').eq('id', bandId).single();
           if (bd) {
             const moraleBoost = totalEngagement >= 20 ? 3 : totalEngagement >= 10 ? 2 : 1;

@@ -33,6 +33,8 @@ export const useTwaaterHashtags = () => {
       const { data: twaats, error } = await supabase
         .from("twaats")
         .select("body, created_at")
+        .eq("visibility", "public")
+        .is("deleted_at", null)
         .is("scheduled_for", null)
         .gte("created_at", oneWeekAgo.toISOString())
         .order("created_at", { ascending: false })
@@ -88,6 +90,8 @@ export const useTwaaterHashtags = () => {
           id, handle, display_name, avatar_url, verified
         )
       `)
+      .eq("visibility", "public")
+      .is("deleted_at", null)
       .is("scheduled_for", null)
       .ilike("body", `%#${hashtag}%`)
       .order("created_at", { ascending: false })

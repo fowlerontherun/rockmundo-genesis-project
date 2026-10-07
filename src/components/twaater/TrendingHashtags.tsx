@@ -5,9 +5,14 @@ import { TrendingUp, Hash, Flame } from "lucide-react";
 import { useTwaaterHashtags } from "@/hooks/useTwaaterHashtags";
 import { useNavigate } from "react-router-dom";
 
-export const TrendingHashtags = () => {
+interface TrendingHashtagsProps {
+  currentAccountId?: string;
+}
+
+export const TrendingHashtags = ({ currentAccountId }: TrendingHashtagsProps) => {
   const { trending, isLoading } = useTwaaterHashtags();
   const navigate = useNavigate();
+  const accountSuffix = currentAccountId ? `?account=${encodeURIComponent(currentAccountId)}` : "";
 
   if (isLoading) {
     return (
@@ -59,7 +64,7 @@ export const TrendingHashtags = () => {
             key={hashtag.tag}
             variant="ghost"
             className="w-full justify-start h-auto py-2 px-2"
-            onClick={() => navigate(`/twaater/tag/${hashtag.tag}`)}
+            onClick={() => navigate(`/twaater/tag/${hashtag.tag}${accountSuffix}`)}
           >
             <div className="flex items-center gap-2 w-full">
               <span className="text-muted-foreground text-xs w-4">{index + 1}</span>
@@ -82,7 +87,7 @@ export const TrendingHashtags = () => {
             variant="link"
             size="sm"
             className="w-full text-[hsl(var(--twaater-purple))]"
-            onClick={() => navigate("/twaater/trending")}
+            onClick={() => navigate(`/twaater?tab=trending${currentAccountId ? `&account=${encodeURIComponent(currentAccountId)}` : ""}`)}
           >
             Show more
           </Button>

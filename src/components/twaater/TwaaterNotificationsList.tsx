@@ -11,6 +11,7 @@ interface TwaaterNotificationsListProps {
 export const TwaaterNotificationsList = ({ accountId }: TwaaterNotificationsListProps) => {
   const { notifications, isLoading, error, refetch, markAsRead, markAllAsRead, unreadCount } = useTwaaterNotifications(accountId);
   const navigate = useNavigate();
+  const accountSuffix = `?account=${encodeURIComponent(accountId)}`;
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -44,9 +45,9 @@ export const TwaaterNotificationsList = ({ accountId }: TwaaterNotificationsList
     }
     
     if (notification.type === "follow" && notification.source_account?.handle) {
-      navigate(`/twaater/${notification.source_account.handle}`);
+      navigate(`/twaater/${notification.source_account.handle}${accountSuffix}`);
     } else if (notification.related_twaat_id) {
-      navigate(`/twaater/twaat/${notification.related_twaat_id}`);
+      navigate(`/twaater/twaat/${notification.related_twaat_id}${accountSuffix}`);
     }
   };
 
