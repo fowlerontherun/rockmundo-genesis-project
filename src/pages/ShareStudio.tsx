@@ -10,11 +10,11 @@ import { deleteShareMomentSnapshot, listShareMomentSnapshots, type ShareMomentSn
 import type { ShareMoment } from "@/features/shareable-moments/types";
 
 const creators = [
-  { title: "Gig Poster", description: "Promote a scheduled show with venue, date, ticket price and live ticket demand.", action: "Choose a gig", path: "/schedule", icon: Music2, badge: "Live poster" },
-  { title: "Tour Poster", description: "Build a route-aware tour poster from your real booked stops and dates.", action: "Choose a tour", path: "/band/tours", icon: CalendarDays, badge: "Route poster" },
-  { title: "Release Poster", description: "Create Coming Soon or Out Now artwork from your singles, EPs and albums.", action: "Choose a release", path: "/music/releases", icon: Disc3, badge: "Release art" },
-  { title: "Band Promo", description: "Create a reusable band identity card with logo, genre, fame and current stats.", action: "Open band", path: "/band", icon: Users, badge: "Band identity" },
-  { title: "Character Promo", description: "Put your current Avatar V1 look at the centre of a career promo card.", action: "Open profile", path: "/character", icon: UserRound, badge: "Avatar V1" },
+  { title: "Gig Poster", description: "Promote a scheduled show with venue, date, ticket price and live ticket demand.", action: "Choose a gig", path: "/schedule?shareCreate=gig", icon: Music2, badge: "Live poster" },
+  { title: "Tour Poster", description: "Build a route-aware tour poster from your real booked stops and dates.", action: "Choose a tour", path: "/band/tours?shareCreate=tour", icon: CalendarDays, badge: "Route poster" },
+  { title: "Release Poster", description: "Create Coming Soon or Out Now artwork from your singles, EPs and albums.", action: "Choose a release", path: "/music/releases?shareCreate=release", icon: Disc3, badge: "Release art" },
+  { title: "Band Promo", description: "Create a reusable band identity card with logo, genre, fame and current stats.", action: "Open band", path: "/band?shareCreate=band", icon: Users, badge: "Band identity" },
+  { title: "Character Promo", description: "Put your current Avatar V1 look at the centre of a career promo card.", action: "Open profile", path: "/character?shareCreate=character", icon: UserRound, badge: "Avatar V1" },
 ];
 
 const moments = [
