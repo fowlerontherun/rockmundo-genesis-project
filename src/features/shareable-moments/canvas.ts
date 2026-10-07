@@ -49,7 +49,10 @@ export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment
     band_profile: ['#09070f','#21123b','#4c1d95','#a78bfa'],
     character_profile: ['#070b12','#101b2b','#28143a','#8b5cf6'],
   };
-  const [start,mid,end,accent]=themes[moment.type] ?? themes.character_profile;
+  let [start,mid,end,accent]=themes[moment.type] ?? themes.character_profile;
+  if(moment.visualTheme==='spotlight'){start='#09090b';mid='#18181b';end='#27272a';accent='#facc15';}
+  else if(moment.visualTheme==='neon'){start='#020617';mid='#172554';end='#4c1d95';accent='#22d3ee';}
+  else if(moment.visualTheme==='mono'){start='#050505';mid='#171717';end='#262626';accent='#d4d4d4';}
   const headlineVariant = moment.type === 'festival' && moment.variant === 'headline';
   const bg = ctx.createLinearGradient(0, 0, width, height);
   bg.addColorStop(0,start); bg.addColorStop(.55,mid); bg.addColorStop(1,end);
