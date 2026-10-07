@@ -228,6 +228,7 @@ export const useTwaaterConversation = (conversationId?: string, accountId?: stri
     messages,
     isLoading,
     sendMessage: sendMessageMutation.mutate,
+    sendMessageAsync: sendMessageMutation.mutateAsync,
     isSending: sendMessageMutation.isPending,
   };
 };
