@@ -62,6 +62,9 @@ export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment
   const numberOne = moment.type === 'chart' && /NUMBER ONE|#1/i.test(milestoneCopy);
   const soldOut = moment.type === 'gig_result' && /SOLD OUT/i.test(milestoneCopy);
   const festivalHeadliner = moment.type === 'festival' && /HEADLINER/i.test(milestoneCopy);
+  const tourPromo = moment.type === 'tour' && moment.id?.startsWith('promo:');
+  const gigPromo = moment.type === 'gig_result' && moment.id?.startsWith('promo:');
+  const hotTickets = gigPromo && Number(moment.ticketSalesRatio || 0) >= .75;
   const bg = ctx.createLinearGradient(0, 0, width, height);
   bg.addColorStop(0,start); bg.addColorStop(.55,mid); bg.addColorStop(1,end);
   ctx.fillStyle=bg; ctx.fillRect(0,0,width,height);
@@ -120,7 +123,15 @@ export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment
     }
     ctx.restore();
   }
-  if(moment.type==='tour'){ctx.beginPath();ctx.moveTo(width*.58,height*.18);ctx.bezierCurveTo(width*.72,height*.12,width*.75,height*.34,width*.9,height*.27);ctx.stroke();for(const [x,y] of [[.58,.18],[.73,.2],[.9,.27]]){ctx.beginPath();ctx.arc(width*x,height*y,width*.012,0,Math.PI*2);ctx.fillStyle=accent;ctx.fill();}}
+  if(moment.type==='tour'){
+    const stops=tourPromo && moment.routeStops?.length ? moment.routeStops.slice(0,8) : [];
+    if(stops.length>1){
+      const x0=width*.56,x1=width*.93,y0=height*.16,y1=height*.36;
+      ctx.save();ctx.globalAlpha=.72;ctx.strokeStyle=accent;ctx.lineWidth=Math.max(3,width*.004);ctx.beginPath();
+      stops.forEach((_,i)=>{const t=i/(stops.length-1);const x=x0+(x1-x0)*t;const y=y0+(y1-y0)*(.5+.42*Math.sin(t*Math.PI*2));if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});ctx.stroke();
+      stops.forEach((name,i)=>{const t=i/(stops.length-1);const x=x0+(x1-x0)*t;const y=y0+(y1-y0)*(.5+.42*Math.sin(t*Math.PI*2));ctx.fillStyle=accent;ctx.beginPath();ctx.arc(x,y,width*.009,0,Math.PI*2);ctx.fill();ctx.font=`700 ${Math.round(width*.014)}px Inter, system-ui, sans-serif`;ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText(name.slice(0,14),x,y+height*.035);});ctx.restore();
+    } else {ctx.beginPath();ctx.moveTo(width*.58,height*.18);ctx.bezierCurveTo(width*.72,height*.12,width*.75,height*.34,width*.9,height*.27);ctx.stroke();for(const [x,y] of [[.58,.18],[.73,.2],[.9,.27]]){ctx.beginPath();ctx.arc(width*x,height*y,width*.012,0,Math.PI*2);ctx.fillStyle=accent;ctx.fill();}}
+  }
   else if(moment.type==='festival'){for(let i=0;i<5;i++){ctx.beginPath();ctx.arc(width*(.68+i*.07),height*(.18+i*.025),width*(.04+i*.018),0,Math.PI*2);ctx.stroke();}}
   else if(moment.type==='gig_result'){for(let x=-height;x<width;x+=90){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+height,height);ctx.stroke();}}
   else if(moment.type==='chart'){for(let i=0;i<6;i++){const barW=width*.035,barH=height*(.08+i*.035);ctx.fillStyle=accent;ctx.fillRect(width*.76+i*barW*1.25,height*.78-barH,barW,barH);}}
@@ -129,6 +140,7 @@ export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment
   ctx.restore();
   if(numberOne){ctx.save();ctx.font=`900 ${Math.round(width*.16)}px Inter, system-ui, sans-serif`;ctx.fillStyle='#fde04722';ctx.textAlign='right';ctx.fillText('#1',width*.96,height*.72);ctx.restore();}
   if(festivalHeadliner){ctx.save();ctx.font=`900 ${Math.round(width*.045)}px Inter, system-ui, sans-serif`;ctx.fillStyle='#fde68a';ctx.textAlign='right';ctx.fillText('HEADLINER',width*.94,height*.82);ctx.restore();}
+  if(gigPromo){ctx.save();ctx.font=`900 ${Math.round(width*.06)}px Inter, system-ui, sans-serif`;ctx.fillStyle='#ffffff18';ctx.textAlign='right';ctx.fillText('LIVE',width*.95,height*.78);if(hotTickets){ctx.translate(width*.68,height*.14);ctx.rotate(-.08);ctx.fillStyle='#f97316';ctx.beginPath();ctx.roundRect(0,0,width*.25,height*.065,width*.012);ctx.fill();ctx.font=`900 ${Math.round(width*.022)}px Inter, system-ui, sans-serif`;ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText(Number(moment.ticketSalesRatio||0)>=.95?'ALMOST SOLD OUT':'TICKETS MOVING FAST',width*.125,height*.042);}ctx.restore();}
 
   const layout=moment.visualLayout ?? 'right';
   if (artwork) {

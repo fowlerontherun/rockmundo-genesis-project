@@ -602,6 +602,7 @@ const TourManager = () => {
         ...(uniqueCities.length ? [{ label: "Cities", value: String(uniqueCities.length) }] : []),
       ].slice(0, 4),
       artworkUrl: tour.band?.logo_url ?? null,
+      routeStops: uniqueCities.slice(0, 8),
       destinationUrl: `${window.location.origin}/tour-manager?tour=${tour.id}`,
       referralCode: null,
       visualTheme: "neon",
