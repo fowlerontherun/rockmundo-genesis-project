@@ -33,6 +33,10 @@ export interface ShareMoment {
   subheadline?: string;
   eyebrow?: string;
   metrics?: ShareMetric[];
+  /** Optional short route labels for promotional tour posters. */
+  routeStops?: string[];
+  /** Persisted ticket demand ratio (0..1+) for promotional gig treatments. */
+  ticketSalesRatio?: number | null;
   artworkUrl?: string | null;
   variant?: 'standard' | 'headline';
   visualTheme?: ShareVisualTheme;
