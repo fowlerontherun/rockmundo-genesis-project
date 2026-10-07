@@ -148,6 +148,7 @@ const OTHER_TOURS_PER_PAGE = 10;
 const TourManager = () => {
   const [searchParams] = useSearchParams();
   const requestedCityId = searchParams.get("cityId");
+  const creatingTourPoster = searchParams.get("shareCreate") === "tour";
   const { profileId } = useActiveProfile();
   const { data: primaryBand } = usePrimaryBand();
   const currentBandId = primaryBand?.band_id ?? primaryBand?.bands?.id;
@@ -763,7 +764,8 @@ const TourManager = () => {
       icon={Map}
       backTo="/hub/band-live"
       headerActions={
-        <Button onClick={() => { setDraftRouteCityIds([]); setWizardOpen(true); }} size="sm">
+        <Button onClick={() =>
+      {creatingTourPoster && <Card className="mb-4 border-primary/30 bg-primary/5"><CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><Sparkles className="h-4 w-4 text-primary" />Choose a tour for your poster</CardTitle></CardHeader><CardContent><p className="text-sm text-muted-foreground">Use <strong>Create tour poster</strong> on one of your current or upcoming tours. Its real booked route, dates and band identity will be loaded into Share Studio.</p></CardContent></Card>} { setDraftRouteCityIds([]); setWizardOpen(true); }} size="sm">
           <Plus className="h-4 w-4 mr-2" />
           Create Tour
         </Button>
