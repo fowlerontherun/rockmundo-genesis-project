@@ -2,6 +2,8 @@ import { format, isToday, isYesterday, isThisWeek } from "date-fns";
 import { RefreshCw } from "lucide-react";
 import { TwaatCard } from "./TwaatCard";
 import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TwaatData {
   id: string;
@@ -28,7 +30,17 @@ interface TwaatData {
     handle: string;
     display_name: string;
   };
+  poll?: {
+    id: string;
+  } | null;
 }
+
+type PollVote = {
+  id: string;
+  poll_id: string;
+  option_id: string;
+  account_id: string;
+};
 
 interface TwaaterTimelineProps {
   twaats: TwaatData[];
@@ -65,6 +77,32 @@ export default function TwaaterTimeline({
   currentAccountId,
   showDateSeparators = true,
 }: TwaaterTimelineProps) {
+  const pollIds = Array.from(
+    new Set(
+      twaats
+        .map((twaat) => twaat.poll?.id)
+        .filter((pollId): pollId is string => Boolean(pollId)),
+    ),
+  );
+
+  const { data: pollVotes = [] } = useQuery({
+    queryKey: ["twaater-poll-votes-batch", currentAccountId, pollIds],
+    queryFn: async (): Promise<PollVote[]> => {
+      if (!currentAccountId || pollIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("twaater_poll_votes")
+        .select("id, poll_id, option_id, account_id")
+        .eq("account_id", currentAccountId)
+        .in("poll_id", pollIds);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: Boolean(currentAccountId) && pollIds.length > 0,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const pollVoteByPollId = new Map(pollVotes.map((vote) => [vote.poll_id, vote]));
   const groupedTwaats = showDateSeparators ? groupTwaatsByDate(twaats) : null;
 
   if (isLoading) {
@@ -99,7 +137,11 @@ export default function TwaaterTimeline({
         </div>
       )}
 
-      <TwaatCard twaat={twaat} viewerAccountId={currentAccountId} />
+      <TwaatCard
+        twaat={twaat}
+        viewerAccountId={currentAccountId}
+        preloadedPollVote={twaat.poll?.id ? pollVoteByPollId.get(twaat.poll.id) ?? null : undefined}
+      />
     </div>
   );
 
