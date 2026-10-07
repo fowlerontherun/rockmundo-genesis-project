@@ -54,11 +54,20 @@ export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment
   else if(moment.visualTheme==='neon'){start='#020617';mid='#172554';end='#4c1d95';accent='#22d3ee';}
   else if(moment.visualTheme==='mono'){start='#050505';mid='#171717';end='#262626';accent='#d4d4d4';}
   const headlineVariant = moment.type === 'festival' && moment.variant === 'headline';
-  const recordAward = moment.type === 'release' && /(?:1M|10M|100M)\s+(?:streams|in gross sales)/i.test(moment.subheadline || '');
+  const milestoneCopy = `${moment.eyebrow || ''} ${moment.subheadline || ''}`;
+  const awardMatch = moment.type === 'release' ? milestoneCopy.match(/(100M|10M|1M)\s+(?:streams|in gross sales)/i) : null;
+  const recordAward = Boolean(awardMatch);
+  const recordTier = awardMatch?.[1]?.toUpperCase() === '100M' ? 'DIAMOND' : awardMatch?.[1]?.toUpperCase() === '10M' ? 'MULTI-PLATINUM' : awardMatch ? 'PLATINUM' : null;
+  const numberOne = moment.type === 'chart' && /NUMBER ONE|#1/i.test(milestoneCopy);
+  const soldOut = moment.type === 'gig_result' && /SOLD OUT/i.test(milestoneCopy);
+  const festivalHeadliner = moment.type === 'festival' && /HEADLINER/i.test(milestoneCopy);
   const bg = ctx.createLinearGradient(0, 0, width, height);
   bg.addColorStop(0,start); bg.addColorStop(.55,mid); bg.addColorStop(1,end);
   ctx.fillStyle=bg; ctx.fillRect(0,0,width,height);
-  if(recordAward){const award=ctx.createRadialGradient(width*.82,height*.26,10,width*.82,height*.26,width*.25);award.addColorStop(0,'#fef3c7aa');award.addColorStop(.5,'#d4af3766');award.addColorStop(1,'#00000000');ctx.fillStyle=award;ctx.fillRect(0,0,width,height);}
+  if(recordAward){const award=ctx.createRadialGradient(width*.82,height*.26,10,width*.82,height*.26,width*.28);const awardTone=recordTier==='DIAMOND'?'#a5f3fc':recordTier==='MULTI-PLATINUM'?'#e2e8f0':'#f8fafc';award.addColorStop(0,awardTone+'cc');award.addColorStop(.5,awardTone+'55');award.addColorStop(1,'#00000000');ctx.fillStyle=award;ctx.fillRect(0,0,width,height);}
+  if(numberOne){const crown=ctx.createRadialGradient(width*.82,height*.2,10,width*.82,height*.2,width*.25);crown.addColorStop(0,'#fde04788');crown.addColorStop(1,'#00000000');ctx.fillStyle=crown;ctx.fillRect(0,0,width,height);}
+  if(soldOut){ctx.save();ctx.translate(width*.72,height*.18);ctx.rotate(-.12);ctx.strokeStyle='#fb7185';ctx.lineWidth=Math.max(6,width*.007);ctx.strokeRect(0,0,width*.23,height*.08);ctx.font=`900 ${Math.round(width*.033)}px Inter, system-ui, sans-serif`;ctx.fillStyle='#fecdd3';ctx.textAlign='center';ctx.fillText('SOLD OUT',width*.115,height*.052);ctx.restore();}
+  if(festivalHeadliner){const beam=ctx.createLinearGradient(width*.5,0,width*.5,height*.7);beam.addColorStop(0,'#fde04755');beam.addColorStop(1,'#00000000');ctx.fillStyle=beam;ctx.fillRect(width*.35,0,width*.3,height*.72);}
   const glow=ctx.createRadialGradient(width*.72,height*.3,20,width*.72,height*.3,Math.max(width,height)*.65);
   glow.addColorStop(0,accent+'66'); glow.addColorStop(1,'#00000000'); ctx.fillStyle=glow; ctx.fillRect(0,0,width,height);
   if (headlineVariant) { const halo=ctx.createRadialGradient(width*.5,height*.22,10,width*.5,height*.22,width*.55);halo.addColorStop(0,'#fef08a55');halo.addColorStop(1,'#00000000');ctx.fillStyle=halo;ctx.fillRect(0,0,width,height); }
@@ -108,8 +117,10 @@ export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment
   else if(moment.type==='gig_result'){for(let x=-height;x<width;x+=90){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+height,height);ctx.stroke();}}
   else if(moment.type==='chart'){for(let i=0;i<6;i++){const barW=width*.035,barH=height*(.08+i*.035);ctx.fillStyle=accent;ctx.fillRect(width*.76+i*barW*1.25,height*.78-barH,barW,barH);}}
   else if(moment.type==='achievement'){ctx.beginPath();ctx.arc(width*.82,height*.24,width*.14,0,Math.PI*2);ctx.stroke();}
-  else if(moment.type==='release'){ctx.save();if(recordAward){ctx.strokeStyle='#f6d365';ctx.lineWidth=Math.max(5,width*.006);ctx.globalAlpha=.75;}ctx.beginPath();ctx.arc(width*.82,height*.26,width*.18,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(width*.82,height*.26,width*.055,0,Math.PI*2);ctx.stroke();if(recordAward){ctx.font=`900 ${Math.round(width*.035)}px Inter, system-ui, sans-serif`;ctx.fillStyle='#fde68a';ctx.textAlign='center';ctx.fillText('MILLION CLUB',width*.82,height*.51);}ctx.restore();}
+  else if(moment.type==='release'){ctx.save();if(recordAward){ctx.strokeStyle=recordTier==='DIAMOND'?'#a5f3fc':recordTier==='MULTI-PLATINUM'?'#e2e8f0':'#f8fafc';ctx.lineWidth=Math.max(6,width*.007);ctx.globalAlpha=.88;}ctx.beginPath();ctx.arc(width*.82,height*.26,width*.18,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(width*.82,height*.26,width*.055,0,Math.PI*2);ctx.stroke();if(recordAward){ctx.font=`900 ${Math.round(width*.032)}px Inter, system-ui, sans-serif`;ctx.fillStyle=recordTier==='DIAMOND'?'#cffafe':'#f8fafc';ctx.textAlign='center';ctx.fillText(recordTier || 'PLATINUM',width*.82,height*.51);}ctx.restore();}
   ctx.restore();
+  if(numberOne){ctx.save();ctx.font=`900 ${Math.round(width*.16)}px Inter, system-ui, sans-serif`;ctx.fillStyle='#fde04722';ctx.textAlign='right';ctx.fillText('#1',width*.96,height*.72);ctx.restore();}
+  if(festivalHeadliner){ctx.save();ctx.font=`900 ${Math.round(width*.045)}px Inter, system-ui, sans-serif`;ctx.fillStyle='#fde68a';ctx.textAlign='right';ctx.fillText('HEADLINER',width*.94,height*.82);ctx.restore();}
 
   const layout=moment.visualLayout ?? 'right';
   if (artwork) {
