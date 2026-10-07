@@ -1,9 +1,13 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Award, BarChart3, CalendarDays, Disc3, Music2, Sparkles, Star, UserRound, Users } from "lucide-react";
+import { Award, BarChart3, CalendarDays, Disc3, Music2, Sparkles, Star, Trash2, UserRound, Users } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
+import { deleteShareMomentSnapshot, listShareMomentSnapshots, type ShareMomentSnapshot } from "@/features/shareable-moments/gallery";
+import type { ShareMoment } from "@/features/shareable-moments/types";
 
 const moments = [
   { title: "Character", description: "Show your Avatar V1, career identity and current look.", action: "Open profile", path: "/character", icon: UserRound },
@@ -18,6 +22,10 @@ const moments = [
 
 export default function ShareStudio() {
   const navigate = useNavigate();
+  const [gallery, setGallery] = useState<ShareMomentSnapshot[]>([]);
+  const [selected, setSelected] = useState<ShareMoment | null>(null);
+  useEffect(() => { void listShareMomentSnapshots().then(setGallery).catch(() => setGallery([])); }, []);
+  const removeSnapshot = async (id: string) => { await deleteShareMomentSnapshot(id); setGallery((items) => items.filter((item) => item.id !== id)); };
   return (
     <FMPageScaffold title="Share Studio" subtitle="Turn your RockMundo career into social-ready graphics." icon={Sparkles} backTo="/social">
       <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-primary/10 via-background to-background">
@@ -40,7 +48,20 @@ export default function ShareStudio() {
           </Card>
         ))}
       </div>
-      <Card><CardHeader><CardTitle className="text-base">Share Gallery</CardTitle><CardDescription>Saved historical cards are the next step. They will use frozen moment snapshots so an old achievement, outfit, lineup or tour poster does not silently change when your live character or band changes later.</CardDescription></CardHeader></Card>
+      <Card>
+        <CardHeader><CardTitle className="text-base">Share Gallery</CardTitle><CardDescription>Your successfully shared career moments are frozen here so they can be reopened later without changing with live game data.</CardDescription></CardHeader>
+        <CardContent>
+          {gallery.length === 0 ? <p className="text-sm text-muted-foreground">Share a RockMundo card and it will appear here.</p> : (
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {gallery.map((item) => <div key={item.id} className="rounded-lg border p-3">
+                <div className="flex items-start justify-between gap-2"><div><Badge variant="outline" className="mb-2 capitalize">{item.moment_type.replaceAll("_", " ")}</Badge><p className="font-medium">{item.headline}</p><p className="text-xs text-muted-foreground">Last shared {new Date(item.last_shared_at).toLocaleDateString()}</p></div><Button size="icon" variant="ghost" aria-label="Remove saved share" onClick={() => void removeSnapshot(item.id)}><Trash2 className="h-4 w-4" /></Button></div>
+                <Button size="sm" variant="secondary" className="mt-3 w-full" onClick={() => setSelected(item.snapshot)}>Open & share again</Button>
+              </div>)}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      <ShareMomentSheet moment={selected} open={!!selected} onOpenChange={(open) => { if (!open) setSelected(null); }} />
     </FMPageScaffold>
   );
 }
