@@ -7,9 +7,13 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Award, Trophy, Lock, Search, CheckCircle2 } from "lucide-react";
+import { Award, Trophy, Lock, Search, CheckCircle2, Share2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { AvatarShareStudio } from "@/features/shareable-moments/CharacterShareStudio";
+import type { CharacterProfileShareMoment } from "@/features/shareable-moments/characterProfile";
+import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 
 type Achievement = {
   id: string;
@@ -58,6 +62,10 @@ export default function AchievementsProgress() {
   const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("all");
+  const [shareMoment, setShareMoment] = useState<CharacterProfileShareMoment | null>(null);
+  const { data: primaryBand } = usePrimaryBand();
+  const bandName = primaryBand?.bands?.name || null;
+  const bandLogoUrl = primaryBand?.bands?.logo_url || null;
 
   const { data: allAchievements, isLoading: loadingAll } = useQuery({
     queryKey: ["achievements-all"],
@@ -177,9 +185,36 @@ export default function AchievementsProgress() {
             </div>
           )}
           {isEarned && pa?.unlocked_at && (
-            <p className="text-[11px] text-muted-foreground">
-              Unlocked {format(new Date(pa.unlocked_at), "PP")}
-            </p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[11px] text-muted-foreground">
+                Unlocked {format(new Date(pa.unlocked_at), "PP")}
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setShareMoment({
+                  version: 1,
+                  type: "achievement",
+                  id: pa.id,
+                  eyebrow: "ACHIEVEMENT UNLOCKED",
+                  headline: a.name,
+                  subheadline: a.description || (bandName ? `${bandName} milestone` : "RockMundo career milestone"),
+                  metrics: [
+                    { label: "Rarity", value: a.rarity || "common" },
+                    ...(a.category ? [{ label: "Category", value: a.category }] : []),
+                    { label: "Unlocked", value: format(new Date(pa.unlocked_at!), "MMM d, yyyy") },
+                    ...(bandName ? [{ label: "Band", value: bandName }] : []),
+                  ].slice(0, 4),
+                  artworkUrl: bandLogoUrl,
+                  destinationUrl: `${window.location.origin}/career/achievements`,
+                  referralCode: null,
+                  createdAt: new Date().toISOString(),
+                })}
+              >
+                <Share2 className="mr-1 h-3.5 w-3.5" /> Share
+              </Button>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -293,6 +328,7 @@ export default function AchievementsProgress() {
           </TabsContent>
         </Tabs>
       )}
+      {shareMoment && <AvatarShareStudio moment={shareMoment} open={true} onOpenChange={(open) => { if (!open) setShareMoment(null); }} />}
     </div>
   );
 }

@@ -107,6 +107,7 @@ interface Tour {
     fame: number | null;
     genre: string | null;
     total_fans: number | null;
+    logo_url?: string | null;
   } | null;
 }
 
@@ -184,7 +185,7 @@ const TourManager = () => {
         .select(
           `
  *,
- band:bands!tours_band_id_fkey(id, name, fame, genre, total_fans)
+ band:bands!tours_band_id_fkey(id, name, fame, genre, total_fans, logo_url)
  `,
         )
         .eq("band_id", currentBandId)
@@ -245,7 +246,7 @@ const TourManager = () => {
         .select(
           `
  *,
- band:bands!tours_band_id_fkey(id, name, fame, genre, total_fans)
+ band:bands!tours_band_id_fkey(id, name, fame, genre, total_fans, logo_url)
  `,
           { count: "exact" },
         )
@@ -675,6 +676,7 @@ const TourManager = () => {
                   ...(tour.scope ? [{ label: "Scope", value: tour.scope }] : []),
                   ...(tour.stage_setup_tier ? [{ label: "Production", value: tour.stage_setup_tier }] : []),
                 ].slice(0, 4),
+                artworkUrl: tour.band?.logo_url || null,
                 destinationUrl: `${window.location.origin}/tour-manager?tour=${tour.id}`,
                 referralCode: null, createdAt: new Date().toISOString(),
               })}><Share2 className="h-4 w-4 mr-1" /> Share tour</Button>
