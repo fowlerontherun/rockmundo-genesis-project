@@ -2,12 +2,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-export const useTwaaterModeration = (viewerAccountId?: string) => {
+export const useTwaaterReport = () => {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
-  // Twaater reports now flow into the common player_reports moderation queue.
-  // The RPC resolves the post owner and captures the authoritative post snapshot server-side.
   const reportTwaatMutation = useMutation({
     mutationFn: async ({
       twaatId,
@@ -52,11 +49,21 @@ export const useTwaaterModeration = (viewerAccountId?: string) => {
     onError: (error: any) => {
       toast({
         title: "Failed to report",
-        description: error.message,
+        description: error?.message || "We couldn't submit that report.",
         variant: "destructive",
       });
     },
   });
+
+  return {
+    reportTwaat: reportTwaatMutation.mutate,
+    isReporting: reportTwaatMutation.isPending,
+  };
+};
+
+export const useTwaaterModeration = (viewerAccountId?: string) => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Block an account
   const blockAccountMutation = useMutation({
@@ -75,17 +82,20 @@ export const useTwaaterModeration = (viewerAccountId?: string) => {
       if (error) throw error;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["blocked-accounts", viewerAccountId] });
       queryClient.invalidateQueries({ queryKey: ["twaater-feed"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-ai-feed"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-explore-feed"] });
       queryClient.invalidateQueries({ queryKey: ["twaats"] });
       toast({
-        title: "User blocked",
-        description: "You won't see posts from this account anymore.",
+        title: "Account blocked",
+        description: "You won't see posts from this Twaater account anymore.",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Failed to block user",
-        description: error.message,
+        title: "Failed to block account",
+        description: error?.message || "We couldn't block this account.",
         variant: "destructive",
       });
     },
@@ -109,22 +119,25 @@ export const useTwaaterModeration = (viewerAccountId?: string) => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["blocked-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["blocked-accounts", viewerAccountId] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-feed"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-ai-feed"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-explore-feed"] });
+      queryClient.invalidateQueries({ queryKey: ["twaats"] });
       toast({
-        title: "User unblocked",
-        description: "You can now see posts from this account again.",
+        title: "Account unblocked",
+        description: "You can now see posts from this Twaater account again.",
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Failed to unblock user",
-        description: error.message,
+        title: "Failed to unblock account",
+        description: error?.message || "We couldn't unblock this account.",
         variant: "destructive",
       });
     },
   });
 
-  // Get blocked accounts
   const { data: blockedAccounts } = useQuery({
     queryKey: ["blocked-accounts", viewerAccountId],
     queryFn: async () => {
@@ -132,32 +145,30 @@ export const useTwaaterModeration = (viewerAccountId?: string) => {
 
       const { data, error } = await supabase
         .from("twaater_blocks" as any)
-        .select(
-          `
+        .select(`
           *,
           blocked_account:twaater_accounts!twaater_blocks_blocked_account_id_fkey(id, handle, display_name)
-        `
-        )
+        `)
         .eq("blocker_account_id", viewerAccountId);
 
       if (error) throw error;
       return data || [];
     },
     enabled: !!viewerAccountId,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
-  const isAccountBlocked = (accountId: string) => {
-    return blockedAccounts?.some((block: any) => block.blocked_account_id === accountId);
-  };
+  const isAccountBlocked = (accountId: string) =>
+    blockedAccounts?.some((block: any) => block.blocked_account_id === accountId) || false;
 
   return {
-    reportTwaat: reportTwaatMutation.mutate,
     blockAccount: blockAccountMutation.mutate,
     unblockAccount: unblockAccountMutation.mutate,
-    isReporting: reportTwaatMutation.isPending,
     isBlocking: blockAccountMutation.isPending,
     isUnblocking: unblockAccountMutation.isPending,
     blockedAccounts,
     isAccountBlocked,
   };
 };
+
