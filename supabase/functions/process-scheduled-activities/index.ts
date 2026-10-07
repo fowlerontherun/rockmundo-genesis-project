@@ -35,6 +35,20 @@ Deno.serve(async (req) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const supabase = createClient(supabaseUrl, supabaseKey);
+
+  const cronSecret = req.headers.get("x-cron-secret");
+  const { data: cronAuthorized, error: cronAuthError } = await supabase.rpc(
+    "verify_internal_cron_secret",
+    { p_secret: cronSecret },
+  );
+  if (cronAuthError || cronAuthorized !== true) {
+    console.warn("[process-scheduled-activities] Rejected unauthorized invocation");
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   let runId: string | null = null;
   const startedAt = Date.now();
 
