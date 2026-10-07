@@ -1,3 +1,4 @@
+import rockmundoLogo from '@/assets/rockmundo-new-logo.png';
 import { SHARE_FORMATS, type ShareFormat, type ShareMoment } from './types';
 
 export function shareFilename(moment: ShareMoment, format: ShareFormat): string {
@@ -31,15 +32,21 @@ export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment
 
   const pad = Math.round(width * .06);
   ctx.textAlign = 'left';
-  ctx.fillStyle = '#ffffffaa'; ctx.font = '700 28px Inter, system-ui, sans-serif';
-  ctx.fillText('ROCKMUNDO', pad, pad + 28);
+  const logo = new Image();
+  logo.onload = () => {
+    const logoW = Math.min(260, width * .24);
+    const logoH = logoW * (logo.naturalHeight / logo.naturalWidth);
+    ctx.drawImage(logo, pad, pad, logoW, logoH);
+  };
+  logo.src = rockmundoLogo;
 
   if (moment.eyebrow) {
     ctx.fillStyle = '#c4b5fd'; ctx.font = '700 24px Inter, system-ui, sans-serif';
     ctx.fillText(moment.eyebrow.toUpperCase(), pad, height * .22);
   }
 
-  const headlineSize = fitText(ctx, moment.headline, width - pad * 2, format === 'landscape' ? 62 : 76);
+  const textWidth = format === 'landscape' ? width * .55 : width - pad * 2;
+  const headlineSize = fitText(ctx, moment.headline, textWidth, format === 'landscape' ? 62 : format === 'story' ? 82 : 76);
   ctx.font = `800 ${headlineSize}px Inter, system-ui, sans-serif`; ctx.fillStyle = '#fff';
   ctx.fillText(moment.headline, pad, height * .31);
 
@@ -50,7 +57,7 @@ export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment
 
   const metrics = moment.metrics?.slice(0, 4) ?? [];
   metrics.forEach((metric, index) => {
-    const y = height * .55 + index * 72;
+    const y = (format === 'story' ? height * .7 : format === 'landscape' ? height * .57 : height * .58) + index * (format === 'story' ? 78 : 58);
     ctx.fillStyle = '#ffffff88'; ctx.font = '600 20px Inter, system-ui, sans-serif'; ctx.fillText(metric.label.toUpperCase(), pad, y);
     ctx.fillStyle = '#fff'; ctx.font = '800 34px Inter, system-ui, sans-serif'; ctx.fillText(metric.value, pad + 220, y);
   });
