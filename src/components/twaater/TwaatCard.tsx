@@ -16,12 +16,20 @@ import { Heart, MessageCircle, Repeat2, Bookmark, BookmarkCheck, Quote, Rocket }
 import { useNavigate } from "react-router-dom";
 import { useTwaaterRuntimeConfig } from "@/hooks/useTwaaterRuntimeConfig";
 
+interface PollVote {
+  id: string;
+  poll_id: string;
+  option_id: string;
+  account_id: string;
+}
+
 interface TwaatCardProps {
   twaat: any;
   viewerAccountId?: string;
+  preloadedPollVote?: PollVote | null;
 }
 
-export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
+export const TwaatCard = ({ twaat, viewerAccountId, preloadedPollVote }: TwaatCardProps) => {
   const { toggleLike, toggleRetwaat } = useTwaaterReactions();
   const { postReplyAsync, isPosting } = useTwaaterReplies(twaat.id, false);
   const { toggleBookmark, isBookmarked } = useTwaaterBookmarks(viewerAccountId);
@@ -131,7 +139,12 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
             />
           )}
           {twaat.quoted_twaat_id && twaat.quoted_twaat && <QuotedTwaat twaat={twaat.quoted_twaat} />}
-          <TwaatPoll twaatId={twaat.id} accountId={viewerAccountId} preloadedPoll={twaat.poll} />
+          <TwaatPoll
+            twaatId={twaat.id}
+            accountId={viewerAccountId}
+            preloadedPoll={twaat.poll}
+            preloadedUserVote={preloadedPollVote}
+          />
 
           <div className="flex items-center gap-4 mt-3">
             <Button variant="ghost" size="sm" onClick={() => setShowReplyBox(!showReplyBox)} disabled={!viewerAccountId} className="hover:text-[hsl(var(--twaater-purple))]">
