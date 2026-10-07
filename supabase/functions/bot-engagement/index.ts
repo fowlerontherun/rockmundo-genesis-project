@@ -68,6 +68,18 @@ const REPLY_PROBABILITY: Record<string, number> = {
 };
 
 // MUCH HIGHER follow probability based on player fame
+async function fetchAllPages(buildQuery: () => any, pageSize = 1000): Promise<any[]> {
+  const rows: any[] = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await buildQuery().range(from, from + pageSize - 1);
+    if (error) throw error;
+    const page = data || [];
+    rows.push(...page);
+    if (page.length < pageSize) break;
+  }
+  return rows;
+}
+
 function getFollowProbability(fame: number, fans: number = 0): number {
   let prob = 0;
   if (fame >= 10000) prob = 0.7;
@@ -161,42 +173,52 @@ serve(async (req) => {
     const bandDataById = new Map(bands?.map(b => [b.id, { fame: b.fame || 0, fans: b.total_fans || 0 }]));
 
     // Preload existing bot activity once instead of issuing per-bot/per-twaat existence queries.
-    const [existingReactionsResult, existingRepliesResult, existingFollowsResult] = await Promise.all([
+    // These sets can exceed PostgREST's per-response row cap, so page until the
+    // final short page rather than silently dropping existing activity.
+    const [existingReactions, existingReplies, existingFollows] = await Promise.all([
       playerTwaatIds.length > 0 && botAccountIds.length > 0
-        ? supabase
-            .from("twaater_reactions")
-            .select("twaat_id, account_id")
-            .in("twaat_id", playerTwaatIds)
-            .in("account_id", botAccountIds)
-        : Promise.resolve({ data: [], error: null }),
+        ? fetchAllPages(() =>
+            supabase
+              .from("twaater_reactions")
+              .select("twaat_id, account_id")
+              .in("twaat_id", playerTwaatIds)
+              .in("account_id", botAccountIds)
+              .order("twaat_id")
+              .order("account_id")
+          )
+        : Promise.resolve([]),
       playerTwaatIds.length > 0 && botAccountIds.length > 0
-        ? supabase
-            .from("twaat_replies")
-            .select("parent_twaat_id, account_id")
-            .in("parent_twaat_id", playerTwaatIds)
-            .in("account_id", botAccountIds)
-        : Promise.resolve({ data: [], error: null }),
+        ? fetchAllPages(() =>
+            supabase
+              .from("twaat_replies")
+              .select("parent_twaat_id, account_id")
+              .in("parent_twaat_id", playerTwaatIds)
+              .in("account_id", botAccountIds)
+              .order("parent_twaat_id")
+              .order("account_id")
+          )
+        : Promise.resolve([]),
       nonBotAccountIds.length > 0 && botAccountIds.length > 0
-        ? supabase
-            .from("twaater_follows")
-            .select("follower_account_id, followed_account_id")
-            .in("follower_account_id", botAccountIds)
-            .in("followed_account_id", nonBotAccountIds)
-        : Promise.resolve({ data: [], error: null }),
+        ? fetchAllPages(() =>
+            supabase
+              .from("twaater_follows")
+              .select("follower_account_id, followed_account_id")
+              .in("follower_account_id", botAccountIds)
+              .in("followed_account_id", nonBotAccountIds)
+              .order("follower_account_id")
+              .order("followed_account_id")
+          )
+        : Promise.resolve([]),
     ]);
 
-    if (existingReactionsResult.error) throw existingReactionsResult.error;
-    if (existingRepliesResult.error) throw existingRepliesResult.error;
-    if (existingFollowsResult.error) throw existingFollowsResult.error;
-
     const reactionKeys = new Set(
-      (existingReactionsResult.data || []).map((row: any) => `${row.account_id}:${row.twaat_id}`),
+      existingReactions.map((row: any) => `${row.account_id}:${row.twaat_id}`),
     );
     const replyKeys = new Set(
-      (existingRepliesResult.data || []).map((row: any) => `${row.account_id}:${row.parent_twaat_id}`),
+      existingReplies.map((row: any) => `${row.account_id}:${row.parent_twaat_id}`),
     );
     const followKeys = new Set(
-      (existingFollowsResult.data || []).map((row: any) => `${row.follower_account_id}:${row.followed_account_id}`),
+      existingFollows.map((row: any) => `${row.follower_account_id}:${row.followed_account_id}`),
     );
     const engagedBandOwnerIds = new Set<string>();
 
