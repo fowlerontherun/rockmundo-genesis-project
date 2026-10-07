@@ -17,6 +17,7 @@ export const TwaaterProfilePage = ({ viewerAccountId }: { viewerAccountId: strin
   const { handle } = useParams<{ handle: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const viewerSuffix = viewerAccountId ? `?account=${encodeURIComponent(viewerAccountId)}` : "";
   
   const { isFollowing, follow, unfollow, isFollowPending } = useTwaaterFollow(viewerAccountId);
   const { isAccountBlocked, blockAccount, unblockAccount } = useTwaaterModeration(viewerAccountId);
@@ -149,7 +150,7 @@ export const TwaaterProfilePage = ({ viewerAccountId }: { viewerAccountId: strin
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">Profile not found</p>
-            <Button onClick={() => navigate("/twaater")} className="mt-4">
+            <Button onClick={() => navigate(`/twaater${viewerSuffix}`)} className="mt-4">
               Back to Feed
             </Button>
           </CardContent>
@@ -340,7 +341,7 @@ export const TwaaterProfilePage = ({ viewerAccountId }: { viewerAccountId: strin
                     <p className="text-sm mt-1 whitespace-pre-wrap break-words">{reply.body}</p>
                     {reply.parent?.id && (
                       <button
-                        onClick={() => navigate(`/twaater/twaat/${reply.parent.id}`)}
+                        onClick={() => navigate(`/twaater/twaat/${reply.parent.id}${viewerSuffix}`)}
                         className="text-xs mt-2 hover:underline"
                         style={{ color: 'hsl(var(--twaater-purple))' }}
                       >
