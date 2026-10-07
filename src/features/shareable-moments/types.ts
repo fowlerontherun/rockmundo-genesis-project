@@ -8,7 +8,7 @@ export type ShareFormat = keyof typeof SHARE_FORMATS;
 export type ShareMomentType =
   | 'character_profile'
   | 'band_profile'
-  | 'gig_result'
+  | 'gig_result'\n  | 'festival'
   | 'achievement'
   | 'release'
   | 'chart'
