@@ -602,7 +602,7 @@ function ReleaseCard({ release, financials, financeAvailable = false, labelCutPc
       toast.error("Could not prepare your referral link");
       return;
     }
-    const url = buildReferralUrl(data.code);
+    const url = buildReferralUrl(data.code, { source: "release_chart_share" });
     const text = `${release.title} just reached #${bestChartPosition} in RockMundo. Start your own music career and join me.`;
     const result = await shareReferral({ title: `${release.title} — RockMundo`, text, url, cooldownKey: key });
     if (result === "copied") toast.success("Invite copied");
