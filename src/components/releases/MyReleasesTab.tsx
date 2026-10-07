@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -37,6 +37,8 @@ import { resolveActiveBandMembership } from "@/utils/activeBandMembership";
 import { buildReferralUrl, referralShareOnCooldown } from "@/lib/referralShare";
 import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
 import type { ShareMoment } from "@/features/shareable-moments/types";
+import { markSharePromptSeen, shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
+import { REVENUE_SHARE_THRESHOLDS, highestReachedThreshold, milestoneLabel } from "@/features/shareable-moments/milestones";
 
 interface MyReleasesTabProps {
   userId: string;
@@ -111,6 +113,7 @@ export function MyReleasesTab({ userId, authUserId }: MyReleasesTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [genreFilter, setGenreFilter] = useState<string>("all");
+  const [milestoneMoment, setMilestoneMoment] = useState<ShareMoment | null>(null);
 
   const { data: releases, isLoading, error } = useQuery({
     queryKey: ["releases", userId],
@@ -298,6 +301,37 @@ export function MyReleasesTab({ userId, authUserId }: MyReleasesTabProps) {
   const totalBandNet = Object.values(salesFinancials || {}).reduce((sum: number, s: any) => sum + (s.bandRevenue || 0), 0);
   const totalProfit = totalBandNet - totalBandCosts;
 
+  useEffect(() => {
+    if (!releases?.length || !salesFinancials || milestoneMoment) return;
+    const candidate = releases
+      .filter((release: any) => release.release_status === "released")
+      .map((release: any) => ({ release, revenue: Number(salesFinancials[release.id]?.grossRevenue || 0) }))
+      .map(({ release, revenue }) => ({ release, revenue, threshold: highestReachedThreshold(revenue, REVENUE_SHARE_THRESHOLDS) }))
+      .filter((item): item is { release: any; revenue: number; threshold: number } => item.threshold !== null)
+      .sort((a, b) => b.threshold - a.threshold)[0];
+    if (!candidate) return;
+    const sourceId = `${candidate.release.id}:${candidate.threshold}`;
+    if (!shouldOfferSharePrompt("release-revenue-milestone", sourceId)) return;
+    markSharePromptSeen("release-revenue-milestone", sourceId);
+    setMilestoneMoment({
+      version: 1,
+      type: "release",
+      id: `revenue:${sourceId}`,
+      eyebrow: "RELEASE MILESTONE",
+      headline: candidate.release.title,
+      subheadline: `${milestoneLabel(candidate.threshold)} in gross sales`,
+      metrics: [
+        { label: "Gross sales", value: `${candidate.revenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}` },
+        ...(candidate.release.artist_name ? [{ label: "Artist", value: candidate.release.artist_name }] : []),
+        ...(candidate.release.release_type ? [{ label: "Format", value: String(candidate.release.release_type).toUpperCase() }] : []),
+      ].slice(0, 4),
+      artworkUrl: candidate.release.cover_art_url || candidate.release.cover_image_url || null,
+      destinationUrl: window.location.href,
+      referralCode: null,
+      createdAt: new Date().toISOString(),
+    });
+  }, [releases, salesFinancials, milestoneMoment]);
+
   const stats = {
     total: releases?.filter(r => r.release_status !== "cancelled").length || 0,
     released: releases?.filter(r => r.release_status === "released").length || 0,
@@ -359,6 +393,7 @@ export function MyReleasesTab({ userId, authUserId }: MyReleasesTabProps) {
 
   return (
     <div className="space-y-6">
+      <ShareMomentSheet moment={milestoneMoment} open={!!milestoneMoment} onOpenChange={(open) => { if (!open) setMilestoneMoment(null); }} />
       {(financeHealth.error || financeError) && <Card className="border-amber-500"><CardContent className="p-4 flex gap-2"><AlertCircle className="h-5 w-5 text-amber-500"/><div><strong>Release financial data is temporarily unavailable.</strong><p className="text-sm text-muted-foreground">Your releases are still shown below; financial values are hidden until the finance service recovers.</p></div></CardContent></Card>}
       {/* Stats Overview */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
