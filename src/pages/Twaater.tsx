@@ -76,6 +76,9 @@ export default function Twaater() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedAccountId = searchParams.get("account");
+  const requestedTab = searchParams.get("tab");
+  const validTabs = new Set(["feed", "explore", "search", "trending", "mentions", "bookmarks"]);
+  const currentTab = requestedTab && validTabs.has(requestedTab) ? requestedTab : "feed";
   const {
     account: displayAccount,
     isLoading: routeAccountLoading,
@@ -98,6 +101,13 @@ export default function Twaater() {
   }, []);
 
   const currentAccountId = displayAccount?.id;
+
+  const handleTabChange = (tab: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (tab === "feed") next.delete("tab");
+    else next.set("tab", tab);
+    setSearchParams(next, { replace: true });
+  };
 
   const handleAccountSwitch = (accountId: string) => {
     const next = new URLSearchParams(searchParams);
@@ -157,7 +167,7 @@ export default function Twaater() {
               </div>
             </div>
 
-            <Tabs defaultValue="feed" className="w-full">
+            <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
               <TabsList className="grid w-full grid-cols-6" style={{ backgroundColor: "hsl(var(--twaater-card))" }}>
                 <TabsTrigger value="feed" className="gap-1 data-[state=active]:bg-[hsl(var(--twaater-purple)_/_0.2)] data-[state=active]:text-[hsl(var(--twaater-purple))]">
                   <Home className="h-4 w-4" />
