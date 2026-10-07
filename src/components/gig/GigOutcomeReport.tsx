@@ -23,8 +23,8 @@ import { LessonsPanel } from "./outcome/LessonsPanel";
 import { GigCrewProgressReport } from "./GigCrewProgressReport";
 import { bestSong, contributionTotal, crowdLabel, headlineFromExperience, money, numberFormat, pct, score, songScore, weakestSong } from "./outcome/reportUtils";
 import { buildReferralUrl, referralShareOnCooldown } from "@/lib/referralShare";
-import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
-import type { ShareMoment } from "@/features/shareable-moments/types";
+import { AvatarShareStudio } from "@/features/shareable-moments/CharacterShareStudio";
+import type { CharacterProfileShareMoment } from "@/features/shareable-moments/characterProfile";
 
 interface LegacyOutcome { overall_rating: number; actual_attendance: number; attendance_percentage: number; ticket_revenue: number; merch_sales: number; total_revenue: number; crew_costs: number; equipment_wear_cost: number; net_profit: number; fame_gained: number; chemistry_impact: number; gig_song_performances?: Array<{ song_id: string; position: number; performance_score: number; song_quality_contrib: number; rehearsal_contrib: number; chemistry_contrib: number; equipment_contrib: number; crew_contrib: number; member_skill_contrib: number; crowd_response: string; song_title?: string | null; performance_item_name?: string | null; }>; equipment_quality_avg?: number | null; crew_skill_avg?: number | null; band_chemistry_level?: number | null; member_skill_avg?: number | null; merch_items_sold?: number | null; }
 interface Props { isOpen: boolean; onClose: () => void; outcome: LegacyOutcome | null; venueName: string; venueCapacity: number; songs?: Array<{ id: string; title: string }>; gearEffects?: GearModifierEffects | null; gearNarrative?: GearOutcomeNarrative | null; xpSummary?: GigXpSummary | null; fanConversion?: FanConversionResult | null; momentHighlights?: GigMoment[] | null; venueRelationship?: VenueRelationshipResult | null; chemistryMoments?: ChemistryMoment[] | null; chemistryLevel?: number; chemistryChange?: number; merchItemsSold?: number; ticketPrice?: number; stageBehaviorUsed?: string | null; bandId?: string | null; gigId?: string | null; experience?: GigExperienceDTO | null; }
@@ -51,7 +51,7 @@ export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCap
   if (!report) return null;
   const processing = report.viewer.ready === false || report.gig.status === "processing";
   const [shareInvite, setShareInvite] = useState<{ url: string; text: string } | null>(null);
-  const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
+  const [shareMoment, setShareMoment] = useState<CharacterProfileShareMoment | null>(null);
   useEffect(() => {
     if (!isOpen || processing || ["cancelled", "canceled", "abandoned"].includes(report.gig.status)) return;
     if (!profileId) return;
@@ -84,7 +84,7 @@ export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCap
   </Dialog>;
 };
 
-function HeadlineResult({ experience, onClose, processing, cancelled, shareInvite, onShareMoment }: { experience: GigExperienceDTO; onClose: () => void; processing: boolean; cancelled: boolean; shareInvite: { url: string; text: string } | null; onShareMoment: (moment: ShareMoment) => void }) {
+function HeadlineResult({ experience, onClose, processing, cancelled, shareInvite, onShareMoment }: { experience: GigExperienceDTO; onClose: () => void; processing: boolean; cancelled: boolean; shareInvite: { url: string; text: string } | null; onShareMoment: (moment: CharacterProfileShareMoment) => void }) {
   const h = headlineFromExperience(experience); const best = bestSong(experience.songs); const weak = weakestSong(experience.songs);
   const verdict = cancelled ? "Gig cancelled" : processing ? "Outcome processing" : experience.headline.verdict;
   return <section className="sticky top-0 z-10 -mx-3 rounded-b-2xl border bg-background/95 p-4 shadow-sm backdrop-blur sm:static sm:mx-0 sm:rounded-2xl" aria-labelledby="headline-result-heading">
@@ -104,7 +104,7 @@ function HeadlineResult({ experience, onClose, processing, cancelled, shareInvit
             return;
           }
           onShareMoment({ version: 1, type: "gig_result", id: experience.gig.id, eyebrow: "LIVE RESULT", headline: experience.gig.venue.name, subheadline: experience.headline.verdict, metrics: [{ label: "Grade", value: h.grade }, { label: "Attendance", value: `${numberFormat.format(h.attendance)} / ${numberFormat.format(h.capacity)}` }, { label: "Fame gained", value: `+${numberFormat.format(metricValue(experience.headline.fameGained, 0))}` }], destinationUrl: shareInvite.url, referralCode: null, createdAt: new Date().toISOString() });
-        }}><Share2 className="mr-2 h-4 w-4" />Invite a friend</Button> : null}</div>
+        }}><Share2 className="mr-2 h-4 w-4" />Share gig result</Button> : null}</div>
       </div>
     </div>
   </section>;
