@@ -128,7 +128,7 @@ export default function Twaater() {
               <div className="flex items-center gap-3">
                 {currentAccountId && displayAccount?.handle && (
                   <button
-                    onClick={() => navigate(`/twaater/${displayAccount.handle}`)}
+                    onClick={() => navigate(`/twaater/${displayAccount.handle}?account=${encodeURIComponent(currentAccountId)}`)}
                     className="flex items-center gap-1.5 px-2 py-1 rounded-full hover:bg-[hsl(var(--twaater-purple)_/_0.1)] transition-colors text-sm"
                   >
                     <Users className="h-4 w-4 text-[hsl(var(--twaater-purple))]" />
