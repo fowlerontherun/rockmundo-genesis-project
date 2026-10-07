@@ -12,6 +12,7 @@ interface TrendingSectionProps {
 
 export const TrendingSection = ({ viewerAccountId }: TrendingSectionProps) => {
   const navigate = useNavigate();
+  const accountSuffix = viewerAccountId ? `?account=${encodeURIComponent(viewerAccountId)}` : "";
   const { trendingTwaats, trendingTopics, isLoading, error, refetch } = useTwaaterTrending();
 
   if (isLoading) {
@@ -53,7 +54,7 @@ export const TrendingSection = ({ viewerAccountId }: TrendingSectionProps) => {
               <button
                 type="button"
                 key={topic.tag}
-                onClick={() => navigate(`/twaater/tag/${topic.tag.replace(/^#/, "")}`)}
+                onClick={() => navigate(`/twaater/tag/${topic.tag.replace(/^#/, "")}${accountSuffix}`)}
                 className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-accent transition-colors text-left"
               >
                 <div className="flex items-center gap-2">
