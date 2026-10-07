@@ -100,6 +100,8 @@ export const CompleteSongDialog = ({
     try {
       await callback();
       if (closeAfter) onOpenChange(false);
+    } catch {
+      // Action callbacks surface their own player-facing error message.
     } finally {
       setWorking(null);
     }
