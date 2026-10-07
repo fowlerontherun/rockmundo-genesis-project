@@ -16,6 +16,7 @@ export const WhoToFollow = ({ currentAccountId }: WhoToFollowProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const accountSuffix = `?account=${encodeURIComponent(currentAccountId)}`;
 
   // Fetch suggested accounts to follow
   const { data: suggestions, isLoading, error, refetch } = useQuery({
@@ -136,7 +137,7 @@ export const WhoToFollow = ({ currentAccountId }: WhoToFollowProps) => {
           <div key={account.id} className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => navigate(`/twaater/${account.handle}`)}
+              onClick={() => navigate(`/twaater/${account.handle}${accountSuffix}`)}
               className="flex items-center gap-3 flex-1 min-w-0 text-left"
             >
               <Avatar className="h-10 w-10">
