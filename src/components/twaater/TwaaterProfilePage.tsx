@@ -23,14 +23,14 @@ export const TwaaterProfilePage = ({ viewerAccountId }: { viewerAccountId: strin
   const { isAccountBlocked, blockAccount, unblockAccount } = useTwaaterModeration(viewerAccountId);
 
   // Fetch profile data
-  const { data: profile, isLoading } = useQuery({
+  const { data: profile, isLoading, error: profileError, refetch: refetchProfile } = useQuery({
     queryKey: ["twaater-profile", handle],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("twaater_accounts")
         .select("*")
         .eq("handle", handle)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       return data;
@@ -50,7 +50,9 @@ export const TwaaterProfilePage = ({ viewerAccountId }: { viewerAccountId: strin
           metrics:twaat_metrics(*)
         `)
         .eq("account_id", profile?.id)
+        .eq("visibility", "public")
         .is("deleted_at", null)
+        .is("scheduled_for", null)
         .order("created_at", { ascending: false })
         .limit(50);
 
@@ -106,7 +108,12 @@ export const TwaaterProfilePage = ({ viewerAccountId }: { viewerAccountId: strin
       if (error) throw error;
       return (data ?? [])
         .map((row: any) => row.twaat)
-        .filter((t: any) => t && !t.deleted_at);
+        .filter((t: any) =>
+          t &&
+          !t.deleted_at &&
+          !t.scheduled_for &&
+          t.visibility === "public"
+        );
     },
     enabled: !!profile?.id,
   });
@@ -116,17 +123,15 @@ export const TwaaterProfilePage = ({ viewerAccountId }: { viewerAccountId: strin
     mutationFn: async () => {
       if (!profile?.id || profile.id === viewerAccountId) return;
       
-      await supabase
+      const { error } = await supabase
         .from("twaater_profile_views")
         .insert({
           viewer_account_id: viewerAccountId,
           viewed_account_id: profile.id,
         });
 
-      await supabase
-        .from("twaater_accounts")
-        .update({ profile_views: (profile.profile_views || 0) + 1 })
-        .eq("id", profile.id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["twaater-profile", handle] });
     },
   });
 
@@ -134,12 +139,25 @@ export const TwaaterProfilePage = ({ viewerAccountId }: { viewerAccountId: strin
     if (profile && viewerAccountId && profile.id !== viewerAccountId) {
       trackViewMutation.mutate();
     }
-  }, [profile?.id]);
+  }, [profile?.id, viewerAccountId]);
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (profileError) {
+    return (
+      <div className="container mx-auto py-6">
+        <Card>
+          <CardContent className="py-12 text-center space-y-3">
+            <p className="text-muted-foreground">This Twaater profile couldn't load.</p>
+            <Button variant="outline" onClick={() => refetchProfile()}>Retry</Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -169,7 +187,7 @@ export const TwaaterProfilePage = ({ viewerAccountId }: { viewerAccountId: strin
         {/* Header with back button */}
         <div className="sticky top-0 z-10 backdrop-blur-sm border-b px-4 py-3" style={{ backgroundColor: 'hsl(var(--twaater-bg) / 0.8)', borderColor: 'hsl(var(--twaater-border))' }}>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/twaater")}>
+            <Button variant="ghost" size="icon" onClick={() => navigate(`/twaater${viewerSuffix}`)}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
