@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -61,6 +61,8 @@ const RELEASE_TYPE_CONFIG: Record<string, { label: string; trackRange: string }>
 
 export function MyReleasesTab({ userId, authUserId }: MyReleasesTabProps) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const creatingReleasePoster = new URLSearchParams(location.search).get("shareCreate") === "release";
   const queryClient = useQueryClient();
 
   const releaseNow = useMutation({
@@ -416,6 +418,7 @@ export function MyReleasesTab({ userId, authUserId }: MyReleasesTabProps) {
 
   return (
     <div className="space-y-6">
+      {creatingReleasePoster && <Card className="border-primary/30 bg-primary/5"><CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><Share2 className="h-4 w-4 text-primary" />Choose a release for your poster</CardTitle></CardHeader><CardContent><p className="text-sm text-muted-foreground">Choose <strong>Poster</strong> on any non-cancelled release. Planned releases become COMING SOON artwork; live releases become OUT NOW artwork.</p></CardContent></Card>}
       <ShareMomentSheet moment={milestoneMoment} open={!!milestoneMoment} onOpenChange={(open) => { if (!open) setMilestoneMoment(null); }} />
       <ShareMomentSheet moment={promoMoment} open={!!promoMoment} onOpenChange={(open) => { if (!open) setPromoMoment(null); }} />
       {(financeHealth.error || financeError) && <Card className="border-amber-500"><CardContent className="p-4 flex gap-2"><AlertCircle className="h-5 w-5 text-amber-500"/><div><strong>Release financial data is temporarily unavailable.</strong><p className="text-sm text-muted-foreground">Your releases are still shown below; financial values are hidden until the finance service recovers.</p></div></CardContent></Card>}
