@@ -34,7 +34,7 @@ export const TwaaterAccountCard = ({ account, currentAccountId }: TwaaterAccount
     <div className="flex items-center justify-between gap-3 p-3 rounded-lg hover:bg-accent/50 transition-colors">
       <button
         type="button"
-        onClick={() => navigate(`/twaater/${account.handle}`)}
+        onClick={() => navigate(`/twaater/${account.handle}?account=${encodeURIComponent(currentAccountId)}`)}
         className="flex items-center gap-3 flex-1 min-w-0 text-left"
       >
         <div className="flex-shrink-0">
