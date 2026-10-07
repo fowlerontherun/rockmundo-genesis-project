@@ -13,7 +13,7 @@ export async function renderCharacterProfileCard(
   moment: CharacterProfileShareMoment,
   format: ShareFormat,
 ): Promise<void> {
-  renderShareMoment(canvas, moment, format);
+  await renderShareMoment(canvas, moment, format);
   if (!moment.avatar) return;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
