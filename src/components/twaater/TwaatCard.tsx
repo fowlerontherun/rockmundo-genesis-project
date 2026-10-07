@@ -32,16 +32,19 @@ interface TwaatCardProps {
 interface TwaatCardViewProps extends TwaatCardProps {
   config: TwaaterRuntimeConfig;
   bookmarked: boolean;
+  liked: boolean;
+  retwaated: boolean;
   toggleLike: (input: { twaatId: string; accountId: string }) => void;
   toggleRetwaat: (input: { twaatId: string; accountId: string }) => void;
   toggleBookmark: (input: { twaatId: string }) => void;
   postReplyAsync: (input: { accountId: string; body: string }) => Promise<unknown>;
   isPosting: boolean;
   isBookmarkPending?: boolean;
+  isReactionPending?: boolean;
 }
 
 export const TwaatCard = ({ twaat, viewerAccountId, preloadedPollVote }: TwaatCardProps) => {
-  const { toggleLike, toggleRetwaat } = useTwaaterReactions();
+  const reactions = useTwaaterReactions(viewerAccountId, twaat?.id ? [twaat.id] : []);
   const replyActions = useTwaaterReplyActions();
   const bookmarks = useTwaaterBookmarkState(viewerAccountId);
   const { config } = useTwaaterRuntimeConfig();
@@ -53,14 +56,17 @@ export const TwaatCard = ({ twaat, viewerAccountId, preloadedPollVote }: TwaatCa
       preloadedPollVote={preloadedPollVote}
       config={config}
       bookmarked={bookmarks.isBookmarked(twaat.id)}
-      toggleLike={toggleLike}
-      toggleRetwaat={toggleRetwaat}
+      liked={reactions.isLiked(twaat.id)}
+      retwaated={reactions.isRetwaated(twaat.id)}
+      toggleLike={reactions.toggleLike}
+      toggleRetwaat={reactions.toggleRetwaat}
       toggleBookmark={bookmarks.toggleBookmark}
       postReplyAsync={({ accountId, body }) =>
         replyActions.postReplyAsync({ twaatId: twaat.id, accountId, body })
       }
       isPosting={replyActions.isPosting}
       isBookmarkPending={bookmarks.isBookmarkPending}
+      isReactionPending={reactions.isReactionPending}
     />
   );
 };
@@ -71,12 +77,15 @@ export const TwaatCardView = ({
   preloadedPollVote,
   config,
   bookmarked,
+  liked,
+  retwaated,
   toggleLike,
   toggleRetwaat,
   toggleBookmark,
   postReplyAsync,
   isPosting,
   isBookmarkPending = false,
+  isReactionPending = false,
 }: TwaatCardViewProps) => {
   const [showReplyBox, setShowReplyBox] = useState(false);
   const [replyBody, setReplyBody] = useState("");
@@ -198,8 +207,13 @@ export const TwaatCardView = ({
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" disabled={!viewerAccountId} className="hover:text-green-500">
-                  <Repeat2 className="h-4 w-4" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={!viewerAccountId || isReactionPending}
+                  className={retwaated ? "text-green-500 hover:text-green-500" : "hover:text-green-500"}
+                >
+                  <Repeat2 className={`h-4 w-4 ${retwaated ? "fill-current" : ""}`} />
                   <span className="ml-1">{twaat.metrics?.retwaats || 0}</span>
                 </Button>
               </DropdownMenuTrigger>
@@ -213,8 +227,14 @@ export const TwaatCardView = ({
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button variant="ghost" size="sm" onClick={() => toggleLike({ twaatId: twaat.id, accountId: viewerAccountId! })} disabled={!viewerAccountId} className="hover:text-red-500">
-              <Heart className="h-4 w-4" />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => toggleLike({ twaatId: twaat.id, accountId: viewerAccountId! })}
+              disabled={!viewerAccountId || isReactionPending}
+              className={liked ? "text-red-500 hover:text-red-500" : "hover:text-red-500"}
+            >
+              <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
               <span className="ml-1">{twaat.metrics?.likes || 0}</span>
             </Button>
 

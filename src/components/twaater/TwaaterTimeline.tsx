@@ -81,7 +81,8 @@ export default function TwaaterTimeline({
   currentAccountId,
   showDateSeparators = true,
 }: TwaaterTimelineProps) {
-  const { toggleLike, toggleRetwaat } = useTwaaterReactions();
+  const reactionTwaatIds = twaats.map((twaat) => twaat.id);
+  const reactions = useTwaaterReactions(currentAccountId, reactionTwaatIds);
   const replyActions = useTwaaterReplyActions();
   const bookmarks = useTwaaterBookmarkState(currentAccountId);
   const { config } = useTwaaterRuntimeConfig();
@@ -152,14 +153,17 @@ export default function TwaaterTimeline({
         preloadedPollVote={twaat.poll?.id ? pollVoteByPollId.get(twaat.poll.id) ?? null : undefined}
         config={config}
         bookmarked={bookmarks.isBookmarked(twaat.id)}
-        toggleLike={toggleLike}
-        toggleRetwaat={toggleRetwaat}
+        liked={reactions.isLiked(twaat.id)}
+        retwaated={reactions.isRetwaated(twaat.id)}
+        toggleLike={reactions.toggleLike}
+        toggleRetwaat={reactions.toggleRetwaat}
         toggleBookmark={bookmarks.toggleBookmark}
         postReplyAsync={({ accountId, body }) =>
           replyActions.postReplyAsync({ twaatId: twaat.id, accountId, body })
         }
         isPosting={replyActions.isPosting}
         isBookmarkPending={bookmarks.isBookmarkPending}
+        isReactionPending={reactions.isReactionPending}
       />
     </div>
   );
