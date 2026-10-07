@@ -17,7 +17,9 @@ type Audit = {
     last_7d: number;
     qualification_rate: number;
     vip_conversion_rate: number;
+    band_recruits: number;
   };
+  sources: Array<{ source: string; referrals: number; qualified: number; vip_paid: number; qualification_rate: number; vip_conversion_rate: number }>;
   recent: Array<{
     id: string; referral_code: string; bound_at: string; signup_qualified_at?: string | null;
     signup_rewarded_at?: string | null; vip_paid_at?: string | null; vip_rewarded_at?: string | null;
@@ -62,12 +64,26 @@ export default function ReferralAudit() {
             ["Qualification", `${audit?.summary.qualification_rate ?? 0}%`],
             ["VIP buyers", audit?.summary.vip_paid ?? 0],
             ["VIP conversion", `${audit?.summary.vip_conversion_rate ?? 0}%`],
+            ["Band recruits", audit?.summary.band_recruits ?? 0],
             ["Last 24h", audit?.summary.last_24h ?? 0],
             ["Last 7d", audit?.summary.last_7d ?? 0],
             ["Signup rewards", audit?.summary.signup_rewarded ?? 0],
             ["VIP rewards", audit?.summary.vip_rewarded ?? 0],
           ].map(([label, value]) => <Card key={String(label)}><CardContent className="pt-5"><p className="text-xs text-muted-foreground">{label}</p><p className="text-2xl font-semibold">{value}</p></CardContent></Card>)}
         </div>
+
+        <Card>
+          <CardHeader><CardTitle>Acquisition sources</CardTitle><CardDescription>Which referral entry points turn invitations into qualified players and VIP customers.</CardDescription></CardHeader>
+          <CardContent className="overflow-x-auto">
+            <table className="w-full min-w-[620px] text-sm">
+              <thead><tr className="border-b text-left"><th className="p-2">Source</th><th className="p-2">Referrals</th><th className="p-2">Qualified</th><th className="p-2">Qualification</th><th className="p-2">VIP</th><th className="p-2">VIP conversion</th></tr></thead>
+              <tbody>{audit?.sources?.map((row) => <tr key={row.source} className="border-b">
+                <td className="p-2"><Badge variant="outline">{row.source}</Badge></td><td className="p-2">{row.referrals}</td><td className="p-2">{row.qualified}</td><td className="p-2">{row.qualification_rate}%</td><td className="p-2">{row.vip_paid}</td><td className="p-2">{row.vip_conversion_rate}%</td>
+              </tr>)}</tbody>
+            </table>
+            {!query.isLoading && !audit?.sources?.length ? <p className="py-6 text-center text-muted-foreground">No referral source data yet.</p> : null}
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader><CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" />Recent referrals</CardTitle><CardDescription>Newest attribution records and their progression through qualification and VIP conversion.</CardDescription></CardHeader>
