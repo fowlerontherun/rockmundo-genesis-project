@@ -578,6 +578,38 @@ const TourManager = () => {
     );
   };
 
+  const promoteTour = async (tour: Tour) => {
+    const { data: stops } = await (supabase as any)
+      .from("tour_venues")
+      .select("date, city_id, cities:city_id(name, country)")
+      .eq("tour_id", tour.id)
+      .order("date", { ascending: true });
+    const cities = (stops || [])
+      .map((stop: any) => stop.cities?.name)
+      .filter(Boolean);
+    const uniqueCities = Array.from(new Set(cities)) as string[];
+    setShareMoment({
+      version: 1,
+      type: "tour",
+      id: `promo:${tour.id}`,
+      eyebrow: "ON TOUR",
+      headline: tour.name,
+      subheadline: uniqueCities.length ? uniqueCities.slice(0, 5).join(" · ") : `${tour.band?.name || "RockMundo band"} · ${tour.band?.genre || "Live"}`,
+      metrics: [
+        { label: "Starts", value: format(new Date(tour.start_date), "MMM d, yyyy") },
+        { label: "Ends", value: format(new Date(tour.end_date), "MMM d, yyyy") },
+        ...(stops?.length ? [{ label: "Shows", value: String(stops.length) }] : []),
+        ...(uniqueCities.length ? [{ label: "Cities", value: String(uniqueCities.length) }] : []),
+      ].slice(0, 4),
+      artworkUrl: tour.band?.logo_url ?? null,
+      destinationUrl: `${window.location.origin}/tour-manager?tour=${tour.id}`,
+      referralCode: null,
+      visualTheme: "neon",
+      visualLayout: "hero",
+      createdAt: new Date().toISOString(),
+    });
+  };
+
   const openTourDetails = (tour: Tour) => {
     setSelectedTour(tour);
     setDetailsOpen(true);

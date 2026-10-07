@@ -3,11 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { format, differenceInDays } from "date-fns";
-import { MapPin, Clock, Music, DollarSign, Calendar, AlertCircle, ArrowRight } from "lucide-react";
+import { MapPin, Clock, Music, DollarSign, Calendar, AlertCircle, ArrowRight, Share2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { TicketSalesDisplay } from "@/components/gig/TicketSalesDisplay";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
+import type { ShareMoment } from "@/features/shareable-moments/types";
 
 interface GigDetailsDialogProps {
   open: boolean;
@@ -18,6 +21,7 @@ interface GigDetailsDialogProps {
 
 export function GigDetailsDialog({ open, onOpenChange, gigId }: GigDetailsDialogProps) {
   const navigate = useNavigate();
+  const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
 
   // Fetch gig details. Ticket sales are authoritative server-side state, so this
   // query must render the persisted prediction rather than recalculating a second
@@ -54,6 +58,29 @@ export function GigDetailsDialog({ open, onOpenChange, gigId }: GigDetailsDialog
     Math.max(ticketsSold, Number.isFinite(storedPrediction) ? storedPrediction : ticketsSold),
   );
 
+  const createGigPoster = () => {
+    if (!gig || !venue) return;
+    setShareMoment({
+      version: 1,
+      type: "gig_result",
+      id: `promo:${gig.id}`,
+      eyebrow: "LIVE",
+      headline: venue.name || "RockMundo Live",
+      subheadline: venue.location || "Upcoming RockMundo gig",
+      metrics: [
+        { label: "Date", value: format(scheduledDate, "MMM d, yyyy") },
+        { label: "Time", value: format(scheduledDate, "h:mm a") },
+        { label: "Tickets", value: `${ticketsSold.toLocaleString()} / ${venueCapacity.toLocaleString()}` },
+        { label: "Price", value: `${Number(gig.ticket_price || 0).toLocaleString()}` },
+      ],
+      destinationUrl: `${window.location.origin}/gigs/perform/${gig.id}`,
+      referralCode: null,
+      visualTheme: "neon",
+      visualLayout: "hero",
+      createdAt: new Date().toISOString(),
+    });
+  };
+
   const handleGoToPerform = () => {
     onOpenChange(false);
     navigate(`/gigs/perform/${gigId}`);
@@ -66,6 +93,7 @@ export function GigDetailsDialog({ open, onOpenChange, gigId }: GigDetailsDialog
       : 'Open Gig Preparation';
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
@@ -120,6 +148,13 @@ export function GigDetailsDialog({ open, onOpenChange, gigId }: GigDetailsDialog
               />
             ) : null}
 
+            {gig.status === 'scheduled' ? (
+              <Button variant="outline" className="w-full" onClick={createGigPoster}>
+                <Share2 className="mr-2 h-4 w-4" />
+                Create gig poster
+              </Button>
+            ) : null}
+
             <Button className="w-full" onClick={handleGoToPerform}>
               <Music className="mr-2 h-4 w-4" />
               {actionLabel}
@@ -134,5 +169,7 @@ export function GigDetailsDialog({ open, onOpenChange, gigId }: GigDetailsDialog
         )}
       </DialogContent>
     </Dialog>
+      <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(next) => { if (!next) setShareMoment(null); }} />
+    </>
   );
 }
