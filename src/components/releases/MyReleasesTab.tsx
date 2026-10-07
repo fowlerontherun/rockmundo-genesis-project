@@ -114,6 +114,7 @@ export function MyReleasesTab({ userId, authUserId }: MyReleasesTabProps) {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [genreFilter, setGenreFilter] = useState<string>("all");
   const [milestoneMoment, setMilestoneMoment] = useState<ShareMoment | null>(null);
+  const [promoMoment, setPromoMoment] = useState<ShareMoment | null>(null);
 
   const { data: releases, isLoading, error } = useQuery({
     queryKey: ["releases", userId],
@@ -332,6 +333,28 @@ export function MyReleasesTab({ userId, authUserId }: MyReleasesTabProps) {
     });
   }, [releases, salesFinancials, milestoneMoment]);
 
+  const createReleasePoster = (release: any) => {
+    const releaseDate = release.scheduled_release_date || release.release_date || release.created_at;
+    setPromoMoment({
+      version: 1,
+      type: "release",
+      id: `promo:${release.id}`,
+      eyebrow: release.release_status === "released" ? "OUT NOW" : "COMING SOON",
+      headline: release.title,
+      subheadline: `${release.artist_name || "RockMundo artist"} · ${String(release.release_type || "release").toUpperCase()}`,
+      metrics: [
+        ...(releaseDate ? [{ label: release.release_status === "released" ? "Released" : "Release date", value: formatDate(new Date(releaseDate), "MMM d, yyyy") }] : []),
+        ...(release.release_songs?.length ? [{ label: "Tracks", value: String(release.release_songs.length) }] : []),
+      ],
+      artworkUrl: release.cover_art_url || release.cover_image_url || null,
+      destinationUrl: `${window.location.origin}/release/${release.id}`,
+      referralCode: null,
+      visualTheme: "spotlight",
+      visualLayout: "hero",
+      createdAt: new Date().toISOString(),
+    });
+  };
+
   const stats = {
     total: releases?.filter(r => r.release_status !== "cancelled").length || 0,
     released: releases?.filter(r => r.release_status === "released").length || 0,
@@ -394,6 +417,7 @@ export function MyReleasesTab({ userId, authUserId }: MyReleasesTabProps) {
   return (
     <div className="space-y-6">
       <ShareMomentSheet moment={milestoneMoment} open={!!milestoneMoment} onOpenChange={(open) => { if (!open) setMilestoneMoment(null); }} />
+      <ShareMomentSheet moment={promoMoment} open={!!promoMoment} onOpenChange={(open) => { if (!open) setPromoMoment(null); }} />
       {(financeHealth.error || financeError) && <Card className="border-amber-500"><CardContent className="p-4 flex gap-2"><AlertCircle className="h-5 w-5 text-amber-500"/><div><strong>Release financial data is temporarily unavailable.</strong><p className="text-sm text-muted-foreground">Your releases are still shown below; financial values are hidden until the finance service recovers.</p></div></CardContent></Card>}
       {/* Stats Overview */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
@@ -522,6 +546,7 @@ export function MyReleasesTab({ userId, authUserId }: MyReleasesTabProps) {
             onCancel={() => setCancellingRelease(release)}
             onViewDetails={() => navigate(`/release/${release.id}`)}
             onPromo={() => navigate(`/release/${release.id}?tab=promotion`)}
+            onSharePoster={() => createReleasePoster(release)}
             onAddPhysical={() => setAddPhysicalRelease(release)}
             onAnalytics={() => setAnalyticsRelease(release)}
             onReorder={(format) => {
