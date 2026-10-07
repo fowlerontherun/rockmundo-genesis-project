@@ -692,19 +692,9 @@ const TourManager = () => {
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
             {canPromote && (
-              <Button variant="outline" size="sm" onClick={() => setShareMoment({
-                version: 1, type: "tour", id: tour.id, eyebrow: "TOUR ANNOUNCEMENT",
-                headline: tour.name, subheadline: `${tour.band?.name || "RockMundo band"}${tour.band?.genre ? ` · ${tour.band.genre}` : ""}`,
-                metrics: [
-                  { label: "Starts", value: format(new Date(tour.start_date), "MMM d, yyyy") },
-                  { label: "Ends", value: format(new Date(tour.end_date), "MMM d, yyyy") },
-                  ...(tour.scope ? [{ label: "Scope", value: tour.scope }] : []),
-                  ...(tour.stage_setup_tier ? [{ label: "Production", value: tour.stage_setup_tier }] : []),
-                ].slice(0, 4),
-                artworkUrl: tour.band?.logo_url || null,
-                destinationUrl: `${window.location.origin}/tour-manager?tour=${tour.id}`,
-                referralCode: null, createdAt: new Date().toISOString(),
-              })}><Share2 className="h-4 w-4 mr-1" /> Share tour</Button>
+              <Button variant="outline" size="sm" onClick={() => promoteTour(tour)}>
+                <Share2 className="h-4 w-4 mr-1" /> Create tour poster
+              </Button>
             )}
           </div>
         </CardContent>
