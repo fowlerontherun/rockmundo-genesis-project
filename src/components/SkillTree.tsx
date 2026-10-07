@@ -28,6 +28,9 @@ import {
 } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
+import type { ShareMoment } from "@/features/shareable-moments/types";
+import { markSharePromptSeen, shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   type EducationSource,
@@ -214,6 +217,7 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [refreshKey, setRefreshKey] = useState(0);
   const [showUnlocked, setShowUnlocked] = useState(false);
+  const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [filterMode, setFilterMode] = useState<FilterMode>("learned");
   const [hideMaxed, setHideMaxed] = useState(true);
@@ -428,6 +432,31 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
       return [{ from, next, started: (nextProgress?.current_level || 0) > 0 }];
     });
   }, [progress, skills]);
+
+  useEffect(() => {
+    if (!profile?.id || shareMoment || skills.length === 0) return;
+    const mastered = progress.find((item) => {
+      const skill = skills.find((candidate) => candidate.slug === item.skill_slug);
+      const cap = Number((skill?.tier_caps as any)?.max_level) || 100;
+      return cap > 0 && (item.current_level || 0) >= cap;
+    });
+    if (!mastered) return;
+    const skill = skills.find((candidate) => candidate.slug === mastered.skill_slug);
+    if (!skill || !shouldOfferSharePrompt("skill-mastered", `${profile.id}:${skill.slug}`)) return;
+    markSharePromptSeen("skill-mastered", `${profile.id}:${skill.slug}`);
+    setShareMoment({
+      version: 1,
+      type: "achievement",
+      id: `skill:${skill.slug}`,
+      eyebrow: "SKILL MASTERED",
+      headline: skill.display_name,
+      subheadline: "Mastered a RockMundo skill",
+      metrics: [{ label: "Level", value: String(mastered.current_level || 0) }, { label: "Tier", value: getSkillTier(skill.slug) }],
+      destinationUrl: window.location.href,
+      referralCode: null,
+      createdAt: new Date().toISOString(),
+    });
+  }, [profile?.id, progress, skills, shareMoment]);
 
   useEffect(() => {
     if (!profile?.id || unlockedNextTiers.length === 0) return;
@@ -666,6 +695,8 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
           </div>
         )}
       </ScrollArea>
+
+      <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(open) => { if (!open) setShareMoment(null); }} />
 
       {/* Skills Not Started Section */}
       {filterMode !== "unlearned" &&
