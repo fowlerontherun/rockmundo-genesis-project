@@ -29,7 +29,7 @@ export const useTwaaterMentions = (accountId?: string) => {
         return twaat && !twaat.deleted_at && !twaat.scheduled_for && twaat.visibility === "public";
       });
       const twaats = rows.map((mention: any) => mention.twaat);
-      const hydrated = await hydrateTwaaterFeedExtras(twaats);
+      const hydrated = await hydrateTwaaterFeedExtras(twaats, accountId);
       const hydratedById = new Map(hydrated.map((twaat: any) => [twaat.id, twaat]));
 
       return rows
