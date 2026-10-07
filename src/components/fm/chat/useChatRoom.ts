@@ -27,12 +27,18 @@ export function useChatRoom(channelKey: string | null) {
   const [messages, setMessages] = useState<ChatRoomMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const nameCacheRef = useRef<Record<string, string>>({});
+  const requestIdRef = useRef(0);
 
   const fetchMessages = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     if (!channelKey) {
-      setMessages([]);
-      setLoading(false);
+      if (requestId === requestIdRef.current) {
+        setMessages([]);
+        setError(null);
+        setLoading(false);
+      }
       return;
     }
 
@@ -87,6 +93,7 @@ export function useChatRoom(channelKey: string | null) {
         });
       }
 
+      if (requestId !== requestIdRef.current) return;
       setMessages(
         rows.map((row) => {
           const key = (row.profile_id as string | null) ?? (row.user_id as string);
@@ -96,16 +103,23 @@ export function useChatRoom(channelKey: string | null) {
           } as ChatRoomMessage;
         }),
       );
-    } catch (error) {
-      console.error("Failed to load room messages", error);
+      setError(null);
+    } catch (loadError) {
+      if (requestId !== requestIdRef.current) return;
+      console.error("Failed to load room messages", loadError);
+      setError("Chat messages could not be loaded.");
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
   }, [channelKey]);
 
   useEffect(() => {
     setLoading(true);
+    setError(null);
     void fetchMessages();
+    return () => {
+      requestIdRef.current += 1;
+    };
   }, [fetchMessages]);
 
   useEffect(() => {
@@ -172,5 +186,13 @@ export function useChatRoom(channelKey: string | null) {
     [channelKey, fetchMessages, profileId, userId],
   );
 
-  return { messages, loading, sending, sendMessage, canPost: Boolean(userId && channelKey) };
+  return {
+    messages,
+    loading,
+    sending,
+    error,
+    sendMessage,
+    refetch: fetchMessages,
+    canPost: Boolean(userId && channelKey),
+  };
 }
