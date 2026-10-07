@@ -20,6 +20,7 @@ export function TrendingTwaats({ viewerAccountId }: TrendingTwaatsProps) {
           metrics:twaat_metrics(*),
           replies:twaater_replies(count)
         `)
+        .eq("visibility", "public")
         .is("deleted_at", null)
         .is("scheduled_for", null)
         .order("created_at", { ascending: false })
