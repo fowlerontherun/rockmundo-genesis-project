@@ -15,7 +15,9 @@ const sourceLabel = (source: string) => ({ band_recruitment:"Band recruitment", 
 
 type GrowthAnalytics = { trends:{joins_7d:number;joins_prev_7d:number;qualified_7d:number;qualified_prev_7d:number;band_joins_7d:number;band_joins_prev_7d:number}; speed:{median_qualification_hours:number|null;median_band_join_hours:number|null}; funnel: { joined:number; qualified:number; vip:number; activating:number }; dropoff:{ missing_email:number; waiting_24h:number; missing_activity:number }; band:{ joined:number; qualified:number; band_members:number; vip:number; qualification_rate:number; band_join_rate:number }; sources:Array<{source:string;joined:number;qualified:number;vip:number;activating:number;missing_email:number;waiting_24h:number;missing_activity:number;band_joined:number;qualification_rate:number;vip_rate:number}>; campaigns:Array<{campaign:string;source:string;joined:number;qualified:number;vip:number;qualification_rate:number;vip_rate:number}> };
 
-type SavedCampaign = { id:string; slug:string; name:string; referral_code:string; source:string; partner_name?:string|null; notes?:string|null; starts_at?:string|null; ends_at?:string|null; is_active:boolean; created_at:string; updated_at:string };\n\ntype Audit = {
+type SavedCampaign = { id:string; slug:string; name:string; referral_code:string; source:string; partner_name?:string|null; notes?:string|null; starts_at?:string|null; ends_at?:string|null; is_active:boolean; created_at:string; updated_at:string };
+
+type Audit = {
   summary: {
     total_referrals: number;
     qualified: number;
