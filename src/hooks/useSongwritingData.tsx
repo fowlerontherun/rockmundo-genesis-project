@@ -424,9 +424,16 @@ export const useSongwritingData = (profileId?: string | null, userId?: string | 
 
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['songwriting-projects', profileId, userId] });
-      toast({ title: "Session Completed", description: "Progress saved!" });
+      if (data?.project_completed) {
+        toast({
+          title: "Songwriting complete!",
+          description: "Your quality result and one final polish chance are ready to review.",
+        });
+      } else {
+        toast({ title: "Session Completed", description: "Progress saved!" });
+      }
     },
     onError: (error) => {
       toast({ title: "Error", description: "Failed to complete session", variant: "destructive" });
