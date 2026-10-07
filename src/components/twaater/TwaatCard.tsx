@@ -12,6 +12,7 @@ import { QuotedTwaat } from "./QuotedTwaat";
 import { LinkedContentEmbed } from "./LinkedContentEmbed";
 import { VerifiedBadge } from "./VerifiedBadge";
 import { PromoteTwaatDialog } from "./PromoteTwaatDialog";
+import { TwaatReportDialog } from "./TwaatReportDialog";
 import { Heart, MessageCircle, Repeat2, Bookmark, BookmarkCheck, Quote, Rocket } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTwaaterRuntimeConfig, type TwaaterRuntimeConfig } from "@/hooks/useTwaaterRuntimeConfig";
@@ -221,6 +222,14 @@ export const TwaatCardView = ({
             <Button variant="ghost" size="sm" onClick={() => toggleBookmark({ twaatId: twaat.id })} disabled={!viewerAccountId || isBookmarkPending} className="hover:text-[hsl(var(--twaater-purple))]">
               {bookmarked ? <BookmarkCheck className="h-4 w-4 text-[hsl(var(--twaater-purple))]" /> : <Bookmark className="h-4 w-4" />}
             </Button>
+
+            {!isOwn && viewerAccountId && account?.id && (
+              <TwaatReportDialog
+                twaatId={twaat.id}
+                accountId={account.id}
+                viewerAccountId={viewerAccountId}
+              />
+            )}
 
             {isOwn && !isPromoted && <PromoteTwaatDialog twaatId={twaat.id} />}
           </div>
