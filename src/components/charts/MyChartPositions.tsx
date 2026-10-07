@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";\nimport { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,14 +9,17 @@ import { SongPlayer } from "@/components/audio/SongPlayer";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { buildReferralUrl, referralShareOnCooldown } from "@/lib/referralShare";\nimport { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";\nimport type { ShareMoment } from "@/features/shareable-moments/types";
+import { buildReferralUrl, referralShareOnCooldown } from "@/lib/referralShare";
+import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
+import type { ShareMoment } from "@/features/shareable-moments/types";
 
 interface MyChartPositionsProps {
   userId: string;
 }
 
 export function MyChartPositions({ userId }: MyChartPositionsProps) {
-  const { profileId } = useActiveProfile();\n  const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
+  const { profileId } = useActiveProfile();
+  const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
 
   const { data: chartPositions, isLoading } = useQuery({
     queryKey: ["my-chart-positions", profileId],
@@ -242,6 +246,7 @@ export function MyChartPositions({ userId }: MyChartPositionsProps) {
           </Card>
         );
       })}
-      <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(open) => { if (!open) setShareMoment(null); }} />\n    </div>
+      <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(open) => { if (!open) setShareMoment(null); }} />
+    </div>
   );
 }
