@@ -1,20 +1,71 @@
-import { useEffect, useRef, useState } from "react";
-import { Check, Copy, Download, Image as ImageIcon, Share2 } from "lucide-react";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { canvasBlob, renderShareMoment, shareFilename } from "./canvas";
-import { downloadBlob, nativeShare, withReferral } from "./share";
-import type { ShareFormat, ShareMoment } from "./types";
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Check, Copy, Download, Share2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import { canvasBlob, renderShareMoment, shareFilename } from './canvas';
+import { renderCharacterProfileCard, type CharacterProfileShareMoment } from './characterProfile';
+import { downloadBlob, nativeShare } from './share';
+import type { ShareFormat, ShareMoment } from './types';
 
-export function ShareMomentSheet({moment,open,onOpenChange}:{moment:ShareMoment|null;open:boolean;onOpenChange:(open:boolean)=>void}){
- const {toast}=useToast(); const canvasRef=useRef<HTMLCanvasElement|null>(null); const [format,setFormat]=useState<ShareFormat>("square"); const [done,setDone]=useState<string|null>(null);
- useEffect(()=>{if(open&&moment&&canvasRef.current)renderShareMoment(canvasRef.current,moment,format)},[open,moment,format]);
- if(!moment)return null;
- const url=moment.destinationUrl?withReferral(moment.destinationUrl,moment.referralCode):undefined;
- const text=[moment.headline,moment.subheadline].filter(Boolean).join(" — ");
- const blob=()=>canvasRef.current?canvasBlob(canvasRef.current):Promise.reject(new Error("Preview unavailable"));
- const flash=(k:string)=>{setDone(k);setTimeout(()=>setDone(v=>v===k?null:v),1400)};
- const share=async()=>{try{const b=await blob();const file=new File([b],shareFilename(moment,format),{type:"image/png"});const result=await nativeShare({title:moment.headline,text,url,file});if(result==="unsupported"){await navigator.clipboard.writeText([text,url].filter(Boolean).join("\n"));toast({title:"Share link copied"});}else if(result==="shared")flash("share")}catch(e){toast({title:"Unable to share",description:(e as Error).message,variant:"destructive"})}};
- return <Sheet open={open} onOpenChange={onOpenChange}><SheetContent side="right" className="w-full overflow-y-auto sm:max-w-lg"><SheetHeader><SheetTitle className="flex items-center gap-2"><Share2 className="h-4 w-4"/>Share your RockMundo moment</SheetTitle><SheetDescription>Choose a format, preview the branded card, then share the image or link.</SheetDescription></SheetHeader><div className="mt-4 space-y-4"><div className="flex gap-2">{(["square","story","landscape"] as ShareFormat[]).map(f=><Button key={f} size="sm" variant={format===f?"default":"outline"} onClick={()=>setFormat(f)} className="capitalize">{f}</Button>)}</div><div className="rounded-lg border bg-muted/30 p-2"><canvas ref={canvasRef} className="h-auto w-full rounded-md" aria-label="RockMundo share card preview"/></div><div className="grid grid-cols-2 gap-2"><Button onClick={share}>{done==="share"?<Check/>:<Share2/>}Share…</Button><Button variant="secondary" onClick={async()=>{const b=await blob();downloadBlob(b,shareFilename(moment,format));flash("download")}}>{done==="download"?<Check/>:<Download/>}Download PNG</Button><Button variant="outline" onClick={async()=>{try{const b=await blob();await navigator.clipboard.write([new ClipboardItem({"image/png":b})]);flash("image")}catch{toast({title:"Copy image unsupported",description:"Download the PNG instead.",variant:"destructive"})}}}>{done==="image"?<Check/>:<ImageIcon/>}Copy image</Button><Button variant="outline" onClick={async()=>{await navigator.clipboard.writeText([text,url].filter(Boolean).join("\n"));flash("link")}}>{done==="link"?<Check/>:<Copy/>}Copy link</Button></div></div></SheetContent></Sheet>;
+interface Props { open: boolean; onOpenChange: (open: boolean) => void; moment: ShareMoment | CharacterProfileShareMoment; }
+
+export function ShareMomentSheet({ open, onOpenChange, moment }: Props) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [format, setFormat] = useState<ShareFormat>('square');
+  const [done, setDone] = useState<string | null>(null);
+  const { toast } = useToast();
+  const text = useMemo(() => [moment.headline, moment.subheadline].filter(Boolean).join(' — '), [moment]);
+
+  useEffect(() => {
+    if (!open || !canvasRef.current) return;
+    if (moment.type === 'character_profile') void renderCharacterProfileCard(canvasRef.current, moment as CharacterProfileShareMoment, format);
+    else void renderShareMoment(canvasRef.current, moment, format);
+  }, [open, moment, format]);
+
+  const flash = (value: string) => { setDone(value); window.setTimeout(() => setDone(current => current === value ? null : current), 1400); };
+  const blob = () => canvasRef.current ? canvasBlob(canvasRef.current) : Promise.reject(new Error('Preview unavailable'));
+  const recordShare = () => { if (moment.shareCooldownKey) localStorage.setItem(moment.shareCooldownKey, String(Date.now())); };
+
+  const share = async () => {
+    try {
+      const image = await blob();
+      const file = new File([image], shareFilename(moment, format), { type: 'image/png' });
+      const result = await nativeShare({ title: moment.headline + ' — Rockmundo', text, url: moment.destinationUrl ?? undefined, file });
+      if (result === 'shared') recordShare();
+      if (result === 'unsupported') { downloadBlob(image, file.name); toast({ title: 'Sharing is not supported here', description: 'The image was downloaded instead.' }); }
+    } catch (error) { toast({ title: 'Could not share', description: error instanceof Error ? error.message : 'Try downloading the image instead.', variant: 'destructive' }); }
+  };
+
+  const download = async () => { const image = await blob(); downloadBlob(image, shareFilename(moment, format)); flash('download'); };
+  const copyLink = async () => {
+    if (!moment.destinationUrl) return;
+    await navigator.clipboard.writeText(moment.destinationUrl); recordShare(); flash('link'); toast({ title: 'Link copied' });
+  };
+  const copyImage = async () => {
+    try {
+      const image = await blob();
+      if (!window.ClipboardItem) throw new Error('Image clipboard is unavailable');
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': image })]); flash('image');
+    } catch { toast({ title: 'Copy image is not supported by this browser', description: 'Use Download image instead.', variant: 'destructive' }); }
+  };
+
+  return <Dialog open={open} onOpenChange={onOpenChange}>
+    <DialogContent className="max-w-2xl">
+      <DialogHeader><DialogTitle>Share your Rockmundo moment</DialogTitle><DialogDescription>Choose a format, preview the graphic, then share or save it.</DialogDescription></DialogHeader>
+      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_180px]">
+        <div className="overflow-hidden rounded-xl border bg-black/30 p-2">
+          <canvas ref={canvasRef} className="h-auto max-h-[60vh] w-full object-contain" aria-label="Social share graphic preview" />
+        </div>
+        <div className="space-y-3">
+          <Select value={format} onValueChange={value => setFormat(value as ShareFormat)}><SelectTrigger aria-label="Share graphic format"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="square">Square post</SelectItem><SelectItem value="story">Story / vertical</SelectItem><SelectItem value="landscape">Landscape</SelectItem></SelectContent></Select>
+          <Button className="w-full" onClick={() => void share()}><Share2 className="mr-2 h-4 w-4" />Share</Button>
+          <Button className="w-full" variant="outline" onClick={() => void copyImage()}>{done === 'image' ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}Copy image</Button>
+          <Button className="w-full" variant="outline" onClick={() => void download()}>{done === 'download' ? <Check className="mr-2 h-4 w-4" /> : <Download className="mr-2 h-4 w-4" />}Download image</Button>
+          {moment.destinationUrl && <Button className="w-full" variant="ghost" onClick={() => void copyLink()}>{done === 'link' ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}Copy link</Button>}
+        </div>
+      </div>
+    </DialogContent>
+  </Dialog>;
 }
