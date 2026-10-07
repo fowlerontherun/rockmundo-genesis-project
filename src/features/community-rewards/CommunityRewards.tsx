@@ -18,6 +18,8 @@ type Reward = {
   band_fame: number;
 };
 
+type RecruitStatus = { referral_id: string; joined_at: string; qualified: boolean; qualified_at?: string | null; vip_paid: boolean; source: string; band?: { band_id: string; name: string } | null; recruit: { profile_id?: string | null; name: string }; progress: { email_confirmed: boolean; account_age_met: boolean; activity_met: boolean; steps_complete: number } };
+
 type Dashboard = {
   code: string;
   stats: {
@@ -45,6 +47,7 @@ export default function CommunityRewards({ profileId, profileName }: { profileId
   const [discordLoading, setDiscordLoading] = useState(false);
   const [manualCode, setManualCode] = useState("");
   const [binding, setBinding] = useState(false);
+  const [recruits, setRecruits] = useState<RecruitStatus[]>([]);
 
   const loadDashboard = async () => {
     if (!profileId) {
@@ -53,11 +56,15 @@ export default function CommunityRewards({ profileId, profileName }: { profileId
       return;
     }
     setLoading(true);
-    const { data, error } = await (supabase as any).rpc("get_referral_dashboard", { p_profile_id: profileId });
+    const [{ data, error }, recruitResult] = await Promise.all([
+      (supabase as any).rpc("get_referral_dashboard", { p_profile_id: profileId }),
+      (supabase as any).rpc("get_my_referral_recruits", { p_profile_id: profileId }),
+    ]);
     if (error) {
       toast({ title: "Unable to load rewards", description: error.message, variant: "destructive" });
     } else {
       setDashboard(data as Dashboard);
+      setRecruits(recruitResult.error ? [] : ((recruitResult.data ?? []) as RecruitStatus[]));
     }
     setLoading(false);
   };
@@ -81,7 +88,7 @@ export default function CommunityRewards({ profileId, profileName }: { profileId
     if (status === "verified") void loadDashboard();
   }, []);
 
-  const referralUrl = useMemo(() => dashboard?.code ? `${window.location.origin}/auth?ref=${encodeURIComponent(dashboard.code)}` : "", [dashboard?.code]);
+  const referralUrl = useMemo(() => dashboard?.code ? `${window.location.origin}/auth?ref=${encodeURIComponent(dashboard.code)}&source=referral_hub` : "", [dashboard?.code]);
   const totalClaimable = (dashboard?.pending.signup ?? 0) + (dashboard?.pending.vip ?? 0) + (dashboard?.pending.milestones ?? 0) + (dashboard?.discord.verified && !dashboard.discord.rewarded ? 1 : 0);
   const qualified = dashboard?.stats.qualified ?? 0;
   const promoterMilestones = [5, 10, 25];
@@ -227,6 +234,22 @@ export default function CommunityRewards({ profileId, profileName }: { profileId
           </CardContent>
         </Card>
       </div>
+
+
+      <Card>
+        <CardHeader><CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" />Your recruits</CardTitle><CardDescription>See who has joined through your invite and how close they are to becoming a qualified active player. Private play totals are not exposed.</CardDescription></CardHeader>
+        <CardContent className="space-y-3">
+          {recruits.length === 0 ? <p className="text-sm text-muted-foreground">No recruits have joined through your referral link yet.</p> : recruits.map((item) => {
+            const pct = item.qualified ? 100 : Math.round((item.progress.steps_complete / 3) * 100);
+            const sourceLabel = item.source.replace(/_/g, " ");
+            return <div key={item.referral_id} className="rounded-lg border p-3">
+              <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex flex-wrap items-center gap-2"><span className="font-medium">{item.recruit.name}</span><Badge variant={item.qualified ? "default" : "secondary"}>{item.qualified ? "Qualified" : item.progress.steps_complete === 2 ? "Close to qualifying" : "Activating"}</Badge>{item.vip_paid ? <Badge variant="outline">VIP</Badge> : null}</div><p className="mt-1 text-xs capitalize text-muted-foreground">Source: {sourceLabel}{item.band?.name ? ` · Recruited for ${item.band.name}` : ""}</p></div>{item.recruit.profile_id ? <Button asChild size="sm" variant="outline"><a href={`/player/${item.recruit.profile_id}`}>View player</a></Button> : null}</div>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} /></div>
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground"><span>{item.progress.email_confirmed ? "✓" : "○"} Email confirmed</span><span>{item.progress.account_age_met ? "✓" : "○"} 24h account age</span><span>{item.progress.activity_met ? "✓" : "○"} Active play</span></div>
+            </div>;
+          })}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
