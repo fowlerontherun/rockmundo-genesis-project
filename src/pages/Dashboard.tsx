@@ -38,9 +38,7 @@ import { WorldNewsList } from "@/components/world/WorldNewsList";
 
 import { Link } from "react-router-dom";
 import { generatePlayerGoals, type PlayerGoalInput } from "@/lib/playerGoals";
-import { buildReferralUrl, referralShareOnCooldown } from "@/lib/referralShare";
-import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
-import type { ShareMoment } from "@/features/shareable-moments/types";
+import { buildReferralUrl, referralShareOnCooldown } from "@/lib/referralShare";\nimport { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";\nimport type { ShareMoment } from "@/features/shareable-moments/types";
 
 const StatusMetric = ({ label, value, icon: Icon }: { label: string; value: string | number; icon: typeof Bell }) => (
   <div className="rounded-lg border bg-card/50 p-3">
@@ -301,8 +299,7 @@ const Dashboard = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
   const [activeTab, setActiveTab] = useState("profile");
-  const [surveyDismissed, setSurveyDismissed] = useState(false);
-  const [achievementShare, setAchievementShare] = useState<ShareMoment | null>(null);
+  const [surveyDismissed, setSurveyDismissed] = useState(false);\n  const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
   const { shouldShowSurvey, questions: surveyQuestions, submitSurvey, isSubmitting: isSurveySubmitting } = usePlayerSurvey();
 
   const weekStart = useMemo(() => startOfWeek(currentDate, {
@@ -579,21 +576,7 @@ const Dashboard = () => {
                                 return;
                               }
                               const url = buildReferralUrl(data.code, { source: "achievement_share" });
-                              setAchievementShare({
-                                version: 1,
-                                type: "achievement",
-                                id: achievement.id,
-                                eyebrow: `${achievement.achievements?.rarity || "Epic"} achievement`,
-                                headline: achievement.achievements?.name || "Achievement unlocked",
-                                subheadline: achievement.achievements?.description || "A new Rockmundo milestone",
-                                metrics: [
-                                  { label: "Rarity", value: String(achievement.achievements?.rarity || "Epic") },
-                                  { label: "Unlocked", value: formatDistanceToNow(new Date(achievement.unlocked_at), { addSuffix: false }) + " ago" },
-                                ],
-                                destinationUrl: url,
-                                shareCooldownKey: key,
-                                createdAt: achievement.unlocked_at,
-                              });
+                              setShareMoment({ version: 1, type: "achievement", id: achievement.id, eyebrow: `${String(achievement.achievements?.rarity || "Achievement").toUpperCase()} ACHIEVEMENT`, headline: achievement.achievements?.name || "Achievement unlocked", subheadline: achievement.achievements?.description || "A new RockMundo milestone", metrics: [{ label: "Unlocked", value: formatDistanceToNow(new Date(achievement.unlocked_at), { addSuffix: true }) }], destinationUrl: url, referralCode: null, createdAt: new Date().toISOString() });
                             }}><Share2 className="mr-1.5 h-3.5 w-3.5" />Share milestone</Button>
                           )}
                         </div>
@@ -605,7 +588,6 @@ const Dashboard = () => {
 
         </TabsContent>
       </Tabs>
-      {achievementShare && <ShareMomentSheet open={true} onOpenChange={open => { if (!open) setAchievementShare(null); }} moment={achievementShare} />}
-    </StandardPageLayout>;
+      <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(open) => { if (!open) setShareMoment(null); }} />\n    </StandardPageLayout>;
 };
 export default Dashboard;
