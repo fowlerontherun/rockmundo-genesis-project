@@ -31,6 +31,8 @@ export interface ShareMoment {
   artworkUrl?: string | null;
   destinationUrl?: string | null;
   referralCode?: string | null;
+  /** Optional existing growth throttle; recorded only after a successful share/copy-link action. */
+  shareCooldownKey?: string | null;
   createdAt: string;
 }
 
