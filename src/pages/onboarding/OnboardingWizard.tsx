@@ -256,7 +256,7 @@ const OnboardingWizard = () => {
       });
       if (recruitingBand) {
         localStorage.removeItem("rockmundo_referral_band");
-        navigate(`/band?tab=members&recruitedBand=${recruitingBand.id}`);
+        navigate(`/band/members?recruitedBand=${recruitingBand.id}`);
       } else {
         navigate("/home");
       }
