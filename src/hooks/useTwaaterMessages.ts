@@ -95,9 +95,19 @@ export const useTwaaterConversation = (conversationId?: string, accountId?: stri
   const queryClient = useQueryClient();
 
   const { data: messages, isLoading } = useQuery({
-    queryKey: ["twaater-messages", conversationId],
+    queryKey: ["twaater-messages", conversationId, accountId],
     queryFn: async () => {
-      if (!conversationId) return [];
+      if (!conversationId || !accountId) return [];
+
+      const { data: conversation, error: conversationError } = await supabase
+        .from("twaater_conversations")
+        .select("id")
+        .eq("id", conversationId)
+        .or(`participant_1_id.eq.${accountId},participant_2_id.eq.${accountId}`)
+        .maybeSingle();
+
+      if (conversationError) throw conversationError;
+      if (!conversation) return [];
 
       const { data, error } = await supabase
         .from("twaater_messages")
@@ -111,7 +121,7 @@ export const useTwaaterConversation = (conversationId?: string, accountId?: stri
       if (error) throw error;
       return data;
     },
-    enabled: !!conversationId,
+    enabled: !!conversationId && !!accountId,
   });
 
   const sendMessageMutation = useMutation({
@@ -129,7 +139,7 @@ export const useTwaaterConversation = (conversationId?: string, accountId?: stri
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["twaater-messages", conversationId] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-messages", conversationId, accountId] });
       queryClient.invalidateQueries({ queryKey: ["twaater-conversations"] });
     },
     onError: (error: unknown) => {
