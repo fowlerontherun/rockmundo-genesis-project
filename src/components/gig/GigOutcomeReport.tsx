@@ -22,8 +22,7 @@ import { toast } from "sonner";
 import { LessonsPanel } from "./outcome/LessonsPanel";
 import { GigCrewProgressReport } from "./GigCrewProgressReport";
 import { bestSong, contributionTotal, crowdLabel, headlineFromExperience, money, numberFormat, pct, score, songScore, weakestSong } from "./outcome/reportUtils";
-import { buildReferralUrl, referralShareOnCooldown } from "@/lib/referralShare";
-import { AvatarShareStudio } from "@/features/shareable-moments/CharacterShareStudio";
+import { buildReferralUrl, referralShareOnCooldown } from "@/lib/referralShare";\nimport { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";\nimport type { ShareMoment } from "@/features/shareable-moments/types";
 
 interface LegacyOutcome { overall_rating: number; actual_attendance: number; attendance_percentage: number; ticket_revenue: number; merch_sales: number; total_revenue: number; crew_costs: number; equipment_wear_cost: number; net_profit: number; fame_gained: number; chemistry_impact: number; gig_song_performances?: Array<{ song_id: string; position: number; performance_score: number; song_quality_contrib: number; rehearsal_contrib: number; chemistry_contrib: number; equipment_contrib: number; crew_contrib: number; member_skill_contrib: number; crowd_response: string; song_title?: string | null; performance_item_name?: string | null; }>; equipment_quality_avg?: number | null; crew_skill_avg?: number | null; band_chemistry_level?: number | null; member_skill_avg?: number | null; merch_items_sold?: number | null; }
 interface Props { isOpen: boolean; onClose: () => void; outcome: LegacyOutcome | null; venueName: string; venueCapacity: number; songs?: Array<{ id: string; title: string }>; gearEffects?: GearModifierEffects | null; gearNarrative?: GearOutcomeNarrative | null; xpSummary?: GigXpSummary | null; fanConversion?: FanConversionResult | null; momentHighlights?: GigMoment[] | null; venueRelationship?: VenueRelationshipResult | null; chemistryMoments?: ChemistryMoment[] | null; chemistryLevel?: number; chemistryChange?: number; merchItemsSold?: number; ticketPrice?: number; stageBehaviorUsed?: string | null; bandId?: string | null; gigId?: string | null; experience?: GigExperienceDTO | null; }
@@ -47,11 +46,11 @@ const legacyPostConsequences: GigExperienceDTO["postConsequences"] = {
 export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCapacity, songs = [], experience, xpSummary, fanConversion, momentHighlights, venueRelationship, chemistryMoments, chemistryLevel = 50, chemistryChange = 0, merchItemsSold = 0, ticketPrice = 20, stageBehaviorUsed, gigId }: Props) => {
   const { profileId } = useActiveProfile();
   const report = experience ?? legacyToExperience(outcome, venueName, venueCapacity, songs, merchItemsSold, chemistryChange, stageBehaviorUsed);
-  const processing = report?.viewer.ready === false || report?.gig.status === "processing";
-  const [shareInvite, setShareInvite] = useState<{ url: string; text: string } | null>(null);
-  const [shareOpen, setShareOpen] = useState(false);
+  if (!report) return null;
+  const processing = report.viewer.ready === false || report.gig.status === "processing";
+  const [shareInvite, setShareInvite] = useState<{ url: string; text: string } | null>(null);\n  const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
   useEffect(() => {
-    if (!report || !isOpen || processing || ["cancelled", "canceled", "abandoned"].includes(report.gig.status)) return;
+    if (!isOpen || processing || ["cancelled", "canceled", "abandoned"].includes(report.gig.status)) return;
     if (!profileId) return;
     const key = "rockmundo_gig_referral_share_at";
     const last = Number(localStorage.getItem(key) || 0);
@@ -62,33 +61,14 @@ export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCap
       const url = buildReferralUrl(data.code, { source: "gig_share" });
       setShareInvite({ url, text: `I just played ${report.gig.venue.name} in RockMundo. Start your own music career and join me.` });
     })();
-  }, [isOpen, processing, profileId, report?.gig.status, report?.gig.venue.name]);
-  if (!report) return null;
+  }, [isOpen, processing, profileId, report.gig.status, report.gig.venue.name]);
   const cancelled = ["cancelled", "canceled", "abandoned"].includes(report.gig.status);
-
-  const gigShareMoment = shareInvite ? {
-    version: 1 as const,
-    type: "gig_result" as const,
-    id: gigId ?? undefined,
-    eyebrow: "Gig result",
-    headline: report.headline.verdict,
-    subheadline: report.gig.venue.name,
-    metrics: [
-      { label: "Grade", value: headlineFromExperience(report).grade },
-      { label: "Attendance", value: numberFormat.format(metricValue(report.headline.attendance, 0)) },
-      { label: "Fans gained", value: "+" + numberFormat.format(metricValue(report.headline.fansGained, 0)) },
-      { label: "Fame gained", value: "+" + numberFormat.format(metricValue(report.headline.fameGained, 0)) },
-    ],
-    destinationUrl: shareInvite.url,
-    shareCooldownKey: "rockmundo_gig_referral_share_at",
-    createdAt: new Date().toISOString(),
-  } : null;
 
   return <Dialog open={isOpen} onOpenChange={onClose}>
     <DialogContent className="w-[96vw] max-w-6xl max-h-[92vh] overflow-y-auto p-0 sm:p-6" aria-describedby="gig-report-summary">
       <DialogHeader className="sr-only"><DialogTitle>Gig Performance Report</DialogTitle></DialogHeader>
       <main className="space-y-4 p-3 sm:p-0">
-        <HeadlineResult experience={report} onClose={onClose} processing={processing} cancelled={cancelled} shareInvite={shareInvite} />
+        <HeadlineResult experience={report} onClose={onClose} processing={processing} cancelled={cancelled} shareInvite={shareInvite} onShareMoment={setShareMoment} />
         <p id="gig-report-summary" className="sr-only">Post-gig report with headline result, performance story, lessons, timeline, and detailed analysis.</p>
         {processing ? <EmptyState title="Results processing" body="The authoritative outcome is still being prepared. Rewards and progression will appear when processing finishes." /> : cancelled ? <EmptyState title="Gig did not complete" body="This report is limited because the gig was cancelled or abandoned before a full outcome could be recorded." /> : <>
           <PerformanceStory experience={report} momentHighlights={momentHighlights} />
@@ -98,11 +78,10 @@ export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCap
         </>}
       </main>
     </DialogContent>
-    {gigShareMoment && <AvatarShareStudio open={shareOpen} onOpenChange={setShareOpen} moment={gigShareMoment} />}
   </Dialog>;
 };
 
-function HeadlineResult({ experience, onClose, processing, cancelled, shareInvite }: { experience: GigExperienceDTO; onClose: () => void; processing: boolean; cancelled: boolean; shareInvite: { url: string; text: string } | null }) {
+function HeadlineResult({ experience, onClose, processing, cancelled, shareInvite, onShareMoment }: { experience: GigExperienceDTO; onClose: () => void; processing: boolean; cancelled: boolean; shareInvite: { url: string; text: string } | null; onShareMoment: (moment: ShareMoment) => void }) {
   const h = headlineFromExperience(experience); const best = bestSong(experience.songs); const weak = weakestSong(experience.songs);
   const verdict = cancelled ? "Gig cancelled" : processing ? "Outcome processing" : experience.headline.verdict;
   return <section className="sticky top-0 z-10 -mx-3 rounded-b-2xl border bg-background/95 p-4 shadow-sm backdrop-blur sm:static sm:mx-0 sm:rounded-2xl" aria-labelledby="headline-result-heading">
@@ -121,8 +100,8 @@ function HeadlineResult({ experience, onClose, processing, cancelled, shareInvit
             toast.info("You shared a gig recently. Try again later.");
             return;
           }
-          setShareOpen(true);
-        }}><Share2 className="mr-2 h-4 w-4" />Share gig result</Button> : null}</div>
+          onShareMoment({ version: 1, type: "gig_result", id: experience.gig.id, eyebrow: "LIVE RESULT", headline: experience.gig.venue.name, subheadline: experience.headline.verdict, metrics: [{ label: "Grade", value: h.grade }, { label: "Attendance", value: `${numberFormat.format(h.attendance)} / ${numberFormat.format(h.capacity)}` }, { label: "Fame gained", value: `+${numberFormat.format(metricValue(experience.headline.fameGained, 0))}` }], destinationUrl: shareInvite.url, referralCode: null, createdAt: new Date().toISOString() });
+        }}><Share2 className="mr-2 h-4 w-4" />Invite a friend</Button> : null}</div>
       </div>
     </div>
   </section>;
