@@ -172,7 +172,7 @@ serve(async (req) => {
         const { data: existingReaction } = await supabase
           .from("twaat_reactions")
           .select("id")
-          .eq("parent_twaat_id", twaat.id)
+          .eq("twaat_id", twaat.id)
           .eq("account_id", bot.account_id)
           .limit(1);
 
@@ -275,7 +275,7 @@ serve(async (req) => {
       try {
         // Find band accounts that received engagement
         const bandAccountIds = new Set<string>();
-        for (const pa of playerAccounts || []) {
+        for (const pa of nonBotAccounts || []) {
           if (pa.owner_type === 'band' && pa.owner_id) bandAccountIds.add(pa.owner_id);
         }
         for (const bandId of bandAccountIds) {

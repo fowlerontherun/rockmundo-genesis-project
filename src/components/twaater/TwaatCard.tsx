@@ -29,6 +29,15 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
   const [replyBody, setReplyBody] = useState("");
   const navigate = useNavigate();
   const { config } = useTwaaterRuntimeConfig();
+  const account = twaat?.account ?? null;
+  const accountHandle = typeof account?.handle === "string" && account.handle.trim() ? account.handle : null;
+  const accountDisplayName = typeof account?.display_name === "string" && account.display_name.trim()
+    ? account.display_name
+    : "Deleted account";
+  const viewerSuffix = viewerAccountId ? `?account=${encodeURIComponent(viewerAccountId)}` : "";
+  const createdAt = twaat?.created_at ? new Date(twaat.created_at) : null;
+  const hasValidCreatedAt = Boolean(createdAt && !Number.isNaN(createdAt.getTime()));
+  const body = typeof twaat?.body === "string" ? twaat.body : "";
 
   const handleReply = async () => {
     if (!replyBody.trim() || !viewerAccountId) return;
@@ -47,7 +56,7 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
       if (config.hashtagsEnabled && part.startsWith("#")) {
         const hashtag = part.slice(1);
         return (
-          <span key={i} onClick={(e) => { e.stopPropagation(); navigate(`/twaater/tag/${hashtag}`); }} className="text-[hsl(var(--twaater-purple))] hover:underline cursor-pointer">
+          <span key={i} onClick={(e) => { e.stopPropagation(); navigate(`/twaater/tag/${hashtag}${viewerSuffix}`); }} className="text-[hsl(var(--twaater-purple))] hover:underline cursor-pointer">
             {part}
           </span>
         );
@@ -62,7 +71,7 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
       if (part.startsWith("@")) {
         const handle = part.slice(1);
         return (
-          <span key={i} onClick={(e) => { e.stopPropagation(); navigate(`/twaater/${handle}`); }} className="text-[hsl(var(--twaater-purple))] hover:underline cursor-pointer">
+          <span key={i} onClick={(e) => { e.stopPropagation(); navigate(`/twaater/${handle}${viewerSuffix}`); }} className="text-[hsl(var(--twaater-purple))] hover:underline cursor-pointer">
             {part}
           </span>
         );
@@ -72,7 +81,7 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
     });
   };
 
-  const isOwn = viewerAccountId && twaat.account?.id === viewerAccountId;
+  const isOwn = viewerAccountId && account?.id === viewerAccountId;
   const isPromoted = twaat.is_promoted && twaat.promoted_until && new Date(twaat.promoted_until) > new Date();
 
   return (
@@ -88,16 +97,19 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
             </div>
           )}
           <div className="flex items-center gap-2 mb-2">
-            <span className="font-semibold cursor-pointer hover:underline" onClick={() => navigate(`/twaater/${twaat.account.handle}`)}>
-              {twaat.account.display_name}
+            <span
+              className={accountHandle ? "font-semibold cursor-pointer hover:underline" : "font-semibold text-muted-foreground"}
+              onClick={() => accountHandle && navigate(`/twaater/${accountHandle}${viewerSuffix}`)}
+            >
+              {accountDisplayName}
             </span>
-            {twaat.account.verified && config.verifiedBadgesEnabled && <VerifiedBadge accountId={twaat.account.id} />}
-            <span className="text-muted-foreground text-sm">@{twaat.account.handle}</span>
-            <span className="text-muted-foreground text-sm">·</span>
-            <span className="text-muted-foreground text-sm">{formatDistanceToNow(new Date(twaat.created_at), { addSuffix: true })}</span>
+            {account?.verified && config.verifiedBadgesEnabled && <VerifiedBadge accountId={account.id} />}
+            {accountHandle && <span className="text-muted-foreground text-sm">@{accountHandle}</span>}
+            {hasValidCreatedAt && <span className="text-muted-foreground text-sm">·</span>}
+            {hasValidCreatedAt && <span className="text-muted-foreground text-sm">{formatDistanceToNow(createdAt!, { addSuffix: true })}</span>}
           </div>
 
-          <p className="text-sm mt-1 whitespace-pre-wrap break-words">{makeMentionsClickable(twaat.body)}</p>
+          <p className="text-sm mt-1 whitespace-pre-wrap break-words">{makeMentionsClickable(body)}</p>
 
           {twaat.linked_type && twaat.linked_id && (
             <LinkedContentEmbed linkedType={twaat.linked_type} linkedId={twaat.linked_id} />
@@ -138,7 +150,7 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
                 <DropdownMenuItem onClick={() => toggleRetwaat({ twaatId: twaat.id, accountId: viewerAccountId! })}>
                   <Repeat2 className="h-4 w-4 mr-2" />Retwaat
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { sessionStorage.setItem("quoteTwaat", JSON.stringify(twaat)); navigate("/twaater"); }}>
+                <DropdownMenuItem onClick={() => { sessionStorage.setItem("quoteTwaat", JSON.stringify(twaat)); navigate(`/twaater${viewerSuffix}`); }}>
                   <Quote className="h-4 w-4 mr-2" />Quote Twaat
                 </DropdownMenuItem>
               </DropdownMenuContent>
