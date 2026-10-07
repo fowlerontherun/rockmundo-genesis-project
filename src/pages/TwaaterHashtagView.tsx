@@ -19,7 +19,7 @@ export default function TwaaterHashtagView() {
   const backTo = account?.id ? `/twaater?account=${account.id}` : "/twaater";
 
   const { data: twaats, isLoading, error, refetch } = useQuery({
-    queryKey: ["hashtag-feed", hashtag],
+    queryKey: ["hashtag-feed", hashtag, account?.id],
     queryFn: async () => {
       if (!hashtag) return [];
 
@@ -38,9 +38,9 @@ export default function TwaaterHashtagView() {
         .limit(50);
 
       if (error) throw error;
-      return hydrateTwaaterFeedExtras(data || []);
+      return hydrateTwaaterFeedExtras(data || [], account?.id);
     },
-    enabled: !!hashtag,
+    enabled: !!hashtag && !personaLoading && !routeAccountLoading,
   });
 
   if (isLoading || personaLoading || routeAccountLoading) {
