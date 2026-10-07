@@ -1,10 +1,15 @@
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AdminRoute } from "@/components/AdminRoute";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Gift, RefreshCw, Users } from "lucide-react";
+import { Copy, Gift, Link2, RefreshCw, Users } from "lucide-react";
 
 const sourceLabel = (source: string) => ({ band_recruitment:"Band recruitment", gig_share:"Gig share", song_chart_share:"Song chart", release_chart_share:"Release chart", achievement_share:"Achievement", referral_hub:"Invite Friends", manual_code:"Referral code", signup_metadata:"Direct invite", unknown:"Direct invite" } as Record<string,string>)[source] ?? source.replace(/_/g," ");
 
@@ -36,6 +41,25 @@ type Audit = {
 };
 
 export default function ReferralAudit() {
+  const { toast } = useToast();
+  const [campaignCode, setCampaignCode] = useState("");
+  const [campaignSlug, setCampaignSlug] = useState("");
+  const [campaignSource, setCampaignSource] = useState("referral_hub");
+  const normalizedCode = campaignCode.trim().toUpperCase();
+  const normalizedCampaign = campaignSlug.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+  const campaignLink = useMemo(() => {
+    if (!/^RM[A-Z0-9]{6,18}$/.test(normalizedCode) || !/^[a-z0-9][a-z0-9_-]{1,39}$/.test(normalizedCampaign)) return "";
+    const url = new URL("/auth", window.location.origin);
+    url.searchParams.set("ref", normalizedCode);
+    url.searchParams.set("source", campaignSource);
+    url.searchParams.set("campaign", normalizedCampaign);
+    return url.toString();
+  }, [normalizedCode, normalizedCampaign, campaignSource]);
+  const copyCampaignLink = async () => {
+    if (!campaignLink) return;
+    try { await navigator.clipboard.writeText(campaignLink); toast({ title: "Campaign link copied", description: `${normalizedCampaign} is ready to share.` }); }
+    catch { toast({ title: "Couldn’t copy campaign link", description: "Your browser blocked clipboard access.", variant: "destructive" }); }
+  };
   const query = useQuery({
     queryKey: ["admin-referral-audit"],
     queryFn: async () => {
@@ -88,6 +112,19 @@ export default function ReferralAudit() {
         <Card>
           <CardHeader><CardTitle>Source funnel diagnostics</CardTitle><CardDescription>Find share surfaces that generate signups but lose players before activation.</CardDescription></CardHeader>
           <CardContent className="overflow-x-auto"><table className="w-full min-w-[900px] text-sm"><thead><tr className="border-b text-left"><th className="p-2">Source</th><th className="p-2">Joined</th><th className="p-2">Activating</th><th className="p-2">Qualified</th><th className="p-2">Qual. rate</th><th className="p-2">Email gap</th><th className="p-2">24h gap</th><th className="p-2">Play gap</th><th className="p-2">VIP</th></tr></thead><tbody>{growth?.sources.map(row=><tr key={row.source} className="border-b"><td className="p-2"><Badge variant="outline">{sourceLabel(row.source)}</Badge></td><td className="p-2">{row.joined}</td><td className="p-2">{row.activating}</td><td className="p-2">{row.qualified}</td><td className="p-2">{row.qualification_rate}%</td><td className="p-2">{row.missing_email}</td><td className="p-2">{row.waiting_24h}</td><td className="p-2">{row.missing_activity}</td><td className="p-2">{row.vip}</td></tr>)}</tbody></table></CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2"><Link2 className="h-5 w-5" />Campaign link builder</CardTitle><CardDescription>Create tagged referral links for creators, communities and promotions. The referral code still decides who receives credit; campaign and source are analytics only.</CardDescription></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2"><Label htmlFor="campaign-referral-code">Referral code</Label><Input id="campaign-referral-code" value={campaignCode} onChange={(event) => setCampaignCode(event.target.value.toUpperCase())} placeholder="RMXXXXXXXX" maxLength={20} /></div>
+              <div className="space-y-2"><Label htmlFor="campaign-slug">Campaign</Label><Input id="campaign-slug" value={campaignSlug} onChange={(event) => setCampaignSlug(event.target.value)} placeholder="creator_october" maxLength={40} /><p className="text-xs text-muted-foreground">Lowercase letters, numbers, hyphens and underscores.</p></div>
+              <div className="space-y-2"><Label>Source</Label><Select value={campaignSource} onValueChange={setCampaignSource}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="referral_hub">Invite Friends</SelectItem><SelectItem value="band_recruitment">Band recruitment</SelectItem><SelectItem value="gig_share">Gig share</SelectItem><SelectItem value="song_chart_share">Song chart</SelectItem><SelectItem value="release_chart_share">Release chart</SelectItem><SelectItem value="achievement_share">Achievement</SelectItem></SelectContent></Select></div>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row"><Input readOnly value={campaignLink} placeholder="Enter a valid referral code and campaign name to generate a link" className="font-mono text-xs" /><Button onClick={copyCampaignLink} disabled={!campaignLink}><Copy className="mr-2 h-4 w-4" />Copy link</Button></div>
+            <p className="text-xs text-muted-foreground">Use a different campaign slug for each creator, community or promotion you want to compare. Results appear in Campaign performance after referred players join.</p>
+          </CardContent>
         </Card>
 
         <Card>
