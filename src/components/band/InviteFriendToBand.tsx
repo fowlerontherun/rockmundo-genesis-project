@@ -15,7 +15,7 @@ import { UserPlus, Loader2, X, Search, Share2, Copy } from 'lucide-react';
 import { searchPublicProfiles, type PublicProfileSearchResult } from '@/services/publicProfileSearch';
 import { bandInviteUnavailability } from '@/services/bandInviteEligibility';
 import { cancelBandInvitation, sendBandInvitation, friendlyBandInvitationError } from '@/services/bandInvitations';
-import { buildReferralUrl } from '@/lib/referralShare';
+import { buildReferralUrl } from '@/lib/referralShare';\nimport { ShareMomentSheet } from '@/features/shareable-moments/ShareMomentSheet';\nimport type { ShareMoment } from '@/features/shareable-moments/types';
 
 interface InviteFriendToBandProps {
   bandId: string;
@@ -67,7 +67,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
   const [instrumentRole, setInstrumentRole] = useState<string>(DEFAULT_BAND_PERFORMANCE_ROLE);
   const [vocalRole, setVocalRole] = useState<string | undefined>(undefined);
   const [message, setMessage] = useState('');
-  const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [referralCode, setReferralCode] = useState<string | null>(null);\n  const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
   const [referredRecruits, setReferredRecruits] = useState<Array<{ referral_id: string; profile_id: string; profile_name: string; signup_qualified_at: string | null; invitation_status: string | null }>>([]);
   const { toast } = useToast();
 
@@ -539,7 +539,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
 
           <div className="flex justify-end"><Button variant="outline" aria-label="Close invitation dialog" onClick={() => handleDialogOpenChange(false)} disabled={submitting || !!cancellingId}>Close</Button></div>
         </DialogContent>
-      </Dialog>
+      </Dialog>\n      <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(next) => { if (!next) setShareMoment(null); }} />
     </>
   );
 }
