@@ -163,7 +163,7 @@ export default function CommunityRewards({ profileId, profileName }: { profileId
     const code = manualCode.trim().toUpperCase();
     if (!code) return;
     setBinding(true);
-    const { error } = await (supabase as any).rpc("bind_referral_code", { p_code: code });
+    const { error } = await (supabase as any).rpc("bind_referral_code", { p_code: code, p_source: "manual_code" });
     setBinding(false);
     if (error) {
       toast({ title: "Referral code not linked", description: error.message, variant: "destructive" });
