@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { canvasBlob, renderShareMoment, shareFilename } from "./canvas";
 import { downloadBlob, nativeShare, withReferral } from "./share";
-import type { ShareFormat, ShareMoment } from "./types";
+import type { ShareFormat, ShareMoment } from "./types";\nimport { useActiveProfile } from "@/hooks/useActiveProfile";\nimport { useGigPlayerModels } from "@/features/player-model/usePlayerModel";\nimport { captureAvatarV1ForShare } from "./avatarCapture";
 
 export function ShareMomentSheet({moment,open,onOpenChange}:{moment:ShareMoment|null;open:boolean;onOpenChange:(open:boolean)=>void}){
  const {toast}=useToast(); const canvasRef=useRef<HTMLCanvasElement|null>(null); const [format,setFormat]=useState<ShareFormat>("square"); const [done,setDone]=useState<string|null>(null);
