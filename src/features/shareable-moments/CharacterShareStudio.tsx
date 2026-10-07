@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { PlayerModelPreview } from '@/features/player-model/PlayerModelPreview';
 import { useAvatarMerchWearables } from '@/features/player-model/useAvatarMerchWearables';
 import { useEquippedRichClothing, useEquippedStageLuthieryInstruments, usePlayerModel, usePlayerStageTattoos } from '@/features/player-model/usePlayerModel';
@@ -20,6 +20,7 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
   const luthiery = useEquippedStageLuthieryInstruments(open ? model.profileId : null);
   const merch = useAvatarMerchWearables(open ? model.profileId : null);
   const [avatar, setAvatar] = useState<AvatarCapture | null>(null);
+  useEffect(() => { if (!open) setAvatar(null); }, [open, moment.id]);
   const shareMoment = useMemo(() => ({ ...moment, avatar }), [moment, avatar]);
 
   return <>
