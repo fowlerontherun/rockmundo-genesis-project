@@ -15,7 +15,7 @@ function fitText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, 
   return size;
 }
 
-export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment, format: ShareFormat, avatar?: CanvasImageSource | null): void {
+export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment, format: ShareFormat, avatar?: CanvasImageSource | null, artwork?: CanvasImageSource | null): void {
   const { width, height } = SHARE_FORMATS[format];
   canvas.width = width; canvas.height = height;
   const ctx = canvas.getContext('2d');
@@ -41,6 +41,11 @@ export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment
   else if(moment.type==='achievement'){ctx.beginPath();ctx.arc(width*.82,height*.24,width*.14,0,Math.PI*2);ctx.stroke();}
   else if(moment.type==='release'){ctx.beginPath();ctx.arc(width*.82,height*.26,width*.18,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(width*.82,height*.26,width*.055,0,Math.PI*2);ctx.stroke();}
   ctx.restore();
+
+  if (artwork) {
+    const size=format==='landscape'?height*.48:width*.34, x=width-size-width*.065, y=height*.08;
+    ctx.save(); ctx.globalAlpha=.88; ctx.beginPath(); ctx.roundRect(x,y,size,size,Math.max(18,size*.06)); ctx.clip(); ctx.drawImage(artwork,x,y,size,size); ctx.restore();
+  }
 
   if (avatar) {
     const avatarW = format === 'landscape' ? width * .34 : width * .5;
