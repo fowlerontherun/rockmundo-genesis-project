@@ -38,6 +38,8 @@ export interface ShareMoment {
   visualLayout?: ShareVisualLayout;
   destinationUrl?: string | null;
   referralCode?: string | null;
+  referralSource?: string | null;
+  referralCampaign?: string | null;
   /** Existing growth throttle key; recorded only after a successful share/link-copy action. */
   shareCooldownKey?: string | null;
   createdAt: string;
