@@ -37,11 +37,13 @@ export default function TwaaterNotifications() {
   const { account: personaAccount, isLoading: personaLoading } = useTwaaterAccount("persona", profile?.id);
   const { account, isLoading: routeAccountLoading } = useTwaaterRouteAccount(personaAccount, searchParams.get("account"));
   const accountLoading = personaLoading || routeAccountLoading;
+  const accountSuffix = account?.id ? `?account=${encodeURIComponent(account.id)}` : "";
+  const backTo = account?.id ? `/twaater?account=${account.id}` : "/twaater";
   const { notifications, isLoading, error, refetch, markAsRead, markAllAsRead, unreadCount } = useTwaaterNotifications(account?.id);
 
   if (!profile || accountLoading || isLoading) {
     return (
-      <FMPageScaffold title="Notifications" icon={Bell} backTo="/twaater">
+      <FMPageScaffold title="Notifications" icon={Bell} backTo={backTo}>
         <div className="flex items-center justify-center py-16"><p>Loading...</p></div>
       </FMPageScaffold>
     );
@@ -49,7 +51,7 @@ export default function TwaaterNotifications() {
 
   if (!account) {
     return (
-      <FMPageScaffold title="Notifications" icon={Bell} backTo="/twaater">
+      <FMPageScaffold title="Notifications" icon={Bell} backTo={backTo}>
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">You need a Twaater account to view notifications.</p>
@@ -61,7 +63,7 @@ export default function TwaaterNotifications() {
 
   if (error) {
     return (
-      <FMPageScaffold title="Notifications" icon={Bell} backTo="/twaater">
+      <FMPageScaffold title="Notifications" icon={Bell} backTo={backTo}>
         <Card>
           <CardContent className="py-12 text-center space-y-3">
             <p className="text-muted-foreground">Notifications couldn't load.</p>
@@ -91,9 +93,9 @@ export default function TwaaterNotifications() {
         onClick={() => {
           if (!notification.read_at) markAsRead(notification.id);
           if (notification.related_twaat_id) {
-            navigate(`/twaater/twaat/${notification.related_twaat_id}`);
+            navigate(`/twaater/twaat/${notification.related_twaat_id}${accountSuffix}`);
           } else if (notification.source_account?.handle) {
-            navigate(`/twaater/${notification.source_account.handle}`);
+            navigate(`/twaater/${notification.source_account.handle}${accountSuffix}`);
           }
         }}
       >
@@ -139,7 +141,7 @@ export default function TwaaterNotifications() {
     <FMPageScaffold
       title="Notifications"
       icon={Bell}
-      backTo={account?.id ? `/twaater?account=${account.id}` : "/twaater"}
+      backTo={backTo}
       backLabel="Back to Twaater"
       headerActions={
         unreadCount > 0 ? (
