@@ -50,13 +50,13 @@ Share Sheet
 ## Phase 1 — Core engine and first five cards
 
 ### 1A. Foundation
-- [ ] Add `src/features/shareable-moments/`.
-- [ ] Define versioned ShareMoment and template contracts.
-- [ ] Add central format dimensions/safe areas.
-- [ ] Add reusable Canvas drawing helpers (text fitting, rounded panels, image loading, branding).
-- [ ] Add referral-aware share URL helper using the existing `/auth?ref=CODE` contract.
-- [ ] Add native share helper with file capability detection and clipboard/download fallbacks.
-- [ ] Unit-test URL construction, dimensions, filenames and share capability selection.
+- [x] Add `src/features/shareable-moments/`.
+- [x] Define versioned ShareMoment and template contracts.
+- [x] Add central format dimensions/safe areas.
+- [x] Add reusable Canvas drawing helpers (text fitting, rounded panels, image loading, branding).
+- [x] Add referral-aware share URL helper using the existing `/auth?ref=CODE` contract.
+- [x] Add native share helper with file capability detection and clipboard/download fallbacks.
+- [x] Unit-test URL construction, dimensions, filenames and share capability selection.
 
 ### 1B. Avatar V1 capture
 - [ ] Reuse `features/player-model` assembly; do not create another avatar implementation.
@@ -75,10 +75,10 @@ Share Sheet
 - [ ] Render all five in square/story/landscape formats.
 
 ### 1D. UI
-- [ ] Reusable `ShareMomentSheet` with live preview.
-- [ ] Format selector.
-- [ ] Native Share button.
-- [ ] Copy image, download image and copy link.
+- [x] Reusable `ShareMomentSheet` with live preview.
+- [x] Format selector.
+- [x] Native Share button.
+- [x] Copy image, download image and copy link.
 - [ ] Accessible labels/status and mobile-safe layout.
 - [ ] Add Share entry points to the five initial surfaces.
 
