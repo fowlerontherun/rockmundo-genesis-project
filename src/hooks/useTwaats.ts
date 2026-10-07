@@ -184,7 +184,7 @@ export const useTwaats = (accountId?: string) => {
 
       const { data, error } = await query;
       if (error) throw error;
-      return await hydrateTwaaterFeedExtras((data || []) as unknown as TwaatWithDetails[], viewerAccountId);
+      return await hydrateTwaaterFeedExtras((data || []) as unknown as TwaatWithDetails[]);
     },
   });
 
@@ -304,7 +304,7 @@ export const useTwaaterFeed = (viewerAccountId?: string, enabled = true) => {
         .limit(50);
 
       if (error) throw error;
-      return await hydrateTwaaterFeedExtras((data || []) as unknown as TwaatWithDetails[]);
+      return await hydrateTwaaterFeedExtras((data || []) as unknown as TwaatWithDetails[], viewerAccountId);
     },
     enabled,
     staleTime: 60 * 1000,
