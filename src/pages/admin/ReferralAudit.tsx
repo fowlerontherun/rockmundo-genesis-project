@@ -9,7 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Copy, Gift, Link2, RefreshCw, Users } from "lucide-react";
+import { Copy, Gift, Image as ImageIcon, Link2, RefreshCw, Users } from "lucide-react";
+import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
+import type { ShareMoment } from "@/features/shareable-moments/types";
 
 const sourceLabel = (source: string) => ({ band_recruitment:"Band recruitment", gig_share:"Gig share", song_chart_share:"Song chart", release_chart_share:"Release chart", achievement_share:"Achievement", referral_hub:"Invite Friends", manual_code:"Referral code", signup_metadata:"Direct invite", unknown:"Direct invite" } as Record<string,string>)[source] ?? source.replace(/_/g," ");
 
@@ -55,6 +57,7 @@ export default function ReferralAudit() {
   const [campaignEnd, setCampaignEnd] = useState("");
   const [campaignActive, setCampaignActive] = useState(true);
   const [savingCampaign, setSavingCampaign] = useState(false);
+  const [campaignShareMoment, setCampaignShareMoment] = useState<ShareMoment | null>(null);
   const normalizedCode = campaignCode.trim().toUpperCase();
   const normalizedCampaign = campaignSlug.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
   const campaignLink = useMemo(() => {
@@ -72,6 +75,7 @@ export default function ReferralAudit() {
   };
   const campaignsQuery = useQuery({ queryKey: ["admin-referral-campaigns"], queryFn: async () => { const { data, error } = await (supabase as any).rpc("admin_list_referral_campaigns"); if (error) throw error; return (data ?? []) as SavedCampaign[]; } });
   const saveCampaign = async () => { if (!campaignLink || !campaignName.trim()) return; setSavingCampaign(true); const { error } = await (supabase as any).rpc("admin_save_referral_campaign", { p_id: campaignId, p_slug: normalizedCampaign, p_name: campaignName.trim(), p_referral_code: normalizedCode, p_source: campaignSource, p_partner_name: campaignPartner, p_notes: campaignNotes, p_starts_at: campaignStart || null, p_ends_at: campaignEnd || null, p_is_active: campaignActive }); setSavingCampaign(false); if (error) { toast({ title: "Campaign not saved", description: error.message, variant: "destructive" }); return; } toast({ title: campaignId ? "Campaign updated" : "Campaign saved" }); await campaignsQuery.refetch(); };
+  const shareCampaign = (item: SavedCampaign) => setCampaignShareMoment({ version: 1, type: "referral", id: item.id, eyebrow: item.partner_name ? `INVITED BY ${item.partner_name}` : "JOIN ROCKMUNDO", headline: item.name, subheadline: "Build your music career. Form a band. Play the world.", metrics: [{ label: "Campaign", value: item.slug }, { label: "Source", value: sourceLabel(item.source) }], destinationUrl: "/auth", referralCode: item.referral_code, referralSource: item.source, referralCampaign: item.slug, visualTheme: "neon", visualLayout: "right", createdAt: new Date().toISOString() });
   const loadCampaign = (item: SavedCampaign) => { setCampaignId(item.id); setCampaignName(item.name); setCampaignCode(item.referral_code); setCampaignSlug(item.slug); setCampaignSource(item.source); setCampaignPartner(item.partner_name ?? ""); setCampaignNotes(item.notes ?? ""); setCampaignStart(item.starts_at?.slice(0,10) ?? ""); setCampaignEnd(item.ends_at?.slice(0,10) ?? ""); setCampaignActive(item.is_active); };
   const query = useQuery({
     queryKey: ["admin-referral-audit"],
@@ -143,7 +147,7 @@ export default function ReferralAudit() {
             </div>
             <div className="flex flex-col gap-2 sm:flex-row"><Input readOnly value={campaignLink} placeholder="Complete the referral code and campaign slug" className="font-mono text-xs" /><Button onClick={copyCampaignLink} disabled={!campaignLink}><Copy className="mr-2 h-4 w-4" />Copy link</Button></div>
             <div className="flex flex-wrap gap-2"><Button onClick={saveCampaign} disabled={!campaignLink || !campaignName.trim() || savingCampaign}>{campaignId ? "Update campaign" : "Save campaign"}</Button>{campaignId ? <Button variant="outline" onClick={()=>{setCampaignId(null);setCampaignName("");setCampaignPartner("");setCampaignNotes("");setCampaignStart("");setCampaignEnd("");setCampaignActive(true);}}>New campaign</Button> : null}</div>
-            {campaignsQuery.data?.length ? <div className="space-y-2 border-t pt-4"><Label>Saved campaigns</Label>{campaignsQuery.data.map(item=><div key={item.id} className="flex flex-col gap-2 rounded border p-3 sm:flex-row sm:items-center sm:justify-between"><div><div className="flex items-center gap-2"><strong>{item.name}</strong><Badge variant={item.is_active ? "default" : "secondary"}>{item.is_active ? "Active" : "Paused"}</Badge></div><p className="text-xs text-muted-foreground">{item.slug} · {sourceLabel(item.source)}{item.partner_name ? ` · ${item.partner_name}` : ""}</p></div><Button size="sm" variant="outline" onClick={()=>loadCampaign(item)}>Open</Button></div>)}</div> : null}
+            {campaignsQuery.data?.length ? <div className="space-y-2 border-t pt-4"><Label>Saved campaigns</Label>{campaignsQuery.data.map(item=><div key={item.id} className="flex flex-col gap-2 rounded border p-3 sm:flex-row sm:items-center sm:justify-between"><div><div className="flex items-center gap-2"><strong>{item.name}</strong><Badge variant={item.is_active ? "default" : "secondary"}>{item.is_active ? "Active" : "Paused"}</Badge></div><p className="text-xs text-muted-foreground">{item.slug} · {sourceLabel(item.source)}{item.partner_name ? ` · ${item.partner_name}` : ""}</p></div><div className="flex gap-2"><Button size="sm" variant="secondary" onClick={()=>shareCampaign(item)}><ImageIcon className="mr-1 h-4 w-4" />Social graphic</Button><Button size="sm" variant="outline" onClick={()=>loadCampaign(item)}>Open</Button></div></div>)}</div> : null}
           </CardContent>
         </Card>
 
@@ -196,6 +200,7 @@ export default function ReferralAudit() {
             </div>)}
           </CardContent>
         </Card>
+        <ShareMomentSheet moment={campaignShareMoment} open={!!campaignShareMoment} onOpenChange={(open)=>{ if (!open) setCampaignShareMoment(null); }} />
       </div>
     </AdminRoute>
   );

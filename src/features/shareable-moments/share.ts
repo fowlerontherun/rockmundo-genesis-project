@@ -9,10 +9,11 @@ export function referralUrl(code: string, origin?: string): string {
   return url.toString();
 }
 
-export function withReferral(url: string, code?: string | null): string {
-  if (!code) return url;
+export function withReferral(url: string, code?: string | null, source?: string | null, campaign?: string | null): string {
   const parsed = new URL(url, typeof window === 'undefined' ? 'https://rockmundo.uk' : window.location.origin);
-  parsed.searchParams.set('ref', code.trim().toUpperCase());
+  if (code) parsed.searchParams.set('ref', code.trim().toUpperCase());
+  if (source) parsed.searchParams.set('source', source.trim().toLowerCase());
+  if (campaign) parsed.searchParams.set('campaign', campaign.trim().toLowerCase());
   return parsed.toString();
 }
 
