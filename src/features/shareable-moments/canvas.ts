@@ -76,6 +76,9 @@ export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment
     const avatarH = format === 'landscape' ? height * .82 : height * .52;
     const avatarX = width - avatarW - Math.round(width * .035);
     const avatarY = format === 'story' ? height * .42 : height * .16;
+    const avatarGlow = ctx.createRadialGradient(avatarX + avatarW * .55, avatarY + avatarH * .48, 10, avatarX + avatarW * .55, avatarY + avatarH * .48, avatarW * .62);
+    avatarGlow.addColorStop(0, accent + '44'); avatarGlow.addColorStop(1, '#00000000');
+    ctx.save(); ctx.fillStyle = avatarGlow; ctx.fillRect(avatarX - avatarW * .12, avatarY - avatarH * .08, avatarW * 1.24, avatarH * 1.16); ctx.restore();
     ctx.save(); ctx.globalAlpha = .96; ctx.drawImage(avatar, avatarX, avatarY, avatarW, avatarH); ctx.restore();
   }
 

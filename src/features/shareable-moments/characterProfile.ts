@@ -4,7 +4,7 @@ import { SHARE_FORMATS, type ShareFormat, type ShareMoment } from './types';
 import { renderShareMoment } from './canvas';
 
 export interface CharacterProfileShareMoment extends ShareMoment {
-  type: 'character_profile' | 'gig_result';
+  type: 'character_profile' | 'gig_result' | 'achievement' | 'tour';
   avatar?: AvatarCapture | null;
 }
 

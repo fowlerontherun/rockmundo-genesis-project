@@ -57,8 +57,8 @@ import {
   TrendingUp,
   Share2,
 } from "lucide-react";
-import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
-import type { ShareMoment } from "@/features/shareable-moments/types";
+import { AvatarShareStudio } from "@/features/shareable-moments/CharacterShareStudio";
+import type { CharacterProfileShareMoment } from "@/features/shareable-moments/characterProfile";
 import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -152,7 +152,7 @@ const TourManager = () => {
   const { data: bandTotals } = useBandTourTotals(currentBandId);
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
+  const [shareMoment, setShareMoment] = useState<CharacterProfileShareMoment | null>(null);
   const [wizardOpen, setWizardOpen] = useState(() => Boolean(requestedCityId));
   const [draftRouteCityIds, setDraftRouteCityIds] = useState<string[]>(() => requestedCityId ? [requestedCityId] : []);
 
@@ -668,7 +668,7 @@ const TourManager = () => {
             {canPromote && (
               <Button variant="outline" size="sm" onClick={() => setShareMoment({
                 version: 1, type: "tour", id: tour.id, eyebrow: "TOUR ANNOUNCEMENT",
-                headline: tour.name, subheadline: tour.band?.name || "RockMundo tour",
+                headline: tour.name, subheadline: `${tour.band?.name || "RockMundo band"}${tour.band?.genre ? ` · ${tour.band.genre}` : ""}`,
                 metrics: [
                   { label: "Starts", value: format(new Date(tour.start_date), "MMM d, yyyy") },
                   { label: "Ends", value: format(new Date(tour.end_date), "MMM d, yyyy") },
@@ -1335,7 +1335,7 @@ const TourManager = () => {
         </DialogContent>
       </Dialog>
 
-      <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(next) => { if (!next) setShareMoment(null); }} />
+      {shareMoment && <AvatarShareStudio moment={shareMoment} open={true} onOpenChange={(next) => { if (!next) setShareMoment(null); }} />}
 
       {/* Tour Creation Wizard */}
       <Dialog open={wizardOpen} onOpenChange={open => { setWizardOpen(open); if (!open) setDraftRouteCityIds([]); }}>
