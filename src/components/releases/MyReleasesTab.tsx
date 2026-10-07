@@ -34,9 +34,7 @@ import { minorToMajor } from "@/lib/releaseMoney";
 import { MUSIC_GENRES } from "@/data/genres";
 import { format as formatDate, formatDistanceToNow } from "date-fns";
 import { resolveActiveBandMembership } from "@/utils/activeBandMembership";
-import { buildReferralUrl, referralShareOnCooldown } from "@/lib/referralShare";
-import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
-import type { ShareMoment } from "@/features/shareable-moments/types";
+import { buildReferralUrl, referralShareOnCooldown } from "@/lib/referralShare";\nimport { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";\nimport type { ShareMoment } from "@/features/shareable-moments/types";
 
 interface MyReleasesTabProps {
   userId: string;
@@ -574,10 +572,9 @@ interface ReleaseCardProps {
 }
 
 function ReleaseCard({ release, financials, financeAvailable = false, labelCutPct = 0, onEdit, onCancel, onViewDetails, onPromo, onAddPhysical, onAnalytics, onReorder, onParty, onReleaseNow, isReleasing, bestChartPosition, profileId }: ReleaseCardProps) {
-  const statusConfig = STATUS_CONFIG[release.release_status] || STATUS_CONFIG.draft;
+  const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);\n  const statusConfig = STATUS_CONFIG[release.release_status] || STATUS_CONFIG.draft;
   const typeConfig = RELEASE_TYPE_CONFIG[release.release_type] || RELEASE_TYPE_CONFIG.single;
   const StatusIcon = statusConfig.icon;
-  const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
   
   const totalTracks = release.release_songs?.length || 0;
   const avgQuality = totalTracks > 0 
@@ -606,23 +603,7 @@ function ReleaseCard({ release, financials, financeAvailable = false, labelCutPc
       return;
     }
     const url = buildReferralUrl(data.code, { source: "release_chart_share" });
-    setShareMoment({
-      version: 1,
-      type: "release",
-      id: release.id,
-      eyebrow: bestChartPosition === 1 ? "Number one release" : "Top 10 release",
-      headline: release.title,
-      subheadline: release.artist_name || "New Rockmundo release",
-      metrics: [
-        { label: "Peak chart", value: "#" + bestChartPosition },
-        { label: "Format", value: typeConfig.label },
-        { label: "Tracks", value: String(totalTracks) },
-      ],
-      artworkUrl: release.artwork_url || null,
-      destinationUrl: url,
-      shareCooldownKey: key,
-      createdAt: release.release_date || release.created_at || new Date().toISOString(),
-    });
+    setShareMoment({ version: 1, type: "release", id: release.id, eyebrow: bestChartPosition === 1 ? "NUMBER ONE RELEASE" : "RELEASE CHART MILESTONE", headline: release.title, subheadline: `Reached #${bestChartPosition} in RockMundo`, metrics: [{ label: "Chart position", value: `#${bestChartPosition}` }, { label: "Tracks", value: String(totalTracks) }], destinationUrl: url, referralCode: null, createdAt: new Date().toISOString() });
   };
   
   return (
@@ -738,7 +719,6 @@ function ReleaseCard({ release, financials, financeAvailable = false, labelCutPc
           </div>
         </div>
       </div>
-      {shareMoment && <ShareMomentSheet open={true} onOpenChange={open => { if (!open) setShareMoment(null); }} moment={shareMoment} />}
-    </Card>
+    </Card>\n      <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(open) => { if (!open) setShareMoment(null); }} />
   );
 }
