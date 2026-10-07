@@ -21,7 +21,7 @@ import { getPublicProfileDetail } from "@/services/publicProfileDetail";
 import { PlayerProfileHeader, FutureProfileActions } from "@/components/player-profile/PlayerProfileHeader";
 import { ProfileInfoCard, BandProfileCard, EmploymentProfileCard, OpenStatusBadges } from "@/components/player-profile/ProfileCards";
 import { mergePresenceProfiles } from "@/services/presenceService";
-import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
+import { CharacterShareStudio } from "@/features/shareable-moments/CharacterShareStudio";
 import type { CharacterProfileShareMoment } from "@/features/shareable-moments/characterProfile";
 
 export default function PlayerProfile() {
@@ -227,7 +227,7 @@ export default function PlayerProfile() {
         )}
       />
 
-      {shareMoment && <ShareMomentSheet open={shareOpen} onOpenChange={setShareOpen} moment={shareMoment} />}
+      {shareMoment && isOwnProfile && <CharacterShareStudio open={shareOpen} onOpenChange={setShareOpen} moment={shareMoment} />}
 
       {profile.social_profile?.status_message && <Card><CardContent className="p-4 text-sm font-medium">{profile.social_profile.status_message}</CardContent></Card>}
 
