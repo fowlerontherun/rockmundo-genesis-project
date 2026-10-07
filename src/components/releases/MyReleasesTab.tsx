@@ -34,7 +34,9 @@ import { minorToMajor } from "@/lib/releaseMoney";
 import { MUSIC_GENRES } from "@/data/genres";
 import { format as formatDate, formatDistanceToNow } from "date-fns";
 import { resolveActiveBandMembership } from "@/utils/activeBandMembership";
-import { buildReferralUrl, referralShareOnCooldown, shareReferral } from "@/lib/referralShare";
+import { buildReferralUrl, referralShareOnCooldown } from "@/lib/referralShare";
+import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
+import type { ShareMoment } from "@/features/shareable-moments/types";
 
 interface MyReleasesTabProps {
   userId: string;
@@ -572,6 +574,7 @@ interface ReleaseCardProps {
 }
 
 function ReleaseCard({ release, financials, financeAvailable = false, labelCutPct = 0, onEdit, onCancel, onViewDetails, onPromo, onAddPhysical, onAnalytics, onReorder, onParty, onReleaseNow, isReleasing, bestChartPosition, profileId }: ReleaseCardProps) {
+  const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
   const statusConfig = STATUS_CONFIG[release.release_status] || STATUS_CONFIG.draft;
   const typeConfig = RELEASE_TYPE_CONFIG[release.release_type] || RELEASE_TYPE_CONFIG.single;
   const StatusIcon = statusConfig.icon;
@@ -603,10 +606,23 @@ function ReleaseCard({ release, financials, financeAvailable = false, labelCutPc
       return;
     }
     const url = buildReferralUrl(data.code);
-    const text = `${release.title} just reached #${bestChartPosition} in RockMundo. Start your own music career and join me.`;
-    const result = await shareReferral({ title: `${release.title} — RockMundo`, text, url, cooldownKey: key });
-    if (result === "copied") toast.success("Invite copied");
-    if (result === "failed") toast.error("Could not share invite", { description: "Your browser blocked clipboard access. Try the share button again from a supported browser." });
+    setShareMoment({
+      version: 1,
+      type: "release",
+      id: release.id,
+      eyebrow: bestChartPosition === 1 ? "Number one release" : "Top 10 release",
+      headline: release.title,
+      subheadline: release.artist_name || "New Rockmundo release",
+      metrics: [
+        { label: "Peak chart", value: "#" + bestChartPosition },
+        { label: "Format", value: typeConfig.label },
+        { label: "Tracks", value: String(totalTracks) },
+      ],
+      artworkUrl: release.artwork_url || null,
+      destinationUrl: url,
+      shareCooldownKey: key,
+      createdAt: release.release_date || release.created_at || new Date().toISOString(),
+    });
   };
   
   return (
@@ -722,6 +738,7 @@ function ReleaseCard({ release, financials, financeAvailable = false, labelCutPc
           </div>
         </div>
       </div>
+      {shareMoment && <ShareMomentSheet open={true} onOpenChange={open => { if (!open) setShareMoment(null); }} moment={shareMoment} />}
     </Card>
   );
 }
