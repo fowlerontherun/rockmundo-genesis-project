@@ -3,26 +3,21 @@ import { Check, Copy, Download, Image as ImageIcon, Share2 } from "lucide-react"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useActiveProfile } from "@/hooks/useActiveProfile";
-import { useGigPlayerModels } from "@/features/player-model/usePlayerModel";
 import { canvasBlob, renderShareMoment, shareFilename } from "./canvas";
 import { copyPng, copyText, downloadBlob, nativeShare, withReferral } from "./share";
 import type { ShareFormat, ShareMoment } from "./types";
-import { captureAvatarV1ForShare, loadCaptureImage } from "./avatarCapture";
+import { loadCaptureImage } from "./avatarCapture";
 import type { CharacterProfileShareMoment } from "./characterProfile";
 import rockmundoLogo from "@/assets/rockmundo-new-logo.png";
 
 export function ShareMomentSheet({moment,open,onOpenChange}:{moment:ShareMoment|null;open:boolean;onOpenChange:(open:boolean)=>void}){
- const {toast}=useToast(); const {profileId}=useActiveProfile(); const models=useGigPlayerModels(open&&profileId?[profileId]:[]);
+ const {toast}=useToast();
  const canvasRef=useRef<HTMLCanvasElement|null>(null); const avatarRef=useRef<CanvasImageSource|null>(null); const artworkRef=useRef<CanvasImageSource|null>(null); const logoRef=useRef<CanvasImageSource|null>(null); const [format,setFormat]=useState<ShareFormat>("square"); const [done,setDone]=useState<string|null>(null); const [avatarVersion,setAvatarVersion]=useState(0);
  useEffect(()=>{let cancelled=false;avatarRef.current=null;if(!open||!moment)return;const embedded=(moment as CharacterProfileShareMoment).avatar;
-  const load=async()=>{try{
-   if(embedded) return await loadCaptureImage(embedded);
-   if(!profileId||!models.data?.appearances[profileId]) return null;
-   return await captureAvatarV1ForShare({appearance:models.data.appearances[profileId],richClothing:models.data.richClothing[profileId]??[],tattoos:models.data.tattoos?.[profileId]??[],merchWearable:models.data.merchWearables?.[profileId]??null,luthieryInstrument:models.data.luthieryInstruments?.[profileId]?.[0]??null});
-  }catch{return null}};
-  void load().then(avatar=>{if(!cancelled){avatarRef.current=avatar;setAvatarVersion(v=>v+1)}});return()=>{cancelled=true};
- },[open,moment,profileId,models.data]);
+  if(!embedded){setAvatarVersion(v=>v+1);return;}
+  void loadCaptureImage(embedded).then(avatar=>{if(!cancelled){avatarRef.current=avatar;setAvatarVersion(v=>v+1)}}).catch(()=>{if(!cancelled)setAvatarVersion(v=>v+1)});
+  return()=>{cancelled=true};
+ },[open,moment]);
  useEffect(()=>{let cancelled=false;artworkRef.current=null;if(!open||!moment?.artworkUrl){setAvatarVersion(v=>v+1);return;}const image=new Image();image.crossOrigin="anonymous";image.onload=()=>{if(!cancelled){artworkRef.current=image;setAvatarVersion(v=>v+1)}};image.onerror=()=>{if(!cancelled)setAvatarVersion(v=>v+1)};image.src=moment.artworkUrl;return()=>{cancelled=true};},[open,moment?.artworkUrl]);
  useEffect(()=>{let cancelled=false;const image=new Image();image.onload=()=>{if(!cancelled){logoRef.current=image;setAvatarVersion(v=>v+1)}};image.onerror=()=>{if(!cancelled)setAvatarVersion(v=>v+1)};image.src=rockmundoLogo;return()=>{cancelled=true};},[]);
  useEffect(()=>{if(open&&moment&&canvasRef.current)renderShareMoment(canvasRef.current,moment,format,avatarRef.current,artworkRef.current,logoRef.current)},[open,moment,format,avatarVersion]);
