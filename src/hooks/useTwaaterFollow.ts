@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { invalidateTwaaterContentQueries } from "@/lib/twaaterQueryInvalidation";
 
 const socialActionError = (error: unknown, fallback: string) => {
   const message = error instanceof Error ? error.message : String((error as { message?: string } | null)?.message ?? "");
@@ -46,6 +47,12 @@ export const useTwaaterFollow = (followerAccountId?: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["twaater-following"] });
       queryClient.invalidateQueries({ queryKey: ["twaater-account"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-suggestions"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-feed"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-ai-feed"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-suggestions"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-feed"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-ai-feed"] });
       toast({
         title: "Followed!",
         description: "You'll now see their posts in your feed.",
