@@ -13,7 +13,7 @@ interface Props {
   moment: CharacterProfileShareMoment;
 }
 
-export function CharacterShareStudio({ open, onOpenChange, moment }: Props) {
+export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
   const model = usePlayerModel();
   const clothing = useEquippedRichClothing(open ? model.profileId : null);
   const tattoos = usePlayerStageTattoos(open ? model.profileId : null);
@@ -38,3 +38,6 @@ export function CharacterShareStudio({ open, onOpenChange, moment }: Props) {
     <ShareMomentSheet open={open} onOpenChange={onOpenChange} moment={shareMoment} />
   </>;
 }
+
+/** Backwards-compatible semantic alias for the profile entry point. */
+export const CharacterShareStudio = AvatarShareStudio;
