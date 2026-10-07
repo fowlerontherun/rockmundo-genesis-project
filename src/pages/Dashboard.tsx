@@ -589,6 +589,7 @@ const Dashboard = () => {
                                   { label: "Unlocked", value: formatDistanceToNow(new Date(achievement.unlocked_at), { addSuffix: false }) + " ago" },
                                 ],
                                 destinationUrl: url,
+                                shareCooldownKey: key,
                                 createdAt: achievement.unlocked_at,
                               });
                             }}><Share2 className="mr-1.5 h-3.5 w-3.5" />Share milestone</Button>
