@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PlayerModelPreview } from '@/features/player-model/PlayerModelPreview';
-import { useEquippedRichClothing, usePlayerModel, usePlayerStageTattoos } from '@/features/player-model/usePlayerModel';
+import { useEquippedRichClothing, useEquippedStageLuthieryInstruments, usePlayerModel, usePlayerStageTattoos } from '@/features/player-model/usePlayerModel';
 import { useAvatarMerchWearables } from '@/features/player-model/useAvatarMerchWearables';
 import { captureAvatarCanvas, type AvatarCapture } from './avatarCapture';
 import { ShareMomentSheet } from './ShareMomentSheet';
@@ -21,6 +21,10 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
   const clothing = useEquippedRichClothing(open ? model.profileId : null);
   const tattoos = usePlayerStageTattoos(open ? model.profileId : null);
   const merch = useAvatarMerchWearables(open ? model.profileId : null);
+  const luthiery = useEquippedStageLuthieryInstruments(open ? model.profileId : null);
+  const craftedInstrument = luthiery.data?.[0] ?? null;
+  const instrument = craftedInstrument?.instrumentKind === 'electric_bass' ? 'bass_guitar' : craftedInstrument?.instrumentKind === 'electric_guitar' ? 'electric_guitar' : undefined;
+  const role = instrument === 'bass_guitar' ? 'bass' : instrument === 'electric_guitar' ? 'guitar' : 'other';
   const [avatar, setAvatar] = useState<AvatarCapture | null>(null);
 
   useEffect(() => { if (!open) setAvatar(null); }, [open]);
@@ -37,9 +41,12 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
       <div className="fixed -left-[10000px] top-0 h-[1000px] w-[800px] pointer-events-none" aria-hidden="true">
         <PlayerModelPreview
           appearance={model.query.data.appearance}
+          role={role}
+          instrument={instrument}
           richClothing={clothing.data ?? []}
           tattoos={tattoos.data ?? []}
           merchWearable={merch.query.data?.equipped ?? null}
+          luthieryInstrument={craftedInstrument}
           presentation="stage"
           transparentCapture
           onCanvasReady={capture}
