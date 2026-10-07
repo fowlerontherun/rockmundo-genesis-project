@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { TwaatCard } from "@/components/twaater/TwaatCard";
@@ -8,11 +8,15 @@ import { useTwaaterAccount } from "@/hooks/useTwaaterAccount";
 import { useGameData } from "@/hooks/useGameData";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { hydrateTwaaterFeedExtras } from "@/hooks/useTwaats";
+import { useTwaaterRouteAccount } from "@/hooks/useTwaaterRouteAccount";
 
 export default function TwaaterHashtagView() {
   const { hashtag } = useParams();
   const { profile } = useGameData();
-  const { account } = useTwaaterAccount("persona", profile?.id);
+  const [searchParams] = useSearchParams();
+  const { account: personaAccount, isLoading: personaLoading } = useTwaaterAccount("persona", profile?.id);
+  const { account, isLoading: routeAccountLoading } = useTwaaterRouteAccount(personaAccount, searchParams.get("account"));
+  const backTo = account?.id ? `/twaater?account=${account.id}` : "/twaater";
 
   const { data: twaats, isLoading, error, refetch } = useQuery({
     queryKey: ["hashtag-feed", hashtag],
@@ -39,9 +43,9 @@ export default function TwaaterHashtagView() {
     enabled: !!hashtag,
   });
 
-  if (isLoading) {
+  if (isLoading || personaLoading || routeAccountLoading) {
     return (
-      <FMPageScaffold title={`#${hashtag}`} icon={Hash} backTo="/twaater">
+      <FMPageScaffold title={`#${hashtag}`} icon={Hash} backTo={backTo}>
         <div className="flex items-center justify-center py-16">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
@@ -51,7 +55,7 @@ export default function TwaaterHashtagView() {
 
   if (error) {
     return (
-      <FMPageScaffold title={`#${hashtag}`} icon={Hash} backTo="/twaater">
+      <FMPageScaffold title={`#${hashtag}`} icon={Hash} backTo={backTo}>
         <Card>
           <CardContent className="py-12 text-center space-y-3">
             <p className="text-muted-foreground">This hashtag feed couldn't load.</p>
@@ -73,7 +77,7 @@ export default function TwaaterHashtagView() {
       title={`#${hashtag}`}
       subtitle={`${twaats?.length || 0} ${twaats?.length === 1 ? 'twaat' : 'twaats'}`}
       icon={Hash}
-      backTo="/twaater"
+      backTo={backTo}
       backLabel="Back to Twaater"
     >
       {!twaats || twaats.length === 0 ? (
