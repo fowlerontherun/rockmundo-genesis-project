@@ -8,7 +8,7 @@ import { Gift, RefreshCw, Users } from "lucide-react";
 
 const sourceLabel = (source: string) => ({ band_recruitment:"Band recruitment", gig_share:"Gig share", song_chart_share:"Song chart", release_chart_share:"Release chart", achievement_share:"Achievement", referral_hub:"Invite Friends", manual_code:"Referral code", signup_metadata:"Direct invite", unknown:"Direct invite" } as Record<string,string>)[source] ?? source.replace(/_/g," ");
 
-type GrowthAnalytics = { trends:{joins_7d:number;joins_prev_7d:number;qualified_7d:number;qualified_prev_7d:number;band_joins_7d:number;band_joins_prev_7d:number}; speed:{median_qualification_hours:number|null;median_band_join_hours:number|null}; funnel: { joined:number; qualified:number; vip:number; activating:number }; dropoff:{ missing_email:number; waiting_24h:number; missing_activity:number }; band:{ joined:number; qualified:number; band_members:number; vip:number; qualification_rate:number; band_join_rate:number }; sources:Array<{source:string;joined:number;qualified:number;vip:number;activating:number;missing_email:number;waiting_24h:number;missing_activity:number;band_joined:number;qualification_rate:number;vip_rate:number}> };
+type GrowthAnalytics = { trends:{joins_7d:number;joins_prev_7d:number;qualified_7d:number;qualified_prev_7d:number;band_joins_7d:number;band_joins_prev_7d:number}; speed:{median_qualification_hours:number|null;median_band_join_hours:number|null}; funnel: { joined:number; qualified:number; vip:number; activating:number }; dropoff:{ missing_email:number; waiting_24h:number; missing_activity:number }; band:{ joined:number; qualified:number; band_members:number; vip:number; qualification_rate:number; band_join_rate:number }; sources:Array<{source:string;joined:number;qualified:number;vip:number;activating:number;missing_email:number;waiting_24h:number;missing_activity:number;band_joined:number;qualification_rate:number;vip_rate:number}>; campaigns:Array<{campaign:string;source:string;joined:number;qualified:number;vip:number;qualification_rate:number;vip_rate:number}> };
 
 type Audit = {
   summary: {
@@ -88,6 +88,17 @@ export default function ReferralAudit() {
         <Card>
           <CardHeader><CardTitle>Source funnel diagnostics</CardTitle><CardDescription>Find share surfaces that generate signups but lose players before activation.</CardDescription></CardHeader>
           <CardContent className="overflow-x-auto"><table className="w-full min-w-[900px] text-sm"><thead><tr className="border-b text-left"><th className="p-2">Source</th><th className="p-2">Joined</th><th className="p-2">Activating</th><th className="p-2">Qualified</th><th className="p-2">Qual. rate</th><th className="p-2">Email gap</th><th className="p-2">24h gap</th><th className="p-2">Play gap</th><th className="p-2">VIP</th></tr></thead><tbody>{growth?.sources.map(row=><tr key={row.source} className="border-b"><td className="p-2"><Badge variant="outline">{sourceLabel(row.source)}</Badge></td><td className="p-2">{row.joined}</td><td className="p-2">{row.activating}</td><td className="p-2">{row.qualified}</td><td className="p-2">{row.qualification_rate}%</td><td className="p-2">{row.missing_email}</td><td className="p-2">{row.waiting_24h}</td><td className="p-2">{row.missing_activity}</td><td className="p-2">{row.vip}</td></tr>)}</tbody></table></CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Campaign performance</CardTitle><CardDescription>Compare creator, community and promotional pushes within the same referral source. Add <code>campaign=your_slug</code> to referral links to populate this table.</CardDescription></CardHeader>
+          <CardContent className="overflow-x-auto">
+            <table className="w-full min-w-[680px] text-sm">
+              <thead><tr className="border-b text-left"><th className="p-2">Campaign</th><th className="p-2">Source</th><th className="p-2">Joined</th><th className="p-2">Qualified</th><th className="p-2">Qualification</th><th className="p-2">VIP</th><th className="p-2">VIP conversion</th></tr></thead>
+              <tbody>{growth?.campaigns?.map((row) => <tr key={`${row.campaign}:${row.source}`} className="border-b"><td className="p-2 font-medium">{row.campaign}</td><td className="p-2"><Badge variant="outline">{sourceLabel(row.source)}</Badge></td><td className="p-2">{row.joined}</td><td className="p-2">{row.qualified}</td><td className="p-2">{row.qualification_rate}%</td><td className="p-2">{row.vip}</td><td className="p-2">{row.vip_rate}%</td></tr>)}</tbody>
+            </table>
+            {!growthQuery.isLoading && !growth?.campaigns?.length ? <p className="py-6 text-center text-muted-foreground">No campaign-tagged referrals yet.</p> : null}
+          </CardContent>
         </Card>
 
         <Card>
