@@ -631,9 +631,10 @@ interface ReleaseCardProps {
   isReleasing?: boolean;
   bestChartPosition?: number;
   profileId?: string;
+  onSharePoster?: () => void;
 }
 
-function ReleaseCard({ release, financials, financeAvailable = false, labelCutPct = 0, onEdit, onCancel, onViewDetails, onPromo, onAddPhysical, onAnalytics, onReorder, onParty, onReleaseNow, isReleasing, bestChartPosition, profileId }: ReleaseCardProps) {
+function ReleaseCard({ release, financials, financeAvailable = false, labelCutPct = 0, onEdit, onCancel, onViewDetails, onPromo, onAddPhysical, onAnalytics, onReorder, onParty, onReleaseNow, isReleasing, bestChartPosition, profileId, onSharePoster }: ReleaseCardProps) {
   const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
   const statusConfig = STATUS_CONFIG[release.release_status] || STATUS_CONFIG.draft;
   const typeConfig = RELEASE_TYPE_CONFIG[release.release_type] || RELEASE_TYPE_CONFIG.single;
@@ -779,6 +780,9 @@ function ReleaseCard({ release, financials, financeAvailable = false, labelCutPc
             <Button variant="default" size="sm" className="text-[10px] px-2 h-6" onClick={onViewDetails}>Details</Button>
             {release.release_status !== "cancelled" && (
               <Button variant="outline" size="sm" className="text-[10px] px-2 h-6" onClick={onPromo}><Megaphone className="h-2.5 w-2.5 mr-0.5" />Promo</Button>
+            )}
+            {release.release_status !== "cancelled" && onSharePoster && (
+              <Button variant="outline" size="sm" className="text-[10px] px-2 h-6" onClick={onSharePoster}><Share2 className="h-2.5 w-2.5 mr-0.5" />Poster</Button>
             )}
             {release.release_status === "released" && (
               <>
