@@ -75,6 +75,7 @@ export function GigDetailsDialog({ open, onOpenChange, gigId }: GigDetailsDialog
       ],
       destinationUrl: `${window.location.origin}/gigs/perform/${gig.id}`,
       referralCode: null,
+      ticketSalesRatio: venueCapacity > 0 ? ticketsSold / venueCapacity : null,
       visualTheme: "neon",
       visualLayout: "hero",
       createdAt: new Date().toISOString(),
