@@ -45,6 +45,7 @@ export interface ShareMoment {
   referralCode?: string | null;
   referralSource?: string | null;
   referralCampaign?: string | null;
+  referralCreative?: string | null;
   referralTemplate?: ReferralShareTemplate;
   callToAction?: string | null;
   /** Existing growth throttle key; recorded only after a successful share/link-copy action. */
