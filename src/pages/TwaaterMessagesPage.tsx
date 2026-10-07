@@ -9,18 +9,24 @@ import { formatDistanceToNow } from "date-fns";
 import { TwaaterConversation } from "@/components/twaater/TwaaterConversation";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { useTwaaterRouteAccount } from "@/hooks/useTwaaterRouteAccount";
 
 export default function TwaaterMessagesPage() {
   const { profile } = useGameData();
-  const { account, isLoading: accountLoading } = useTwaaterAccount("persona", profile?.id);
-  const { conversations, isLoading } = useTwaaterMessages(account?.id);
   const [searchParams] = useSearchParams();
+  const { account: personaAccount, isLoading: personaLoading } = useTwaaterAccount("persona", profile?.id);
+  const { account, isLoading: routeAccountLoading } = useTwaaterRouteAccount(personaAccount, searchParams.get("account"));
+  const accountLoading = personaLoading || routeAccountLoading;
+  const { conversations, isLoading } = useTwaaterMessages(account?.id);
+  const accountSuffix = account?.id ? `&account=${encodeURIComponent(account.id)}` : "";
+  const messagesRoot = account?.id ? `/twaater/messages?account=${encodeURIComponent(account.id)}` : "/twaater/messages";
+  const backTo = account?.id ? `/twaater?account=${encodeURIComponent(account.id)}` : "/twaater";
   const [selectedConversation, setSelectedConversation] = useState<string | null>(() => searchParams.get("conversation"));
   const navigate = useNavigate();
 
   if (accountLoading || isLoading) {
     return (
-      <FMPageScaffold title="Direct Messages" icon={MessageCircle} backTo="/twaater">
+      <FMPageScaffold title="Direct Messages" icon={MessageCircle} backTo={backTo}>
         <div className="flex items-center justify-center py-16">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
@@ -30,7 +36,7 @@ export default function TwaaterMessagesPage() {
 
   if (!account) {
     return (
-      <FMPageScaffold title="Direct Messages" icon={MessageCircle} backTo="/twaater">
+      <FMPageScaffold title="Direct Messages" icon={MessageCircle} backTo={backTo}>
         <Card>
           <CardContent className="pt-6">
             <p className="text-muted-foreground">No Twaater account found</p>
@@ -45,14 +51,14 @@ export default function TwaaterMessagesPage() {
       <FMPageScaffold
         title="Messages"
         icon={MessageCircle}
-        backTo="/twaater/messages"
+        backTo={messagesRoot}
         headerActions={
           <Button
             variant="outline"
             size="sm"
             onClick={() => {
               setSelectedConversation(null);
-              navigate("/twaater/messages", { replace: true });
+              navigate(messagesRoot, { replace: true });
             }}
             className="gap-1"
           >
@@ -69,7 +75,7 @@ export default function TwaaterMessagesPage() {
   }
 
   return (
-    <FMPageScaffold title="Direct Messages" icon={MessageCircle} backTo="/twaater" backLabel="Back to Twaater">
+    <FMPageScaffold title="Direct Messages" icon={MessageCircle} backTo={backTo} backLabel="Back to Twaater">
       <Card>
         <CardContent className="p-4">
           {!conversations || conversations.length === 0 ? (
@@ -78,7 +84,7 @@ export default function TwaaterMessagesPage() {
               <Button
                 variant="outline"
                 className="mt-4"
-                onClick={() => navigate("/twaater")}
+                onClick={() => navigate(backTo)}
               >
                 Find people to message
               </Button>
@@ -95,7 +101,7 @@ export default function TwaaterMessagesPage() {
                     key={conversation.id}
                     onClick={() => {
                       setSelectedConversation(conversation.id);
-                      navigate(`/twaater/messages?conversation=${conversation.id}`, { replace: true });
+                      navigate(`/twaater/messages?conversation=${conversation.id}${accountSuffix}`, { replace: true });
                     }}
                     className="w-full p-4 border rounded-lg hover:bg-accent transition-colors text-left"
                   >
