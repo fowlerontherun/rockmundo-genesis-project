@@ -9,6 +9,28 @@ import { visibleTattoosForPresentation, type ResolvedTattooVisual } from "@/feat
 import type { ResolvedMerchWearable } from "@/features/player-model/merchWearables";
 import type { LuthieryInstrumentVisual } from "@/features/luthiery/luthieryInstrument";
 
+
+export interface AvatarCapture {
+  dataUrl: string;
+  width: number;
+  height: number;
+}
+
+/** Serializable snapshot of the canonical Avatar V1 canvas for historical share cards. */
+export function captureAvatarCanvas(canvas: HTMLCanvasElement): AvatarCapture {
+  return { dataUrl: canvas.toDataURL("image/png"), width: canvas.width, height: canvas.height };
+}
+
+/** Decode a stored avatar snapshot without invoking a second avatar renderer. */
+export function loadCaptureImage(capture: AvatarCapture): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Avatar snapshot could not be loaded"));
+    image.src = capture.dataUrl;
+  });
+}
+
 export interface AvatarShareVisual {appearance:PlayerAppearance;role?:StageRole;instrument?:InstrumentId;richClothing?:ResolvedEquippedClothing[];tattoos?:ResolvedTattooVisual[];merchWearable?:ResolvedMerchWearable|null;luthieryInstrument?:LuthieryInstrumentVisual|null}
 export const AVATAR_SHARE_PRESET={width:720,height:1080,camera:[2.05,1.55,4.65] as const,target:[0,.9,0] as const,fov:34};
 
