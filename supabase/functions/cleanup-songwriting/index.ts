@@ -52,8 +52,9 @@ Deno.serve(async (req) => {
       throw autoCompleteError
     }
 
-    completedSessions = autoCompleteResult?.[0]?.completed_sessions || 0
-    convertedProjects = autoCompleteResult?.[0]?.converted_projects || 0
+    const autoRow = autoCompleteResult?.[0] ?? {}
+    completedSessions = autoRow.completed_sessions ?? autoRow.completed ?? 0
+    convertedProjects = autoRow.converted_projects ?? autoRow.converted ?? 0
 
     console.log(`Auto-completed ${completedSessions} sessions, converted ${convertedProjects} projects`)
 
@@ -153,6 +154,7 @@ Deno.serve(async (req) => {
         convertedProjects,
         xpAwardsIssued: xpAwardedCount,
         xpAwardErrors,
+        completedPolishSessions,
       },
     })
 
