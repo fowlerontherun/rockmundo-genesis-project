@@ -12,7 +12,7 @@ import { useSocialPermission } from "@/hooks/useSocialSafety";
 import { SafetyActions } from "@/components/social-safety/SafetyActions";
 import { respondToFriendship } from "@/integrations/supabase/playerConnections";
 import {
-  User, Music, Calendar, MapPin, Star, Clock, TrendingUp, Users, UserPlus, UserMinus, AlertCircle, Edit
+  User, Music, Calendar, MapPin, Star, Clock, TrendingUp, Users, UserPlus, UserMinus, AlertCircle, Edit, Share2
 } from "lucide-react";
 import { format } from "date-fns";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
@@ -20,11 +20,15 @@ import { getPublicProfileDetail } from "@/services/publicProfileDetail";
 import { PlayerProfileHeader, FutureProfileActions } from "@/components/player-profile/PlayerProfileHeader";
 import { ProfileInfoCard, BandProfileCard, EmploymentProfileCard, OpenStatusBadges } from "@/components/player-profile/ProfileCards";
 import { mergePresenceProfiles } from "@/services/presenceService";
+import { useState } from "react";
+import { CharacterShareStudio } from "@/features/shareable-moments/CharacterShareStudio";
+import type { CharacterProfileShareMoment } from "@/features/shareable-moments/characterProfile";
 
 export default function PlayerProfile() {
   const { playerId } = useParams();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [shareOpen, setShareOpen] = useState(false);
 
   // Always resolve the currently selected character. Querying profiles by
   // user_id with .single() fails for accounts that own more than one character.
@@ -169,6 +173,23 @@ export default function PlayerProfile() {
   const isPendingSent = friendship?.status === "pending" && friendship?.requestor_id === currentUser?.id;
   const isPendingReceived = friendship?.status === "pending" && friendship?.addressee_id === currentUser?.id;
 
+  const shareMoment: CharacterProfileShareMoment = {
+    version: 1,
+    type: "character_profile",
+    id: profile.id,
+    eyebrow: "Rockmundo artist",
+    headline: profile.display_name || profile.username || "Rockmundo artist",
+    subheadline: [profile.bands[0]?.name, profile.city_name].filter(Boolean).join(" · ") || "Building a music career",
+    metrics: [
+      { label: "Career level", value: String(profile.level || 1) },
+      { label: "Fame", value: (profile.fame || 0).toLocaleString() },
+      { label: "Fans", value: (profile.fans || 0).toLocaleString() },
+      { label: "Bands", value: profile.bands.length.toLocaleString() },
+    ],
+    destinationUrl: window.location.href,
+    createdAt: new Date().toISOString(),
+  };
+
   const statItems = [
     { icon: Star, label: "Level", value: profile.level || 1 },
     { icon: TrendingUp, label: "Fame", value: (profile.fame || 0).toLocaleString() },
@@ -191,7 +212,7 @@ export default function PlayerProfile() {
         presence={profilePresence?.presence}
         isOwnProfile={isOwnProfile}
         actions={isOwnProfile ? (
-          <Button asChild size="sm"><Link to="/character/profile/edit"><Edit className="mr-1 h-4 w-4" />Edit profile</Link></Button>
+          <><Button size="sm" variant="outline" onClick={() => setShareOpen(true)}><Share2 className="mr-1 h-4 w-4" />Share character</Button><Button asChild size="sm"><Link to="/character/profile/edit"><Edit className="mr-1 h-4 w-4" />Edit profile</Link></Button></>
         ) : (
           <>
             {restrictedBySafety && <Button size="sm" variant="secondary" disabled>{blockedByViewer ? "You blocked this player" : "This player is unavailable."}</Button>}
@@ -331,6 +352,7 @@ export default function PlayerProfile() {
             </Card>
           )}
       </div>
+      {isOwnProfile && <CharacterShareStudio open={shareOpen} onOpenChange={setShareOpen} moment={shareMoment} />}
     </FMPageScaffold>
   );
 }
