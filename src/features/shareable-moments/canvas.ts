@@ -109,16 +109,19 @@ export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment
   else if(moment.type==='release'){ctx.beginPath();ctx.arc(width*.82,height*.26,width*.18,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(width*.82,height*.26,width*.055,0,Math.PI*2);ctx.stroke();}
   ctx.restore();
 
+  const layout=moment.visualLayout ?? 'right';
   if (artwork) {
-    const size=format==='landscape'?height*.48:width*.34, x=width-size-width*.065, y=height*.08;
+    const size=format==='landscape'?height*(layout==='hero'?.58:.48):width*(layout==='hero'?.44:.34);
+    const x=layout==='left'?width*.055:layout==='hero'?(width-size)/2:width-size-width*.065;
+    const y=layout==='hero'?(format==='story'?height*.48:height*.09):height*.08;
     ctx.save(); ctx.globalAlpha=.88; ctx.beginPath(); ctx.roundRect(x,y,size,size,Math.max(18,size*.06)); ctx.clip(); ctx.drawImage(artwork,x,y,size,size); ctx.restore();
   }
 
   if (avatar) {
-    const avatarW = format === 'landscape' ? width * .34 : width * .5;
-    const avatarH = format === 'landscape' ? height * .82 : height * .52;
-    const avatarX = width - avatarW - Math.round(width * .035);
-    const avatarY = format === 'story' ? height * .42 : height * .16;
+    const avatarW = format === 'landscape' ? width * (layout==='hero'?.42:.34) : width * (layout==='hero'?.62:.5);
+    const avatarH = format === 'landscape' ? height * (layout==='hero'?.9:.82) : height * (layout==='hero'?.6:.52);
+    const avatarX = layout==='left' ? Math.round(width*.025) : layout==='hero' ? Math.round((width-avatarW)/2) : width - avatarW - Math.round(width * .035);
+    const avatarY = layout==='hero' ? (format==='story'?height*.38:height*.12) : format === 'story' ? height * .42 : height * .16;
     const avatarGlow = ctx.createRadialGradient(avatarX + avatarW * .55, avatarY + avatarH * .48, 10, avatarX + avatarW * .55, avatarY + avatarH * .48, avatarW * .62);
     avatarGlow.addColorStop(0, accent + '44'); avatarGlow.addColorStop(1, '#00000000');
     ctx.save(); ctx.fillStyle = avatarGlow; ctx.fillRect(avatarX - avatarW * .12, avatarY - avatarH * .08, avatarW * 1.24, avatarH * 1.16); ctx.restore();
@@ -126,48 +129,50 @@ export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment
   }
 
   const pad = Math.round(width * .06);
-  const rightVisual = Boolean(avatar || artwork);
-  const textWidth = rightVisual
+  const hasVisual = Boolean(avatar || artwork);
+  const sideVisual = hasVisual && layout !== 'hero';
+  const textWidth = sideVisual
     ? (format === 'landscape' ? width * .54 : format === 'square' ? width * .52 : width - pad * 2)
     : width - pad * 2;
+  const textX = sideVisual && layout === 'left' ? width - pad - textWidth : pad;
   ctx.textAlign = 'left';
   if (logo) {
     const logoW = Math.min(width * .22, 250); const ratio = Number((logo as HTMLImageElement).naturalWidth || (logo as HTMLCanvasElement).width || 1) / Number((logo as HTMLImageElement).naturalHeight || (logo as HTMLCanvasElement).height || 1);
-    const logoH = logoW / Math.max(.1, ratio); ctx.drawImage(logo, pad, pad, logoW, logoH);
+    const logoH = logoW / Math.max(.1, ratio); ctx.drawImage(logo, textX, pad, logoW, logoH);
   } else {
-    ctx.fillStyle = '#ffffffaa'; ctx.font = '700 28px Inter, system-ui, sans-serif'; ctx.fillText('ROCKMUNDO', pad, pad + 28);
+    ctx.fillStyle = '#ffffffaa'; ctx.font = '700 28px Inter, system-ui, sans-serif'; ctx.fillText('ROCKMUNDO', textX, pad + 28);
   }
 
   if (moment.eyebrow) {
     ctx.fillStyle = headlineVariant ? '#fde047' : '#c4b5fd'; ctx.font = headlineVariant ? '900 30px Inter, system-ui, sans-serif' : '700 24px Inter, system-ui, sans-serif';
-    ctx.fillText(moment.eyebrow.toUpperCase(), pad, height * .22);
+    ctx.fillText(moment.eyebrow.toUpperCase(), textX, height * .22);
   }
 
   const headlineStart = format === 'story' ? height * .18 : height * .31;
   const headlineSize = fitText(ctx, moment.headline, textWidth, format === 'landscape' ? 62 : 76, 34);
   ctx.font = `800 ${headlineSize}px Inter, system-ui, sans-serif`; ctx.fillStyle = '#fff';
-  const headlineHeight = drawWrappedText(ctx, moment.headline, pad, headlineStart, textWidth, headlineSize * 1.05, 2);
+  const headlineHeight = drawWrappedText(ctx, moment.headline, textX, headlineStart, textWidth, headlineSize * 1.05, 2);
 
   let contentY = headlineStart + headlineHeight + 14;
   if (moment.subheadline) {
     ctx.font = '500 30px Inter, system-ui, sans-serif'; ctx.fillStyle = '#d6d3d1';
-    contentY += drawWrappedText(ctx, moment.subheadline, pad, contentY, textWidth, 38, 2) + 22;
+    contentY += drawWrappedText(ctx, moment.subheadline, textX, contentY, textWidth, 38, 2) + 22;
   }
 
   const metrics = moment.metrics?.slice(0, format === 'landscape' ? 3 : 4) ?? [];
   const metricStart = Math.max(format === 'story' ? height * .34 : height * .5, contentY);
   metrics.forEach((metric, index) => {
     const y = metricStart + index * 72;
-    ctx.fillStyle = '#ffffff88'; ctx.font = '600 20px Inter, system-ui, sans-serif'; ctx.fillText(metric.label.toUpperCase(), pad, y);
+    ctx.fillStyle = '#ffffff88'; ctx.font = '600 20px Inter, system-ui, sans-serif'; ctx.fillText(metric.label.toUpperCase(), textX, y);
     ctx.fillStyle = '#fff'; ctx.font = '800 34px Inter, system-ui, sans-serif';
-    const valueX = format === 'story' ? pad : pad + Math.min(220, textWidth * .42);
-    const valueWidth = format === 'story' ? textWidth : Math.max(120, textWidth - (valueX - pad));
+    const valueX = format === 'story' ? textX : textX + Math.min(220, textWidth * .42);
+    const valueWidth = format === 'story' ? textWidth : Math.max(120, textWidth - (valueX - textX));
     if (format === 'story') ctx.fillText(metric.value, valueX, y + 34);
     else drawWrappedText(ctx, metric.value, valueX, y, valueWidth, 38, 1);
   });
 
   ctx.fillStyle = '#ffffff88'; ctx.font = '500 21px Inter, system-ui, sans-serif';
-  ctx.fillText('Build your music career at rockmundo.uk', pad, height - pad);
+  ctx.fillText('Build your music career at rockmundo.uk', textX, height - pad);
 }
 
 export function canvasBlob(canvas: HTMLCanvasElement): Promise<Blob> {
