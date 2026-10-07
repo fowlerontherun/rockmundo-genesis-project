@@ -1,7 +1,35 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export const useTwaaterUnreadCount = (accountId?: string) => {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!accountId) return;
+
+    const channel = supabase
+      .channel(`twaater-notification-count:${accountId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "twaater_notifications",
+          filter: `account_id=eq.${accountId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["twaater-notifications-unread-count", accountId] });
+          queryClient.invalidateQueries({ queryKey: ["twaater-notifications", accountId] });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [accountId, queryClient]);
+
   return useQuery({
     queryKey: ["twaater-notifications-unread-count", accountId],
     queryFn: async () => {
@@ -24,6 +52,31 @@ export const useTwaaterUnreadCount = (accountId?: string) => {
 
 export const useTwaaterNotifications = (accountId?: string) => {
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!accountId) return;
+
+    const channel = supabase
+      .channel(`twaater-notification-list:${accountId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "twaater_notifications",
+          filter: `account_id=eq.${accountId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["twaater-notifications", accountId] });
+          queryClient.invalidateQueries({ queryKey: ["twaater-notifications-unread-count", accountId] });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [accountId, queryClient]);
 
   const { data: notifications, isLoading, error, refetch } = useQuery({
     queryKey: ["twaater-notifications", accountId],
