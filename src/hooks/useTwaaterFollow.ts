@@ -48,11 +48,7 @@ export const useTwaaterFollow = (followerAccountId?: string) => {
       queryClient.invalidateQueries({ queryKey: ["twaater-following"] });
       queryClient.invalidateQueries({ queryKey: ["twaater-account"] });
       queryClient.invalidateQueries({ queryKey: ["twaater-suggestions"] });
-      queryClient.invalidateQueries({ queryKey: ["twaater-feed"] });
-      queryClient.invalidateQueries({ queryKey: ["twaater-ai-feed"] });
-      queryClient.invalidateQueries({ queryKey: ["twaater-suggestions"] });
-      queryClient.invalidateQueries({ queryKey: ["twaater-feed"] });
-      queryClient.invalidateQueries({ queryKey: ["twaater-ai-feed"] });
+      invalidateTwaaterContentQueries(queryClient);
       toast({
         title: "Followed!",
         description: "You'll now see their posts in your feed.",
@@ -82,6 +78,8 @@ export const useTwaaterFollow = (followerAccountId?: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["twaater-following"] });
       queryClient.invalidateQueries({ queryKey: ["twaater-account"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-suggestions"] });
+      invalidateTwaaterContentQueries(queryClient);
       toast({
         title: "Unfollowed",
         description: "Removed from your feed.",
