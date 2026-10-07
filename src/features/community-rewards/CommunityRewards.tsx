@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";\nimport { Link } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
 
 const DISCORD_INVITE_URL = "https://discord.gg/KB45k3XJuZ";
 const FACEBOOK_URL = import.meta.env.VITE_ROCKMUNDO_FACEBOOK_URL as string | undefined;
@@ -34,7 +35,9 @@ type Dashboard = {
   discord: { verified: boolean; rewarded: boolean; verified_at?: string | null };
 };
 
-const referralSourceLabel = (source: string) => ({ band_recruitment: "Band recruitment", gig_share: "Gig share", song_chart_share: "Song chart", release_chart_share: "Release chart", achievement_share: "Achievement", referral_hub: "Invite Friends", manual_code: "Referral code", signup_metadata: "Direct invite", unknown: "Direct invite" } as Record<string, string>)[source] ?? source.replace(/_/g, " ");\n\nconst rewardSummary = (reward?: Reward) => {
+const referralSourceLabel = (source: string) => ({ band_recruitment: "Band recruitment", gig_share: "Gig share", song_chart_share: "Song chart", release_chart_share: "Release chart", achievement_share: "Achievement", referral_hub: "Invite Friends", manual_code: "Referral code", signup_metadata: "Direct invite", unknown: "Direct invite" } as Record<string, string>)[source] ?? source.replace(/_/g, " ");
+
+const rewardSummary = (reward?: Reward) => {
   if (!reward) return "Reward unavailable";
   return `${reward.xp.toLocaleString()} XP · ${reward.ap} AP · $${reward.cash.toLocaleString()} · +${reward.player_fame} player fame · +${reward.band_fame} band fame`;
 };
@@ -94,7 +97,8 @@ export default function CommunityRewards({ profileId, profileName }: { profileId
   const promoterMilestones = [5, 10, 25];
   const promoterLabels: Record<number, string> = { 5: "Street Promoter", 10: "Scene Builder", 25: "RockMundo Ambassador" };
   const nextMilestone = promoterMilestones.find((value) => qualified < value);
-  const nextProgress = nextMilestone ? Math.min(100, Math.round((qualified / nextMilestone) * 100)) : 100;\n  const recruitsToNext = nextMilestone ? Math.max(0, nextMilestone - qualified) : 0;
+  const nextProgress = nextMilestone ? Math.min(100, Math.round((qualified / nextMilestone) * 100)) : 100;
+  const recruitsToNext = nextMilestone ? Math.max(0, nextMilestone - qualified) : 0;
   const shareText = `Join me in RockMundo — create a musician, form a band and build your music career. Use my invite so we both get credit: ${referralUrl}`;
 
   const copy = async (value: string, label: string) => {
@@ -197,7 +201,9 @@ export default function CommunityRewards({ profileId, profileName }: { profileId
 
       {totalClaimable > 0 && <Card className="border-primary/30 bg-primary/5"><CardContent className="p-4 text-sm"><strong>{totalClaimable} account-earned reward{totalClaimable === 1 ? "" : "s"} ready.</strong> Claiming now permanently awards the character-bound XP, AP, cash, fame and promoter prestige to <strong>{profileName || "the selected character"}</strong>. Switch character before claiming if you want these rewards on someone else.</CardContent></Card>}
 
-      <Card className="overflow-hidden border-primary/30 bg-gradient-to-r from-primary/10 via-background to-background"><CardContent className="p-5"><div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"><div><div className="flex items-center gap-2"><Trophy className="h-5 w-5 text-primary" /><span className="font-semibold">{nextMilestone ? `${recruitsToNext} more qualified ${recruitsToNext === 1 ? "recruit" : "recruits"} to ${promoterLabels[nextMilestone]}` : "All promoter milestones complete"}</span></div><p className="mt-1 text-sm text-muted-foreground">{nextMilestone ? `${qualified} of ${nextMilestone} qualified recruits. Keep sharing moments from your RockMundo career to reach the next promoter tier.` : "You have reached RockMundo Ambassador status."}</p></div><Button onClick={share}><Share2 className="mr-2 h-4 w-4" />Invite someone now</Button></div><div className="mt-4 h-3 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary transition-all" style={{ width: `${nextProgress}%` }} /></div></CardContent></Card>\n\n      <div className="grid gap-4 lg:grid-cols-3">
+      <Card className="overflow-hidden border-primary/30 bg-gradient-to-r from-primary/10 via-background to-background"><CardContent className="p-5"><div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"><div><div className="flex items-center gap-2"><Trophy className="h-5 w-5 text-primary" /><span className="font-semibold">{nextMilestone ? `${recruitsToNext} more qualified ${recruitsToNext === 1 ? "recruit" : "recruits"} to ${promoterLabels[nextMilestone]}` : "All promoter milestones complete"}</span></div><p className="mt-1 text-sm text-muted-foreground">{nextMilestone ? `${qualified} of ${nextMilestone} qualified recruits. Keep sharing moments from your RockMundo career to reach the next promoter tier.` : "You have reached RockMundo Ambassador status."}</p></div><Button onClick={share}><Share2 className="mr-2 h-4 w-4" />Invite someone now</Button></div><div className="mt-4 h-3 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary transition-all" style={{ width: `${nextProgress}%` }} /></div></CardContent></Card>
+
+      <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" />Invite your friends</CardTitle>
@@ -216,7 +222,8 @@ export default function CommunityRewards({ profileId, profileName }: { profileId
               <Button onClick={share}><Share2 className="mr-2 h-4 w-4" />Share invite</Button>
               <Button asChild variant="outline"><a href={`https://wa.me/?text=${encodeURIComponent(shareText)}`} target="_blank" rel="noreferrer"><MessageCircle className="mr-2 h-4 w-4" />WhatsApp</a></Button>
             </div>
-            <div className="rounded-lg border bg-muted/30 p-3"><p className="text-sm font-medium">What makes a referral qualified?</p><div className="mt-2 grid gap-2 text-xs text-muted-foreground sm:grid-cols-3"><span><strong className="text-foreground">1.</strong> Confirm their email</span><span><strong className="text-foreground">2.</strong> Keep the account for 24 hours</span><span><strong className="text-foreground">3.</strong> Make genuine game progress</span></div><p className="mt-2 text-xs text-muted-foreground">Registration alone does not unlock rewards. This keeps promoter rewards focused on real new players.</p></div>\n            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <div className="rounded-lg border bg-muted/30 p-3"><p className="text-sm font-medium">What makes a referral qualified?</p><div className="mt-2 grid gap-2 text-xs text-muted-foreground sm:grid-cols-3"><span><strong className="text-foreground">1.</strong> Confirm their email</span><span><strong className="text-foreground">2.</strong> Keep the account for 24 hours</span><span><strong className="text-foreground">3.</strong> Make genuine game progress</span></div><p className="mt-2 text-xs text-muted-foreground">Registration alone does not unlock rewards. This keeps promoter rewards focused on real new players.</p></div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
               <div><div className="text-2xl font-semibold">{dashboard?.stats.joined ?? 0}</div><div className="text-xs text-muted-foreground">Joined</div></div>
               <div><div className="text-2xl font-semibold">{dashboard?.stats.qualified ?? 0}</div><div className="text-xs text-muted-foreground">Qualified</div></div>
               <div><div className="text-2xl font-semibold">{dashboard?.stats.signup_rewarded ?? 0}</div><div className="text-xs text-muted-foreground">Signup paid</div></div>
@@ -236,7 +243,17 @@ export default function CommunityRewards({ profileId, profileName }: { profileId
       </div>
 
 
-      <Card>\n        <CardHeader><CardTitle className="flex items-center gap-2"><Share2 className="h-5 w-5" />Share your RockMundo story</CardTitle><CardDescription>The strongest invites come from something you actually achieved. Open an area below and share its contextual milestone.</CardDescription></CardHeader>\n        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">\n          <Button asChild variant="outline" className="h-auto justify-start py-3"><Link to="/charts"><Music2 className="mr-2 h-4 w-4" /><span className="text-left"><strong className="block">Chart success</strong><span className="text-xs text-muted-foreground">Share a top song position</span></span></Link></Button>\n          <Button asChild variant="outline" className="h-auto justify-start py-3"><Link to="/releases"><Mic2 className="mr-2 h-4 w-4" /><span className="text-left"><strong className="block">Release milestone</strong><span className="text-xs text-muted-foreground">Share a charting release</span></span></Link></Button>\n          <Button asChild variant="outline" className="h-auto justify-start py-3"><Link to="/home"><Award className="mr-2 h-4 w-4" /><span className="text-left"><strong className="block">Achievement</strong><span className="text-xs text-muted-foreground">Share an unlocked achievement</span></span></Link></Button>\n          <Button asChild variant="outline" className="h-auto justify-start py-3"><Link to="/band/members"><UserPlus className="mr-2 h-4 w-4" /><span className="text-left"><strong className="block">Recruit a bandmate</strong><span className="text-xs text-muted-foreground">Create a band recruitment invite</span></span></Link></Button>\n        </CardContent>\n      </Card>\n\n      <Card>
+      <Card>
+        <CardHeader><CardTitle className="flex items-center gap-2"><Share2 className="h-5 w-5" />Share your RockMundo story</CardTitle><CardDescription>The strongest invites come from something you actually achieved. Open an area below and share its contextual milestone.</CardDescription></CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Button asChild variant="outline" className="h-auto justify-start py-3"><Link to="/charts"><Music2 className="mr-2 h-4 w-4" /><span className="text-left"><strong className="block">Chart success</strong><span className="text-xs text-muted-foreground">Share a top song position</span></span></Link></Button>
+          <Button asChild variant="outline" className="h-auto justify-start py-3"><Link to="/releases"><Mic2 className="mr-2 h-4 w-4" /><span className="text-left"><strong className="block">Release milestone</strong><span className="text-xs text-muted-foreground">Share a charting release</span></span></Link></Button>
+          <Button asChild variant="outline" className="h-auto justify-start py-3"><Link to="/home"><Award className="mr-2 h-4 w-4" /><span className="text-left"><strong className="block">Achievement</strong><span className="text-xs text-muted-foreground">Share an unlocked achievement</span></span></Link></Button>
+          <Button asChild variant="outline" className="h-auto justify-start py-3"><Link to="/band/members"><UserPlus className="mr-2 h-4 w-4" /><span className="text-left"><strong className="block">Recruit a bandmate</strong><span className="text-xs text-muted-foreground">Create a band recruitment invite</span></span></Link></Button>
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" />Your recruits</CardTitle><CardDescription>See who has joined through your invite and how close they are to becoming a qualified active player. Private play totals are not exposed.</CardDescription></CardHeader>
         <CardContent className="space-y-3">
           {recruits.length === 0 ? <p className="text-sm text-muted-foreground">No recruits have joined through your referral link yet.</p> : recruits.map((item) => {
