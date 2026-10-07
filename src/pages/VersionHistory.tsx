@@ -20,7 +20,7 @@ const versionHistory: VersionEntry[] = [
     version: "1.1.771",
     date: "2026-10-07",
     changes: [
-      { type: "fix", description: "Fixed a blank screen caused by a typo in the shareable moments setup." },
+      { type: "fix", description: "Fixed a blank screen and build errors caused by typos in shareable moments, the gig system page and festival appearances." },
     ],
   },
   {
