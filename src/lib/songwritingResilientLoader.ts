@@ -2,6 +2,7 @@ import logger from "@/lib/logger";
 
 export const CORE_PROJECT_COLUMNS = "id, profile_id, user_id, title, initial_lyrics, lyrics, music_progress, lyrics_progress, total_sessions, sessions_completed, estimated_sessions, quality_score, song_rating, status, is_locked, locked_until, song_id, genres, created_at, updated_at, theme_id, chord_progression_id, creative_brief, purpose, mode";
 export const OPTIONAL_PROJECT_COLUMNS = "id, arrangement_progress, polish_progress, consistency_score, songwriting_breakdown, calculation_version, completed_at";
+export const COMPLETION_PROJECT_COLUMNS = "id, writing_completed_at, writing_quality_score, completion_quality_breakdown, completion_notified_at, polish_success_chance, polish_attempted, polish_skipped, polish_succeeded, polish_resolved_at, polish_session_id";
 export const STABLE_SESSION_COLUMNS = "id, project_id, user_id, session_start, session_end, music_progress_gained, lyrics_progress_gained, xp_earned, notes, locked_until";
 export const OPTIONAL_SESSION_COLUMNS = "id, completed_at, progress_breakdown, session_type, effort_hours";
 
@@ -54,6 +55,16 @@ const defaultProjectEnhancements = (project: any) => ({
   songwriting_breakdown: project.songwriting_breakdown ?? null,
   calculation_version: project.calculation_version ?? null,
   completed_at: project.completed_at ?? null,
+  writing_completed_at: project.writing_completed_at ?? null,
+  writing_quality_score: project.writing_quality_score ?? null,
+  completion_quality_breakdown: project.completion_quality_breakdown ?? null,
+  completion_notified_at: project.completion_notified_at ?? null,
+  polish_success_chance: project.polish_success_chance ?? null,
+  polish_attempted: project.polish_attempted ?? false,
+  polish_skipped: project.polish_skipped ?? false,
+  polish_succeeded: project.polish_succeeded ?? null,
+  polish_resolved_at: project.polish_resolved_at ?? null,
+  polish_session_id: project.polish_session_id ?? null,
 });
 
 export async function loadSongwritingProjectsResilient(client: any, profileId?: string | null, userId?: string | null) {
@@ -77,6 +88,15 @@ export async function loadSongwritingProjectsResilient(client: any, profileId?: 
       const failure = normalizeFailure("optional project details", "songwriting_projects", optional.error, { selectedColumns: OPTIONAL_PROJECT_COLUMNS, profileId, userId, legacyUserFallbackAttempted });
       failures.push(failure); logFailure(failure, "warn");
     } else optionalById = new Map((optional.data || []).map((row: any) => [row.id, row]));
+  }
+
+  let completionById = new Map<string, any>();
+  if (ids.length) {
+    const completion = await client.from("songwriting_projects").select(COMPLETION_PROJECT_COLUMNS).in("id", ids);
+    if (completion.error) {
+      const failure = normalizeFailure("completion project details", "songwriting_projects", completion.error, { selectedColumns: COMPLETION_PROJECT_COLUMNS, profileId, userId, legacyUserFallbackAttempted });
+      failures.push(failure); logFailure(failure, "warn");
+    } else completionById = new Map((completion.data || []).map((row: any) => [row.id, row]));
   }
 
   let sessionsByProject = new Map<string, any[]>();
@@ -110,6 +130,7 @@ export async function loadSongwritingProjectsResilient(client: any, profileId?: 
       ...defaultProjectEnhancements(p),
       ...p,
       ...(optionalById.get(p.id) || {}),
+      ...(completionById.get(p.id) || {}),
       songwriting_sessions: (sessionsByProject.get(p.id) || []).sort((a, b) => new Date(b.session_start).getTime() - new Date(a.session_start).getTime()),
       is_locked: isExpired ? false : p.is_locked,
       locked_until: isExpired ? null : p.locked_until,

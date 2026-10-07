@@ -31,6 +31,7 @@ Deno.serve(async (req) => {
   let convertedProjects = 0
   let xpAwardedCount = 0
   let xpAwardErrors = 0
+  let completedPolishSessions = 0
 
   try {
     runId = await startJobRun({
@@ -51,10 +52,24 @@ Deno.serve(async (req) => {
       throw autoCompleteError
     }
 
-    completedSessions = autoCompleteResult?.[0]?.completed_sessions || 0
-    convertedProjects = autoCompleteResult?.[0]?.converted_projects || 0
+    const autoRow = autoCompleteResult?.[0] ?? {}
+    completedSessions = autoRow.completed_sessions ?? autoRow.completed ?? 0
+    convertedProjects = autoRow.converted_projects ?? autoRow.converted ?? 0
 
     console.log(`Auto-completed ${completedSessions} sessions, converted ${convertedProjects} projects`)
+
+    const { data: polishResult, error: polishError } = await supabase
+      .rpc('auto_complete_songwriting_polish_sessions')
+
+    if (polishError) {
+      console.error('Auto-complete final polish error:', polishError)
+      throw polishError
+    }
+
+    completedPolishSessions = Number(polishResult || 0)
+    if (completedPolishSessions > 0) {
+      console.log(`Auto-completed ${completedPolishSessions} final songwriting polish session(s)`)
+    }
 
     // Award XP for auto-completed sessions that haven't been processed yet
     if (completedSessions > 0) {
@@ -112,6 +127,7 @@ Deno.serve(async (req) => {
         convertedProjects,
         xpAwardsIssued: xpAwardedCount,
         xpAwardErrors,
+        completedPolishSessions,
       },
     })
 
@@ -120,6 +136,7 @@ Deno.serve(async (req) => {
         success: true,
         completedSessions,
         convertedProjects,
+        completedPolishSessions,
         xpAwardsIssued: xpAwardedCount,
         xpAwardErrors,
       }),
@@ -137,6 +154,7 @@ Deno.serve(async (req) => {
         convertedProjects,
         xpAwardsIssued: xpAwardedCount,
         xpAwardErrors,
+        completedPolishSessions,
       },
     })
 
