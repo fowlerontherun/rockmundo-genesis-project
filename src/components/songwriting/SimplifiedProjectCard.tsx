@@ -18,7 +18,9 @@ interface SimplifiedProjectCardProps {
   onEdit: () => void;
   onDelete: () => void;
   onViewHistory: () => void;
-  onComplete?: () => void;
+  onStartPolish: () => Promise<void>;
+  onKeepAsIs: () => Promise<void>;
+  onFinish: () => Promise<void>;
   onSchedule?: () => void;
   isLocked: boolean;
   userBandId?: string;
@@ -30,7 +32,9 @@ export const SimplifiedProjectCard = ({
   onEdit,
   onDelete,
   onViewHistory,
-  onComplete,
+  onStartPolish,
+  onKeepAsIs,
+  onFinish,
   onSchedule,
   isLocked,
   userBandId,
@@ -65,7 +69,10 @@ export const SimplifiedProjectCard = ({
   };
   
   const isCompleted = musicPercent >= 100 && lyricsPercent >= 100;
-  const canComplete = isCompleted && project.status !== 'completed' && project.status !== 'complete';
+  const canReviewCompletion =
+    isCompleted &&
+    project.status !== "converted" &&
+    !project.song_id;
   const isExpired = project.locked_until && new Date(project.locked_until) <= new Date();
   
   return (
@@ -115,6 +122,28 @@ export const SimplifiedProjectCard = ({
             {project.song_rating != null && <p className="text-foreground">Final songwriting score: {project.song_rating}/1000</p>}
           </div>
 
+          {canReviewCompletion && (
+            <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-semibold">Writing complete</span>
+                {project.writing_quality_score != null && (
+                  <Badge variant="secondary">
+                    {project.writing_quality_score}/1000
+                  </Badge>
+                )}
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {project.polish_resolved_at
+                  ? "Final polish choice resolved — finish the song when ready."
+                  : project.polish_attempted
+                    ? "Your one final polish session is in progress."
+                    : "One final polish session is available with a " +
+                      (project.polish_success_chance ?? "?") +
+                      "% chance of improving quality."}
+              </p>
+            </div>
+          )}
+
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Sessions</span>
             <span className="font-medium">{project.sessions_completed || 0} of ~{totalSessions}</span>
@@ -155,17 +184,21 @@ export const SimplifiedProjectCard = ({
           )}
           
           <div className="flex flex-wrap items-center gap-2 pt-2">
-            {canComplete && (
-              <Button onClick={() => setCompleteDialogOpen(true)} size="sm" className="flex-1 min-w-[180px]">
-                <CheckCircle2 className="w-3 h-3 mr-1" />Complete
+            {canReviewCompletion ? (
+              <Button
+                onClick={() => setCompleteDialogOpen(true)}
+                size="sm"
+                className="flex-1 min-w-[180px]"
+              >
+                <CheckCircle2 className="w-3 h-3 mr-1" />
+                Review completion
               </Button>
-            )}
-            {!canComplete && (
+            ) : (
               <>
                 <Button onClick={onStartSession} disabled={isLocked || isCompleted} size="sm" className="flex-1 min-w-[180px]">
                   <Play className="w-3 h-3 mr-1" />Start Session
                 </Button>
-                {onSchedule && (
+                {onSchedule && !isCompleted && (
                   <Button onClick={onSchedule} variant="outline" size="sm" disabled={isLocked}>
                     <Clock className="w-3 h-3 mr-1" />Plan
                   </Button>
@@ -185,9 +218,10 @@ export const SimplifiedProjectCard = ({
       <CompleteSongDialog
         open={completeDialogOpen}
         onOpenChange={setCompleteDialogOpen}
-        projectId={project.id}
-        projectTitle={project.title}
-        onComplete={() => onComplete?.()}
+        project={project}
+        onStartPolish={onStartPolish}
+        onKeepAsIs={onKeepAsIs}
+        onFinish={onFinish}
       />
 
       <CollaboratorInviteDialog
