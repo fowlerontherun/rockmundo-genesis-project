@@ -8,6 +8,7 @@ import { SongPlayer } from "@/components/audio/SongPlayer";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { buildReferralUrl, referralShareOnCooldown, shareReferral } from "@/lib/referralShare";
 
 interface MyChartPositionsProps {
   userId: string;
@@ -174,25 +175,22 @@ export function MyChartPositions({ userId }: MyChartPositionsProps) {
                   {highestRank <= 10 && (
                     <Button size="sm" variant="outline" onClick={async () => {
                       const key = "rockmundo_chart_referral_share_at";
-                      const last = Number(localStorage.getItem(key) || 0);
-                      if (Date.now() - last < 7 * 24 * 60 * 60 * 1000) return;
+                      if (referralShareOnCooldown(key)) {
+                        toast.info("You shared a chart milestone recently. Try again later.");
+                        return;
+                      }
                       const { data, error } = await (supabase as any).rpc("get_referral_dashboard", { p_profile_id: profileId });
-                      if (error || !data?.code) return;
-                      const url = `${window.location.origin}/auth?ref=${encodeURIComponent(data.code)}`;
+                      if (error || !data?.code) {
+                        toast.error("Could not prepare your referral link");
+                        return;
+                      }
+                      const url = buildReferralUrl(data.code);
                       const text = highestRank === 1
                         ? `My song “${firstPos.songTitle}” hit #1 in RockMundo. Start your own music career and join me.`
                         : `My song “${firstPos.songTitle}” reached #${highestRank} in RockMundo. Start your own music career and join me.`;
-                      if (navigator.share) {
-                        try { await navigator.share({ title: "RockMundo chart milestone", text, url }); localStorage.setItem(key, String(Date.now())); return; }
-                        catch (error) { if ((error as DOMException)?.name === "AbortError") return; }
-                      }
-                      try {
-                        await navigator.clipboard.writeText(`${text} ${url}`);
-                        localStorage.setItem(key, String(Date.now()));
-                        toast.success("Chart invite copied");
-                      } catch {
-                        toast.error("Could not share chart result", { description: "Your browser blocked clipboard access. Try sharing again from a supported browser." });
-                      }
+                      const result = await shareReferral({ title: "RockMundo chart milestone", text, url, cooldownKey: key });
+                      if (result === "copied") toast.success("Chart invite copied");
+                      if (result === "failed") toast.error("Could not share chart result", { description: "Your browser blocked clipboard access. Try sharing again from a supported browser." });
                     }}><Share2 className="mr-1.5 h-3.5 w-3.5" />Share chart result</Button>
                   )}
                 </div>
