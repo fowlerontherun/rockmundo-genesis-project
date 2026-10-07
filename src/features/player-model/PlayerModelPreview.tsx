@@ -34,9 +34,11 @@ export interface PlayerModelPreviewProps {
   luthieryInstrument?: LuthieryInstrumentVisual | null;
   /** Shareable Moments uses the canonical live renderer canvas instead of rebuilding the avatar scene. */
   onCanvasReady?: (canvas: HTMLCanvasElement) => void;
+  /** Removes the fitting-room background/platform for transparent social-card composition. */
+  transparentCapture?: boolean;
 }
 
-export function PlayerModelPreview({ appearance, role = 'other', instrument, richClothing = [], tattoos = [], presentation = 'stage', merchWearable = null, luthieryInstrument = null, onCanvasReady }: PlayerModelPreviewProps) {
+export function PlayerModelPreview({ appearance, role = 'other', instrument, richClothing = [], tattoos = [], presentation = 'stage', merchWearable = null, luthieryInstrument = null, onCanvasReady, transparentCapture = false }: PlayerModelPreviewProps) {
   const canvas = useRef<HTMLCanvasElement>(null), api = useRef<PreviewApi | null>(null), latest = useRef({ appearance, role, instrument, richClothing, tattoos, presentation, merchWearable, luthieryInstrument }); latest.current = { appearance, role, instrument, richClothing, tattoos, presentation, merchWearable, luthieryInstrument };
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading'), [attempt, setAttempt] = useState(0);
   useEffect(() => {
@@ -56,9 +58,9 @@ export function PlayerModelPreview({ appearance, role = 'other', instrument, ric
     };
     setStatus('loading');
     try {
-      renderer = new T.WebGLRenderer({ canvas: element, antialias: true, powerPreference: 'high-performance' });
+      renderer = new T.WebGLRenderer({ canvas: element, antialias: true, alpha: transparentCapture, preserveDrawingBuffer: transparentCapture, powerPreference: 'high-performance' });
       renderer.outputColorSpace = T.SRGBColorSpace; renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.3; renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap;
-      scene.background = new T.Color('#101823'); scene.fog = new T.Fog('#101823', 5, 12);
+      scene.background = transparentCapture ? null : new T.Color('#101823'); scene.fog = transparentCapture ? null : new T.Fog('#101823', 5, 12);
       const pmrem = new T.PMREMGenerator(renderer), room = new RoomEnvironment(); environment = pmrem.fromScene(room, .04); scene.environment = environment.texture; room.dispose(); pmrem.dispose();
       scene.add(new T.HemisphereLight('#cad9f0', '#253044', 1.4));
       const key = new T.SpotLight('#ffe6cd', 46, 15, .68, .72, 1.45);
@@ -74,9 +76,9 @@ export function PlayerModelPreview({ appearance, role = 'other', instrument, ric
       const faceFill = new T.DirectionalLight('#fff4e8', visualQuality === 'ultra' ? 1.1 : .8);
       faceFill.position.set(.4, 2.1, 3.2);
       scene.add(faceFill);
-      const floor = new T.Mesh(new T.PlaneGeometry(30, 30), new T.MeshStandardMaterial({ color: '#1c2534', roughness: .78 })); floor.rotation.x = -Math.PI / 2; floor.position.y = -.045; floor.receiveShadow = true; scene.add(floor);
-      const platform = new T.Mesh(new T.CylinderGeometry(1.18, 1.25, .08, 80), new T.MeshStandardMaterial({ color: '#303c4f', roughness: .37, metalness: .5 })); platform.position.y = -.04; platform.receiveShadow = true; scene.add(platform);
-      const ring = new T.Mesh(new T.TorusGeometry(1.21, .007, 8, 96), new T.MeshStandardMaterial({ color: '#53cedb', emissive: '#2e9eb3', emissiveIntensity: 2 })); ring.rotation.x = Math.PI / 2; ring.position.y = -.012; scene.add(ring);
+      const floor = new T.Mesh(new T.PlaneGeometry(30, 30), new T.MeshStandardMaterial({ color: '#1c2534', roughness: .78 })); floor.rotation.x = -Math.PI / 2; floor.position.y = -.045; floor.receiveShadow = true; if (!transparentCapture) scene.add(floor);
+      const platform = new T.Mesh(new T.CylinderGeometry(1.18, 1.25, .08, 80), new T.MeshStandardMaterial({ color: '#303c4f', roughness: .37, metalness: .5 })); platform.position.y = -.04; platform.receiveShadow = true; if (!transparentCapture) scene.add(platform);
+      const ring = new T.Mesh(new T.TorusGeometry(1.21, .007, 8, 96), new T.MeshStandardMaterial({ color: '#53cedb', emissive: '#2e9eb3', emissiveIntensity: 2 })); ring.rotation.x = Math.PI / 2; ring.position.y = -.012; if (!transparentCapture) scene.add(ring);
       camera.position.set(2.1, 1.65, 4.8); controls = new OrbitControls(camera, element); controls.target.set(0, .92, 0); controls.enableDamping = true; controls.enablePan = false; controls.minDistance = 2.4; controls.maxDistance = 7; controls.minPolarAngle = .55; controls.maxPolarAngle = Math.PI / 2; controls.update(); controls.saveState();
       observer = new ResizeObserver(() => {
         const rect = element.getBoundingClientRect();
@@ -161,7 +163,7 @@ export function PlayerModelPreview({ appearance, role = 'other', instrument, ric
       scene.traverse(object => { if (object instanceof T.SpotLight) object.shadow.dispose(); });
       disposeModel(scene); library?.forEach(disposeModel); environment?.dispose(); renderer?.dispose();
     };
-  }, [attempt, onCanvasReady]);
+  }, [attempt, onCanvasReady, transparentCapture]);
   useEffect(() => { try { api.current?.replace(appearance, role, instrument, richClothing, tattoos, presentation, merchWearable, luthieryInstrument); } catch { setStatus('error'); } }, [appearance, role, instrument, richClothing, tattoos, presentation, merchWearable, luthieryInstrument]);
   return <div className="player-model-preview">
     <canvas ref={canvas} tabIndex={0} role="img" aria-label="Your animated 3D stage model. Drag to rotate, scroll to zoom, or use the buttons below." onKeyDown={event => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); api.current?.rotate(event.key === 'ArrowLeft' ? -.25 : .25); } if (event.key === '+' || event.key === '-') { event.preventDefault(); api.current?.zoom(event.key === '+' ? .9 : 1.1); } }} />
