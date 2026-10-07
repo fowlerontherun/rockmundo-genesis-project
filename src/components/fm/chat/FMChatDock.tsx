@@ -232,6 +232,10 @@ export function FMChatDock() {
     [friendships],
   );
 
+  const totalRoomUnread =
+    unreadWorld + unreadRooms.help + unreadRooms.recruit + unreadRooms.band;
+  const totalUnread = totalRoomUnread + unreadDirectMessages;
+
   if (!myProfileId) return null;
   if (HIDDEN_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))) return null;
 
@@ -247,6 +251,7 @@ export function FMChatDock() {
               {t.displayName}
             </span>
             <button
+              type="button"
               onClick={() => closeThread(t.profileId)}
               className="text-fm-fg-muted hover:text-fm-fg"
               aria-label={fmChatText(language, "closeChat")}
@@ -259,6 +264,7 @@ export function FMChatDock() {
               myProfileId={myProfileId}
               otherProfileId={t.profileId}
               otherDisplayName={t.displayName}
+              compact
             />
           </div>
         </div>
@@ -266,15 +272,19 @@ export function FMChatDock() {
 
       <div className="pointer-events-auto w-[300px] bg-fm-panel border border-fm-border border-b-0 rounded-t-sm shadow-lg flex flex-col">
         <button
-          onClick={() => { setOpen(!open); if (!open) setActiveRoom("world"); }}
+          type="button"
+          onClick={() => setOpen(!open)}
           className="h-8 flex items-center justify-between px-2 bg-fm-panel-2 border-b border-fm-border hover:bg-fm-panel-2/80"
         >
           <span className="flex items-center gap-1.5 text-[11px] tracking-tight text-fm-fg font-medium">
             <MessageSquare className="h-3.5 w-3.5 text-fm-accent" />
             {fmChatText(language, "chat")}
-            {(worldActivity || unreadDirectMessages > 0) && notificationMode !== "off" && (
-              <span className="rounded-full bg-fm-accent px-1.5 text-[10px] text-fm-panel" aria-label={`${unreadWorld} unread world chat messages`}>
-                {unreadWorld + unreadDirectMessages > 99 ? "99+" : unreadWorld + unreadDirectMessages}
+            {totalUnread > 0 && (
+              <span
+                className="rounded-full bg-fm-accent px-1.5 text-[10px] text-fm-panel"
+                aria-label={`${totalUnread} unread chat messages`}
+              >
+                {totalUnread > 99 ? "99+" : totalUnread}
               </span>
             )}
             <span className="text-fm-fg-muted">
@@ -308,18 +318,42 @@ export function FMChatDock() {
               {rooms.map((room) => {
                 const Icon = room.icon;
                 const isActive = activeRoom === room.id;
+                const roomUnread =
+                  room.id === "world"
+                    ? unreadWorld
+                    : room.id === "friends"
+                      ? unreadDirectMessages
+                      : room.id === "help"
+                        ? unreadRooms.help
+                        : room.id === "recruit"
+                          ? unreadRooms.recruit
+                          : unreadRooms.band;
                 return (
                   <button
                     key={room.id}
-                    onClick={() => { setActiveRoom(room.id); if (room.id === "world") { setUnreadWorld(0); setWorldActivity(false); } }}
+                    type="button"
+                    onClick={() => {
+                      setActiveRoom(room.id);
+                      if (room.id === "world") {
+                        setUnreadWorld(0);
+                        setWorldActivity(false);
+                      } else if (room.id === "help" || room.id === "recruit" || room.id === "band") {
+                        setUnreadRooms((current) =>
+                          current[room.id] ? { ...current, [room.id]: 0 } : current,
+                        );
+                      }
+                    }}
                     className={cn(
                       "flex shrink-0 items-center gap-1 px-2 py-1.5 text-[10px] font-medium text-fm-fg-muted hover:text-fm-fg",
                       isActive && "bg-fm-panel text-fm-accent border-b-2 border-fm-accent",
                     )}
                   >
                     <Icon className="h-3 w-3" />
-                    {room.id === "world" && unreadWorld > 0 && <span className="rounded-full bg-fm-accent px-1 text-[9px] text-fm-panel">{unreadWorld > 99 ? "99+" : unreadWorld}</span>}
-                    {room.id === "friends" && unreadDirectMessages > 0 && <span className="rounded-full bg-fm-accent px-1 text-[9px] text-fm-panel">{unreadDirectMessages > 99 ? "99+" : unreadDirectMessages}</span>}
+                    {roomUnread > 0 && (
+                      <span className="rounded-full bg-fm-accent px-1 text-[9px] text-fm-panel">
+                        {roomUnread > 99 ? "99+" : roomUnread}
+                      </span>
+                    )}
                     {room.label}
                   </button>
                 );
@@ -375,6 +409,7 @@ export function FMChatDock() {
                         return (
                           <button
                             key={f.friendship.id}
+                            type="button"
                             onClick={() => openThread({ profileId: other.id, displayName: name })}
                             className={cn(
                               "w-full flex items-center gap-2 px-2 py-1.5 text-left hover:bg-fm-panel-2",
