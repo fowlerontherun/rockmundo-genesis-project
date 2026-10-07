@@ -19,6 +19,7 @@ export interface PrimaryBandRecord {
     weekly_fans: number | null;
     performance_count: number | null;
     status: string | null;
+    logo_url: string | null;
   } | null;
 }
 
@@ -49,7 +50,8 @@ export const usePrimaryBand = () => {
               chemistry_level,
               weekly_fans,
               performance_count,
-              status
+              status,
+              logo_url
             )
           `
         )
