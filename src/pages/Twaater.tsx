@@ -211,7 +211,7 @@ export default function Twaater() {
 
           {showDesktopSidebar && (
             <div className="hidden lg:block w-80 space-y-4 sticky top-0 h-fit pt-4">
-              <TrendingHashtags />
+              <TrendingHashtags currentAccountId={currentAccountId} />
               {currentAccountId && <WhoToFollow currentAccountId={currentAccountId} />}
             </div>
           )}
