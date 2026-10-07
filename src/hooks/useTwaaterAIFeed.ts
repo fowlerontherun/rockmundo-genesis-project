@@ -19,7 +19,7 @@ const fetchChronologicalFeed = async (accountId?: string) => {
       .order("created_at", { ascending: false })
       .limit(50);
     if (error) throw error;
-    return hydrateTwaaterFeedExtras(data || []);
+    return hydrateTwaaterFeedExtras(data || [], accountId);
   }
 
   const { data: follows, error: followsError } = await supabase
@@ -40,7 +40,7 @@ const fetchChronologicalFeed = async (accountId?: string) => {
     .limit(50);
 
   if (error) throw error;
-  return hydrateTwaaterFeedExtras(data || []);
+  return hydrateTwaaterFeedExtras(data || [], accountId);
 };
 
 export const useTwaaterAIFeed = (accountId?: string, enabled = true) => {
@@ -64,7 +64,7 @@ export const useTwaaterAIFeed = (accountId?: string, enabled = true) => {
           return fetchChronologicalFeed(accountId);
         }
 
-        return hydrateTwaaterFeedExtras(rankedFeed);
+        return hydrateTwaaterFeedExtras(rankedFeed, accountId);
       } catch (error) {
         console.error("AI feed exception:", error);
         return fetchChronologicalFeed(accountId);
