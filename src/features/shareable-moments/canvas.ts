@@ -166,7 +166,7 @@ export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment
     ctx.fillStyle = '#ffffff88'; ctx.font = '600 20px Inter, system-ui, sans-serif'; ctx.fillText(metric.label.toUpperCase(), textX, y);
     ctx.fillStyle = '#fff'; ctx.font = '800 34px Inter, system-ui, sans-serif';
     const valueX = format === 'story' ? textX : textX + Math.min(220, textWidth * .42);
-    const valueWidth = format === 'story' ? textWidth : Math.max(120, textWidth - (valueX - pad));
+    const valueWidth = format === 'story' ? textWidth : Math.max(120, textWidth - (valueX - textX));
     if (format === 'story') ctx.fillText(metric.value, valueX, y + 34);
     else drawWrappedText(ctx, metric.value, valueX, y, valueWidth, 38, 1);
   });
