@@ -18,9 +18,7 @@ interface SimplifiedProjectCardProps {
   onEdit: () => void;
   onDelete: () => void;
   onViewHistory: () => void;
-  onStartPolish: () => Promise<void>;
-  onKeepAsIs: () => Promise<void>;
-  onFinish: () => Promise<void>;
+  onComplete?: () => void;
   onSchedule?: () => void;
   isLocked: boolean;
   userBandId?: string;
@@ -32,9 +30,7 @@ export const SimplifiedProjectCard = ({
   onEdit,
   onDelete,
   onViewHistory,
-  onStartPolish,
-  onKeepAsIs,
-  onFinish,
+  onComplete,
   onSchedule,
   isLocked,
   userBandId,
@@ -219,9 +215,9 @@ export const SimplifiedProjectCard = ({
         open={completeDialogOpen}
         onOpenChange={setCompleteDialogOpen}
         project={project}
-        onStartPolish={onStartPolish}
-        onKeepAsIs={onKeepAsIs}
-        onFinish={onFinish}
+        onStartPolish={async () => { onComplete?.(); }}
+        onKeepAsIs={async () => { onComplete?.(); }}
+        onFinish={async () => { onComplete?.(); }}
       />
 
       <CollaboratorInviteDialog
