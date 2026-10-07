@@ -97,7 +97,7 @@ const TwaaterProfileView = () => {
 
       const { data, error } = await query;
       if (error) throw error;
-      return hydrateTwaaterFeedExtras(data || []);
+      return hydrateTwaaterFeedExtras(data || [], viewerAccount?.id);
     },
     enabled: !!profileAccount && !visibilityLoading,
   });
