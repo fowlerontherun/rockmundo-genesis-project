@@ -572,7 +572,7 @@ const Dashboard = () => {
                                 toast.error("Could not prepare your referral link");
                                 return;
                               }
-                              const url = buildReferralUrl(data.code);
+                              const url = buildReferralUrl(data.code, { source: "achievement_share" });
                               const text = `I just unlocked “${achievement.achievements?.name}” in RockMundo. Start your own music career and join me.`;
                               const result = await shareReferral({ title: "RockMundo achievement", text, url, cooldownKey: key });
                               if (result === "copied") toast.success("Achievement invite copied");
