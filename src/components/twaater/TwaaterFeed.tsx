@@ -16,6 +16,7 @@ interface TwaaterFeedProps {
 export const TwaaterFeed = ({ viewerAccountId, feedType = "feed" }: TwaaterFeedProps) => {
   const [useAI, setUseAI] = useState(false);
   const [newTwaatsCount, setNewTwaatsCount] = useState(0);
+  const [visibleCount, setVisibleCount] = useState(20);
 
   const regularEnabled = feedType === "feed" && !useAI;
   const aiEnabled = feedType === "feed" && useAI && !!viewerAccountId;
@@ -36,6 +37,10 @@ export const TwaaterFeed = ({ viewerAccountId, feedType = "feed" }: TwaaterFeedP
   const isLoading = feedType === "feed" ? (useAI ? aiLoading : feedLoading) : mentionsLoading;
   const feedErrorState = feedType === "feed" ? (useAI ? aiError : feedError) : null;
   const items = feedType === "feed" ? (useAI ? aiFeed : regularFeed) : mentions?.map((mention) => mention.twaat).filter(Boolean);
+
+  useEffect(() => {
+    setVisibleCount(20);
+  }, [viewerAccountId, feedType, useAI]);
 
   useEffect(() => {
     if (feedType !== "feed") return;
@@ -94,7 +99,8 @@ export const TwaaterFeed = ({ viewerAccountId, feedType = "feed" }: TwaaterFeedP
 
   // Keep the complete Twaat object. Older code rebuilt a legacy subset here,
   // which silently discarded media, quote hydration and promotion fields.
-  const timelineTwaats = items.map((twaat: any) => ({
+  const visibleItems = items.slice(0, visibleCount);
+  const timelineTwaats = visibleItems.map((twaat: any) => ({
     ...twaat,
     account: {
       id: twaat.account?.id || twaat.twaater_accounts?.id,
@@ -153,6 +159,16 @@ export const TwaaterFeed = ({ viewerAccountId, feedType = "feed" }: TwaaterFeedP
           currentAccountId={viewerAccountId}
           showDateSeparators={feedType === "feed"}
         />
+        {items.length > visibleCount && (
+          <div className="flex justify-center py-4">
+            <Button
+              variant="outline"
+              onClick={() => setVisibleCount((current) => current + 20)}
+            >
+              Load more Twaats
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
