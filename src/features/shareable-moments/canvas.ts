@@ -15,7 +15,7 @@ function fitText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, 
   return size;
 }
 
-export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment, format: ShareFormat): void {
+export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment, format: ShareFormat, avatar?: CanvasImageSource | null): void {
   const { width, height } = SHARE_FORMATS[format];
   canvas.width = width; canvas.height = height;
   const ctx = canvas.getContext('2d');
@@ -28,6 +28,14 @@ export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment
   const glow = ctx.createRadialGradient(width * .72, height * .3, 20, width * .72, height * .3, Math.max(width, height) * .65);
   glow.addColorStop(0, '#8b5cf655'); glow.addColorStop(1, '#00000000');
   ctx.fillStyle = glow; ctx.fillRect(0, 0, width, height);
+
+  if (avatar) {
+    const avatarW = format === 'landscape' ? width * .34 : width * .5;
+    const avatarH = format === 'landscape' ? height * .82 : height * .52;
+    const avatarX = width - avatarW - Math.round(width * .035);
+    const avatarY = format === 'story' ? height * .42 : height * .16;
+    ctx.save(); ctx.globalAlpha = .96; ctx.drawImage(avatar, avatarX, avatarY, avatarW, avatarH); ctx.restore();
+  }
 
   const pad = Math.round(width * .06);
   ctx.textAlign = 'left';
