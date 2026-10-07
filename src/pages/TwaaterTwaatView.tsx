@@ -18,8 +18,8 @@ export default function TwaaterTwaatView() {
   const navigate = useNavigate();
   const { profile } = useGameData();
   const [searchParams] = useSearchParams();
-  const { account: personaAccount } = useTwaaterAccount("persona", profile?.id);
-  const { account } = useTwaaterRouteAccount(personaAccount, searchParams.get("account"));
+  const { account: personaAccount, isLoading: personaLoading } = useTwaaterAccount("persona", profile?.id);
+  const { account, isLoading: routeAccountLoading } = useTwaaterRouteAccount(personaAccount, searchParams.get("account"));
   const backTo = account?.id ? `/twaater?account=${account.id}` : "/twaater";
 
   // Fetch main twaat
@@ -71,7 +71,7 @@ export default function TwaaterTwaatView() {
     enabled: !!twaatId,
   });
 
-  if (isLoading) {
+  if (isLoading || personaLoading || routeAccountLoading) {
     return (
       <FMPageScaffold title="Twaat" icon={MessageCircle} backTo={backTo}>
         <div className="flex items-center justify-center py-16">
