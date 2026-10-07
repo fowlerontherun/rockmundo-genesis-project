@@ -605,7 +605,7 @@ function ReleaseCard({ release, financials, financeAvailable = false, labelCutPc
       toast.error("Could not prepare your referral link");
       return;
     }
-    const url = buildReferralUrl(data.code, { source: "release_chart_share" });
+    const url = buildReferralUrl(data.code, { source: bestChartPosition != null && bestChartPosition <= 10 ? "release_chart_share" : "release_share" });
     setShareMoment({
       version: 1,
       type: "release",
