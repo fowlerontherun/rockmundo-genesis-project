@@ -30,7 +30,7 @@ export interface BandFestivalAppearance {
   confirmedEndAt: string | null;
   stageName: string | null;
   timeConfirmed: boolean;
-  sessionStatus: string | null;
+  sessionStatus: string | null;\n  heroImageReference: string | null;
 }
 
 type Row = Record<string, unknown>;
@@ -72,7 +72,7 @@ export function parseBandFestivalAppearances(data: unknown): BandFestivalAppeara
       confirmedEndAt: nullableText(row.confirmed_end_at),
       stageName: nullableText(row.stage_name),
       timeConfirmed: row.time_confirmed === true,
-      sessionStatus: nullableText(row.session_status),
+      sessionStatus: nullableText(row.session_status),\n      heroImageReference: nullableText(row.hero_image_reference),
     };
   }).filter((appearance) => {
     if (bookings.has(appearance.bookingId)) return false;
