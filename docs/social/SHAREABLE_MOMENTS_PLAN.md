@@ -83,7 +83,7 @@ Share Sheet
 - [x] Add Share entry points to the five initial surfaces.
 
 ### 1E. Consolidate current sharing
-- [ ] Migrate Dashboard achievement sharing.
+- [x] Migrate Dashboard achievement sharing.
 - [ ] Migrate chart milestone sharing.
 - [ ] Migrate release milestone sharing.
 - [ ] Keep band recruitment semantics but move transport/referral utilities to shared helpers.
