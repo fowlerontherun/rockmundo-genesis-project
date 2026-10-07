@@ -1,8 +1,12 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Star } from "lucide-react";
+import { Share2, Sparkles, Star } from "lucide-react";
 import { getQualityLabel } from "@/data/craftingMaterials";
+import { useEffect, useState } from "react";
+import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
+import type { ShareMoment } from "@/features/shareable-moments/types";
+import { markSharePromptSeen, shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
 
 interface CraftedItemRevealProps {
   open: boolean;
@@ -21,8 +25,17 @@ export const CraftedItemReveal = ({
 }: CraftedItemRevealProps) => {
   const quality = getQualityLabel(qualityRoll);
   const isMasterwork = qualityRoll >= 95;
+  const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
+  useEffect(() => {
+    if (!open || !isMasterwork || shareMoment) return;
+    const sourceId = `${recipeName}:${Math.round(qualityRoll)}`;
+    if (!shouldOfferSharePrompt("craft-masterwork", sourceId)) return;
+    markSharePromptSeen("craft-masterwork", sourceId);
+    setShareMoment({ version: 1, type: "achievement", id: sourceId, eyebrow: "MASTERWORK", headline: recipeName, subheadline: "Crafted an exceptional item in RockMundo", metrics: [{ label: "Quality", value: `${Math.round(qualityRoll)}%` }, { label: "Grade", value: quality.label }], destinationUrl: window.location.href, referralCode: null, createdAt: new Date().toISOString() });
+  }, [open, isMasterwork, recipeName, qualityRoll, quality.label, shareMoment]);
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
@@ -58,10 +71,10 @@ export const CraftedItemReveal = ({
           )}
         </div>
 
-        <Button onClick={onClose} className="w-full">
-          Awesome!
-        </Button>
+        <div className="grid gap-2"><Button onClick={onClose} className="w-full">Awesome!</Button>{isMasterwork && <Button variant="outline" onClick={() => setShareMoment({ version: 1, type: "achievement", id: `${recipeName}:${Math.round(qualityRoll)}`, eyebrow: "MASTERWORK", headline: recipeName, subheadline: "Crafted an exceptional item in RockMundo", metrics: [{ label: "Quality", value: `${Math.round(qualityRoll)}%` }, { label: "Grade", value: quality.label }], destinationUrl: window.location.href, referralCode: null, createdAt: new Date().toISOString() })}><Share2 className="mr-2 h-4 w-4" />Share masterwork</Button>}</div>
       </DialogContent>
     </Dialog>
+    <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(next) => { if (!next) setShareMoment(null); }} />
+    </>
   );
 };
