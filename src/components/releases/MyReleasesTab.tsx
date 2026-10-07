@@ -603,7 +603,7 @@ function ReleaseCard({ release, financials, financeAvailable = false, labelCutPc
       return;
     }
     const url = buildReferralUrl(data.code, { source: "release_chart_share" });
-    setShareMoment({ version: 1, type: "release", id: release.id, eyebrow: bestChartPosition === 1 ? "NUMBER ONE RELEASE" : "RELEASE CHART MILESTONE", headline: release.title, subheadline: `Reached #${bestChartPosition} in RockMundo`, metrics: [{ label: "Chart position", value: `#${bestChartPosition}` }, { label: "Tracks", value: String(totalTracks) }], destinationUrl: url, referralCode: null, createdAt: new Date().toISOString() });
+    setShareMoment({ version: 1, type: "release", id: release.id, eyebrow: bestChartPosition === 1 ? "NUMBER ONE RELEASE" : "RELEASE CHART MILESTONE", headline: release.title, subheadline: `Reached #${bestChartPosition} in RockMundo`, metrics: [{ label: "Chart position", value: `#${bestChartPosition}` }, { label: "Tracks", value: String(totalTracks) }], artworkUrl: release.artwork_url || null, destinationUrl: url, referralCode: null, createdAt: new Date().toISOString() });
   };
   
   return (
