@@ -82,7 +82,9 @@ function BookingLauncher() {
 const Schedule = () => {
   const { userId } = useActiveProfile();
   const location = useLocation();
-  const initialDate = new URLSearchParams(location.search).get("date");
+  const params = new URLSearchParams(location.search);
+  const initialDate = params.get("date");
+  const creatingGigPoster = params.get("shareCreate") === "gig";
   const [currentDate, setCurrentDate] = useState(initialDate ? new Date(`${initialDate}T12:00:00`) : new Date());
   const path = location.pathname;
   const viewMode: "day" | "week" = path.includes("/week") || path.includes("/calendar") ? "week" : "day";
@@ -95,6 +97,7 @@ const Schedule = () => {
   return (
     <HubLayout title="Schedule" description="Today is the default schedule view. Review current, upcoming and historical activity, then launch the owning booking workflow." icon={Calendar} overviewPath="/schedule" navigation={scheduleHubNavigation} actions={[{ label: "Book activity", path: "/schedule/book", variant: "outline" }]}>
       <GigLocationWarning />
+      {creatingGigPoster && <Card className="border-primary/30 bg-primary/5"><CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><Sparkles className="h-4 w-4 text-primary" />Choose a gig for your poster</CardTitle></CardHeader><CardContent><p className="text-sm text-muted-foreground">Open a scheduled gig below, then choose <strong>Create gig poster</strong>. RockMundo will fill in its venue, date, ticket price and current ticket demand.</p></CardContent></Card>}
       {isBook ? <BookingLauncher /> : isCurrent ? <CurrentActivityPanel userId={userId ?? undefined} /> : isHistory ? (
         <Card><CardHeader><CardTitle>Activity history</CardTitle></CardHeader><CardContent><DaySchedule date={currentDate} userId={userId ?? undefined} /></CardContent></Card>
       ) : (
