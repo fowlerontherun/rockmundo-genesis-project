@@ -75,6 +75,7 @@ const Onboarding = lazyWithRetry(() => import("./pages/Onboarding"));
 const TourManager = lazyWithRetry(() => import("./pages/TourManager"));
 const RecordLabel = lazyWithRetry(() => import("./pages/RecordLabel"));
 const SocialMedia = lazyWithRetry(() => import("./pages/SocialMedia"));
+const ShareStudio = lazyWithRetry(() => import("./pages/ShareStudio"));
 const Relationships = lazyWithRetry(() => import("./pages/Relationships"));
 const VenueManagement = lazyWithRetry(() => import("./pages/VenueManagement"));
 const BandChemistry = lazyWithRetry(() => import("./pages/BandChemistry"));
@@ -809,6 +810,7 @@ function App() {
                     <Route path="social/activities/new" element={<NewSocialActivity />} />
                     <Route path="social/activities/:activityId" element={<SocialActivityDetail />} />
                     <Route path="social/recruitment" element={<BandRecruitmentDiscovery />} />
+                    <Route path="social/share-studio" element={<ShareStudio />} />
                     <Route path="social/twaater" element={<PreserveQueryRedirect to="/twaater" />} />
                     <Route path="twaater/notifications" element={<TwaaterNotifications />} />
                     <Route path="twaater/analytics" element={<TwaaterAnalytics />} />

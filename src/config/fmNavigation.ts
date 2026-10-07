@@ -501,7 +501,7 @@ export const FM_MODULES: FMModule[] = [
     icon: MessageSquare,
     rootPath: "/social",
     matchPaths: [
-      "/hub/social", "/social",
+      "/hub/social", "/social", "/social/share-studio",
       "/community", "/relationships", "/player", "/players",
       "/settings/privacy/blocked-players", "/settings/safety/reports",
       "/twaater", "/dikcok", "/gettit",
@@ -524,6 +524,7 @@ export const FM_MODULES: FMModule[] = [
           { label: "Messages", path: "/social/messages", icon: MessageSquare },
           { label: "Recruitment", path: "/social/recruitment", icon: Users },
           { label: "Invitations", path: "/social/invitations", icon: InboxIcon },
+          { label: "Share Studio", path: "/social/share-studio", icon: Share2 },
         ],
       },
       {
