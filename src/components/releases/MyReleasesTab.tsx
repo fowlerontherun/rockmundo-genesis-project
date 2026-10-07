@@ -610,6 +610,7 @@ function ReleaseCard({ release, financials, financeAvailable = false, labelCutPc
   };
   
   return (
+    <>
     <Card className="overflow-hidden">
       <div className="flex gap-3 p-3">
         {release.artwork_url ? (
@@ -724,5 +725,6 @@ function ReleaseCard({ release, financials, financeAvailable = false, labelCutPc
       </div>
     </Card>
       <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(open) => { if (!open) setShareMoment(null); }} />
+    </>
   );
 }
