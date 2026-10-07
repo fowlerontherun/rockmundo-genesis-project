@@ -592,7 +592,7 @@ function ReleaseCard({ release, financials, financeAvailable = false, labelCutPc
   ) || [];
   
   const totalUnitsOrdered = physicalFormats.reduce((sum: number, f: any) => sum + (f.quantity || 0), 0);
-  const shareRelease = release.release_status === "released" && (bestChartPosition != null && bestChartPosition <= 10);
+  const shareRelease = release.release_status === "released";
   const handleShareRelease = async () => {
     if (!profileId || !shareRelease) return;
     const key = "rockmundo_release_referral_share_at";
@@ -606,7 +606,25 @@ function ReleaseCard({ release, financials, financeAvailable = false, labelCutPc
       return;
     }
     const url = buildReferralUrl(data.code, { source: "release_chart_share" });
-    setShareMoment({ version: 1, type: "release", id: release.id, eyebrow: bestChartPosition === 1 ? "NUMBER ONE RELEASE" : "RELEASE CHART MILESTONE", headline: release.title, subheadline: `Reached #${bestChartPosition} in RockMundo`, metrics: [{ label: "Chart position", value: `#${bestChartPosition}` }, { label: "Tracks", value: String(totalTracks) }], artworkUrl: release.artwork_url || null, destinationUrl: url, referralCode: null, createdAt: new Date().toISOString() });
+    setShareMoment({
+      version: 1,
+      type: "release",
+      id: release.id,
+      eyebrow: bestChartPosition === 1 ? "NUMBER ONE RELEASE" : bestChartPosition != null && bestChartPosition <= 10 ? "RELEASE CHART MILESTONE" : "OUT NOW",
+      headline: release.title,
+      subheadline: bestChartPosition != null ? `${release.artist_name || release.bands?.name || "New release"} · Reached #${bestChartPosition} in RockMundo` : `${release.artist_name || release.bands?.name || "New release"} · Out now in RockMundo`,
+      metrics: [
+        ...(bestChartPosition != null ? [{ label: "Chart position", value: `#${bestChartPosition}` }] : []),
+        { label: "Format", value: typeConfig.label },
+        { label: "Tracks", value: String(totalTracks) },
+        ...(avgQuality > 0 ? [{ label: "Quality", value: String(avgQuality) }] : []),
+      ].slice(0, 4),
+      artworkUrl: release.artwork_url || null,
+      destinationUrl: url,
+      referralCode: null,
+      shareCooldownKey: key,
+      createdAt: new Date().toISOString(),
+    });
   };
   
   return (
@@ -680,7 +698,7 @@ function ReleaseCard({ release, financials, financeAvailable = false, labelCutPc
           )}
           {shareRelease && (
             <Button variant="outline" size="sm" className="h-7 text-xs" onClick={(e) => { e.stopPropagation(); void handleShareRelease(); }}>
-              <Share2 className="mr-1.5 h-3.5 w-3.5" />Share #{bestChartPosition} chart milestone
+              <Share2 className="mr-1.5 h-3.5 w-3.5" />{bestChartPosition != null && bestChartPosition <= 10 ? `Share #${bestChartPosition} chart milestone` : "Share release"}
             </Button>
           )}
           {release.release_status === "manufacturing" && (
