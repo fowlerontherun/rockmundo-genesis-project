@@ -5,6 +5,7 @@ export const SHARE_FORMATS = {
 } as const;
 
 export type ShareFormat = keyof typeof SHARE_FORMATS;
+export type ShareVisualTheme = 'moment' | 'spotlight' | 'neon' | 'mono';
 export type ShareMomentType =
   | 'character_profile'
   | 'band_profile'
@@ -32,6 +33,7 @@ export interface ShareMoment {
   metrics?: ShareMetric[];
   artworkUrl?: string | null;
   variant?: 'standard' | 'headline';
+  visualTheme?: ShareVisualTheme;
   destinationUrl?: string | null;
   referralCode?: string | null;
   /** Existing growth throttle key; recorded only after a successful share/link-copy action. */
