@@ -20,9 +20,9 @@ export function ChatDockProvider({ children }: { children: ReactNode }) {
   const openThread = useCallback((t: OpenThread) => {
     setOpen(true);
     setThreads((prev) => {
-      if (prev.some((p) => p.profileId === t.profileId)) return prev;
-      const next = [...prev, t];
-      return next.slice(-2); // keep at most 2 open windows
+      const withoutThread = prev.filter((p) => p.profileId !== t.profileId);
+      const next = [...withoutThread, t];
+      return next.slice(-2); // keep at most 2 open windows, most recently used last
     });
   }, []);
 

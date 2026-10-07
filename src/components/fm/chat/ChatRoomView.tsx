@@ -25,7 +25,9 @@ export function ChatRoomView({
 }: ChatRoomViewProps) {
   const { profileId } = useActiveProfile();
   const { language } = useTranslation();
-  const { messages, loading, sending, sendMessage } = useChatRoom(lockedMessage ? null : channelKey);
+  const { messages, loading, sending, error, sendMessage, refetch } = useChatRoom(
+    lockedMessage ? null : channelKey,
+  );
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const resolvedEmptyMessage = emptyMessage ?? fmChatText(language, "defaultEmpty");
@@ -57,7 +59,23 @@ export function ChatRoomView({
     <div className="flex flex-1 min-h-0 flex-col">
       <ScrollArea ref={scrollRef} className="flex-1 min-h-0">
         <div className="space-y-1.5 p-2">
-          {loading ? (
+          {error ? (
+            <div
+              className="flex flex-col items-center justify-center gap-2 py-6 text-center text-xs text-fm-fg-muted"
+              role="alert"
+            >
+              <span>{error}</span>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 text-[11px]"
+                onClick={() => void refetch()}
+              >
+                Retry
+              </Button>
+            </div>
+          ) : loading ? (
             <div className="flex items-center justify-center py-6 text-xs text-fm-fg-muted">
               <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> {fmChatText(language, "loading")}
             </div>

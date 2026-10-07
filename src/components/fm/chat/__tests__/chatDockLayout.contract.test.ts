@@ -8,6 +8,7 @@ describe("FM chat dock layout regressions", () => {
   const dock = read("src/components/fm/chat/FMChatDock.tsx");
   const footer = read("src/components/fm/BottomActionBar.tsx");
   const directThread = read("src/features/social-hub/components/DirectMessageThread.tsx");
+  const dockContext = read("src/components/fm/chat/ChatDockContext.tsx");
 
   it("keeps chat on the left and footer actions on the right", () => {
     expect(dock).toContain('className="fixed bottom-0 left-3');
@@ -38,5 +39,13 @@ describe("FM chat dock layout regressions", () => {
     );
     expect(directThread).toContain('compact && "flex min-h-0 flex-col px-2 pb-2"');
     expect(directThread).toContain('compact ? "min-h-0 flex-1" : "h-[360px]"');
+  });
+
+  it("keeps the latest private chat visible without clipping narrower desktops", () => {
+    expect(dock).toContain('"hidden xl:flex"');
+    expect(dockContext).toContain(
+      "const withoutThread = prev.filter((p) => p.profileId !== t.profileId)",
+    );
+    expect(dockContext).toContain("const next = [...withoutThread, t]");
   });
 });
