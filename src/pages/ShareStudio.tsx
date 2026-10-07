@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Award, BarChart3, CalendarDays, Disc3, Music2, Sparkles, Star, Trash2, UserRound, Users } from "lucide-react";
+import { Award, BarChart3, CalendarDays, Disc3, Music2, Sparkles, Star, Trash2, UserRound, Users, Plus, ArrowRight } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
 import { deleteShareMomentSnapshot, listShareMomentSnapshots, type ShareMomentSnapshot } from "@/features/shareable-moments/gallery";
 import type { ShareMoment } from "@/features/shareable-moments/types";
+
+const creators = [
+  { title: "Gig Poster", description: "Promote a scheduled show with venue, date, ticket price and live ticket demand.", action: "Choose a gig", path: "/schedule", icon: Music2, badge: "Live poster" },
+  { title: "Tour Poster", description: "Build a route-aware tour poster from your real booked stops and dates.", action: "Choose a tour", path: "/band/tours", icon: CalendarDays, badge: "Route poster" },
+  { title: "Release Poster", description: "Create Coming Soon or Out Now artwork from your singles, EPs and albums.", action: "Choose a release", path: "/music/releases", icon: Disc3, badge: "Release art" },
+  { title: "Band Promo", description: "Create a reusable band identity card with logo, genre, fame and current stats.", action: "Open band", path: "/band", icon: Users, badge: "Band identity" },
+  { title: "Character Promo", description: "Put your current Avatar V1 look at the centre of a career promo card.", action: "Open profile", path: "/character", icon: UserRound, badge: "Avatar V1" },
+];
 
 const moments = [
   { title: "Character", description: "Show your Avatar V1, career identity and current look.", action: "Open profile", path: "/character", icon: UserRound },
@@ -34,9 +42,28 @@ export default function ShareStudio() {
             <Badge>Live V1</Badge><Badge variant="outline">Square</Badge><Badge variant="outline">Story</Badge><Badge variant="outline">Landscape</Badge>
           </div>
           <CardTitle className="text-2xl">Your career is the content</CardTitle>
-          <CardDescription className="max-w-2xl">Choose a RockMundo moment below. The source page supplies the real avatar, artwork, logo and stats; Share Studio keeps every card on the same branded export system.</CardDescription>
+          <CardDescription className="max-w-2xl">Create promotional posters here or browse shareable career moments below. Source pages supply the real avatar, artwork, logo and stats; every card uses the same branded export system.</CardDescription>
         </CardHeader>
       </Card>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2"><Plus className="h-5 w-5 text-primary" /><CardTitle>Create a poster</CardTitle></div>
+          <CardDescription>Start with what you want to promote. RockMundo will pull the real game data into the poster editor for you.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {creators.map(({ title, description, action, path, icon: Icon, badge }) => (
+              <button key={title} type="button" onClick={() => navigate(path)} className="group rounded-xl border bg-card p-4 text-left transition hover:border-primary/50 hover:bg-primary/[0.03]">
+                <div className="mb-3 flex items-center justify-between gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10"><Icon className="h-5 w-5 text-primary" /></span><Badge variant="outline">{badge}</Badge></div>
+                <h3 className="font-semibold">{title}</h3>
+                <p className="mt-1 min-h-10 text-sm text-muted-foreground">{description}</p>
+                <span className="mt-4 flex items-center gap-1 text-sm font-medium text-primary">{action}<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" /></span>
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+      <CardHeader className="px-0 pb-0"><CardTitle className="text-lg">Browse shareable moments</CardTitle><CardDescription>Jump to a game area to celebrate results, charts and achievements.</CardDescription></CardHeader>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {moments.map(({ title, description, action, path, icon: Icon }) => (
           <Card key={title} className="flex flex-col">
