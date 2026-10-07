@@ -38,7 +38,7 @@ import { WorldNewsList } from "@/components/world/WorldNewsList";
 
 import { Link } from "react-router-dom";
 import { generatePlayerGoals, type PlayerGoalInput } from "@/lib/playerGoals";
-import { buildReferralUrl, referralShareOnCooldown } from "@/lib/referralShare";
+import { referralShareOnCooldown } from "@/lib/referralShare";
 import { AvatarShareStudio } from "@/features/shareable-moments/CharacterShareStudio";
 import type { CharacterProfileShareMoment } from "@/features/shareable-moments/characterProfile";
 
@@ -578,8 +578,7 @@ const Dashboard = () => {
                                 toast.error("Could not prepare your referral link");
                                 return;
                               }
-                              const url = buildReferralUrl(data.code, { source: "achievement_share" });
-                              setShareMoment({ version: 1, type: "achievement", id: achievement.id, eyebrow: `${String(achievement.achievements?.rarity || "Achievement").toUpperCase()} ACHIEVEMENT`, headline: achievement.achievements?.name || "Achievement unlocked", subheadline: achievement.achievements?.description || "A new RockMundo milestone", metrics: [{ label: "Unlocked", value: formatDistanceToNow(new Date(achievement.unlocked_at), { addSuffix: true }) }], destinationUrl: url, referralCode: null, shareCooldownKey: key, createdAt: new Date().toISOString() });
+                              setShareMoment({ version: 1, type: "achievement", id: achievement.id, eyebrow: `${String(achievement.achievements?.rarity || "Achievement").toUpperCase()} ACHIEVEMENT`, headline: achievement.achievements?.name || "Achievement unlocked", subheadline: achievement.achievements?.description || "A new RockMundo milestone", metrics: [{ label: "Unlocked", value: formatDistanceToNow(new Date(achievement.unlocked_at), { addSuffix: true }) }], destinationUrl: `${window.location.origin}/career/achievements?source=achievement_share`, referralCode: data.code, shareCooldownKey: key, createdAt: new Date().toISOString() });
                             }}><Share2 className="mr-1.5 h-3.5 w-3.5" />Share milestone</Button>
                           )}
                         </div>
