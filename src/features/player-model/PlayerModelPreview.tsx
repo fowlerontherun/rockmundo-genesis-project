@@ -150,7 +150,18 @@ export function PlayerModelPreview({ appearance, role = 'other', instrument, ric
       disposeModel(scene); library?.forEach(disposeModel); environment?.dispose(); renderer?.dispose();
     };
   }, [attempt, transparentCapture]);
-  useEffect(() => { try { api.current?.replace(appearance, role, instrument, richClothing, tattoos, presentation, merchWearable, luthieryInstrument); } catch { setStatus('error'); } }, [appearance, role, instrument, richClothing, tattoos, presentation, merchWearable, luthieryInstrument]);
+  useEffect(() => {
+    try {
+      if (!api.current) return;
+      api.current.replace(appearance, role, instrument, richClothing, tattoos, presentation, merchWearable, luthieryInstrument);
+      if (transparentCapture) {
+        const first = requestAnimationFrame(() => {
+          requestAnimationFrame(() => { if (canvas.current) onCanvasReadyRef.current?.(canvas.current); });
+        });
+        return () => cancelAnimationFrame(first);
+      }
+    } catch { setStatus('error'); }
+  }, [appearance, role, instrument, richClothing, tattoos, presentation, merchWearable, luthieryInstrument, transparentCapture]);
   return <div className="player-model-preview">
     <canvas ref={canvas} tabIndex={0} role="img" aria-label="Your animated 3D stage model. Drag to rotate, scroll to zoom, or use the buttons below." onKeyDown={event => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); api.current?.rotate(event.key === 'ArrowLeft' ? -.25 : .25); } if (event.key === '+' || event.key === '-') { event.preventDefault(); api.current?.zoom(event.key === '+' ? .9 : 1.1); } }} />
     <div className="player-model-preview__label" aria-hidden="true">ROCKMUNDO <span>{presentation === 'tattoo' ? 'TATTOO PARLOUR / UNCLOTHED PREVIEW' : 'BACKSTAGE / FITTING ROOM'}</span></div>
