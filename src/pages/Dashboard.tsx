@@ -38,7 +38,9 @@ import { WorldNewsList } from "@/components/world/WorldNewsList";
 
 import { Link } from "react-router-dom";
 import { generatePlayerGoals, type PlayerGoalInput } from "@/lib/playerGoals";
-import { buildReferralUrl, referralShareOnCooldown, shareReferral } from "@/lib/referralShare";
+import { buildReferralUrl, referralShareOnCooldown } from "@/lib/referralShare";
+import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
+import type { ShareMoment } from "@/features/shareable-moments/types";
 
 const StatusMetric = ({ label, value, icon: Icon }: { label: string; value: string | number; icon: typeof Bell }) => (
   <div className="rounded-lg border bg-card/50 p-3">
@@ -300,6 +302,7 @@ const Dashboard = () => {
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
   const [activeTab, setActiveTab] = useState("profile");
   const [surveyDismissed, setSurveyDismissed] = useState(false);
+  const [achievementShare, setAchievementShare] = useState<ShareMoment | null>(null);
   const { shouldShowSurvey, questions: surveyQuestions, submitSurvey, isSubmitting: isSurveySubmitting } = usePlayerSurvey();
 
   const weekStart = useMemo(() => startOfWeek(currentDate, {
@@ -576,10 +579,21 @@ const Dashboard = () => {
                                 return;
                               }
                               const url = buildReferralUrl(data.code, { source: "achievement_share" });
-                              const text = `I just unlocked “${achievement.achievements?.name}” in RockMundo. Start your own music career and join me.`;
-                              const result = await shareReferral({ title: "RockMundo achievement", text, url, cooldownKey: key });
-                              if (result === "copied") toast.success("Achievement invite copied");
-                              if (result === "failed") toast.error("Could not share achievement", { description: "Your browser blocked clipboard access. Try sharing again from a supported browser." });
+                              setAchievementShare({
+                                version: 1,
+                                type: "achievement",
+                                id: achievement.id,
+                                eyebrow: `${achievement.achievements?.rarity || "Epic"} achievement`,
+                                headline: achievement.achievements?.name || "Achievement unlocked",
+                                subheadline: achievement.achievements?.description || "A new Rockmundo milestone",
+                                metrics: [
+                                  { label: "Rarity", value: String(achievement.achievements?.rarity || "Epic") },
+                                  { label: "Unlocked", value: formatDistanceToNow(new Date(achievement.unlocked_at), { addSuffix: false }) + " ago" },
+                                ],
+                                destinationUrl: url,
+                                shareCooldownKey: key,
+                                createdAt: achievement.unlocked_at,
+                              });
                             }}><Share2 className="mr-1.5 h-3.5 w-3.5" />Share milestone</Button>
                           )}
                         </div>
@@ -591,6 +605,7 @@ const Dashboard = () => {
 
         </TabsContent>
       </Tabs>
+      {achievementShare && <ShareMomentSheet open={true} onOpenChange={open => { if (!open) setAchievementShare(null); }} moment={achievementShare} />}
     </StandardPageLayout>;
 };
 export default Dashboard;
