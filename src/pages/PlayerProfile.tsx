@@ -20,15 +20,18 @@ import { getPublicProfileDetail } from "@/services/publicProfileDetail";
 import { PlayerProfileHeader, FutureProfileActions } from "@/components/player-profile/PlayerProfileHeader";
 import { ProfileInfoCard, BandProfileCard, EmploymentProfileCard, OpenStatusBadges } from "@/components/player-profile/ProfileCards";
 import { mergePresenceProfiles } from "@/services/presenceService";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CharacterShareStudio } from "@/features/shareable-moments/CharacterShareStudio";
 import type { CharacterProfileShareMoment } from "@/features/shareable-moments/characterProfile";
+import { markSharePromptSeen, shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
+import { FAME_SHARE_THRESHOLDS, highestReachedThreshold, milestoneLabel } from "@/features/shareable-moments/milestones";
 
 export default function PlayerProfile() {
   const { playerId } = useParams();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [shareOpen, setShareOpen] = useState(false);
+  const [milestoneMoment, setMilestoneMoment] = useState<CharacterProfileShareMoment | null>(null);
 
   // Always resolve the currently selected character. Querying profiles by
   // user_id with .single() fails for accounts that own more than one character.
@@ -40,6 +43,27 @@ export default function PlayerProfile() {
     enabled: !!playerId && !!currentUser?.id,
     retry: false,
   });
+
+  useEffect(() => {
+    if (!profile || !currentUser || currentUser.id !== playerId || milestoneMoment) return;
+    const fame = Number(profile.fame || 0);
+    const threshold = highestReachedThreshold(fame, FAME_SHARE_THRESHOLDS);
+    if (!threshold) return;
+    const sourceId = `${profile.id}:${threshold}`;
+    if (!shouldOfferSharePrompt("fame-milestone", sourceId)) return;
+    markSharePromptSeen("fame-milestone", sourceId);
+    setMilestoneMoment({
+      version: 1,
+      type: "achievement",
+      id: `fame:${sourceId}`,
+      eyebrow: "FAME MILESTONE",
+      headline: `${milestoneLabel(threshold)} Fame`,
+      subheadline: profile.display_name || profile.username || "RockMundo artist",
+      metrics: [{ label: "Fame", value: fame.toLocaleString() }, { label: "Career level", value: String(profile.level || 1) }, { label: "Fans", value: Number(profile.fans || 0).toLocaleString() }],
+      destinationUrl: window.location.href,
+      createdAt: new Date().toISOString(),
+    });
+  }, [profile, currentUser, playerId, milestoneMoment]);
 
   // Friendship status
   const { data: profilePresence } = useQuery({
@@ -352,7 +376,7 @@ export default function PlayerProfile() {
             </Card>
           )}
       </div>
-      {isOwnProfile && <CharacterShareStudio open={shareOpen} onOpenChange={setShareOpen} moment={shareMoment} />}
+      {isOwnProfile && <><CharacterShareStudio open={shareOpen} onOpenChange={setShareOpen} moment={shareMoment} />{milestoneMoment && <CharacterShareStudio open={!!milestoneMoment} onOpenChange={(open) => { if (!open) setMilestoneMoment(null); }} moment={milestoneMoment} />}</>}
     </FMPageScaffold>
   );
 }
