@@ -47,11 +47,34 @@ const TwaaterProfileView = () => {
     enabled: !!handle,
   });
 
+  const { data: selectedAccountFollowsProfile = false, isLoading: visibilityLoading } = useQuery({
+    queryKey: ["twaater-selected-account-follows-profile", viewerAccount?.id, profileAccount?.id],
+    queryFn: async () => {
+      if (!viewerAccount?.id || !profileAccount?.id || viewerAccount.id === profileAccount.id) return false;
+      const { data, error } = await supabase
+        .from("twaater_follows")
+        .select("follower_account_id")
+        .eq("follower_account_id", viewerAccount.id)
+        .eq("followed_account_id", profileAccount.id)
+        .maybeSingle();
+      if (error) throw error;
+      return Boolean(data);
+    },
+    enabled: !!viewerAccount?.id && !!profileAccount?.id && viewerAccount.id !== profileAccount.id,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
   const { data: twaats, isLoading: twaatsLoading, error: twaatsError, refetch: refetchTwaats } = useQuery({
-    queryKey: ["twaater-profile-twaats", profileAccount?.id],
+    queryKey: [
+      "twaater-profile-twaats",
+      profileAccount?.id,
+      viewerAccount?.id,
+      selectedAccountFollowsProfile,
+    ],
     queryFn: async () => {
       if (!profileAccount) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("twaats")
         .select(`
           *,
@@ -63,27 +86,24 @@ const TwaaterProfileView = () => {
         .is("scheduled_for", null)
         .order("created_at", { ascending: false })
         .limit(50);
+
+      if (viewerAccount?.id === profileAccount.id) {
+        query = query.in("visibility", ["public", "followers"]);
+      } else if (selectedAccountFollowsProfile) {
+        query = query.in("visibility", ["public", "followers"]);
+      } else {
+        query = query.eq("visibility", "public");
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
-      return hydrateTwaaterFeedExtras(data || []);
+      return hydrateTwaaterFeedExtras(data || [], viewerAccount?.id);
     },
-    enabled: !!profileAccount,
+    enabled: !!profileAccount && !visibilityLoading,
   });
 
-  const { data: isFollowing, isLoading: followLoading } = useQuery({
-    queryKey: ["is-following", viewerAccount?.id, profileAccount?.id],
-    queryFn: async () => {
-      if (!viewerAccount || !profileAccount) return false;
-      const { data, error } = await supabase
-        .from("twaater_follows")
-        .select("follower_account_id")
-        .eq("follower_account_id", viewerAccount.id)
-        .eq("followed_account_id", profileAccount.id)
-        .maybeSingle();
-      if (error) throw error;
-      return !!data;
-    },
-    enabled: !!viewerAccount && !!profileAccount,
-  });
+  const isFollowing = selectedAccountFollowsProfile;
+  const followLoading = visibilityLoading;
 
   useEffect(() => {
     if (!viewerAccount?.id || !profileAccount?.id || viewerAccount.id === profileAccount.id) return;
@@ -131,7 +151,10 @@ const TwaaterProfileView = () => {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["is-following", viewerAccount?.id, profileAccount?.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["twaater-selected-account-follows-profile", viewerAccount?.id, profileAccount?.id],
+      });
+      queryClient.invalidateQueries({ queryKey: ["twaater-profile-twaats", profileAccount?.id] });
       queryClient.invalidateQueries({ queryKey: ["twaater-profile", handle] });
       queryClient.invalidateQueries({ queryKey: ["twaater-account"] });
       queryClient.invalidateQueries({ queryKey: ["twaater-feed"] });
@@ -151,7 +174,7 @@ const TwaaterProfileView = () => {
     },
   });
 
-  if (accountLoading || viewerAccountLoading) {
+  if (accountLoading || viewerAccountLoading || visibilityLoading) {
     return (
       <FMPageScaffold title="Profile" icon={Users} backTo={backTo}>
         <div className="flex items-center justify-center py-16">

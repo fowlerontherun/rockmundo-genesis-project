@@ -125,6 +125,8 @@ Deno.serve(async (req) => {
           id,
           body,
           created_at,
+          account_id,
+          visibility,
           account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, owner_type)
         `)
         .in("id", quotedIds)
@@ -134,7 +136,13 @@ Deno.serve(async (req) => {
       if (quotedError) {
         console.warn("[twaater-ai-feed] quoted Twaat hydration failed", quotedError);
       } else {
-        for (const quoted of quotedTwaats || []) quotedById.set(quoted.id, quoted);
+        for (const quoted of quotedTwaats || []) {
+          const quoteVisible =
+            quoted.visibility === "public" ||
+            (quoted.visibility === "followers" && permittedFollowerOnlyIds.has(quoted.account_id));
+          if (!quoteVisible || blockedIds.has(quoted.account_id)) continue;
+          quotedById.set(quoted.id, quoted);
+        }
       }
     }
 

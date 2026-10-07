@@ -54,34 +54,75 @@ const quotedTwaatSelect = `
   id,
   body,
   created_at,
+  account_id,
+  visibility,
   account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, owner_type)
 `;
 
-export const hydrateQuotedTwaats = async <T extends { id: string; quoted_twaat_id?: string | null }>(rows: T[]): Promise<T[]> => {
+export const hydrateQuotedTwaats = async <T extends { id: string; quoted_twaat_id?: string | null }>(
+  rows: T[],
+  viewerAccountId?: string,
+): Promise<T[]> => {
   const quotedIds = Array.from(new Set(rows.map((row) => row.quoted_twaat_id).filter(Boolean))) as string[];
   if (quotedIds.length === 0) return rows;
 
-  const { data, error } = await supabase
+  let quoteQuery = supabase
     .from("twaats")
     .select(quotedTwaatSelect)
     .in("id", quotedIds)
     .is("deleted_at", null)
     .is("scheduled_for", null);
 
+  quoteQuery = viewerAccountId
+    ? quoteQuery.in("visibility", ["public", "followers"])
+    : quoteQuery.eq("visibility", "public");
+
+  const { data, error } = await quoteQuery;
+
   if (error) {
     console.warn("Unable to hydrate quoted Twaats:", error);
     return rows;
   }
 
-  const quotedById = new Map((data || []).map((quoted: any) => [quoted.id, quoted]));
+  const followerOnlyAuthors = Array.from(new Set(
+    (data || [])
+      .filter((quoted: any) => quoted.visibility === "followers" && quoted.account_id !== viewerAccountId)
+      .map((quoted: any) => quoted.account_id)
+      .filter(Boolean),
+  ));
+
+  let followedAuthorIds = new Set<string>();
+  if (viewerAccountId && followerOnlyAuthors.length > 0) {
+    const { data: follows, error: followsError } = await supabase
+      .from("twaater_follows")
+      .select("followed_account_id")
+      .eq("follower_account_id", viewerAccountId)
+      .in("followed_account_id", followerOnlyAuthors);
+
+    if (followsError) {
+      console.warn("Unable to verify quoted Twaat visibility:", followsError);
+    } else {
+      followedAuthorIds = new Set((follows || []).map((follow) => follow.followed_account_id));
+    }
+  }
+
+  const visibleQuotes = (data || []).filter((quoted: any) =>
+    quoted.visibility === "public" ||
+    quoted.account_id === viewerAccountId ||
+    followedAuthorIds.has(quoted.account_id)
+  );
+  const quotedById = new Map(visibleQuotes.map((quoted: any) => [quoted.id, quoted]));
   return rows.map((row: any) => ({
     ...row,
     quoted_twaat: row.quoted_twaat_id ? quotedById.get(row.quoted_twaat_id) : undefined,
   }));
 };
 
-export const hydrateTwaaterFeedExtras = async <T extends { id: string; quoted_twaat_id?: string | null }>(rows: T[]): Promise<T[]> => {
-  const hydratedQuotes = await hydrateQuotedTwaats(rows);
+export const hydrateTwaaterFeedExtras = async <T extends { id: string; quoted_twaat_id?: string | null }>(
+  rows: T[],
+  viewerAccountId?: string,
+): Promise<T[]> => {
+  const hydratedQuotes = await hydrateQuotedTwaats(rows, viewerAccountId);
   if (hydratedQuotes.length === 0) return hydratedQuotes;
 
   // The regular chronological feed embeds polls in the primary Twaat query so
@@ -240,7 +281,7 @@ export const useTwaaterFeed = (viewerAccountId?: string, enabled = true) => {
           .limit(50);
 
         if (error) throw error;
-        return await hydrateTwaaterFeedExtras((data || []) as unknown as TwaatWithDetails[]);
+        return await hydrateTwaaterFeedExtras((data || []) as unknown as TwaatWithDetails[], viewerAccountId);
       }
 
       const { data: follows, error: followsError } = await supabase
@@ -263,7 +304,7 @@ export const useTwaaterFeed = (viewerAccountId?: string, enabled = true) => {
         .limit(50);
 
       if (error) throw error;
-      return await hydrateTwaaterFeedExtras((data || []) as unknown as TwaatWithDetails[]);
+      return await hydrateTwaaterFeedExtras((data || []) as unknown as TwaatWithDetails[], viewerAccountId);
     },
     enabled,
     staleTime: 60 * 1000,
