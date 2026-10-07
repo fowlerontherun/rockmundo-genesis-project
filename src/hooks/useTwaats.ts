@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { invalidateTwaaterContentQueries } from "@/lib/twaaterQueryInvalidation";
 import type { Database } from "@/lib/supabase-types";
 
 type Twaat = Database["public"]["Tables"]["twaats"]["Row"];
@@ -147,10 +148,7 @@ export const useTwaats = (accountId?: string) => {
       return twaat;
     },
     onSuccess: (twaat) => {
-      queryClient.invalidateQueries({ queryKey: ["twaats"] });
-      queryClient.invalidateQueries({ queryKey: ["twaater-feed"] });
-      queryClient.invalidateQueries({ queryKey: ["twaater-ai-feed"] });
-      queryClient.invalidateQueries({ queryKey: ["twaater-trending"] });
+      invalidateTwaaterContentQueries(queryClient);
 
       if (twaat.scheduled_for) {
         const scheduledTime = new Date(twaat.scheduled_for).toLocaleString();
@@ -185,9 +183,7 @@ export const useTwaats = (accountId?: string) => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["twaats"] });
-      queryClient.invalidateQueries({ queryKey: ["twaater-feed"] });
-      queryClient.invalidateQueries({ queryKey: ["twaater-ai-feed"] });
+      invalidateTwaaterContentQueries(queryClient);
       toast({
         title: "Twaat deleted",
         description: "Your post has been removed.",
