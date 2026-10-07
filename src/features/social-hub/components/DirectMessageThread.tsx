@@ -8,14 +8,21 @@ import { format } from "date-fns";
 import { useDirectMessages } from "@/hooks/useDirectMessages";
 import { ReportSocialTargetDialog } from "@/features/social-safety/components/ReportSocialTargetDialog";
 import { DirectVoiceChat } from "./DirectVoiceChat";
+import { cn } from "@/lib/utils";
 
 interface Props {
   myProfileId: string;
   otherProfileId: string;
   otherDisplayName: string;
+  compact?: boolean;
 }
 
-export function DirectMessageThread({ myProfileId, otherProfileId, otherDisplayName }: Props) {
+export function DirectMessageThread({
+  myProfileId,
+  otherProfileId,
+  otherDisplayName,
+  compact = false,
+}: Props) {
   const { channelId, messages, isLoading, sendMessage, markRead } = useDirectMessages(
     myProfileId,
     otherProfileId,
@@ -25,7 +32,10 @@ export function DirectMessageThread({ myProfileId, otherProfileId, otherDisplayN
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    const viewport = scrollRef.current?.querySelector(
+      "[data-radix-scroll-area-viewport]",
+    ) as HTMLDivElement | null;
+    if (viewport) viewport.scrollTop = viewport.scrollHeight;
   }, [messages.length]);
 
   useEffect(() => {
@@ -39,25 +49,38 @@ export function DirectMessageThread({ myProfileId, otherProfileId, otherDisplayN
   };
 
   return (
-    <Card className="flex h-full flex-col">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-        <CardTitle className="text-base">Chat with {otherDisplayName}</CardTitle>
+    <Card className={cn("flex h-full flex-col", compact && "min-h-0 rounded-none border-0 shadow-none")}>
+      <CardHeader
+        className={cn(
+          "flex flex-row items-center justify-between space-y-0 pb-3",
+          compact && "shrink-0 px-2 py-2",
+        )}
+      >
+        <CardTitle className={compact ? "text-xs" : "text-base"}>
+          Chat with {otherDisplayName}
+        </CardTitle>
         <Button
           variant={voiceOpen ? "destructive" : "outline"}
-          size="sm"
+          size={compact ? "icon" : "sm"}
+          className={compact ? "h-7 w-7 shrink-0" : undefined}
           onClick={() => setVoiceOpen((v) => !v)}
           disabled={!channelId}
+          aria-label={voiceOpen ? "Close voice chat" : "Start voice chat"}
         >
-          {voiceOpen ? <X className="h-4 w-4 mr-1" /> : <Phone className="h-4 w-4 mr-1" />}
-          {voiceOpen ? "Close voice" : "Voice call"}
+          {voiceOpen ? (
+            <X className={cn("h-4 w-4", !compact && "mr-1")} />
+          ) : (
+            <Phone className={cn("h-4 w-4", !compact && "mr-1")} />
+          )}
+          {!compact && (voiceOpen ? "Close voice" : "Voice call")}
         </Button>
       </CardHeader>
       {voiceOpen && channelId && (
-        <div className="px-4 pb-3">
+        <div className={compact ? "px-2 pb-2" : "px-4 pb-3"}>
           <DirectVoiceChat channelId={channelId} />
         </div>
       )}
-      <CardContent className="flex-1 overflow-hidden">
+      <CardContent className={cn("flex-1 overflow-hidden", compact && "min-h-0 px-2 pb-2")}>
         {sendMessage.isSuccess && (
           <p className="mb-2 rounded-md bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700" role="status">
             Message sent.
@@ -68,7 +91,7 @@ export function DirectMessageThread({ myProfileId, otherProfileId, otherDisplayN
             {sendMessage.error instanceof Error ? sendMessage.error.message : "We couldn't send that message."}
           </p>
         )}
-        <ScrollArea className="h-[360px]" ref={scrollRef}>
+        <ScrollArea className={compact ? "h-full" : "h-[360px]"} ref={scrollRef}>
           <div className="space-y-2 pr-3">
             {isLoading ? (
               <div className="flex h-32 items-center justify-center text-muted-foreground">
@@ -111,7 +134,7 @@ export function DirectMessageThread({ myProfileId, otherProfileId, otherDisplayN
           </div>
         </ScrollArea>
       </CardContent>
-      <CardFooter className="flex flex-col gap-2">
+      <CardFooter className={cn("flex flex-col gap-2", compact && "shrink-0 px-2 pb-2")}>
         <Textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -119,13 +142,15 @@ export function DirectMessageThread({ myProfileId, otherProfileId, otherDisplayN
           aria-label={`Message ${otherDisplayName}`}
           maxLength={2000}
           disabled={sendMessage.isPending}
-          className="min-h-[72px]"
+          className={compact ? "min-h-[44px] max-h-[64px] resize-none" : "min-h-[72px]"}
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleSend();
           }}
         />
         <div className="flex w-full justify-between text-xs text-muted-foreground">
-          <span>⌘/Ctrl + Enter to send · {draft.trim().length}/2,000</span>
+          <span className={compact ? "sr-only" : undefined}>
+            ⌘/Ctrl + Enter to send · {draft.trim().length}/2,000
+          </span>
           <Button onClick={handleSend} disabled={sendMessage.isPending || !draft.trim()} size="sm" aria-label={`Send message to ${otherDisplayName}`}>
             {sendMessage.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             <SendHorizontal className="mr-1 h-4 w-4" /> Send
