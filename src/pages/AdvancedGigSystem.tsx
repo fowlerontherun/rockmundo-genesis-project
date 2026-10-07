@@ -7,7 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAdvancedGigs } from "@/hooks/useAdvancedGigs";
 import { appearanceDetailHref, formatFestivalSetTime, FESTIVAL_APPEARANCE_HIGHLIGHT } from "@/features/festivals/appearances/bandFestivalAppearances";
 import { Link } from "react-router-dom";
-import { Calendar, Clock, AlertTriangle, Lock, Music, DollarSign, Handshake, Share2 } from "lucide-react";\nimport { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";\nimport type { ShareMoment } from "@/features/shareable-moments/types";
+import { Calendar, Clock, AlertTriangle, Lock, Music, DollarSign, Handshake, Share2 } from "lucide-react";
+import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
+import type { ShareMoment } from "@/features/shareable-moments/types";
 import { supabase } from "@/integrations/supabase/client";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -18,7 +20,9 @@ import { SupportHistoryPanel } from "@/features/support-bands/SupportHistoryPane
 export default function AdvancedGigSystem() {
   const { gigId } = useParams<{ gigId?: string }>();
   const { profileId } = useActiveProfile();
-  const [userBandId, setUserBandId] = useState<string | null>(null);\n  const [bandName, setBandName] = useState("Your band");\n  const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
+  const [userBandId, setUserBandId] = useState<string | null>(null);
+  const [bandName, setBandName] = useState("Your band");
+  const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
   const supportMode = gigId === "support";
 
   useEffect(() => {
@@ -36,7 +40,9 @@ export default function AdvancedGigSystem() {
       .then(({ data: member }) => setUserBandId(member?.band_id || null));
   }, [profileId]);
 
-  useEffect(() => { if (!userBandId) return; void supabase.from("bands").select("name").eq("id", userBandId).maybeSingle().then(({ data }) => setBandName(data?.name || "Your band")); }, [userBandId]);\n\n  const { offers, conflicts, lockouts, upcomingGigs, festivalAppearances, festivalsError, festivalsLoading, isLoading } = useAdvancedGigs(userBandId || undefined);
+  useEffect(() => { if (!userBandId) return; void supabase.from("bands").select("name").eq("id", userBandId).maybeSingle().then(({ data }) => setBandName(data?.name || "Your band")); }, [userBandId]);
+
+  const { offers, conflicts, lockouts, upcomingGigs, festivalAppearances, festivalsError, festivalsLoading, isLoading } = useAdvancedGigs(userBandId || undefined);
 
   if (isLoading) {
     return (
