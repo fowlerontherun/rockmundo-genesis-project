@@ -34,7 +34,9 @@ import { minorToMajor } from "@/lib/releaseMoney";
 import { MUSIC_GENRES } from "@/data/genres";
 import { format as formatDate, formatDistanceToNow } from "date-fns";
 import { resolveActiveBandMembership } from "@/utils/activeBandMembership";
-import { buildReferralUrl, referralShareOnCooldown } from "@/lib/referralShare";\nimport { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";\nimport type { ShareMoment } from "@/features/shareable-moments/types";
+import { buildReferralUrl, referralShareOnCooldown } from "@/lib/referralShare";
+import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
+import type { ShareMoment } from "@/features/shareable-moments/types";
 
 interface MyReleasesTabProps {
   userId: string;
@@ -572,7 +574,8 @@ interface ReleaseCardProps {
 }
 
 function ReleaseCard({ release, financials, financeAvailable = false, labelCutPct = 0, onEdit, onCancel, onViewDetails, onPromo, onAddPhysical, onAnalytics, onReorder, onParty, onReleaseNow, isReleasing, bestChartPosition, profileId }: ReleaseCardProps) {
-  const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);\n  const statusConfig = STATUS_CONFIG[release.release_status] || STATUS_CONFIG.draft;
+  const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
+  const statusConfig = STATUS_CONFIG[release.release_status] || STATUS_CONFIG.draft;
   const typeConfig = RELEASE_TYPE_CONFIG[release.release_type] || RELEASE_TYPE_CONFIG.single;
   const StatusIcon = statusConfig.icon;
   
@@ -719,6 +722,7 @@ function ReleaseCard({ release, financials, financeAvailable = false, labelCutPc
           </div>
         </div>
       </div>
-    </Card>\n      <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(open) => { if (!open) setShareMoment(null); }} />
+    </Card>
+      <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(open) => { if (!open) setShareMoment(null); }} />
   );
 }
