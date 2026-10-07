@@ -181,19 +181,33 @@ const OnboardingWizard = () => {
   const [recruitingBand, setRecruitingBand] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
-    const bandId = localStorage.getItem("rockmundo_referral_band");
-    if (!bandId) return;
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bandId)) {
-      localStorage.removeItem("rockmundo_referral_band");
-      return;
-    }
+    if (!user) return;
     let cancelled = false;
-    void supabase.from("bands").select("id, name").eq("id", bandId).maybeSingle().then(({ data }) => {
+
+    const loadRecruitingBand = async () => {
+      const { data: context } = await (supabase as any).rpc("get_my_referral_context");
+      const persistedBand = context?.band;
+      if (!cancelled && persistedBand?.band_id && persistedBand?.name) {
+        setRecruitingBand({ id: persistedBand.band_id, name: persistedBand.name });
+        localStorage.removeItem("rockmundo_referral_band");
+        return;
+      }
+
+      // Keep the captured link value only as a pre-persistence fallback.
+      const bandId = localStorage.getItem("rockmundo_referral_band");
+      if (!bandId) return;
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bandId)) {
+        localStorage.removeItem("rockmundo_referral_band");
+        return;
+      }
+      const { data } = await supabase.from("bands").select("id, name").eq("id", bandId).maybeSingle();
       if (!cancelled && data?.id && data?.name) setRecruitingBand({ id: data.id, name: data.name });
       else if (!cancelled) localStorage.removeItem("rockmundo_referral_band");
-    });
+    };
+
+    void loadRecruitingBand();
     return () => { cancelled = true; };
-  }, []);
+  }, [user]);
 
   const profileQuery = useQuery<PlayerProfile>({
     queryKey: ["player-profile", user?.id],
