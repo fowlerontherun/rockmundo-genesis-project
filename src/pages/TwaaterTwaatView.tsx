@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { TwaatCard } from "@/components/twaater/TwaatCard";
@@ -11,12 +11,16 @@ import { useTwaaterAccount } from "@/hooks/useTwaaterAccount";
 import { useGameData } from "@/hooks/useGameData";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { hydrateTwaaterFeedExtras } from "@/hooks/useTwaats";
+import { useTwaaterRouteAccount } from "@/hooks/useTwaaterRouteAccount";
 
 export default function TwaaterTwaatView() {
   const { twaatId } = useParams();
   const navigate = useNavigate();
   const { profile } = useGameData();
-  const { account } = useTwaaterAccount("persona", profile?.id);
+  const [searchParams] = useSearchParams();
+  const { account: personaAccount } = useTwaaterAccount("persona", profile?.id);
+  const { account } = useTwaaterRouteAccount(personaAccount, searchParams.get("account"));
+  const backTo = account?.id ? `/twaater?account=${account.id}` : "/twaater";
 
   // Fetch main twaat
   const { data: twaat, isLoading, error: twaatError, refetch: refetchTwaat } = useQuery({
@@ -69,7 +73,7 @@ export default function TwaaterTwaatView() {
 
   if (isLoading) {
     return (
-      <FMPageScaffold title="Twaat" icon={MessageCircle} backTo="/twaater">
+      <FMPageScaffold title="Twaat" icon={MessageCircle} backTo={backTo}>
         <div className="flex items-center justify-center py-16">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
@@ -79,7 +83,7 @@ export default function TwaaterTwaatView() {
 
   if (twaatError) {
     return (
-      <FMPageScaffold title="Twaat" icon={MessageCircle} backTo="/twaater">
+      <FMPageScaffold title="Twaat" icon={MessageCircle} backTo={backTo}>
         <Card>
           <CardContent className="py-12 text-center space-y-3">
             <p className="text-muted-foreground">This Twaat couldn't load.</p>
@@ -92,11 +96,11 @@ export default function TwaaterTwaatView() {
 
   if (!twaat) {
     return (
-      <FMPageScaffold title="Twaat" icon={MessageCircle} backTo="/twaater">
+      <FMPageScaffold title="Twaat" icon={MessageCircle} backTo={backTo}>
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground mb-4">Twaat not found</p>
-            <Button onClick={() => navigate("/twaater")}>
+            <Button onClick={() => navigate(backTo)}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Feed
             </Button>
@@ -107,7 +111,7 @@ export default function TwaaterTwaatView() {
   }
 
   return (
-    <FMPageScaffold title="Twaat" icon={MessageCircle} backTo="/twaater" backLabel="Back to Twaater">
+    <FMPageScaffold title="Twaat" icon={MessageCircle} backTo={backTo} backLabel="Back to Twaater">
       <div className="rounded-sm border border-fm-border overflow-hidden" style={{ backgroundColor: "hsl(var(--twaater-bg))" }}>
         {/* Main Twaat */}
         <TwaatCard twaat={twaat} viewerAccountId={account?.id} />
