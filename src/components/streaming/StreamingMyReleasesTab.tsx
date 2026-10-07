@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Music, TrendingUp, DollarSign, Trash2, Play, Pause, Flame, Star, RotateCcw, ChevronDown, ChevronsDownUp, ChevronsUpDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
+import type { ShareMoment } from "@/features/shareable-moments/types";
+import { markSharePromptSeen, shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
+import { STREAM_SHARE_THRESHOLDS, highestReachedThreshold, milestoneLabel } from "@/features/shareable-moments/milestones";
 import { SongPlayer } from "@/components/audio/SongPlayer";
 import { PlatformIcon, getPlatformColor } from "./PlatformIcon";
 import { StreamSparkline } from "./StreamSparkline";
@@ -31,6 +35,7 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
   const queryClient = useQueryClient();
   const [takeDownId, setTakeDownId] = useState<string | null>(null);
   const [expandedSongs, setExpandedSongs] = useState<Set<string>>(new Set());
+  const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
 
   const toggleSong = (songId: string) => {
     setExpandedSongs((prev) => {
@@ -221,6 +226,34 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
     return acc;
   }, {} as Record<string, any>) || {};
 
+  useEffect(() => {
+    if (shareMoment) return;
+    const candidate = Object.entries(groupedBySong)
+      .map(([songId, data]: [string, any]) => ({ songId, data, threshold: highestReachedThreshold(Number(data.totalStreams || 0), STREAM_SHARE_THRESHOLDS) }))
+      .filter((item): item is { songId: string; data: any; threshold: number } => item.threshold !== null)
+      .sort((a, b) => b.threshold - a.threshold)[0];
+    if (!candidate) return;
+    const sourceId = `${candidate.songId}:${candidate.threshold}`;
+    if (!shouldOfferSharePrompt("stream-milestone", sourceId)) return;
+    markSharePromptSeen("stream-milestone", sourceId);
+    setShareMoment({
+      version: 1,
+      type: "release",
+      id: `streams:${sourceId}`,
+      eyebrow: candidate.threshold >= 1_000_000 ? "STREAMING HIT" : "STREAM MILESTONE",
+      headline: candidate.data.song?.title || "Streaming milestone",
+      subheadline: `${milestoneLabel(candidate.threshold)} streams in RockMundo`,
+      metrics: [
+        { label: "Streams", value: Number(candidate.data.totalStreams || 0).toLocaleString() },
+        { label: "Platforms", value: String(candidate.data.platforms.length) },
+        ...(candidate.data.song?.genre ? [{ label: "Genre", value: candidate.data.song.genre }] : []),
+      ],
+      destinationUrl: window.location.href,
+      referralCode: null,
+      createdAt: new Date().toISOString(),
+    });
+  }, [groupedBySong, shareMoment]);
+
   if (isLoading) {
     return <div className="text-center py-8">Loading streaming releases...</div>;
   }
@@ -249,6 +282,7 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
 
   return (
     <>
+      <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(open) => { if (!open) setShareMoment(null); }} />
       <div className="flex items-center justify-between mb-2">
         <p className="text-sm text-muted-foreground">
           {songEntries.length} song{songEntries.length !== 1 ? "s" : ""} on streaming
