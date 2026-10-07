@@ -34,3 +34,24 @@ it('uses the displayed default accent when swapping for the first time', () => {
   expect(changed.mock.lastCall?.[0].equipment.bottom).toEqual({ ...appearance.equipment.bottom, color: '#eee8db', secondaryColor: appearance.equipment.bottom.color });
   expect(changed.mock.lastCall?.[0].equipment.top).toEqual(appearance.equipment.top);
 });
+
+it('does not reset a custom dye when the selected garment is clicked again', () => {
+  const appearance = defaultAppearance();
+  appearance.equipment.top = { itemId: 'starter.top.plain-black', color: '#90c9eb', pattern: 'dots', secondaryColor: '#ed4495' };
+  const changed = vi.fn();
+  render(<StarterWardrobe slot="top" appearance={appearance} onChange={changed} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Plain black T-shirt' }));
+  expect(changed).not.toHaveBeenCalled();
+});
+
+it('preserves the pattern and accent on item switches, and honours keep-colour for the main dye', () => {
+  const appearance = defaultAppearance();
+  appearance.equipment.top = { itemId: 'starter.top.plain-black', color: '#90c9eb', pattern: 'checks', secondaryColor: '#ed4495' };
+  const changed = vi.fn();
+  render(<StarterWardrobe slot="top" appearance={appearance} onChange={changed} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Plain white T-shirt' }));
+  expect(changed.mock.lastCall?.[0].equipment.top).toEqual({ ...appearance.equipment.top, itemId: 'starter.top.plain-white', color: '#eee8db' });
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Keep my colour when switching items' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Plain white T-shirt' }));
+  expect(changed.mock.lastCall?.[0].equipment.top).toEqual({ ...appearance.equipment.top, itemId: 'starter.top.plain-white' });
+});
