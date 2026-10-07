@@ -21,3 +21,6 @@ begin
   end if;
 end
 $$;
+
+-- The unique participant-pair index covers the same lookup path.
+drop index if exists public.idx_conversations_participants;
