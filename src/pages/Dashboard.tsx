@@ -38,7 +38,9 @@ import { WorldNewsList } from "@/components/world/WorldNewsList";
 
 import { Link } from "react-router-dom";
 import { generatePlayerGoals, type PlayerGoalInput } from "@/lib/playerGoals";
-import { buildReferralUrl, referralShareOnCooldown, shareReferral } from "@/lib/referralShare";
+import { buildReferralUrl, referralShareOnCooldown } from "@/lib/referralShare";
+import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
+import type { ShareMoment } from "@/features/shareable-moments/types";
 
 const StatusMetric = ({ label, value, icon: Icon }: { label: string; value: string | number; icon: typeof Bell }) => (
   <div className="rounded-lg border bg-card/50 p-3">
@@ -284,6 +286,7 @@ const NotificationsPanel = ({ userId, profileId }: { userId?: string; profileId?
 };
 
 const Dashboard = () => {
+  const [achievementShare, setAchievementShare] = useState<ShareMoment | null>(null);
   const {
     user
   } = useAuth();
@@ -503,7 +506,8 @@ const Dashboard = () => {
                   {weekDays.map(day => <TabsContent key={day.toISOString()} value={formatDate(day, 'yyyy-MM-dd')}>
                       <DaySchedule date={day} userId={user?.id} />
                     </TabsContent>)}
-                </Tabs>}
+                </Tabs>
+      {achievementShare && <ShareMomentSheet open={true} onOpenChange={open => { if (!open) setAchievementShare(null); }} moment={achievementShare} />}}
             </CardContent>
           </Card>
         </TabsContent>
@@ -573,10 +577,20 @@ const Dashboard = () => {
                                 return;
                               }
                               const url = buildReferralUrl(data.code);
-                              const text = `I just unlocked “${achievement.achievements?.name}” in RockMundo. Start your own music career and join me.`;
-                              const result = await shareReferral({ title: "RockMundo achievement", text, url, cooldownKey: key });
-                              if (result === "copied") toast.success("Achievement invite copied");
-                              if (result === "failed") toast.error("Could not share achievement", { description: "Your browser blocked clipboard access. Try sharing again from a supported browser." });
+                              setAchievementShare({
+                                version: 1,
+                                type: "achievement",
+                                id: achievement.id,
+                                eyebrow: String(achievement.achievements?.rarity || "Achievement") + " achievement",
+                                headline: achievement.achievements?.name || "Achievement unlocked",
+                                subheadline: achievement.achievements?.description || "A new Rockmundo milestone",
+                                metrics: [
+                                  { label: "Rarity", value: String(achievement.achievements?.rarity || "Epic") },
+                                  { label: "Unlocked", value: formatDistanceToNow(new Date(achievement.unlocked_at), { addSuffix: false }) + " ago" },
+                                ],
+                                destinationUrl: url,
+                                createdAt: achievement.unlocked_at,
+                              });
                             }}><Share2 className="mr-1.5 h-3.5 w-3.5" />Share milestone</Button>
                           )}
                         </div>
