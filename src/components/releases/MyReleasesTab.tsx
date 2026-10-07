@@ -34,6 +34,7 @@ import { minorToMajor } from "@/lib/releaseMoney";
 import { MUSIC_GENRES } from "@/data/genres";
 import { format as formatDate, formatDistanceToNow } from "date-fns";
 import { resolveActiveBandMembership } from "@/utils/activeBandMembership";
+import { buildReferralUrl, referralShareOnCooldown, shareReferral } from "@/lib/referralShare";
 
 interface MyReleasesTabProps {
   userId: string;
@@ -592,23 +593,20 @@ function ReleaseCard({ release, financials, financeAvailable = false, labelCutPc
   const handleShareRelease = async () => {
     if (!profileId || !shareRelease) return;
     const key = "rockmundo_release_referral_share_at";
-    const last = Number(localStorage.getItem(key) || 0);
-    if (Date.now() - last < 7 * 24 * 60 * 60 * 1000) return;
+    if (referralShareOnCooldown(key)) {
+      toast.info("You shared a release milestone recently. Try again later.");
+      return;
+    }
     const { data, error } = await (supabase as any).rpc("get_referral_dashboard", { p_profile_id: profileId });
-    if (error || !data?.code) return;
-    const url = `${window.location.origin}/auth?ref=${encodeURIComponent(data.code)}`;
+    if (error || !data?.code) {
+      toast.error("Could not prepare your referral link");
+      return;
+    }
+    const url = buildReferralUrl(data.code);
     const text = `${release.title} just reached #${bestChartPosition} in RockMundo. Start your own music career and join me.`;
-    if (navigator.share) {
-      try { await navigator.share({ title: `${release.title} — RockMundo`, text, url }); localStorage.setItem(key, String(Date.now())); return; }
-      catch (error) { if ((error as DOMException)?.name === "AbortError") return; }
-    }
-    try {
-      await navigator.clipboard.writeText(`${text} ${url}`);
-      localStorage.setItem(key, String(Date.now()));
-      toast.success("Invite copied");
-    } catch {
-      toast.error("Could not share invite", { description: "Your browser blocked clipboard access. Try the share button again from a supported browser." });
-    }
+    const result = await shareReferral({ title: `${release.title} — RockMundo`, text, url, cooldownKey: key });
+    if (result === "copied") toast.success("Invite copied");
+    if (result === "failed") toast.error("Could not share invite", { description: "Your browser blocked clipboard access. Try the share button again from a supported browser." });
   };
   
   return (
