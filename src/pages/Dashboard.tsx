@@ -39,8 +39,8 @@ import { WorldNewsList } from "@/components/world/WorldNewsList";
 import { Link } from "react-router-dom";
 import { generatePlayerGoals, type PlayerGoalInput } from "@/lib/playerGoals";
 import { buildReferralUrl, referralShareOnCooldown } from "@/lib/referralShare";
-import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
-import type { ShareMoment } from "@/features/shareable-moments/types";
+import { AvatarShareStudio } from "@/features/shareable-moments/CharacterShareStudio";
+import type { CharacterProfileShareMoment } from "@/features/shareable-moments/characterProfile";
 
 const StatusMetric = ({ label, value, icon: Icon }: { label: string; value: string | number; icon: typeof Bell }) => (
   <div className="rounded-lg border bg-card/50 p-3">
@@ -302,7 +302,7 @@ const Dashboard = () => {
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
   const [activeTab, setActiveTab] = useState("profile");
   const [surveyDismissed, setSurveyDismissed] = useState(false);
-  const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
+  const [shareMoment, setShareMoment] = useState<CharacterProfileShareMoment | null>(null);
   const { shouldShowSurvey, questions: surveyQuestions, submitSurvey, isSubmitting: isSurveySubmitting } = usePlayerSurvey();
 
   const weekStart = useMemo(() => startOfWeek(currentDate, {
@@ -591,7 +591,7 @@ const Dashboard = () => {
 
         </TabsContent>
       </Tabs>
-      <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(open) => { if (!open) setShareMoment(null); }} />
+      {shareMoment && <AvatarShareStudio moment={shareMoment} open={true} onOpenChange={(open) => { if (!open) setShareMoment(null); }} />}
     </StandardPageLayout>;
 };
 export default Dashboard;
