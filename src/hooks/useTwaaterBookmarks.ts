@@ -27,8 +27,11 @@ export const useTwaaterBookmarks = (accountId?: string) => {
 
       if (error) throw error;
 
-      const rows = data || [];
-      const twaats = rows.map((bookmark: any) => bookmark.twaat).filter(Boolean);
+      const rows = (data || []).filter((bookmark: any) => {
+        const twaat = bookmark.twaat;
+        return twaat && !twaat.deleted_at && !twaat.scheduled_for && twaat.visibility === "public";
+      });
+      const twaats = rows.map((bookmark: any) => bookmark.twaat);
       const hydrated = await hydrateTwaaterFeedExtras(twaats);
       const hydratedById = new Map(hydrated.map((twaat: any) => [twaat.id, twaat]));
 
