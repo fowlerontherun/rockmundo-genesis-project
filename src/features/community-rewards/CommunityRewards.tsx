@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { Copy, Gift, Loader2, ShieldCheck, Users, ExternalLink, CheckCircle2, Share2, MessageCircle, Trophy } from "lucide-react";
+import { Copy, Gift, Loader2, ShieldCheck, Users, ExternalLink, CheckCircle2, Share2, MessageCircle, Trophy, Music2, Mic2, Award, UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";\nimport { Link } from "react-router-dom";
 
 const DISCORD_INVITE_URL = "https://discord.gg/KB45k3XJuZ";
 const FACEBOOK_URL = import.meta.env.VITE_ROCKMUNDO_FACEBOOK_URL as string | undefined;
@@ -236,7 +236,7 @@ export default function CommunityRewards({ profileId, profileName }: { profileId
       </div>
 
 
-      <Card>
+      <Card>\n        <CardHeader><CardTitle className="flex items-center gap-2"><Share2 className="h-5 w-5" />Share your RockMundo story</CardTitle><CardDescription>The strongest invites come from something you actually achieved. Open an area below and share its contextual milestone.</CardDescription></CardHeader>\n        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">\n          <Button asChild variant="outline" className="h-auto justify-start py-3"><Link to="/charts"><Music2 className="mr-2 h-4 w-4" /><span className="text-left"><strong className="block">Chart success</strong><span className="text-xs text-muted-foreground">Share a top song position</span></span></Link></Button>\n          <Button asChild variant="outline" className="h-auto justify-start py-3"><Link to="/releases"><Mic2 className="mr-2 h-4 w-4" /><span className="text-left"><strong className="block">Release milestone</strong><span className="text-xs text-muted-foreground">Share a charting release</span></span></Link></Button>\n          <Button asChild variant="outline" className="h-auto justify-start py-3"><Link to="/home"><Award className="mr-2 h-4 w-4" /><span className="text-left"><strong className="block">Achievement</strong><span className="text-xs text-muted-foreground">Share an unlocked achievement</span></span></Link></Button>\n          <Button asChild variant="outline" className="h-auto justify-start py-3"><Link to="/band/members"><UserPlus className="mr-2 h-4 w-4" /><span className="text-left"><strong className="block">Recruit a bandmate</strong><span className="text-xs text-muted-foreground">Create a band recruitment invite</span></span></Link></Button>\n        </CardContent>\n      </Card>\n\n      <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" />Your recruits</CardTitle><CardDescription>See who has joined through your invite and how close they are to becoming a qualified active player. Private play totals are not exposed.</CardDescription></CardHeader>
         <CardContent className="space-y-3">
           {recruits.length === 0 ? <p className="text-sm text-muted-foreground">No recruits have joined through your referral link yet.</p> : recruits.map((item) => {
