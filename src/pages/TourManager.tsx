@@ -1,5 +1,5 @@
 import WorldAtlas from "@/components/map/WorldAtlas";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Card,
@@ -76,6 +76,7 @@ import { useTourTravelRepair } from "@/hooks/useTourTravelRepair";
 import { useTourCatchUp } from "@/hooks/useTourCatchUp";
 import { useTourCancellation } from "@/hooks/useTourCancellation";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { markSharePromptSeen, shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
 
 interface Tour {
   id: string;
@@ -224,6 +225,30 @@ const TourManager = () => {
     const endDate = endOfTourDay(t.end_date);
     return !Number.isNaN(endDate.getTime()) && endDate < now;
   });
+
+  useEffect(() => {
+    if (shareMoment) return;
+    const completed = historicTours.find((tour) => tour.status === "completed");
+    if (!completed || !shouldOfferSharePrompt("tour-completed", completed.id)) return;
+    markSharePromptSeen("tour-completed", completed.id);
+    setShareMoment({
+      version: 1,
+      type: "tour",
+      id: completed.id,
+      eyebrow: "TOUR COMPLETE",
+      headline: completed.name,
+      subheadline: completed.band?.name ? `${completed.band.name} completed the tour` : "Tour completed in RockMundo",
+      metrics: [
+        { label: "Started", value: format(new Date(completed.start_date), "MMM d, yyyy") },
+        { label: "Finished", value: format(new Date(completed.end_date), "MMM d, yyyy") },
+        ...(completed.total_revenue ? [{ label: "Revenue", value: `${completed.total_revenue.toLocaleString()}` }] : []),
+      ].slice(0, 4),
+      artworkUrl: completed.band?.logo_url ?? null,
+      destinationUrl: `${window.location.origin}/tour-manager?tour=${completed.id}`,
+      referralCode: null,
+      createdAt: new Date().toISOString(),
+    });
+  }, [historicTours, shareMoment]);
 
   const { cancelTour } = useTourCancellation();
   const {
