@@ -21,7 +21,7 @@ export function ShareMomentSheet({ open, onOpenChange, moment }: Props) {
   useEffect(() => {
     if (!open || !canvasRef.current) return;
     if (moment.type === 'character_profile') void renderCharacterProfileCard(canvasRef.current, moment as CharacterProfileShareMoment, format);
-    else renderShareMoment(canvasRef.current, moment, format);
+    else void renderShareMoment(canvasRef.current, moment, format);
   }, [open, moment, format]);
 
   const flash = (value: string) => { setDone(value); window.setTimeout(() => setDone(current => current === value ? null : current), 1400); };
