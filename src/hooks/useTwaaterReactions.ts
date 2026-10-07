@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { invalidateTwaaterContentQueries } from "@/lib/twaaterQueryInvalidation";
 
 export const useTwaaterReactions = () => {
   const { toast } = useToast();
@@ -41,8 +42,7 @@ export const useTwaaterReactions = () => {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["twaats"] });
-      queryClient.invalidateQueries({ queryKey: ["twaater-feed"] });
+      invalidateTwaaterContentQueries(queryClient);
     },
     onError: (error: any) => {
       toast({
@@ -85,8 +85,7 @@ export const useTwaaterReactions = () => {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["twaats"] });
-      queryClient.invalidateQueries({ queryKey: ["twaater-feed"] });
+      invalidateTwaaterContentQueries(queryClient);
     },
     onError: (error: any) => {
       toast({
