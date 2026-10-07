@@ -15,7 +15,7 @@ const sourceLabel = (source: string) => ({ band_recruitment:"Band recruitment", 
 
 type GrowthAnalytics = { trends:{joins_7d:number;joins_prev_7d:number;qualified_7d:number;qualified_prev_7d:number;band_joins_7d:number;band_joins_prev_7d:number}; speed:{median_qualification_hours:number|null;median_band_join_hours:number|null}; funnel: { joined:number; qualified:number; vip:number; activating:number }; dropoff:{ missing_email:number; waiting_24h:number; missing_activity:number }; band:{ joined:number; qualified:number; band_members:number; vip:number; qualification_rate:number; band_join_rate:number }; sources:Array<{source:string;joined:number;qualified:number;vip:number;activating:number;missing_email:number;waiting_24h:number;missing_activity:number;band_joined:number;qualification_rate:number;vip_rate:number}>; campaigns:Array<{campaign:string;source:string;joined:number;qualified:number;vip:number;qualification_rate:number;vip_rate:number}> };
 
-type Audit = {
+type SavedCampaign = { id:string; slug:string; name:string; referral_code:string; source:string; partner_name?:string|null; notes?:string|null; starts_at?:string|null; ends_at?:string|null; is_active:boolean; created_at:string; updated_at:string };\n\ntype Audit = {
   summary: {
     total_referrals: number;
     qualified: number;
@@ -45,6 +45,14 @@ export default function ReferralAudit() {
   const [campaignCode, setCampaignCode] = useState("");
   const [campaignSlug, setCampaignSlug] = useState("");
   const [campaignSource, setCampaignSource] = useState("referral_hub");
+  const [campaignId, setCampaignId] = useState<string | null>(null);
+  const [campaignName, setCampaignName] = useState("");
+  const [campaignPartner, setCampaignPartner] = useState("");
+  const [campaignNotes, setCampaignNotes] = useState("");
+  const [campaignStart, setCampaignStart] = useState("");
+  const [campaignEnd, setCampaignEnd] = useState("");
+  const [campaignActive, setCampaignActive] = useState(true);
+  const [savingCampaign, setSavingCampaign] = useState(false);
   const normalizedCode = campaignCode.trim().toUpperCase();
   const normalizedCampaign = campaignSlug.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
   const campaignLink = useMemo(() => {
@@ -60,6 +68,9 @@ export default function ReferralAudit() {
     try { await navigator.clipboard.writeText(campaignLink); toast({ title: "Campaign link copied", description: `${normalizedCampaign} is ready to share.` }); }
     catch { toast({ title: "Couldn’t copy campaign link", description: "Your browser blocked clipboard access.", variant: "destructive" }); }
   };
+  const campaignsQuery = useQuery({ queryKey: ["admin-referral-campaigns"], queryFn: async () => { const { data, error } = await (supabase as any).rpc("admin_list_referral_campaigns"); if (error) throw error; return (data ?? []) as SavedCampaign[]; } });
+  const saveCampaign = async () => { if (!campaignLink || !campaignName.trim()) return; setSavingCampaign(true); const { error } = await (supabase as any).rpc("admin_save_referral_campaign", { p_id: campaignId, p_slug: normalizedCampaign, p_name: campaignName.trim(), p_referral_code: normalizedCode, p_source: campaignSource, p_partner_name: campaignPartner, p_notes: campaignNotes, p_starts_at: campaignStart || null, p_ends_at: campaignEnd || null, p_is_active: campaignActive }); setSavingCampaign(false); if (error) { toast({ title: "Campaign not saved", description: error.message, variant: "destructive" }); return; } toast({ title: campaignId ? "Campaign updated" : "Campaign saved" }); await campaignsQuery.refetch(); };
+  const loadCampaign = (item: SavedCampaign) => { setCampaignId(item.id); setCampaignName(item.name); setCampaignCode(item.referral_code); setCampaignSlug(item.slug); setCampaignSource(item.source); setCampaignPartner(item.partner_name ?? ""); setCampaignNotes(item.notes ?? ""); setCampaignStart(item.starts_at?.slice(0,10) ?? ""); setCampaignEnd(item.ends_at?.slice(0,10) ?? ""); setCampaignActive(item.is_active); };
   const query = useQuery({
     queryKey: ["admin-referral-audit"],
     queryFn: async () => {
@@ -112,6 +123,26 @@ export default function ReferralAudit() {
         <Card>
           <CardHeader><CardTitle>Source funnel diagnostics</CardTitle><CardDescription>Find share surfaces that generate signups but lose players before activation.</CardDescription></CardHeader>
           <CardContent className="overflow-x-auto"><table className="w-full min-w-[900px] text-sm"><thead><tr className="border-b text-left"><th className="p-2">Source</th><th className="p-2">Joined</th><th className="p-2">Activating</th><th className="p-2">Qualified</th><th className="p-2">Qual. rate</th><th className="p-2">Email gap</th><th className="p-2">24h gap</th><th className="p-2">Play gap</th><th className="p-2">VIP</th></tr></thead><tbody>{growth?.sources.map(row=><tr key={row.source} className="border-b"><td className="p-2"><Badge variant="outline">{sourceLabel(row.source)}</Badge></td><td className="p-2">{row.joined}</td><td className="p-2">{row.activating}</td><td className="p-2">{row.qualified}</td><td className="p-2">{row.qualification_rate}%</td><td className="p-2">{row.missing_email}</td><td className="p-2">{row.waiting_24h}</td><td className="p-2">{row.missing_activity}</td><td className="p-2">{row.vip}</td></tr>)}</tbody></table></CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2"><Link2 className="h-5 w-5" />Campaign manager</CardTitle><CardDescription>Save creator, community and promotional campaigns, then reuse their attributed referral links.</CardDescription></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2"><Label>Campaign name</Label><Input value={campaignName} onChange={(e)=>setCampaignName(e.target.value)} placeholder="October creator push" maxLength={80} /></div>
+              <div className="space-y-2"><Label>Creator / community</Label><Input value={campaignPartner} onChange={(e)=>setCampaignPartner(e.target.value)} placeholder="Optional partner name" maxLength={100} /></div>
+              <div className="space-y-2"><Label>Referral code</Label><Input value={campaignCode} onChange={(e)=>setCampaignCode(e.target.value.toUpperCase())} placeholder="RMXXXXXXXX" maxLength={20} /></div>
+              <div className="space-y-2"><Label>Campaign slug</Label><Input value={campaignSlug} onChange={(e)=>setCampaignSlug(e.target.value)} placeholder="creator_october" maxLength={40} /></div>
+              <div className="space-y-2"><Label>Source</Label><Select value={campaignSource} onValueChange={setCampaignSource}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="referral_hub">Invite Friends</SelectItem><SelectItem value="band_recruitment">Band recruitment</SelectItem><SelectItem value="gig_share">Gig share</SelectItem><SelectItem value="song_chart_share">Song chart</SelectItem><SelectItem value="release_chart_share">Release chart</SelectItem><SelectItem value="achievement_share">Achievement</SelectItem></SelectContent></Select></div>
+              <div className="space-y-2"><Label>Status</Label><Button className="w-full" type="button" variant={campaignActive ? "outline" : "secondary"} onClick={()=>setCampaignActive(v=>!v)}>{campaignActive ? "Active" : "Paused"}</Button></div>
+              <div className="space-y-2"><Label>Starts</Label><Input type="date" value={campaignStart} onChange={(e)=>setCampaignStart(e.target.value)} /></div>
+              <div className="space-y-2"><Label>Ends</Label><Input type="date" value={campaignEnd} onChange={(e)=>setCampaignEnd(e.target.value)} /></div>
+              <div className="space-y-2"><Label>Notes</Label><Input value={campaignNotes} onChange={(e)=>setCampaignNotes(e.target.value)} placeholder="Audience, placement or experiment notes" /></div>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row"><Input readOnly value={campaignLink} placeholder="Complete the referral code and campaign slug" className="font-mono text-xs" /><Button onClick={copyCampaignLink} disabled={!campaignLink}><Copy className="mr-2 h-4 w-4" />Copy link</Button></div>
+            <div className="flex flex-wrap gap-2"><Button onClick={saveCampaign} disabled={!campaignLink || !campaignName.trim() || savingCampaign}>{campaignId ? "Update campaign" : "Save campaign"}</Button>{campaignId ? <Button variant="outline" onClick={()=>{setCampaignId(null);setCampaignName("");setCampaignPartner("");setCampaignNotes("");setCampaignStart("");setCampaignEnd("");setCampaignActive(true);}}>New campaign</Button> : null}</div>
+            {campaignsQuery.data?.length ? <div className="space-y-2 border-t pt-4"><Label>Saved campaigns</Label>{campaignsQuery.data.map(item=><div key={item.id} className="flex flex-col gap-2 rounded border p-3 sm:flex-row sm:items-center sm:justify-between"><div><div className="flex items-center gap-2"><strong>{item.name}</strong><Badge variant={item.is_active ? "default" : "secondary"}>{item.is_active ? "Active" : "Paused"}</Badge></div><p className="text-xs text-muted-foreground">{item.slug} · {sourceLabel(item.source)}{item.partner_name ? ` · ${item.partner_name}` : ""}</p></div><Button size="sm" variant="outline" onClick={()=>loadCampaign(item)}>Open</Button></div>)}</div> : null}
+          </CardContent>
         </Card>
 
         <Card>
