@@ -7,6 +7,7 @@ export const SHARE_FORMATS = {
 export type ShareFormat = keyof typeof SHARE_FORMATS;
 export type ShareVisualTheme = 'moment' | 'spotlight' | 'neon' | 'mono';
 export type ShareVisualLayout = 'right' | 'hero' | 'left';
+export type ReferralShareTemplate = 'creator' | 'backstage' | 'world-tour';
 export type ShareMomentType =
   | 'character_profile'
   | 'band_profile'
@@ -40,6 +41,8 @@ export interface ShareMoment {
   referralCode?: string | null;
   referralSource?: string | null;
   referralCampaign?: string | null;
+  referralTemplate?: ReferralShareTemplate;
+  callToAction?: string | null;
   /** Existing growth throttle key; recorded only after a successful share/link-copy action. */
   shareCooldownKey?: string | null;
   createdAt: string;
