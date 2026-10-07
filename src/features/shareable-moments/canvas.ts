@@ -65,6 +65,13 @@ export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment
   const bg = ctx.createLinearGradient(0, 0, width, height);
   bg.addColorStop(0,start); bg.addColorStop(.55,mid); bg.addColorStop(1,end);
   ctx.fillStyle=bg; ctx.fillRect(0,0,width,height);
+  if(moment.type==='referral'){
+    const template=moment.referralTemplate ?? 'creator'; ctx.save(); ctx.globalAlpha=.16; ctx.strokeStyle=accent; ctx.fillStyle=accent;
+    if(template==='creator'){for(let i=0;i<5;i++){ctx.beginPath();ctx.arc(width*(.72+i*.035),height*(.18+i*.025),width*(.035+i*.012),0,Math.PI*2);ctx.stroke();}}
+    else if(template==='backstage'){for(let x=-height;x<width;x+=Math.max(90,width*.09)){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+height,height);ctx.stroke();}}
+    else {ctx.beginPath();ctx.moveTo(width*.55,height*.18);ctx.bezierCurveTo(width*.67,height*.08,width*.76,height*.38,width*.92,height*.22);ctx.stroke();for(const [x,y] of [[.55,.18],[.72,.21],[.92,.22]]){ctx.beginPath();ctx.arc(width*x,height*y,width*.012,0,Math.PI*2);ctx.fill();}}
+    ctx.restore();
+  }
   if(recordAward){const award=ctx.createRadialGradient(width*.82,height*.26,10,width*.82,height*.26,width*.28);const awardTone=recordTier==='DIAMOND'?'#a5f3fc':recordTier==='MULTI-PLATINUM'?'#e2e8f0':'#f8fafc';award.addColorStop(0,awardTone+'cc');award.addColorStop(.5,awardTone+'55');award.addColorStop(1,'#00000000');ctx.fillStyle=award;ctx.fillRect(0,0,width,height);}
   if(numberOne){const crown=ctx.createRadialGradient(width*.82,height*.2,10,width*.82,height*.2,width*.25);crown.addColorStop(0,'#fde04788');crown.addColorStop(1,'#00000000');ctx.fillStyle=crown;ctx.fillRect(0,0,width,height);}
   if(soldOut){ctx.save();ctx.translate(width*.72,height*.18);ctx.rotate(-.12);ctx.strokeStyle='#fb7185';ctx.lineWidth=Math.max(6,width*.007);ctx.strokeRect(0,0,width*.23,height*.08);ctx.font=`900 ${Math.round(width*.033)}px Inter, system-ui, sans-serif`;ctx.fillStyle='#fecdd3';ctx.textAlign='center';ctx.fillText('SOLD OUT',width*.115,height*.052);ctx.restore();}
@@ -185,6 +192,7 @@ export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment
     else drawWrappedText(ctx, metric.value, valueX, y, valueWidth, 38, 1);
   });
 
+  if(moment.type==='referral'&&moment.callToAction){const cta=moment.callToAction.toUpperCase();ctx.font=`800 ${Math.round(width*.024)}px Inter, system-ui, sans-serif`;const ctaW=Math.min(textWidth,ctx.measureText(cta).width+width*.055);const ctaH=Math.round(width*.052);const ctaY=height-pad-ctaH-Math.round(width*.035);ctx.fillStyle=accent;ctx.beginPath();ctx.roundRect(textX,ctaY,ctaW,ctaH,ctaH*.28);ctx.fill();ctx.fillStyle='#020617';ctx.fillText(cta,textX+width*.025,ctaY+ctaH*.66);}
   ctx.fillStyle = '#ffffff88'; ctx.font = '500 21px Inter, system-ui, sans-serif';
   ctx.fillText('Build your music career at rockmundo.uk', textX, height - pad);
 }
