@@ -679,7 +679,7 @@ const TourManager = () => {
                   ...(tour.scope ? [{ label: "Scope", value: tour.scope }] : []),
                   ...(tour.stage_setup_tier ? [{ label: "Production", value: tour.stage_setup_tier }] : []),
                 ].slice(0, 4),
-                destinationUrl: `${window.location.origin}/world/tours?tour=${tour.id}`,
+                destinationUrl: `${window.location.origin}/tour-manager?tour=${tour.id}`,
                 referralCode: null,
                 createdAt: new Date().toISOString(),
               })}>
