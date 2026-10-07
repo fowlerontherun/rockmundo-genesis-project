@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { Share2 } from "lucide-react";
+import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
+import type { ShareMoment } from "@/features/shareable-moments/types";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth-context";
 import { Badge } from "@/components/ui/badge";
@@ -102,6 +105,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   const leaveEarly = useLeaveFestivalEarly();
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [activePurchaseProductId, setActivePurchaseProductId] = useState<string | null>(null);
+  const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
 
   if (isLoading) return <main className="p-8" role="status">Loading Festival…</main>;
   if (isError || !f) return <main className="p-8" role="alert">Festival not found.</main>;
@@ -167,6 +171,28 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
               {f.city}, {f.country} · {new Date(f.startsAt).toLocaleDateString("en-GB")}–
               {new Date(f.endsAt).toLocaleDateString("en-GB")}
             </p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              <Button variant="secondary" onClick={() => setShareMoment({
+                version: 1,
+                type: "festival",
+                id: f.id,
+                eyebrow: "FESTIVAL",
+                headline: f.name,
+                subheadline: [f.city, f.country, f.tagline].filter(Boolean).join(" · "),
+                metrics: [
+                  { label: "Starts", value: new Date(f.startsAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) },
+                  { label: "Line-up", value: String(confirmedLineup.length) + " acts" },
+                  { label: "Stages", value: String(f.stages.length) },
+                  ...(f.ticketSales ? [{ label: "Tickets sold", value: f.ticketSales.admissionTicketsSold.toLocaleString("en-GB") }] : []),
+                ].slice(0, 4),
+                artworkUrl: f.heroImageReference || f.logoReference || null,
+                destinationUrl: window.location.href,
+                referralCode: null,
+                createdAt: new Date().toISOString(),
+              })}>
+                <Share2 className="mr-2 h-4 w-4" /> Share Festival
+              </Button>
+            </div>
             <div className="mt-5">
               {eventPhase === "upcoming" ? (
                 <Countdown target={f.countdownTarget} />
@@ -607,6 +633,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
           </TabsContent>
         </Tabs>
       </div>
+      <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(open) => { if (!open) setShareMoment(null); }} />
     </main>
   );
 }
