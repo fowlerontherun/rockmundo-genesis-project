@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { invalidateTwaaterContentQueries } from "@/lib/twaaterQueryInvalidation";
 
 export const useTwaaterReplies = (twaatId: string, loadReplies = true) => {
   const { toast } = useToast();
@@ -38,8 +39,7 @@ export const useTwaaterReplies = (twaatId: string, loadReplies = true) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["twaat-replies", twaatId] });
-      queryClient.invalidateQueries({ queryKey: ["twaats"] });
-      queryClient.invalidateQueries({ queryKey: ["twaater-feed"] });
+      invalidateTwaaterContentQueries(queryClient);
       toast({
         title: "Reply posted",
         description: "Your reply is now visible.",
