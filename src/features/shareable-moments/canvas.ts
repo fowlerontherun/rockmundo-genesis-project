@@ -16,7 +16,24 @@ function fitText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, 
   return size;
 }
 
-export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment, format: ShareFormat): void {
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.crossOrigin = 'anonymous';
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('Unable to load share artwork'));
+    image.src = src;
+  });
+}
+
+function drawCover(ctx: CanvasRenderingContext2D, image: HTMLImageElement, x: number, y: number, width: number, height: number) {
+  const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
+  const sourceW = width / scale, sourceH = height / scale;
+  const sourceX = (image.naturalWidth - sourceW) / 2, sourceY = (image.naturalHeight - sourceH) / 2;
+  ctx.drawImage(image, sourceX, sourceY, sourceW, sourceH, x, y, width, height);
+}
+
+export async function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment, format: ShareFormat): Promise<void> {
   const { width, height } = SHARE_FORMATS[format];
   canvas.width = width; canvas.height = height;
   const ctx = canvas.getContext('2d');
@@ -31,14 +48,31 @@ export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment
   ctx.fillStyle = glow; ctx.fillRect(0, 0, width, height);
 
   const pad = Math.round(width * .06);
+  if (moment.artworkUrl) {
+    try {
+      const artwork = await loadImage(moment.artworkUrl);
+      const artSize = format === 'landscape' ? Math.round(height * .62) : Math.round(width * .56);
+      const artX = format === 'landscape' ? width - artSize - pad : width - artSize - pad;
+      const artY = format === 'story' ? Math.round(height * .36) : format === 'landscape' ? Math.round(height * .19) : Math.round(height * .35);
+      ctx.save();
+      ctx.beginPath(); ctx.roundRect(artX, artY, artSize, artSize, 28); ctx.clip();
+      drawCover(ctx, artwork, artX, artY, artSize, artSize);
+      ctx.restore();
+    } catch {
+      // Remote artwork can fail CORS; the branded card remains complete without it.
+    }
+  }
+
   ctx.textAlign = 'left';
-  const logo = new Image();
-  logo.onload = () => {
+  try {
+    const logo = await loadImage(rockmundoLogo);
     const logoW = Math.min(260, width * .24);
     const logoH = logoW * (logo.naturalHeight / logo.naturalWidth);
     ctx.drawImage(logo, pad, pad, logoW, logoH);
-  };
-  logo.src = rockmundoLogo;
+  } catch {
+    ctx.fillStyle = '#fff'; ctx.font = '800 28px Inter, system-ui, sans-serif';
+    ctx.fillText('ROCKMUNDO', pad, pad + 28);
+  }
 
   if (moment.eyebrow) {
     ctx.fillStyle = '#c4b5fd'; ctx.font = '700 24px Inter, system-ui, sans-serif';
