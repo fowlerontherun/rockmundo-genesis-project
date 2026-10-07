@@ -21,7 +21,7 @@ export const LinkedContentEmbed = ({ linkedType, linkedId }: LinkedContentEmbedP
         .from("songs")
         .select("id, title, genre, quality_score, audio_url, band:bands!songs_band_id_fkey(name)")
         .eq("id", linkedId!)
-        .single();
+        .maybeSingle();
       return data;
     },
     enabled: linkedType === "single" && !!linkedId,
@@ -34,7 +34,7 @@ export const LinkedContentEmbed = ({ linkedType, linkedId }: LinkedContentEmbedP
         .from("releases")
         .select("id, title, release_type, artwork_url, band:bands(name)")
         .eq("id", linkedId!)
-        .single();
+        .maybeSingle();
       return data;
     },
     enabled: linkedType === "album" && !!linkedId,
@@ -51,7 +51,7 @@ export const LinkedContentEmbed = ({ linkedType, linkedId }: LinkedContentEmbedP
           band:bands!gigs_band_id_fkey(name)
         `)
         .eq("id", linkedId!)
-        .single();
+        .maybeSingle();
       return data;
     },
     enabled: linkedType === "gig" && !!linkedId,
@@ -64,7 +64,7 @@ export const LinkedContentEmbed = ({ linkedType, linkedId }: LinkedContentEmbedP
         .from("tours")
         .select("id, name, status, start_date, end_date, band:bands(name)")
         .eq("id", linkedId!)
-        .single();
+        .maybeSingle();
       return data;
     },
     enabled: linkedType === "tour" && !!linkedId,
