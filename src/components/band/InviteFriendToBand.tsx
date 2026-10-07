@@ -90,25 +90,12 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
     setReferredRecruits(Array.isArray(data) ? data : []);
   }, [bandId]);
 
-  const shareExternalRecruitment = async () => {
+  const shareExternalRecruitment = () => {
     if (!externalRecruitmentUrl) {
       toast({ title: 'Invite link unavailable', description: 'Open Invite Friends once to initialise your referral link.', variant: 'destructive' });
       return;
     }
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: `Join ${bandName} in RockMundo`, text: externalRecruitmentText, url: externalRecruitmentUrl });
-        return;
-      } catch (error) {
-        if ((error as DOMException)?.name === 'AbortError') return;
-      }
-    }
-    try {
-      await navigator.clipboard.writeText(externalRecruitmentUrl);
-      toast({ title: 'Recruitment link copied' });
-    } catch {
-      toast({ title: 'Could not copy recruitment link', description: 'Your browser blocked clipboard access. Copy the visible link manually or try Share again.', variant: 'destructive' });
-    }
+    setShareMoment({ version: 1, type: 'band_profile', id: bandId, eyebrow: 'BAND RECRUITMENT', headline: bandName, subheadline: 'We are looking for our next bandmate', metrics: [{ label: 'Opportunity', value: 'Join the band' }, { label: 'World', value: 'RockMundo' }], destinationUrl: externalRecruitmentUrl, referralCode: null, createdAt: new Date().toISOString() });
   };
 
   useEffect(() => {
