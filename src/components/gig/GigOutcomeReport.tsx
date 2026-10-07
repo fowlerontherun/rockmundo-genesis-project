@@ -66,6 +66,24 @@ export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCap
   if (!report) return null;
   const cancelled = ["cancelled", "canceled", "abandoned"].includes(report.gig.status);
 
+  const gigShareMoment = shareInvite ? {
+    version: 1 as const,
+    type: "gig_result" as const,
+    id: gigId ?? undefined,
+    eyebrow: "Gig result",
+    headline: report.headline.verdict,
+    subheadline: report.gig.venue.name,
+    metrics: [
+      { label: "Grade", value: headlineFromExperience(report).grade },
+      { label: "Attendance", value: numberFormat.format(metricValue(report.headline.attendance, 0)) },
+      { label: "Fans gained", value: "+" + numberFormat.format(metricValue(report.headline.fansGained, 0)) },
+      { label: "Fame gained", value: "+" + numberFormat.format(metricValue(report.headline.fameGained, 0)) },
+    ],
+    destinationUrl: shareInvite.url,
+    shareCooldownKey: "rockmundo_gig_referral_share_at",
+    createdAt: new Date().toISOString(),
+  } : null;
+
   return <Dialog open={isOpen} onOpenChange={onClose}>
     <DialogContent className="w-[96vw] max-w-6xl max-h-[92vh] overflow-y-auto p-0 sm:p-6" aria-describedby="gig-report-summary">
       <DialogHeader className="sr-only"><DialogTitle>Gig Performance Report</DialogTitle></DialogHeader>
@@ -80,6 +98,7 @@ export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCap
         </>}
       </main>
     </DialogContent>
+    {gigShareMoment && <AvatarShareStudio open={shareOpen} onOpenChange={setShareOpen} moment={gigShareMoment} />}
   </Dialog>;
 };
 
