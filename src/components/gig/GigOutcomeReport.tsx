@@ -103,7 +103,7 @@ function HeadlineResult({ experience, onClose, processing, cancelled, shareInvit
             toast.info("You shared a gig recently. Try again later.");
             return;
           }
-          onShareMoment({ version: 1, type: "gig_result", id: experience.gig.id, eyebrow: "LIVE RESULT", headline: experience.gig.venue.name, subheadline: experience.headline.verdict, metrics: [{ label: "Grade", value: h.grade }, { label: "Attendance", value: `${numberFormat.format(h.attendance)} / ${numberFormat.format(h.capacity)}` }, { label: "Fame gained", value: `+${numberFormat.format(metricValue(experience.headline.fameGained, 0))}` }], destinationUrl: shareInvite.url, referralCode: null, createdAt: new Date().toISOString() });
+          onShareMoment({ version: 1, type: "gig_result", id: experience.gig.id, eyebrow: "LIVE RESULT", headline: experience.gig.venue.name, subheadline: experience.headline.verdict, metrics: [{ label: "Grade", value: h.grade }, { label: "Attendance", value: `${numberFormat.format(h.attendance)} / ${numberFormat.format(h.capacity)}` }, { label: "Fame gained", value: `+${numberFormat.format(metricValue(experience.headline.fameGained, 0))}` }], destinationUrl: shareInvite.url, referralCode: null, shareCooldownKey: key, createdAt: new Date().toISOString() });
         }}><Share2 className="mr-2 h-4 w-4" />Share gig result</Button> : null}</div>
       </div>
     </div>

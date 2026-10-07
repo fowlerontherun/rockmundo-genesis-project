@@ -579,7 +579,7 @@ const Dashboard = () => {
                                 return;
                               }
                               const url = buildReferralUrl(data.code, { source: "achievement_share" });
-                              setShareMoment({ version: 1, type: "achievement", id: achievement.id, eyebrow: `${String(achievement.achievements?.rarity || "Achievement").toUpperCase()} ACHIEVEMENT`, headline: achievement.achievements?.name || "Achievement unlocked", subheadline: achievement.achievements?.description || "A new RockMundo milestone", metrics: [{ label: "Unlocked", value: formatDistanceToNow(new Date(achievement.unlocked_at), { addSuffix: true }) }], destinationUrl: url, referralCode: null, createdAt: new Date().toISOString() });
+                              setShareMoment({ version: 1, type: "achievement", id: achievement.id, eyebrow: `${String(achievement.achievements?.rarity || "Achievement").toUpperCase()} ACHIEVEMENT`, headline: achievement.achievements?.name || "Achievement unlocked", subheadline: achievement.achievements?.description || "A new RockMundo milestone", metrics: [{ label: "Unlocked", value: formatDistanceToNow(new Date(achievement.unlocked_at), { addSuffix: true }) }], destinationUrl: url, referralCode: null, shareCooldownKey: key, createdAt: new Date().toISOString() });
                             }}><Share2 className="mr-1.5 h-3.5 w-3.5" />Share milestone</Button>
                           )}
                         </div>

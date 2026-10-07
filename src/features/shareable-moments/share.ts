@@ -2,8 +2,9 @@ import type { SharePayload } from './types';
 
 const REFERRAL_PATH = '/auth';
 
-export function referralUrl(code: string, origin = window.location.origin): string {
-  const url = new URL(REFERRAL_PATH, origin);
+export function referralUrl(code: string, origin?: string): string {
+  const resolvedOrigin = origin ?? (typeof window === 'undefined' ? 'https://rockmundo.uk' : window.location.origin);
+  const url = new URL(REFERRAL_PATH, resolvedOrigin);
   url.searchParams.set('ref', code.trim().toUpperCase());
   return url.toString();
 }
