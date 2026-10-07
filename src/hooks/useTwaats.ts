@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { invalidateTwaaterContentQueries } from "@/lib/twaaterQueryInvalidation";
 import type { Database } from "@/lib/supabase-types";
 
 type Twaat = Database["public"]["Tables"]["twaats"]["Row"];
@@ -22,7 +23,14 @@ interface TwaatWithDetails extends Twaat {
 const twaatDetailsSelect = `
   *,
   account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, owner_type, fame_score),
-  metrics:twaat_metrics(*)
+  metrics:twaat_metrics(*),
+  poll_rows:twaater_polls(
+    id,
+    twaat_id,
+    question,
+    expires_at,
+    options:twaater_poll_options(*)
+  )
 `;
 
 const getTwaatPostErrorMessage = (error: any) => {
@@ -75,6 +83,22 @@ export const hydrateQuotedTwaats = async <T extends { id: string; quoted_twaat_i
 export const hydrateTwaaterFeedExtras = async <T extends { id: string; quoted_twaat_id?: string | null }>(rows: T[]): Promise<T[]> => {
   const hydratedQuotes = await hydrateQuotedTwaats(rows);
   if (hydratedQuotes.length === 0) return hydratedQuotes;
+
+  // The regular chronological feed embeds polls in the primary Twaat query so
+  // it does not need a second serial REST request. Other callers can continue
+  // using the fallback hydration below.
+  const hasEmbeddedPollRows = hydratedQuotes.every((row: any) =>
+    Object.prototype.hasOwnProperty.call(row, "poll_rows")
+  );
+  if (hasEmbeddedPollRows) {
+    return hydratedQuotes.map((row: any) => {
+      const { poll_rows: pollRows, ...rest } = row;
+      return {
+        ...rest,
+        poll: Array.isArray(pollRows) && pollRows.length > 0 ? pollRows[0] : null,
+      };
+    }) as T[];
+  }
 
   const twaatIds = hydratedQuotes.map((row) => row.id);
   const { data: polls, error } = await supabase
@@ -147,10 +171,7 @@ export const useTwaats = (accountId?: string) => {
       return twaat;
     },
     onSuccess: (twaat) => {
-      queryClient.invalidateQueries({ queryKey: ["twaats"] });
-      queryClient.invalidateQueries({ queryKey: ["twaater-feed"] });
-      queryClient.invalidateQueries({ queryKey: ["twaater-ai-feed"] });
-      queryClient.invalidateQueries({ queryKey: ["twaater-trending"] });
+      invalidateTwaaterContentQueries(queryClient);
 
       if (twaat.scheduled_for) {
         const scheduledTime = new Date(twaat.scheduled_for).toLocaleString();
@@ -185,9 +206,7 @@ export const useTwaats = (accountId?: string) => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["twaats"] });
-      queryClient.invalidateQueries({ queryKey: ["twaater-feed"] });
-      queryClient.invalidateQueries({ queryKey: ["twaater-ai-feed"] });
+      invalidateTwaaterContentQueries(queryClient);
       toast({
         title: "Twaat deleted",
         description: "Your post has been removed.",

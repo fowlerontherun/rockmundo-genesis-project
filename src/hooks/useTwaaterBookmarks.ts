@@ -100,3 +100,75 @@ export const useTwaaterBookmarks = (accountId?: string) => {
     isBookmarked,
   };
 };
+
+export const useTwaaterBookmarkState = (accountId?: string) => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: bookmarkedTwaatIds = [] } = useQuery({
+    queryKey: ["twaater-bookmark-ids", accountId],
+    queryFn: async () => {
+      if (!accountId) return [];
+
+      const { data, error } = await supabase
+        .from("twaater_bookmarks")
+        .select("twaat_id")
+        .eq("account_id", accountId);
+
+      if (error) throw error;
+      return (data || []).map((bookmark) => bookmark.twaat_id);
+    },
+    enabled: !!accountId,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const bookmarkedIds = new Set(bookmarkedTwaatIds);
+
+  const toggleBookmarkMutation = useMutation({
+    mutationFn: async ({ twaatId }: { twaatId: string }) => {
+      if (!accountId) throw new Error("No account ID");
+
+      if (bookmarkedIds.has(twaatId)) {
+        const { error } = await supabase
+          .from("twaater_bookmarks")
+          .delete()
+          .eq("account_id", accountId)
+          .eq("twaat_id", twaatId);
+
+        if (error) throw error;
+        return { action: "removed" as const };
+      }
+
+      const { error } = await supabase
+        .from("twaater_bookmarks")
+        .insert({
+          account_id: accountId,
+          twaat_id: twaatId,
+        });
+
+      if (error) throw error;
+      return { action: "added" as const };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["twaater-bookmark-ids", accountId] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-bookmarks", accountId] });
+      toast({
+        title: result.action === "added" ? "Bookmark added" : "Bookmark removed",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Bookmark action failed",
+        description: error?.message || "We couldn't update that bookmark.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  return {
+    isBookmarked: (twaatId: string) => bookmarkedIds.has(twaatId),
+    toggleBookmark: toggleBookmarkMutation.mutate,
+    isBookmarkPending: toggleBookmarkMutation.isPending,
+  };
+};

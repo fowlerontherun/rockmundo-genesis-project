@@ -4,14 +4,27 @@ import { Card } from "@/components/ui/card";
 import { formatDistanceToNow } from "date-fns";
 import { CheckCircle2 } from "lucide-react";
 
+interface PollVote {
+  id: string;
+  poll_id: string;
+  option_id: string;
+  account_id: string;
+}
+
 interface TwaatPollProps {
   twaatId: string;
   accountId?: string;
   preloadedPoll?: any;
+  preloadedUserVote?: PollVote | null;
 }
 
-export const TwaatPoll = ({ twaatId, accountId, preloadedPoll }: TwaatPollProps) => {
-  const { poll, userVote, isLoading, vote, isVoting } = useTwaaterPolls(twaatId, accountId, preloadedPoll);
+export const TwaatPoll = ({ twaatId, accountId, preloadedPoll, preloadedUserVote }: TwaatPollProps) => {
+  const { poll, userVote, isLoading, vote, isVoting } = useTwaaterPolls(
+    twaatId,
+    accountId,
+    preloadedPoll,
+    preloadedUserVote,
+  );
 
   if (isLoading || !poll) return null;
 

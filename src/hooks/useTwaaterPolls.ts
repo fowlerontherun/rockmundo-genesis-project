@@ -2,7 +2,19 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
-export const useTwaaterPolls = (twaatId?: string, accountId?: string, preloadedPoll?: any) => {
+type PollVote = {
+  id: string;
+  poll_id: string;
+  option_id: string;
+  account_id: string;
+};
+
+export const useTwaaterPolls = (
+  twaatId?: string,
+  accountId?: string,
+  preloadedPoll?: any,
+  preloadedUserVote?: PollVote | null,
+) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -28,7 +40,7 @@ export const useTwaaterPolls = (twaatId?: string, accountId?: string, preloadedP
 
   const poll = preloadedPoll !== undefined ? preloadedPoll : queriedPoll;
 
-  const { data: userVote } = useQuery({
+  const { data: queriedUserVote } = useQuery({
     queryKey: ["poll-vote", poll?.id, accountId],
     queryFn: async () => {
       if (!poll?.id || !accountId) return null;
@@ -43,8 +55,10 @@ export const useTwaaterPolls = (twaatId?: string, accountId?: string, preloadedP
       if (error) throw error;
       return data;
     },
-    enabled: !!poll?.id && !!accountId,
+    enabled: !!poll?.id && !!accountId && preloadedUserVote === undefined,
   });
+
+  const userVote = preloadedUserVote !== undefined ? preloadedUserVote : queriedUserVote;
 
   const voteMutation = useMutation({
     mutationFn: async ({ optionId }: { optionId: string }) => {
@@ -67,6 +81,10 @@ export const useTwaaterPolls = (twaatId?: string, accountId?: string, preloadedP
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["twaat-poll", twaatId] });
       queryClient.invalidateQueries({ queryKey: ["poll-vote", poll?.id, accountId] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-poll-votes-batch", accountId] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-feed"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-ai-feed"] });
+      queryClient.invalidateQueries({ queryKey: ["twaater-explore-feed"] });
       toast({ title: "Vote recorded", description: "Your vote has been counted." });
     },
     onError: (error: any) => {

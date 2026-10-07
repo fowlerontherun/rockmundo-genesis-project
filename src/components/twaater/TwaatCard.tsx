@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useTwaaterReactions } from "@/hooks/useTwaaterReactions";
-import { useTwaaterReplies } from "@/hooks/useTwaaterReplies";
-import { useTwaaterBookmarks } from "@/hooks/useTwaaterBookmarks";
+import { useTwaaterReplyActions } from "@/hooks/useTwaaterReplies";
+import { useTwaaterBookmarkState } from "@/hooks/useTwaaterBookmarks";
 import { TwaatPoll } from "./TwaatPoll";
 import { QuotedTwaat } from "./QuotedTwaat";
 import { LinkedContentEmbed } from "./LinkedContentEmbed";
@@ -14,21 +14,73 @@ import { VerifiedBadge } from "./VerifiedBadge";
 import { PromoteTwaatDialog } from "./PromoteTwaatDialog";
 import { Heart, MessageCircle, Repeat2, Bookmark, BookmarkCheck, Quote, Rocket } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useTwaaterRuntimeConfig } from "@/hooks/useTwaaterRuntimeConfig";
+import { useTwaaterRuntimeConfig, type TwaaterRuntimeConfig } from "@/hooks/useTwaaterRuntimeConfig";
+
+interface PollVote {
+  id: string;
+  poll_id: string;
+  option_id: string;
+  account_id: string;
+}
 
 interface TwaatCardProps {
   twaat: any;
   viewerAccountId?: string;
+  preloadedPollVote?: PollVote | null;
 }
 
-export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
+interface TwaatCardViewProps extends TwaatCardProps {
+  config: TwaaterRuntimeConfig;
+  bookmarked: boolean;
+  toggleLike: (input: { twaatId: string; accountId: string }) => void;
+  toggleRetwaat: (input: { twaatId: string; accountId: string }) => void;
+  toggleBookmark: (input: { twaatId: string }) => void;
+  postReplyAsync: (input: { accountId: string; body: string }) => Promise<unknown>;
+  isPosting: boolean;
+  isBookmarkPending?: boolean;
+}
+
+export const TwaatCard = ({ twaat, viewerAccountId, preloadedPollVote }: TwaatCardProps) => {
   const { toggleLike, toggleRetwaat } = useTwaaterReactions();
-  const { postReplyAsync, isPosting } = useTwaaterReplies(twaat.id, false);
-  const { toggleBookmark, isBookmarked } = useTwaaterBookmarks(viewerAccountId);
+  const replyActions = useTwaaterReplyActions();
+  const bookmarks = useTwaaterBookmarkState(viewerAccountId);
+  const { config } = useTwaaterRuntimeConfig();
+
+  return (
+    <TwaatCardView
+      twaat={twaat}
+      viewerAccountId={viewerAccountId}
+      preloadedPollVote={preloadedPollVote}
+      config={config}
+      bookmarked={bookmarks.isBookmarked(twaat.id)}
+      toggleLike={toggleLike}
+      toggleRetwaat={toggleRetwaat}
+      toggleBookmark={bookmarks.toggleBookmark}
+      postReplyAsync={({ accountId, body }) =>
+        replyActions.postReplyAsync({ twaatId: twaat.id, accountId, body })
+      }
+      isPosting={replyActions.isPosting}
+      isBookmarkPending={bookmarks.isBookmarkPending}
+    />
+  );
+};
+
+export const TwaatCardView = ({
+  twaat,
+  viewerAccountId,
+  preloadedPollVote,
+  config,
+  bookmarked,
+  toggleLike,
+  toggleRetwaat,
+  toggleBookmark,
+  postReplyAsync,
+  isPosting,
+  isBookmarkPending = false,
+}: TwaatCardViewProps) => {
   const [showReplyBox, setShowReplyBox] = useState(false);
   const [replyBody, setReplyBody] = useState("");
   const navigate = useNavigate();
-  const { config } = useTwaaterRuntimeConfig();
   const account = twaat?.account ?? null;
   const accountHandle = typeof account?.handle === "string" && account.handle.trim() ? account.handle : null;
   const accountDisplayName = typeof account?.display_name === "string" && account.display_name.trim()
@@ -131,7 +183,12 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
             />
           )}
           {twaat.quoted_twaat_id && twaat.quoted_twaat && <QuotedTwaat twaat={twaat.quoted_twaat} />}
-          <TwaatPoll twaatId={twaat.id} accountId={viewerAccountId} preloadedPoll={twaat.poll} />
+          <TwaatPoll
+            twaatId={twaat.id}
+            accountId={viewerAccountId}
+            preloadedPoll={twaat.poll}
+            preloadedUserVote={preloadedPollVote}
+          />
 
           <div className="flex items-center gap-4 mt-3">
             <Button variant="ghost" size="sm" onClick={() => setShowReplyBox(!showReplyBox)} disabled={!viewerAccountId} className="hover:text-[hsl(var(--twaater-purple))]">
@@ -161,8 +218,8 @@ export const TwaatCard = ({ twaat, viewerAccountId }: TwaatCardProps) => {
               <span className="ml-1">{twaat.metrics?.likes || 0}</span>
             </Button>
 
-            <Button variant="ghost" size="sm" onClick={() => toggleBookmark({ twaatId: twaat.id })} disabled={!viewerAccountId} className="hover:text-[hsl(var(--twaater-purple))]">
-              {isBookmarked(twaat.id) ? <BookmarkCheck className="h-4 w-4 text-[hsl(var(--twaater-purple))]" /> : <Bookmark className="h-4 w-4" />}
+            <Button variant="ghost" size="sm" onClick={() => toggleBookmark({ twaatId: twaat.id })} disabled={!viewerAccountId || isBookmarkPending} className="hover:text-[hsl(var(--twaater-purple))]">
+              {bookmarked ? <BookmarkCheck className="h-4 w-4 text-[hsl(var(--twaater-purple))]" /> : <Bookmark className="h-4 w-4" />}
             </Button>
 
             {isOwn && !isPromoted && <PromoteTwaatDialog twaatId={twaat.id} />}
