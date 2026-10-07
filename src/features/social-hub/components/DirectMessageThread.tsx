@@ -80,7 +80,12 @@ export function DirectMessageThread({
           <DirectVoiceChat channelId={channelId} />
         </div>
       )}
-      <CardContent className={cn("flex-1 overflow-hidden", compact && "min-h-0 px-2 pb-2")}>
+      <CardContent
+        className={cn(
+          "flex-1 overflow-hidden",
+          compact && "flex min-h-0 flex-col px-2 pb-2",
+        )}
+      >
         {sendMessage.isSuccess && (
           <p className="mb-2 rounded-md bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700" role="status">
             Message sent.
@@ -91,7 +96,7 @@ export function DirectMessageThread({
             {sendMessage.error instanceof Error ? sendMessage.error.message : "We couldn't send that message."}
           </p>
         )}
-        <ScrollArea className={compact ? "h-full" : "h-[360px]"} ref={scrollRef}>
+        <ScrollArea className={compact ? "min-h-0 flex-1" : "h-[360px]"} ref={scrollRef}>
           <div className="space-y-2 pr-3">
             {isLoading ? (
               <div className="flex h-32 items-center justify-center text-muted-foreground">
