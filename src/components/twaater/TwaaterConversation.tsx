@@ -11,7 +11,7 @@ interface TwaaterConversationProps {
 }
 
 export const TwaaterConversation = ({ conversationId, accountId }: TwaaterConversationProps) => {
-  const { messages, isLoading, sendMessage, isSending } = useTwaaterConversation(conversationId, accountId);
+  const { messages, isLoading, sendMessageAsync, isSending } = useTwaaterConversation(conversationId, accountId);
   const [body, setBody] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -23,10 +23,16 @@ export const TwaaterConversation = ({ conversationId, accountId }: TwaaterConver
     scrollToBottom();
   }, [messages]);
 
-  const handleSend = () => {
-    if (!body.trim()) return;
-    sendMessage({ body: body.trim() });
-    setBody("");
+  const handleSend = async () => {
+    const draft = body.trim();
+    if (!draft || isSending) return;
+
+    try {
+      await sendMessageAsync({ body: draft });
+      setBody("");
+    } catch {
+      // The mutation shows the error. Keep the draft so the player can retry.
+    }
   };
 
   if (isLoading) {

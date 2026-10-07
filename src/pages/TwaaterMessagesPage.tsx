@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useGameData } from "@/hooks/useGameData";
 import { useTwaaterAccount } from "@/hooks/useTwaaterAccount";
 import { useTwaaterMessages } from "@/hooks/useTwaaterMessages";
@@ -21,8 +20,10 @@ export default function TwaaterMessagesPage() {
   const accountSuffix = account?.id ? `&account=${encodeURIComponent(account.id)}` : "";
   const messagesRoot = account?.id ? `/twaater/messages?account=${encodeURIComponent(account.id)}` : "/twaater/messages";
   const backTo = account?.id ? `/twaater?account=${encodeURIComponent(account.id)}` : "/twaater";
-  const [selectedConversation, setSelectedConversation] = useState<string | null>(() => searchParams.get("conversation"));
+  const selectedConversation = searchParams.get("conversation");
   const navigate = useNavigate();
+  const selectedConversationIsOwned =
+    !selectedConversation || Boolean(conversations?.some((conversation: any) => conversation.id === selectedConversation));
 
   if (accountLoading || isLoading) {
     return (
@@ -70,6 +71,24 @@ export default function TwaaterMessagesPage() {
     );
   }
 
+  if (selectedConversation && !selectedConversationIsOwned) {
+    return (
+      <FMPageScaffold title="Messages" icon={MessageCircle} backTo={messagesRoot}>
+        <Card>
+          <CardContent className="py-10 text-center space-y-4">
+            <p className="font-medium">Conversation unavailable</p>
+            <p className="text-sm text-muted-foreground">
+              This conversation does not belong to the selected Twaater account.
+            </p>
+            <Button onClick={() => navigate(messagesRoot, { replace: true })}>
+              Back to conversations
+            </Button>
+          </CardContent>
+        </Card>
+      </FMPageScaffold>
+    );
+  }
+
   if (selectedConversation) {
     return (
       <FMPageScaffold
@@ -80,10 +99,7 @@ export default function TwaaterMessagesPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
-              setSelectedConversation(null);
-              navigate(messagesRoot, { replace: true });
-            }}
+            onClick={() => navigate(messagesRoot, { replace: true })}
             className="gap-1"
           >
             <ArrowLeft className="h-4 w-4" /> Conversations
@@ -123,10 +139,9 @@ export default function TwaaterMessagesPage() {
                 return (
                   <button
                     key={conversation.id}
-                    onClick={() => {
-                      setSelectedConversation(conversation.id);
-                      navigate(`/twaater/messages?conversation=${conversation.id}${accountSuffix}`, { replace: true });
-                    }}
+                    onClick={() =>
+                      navigate(`/twaater/messages?conversation=${conversation.id}${accountSuffix}`, { replace: true })
+                    }
                     className="w-full p-4 border rounded-lg hover:bg-accent transition-colors text-left"
                   >
                     <div className="flex items-center justify-between">
