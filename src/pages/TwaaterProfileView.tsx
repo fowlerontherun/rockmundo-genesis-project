@@ -66,7 +66,12 @@ const TwaaterProfileView = () => {
   });
 
   const { data: twaats, isLoading: twaatsLoading, error: twaatsError, refetch: refetchTwaats } = useQuery({
-    queryKey: ["twaater-profile-twaats", profileAccount?.id],
+    queryKey: [
+      "twaater-profile-twaats",
+      profileAccount?.id,
+      viewerAccount?.id,
+      selectedAccountFollowsProfile,
+    ],
     queryFn: async () => {
       if (!profileAccount) return [];
       let query = supabase
@@ -97,21 +102,8 @@ const TwaaterProfileView = () => {
     enabled: !!profileAccount && !visibilityLoading,
   });
 
-  const { data: isFollowing, isLoading: followLoading } = useQuery({
-    queryKey: ["is-following", viewerAccount?.id, profileAccount?.id],
-    queryFn: async () => {
-      if (!viewerAccount || !profileAccount) return false;
-      const { data, error } = await supabase
-        .from("twaater_follows")
-        .select("follower_account_id")
-        .eq("follower_account_id", viewerAccount.id)
-        .eq("followed_account_id", profileAccount.id)
-        .maybeSingle();
-      if (error) throw error;
-      return !!data;
-    },
-    enabled: !!viewerAccount && !!profileAccount,
-  });
+  const isFollowing = selectedAccountFollowsProfile;
+  const followLoading = visibilityLoading;
 
   useEffect(() => {
     if (!viewerAccount?.id || !profileAccount?.id || viewerAccount.id === profileAccount.id) return;
@@ -159,7 +151,10 @@ const TwaaterProfileView = () => {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["is-following", viewerAccount?.id, profileAccount?.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["twaater-selected-account-follows-profile", viewerAccount?.id, profileAccount?.id],
+      });
+      queryClient.invalidateQueries({ queryKey: ["twaater-profile-twaats", profileAccount?.id] });
       queryClient.invalidateQueries({ queryKey: ["twaater-profile", handle] });
       queryClient.invalidateQueries({ queryKey: ["twaater-account"] });
       queryClient.invalidateQueries({ queryKey: ["twaater-feed"] });
