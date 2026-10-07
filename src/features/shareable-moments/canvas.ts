@@ -58,6 +58,27 @@ export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment
   glow.addColorStop(0,accent+'66'); glow.addColorStop(1,'#00000000'); ctx.fillStyle=glow; ctx.fillRect(0,0,width,height);
   if (headlineVariant) { const halo=ctx.createRadialGradient(width*.5,height*.22,10,width*.5,height*.22,width*.55);halo.addColorStop(0,'#fef08a55');halo.addColorStop(1,'#00000000');ctx.fillStyle=halo;ctx.fillRect(0,0,width,height); }
   ctx.save(); ctx.globalAlpha=headlineVariant ? .22 : .12; ctx.strokeStyle=headlineVariant?'#fde047':accent; ctx.lineWidth=Math.max(2,width*.003);
+  if(moment.type==='festival'){
+    ctx.save();
+    ctx.globalAlpha=.16;
+    ctx.fillStyle=accent;
+    const beamY=height*.18;
+    for(let i=0;i<5;i++){
+      ctx.beginPath();
+      ctx.moveTo(width*(.08+i*.21),beamY);
+      ctx.lineTo(width*(.02+i*.24),height*.62);
+      ctx.lineTo(width*(.16+i*.19),height*.62);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.globalAlpha=.35;
+    for(let i=0;i<7;i++){
+      ctx.beginPath();
+      ctx.arc(width*(.08+i*.145),height*(.15+(i%2)*.035),width*.012,0,Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
   if(moment.type==='tour'){ctx.beginPath();ctx.moveTo(width*.58,height*.18);ctx.bezierCurveTo(width*.72,height*.12,width*.75,height*.34,width*.9,height*.27);ctx.stroke();for(const [x,y] of [[.58,.18],[.73,.2],[.9,.27]]){ctx.beginPath();ctx.arc(width*x,height*y,width*.012,0,Math.PI*2);ctx.fillStyle=accent;ctx.fill();}}
   else if(moment.type==='festival'){for(let i=0;i<5;i++){ctx.beginPath();ctx.arc(width*(.68+i*.07),height*(.18+i*.025),width*(.04+i*.018),0,Math.PI*2);ctx.stroke();}}
   else if(moment.type==='gig_result'){for(let x=-height;x<width;x+=90){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+height,height);ctx.stroke();}}
