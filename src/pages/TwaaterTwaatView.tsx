@@ -57,7 +57,7 @@ export default function TwaaterTwaatView() {
         return null;
       }
 
-      const hydrated = await hydrateTwaaterFeedExtras([data]);
+      const hydrated = await hydrateTwaaterFeedExtras([data], account?.id);
       return hydrated[0] || null;
     },
     enabled: !!twaatId && !personaLoading && !routeAccountLoading,
