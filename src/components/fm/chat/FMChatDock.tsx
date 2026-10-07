@@ -273,7 +273,7 @@ export function FMChatDock() {
       <div className="pointer-events-auto w-[300px] bg-fm-panel border border-fm-border border-b-0 rounded-t-sm shadow-lg flex flex-col">
         <button
           type="button"
-          onClick={() => { setOpen(!open); if (!open) setActiveRoom("world"); }}
+          onClick={() => setOpen(!open)}
           className="h-8 flex items-center justify-between px-2 bg-fm-panel-2 border-b border-fm-border hover:bg-fm-panel-2/80"
         >
           <span className="flex items-center gap-1.5 text-[11px] tracking-tight text-fm-fg font-medium">
@@ -409,6 +409,7 @@ export function FMChatDock() {
                         return (
                           <button
                             key={f.friendship.id}
+                            type="button"
                             onClick={() => openThread({ profileId: other.id, displayName: name })}
                             className={cn(
                               "w-full flex items-center gap-2 px-2 py-1.5 text-left hover:bg-fm-panel-2",
