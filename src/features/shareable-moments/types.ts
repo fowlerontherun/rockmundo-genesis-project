@@ -34,6 +34,8 @@ export interface ShareMoment {
   variant?: 'standard' | 'headline';
   destinationUrl?: string | null;
   referralCode?: string | null;
+  /** Existing growth throttle key; recorded only after a successful share/link-copy action. */
+  shareCooldownKey?: string | null;
   createdAt: string;
 }
 
