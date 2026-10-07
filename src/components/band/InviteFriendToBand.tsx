@@ -15,7 +15,7 @@ import { UserPlus, Loader2, X, Search, Share2, Copy } from 'lucide-react';
 import { searchPublicProfiles, type PublicProfileSearchResult } from '@/services/publicProfileSearch';
 import { bandInviteUnavailability } from '@/services/bandInviteEligibility';
 import { cancelBandInvitation, sendBandInvitation, friendlyBandInvitationError } from '@/services/bandInvitations';
-import { buildReferralUrl } from '@/lib/referralShare';
+import { buildReferralUrl } from '@/lib/referralShare';\nimport { ShareMomentSheet } from '@/features/shareable-moments/ShareMomentSheet';\nimport type { ShareMoment } from '@/features/shareable-moments/types';
 
 interface InviteFriendToBandProps {
   bandId: string;
@@ -67,7 +67,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
   const [instrumentRole, setInstrumentRole] = useState<string>(DEFAULT_BAND_PERFORMANCE_ROLE);
   const [vocalRole, setVocalRole] = useState<string | undefined>(undefined);
   const [message, setMessage] = useState('');
-  const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [referralCode, setReferralCode] = useState<string | null>(null);\n  const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
   const [referredRecruits, setReferredRecruits] = useState<Array<{ referral_id: string; profile_id: string; profile_name: string; signup_qualified_at: string | null; invitation_status: string | null }>>([]);
   const { toast } = useToast();
 
@@ -90,25 +90,12 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
     setReferredRecruits(Array.isArray(data) ? data : []);
   }, [bandId]);
 
-  const shareExternalRecruitment = async () => {
+  const shareExternalRecruitment = () => {
     if (!externalRecruitmentUrl) {
       toast({ title: 'Invite link unavailable', description: 'Open Invite Friends once to initialise your referral link.', variant: 'destructive' });
       return;
     }
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: `Join ${bandName} in RockMundo`, text: externalRecruitmentText, url: externalRecruitmentUrl });
-        return;
-      } catch (error) {
-        if ((error as DOMException)?.name === 'AbortError') return;
-      }
-    }
-    try {
-      await navigator.clipboard.writeText(externalRecruitmentUrl);
-      toast({ title: 'Recruitment link copied' });
-    } catch {
-      toast({ title: 'Could not copy recruitment link', description: 'Your browser blocked clipboard access. Copy the visible link manually or try Share again.', variant: 'destructive' });
-    }
+    setShareMoment({ version: 1, type: 'band_profile', id: bandId, eyebrow: 'BAND RECRUITMENT', headline: bandName, subheadline: 'We are looking for our next bandmate', metrics: [{ label: 'Opportunity', value: 'Join the band' }, { label: 'World', value: 'RockMundo' }], destinationUrl: externalRecruitmentUrl, referralCode: null, createdAt: new Date().toISOString() });
   };
 
   useEffect(() => {
@@ -539,7 +526,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
 
           <div className="flex justify-end"><Button variant="outline" aria-label="Close invitation dialog" onClick={() => handleDialogOpenChange(false)} disabled={submitting || !!cancellingId}>Close</Button></div>
         </DialogContent>
-      </Dialog>
+      </Dialog>\n      <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(next) => { if (!next) setShareMoment(null); }} />
     </>
   );
 }
