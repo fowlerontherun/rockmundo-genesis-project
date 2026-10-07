@@ -31,6 +31,7 @@ export function CharacterShareStudio({ open, onOpenChange, moment }: Props) {
         merchWearable={merch.query.data?.equipped ?? null}
         luthieryInstrument={luthiery.data?.[0] ?? null}
         presentation="stage"
+        transparentCapture
         onCanvasReady={canvas => setAvatar(captureAvatarCanvas(canvas))}
       />
     </div>}
