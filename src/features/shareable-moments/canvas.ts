@@ -45,6 +45,7 @@ export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment
     achievement: ['#120d03','#3b2607','#713f12','#fbbf24'],
     gig_result: ['#030b0a','#07352f','#14532d','#34d399'],
     festival: ['#100317','#351052','#701a75','#e879f9'],
+    tour: ['#041014','#0b2d38','#164e63','#22d3ee'],
     band_profile: ['#09070f','#21123b','#4c1d95','#a78bfa'],
     character_profile: ['#070b12','#101b2b','#28143a','#8b5cf6'],
   };
@@ -57,7 +58,8 @@ export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment
   glow.addColorStop(0,accent+'66'); glow.addColorStop(1,'#00000000'); ctx.fillStyle=glow; ctx.fillRect(0,0,width,height);
   if (headlineVariant) { const halo=ctx.createRadialGradient(width*.5,height*.22,10,width*.5,height*.22,width*.55);halo.addColorStop(0,'#fef08a55');halo.addColorStop(1,'#00000000');ctx.fillStyle=halo;ctx.fillRect(0,0,width,height); }
   ctx.save(); ctx.globalAlpha=headlineVariant ? .22 : .12; ctx.strokeStyle=headlineVariant?'#fde047':accent; ctx.lineWidth=Math.max(2,width*.003);
-  if(moment.type==='festival'){for(let i=0;i<5;i++){ctx.beginPath();ctx.arc(width*(.68+i*.07),height*(.18+i*.025),width*(.04+i*.018),0,Math.PI*2);ctx.stroke();}}
+  if(moment.type==='tour'){ctx.beginPath();ctx.moveTo(width*.58,height*.18);ctx.bezierCurveTo(width*.72,height*.12,width*.75,height*.34,width*.9,height*.27);ctx.stroke();for(const [x,y] of [[.58,.18],[.73,.2],[.9,.27]]){ctx.beginPath();ctx.arc(width*x,height*y,width*.012,0,Math.PI*2);ctx.fillStyle=accent;ctx.fill();}}
+  else if(moment.type==='festival'){for(let i=0;i<5;i++){ctx.beginPath();ctx.arc(width*(.68+i*.07),height*(.18+i*.025),width*(.04+i*.018),0,Math.PI*2);ctx.stroke();}}
   else if(moment.type==='gig_result'){for(let x=-height;x<width;x+=90){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+height,height);ctx.stroke();}}
   else if(moment.type==='chart'){for(let i=0;i<6;i++){const barW=width*.035,barH=height*(.08+i*.035);ctx.fillStyle=accent;ctx.fillRect(width*.76+i*barW*1.25,height*.78-barH,barW,barH);}}
   else if(moment.type==='achievement'){ctx.beginPath();ctx.arc(width*.82,height*.24,width*.14,0,Math.PI*2);ctx.stroke();}
