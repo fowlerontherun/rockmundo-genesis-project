@@ -69,6 +69,7 @@ export default function BandManager() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+  const recruitedBandId = new URLSearchParams(location.search).get("recruitedBand");
   const [userBands, setUserBands] = useState<any[]>([]);
   const [selectedBandId, setSelectedBandId] = useState<string | null>(null);
   const [selectedBand, setSelectedBand] = useState<any>(null);
@@ -321,7 +322,7 @@ export default function BandManager() {
               </Button>
             </CardContent>
           </Card>
-          <BandInvitations onMembershipChanged={loadUserBands} />
+          <BandInvitations onMembershipChanged={loadUserBands} highlightedBandId={recruitedBandId} />
           <div className="lg:col-span-2">
             <BandCreationForm onBandCreated={loadUserBands} />
           </div>
@@ -459,7 +460,7 @@ export default function BandManager() {
         </TabsContent>
 
         <TabsContent value="members" className="space-y-4">
-          <BandInvitations onMembershipChanged={loadUserBands} />
+          <BandInvitations onMembershipChanged={loadUserBands} highlightedBandId={recruitedBandId} />
 
           {/* Pending Applications (Leader only) */}
           {isLeader && selectedBand.status === "active" && (
