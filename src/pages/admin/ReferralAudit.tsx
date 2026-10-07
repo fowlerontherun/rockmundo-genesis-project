@@ -146,19 +146,6 @@ export default function ReferralAudit() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2"><Link2 className="h-5 w-5" />Campaign link builder</CardTitle><CardDescription>Create tagged referral links for creators, communities and promotions. The referral code still decides who receives credit; campaign and source are analytics only.</CardDescription></CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="space-y-2"><Label htmlFor="campaign-referral-code">Referral code</Label><Input id="campaign-referral-code" value={campaignCode} onChange={(event) => setCampaignCode(event.target.value.toUpperCase())} placeholder="RMXXXXXXXX" maxLength={20} /></div>
-              <div className="space-y-2"><Label htmlFor="campaign-slug">Campaign</Label><Input id="campaign-slug" value={campaignSlug} onChange={(event) => setCampaignSlug(event.target.value)} placeholder="creator_october" maxLength={40} /><p className="text-xs text-muted-foreground">Lowercase letters, numbers, hyphens and underscores.</p></div>
-              <div className="space-y-2"><Label>Source</Label><Select value={campaignSource} onValueChange={setCampaignSource}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="referral_hub">Invite Friends</SelectItem><SelectItem value="band_recruitment">Band recruitment</SelectItem><SelectItem value="gig_share">Gig share</SelectItem><SelectItem value="song_chart_share">Song chart</SelectItem><SelectItem value="release_chart_share">Release chart</SelectItem><SelectItem value="achievement_share">Achievement</SelectItem></SelectContent></Select></div>
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row"><Input readOnly value={campaignLink} placeholder="Enter a valid referral code and campaign name to generate a link" className="font-mono text-xs" /><Button onClick={copyCampaignLink} disabled={!campaignLink}><Copy className="mr-2 h-4 w-4" />Copy link</Button></div>
-            <p className="text-xs text-muted-foreground">Use a different campaign slug for each creator, community or promotion you want to compare. Results appear in Campaign performance after referred players join.</p>
-          </CardContent>
-        </Card>
-
-        <Card>
           <CardHeader><CardTitle>Campaign performance</CardTitle><CardDescription>Compare creator, community and promotional pushes within the same referral source. Add <code>campaign=your_slug</code> to referral links to populate this table.</CardDescription></CardHeader>
           <CardContent className="overflow-x-auto">
             <table className="w-full min-w-[680px] text-sm">
