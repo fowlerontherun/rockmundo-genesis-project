@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Gift, RefreshCw, Users } from "lucide-react";
 
+type GrowthAnalytics = { funnel: { joined:number; qualified:number; vip:number; activating:number }; dropoff:{ missing_email:number; waiting_24h:number; missing_activity:number }; band:{ joined:number; qualified:number; vip:number; qualification_rate:number }; sources:Array<{source:string;joined:number;qualified:number;vip:number;activating:number;missing_email:number;waiting_24h:number;missing_activity:number;qualification_rate:number;vip_rate:number}> };
+
 type Audit = {
   summary: {
     total_referrals: number;
@@ -40,7 +42,9 @@ export default function ReferralAudit() {
       return data as Audit;
     },
   });
+  const growthQuery = useQuery({ queryKey: ["admin-referral-growth-analytics"], queryFn: async () => { const { data, error } = await (supabase as any).rpc("admin_get_referral_growth_analytics"); if (error) throw error; return data as GrowthAnalytics; } });
   const audit = query.data;
+  const growth = growthQuery.data;
 
   return (
     <AdminRoute>
@@ -50,7 +54,7 @@ export default function ReferralAudit() {
             <h1 className="flex items-center gap-2 text-3xl font-bold"><Gift className="h-7 w-7" />Referral Audit</h1>
             <p className="text-muted-foreground">Read-only referral attribution, qualification, conversion and reward diagnostics.</p>
           </div>
-          <Button variant="outline" onClick={() => query.refetch()} disabled={query.isFetching}>
+          <Button variant="outline" onClick={() => { query.refetch(); growthQuery.refetch(); }} disabled={query.isFetching}>
             <RefreshCw className={`mr-2 h-4 w-4 ${query.isFetching ? "animate-spin" : ""}`} />Refresh
           </Button>
         </div>
@@ -71,6 +75,17 @@ export default function ReferralAudit() {
             ["VIP rewards", audit?.summary.vip_rewarded ?? 0],
           ].map(([label, value]) => <Card key={String(label)}><CardContent className="pt-5"><p className="text-xs text-muted-foreground">{label}</p><p className="text-2xl font-semibold">{value}</p></CardContent></Card>)}
         </div>
+
+        <div className="grid gap-4 lg:grid-cols-3">
+          <Card><CardHeader><CardTitle>Activation funnel</CardTitle><CardDescription>Referral joins progressing into active players and VIP customers.</CardDescription></CardHeader><CardContent className="space-y-2 text-sm"><div className="flex justify-between"><span>Joined</span><strong>{growth?.funnel.joined ?? 0}</strong></div><div className="flex justify-between"><span>Qualified</span><strong>{growth?.funnel.qualified ?? 0}</strong></div><div className="flex justify-between"><span>Still activating</span><strong>{growth?.funnel.activating ?? 0}</strong></div><div className="flex justify-between"><span>VIP</span><strong>{growth?.funnel.vip ?? 0}</strong></div></CardContent></Card>
+          <Card><CardHeader><CardTitle>Activation drop-off</CardTitle><CardDescription>Which qualification gates are holding pending recruits back. A recruit can appear in more than one row.</CardDescription></CardHeader><CardContent className="space-y-2 text-sm"><div className="flex justify-between"><span>Email not confirmed</span><strong>{growth?.dropoff.missing_email ?? 0}</strong></div><div className="flex justify-between"><span>Waiting for 24h</span><strong>{growth?.dropoff.waiting_24h ?? 0}</strong></div><div className="flex justify-between"><span>Needs active play</span><strong>{growth?.dropoff.missing_activity ?? 0}</strong></div></CardContent></Card>
+          <Card><CardHeader><CardTitle>Band recruitment</CardTitle><CardDescription>Performance of referrals created specifically to recruit a player into a band.</CardDescription></CardHeader><CardContent className="space-y-2 text-sm"><div className="flex justify-between"><span>Joined</span><strong>{growth?.band.joined ?? 0}</strong></div><div className="flex justify-between"><span>Qualified</span><strong>{growth?.band.qualified ?? 0}</strong></div><div className="flex justify-between"><span>Qualification rate</span><strong>{growth?.band.qualification_rate ?? 0}%</strong></div><div className="flex justify-between"><span>VIP</span><strong>{growth?.band.vip ?? 0}</strong></div></CardContent></Card>
+        </div>
+
+        <Card>
+          <CardHeader><CardTitle>Source funnel diagnostics</CardTitle><CardDescription>Find share surfaces that generate signups but lose players before activation.</CardDescription></CardHeader>
+          <CardContent className="overflow-x-auto"><table className="w-full min-w-[900px] text-sm"><thead><tr className="border-b text-left"><th className="p-2">Source</th><th className="p-2">Joined</th><th className="p-2">Activating</th><th className="p-2">Qualified</th><th className="p-2">Qual. rate</th><th className="p-2">Email gap</th><th className="p-2">24h gap</th><th className="p-2">Play gap</th><th className="p-2">VIP</th></tr></thead><tbody>{growth?.sources.map(row=><tr key={row.source} className="border-b"><td className="p-2"><Badge variant="outline">{row.source.replace(/_/g," ")}</Badge></td><td className="p-2">{row.joined}</td><td className="p-2">{row.activating}</td><td className="p-2">{row.qualified}</td><td className="p-2">{row.qualification_rate}%</td><td className="p-2">{row.missing_email}</td><td className="p-2">{row.waiting_24h}</td><td className="p-2">{row.missing_activity}</td><td className="p-2">{row.vip}</td></tr>)}</tbody></table></CardContent>
+        </Card>
 
         <Card>
           <CardHeader><CardTitle>Acquisition sources</CardTitle><CardDescription>Which referral entry points turn invitations into qualified players and VIP customers.</CardDescription></CardHeader>
