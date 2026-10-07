@@ -63,27 +63,27 @@ Share Sheet
 - [x] Add a deterministic share presentation/camera preset.
 - [x] Support current appearance, rich clothing, tattoos, merch wearable and equipped/luthiery instruments.
 - [x] Capture transparent/high-quality avatar image for card composition.
-- [ ] Define serialisable avatar visual snapshot contract for historical moments.
-- [ ] Gracefully render a branded non-avatar fallback if WebGL/assets fail.
+- [x] Define serialisable avatar visual snapshot contract for historical moments.
+- [x] Gracefully render a branded non-avatar fallback if WebGL/assets fail.
 
 ### 1C. Initial templates
-- [ ] Character profile card.
-- [ ] Band profile card.
-- [ ] Gig result card.
-- [ ] Achievement/fame milestone card.
-- [ ] New release card.
-- [ ] Render all five in square/story/landscape formats.
+- [x] Character profile card.
+- [x] Band profile card.
+- [x] Gig result card.
+- [x] Achievement/fame milestone card.
+- [x] New release card.
+- [x] Render all five in square/story/landscape formats.
 
 ### 1D. UI
 - [x] Reusable `ShareMomentSheet` with live preview.
 - [x] Format selector.
 - [x] Native Share button.
 - [x] Copy image, download image and copy link.
-- [ ] Accessible labels/status and mobile-safe layout.
-- [ ] Add Share entry points to the five initial surfaces.
+- [x] Accessible labels/status and mobile-safe layout.
+- [x] Add Share entry points to the five initial surfaces.
 
 ### 1E. Consolidate current sharing
-- [ ] Migrate Dashboard achievement sharing.
+- [x] Migrate Dashboard achievement sharing.
 - [ ] Migrate chart milestone sharing.
 - [ ] Migrate release milestone sharing.
 - [ ] Keep band recruitment semantics but move transport/referral utilities to shared helpers.
