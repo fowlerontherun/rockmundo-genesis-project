@@ -23,7 +23,20 @@ interface PreviewApi {
   focusHead: () => void;
   focusTattoo: (preset: TattooCameraPreset) => void;
 }
-export function PlayerModelPreview({ appearance, role = 'other', instrument, richClothing = [], tattoos = [], presentation = 'stage', merchWearable = null, luthieryInstrument = null }: { appearance: PlayerAppearance; role?: StageRole; instrument?: InstrumentId; richClothing?: ResolvedEquippedClothing[]; tattoos?: ResolvedTattooVisual[]; presentation?: PlayerModelPresentation; merchWearable?: ResolvedMerchWearable | null; luthieryInstrument?: LuthieryInstrumentVisual | null }) {
+export interface PlayerModelPreviewProps {
+  appearance: PlayerAppearance;
+  role?: StageRole;
+  instrument?: InstrumentId;
+  richClothing?: ResolvedEquippedClothing[];
+  tattoos?: ResolvedTattooVisual[];
+  presentation?: PlayerModelPresentation;
+  merchWearable?: ResolvedMerchWearable | null;
+  luthieryInstrument?: LuthieryInstrumentVisual | null;
+  /** Shareable Moments uses the canonical live renderer canvas instead of rebuilding the avatar scene. */
+  onCanvasReady?: (canvas: HTMLCanvasElement) => void;
+}
+
+export function PlayerModelPreview({ appearance, role = 'other', instrument, richClothing = [], tattoos = [], presentation = 'stage', merchWearable = null, luthieryInstrument = null, onCanvasReady }: PlayerModelPreviewProps) {
   const canvas = useRef<HTMLCanvasElement>(null), api = useRef<PreviewApi | null>(null), latest = useRef({ appearance, role, instrument, richClothing, tattoos, presentation, merchWearable, luthieryInstrument }); latest.current = { appearance, role, instrument, richClothing, tattoos, presentation, merchWearable, luthieryInstrument };
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading'), [attempt, setAttempt] = useState(0);
   useEffect(() => {
@@ -139,7 +152,7 @@ export function PlayerModelPreview({ appearance, role = 'other', instrument, ric
             controls!.update();
           },
         };
-        api.current.replace(latest.current.appearance, latest.current.role, latest.current.instrument, latest.current.richClothing, latest.current.tattoos, latest.current.presentation, latest.current.merchWearable, latest.current.luthieryInstrument); setStatus('ready');
+        api.current.replace(latest.current.appearance, latest.current.role, latest.current.instrument, latest.current.richClothing, latest.current.tattoos, latest.current.presentation, latest.current.merchWearable, latest.current.luthieryInstrument); renderer?.render(scene, camera); setStatus('ready'); onCanvasReady?.(element);
       }).catch(() => { if (alive) setStatus('error'); });
     } catch { setStatus('error'); }
     return () => {
@@ -148,7 +161,7 @@ export function PlayerModelPreview({ appearance, role = 'other', instrument, ric
       scene.traverse(object => { if (object instanceof T.SpotLight) object.shadow.dispose(); });
       disposeModel(scene); library?.forEach(disposeModel); environment?.dispose(); renderer?.dispose();
     };
-  }, [attempt]);
+  }, [attempt, onCanvasReady]);
   useEffect(() => { try { api.current?.replace(appearance, role, instrument, richClothing, tattoos, presentation, merchWearable, luthieryInstrument); } catch { setStatus('error'); } }, [appearance, role, instrument, richClothing, tattoos, presentation, merchWearable, luthieryInstrument]);
   return <div className="player-model-preview">
     <canvas ref={canvas} tabIndex={0} role="img" aria-label="Your animated 3D stage model. Drag to rotate, scroll to zoom, or use the buttons below." onKeyDown={event => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); api.current?.rotate(event.key === 'ArrowLeft' ? -.25 : .25); } if (event.key === '+' || event.key === '-') { event.preventDefault(); api.current?.zoom(event.key === '+' ? .9 : 1.1); } }} />
