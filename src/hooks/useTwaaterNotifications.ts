@@ -13,7 +13,20 @@ export const useTwaaterUnreadCount = (accountId?: string) => {
       .on(
         "postgres_changes",
         {
-          event: "*",
+          event: "INSERT",
+          schema: "public",
+          table: "twaater_notifications",
+          filter: `account_id=eq.${accountId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["twaater-notifications-unread-count", accountId] });
+          queryClient.invalidateQueries({ queryKey: ["twaater-notifications", accountId] });
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
           schema: "public",
           table: "twaater_notifications",
           filter: `account_id=eq.${accountId}`,
