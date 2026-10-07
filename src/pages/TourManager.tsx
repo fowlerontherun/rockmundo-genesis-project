@@ -55,7 +55,10 @@ import {
   XCircle,
   ListMusic,
   TrendingUp,
+  Share2,
 } from "lucide-react";
+import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
+import type { ShareMoment } from "@/features/shareable-moments/types";
 import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -149,6 +152,7 @@ const TourManager = () => {
   const { data: bandTotals } = useBandTourTotals(currentBandId);
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
   const [wizardOpen, setWizardOpen] = useState(() => Boolean(requestedCityId));
   const [draftRouteCityIds, setDraftRouteCityIds] = useState<string[]>(() => requestedCityId ? [requestedCityId] : []);
 
@@ -561,6 +565,7 @@ const TourManager = () => {
     showBandInfo?: boolean;
   }) => {
     const isCancelled = tour.status === "cancelled";
+    const canPromote = !showBandInfo && !isCancelled && !terminalTourStatuses.has(tour.status);
     return (
       <Card
         className={cn(
@@ -655,15 +660,33 @@ const TourManager = () => {
               {tour.description}
             </p>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full"
-            onClick={() => openTourDetails(tour)}
-          >
-            View Details
-            <ChevronRight className="h-4 w-4 ml-1" />
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" className="flex-1" onClick={() => openTourDetails(tour)}>
+              View Details
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+            {canPromote && (
+              <Button variant="outline" size="sm" onClick={() => setShareMoment({
+                version: 1,
+                type: "tour",
+                id: tour.id,
+                eyebrow: "TOUR ANNOUNCEMENT",
+                headline: tour.name,
+                subheadline: tour.band?.name || "RockMundo tour",
+                metrics: [
+                  { label: "Starts", value: format(new Date(tour.start_date), "MMM d, yyyy") },
+                  { label: "Ends", value: format(new Date(tour.end_date), "MMM d, yyyy") },
+                  ...(tour.scope ? [{ label: "Scope", value: tour.scope }] : []),
+                  ...(tour.stage_setup_tier ? [{ label: "Production", value: tour.stage_setup_tier }] : []),
+                ].slice(0, 4),
+                destinationUrl: `${window.location.origin}/world/tours?tour=${tour.id}`,
+                referralCode: null,
+                createdAt: new Date().toISOString(),
+              })}>
+                <Share2 className="h-4 w-4 mr-1" /> Share tour
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
     );
@@ -1337,6 +1360,7 @@ const TourManager = () => {
           )}
         </DialogContent>
       </Dialog>
+      <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(next) => { if (!next) setShareMoment(null); }} />
     </FMPageScaffold>
   );
 };
