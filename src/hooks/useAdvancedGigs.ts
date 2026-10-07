@@ -50,7 +50,7 @@ export const useAdvancedGigs = (bandId?: string) => {
         .from("gig_offers")
         .select(`
           *,
-          venue:venues(name, capacity, city_id)
+          venue:venues(name, capacity, city_id, city:cities(name))
         `)
         .eq("band_id", bandId)
         .eq("status", "pending")
