@@ -11,6 +11,10 @@ import { CompleteSongDialog } from "./CompleteSongDialog";
 import { CollaboratorInviteDialog } from "./CollaboratorInviteDialog";
 import { ActiveSongwritingDialog } from "./ActiveSongwritingDialog";
 import { useCollaborationInvites } from "@/hooks/useCollaborationInvites";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface SimplifiedProjectCardProps {
   project: SongwritingProject;
@@ -39,6 +43,68 @@ export const SimplifiedProjectCard = ({
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [activeWritingOpen, setActiveWritingOpen] = useState(false);
   const { collaborators } = useCollaborationInvites(project.id);
+  const { profileId } = useActiveProfile();
+  const queryClient = useQueryClient();
+
+  const refreshCompletionState = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["songwriting-projects"] });
+    await queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });
+    await queryClient.invalidateQueries({ queryKey: ["activity-status"] });
+    onComplete?.();
+  };
+
+  const startFinalPolish = async () => {
+    if (!profileId) throw new Error("Select an active character first.");
+    const { data, error } = await (supabase as any).rpc(
+      "start_songwriting_polish_session",
+      { p_profile_id: profileId, p_project_id: project.id },
+    );
+    if (error) {
+      toast.error("Could not start final polish", { description: error.message });
+      throw error;
+    }
+    toast.success("Final polish started", {
+      description:
+        "One final 1-hour writing session is underway. Success chance: " +
+        (data?.success_chance ?? project.polish_success_chance ?? "?") +
+        "%.",
+    });
+    await refreshCompletionState();
+  };
+
+  const finishSong = async () => {
+    if (!profileId) throw new Error("Select an active character first.");
+    const { error } = await (supabase as any).rpc(
+      "complete_songwriting_project",
+      {
+        p_profile_id: profileId,
+        p_project_id: project.id,
+        p_catalog_status: "private",
+        p_band_id: null,
+      },
+    );
+    if (error) {
+      toast.error("Could not finish song", { description: error.message });
+      throw error;
+    }
+    toast.success("Song created!", {
+      description: '"' + project.title + '" is now in your private catalog.',
+    });
+    await refreshCompletionState();
+  };
+
+  const keepSongAsIs = async () => {
+    if (!profileId) throw new Error("Select an active character first.");
+    const { error } = await (supabase as any).rpc(
+      "skip_songwriting_polish",
+      { p_profile_id: profileId, p_project_id: project.id },
+    );
+    if (error) {
+      toast.error("Could not keep song as-is", { description: error.message });
+      throw error;
+    }
+    await finishSong();
+  };
   
   const acceptedCollaborators = collaborators?.filter(c => c.status === "accepted") || [];
   const hasCollaborators = acceptedCollaborators.length > 0;
@@ -215,9 +281,9 @@ export const SimplifiedProjectCard = ({
         open={completeDialogOpen}
         onOpenChange={setCompleteDialogOpen}
         project={project}
-        onStartPolish={async () => { onComplete?.(); }}
-        onKeepAsIs={async () => { onComplete?.(); }}
-        onFinish={async () => { onComplete?.(); }}
+        onStartPolish={startFinalPolish}
+        onKeepAsIs={keepSongAsIs}
+        onFinish={finishSong}
       />
 
       <CollaboratorInviteDialog
