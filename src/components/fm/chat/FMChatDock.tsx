@@ -236,7 +236,7 @@ export function FMChatDock() {
   if (HIDDEN_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))) return null;
 
   return (
-    <div className="fixed bottom-0 right-3 z-40 flex items-end gap-2 pointer-events-none">
+    <div className="fixed bottom-0 left-3 z-40 flex flex-row-reverse items-end gap-2 pointer-events-none">
       {threads.map((t) => (
         <div
           key={t.profileId}
