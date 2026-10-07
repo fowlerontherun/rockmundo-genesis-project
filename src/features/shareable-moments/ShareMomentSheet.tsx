@@ -13,7 +13,7 @@ import type { CharacterProfileShareMoment } from "./characterProfile";
 
 export function ShareMomentSheet({moment,open,onOpenChange}:{moment:ShareMoment|null;open:boolean;onOpenChange:(open:boolean)=>void}){
  const {toast}=useToast(); const {profileId}=useActiveProfile(); const models=useGigPlayerModels(open&&profileId?[profileId]:[]);
- const canvasRef=useRef<HTMLCanvasElement|null>(null); const avatarRef=useRef<CanvasImageSource|null>(null); const [format,setFormat]=useState<ShareFormat>("square"); const [done,setDone]=useState<string|null>(null); const [avatarVersion,setAvatarVersion]=useState(0);
+ const canvasRef=useRef<HTMLCanvasElement|null>(null); const avatarRef=useRef<CanvasImageSource|null>(null); const artworkRef=useRef<CanvasImageSource|null>(null); const [format,setFormat]=useState<ShareFormat>("square"); const [done,setDone]=useState<string|null>(null); const [avatarVersion,setAvatarVersion]=useState(0);
  useEffect(()=>{let cancelled=false;avatarRef.current=null;if(!open||!moment)return;const embedded=(moment as CharacterProfileShareMoment).avatar;
   const load=async()=>{try{
    if(embedded) return await loadCaptureImage(embedded);
@@ -22,7 +22,8 @@ export function ShareMomentSheet({moment,open,onOpenChange}:{moment:ShareMoment|
   }catch{return null}};
   void load().then(avatar=>{if(!cancelled){avatarRef.current=avatar;setAvatarVersion(v=>v+1)}});return()=>{cancelled=true};
  },[open,moment,profileId,models.data]);
- useEffect(()=>{if(open&&moment&&canvasRef.current)renderShareMoment(canvasRef.current,moment,format,avatarRef.current)},[open,moment,format,avatarVersion]);
+ useEffect(()=>{let cancelled=false;artworkRef.current=null;if(!open||!moment?.artworkUrl){setAvatarVersion(v=>v+1);return;}const image=new Image();image.crossOrigin="anonymous";image.onload=()=>{if(!cancelled){artworkRef.current=image;setAvatarVersion(v=>v+1)}};image.onerror=()=>{if(!cancelled)setAvatarVersion(v=>v+1)};image.src=moment.artworkUrl;return()=>{cancelled=true};},[open,moment?.artworkUrl]);
+ useEffect(()=>{if(open&&moment&&canvasRef.current)renderShareMoment(canvasRef.current,moment,format,avatarRef.current,artworkRef.current)},[open,moment,format,avatarVersion]);
  if(!moment)return null;
  const url=moment.destinationUrl?withReferral(moment.destinationUrl,moment.referralCode):undefined; const text=[moment.headline,moment.subheadline].filter(Boolean).join(" — ");
  const blob=()=>canvasRef.current?canvasBlob(canvasRef.current):Promise.reject(new Error("Preview unavailable")); const flash=(k:string)=>{setDone(k);setTimeout(()=>setDone(v=>v===k?null:v),1400)};
