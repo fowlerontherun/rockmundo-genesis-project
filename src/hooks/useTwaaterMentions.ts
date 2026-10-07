@@ -24,8 +24,11 @@ export const useTwaaterMentions = (accountId?: string) => {
 
       if (error) throw error;
 
-      const rows = data || [];
-      const twaats = rows.map((mention: any) => mention.twaat).filter(Boolean);
+      const rows = (data || []).filter((mention: any) => {
+        const twaat = mention.twaat;
+        return twaat && !twaat.deleted_at && !twaat.scheduled_for && twaat.visibility === "public";
+      });
+      const twaats = rows.map((mention: any) => mention.twaat);
       const hydrated = await hydrateTwaaterFeedExtras(twaats);
       const hydratedById = new Map(hydrated.map((twaat: any) => [twaat.id, twaat]));
 

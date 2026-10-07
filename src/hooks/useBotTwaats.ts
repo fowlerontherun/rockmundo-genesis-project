@@ -70,7 +70,9 @@ export const useBotTwaats = () => {
           metrics:twaat_metrics(*)
         `)
         .in("account_id", botAccounts.map((b: any) => b.account_id))
+        .eq("visibility", "public")
         .is("deleted_at", null)
+        .is("scheduled_for", null)
         .order("created_at", { ascending: false })
         .limit(20);
       

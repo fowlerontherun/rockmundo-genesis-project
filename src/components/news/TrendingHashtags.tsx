@@ -12,6 +12,9 @@ export function TrendingHashtags() {
       const { data: twaats } = await supabase
         .from("twaats")
         .select("body, created_at")
+        .eq("visibility", "public")
+        .is("deleted_at", null)
+        .is("scheduled_for", null)
         .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
         .order("created_at", { ascending: false })
         .limit(500);
