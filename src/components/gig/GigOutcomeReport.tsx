@@ -67,7 +67,7 @@ export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCap
   }, [isOpen, processing, profileId, report.gig.status, report.gig.venue.name]);
   const cancelled = ["cancelled", "canceled", "abandoned"].includes(report.gig.status);
 
-  return <Dialog open={isOpen} onOpenChange={onClose}>
+  return <><Dialog open={isOpen} onOpenChange={onClose}>
     <DialogContent className="w-[96vw] max-w-6xl max-h-[92vh] overflow-y-auto p-0 sm:p-6" aria-describedby="gig-report-summary">
       <DialogHeader className="sr-only"><DialogTitle>Gig Performance Report</DialogTitle></DialogHeader>
       <main className="space-y-4 p-3 sm:p-0">
@@ -81,7 +81,7 @@ export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCap
         </>}
       </main>
     </DialogContent>
-  </Dialog>;
+  </Dialog>{shareMoment && <AvatarShareStudio moment={shareMoment} open={true} onOpenChange={(open) => { if (!open) setShareMoment(null); }} />}</>;
 };
 
 function HeadlineResult({ experience, onClose, processing, cancelled, shareInvite, onShareMoment }: { experience: GigExperienceDTO; onClose: () => void; processing: boolean; cancelled: boolean; shareInvite: { url: string; text: string } | null; onShareMoment: (moment: CharacterProfileShareMoment) => void }) {
