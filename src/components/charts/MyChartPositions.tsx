@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +9,9 @@ import { SongPlayer } from "@/components/audio/SongPlayer";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { buildReferralUrl, referralShareOnCooldown, shareReferral } from "@/lib/referralShare";
+import { buildReferralUrl, referralShareOnCooldown } from "@/lib/referralShare";
+import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
+import type { ShareMoment } from "@/features/shareable-moments/types";
 
 interface MyChartPositionsProps {
   userId: string;
@@ -16,6 +19,7 @@ interface MyChartPositionsProps {
 
 export function MyChartPositions({ userId }: MyChartPositionsProps) {
   const { profileId } = useActiveProfile();
+  const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
 
   const { data: chartPositions, isLoading } = useQuery({
     queryKey: ["my-chart-positions", profileId],
@@ -185,12 +189,21 @@ export function MyChartPositions({ userId }: MyChartPositionsProps) {
                         return;
                       }
                       const url = buildReferralUrl(data.code, { source: "song_chart_share" });
-                      const text = highestRank === 1
-                        ? `My song “${firstPos.songTitle}” hit #1 in RockMundo. Start your own music career and join me.`
-                        : `My song “${firstPos.songTitle}” reached #${highestRank} in RockMundo. Start your own music career and join me.`;
-                      const result = await shareReferral({ title: "RockMundo chart milestone", text, url, cooldownKey: key });
-                      if (result === "copied") toast.success("Chart invite copied");
-                      if (result === "failed") toast.error("Could not share chart result", { description: "Your browser blocked clipboard access. Try sharing again from a supported browser." });
+                      setShareMoment({
+                        version: 1,
+                        type: "chart",
+                        id: firstPos.songId,
+                        eyebrow: highestRank === 1 ? "Number one" : "Top 10 chart milestone",
+                        headline: firstPos.songTitle,
+                        subheadline: highestRank === 1 ? "Hit #1 in Rockmundo" : `Reached #${highestRank} in Rockmundo`,
+                        metrics: [
+                          { label: "Peak position", value: "#" + highestRank },
+                          { label: "Charts", value: String(positions.length) },
+                        ],
+                        destinationUrl: url,
+                        shareCooldownKey: key,
+                        createdAt: new Date().toISOString(),
+                      });
                     }}><Share2 className="mr-1.5 h-3.5 w-3.5" />Share chart result</Button>
                   )}
                 </div>
@@ -244,6 +257,7 @@ export function MyChartPositions({ userId }: MyChartPositionsProps) {
           </Card>
         );
       })}
+      {shareMoment && <ShareMomentSheet open={true} onOpenChange={open => { if (!open) setShareMoment(null); }} moment={shareMoment} />}
     </div>
   );
 }
