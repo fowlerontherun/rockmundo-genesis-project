@@ -9,6 +9,8 @@ const REFERRAL_CODE_PATTERN = /^RM[A-Z0-9]{6,18}$/;
 const REFERRAL_BAND_STORAGE_KEY = "rockmundo_referral_band";
 const REFERRAL_SOURCE_STORAGE_KEY = "rockmundo_referral_source";
 const REFERRAL_SOURCE_PATTERN = /^[a-z0-9_]{2,40}$/;
+const REFERRAL_CAMPAIGN_STORAGE_KEY = "rockmundo_referral_campaign";
+const REFERRAL_CAMPAIGN_PATTERN = /^[a-z0-9][a-z0-9_-]{1,39}$/;
 
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
   throw new Error(
@@ -44,6 +46,10 @@ if (typeof window !== "undefined") {
     if (sourceParam && REFERRAL_SOURCE_PATTERN.test(sourceParam)) {
       localStorage.setItem(REFERRAL_SOURCE_STORAGE_KEY, sourceParam);
     }
+    const campaignParam = new URLSearchParams(window.location.search).get("campaign")?.trim().toLowerCase();
+    if (campaignParam && REFERRAL_CAMPAIGN_PATTERN.test(campaignParam)) {
+      localStorage.setItem(REFERRAL_CAMPAIGN_STORAGE_KEY, campaignParam);
+    }
     const bandParam = new URLSearchParams(window.location.search).get("band")?.trim();
     if (bandParam && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bandParam)) {
       localStorage.setItem(REFERRAL_BAND_STORAGE_KEY, bandParam);
@@ -68,6 +74,7 @@ if (typeof window !== "undefined") {
           referral_code: pendingCode,
           referral_band_id: localStorage.getItem(REFERRAL_BAND_STORAGE_KEY) || undefined,
           referral_source: localStorage.getItem(REFERRAL_SOURCE_STORAGE_KEY) || undefined,
+          referral_campaign: localStorage.getItem(REFERRAL_CAMPAIGN_STORAGE_KEY) || undefined,
         },
       },
     });
@@ -88,6 +95,15 @@ if (typeof window !== "undefined") {
           p_source: pendingSource && REFERRAL_SOURCE_PATTERN.test(pendingSource) ? pendingSource : undefined,
         });
         if (!error || /already_bound/i.test(error?.message ?? "")) {
+          const pendingCampaign = localStorage.getItem(REFERRAL_CAMPAIGN_STORAGE_KEY)?.trim().toLowerCase();
+          if (pendingCampaign && REFERRAL_CAMPAIGN_PATTERN.test(pendingCampaign)) {
+            const { error: campaignError } = await (supabase as any).rpc("attach_my_referral_campaign", { p_campaign: pendingCampaign });
+            if (!campaignError || /already.*attached/i.test(campaignError?.message ?? "")) {
+              localStorage.removeItem(REFERRAL_CAMPAIGN_STORAGE_KEY);
+            } else {
+              console.warn("[REFERRAL] Unable to attach pending referral campaign", campaignError.message);
+            }
+          }
           const pendingBand = localStorage.getItem(REFERRAL_BAND_STORAGE_KEY)?.trim();
           if (pendingBand && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pendingBand)) {
             const { error: bandError } = await (supabase as any).rpc("attach_my_referral_band", { p_band_id: pendingBand });
