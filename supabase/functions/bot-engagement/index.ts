@@ -107,6 +107,19 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    const cronSecret = req.headers.get("x-cron-secret");
+    const { data: cronAuthorized, error: cronAuthError } = await supabase.rpc(
+      "verify_internal_cron_secret",
+      { p_secret: cronSecret },
+    );
+    if (cronAuthError || cronAuthorized !== true) {
+      console.warn("[bot-engagement] Rejected unauthorized invocation");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     console.log("[bot-engagement] Starting bot engagement processing...");
 
     // Get active bot accounts
