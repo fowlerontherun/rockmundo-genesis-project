@@ -26,12 +26,14 @@ export function ShareMomentSheet({ open, onOpenChange, moment }: Props) {
 
   const flash = (value: string) => { setDone(value); window.setTimeout(() => setDone(current => current === value ? null : current), 1400); };
   const blob = () => canvasRef.current ? canvasBlob(canvasRef.current) : Promise.reject(new Error('Preview unavailable'));
+  const recordShare = () => { if (moment.shareCooldownKey) localStorage.setItem(moment.shareCooldownKey, String(Date.now())); };
 
   const share = async () => {
     try {
       const image = await blob();
       const file = new File([image], shareFilename(moment, format), { type: 'image/png' });
       const result = await nativeShare({ title: moment.headline + ' — Rockmundo', text, url: moment.destinationUrl ?? undefined, file });
+      if (result === 'shared') recordShare();
       if (result === 'unsupported') { downloadBlob(image, file.name); toast({ title: 'Sharing is not supported here', description: 'The image was downloaded instead.' }); }
     } catch (error) { toast({ title: 'Could not share', description: error instanceof Error ? error.message : 'Try downloading the image instead.', variant: 'destructive' }); }
   };
@@ -39,7 +41,7 @@ export function ShareMomentSheet({ open, onOpenChange, moment }: Props) {
   const download = async () => { const image = await blob(); downloadBlob(image, shareFilename(moment, format)); flash('download'); };
   const copyLink = async () => {
     if (!moment.destinationUrl) return;
-    await navigator.clipboard.writeText(moment.destinationUrl); flash('link'); toast({ title: 'Link copied' });
+    await navigator.clipboard.writeText(moment.destinationUrl); recordShare(); flash('link'); toast({ title: 'Link copied' });
   };
   const copyImage = async () => {
     try {
