@@ -184,7 +184,7 @@ export function MyChartPositions({ userId }: MyChartPositionsProps) {
                         toast.error("Could not prepare your referral link");
                         return;
                       }
-                      const url = buildReferralUrl(data.code);
+                      const url = buildReferralUrl(data.code, { source: "song_chart_share" });
                       const text = highestRank === 1
                         ? `My song “${firstPos.songTitle}” hit #1 in RockMundo. Start your own music career and join me.`
                         : `My song “${firstPos.songTitle}” reached #${highestRank} in RockMundo. Start your own music career and join me.`;

@@ -7,6 +7,8 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const REFERRAL_STORAGE_KEY = "rockmundo_referral_code";
 const REFERRAL_CODE_PATTERN = /^RM[A-Z0-9]{6,18}$/;
 const REFERRAL_BAND_STORAGE_KEY = "rockmundo_referral_band";
+const REFERRAL_SOURCE_STORAGE_KEY = "rockmundo_referral_source";
+const REFERRAL_SOURCE_PATTERN = /^[a-z0-9_]{2,40}$/;
 
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
   throw new Error(
@@ -38,6 +40,10 @@ if (typeof window !== "undefined") {
   const referralParam = new URLSearchParams(window.location.search).get("ref")?.trim().toUpperCase();
   if (referralParam && REFERRAL_CODE_PATTERN.test(referralParam)) {
     localStorage.setItem(REFERRAL_STORAGE_KEY, referralParam);
+    const sourceParam = new URLSearchParams(window.location.search).get("source")?.trim().toLowerCase();
+    if (sourceParam && REFERRAL_SOURCE_PATTERN.test(sourceParam)) {
+      localStorage.setItem(REFERRAL_SOURCE_STORAGE_KEY, sourceParam);
+    }
     const bandParam = new URLSearchParams(window.location.search).get("band")?.trim();
     if (bandParam && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bandParam)) {
       localStorage.setItem(REFERRAL_BAND_STORAGE_KEY, bandParam);
@@ -61,6 +67,7 @@ if (typeof window !== "undefined") {
           ...credentials.options?.data,
           referral_code: pendingCode,
           referral_band_id: localStorage.getItem(REFERRAL_BAND_STORAGE_KEY) || undefined,
+          referral_source: localStorage.getItem(REFERRAL_SOURCE_STORAGE_KEY) || undefined,
         },
       },
     });
@@ -75,7 +82,11 @@ if (typeof window !== "undefined") {
     // Avoid awaiting Supabase work directly inside the auth callback.
     setTimeout(async () => {
       try {
-        const { error } = await (supabase as any).rpc("bind_referral_code", { p_code: pendingCode });
+        const pendingSource = localStorage.getItem(REFERRAL_SOURCE_STORAGE_KEY)?.trim().toLowerCase();
+        const { error } = await (supabase as any).rpc("bind_referral_code", {
+          p_code: pendingCode,
+          p_source: pendingSource && REFERRAL_SOURCE_PATTERN.test(pendingSource) ? pendingSource : undefined,
+        });
         if (!error || /already_bound/i.test(error?.message ?? "")) {
           const pendingBand = localStorage.getItem(REFERRAL_BAND_STORAGE_KEY)?.trim();
           if (pendingBand && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pendingBand)) {
@@ -87,6 +98,7 @@ if (typeof window !== "undefined") {
             }
           }
           localStorage.removeItem(REFERRAL_STORAGE_KEY);
+          localStorage.removeItem(REFERRAL_SOURCE_STORAGE_KEY);
         } else {
           console.warn("[REFERRAL] Unable to bind pending referral code", error.message);
         }
