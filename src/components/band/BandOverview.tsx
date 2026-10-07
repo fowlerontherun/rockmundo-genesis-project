@@ -17,6 +17,12 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { useToast } from '@/hooks/use-toast';
 import { BandOverviewTabs } from './BandOverviewTabs';
 import { BandSongGifts } from './BandSongGifts';
+import { useMyBandFestivalAppearances } from '@/features/festivals/appearances/useMyBandFestivalAppearances';
+import { appearanceDetailHref } from '@/features/festivals/appearances/bandFestivalAppearances';
+import { ShareMomentSheet } from '@/features/shareable-moments/ShareMomentSheet';
+import type { ShareMoment } from '@/features/shareable-moments/types';
+import { markSharePromptSeen, shouldOfferSharePrompt } from '@/features/shareable-moments/prompts';
+import { useActiveProfile } from '@/hooks/useActiveProfile';
 import type { Database } from '@/lib/supabase-types';
 
 type BandRow = Database['public']['Tables']['bands']['Row'];
@@ -39,6 +45,9 @@ export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, band
   const [profileOpen, setProfileOpen] = useState(false);
   const [homeCity, setHomeCity] = useState<{ name: string; country: string } | null>(null);
   const [settingHomeCity, setSettingHomeCity] = useState(false);
+  const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
+  const { profileId } = useActiveProfile();
+  const festivalAppearances = useMyBandFestivalAppearances(profileId);
 
   // Fetch cities for home city selector
   const { data: cities } = useQuery({
@@ -115,6 +124,35 @@ export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, band
 
     void fetchBand();
   }, [bandId]);
+
+  useEffect(() => {
+    if (shareMoment || !band || !festivalAppearances.data?.length) return;
+    const headliner = festivalAppearances.data.find((appearance) =>
+      appearance.bandId === bandId &&
+      appearance.bookingStatus === "confirmed" &&
+      appearance.billingPosition.toLowerCase() === "headliner"
+    );
+    if (!headliner || !shouldOfferSharePrompt("festival-headliner", headliner.bookingId)) return;
+    markSharePromptSeen("festival-headliner", headliner.bookingId);
+    setShareMoment({
+      version: 1,
+      type: "festival",
+      id: headliner.bookingId,
+      eyebrow: "FESTIVAL HEADLINER",
+      headline: headliner.festivalName,
+      subheadline: `${headliner.bandName} · Headliner`,
+      metrics: [
+        { label: "Date", value: new Date(`${headliner.festivalDate}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) },
+        ...(headliner.stageName ? [{ label: "Stage", value: headliner.stageName }] : []),
+        ...(headliner.cityName ? [{ label: "City", value: headliner.cityName }] : []),
+        { label: "Set", value: `${headliner.setMinutes} min` },
+      ].slice(0, 4),
+      artworkUrl: headliner.heroImageReference || logoUrl || null,
+      destinationUrl: `${window.location.origin}${appearanceDetailHref(headliner)}`,
+      referralCode: null,
+      createdAt: new Date().toISOString(),
+    });
+  }, [band, bandId, festivalAppearances.data, logoUrl, shareMoment]);
 
   const handleSetHomeCity = async (cityId: string) => {
     if (!cityId || !band || band.home_city_id) return;
@@ -238,6 +276,8 @@ export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, band
 
       {/* Gifted Songs - after tabs */}
       <BandSongGifts bandId={bandId} />
+
+      <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(open) => { if (!open) setShareMoment(null); }} />
 
       {/* Profile Edit Section (Leaders Only) - Moved to bottom */}
       {isLeader && (
