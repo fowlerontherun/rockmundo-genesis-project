@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Flag, AlertTriangle } from "lucide-react";
-import { useTwaaterModeration } from "@/hooks/useTwaaterModeration";
+import { useTwaaterReport } from "@/hooks/useTwaaterModeration";
 
 interface TwaatReportDialogProps {
   twaatId: string;
@@ -31,7 +31,7 @@ export const TwaatReportDialog = ({
     "spam" | "harassment" | "inappropriate" | "misinformation" | "other"
   >("spam");
   const [details, setDetails] = useState("");
-  const { reportTwaat, isReporting } = useTwaaterModeration(viewerAccountId);
+  const { reportTwaat, isReporting } = useTwaaterReport();
 
   const handleSubmit = () => {
     reportTwaat(
