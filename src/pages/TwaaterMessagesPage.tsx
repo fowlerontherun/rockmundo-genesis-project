@@ -46,6 +46,30 @@ export default function TwaaterMessagesPage() {
     );
   }
 
+  if (account.owner_type !== "persona") {
+    const personaMessagesUrl = personaAccount?.id
+      ? `/twaater/messages?account=${encodeURIComponent(personaAccount.id)}`
+      : "/twaater/messages";
+
+    return (
+      <FMPageScaffold title="Direct Messages" icon={MessageCircle} backTo={backTo}>
+        <Card>
+          <CardContent className="py-10 text-center space-y-4">
+            <p className="font-medium">Direct messages are available from artist accounts.</p>
+            <p className="text-sm text-muted-foreground">
+              Band Twaater accounts can post, follow and receive notifications, but private conversations use your artist identity.
+            </p>
+            {personaAccount && (
+              <Button onClick={() => navigate(personaMessagesUrl)}>
+                Open artist messages
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      </FMPageScaffold>
+    );
+  }
+
   if (selectedConversation) {
     return (
       <FMPageScaffold

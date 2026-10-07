@@ -190,7 +190,7 @@ const TwaaterProfileView = () => {
   const isOwnProfile = viewerAccount?.id === profileAccount.id;
 
   const handleMessage = async () => {
-    if (!viewerAccount?.id || !profileAccount?.id) return;
+    if (!viewerAccount?.id || viewerAccount.owner_type !== "persona" || !profileAccount?.id || profileAccount.owner_type !== "persona") return;
     try {
       const conversation = await getOrCreateConversation({ otherAccountId: profileAccount.id });
       navigate(`/twaater/messages?conversation=${conversation.id}${viewerSuffix}`);
@@ -228,7 +228,7 @@ const TwaaterProfileView = () => {
               </div>
               {!isOwnProfile && viewerAccount && (
                 <div className="flex items-center gap-2">
-                  {profileAccount.owner_type === "persona" && (
+                  {profileAccount.owner_type === "persona" && viewerAccount.owner_type === "persona" && (
                     <Button
                       variant="outline"
                       onClick={handleMessage}
