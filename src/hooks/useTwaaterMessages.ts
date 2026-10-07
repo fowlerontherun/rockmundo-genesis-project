@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -34,6 +35,27 @@ export const useTwaaterMessages = (accountId?: string, loadConversations = true)
     },
     enabled: loadConversations && !!accountId,
   });
+
+  useEffect(() => {
+    if (!accountId || !loadConversations) return;
+
+    const channel = supabase
+      .channel(`twaater-conversations:${accountId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "twaater_conversations" },
+        (payload) => {
+          const row = payload.new as { participant_1_id?: string; participant_2_id?: string };
+          if (row.participant_1_id !== accountId && row.participant_2_id !== accountId) return;
+          queryClient.invalidateQueries({ queryKey: ["twaater-conversations", accountId] });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [accountId, loadConversations, queryClient]);
 
   const getOrCreateConversationMutation = useMutation({
     mutationFn: async ({ otherAccountId }: { otherAccountId: string }) => {
@@ -123,6 +145,57 @@ export const useTwaaterConversation = (conversationId?: string, accountId?: stri
     },
     enabled: !!conversationId && !!accountId,
   });
+
+  useEffect(() => {
+    if (!conversationId || !accountId) return;
+
+    const channel = supabase
+      .channel(`twaater-messages:${conversationId}:${accountId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "twaater_messages",
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({
+            queryKey: ["twaater-messages", conversationId, accountId],
+          });
+          queryClient.invalidateQueries({ queryKey: ["twaater-conversations", accountId] });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [conversationId, accountId, queryClient]);
+
+  useEffect(() => {
+    if (!conversationId || !accountId || !messages?.length) return;
+    const hasUnreadIncoming = messages.some(
+      (message: any) => message.sender_id !== accountId && !message.read_at,
+    );
+    if (!hasUnreadIncoming) return;
+
+    void supabase
+      .from("twaater_messages")
+      .update({ read_at: new Date().toISOString() })
+      .eq("conversation_id", conversationId)
+      .neq("sender_id", accountId)
+      .is("read_at", null)
+      .then(({ error }) => {
+        if (error) {
+          console.warn("Unable to mark Twaater messages as read:", error);
+          return;
+        }
+        queryClient.invalidateQueries({
+          queryKey: ["twaater-messages", conversationId, accountId],
+        });
+      });
+  }, [conversationId, accountId, messages, queryClient]);
 
   const sendMessageMutation = useMutation({
     mutationFn: async ({ body }: { body: string }) => {
