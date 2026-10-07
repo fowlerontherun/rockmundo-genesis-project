@@ -7,6 +7,10 @@ describe('outfit looks', () => {
     const original = defaultAppearance();
     original.body.frame = 'feminine';
     original.body.breastSize = 1.35;
+    for (const slot of SLOTS) {
+      original.equipment[slot].pattern = 'stripes';
+      original.equipment[slot].secondaryColor = '#ed4495';
+    }
     const before = structuredClone(original);
     const styled = applyOutfitLook(original, look);
     expect(appearanceSchema.parse(styled)).toEqual(styled);
@@ -14,6 +18,10 @@ describe('outfit looks', () => {
     expect(styled.body).toEqual(original.body);
     expect(styled.accessories).toEqual(original.accessories);
     expect(styled.equipment.instrument).toEqual(original.equipment.instrument);
-    for (const slot of SLOTS) expect(LIVE_STARTER_ITEM_IDS.has(styled.equipment[slot].itemId)).toBe(true);
+    for (const slot of SLOTS) {
+      expect(LIVE_STARTER_ITEM_IDS.has(styled.equipment[slot].itemId)).toBe(true);
+      expect(styled.equipment[slot].pattern).toBe(look.fabrics?.[slot]?.pattern);
+      expect(styled.equipment[slot].secondaryColor).toBe(look.fabrics?.[slot]?.secondaryColor);
+    }
   });
 });

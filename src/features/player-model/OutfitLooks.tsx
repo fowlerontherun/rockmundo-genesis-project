@@ -1,4 +1,5 @@
-import type { PlayerAppearance } from './appearance';
+import { SLOTS, type PlayerAppearance } from './appearance';
+import { patternPreview } from './patternPreview';
 import { applyOutfitLook, OUTFIT_LOOKS } from './wardrobeStyling';
 
 export function OutfitLooks({ appearance, onChange }: { appearance: PlayerAppearance; onChange: (next: PlayerAppearance) => void }) {
@@ -6,7 +7,7 @@ export function OutfitLooks({ appearance, onChange }: { appearance: PlayerAppear
     <div className="player-model-wardrobe__heading"><h3>Style a complete look</h3><span>Mix and recolour after selecting</span></div>
     <div className="player-model-wardrobe__grid">
       {OUTFIT_LOOKS.map(look => <button type="button" key={look.name} onClick={() => onChange(applyOutfitLook(appearance, look))}>
-        <span className="player-model-look-swatches" aria-hidden="true">{look.colours.map((colour, index) => <i key={index} style={{ background: colour }} />)}</span>
+        <span className="player-model-look-swatches" aria-hidden="true">{look.colours.map((colour, index) => <i key={index} style={{ background: patternPreview(look.fabrics?.[SLOTS[index]]?.pattern, colour, look.fabrics?.[SLOTS[index]]?.secondaryColor ?? colour) }} />)}</span>
         {look.name}
       </button>)}
     </div>
