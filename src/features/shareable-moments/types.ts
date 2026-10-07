@@ -29,6 +29,7 @@ export interface ShareMoment {
   eyebrow?: string;
   metrics?: ShareMetric[];
   artworkUrl?: string | null;
+  variant?: 'standard' | 'headline';
   destinationUrl?: string | null;
   referralCode?: string | null;
   createdAt: string;
