@@ -53,7 +53,8 @@ BEGIN
       coalesce(session.scheduled_start_at, slot.start_time) AS confirmed_start_at,
       coalesce(session.scheduled_end_at, slot.end_time) AS confirmed_end_at,
       coalesce(stage.public_name, stage.stage_name) AS stage_name,
-      public_profile.hero_image_reference AS hero_image_reference,\n      (coalesce(session.scheduled_start_at, slot.start_time) IS NOT NULL
+      public_profile.hero_image_reference AS hero_image_reference,
+      (coalesce(session.scheduled_start_at, slot.start_time) IS NOT NULL
        AND coalesce(session.scheduled_end_at, slot.end_time) IS NOT NULL)
         AS time_confirmed
     FROM public.festival_artist_bookings booking
@@ -63,7 +64,9 @@ BEGIN
       ON edition.id=programme.festival_edition_id
     JOIN public.festival_companies company
       ON company.id=edition.festival_company_id
-    JOIN public.bands band ON band.id=booking.band_id\n    LEFT JOIN public.festival_public_profiles public_profile\n      ON public_profile.festival_company_id=edition.festival_company_id
+    JOIN public.bands band ON band.id=booking.band_id
+    LEFT JOIN public.festival_public_profiles public_profile
+      ON public_profile.festival_company_id=edition.festival_company_id
     JOIN public.band_members member
       ON member.band_id=booking.band_id AND member.profile_id=v_profile_id
       AND member.member_status='active'
