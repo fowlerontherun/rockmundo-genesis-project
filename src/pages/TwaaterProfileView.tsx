@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TwaatCard } from "@/components/twaater/TwaatCard";
-import { ArrowLeft, MapPin, Calendar, Music, Users, CheckCircle2, Loader2, MessageCircle } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, Music, Users, CheckCircle2, Loader2, MessageCircle, Ban } from "lucide-react";
 import { useGameData } from "@/hooks/useGameData";
 import { useTwaaterAccount } from "@/hooks/useTwaaterAccount";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +14,7 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { hydrateTwaaterFeedExtras } from "@/hooks/useTwaats";
 import { useTwaaterMessages } from "@/hooks/useTwaaterMessages";
 import { useTwaaterRouteAccount } from "@/hooks/useTwaaterRouteAccount";
+import { useTwaaterModeration } from "@/hooks/useTwaaterModeration";
 
 const TwaaterProfileView = () => {
   const { handle } = useParams();
@@ -32,6 +33,13 @@ const TwaaterProfileView = () => {
   const backTo = viewerAccount?.id ? `/twaater?account=${viewerAccount.id}` : "/twaater";
   const viewerSuffix = viewerAccount?.id ? `&account=${encodeURIComponent(viewerAccount.id)}` : "";
   const { getOrCreateConversation, isCreatingConversation } = useTwaaterMessages(viewerAccount?.id, false);
+  const {
+    isAccountBlocked,
+    blockAccount,
+    unblockAccount,
+    isBlocking,
+    isUnblocking,
+  } = useTwaaterModeration(viewerAccount?.id);
 
   const { data: profileAccount, isLoading: accountLoading, error: accountError, refetch: refetchAccount } = useQuery({
     queryKey: ["twaater-profile", handle],
@@ -240,10 +248,31 @@ const TwaaterProfileView = () => {
                   )}
                   <Button
                     onClick={() => followMutation.mutate()}
-                    disabled={followMutation.isPending || followLoading}
+                    disabled={followMutation.isPending || followLoading || isAccountBlocked(profileAccount.id)}
                     variant={isFollowing ? "outline" : "default"}
                   >
                     {isFollowing ? "Following" : "Follow"}
+                  </Button>
+                  <Button
+                    variant={isAccountBlocked(profileAccount.id) ? "outline" : "ghost"}
+                    disabled={isBlocking || isUnblocking}
+                    onClick={() => {
+                      const input = {
+                        blockerAccountId: viewerAccount.id,
+                        blockedAccountId: profileAccount.id,
+                      };
+                      if (isAccountBlocked(profileAccount.id)) {
+                        unblockAccount(input);
+                      } else {
+                        blockAccount(input, {
+                          onSuccess: () => navigate(backTo),
+                        });
+                      }
+                    }}
+                    className={isAccountBlocked(profileAccount.id) ? "" : "text-destructive hover:text-destructive"}
+                  >
+                    <Ban className="h-4 w-4 mr-2" />
+                    {isAccountBlocked(profileAccount.id) ? "Unblock" : "Block"}
                   </Button>
                 </div>
               )}
