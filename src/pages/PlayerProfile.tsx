@@ -24,7 +24,7 @@ import { useEffect, useState } from "react";
 import { CharacterShareStudio } from "@/features/shareable-moments/CharacterShareStudio";
 import type { CharacterProfileShareMoment } from "@/features/shareable-moments/characterProfile";
 import { markSharePromptSeen, shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
-import { FAME_SHARE_THRESHOLDS, highestReachedThreshold, milestoneLabel } from "@/features/shareable-moments/milestones";
+import { FAME_SHARE_THRESHOLDS, FAN_SHARE_THRESHOLDS, highestReachedThreshold, milestoneLabel } from "@/features/shareable-moments/milestones";
 
 export default function PlayerProfile() {
   const { playerId } = useParams();
@@ -47,19 +47,25 @@ export default function PlayerProfile() {
   useEffect(() => {
     if (!profile || !currentUser || currentUser.id !== playerId || milestoneMoment) return;
     const fame = Number(profile.fame || 0);
-    const threshold = highestReachedThreshold(fame, FAME_SHARE_THRESHOLDS);
-    if (!threshold) return;
-    const sourceId = `${profile.id}:${threshold}`;
-    if (!shouldOfferSharePrompt("fame-milestone", sourceId)) return;
-    markSharePromptSeen("fame-milestone", sourceId);
+    const fans = Number(profile.fans || 0);
+    const fameThreshold = highestReachedThreshold(fame, FAME_SHARE_THRESHOLDS);
+    const fanThreshold = highestReachedThreshold(fans, FAN_SHARE_THRESHOLDS);
+    const candidates = [
+      fameThreshold ? { kind: "fame", threshold: fameThreshold, value: fame } : null,
+      fanThreshold ? { kind: "fans", threshold: fanThreshold, value: fans } : null,
+    ].filter(Boolean).sort((a: any, b: any) => b.threshold - a.threshold) as Array<{ kind: "fame" | "fans"; threshold: number; value: number }>;
+    const candidate = candidates.find(({ kind, threshold }) => shouldOfferSharePrompt(`${kind}-milestone`, `${profile.id}:${threshold}`));
+    if (!candidate) return;
+    const sourceId = `${profile.id}:${candidate.threshold}`;
+    markSharePromptSeen(`${candidate.kind}-milestone`, sourceId);
     setMilestoneMoment({
       version: 1,
       type: "achievement",
-      id: `fame:${sourceId}`,
-      eyebrow: "FAME MILESTONE",
-      headline: `${milestoneLabel(threshold)} Fame`,
+      id: `${candidate.kind}:${sourceId}`,
+      eyebrow: candidate.kind === "fans" ? "FAN MILESTONE" : "FAME MILESTONE",
+      headline: `${milestoneLabel(candidate.threshold)} ${candidate.kind === "fans" ? "Fans" : "Fame"}`,
       subheadline: profile.display_name || profile.username || "RockMundo artist",
-      metrics: [{ label: "Fame", value: fame.toLocaleString() }, { label: "Career level", value: String(profile.level || 1) }, { label: "Fans", value: Number(profile.fans || 0).toLocaleString() }],
+      metrics: [{ label: candidate.kind === "fans" ? "Fans" : "Fame", value: candidate.value.toLocaleString() }, { label: "Career level", value: String(profile.level || 1) }, { label: candidate.kind === "fans" ? "Fame" : "Fans", value: (candidate.kind === "fans" ? fame : fans).toLocaleString() }],
       destinationUrl: window.location.href,
       createdAt: new Date().toISOString(),
     });

@@ -54,9 +54,11 @@ export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment
   else if(moment.visualTheme==='neon'){start='#020617';mid='#172554';end='#4c1d95';accent='#22d3ee';}
   else if(moment.visualTheme==='mono'){start='#050505';mid='#171717';end='#262626';accent='#d4d4d4';}
   const headlineVariant = moment.type === 'festival' && moment.variant === 'headline';
+  const recordAward = moment.type === 'release' && /(?:1M|10M|100M)\s+(?:streams|in gross sales)/i.test(moment.subheadline || '');
   const bg = ctx.createLinearGradient(0, 0, width, height);
   bg.addColorStop(0,start); bg.addColorStop(.55,mid); bg.addColorStop(1,end);
   ctx.fillStyle=bg; ctx.fillRect(0,0,width,height);
+  if(recordAward){const award=ctx.createRadialGradient(width*.82,height*.26,10,width*.82,height*.26,width*.25);award.addColorStop(0,'#fef3c7aa');award.addColorStop(.5,'#d4af3766');award.addColorStop(1,'#00000000');ctx.fillStyle=award;ctx.fillRect(0,0,width,height);}
   const glow=ctx.createRadialGradient(width*.72,height*.3,20,width*.72,height*.3,Math.max(width,height)*.65);
   glow.addColorStop(0,accent+'66'); glow.addColorStop(1,'#00000000'); ctx.fillStyle=glow; ctx.fillRect(0,0,width,height);
   if (headlineVariant) { const halo=ctx.createRadialGradient(width*.5,height*.22,10,width*.5,height*.22,width*.55);halo.addColorStop(0,'#fef08a55');halo.addColorStop(1,'#00000000');ctx.fillStyle=halo;ctx.fillRect(0,0,width,height); }
@@ -106,7 +108,7 @@ export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment
   else if(moment.type==='gig_result'){for(let x=-height;x<width;x+=90){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+height,height);ctx.stroke();}}
   else if(moment.type==='chart'){for(let i=0;i<6;i++){const barW=width*.035,barH=height*(.08+i*.035);ctx.fillStyle=accent;ctx.fillRect(width*.76+i*barW*1.25,height*.78-barH,barW,barH);}}
   else if(moment.type==='achievement'){ctx.beginPath();ctx.arc(width*.82,height*.24,width*.14,0,Math.PI*2);ctx.stroke();}
-  else if(moment.type==='release'){ctx.beginPath();ctx.arc(width*.82,height*.26,width*.18,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(width*.82,height*.26,width*.055,0,Math.PI*2);ctx.stroke();}
+  else if(moment.type==='release'){ctx.save();if(recordAward){ctx.strokeStyle='#f6d365';ctx.lineWidth=Math.max(5,width*.006);ctx.globalAlpha=.75;}ctx.beginPath();ctx.arc(width*.82,height*.26,width*.18,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(width*.82,height*.26,width*.055,0,Math.PI*2);ctx.stroke();if(recordAward){ctx.font=`900 ${Math.round(width*.035)}px Inter, system-ui, sans-serif`;ctx.fillStyle='#fde68a';ctx.textAlign='center';ctx.fillText('MILLION CLUB',width*.82,height*.51);}ctx.restore();}
   ctx.restore();
 
   const layout=moment.visualLayout ?? 'right';
