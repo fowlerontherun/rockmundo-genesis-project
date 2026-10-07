@@ -40,6 +40,16 @@ export interface SongwritingProject {
   songwriting_breakdown?: any;
   calculation_version?: string | null;
   completed_at?: string | null;
+  writing_completed_at?: string | null;
+  writing_quality_score?: number | null;
+  completion_quality_breakdown?: any;
+  completion_notified_at?: string | null;
+  polish_success_chance?: number | null;
+  polish_attempted?: boolean;
+  polish_skipped?: boolean;
+  polish_succeeded?: boolean | null;
+  polish_resolved_at?: string | null;
+  polish_session_id?: string | null;
   status: string;
   is_locked: boolean;
   locked_until: string | null;
@@ -424,6 +434,66 @@ export const useSongwritingData = (profileId?: string | null, userId?: string | 
     }
   });
 
+  const startPolish = useMutation({
+    mutationFn: async ({ projectId }: { projectId: string }) => {
+      if (!profileId) throw new Error("Profile ID required");
+      const { data, error } = await (supabase as any).rpc(
+        "start_songwriting_polish_session",
+        {
+          p_profile_id: profileId,
+          p_project_id: projectId,
+        },
+      );
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["songwriting-projects", profileId, userId] });
+      queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });
+      queryClient.invalidateQueries({ queryKey: ["activity-status"] });
+      toast({
+        title: "Final polish started",
+        description: `One final 1-hour writing session is underway. Success chance: ${data?.success_chance ?? "?"}%.`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Could not start final polish",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const skipPolish = useMutation({
+    mutationFn: async ({ projectId }: { projectId: string }) => {
+      if (!profileId) throw new Error("Profile ID required");
+      const { data, error } = await (supabase as any).rpc(
+        "skip_songwriting_polish",
+        {
+          p_profile_id: profileId,
+          p_project_id: projectId,
+        },
+      );
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["songwriting-projects", profileId, userId] });
+      toast({
+        title: "Song kept as-is",
+        description: "The final polish option has been resolved.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Could not keep song as-is",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Convert to song using the server-authoritative final quality calculator.
   const convertToSong = useMutation({
     mutationFn: async ({ projectId, catalogStatus = 'private', bandId }: { projectId: string; quality?: any; catalogStatus?: string; bandId?: string; }) => {
@@ -506,6 +576,8 @@ export const useSongwritingData = (profileId?: string | null, userId?: string | 
     startSession,
     pauseSession,
     completeSession,
+    startPolish,
+    skipPolish,
     convertToSong,
     refetchProjects,
     projectsError,
