@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { hydrateTwaaterFeedExtras } from "@/hooks/useTwaats";
 import { useTwaaterMessages } from "@/hooks/useTwaaterMessages";
+import { useTwaaterRouteAccount } from "@/hooks/useTwaaterRouteAccount";
 
 const TwaaterProfileView = () => {
   const { handle } = useParams();
@@ -20,8 +21,16 @@ const TwaaterProfileView = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { profile } = useGameData();
+  const [searchParams] = useSearchParams();
 
-  const { account: viewerAccount } = useTwaaterAccount("persona", profile?.id);
+  const { account: personaAccount, isLoading: personaLoading } = useTwaaterAccount("persona", profile?.id);
+  const { account: viewerAccount, isLoading: routeAccountLoading } = useTwaaterRouteAccount(
+    personaAccount,
+    searchParams.get("account"),
+  );
+  const viewerAccountLoading = personaLoading || routeAccountLoading;
+  const backTo = viewerAccount?.id ? `/twaater?account=${viewerAccount.id}` : "/twaater";
+  const viewerSuffix = viewerAccount?.id ? `&account=${encodeURIComponent(viewerAccount.id)}` : "";
   const { getOrCreateConversation, isCreatingConversation } = useTwaaterMessages(viewerAccount?.id, false);
 
   const { data: profileAccount, isLoading: accountLoading, error: accountError, refetch: refetchAccount } = useQuery({
@@ -142,9 +151,9 @@ const TwaaterProfileView = () => {
     },
   });
 
-  if (accountLoading) {
+  if (accountLoading || viewerAccountLoading) {
     return (
-      <FMPageScaffold title="Profile" icon={Users} backTo="/twaater">
+      <FMPageScaffold title="Profile" icon={Users} backTo={backTo}>
         <div className="flex items-center justify-center py-16">
           <Loader2 className="h-8 w-8 animate-spin" />
         </div>
@@ -154,7 +163,7 @@ const TwaaterProfileView = () => {
 
   if (accountError) {
     return (
-      <FMPageScaffold title="Profile" icon={Users} backTo="/twaater">
+      <FMPageScaffold title="Profile" icon={Users} backTo={backTo}>
         <Card className="p-6 text-center space-y-3">
           <p className="text-muted-foreground">This Twaater profile couldn't load.</p>
           <Button variant="outline" size="sm" onClick={() => refetchAccount()}>Retry</Button>
@@ -165,11 +174,11 @@ const TwaaterProfileView = () => {
 
   if (!profileAccount) {
     return (
-      <FMPageScaffold title="Profile" icon={Users} backTo="/twaater">
+      <FMPageScaffold title="Profile" icon={Users} backTo={backTo}>
         <div className="flex flex-col items-center justify-center gap-4 py-16">
           <h2 className="text-2xl font-bold">Profile Not Found</h2>
           <p className="text-muted-foreground">@{handle} doesn't exist</p>
-          <Button onClick={() => navigate("/twaater")}>
+          <Button onClick={() => navigate(backTo)}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Feed
           </Button>
@@ -184,7 +193,7 @@ const TwaaterProfileView = () => {
     if (!viewerAccount?.id || !profileAccount?.id) return;
     try {
       const conversation = await getOrCreateConversation({ otherAccountId: profileAccount.id });
-      navigate(`/twaater/messages?conversation=${conversation.id}`);
+      navigate(`/twaater/messages?conversation=${conversation.id}${viewerSuffix}`);
     } catch (error: any) {
       toast({
         title: "Unable to start conversation",
@@ -199,7 +208,7 @@ const TwaaterProfileView = () => {
       title={profileAccount.display_name}
       subtitle={`${twaats?.length || 0} twaats`}
       icon={Users}
-      backTo="/twaater"
+      backTo={backTo}
       backLabel="Back to Twaater"
     >
       <div className="rounded-sm border border-fm-border" style={{ backgroundColor: "hsl(var(--twaater-bg))" }}>
