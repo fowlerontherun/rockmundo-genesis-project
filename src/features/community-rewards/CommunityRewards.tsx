@@ -216,7 +216,7 @@ export default function CommunityRewards({ profileId, profileName }: { profileId
               <Button onClick={share}><Share2 className="mr-2 h-4 w-4" />Share invite</Button>
               <Button asChild variant="outline"><a href={`https://wa.me/?text=${encodeURIComponent(shareText)}`} target="_blank" rel="noreferrer"><MessageCircle className="mr-2 h-4 w-4" />WhatsApp</a></Button>
             </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <div className="rounded-lg border bg-muted/30 p-3"><p className="text-sm font-medium">What makes a referral qualified?</p><div className="mt-2 grid gap-2 text-xs text-muted-foreground sm:grid-cols-3"><span><strong className="text-foreground">1.</strong> Confirm their email</span><span><strong className="text-foreground">2.</strong> Keep the account for 24 hours</span><span><strong className="text-foreground">3.</strong> Make genuine game progress</span></div><p className="mt-2 text-xs text-muted-foreground">Registration alone does not unlock rewards. This keeps promoter rewards focused on real new players.</p></div>\n            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
               <div><div className="text-2xl font-semibold">{dashboard?.stats.joined ?? 0}</div><div className="text-xs text-muted-foreground">Joined</div></div>
               <div><div className="text-2xl font-semibold">{dashboard?.stats.qualified ?? 0}</div><div className="text-xs text-muted-foreground">Qualified</div></div>
               <div><div className="text-2xl font-semibold">{dashboard?.stats.signup_rewarded ?? 0}</div><div className="text-xs text-muted-foreground">Signup paid</div></div>
