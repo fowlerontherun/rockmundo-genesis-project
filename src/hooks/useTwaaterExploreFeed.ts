@@ -114,7 +114,7 @@ export const useTwaaterExploreFeed = (excludeAccountId?: string) => {
       filtered.sort((a: any, b: any) => (b.engagement_score || 0) - (a.engagement_score || 0));
 
       // Return top 50 with quotes/polls hydrated in batches.
-      return await hydrateTwaaterFeedExtras(filtered.slice(0, 50) as any[]) as ExploreTwaat[];
+      return await hydrateTwaaterFeedExtras(filtered.slice(0, 50) as any[], excludeAccountId) as ExploreTwaat[];
     },
     staleTime: 2 * 60 * 1000, // 2 minutes
     refetchOnWindowFocus: false,
