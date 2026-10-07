@@ -43,18 +43,22 @@ export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment
     chart: ['#050816','#102047','#312e81','#60a5fa'],
     release: ['#0d0710','#351020','#6b213d','#fb7185'],
     achievement: ['#120d03','#3b2607','#713f12','#fbbf24'],
-    gig_result: ['#030b0a','#07352f','#14532d','#34d399'],\n    festival: ['#100317','#351052','#701a75','#e879f9'],
+    gig_result: ['#030b0a','#07352f','#14532d','#34d399'],
+    festival: ['#100317','#351052','#701a75','#e879f9'],
     band_profile: ['#09070f','#21123b','#4c1d95','#a78bfa'],
     character_profile: ['#070b12','#101b2b','#28143a','#8b5cf6'],
   };
   const [start,mid,end,accent]=themes[moment.type] ?? themes.character_profile;
+  const headlineVariant = moment.type === 'festival' && moment.variant === 'headline';
   const bg = ctx.createLinearGradient(0, 0, width, height);
   bg.addColorStop(0,start); bg.addColorStop(.55,mid); bg.addColorStop(1,end);
   ctx.fillStyle=bg; ctx.fillRect(0,0,width,height);
   const glow=ctx.createRadialGradient(width*.72,height*.3,20,width*.72,height*.3,Math.max(width,height)*.65);
   glow.addColorStop(0,accent+'66'); glow.addColorStop(1,'#00000000'); ctx.fillStyle=glow; ctx.fillRect(0,0,width,height);
-  ctx.save(); ctx.globalAlpha=.12; ctx.strokeStyle=accent; ctx.lineWidth=Math.max(2,width*.003);
-  if(moment.type==='festival'){for(let i=0;i<5;i++){ctx.beginPath();ctx.arc(width*(.68+i*.07),height*(.18+i*.025),width*(.04+i*.018),0,Math.PI*2);ctx.stroke();}}\n  else if(moment.type==='gig_result'){for(let x=-height;x<width;x+=90){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+height,height);ctx.stroke();}}
+  if (headlineVariant) { const halo=ctx.createRadialGradient(width*.5,height*.22,10,width*.5,height*.22,width*.55);halo.addColorStop(0,'#fef08a55');halo.addColorStop(1,'#00000000');ctx.fillStyle=halo;ctx.fillRect(0,0,width,height); }
+  ctx.save(); ctx.globalAlpha=headlineVariant ? .22 : .12; ctx.strokeStyle=headlineVariant?'#fde047':accent; ctx.lineWidth=Math.max(2,width*.003);
+  if(moment.type==='festival'){for(let i=0;i<5;i++){ctx.beginPath();ctx.arc(width*(.68+i*.07),height*(.18+i*.025),width*(.04+i*.018),0,Math.PI*2);ctx.stroke();}}
+  else if(moment.type==='gig_result'){for(let x=-height;x<width;x+=90){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+height,height);ctx.stroke();}}
   else if(moment.type==='chart'){for(let i=0;i<6;i++){const barW=width*.035,barH=height*(.08+i*.035);ctx.fillStyle=accent;ctx.fillRect(width*.76+i*barW*1.25,height*.78-barH,barW,barH);}}
   else if(moment.type==='achievement'){ctx.beginPath();ctx.arc(width*.82,height*.24,width*.14,0,Math.PI*2);ctx.stroke();}
   else if(moment.type==='release'){ctx.beginPath();ctx.arc(width*.82,height*.26,width*.18,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(width*.82,height*.26,width*.055,0,Math.PI*2);ctx.stroke();}
@@ -87,7 +91,7 @@ export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment
   }
 
   if (moment.eyebrow) {
-    ctx.fillStyle = '#c4b5fd'; ctx.font = '700 24px Inter, system-ui, sans-serif';
+    ctx.fillStyle = headlineVariant ? '#fde047' : '#c4b5fd'; ctx.font = headlineVariant ? '900 30px Inter, system-ui, sans-serif' : '700 24px Inter, system-ui, sans-serif';
     ctx.fillText(moment.eyebrow.toUpperCase(), pad, height * .22);
   }
 
