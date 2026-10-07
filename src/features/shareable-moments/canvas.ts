@@ -48,6 +48,7 @@ export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment
     tour: ['#041014','#0b2d38','#164e63','#22d3ee'],
     band_profile: ['#09070f','#21123b','#4c1d95','#a78bfa'],
     character_profile: ['#070b12','#101b2b','#28143a','#8b5cf6'],
+    referral: ['#07040d','#211044','#4c1d95','#f472b6'],
   };
   let [start,mid,end,accent]=themes[moment.type] ?? themes.character_profile;
   if(moment.visualTheme==='spotlight'){start='#09090b';mid='#18181b';end='#27272a';accent='#facc15';}
