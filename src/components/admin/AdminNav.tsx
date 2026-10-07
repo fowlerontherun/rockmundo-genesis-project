@@ -32,6 +32,7 @@ export const adminCategories: AdminCategory[] = [
       { path: "/admin/vip", label: "VIP Management", description: "Grant and manage VIP subscriptions" },
       { path: "/admin/achievements", label: "Achievements", description: "Configure achievement system" },
       { path: "/admin/analytics", label: "Analytics", description: "View player statistics" },
+      { path: "/admin/referrals", label: "Referral Audit", description: "Referral funnel, sources, qualification and rewards" },
       { path: "/admin/mentors", label: "Mentors", description: "Manage mentorship program" },
       { path: "/admin/player-survey", label: "Player Survey", description: "Feedback surveys & results" },
     ],
