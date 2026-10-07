@@ -149,22 +149,34 @@ export const useTwaaterConversation = (conversationId?: string, accountId?: stri
   useEffect(() => {
     if (!conversationId || !accountId) return;
 
+    const refreshConversation = () => {
+      queryClient.invalidateQueries({
+        queryKey: ["twaater-messages", conversationId, accountId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["twaater-conversations", accountId] });
+    };
+
     const channel = supabase
       .channel(`twaater-messages:${conversationId}:${accountId}`)
       .on(
         "postgres_changes",
         {
-          event: "*",
+          event: "INSERT",
           schema: "public",
           table: "twaater_messages",
           filter: `conversation_id=eq.${conversationId}`,
         },
-        () => {
-          queryClient.invalidateQueries({
-            queryKey: ["twaater-messages", conversationId, accountId],
-          });
-          queryClient.invalidateQueries({ queryKey: ["twaater-conversations", accountId] });
+        refreshConversation,
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "twaater_messages",
+          filter: `conversation_id=eq.${conversationId}`,
         },
+        refreshConversation,
       )
       .subscribe();
 
