@@ -178,8 +178,7 @@ const InviteFriendsCard = ({ profileId }: { profileId?: string }) => {
     enabled: !!profileId,
     staleTime: 60_000,
     queryFn: async () => {
-      const { data, error } = await (supabase as any).rpc("get_referral_dashboard", { p_profile_id: profileId });
-      if (error) throw error;
+      const [{ data, error }] = await Promise.all([\n        (supabase as any).rpc("get_referral_dashboard", { p_profile_id: profileId }),\n        (supabase as any).rpc("refresh_referral_progress_notifications"),\n      ]);\n      if (error) throw error;
       return data as { stats?: { qualified?: number; joined?: number } };
     },
   });
