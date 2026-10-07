@@ -6172,6 +6172,63 @@ export type Database = {
           },
         ]
       }
+      character_coma_events: {
+        Row: {
+          account_last_activity_at: string | null
+          actor_id: string | null
+          cause: string | null
+          coma_started_at: string | null
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json
+          profile_id: string
+          source: string
+          user_id: string
+        }
+        Insert: {
+          account_last_activity_at?: string | null
+          actor_id?: string | null
+          cause?: string | null
+          coma_started_at?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json
+          profile_id: string
+          source: string
+          user_id: string
+        }
+        Update: {
+          account_last_activity_at?: string | null
+          actor_id?: string | null
+          cause?: string | null
+          coma_started_at?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          profile_id?: string
+          source?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_coma_events_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_coma_events_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       character_emotional_states: {
         Row: {
           created_at: string
@@ -48079,6 +48136,8 @@ export type Database = {
           cash: number
           character_birth_date: string | null
           city_name: string | null
+          coma_last_account_activity_at: string | null
+          coma_started_at: string | null
           created_at: string | null
           current_activity: string | null
           current_city_id: string | null
@@ -48160,6 +48219,8 @@ export type Database = {
           cash?: number
           character_birth_date?: string | null
           city_name?: string | null
+          coma_last_account_activity_at?: string | null
+          coma_started_at?: string | null
           created_at?: string | null
           current_activity?: string | null
           current_city_id?: string | null
@@ -48241,6 +48302,8 @@ export type Database = {
           cash?: number
           character_birth_date?: string | null
           city_name?: string | null
+          coma_last_account_activity_at?: string | null
+          coma_started_at?: string | null
           created_at?: string | null
           current_activity?: string | null
           current_city_id?: string | null
@@ -64656,6 +64719,10 @@ export type Database = {
         Args: { p_as_of: string; p_gig_id: string }
         Returns: Json
       }
+      _grant_referral_promoter_prestige: {
+        Args: { p_milestone: number; p_profile_id: string }
+        Returns: undefined
+      }
       _has_active_vip_entitlement: {
         Args: { p_user_id: string }
         Returns: boolean
@@ -65105,6 +65172,7 @@ export type Database = {
         Returns: undefined
       }
       admin_get_beta_health_overview: { Args: never; Returns: Json }
+      admin_get_coma_system_health: { Args: never; Returns: Json }
       admin_get_cron_job_runs: {
         Args: { _limit?: number }
         Returns: {
@@ -65153,6 +65221,8 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      admin_get_referral_audit: { Args: { p_limit?: number }; Returns: Json }
+      admin_get_referral_growth_analytics: { Args: never; Returns: Json }
       admin_gift_song_to_band: {
         Args: {
           p_ai_generated_lyrics: boolean
@@ -65615,6 +65685,7 @@ export type Database = {
         }
         Returns: Json
       }
+      attach_my_referral_band: { Args: { p_band_id: string }; Returns: Json }
       attend_addiction_therapy: {
         Args: { p_addiction_id: string; p_profile_id: string }
         Returns: Json
@@ -65788,7 +65859,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      bind_referral_code: { Args: { p_code: string }; Returns: Json }
+      bind_referral_code: {
+        Args: { p_code: string; p_source?: string }
+        Returns: Json
+      }
       block_player: {
         Args: {
           private_note?: string
@@ -66664,6 +66738,10 @@ export type Database = {
           requested_views: Json
         }[]
       }
+      claim_referral_milestones: {
+        Args: { p_profile_id: string }
+        Returns: Json
+      }
       claim_referral_rewards: { Args: { p_profile_id: string }; Returns: Json }
       claim_release_inventory: {
         Args: {
@@ -67109,6 +67187,8 @@ export type Database = {
           cash: number
           character_birth_date: string | null
           city_name: string | null
+          coma_last_account_activity_at: string | null
+          coma_started_at: string | null
           created_at: string | null
           current_activity: string | null
           current_city_id: string | null
@@ -67608,6 +67688,15 @@ export type Database = {
           p_amount_minor: number
           p_contract_id: string
           p_payee_profile_id: string
+        }
+        Returns: string
+      }
+      create_twaater_poll_with_options: {
+        Args: {
+          p_expires_at: string
+          p_options: string[]
+          p_question: string
+          p_twaat_id: string
         }
         Returns: string
       }
@@ -68706,6 +68795,7 @@ export type Database = {
         Args: { p_band_id: string }
         Returns: Json
       }
+      get_band_referral_recruits: { Args: { p_band_id: string }; Returns: Json }
       get_band_setlist_song_options: {
         Args: { p_band_id: string }
         Returns: {
@@ -69221,6 +69311,12 @@ export type Database = {
         Returns: Json
       }
       get_my_private_credit_profile: { Args: never; Returns: Json }
+      get_my_referral_context: { Args: never; Returns: Json }
+      get_my_referral_recruits: {
+        Args: { p_profile_id: string }
+        Returns: Json
+      }
+      get_my_referral_welcome: { Args: { p_profile_id: string }; Returns: Json }
       get_my_social_band_rivalries: {
         Args: { p_profile_id: string }
         Returns: {
@@ -71146,6 +71242,9 @@ export type Database = {
         Args: { p_instance_id: string }
         Returns: string[]
       }
+      refresh_referral_progress_notifications: { Args: never; Returns: number }
+      refresh_referral_qualification: { Args: never; Returns: number }
+      refresh_referral_vip_eligibility: { Args: never; Returns: number }
       refresh_social_band_rivalry: {
         Args: { p_profile_id: string; p_rivalry_id: string }
         Returns: Json
@@ -74486,6 +74585,10 @@ export type Database = {
         Args: { p_attendance_id: string; p_idempotency_key: string }
         Returns: Json
       }
+      twaater_account_blocked_for_me: {
+        Args: { _account_id: string }
+        Returns: boolean
+      }
       twaater_account_is_mine: {
         Args: { _account_id: string }
         Returns: boolean
@@ -74493,6 +74596,10 @@ export type Database = {
       twaater_account_profile_id: {
         Args: { p_account_id: string }
         Returns: string
+      }
+      twaater_accounts_blocked: {
+        Args: { _account_a: string; _account_b: string }
+        Returns: boolean
       }
       unblock_player: { Args: { target_profile_id: string }; Returns: boolean }
       unblock_profile:
@@ -74820,6 +74927,10 @@ export type Database = {
       validate_setlist_for_slot: {
         Args: { p_setlist_id: string; p_slot_type: string }
         Returns: Json
+      }
+      verify_internal_cron_secret: {
+        Args: { p_secret: string }
+        Returns: boolean
       }
       withdraw_band_application: {
         Args: { application_id: string }

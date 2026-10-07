@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.771",
+    date: "2026-10-07",
+    changes: [
+      { type: "fix", description: "Fixed a blank screen and build errors caused by typos in shareable moments, the gig system page and festival appearances." },
+    ],
+  },
+  {
     version: "1.1.770",
     date: "2026-10-06",
     changes: [
