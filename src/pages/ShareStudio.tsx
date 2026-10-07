@@ -6,6 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
+import { AvatarShareStudio } from "@/features/shareable-moments/CharacterShareStudio";
+import type { CharacterProfileShareMoment } from "@/features/shareable-moments/characterProfile";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { deleteShareMomentSnapshot, listShareMomentSnapshots, type ShareMomentSnapshot } from "@/features/shareable-moments/gallery";
 import type { ShareMoment } from "@/features/shareable-moments/types";
 
@@ -30,9 +34,25 @@ const moments = [
 
 export default function ShareStudio() {
   const navigate = useNavigate();
+  const { profile } = useActiveProfile();
+  const { data: primaryBand } = usePrimaryBand();
   const [gallery, setGallery] = useState<ShareMomentSnapshot[]>([]);
   const [selected, setSelected] = useState<ShareMoment | null>(null);
+  const [characterPromo, setCharacterPromo] = useState<CharacterProfileShareMoment | null>(null);
   useEffect(() => { void listShareMomentSnapshots().then(setGallery).catch(() => setGallery([])); }, []);
+  const createIdentityPromo = (title: string) => {
+    if (title === "Character Promo" && profile) {
+      setCharacterPromo({ version: 1, type: "character_profile", id: `promo:${profile.id}`, eyebrow: "ROCKMUNDO ARTIST", headline: profile.display_name || profile.username || "RockMundo artist", subheadline: "Building a music career in RockMundo", metrics: [{ label: "Career level", value: String(profile.level || 1) }, { label: "Fame", value: Number(profile.fame || 0).toLocaleString() }, { label: "Fans", value: Number(profile.fans || 0).toLocaleString() }], destinationUrl: `${window.location.origin}/player/${profile.id}`, visualTheme: "spotlight", visualLayout: "hero", createdAt: new Date().toISOString() });
+      return true;
+    }
+    const band = primaryBand?.bands;
+    if (title === "Band Promo" && band) {
+      setSelected({ version: 1, type: "band_profile", id: `promo:${band.id}`, eyebrow: "BAND PROFILE", headline: band.name, subheadline: band.genre || "RockMundo band", metrics: [{ label: "Fame", value: Number(band.fame || 0).toLocaleString() }, { label: "Fans", value: Number(band.total_fans || 0).toLocaleString() }], artworkUrl: band.logo_url || null, destinationUrl: `${window.location.origin}/band/${band.id}`, referralCode: null, visualTheme: "spotlight", visualLayout: "hero", createdAt: new Date().toISOString() });
+      return true;
+    }
+    return false;
+  };
+
   const removeSnapshot = async (id: string) => { await deleteShareMomentSnapshot(id); setGallery((items) => items.filter((item) => item.id !== id)); };
   return (
     <FMPageScaffold title="Share Studio" subtitle="Turn your RockMundo career into social-ready graphics." icon={Sparkles} backTo="/social">
@@ -53,7 +73,7 @@ export default function ShareStudio() {
         <CardContent>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {creators.map(({ title, description, action, path, icon: Icon, badge }) => (
-              <button key={title} type="button" onClick={() => navigate(path)} className="group rounded-xl border bg-card p-4 text-left transition hover:border-primary/50 hover:bg-primary/[0.03]">
+              <button key={title} type="button" onClick={() => { if (!createIdentityPromo(title)) navigate(path); }} className="group rounded-xl border bg-card p-4 text-left transition hover:border-primary/50 hover:bg-primary/[0.03]">
                 <div className="mb-3 flex items-center justify-between gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10"><Icon className="h-5 w-5 text-primary" /></span><Badge variant="outline">{badge}</Badge></div>
                 <h3 className="font-semibold">{title}</h3>
                 <p className="mt-1 min-h-10 text-sm text-muted-foreground">{description}</p>
@@ -88,6 +108,7 @@ export default function ShareStudio() {
           )}
         </CardContent>
       </Card>
+      <AvatarShareStudio moment={characterPromo} open={!!characterPromo} onOpenChange={(open) => { if (!open) setCharacterPromo(null); }} />
       <ShareMomentSheet moment={selected} open={!!selected} onOpenChange={(open) => { if (!open) setSelected(null); }} />
     </FMPageScaffold>
   );
