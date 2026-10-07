@@ -137,23 +137,14 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
   const createPoll = async (twaatId: string, draft: PollDraft, publishAt?: string | null) => {
     const publishBaseMs = publishAt ? new Date(publishAt).getTime() : Date.now();
     const expiresAt = new Date(publishBaseMs + draft.durationHours * 60 * 60 * 1000).toISOString();
-    const { data: poll, error: pollError } = await supabase
-      .from("twaater_polls")
-      .insert({ twaat_id: twaatId, question: draft.question, expires_at: expiresAt })
-      .select("id")
-      .single();
+    const { error } = await (supabase.rpc as any)("create_twaater_poll_with_options", {
+      p_twaat_id: twaatId,
+      p_question: draft.question,
+      p_expires_at: expiresAt,
+      p_options: draft.options,
+    });
 
-    if (pollError) throw pollError;
-
-    const { error: optionsError } = await supabase
-      .from("twaater_poll_options")
-      .insert(draft.options.map((option, index) => ({
-        poll_id: poll.id,
-        option_text: option,
-        display_order: index,
-      })));
-
-    if (optionsError) throw optionsError;
+    if (error) throw error;
   };
 
   const handlePost = async () => {
