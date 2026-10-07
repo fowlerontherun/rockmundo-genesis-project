@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Users, TrendingUp, Music, User, Mail, CheckCircle2, Clock3 } from "lucide-react";
+import { Users, TrendingUp, Music, User, Mail, CheckCircle2, Clock3, Share2 } from "lucide-react";
 import { format } from "date-fns";
 import { BandSongsSection } from "@/components/band/BandSongsSection";
 import { BandMerchStore } from "@/components/band/BandMerchStore";
@@ -19,6 +19,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useTranslation } from "@/hooks/useTranslation";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
+import type { ShareMoment } from "@/features/shareable-moments/types";
 
 export default function BandProfile() {
   const { t } = useTranslation();
@@ -29,6 +31,7 @@ export default function BandProfile() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [submittedApplication, setSubmittedApplication] = useState<any | null>(null);
+  const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
 
   const { data: band, isLoading } = useQuery({
     queryKey: ["band-profile", bandId],
@@ -256,6 +259,26 @@ export default function BandProfile() {
                 <p className="text-xs text-muted-foreground">
                   {band.created_at && `Formed ${format(new Date(band.created_at), "MMMM yyyy")}`}
                 </p>
+                <Button size="sm" variant="outline" onClick={() => setShareMoment({
+                  version: 1,
+                  type: "band_profile",
+                  id: band.id,
+                  eyebrow: band.is_solo_artist ? "ARTIST PROFILE" : "BAND PROFILE",
+                  headline: band.name,
+                  subheadline: [band.genre, band.description].filter(Boolean).join(" · "),
+                  metrics: [
+                    { label: "Fame", value: Number(band.fame || 0).toLocaleString() },
+                    { label: "Members", value: String(band.band_members?.length || 0) },
+                    { label: "Chemistry", value: String(band.chemistry_level || 0) },
+                    { label: "Cohesion", value: String(band.cohesion_score || 0) },
+                  ],
+                  artworkUrl: band.logo_url || null,
+                  destinationUrl: window.location.href,
+                  referralCode: null,
+                  createdAt: new Date().toISOString(),
+                })}>
+                  <Share2 className="mr-2 h-4 w-4" /> Share {band.is_solo_artist ? "artist" : "band"}
+                </Button>
                 {canApply && (
                   <BandApplicationDialog
                     bandId={band.id}
@@ -419,6 +442,7 @@ export default function BandProfile() {
       )}
 
       <BandSongsSection bandId={band.id} bandName={band.name} />
+      <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(open) => { if (!open) setShareMoment(null); }} />
     </FMPageScaffold>
   );
 }
