@@ -33,7 +33,7 @@ function drawWrappedText(ctx: CanvasRenderingContext2D, text: string, x: number,
   return lines.length * lineHeight;
 }
 
-export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment, format: ShareFormat, avatar?: CanvasImageSource | null, artwork?: CanvasImageSource | null): void {
+export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment, format: ShareFormat, avatar?: CanvasImageSource | null, artwork?: CanvasImageSource | null, logo?: CanvasImageSource | null): void {
   const { width, height } = SHARE_FORMATS[format];
   canvas.width = width; canvas.height = height;
   const ctx = canvas.getContext('2d');
@@ -79,8 +79,12 @@ export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment
     ? (format === 'landscape' ? width * .54 : format === 'square' ? width * .52 : width - pad * 2)
     : width - pad * 2;
   ctx.textAlign = 'left';
-  ctx.fillStyle = '#ffffffaa'; ctx.font = '700 28px Inter, system-ui, sans-serif';
-  ctx.fillText('ROCKMUNDO', pad, pad + 28);
+  if (logo) {
+    const logoW = Math.min(width * .22, 250); const ratio = Number((logo as HTMLImageElement).naturalWidth || (logo as HTMLCanvasElement).width || 1) / Number((logo as HTMLImageElement).naturalHeight || (logo as HTMLCanvasElement).height || 1);
+    const logoH = logoW / Math.max(.1, ratio); ctx.drawImage(logo, pad, pad, logoW, logoH);
+  } else {
+    ctx.fillStyle = '#ffffffaa'; ctx.font = '700 28px Inter, system-ui, sans-serif'; ctx.fillText('ROCKMUNDO', pad, pad + 28);
+  }
 
   if (moment.eyebrow) {
     ctx.fillStyle = '#c4b5fd'; ctx.font = '700 24px Inter, system-ui, sans-serif';
