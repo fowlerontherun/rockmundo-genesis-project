@@ -59,10 +59,10 @@ Share Sheet
 - [x] Unit-test URL construction, dimensions, filenames and share capability selection.
 
 ### 1B. Avatar V1 capture
-- [ ] Reuse `features/player-model` assembly; do not create another avatar implementation.
-- [ ] Add a deterministic share presentation/camera preset.
-- [ ] Support current appearance, rich clothing, tattoos, merch wearable and equipped/luthiery instruments.
-- [ ] Capture transparent/high-quality avatar image for card composition.
+- [x] Reuse `features/player-model` assembly; do not create another avatar implementation.
+- [x] Add a deterministic share presentation/camera preset.
+- [x] Support current appearance, rich clothing, tattoos, merch wearable and equipped/luthiery instruments.
+- [x] Capture transparent/high-quality avatar image for card composition.
 - [ ] Define serialisable avatar visual snapshot contract for historical moments.
 - [ ] Gracefully render a branded non-avatar fallback if WebGL/assets fail.
 
