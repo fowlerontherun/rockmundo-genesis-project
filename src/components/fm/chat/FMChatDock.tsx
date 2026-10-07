@@ -241,10 +241,13 @@ export function FMChatDock() {
 
   return (
     <div className="fixed bottom-0 left-3 z-40 flex flex-row-reverse items-end gap-2 pointer-events-none">
-      {threads.map((t) => (
+      {threads.map((t, index) => (
         <div
           key={t.profileId}
-          className="pointer-events-auto w-[320px] h-[420px] bg-fm-panel border border-fm-border border-b-0 rounded-t-sm shadow-lg flex flex-col"
+          className={cn(
+            "pointer-events-auto w-[320px] h-[420px] bg-fm-panel border border-fm-border border-b-0 rounded-t-sm shadow-lg flex flex-col",
+            threads.length > 1 && index < threads.length - 1 && "hidden xl:flex",
+          )}
         >
           <div className="h-8 flex items-center justify-between px-2 bg-fm-panel-2 border-b border-fm-border">
             <span className="text-[11px] tracking-tight text-fm-fg font-medium truncate">
