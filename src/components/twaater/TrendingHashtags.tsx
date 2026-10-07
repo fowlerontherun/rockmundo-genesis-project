@@ -87,7 +87,7 @@ export const TrendingHashtags = ({ currentAccountId }: TrendingHashtagsProps) =>
             variant="link"
             size="sm"
             className="w-full text-[hsl(var(--twaater-purple))]"
-            onClick={() => navigate(`/twaater/trending${accountSuffix}`)}
+            onClick={() => navigate(`/twaater?tab=trending${currentAccountId ? `&account=${encodeURIComponent(currentAccountId)}` : ""}`)}
           >
             Show more
           </Button>
