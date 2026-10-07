@@ -192,7 +192,7 @@ export function MyChartPositions({ userId }: MyChartPositionsProps) {
                       const text = highestRank === 1
                         ? `My song “${firstPos.songTitle}” hit #1 in RockMundo. Start your own music career and join me.`
                         : `My song “${firstPos.songTitle}” reached #${highestRank} in RockMundo. Start your own music career and join me.`;
-                      setShareMoment({ version: 1, type: "chart", id: songId, eyebrow: highestRank === 1 ? "NUMBER ONE" : "CHART MILESTONE", headline: firstPos.songTitle, subheadline: highestRank === 1 ? "Hit #1 in RockMundo" : `Reached #${highestRank} in RockMundo`, metrics: [{ label: "Highest position", value: `#${highestRank}` }, { label: "Chart entries", value: String(positions.length) }], destinationUrl: url, referralCode: null, createdAt: new Date().toISOString() });
+                      setShareMoment({ version: 1, type: "chart", id: songId, eyebrow: highestRank === 1 ? "NUMBER ONE" : "CHART MILESTONE", headline: firstPos.songTitle, subheadline: highestRank === 1 ? "Hit #1 in RockMundo" : `Reached #${highestRank} in RockMundo`, metrics: [{ label: "Highest position", value: `#${highestRank}` }, { label: "Chart entries", value: String(positions.length) }], destinationUrl: url, referralCode: null, shareCooldownKey: key, createdAt: new Date().toISOString() });
                     }}><Share2 className="mr-1.5 h-3.5 w-3.5" />Share chart result</Button>
                   )}
                 </div>
