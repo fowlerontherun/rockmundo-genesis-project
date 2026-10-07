@@ -26,3 +26,18 @@ export async function captureAvatarV1ForShare(visual:AvatarShareVisual):Promise<
   actor.update(0,.55,true);renderer.render(scene,camera);return canvas;
  } finally {if(actor)disposeModel(actor.root);if(equipment)disposeModel(equipment);library?.forEach(disposeModel);renderer.dispose();}
 }
+
+export interface AvatarCapture { dataUrl: string; width: number; height: number }
+
+export function captureAvatarCanvas(canvas: HTMLCanvasElement): AvatarCapture {
+  return { dataUrl: canvas.toDataURL("image/png"), width: canvas.width, height: canvas.height };
+}
+
+export function loadCaptureImage(capture: AvatarCapture): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Avatar capture failed to load"));
+    image.src = capture.dataUrl;
+  });
+}
