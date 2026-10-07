@@ -9,6 +9,7 @@ export type ShareMomentType =
   | 'character_profile'
   | 'band_profile'
   | 'gig_result'\n  | 'festival'
+  | 'tour'
   | 'achievement'
   | 'release'
   | 'chart'
