@@ -110,6 +110,23 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
   });
 
   useEffect(() => {
+    const stored = sessionStorage.getItem("rockmundoTwaaterShareDraft");
+    if (!stored) return;
+    try {
+      const draft = JSON.parse(stored) as { body?: string; mediaUrl?: string; mediaType?: "image" };
+      if (draft.body) setBody(draft.body);
+      if (draft.mediaUrl) {
+        setMediaUrl(draft.mediaUrl);
+        setMediaType(draft.mediaType || "image");
+      }
+    } catch {
+      // Ignore stale/corrupt Share Studio drafts.
+    } finally {
+      sessionStorage.removeItem("rockmundoTwaaterShareDraft");
+    }
+  }, []);
+
+  useEffect(() => {
     const stored = sessionStorage.getItem("quoteTwaat");
     if (!stored) return;
     try {
