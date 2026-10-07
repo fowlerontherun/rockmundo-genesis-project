@@ -38,6 +38,7 @@ import { WorldNewsList } from "@/components/world/WorldNewsList";
 
 import { Link } from "react-router-dom";
 import { generatePlayerGoals, type PlayerGoalInput } from "@/lib/playerGoals";
+import { buildReferralUrl, referralShareOnCooldown, shareReferral } from "@/lib/referralShare";
 
 const StatusMetric = ({ label, value, icon: Icon }: { label: string; value: string | number; icon: typeof Bell }) => (
   <div className="rounded-lg border bg-card/50 p-3">
@@ -562,23 +563,20 @@ const Dashboard = () => {
                           {["epic", "legendary", "mythic"].includes(String(achievement.achievements?.rarity || "").toLowerCase()) && (
                             <Button size="sm" variant="ghost" className="mt-2 h-7 px-2" onClick={async () => {
                               const key = "rockmundo_achievement_referral_share_at";
-                              const last = Number(localStorage.getItem(key) || 0);
-                              if (Date.now() - last < 7 * 24 * 60 * 60 * 1000) return;
+                              if (referralShareOnCooldown(key)) {
+                                toast.info("You shared an achievement recently. Try again later.");
+                                return;
+                              }
                               const { data, error } = await (supabase as any).rpc("get_referral_dashboard", { p_profile_id: profile?.id });
-                              if (error || !data?.code) return;
-                              const url = `${window.location.origin}/auth?ref=${encodeURIComponent(data.code)}`;
+                              if (error || !data?.code) {
+                                toast.error("Could not prepare your referral link");
+                                return;
+                              }
+                              const url = buildReferralUrl(data.code);
                               const text = `I just unlocked “${achievement.achievements?.name}” in RockMundo. Start your own music career and join me.`;
-                              if (navigator.share) {
-                                try { await navigator.share({ title: "RockMundo achievement", text, url }); localStorage.setItem(key, String(Date.now())); return; }
-                                catch (error) { if ((error as DOMException)?.name === "AbortError") return; }
-                              }
-                              try {
-                                await navigator.clipboard.writeText(`${text} ${url}`);
-                                localStorage.setItem(key, String(Date.now()));
-                                toast.success("Achievement invite copied");
-                              } catch {
-                                toast.error("Could not share achievement", { description: "Your browser blocked clipboard access. Try sharing again from a supported browser." });
-                              }
+                              const result = await shareReferral({ title: "RockMundo achievement", text, url, cooldownKey: key });
+                              if (result === "copied") toast.success("Achievement invite copied");
+                              if (result === "failed") toast.error("Could not share achievement", { description: "Your browser blocked clipboard access. Try sharing again from a supported browser." });
                             }}><Share2 className="mr-1.5 h-3.5 w-3.5" />Share milestone</Button>
                           )}
                         </div>
