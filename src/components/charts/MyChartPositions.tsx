@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { buildReferralUrl, referralShareOnCooldown } from "@/lib/referralShare";
 import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
 import type { ShareMoment } from "@/features/shareable-moments/types";
+import { markSharePromptSeen, shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
 
 interface MyChartPositionsProps {
   userId: string;
@@ -82,6 +83,25 @@ export function MyChartPositions({ userId }: MyChartPositionsProps) {
     },
     enabled: !!profileId,
   });
+
+  useEffect(() => {
+    if (!chartPositions?.length || shareMoment) return;
+    const numberOne = chartPositions.find((position) => position.rank === 1);
+    if (!numberOne || !shouldOfferSharePrompt("chart-number-one", numberOne.songId)) return;
+    markSharePromptSeen("chart-number-one", numberOne.songId);
+    setShareMoment({
+      version: 1,
+      type: "chart",
+      id: numberOne.songId,
+      eyebrow: "NUMBER ONE",
+      headline: numberOne.songTitle,
+      subheadline: "Hit #1 in RockMundo",
+      metrics: [{ label: "Chart", value: formatChartType(numberOne.chartType) }, { label: "Position", value: "#1" }],
+      destinationUrl: window.location.href,
+      referralCode: null,
+      createdAt: new Date().toISOString(),
+    });
+  }, [chartPositions, shareMoment]);
 
   const getTrendIcon = (trend: string | null) => {
     switch (trend) {
