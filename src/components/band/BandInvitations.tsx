@@ -35,9 +35,10 @@ interface ActiveMembership {
 
 interface BandInvitationsProps {
   onMembershipChanged?: () => void | Promise<void>;
+  highlightedBandId?: string | null;
 }
 
-export const BandInvitations = ({ onMembershipChanged }: BandInvitationsProps) => {
+export const BandInvitations = ({ onMembershipChanged, highlightedBandId }: BandInvitationsProps) => {
   const { profileId, userId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -225,12 +226,12 @@ export const BandInvitations = ({ onMembershipChanged }: BandInvitationsProps) =
             return (
               <div
                 key={invitation.id}
-                className="flex flex-col gap-4 rounded-lg border bg-card p-4 sm:flex-row sm:items-start sm:justify-between"
+                className={`flex flex-col gap-4 rounded-lg border p-4 sm:flex-row sm:items-start sm:justify-between ${highlightedBandId === invitation.band_id ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "bg-card"}`}
               >
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">{invitation.bands?.name || "Unavailable band"}</span>
+                    <span className="font-medium">{invitation.bands?.name || "Unavailable band"}</span>\n                    {highlightedBandId === invitation.band_id && <Badge>Recruiting band</Badge>}
                     {invitation.bands?.genre && (
                       <Badge variant="secondary">{invitation.bands.genre}</Badge>
                     )}
