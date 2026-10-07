@@ -58,6 +58,25 @@ export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment
   glow.addColorStop(0,accent+'66'); glow.addColorStop(1,'#00000000'); ctx.fillStyle=glow; ctx.fillRect(0,0,width,height);
   if (headlineVariant) { const halo=ctx.createRadialGradient(width*.5,height*.22,10,width*.5,height*.22,width*.55);halo.addColorStop(0,'#fef08a55');halo.addColorStop(1,'#00000000');ctx.fillStyle=halo;ctx.fillRect(0,0,width,height); }
   ctx.save(); ctx.globalAlpha=headlineVariant ? .22 : .12; ctx.strokeStyle=headlineVariant?'#fde047':accent; ctx.lineWidth=Math.max(2,width*.003);
+  if(moment.type==='band_profile'){
+    ctx.save();
+    ctx.globalAlpha=.14;
+    ctx.strokeStyle=accent;
+    ctx.lineWidth=Math.max(2,width*.004);
+    const centerY=height*.28;
+    for(let row=0;row<4;row++){
+      ctx.beginPath();
+      for(let x=0;x<=width;x+=Math.max(12,width/70)){
+        const y=centerY+row*height*.055+Math.sin((x/width)*Math.PI*8+row)*height*.018;
+        if(x===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+    }
+    ctx.globalAlpha=.08;
+    ctx.fillStyle=accent;
+    ctx.beginPath(); ctx.arc(width*.82,height*.2,width*.18,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
   if(moment.type==='festival'){
     ctx.save();
     ctx.globalAlpha=.16;
