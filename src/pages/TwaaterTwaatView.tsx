@@ -24,7 +24,7 @@ export default function TwaaterTwaatView() {
 
   // Fetch main twaat
   const { data: twaat, isLoading, error: twaatError, refetch: refetchTwaat } = useQuery({
-    queryKey: ["twaat-detail", twaatId],
+    queryKey: ["twaat-detail", twaatId, account?.id],
     queryFn: async (): Promise<any> => {
       if (!twaatId) return null;
 
@@ -41,10 +41,26 @@ export default function TwaaterTwaatView() {
         .maybeSingle();
 
       if (error) throw error;
-      const hydrated = await hydrateTwaaterFeedExtras(data ? [data] : []);
+      if (!data) return null;
+
+      if (data.visibility === "followers" && account?.id !== data.account_id) {
+        if (!account?.id) return null;
+        const { data: follow, error: followError } = await supabase
+          .from("twaater_follows")
+          .select("follower_account_id")
+          .eq("follower_account_id", account.id)
+          .eq("followed_account_id", data.account_id)
+          .maybeSingle();
+        if (followError) throw followError;
+        if (!follow) return null;
+      } else if (data.visibility !== "public" && account?.id !== data.account_id) {
+        return null;
+      }
+
+      const hydrated = await hydrateTwaaterFeedExtras([data]);
       return hydrated[0] || null;
     },
-    enabled: !!twaatId,
+    enabled: !!twaatId && !personaLoading && !routeAccountLoading,
   });
 
   // Fetch replies
@@ -68,7 +84,7 @@ export default function TwaaterTwaatView() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!twaatId,
+    enabled: !!twaatId && Boolean(twaat),
   });
 
   if (isLoading || personaLoading || routeAccountLoading) {
