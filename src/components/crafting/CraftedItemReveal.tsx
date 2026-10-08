@@ -6,7 +6,7 @@ import { getQualityLabel } from "@/data/craftingMaterials";
 import { useEffect, useState } from "react";
 import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
 import type { ShareMoment } from "@/features/shareable-moments/types";
-import { markSharePromptSeen, shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
+import { shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
 import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 
