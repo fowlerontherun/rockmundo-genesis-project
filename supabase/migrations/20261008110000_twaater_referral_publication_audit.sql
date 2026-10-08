@@ -17,7 +17,7 @@ declare
   v_query text;
   v_ref text;
 begin
-  if new.deleted_at is not null or new.scheduled_for is not null or new.visibility <> 'public' or new.moderation_status <> 'approved' then
+  if new.deleted_at is not null or new.scheduled_for is not null or new.visibility is distinct from 'public' or new.moderation_status <> 'approved' then
     delete from public.twaater_referral_publications where twaat_id = new.id;
     return new;
   end if;
@@ -41,7 +41,12 @@ begin
   on conflict(twaat_id) do update
   set referral_code = excluded.referral_code,
       campaign = excluded.campaign,
-      creative = excluded.creative;
+      creative = excluded.creative,
+      published_at = case
+        when public.twaater_referral_publications.referral_code is distinct from excluded.referral_code
+          then excluded.published_at
+        else public.twaater_referral_publications.published_at
+      end;
   return new;
 end;
 $$;
