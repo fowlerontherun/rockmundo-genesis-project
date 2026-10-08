@@ -46,6 +46,32 @@ after insert or update of body, visibility, deleted_at, scheduled_for, moderatio
 for each row execute function public.audit_twaater_referral_publication();
 
 
+-- Restore audit rows for eligible posts that predate this follow-up.
+-- This also handles deployments that ran the original migration before validation existed.
+insert into public.twaater_referral_publications
+  (twaat_id, referral_code, campaign, creative, published_at)
+select
+  t.id,
+  rc.code,
+  left(lower((regexp_match(split_part(m.url, '?', 2), '(^|&)campaign=([a-zA-Z0-9_-]+)'))[2]), 40),
+  left(lower((regexp_match(split_part(m.url, '?', 2), '(^|&)creative=([a-zA-Z0-9_-]+)'))[2]), 40),
+  coalesce(t.scheduled_published_at, t.created_at, now())
+from public.twaats t
+cross join lateral (
+  select (regexp_match(t.body, 'https://rockmundo[.]uk/auth[?][^[:space:]]+'))[1] as url
+) m
+join public.referral_codes rc
+  on rc.code = upper((regexp_match(split_part(m.url, '?', 2), '(^|&)ref=([a-zA-Z0-9_-]+)'))[2])
+where t.scheduled_for is null
+  and t.deleted_at is null
+  and t.visibility = 'public'
+  and t.moderation_status = 'approved'
+  and m.url is not null
+on conflict (twaat_id) do update
+set referral_code = excluded.referral_code,
+    campaign = excluded.campaign,
+    creative = excluded.creative;
+
 -- Remove records no longer eligible under the validated publication rules.
 delete from public.twaater_referral_publications p
 where not exists (
