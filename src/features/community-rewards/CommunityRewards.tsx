@@ -51,6 +51,7 @@ export default function CommunityRewards({ profileId, profileName }: { profileId
   const [manualCode, setManualCode] = useState("");
   const [binding, setBinding] = useState(false);
   const [recruits, setRecruits] = useState<RecruitStatus[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadDashboard = async () => {
     if (!profileId) {
@@ -59,11 +60,15 @@ export default function CommunityRewards({ profileId, profileName }: { profileId
       return;
     }
     setLoading(true);
+    setLoadError(null);
     const [{ data, error }, recruitResult] = await Promise.all([
       (supabase as any).rpc("get_referral_dashboard", { p_profile_id: profileId }),
       (supabase as any).rpc("get_my_referral_recruits", { p_profile_id: profileId }),
     ]);
     if (error) {
+      setDashboard(null);
+      setRecruits([]);
+      setLoadError(error.message || "Referral rewards could not be loaded.");
       toast({ title: "Unable to load rewards", description: error.message, variant: "destructive" });
     } else {
       setDashboard(data as Dashboard);
@@ -184,6 +189,23 @@ export default function CommunityRewards({ profileId, profileName }: { profileId
 
   if (loading) {
     return <div className="flex h-40 items-center justify-center text-muted-foreground"><Loader2 className="mr-2 h-4 w-4 animate-spin" />Loading rewards…</div>;
+  }
+
+  if (loadError) {
+    return (
+      <Card className="border-destructive/30">
+        <CardHeader>
+          <CardTitle>Invite friends unavailable</CardTitle>
+          <CardDescription>The referral page loaded, but its reward data could not be fetched.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">{loadError}</p>
+          <Button type="button" variant="outline" onClick={() => void loadDashboard()}>
+            Try again
+          </Button>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
