@@ -30,3 +30,29 @@ begin
   end if;
 end;
 $$;
+
+-- URL parsing regressions: only the canonical RockMundo auth referral URL counts.
+do $$
+declare
+  sample record;
+  parsed_code text;
+begin
+  for sample in
+    select * from (values
+      ('https://rockmundo.uk/auth?ref=ABC123', 'ABC123'),
+      ('Join: https://rockmundo.uk/auth?campaign=launch&ref=ABC123&creative=poster', 'ABC123'),
+      ('https://example.com/auth?ref=ABC123', null::text),
+      ('https://rockmundo.uk/auth?campaign=launch', null::text),
+      ('https://rockmundo.uk/auth?ref=', null::text)
+    ) as v(body, expected_code)
+  loop
+    parsed_code := upper((regexp_match(
+      split_part(coalesce((regexp_match(sample.body, 'https://rockmundo[.]uk/auth[?][^[:space:]]+'))[1], ''), '?', 2),
+      '(^|&)ref=([a-zA-Z0-9_-]+)'
+    ))[2]);
+    if parsed_code is distinct from sample.expected_code then
+      raise exception 'Referral URL parser mismatch for input %', sample.body;
+    end if;
+  end loop;
+end;
+$$;
