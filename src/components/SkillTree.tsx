@@ -31,6 +31,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
 import type { ShareMoment } from "@/features/shareable-moments/types";
 import { markSharePromptSeen, shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
+import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   type EducationSource,
@@ -444,7 +445,9 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
     const skill = skills.find((candidate) => candidate.slug === mastered.skill_slug);
     if (!skill || !shouldOfferSharePrompt("skill-mastered", `${profile.id}:${skill.slug}`)) return;
     markSharePromptSeen("skill-mastered", `${profile.id}:${skill.slug}`);
-    setShareMoment({
+    void (async () => {
+      const destinationUrl = await referralAwareDestination(profile.id, window.location.href, "skill_share");
+      setShareMoment({
       version: 1,
       type: "achievement",
       id: `skill:${skill.slug}`,
@@ -452,10 +455,11 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
       headline: skill.display_name,
       subheadline: "Mastered a RockMundo skill",
       metrics: [{ label: "Level", value: String(mastered.current_level || 0) }, { label: "Tier", value: getSkillTier(skill.slug) }],
-      destinationUrl: window.location.href,
+      destinationUrl,
       referralCode: null,
       createdAt: new Date().toISOString(),
     });
+    })();
   }, [profile?.id, progress, skills, shareMoment]);
 
   useEffect(() => {

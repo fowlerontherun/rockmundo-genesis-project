@@ -22,6 +22,7 @@ import { appearanceDetailHref } from '@/features/festivals/appearances/bandFesti
 import { ShareMomentSheet } from '@/features/shareable-moments/ShareMomentSheet';
 import type { ShareMoment } from '@/features/shareable-moments/types';
 import { markSharePromptSeen, shouldOfferSharePrompt } from '@/features/shareable-moments/prompts';
+import { referralAwareDestination } from '@/features/shareable-moments/referralDestination';
 import { useActiveProfile } from '@/hooks/useActiveProfile';
 import type { Database } from '@/lib/supabase-types';
 
@@ -134,7 +135,9 @@ export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, band
     );
     if (!headliner || !shouldOfferSharePrompt("festival-headliner", headliner.bookingId)) return;
     markSharePromptSeen("festival-headliner", headliner.bookingId);
-    setShareMoment({
+    void (async () => {
+      const destinationUrl = await referralAwareDestination(profileId, `${window.location.origin}${appearanceDetailHref(headliner)}`, "festival_share");
+      setShareMoment({
       version: 1,
       type: "festival",
       id: headliner.bookingId,
@@ -148,11 +151,12 @@ export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, band
         { label: "Set", value: `${headliner.setMinutes} min` },
       ].slice(0, 4),
       artworkUrl: headliner.heroImageReference || logoUrl || null,
-      destinationUrl: `${window.location.origin}${appearanceDetailHref(headliner)}`,
+      destinationUrl,
       referralCode: null,
       createdAt: new Date().toISOString(),
     });
-  }, [band, bandId, festivalAppearances.data, logoUrl, shareMoment]);
+    })();
+  }, [band, bandId, festivalAppearances.data, logoUrl, shareMoment, profileId]);
 
   const handleSetHomeCity = async (cityId: string) => {
     if (!cityId || !band || band.home_city_id) return;

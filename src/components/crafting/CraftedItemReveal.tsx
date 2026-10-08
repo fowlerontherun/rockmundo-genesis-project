@@ -7,6 +7,8 @@ import { useEffect, useState } from "react";
 import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
 import type { ShareMoment } from "@/features/shareable-moments/types";
 import { markSharePromptSeen, shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
+import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 interface CraftedItemRevealProps {
   open: boolean;
@@ -26,13 +28,17 @@ export const CraftedItemReveal = ({
   const quality = getQualityLabel(qualityRoll);
   const isMasterwork = qualityRoll >= 95;
   const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
+  const { profileId } = useActiveProfile();
   useEffect(() => {
     if (!open || !isMasterwork || shareMoment) return;
     const sourceId = `${recipeName}:${Math.round(qualityRoll)}`;
     if (!shouldOfferSharePrompt("craft-masterwork", sourceId)) return;
     markSharePromptSeen("craft-masterwork", sourceId);
-    setShareMoment({ version: 1, type: "achievement", id: sourceId, eyebrow: "MASTERWORK", headline: recipeName, subheadline: "Crafted an exceptional item in RockMundo", metrics: [{ label: "Quality", value: `${Math.round(qualityRoll)}%` }, { label: "Grade", value: quality.label }], destinationUrl: window.location.href, referralCode: null, createdAt: new Date().toISOString() });
-  }, [open, isMasterwork, recipeName, qualityRoll, quality.label, shareMoment]);
+    void (async () => {
+      const destinationUrl = await referralAwareDestination(profileId, window.location.href, "craft_share");
+      setShareMoment({ version: 1, type: "achievement", id: sourceId, eyebrow: "MASTERWORK", headline: recipeName, subheadline: "Crafted an exceptional item in RockMundo", metrics: [{ label: "Quality", value: `${Math.round(qualityRoll)}%` }, { label: "Grade", value: quality.label }], destinationUrl, referralCode: null, createdAt: new Date().toISOString() });
+    })();
+  }, [open, isMasterwork, recipeName, qualityRoll, quality.label, shareMoment, profileId]);
 
   return (
     <>
