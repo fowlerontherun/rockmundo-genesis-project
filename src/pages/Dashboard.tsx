@@ -342,6 +342,7 @@ const Dashboard = () => {
       bareContent
       secondaryActions={
         <>
+          <Link to="/social/share-studio"><Button size="sm"><Share2 className="mr-1 h-4 w-4" />Share</Button></Link>
           <Link to="/schedule"><Button variant="outline" size="sm">Schedule</Button></Link>
           <Link to="/statistics"><Button variant="outline" size="sm">Statistics</Button></Link>
           <Link to="/inbox"><Button variant="outline" size="sm">Inbox</Button></Link>

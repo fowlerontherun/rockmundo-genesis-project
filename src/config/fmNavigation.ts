@@ -547,8 +547,8 @@ export const FM_MODULES: FMModule[] = [
       },
     ],
     quickActions: [
+      { label: "Share Studio", path: "/social/share-studio", icon: Share2, description: "Create a shareable RockMundo graphic" },
       { label: "Post on Twaater", path: "/twaater", icon: Newspaper, description: "Share with fans" },
-      { label: "Hit a Nightclub", path: "/nightclubs", icon: Sparkles },
       { label: "Open Messages", path: "/social/messages", icon: MessageSquare },
     ],
   },
