@@ -16,16 +16,18 @@ export async function saveShareMomentSnapshot(moment: ShareMoment) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
   const profile = await getActiveProfile(user.id);
+  if (!profile) return;
   const frozen: ShareMoment = { ...moment, createdAt: moment.createdAt || new Date().toISOString() };
-  await supabase.from("share_moment_snapshots").upsert({
+  const { error } = await supabase.from("share_moment_snapshots").upsert({
     user_id: user.id,
     profile_id: profile?.id || null,
     moment_type: moment.type,
-    source_id: moment.id,
+    source_id: moment.id || `${moment.type}:${moment.createdAt}`,
     headline: moment.headline,
     snapshot: frozen,
     last_shared_at: new Date().toISOString(),
   }, { onConflict: "user_id,moment_type,source_id" });
+  if (error) throw error;
 }
 
 export async function listShareMomentSnapshots(): Promise<ShareMomentSnapshot[]> {
