@@ -33,7 +33,7 @@ begin
   if exists (
     select 1 from public.twaater_referral_publications p
     join public.twaats t on t.id=p.twaat_id
-    where t.scheduled_for is not null or t.deleted_at is not null or t.visibility <> 'public'
+    where t.scheduled_for is not null or t.deleted_at is not null or t.visibility <> 'public' or t.moderation_status <> 'approved'
   ) then
     raise exception 'Audit contains scheduled, deleted or non-public Twaats';
   end if;
