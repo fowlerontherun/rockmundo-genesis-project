@@ -26,6 +26,7 @@ import { buildReferralUrl, referralShareOnCooldown } from "@/lib/referralShare";
 import { AvatarShareStudio } from "@/features/shareable-moments/CharacterShareStudio";
 import type { CharacterProfileShareMoment } from "@/features/shareable-moments/characterProfile";
 import { markSharePromptSeen, shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
+import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
 
 interface LegacyOutcome { overall_rating: number; actual_attendance: number; attendance_percentage: number; ticket_revenue: number; merch_sales: number; total_revenue: number; crew_costs: number; equipment_wear_cost: number; net_profit: number; fame_gained: number; chemistry_impact: number; gig_song_performances?: Array<{ song_id: string; position: number; performance_score: number; song_quality_contrib: number; rehearsal_contrib: number; chemistry_contrib: number; equipment_contrib: number; crew_contrib: number; member_skill_contrib: number; crowd_response: string; song_title?: string | null; performance_item_name?: string | null; }>; equipment_quality_avg?: number | null; crew_skill_avg?: number | null; band_chemistry_level?: number | null; member_skill_avg?: number | null; merch_items_sold?: number | null; }
 interface Props { isOpen: boolean; onClose: () => void; outcome: LegacyOutcome | null; venueName: string; venueCapacity: number; songs?: Array<{ id: string; title: string }>; gearEffects?: GearModifierEffects | null; gearNarrative?: GearOutcomeNarrative | null; xpSummary?: GigXpSummary | null; fanConversion?: FanConversionResult | null; momentHighlights?: GigMoment[] | null; venueRelationship?: VenueRelationshipResult | null; chemistryMoments?: ChemistryMoment[] | null; chemistryLevel?: number; chemistryChange?: number; merchItemsSold?: number; ticketPrice?: number; stageBehaviorUsed?: string | null; bandId?: string | null; gigId?: string | null; experience?: GigExperienceDTO | null; }
@@ -75,7 +76,9 @@ export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCap
     const sourceId = report.gig.id || gigId || report.gig.venue.name;
     if (!shouldOfferSharePrompt("gig-highlight", sourceId)) return;
     markSharePromptSeen("gig-highlight", sourceId);
-    setShareMoment({
+    void (async () => {
+      const destinationUrl = await referralAwareDestination(profileId, window.location.href, "gig_share");
+      setShareMoment({
       version: 1,
       type: "gig_result",
       id: report.gig.id,
@@ -83,11 +86,12 @@ export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCap
       headline: report.gig.venue.name,
       subheadline: soldOut ? "Sold-out RockMundo show" : `${h.grade} performance`,
       metrics: [{ label: "Grade", value: h.grade }, { label: "Attendance", value: `${numberFormat.format(h.attendance)} / ${numberFormat.format(h.capacity)}` }, { label: "Fame gained", value: `+${numberFormat.format(metricValue(report.headline.fameGained, 0))}` }],
-      destinationUrl: window.location.href,
+      destinationUrl,
       referralCode: null,
       createdAt: new Date().toISOString(),
     });
-  }, [isOpen, processing, report, gigId, shareMoment]);
+    })();
+  }, [isOpen, processing, report, gigId, shareMoment, profileId]);
 
   const cancelled = ["cancelled", "canceled", "abandoned"].includes(report.gig.status);
 
