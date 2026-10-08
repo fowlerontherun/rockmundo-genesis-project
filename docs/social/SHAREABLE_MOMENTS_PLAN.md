@@ -108,7 +108,7 @@ Share Sheet
 - [x] Typecheck passes.
 - [ ] Lint-ci passes without increasing the existing baseline.
 - [x] Focused Shareable Moments unit tests pass in CI.
-- [ ] Production build passes in CI.
+- [x] Production build passes in CI.
 
 ## Phase 2 — Music graphics
 - [ ] Gig announcement/poster and sold-out variants.
