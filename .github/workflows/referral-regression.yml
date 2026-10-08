@@ -16,6 +16,9 @@ on:
       - "src/lib/referralShare.ts"
       - "supabase/migrations/**"
       - "supabase/tests/referral_profile_schema_contract.sql"
+      - "scripts/supabase/verify-migration-timestamps.mjs"
+      - "scripts/supabase/inherited-future-migrations.json"
+      - "scripts/supabase/migration-timestamp-collisions.json"
       - ".github/workflows/referral-regression.yml"
   push:
     branches: [main]
@@ -28,6 +31,9 @@ on:
       - "src/lib/referralShare.ts"
       - "supabase/migrations/**"
       - "supabase/tests/referral_profile_schema_contract.sql"
+      - "scripts/supabase/verify-migration-timestamps.mjs"
+      - "scripts/supabase/inherited-future-migrations.json"
+      - "scripts/supabase/migration-timestamp-collisions.json"
       - ".github/workflows/referral-regression.yml"
 
 jobs:
