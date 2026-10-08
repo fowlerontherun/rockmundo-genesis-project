@@ -1,7 +1,7 @@
 name: Shareable Moments Regression Gate
 
 concurrency:
-  group: shareable-moments-regression-${{ github.event_name }}
+  group: shareable-moments-regression-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 on:
