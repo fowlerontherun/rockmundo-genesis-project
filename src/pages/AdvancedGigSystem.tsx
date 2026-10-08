@@ -8,8 +8,8 @@ import { useAdvancedGigs } from "@/hooks/useAdvancedGigs";
 import { appearanceDetailHref, formatFestivalSetTime, FESTIVAL_APPEARANCE_HIGHLIGHT } from "@/features/festivals/appearances/bandFestivalAppearances";
 import { Link } from "react-router-dom";
 import { Calendar, Clock, AlertTriangle, Lock, Music, DollarSign, Handshake, Share2 } from "lucide-react";
-import { AvatarShareStudio } from "@/features/shareable-moments/CharacterShareStudio";
-import type { CharacterProfileShareMoment } from "@/features/shareable-moments/characterProfile";
+import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
+import type { ShareMoment } from "@/features/shareable-moments/types";
 import { supabase } from "@/integrations/supabase/client";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -23,7 +23,7 @@ export default function AdvancedGigSystem() {
   const [userBandId, setUserBandId] = useState<string | null>(null);
   const [bandName, setBandName] = useState("Your band");
   const [bandLogoUrl, setBandLogoUrl] = useState<string | null>(null);
-  const [shareMoment, setShareMoment] = useState<CharacterProfileShareMoment | null>(null);
+  const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
   const supportMode = gigId === "support";
 
   useEffect(() => {

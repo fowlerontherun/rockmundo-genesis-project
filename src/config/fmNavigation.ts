@@ -6,7 +6,7 @@ import {
   Newspaper, Tv, Hammer, GraduationCap, Award, Mic, Video, Film,
   Star, ShoppingBag, Package, Home, Car, Palette, Scissors, Dices,
   Ticket, Skull, Vote, Flag, Handshake, Megaphone, Headphones, HandHeart,
-  Crown, Store, Inbox as InboxIcon, type LucideIcon,
+  Crown, Store, Inbox as InboxIcon, Share2, type LucideIcon,
 } from "lucide-react";
 
 export type FMSubLink = { label: string; path: string; icon?: LucideIcon };
