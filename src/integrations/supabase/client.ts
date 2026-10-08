@@ -43,6 +43,13 @@ const getPendingReferralCode = () => {
 if (typeof window !== "undefined") {
   const referralParam = new URLSearchParams(window.location.search).get("ref")?.trim().toUpperCase();
   if (referralParam && REFERRAL_CODE_PATTERN.test(referralParam)) {
+    // A new referral link starts a new attribution context. Clear optional
+    // values first so campaign/source/creative/band data from an older link
+    // cannot leak into this signup when the new URL omits those parameters.
+    localStorage.removeItem(REFERRAL_SOURCE_STORAGE_KEY);
+    localStorage.removeItem(REFERRAL_CAMPAIGN_STORAGE_KEY);
+    localStorage.removeItem(REFERRAL_CREATIVE_STORAGE_KEY);
+    localStorage.removeItem(REFERRAL_BAND_STORAGE_KEY);
     localStorage.setItem(REFERRAL_STORAGE_KEY, referralParam);
     const sourceParam = new URLSearchParams(window.location.search).get("source")?.trim().toLowerCase();
     if (sourceParam && REFERRAL_SOURCE_PATTERN.test(sourceParam)) {
