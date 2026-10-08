@@ -56,9 +56,9 @@ serve(async (req) => {
 
     const { songId } = await req.json()
 
-    if (!songId) {
+    if (typeof songId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(songId)) {
       return new Response(
-        JSON.stringify({ error: "Missing required field: songId" }),
+        JSON.stringify({ error: "A valid songId is required" }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
     }
@@ -88,6 +88,10 @@ serve(async (req) => {
       )
     }
 
+    if (!song.audio_url) {
+      return new Response(JSON.stringify({ error: 'Generate original song audio before creating an extended rendition' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 })
+    }
+
     addLog(`Found song: "${song.title}" by ${song.bands?.name || 'Unknown'}`)
 
     // Get songwriting project for full lyrics
@@ -108,8 +112,13 @@ serve(async (req) => {
         .single()
       
       project = projectData
-      fullLyrics = projectData?.lyrics || ''
+      fullLyrics = projectData?.lyrics || song.lyrics || ''
       addLog(`Found project with ${fullLyrics.length} chars of lyrics`)
+    }
+
+    if (!fullLyrics.trim()) fullLyrics = song.lyrics || ''
+    if (!fullLyrics.trim()) {
+      return new Response(JSON.stringify({ error: 'Song lyrics are required to generate an extended rendition' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 422 })
     }
 
     // Get creator's gender for vocal style
@@ -169,7 +178,7 @@ serve(async (req) => {
 
     const audioUrl = typeof output === 'string' ? output : (output as any)?.audio || (output as any)?.[0]
 
-    if (!audioUrl) {
+    if (typeof audioUrl !== 'string' || !/^https:\/\//i.test(audioUrl)) {
       addLog('ERROR: No audio URL in response')
       throw new Error('No audio URL generated')
     }
@@ -178,16 +187,18 @@ serve(async (req) => {
 
     // Update song with extended audio URL
     addLog('Saving extended audio URL to database...')
-    const { error: updateError } = await supabase
+    const { data: updatedSong, error: updateError } = await supabase
       .from('songs')
       .update({
         extended_audio_url: audioUrl,
         extended_audio_generated_at: new Date().toISOString()
       })
       .eq('id', songId)
+      .select('id')
+      .single()
 
-    if (updateError) {
-      addLog(`ERROR: Failed to save - ${updateError.message}`)
+    if (updateError || !updatedSong) {
+      addLog(`ERROR: Failed to save - ${updateError?.message || 'No song updated'}`)
       throw new Error('Failed to save extended audio URL')
     }
 
