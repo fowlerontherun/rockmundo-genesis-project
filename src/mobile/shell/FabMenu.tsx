@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, X, CalendarDays, CalendarPlus, Inbox, MessageSquare, Sparkles } from "lucide-react";
+import { Plus, X, CalendarDays, CalendarPlus, Inbox, MessageSquare, Share2, Sparkles } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -12,11 +12,12 @@ const companionActions = [
   { key: "inbox", label: "Inbox", icon: <Inbox className="h-5 w-5" />, to: "/mobile/inbox" },
   { key: "chat", label: "Game Chat", icon: <MessageSquare className="h-5 w-5" />, to: "/mobile/chat" },
   { key: "progression", label: "Spend XP / AP", icon: <Sparkles className="h-5 w-5" />, to: "/mobile/progression" },
+  { key: "share", label: "Share", icon: <Share2 className="h-5 w-5" />, to: "/social/share-studio" },
 ];
 
 export const FabMenu = () => {
   const { t } = useTranslation();
-  const labels: Record<string, string> = { schedule: t("playerControls.mySchedule"), book: t("playerControls.bookActivity"), inbox: t("nav.inbox"), chat: t("playerControls.gameChat"), progression: t("playerControls.spendPoints") };
+  const labels: Record<string, string> = { schedule: t("playerControls.mySchedule"), book: t("playerControls.bookActivity"), inbox: t("nav.inbox"), chat: t("playerControls.gameChat"), progression: t("playerControls.spendPoints"), share: t("common.share") };
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   return <>
