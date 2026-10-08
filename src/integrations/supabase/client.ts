@@ -99,6 +99,20 @@ if (typeof window !== "undefined") {
     const pendingCode = getPendingReferralCode();
     if (!session?.user || !pendingCode || bindingReferral) return;
 
+    // Referral links are intended for new/recent accounts. If an established
+    // player follows one while logged out and then signs back in, do not bind
+    // that invite (or leave its attribution waiting for a later account).
+    const createdAt = session.user.created_at ? Date.parse(session.user.created_at) : NaN;
+    const referralWindowMs = 30 * 24 * 60 * 60 * 1000;
+    if (Number.isFinite(createdAt) && Date.now() - createdAt > referralWindowMs) {
+      localStorage.removeItem(REFERRAL_STORAGE_KEY);
+      localStorage.removeItem(REFERRAL_SOURCE_STORAGE_KEY);
+      localStorage.removeItem(REFERRAL_CAMPAIGN_STORAGE_KEY);
+      localStorage.removeItem(REFERRAL_CREATIVE_STORAGE_KEY);
+      localStorage.removeItem(REFERRAL_BAND_STORAGE_KEY);
+      return;
+    }
+
     bindingReferral = true;
     // Avoid awaiting Supabase work directly inside the auth callback.
     setTimeout(async () => {
