@@ -76,11 +76,14 @@ export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCap
     if (!soldOut && !exceptionalGrade) return;
     const sourceId = report.gig.id || gigId || report.gig.venue.name;
     if (!shouldOfferSharePrompt("gig-highlight", sourceId)) return;
-    markSharePromptSeen("gig-highlight", sourceId);
     void (async () => {
       const destinationUrl = await referralAwareDestination(profileId, window.location.href, "gig_share");
       setShareMoment({
       version: 1,
+      promptOnly: true,
+      promptKind: "gig-highlight",
+      promptSourceId: sourceId,
+      promptLabel: "Share gig highlight",
       type: "gig_result",
       id: report.gig.id,
       eyebrow: soldOut ? "SOLD OUT" : "LIVE HIGHLIGHT",
