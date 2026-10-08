@@ -100,9 +100,12 @@ Share Sheet
 - [ ] All five templates produce valid PNGs in all three formats.
 - [ ] Android/iOS-capable browsers receive file sharing where supported.
 - [ ] Desktop has download/copy fallbacks.
-- [ ] Referral links retain attribution.
+- [x] Referral links retain attribution, including contextual prompts and existing query/hash data.
 - [ ] Existing achievement/chart/release sharing still works after migration.
-- [ ] Typecheck, lint-ci and focused unit tests pass.
+- [x] Typecheck passes.
+- [ ] Lint-ci passes without increasing the existing baseline.
+- [ ] Focused Shareable Moments unit tests pass in CI.
+- [ ] Production build passes in CI.
 
 ## Phase 2 — Music graphics
 - [ ] Gig announcement/poster and sold-out variants.
