@@ -14,7 +14,7 @@ on:
       - "src/features/shareable-moments/referralDestination.ts"
       - "src/features/shareable-moments/referralDestination.test.ts"
       - "src/lib/referralShare.ts"
-      - "supabase/migrations/*referral*"
+      - "supabase/migrations/**"
       - "supabase/tests/referral_profile_schema_contract.sql"
       - ".github/workflows/referral-regression.yml"
   push:
@@ -26,7 +26,7 @@ on:
       - "src/features/shareable-moments/referralDestination.ts"
       - "src/features/shareable-moments/referralDestination.test.ts"
       - "src/lib/referralShare.ts"
-      - "supabase/migrations/*referral*"
+      - "supabase/migrations/**"
       - "supabase/tests/referral_profile_schema_contract.sql"
       - ".github/workflows/referral-regression.yml"
 
