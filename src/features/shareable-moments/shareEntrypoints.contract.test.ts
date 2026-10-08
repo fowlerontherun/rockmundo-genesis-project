@@ -6,6 +6,20 @@ const read = (relativePath: string) =>
   fs.readFileSync(path.resolve(relativePath), "utf8");
 
 describe("Shareable Moments migrated entrypoint contracts", () => {
+  it("keeps Share Studio persistently visible across desktop and mobile navigation", () => {
+    const dashboard = read("src/pages/Dashboard.tsx");
+    const fmNavigation = read("src/config/fmNavigation.ts");
+    const mobileFab = read("src/mobile/shell/FabMenu.tsx");
+    const hubNavigation = read("src/config/hubNavigation.ts");
+
+    expect(dashboard).toContain('to="/social/share-studio"');
+    expect(dashboard).toContain(">Share</Button>");
+    expect(fmNavigation).toContain('{ label: "Share Studio", path: "/social/share-studio", icon: Share2');
+    expect(mobileFab).toContain('key: "share"');
+    expect(mobileFab).toContain('to: "/social/share-studio"');
+    expect(hubNavigation).toContain('id: "share-studio"');
+  });
+
   it("keeps Dashboard achievement sharing on AvatarShareStudio", () => {
     const source = read("src/pages/Dashboard.tsx");
     expect(source).toContain('from "@/features/shareable-moments/CharacterShareStudio"');
