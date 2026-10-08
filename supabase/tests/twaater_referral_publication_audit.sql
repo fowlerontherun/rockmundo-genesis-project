@@ -68,6 +68,15 @@ begin
   ) then
     raise exception 'Audit contains scheduled, deleted or non-public Twaats';
   end if;
+  -- A dangling audit row must not survive when its source post is missing.
+  if exists (
+    select 1
+    from public.twaater_referral_publications p
+    left join public.twaats t on t.id = p.twaat_id
+    where t.id is null
+  ) then
+    raise exception 'Audit contains an orphaned publication record';
+  end if;
   -- Every currently eligible published post must have a matching audit record.
   if exists (
     select 1
