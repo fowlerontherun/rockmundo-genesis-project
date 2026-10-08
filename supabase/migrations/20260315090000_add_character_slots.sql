@@ -1,5 +1,17 @@
--- Allow multiple character profiles per user with slot metadata
+-- Allow multiple character profiles per user with slot metadata.
+-- Legacy jam_sessions.host_id originally referenced profiles.user_id, which
+-- prevents removing the one-profile-per-user uniqueness constraint. Historical
+-- jam-session rows were cleared by the earlier Jam Session Phase 1 migration,
+-- so clean installs can safely converge host_id to the current character-scoped
+-- profiles.id relationship before enabling multiple profile slots.
+ALTER TABLE public.jam_sessions
+  DROP CONSTRAINT IF EXISTS jam_sessions_host_id_fkey;
+
 ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_user_id_key;
+
+ALTER TABLE public.jam_sessions
+  ADD CONSTRAINT jam_sessions_host_id_fkey
+  FOREIGN KEY (host_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
 
 ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS slot_number integer DEFAULT 1,
