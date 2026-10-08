@@ -33,10 +33,10 @@ export const CraftedItemReveal = ({
     if (!open || !isMasterwork || shareMoment) return;
     const sourceId = `${recipeName}:${Math.round(qualityRoll)}`;
     if (!shouldOfferSharePrompt("craft-masterwork", sourceId)) return;
-    markSharePromptSeen("craft-masterwork", sourceId);
     void (async () => {
       const destinationUrl = await referralAwareDestination(profileId, window.location.href, "craft_share");
-      setShareMoment({ version: 1, type: "achievement", id: sourceId, eyebrow: "MASTERWORK", headline: recipeName, subheadline: "Crafted an exceptional item in RockMundo", metrics: [{ label: "Quality", value: `${Math.round(qualityRoll)}%` }, { label: "Grade", value: quality.label }], destinationUrl, referralCode: null, createdAt: new Date().toISOString() });
+      setShareMoment({ version: 1,
+      promptOnly: true, promptKind: "craft-masterwork", promptSourceId: sourceId, promptLabel: "Share masterwork", type: "achievement", id: sourceId, eyebrow: "MASTERWORK", headline: recipeName, subheadline: "Crafted an exceptional item in RockMundo", metrics: [{ label: "Quality", value: `${Math.round(qualityRoll)}%` }, { label: "Grade", value: quality.label }], destinationUrl, referralCode: null, createdAt: new Date().toISOString() });
     })();
   }, [open, isMasterwork, recipeName, qualityRoll, quality.label, shareMoment, profileId]);
 
