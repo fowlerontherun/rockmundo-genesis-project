@@ -72,14 +72,20 @@ set referral_code = excluded.referral_code,
     campaign = excluded.campaign,
     creative = excluded.creative;
 
--- Remove records no longer eligible under the validated publication rules.
+-- Reconcile the audit with the currently published, approved post body.
+-- An older audit row must not survive if its referral link was removed or changed.
 delete from public.twaater_referral_publications p
 where not exists (
-  select 1 from public.twaats t
+  select 1
+  from public.twaats t
   join public.referral_codes rc on rc.code = p.referral_code
   where t.id = p.twaat_id
     and t.deleted_at is null
     and t.scheduled_for is null
     and t.visibility = 'public'
     and t.moderation_status = 'approved'
+    and upper((regexp_match(
+      split_part(coalesce((regexp_match(t.body, 'https://rockmundo[.]uk/auth[?][^[:space:]]+'))[1], ''), '?', 2),
+      '(^|&)ref=([a-zA-Z0-9_-]+)'
+    ))[2]) = p.referral_code
 );
