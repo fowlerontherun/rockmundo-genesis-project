@@ -15,7 +15,7 @@ import { UserPlus, Loader2, X, Search, Share2, Copy } from 'lucide-react';
 import { searchPublicProfiles, type PublicProfileSearchResult } from '@/services/publicProfileSearch';
 import { bandInviteUnavailability } from '@/services/bandInviteEligibility';
 import { cancelBandInvitation, sendBandInvitation, friendlyBandInvitationError } from '@/services/bandInvitations';
-import { buildReferralUrl } from '@/lib/referralShare';
+import { referralUrlWithParams } from '@/features/shareable-moments/share';
 import { ShareMomentSheet } from '@/features/shareable-moments/ShareMomentSheet';
 import type { ShareMoment } from '@/features/shareable-moments/types';
 
@@ -75,7 +75,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
   const { toast } = useToast();
 
   const externalRecruitmentUrl = referralCode
-    ? buildReferralUrl(referralCode, { band: bandId, source: 'band_recruitment' })
+    ? referralUrlWithParams(referralCode, { band: bandId, source: 'band_recruitment' })
     : '';
   const externalRecruitmentText = `Join me in RockMundo and help build ${bandName}. Create your musician with my invite, then I can recruit you into the band: ${externalRecruitmentUrl}`;
 
