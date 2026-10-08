@@ -44,9 +44,12 @@ begin
   ) then
     raise exception 'Publication audit trigger must watch moderation changes';
   end if;
-  if has_table_privilege('anon', 'public.twaater_referral_publications', 'SELECT')
-    or has_table_privilege('authenticated', 'public.twaater_referral_publications', 'SELECT')
-    or has_table_privilege('authenticated', 'public.twaater_referral_publications', 'INSERT') then
+  if exists (
+    select 1
+    from (values ('anon'), ('authenticated')) as roles(role_name)
+    cross join (values ('SELECT'), ('INSERT'), ('UPDATE'), ('DELETE'), ('TRUNCATE'), ('REFERENCES'), ('TRIGGER')) as privileges(privilege_name)
+    where has_table_privilege(roles.role_name, 'public.twaater_referral_publications', privileges.privilege_name)
+  ) then
     raise exception 'Publication audit table must not be accessible to API roles';
   end if;
   if exists (
