@@ -444,11 +444,14 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
     if (!mastered) return;
     const skill = skills.find((candidate) => candidate.slug === mastered.skill_slug);
     if (!skill || !shouldOfferSharePrompt("skill-mastered", `${profile.id}:${skill.slug}`)) return;
-    markSharePromptSeen("skill-mastered", `${profile.id}:${skill.slug}`);
     void (async () => {
       const destinationUrl = await referralAwareDestination(profile.id, window.location.href, "skill_share");
       setShareMoment({
       version: 1,
+      promptOnly: true,
+      promptKind: "skill-mastered",
+      promptSourceId: `${profile.id}:${skill.slug}`,
+      promptLabel: "Share skill mastery",
       type: "achievement",
       id: `skill:${skill.slug}`,
       eyebrow: "SKILL MASTERED",
