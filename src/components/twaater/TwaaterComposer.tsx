@@ -30,6 +30,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/components/ui/use-toast";
 import { useTwaaterRuntimeConfig } from "@/hooks/useTwaaterRuntimeConfig";
+import { reconcilePublishedTwaaterShareReceipts, registerTwaaterSharePublicationReceipt } from "@/features/shareable-moments/twaater";
 
 interface TwaaterComposerProps {
   accountId: string;
@@ -93,6 +94,12 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
   const [showReleaseDialog, setShowReleaseDialog] = useState(false);
   const [showGigDialog, setShowGigDialog] = useState(false);
   const [showTourDialog, setShowTourDialog] = useState(false);
+
+  useEffect(() => {
+    void reconcilePublishedTwaaterShareReceipts().catch(() => {
+      // Publication reconciliation is best-effort and never blocks Twaater.
+    });
+  }, []);
 
   const { data: userBands = [] } = useQuery({
     queryKey: ["user-bands-for-twaater", profileId],
@@ -196,6 +203,14 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
         quoted_twaat_id: quotedTwaat?.id || undefined,
         scheduled_for: scheduledIso,
       });
+
+      if (shareCooldownKey) {
+        try {
+          await registerTwaaterSharePublicationReceipt(twaat.id, shareCooldownKey);
+        } catch (error) {
+          console.warn("Could not register Twaater share publication receipt", error);
+        }
+      }
 
       if (pollDraft) {
         try {
