@@ -75,6 +75,7 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
   const { toast } = useToast();
   const { config } = useTwaaterRuntimeConfig();
   const [body, setBody] = useState("");
+  const [shareCooldownKey, setShareCooldownKey] = useState<string | null>(null);
   const [linkedType, setLinkedType] = useState<"single" | "album" | "gig" | "tour" | "busking" | null>(null);
   const [linkedId, setLinkedId] = useState<string | null>(null);
   const [linkedTitle, setLinkedTitle] = useState<string | null>(null);
@@ -113,8 +114,9 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
     const stored = sessionStorage.getItem("rockmundoTwaaterShareDraft");
     if (!stored) return;
     try {
-      const draft = JSON.parse(stored) as { body?: string; mediaUrl?: string; mediaType?: "image" };
+      const draft = JSON.parse(stored) as { body?: string; mediaUrl?: string; mediaType?: "image"; shareCooldownKey?: string | null };
       if (draft.body) setBody(draft.body);
+      if (draft.shareCooldownKey) setShareCooldownKey(draft.shareCooldownKey);
       if (draft.mediaUrl) {
         setMediaUrl(draft.mediaUrl);
         setMediaType(draft.mediaType || "image");
@@ -140,6 +142,7 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
 
   const resetComposer = () => {
     setBody("");
+    setShareCooldownKey(null);
     setLinkedType(null);
     setLinkedId(null);
     setLinkedTitle(null);
@@ -210,6 +213,10 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
         }
       }
 
+      // Only count a published post, never opening the composer or scheduling.
+      if (!twaat.scheduled_for && shareCooldownKey) {
+        try { localStorage.setItem(shareCooldownKey, String(Date.now())); } catch { /* Storage may be disabled. */ }
+      }
       resetComposer();
     } catch {
       // Mutation toast handles the error. Preserve the draft for retry.
