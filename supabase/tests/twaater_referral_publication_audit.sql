@@ -35,14 +35,18 @@ begin
       and tg.tgname = 'trg_audit_twaater_referral_publication'
       and (tg.tgtype & 4) = 4 -- INSERT
       and (tg.tgtype & 16) = 16 -- UPDATE
-      and exists (
+      and not exists (
         select 1
-        from unnest(tg.tgattr) as watched(attnum)
-        join pg_attribute a on a.attrelid = t.oid and a.attnum = watched.attnum
-        where a.attname = 'moderation_status'
+        from (values ('body'), ('visibility'), ('deleted_at'), ('scheduled_for'), ('moderation_status')) as required(column_name)
+        where not exists (
+          select 1
+          from unnest(tg.tgattr) as watched(attnum)
+          join pg_attribute a on a.attrelid = t.oid and a.attnum = watched.attnum
+          where a.attname = required.column_name
+        )
       )
   ) then
-    raise exception 'Publication audit trigger must watch moderation changes';
+    raise exception 'Publication audit trigger must watch all publication eligibility changes';
   end if;
   if exists (
     select 1
