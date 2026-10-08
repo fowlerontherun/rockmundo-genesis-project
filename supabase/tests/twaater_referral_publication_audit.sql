@@ -25,6 +25,25 @@ begin
   ) then
     raise exception 'Publication audit trigger is missing or disabled';
   end if;
+  if not exists (
+    select 1
+    from pg_trigger tg
+    join pg_class t on t.oid = tg.tgrelid
+    join pg_namespace n on n.oid = t.relnamespace
+    where n.nspname = 'public'
+      and t.relname = 'twaats'
+      and tg.tgname = 'trg_audit_twaater_referral_publication'
+      and (tg.tgtype & 4) = 4 -- INSERT
+      and (tg.tgtype & 16) = 16 -- UPDATE
+      and exists (
+        select 1
+        from unnest(tg.tgattr) as watched(attnum)
+        join pg_attribute a on a.attrelid = t.oid and a.attnum = watched.attnum
+        where a.attname = 'moderation_status'
+      )
+  ) then
+    raise exception 'Publication audit trigger must watch moderation changes';
+  end if;
   if has_table_privilege('anon', 'public.twaater_referral_publications', 'SELECT')
     or has_table_privilege('authenticated', 'public.twaater_referral_publications', 'SELECT')
     or has_table_privilege('authenticated', 'public.twaater_referral_publications', 'INSERT') then
