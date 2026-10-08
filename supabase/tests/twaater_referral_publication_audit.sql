@@ -15,6 +15,21 @@ begin
     or has_function_privilege('authenticated', 'public.audit_twaater_referral_publication()', 'EXECUTE') then
     raise exception 'Publication audit trigger must not be executable by API roles';
   end if;
+  if not exists (
+    select 1 from pg_trigger tg
+    join pg_class t on t.oid = tg.tgrelid
+    join pg_namespace n on n.oid = t.relnamespace
+    where n.nspname = 'public' and t.relname = 'twaats'
+      and tg.tgname = 'trg_audit_twaater_referral_publication'
+      and not tg.tgisinternal and tg.tgenabled <> 'D'
+  ) then
+    raise exception 'Publication audit trigger is missing or disabled';
+  end if;
+  if has_table_privilege('anon', 'public.twaater_referral_publications', 'SELECT')
+    or has_table_privilege('authenticated', 'public.twaater_referral_publications', 'SELECT')
+    or has_table_privilege('authenticated', 'public.twaater_referral_publications', 'INSERT') then
+    raise exception 'Publication audit table must not be accessible to API roles';
+  end if;
   if exists (
     select 1 from public.twaater_referral_publications p
     join public.twaats t on t.id=p.twaat_id
