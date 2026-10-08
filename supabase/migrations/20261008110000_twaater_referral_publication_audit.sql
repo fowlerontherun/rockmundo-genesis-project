@@ -52,15 +52,23 @@ create trigger trg_audit_twaater_referral_publication
 after insert or update of body, visibility, deleted_at, scheduled_for on public.twaats
 for each row execute function public.audit_twaater_referral_publication();
 
--- Backfill published public referral posts from before this migration.
--- Updating only eligible rows reuses the trigger's validation and attribution rules.
--- Suppress redundant updates to posts that already have audit entries.
-update public.twaats t
-set body = t.body
+-- Backfill without updating original Twaat records or triggering game side effects.
+insert into public.twaater_referral_publications
+  (twaat_id, referral_code, campaign, creative, published_at)
+select
+  t.id,
+  upper((regexp_match(split_part(m.url, '?', 2), '(^|&)ref=([a-zA-Z0-9_-]+)'))[2]),
+  left(lower((regexp_match(split_part(m.url, '?', 2), '(^|&)campaign=([a-zA-Z0-9_-]+)'))[2]), 40),
+  left(lower((regexp_match(split_part(m.url, '?', 2), '(^|&)creative=([a-zA-Z0-9_-]+)'))[2]), 40),
+  coalesce(t.scheduled_published_at, t.created_at, now())
+from public.twaats t
+cross join lateral (
+  select (regexp_match(t.body, 'https://rockmundo[.]uk/auth[?][^[:space:]]+'))[1] as url
+) m
+join public.referral_codes rc
+  on rc.code = upper((regexp_match(split_part(m.url, '?', 2), '(^|&)ref=([a-zA-Z0-9_-]+)'))[2])
 where t.scheduled_for is null
   and t.deleted_at is null
   and t.visibility = 'public'
-  and t.body ~ 'https://rockmundo[.]uk/auth[?]'
-  and not exists (
-    select 1 from public.twaater_referral_publications p where p.twaat_id = t.id
-  );
+  and m.url is not null
+on conflict (twaat_id) do nothing;
