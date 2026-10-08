@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -78,6 +78,33 @@ export default function BandProfile() {
     },
     enabled: !!bandId,
   });
+
+  useEffect(() => {
+    if (!band || shareMoment || searchParams.get("shareCreate") !== "band") return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("shareCreate");
+    navigate({ pathname: `/band/${band.id}`, search: next.toString() ? `?${next.toString()}` : "" }, { replace: true });
+    setShareMoment({
+      version: 1,
+      type: "band_profile",
+      id: band.id,
+      eyebrow: band.is_solo_artist ? "ARTIST PROFILE" : "BAND PROFILE",
+      headline: band.name,
+      subheadline: [band.genre, band.description].filter(Boolean).join(" · "),
+      metrics: [
+        { label: "Fame", value: Number(band.fame || 0).toLocaleString() },
+        { label: "Members", value: String(band.band_members?.length || 0) },
+        { label: "Chemistry", value: String(band.chemistry_level || 0) },
+        { label: "Cohesion", value: String(band.cohesion_score || 0) },
+      ],
+      artworkUrl: band.logo_url || null,
+      destinationUrl: `${window.location.origin}/band/${band.id}`,
+      referralCode: null,
+      visualTheme: "spotlight",
+      visualLayout: "hero",
+      createdAt: new Date().toISOString(),
+    });
+  }, [band, shareMoment, searchParams, navigate]);
 
   const isMember = band?.band_members?.some(
     (m: any) => m.profile_id === profileId

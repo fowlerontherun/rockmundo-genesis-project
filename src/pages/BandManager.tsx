@@ -69,7 +69,9 @@ export default function BandManager() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  const recruitedBandId = new URLSearchParams(location.search).get("recruitedBand");
+  const searchParams = new URLSearchParams(location.search);
+  const recruitedBandId = searchParams.get("recruitedBand");
+  const creatingBandPromo = searchParams.get("shareCreate") === "band";
   const [userBands, setUserBands] = useState<any[]>([]);
   const [selectedBandId, setSelectedBandId] = useState<string | null>(null);
   const [selectedBand, setSelectedBand] = useState<any>(null);
@@ -419,6 +421,20 @@ export default function BandManager() {
       }
     >
       <div className="mb-6 space-y-4">
+        {creatingBandPromo && (
+          <Card className="border-primary/30 bg-primary/5">
+            <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><Star className="h-4 w-4 text-primary" />Create a band promo</CardTitle></CardHeader>
+            <CardContent className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-muted-foreground">Use your selected band's real logo, genre and current stats in a branded Share Studio card.</p>
+              <Button size="sm" onClick={() => {
+                const params = new URLSearchParams(location.search);
+                params.delete("shareCreate");
+                navigate({ pathname: location.pathname, search: params.toString() ? `?${params.toString()}` : "" }, { replace: true });
+                navigate(`/band/${selectedBand.id}?shareCreate=band`);
+              }}>Create promo</Button>
+            </CardContent>
+          </Card>
+        )}
         {/* Status Banner for Hiatus */}
         <BandStatusBanner
           status={selectedBand.status}

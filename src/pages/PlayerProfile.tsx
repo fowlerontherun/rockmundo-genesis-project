@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +30,8 @@ export default function PlayerProfile() {
   const { playerId } = useParams();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [shareOpen, setShareOpen] = useState(false);
   const [milestoneMoment, setMilestoneMoment] = useState<CharacterProfileShareMoment | null>(null);
 
@@ -70,6 +72,15 @@ export default function PlayerProfile() {
       createdAt: new Date().toISOString(),
     });
   }, [profile, currentUser, playerId, milestoneMoment]);
+
+  useEffect(() => {
+    if (!profile || !currentUser || currentUser.id !== playerId || shareOpen) return;
+    const params = new URLSearchParams(location.search);
+    if (params.get("shareCreate") !== "character") return;
+    params.delete("shareCreate");
+    navigate({ pathname: location.pathname, search: params.toString() ? `?${params.toString()}` : "" }, { replace: true });
+    setShareOpen(true);
+  }, [profile, currentUser, playerId, shareOpen, location.pathname, location.search, navigate]);
 
   // Friendship status
   const { data: profilePresence } = useQuery({
