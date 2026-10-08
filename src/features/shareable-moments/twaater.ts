@@ -13,6 +13,6 @@ export async function uploadShareCardToTwaater(blob: Blob, filename: string): Pr
   return supabase.storage.from("twaater-media").getPublicUrl(path).data.publicUrl;
 }
 
-export function storeTwaaterShareDraft(body: string, mediaUrl: string) {
-  sessionStorage.setItem("rockmundoTwaaterShareDraft", JSON.stringify({ body, mediaUrl, mediaType: "image" }));
+export function storeTwaaterShareDraft(body: string, mediaUrl: string, shareCooldownKey?: string | null) {
+  sessionStorage.setItem("rockmundoTwaaterShareDraft", JSON.stringify({ body, mediaUrl, mediaType: "image", shareCooldownKey }));
 }
