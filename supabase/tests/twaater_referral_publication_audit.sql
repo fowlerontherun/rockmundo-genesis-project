@@ -59,6 +59,27 @@ begin
   ) then
     raise exception 'Audit contains scheduled, deleted or non-public Twaats';
   end if;
+  -- Every currently eligible published post must have a matching audit record.
+  if exists (
+    select 1
+    from public.twaats t
+    cross join lateral (
+      select upper((regexp_match(
+        split_part(coalesce((regexp_match(t.body, 'https://rockmundo[.]uk/auth[?][^[:space:]]+'))[1], ''), '?', 2),
+        '(^|&)ref=([a-zA-Z0-9_-]+)(&|$)'
+      ))[2]) as code
+    ) parsed
+    join public.referral_codes rc on rc.code = parsed.code
+    left join public.twaater_referral_publications p on p.twaat_id = t.id
+    where t.deleted_at is null
+      and t.scheduled_for is null
+      and t.visibility = 'public'
+      and t.moderation_status = 'approved'
+      and length(parsed.code) between 6 and 20
+      and (p.twaat_id is null or p.referral_code is distinct from parsed.code)
+  ) then
+    raise exception 'Eligible published Twaat is missing a matching referral audit record';
+  end if;
   if exists (
     select 1 from public.twaater_referral_publications p
     where not exists (select 1 from public.referral_codes c where c.code=p.referral_code)
