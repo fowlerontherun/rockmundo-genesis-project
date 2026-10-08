@@ -12,6 +12,7 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { deleteShareMomentSnapshot, listShareMomentSnapshots, type ShareMomentSnapshot } from "@/features/shareable-moments/gallery";
 import type { ShareMoment } from "@/features/shareable-moments/types";
+import { trackShareAnalyticsEvent } from "@/features/shareable-moments/analytics";
 
 const creators = [
   { title: "Gig Poster", description: "Promote a scheduled show with venue, date, ticket price and live ticket demand.", action: "Choose a gig", path: "/schedule?shareCreate=gig", icon: Music2, badge: "Live poster" },
@@ -39,7 +40,7 @@ export default function ShareStudio() {
   const [gallery, setGallery] = useState<ShareMomentSnapshot[]>([]);
   const [selected, setSelected] = useState<ShareMoment | null>(null);
   const [characterPromo, setCharacterPromo] = useState<CharacterProfileShareMoment | null>(null);
-  useEffect(() => { void listShareMomentSnapshots().then(setGallery).catch(() => setGallery([])); }, []);
+  useEffect(() => { trackShareAnalyticsEvent("share_studio_opened", { channel: "studio" }); void listShareMomentSnapshots().then(setGallery).catch(() => setGallery([])); }, []);
   const createIdentityPromo = (title: string) => {
     if (title === "Character Promo" && profile) {
       setCharacterPromo({ version: 1, type: "character_profile", id: `promo:${profile.id}`, eyebrow: "ROCKMUNDO ARTIST", headline: profile.display_name || profile.username || "RockMundo artist", subheadline: "Building a music career in RockMundo", metrics: [{ label: "Career level", value: String(profile.level || 1) }, { label: "Fame", value: Number(profile.fame || 0).toLocaleString() }, { label: "Fans", value: Number(profile.fans || 0).toLocaleString() }], destinationUrl: `${window.location.origin}/player/${profile.id}`, visualTheme: "spotlight", visualLayout: "hero", createdAt: new Date().toISOString() });
