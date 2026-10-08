@@ -9,6 +9,14 @@ export function referralUrl(code: string, origin?: string): string {
   return url.toString();
 }
 
+export function referralUrlWithParams(code: string, params: Record<string, string | undefined | null> = {}, origin?: string): string {
+  const url = new URL(referralUrl(code, origin));
+  Object.entries(params).forEach(([key, value]) => {
+    if (value != null && String(value).trim()) url.searchParams.set(key, String(value).trim());
+  });
+  return url.toString();
+}
+
 export function withReferral(url: string, code?: string | null, source?: string | null, campaign?: string | null, creative?: string | null): string {
   const parsed = new URL(url, typeof window === 'undefined' ? 'https://rockmundo.uk' : window.location.origin);
   if (code) parsed.searchParams.set('ref', code.trim().toUpperCase());

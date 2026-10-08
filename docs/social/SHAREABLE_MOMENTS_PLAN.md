@@ -86,8 +86,8 @@ Share Sheet
 - [x] Migrate Dashboard achievement sharing.
 - [x] Migrate chart milestone sharing.
 - [x] Migrate release milestone sharing.
-- [ ] Keep band recruitment semantics but move transport/referral utilities to shared helpers.
-- [ ] Adapt BlindBoxShareSheet to shared primitives without regressing its existing image card.
+- [x] Keep band recruitment semantics but move transport/referral utilities to shared helpers.
+- [x] Adapt BlindBoxShareSheet to shared primitives without regressing its existing image card.
 
 ### 1F. Analytics
 - [x] Define and persist events: share_prompt_viewed, share_studio_opened, share_rendered, share_native_started, share_downloaded, share_link_copied.

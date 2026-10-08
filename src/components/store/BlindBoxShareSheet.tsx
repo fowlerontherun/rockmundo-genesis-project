@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Download, Link2, Copy, Share2, Check, Image as ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { RevealResult } from "@/pages/BlindBoxStore";
+import { copyPng, copyText, downloadBlob, nativeShare } from "@/features/shareable-moments/share";
+import { trackShareAnalyticsEvent } from "@/features/shareable-moments/analytics";
 
 interface Props {
   reveal: RevealResult | null;
@@ -185,6 +187,7 @@ export function BlindBoxShareSheet({ reveal, open, onOpenChange }: Props) {
   useEffect(() => {
     if (open && reveal && canvasRef.current) {
       renderCard(canvasRef.current, reveal);
+      trackShareAnalyticsEvent("share_rendered", { momentType: "blind_box", template: "blind_box", channel: "render" });
     }
   }, [open, reveal]);
 
@@ -202,62 +205,46 @@ export function BlindBoxShareSheet({ reveal, open, onOpenChange }: Props) {
   const handleDownload = async () => {
     const blob = await getBlob();
     if (!blob) return;
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `rockmundo-${reveal?.tier ?? "pull"}-${Date.now()}.png`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+    downloadBlob(blob, `rockmundo-${reveal?.tier ?? "pull"}-${Date.now()}.png`);
+    trackShareAnalyticsEvent("share_downloaded", { momentType: "blind_box", template: "blind_box", channel: "download" });
     flash("download");
     toast({ title: "Image downloaded", description: "Saved to your device." });
   };
 
   const handleCopyImage = async () => {
-    try {
-      const blob = await getBlob();
-      if (!blob) throw new Error("no blob");
-      const ClipboardItemCtor = (window as unknown as { ClipboardItem?: typeof ClipboardItem }).ClipboardItem;
-      if (!ClipboardItemCtor) throw new Error("ClipboardItem unsupported");
-      await navigator.clipboard.write([new ClipboardItemCtor({ "image/png": blob })]);
+    const blob = await getBlob();
+    if (blob && await copyPng(blob)) {
       flash("image");
       toast({ title: "Image copied", description: "Paste anywhere as PNG." });
-    } catch {
-      toast({
-        title: "Copy not supported",
-        description: "Your browser blocked image copy. Try Download instead.",
-        variant: "destructive",
-      });
+      return;
     }
+    toast({
+      title: "Copy not supported",
+      description: "Your browser blocked image copy. Try Download instead.",
+      variant: "destructive",
+    });
   };
 
   const handleCopyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
+    if (await copyText(`${shareText}\n${shareUrl}`)) {
+      trackShareAnalyticsEvent("share_link_copied", { momentType: "blind_box", template: "blind_box", channel: "copy_link" });
       flash("link");
       toast({ title: "Link copied", description: shareUrl });
-    } catch {
-      toast({ title: "Failed to copy", variant: "destructive" });
+      return;
     }
+    toast({ title: "Failed to copy", variant: "destructive" });
   };
 
   const handleNativeShare = async () => {
+    const blob = await getBlob();
+    const file = blob ? new File([blob], "rockmundo-pull.png", { type: "image/png" }) : undefined;
+    trackShareAnalyticsEvent("share_native_started", { momentType: "blind_box", template: "blind_box", channel: "native" });
     try {
-      const blob = await getBlob();
-      const file = blob ? new File([blob], "rockmundo-pull.png", { type: "image/png" }) : null;
-      const data: ShareData = { title: "Rockmundo pull", text: shareText, url: shareUrl };
-      if (file && (navigator as any).canShare?.({ files: [file] })) {
-        (data as any).files = [file];
-      }
-      if (navigator.share) {
-        await navigator.share(data);
-        flash("share");
-      } else {
-        await handleCopyLink();
-      }
+      const result = await nativeShare({ title: "Rockmundo pull", text: shareText, url: shareUrl, file });
+      if (result === "shared") flash("share");
+      else if (result === "unsupported") await handleCopyLink();
     } catch {
-      // user cancelled
+      toast({ title: "Unable to share", description: "Try copying the link or downloading the image instead.", variant: "destructive" });
     }
   };
 
@@ -310,12 +297,11 @@ export function BlindBoxShareSheet({ reveal, open, onOpenChange }: Props) {
               size="sm"
               className="h-7 px-2 text-[11px]"
               onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(shareText);
+                if (await copyText(shareText)) {
                   flash("caption");
                   toast({ title: "Caption copied" });
-                } catch {
-                  /* noop */
+                } else {
+                  toast({ title: "Failed to copy caption", variant: "destructive" });
                 }
               }}
             >
