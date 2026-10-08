@@ -1,5 +1,5 @@
 -- Read-only validation for the publication audit migration.
--- Run after applying 20261008110000_twaater_referral_publication_audit.sql.
+-- Run after applying both 20261008110000 and 20261008180000 audit migrations.
 do $$
 begin
   if to_regclass('public.twaater_referral_publications') is null then
@@ -42,6 +42,17 @@ begin
     where not exists (select 1 from public.referral_codes c where c.code=p.referral_code)
   ) then
     raise exception 'Audit contains unknown referral codes';
+  end if;
+  if exists (
+    select 1
+    from public.twaater_referral_publications p
+    join public.twaats t on t.id = p.twaat_id
+    where upper((regexp_match(
+      split_part(coalesce((regexp_match(t.body, 'https://rockmundo[.]uk/auth[?][^[:space:]]+'))[1], ''), '?', 2),
+      '(^|&)ref=([a-zA-Z0-9_-]+)(&|$)'
+    ))[2]) is distinct from p.referral_code
+  ) then
+    raise exception 'Audit contains a stale or malformed referral link';
   end if;
 end;
 $$;
