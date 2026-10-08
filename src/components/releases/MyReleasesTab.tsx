@@ -317,11 +317,14 @@ export function MyReleasesTab({ userId, authUserId }: MyReleasesTabProps) {
     if (!candidate) return;
     const sourceId = `${candidate.release.id}:${candidate.threshold}`;
     if (!shouldOfferSharePrompt("release-revenue-milestone", sourceId)) return;
-    markSharePromptSeen("release-revenue-milestone", sourceId);
     void (async () => {
       const destinationUrl = await referralAwareDestination(userId, window.location.href, "release_share");
       setMilestoneMoment({
       version: 1,
+      promptOnly: true,
+      promptKind: "release-revenue-milestone",
+      promptSourceId: sourceId,
+      promptLabel: "Share release milestone",
       type: "release",
       id: `revenue:${sourceId}`,
       eyebrow: "RELEASE MILESTONE",
