@@ -44,6 +44,23 @@ describe("CommunityRewards referral page recovery", () => {
     expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
   });
 
+  it("settles loading and shows retry when the RPC throws", async () => {
+    mocks.rpc.mockImplementation((name: string) => {
+      if (name === "get_referral_dashboard") return Promise.reject(new Error("Network unavailable"));
+      return Promise.resolve({ data: [], error: null });
+    });
+
+    render(
+      <MemoryRouter>
+        <CommunityRewards profileId="11111111-1111-4111-8111-111111111111" profileName="Tester" />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Invite friends unavailable")).toBeInTheDocument();
+    expect(screen.getByText("Network unavailable")).toBeInTheDocument();
+    expect(screen.queryByText("Loading rewards…")).not.toBeInTheDocument();
+  });
+
   it("retries the referral dashboard after a transient failure", async () => {
     let attempts = 0;
     mocks.rpc.mockImplementation((name: string) => {
