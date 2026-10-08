@@ -87,35 +87,52 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
     setRetrying(true);
     setShowLyricsDialog(false);
     try {
-      // Save updated lyrics if provided
-      const updatePayload: Record<string, any> = { audio_generation_status: 'failed', audio_url: null };
+      // Persist edited lyrics first, but let the admin edge function own generation
+      // state. The player endpoint intentionally blocks songs that already have
+      // audio, which makes completed-song regeneration fail when the client-side
+      // audio reset is rejected or delayed by RLS.
       if (updatedLyrics !== undefined) {
-        updatePayload.lyrics = updatedLyrics;
-      }
-      await supabase
-        .from('songs')
-        .update(updatePayload as any)
-        .eq('id', songId);
+        const { error: lyricsError } = await supabase
+          .from('songs')
+          .update({ lyrics: updatedLyrics } as any)
+          .eq('id', songId);
 
-      const body: Record<string, any> = { songId, userId: profileId };
-      if (updatedLyrics !== undefined) {
-        body.overrideLyrics = updatedLyrics;
+        if (lyricsError) {
+          console.error('Admin regenerate lyrics update error:', lyricsError);
+          toast.error("Failed to save updated lyrics");
+          return;
+        }
       }
-      const { data, error } = await supabase.functions.invoke('generate-song-audio', {
-        body
-      });
 
-      if (error) {
-        console.error('Admin regenerate error:', error);
-        toast.error("Failed to regenerate");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Your session has expired. Please sign in again.");
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-generate-song-audio`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ songId }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || data?.error) {
+        console.error('Admin regenerate error:', data);
+        toast.error(data?.error || "Failed to regenerate");
       } else if (data?.success) {
         toast.success("Regeneration started!", {
           description: "Song is being regenerated with MiniMax Music."
         });
         queryClient.invalidateQueries({ queryKey: ["song-generation-status", songId] });
         queryClient.invalidateQueries({ queryKey: ["song-generation-limits"] });
-      } else if (data?.error) {
-        toast.error(data.error, { description: data.details });
       }
     } catch (err) {
       console.error('Admin regenerate failed:', err);
