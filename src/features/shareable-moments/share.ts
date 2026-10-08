@@ -22,13 +22,21 @@ export function canShareFile(file: File): boolean {
   return typeof navigator !== 'undefined'
     && typeof navigator.share === 'function'
     && typeof navigator.canShare === 'function'
-    && navigator.canShare({ files: [file] });
+    && (() => { try { return navigator.canShare({ files: [file] }); } catch { return false; } })();
 }
 
 export async function nativeShare(payload: SharePayload): Promise<'shared' | 'unsupported' | 'cancelled'> {
   if (typeof navigator === 'undefined' || typeof navigator.share !== 'function') return 'unsupported';
   const data: ShareData = { title: payload.title, text: payload.text, url: payload.url };
-  if (payload.file && canShareFile(payload.file)) data.files = [payload.file];
+  if (payload.file && canShareFile(payload.file)) {
+    // Some mobile share targets reject mixing files with URLs. Keep the link in
+    // the message so the referral remains available alongside the artwork.
+    data.files = [payload.file];
+    if (data.url) {
+      data.text = [data.text, data.url].filter(Boolean).join('\n');
+      delete data.url;
+    }
+  }
   try {
     await navigator.share(data);
     return 'shared';
@@ -46,7 +54,8 @@ export function downloadBlob(blob: Blob, filename: string): void {
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
-  URL.revokeObjectURL(url);
+  // Revoke after the browser has had a chance to start the download.
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 
