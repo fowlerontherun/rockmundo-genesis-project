@@ -232,11 +232,14 @@ const TourManager = () => {
     if (shareMoment) return;
     const completed = historicTours.find((tour) => tour.status === "completed");
     if (!completed || !shouldOfferSharePrompt("tour-completed", completed.id)) return;
-    markSharePromptSeen("tour-completed", completed.id);
     void (async () => {
       const destinationUrl = await referralAwareDestination(profileId, `${window.location.origin}/tour-manager?tour=${completed.id}`, "tour_share");
       setShareMoment({
       version: 1,
+      promptOnly: true,
+      promptKind: "tour-completed",
+      promptSourceId: completed.id,
+      promptLabel: "Share completed tour",
       type: "tour",
       id: completed.id,
       eyebrow: "TOUR COMPLETE",
