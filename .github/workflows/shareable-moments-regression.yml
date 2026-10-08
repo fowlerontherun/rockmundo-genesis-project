@@ -53,7 +53,7 @@ jobs:
           src/features/shareable-moments/shareableMoments.test.ts
           src/features/shareable-moments/referralAttribution.test.ts
           src/features/shareable-moments/referralDestination.test.ts
-          src/features/shareable-moments/ShareMomentSheet.test.tsx
+          src/features/shareable-moments/ShareMomentSheet.test.tsx\n          src/features/shareable-moments/shareEntrypoints.contract.test.ts
       - name: Typecheck
         run: npm run typecheck
       - name: Production build
