@@ -76,7 +76,7 @@ import { useTourTravelRepair } from "@/hooks/useTourTravelRepair";
 import { useTourCatchUp } from "@/hooks/useTourCatchUp";
 import { useTourCancellation } from "@/hooks/useTourCancellation";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
-import { markSharePromptSeen, shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
+import { shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
 import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
 
 interface Tour {
