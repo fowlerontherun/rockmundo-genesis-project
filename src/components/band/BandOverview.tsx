@@ -134,11 +134,14 @@ export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, band
       appearance.billingPosition.toLowerCase() === "headliner"
     );
     if (!headliner || !shouldOfferSharePrompt("festival-headliner", headliner.bookingId)) return;
-    markSharePromptSeen("festival-headliner", headliner.bookingId);
     void (async () => {
       const destinationUrl = await referralAwareDestination(profileId, `${window.location.origin}${appearanceDetailHref(headliner)}`, "festival_share");
       setShareMoment({
       version: 1,
+      promptOnly: true,
+      promptKind: "festival-headliner",
+      promptSourceId: headliner.bookingId,
+      promptLabel: "Share headliner slot",
       type: "festival",
       id: headliner.bookingId,
       eyebrow: "FESTIVAL HEADLINER",
