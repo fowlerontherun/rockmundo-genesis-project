@@ -102,12 +102,12 @@ Share Sheet
 - [ ] A real Avatar V1 character can be rendered into a branded Character Profile card.
 - [ ] All five templates produce valid PNGs in all three formats.
 - [ ] Android/iOS-capable browsers receive file sharing where supported.
-- [ ] Desktop has download/copy fallbacks.
+- [x] Desktop has download/copy fallbacks.
 - [x] Referral links retain attribution, including contextual prompts and existing query/hash data.
 - [ ] Existing achievement/chart/release sharing still works after migration.
 - [x] Typecheck passes.
 - [ ] Lint-ci passes without increasing the existing baseline.
-- [ ] Focused Shareable Moments unit tests pass in CI.
+- [x] Focused Shareable Moments unit tests pass in CI.
 - [ ] Production build passes in CI.
 
 ## Phase 2 — Music graphics
