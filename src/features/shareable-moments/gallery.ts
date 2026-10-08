@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getActiveProfile } from "@/services/profileService";
 import type { ShareMoment } from "./types";
 
 export type ShareMomentSnapshot = {
@@ -14,7 +15,7 @@ export type ShareMomentSnapshot = {
 export async function saveShareMomentSnapshot(moment: ShareMoment) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
-  const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", user.id).maybeSingle();
+  const profile = await getActiveProfile(user.id);
   const frozen: ShareMoment = { ...moment, createdAt: moment.createdAt || new Date().toISOString() };
   await supabase.from("share_moment_snapshots").upsert({
     user_id: user.id,
