@@ -31,7 +31,7 @@ describe('mobile referral artwork sharing', () => {
     expect(await nativeShare({ title: 'Join RockMundo', text: 'Join my band', url: 'https://rockmundo.uk/auth?ref=RM123456', file })).toBe('shared');
     expect(share).toHaveBeenCalledWith({
       title: 'Join RockMundo',
-      text: 'Join my band\\nhttps://rockmundo.uk/auth?ref=RM123456',
+      text: 'Join my band\nhttps://rockmundo.uk/auth?ref=RM123456',
       files: [file],
     });
   });
