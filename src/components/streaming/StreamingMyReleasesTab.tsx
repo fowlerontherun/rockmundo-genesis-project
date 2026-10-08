@@ -9,7 +9,7 @@ import { Music, TrendingUp, DollarSign, Trash2, Play, Pause, Flame, Star, Rotate
 import { useToast } from "@/hooks/use-toast";
 import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
 import type { ShareMoment } from "@/features/shareable-moments/types";
-import { markSharePromptSeen, shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
+import { shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
 import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
 import { STREAM_SHARE_THRESHOLDS, highestReachedThreshold, milestoneLabel } from "@/features/shareable-moments/milestones";
 import { SongPlayer } from "@/components/audio/SongPlayer";
