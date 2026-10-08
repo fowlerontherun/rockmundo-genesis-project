@@ -215,3 +215,34 @@ describe("GigExperienceService", () => {
     expect(renderMetricValue(metricLegacyMissing<number>("legacy"))).toBe("Legacy data unavailable");
   });
 });
+
+describe('post-gig evidence mapping', () => {
+  const processing = { status: 'completed', processing_version: 'consequences-v2', completed_at: '2026-10-08' };
+  const row = (key: string, category: string, delta: number | null = null) => ({
+    category, target_type: 'band', target_id: 'band-1', consequence_key: key,
+    previous_value: null, delta_value: delta, new_value: null, status: 'neutral',
+    explanation: 'Stored evidence only', source_factors: [], metadata: {}, created_at: '2026-10-08',
+  }) as NonNullable<MapGigExperienceInput['consequences']>[number];
+  it('does not show a null recorded reward as an available zero', () => {
+    const dto=mapGigExperience({gig,outcome,postProcessing:processing,consequences:[
+      row('live_reputation.overall','live_reputation',2), row('fans.local_delta','fans'),
+      row('performer.progression','performer'), row('media.review','media'),
+    ]});
+    expect(dto.postConsequences.processingStatus).toBe('completed');
+    expect(dto.postConsequences.fanDelta.status).toBe('legacy_missing');
+    expect(dto.postConsequences.followerDelta.status).toBe('legacy_missing');
+    expect(dto.postConsequences.mediaCoverage.status).toBe('not_applicable');
+    expect(dto.postConsequences.timeline).toEqual(Array(4).fill('Stored evidence only'));
+  });
+  it('does not claim complete v2 processing from a partial snapshot set', () => {
+    const dto=mapGigExperience({gig,outcome,postProcessing:processing,consequences:[row('fans.local_delta','fans',0)]});
+    expect(dto.postConsequences.processingStatus).toBe('retry_required');
+    expect(dto.postConsequences.processedAt).toBeNull();
+    expect(dto.postConsequences.fanDelta).toEqual(metricAvailable(0));
+  });
+  it('keeps legacy reports empty rather than listing unperformed steps', () => {
+    const dto=mapGigExperience({gig,outcome});
+    expect(dto.postConsequences.processingStatus).toBe('legacy_missing');
+    expect(dto.postConsequences.timeline).toEqual([]);
+  });
+});

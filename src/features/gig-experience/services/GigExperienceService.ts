@@ -513,17 +513,20 @@ function buildWarnings(outcome: OutcomeRow | null, songCount: number, performerC
 function buildLessons(rating: number, attendance: number, capacity: number, profit: number) { return { worked: [rating >= 17 ? "Overall performance quality was strong." : "The outcome was recorded and can be reviewed."], heldBack: [attendance < capacity * 0.5 ? "Attendance was below half capacity." : profit < 0 ? "Costs outweighed revenue." : "No major blocker was identified in the canonical summary."], recommendations: [attendance < capacity * 0.5 ? "Book a smaller venue or build local demand before returning." : profit < 0 ? "Review ticket price, crew costs, and venue fit before the next gig." : "Use the song breakdown to refine the next setlist."] }; }
 
 function mapPostConsequences(processing: { status: string; processing_version: string | null; completed_at: string | null } | null, rows: ConsequenceRow[]): GigPostConsequencesDTO {
-  const consequences = rows.map((row) => ({ key: row.consequence_key, category: row.category, targetType: row.target_type, targetId: row.target_id, previousValue: row.previous_value, deltaValue: row.delta_value, newValue: row.new_value, status: row.status, explanation: row.explanation, sourceFactors: row.source_factors ?? [] }));
-  const findDelta = (key: string) => consequences.find((c) => c.key === key)?.deltaValue;
+  const consequences = rows.map((row) => ({ key: row.consequence_key, category: row.category, targetType: row.target_type, targetId: row.target_id, previousValue: row.previous_value, deltaValue: row.delta_value, newValue: row.new_value, status: row.status, explanation: row.explanation, sourceFactors: Array.isArray(row.source_factors) ? row.source_factors : [] }));
+  const findDelta = (key: string) => consequences.find((c) => c.key === key)?.deltaValue ?? undefined;
   const media = consequences.find((c) => c.category === "media");
-  const timeline = ["Performance completed", "Financial settlement", "Fan response", "Media response", "Reputation changes", "Venue and promoter response", "Performer and crew progression", "Equipment inspection", "Health and recovery", "Future offers"];
+  const timeline = consequences.map((c) => c.explanation);
   const allowedStatuses = new Set<GigPostConsequencesDTO["processingStatus"]>(["pending", "processing", "completed", "partially_failed", "retry_required", "skipped", "legacy_missing"]);
   const declaredStatus = processing && allowedStatuses.has(processing.status as GigPostConsequencesDTO["processingStatus"])
     ? processing.status as GigPostConsequencesDTO["processingStatus"]
     : "legacy_missing";
   // A historical processing row is not evidence that the advanced pipeline ran.
   // Likewise, never display an empty completed row as settled consequences.
-  const processingStatus = declaredStatus === "completed" && consequences.length === 0
+  const missingDeclaredEvidence = processing?.processing_version === "consequences-v2"
+    && ["live_reputation.overall", "fans.local_delta", "performer.progression", "media.review"]
+      .some((key) => !consequences.some((c) => c.key === key));
+  const processingStatus = declaredStatus === "completed" && (consequences.length === 0 || missingDeclaredEvidence)
     ? "retry_required"
     : declaredStatus;
   const missingReason = processingStatus === "processing" || processingStatus === "pending"
@@ -539,7 +542,7 @@ function mapPostConsequences(processing: { status: string; processing_version: s
     fanDelta: findDelta("fans.local_delta") !== undefined ? metricAvailable(findDelta("fans.local_delta")!) : metricLegacyMissing(missingReason),
     followerDelta: findDelta("followers.delta") !== undefined ? metricAvailable(findDelta("followers.delta")!) : metricLegacyMissing(missingReason),
     bookingDemandDelta: findDelta("booking_demand.recent") !== undefined ? metricAvailable(findDelta("booking_demand.recent")!) : metricLegacyMissing(missingReason),
-    mediaCoverage: media ? metricAvailable(String(media.newValue ?? media.deltaValue ?? media.key)) : processingStatus === "completed" ? metricNotApplicable("No media coverage met the significance threshold") : metricLegacyMissing(missingReason),
+    mediaCoverage: media ? (media.newValue == null && media.deltaValue == null ? metricNotApplicable(media.explanation) : metricAvailable(String(media.newValue ?? media.deltaValue))) : metricLegacyMissing(missingReason),
     timeline,
     nextActions: buildPostGigNextActions(consequences),
     consequences,
@@ -549,7 +552,7 @@ function buildPostGigNextActions(consequences: GigPostConsequencesDTO["consequen
   const actions: GigPostConsequencesDTO["nextActions"] = [];
   if (consequences.some((c) => c.category === "equipment" && c.status === "negative")) actions.push({ key: "repair_equipment", label: "Inspect and repair damaged equipment", href: "/equipment", priority: "high" });
   if (consequences.some((c) => c.key === "health.fatigue" && (c.deltaValue ?? 0) >= 18)) actions.push({ key: "schedule_recovery", label: "Schedule recovery", href: "/calendar", priority: "medium" });
-  if (consequences.some((c) => c.category === "media")) actions.push({ key: "review_press", label: "Review press coverage", href: "/news", priority: "medium" });
+  if (consequences.some((c) => c.category === "media" && (c.newValue != null || c.deltaValue != null))) actions.push({ key: "review_press", label: "Review press coverage", href: "/news", priority: "medium" });
   actions.push({ key: "review_feedback", label: "Review audience feedback", href: "/gigs", priority: "low" });
   return actions;
 }

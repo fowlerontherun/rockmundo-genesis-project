@@ -86,3 +86,62 @@ This PR lays the durable schema, calculation foundation, DTO mapping and report 
 ## Festival audience outcome integration
 
 Audience simulation and performance outcomes now read immutable festival session evidence, generate canonical crowd/highlight records for viewers, and leave settlement pending.
+
+## Issue #2158: bounded v2 processor
+
+`process_gig_consequences(gig_id)` is the authoritative transactional writer for
+`consequences-v2`. It requires a completed gig, `result_ready_at`, and one completed
+stored outcome. Core completion calls it after recording readiness and on completed
+retries. `process_pending_gig_consequences(100)` reconciles historical claims and
+retries every five minutes through pg_cron. Neither RPC calls core completion.
+
+The deliberately small v2 scope is:
+
+- Apply overall live reputation once, using stored rating (0–25), experience
+  smoothing, and an eight-point cap. Other reputation dimensions remain unchanged.
+- Record existing core fan rewards and existing gig XP ledger totals, without
+  awarding anything again. Null evidence stays unavailable, not zero.
+- Save one private, deterministic in-game fan summary when attendance is positive;
+  explicitly record media as not applicable for zero attendance. No public posts.
+
+Followers, booking demand, contextual reputation, equipment, health, and offers
+remain unavailable in this version. The larger TypeScript calculator is a design
+foundation, not a list of effects the worker claims to have applied.
+
+Gig and reputation row locks serialize retries and band updates. Effects, all four
+declared snapshot keys, and the completion marker commit together. Exceptions roll
+back effects before recording `retry_required` with SQLSTATE and a reason. Existing
+unverified snapshots or media require manual review (`partially_failed`); the worker
+never guesses which effects to repeat.
+
+### Deployment and historical reconciliation
+
+Read-only inspection on 8 October found 299 processing rows for completed gigs,
+zero consequence snapshots, nine gigs with duplicate claims, and the older schema
+without processing audit fields or live-reputation/media tables. These are observed
+counts, not deployment results.
+
+Apply `20261008193206_idempotent_gig_consequences.sql` before deploying `complete-gig`.
+It normalizes both schema variants, consolidates duplicate claims while retaining
+original rows in audit JSON, reparents snapshots, and enforces one claim per gig.
+It also removes permissive processing/snapshot read policies. Historical core
+outcomes, XP ledgers, balances, fans, and performance records are never mutated.
+The scheduled worker drains existing claims in bounded batches; completed gigs
+without claims remain legacy-missing. A service-role operator can run:
+
+```sql
+select public.process_pending_gig_consequences(100);
+select status, count(*) from public.gig_post_processing group by status;
+select gig_id, error_snapshot from public.gig_post_processing
+where status in ('retry_required', 'partially_failed');
+```
+
+Check the `process-gig-consequences` pg_cron job after deployment. Environments
+without pg_cron must invoke the batch RPC from their scheduler. Review failures
+rather than resetting completed claims or replaying core rewards.
+
+Run `npm run test:gig-consequences:db` for isolated PostgreSQL (PGlite) tests against
+both schema variants: duplicate reconciliation, repeat workers, rollback after a
+reputation mutation, safe retry, readiness, incomplete outcomes, unverified partial
+evidence, and unavailable legacy values. These execute real SQL, but do not replace
+a deployed Supabase/pg_cron or multi-connection concurrency smoke test.
