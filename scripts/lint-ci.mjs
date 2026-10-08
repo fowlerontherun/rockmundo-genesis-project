@@ -54,6 +54,15 @@ if (newErrors > 0) {
     );
   });
 
+  const topFiles = report
+    .filter((file) => file.errorCount > 0)
+    .sort((a, b) => b.errorCount - a.errorCount)
+    .slice(0, 25);
+  console.error("\nTop ESLint error files (diagnostic only):");
+  for (const file of topFiles) {
+    console.error(`  ${normalizedPath(file.filePath)} — ${file.errorCount} error(s)`);
+  }
+
   if (focused.length) {
     console.error("\nErrors in release-focused files:");
     for (const file of focused) {
