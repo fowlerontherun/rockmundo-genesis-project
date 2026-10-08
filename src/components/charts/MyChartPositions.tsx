@@ -9,7 +9,8 @@ import { SongPlayer } from "@/components/audio/SongPlayer";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { buildReferralUrl, referralShareOnCooldown } from "@/lib/referralShare";
+import { referralShareOnCooldown } from "@/lib/referralShare";
+import { referralUrlWithParams } from "@/features/shareable-moments/share";
 import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
 import type { ShareMoment } from "@/features/shareable-moments/types";
 import { markSharePromptSeen, shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
@@ -212,7 +213,7 @@ export function MyChartPositions({ userId }: MyChartPositionsProps) {
                         toast.error("Could not prepare your referral link");
                         return;
                       }
-                      const url = buildReferralUrl(data.code, { source: "song_chart_share" });
+                      const url = referralUrlWithParams(data.code, { source: "song_chart_share" });
                       const text = highestRank === 1
                         ? `My song “${firstPos.songTitle}” hit #1 in RockMundo. Start your own music career and join me.`
                         : `My song “${firstPos.songTitle}” reached #${highestRank} in RockMundo. Start your own music career and join me.`;
