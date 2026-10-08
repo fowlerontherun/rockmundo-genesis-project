@@ -1,0 +1,147 @@
+-- Read-only validation for the publication audit migration.
+-- Run after applying both 20261008110000 and 20261008180000 audit migrations.
+do $$
+begin
+  if to_regclass('public.twaater_referral_publications') is null then
+    raise exception 'Publication audit table is missing';
+  end if;
+  if not exists (
+    select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace
+    where n.nspname='public' and c.relname='twaater_referral_publications' and c.relrowsecurity
+  ) then
+    raise exception 'Publication audit RLS must be enabled';
+  end if;
+  if has_function_privilege('anon', 'public.audit_twaater_referral_publication()', 'EXECUTE')
+    or has_function_privilege('authenticated', 'public.audit_twaater_referral_publication()', 'EXECUTE') then
+    raise exception 'Publication audit trigger must not be executable by API roles';
+  end if;
+  if not exists (
+    select 1 from pg_trigger tg
+    join pg_class t on t.oid = tg.tgrelid
+    join pg_namespace n on n.oid = t.relnamespace
+    where n.nspname = 'public' and t.relname = 'twaats'
+      and tg.tgname = 'trg_audit_twaater_referral_publication'
+      and not tg.tgisinternal and tg.tgenabled <> 'D'
+  ) then
+    raise exception 'Publication audit trigger is missing or disabled';
+  end if;
+  if not exists (
+    select 1
+    from pg_trigger tg
+    join pg_class t on t.oid = tg.tgrelid
+    join pg_namespace n on n.oid = t.relnamespace
+    where n.nspname = 'public'
+      and t.relname = 'twaats'
+      and tg.tgname = 'trg_audit_twaater_referral_publication'
+      and tg.tgenabled <> 'D'
+      and not tg.tgisinternal
+      and (tg.tgtype & 1) = 1 -- ROW level
+      and (tg.tgtype & 2) = 0 -- AFTER, not BEFORE
+      and tg.tgfoid = 'public.audit_twaater_referral_publication()'::regprocedure
+      and (tg.tgtype & 4) = 4 -- INSERT
+      and (tg.tgtype & 16) = 16 -- UPDATE
+      and not exists (
+        select 1
+        from (values ('body'), ('visibility'), ('deleted_at'), ('scheduled_for'), ('moderation_status')) as required(column_name)
+        where not exists (
+          select 1
+          from unnest(tg.tgattr) as watched(attnum)
+          join pg_attribute a on a.attrelid = t.oid and a.attnum = watched.attnum
+          where a.attname = required.column_name
+        )
+      )
+  ) then
+    raise exception 'Publication audit trigger must watch all publication eligibility changes';
+  end if;
+  if exists (
+    select 1
+    from (values ('anon'), ('authenticated')) as roles(role_name)
+    cross join (values ('SELECT'), ('INSERT'), ('UPDATE'), ('DELETE'), ('TRUNCATE'), ('REFERENCES'), ('TRIGGER')) as privileges(privilege_name)
+    where has_table_privilege(roles.role_name, 'public.twaater_referral_publications', privileges.privilege_name)
+  ) then
+    raise exception 'Publication audit table must not be accessible to API roles';
+  end if;
+  if exists (
+    select 1 from public.twaater_referral_publications p
+    join public.twaats t on t.id=p.twaat_id
+    where t.scheduled_for is not null or t.deleted_at is not null or t.visibility is distinct from 'public' or t.moderation_status is distinct from 'approved'
+  ) then
+    raise exception 'Audit contains scheduled, deleted or non-public Twaats';
+  end if;
+  -- A dangling audit row must not survive when its source post is missing.
+  if exists (
+    select 1
+    from public.twaater_referral_publications p
+    left join public.twaats t on t.id = p.twaat_id
+    where t.id is null
+  ) then
+    raise exception 'Audit contains an orphaned publication record';
+  end if;
+  -- Every currently eligible published post must have a matching audit record.
+  if exists (
+    select 1
+    from public.twaats t
+    cross join lateral (
+      select upper((regexp_match(
+        split_part(coalesce((regexp_match(t.body, 'https://rockmundo[.]uk/auth[?][^[:space:]]+'))[1], ''), '?', 2),
+        '(^|&)ref=([a-zA-Z0-9_-]+)(&|$)'
+      ))[2]) as code
+    ) parsed
+    join public.referral_codes rc on rc.code = parsed.code
+    left join public.twaater_referral_publications p on p.twaat_id = t.id
+    where t.deleted_at is null
+      and t.scheduled_for is null
+      and t.visibility = 'public'
+      and t.moderation_status = 'approved'
+      and length(parsed.code) between 6 and 20
+      and (p.twaat_id is null or p.referral_code is distinct from parsed.code)
+  ) then
+    raise exception 'Eligible published Twaat is missing a matching referral audit record';
+  end if;
+  if exists (
+    select 1 from public.twaater_referral_publications p
+    where not exists (select 1 from public.referral_codes c where c.code=p.referral_code)
+  ) then
+    raise exception 'Audit contains unknown referral codes';
+  end if;
+  if exists (
+    select 1
+    from public.twaater_referral_publications p
+    join public.twaats t on t.id = p.twaat_id
+    where upper((regexp_match(
+      split_part(coalesce((regexp_match(t.body, 'https://rockmundo[.]uk/auth[?][^[:space:]]+'))[1], ''), '?', 2),
+      '(^|&)ref=([a-zA-Z0-9_-]+)(&|$)'
+    ))[2]) is distinct from p.referral_code
+  ) then
+    raise exception 'Audit contains a stale or malformed referral link';
+  end if;
+end;
+$$;
+
+-- URL parsing regressions: only the canonical RockMundo auth referral URL counts.
+do $$
+declare
+  sample record;
+  parsed_code text;
+begin
+  for sample in
+    select * from (values
+      ('https://rockmundo.uk/auth?ref=ABC123', 'ABC123'),
+      ('Join: https://rockmundo.uk/auth?campaign=launch&ref=ABC123&creative=poster', 'ABC123'),
+      ('https://example.com/auth?ref=ABC123', null::text),
+      ('https://rockmundo.uk/auth?campaign=launch', null::text),
+      ('https://rockmundo.uk/auth?ref=', null::text),
+      ('https://rockmundo.uk/auth?ref=ABC123!invalid', null::text),
+      ('https://rockmundo.uk/auth?ref=ABC123.evil', null::text)
+    ) as v(body, expected_code)
+  loop
+    parsed_code := upper((regexp_match(
+      split_part(coalesce((regexp_match(sample.body, 'https://rockmundo[.]uk/auth[?][^[:space:]]+'))[1], ''), '?', 2),
+      '(^|&)ref=([a-zA-Z0-9_-]+)(&|$)'
+    ))[2]);
+    if parsed_code is distinct from sample.expected_code then
+      raise exception 'Referral URL parser mismatch for input %', sample.body;
+    end if;
+  end loop;
+end;
+$$;
