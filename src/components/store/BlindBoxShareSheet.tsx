@@ -297,12 +297,11 @@ export function BlindBoxShareSheet({ reveal, open, onOpenChange }: Props) {
               size="sm"
               className="h-7 px-2 text-[11px]"
               onClick={async () => {
-                try {
-                  await copyText(shareText);
+                if (await copyText(shareText)) {
                   flash("caption");
                   toast({ title: "Caption copied" });
-                } catch {
-                  /* noop */
+                } else {
+                  toast({ title: "Failed to copy caption", variant: "destructive" });
                 }
               }}
             >
