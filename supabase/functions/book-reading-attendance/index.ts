@@ -327,7 +327,7 @@ serve(async (req) => {
   let manualProfileId: string | undefined;
   if (payload?.manual === true) {
     if (!authorization) return new Response(JSON.stringify({ error: "Please sign in again." }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    const { data: auth, error: authError } = await supabaseClient.auth.getUser(authorization.replace(/^Bearer\\s+/i, ""));
+    const { data: auth, error: authError } = await supabaseClient.auth.getUser(authorization.replace(/^Bearer\s+/i, ""));
     if (authError || !auth.user) return new Response(JSON.stringify({ error: "Please sign in again." }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     if (!payload?.profileId) return new Response(JSON.stringify({ error: "Select an active player character before recording reading." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     const { data: profile, error: profileError } = await supabaseClient
