@@ -32,6 +32,7 @@ describe("Shareable Moments migrated entrypoint contracts", () => {
     const fmNavigation = read("src/config/fmNavigation.ts");
     const mobileFab = read("src/mobile/shell/FabMenu.tsx");
     const hubNavigation = read("src/config/hubNavigation.ts");
+    const socialHub = read("src/pages/SocialHub.tsx");
 
     expect(dashboard).toContain('to="/social/share-studio"');
     expect(dashboard).toContain(">Share</Button>");
@@ -39,6 +40,8 @@ describe("Shareable Moments migrated entrypoint contracts", () => {
     expect(mobileFab).toContain('key: "share"');
     expect(mobileFab).toContain('to: "/social/share-studio"');
     expect(hubNavigation).toContain('id: "share-studio"');
+    expect(socialHub).toContain('to="/social/share-studio"');
+    expect(socialHub).toContain('label: "Share Studio", path: "/social/share-studio"');
   });
 
   it("keeps Dashboard achievement sharing on AvatarShareStudio", () => {
