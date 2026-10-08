@@ -58,12 +58,14 @@ begin
       ('Join: https://rockmundo.uk/auth?campaign=launch&ref=ABC123&creative=poster', 'ABC123'),
       ('https://example.com/auth?ref=ABC123', null::text),
       ('https://rockmundo.uk/auth?campaign=launch', null::text),
-      ('https://rockmundo.uk/auth?ref=', null::text)
+      ('https://rockmundo.uk/auth?ref=', null::text),
+      ('https://rockmundo.uk/auth?ref=ABC123!invalid', null::text),
+      ('https://rockmundo.uk/auth?ref=ABC123.evil', null::text)
     ) as v(body, expected_code)
   loop
     parsed_code := upper((regexp_match(
       split_part(coalesce((regexp_match(sample.body, 'https://rockmundo[.]uk/auth[?][^[:space:]]+'))[1], ''), '?', 2),
-      '(^|&)ref=([a-zA-Z0-9_-]+)'
+      '(^|&)ref=([a-zA-Z0-9_-]+)(&|$)'
     ))[2]);
     if parsed_code is distinct from sample.expected_code then
       raise exception 'Referral URL parser mismatch for input %', sample.body;
