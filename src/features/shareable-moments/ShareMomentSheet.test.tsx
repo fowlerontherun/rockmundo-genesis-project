@@ -61,13 +61,17 @@ describe("ShareMomentSheet contextual prompt gate", () => {
     vi.clearAllMocks();
   });
 
-  it("shows a compact share button without opening the full sheet", () => {
+  it("shows a prominent share card without opening the full sheet", () => {
     render(
       <MemoryRouter>
         <ShareMomentSheet moment={moment} open onOpenChange={vi.fn()} />
       </MemoryRouter>,
     );
 
+    expect(screen.getByRole("region", { name: "Share this RockMundo moment" })).toBeInTheDocument();
+    expect(screen.getByText("Shareable moment")).toBeInTheDocument();
+    expect(screen.getByText("Hit a milestone")).toBeInTheDocument();
+    expect(screen.getByText("Worth sharing")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Share fame milestone" })).toBeInTheDocument();
     expect(screen.queryByText("Share your RockMundo moment")).not.toBeInTheDocument();
     expect(mocks.markSharePromptSeen).not.toHaveBeenCalled();
