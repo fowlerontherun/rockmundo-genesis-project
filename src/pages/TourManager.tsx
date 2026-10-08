@@ -77,6 +77,7 @@ import { useTourCatchUp } from "@/hooks/useTourCatchUp";
 import { useTourCancellation } from "@/hooks/useTourCancellation";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { markSharePromptSeen, shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
+import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
 
 interface Tour {
   id: string;
@@ -232,7 +233,9 @@ const TourManager = () => {
     const completed = historicTours.find((tour) => tour.status === "completed");
     if (!completed || !shouldOfferSharePrompt("tour-completed", completed.id)) return;
     markSharePromptSeen("tour-completed", completed.id);
-    setShareMoment({
+    void (async () => {
+      const destinationUrl = await referralAwareDestination(profileId, `${window.location.origin}/tour-manager?tour=${completed.id}`, "tour_share");
+      setShareMoment({
       version: 1,
       type: "tour",
       id: completed.id,
@@ -245,10 +248,11 @@ const TourManager = () => {
         ...(completed.total_revenue ? [{ label: "Revenue", value: `${completed.total_revenue.toLocaleString()}` }] : []),
       ].slice(0, 4),
       artworkUrl: completed.band?.logo_url ?? null,
-      destinationUrl: `${window.location.origin}/tour-manager?tour=${completed.id}`,
+      destinationUrl,
       referralCode: null,
       createdAt: new Date().toISOString(),
     });
+    })();
   }, [historicTours, shareMoment]);
 
   const { cancelTour } = useTourCancellation();
