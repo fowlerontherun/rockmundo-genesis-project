@@ -36,7 +36,7 @@ begin
     v_ref,
     left(lower((regexp_match(v_query, '(^|&)campaign=([a-zA-Z0-9_-]+)'))[2]), 40),
     left(lower((regexp_match(v_query, '(^|&)creative=([a-zA-Z0-9_-]+)'))[2]), 40),
-    coalesce(new.scheduled_published_at, new.created_at, now())
+    coalesce(new.scheduled_published_at, now())
   )
   on conflict(twaat_id) do update
   set referral_code = excluded.referral_code,
