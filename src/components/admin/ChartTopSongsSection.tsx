@@ -121,7 +121,9 @@ export function ChartTopSongsSection() {
         setGenerationLogs(result.logs);
       }
       
-      if (!response.ok) throw new Error(result.error || "Generation failed");
+      if (!response.ok || !result.success || typeof result.extendedAudioUrl !== "string" || !result.extendedAudioUrl.startsWith("https://")) {
+        throw new Error(result.error || "Generation did not return a valid extended audio URL");
+      }
       return result;
     },
     onSuccess: (data) => {
@@ -277,7 +279,7 @@ export function ChartTopSongsSection() {
                         variant={chartSong.rank === 1 ? "default" : "outline"}
                         size="sm"
                         onClick={() => openGenerateDialog(chartSong)}
-                        disabled={!!chartSong.song.extended_audio_url}
+                        disabled={!!chartSong.song.extended_audio_url || !chartSong.song.audio_url}
                       >
                         {chartSong.song.extended_audio_url ? (
                           "Generated"
@@ -305,7 +307,7 @@ export function ChartTopSongsSection() {
                 Generate Extended Version
               </DialogTitle>
               <DialogDescription>
-                Create a 5-minute full version of "{selectedSong?.song.title}" for streaming release
+                Generate an alternate extended rendition of "{selectedSong?.song.title}" for streaming release
               </DialogDescription>
             </DialogHeader>
             
@@ -333,9 +335,9 @@ export function ChartTopSongsSection() {
               <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 text-sm">
                 <p className="font-medium text-yellow-400 mb-1">Extended Version Features:</p>
                 <ul className="text-muted-foreground space-y-1 text-xs">
-                  <li>• 5-minute full-length version (vs 3-4 min standard)</li>
-                  <li>• 256kbps bitrate for streaming quality</li>
-                  <li>• Full lyrics included (not truncated)</li>
+                  <li>• Extended arrangement generated as a new rendition</li>
+                  <li>• Final length and quality depend on the audio provider</li>
+                  <li>• Uses the song lyrics when available</li>
                   <li>• Weekly #1 songs eligible for Rockmundo release</li>
                 </ul>
               </div>
@@ -364,7 +366,7 @@ export function ChartTopSongsSection() {
                     ))}
                     {generateExtendedMutation.isPending && (
                       <div className="py-0.5 text-yellow-400 animate-pulse">
-                        ▌ Generating extended audio (may take 2-4 minutes)...
+                        ▌ Generating extended audio (provider processing time varies)...
                       </div>
                     )}
                   </div>
@@ -387,7 +389,7 @@ export function ChartTopSongsSection() {
                   ) : (
                     <>
                       <Play className="h-4 w-4 mr-2" />
-                      Generate Extended (5 min)
+                      Generate Extended Rendition
                     </>
                   )}
                 </Button>
