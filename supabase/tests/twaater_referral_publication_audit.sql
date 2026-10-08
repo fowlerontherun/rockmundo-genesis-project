@@ -33,6 +33,11 @@ begin
     where n.nspname = 'public'
       and t.relname = 'twaats'
       and tg.tgname = 'trg_audit_twaater_referral_publication'
+      and tg.tgenabled <> 'D'
+      and not tg.tgisinternal
+      and (tg.tgtype & 1) = 1 -- ROW level
+      and (tg.tgtype & 2) = 0 -- AFTER, not BEFORE
+      and tg.tgfoid = 'public.audit_twaater_referral_publication()'::regprocedure
       and (tg.tgtype & 4) = 4 -- INSERT
       and (tg.tgtype & 16) = 16 -- UPDATE
       and not exists (
