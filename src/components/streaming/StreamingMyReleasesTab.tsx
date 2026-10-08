@@ -236,11 +236,14 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
     if (!candidate) return;
     const sourceId = `${candidate.songId}:${candidate.threshold}`;
     if (!shouldOfferSharePrompt("stream-milestone", sourceId)) return;
-    markSharePromptSeen("stream-milestone", sourceId);
     void (async () => {
       const destinationUrl = await referralAwareDestination(profileId, window.location.href, "release_share");
       setShareMoment({
       version: 1,
+      promptOnly: true,
+      promptKind: "stream-milestone",
+      promptSourceId: sourceId,
+      promptLabel: "Share streaming milestone",
       type: "release",
       id: `streams:${sourceId}`,
       eyebrow: candidate.threshold >= 1_000_000 ? "STREAMING HIT" : "STREAM MILESTONE",
