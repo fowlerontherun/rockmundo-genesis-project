@@ -60,11 +60,14 @@ export default function PlayerProfile() {
     const candidate = candidates.find(({ kind, threshold }) => shouldOfferSharePrompt(`${kind}-milestone`, `${profile.id}:${threshold}`));
     if (!candidate) return;
     const sourceId = `${profile.id}:${candidate.threshold}`;
-    markSharePromptSeen(`${candidate.kind}-milestone`, sourceId);
     void (async () => {
       const destinationUrl = await referralAwareDestination(currentUser.id, window.location.href, "achievement_share");
       setMilestoneMoment({
       version: 1,
+      promptOnly: true,
+      promptKind: `${candidate.kind}-milestone`,
+      promptSourceId: sourceId,
+      promptLabel: `Share ${candidate.kind} milestone`,
       type: "achievement",
       id: `${candidate.kind}:${sourceId}`,
       eyebrow: candidate.kind === "fans" ? "FAN MILESTONE" : "FAME MILESTONE",
