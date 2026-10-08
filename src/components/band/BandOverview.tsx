@@ -156,7 +156,7 @@ export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, band
       createdAt: new Date().toISOString(),
     });
     })();
-  }, [band, bandId, festivalAppearances.data, logoUrl, shareMoment]);
+  }, [band, bandId, festivalAppearances.data, logoUrl, shareMoment, profileId]);
 
   const handleSetHomeCity = async (cityId: string) => {
     if (!cityId || !band || band.home_city_id) return;
