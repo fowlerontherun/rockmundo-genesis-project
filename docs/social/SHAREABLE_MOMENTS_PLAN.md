@@ -84,15 +84,15 @@ Share Sheet
 
 ### 1E. Consolidate current sharing
 - [x] Migrate Dashboard achievement sharing.
-- [ ] Migrate chart milestone sharing.
-- [ ] Migrate release milestone sharing.
+- [x] Migrate chart milestone sharing.
+- [x] Migrate release milestone sharing.
 - [ ] Keep band recruitment semantics but move transport/referral utilities to shared helpers.
 - [ ] Adapt BlindBoxShareSheet to shared primitives without regressing its existing image card.
 
 ### 1F. Analytics
-- [ ] Define events: share_prompt_viewed, share_studio_opened, share_rendered, share_native_started, share_downloaded, share_link_copied.
-- [ ] Include moment type/template/format but no sensitive player data.
-- [ ] Preserve referral attribution through destination links.
+- [x] Define and persist events: share_prompt_viewed, share_studio_opened, share_rendered, share_native_started, share_downloaded, share_link_copied.
+- [x] Include constrained moment type/template/format/channel metadata; no freeform share text, URLs or player content.
+- [x] Preserve referral attribution through destination links.
 - [ ] Add admin reporting later once event volume exists.
 
 ### Phase 1 acceptance
