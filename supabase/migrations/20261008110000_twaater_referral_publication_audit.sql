@@ -23,7 +23,7 @@ begin
   end if;
   v_url := (regexp_match(new.body, 'https://rockmundo[.]uk/auth[?][^[:space:]]+'))[1];
   v_query := split_part(coalesce(v_url, ''), '?', 2);
-  v_ref := upper((regexp_match(v_query, '(^|&)ref=([a-zA-Z0-9_-]+)'))[2]);
+  v_ref := upper((regexp_match(v_query, '(^|&)ref=([a-zA-Z0-9_-]+)(&|$)'))[2]);
   if v_ref is null or length(v_ref) not between 6 and 20 or not exists (
     select 1 from public.referral_codes where code = v_ref
   ) then
@@ -59,7 +59,7 @@ insert into public.twaater_referral_publications
   (twaat_id, referral_code, campaign, creative, published_at)
 select
   t.id,
-  upper((regexp_match(split_part(m.url, '?', 2), '(^|&)ref=([a-zA-Z0-9_-]+)'))[2]),
+  upper((regexp_match(split_part(m.url, '?', 2), '(^|&)ref=([a-zA-Z0-9_-]+)(&|$)'))[2]),
   left(lower((regexp_match(split_part(m.url, '?', 2), '(^|&)campaign=([a-zA-Z0-9_-]+)'))[2]), 40),
   left(lower((regexp_match(split_part(m.url, '?', 2), '(^|&)creative=([a-zA-Z0-9_-]+)'))[2]), 40),
   coalesce(t.scheduled_published_at, t.created_at, now())
@@ -68,7 +68,7 @@ cross join lateral (
   select (regexp_match(t.body, 'https://rockmundo[.]uk/auth[?][^[:space:]]+'))[1] as url
 ) m
 join public.referral_codes rc
-  on rc.code = upper((regexp_match(split_part(m.url, '?', 2), '(^|&)ref=([a-zA-Z0-9_-]+)'))[2])
+  on rc.code = upper((regexp_match(split_part(m.url, '?', 2), '(^|&)ref=([a-zA-Z0-9_-]+)(&|$)'))[2])
 where t.scheduled_for is null
   and t.deleted_at is null
   and t.visibility = 'public'
