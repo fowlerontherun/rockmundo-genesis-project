@@ -13,7 +13,7 @@ import { referralShareOnCooldown } from "@/lib/referralShare";
 import { referralUrlWithParams } from "@/features/shareable-moments/share";
 import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
 import type { ShareMoment } from "@/features/shareable-moments/types";
-import { markSharePromptSeen, shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
+import { shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
 import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
 
 interface MyChartPositionsProps {
