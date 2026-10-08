@@ -228,8 +228,10 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
         }
       }
 
-      // Only count a published post, never opening the composer or scheduling.
-      if (!twaat.scheduled_for && shareCooldownKey) {
+      // Only count an immediately public/approved post. Scheduled posts are reconciled
+      // from the server after their real publication time; followers-only/moderated
+      // posts never consume an external referral-share cooldown.
+      if (!twaat.scheduled_for && visibility === "public" && twaat.moderation_status === "approved" && shareCooldownKey) {
         try { localStorage.setItem(shareCooldownKey, String(Date.now())); } catch { /* Storage may be disabled. */ }
       }
       resetComposer();
