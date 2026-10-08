@@ -34,7 +34,8 @@ import { minorToMajor } from "@/lib/releaseMoney";
 import { MUSIC_GENRES } from "@/data/genres";
 import { format as formatDate, formatDistanceToNow } from "date-fns";
 import { resolveActiveBandMembership } from "@/utils/activeBandMembership";
-import { buildReferralUrl, referralShareOnCooldown } from "@/lib/referralShare";
+import { referralShareOnCooldown } from "@/lib/referralShare";
+import { referralUrlWithParams } from "@/features/shareable-moments/share";
 import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
 import type { ShareMoment } from "@/features/shareable-moments/types";
 import { markSharePromptSeen, shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
@@ -673,7 +674,7 @@ function ReleaseCard({ release, financials, financeAvailable = false, labelCutPc
       toast.error("Could not prepare your referral link");
       return;
     }
-    const url = buildReferralUrl(data.code, { source: bestChartPosition != null && bestChartPosition <= 10 ? "release_chart_share" : "release_share" });
+    const url = referralUrlWithParams(data.code, { source: bestChartPosition != null && bestChartPosition <= 10 ? "release_chart_share" : "release_share" });
     setShareMoment({
       version: 1,
       type: "release",

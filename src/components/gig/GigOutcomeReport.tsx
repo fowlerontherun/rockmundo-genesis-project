@@ -22,7 +22,8 @@ import { toast } from "sonner";
 import { LessonsPanel } from "./outcome/LessonsPanel";
 import { GigCrewProgressReport } from "./GigCrewProgressReport";
 import { bestSong, contributionTotal, crowdLabel, headlineFromExperience, money, numberFormat, pct, score, songScore, weakestSong } from "./outcome/reportUtils";
-import { buildReferralUrl, referralShareOnCooldown } from "@/lib/referralShare";
+import { referralShareOnCooldown } from "@/lib/referralShare";
+import { referralUrlWithParams } from "@/features/shareable-moments/share";
 import { AvatarShareStudio } from "@/features/shareable-moments/CharacterShareStudio";
 import type { CharacterProfileShareMoment } from "@/features/shareable-moments/characterProfile";
 import { markSharePromptSeen, shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
@@ -63,7 +64,7 @@ export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCap
     void (async () => {
       const { data, error } = await (supabase as any).rpc("get_referral_dashboard", { p_profile_id: profileId });
       if (error || !data?.code) return;
-      const url = buildReferralUrl(data.code, { source: "gig_share" });
+      const url = referralUrlWithParams(data.code, { source: "gig_share" });
       setShareInvite({ url, text: `I just played ${report.gig.venue.name} in RockMundo. Start your own music career and join me.` });
     })();
   }, [isOpen, processing, profileId, report.gig.status, report.gig.venue.name]);
