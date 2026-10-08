@@ -24,7 +24,7 @@ begin
   v_url := (regexp_match(new.body, 'https://rockmundo[.]uk/auth[?][^[:space:]]+'))[1];
   v_query := split_part(coalesce(v_url, ''), '?', 2);
   v_ref := upper((regexp_match(v_query, '(^|&)ref=([a-zA-Z0-9_-]+)'))[2]);
-  if v_ref is null or length(v_ref) > 40 or not exists (
+  if v_ref is null or length(v_ref) not between 6 and 20 or not exists (
     select 1 from public.referral_codes where code = v_ref
   ) then
     delete from public.twaater_referral_publications where twaat_id = new.id;
@@ -46,6 +46,9 @@ begin
   return new;
 end;
 $$;
+
+-- The trigger is internal: prevent direct API-role invocation of its definer privileges.
+revoke all on function public.audit_twaater_referral_publication() from public, anon, authenticated;
 
 drop trigger if exists trg_audit_twaater_referral_publication on public.twaats;
 create trigger trg_audit_twaater_referral_publication
