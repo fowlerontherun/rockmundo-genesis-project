@@ -5,7 +5,7 @@ import { socialHubNavigation } from "@/config/hubNavigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarPlus, FileSignature, Gift, Loader2, Users, MessageSquare, Compass, Inbox, Newspaper, Music2 } from "lucide-react";
+import { CalendarPlus, FileSignature, Gift, Loader2, Users, MessageSquare, Compass, Inbox, Newspaper, Music2, Share2 } from "lucide-react";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useFriendships } from "@/features/relationships/hooks/useFriendships";
 import { MessagesTab } from "@/features/social-hub/components/MessagesTab";
@@ -53,6 +53,7 @@ function SocialOverview({ profileId }: { profileId: string | null | undefined })
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           <Button asChild><Link to="/social/players"><Compass className="mr-2 h-4 w-4" />Find players</Link></Button>
+          <Button asChild><Link to="/social/share-studio"><Share2 className="mr-2 h-4 w-4" />Share Studio</Link></Button>
           <Button asChild variant="outline"><Link to="/social/referrals"><Gift className="mr-2 h-4 w-4" />Invite friends</Link></Button>
           <Button asChild variant="outline"><Link to="/social/messages"><MessageSquare className="mr-2 h-4 w-4" />Open messages</Link></Button>
           <Button asChild variant="outline"><Link to="/social/friends"><Users className="mr-2 h-4 w-4" />View friends</Link></Button>
@@ -132,7 +133,7 @@ export default function SocialHub() {
       icon={Users}
       overviewPath="/social"
       navigation={socialHubNavigation}
-      actions={[{ label: "Invite friends", path: "/social/referrals", icon: Gift }, { label: "Find players", path: "/social/players", icon: Compass }, { label: "Messages", path: "/social/messages", icon: MessageSquare }]}
+      actions={[{ label: "Share Studio", path: "/social/share-studio", icon: Share2 }, { label: "Invite friends", path: "/social/referrals", icon: Gift }, { label: "Find players", path: "/social/players", icon: Compass }, { label: "Messages", path: "/social/messages", icon: MessageSquare }]}
     >
       {content}
     </HubLayout>
