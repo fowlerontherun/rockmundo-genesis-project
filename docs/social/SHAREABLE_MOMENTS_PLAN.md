@@ -81,6 +81,9 @@ Share Sheet
 - [x] Copy image, download image and copy link.
 - [x] Accessible labels/status and mobile-safe layout.
 - [x] Add Share entry points to the five initial surfaces.
+- [x] Contextual milestones use a visible button-first prompt instead of auto-opening Share Studio.
+- [x] Keep the primary `Share now` action visible with a sticky footer inside Share Studio.
+- [x] Surface Share Studio persistently from the dashboard, Social quick actions and mobile quick actions.
 
 ### 1E. Consolidate current sharing
 - [x] Migrate Dashboard achievement sharing.
