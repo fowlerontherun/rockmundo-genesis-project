@@ -59,6 +59,8 @@ export default function GigStage3D({ replay, experience, playbackState, reducedM
     queryKey: ['gig-merch-crowd-signal', experience?.gig.id],
     enabled: !!experience?.gig.id && !playerModelsSnapshot && !merchCrowdSignalSnapshot,
     queryFn: async () => {
+      // This RPC is newer than the generated Supabase client types.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase as any).rpc('get_gig_merch_crowd_signal', { p_gig_id: experience!.gig.id });
       if (error) throw error;
       const row = data?.[0];
