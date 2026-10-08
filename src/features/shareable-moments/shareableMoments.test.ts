@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SHARE_FORMATS, type ShareMoment } from './types';
-import { canShareFile, nativeShare, referralUrl, withReferral } from './share';
+import { canShareFile, copyText, nativeShare, referralUrl, withReferral } from './share';
 import { shareFilename } from './canvas';
 
 const moment: ShareMoment = { version: 1, type: 'achievement', headline: 'First Stadium!', createdAt: '2026-10-07T00:00:00Z' };
@@ -48,5 +48,33 @@ describe('mobile referral artwork sharing', () => {
   it('returns cancelled when the user dismisses native sharing', async () => {
     vi.stubGlobal('navigator', { share: vi.fn().mockRejectedValue({ name: 'AbortError' }) });
     expect(await nativeShare({ title: 'Join', text: 'Play', url: 'https://rockmundo.uk/auth?ref=RM123456' })).toBe('cancelled');
+  });
+});
+
+
+describe('desktop sharing fallbacks', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('reports native sharing as unsupported when Web Share is unavailable', async () => {
+    vi.stubGlobal('navigator', {});
+    expect(await nativeShare({
+      title: 'RockMundo',
+      text: 'My latest milestone',
+      url: 'https://rockmundo.uk/auth?ref=RM123456',
+    })).toBe('unsupported');
+  });
+
+  it('copies referral-aware fallback text to the clipboard', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    const payload = 'My latest milestone\nhttps://rockmundo.uk/auth?ref=RM123456';
+
+    expect(await copyText(payload)).toBe(true);
+    expect(writeText).toHaveBeenCalledWith(payload);
+  });
+
+  it('returns false when clipboard access is unavailable', async () => {
+    vi.stubGlobal('navigator', {});
+    expect(await copyText('fallback')).toBe(false);
   });
 });
