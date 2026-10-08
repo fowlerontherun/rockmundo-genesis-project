@@ -41,8 +41,7 @@ begin
   on conflict(twaat_id) do update
   set referral_code = excluded.referral_code,
       campaign = excluded.campaign,
-      creative = excluded.creative,
-      published_at = excluded.published_at;
+      creative = excluded.creative;
   return new;
 end;
 $$;
