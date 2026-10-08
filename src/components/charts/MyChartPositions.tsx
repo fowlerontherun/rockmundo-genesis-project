@@ -13,6 +13,7 @@ import { buildReferralUrl, referralShareOnCooldown } from "@/lib/referralShare";
 import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
 import type { ShareMoment } from "@/features/shareable-moments/types";
 import { markSharePromptSeen, shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
+import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
 
 interface MyChartPositionsProps {
   userId: string;
@@ -89,18 +90,21 @@ export function MyChartPositions({ userId }: MyChartPositionsProps) {
     const numberOne = chartPositions.find((position) => position.rank === 1);
     if (!numberOne || !shouldOfferSharePrompt("chart-number-one", numberOne.songId)) return;
     markSharePromptSeen("chart-number-one", numberOne.songId);
-    setShareMoment({
-      version: 1,
-      type: "chart",
-      id: numberOne.songId,
-      eyebrow: "NUMBER ONE",
-      headline: numberOne.songTitle,
-      subheadline: "Hit #1 in RockMundo",
-      metrics: [{ label: "Chart", value: formatChartType(numberOne.chartType) }, { label: "Position", value: "#1" }],
-      destinationUrl: window.location.href,
-      referralCode: null,
-      createdAt: new Date().toISOString(),
-    });
+    void (async () => {
+      const destinationUrl = await referralAwareDestination(profileId, window.location.href, "song_chart_share");
+      setShareMoment({
+        version: 1,
+        type: "chart",
+        id: numberOne.songId,
+        eyebrow: "NUMBER ONE",
+        headline: numberOne.songTitle,
+        subheadline: "Hit #1 in RockMundo",
+        metrics: [{ label: "Chart", value: formatChartType(numberOne.chartType) }, { label: "Position", value: "#1" }],
+        destinationUrl,
+        referralCode: null,
+        createdAt: new Date().toISOString(),
+      });
+    })();
   }, [chartPositions, shareMoment]);
 
   const getTrendIcon = (trend: string | null) => {

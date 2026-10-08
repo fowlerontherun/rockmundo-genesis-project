@@ -24,6 +24,7 @@ import { useEffect, useState } from "react";
 import { CharacterShareStudio } from "@/features/shareable-moments/CharacterShareStudio";
 import type { CharacterProfileShareMoment } from "@/features/shareable-moments/characterProfile";
 import { markSharePromptSeen, shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
+import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
 import { FAME_SHARE_THRESHOLDS, FAN_SHARE_THRESHOLDS, highestReachedThreshold, milestoneLabel } from "@/features/shareable-moments/milestones";
 
 export default function PlayerProfile() {
@@ -60,7 +61,9 @@ export default function PlayerProfile() {
     if (!candidate) return;
     const sourceId = `${profile.id}:${candidate.threshold}`;
     markSharePromptSeen(`${candidate.kind}-milestone`, sourceId);
-    setMilestoneMoment({
+    void (async () => {
+      const destinationUrl = await referralAwareDestination(currentUser.id, window.location.href, "achievement_share");
+      setMilestoneMoment({
       version: 1,
       type: "achievement",
       id: `${candidate.kind}:${sourceId}`,
@@ -68,9 +71,10 @@ export default function PlayerProfile() {
       headline: `${milestoneLabel(candidate.threshold)} ${candidate.kind === "fans" ? "Fans" : "Fame"}`,
       subheadline: profile.display_name || profile.username || "RockMundo artist",
       metrics: [{ label: candidate.kind === "fans" ? "Fans" : "Fame", value: candidate.value.toLocaleString() }, { label: "Career level", value: String(profile.level || 1) }, { label: candidate.kind === "fans" ? "Fame" : "Fans", value: (candidate.kind === "fans" ? fame : fans).toLocaleString() }],
-      destinationUrl: window.location.href,
+      destinationUrl,
       createdAt: new Date().toISOString(),
     });
+    })();
   }, [profile, currentUser, playerId, milestoneMoment]);
 
   useEffect(() => {
