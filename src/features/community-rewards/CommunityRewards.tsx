@@ -61,20 +61,29 @@ export default function CommunityRewards({ profileId, profileName }: { profileId
     }
     setLoading(true);
     setLoadError(null);
-    const [{ data, error }, recruitResult] = await Promise.all([
-      (supabase as any).rpc("get_referral_dashboard", { p_profile_id: profileId }),
-      (supabase as any).rpc("get_my_referral_recruits", { p_profile_id: profileId }),
-    ]);
-    if (error) {
+    try {
+      const [{ data, error }, recruitResult] = await Promise.all([
+        (supabase as any).rpc("get_referral_dashboard", { p_profile_id: profileId }),
+        (supabase as any).rpc("get_my_referral_recruits", { p_profile_id: profileId }),
+      ]);
+      if (error) {
+        setDashboard(null);
+        setRecruits([]);
+        setLoadError(error.message || "Referral rewards could not be loaded.");
+        toast({ title: "Unable to load rewards", description: error.message, variant: "destructive" });
+      } else {
+        setDashboard(data as Dashboard);
+        setRecruits(recruitResult.error ? [] : ((recruitResult.data ?? []) as RecruitStatus[]));
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Referral rewards could not be loaded.";
       setDashboard(null);
       setRecruits([]);
-      setLoadError(error.message || "Referral rewards could not be loaded.");
-      toast({ title: "Unable to load rewards", description: error.message, variant: "destructive" });
-    } else {
-      setDashboard(data as Dashboard);
-      setRecruits(recruitResult.error ? [] : ((recruitResult.data ?? []) as RecruitStatus[]));
+      setLoadError(message);
+      toast({ title: "Unable to load rewards", description: message, variant: "destructive" });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
