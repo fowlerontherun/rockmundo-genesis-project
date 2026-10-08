@@ -52,18 +52,32 @@ export function ShareMomentSheet({moment,open,onOpenChange}:{moment:ShareMoment|
          <p className="text-xs font-semibold uppercase tracking-wide text-primary">Shareable moment</p>
          <p className="mt-1 truncate text-sm font-semibold">{moment.headline}</p>
          {moment.subheadline&&<p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{moment.subheadline}</p>}
-         <Button
-           type="button"
-           size="sm"
-           className="mt-3 w-full shadow-md sm:w-auto"
-           onClick={()=>{
-             if(moment.promptKind&&moment.promptSourceId) markSharePromptSeen(moment.promptKind,moment.promptSourceId);
-             setPromptAccepted(true);
-           }}
-         >
-           <Share2 className="h-4 w-4"/>
-           {moment.promptLabel||"Share this moment"}
-         </Button>
+         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+           <Button
+             type="button"
+             size="sm"
+             className="w-full shadow-md sm:w-auto"
+             onClick={()=>{
+               if(moment.promptKind&&moment.promptSourceId) markSharePromptSeen(moment.promptKind,moment.promptSourceId);
+               setPromptAccepted(true);
+             }}
+           >
+             <Share2 className="h-4 w-4"/>
+             {moment.promptLabel||"Share this moment"}
+           </Button>
+           <Button
+             type="button"
+             size="sm"
+             variant="ghost"
+             className="w-full sm:w-auto"
+             onClick={()=>{
+               if(moment.promptKind&&moment.promptSourceId) markSharePromptSeen(moment.promptKind,moment.promptSourceId);
+               onOpenChange(false);
+             }}
+           >
+             Not now
+           </Button>
+         </div>
        </div>
      </div>
    </div>;

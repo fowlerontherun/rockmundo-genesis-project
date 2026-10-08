@@ -77,6 +77,21 @@ describe("ShareMomentSheet contextual prompt gate", () => {
     expect(mocks.markSharePromptSeen).not.toHaveBeenCalled();
   });
 
+  it("dismisses the contextual prompt without opening Share Studio", () => {
+    const onOpenChange = vi.fn();
+    render(
+      <MemoryRouter>
+        <ShareMomentSheet moment={moment} open onOpenChange={onOpenChange} />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Not now" }));
+
+    expect(mocks.markSharePromptSeen).toHaveBeenCalledWith("fame-milestone", "milestone-1");
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(screen.queryByText("Share your RockMundo moment")).not.toBeInTheDocument();
+  });
+
   it("opens the full share sheet only after the player clicks the contextual button", () => {
     render(
       <MemoryRouter>
