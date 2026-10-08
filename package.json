@@ -43,6 +43,7 @@
     "test:gig-experience:browser": "vitest run src/features/gig-experience/viewer/tests/browser/gigReplayBrowserGate.test.tsx && npm run test:gig-experience:e2e",
     "test:gig-experience:a11y": "playwright test tests/gig-experience/a11y.spec.ts --project=chromium",
     "test:gig-experience:release": "node scripts/gigs/run-release-gate.mjs",
+    "test:gig-consequences:db": "node --test scripts/gigs/post-consequences.test.mjs",
     "test:gig-experience:db": "bash scripts/gigs/run-db-gate.sh",
     "test:gig-experience:audio": "vitest run src/features/gig-experience/viewer/audio/audioSourceResolver.test.ts",
     "test:gig-experience:e2e": "playwright test tests/gig-experience/admin-demo.spec.ts tests/gig-experience/audio-lifecycle.spec.ts --project=chromium",
@@ -163,6 +164,7 @@
   "devDependencies": {
     "@adobe/css-tools": "^4.5.0",
     "@axe-core/playwright": "^4.10.2",
+    "@electric-sql/pglite": "0.5.8",
     "@eslint/js": "^9.32.0",
     "@playwright/test": "^1.49.1",
     "@tailwindcss/typography": "^0.5.16",

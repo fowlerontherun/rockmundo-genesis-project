@@ -11,6 +11,19 @@ const INT4_MAX_SAFE = 2_000_000_000;
 const INT4_MIN_SAFE = -2_000_000_000;
 const clampInt4 = (value: number) => Math.max(INT4_MIN_SAFE, Math.min(INT4_MAX_SAFE, Math.round(Number.isFinite(value) ? value : 0)));
 
+// Consequence failures must never enter the core reward path again. The database
+// retains retry state and the scheduled batch worker retries the same transaction.
+async function processConsequences(client: ReturnType<typeof createClient>, gigId: string) {
+  try {
+    const { data, error } = await client.rpc('process_gig_consequences', { p_gig_id: gigId });
+    if (error || data?.status === 'retry_required' || data?.status === 'partially_failed') {
+      console.warn('[complete-gig] Consequences need reconciliation:', error || data);
+    }
+  } catch (error) {
+    console.warn('[complete-gig] Consequence request failed:', error);
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -58,6 +71,8 @@ serve(async (req) => {
           .update({ status: 'completed', completed_at: outcome.completed_at || new Date().toISOString(), result_ready_at: gig.result_ready_at || outcome.completed_at || new Date().toISOString() })
           .eq('id', gigId);
       }
+
+      await processConsequences(supabaseClient, gigId);
 
       // Repair a missed crew settlement on safe, idempotent completion retries.
       const { error: crewRetryError } = await supabaseClient.rpc('_settle_completed_gig_crew', { p_gig_id: gigId });
@@ -1032,6 +1047,8 @@ serve(async (req) => {
       .eq('id', gigId);
 
     if (gigUpdateError) throw gigUpdateError;
+
+    await processConsequences(supabaseClient, gigId);
 
     // The completed-status trigger settles crew atomically with the status change.
     // Retrying this RPC also repairs a failed trigger without double-awarding XP.
