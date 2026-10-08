@@ -40,7 +40,7 @@ export function TopPlayedSongsSection() {
       if (!session) throw new Error("Not authenticated");
 
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-generate-song-audio`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-generate-extended-audio`,
         {
           method: "POST",
           headers: {
@@ -48,19 +48,17 @@ export function TopPlayedSongsSection() {
             Authorization: `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({ 
-            songId, 
-            extend: true,
-            customPrompt: "Extended version with additional verses and instrumental sections"
+            songId
           }),
         }
       );
 
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Extension failed");
+      if (!response.ok || !result.success || !result.extendedAudioUrl) throw new Error(result.error || "Extension failed");
       return result;
     },
     onSuccess: (data) => {
-      toast.success(`Extended version created for "${data.songTitle}"`);
+      toast.success(`Extended rendition created for "${data.songTitle}"`);
       queryClient.invalidateQueries({ queryKey: ["top-played-songs"] });
       setExtendingId(null);
     },
@@ -150,7 +148,7 @@ export function TopPlayedSongsSection() {
                         variant="outline"
                         size="sm"
                         onClick={() => extendMutation.mutate(song.song_id)}
-                        disabled={!song.audio_url || extendingId === song.song_id}
+                        disabled={!song.audio_url || extendMutation.isPending}
                       >
                         {extendingId === song.song_id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
