@@ -24,11 +24,16 @@ export function ShareMomentSheet({moment,open,onOpenChange}:{moment:ShareMoment|
  const canvasRef=useRef<HTMLCanvasElement|null>(null); const avatarRef=useRef<CanvasImageSource|null>(null); const artworkRef=useRef<CanvasImageSource|null>(null); const logoRef=useRef<CanvasImageSource|null>(null); const [format,setFormat]=useState<ShareFormat>("square"); const [done,setDone]=useState<string|null>(null); const [busy,setBusy]=useState<string|null>(null); const [status,setStatus]=useState(""); const [avatarVersion,setAvatarVersion]=useState(0); const [draft,setDraft]=useState<ShareMoment|null>(moment);
  useEffect(()=>{if(open&&moment)setDraft({...moment});},[sheetOpen,moment]);
  useEffect(()=>{setPromptAccepted(false);},[moment?.id,moment?.promptSourceId]);
+ useEffect(()=>{
+   if(open&&promptOnly&&moment){
+     trackShareAnalyticsEvent("share_prompt_viewed",{momentType:moment.type,channel:"prompt"});
+   }
+ },[open,promptOnly,moment?.id]);
  useEffect(()=>{let cancelled=false;avatarRef.current=null;if(!sheetOpen||!moment)return;const embedded=(moment as CharacterProfileShareMoment).avatar;
   if(!embedded){setAvatarVersion(v=>v+1);return;}
   void loadCaptureImage(embedded).then(avatar=>{if(!cancelled){avatarRef.current=avatar;setAvatarVersion(v=>v+1)}}).catch(()=>{if(!cancelled)setAvatarVersion(v=>v+1)});
   return()=>{cancelled=true};
- },[open,moment]);
+ },[sheetOpen,moment]);
  useEffect(()=>{let cancelled=false;artworkRef.current=null;if(!sheetOpen||!moment?.artworkUrl){setAvatarVersion(v=>v+1);return;}const image=new Image();image.crossOrigin="anonymous";image.onload=()=>{if(!cancelled){artworkRef.current=image;setAvatarVersion(v=>v+1)}};image.onerror=()=>{if(!cancelled)setAvatarVersion(v=>v+1)};image.src=moment.artworkUrl;return()=>{cancelled=true};},[sheetOpen,moment?.artworkUrl]);
  useEffect(()=>{let cancelled=false;const image=new Image();image.onload=()=>{if(!cancelled){logoRef.current=image;setAvatarVersion(v=>v+1)}};image.onerror=()=>{if(!cancelled)setAvatarVersion(v=>v+1)};image.src=rockmundoLogo;return()=>{cancelled=true};},[]);
  useEffect(()=>{if(sheetOpen&&draft&&canvasRef.current){renderShareMoment(canvasRef.current,draft,format,avatarRef.current,artworkRef.current,logoRef.current);trackShareAnalyticsEvent("share_rendered",{momentType:draft.type,format,template:draft.referralTemplate||draft.visualTheme||null,channel:"render"});}},[sheetOpen,draft,format,avatarVersion]);
