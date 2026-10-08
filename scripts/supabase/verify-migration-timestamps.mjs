@@ -73,6 +73,9 @@ for (const filename of migrationFiles) {
     failures.push(`${filename}: expected YYYYMMDDHHMMSS_description.sql`); continue;
   }
   const stamp = match[1];
+  const timestampFiles = filesByTimestamp.get(stamp) ?? [];
+  timestampFiles.push(filename);
+  filesByTimestamp.set(stamp, timestampFiles);
   if (documentedFestivalSequence.has(filename)) { exceptions.push(filename); continue; }
   if (filename === deployedReleaseFinanceException || inheritedFutureMigrations.has(filename)) { exceptions.push(filename); continue; }
   const todayStamp = `${today.getUTCFullYear()}${String(today.getUTCMonth() + 1).padStart(2, "0")}${String(today.getUTCDate()).padStart(2, "0")}235959`;
@@ -90,9 +93,6 @@ for (const filename of migrationFiles) {
     // are rejected. The anomaly and forward-only strategy are documented in the README.
     failures.push(`${filename}: timestamp is unreasonably beyond the current date (maximum two-day clock skew)`);
   }
-  const timestampFiles = filesByTimestamp.get(stamp) ?? [];
-  timestampFiles.push(filename);
-  filesByTimestamp.set(stamp, timestampFiles);
 }
 
 // Supabase identifies migrations by timestamp, not by the complete filename.
