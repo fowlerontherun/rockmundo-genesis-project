@@ -1,0 +1,103 @@
+name: Referral Regression Gate
+
+concurrency:
+  group: referral-regression-${{ github.event_name }}
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "src/App.tsx"
+      - "src/pages/SocialHub.tsx"
+      - "src/features/community-rewards/**"
+      - "src/features/shareable-moments/referralDestination.ts"
+      - "src/features/shareable-moments/referralDestination.test.ts"
+      - "src/lib/referralShare.ts"
+      - "supabase/migrations/*referral*"
+      - "supabase/tests/referral_profile_schema_contract.sql"
+      - ".github/workflows/referral-regression.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/App.tsx"
+      - "src/pages/SocialHub.tsx"
+      - "src/features/community-rewards/**"
+      - "src/features/shareable-moments/referralDestination.ts"
+      - "src/features/shareable-moments/referralDestination.test.ts"
+      - "src/lib/referralShare.ts"
+      - "supabase/migrations/*referral*"
+      - "supabase/tests/referral_profile_schema_contract.sql"
+      - ".github/workflows/referral-regression.yml"
+
+jobs:
+  frontend:
+    name: Referral frontend regression
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Use repository npm version
+        run: npm install --global npm@10.9.2
+      - name: Install dependencies
+        run: npm ci
+      - name: Referral focused tests
+        run: >
+          npx vitest run
+          src/features/community-rewards/CommunityRewards.test.tsx
+          src/features/shareable-moments/referralDestination.test.ts
+          src/__tests__/App.routeRender.test.tsx
+      - name: Typecheck
+        run: npm run typecheck
+
+  database:
+    name: Referral database schema contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      SUPABASE_STARTED: "false"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify Docker
+        run: |
+          command -v docker
+          docker info
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.31.8
+      - name: Print database tool versions
+        run: |
+          supabase --version
+          psql --version
+      - name: Start local Supabase stack
+        run: |
+          supabase stop --no-backup || true
+          supabase start
+          echo "SUPABASE_STARTED=true" >> "$GITHUB_ENV"
+          db_url="$(supabase status -o env | sed -n 's/^DB_URL="\(.*\)"$/\1/p')"
+          test -n "$db_url"
+          case "$db_url" in
+            postgresql://postgres:*@127.0.0.1:54322/postgres|postgres://postgres:*@127.0.0.1:54322/postgres) ;;
+            *) echo "Refusing non-disposable database URL" >&2; exit 2 ;;
+          esac
+          echo "SUPABASE_DB_URL=$db_url" >> "$GITHUB_ENV"
+      - name: Reset migrated test database
+        run: supabase db reset
+      - name: Run referral schema contract
+        run: psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/referral_profile_schema_contract.sql
+      - name: Stop local Supabase stack
+        if: ${{ always() && env.SUPABASE_STARTED == 'true' }}
+        run: supabase stop --no-backup
