@@ -253,7 +253,7 @@ const TourManager = () => {
       createdAt: new Date().toISOString(),
     });
     })();
-  }, [historicTours, shareMoment]);
+  }, [historicTours, shareMoment, profileId]);
 
   const { cancelTour } = useTourCancellation();
   const {
