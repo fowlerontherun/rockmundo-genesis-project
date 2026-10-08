@@ -17,7 +17,7 @@ declare
   v_query text;
   v_ref text;
 begin
-  if new.deleted_at is not null or new.scheduled_for is not null or new.visibility <> 'public' then
+  if new.deleted_at is not null or new.scheduled_for is not null or new.visibility <> 'public' or new.moderation_status <> 'approved' then
     delete from public.twaater_referral_publications where twaat_id = new.id;
     return new;
   end if;
@@ -51,7 +51,7 @@ revoke all on function public.audit_twaater_referral_publication() from public, 
 
 drop trigger if exists trg_audit_twaater_referral_publication on public.twaats;
 create trigger trg_audit_twaater_referral_publication
-after insert or update of body, visibility, deleted_at, scheduled_for on public.twaats
+after insert or update of body, visibility, deleted_at, scheduled_for, moderation_status on public.twaats
 for each row execute function public.audit_twaater_referral_publication();
 
 -- Backfill without updating original Twaat records or triggering game side effects.
@@ -72,5 +72,6 @@ join public.referral_codes rc
 where t.scheduled_for is null
   and t.deleted_at is null
   and t.visibility = 'public'
+  and t.moderation_status = 'approved'
   and m.url is not null
 on conflict (twaat_id) do nothing;
