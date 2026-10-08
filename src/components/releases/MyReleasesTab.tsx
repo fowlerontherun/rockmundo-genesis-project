@@ -38,6 +38,7 @@ import { buildReferralUrl, referralShareOnCooldown } from "@/lib/referralShare";
 import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
 import type { ShareMoment } from "@/features/shareable-moments/types";
 import { markSharePromptSeen, shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
+import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
 import { REVENUE_SHARE_THRESHOLDS, highestReachedThreshold, milestoneLabel } from "@/features/shareable-moments/milestones";
 
 interface MyReleasesTabProps {
@@ -316,7 +317,9 @@ export function MyReleasesTab({ userId, authUserId }: MyReleasesTabProps) {
     const sourceId = `${candidate.release.id}:${candidate.threshold}`;
     if (!shouldOfferSharePrompt("release-revenue-milestone", sourceId)) return;
     markSharePromptSeen("release-revenue-milestone", sourceId);
-    setMilestoneMoment({
+    void (async () => {
+      const destinationUrl = await referralAwareDestination(userId, window.location.href, "release_share");
+      setMilestoneMoment({
       version: 1,
       type: "release",
       id: `revenue:${sourceId}`,
@@ -329,11 +332,12 @@ export function MyReleasesTab({ userId, authUserId }: MyReleasesTabProps) {
         ...(candidate.release.release_type ? [{ label: "Format", value: String(candidate.release.release_type).toUpperCase() }] : []),
       ].slice(0, 4),
       artworkUrl: candidate.release.cover_art_url || candidate.release.cover_image_url || null,
-      destinationUrl: window.location.href,
+      destinationUrl,
       referralCode: null,
       createdAt: new Date().toISOString(),
     });
-  }, [releases, salesFinancials, milestoneMoment]);
+    })();
+  }, [releases, salesFinancials, milestoneMoment, userId]);
 
   const createReleasePoster = (release: any) => {
     const releaseDate = release.scheduled_release_date || release.release_date || release.created_at;
