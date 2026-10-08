@@ -55,7 +55,9 @@ export const SimplifiedProjectCard = ({
 
   const startFinalPolish = async () => {
     if (!profileId) throw new Error("Select an active character first.");
-    // Generated Supabase RPC types lag this migration; keep the escape hatch local.\n    // eslint-disable-next-line @typescript-eslint/no-explicit-any\n    const { data, error } = await (supabase as any).rpc(
+    // Generated Supabase RPC types lag this migration; keep the escape hatch local.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any).rpc(
       "start_songwriting_polish_session",
       { p_profile_id: profileId, p_project_id: project.id },
     );
@@ -74,7 +76,9 @@ export const SimplifiedProjectCard = ({
 
   const finishSong = async () => {
     if (!profileId) throw new Error("Select an active character first.");
-    // Generated Supabase RPC types lag this migration; keep the escape hatch local.\n    // eslint-disable-next-line @typescript-eslint/no-explicit-any\n    // Generated Supabase RPC types lag this migration; keep the escape hatch local.\n    // eslint-disable-next-line @typescript-eslint/no-explicit-any\n    const { error } = await (supabase as any).rpc(
+    // Generated Supabase RPC types lag this migration; keep the escape hatch local.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any).rpc(
       "complete_songwriting_project",
       {
         p_profile_id: profileId,
@@ -95,6 +99,8 @@ export const SimplifiedProjectCard = ({
 
   const keepSongAsIs = async () => {
     if (!profileId) throw new Error("Select an active character first.");
+    // Generated Supabase RPC types lag this migration; keep the escape hatch local.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase as any).rpc(
       "skip_songwriting_polish",
       { p_profile_id: profileId, p_project_id: project.id },
