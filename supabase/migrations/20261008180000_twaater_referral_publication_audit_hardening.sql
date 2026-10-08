@@ -8,7 +8,7 @@ declare
   v_query text;
   v_ref text;
 begin
-  if new.deleted_at is not null or new.scheduled_for is not null or new.visibility is distinct from 'public' or new.moderation_status <> 'approved' then
+  if new.deleted_at is not null or new.scheduled_for is not null or new.visibility is distinct from 'public' or new.moderation_status is distinct from 'approved' then
     delete from public.twaater_referral_publications where twaat_id = new.id;
     return new;
   end if;
