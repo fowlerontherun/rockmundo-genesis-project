@@ -16,6 +16,8 @@ export function useAvatarMerchWearables(profileId: string | null | undefined) {
     queryFn: async () => {
       const [designResult, equippedResult] = await Promise.all([
         supabase.from('tshirt_designs').select('id,band_id,design_name,product_type,artwork_url,background_color,design_data').eq('band_id', bandId!).order('created_at', { ascending: false }),
+        // Table typing is pending regeneration after the merch wearable migration.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase as any).from('player_merch_wearables').select('design_id').eq('profile_id', profileId!).maybeSingle(),
       ]);
       if (designResult.error) throw designResult.error;
@@ -40,10 +42,14 @@ export function useAvatarMerchWearables(profileId: string | null | undefined) {
     mutationFn: async (designId: string | null) => {
       if (!profileId) throw new Error('Select a character before equipping band merch.');
       if (!designId) {
+        // Table typing is pending regeneration after the merch wearable migration.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { error } = await (supabase as any).from('player_merch_wearables').delete().eq('profile_id', profileId);
         if (error) throw error;
         return null;
       }
+      // Table typing is pending regeneration after the merch wearable migration.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase as any).from('player_merch_wearables').upsert({ profile_id: profileId, design_id: designId, equipped_at: new Date().toISOString() }, { onConflict: 'profile_id' });
       if (error) throw error;
       return designId;
