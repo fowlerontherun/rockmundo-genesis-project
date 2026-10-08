@@ -88,5 +88,7 @@ describe("ShareMomentSheet contextual prompt gate", () => {
 
     expect(mocks.markSharePromptSeen).toHaveBeenCalledWith("fame-milestone", "milestone-1");
     expect(screen.getByText("Share your RockMundo moment")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Share now" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Post to Twaater" })).toBeInTheDocument();
   });
 });
