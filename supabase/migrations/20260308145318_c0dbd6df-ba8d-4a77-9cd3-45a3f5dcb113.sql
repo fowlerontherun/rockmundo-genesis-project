@@ -47,7 +47,7 @@ CREATE POLICY "Users can insert own story choices" ON public.story_choices
   FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
 
 -- Casting Calls table for talent discovery
-CREATE TABLE public.casting_calls (
+CREATE TABLE IF NOT EXISTS public.casting_calls (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   description TEXT,
@@ -63,16 +63,37 @@ CREATE TABLE public.casting_calls (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+ALTER TABLE public.casting_calls
+  ADD COLUMN IF NOT EXISTS compensation_notes TEXT;
+
 ALTER TABLE public.casting_calls ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Anyone can read casting calls" ON public.casting_calls
   FOR SELECT TO authenticated USING (true);
 
 CREATE POLICY "Creators can manage casting calls" ON public.casting_calls
-  FOR ALL TO authenticated USING (auth.uid() = created_by);
+  FOR ALL TO authenticated
+  USING (
+    auth.uid() = created_by
+    OR EXISTS (
+      SELECT 1
+      FROM public.profiles p
+      WHERE p.id = casting_calls.created_by
+        AND p.user_id = auth.uid()
+    )
+  )
+  WITH CHECK (
+    auth.uid() = created_by
+    OR EXISTS (
+      SELECT 1
+      FROM public.profiles p
+      WHERE p.id = casting_calls.created_by
+        AND p.user_id = auth.uid()
+    )
+  );
 
 -- Casting Call Roles
-CREATE TABLE public.casting_call_roles (
+CREATE TABLE IF NOT EXISTS public.casting_call_roles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   casting_call_id UUID REFERENCES public.casting_calls(id) ON DELETE CASCADE NOT NULL,
   name TEXT NOT NULL,
@@ -84,13 +105,16 @@ CREATE TABLE public.casting_call_roles (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+ALTER TABLE public.casting_call_roles
+  ADD COLUMN IF NOT EXISTS ethnicity TEXT;
+
 ALTER TABLE public.casting_call_roles ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Anyone can read casting call roles" ON public.casting_call_roles
   FOR SELECT TO authenticated USING (true);
 
 -- Casting Submissions
-CREATE TABLE public.casting_submissions (
+CREATE TABLE IF NOT EXISTS public.casting_submissions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   casting_call_id UUID REFERENCES public.casting_calls(id) ON DELETE CASCADE NOT NULL,
   casting_call_role_id UUID REFERENCES public.casting_call_roles(id) ON DELETE SET NULL,
@@ -126,7 +150,7 @@ CREATE POLICY "Reviewers can read all submissions" ON public.casting_submissions
   FOR SELECT TO authenticated USING (true);
 
 -- Casting Reviews
-CREATE TABLE public.casting_reviews (
+CREATE TABLE IF NOT EXISTS public.casting_reviews (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   submission_id UUID REFERENCES public.casting_submissions(id) ON DELETE CASCADE NOT NULL,
   reviewer_profile_id UUID,
