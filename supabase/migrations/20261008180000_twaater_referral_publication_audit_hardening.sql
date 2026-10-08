@@ -75,7 +75,12 @@ where t.scheduled_for is null
 on conflict (twaat_id) do update
 set referral_code = excluded.referral_code,
     campaign = excluded.campaign,
-    creative = excluded.creative;
+    creative = excluded.creative,
+    published_at = case
+      when public.twaater_referral_publications.referral_code is distinct from excluded.referral_code
+        then excluded.published_at
+      else public.twaater_referral_publications.published_at
+    end;
 
 -- Reconcile the audit with the currently published, approved post body.
 -- An older audit row must not survive if its referral link was removed or changed.
