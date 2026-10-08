@@ -21,7 +21,7 @@ import { useMyBandFestivalAppearances } from '@/features/festivals/appearances/u
 import { appearanceDetailHref } from '@/features/festivals/appearances/bandFestivalAppearances';
 import { ShareMomentSheet } from '@/features/shareable-moments/ShareMomentSheet';
 import type { ShareMoment } from '@/features/shareable-moments/types';
-import { markSharePromptSeen, shouldOfferSharePrompt } from '@/features/shareable-moments/prompts';
+import { shouldOfferSharePrompt } from '@/features/shareable-moments/prompts';
 import { referralAwareDestination } from '@/features/shareable-moments/referralDestination';
 import { useActiveProfile } from '@/hooks/useActiveProfile';
 import type { Database } from '@/lib/supabase-types';
