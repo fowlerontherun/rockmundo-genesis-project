@@ -48,6 +48,11 @@ export interface ShareMoment {
   referralCreative?: string | null;
   referralTemplate?: ReferralShareTemplate;
   callToAction?: string | null;
+  /** Contextual milestone prompts show a compact button before opening the full share sheet. */
+  promptOnly?: boolean;
+  promptKind?: string | null;
+  promptSourceId?: string | null;
+  promptLabel?: string | null;
   /** Existing growth throttle key; recorded only after a successful share/link-copy action. */
   shareCooldownKey?: string | null;
   createdAt: string;

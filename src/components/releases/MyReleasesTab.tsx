@@ -38,7 +38,7 @@ import { referralShareOnCooldown } from "@/lib/referralShare";
 import { referralUrlWithParams } from "@/features/shareable-moments/share";
 import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
 import type { ShareMoment } from "@/features/shareable-moments/types";
-import { markSharePromptSeen, shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
+import { shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
 import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
 import { REVENUE_SHARE_THRESHOLDS, highestReachedThreshold, milestoneLabel } from "@/features/shareable-moments/milestones";
 
@@ -317,11 +317,14 @@ export function MyReleasesTab({ userId, authUserId }: MyReleasesTabProps) {
     if (!candidate) return;
     const sourceId = `${candidate.release.id}:${candidate.threshold}`;
     if (!shouldOfferSharePrompt("release-revenue-milestone", sourceId)) return;
-    markSharePromptSeen("release-revenue-milestone", sourceId);
     void (async () => {
       const destinationUrl = await referralAwareDestination(userId, window.location.href, "release_share");
       setMilestoneMoment({
       version: 1,
+      promptOnly: true,
+      promptKind: "release-revenue-milestone",
+      promptSourceId: sourceId,
+      promptLabel: "Share release milestone",
       type: "release",
       id: `revenue:${sourceId}`,
       eyebrow: "RELEASE MILESTONE",

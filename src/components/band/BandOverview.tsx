@@ -21,7 +21,7 @@ import { useMyBandFestivalAppearances } from '@/features/festivals/appearances/u
 import { appearanceDetailHref } from '@/features/festivals/appearances/bandFestivalAppearances';
 import { ShareMomentSheet } from '@/features/shareable-moments/ShareMomentSheet';
 import type { ShareMoment } from '@/features/shareable-moments/types';
-import { markSharePromptSeen, shouldOfferSharePrompt } from '@/features/shareable-moments/prompts';
+import { shouldOfferSharePrompt } from '@/features/shareable-moments/prompts';
 import { referralAwareDestination } from '@/features/shareable-moments/referralDestination';
 import { useActiveProfile } from '@/hooks/useActiveProfile';
 import type { Database } from '@/lib/supabase-types';
@@ -134,11 +134,14 @@ export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, band
       appearance.billingPosition.toLowerCase() === "headliner"
     );
     if (!headliner || !shouldOfferSharePrompt("festival-headliner", headliner.bookingId)) return;
-    markSharePromptSeen("festival-headliner", headliner.bookingId);
     void (async () => {
       const destinationUrl = await referralAwareDestination(profileId, `${window.location.origin}${appearanceDetailHref(headliner)}`, "festival_share");
       setShareMoment({
       version: 1,
+      promptOnly: true,
+      promptKind: "festival-headliner",
+      promptSourceId: headliner.bookingId,
+      promptLabel: "Share headliner slot",
       type: "festival",
       id: headliner.bookingId,
       eyebrow: "FESTIVAL HEADLINER",

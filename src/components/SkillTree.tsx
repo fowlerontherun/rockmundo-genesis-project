@@ -30,7 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
 import type { ShareMoment } from "@/features/shareable-moments/types";
-import { markSharePromptSeen, shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
+import { shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
 import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
@@ -444,11 +444,14 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
     if (!mastered) return;
     const skill = skills.find((candidate) => candidate.slug === mastered.skill_slug);
     if (!skill || !shouldOfferSharePrompt("skill-mastered", `${profile.id}:${skill.slug}`)) return;
-    markSharePromptSeen("skill-mastered", `${profile.id}:${skill.slug}`);
     void (async () => {
       const destinationUrl = await referralAwareDestination(profile.id, window.location.href, "skill_share");
       setShareMoment({
       version: 1,
+      promptOnly: true,
+      promptKind: "skill-mastered",
+      promptSourceId: `${profile.id}:${skill.slug}`,
+      promptLabel: "Share skill mastery",
       type: "achievement",
       id: `skill:${skill.slug}`,
       eyebrow: "SKILL MASTERED",

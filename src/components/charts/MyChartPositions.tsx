@@ -13,7 +13,7 @@ import { referralShareOnCooldown } from "@/lib/referralShare";
 import { referralUrlWithParams } from "@/features/shareable-moments/share";
 import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
 import type { ShareMoment } from "@/features/shareable-moments/types";
-import { markSharePromptSeen, shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
+import { shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
 import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
 
 interface MyChartPositionsProps {
@@ -90,11 +90,14 @@ export function MyChartPositions({ userId }: MyChartPositionsProps) {
     if (!chartPositions?.length || shareMoment) return;
     const numberOne = chartPositions.find((position) => position.rank === 1);
     if (!numberOne || !shouldOfferSharePrompt("chart-number-one", numberOne.songId)) return;
-    markSharePromptSeen("chart-number-one", numberOne.songId);
     void (async () => {
       const destinationUrl = await referralAwareDestination(profileId, window.location.href, "song_chart_share");
       setShareMoment({
         version: 1,
+        promptOnly: true,
+        promptKind: "chart-number-one",
+        promptSourceId: numberOne.songId,
+        promptLabel: "Share #1 milestone",
         type: "chart",
         id: numberOne.songId,
         eyebrow: "NUMBER ONE",

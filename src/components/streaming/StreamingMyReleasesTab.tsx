@@ -9,7 +9,7 @@ import { Music, TrendingUp, DollarSign, Trash2, Play, Pause, Flame, Star, Rotate
 import { useToast } from "@/hooks/use-toast";
 import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
 import type { ShareMoment } from "@/features/shareable-moments/types";
-import { markSharePromptSeen, shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
+import { shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
 import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
 import { STREAM_SHARE_THRESHOLDS, highestReachedThreshold, milestoneLabel } from "@/features/shareable-moments/milestones";
 import { SongPlayer } from "@/components/audio/SongPlayer";
@@ -236,11 +236,14 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
     if (!candidate) return;
     const sourceId = `${candidate.songId}:${candidate.threshold}`;
     if (!shouldOfferSharePrompt("stream-milestone", sourceId)) return;
-    markSharePromptSeen("stream-milestone", sourceId);
     void (async () => {
       const destinationUrl = await referralAwareDestination(profileId, window.location.href, "release_share");
       setShareMoment({
       version: 1,
+      promptOnly: true,
+      promptKind: "stream-milestone",
+      promptSourceId: sourceId,
+      promptLabel: "Share streaming milestone",
       type: "release",
       id: `streams:${sourceId}`,
       eyebrow: candidate.threshold >= 1_000_000 ? "STREAMING HIT" : "STREAM MILESTONE",
