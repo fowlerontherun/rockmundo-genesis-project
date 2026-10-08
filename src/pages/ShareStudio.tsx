@@ -48,7 +48,7 @@ export default function ShareStudio() {
     }
     const band = primaryBand?.bands;
     if (title === "Band Promo" && band) {
-      setSelected({ version: 1, type: "band_profile", id: `promo:${band.id}`, eyebrow: "BAND PROFILE", headline: band.name, subheadline: band.genre || "RockMundo band", metrics: [{ label: "Fame", value: Number(band.fame || 0).toLocaleString() }, { label: "Fans", value: Number(band.total_fans || 0).toLocaleString() }], artworkUrl: band.logo_url || null, destinationUrl: `${window.location.origin}/band/${band.id}`, referralCode: null, visualTheme: "spotlight", visualLayout: "hero", createdAt: new Date().toISOString() });
+      setSelected({ version: 1, type: "band_profile", id: `promo:${band.id}`, eyebrow: "BAND PROFILE", headline: band.name, subheadline: band.genre || "RockMundo band", metrics: [{ label: "Fame", value: Number(band.fame || 0).toLocaleString() }, { label: "Fans", value: Number(band.weekly_fans || 0).toLocaleString() }], artworkUrl: band.logo_url || null, destinationUrl: `${window.location.origin}/band/${band.id}`, referralCode: null, visualTheme: "spotlight", visualLayout: "hero", createdAt: new Date().toISOString() });
       return true;
     }
     return false;
