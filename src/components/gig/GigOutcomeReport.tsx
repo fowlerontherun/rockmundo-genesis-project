@@ -26,7 +26,7 @@ import { referralShareOnCooldown } from "@/lib/referralShare";
 import { referralUrlWithParams } from "@/features/shareable-moments/share";
 import { AvatarShareStudio } from "@/features/shareable-moments/CharacterShareStudio";
 import type { CharacterProfileShareMoment } from "@/features/shareable-moments/characterProfile";
-import { markSharePromptSeen, shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
+import { shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
 import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
 
 interface LegacyOutcome { overall_rating: number; actual_attendance: number; attendance_percentage: number; ticket_revenue: number; merch_sales: number; total_revenue: number; crew_costs: number; equipment_wear_cost: number; net_profit: number; fame_gained: number; chemistry_impact: number; gig_song_performances?: Array<{ song_id: string; position: number; performance_score: number; song_quality_contrib: number; rehearsal_contrib: number; chemistry_contrib: number; equipment_contrib: number; crew_contrib: number; member_skill_contrib: number; crowd_response: string; song_title?: string | null; performance_item_name?: string | null; }>; equipment_quality_avg?: number | null; crew_skill_avg?: number | null; band_chemistry_level?: number | null; member_skill_avg?: number | null; merch_items_sold?: number | null; }
