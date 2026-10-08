@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
 import type { ShareMoment } from "@/features/shareable-moments/types";
 import { markSharePromptSeen, shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
+import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
 import { STREAM_SHARE_THRESHOLDS, highestReachedThreshold, milestoneLabel } from "@/features/shareable-moments/milestones";
 import { SongPlayer } from "@/components/audio/SongPlayer";
 import { PlatformIcon, getPlatformColor } from "./PlatformIcon";
@@ -236,7 +237,9 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
     const sourceId = `${candidate.songId}:${candidate.threshold}`;
     if (!shouldOfferSharePrompt("stream-milestone", sourceId)) return;
     markSharePromptSeen("stream-milestone", sourceId);
-    setShareMoment({
+    void (async () => {
+      const destinationUrl = await referralAwareDestination(profileId, window.location.href, "release_share");
+      setShareMoment({
       version: 1,
       type: "release",
       id: `streams:${sourceId}`,
@@ -248,11 +251,12 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
         { label: "Platforms", value: String(candidate.data.platforms.length) },
         ...(candidate.data.song?.genre ? [{ label: "Genre", value: candidate.data.song.genre }] : []),
       ],
-      destinationUrl: window.location.href,
+      destinationUrl,
       referralCode: null,
       createdAt: new Date().toISOString(),
     });
-  }, [groupedBySong, shareMoment]);
+    })();
+  }, [groupedBySong, shareMoment, profileId]);
 
   if (isLoading) {
     return <div className="text-center py-8">Loading streaming releases...</div>;
