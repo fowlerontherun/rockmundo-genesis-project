@@ -9,7 +9,7 @@ import type { CharacterProfileShareMoment } from './characterProfile';
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  moment: CharacterProfileShareMoment;
+  moment: CharacterProfileShareMoment | null;
 }
 
 /**
@@ -28,16 +28,16 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
   const [avatar, setAvatar] = useState<AvatarCapture | null>(null);
 
   useEffect(() => { if (!open) setAvatar(null); }, [open]);
-  useEffect(() => { setAvatar(null); }, [moment.id]);
+  useEffect(() => { setAvatar(null); }, [moment?.id]);
 
   const capture = useCallback((canvas: HTMLCanvasElement) => {
     try { setAvatar(captureAvatarCanvas(canvas)); } catch { setAvatar(null); }
   }, []);
 
-  const shareMoment = useMemo(() => ({ ...moment, avatar }), [moment, avatar]);
+  const shareMoment = useMemo(() => moment ? { ...moment, avatar } : null, [moment, avatar]);
 
   return <>
-    {open && model.query.data?.appearance && (
+    {open && moment && model.query.data?.appearance && (
       <div className="fixed -left-[10000px] top-0 h-[1000px] w-[800px] pointer-events-none" aria-hidden="true">
         <PlayerModelPreview
           appearance={model.query.data.appearance}
