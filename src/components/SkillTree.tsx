@@ -352,7 +352,8 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
     if (search) filtered = filtered.filter((skill) =>
       skill.display_name.toLowerCase().includes(search) ||
       skill.slug.toLowerCase().includes(search) ||
-      skillFamilyKey(skill.slug).replace(/_/g, " ").includes(search)
+      skillFamilyKey(skill.slug).replace(/_/g, " ").includes(search) ||
+      skillFamilyKey(skill.slug).includes(search)
     );
 
     // Apply category filter
