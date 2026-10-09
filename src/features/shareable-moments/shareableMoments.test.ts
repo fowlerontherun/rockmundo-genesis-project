@@ -16,6 +16,11 @@ describe('shareable moments foundation', () => {
     expect(withReferral('https://rockmundo.uk/song/1?x=y', 'abc')).toBe('https://rockmundo.uk/song/1?x=y&ref=ABC');
     expect(withReferral('https://rockmundo.uk/auth', 'rm123456', 'referral_hub', 'creator_october', 'short_video_hook1')).toBe('https://rockmundo.uk/auth?ref=RM123456&source=referral_hub&campaign=creator_october&creative=short_video_hook1');
   });
+
+  it('never leaks the hosting origin into referral links', () => {
+    expect(referralUrl('rm123456', 'https://preview.example-host.dev')).toBe('https://rockmundo.uk/auth?ref=RM123456');
+    expect(withReferral('https://preview.example-host.dev/song/1?x=y', 'abc')).toBe('https://rockmundo.uk/song/1?x=y&ref=ABC');
+  });
   it('creates safe branded filenames', () => {
     expect(shareFilename(moment, 'story')).toBe('rockmundo-first-stadium-story.png');
   });
