@@ -18,12 +18,17 @@ export interface AvatarCapture {
 
 /** Serializable snapshot of the canonical Avatar V1 canvas for historical share cards. */
 export function captureAvatarCanvas(canvas: HTMLCanvasElement): AvatarCapture {
+  if (!canvas.width || !canvas.height) throw new Error("Avatar canvas is empty");
   return { dataUrl: canvas.toDataURL("image/png"), width: canvas.width, height: canvas.height };
 }
 
 /** Decode a stored avatar snapshot without invoking a second avatar renderer. */
 export function loadCaptureImage(capture: AvatarCapture): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
+    if (!capture?.dataUrl?.startsWith("data:image/") || !capture.width || !capture.height) {
+      reject(new Error("Avatar snapshot is missing or invalid"));
+      return;
+    }
     const image = new Image();
     image.onload = () => resolve(image);
     image.onerror = () => reject(new Error("Avatar snapshot could not be loaded"));
