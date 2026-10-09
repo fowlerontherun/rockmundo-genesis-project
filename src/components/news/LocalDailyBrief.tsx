@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { GraduationCap, Music2, Users, Building2 } from "lucide-react";
+import { GraduationCap, Music2, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useCountryCharts } from "@/hooks/useCountryCharts";
@@ -29,13 +29,20 @@ export function LocalDailyBrief() {
     staleTime: 300_000,
     queryFn: async () => {
       const { data, error } = await (supabase as any).from("active_professor_residencies")
-        .select("id, university_id, name, skill_family, ends_at, universities(name, city)")
+        .select("id, university_id, name, skill_family, ends_at")
         .order("ends_at", { ascending: true }).limit(10);
       if (error) throw error;
-      return (data ?? []) as Array<{
+      const raw = (data ?? []) as Array<{
         id: string; university_id: string; name: string; skill_family: string;
-        ends_at: string; universities: { name: string; city: string | null } | null;
+        ends_at: string;
       }>;
+      const ids = raw.map(v => v.university_id);
+      if (!ids.length) return [];
+      const { data: schools, error: schoolError } = await supabase.from("universities")
+        .select("id, name, city").in("id", ids);
+      if (schoolError) throw schoolError;
+      const byId = new Map((schools ?? []).map(u => [u.id, u]));
+      return raw.map(v => ({ ...v, universities: byId.get(v.university_id) ?? null }));
     },
   });
   const { data: newcomers = [] } = useQuery({
