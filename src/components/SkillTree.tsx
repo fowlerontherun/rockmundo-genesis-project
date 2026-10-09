@@ -227,6 +227,7 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
   const [hideMaxed, setHideMaxed] = useState(false);
   const [groupFamilies, setGroupFamilies] = useState(true);
   const [skillSearch, setSkillSearch] = useState("");
+  const [expandedFamilies, setExpandedFamilies] = useState<string[]>([]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -686,7 +687,23 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
                 .join(", ");
               return (
                 <div key={skill.id} className="space-y-1">
-                  {showFamilyHeading && <h3 className="rounded bg-muted px-3 py-2 text-sm font-semibold capitalize">{family.replace(/_/g, " ")} <span className="font-normal text-muted-foreground">· Basic → Professional → Mastery</span></h3>}
+                  {showFamilyHeading && (
+                    <div className="rounded bg-muted px-3 py-2">
+                      <button type="button" className="flex w-full items-center justify-between gap-2 text-left text-sm font-semibold capitalize" aria-expanded={expandedFamilies.includes(family)} onClick={() => setExpandedFamilies((current) => current.includes(family) ? current.filter((key) => key !== family) : [...current, family])}>
+                        <span>{family.replace(/_/g, " ")} <span className="font-normal text-muted-foreground">· {skillFamilies.find((group) => group.key === family)?.skills.map((item) => item.tier).join(" → ")}</span></span>
+                        {expandedFamilies.includes(family) ? <ChevronUp className="h-4 w-4 shrink-0" /> : <ChevronDown className="h-4 w-4 shrink-0" />}
+                      </button>
+                      {expandedFamilies.includes(family) && (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {skillFamilies.find((group) => group.key === family)?.skills.map((item) => (
+                            <Badge key={item.slug} variant={item.level >= item.maxLevel ? "default" : "outline"} className="capitalize">
+                              {item.tier}: {item.level}/{item.maxLevel}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <CompactSkillRow
                     key={skill.id}
                     skill={skill}
@@ -732,7 +749,7 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
           <div className="grid gap-3 sm:grid-cols-2">
             {filteredSkills.map((skill) => {
               const skillProgress = getSkillProgress(skill.slug);
-              const tier = getSkillTier(skill.slug);
+              const tier = resolveSkillTier(skill.slug, (skill.tier_caps as any)?.tier);
               return (
                 <HierarchicalSkillNode
                   key={skill.id}
