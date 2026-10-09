@@ -108,3 +108,20 @@ describe("ShareMomentSheet contextual prompt gate", () => {
     expect(screen.getByRole("button", { name: "Post to Twaater" })).toBeInTheDocument();
   });
 });
+
+describe("character promo avatar readiness", () => {
+  it("prevents sharing while Avatar V1 capture is missing", () => {
+    render(
+      <MemoryRouter>
+        <ShareMomentSheet
+          moment={{ ...moment, type: "character_profile", promptOnly: false }}
+          open
+          onOpenChange={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("button", { name: "Share now" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Post to Twaater" })).toBeDisabled();
+    expect(screen.getByText(/Avatar preview unavailable/)).toBeInTheDocument();
+  });
+});
