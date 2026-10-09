@@ -129,7 +129,14 @@ export function LocalDailyBrief() {
         .eq("status", "active").gte("activated_at", since)
         .order("activated_at", { ascending: false }).limit(8);
       if (error) throw error;
-      return (data ?? []) as Array<{id:string;category_key:string;active_level:number;activated_at:string;festival_company_id:string}>;
+      const upgrades = (data ?? []) as Array<{id:string;category_key:string;active_level:number;activated_at:string;festival_company_id:string}>;
+      const ids = [...new Set(upgrades.map(row => row.festival_company_id))];
+      if (!ids.length) return [];
+      const { data: companies, error: companyError } = await (supabase as any)
+        .from("festival_companies").select("id, name").in("id", ids);
+      if (companyError) throw companyError;
+      const names = new Map<string, string>((companies ?? []).map((row: any) => [row.id, row.name]));
+      return upgrades.map(row => ({ ...row, companyName: names.get(row.festival_company_id) || "Festival company" }));
     },
   });
 
@@ -184,7 +191,7 @@ export function LocalDailyBrief() {
           <h2 className="mb-2 font-serif text-lg font-black">Festival Business Improvements</h2>
           {festivalUpgrades.map(upgrade => (
             <article key={upgrade.id} className="border-b border-border/50 py-2 text-sm last:border-0">
-              <p className="font-semibold">{upgrade.category_key.replace(/_/g, " ")} upgraded to level {upgrade.active_level}</p>
+              <p className="font-semibold">{upgrade.companyName}: {upgrade.category_key.replace(/_/g, " ")} upgraded to level {upgrade.active_level}</p>
               <p className="text-xs text-muted-foreground">Festival company improvement · {new Date(upgrade.activated_at).toLocaleDateString()}</p>
             </article>
           ))}
