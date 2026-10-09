@@ -26,7 +26,9 @@ FROM families
 ON CONFLICT (skill_family) DO NOTHING;
 
 INSERT INTO public.professor_skill_memberships (skill_slug, skill_family)
-SELECT c.slug, c.family FROM canonical c
+SELECT DISTINCT sd.slug, regexp_replace(sd.slug, '_(basic|professional|mastery)_', '_', 'g')
+FROM public.skill_definitions sd
+JOIN public.university_courses uc ON uc.skill_slug = sd.slug
 ON CONFLICT (skill_slug) DO NOTHING;
 
 ALTER TABLE public.professor_skill_memberships ENABLE ROW LEVEL SECURITY;
