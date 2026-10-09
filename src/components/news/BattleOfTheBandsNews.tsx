@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getBattleNewsDateRanges } from "./battleNewsDates";
 
 const db = supabase;
+const MAX_BATTLES_PER_LIST = 5;
 
 export function BattleOfTheBandsNews() {
   const ranges = getBattleNewsDateRanges(new Date());
@@ -20,11 +21,11 @@ export function BattleOfTheBandsNews() {
         db.from("botb_events")
           .select("id, scheduled_date, max_entries, city:cities(name, country), botb_entries(id)")
           .eq("status", "upcoming").gte("scheduled_date", ranges.todayStart)
-          .lte("scheduled_date", ranges.todayEnd).order("scheduled_date", { ascending: true }),
+          .lte("scheduled_date", ranges.todayEnd).order("scheduled_date", { ascending: true }).limit(MAX_BATTLES_PER_LIST),
         db.from("botb_events")
           .select("id, scheduled_date, winner_rating, city:cities(name, country), winner_band:bands!botb_events_winner_band_id_fkey(name), botb_entries(id)")
           .eq("status", "completed").gte("scheduled_date", ranges.yesterdayStart)
-          .lte("scheduled_date", ranges.yesterdayEnd).order("winner_rating", { ascending: false }),
+          .lte("scheduled_date", ranges.yesterdayEnd).order("winner_rating", { ascending: false }).limit(MAX_BATTLES_PER_LIST),
       ]);
       if (todayResult.error) throw todayResult.error;
       if (yesterdayResult.error) throw yesterdayResult.error;
@@ -41,6 +42,7 @@ export function BattleOfTheBandsNews() {
         <Swords className="h-5 w-5 text-primary" />Battle of the Bands
       </CardTitle></CardHeader>
       <CardContent className="space-y-4">
+        <p className="text-xs text-muted-foreground">Showing up to five upcoming battles and five recent results.</p>
         {isLoading ? <p className="text-sm text-muted-foreground">Loading battle news…</p> : <>
           {data?.upcoming.map((event) => <article key={event.id} className="rounded-lg border bg-muted/30 p-3">
             <div className="mb-2 flex items-center justify-between gap-2"><h4 className="font-semibold font-serif">Battle today in {event.city?.name}</h4><Badge>Today</Badge></div>
