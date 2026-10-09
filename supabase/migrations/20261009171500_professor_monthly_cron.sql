@@ -14,15 +14,15 @@ BEGIN
   SELECT count(*) INTO v_count FROM public.professor_residencies WHERE starts_at = v_start;
   IF v_count > 0 THEN RETURN v_count; END IF;
   WITH professors AS (
-    SELECT id, row_number() OVER (
+    SELECT p.id, row_number() OVER (
       ORDER BY (SELECT count(*) FROM public.professor_residencies r WHERE r.professor_id = p.id),
       md5(p.id::text || v_start::text), p.id
     ) rn
-    FROM public.travelling_professors p WHERE is_enabled
+    FROM public.travelling_professors p WHERE p.is_enabled
   ), universities AS (
-    SELECT id, row_number() OVER (
+    SELECT u.id, row_number() OVER (
       ORDER BY (SELECT count(*) FROM public.professor_residencies r WHERE r.university_id = u.id),
-      md5(id::text || v_start::text), id
+      md5(u.id::text || v_start::text), u.id
     ) rn
     FROM public.universities u
   )
