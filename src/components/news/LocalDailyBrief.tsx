@@ -58,6 +58,20 @@ export function LocalDailyBrief() {
     staleTime: 300_000,
   });
 
+  const { data: newCompanies = [] } = useQuery({
+    queryKey: ["news-new-companies"],
+    queryFn: async () => {
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await supabase.from("companies")
+        .select("id, name, company_type, created_at, headquarters_city:cities!headquarters_city_id(name, country)")
+        .gte("created_at", since).eq("status", "active")
+        .order("created_at", { ascending: false }).limit(8);
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+    staleTime: 300_000,
+  });
+
   const orderedVisits = [...visits].sort((a, b) => {
     const score = (v: typeof visits[number]) => {
       if (location?.city && v.universities?.city === location.city) return 2;
@@ -103,6 +117,15 @@ export function LocalDailyBrief() {
             </article>
           )) : <p className="text-sm text-muted-foreground">No visiting professors are active right now.</p>}
         <Link to="/career/education" className="mt-2 inline-block text-sm text-primary underline">Explore universities</Link>
+      </section>
+      <section className="border border-foreground/40 bg-card/60 p-4">
+        <h2 className="mb-2 font-serif text-lg font-black">New Companies · Last 24 Hours</h2>
+        {newCompanies.length ? newCompanies.map(company => (
+          <article key={company.id} className="border-b border-border/50 py-2 text-sm last:border-0">
+            <p className="font-semibold">{company.name}</p>
+            <p className="text-xs text-muted-foreground">{company.company_type.replace(/_/g, " ")} · {company.headquarters_city?.name || "Location unlisted"}{company.headquarters_city?.country ? `, ${company.headquarters_city.country}` : ""}</p>
+          </article>
+        )) : <p className="text-sm text-muted-foreground">No new companies in the last 24 hours.</p>}
       </section>
       <section className="border border-foreground/40 bg-card/60 p-4">
         <h2 className="mb-2 flex items-center gap-2 font-serif text-lg font-black"><Users className="h-5 w-5" /> New Players · Last 24 Hours</h2>
