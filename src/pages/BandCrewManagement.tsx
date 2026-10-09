@@ -257,6 +257,45 @@ const BandCrewManagement = () => {
   const bandId = primaryBand?.band_id ?? null;
   const bandName = primaryBand?.bands?.name ?? "Band";
   const bandFame = primaryBand?.bands?.fame ?? 0;
+  const isLeader = ["leader", "founder", "co-leader", "co_leader"].includes(String(primaryBand?.role ?? "").toLowerCase());
+
+  const { data: requireAllCrewForGigs = false, isLoading: loadingCrewPolicy } = useQuery<boolean>({
+    queryKey: ["band-crew-policy", bandId],
+    queryFn: async () => {
+      if (!bandId) return false;
+      const { data, error } = await (supabase as any)
+        .from("bands")
+        .select("require_all_crew_for_gigs")
+        .eq("id", bandId)
+        .single();
+      if (error) throw error;
+      return Boolean(data?.require_all_crew_for_gigs);
+    },
+    enabled: Boolean(bandId),
+  });
+
+  const crewPolicyMutation = useMutation({
+    mutationFn: async (required: boolean) => {
+      if (!bandId) throw new Error("Join a band first");
+      const { error } = await (supabase as any).rpc("set_band_require_all_crew_for_gigs", {
+        p_band_id: bandId,
+        p_required: required,
+      });
+      if (error) throw error;
+      return required;
+    },
+    onSuccess: (required) => {
+      queryClient.setQueryData(["band-crew-policy", bandId], required);
+      queryClient.invalidateQueries({ queryKey: ["gig-crew-assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["gig-live-setup"] });
+      toast.success(required ? "Automatic crew attendance enabled" : "Per-gig crew attendance restored", {
+        description: required
+          ? "All hired crew roles will be scheduled automatically for every upcoming gig."
+          : "You can choose crew attendance separately for each gig again.",
+      });
+    },
+    onError: (error: Error) => toast.error(error.message || "Could not update crew policy"),
+  });
 
   const [selectedRole, setSelectedRole] = useState<string>("all");
   const [selectedTier, setSelectedTier] = useState<string>("all");
@@ -536,6 +575,39 @@ const BandCrewManagement = () => {
                 <div className="mt-1 text-xl font-bold">{bandFame.toLocaleString()}</div>
                 <div className="text-[11px] text-muted-foreground">Unlocks up to {maxAccessibleStars}★ crew</div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Gig crew attendance</CardTitle>
+            <CardDescription>
+              Set the default once instead of selecting the same crew again for every show.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1">
+                <Label htmlFor="require-all-crew-for-gigs" className="text-sm font-medium">
+                  Require all hired crew for every gig
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {requireAllCrewForGigs
+                    ? "Every hired crew role is automatically confirmed for scheduled and newly booked gigs. New hires are added to upcoming gigs too."
+                    : "Crew attendance is currently chosen separately on each gig."}
+                </p>
+                {!isLeader && (
+                  <p className="text-xs text-muted-foreground">Only a band leader can change this setting.</p>
+                )}
+              </div>
+              <Switch
+                id="require-all-crew-for-gigs"
+                checked={requireAllCrewForGigs}
+                disabled={!isLeader || loadingCrewPolicy || crewPolicyMutation.isPending}
+                onCheckedChange={(checked) => crewPolicyMutation.mutate(checked)}
+                aria-label="Require all hired crew for every gig"
+              />
             </div>
           </CardContent>
         </Card>
