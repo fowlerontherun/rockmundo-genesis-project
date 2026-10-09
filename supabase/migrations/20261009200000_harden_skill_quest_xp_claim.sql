@@ -71,6 +71,19 @@ begin
   if v_ledger_id is null then
     raise exception 'XP ledger entry not produced; rolling back claim' using errcode='55000';
   end if;
+  -- Ensure the ledger evidence represents this exact payout, not merely a
+  -- matching claim identifier on an unrelated or malformed entry.
+  if not exists (
+    select 1 from public.xp_ledger l
+    where l.id = v_ledger_id
+      and l.profile_id = v_claim.profile_id
+      and l.event_type = 'skill_quest_reward'
+      and l.xp_delta = v_claim.reward_amount
+      and l.metadata->>'claim_id' = v_claim.id::text
+      and l.metadata->>'quest_id' = v_claim.quest_id
+  ) then
+    raise exception 'XP ledger evidence mismatch; rolling back claim' using errcode='55000';
+  end if;
   update public.skill_quest_reward_claims
   set status='granted', xp_ledger_id=v_ledger_id, granted_at=now()
   where id=v_claim.id;
