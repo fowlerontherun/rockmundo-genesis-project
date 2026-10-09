@@ -182,7 +182,7 @@ export function useUniversityAttendance(profileId: string | undefined) {
       const endHour = Math.min(Math.max(rawEnd, startHour + 1), 24);
 
       const now = new Date();
-      const hour = now.getHours();
+      const hour = now.getUTCHours();
       setIsWithinClassWindow(hour >= startHour && hour < endHour);
     };
 
