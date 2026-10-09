@@ -651,6 +651,7 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
         </div>
       )}
 
+      {/* Skill availability is authoritative; unknown skills remain read-only until loaded. */}
       {/* Skills display */}
       <ScrollArea id="skill-tree-results" className="h-[500px] rounded-md border p-3">
         {filteredSkills.length === 0 ? (
@@ -717,7 +718,7 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
                         : null
                     }
                     tier={tier}
-                    isLocked={availability?.status === "prerequisites_missing" || availability?.status === "inactive" || availability?.status === "hidden"}
+                    isLocked={!availability || availability.status === "prerequisites_missing" || availability.status === "inactive" || availability.status === "hidden"}
                     xpBalance={xpBalance}
                     educationSources={educationSources[skill.slug] || []}
                     onTrain={handleSkillTrained}
