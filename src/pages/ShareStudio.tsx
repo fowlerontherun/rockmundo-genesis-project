@@ -38,9 +38,17 @@ export default function ShareStudio() {
   const { profile } = useActiveProfile();
   const { data: primaryBand } = usePrimaryBand();
   const [gallery, setGallery] = useState<ShareMomentSnapshot[]>([]);
+  const [galleryError, setGalleryError] = useState<string | null>(null);
+  const [galleryLoading, setGalleryLoading] = useState(true);
   const [selected, setSelected] = useState<ShareMoment | null>(null);
   const [characterPromo, setCharacterPromo] = useState<CharacterProfileShareMoment | null>(null);
-  useEffect(() => { trackShareAnalyticsEvent("share_studio_opened", { channel: "studio" }); void listShareMomentSnapshots().then(setGallery).catch(() => setGallery([])); }, []);
+  const reloadGallery = async () => {
+    setGalleryLoading(true); setGalleryError(null);
+    try { setGallery(await listShareMomentSnapshots()); }
+    catch { setGalleryError("Could not load your saved shares. Please retry."); }
+    finally { setGalleryLoading(false); }
+  };
+  useEffect(() => { trackShareAnalyticsEvent("share_studio_opened", { channel: "studio" }); void reloadGallery(); }, []);
   const createIdentityPromo = (title: string) => {
     if (title === "Character Promo" && profile) {
       setCharacterPromo({ version: 1, type: "character_profile", id: `promo:${profile.id}`, eyebrow: "ROCKMUNDO ARTIST", headline: profile.display_name || profile.username || "RockMundo artist", subheadline: "Building a music career in RockMundo", metrics: [{ label: "Career level", value: String(profile.level || 1) }, { label: "Fame", value: Number(profile.fame || 0).toLocaleString() }, { label: "Fans", value: Number(profile.fans || 0).toLocaleString() }], destinationUrl: `${window.location.origin}/player/${profile.id}`, visualTheme: "spotlight", visualLayout: "hero", createdAt: new Date().toISOString() });
@@ -54,7 +62,10 @@ export default function ShareStudio() {
     return false;
   };
 
-  const removeSnapshot = async (id: string) => { await deleteShareMomentSnapshot(id); setGallery((items) => items.filter((item) => item.id !== id)); };
+  const removeSnapshot = async (id: string) => {
+    try { await deleteShareMomentSnapshot(id); setGallery((items) => items.filter((item) => item.id !== id)); }
+    catch { setGalleryError("Could not delete this saved share. Please retry."); }
+  };
   return (
     <FMPageScaffold title="Share Studio" subtitle="Turn your RockMundo career into social-ready graphics." icon={Sparkles} backTo="/social">
       <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-primary/10 via-background to-background">
@@ -99,7 +110,8 @@ export default function ShareStudio() {
       <Card>
         <CardHeader><CardTitle className="text-base">Share Gallery</CardTitle><CardDescription>Your successfully shared career moments are frozen here so they can be reopened later without changing with live game data.</CardDescription></CardHeader>
         <CardContent>
-          {gallery.length === 0 ? <p className="text-sm text-muted-foreground">Share a RockMundo card and it will appear here.</p> : (
+          {galleryError && <div role="alert" className="mb-3 text-sm text-destructive">{galleryError} <Button size="sm" variant="outline" onClick={() => void reloadGallery()}>Retry</Button></div>}
+          {galleryLoading ? <p className="text-sm text-muted-foreground">Loading saved shares…</p> : galleryError && gallery.length === 0 ? null : gallery.length === 0 ? <p className="text-sm text-muted-foreground">Share a RockMundo card and it will appear here.</p> : (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {gallery.map((item) => <div key={item.id} className="rounded-lg border p-3">
                 <div className="flex items-start justify-between gap-2"><div><Badge variant="outline" className="mb-2 capitalize">{item.moment_type.replaceAll("_", " ")}</Badge><p className="font-medium">{item.headline}</p><p className="text-xs text-muted-foreground">Last shared {new Date(item.last_shared_at).toLocaleDateString()}</p></div><Button size="icon" variant="ghost" aria-label="Remove saved share" onClick={() => void removeSnapshot(item.id)}><Trash2 className="h-4 w-4" /></Button></div>
