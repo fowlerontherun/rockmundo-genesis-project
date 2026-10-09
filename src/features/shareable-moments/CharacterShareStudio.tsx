@@ -34,11 +34,11 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
   useEffect(() => { if (!open) { setAvatar(null); setCaptureError(false); setCaptureTimedOut(false); } }, [open]);
   useEffect(() => { setAvatar(null); setCaptureError(false); setCaptureTimedOut(false); }, [moment?.id]);
   useEffect(() => {
-    if (!open || !moment || avatar || captureError) return;
+    if (!open || !moment || !model.query.data?.appearance || avatar || captureError || captureTimedOut) return;
     setCaptureTimedOut(false);
     const timer = window.setTimeout(() => setCaptureTimedOut(true), 15000);
     return () => window.clearTimeout(timer);
-  }, [open, moment?.id, avatar, captureError, captureAttempt]);
+  }, [open, moment?.id, model.query.data?.appearance, avatar, captureError, captureTimedOut, captureAttempt]);
 
   const capture = useCallback((canvas: HTMLCanvasElement) => {
     try { setAvatar(captureAvatarCanvas(canvas)); setCaptureError(false); setCaptureTimedOut(false); } catch { setAvatar(null); setCaptureError(true); }
