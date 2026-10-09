@@ -95,15 +95,15 @@ export default function TodaysNewsPage() {
         <BreakingNewsTicker />
 
         <div className="mt-6 space-y-3">
-          <NewsCategory title="Your Character & Local News" defaultOpen>
-            <div className="grid gap-4 md:grid-cols-2">
+          <NewsCategory title="Your Character & Local News" description="Your location, local highlights and recent character activity" defaultOpen>
+            <div className="grid items-start gap-4 md:grid-cols-2">
               <PersonalUpdates />
               <RandomEventsNews />
             </div>
             <LocalDailyBrief />
           </NewsCategory>
-          <NewsCategory title="Music, Charts & Releases">
-            <div className="grid gap-4 lg:grid-cols-2">
+          <NewsCategory title="Music, Charts & Releases" description="New music and chart movement">
+            <div className="grid items-start gap-4 md:grid-cols-2">
               <ChartMoversSection />
               {!!releasedSongs?.length && <NewsList title="New Releases" items={releasedSongs ?? []} itemKey={r => r.id} defaultOpen
                 renderItem={release => (
@@ -114,7 +114,7 @@ export default function TodaysNewsPage() {
                 )} />}
             </div>
           </NewsCategory>
-          <NewsCategory title="Festivals & Live Events">
+          <NewsCategory title="Festivals & Live Events" description="Line-ups, battles and live performances">
             <div className="grid gap-4 lg:grid-cols-2">
               {!!festivalBandAnnouncements?.length && <NewsList title="Festival Line-up Announcements" items={festivalBandAnnouncements ?? []} itemKey={a => a.booking_id}
                 renderItem={announcement => (
@@ -131,10 +131,12 @@ export default function TodaysNewsPage() {
                   </>
                 )} />}
             </div>
-            <BattleOfTheBandsNews />
-            <LastNightGigs />
+            <div className="grid items-start gap-4 md:grid-cols-2">
+              <BattleOfTheBandsNews />
+              <LastNightGigs />
+            </div>
           </NewsCategory>
-          <NewsCategory title="Bands & Business">
+          <NewsCategory title="Bands & Business" description="New bands and music industry announcements">
             <div className="grid gap-4 lg:grid-cols-2">
               {!!newBands?.length && <NewsList title="New Bands Formed" items={newBands ?? []} itemKey={b => b.id}
                 renderItem={band => (
@@ -149,8 +151,8 @@ export default function TodaysNewsPage() {
               <DealAnnouncements />
             </div>
           </NewsCategory>
-          <NewsCategory title="Community & Social">
-            <div className="grid gap-4 lg:grid-cols-3">
+          <NewsCategory title="Community & Social" description="Conversations and community updates">
+            <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
               <TrendingHashtags />
               <ClassifiedAds />
               <GossipColumn />
@@ -167,14 +169,14 @@ export default function TodaysNewsPage() {
   );
 }
 
-function NewsCategory({ title, children, defaultOpen = false }: {
-  title: string; children: React.ReactNode; defaultOpen?: boolean;
+function NewsCategory({ title, description, children, defaultOpen = false }: {
+  title: string; description?: string; children: React.ReactNode; defaultOpen?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   return (
     <details open={isOpen} onToggle={event => setIsOpen(event.currentTarget.open)} className="group rounded-md border border-foreground/50 bg-card/30">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 font-serif text-lg font-black [&::-webkit-details-marker]:hidden">
-        <span>{title}</span>
+        <span className="flex flex-col gap-1"><span>{title}</span>{description && <span className="font-sans text-xs font-normal text-muted-foreground">{description}</span>}</span>
         <ChevronDown aria-hidden="true" className="h-5 w-5 transition-transform group-open:rotate-180" />
       </summary>
       <div className="space-y-4 border-t border-border p-4">{children}</div>
