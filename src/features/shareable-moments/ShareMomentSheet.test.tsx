@@ -132,7 +132,7 @@ describe("character promo avatar readiness", () => {
     expect(screen.getByRole("button", { name: "Copy link" })).toBeEnabled();
   });
 
-  it("enables sharing when Avatar V1 capture is available", () => {
+  it("enables sharing when Avatar V1 capture is available", async () => {
     render(
       <MemoryRouter>
         <ShareMomentSheet
@@ -142,7 +142,7 @@ describe("character promo avatar readiness", () => {
         />
       </MemoryRouter>,
     );
-    expect(screen.getByRole("button", { name: "Share now" })).toBeEnabled();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Share now" })).toBeEnabled());
     expect(screen.getByRole("button", { name: "Post to Twaater" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Download PNG" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Copy image" })).toBeEnabled();
