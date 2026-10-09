@@ -1,8 +1,8 @@
 export const REFERRAL_SHARE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+const ROCKMUNDO_PUBLIC_ORIGIN = "https://rockmundo.uk";
 
 export function buildReferralUrl(code: string, params: Record<string, string | undefined> = {}) {
-  const origin = typeof window === "undefined" ? "https://rockmundo.uk" : window.location.origin;
-  const url = new URL("/auth", origin);
+  const url = new URL("/auth", ROCKMUNDO_PUBLIC_ORIGIN);
   url.searchParams.set("ref", code.trim().toUpperCase());
   Object.entries(params).forEach(([key, value]) => {
     if (value) url.searchParams.set(key, value);

@@ -1,10 +1,18 @@
 import type { SharePayload } from './types';
 
 const REFERRAL_PATH = '/auth';
+export const ROCKMUNDO_PUBLIC_ORIGIN = 'https://rockmundo.uk';
 
-export function referralUrl(code: string, origin?: string): string {
-  const resolvedOrigin = origin ?? (typeof window === 'undefined' ? 'https://rockmundo.uk' : window.location.origin);
-  const url = new URL(REFERRAL_PATH, resolvedOrigin);
+function canonicalRockMundoUrl(pathOrUrl: string): URL {
+  const parsed = new URL(pathOrUrl, ROCKMUNDO_PUBLIC_ORIGIN);
+  parsed.protocol = 'https:';
+  parsed.hostname = 'rockmundo.uk';
+  parsed.port = '';
+  return parsed;
+}
+
+export function referralUrl(code: string, _origin?: string): string {
+  const url = canonicalRockMundoUrl(REFERRAL_PATH);
   url.searchParams.set('ref', code.trim().toUpperCase());
   return url.toString();
 }
@@ -18,7 +26,7 @@ export function referralUrlWithParams(code: string, params: Record<string, strin
 }
 
 export function withReferral(url: string, code?: string | null, source?: string | null, campaign?: string | null, creative?: string | null): string {
-  const parsed = new URL(url, typeof window === 'undefined' ? 'https://rockmundo.uk' : window.location.origin);
+  const parsed = canonicalRockMundoUrl(url);
   if (code) parsed.searchParams.set('ref', code.trim().toUpperCase());
   if (source) parsed.searchParams.set('source', source.trim().toLowerCase());
   if (campaign) parsed.searchParams.set('campaign', campaign.trim().toLowerCase());
@@ -65,7 +73,6 @@ export function downloadBlob(blob: Blob, filename: string): void {
   // Revoke after the browser has had a chance to start the download.
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-
 
 export async function copyText(text: string): Promise<boolean> {
   if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) return false;
