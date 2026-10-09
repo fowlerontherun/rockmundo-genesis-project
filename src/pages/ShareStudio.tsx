@@ -121,7 +121,7 @@ export default function ShareStudio() {
           )}
         </CardContent>
       </Card>
-      <AvatarShareStudio moment={characterPromo} open={!!characterPromo} onOpenChange={(open) => { if (!open) setCharacterPromo(null); }} />
+      {characterPromo && <AvatarShareStudio moment={characterPromo} open={true} onOpenChange={(open) => { if (!open) setCharacterPromo(null); }} />}
       <ShareMomentSheet moment={selected} open={!!selected} onOpenChange={(open) => { if (!open) setSelected(null); }} />
     </FMPageScaffold>
   );
