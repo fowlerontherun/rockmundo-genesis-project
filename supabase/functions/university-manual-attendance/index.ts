@@ -51,5 +51,24 @@ serve(async (req) => {
     console.error("Manual university attendance failed", error);
     return new Response("Attendance could not be recorded", { status: 500, headers: cors });
   }
+  // Activity status is presentation state, not part of the XP transaction.
+  // A failure here must never cause the client to retry an already-awarded class.
+  if (award?.awarded) {
+    const now = new Date();
+    const endTime = new Date(now);
+    endTime.setUTCHours(end, 0, 0, 0);
+    const { error: activityError } = await admin.from("profile_activity_statuses").insert({
+      profile_id: enrollment.profile_id,
+      activity_type: "university_class",
+      status: "active",
+      started_at: now.toISOString(),
+      ends_at: endTime.toISOString(),
+      metadata: {
+        enrollment_id: enrollment.id,
+        xp_earned: award.xp,
+      },
+    });
+    if (activityError) console.error("University activity status update failed", activityError);
+  }
   return new Response(JSON.stringify(award), { headers: { ...cors, "Content-Type": "application/json" } });
 });
