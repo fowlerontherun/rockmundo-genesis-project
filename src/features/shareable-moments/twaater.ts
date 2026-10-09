@@ -13,6 +13,20 @@ export async function uploadShareCardToTwaater(blob: Blob, filename: string): Pr
   return supabase.storage.from("twaater-media").getPublicUrl(path).data.publicUrl;
 }
 
+
+/** Remove an unpublished share card belonging to the current user. */
+export async function removeUnpublishedShareCard(mediaUrl: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  const prefix = `/storage/v1/object/public/twaater-media/share-cards/${user.id}/`;
+  const parsed = new URL(mediaUrl);
+  if (!parsed.pathname.startsWith(prefix)) return;
+  const filename = decodeURIComponent(parsed.pathname.slice(prefix.length));
+  if (!filename || filename.includes("/")) return;
+  const { error } = await supabase.storage.from("twaater-media").remove([`share-cards/${user.id}/${filename}`]);
+  if (error) throw error;
+}
+
 export function storeTwaaterShareDraft(body: string, mediaUrl: string, shareCooldownKey?: string | null) {
   sessionStorage.setItem("rockmundoTwaaterShareDraft", JSON.stringify({ body, mediaUrl, mediaType: "image", shareCooldownKey }));
 }
