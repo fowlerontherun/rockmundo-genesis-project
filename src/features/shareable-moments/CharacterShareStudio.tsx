@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { PlayerModelPreview } from '@/features/player-model/PlayerModelPreview';
 import { useEquippedRichClothing, useEquippedStageLuthieryInstruments, usePlayerModel, usePlayerStageTattoos } from '@/features/player-model/usePlayerModel';
 import { useAvatarMerchWearables } from '@/features/player-model/useAvatarMerchWearables';
@@ -26,12 +27,14 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
   const instrument = craftedInstrument?.instrumentKind === 'electric_bass' ? 'bass_guitar' : craftedInstrument?.instrumentKind === 'electric_guitar' ? 'electric_guitar' : undefined;
   const role = instrument === 'bass_guitar' ? 'bass' : instrument === 'electric_guitar' ? 'guitar' : 'other';
   const [avatar, setAvatar] = useState<AvatarCapture | null>(null);
+  const [captureError, setCaptureError] = useState(false);
+  const [captureAttempt, setCaptureAttempt] = useState(0);
 
-  useEffect(() => { if (!open) setAvatar(null); }, [open]);
-  useEffect(() => { setAvatar(null); }, [moment?.id]);
+  useEffect(() => { if (!open) { setAvatar(null); setCaptureError(false); } }, [open]);
+  useEffect(() => { setAvatar(null); setCaptureError(false); }, [moment?.id]);
 
   const capture = useCallback((canvas: HTMLCanvasElement) => {
-    try { setAvatar(captureAvatarCanvas(canvas)); } catch { setAvatar(null); }
+    try { setAvatar(captureAvatarCanvas(canvas)); setCaptureError(false); } catch { setAvatar(null); setCaptureError(true); }
   }, []);
 
   const shareMoment = useMemo(() => moment ? { ...moment, avatar } : null, [moment, avatar]);
@@ -40,6 +43,7 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
     {open && moment && model.query.data?.appearance && (
       <div className="fixed -left-[10000px] top-0 h-[1000px] w-[800px] pointer-events-none" aria-hidden="true">
         <PlayerModelPreview
+          key={captureAttempt}
           appearance={model.query.data.appearance}
           role={role}
           instrument={instrument}
@@ -53,6 +57,7 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
         />
       </div>
     )}
+    {open && moment && captureError && <div role="alert" className="fixed bottom-20 right-4 z-[80] max-w-sm rounded-lg border bg-background p-4 shadow-lg"><p className="mb-2 text-sm">Your avatar could not be captured for sharing.</p><Button size="sm" onClick={() => { setCaptureError(false); setCaptureAttempt((value) => value + 1); }}>Retry avatar capture</Button></div>}
     <ShareMomentSheet open={open} onOpenChange={onOpenChange} moment={shareMoment} />
   </>;
 }
