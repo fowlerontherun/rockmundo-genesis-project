@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
-import { Users, Music, Calendar, Newspaper } from "lucide-react";
+import { Newspaper, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
@@ -18,6 +18,7 @@ import { PersonalUpdates } from "@/components/news/PersonalUpdates";
 import { RandomEventsNews } from "@/components/news/RandomEventsNews";
 import { BattleOfTheBandsNews } from "@/components/news/BattleOfTheBandsNews";
 import { LocalDailyBrief } from "@/components/news/LocalDailyBrief";
+import { NewsList } from "@/components/news/NewsList";
 
 export default function TodaysNewsPage() {
   const today = new Date().toISOString().split("T")[0];
@@ -32,7 +33,7 @@ export default function TodaysNewsPage() {
         .select("id, name, genre, created_at, popularity, total_fans")
         .gte("created_at", dayStart)
         .order("created_at", { ascending: false })
-        .limit(6);
+        .limit(100);
       if (error) throw error;
       return data || [];
     },
@@ -57,7 +58,7 @@ export default function TodaysNewsPage() {
   const { data: festivalBandAnnouncements } = useQuery({
     queryKey: ["news-festival-band-announcements", today],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).rpc("recent_festival_band_announcements", { p_limit: 8 });
+      const { data, error } = await (supabase as any).rpc("recent_festival_band_announcements", { p_limit: 100 });
       if (error) throw error;
       return (data ?? []) as Array<{ booking_id: string; band_name: string; festival_name: string; billing_position: string; confirmed_at: string }>;
     },
@@ -72,7 +73,7 @@ export default function TodaysNewsPage() {
         .eq("event_type", "festival")
         .gte("start_date", dayStart)
         .order("start_date", { ascending: true })
-        .limit(5);
+        .limit(100);
       if (error) throw error;
       return data || [];
     },
@@ -100,132 +101,61 @@ export default function TodaysNewsPage() {
           </aside>
         </div>
 
-        <div className="my-6 border-t-4 border-double border-foreground" />
-
-        {/* Wire section — real world activity */}
-
-
-        <div className="my-6 border-t-4 border-double border-foreground" />
-
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Main column */}
-          <div className="lg:col-span-2 space-y-5">
-            <SectionDivider title="Live Music" page="Page 2" />
-
-
-            <BattleOfTheBandsNews />
-            <LastNightGigs />
-
-
-
-            <SectionDivider title="Charts & Music" page="Page 3" />
-
-            <div className="grid gap-4 sm:grid-cols-2">
+        <div className="mt-6 space-y-3">
+          <NewsCategory title="Music, Charts & Releases" defaultOpen>
+            <div className="grid gap-4 lg:grid-cols-2">
               <ChartMoversSection />
-              <NewsPanel title="Latest Releases" icon={Music}>
-                {releasedSongs && releasedSongs.length > 0 ? (
-                  releasedSongs.map((release: any) => (
-                    <div
-                      key={release.id}
-                      className="py-1 border-b border-border/50 last:border-0"
-                    >
-                      <p className="font-semibold text-sm font-serif">
-                        {release.title}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {release.bands?.name || "Independent"} · {release.release_type}
-                        {release.release_date
-                          ? ` · ${format(new Date(release.release_date), "d MMM")}`
-                          : ""}
-                      </p>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground italic font-serif py-2">
-                    No records have hit the shelves yet.
-                  </p>
-                )}
-              </NewsPanel>
+              <NewsList title="New Releases" items={releasedSongs ?? []} itemKey={r => r.id} defaultOpen
+                renderItem={release => (
+                  <>
+                    <p className="font-semibold text-sm font-serif">{release.title}</p>
+                    <p className="text-xs text-muted-foreground">{release.bands?.name || "Independent"} · {release.release_type}</p>
+                  </>
+                )} />
             </div>
-
-            <SectionDivider title="Festivals & Your Updates" page="Page 4" />
-
-
-
-            {festivalBandAnnouncements && festivalBandAnnouncements.length > 0 ? (
-              <NewsPanel title="Festival Line-up Announcements" icon={Music}>
-                {festivalBandAnnouncements.map((announcement) => (
-                  <article key={announcement.booking_id} className="border-b border-border/50 py-2 last:border-0">
+          </NewsCategory>
+          <NewsCategory title="Festivals & Live Events" defaultOpen>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <NewsList title="Festival Line-up Announcements" items={festivalBandAnnouncements ?? []} itemKey={a => a.booking_id}
+                renderItem={announcement => (
+                  <>
                     <p className="font-semibold font-serif">{announcement.band_name} confirmed for {announcement.festival_name}</p>
                     <p className="text-xs text-muted-foreground capitalize">{announcement.billing_position.replaceAll("_", " ")} · {format(new Date(announcement.confirmed_at), "d MMM")}</p>
-                  </article>
-                ))}
-              </NewsPanel>
-            ) : null}
-
-
-
-            <SectionDivider title="New Bands & Business" page="Page 5" />
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <DealAnnouncements />
-              <NewsPanel title="New Bands Formed" icon={Users}>
-                {newBands && newBands.length > 0 ? (
-                  newBands.map((band: any) => (
-                    <div
-                      key={band.id}
-                      className="flex items-start justify-between gap-2 py-1 border-b border-border/50 last:border-0"
-                    >
-                      <div className="min-w-0">
-                        <p className="font-semibold text-sm font-serif break-words">
-                          {band.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {band.genre || "Genre TBC"}
-                          {band.total_fans
-                            ? ` · ${band.total_fans.toLocaleString()} fans`
-                            : ""}
-                        </p>
-                      </div>
-                      <Badge variant="secondary" className="text-xs flex-shrink-0">
-                        {format(new Date(band.created_at!), "d MMM")}
-                      </Badge>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground italic font-serif py-2">
-                    No bands formed today.
-                  </p>
-                )}
-              </NewsPanel>
-            </div>
-
-            {festivals && festivals.length > 0 && (
-              <NewsPanel title="Festival Diary" icon={Calendar}>
-                {festivals.map((fest: any) => (
-                  <div
-                    key={fest.id}
-                    className="py-1 border-b border-border/50 last:border-0"
-                  >
+                  </>
+                )} />
+              <NewsList title="Festival Diary" items={festivals ?? []} itemKey={f => f.id}
+                renderItem={fest => (
+                  <>
                     <p className="font-semibold text-sm font-serif">{fest.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {fest.start_date
-                        ? format(new Date(fest.start_date), "EEE d MMM")
-                        : fest.event_type}
-                    </p>
+                    <p className="text-xs text-muted-foreground">{fest.start_date ? format(new Date(fest.start_date), "EEE d MMM") : fest.event_type}</p>
+                  </>
+                )} />
+            </div>
+            <BattleOfTheBandsNews />
+            <LastNightGigs />
+          </NewsCategory>
+          <NewsCategory title="Bands & Business">
+            <div className="grid gap-4 lg:grid-cols-2">
+              <NewsList title="New Bands Formed" items={newBands ?? []} itemKey={b => b.id}
+                renderItem={band => (
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold text-sm font-serif">{band.name}</p>
+                      <p className="text-xs text-muted-foreground">{band.genre || "Genre TBC"}{band.total_fans ? ` · ${band.total_fans.toLocaleString()} fans` : ""}</p>
+                    </div>
+                    {band.created_at && <Badge variant="secondary">{format(new Date(band.created_at), "d MMM")}</Badge>}
                   </div>
-                ))}
-              </NewsPanel>
-            )}
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-5 lg:border-l lg:border-border lg:pl-5">
-            <SectionDivider title="World Desk" page="Page 6" />
-            <TrendingHashtags />
-            <ClassifiedAds />
-            <GossipColumn />
-          </div>
+                )} />
+              <DealAnnouncements />
+            </div>
+          </NewsCategory>
+          <NewsCategory title="Community & Social">
+            <div className="grid gap-4 lg:grid-cols-3">
+              <TrendingHashtags />
+              <ClassifiedAds />
+              <GossipColumn />
+            </div>
+          </NewsCategory>
         </div>
 
         <footer className="mt-8 border-t-2 border-foreground pt-2 text-center text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
@@ -237,36 +167,16 @@ export default function TodaysNewsPage() {
   );
 }
 
-function SectionDivider({ title, page }: { title: string; page?: string }) {
-  return (
-    <div className="flex items-center gap-3 pt-2">
-      <h3 className="text-[11px] font-black uppercase tracking-[0.25em] font-serif">
-        {title}
-      </h3>
-      <div className="h-px flex-1 bg-foreground/40" />
-      {page && (
-        <span className="text-[10px] font-mono text-muted-foreground">{page}</span>
-      )}
-    </div>
-  );
-}
-
-function NewsPanel({
-  title,
-  icon: Icon,
-  children,
-}: {
-  title: string;
-  icon: React.ComponentType<{ className?: string }>;
-  children: React.ReactNode;
+function NewsCategory({ title, children, defaultOpen = false }: {
+  title: string; children: React.ReactNode; defaultOpen?: boolean;
 }) {
   return (
-    <section className="border border-foreground/40 bg-card/60 p-3">
-      <h4 className="font-serif text-base font-black flex items-center gap-2 border-b border-foreground/40 pb-1 mb-2">
-        <Icon className="h-4 w-4" />
-        {title}
-      </h4>
-      <div className="space-y-1">{children}</div>
-    </section>
+    <details className="group rounded-md border border-foreground/50 bg-card/30" {...(defaultOpen ? { open: true } : {})}>
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 font-serif text-lg font-black [&::-webkit-details-marker]:hidden">
+        <span>{title}</span>
+        <ChevronDown aria-hidden="true" className="h-5 w-5 transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="space-y-4 border-t border-border p-4">{children}</div>
+    </details>
   );
 }
