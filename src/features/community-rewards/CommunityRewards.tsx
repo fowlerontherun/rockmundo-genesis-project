@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
+import { copyText, nativeShare, referralUrlWithParams } from "@/features/shareable-moments/share";
+import { trackShareAnalyticsEvent } from "@/features/shareable-moments/analytics";
 
 const DISCORD_INVITE_URL = "https://discord.gg/KB45k3XJuZ";
 const FACEBOOK_URL = import.meta.env.VITE_ROCKMUNDO_FACEBOOK_URL as string | undefined;
@@ -105,7 +107,7 @@ export default function CommunityRewards({ profileId, profileName }: { profileId
     if (status === "verified") void loadDashboard();
   }, []);
 
-  const referralUrl = useMemo(() => dashboard?.code ? `${window.location.origin}/auth?ref=${encodeURIComponent(dashboard.code)}&source=referral_hub` : "", [dashboard?.code]);
+  const referralUrl = useMemo(() => dashboard?.code ? referralUrlWithParams(dashboard.code, { source: "referral_hub" }) : "", [dashboard?.code]);
   const totalClaimable = (dashboard?.pending.signup ?? 0) + (dashboard?.pending.vip ?? 0) + (dashboard?.pending.milestones ?? 0) + (dashboard?.discord.verified && !dashboard.discord.rewarded ? 1 : 0);
   const qualified = dashboard?.stats.qualified ?? 0;
   const promoterMilestones = [5, 10, 25];
@@ -120,27 +122,26 @@ export default function CommunityRewards({ profileId, profileName }: { profileId
       toast({ title: `${label} unavailable`, description: "Please refresh and try again.", variant: "destructive" });
       return false;
     }
-    try {
-      await navigator.clipboard.writeText(value);
+    if (await copyText(value)) {
       toast({ title: `${label} copied` });
       return true;
-    } catch {
-      toast({ title: `Couldn't copy ${label.toLowerCase()}`, description: "Your browser blocked clipboard access. Use Share invite instead, or select and copy the link manually.", variant: "destructive" });
-      return false;
     }
+    toast({ title: `Couldn't copy ${label.toLowerCase()}`, description: "Your browser blocked clipboard access. Use Share invite instead, or select and copy the link manually.", variant: "destructive" });
+    return false;
   };
 
   const share = async () => {
     if (!referralUrl) return;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "Join me in RockMundo", text: shareText, url: referralUrl });
-        return;
-      } catch (error) {
-        if ((error as DOMException)?.name === "AbortError") return;
-      }
+    trackShareAnalyticsEvent("share_native_started", { momentType: "referral", channel: "native" });
+    try {
+      const result = await nativeShare({ title: "Join me in RockMundo", text: shareText, url: referralUrl });
+      if (result === "shared" || result === "cancelled") return;
+    } catch {
+      // Fall through to the clipboard fallback below.
     }
-    await copy(referralUrl, "Invite link");
+    if (await copy(referralUrl, "Invite link")) {
+      trackShareAnalyticsEvent("share_link_copied", { momentType: "referral", channel: "copy_link" });
+    }
   };
 
   const claim = async () => {
@@ -247,7 +248,7 @@ export default function CommunityRewards({ profileId, profileName }: { profileId
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Input readOnly value={referralUrl} className="text-xs" />
-              <Button variant="outline" onClick={() => copy(referralUrl, "Invite link")}><Copy className="mr-2 h-4 w-4" />Copy link</Button>
+              <Button variant="outline" onClick={async () => { if (await copy(referralUrl, "Invite link")) trackShareAnalyticsEvent("share_link_copied", { momentType: "referral", channel: "copy_link" }); }}><Copy className="mr-2 h-4 w-4" />Copy link</Button>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button onClick={share}><Share2 className="mr-2 h-4 w-4" />Share invite</Button>
