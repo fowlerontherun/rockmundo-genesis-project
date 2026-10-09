@@ -61,12 +61,12 @@ export function LocalDailyBrief() {
     staleTime: 300_000,
     queryFn: async () => {
       const { data, error } = await (supabase as any).from("active_professor_residencies")
-        .select("id, university_id, name, skill_family, ends_at")
+        .select("id, university_id, name, skill_family, starts_at, ends_at")
         .order("ends_at", { ascending: true }).limit(10);
       if (error) throw error;
       const raw = (data ?? []) as Array<{
         id: string; university_id: string; name: string; skill_family: string;
-        ends_at: string;
+        starts_at: string; ends_at: string;
       }>;
       const ids = raw.map(v => v.university_id);
       if (!ids.length) return [];
@@ -145,7 +145,7 @@ export function LocalDailyBrief() {
       if (location?.city && v.universities?.city === location.city) return 2;
       return 0;
     };
-    return score(b) - score(a);
+    return score(b) - score(a) || new Date(a.ends_at).getTime() - new Date(b.ends_at).getTime();
   });
 
   return (
@@ -179,12 +179,12 @@ export function LocalDailyBrief() {
         {visitsError ? <p className="text-sm text-muted-foreground">Professor information is temporarily unavailable.</p> :
           orderedVisits.length ? orderedVisits.map((v) => (
             <article key={v.id} className="border-b border-border/50 py-2 last:border-0">
-              <p className="font-semibold">{v.name}</p>
+              <p className="font-semibold">{v.name}{location?.city && v.universities?.city === location.city ? <span className="ml-2 text-xs font-semibold text-primary">In your city</span> : null}</p>
               <p className="text-sm">{v.skill_family.replace(/_/g, " ")} · {v.universities?.name || "University"}, {v.universities?.city || "Unknown city"}</p>
-              <p className="text-xs text-muted-foreground">+70% attendance XP · Until {new Date(v.ends_at).toLocaleDateString()}</p>
+              <p className="text-xs text-muted-foreground">+70% attendance XP · Visiting {new Date(v.starts_at).toLocaleDateString()}–{new Date(v.ends_at).toLocaleDateString()}</p>
             </article>
           )) : <p className="text-sm text-muted-foreground">No visiting professors are active right now.</p>}
-        <Link to="/career/education" className="mt-2 inline-block text-sm text-primary underline">Explore universities</Link>
+        <Link to="/career/education" className="mt-2 inline-block text-sm text-primary underline">Find professor courses at universities</Link>
       </section>
       {festivalUpgrades.length > 0 && (
         <section className="border border-foreground/40 bg-card/60 p-4">

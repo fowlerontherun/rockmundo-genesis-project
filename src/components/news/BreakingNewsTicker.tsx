@@ -34,11 +34,11 @@ export function BreakingNewsTicker() {
         ]);
 
       bands?.forEach((b: any) =>
-        items.push(`🎸 New band"${b.name}"formed (${b.genre})`),
+        items.push(`🎸 New band formed: ${b.name} (${b.genre})`),
       );
       releases?.forEach((r: any) =>
         items.push(
-          `💿"${r.title}"by ${r.bands?.name || "Unknown"} released today`,
+          `💿 "${r.title}" by ${r.bands?.name || "Unknown"} released today`,
         ),
       );
       contracts?.forEach((c: any) => {
@@ -48,16 +48,14 @@ export function BreakingNewsTicker() {
           );
       });
 
-      return items.length > 0
-        ? items
-        : ["📰 Stay tuned for today's breaking stories..."];
+      return [...new Set(items)];
     },
     staleTime: 5 * 60 * 1000,
   });
 
   if (!headlines || headlines.length === 0) return null;
 
-  const tickerText = headlines.join("●");
+  const tickerText = headlines.join(" ● ");
 
   return (
     <div className="bg-destructive/10 border border-destructive/30 rounded-md overflow-hidden mb-6">
