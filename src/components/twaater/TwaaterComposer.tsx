@@ -118,7 +118,8 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
   });
 
   useEffect(() => {
-    const stored = sessionStorage.getItem("rockmundoTwaaterShareDraft");
+    let stored: string | null = null;
+    try { stored = sessionStorage.getItem("rockmundoTwaaterShareDraft"); } catch { return; }
     if (!stored) return;
     try {
       const draft = JSON.parse(stored) as { body?: string; mediaUrl?: string; mediaType?: "image"; shareCooldownKey?: string | null };
@@ -131,19 +132,20 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
     } catch {
       // Ignore stale/corrupt Share Studio drafts.
     } finally {
-      sessionStorage.removeItem("rockmundoTwaaterShareDraft");
+      try { sessionStorage.removeItem("rockmundoTwaaterShareDraft"); } catch { /* Restricted browser storage. */ }
     }
   }, []);
 
   useEffect(() => {
-    const stored = sessionStorage.getItem("quoteTwaat");
+    let stored: string | null = null;
+    try { stored = sessionStorage.getItem("quoteTwaat"); } catch { return; }
     if (!stored) return;
     try {
       setQuotedTwaat(JSON.parse(stored));
     } catch {
       // Ignore a stale/corrupt quote draft.
     } finally {
-      sessionStorage.removeItem("quoteTwaat");
+      try { sessionStorage.removeItem("quoteTwaat"); } catch { /* Restricted browser storage. */ }
     }
   }, []);
 
