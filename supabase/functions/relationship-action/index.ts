@@ -25,8 +25,8 @@ const ACTIONS: Record<string, ActionConfig> = {
   jam: { xp: 15, skillXp: 10, skillSlug: "performance", dailyCap: 2, category: "performance", label: "Jam" },
   gig: { xp: 20, skillXp: 15, skillSlug: "performance", dailyCap: 1, category: "performance", label: "Gig collab" },
   songwriting: { xp: 20, skillXp: 15, skillSlug: "songwriting", dailyCap: 1, category: "songwriting", label: "Songwriting collab" },
-  teach: { xp: 20, skillXp: 5, dailyCap: 4, category: "education", label: "Teach session (mentor)" },
-  learn: { xp: 30, skillXp: 15, dailyCap: 4, category: "education", label: "Teach session (student)" },
+  teach: { xp: 30, skillXp: 8, dailyCap: 4, category: "education", label: "Teach session (mentor)" },
+  learn: { xp: 45, skillXp: 23, dailyCap: 4, category: "education", label: "Teach session (student)" },
 };
 
 const STREAK_BONUS = (day: number) => {
