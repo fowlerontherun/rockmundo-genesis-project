@@ -12,6 +12,7 @@ const REFERRAL_SOURCE_PATTERN = /^[a-z0-9_]{2,40}$/;
 const REFERRAL_CAMPAIGN_STORAGE_KEY = "rockmundo_referral_campaign";
 const REFERRAL_CAMPAIGN_PATTERN = /^[a-z0-9][a-z0-9_-]{1,39}$/;
 const REFERRAL_CREATIVE_STORAGE_KEY = "rockmundo_referral_creative";
+const REFERRAL_SIGNUP_USER_STORAGE_KEY = "rockmundo_referral_signup_user";
 const REFERRAL_CREATIVE_PATTERN = /^[a-z0-9][a-z0-9_-]{1,39}$/;
 
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
@@ -74,11 +75,11 @@ if (typeof window !== "undefined") {
   // the same shape; we only merge referral_code into options.data when one is pending.
   const auth = supabase.auth as any;
   const originalSignUp = auth.signUp.bind(auth);
-  auth.signUp = (credentials: any) => {
+  auth.signUp = async (credentials: any) => {
     const pendingCode = getPendingReferralCode();
     if (!pendingCode) return originalSignUp(credentials);
 
-    return originalSignUp({
+    const result = await originalSignUp({
       ...credentials,
       options: {
         ...credentials.options,
@@ -92,12 +93,25 @@ if (typeof window !== "undefined") {
         },
       },
     });
+
+    const signupUserId = result?.data?.user?.id;
+    if (!result?.error && signupUserId) {
+      localStorage.setItem(REFERRAL_SIGNUP_USER_STORAGE_KEY, signupUserId);
+    }
+    return result;
   };
 
   let bindingReferral = false;
   supabase.auth.onAuthStateChange((_event, session) => {
     const pendingCode = getPendingReferralCode();
-    if (!session?.user || !pendingCode || bindingReferral) return;
+    const pendingSignupUserId = localStorage.getItem(REFERRAL_SIGNUP_USER_STORAGE_KEY);
+    if (
+      !session?.user ||
+      !pendingCode ||
+      !pendingSignupUserId ||
+      session.user.id !== pendingSignupUserId ||
+      bindingReferral
+    ) return;
 
     // Referral links are intended for new/recent accounts. If an established
     // player follows one while logged out and then signs back in, do not bind
@@ -110,6 +124,7 @@ if (typeof window !== "undefined") {
       localStorage.removeItem(REFERRAL_CAMPAIGN_STORAGE_KEY);
       localStorage.removeItem(REFERRAL_CREATIVE_STORAGE_KEY);
       localStorage.removeItem(REFERRAL_BAND_STORAGE_KEY);
+      localStorage.removeItem(REFERRAL_SIGNUP_USER_STORAGE_KEY);
       return;
     }
 
@@ -145,6 +160,7 @@ if (typeof window !== "undefined") {
           }
           localStorage.removeItem(REFERRAL_STORAGE_KEY);
           localStorage.removeItem(REFERRAL_SOURCE_STORAGE_KEY);
+          localStorage.removeItem(REFERRAL_SIGNUP_USER_STORAGE_KEY);
         } else {
           console.warn("[REFERRAL] Unable to bind pending referral code", error.message);
         }
