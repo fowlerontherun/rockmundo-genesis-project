@@ -23,8 +23,9 @@ import { NewsList } from "@/components/news/NewsList";
 export default function TodaysNewsPage() {
   const today = new Date().toISOString().split("T")[0];
   const dayStart = `${today}T00:00:00`;
+  const nextDay = new Date(Date.parse(`${today}T00:00:00Z`) + 86400000).toISOString().slice(0, 10);
 
-  // Bands formed recently (falls back to the last week so the page is never empty)
+  // Keep this edition focused on bands formed today.
   const { data: newBands } = useQuery({
     queryKey: ["news-new-bands", today],
     queryFn: async () => {
@@ -32,6 +33,7 @@ export default function TodaysNewsPage() {
         .from("bands")
         .select("id, name, genre, created_at, popularity, total_fans")
         .gte("created_at", dayStart)
+        .lt("created_at", `${nextDay}T00:00:00`)
         .order("created_at", { ascending: false })
         .limit(100);
       if (error) throw error;
@@ -47,7 +49,7 @@ export default function TodaysNewsPage() {
         .select("id, title, release_type, release_date, bands(name)")
         .eq("release_status", "released")
         .gte("release_date", dayStart)
-        .lte("release_date", `${today}T23:59:59`)
+        .lt("release_date", `${nextDay}T00:00:00`)
         .order("release_date", { ascending: false })
         .limit(6);
       if (error) throw error;
@@ -72,6 +74,7 @@ export default function TodaysNewsPage() {
         .select("id, title, event_type, start_date, end_date")
         .eq("event_type", "festival")
         .gte("start_date", dayStart)
+        .lt("start_date", `${nextDay}T00:00:00`)
         .order("start_date", { ascending: true })
         .limit(100);
       if (error) throw error;
