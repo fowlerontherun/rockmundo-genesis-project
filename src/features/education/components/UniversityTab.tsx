@@ -106,7 +106,7 @@ function formatSkillSlug(slug: string): string {
 
 export const UniversityTab = () => {
   const { profileId } = useActiveProfile();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(() => new URLSearchParams(window.location.search).get("skill") ?? "");
   const [selectedCity, setSelectedCity] = useState<string>("current");
   const [selectedCategory, setSelectedCategory] = useState<SkillCategory>("all");
   const [viewMode, setViewMode] = useState<"universities" | "courses">("universities");
@@ -326,6 +326,7 @@ export const UniversityTab = () => {
         const searchText = [
           c.name,
           formattedSkill,
+          c.skill_slug,
           c.universities?.name,
           c.universities?.city,
         ].filter(Boolean).join(" ").toLowerCase();

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { groupSkillFamilies, resolveSkillTier, skillFamilyKey } from "@/utils/skillFamilies";
 import { toast } from "sonner";
@@ -744,10 +745,11 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
                         {availability.blockedReason.message}
                       </span>
                     )}
-                    {getSkillUnlockRoutes(skill.slug).some((route) => route.route_type === "university_course") && <span>Learn via University courses</span>}
-                    {getSkillUnlockRoutes(skill.slug).some((route) => route.route_type === "book") && <span>Learn via Books</span>}
-                    {getSkillUnlockRoutes(skill.slug).some((route) => route.route_type === "lesson") && <span>Learn via Lessons</span>}
+                    {getSkillUnlockRoutes(skill.slug).some((route) => route.route_type === "university_course") && <Link className="underline hover:text-foreground" to={`/education?tab=university&skill=${encodeURIComponent(skill.slug)}`}>Browse University courses</Link>}
+                    {getSkillUnlockRoutes(skill.slug).some((route) => route.route_type === "book") && <Link className="underline hover:text-foreground" to={`/education?tab=books&skill=${encodeURIComponent(skill.slug)}`}>Browse Books</Link>}
+                    {getSkillUnlockRoutes(skill.slug).some((route) => route.route_type === "lesson") && <Link className="underline hover:text-foreground" to={`/education?tab=mentors&skill=${encodeURIComponent(skill.slug)}`}>Find Mentors</Link>}
                     {getSkillUnlockRoutes(skill.slug).some((route) => route.route_type === "starter") && <span>Starter skill</span>}
+                    <Link className="underline hover:text-foreground" to={`/education?tab=videos&skill=${encodeURIComponent(skill.slug)}`}>Browse Videos</Link>
                     {attrSummary && <span>Attributes: {attrSummary}</span>}
                     {prereqSummary && <span>Prereqs: {prereqSummary}</span>}
                     {systems && <span>Systems: {systems}</span>}
