@@ -30,7 +30,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/components/ui/use-toast";
 import { useTwaaterRuntimeConfig } from "@/hooks/useTwaaterRuntimeConfig";
-import { reconcilePublishedTwaaterShareReceipts, registerTwaaterSharePublicationReceipt } from "@/features/shareable-moments/twaater";
+import { reconcilePublishedTwaaterShareReceipts, registerTwaaterSharePublicationReceipt, removeUnpublishedShareCard } from "@/features/shareable-moments/twaater";
 
 interface TwaaterComposerProps {
   accountId: string;
@@ -146,6 +146,13 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
       sessionStorage.removeItem("quoteTwaat");
     }
   }, []);
+
+  const discardShareCard = (url: string) => {
+    if (!url) return;
+    void removeUnpublishedShareCard(url).catch((error) => {
+      console.warn("Could not remove unpublished share card", error);
+    });
+  };
 
   const resetComposer = () => {
     setBody("");
@@ -332,10 +339,12 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
       {config.mediaUploadsEnabled && (
         <TwaatMediaUpload
           onMediaUploaded={(url, type) => {
+            if (mediaUrl && mediaUrl !== url) discardShareCard(mediaUrl);
             setMediaUrl(url);
             setMediaType(type);
           }}
           onMediaRemoved={() => {
+            discardShareCard(mediaUrl);
             setMediaUrl("");
             setMediaType(null);
           }}
