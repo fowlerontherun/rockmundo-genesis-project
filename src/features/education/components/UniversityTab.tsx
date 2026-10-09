@@ -165,6 +165,19 @@ export const UniversityTab = () => {
     enabled: !!profile?.id,
   });
 
+  const { data: professorVisits = [] } = useQuery({
+    queryKey: ["active_professor_residencies"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("active_professor_residencies")
+        .select("id,university_id,name,skill_family,ends_at");
+      if (error) throw error;
+      return (data ?? []) as { id: string; university_id: string; name: string; skill_family: string; ends_at: string }[];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const professorByUniversity = useMemo(() => new Map(professorVisits.map((visit) => [visit.university_id, visit])), [professorVisits]);
+
   const { data: universities, isLoading } = useQuery({
     queryKey: ["universities"],
     queryFn: async () => {
