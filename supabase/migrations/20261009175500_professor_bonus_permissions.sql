@@ -1,11 +1,10 @@
--- Protect the professor XP lookup from missing table grants on the
--- service-owned attendance path. This remains a read-only function.
+-- The read-only bonus lookup uses the caller's permissions.\n-- Table SELECT grants are provided in the earlier professor_api_read_grants migration.
 CREATE OR REPLACE FUNCTION public.university_visiting_professor_bonus(
   p_university_id uuid,
   p_skill_slug text,
   p_at timestamptz DEFAULT now()
 ) RETURNS numeric
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = ''
+LANGUAGE sql STABLE SECURITY INVOKER SET search_path = ''
 AS $fn$
   SELECT CASE WHEN EXISTS (
     SELECT 1 FROM public.professor_residencies r
