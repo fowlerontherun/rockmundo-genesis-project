@@ -25,7 +25,7 @@ BEGIN
   JOIN public.universities u ON u.id = r.university_id
   JOIN public.player_university_enrollments e ON e.university_id = r.university_id
     AND e.status IN ('enrolled', 'in_progress')
-  JOIN public.profiles p ON p.id = e.profile_id
+  JOIN public.profiles p ON p.id = e.profile_id AND p.user_id = e.user_id
   JOIN public.university_courses c ON c.id = e.course_id
   JOIN public.professor_skill_memberships m ON m.skill_slug = c.skill_slug
     AND m.skill_family = prof.skill_family
