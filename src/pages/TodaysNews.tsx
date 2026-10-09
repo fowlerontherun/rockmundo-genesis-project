@@ -22,8 +22,9 @@ import { LocalDailyBrief } from "@/components/news/LocalDailyBrief";
 export default function TodaysNewsPage() {
   const today = new Date().toISOString().split("T")[0];
   const dayStart = `${today}T00:00:00`;
+  const tomorrow = new Date(Date.parse(`${today}T00:00:00Z`) + 86400000).toISOString().slice(0, 10);
 
-  // Bands formed recently (falls back to the last week so the page is never empty)
+  // Only bands formed today belong in this edition.
   const { data: newBands } = useQuery({
     queryKey: ["news-new-bands", today],
     queryFn: async () => {
@@ -31,6 +32,7 @@ export default function TodaysNewsPage() {
         .from("bands")
         .select("id, name, genre, created_at, popularity, total_fans")
         .gte("created_at", dayStart)
+        .lt("created_at", `${tomorrow}T00:00:00`)
         .order("created_at", { ascending: false })
         .limit(6);
       if (error) throw error;
@@ -46,7 +48,7 @@ export default function TodaysNewsPage() {
         .select("id, title, release_type, release_date, bands(name)")
         .eq("release_status", "released")
         .gte("release_date", dayStart)
-        .lte("release_date", `${today}T23:59:59`)
+        .lt("release_date", `${tomorrow}T00:00:00`)
         .order("release_date", { ascending: false })
         .limit(6);
       if (error) throw error;
@@ -71,6 +73,7 @@ export default function TodaysNewsPage() {
         .select("id, title, event_type, start_date, end_date")
         .eq("event_type", "festival")
         .gte("start_date", dayStart)
+        .lt("start_date", `${tomorrow}T00:00:00`)
         .order("start_date", { ascending: true })
         .limit(5);
       if (error) throw error;
@@ -102,10 +105,7 @@ export default function TodaysNewsPage() {
 
         <div className="my-6 border-t-4 border-double border-foreground" />
 
-        {/* Wire section — real world activity */}
 
-
-        <div className="my-6 border-t-4 border-double border-foreground" />
 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main column */}
@@ -148,7 +148,7 @@ export default function TodaysNewsPage() {
               </NewsPanel>
             </div>
 
-            <SectionDivider title="Festivals & Your Updates" page="Page 4" />
+            <SectionDivider title="Festivals" page="Page 4" />
 
 
 
@@ -201,7 +201,7 @@ export default function TodaysNewsPage() {
             </div>
 
             {festivals && festivals.length > 0 && (
-              <NewsPanel title="Festival Diary" icon={Calendar}>
+              <NewsPanel title="Festivals Starting Today" icon={Calendar}>
                 {festivals.map((fest: any) => (
                   <div
                     key={fest.id}
