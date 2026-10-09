@@ -311,7 +311,7 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
 
   // Get set of learned skill slugs
   const learnedSlugs = useMemo(
-    () => new Set(progress.map((p) => p.skill_slug)),
+    () => new Set(progress.filter((p) => (p.current_level ?? 0) > 0).map((p) => p.skill_slug)),
     [progress],
   );
 
@@ -433,7 +433,8 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
 
   const maxedCount = useMemo(() => skills.filter((skill) => {
     const level = progress.find((p) => p.skill_slug === skill.slug)?.current_level ?? 0;
-    return level >= (Number((skill.tier_caps as any)?.max_level) || 100);
+    const cap = Number((skill.tier_caps as any)?.max_level) || 100;
+    return cap > 0 && level >= cap;
   }).length, [skills, progress]);
 
   const nextSteps = useMemo(() => skills.filter((skill) => {
