@@ -776,6 +776,8 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
                       : null
                   }
                   tier={tier}
+                  maxLevel={Number((skill.tier_caps as any)?.max_level) || 100}
+                  isLocked={!availabilityBySlug.get(skill.slug) || ["prerequisites_missing", "inactive", "hidden"].includes(availabilityBySlug.get(skill.slug)!.status)}
                   xpBalance={xpBalance}
                   onTrain={handleSkillTrained}
                 />
