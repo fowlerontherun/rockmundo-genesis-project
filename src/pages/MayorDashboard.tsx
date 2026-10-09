@@ -14,6 +14,7 @@ import { MayorBudgetTab } from "@/components/city/MayorBudgetTab";
 import { MayorProjectsTab } from "@/components/city/MayorProjectsTab";
 import { MayorUniversitiesTab } from "@/components/city/MayorUniversitiesTab";
 import { MayorPublicRelationsTab } from "@/components/city/MayorPublicRelationsTab";
+import { MayorNewsEditor } from "@/components/city/MayorNewsEditor";
 import { MayorPromiseTracker } from "@/components/city/MayorPromiseTracker";
 import { MayorOfficeOverview } from "@/components/city/MayorOfficeOverview";
 import { MayorLawPolicyEditor } from "@/components/city/MayorLawPolicyEditor";
@@ -162,7 +163,7 @@ export default function MayorDashboard() {
       {section === "promises" && <MayorPromiseTracker cityId={cityId} />}
 
       {section === "communications" && (
-        <MayorPublicRelationsTab cityId={cityId} mayorId={mayor.id ?? null} politics={politics} />
+        <div className="space-y-5"><MayorNewsEditor cityId={cityId} /><MayorPublicRelationsTab cityId={cityId} mayorId={mayor.id ?? null} politics={politics} /></div>
       )}
 
       {section === "elections" && <MayorElectionTermTab cityId={cityId} mayor={mayor} />}
