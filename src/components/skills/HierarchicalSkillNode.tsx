@@ -35,6 +35,7 @@ interface SkillNodeProps {
   tier: 'basic' | 'professional' | 'mastery';
   children?: React.ReactNode;
   isLocked?: boolean;
+  maxLevel?: number;
   xpBalance?: number;
   onTrain?: () => void;
 }
@@ -58,6 +59,7 @@ export const HierarchicalSkillNode = ({
   tier, 
   children, 
   isLocked,
+  maxLevel = 100,
   xpBalance = 0,
   onTrain
 }: SkillNodeProps) => {
@@ -73,7 +75,6 @@ export const HierarchicalSkillNode = ({
   const standardCost = getTrainingCost(level);
   const cost = xpBalance > 0 && xpBalance < standardCost ? xpBalance : standardCost;
   const canAfford = xpBalance >= cost;
-  const maxLevel = tier === 'basic' ? 10 : tier === 'professional' ? 20 : 30;
   const isMaxed = level >= maxLevel;
 
   const trainMutation = useMutation({
