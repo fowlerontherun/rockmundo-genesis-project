@@ -119,6 +119,20 @@ export function LocalDailyBrief() {
     },
   });
 
+  const { data: festivalUpgrades = [] } = useQuery({
+    queryKey: ["news-festival-upgrades"],
+    staleTime: 300_000,
+    queryFn: async () => {
+      const since = new Date(Date.now() - 7 * 86400000).toISOString();
+      const { data, error } = await (supabase as any).from("festival_company_upgrades")
+        .select("id, category_key, active_level, activated_at, festival_company_id")
+        .eq("status", "active").gte("activated_at", since)
+        .order("activated_at", { ascending: false }).limit(8);
+      if (error) throw error;
+      return (data ?? []) as Array<{id:string;category_key:string;active_level:number;activated_at:string;festival_company_id:string}>;
+    },
+  });
+
   const orderedVisits = [...visits].sort((a, b) => {
     const score = (v: typeof visits[number]) => {
       if (location?.city && v.universities?.city === location.city) return 2;
@@ -165,6 +179,17 @@ export function LocalDailyBrief() {
           )) : <p className="text-sm text-muted-foreground">No visiting professors are active right now.</p>}
         <Link to="/career/education" className="mt-2 inline-block text-sm text-primary underline">Explore universities</Link>
       </section>
+      {festivalUpgrades.length > 0 && (
+        <section className="border border-foreground/40 bg-card/60 p-4">
+          <h2 className="mb-2 font-serif text-lg font-black">Festival Business Improvements</h2>
+          {festivalUpgrades.map(upgrade => (
+            <article key={upgrade.id} className="border-b border-border/50 py-2 text-sm last:border-0">
+              <p className="font-semibold">{upgrade.category_key.replace(/_/g, " ")} upgraded to level {upgrade.active_level}</p>
+              <p className="text-xs text-muted-foreground">Festival company improvement · {new Date(upgrade.activated_at).toLocaleDateString()}</p>
+            </article>
+          ))}
+        </section>
+      )}
       {cityProjects.length > 0 && (
         <section className="border border-foreground/40 bg-card/60 p-4">
           <h2 className="mb-2 font-serif text-lg font-black">City Improvements — {location?.city}</h2>
