@@ -563,6 +563,9 @@ export const UniversityTab = () => {
                       <Card key={uni.id} className="transition-all hover:border-primary/50 hover:shadow-md">
                         <CardHeader className="pb-3">
                           <CardTitle className="text-base leading-snug">{uni.name}</CardTitle>
+                          {professorByUniversity.has(uni.id) && (
+                            <p className="text-xs font-medium text-amber-600">Visiting: {professorByUniversity.get(uni.id)?.name} · +70% {professorByUniversity.get(uni.id)?.skill_family.replace(/_/g, " ")} XP</p>
+                          )}
                           <div className="flex flex-wrap gap-2">
                             <Badge variant="secondary" className="text-xs">
                               Prestige {prestigeRating}/100 · {prestigeBand.label}
