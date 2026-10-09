@@ -7,35 +7,21 @@ import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 import { NewspaperMasthead } from "@/components/news/NewspaperMasthead";
 import { BreakingNewsTicker } from "@/components/news/BreakingNewsTicker";
-import { TopStoryHero } from "@/components/news/TopStoryHero";
 import { GossipColumn } from "@/components/news/GossipColumn";
-import { WeatherReport } from "@/components/news/WeatherReport";
 import { ClassifiedAds } from "@/components/news/ClassifiedAds";
-import { InterviewNews } from "@/components/news/InterviewNews";
 
 import { LastNightGigs } from "@/components/news/LastNightGigs";
 import { TrendingHashtags } from "@/components/news/TrendingHashtags";
 import { ChartMoversSection } from "@/components/news/ChartMoversSection";
-import { MilestoneNews } from "@/components/news/MilestoneNews";
 import { DealAnnouncements } from "@/components/news/DealAnnouncements";
 import { PersonalUpdates } from "@/components/news/PersonalUpdates";
-import { TopTracksNews } from "@/components/news/TopTracksNews";
-import { PlayerGainsNews } from "@/components/news/PlayerGainsNews";
-import { BandGainsNews } from "@/components/news/BandGainsNews";
-import { OtherBandsGigOutcomes } from "@/components/news/OtherBandsGigOutcomes";
-import { MerchSalesNews } from "@/components/news/MerchSalesNews";
 import { RandomEventsNews } from "@/components/news/RandomEventsNews";
-import { EarningsNews } from "@/components/news/EarningsNews";
-import { ElectionCoverage } from "@/components/news/ElectionCoverage";
-import { ParliamentDigest } from "@/components/news/ParliamentDigest";
-import { PartyPowerRankings } from "@/components/news/PartyPowerRankings";
 import { BattleOfTheBandsNews } from "@/components/news/BattleOfTheBandsNews";
-import { WorldWire } from "@/components/news/WorldWire";
-import { WorldAtAGlance } from "@/components/news/WorldAtAGlance";
+import { LocalDailyBrief } from "@/components/news/LocalDailyBrief";
 
 export default function TodaysNewsPage() {
   const today = new Date().toISOString().split("T")[0];
-  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+  const dayStart = `${today}T00:00:00`;
 
   // Bands formed recently (falls back to the last week so the page is never empty)
   const { data: newBands } = useQuery({
@@ -44,7 +30,7 @@ export default function TodaysNewsPage() {
       const { data, error } = await supabase
         .from("bands")
         .select("id, name, genre, created_at, popularity, total_fans")
-        .gte("created_at", weekAgo)
+        .gte("created_at", dayStart)
         .order("created_at", { ascending: false })
         .limit(6);
       if (error) throw error;
@@ -59,6 +45,7 @@ export default function TodaysNewsPage() {
         .from("releases")
         .select("id, title, release_type, release_date, bands(name)")
         .eq("release_status", "released")
+        .gte("release_date", dayStart)
         .lte("release_date", `${today}T23:59:59`)
         .order("release_date", { ascending: false })
         .limit(6);
@@ -83,7 +70,7 @@ export default function TodaysNewsPage() {
         .from("game_events")
         .select("id, title, event_type, start_date, end_date")
         .eq("event_type", "festival")
-        .gte("start_date", weekAgo)
+        .gte("start_date", dayStart)
         .order("start_date", { ascending: true })
         .limit(5);
       if (error) throw error;
@@ -105,34 +92,31 @@ export default function TodaysNewsPage() {
         {/* Front page splash */}
         <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
           <div className="space-y-5">
-            <TopStoryHero />
-            <RandomEventsNews />
+            <LocalDailyBrief />
             <PersonalUpdates />
           </div>
           <aside className="space-y-5 lg:border-l lg:border-border lg:pl-5">
-            <WorldAtAGlance />
-            <WeatherReport />
-            <GossipColumn />
+            <RandomEventsNews />
           </aside>
         </div>
 
         <div className="my-6 border-t-4 border-double border-foreground" />
 
         {/* Wire section — real world activity */}
-        <WorldWire limit={12} />
+
 
         <div className="my-6 border-t-4 border-double border-foreground" />
 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main column */}
           <div className="lg:col-span-2 space-y-5">
-            <SectionDivider title="Entertainment" page="Page 2" />
+            <SectionDivider title="Live Music" page="Page 2" />
 
-            <TopTracksNews />
+
             <BattleOfTheBandsNews />
             <LastNightGigs />
-            <OtherBandsGigOutcomes />
-            <InterviewNews />
+
+
 
             <SectionDivider title="Charts & Music" page="Page 3" />
 
@@ -164,13 +148,9 @@ export default function TodaysNewsPage() {
               </NewsPanel>
             </div>
 
-            <SectionDivider title="Your Column" page="Page 4" />
+            <SectionDivider title="Festivals & Your Updates" page="Page 4" />
 
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <PlayerGainsNews />
-              <BandGainsNews />
-              <EarningsNews />
-            </div>
+
 
             {festivalBandAnnouncements && festivalBandAnnouncements.length > 0 ? (
               <NewsPanel title="Festival Line-up Announcements" icon={Music}>
@@ -183,9 +163,9 @@ export default function TodaysNewsPage() {
               </NewsPanel>
             ) : null}
 
-            <MerchSalesNews />
 
-            <SectionDivider title="Business & Deals" page="Page 5" />
+
+            <SectionDivider title="New Bands & Business" page="Page 5" />
 
             <div className="grid gap-4 sm:grid-cols-2">
               <DealAnnouncements />
@@ -214,7 +194,7 @@ export default function TodaysNewsPage() {
                   ))
                 ) : (
                   <p className="text-sm text-muted-foreground italic font-serif py-2">
-                    No new bands this week.
+                    No bands formed today.
                   </p>
                 )}
               </NewsPanel>
@@ -243,11 +223,8 @@ export default function TodaysNewsPage() {
           <div className="space-y-5 lg:border-l lg:border-border lg:pl-5">
             <SectionDivider title="World Desk" page="Page 6" />
             <TrendingHashtags />
-            <MilestoneNews />
-            <ElectionCoverage />
-            <ParliamentDigest />
-            <PartyPowerRankings />
             <ClassifiedAds />
+            <GossipColumn />
           </div>
         </div>
 
