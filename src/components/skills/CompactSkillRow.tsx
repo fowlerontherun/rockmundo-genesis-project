@@ -29,6 +29,7 @@ interface CompactSkillRowProps {
     slug: string;
     display_name: string;
     description?: string | null;
+    tier_caps?: unknown;
   };
   progress: {
     current_level: number;
@@ -70,12 +71,13 @@ export const CompactSkillRow = ({
   const level = progress?.current_level || 0;
   const xp = progress?.current_xp || 0;
   const requiredXp = progress?.required_xp || 100;
-  const progressPercent = (xp / requiredXp) * 100;
+  const progressPercent = requiredXp > 0 ? Math.min(100, Math.max(0, (xp / requiredXp) * 100)) : 0;
   
   const standardCost = getTrainingCost(level);
   const cost = xpBalance > 0 && xpBalance < standardCost ? xpBalance : standardCost;
   const canAfford = xpBalance >= cost;
-  const maxLevel = tier === 'basic' ? 10 : tier === 'professional' ? 20 : 30;
+  const configuredMax = Number((skill.tier_caps as { max_level?: number } | null)?.max_level);
+  const maxLevel = Number.isFinite(configuredMax) && configuredMax > 0 ? configuredMax : (tier === 'basic' ? 10 : tier === 'professional' ? 20 : 30);
   const isMaxed = level >= maxLevel;
   const hasProgress = level > 0 || xp > 0;
 
@@ -120,7 +122,7 @@ export const CompactSkillRow = ({
   return (
     <div 
       className={cn(
-        "flex items-center gap-3 p-2 rounded-lg border bg-card hover:bg-accent/50 transition-colors",
+        "flex flex-wrap items-center gap-2 sm:gap-3 p-2 rounded-lg border bg-card hover:bg-accent/50 transition-colors",
         isLocked && "opacity-60",
         !hasProgress && "opacity-70"
       )}
@@ -146,8 +148,8 @@ export const CompactSkillRow = ({
       )}
 
       {/* Level */}
-      <Badge variant="secondary" className="min-w-[50px] justify-center text-xs">
-        Lv {level}
+      <Badge variant="secondary" className="min-w-[70px] justify-center text-xs">
+        Lv {level}/{maxLevel}
       </Badge>
 
       {/* XP Progress */}
@@ -208,7 +210,7 @@ export const CompactSkillRow = ({
       )}
 
       {/* Unlearn button */}
-      {!isLocked && hasProgress && (
+      {hasProgress && (
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button
