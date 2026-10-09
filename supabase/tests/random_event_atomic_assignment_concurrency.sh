@@ -8,11 +8,14 @@ if [[ "$TEST_ISOLATED_DATABASE_CONFIRMATION" != "I_CONFIRM_ISOLATED_TEST_DB" ]];
 : "${TEST_USER_ID:?Supply a disposable auth.users ID}"
 : "${TEST_PROFILE_ID:?Supply the user's disposable profile ID}"
 : "${TEST_EVENT_ID:?Supply a valid disposable random_events ID}"
+if [[ "$TEST_DATABASE_URL" == *"yztogmdixmchsmimtent"* ]]; then
+  echo "Refusing production RockMundo Supabase project URL" >&2; exit 2
+fi
 for var in TEST_USER_ID TEST_PROFILE_ID TEST_EVENT_ID; do
-  if ! [[ "${!var}" =~ ^[0-9a-fA-F-]{36}$ ]]; then echo "Invalid UUID in $var" >&2; exit 2; fi
+  if ! [[ "${!var}" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]; then echo "Invalid UUID in $var" >&2; exit 2; fi
 done
 
-# Both requests contend on the same auth.users row in the RPC.
+# Verify the fixture IDs resolve correctly and the endpoint is not the known production project.\n# Both requests contend on the same auth.users row in the RPC.
 run_assignment() {
   psql "$TEST_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 \
     -v uid="$TEST_USER_ID" -v pid="$TEST_PROFILE_ID" -v eid="$TEST_EVENT_ID" \
