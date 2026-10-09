@@ -5,10 +5,11 @@ import type { CharacterProfileShareMoment } from "./characterProfile";
 const mocks = vi.hoisted(() => ({
   capture: vi.fn(),
   onCanvasReady: null as null | ((canvas: HTMLCanvasElement) => void),
+  appearance: {} as object | null,
 }));
 
 vi.mock("@/features/player-model/usePlayerModel", () => ({
-  usePlayerModel: () => ({ profileId: "player-1", query: { data: { appearance: {} } } }),
+  usePlayerModel: () => ({ profileId: "player-1", query: { data: mocks.appearance ? { appearance: mocks.appearance } : null } }),
   useEquippedRichClothing: () => ({ data: [] }),
   useEquippedStageLuthieryInstruments: () => ({ data: [] }),
   usePlayerStageTattoos: () => ({ data: [] }),
@@ -42,9 +43,21 @@ describe("AvatarShareStudio capture lifecycle", () => {
     vi.useFakeTimers();
     mocks.capture.mockReset();
     mocks.onCanvasReady = null;
+    mocks.appearance = {};
   });
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it("does not start the capture timeout before appearance data loads", () => {
+    mocks.appearance = null;
+    const { rerender } = render(<AvatarShareStudio open moment={moment} onOpenChange={vi.fn()} />);
+    act(() => { vi.advanceTimersByTime(20000); });
+    expect(screen.queryByRole("button", { name: "Retry avatar capture" })).not.toBeInTheDocument();
+    mocks.appearance = {};
+    rerender(<AvatarShareStudio open moment={moment} onOpenChange={vi.fn()} />);
+    act(() => { vi.advanceTimersByTime(15000); });
+    expect(screen.getByRole("button", { name: "Retry avatar capture" })).toBeInTheDocument();
   });
 
   it("offers retry when the avatar renderer stalls", () => {
