@@ -29,12 +29,19 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
   const [avatar, setAvatar] = useState<AvatarCapture | null>(null);
   const [captureError, setCaptureError] = useState(false);
   const [captureAttempt, setCaptureAttempt] = useState(0);
+  const [captureTimedOut, setCaptureTimedOut] = useState(false);
 
-  useEffect(() => { if (!open) { setAvatar(null); setCaptureError(false); } }, [open]);
-  useEffect(() => { setAvatar(null); setCaptureError(false); }, [moment?.id]);
+  useEffect(() => { if (!open) { setAvatar(null); setCaptureError(false); setCaptureTimedOut(false); } }, [open]);
+  useEffect(() => { setAvatar(null); setCaptureError(false); setCaptureTimedOut(false); }, [moment?.id]);
+  useEffect(() => {
+    if (!open || !moment || avatar || captureError) return;
+    setCaptureTimedOut(false);
+    const timer = window.setTimeout(() => setCaptureTimedOut(true), 15000);
+    return () => window.clearTimeout(timer);
+  }, [open, moment?.id, avatar, captureError, captureAttempt]);
 
   const capture = useCallback((canvas: HTMLCanvasElement) => {
-    try { setAvatar(captureAvatarCanvas(canvas)); setCaptureError(false); } catch { setAvatar(null); setCaptureError(true); }
+    try { setAvatar(captureAvatarCanvas(canvas)); setCaptureError(false); setCaptureTimedOut(false); } catch { setAvatar(null); setCaptureError(true); }
   }, []);
 
   const shareMoment = useMemo(() => moment ? { ...moment, avatar } : null, [moment, avatar]);
@@ -57,7 +64,7 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
         />
       </div>
     )}
-    {open && moment && captureError && <div role="alert" className="fixed bottom-20 right-4 z-[80] max-w-sm rounded-lg border bg-background p-4 shadow-lg"><p className="mb-2 text-sm">Your avatar could not be captured for sharing.</p><Button size="sm" onClick={() => { setCaptureError(false); setCaptureAttempt((value) => value + 1); }}>Retry avatar capture</Button></div>}
+    {open && moment && (captureError || captureTimedOut) && <div role="alert" className="fixed bottom-20 right-4 z-[80] max-w-sm rounded-lg border bg-background p-4 shadow-lg"><p className="mb-2 text-sm">Your avatar could not be captured for sharing. The preview may have failed to load.</p><Button size="sm" onClick={() => { setCaptureError(false); setCaptureTimedOut(false); setCaptureAttempt((value) => value + 1); }}>Retry avatar capture</Button></div>}
     <ShareMomentSheet open={open} onOpenChange={onOpenChange} moment={shareMoment} />
   </>;
 }
