@@ -1,26 +1,44 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { GraduationCap, Music2, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TrackableSongPlayer } from "@/components/audio/TrackableSongPlayer";
 
 export function LocalDailyBrief() {
   const { profileId } = useActiveProfile();
+  const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
   const { data: location } = useQuery({
     queryKey: ["news-location", profileId],
     enabled: !!profileId,
     queryFn: async () => {
       const { data, error } = await supabase.from("profiles")
-        .select("current_city_id, cities(name, country)").eq("id", profileId!).maybeSingle();
+        .select("current_city_id").eq("id", profileId!).maybeSingle();
       if (error) throw error;
-      const city = (data as any)?.cities;
-      return { cityId: (data as any)?.current_city_id as string | undefined, city: city?.name as string | undefined, country: city?.country as string | undefined };
+      const cityId = data?.current_city_id;
+      if (!cityId) return { cityId: undefined, city: undefined, country: undefined };
+      const { data: city, error: cityError } = await supabase.from("cities")
+        .select("id, name, country").eq("id", cityId).maybeSingle();
+      if (cityError) throw cityError;
+      return { cityId, city: city?.name, country: city?.country };
     },
   });
 
-  const country = location?.country || "";
+  const { data: cities = [] } = useQuery({
+    queryKey: ["news-available-cities"],
+    staleTime: 15 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("cities")
+        .select("id, name, country").order("name").limit(2000);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const selectedCity = selectedCityId ? cities.find(city => city.id === selectedCityId) : undefined;
+  const country = selectedCity?.country || location?.country || "";
   const { data: charts = [], isLoading: chartsLoading, isError: chartsError } = useQuery({
     queryKey: ["news-country-top5", country],
     enabled: !!country,
@@ -154,7 +172,21 @@ export function LocalDailyBrief() {
         <h2 className="mb-2 flex items-center gap-2 font-serif text-xl font-black"><Music2 className="h-5 w-5" />
           Top 5 Songs — {country || "Select a city"}
         </h2>
-        {!country && <p className="text-xs text-muted-foreground mb-2">Select a current city to see its national chart.</p>}
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted-foreground">Chart city:</span>
+          <Select value={selectedCityId || location?.cityId || ""} onValueChange={setSelectedCityId}>
+            <SelectTrigger className="w-64" aria-label="Choose a city for the Top 5 chart">
+              <SelectValue placeholder="Choose a city" />
+            </SelectTrigger>
+            <SelectContent>
+              {location?.cityId && !cities.some(city => city.id === location.cityId) && location.city &&
+                <SelectItem value={location.cityId}>{location.city} ({location.country})</SelectItem>}
+              {cities.map(city => <SelectItem key={city.id} value={city.id}>{city.name} ({city.country})</SelectItem>)}
+            </SelectContent>
+          </Select>
+          {selectedCityId && <button type="button" className="text-xs text-primary underline" onClick={() => setSelectedCityId(null)}>Use character's city</button>}
+        </div>
+        {!country && <p className="text-xs text-muted-foreground mb-2">Your character has no current city. Choose one above to view its national chart.</p>}
         {chartsError ? <p className="text-sm text-muted-foreground">National charts are temporarily unavailable.</p> : chartsLoading && country ? <p className="text-sm text-muted-foreground">Loading charts…</p> :
           charts.length ? (
             <ol className="divide-y divide-border/50">
