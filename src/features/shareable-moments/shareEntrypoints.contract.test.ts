@@ -44,6 +44,12 @@ describe("Shareable Moments migrated entrypoint contracts", () => {
     expect(socialHub).toContain('label: "Share Studio", path: "/social/share-studio"');
   });
 
+  it("does not mount AvatarShareStudio without a character promo", () => {
+    const source = read("src/pages/ShareStudio.tsx");
+    expect(source).toContain("{characterPromo && <AvatarShareStudio");
+    expect(source).not.toContain("<AvatarShareStudio moment={characterPromo} open={!!characterPromo}");
+  });
+
   it("keeps Dashboard achievement sharing on AvatarShareStudio", () => {
     const source = read("src/pages/Dashboard.tsx");
     expect(source).toContain('from "@/features/shareable-moments/CharacterShareStudio"');
