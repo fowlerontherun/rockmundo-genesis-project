@@ -43,11 +43,30 @@ describe('capacity-aware camera framing', () => {
         expect(Math.abs(imagePoint.x)).toBeLessThan(.94);
         expect(Math.abs(imagePoint.y)).toBeLessThan(.94);
         if (shot === 'lead_close') {
-          expect(rig.camera.position.distanceTo(focus)).toBeLessThan(4);
+          // Portrait framing backs up enough to retain hands/instruments.
+          expect(rig.camera.position.distanceTo(focus)).toBeLessThan(4 / Math.min(1, aspect));
+          for (const dx of [-.8, .8]) for (const dy of [-.5, .65]) {
+            const edge = focus.clone().add(new T.Vector3(dx, dy, 0)).project(rig.camera);
+            expect(Math.abs(edge.x)).toBeLessThan(.95);
+            expect(Math.abs(edge.y)).toBeLessThan(.95);
+          }
           expect(rig.camera.position.distanceTo(focus)).toBeGreaterThan(2.5);
         }
       }
     }
+  });
+
+  it('cuts directly to the next director lens rather than moving through scene geometry', () => {
+    const { rig, p } = harness(65000, 1.78, 'director');
+    const root = new T.Group(); root.position.set(...stagePosition(p, .5, .76));
+    rig.actors = [{ id: 'lead', role: 'vocals', root, hasVocals: () => true }];
+    rig.options.externalClock = false;
+    rig.seconds = 9;
+    rig.camera.position.set(0, 15, 60);
+    rig.moveCamera(.016);
+    expect(rig.sceneKey).toBe('lead_close');
+    expect(rig.camera.position.distanceTo(rig.cameraPos)).toBeLessThan(.00001);
+    expect(rig.lookAt.distanceTo(rig.targetPos)).toBeLessThan(.00001);
   });
 
   it('keeps the singer noticeably closer than the venue-wide lens in a stadium', () => {

@@ -20,7 +20,7 @@ import type { ConcertOptions, ConcertFrame } from './liveTypes';
 import type { AvatarVisualQuality } from '@/features/player-model/avatarVisualQuality';
 import { DEFAULT_SETTINGS, LOOKS, seededRandom, type DemoSettings, type DemoStats, type CameraShot } from './config';
 import { directGigCamera } from './gigCameraSequence';
-import { frameVenuePerformer } from './venueCameraAngles';
+import { frameVenueBand, frameVenuePerformer } from './venueCameraAngles';
 import { frameTvPerformance, studioPerformerMotion, TV_PERFORMANCE_SHOTS } from './tvPerformanceDirection';
 
 const CAMERAS = {
@@ -362,11 +362,14 @@ export class ConcertScene {
         const pose = frameVenuePerformer(p, selected, focus.toArray() as [number, number, number], this.camera.aspect);
         this.targetPos.fromArray(pose.target);
         this.cameraPos.fromArray(pose.position);
+        shotFov = pose.fov;
       } else if (selected === 'lead_close') {
-        this.cameraPos.copy(this.targetPos).add(new T.Vector3(.7, .25, 3.15));
+        this.cameraPos.copy(this.targetPos).add(new T.Vector3(.7, .25, 3.15 / Math.min(1, Math.max(.4, this.camera.aspect))));
       } else if (selected === 'band_medium') {
-        this.targetPos.y = subject.y + 1.12;
-        this.cameraPos.copy(this.targetPos).add(new T.Vector3(1.1, .72, Math.max(5.5, 6.4 / Math.min(1, this.camera.aspect))));
+        const pose = frameVenueBand(p, visible.map(actor => actor.root.position.toArray() as [number, number, number]), this.camera.aspect);
+        this.targetPos.fromArray(pose.target);
+        this.cameraPos.fromArray(pose.position);
+        shotFov = pose.fov;
       } else if (selected === 'side_pit') {
         this.targetPos.y = subject.y + 1.48;
         this.cameraPos.copy(this.targetPos).add(new T.Vector3(-3.45, -Math.min(1.05, p.stageHeight + .5), 4.6));
@@ -506,8 +509,10 @@ export class ConcertScene {
       }
     }
 
-    const televisionCut = !!this.options?.television && selected !== this.sceneKey;
-    const lerp = televisionCut || this.options?.television || this.options?.externalClock ? 1 : reducedMotion || this.seconds === 0 ? 1 : 1 - Math.exp(-dt * (selected === this.sceneKey ? 2 : 1.1));
+    // Cut between director lenses: interpolating across the arena travels through
+    // the crowd, performers and scenery before arriving at a valid shot.
+    const shotCut = (camera === 'director' || !!this.options?.television) && selected !== this.sceneKey;
+    const lerp = shotCut || this.options?.television || this.options?.externalClock ? 1 : reducedMotion || this.seconds === 0 ? 1 : 1 - Math.exp(-dt * (selected === this.sceneKey ? 2 : 1.1));
     this.camera.position.lerp(this.cameraPos, lerp); this.lookAt.lerp(this.targetPos, lerp);
     this.camera.fov = T.MathUtils.lerp(this.camera.fov, shotFov, lerp); this.camera.updateProjectionMatrix(); this.camera.lookAt(this.lookAt); this.sceneKey = selected;
   }

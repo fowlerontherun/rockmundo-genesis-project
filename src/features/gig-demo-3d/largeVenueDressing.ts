@@ -375,6 +375,42 @@ function buildBeachStage(root: T.Group, p: VenueProfile, surfaces: VenueSurfaceM
   root.userData.identityFeatures.push('boardwalk', 'production-tower', 'beach-bar', 'perimeter-fencing', 'site-lights');
 }
 
+/** Touring equipment stays outside the performer/camera lanes and floor audience. */
+function buildTouringWings(root: T.Group, p: VenueProfile, palette: LargeVenuePalette) {
+  const cases = feature(root, 'venue-touring-flight-cases');
+  const racks = feature(root, 'venue-touring-patch-racks');
+  const cables = feature(root, 'venue-touring-cable-runs');
+  for (const side of [-1, 1] as const) {
+    const x = side * (p.stageWidth / 2 + 1.5);
+    const z = .65 - p.stageDepth * .48;
+    for (let i = 0; i < 3; i++) {
+      const cz = z - i * 1.35;
+      box(cases, [1.05, .7, .82], [x, .48, cz], palette.dark);
+      for (const dy of [-.34, .34]) box(cases, [1.09, .045, .86], [x, .48 + dy, cz], palette.steel);
+      for (const dx of [-.49, .49]) {
+        box(cases, [.045, .7, .86], [x + dx, .48, cz], palette.steel);
+        cylinder(cases, .075, .075, .12, [x + dx, .075, cz - .27], palette.dark, 8);
+        cylinder(cases, .075, .075, .12, [x + dx, .075, cz + .27], palette.dark, 8);
+      }
+      for (const dx of [-.3, .3]) box(cases, [.08, .13, .025], [x + dx, .57, cz + .425], palette.pale);
+      box(cases, [.28, .09, .035], [x, .45, cz + .43], palette.steel);
+    }
+    const rackZ = z + 1.8;
+    box(racks, [.85, 1.65, .7], [x, .825, rackZ], palette.dark);
+    for (let unit = 0; unit < 7; unit++) {
+      const y = .22 + unit * .2;
+      box(racks, [.72, .14, .025], [x, y, rackZ + .365], palette.steel);
+      box(racks, [.11, .035, .03], [x - .22, y, rackZ + .385], palette.coolGlow);
+      for (let knob = 0; knob < 3; knob++) box(racks, [.035, .035, .04], [x + knob * .12, y, rackZ + .39], palette.dark);
+    }
+    for (let cable = 0; cable < 3; cable++) {
+      const cx = x + side * (.7 + cable * .08);
+      rod(cables, [cx, .045, rackZ], [cx, .045, .65 - p.stageDepth + .3], .022, palette.dark);
+    }
+  }
+  root.userData.identityFeatures.push('flight-cases', 'patch-racks', 'cable-runs');
+}
+
 export function buildLargeVenueDressing(
   parent: T.Group,
   p: VenueProfile,
@@ -389,6 +425,7 @@ export function buildLargeVenueDressing(
   parent.add(root);
 
   const palette = paletteFor(p);
+  buildTouringWings(root, p, palette);
 
   if (p.kind === 'indoor_arena') buildIndoorArena(root, p, surfaces, palette);
   if (p.kind === 'ice_arena') buildIceArena(root, p, surfaces, palette);
