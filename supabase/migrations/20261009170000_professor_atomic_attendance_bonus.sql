@@ -1,5 +1,5 @@
 -- Server-side professor XP application for the atomic auto-attendance award path.
--- Manual browser attendance still needs migration to this authoritative RPC.
+-- Manual attendance is routed through the trusted university-manual-attendance Edge Function.
 -- Atomic university attendance reward; one transactional RPC owns all core awards.
 CREATE OR REPLACE FUNCTION public.record_university_attendance_reward(
   p_enrollment_id uuid,
