@@ -152,6 +152,24 @@ export const useSkillBooks = () => {
     },
   });
 
+  const stopReading = useMutation({
+    mutationFn: async (sessionId: string) => {
+      if (!profileId) throw new Error("No active character selected.");
+      const { data, error } = await supabase.from("player_book_reading_sessions")
+        .update({ status: "abandoned", auto_read: false })
+        .eq("id", sessionId).eq("profile_id", profileId).eq("status", "reading")
+        .select("id").single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["active_reading_session", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["my_book_purchases", profileId] });
+      toast({ title: "Reading stopped", description: "Your recorded progress has been preserved. You can choose another book." });
+    },
+    onError: (error: Error) => toast({ title: "Unable to stop reading", description: error.message, variant: "destructive" }),
+  });
+
   const startReading = useMutation({
     mutationFn: async ({ purchaseId, bookId, userId, profileId, readingDays, autoRead }: {
       purchaseId: string;
@@ -163,6 +181,22 @@ export const useSkillBooks = () => {
     }) => {
       const scheduledEndDate = new Date();
       scheduledEndDate.setDate(scheduledEndDate.getDate() + readingDays);
+
+      // Reuse the most recent stopped session to preserve attendance and earned XP.
+      const { data: previous, error: previousError } = await supabase
+        .from("player_book_reading_sessions")
+        .select("id")
+        .eq("profile_id", profileId).eq("book_id", bookId).eq("purchase_id", purchaseId)
+        .eq("status", "abandoned").order("started_at", { ascending: false }).limit(1).maybeSingle();
+      if (previousError) throw previousError;
+      if (previous) {
+        const { data, error } = await supabase.from("player_book_reading_sessions")
+          .update({ status: "reading", auto_read: autoRead ?? false, scheduled_end_date: scheduledEndDate.toISOString() })
+          .eq("id", previous.id).eq("profile_id", profileId).eq("status", "abandoned")
+          .select().single();
+        if (error) throw error;
+        return data;
+      }
 
       const { data, error } = await supabase
         .from("player_book_reading_sessions")
@@ -203,5 +237,7 @@ export const useSkillBooks = () => {
     isLoading,
     purchaseBook: purchaseBook.mutate,
     startReading: startReading.mutate,
+    stopReading: stopReading.mutate,
+    isStoppingReading: stopReading.isPending,
   };
 };
