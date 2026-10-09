@@ -61,10 +61,9 @@ export function GigCrewAssignmentCard({ gigId, bandId, locked }: {
       const { data, error } = await crewDb
         .from<{ require_all_crew_for_gigs: boolean }>("bands")
         .select("require_all_crew_for_gigs")
-        .eq("id", bandId)
-        .single();
+        .eq("id", bandId);
       if (error) throw error;
-      return Boolean(data?.require_all_crew_for_gigs);
+      return Boolean(data?.[0]?.require_all_crew_for_gigs);
     },
   });
 
