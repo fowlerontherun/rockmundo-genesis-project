@@ -8,10 +8,9 @@ as $$
 declare
   v_claim public.skill_quest_reward_claims%rowtype;
   v_def public.skill_quest_reward_definitions%rowtype;
-  v_event_id uuid;
   v_ledger_id uuid;
 begin
-  if auth.role() is distinct from 'service_role' then
+  if current_user <> 'service_role' then
     raise exception 'Only service role can process quest rewards' using errcode='42501';
   end if;
 
@@ -48,7 +47,7 @@ begin
   insert into public.profile_action_xp_events(profile_id,action_type,xp_amount,metadata)
   values (v_claim.profile_id,'skill_quest_reward',v_claim.reward_amount,
     jsonb_build_object('quest_id',v_claim.quest_id,'claim_id',v_claim.id,'unique_event_id',v_claim.id::text))
-  returning id into v_event_id;
+  ;
 
   -- The existing action XP trigger creates the authoritative wallet/ledger entry.
   select l.id into v_ledger_id from public.xp_ledger l
