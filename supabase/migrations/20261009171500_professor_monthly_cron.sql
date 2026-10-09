@@ -16,7 +16,7 @@ BEGIN
   WITH professors AS (
     SELECT id, row_number() OVER (
       ORDER BY (SELECT count(*) FROM public.professor_residencies r WHERE r.professor_id = p.id),
-      md5(id::text || v_start::text), id
+      md5(p.id::text || v_start::text), p.id
     ) rn
     FROM public.travelling_professors p WHERE is_enabled
   ), universities AS (
