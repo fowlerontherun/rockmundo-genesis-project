@@ -254,7 +254,7 @@ export function LocalDailyBrief() {
         {newcomers.length ? newcomers.map((p) => (
           <article key={p.id} className="border-b border-border/50 py-2 text-sm last:border-0">
             <p className="font-semibold">{p.display_name || "New artist"}</p>
-            <Link className="text-xs font-semibold text-primary underline" to={`/player/${p.id}`}>Say hi · View player</Link>
+            <Link className="text-xs font-semibold text-primary underline" to={`/player/${p.id}`}>Meet player · Say hi</Link>
           </article>
         )) : null}
       </details>}

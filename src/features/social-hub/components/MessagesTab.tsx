@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,8 +14,11 @@ export function MessagesTab({ myProfileId }: { myProfileId: string | null | unde
     () => friendships.filter((f) => f.friendship.status === "accepted" && f.otherProfile),
     [friendships],
   );
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeFriendId, setActiveFriendId] = useState<string | null>(null);
-  const active = accepted.find((f) => f.otherProfile?.id === activeFriendId);
+  const requestedFriendId = searchParams.get("friend");
+  const resolvedFriendId = activeFriendId ?? (accepted.some(f => f.otherProfile?.id === requestedFriendId) ? requestedFriendId : null);
+  const active = accepted.find((f) => f.otherProfile?.id === resolvedFriendId);
 
   if (!myProfileId) {
     return <p className="text-sm text-muted-foreground">Sign in to view your conversations.</p>;
@@ -43,13 +47,13 @@ export function MessagesTab({ myProfileId }: { myProfileId: string | null | unde
               <div className="space-y-1">
                 {accepted.map((f) => {
                   const other = f.otherProfile!;
-                  const isActive = activeFriendId === other.id;
+                  const isActive = resolvedFriendId === other.id;
                   return (
                     <Button
                       key={f.friendship.id}
                       variant={isActive ? "secondary" : "ghost"}
                       className="w-full justify-start gap-2 px-2"
-                      onClick={() => setActiveFriendId(other.id)}
+                      onClick={() => { setActiveFriendId(other.id); if (requestedFriendId) { const next = new URLSearchParams(searchParams); next.delete("friend"); setSearchParams(next, { replace: true }); } }}
                     >
                       <Avatar className="h-7 w-7">
                         <AvatarImage src={(other as any).avatar_url ?? undefined} />
