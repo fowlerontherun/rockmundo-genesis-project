@@ -374,8 +374,8 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
         break;
     }
 
-    // Hide maxed skills (default on)
-    if (hideMaxed) {
+    // An explicit Maxed filter takes precedence over the hide-maxed preference.
+    if (hideMaxed && filterMode !== "maxed") {
       filtered = filtered.filter((skill) => {
         const sp = progress.find((p) => p.skill_slug === skill.slug);
         const lvl = sp?.current_level ?? 0;
