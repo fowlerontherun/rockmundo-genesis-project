@@ -193,14 +193,19 @@ Deno.serve(async (req) => {
 
       // Keep one pending event per account, matching existing behaviour, while
       // storing profile_id on newly-triggered events for character-safe targeting.
-      const { data: pendingEvents } = await supabase
+      // Legacy awaiting outcomes are quarantined from rewards and must not
+      // block daily events for these accounts. Keep them for manual audit.
+      const { data: activePending, error: activePendingError } = await supabase
         .from("player_events")
         .select("id")
         .eq("user_id", player.user_id)
-        .in("status", ["pending_choice", "awaiting_outcome"])
+        .or("status.eq.pending_choice,and(status.eq.awaiting_outcome,choice_made_at.gte.2026-10-09T00:00:00Z)")
         .limit(1);
-
-      if (pendingEvents && pendingEvents.length > 0) continue;
+      if (activePendingError) {
+        console.error(`[${JOB_NAME}] Failed checking pending events for ${player.user_id}:`, activePendingError);
+        continue;
+      }
+      if (activePending && activePending.length > 0) continue;
 
       const { data: activeAddictions } = await supabase
         .from("player_addictions")
