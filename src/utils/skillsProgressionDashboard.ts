@@ -175,3 +175,13 @@ export function buildRecommendations(rows: SkillDashboardRow[], role?: SkillRole
         : `${r.catalogue.name} is a foundation or role-relevant skill with accessible routes: ${r.unlockRoutes.map((u) => u.route_type.replace(/_/g, " ")).join(", ") || "education or activity progression"}.`,
     }));
 }
+
+/** Choose achievable level-up goals from actual unlocked progress, nearest first.
+ * This is advisory only; the server remains authoritative for XP and unlocks.
+ */
+export function selectSkillLevelGoals(rows: SkillDashboardRow[], limit = 6): SkillDashboardRow[] {
+  return rows
+    .filter((row) => row.progress.is_unlocked && !row.progress.is_max_level && row.progress.xp_required_for_next_level > 0)
+    .sort((a, b) => b.progress.progress_percent - a.progress.progress_percent || a.catalogue.name.localeCompare(b.catalogue.name))
+    .slice(0, Math.max(0, limit));
+}
