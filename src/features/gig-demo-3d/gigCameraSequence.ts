@@ -16,7 +16,7 @@ const STANDARD_SHOTS = [
 
 const LARGE_VENUE_SHOTS = [
   'front', 'lead_close', 'side_pit', 'bass_close', 'crane',
-  'lead_close', 'drums', 'band_medium', 'backline_reverse', 'side_stage', 'lead_close', 'guitar',
+  'lead_close', 'drums', 'band_medium', 'backline_reverse', 'band_medium', 'lead_close', 'guitar',
 ] as const satisfies readonly CameraShot[];
 
 export function directGigCamera(

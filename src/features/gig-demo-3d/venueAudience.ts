@@ -76,6 +76,7 @@ export function audienceFloorPlaces(p: VenueProfile): AudiencePlace[] {
             if (Math.abs(x) < detail.width * .57 + .45 + (runway && z < 10 ? 3.8 : 0) && z < detail.front + detail.depth + 1.5) continue;
             if (runway && z < 10 && Math.abs(x) < 3.6) continue;
             if (p.capacity > 3000 && Math.abs(x - p.crowdWidth * .27) < .65) continue;
+            if (p.kind === 'amphitheatre' && Math.hypot(x, z - 2) >= p.crowdDepth * .45 - .85) continue;
             if (isTvStudioAudienceBlocked(x, z, p)) continue;
             places.push([x, 0, z, Math.PI]);
         }
@@ -105,14 +106,22 @@ export function buildVenueAudience(parent: T.Group, p: VenueProfile, seed: numbe
         shader.uniforms.audienceMotion = strength;
         shader.uniforms.audienceTelevision = televisionMix;
         shader.vertexShader = 'uniform float audienceTime;\nuniform float audienceMotion;\nuniform float audienceTelevision;\n' + shader.vertexShader;
-        shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `vec3 transformed=position;\nfloat phase=instanceMatrix[3].x*1.73+instanceMatrix[3].z*.91;\nfloat weight=smoothstep(.6,1.7,position.y);\nfloat tvPulse=(sin(audienceTime*2.1+phase)*.5+.5);\nfloat sway=.028+audienceTelevision*.022;\nfloat bounce=.035+audienceTelevision*.035;\ntransformed.x+=sin(audienceTime*(1.5+audienceTelevision*.55)+phase)*sway*weight*audienceMotion;\ntransformed.y+=max(0.,sin(audienceTime*(4.0+audienceTelevision*1.2)+phase))*bounce*audienceMotion;\ntransformed.z+=cos(audienceTime*1.25+phase)*.018*audienceTelevision*weight*audienceMotion;\ntransformed.x+=sin(audienceTime*3.4+phase*1.7)*.018*tvPulse*audienceTelevision*weight*audienceMotion;\n`);
+        shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `vec3 transformed=position;\nfloat phase=instanceMatrix[3].x*1.73+instanceMatrix[3].z*.91;\nfloat weight=smoothstep(.6,1.7,position.y);\nfloat tvPulse=(sin(audienceTime*2.1+phase)*.5+.5);\nfloat sway=.028+audienceTelevision*.022;\nfloat bounce=.035+audienceTelevision*.035;\ntransformed.x+=sin(audienceTime*(1.5+audienceTelevision*.55)+phase)*sway*weight*audienceMotion;\ntransformed.y+=max(0.,sin(audienceTime*(4.0+audienceTelevision*1.2)+phase))*bounce*audienceMotion*weight;\ntransformed.z+=cos(audienceTime*1.25+phase)*.018*audienceTelevision*weight*audienceMotion;\ntransformed.x+=sin(audienceTime*3.4+phase*1.7)*.018*tvPulse*audienceTelevision*weight*audienceMotion;\n`);
     };
     for (let bucket = 0; bucket < 16; bucket++) {
         const rows = buckets[bucket]; if (!rows.length) continue;
         const merch = bucket >= 8 && merchColor ? new T.Color(merchColor) : null, kind = bucket % 8;
         const mesh = new T.InstancedMesh(audienceHumanGeometry(kind % 4, kind >= 4, merch), material, rows.length); mesh.name = `audience-humans-${kind}-${merch ? 'merch' : 'regular'}`; mesh.userData.ranks = rows.map(row => row.rank); mesh.userData.maxCount = rows.length; mesh.frustumCulled = false;
         const transform = new T.Object3D();
-        rows.forEach(({ point: [x, y, z, yaw] }, i) => { transform.position.set(x + (random() - .5) * .08, y, z + (random() - .5) * .08); transform.rotation.y = yaw + (random() - .5) * .16; const height = .9 + random() * .15; transform.scale.set(.9 + random() * .17, height, .9 + random() * .1); transform.updateMatrix(); mesh.setMatrixAt(i, transform.matrix); });
+        rows.forEach(({ point: [x, y, z, yaw] }, i) => {
+            // Seated hips must remain attached to the cushion during motion.
+            const seated = kind >= 4;
+            transform.position.set(x + (seated ? 0 : (random() - .5) * .08), y, z + (seated ? 0 : (random() - .5) * .08));
+            transform.rotation.y = yaw + (seated ? 0 : (random() - .5) * .16);
+            const height = seated ? 1 : .9 + random() * .15;
+            transform.scale.set(seated ? 1 : .9 + random() * .17, height, seated ? 1 : .9 + random() * .1);
+            transform.updateMatrix(); mesh.setMatrixAt(i, transform.matrix);
+        });
         mesh.count = 0; root.add(mesh);
     }
     return root;

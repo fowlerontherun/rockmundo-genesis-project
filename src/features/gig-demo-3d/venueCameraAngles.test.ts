@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { frameVenuePerformer } from './venueCameraAngles';
+import * as T from 'three';
+import { frameVenueBand, frameVenuePerformer } from './venueCameraAngles';
 import { directGigCamera, GIG_CAMERA_SHOT_SECONDS } from './gigCameraSequence';
 import { SHOTS } from './config';
 import { resolveVenueProfile, stagePosition, VENUE_TYPES, type VenueKind } from './venueProfile';
@@ -88,5 +89,22 @@ describe('automatic director and manual control discoverability', () => {
     expect(directGigCamera(9 * 3, 'verse', .3, true, true)).toBe('front');
     expect(directGigCamera(35, 'release', .7, true, false)).toBe('stage');
     expect(directGigCamera(9 * 3, 'verse', .3, true, false)).toBe('bass_close');
+  });
+});
+
+describe('whole-band lens', () => {
+  it.each([.4, .6, 1, 1.78, 2.5])('keeps the full band and instruments inside a %s aspect frame', aspect => {
+    const p = resolveVenueProfile({ type: 'stadium', capacity: 65000 });
+    const subjects = [[-.3, .62], [.5, .25], [.7, .62], [.95, .5]].map(([u, v]) => stagePosition(p, u, v));
+    const pose = frameVenueBand(p, subjects, aspect);
+    const camera = new T.PerspectiveCamera(pose.fov, aspect, .08, 400);
+    camera.position.set(...pose.position); camera.lookAt(...pose.target); camera.updateMatrixWorld();
+    for (const point of subjects) for (const x of [-1.1, 1.1]) for (const y of [0, 2.2]) for (const z of [-1.2, 1.2]) {
+      const projected = new T.Vector3(point[0] + x, point[1] + y, point[2] + z).project(camera);
+      expect(Math.abs(projected.x)).toBeLessThan(.91);
+      expect(Math.abs(projected.y)).toBeLessThan(.91);
+      expect(projected.z).toBeLessThan(1);
+      expect(projected.z).toBeGreaterThan(-1);
+    }
   });
 });

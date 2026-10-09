@@ -139,14 +139,55 @@ export function buildVenueEnvironment(scene: T.Scene, p: VenueProfile, seed: num
   const places: [number,number,number,number][] = [];
   if (p.seating) {
     const seat = surfaces.seat;
-    if(p.kind==='amphitheatre') {
-      for(let row=0;row<p.seatRows;row++) { const radius=p.crowdDepth*.45+row*1.3, y=.35+row*.55; const tier=new T.Mesh(new T.TorusGeometry(radius,.42,4,64,Math.PI*.8),stone); tier.rotation.x=Math.PI/2; tier.rotation.z=Math.PI*.1; tier.position.set(0,y,2); root.add(tier); for(let i=0;i<40;i++){const a=Math.PI*.1+i/39*Math.PI*.8;places.push([Math.cos(a)*radius,y+.35,2+Math.sin(a)*radius,Math.PI-a+Math.PI/2]);} }
-    } else for(const side of [-1,1]) for(let row=0;row<p.seatRows;row++) {
-      const x=side*(p.crowdWidth/2+2+row*.85), y=.3+row*.48;
-      box(root,[.9,.38,p.crowdDepth+4],[x,y,p.crowdDepth/2+2],concrete);
-      for(let z=2;z<p.crowdDepth+3;z+=1.1) { box(root,[.65,.12,.65],[x,y+.28,z],seat); box(root,[.1,.55,.65],[x+side*.3,y+.5,z],seat); places.push([x,y+.4,z,side*Math.PI/2]); }
+    // Seat roots and seated human roots share the same foot-level origin.
+    // The underside of the hip is .44m above it; backs sit behind local +Z.
+    const chair = (x: number, floor: number, z: number, yaw: number) => {
+      const group = new T.Group(); group.name = 'venue-seat';
+      group.position.set(x, floor, z); group.rotation.y = yaw; root.add(group);
+      box(group, [.65, .12, .65], [0, .38, 0], seat);
+      box(group, [.65, .55, .1], [0, .7, -.3], seat);
+      for (const side of [-1, 1]) {
+        box(group, [.045, .38, .045], [side * .25, .19, -.18], steel);
+        box(group, [.055, .06, .48], [side * .3, .67, 0], seat);
+      }
+      places.push([x, floor, z, yaw]);
+    };
+    if (p.kind === 'amphitheatre') {
+      for (let row = 0; row < p.seatRows; row++) {
+        const radius = p.crowdDepth * .45 + row * 1.3, y = .35 + row * .55;
+        const tier = new T.Mesh(new T.TorusGeometry(radius, .42, 4, 64, Math.PI * .8), stone);
+        tier.rotation.x = Math.PI / 2; tier.rotation.z = Math.PI * .1; tier.position.set(0, y, 2); root.add(tier);
+        const count = Math.floor(radius * Math.PI * .8 / .85);
+        for (let i = 0; i < count; i++) {
+          const a = Math.PI * .1 + (i + .5) / count * Math.PI * .8;
+          // Hip underside meets the stone bench top, without an extra chair.
+          places.push([Math.cos(a) * radius, y + .42 - .44, 2 + Math.sin(a) * radius, Math.PI * 1.5 - a]);
+        }
+      }
+    } else {
+      for (const side of [-1, 1]) for (let row = 0; row < p.seatRows; row++) {
+        const x = side * (p.crowdWidth / 2 + 2 + row * .85), y = .3 + row * .48;
+        box(root, [.9, .38, p.crowdDepth + 4], [x, y, p.crowdDepth / 2 + 2], concrete);
+        for (let index = 0, z = 2; z < p.crowdDepth + 3; index++, z += 1.1) {
+          if (index % 12 === 6) { // transverse access aisle with a lit step edge
+            box(root, [.85, .025, .1], [x, y + .205, z], glow);
+            continue;
+          }
+          chair(x, y + .19, z, -side * Math.PI / 2);
+        }
+      }
+      for (let row = 0; row < p.seatRows; row++) {
+        const z = p.crowdDepth + 6 + row * .9, y = .3 + row * .48;
+        box(root, [p.crowdWidth + 3, .4, .9], [0, y, z], concrete);
+        for (let x = -p.crowdWidth / 2; x <= p.crowdWidth / 2; x += .85) {
+          if (Math.abs(x) < .85) {
+            box(root, [.65, .025, .1], [x, y + .215, z - .38], glow);
+            continue;
+          }
+          chair(x, y + .2, z, Math.PI);
+        }
+      }
     }
-    if(p.kind!=='amphitheatre') for(let row=0;row<p.seatRows;row++) { const z=p.crowdDepth+6+row*.9,y=.3+row*.48; box(root,[p.crowdWidth+3,.4,.9],[0,y,z],concrete); for(let x=-p.crowdWidth/2;x<=p.crowdWidth/2;x+=.85) { box(root,[.65,.55,.12],[x,y+.6,z+.3],seat); places.push([x,y+.4,z,Math.PI]); } }
     if(p.kind==='stadium') { for(const side of [-1,1]) for(let z=0;z<p.roomDepth;z+=8) { rod(root,[side*half,4,z],[side*half,9,z],.055,steel); box(root,[1.4,.8,.03],[side*half+.7,8.5,z],accent); } screen(0,11,p.crowdDepth+10,8,3); }
   }
   venueArchitecture(root,p,wood);

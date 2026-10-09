@@ -49,3 +49,23 @@ export function frameVenuePerformer(
     fov: 54,
   };
 }
+
+/** Fit the actual band (including instruments), not the much wider stage deck. */
+export function frameVenueBand(p: VenueProfile, subjects: readonly Point3[], aspect: number): PerformerCameraPose {
+  const points = subjects.length ? subjects : [[0, p.stageHeight, .65 - p.stageDepth * .45] as Point3];
+  const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+  for (const point of points) for (let axis = 0; axis < 3; axis++) {
+    min[axis] = Math.min(min[axis], point[axis] + [-1.1, 0, -1.2][axis]);
+    max[axis] = Math.max(max[axis], point[axis] + [1.1, 2.2, 1.2][axis]);
+  }
+  const target: Point3 = [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2];
+  const safeAspect = Number.isFinite(aspect) ? Math.max(.4, Math.min(3, aspect)) : 1;
+  const fov = 43, tanV = Math.tan(fov * Math.PI / 360), tanH = tanV * safeAspect;
+  const tilt = .16, sin = Math.sin(tilt), cos = Math.cos(tilt);
+  let distance = 5.5;
+  for (const x of [min[0], max[0]]) for (const y of [min[1], max[1]]) for (const z of [min[2], max[2]]) {
+    const dx = x - target[0], dy = y - target[1], dz = z - target[2];
+    distance = Math.max(distance, dy * sin + dz * cos + 1.12 * Math.max(Math.abs(dx) / tanH, Math.abs(dy * cos - dz * sin) / tanV));
+  }
+  return { target, position: [target[0], target[1] + sin * distance, target[2] + cos * distance], fov };
+}
