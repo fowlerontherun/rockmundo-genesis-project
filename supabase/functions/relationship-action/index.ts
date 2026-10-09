@@ -60,7 +60,7 @@ async function getRequiredSkillXp(client: any, level: number): Promise<number> {
 }
 
 async function grantSkillXp(client: any, profileId: string, skillSlug: string, amount: number) {
-  if (amount <= 0 || !skillSlug) return;
+  if (amount <= 0 || !skillSlug) return false;
 
   const { data: unlocked, error: unlockError } = await client.rpc("skill_tier_unlocked", {
     p_profile_id: profileId,
@@ -69,7 +69,7 @@ async function grantSkillXp(client: any, profileId: string, skillSlug: string, a
   if (unlockError) throw unlockError;
   if (unlocked === false) {
     console.log(`[Relationship] Skipping XP for locked tier ${skillSlug} on profile ${profileId}`);
-    return;
+    return false;
   }
 
   const maxLevel = await getSkillMaxLevel(client, skillSlug);
@@ -80,6 +80,7 @@ async function grantSkillXp(client: any, profileId: string, skillSlug: string, a
     .eq("skill_slug", skillSlug)
     .maybeSingle();
   if (skillLoadError) throw skillLoadError;
+  if (Number(skill?.current_level ?? 0) >= maxLevel) return false;
 
   let level = Math.min(Math.max(Number(skill?.current_level ?? 0), 0), maxLevel);
   let remaining = Math.max(Number(skill?.current_xp ?? 0), 0);
@@ -114,6 +115,7 @@ async function grantSkillXp(client: any, profileId: string, skillSlug: string, a
     { onConflict: "profile_id,skill_slug" },
   );
   if (upsertError) throw upsertError;
+  return true;
 }
 
 async function updateStreak(client: any, profileId: string): Promise<{ streak: number; bonusApplied: boolean }> {
@@ -217,6 +219,26 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Validate the selected teaching skill on the server before writing rewards.
+    const focusedSkill = typeof metadata?.focus_skill === "string"
+      ? metadata.focus_skill.trim()
+      : "";
+    if (action === "teach" && focusedSkill) {
+      const { data: teacherSkill, error: teacherError } = await admin
+        .from("skill_progress")
+        .select("current_level")
+        .eq("profile_id", profile_id)
+        .eq("skill_slug", focusedSkill)
+        .maybeSingle();
+      if (teacherError) throw teacherError;
+      if (Number(teacherSkill?.current_level ?? 0) < 1) {
+        return new Response(JSON.stringify({ success: false, error: "You must own the skill you teach." }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     const pk = pairKey(profile_id, other_profile_id);
     const todayStart = new Date();
     todayStart.setUTCHours(0, 0, 0, 0);
@@ -253,8 +275,20 @@ Deno.serve(async (req) => {
       },
     });
 
-    if (config.skillXp > 0 && config.skillSlug) {
-      await grantSkillXp(admin, profile_id, config.skillSlug, config.skillXp);
+    let awardedSkillXp = 0;
+    let studentSkillXp = 0;
+    const rewardSkill = config.skillSlug || (
+      (action === "learn" || action === "teach") && focusedSkill ? focusedSkill : null
+    );
+    if (config.skillXp > 0 && rewardSkill) {
+      if (await grantSkillXp(admin, profile_id, rewardSkill, config.skillXp)) {
+        awardedSkillXp = config.skillXp;
+      }
+    }
+    if (action === "teach" && focusedSkill) {
+      if (await grantSkillXp(admin, other_profile_id, focusedSkill, 25)) {
+        studentSkillXp = 25;
+      }
     }
 
     await admin.from("relationship_xp_log").insert({
@@ -263,8 +297,8 @@ Deno.serve(async (req) => {
       pair_key: pk,
       action_type: action,
       xp_awarded: config.xp,
-      skill_xp_awarded: config.skillXp,
-      skill_slug: config.skillSlug ?? null,
+      skill_xp_awarded: awardedSkillXp,
+      skill_slug: rewardSkill,
     });
 
     await admin.from("activity_feed").insert({
@@ -370,8 +404,9 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({
       success: true,
       xp_awarded: config.xp,
-      skill_xp_awarded: config.skillXp,
-      skill_slug: config.skillSlug ?? null,
+      skill_xp_awarded: awardedSkillXp,
+      student_skill_xp_awarded: studentSkillXp,
+      skill_slug: rewardSkill,
       cap_remaining: Math.max(0, config.dailyCap - (usedToday ?? 0) - 1),
       streak_days: streak,
       streak_bonus: bonusApplied && streakReward.xp > 0 ? streakReward : null,
