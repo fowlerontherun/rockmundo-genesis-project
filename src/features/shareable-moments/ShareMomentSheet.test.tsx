@@ -141,6 +141,6 @@ describe("character promo avatar readiness", () => {
     expect(screen.getByRole("button", { name: "Download PNG" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Copy image" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Copy link" })).toBeEnabled();
-    expect(screen.getByText(/Avatar preview unavailable/)).toBeInTheDocument();
+    expect(screen.getByText(/Preparing your avatar preview/)).toBeInTheDocument();
   });
 });
