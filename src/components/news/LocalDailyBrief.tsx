@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { GraduationCap, Music2, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
-import { useCountryCharts } from "@/hooks/useCountryCharts";
+
 import { TrackableSongPlayer } from "@/components/audio/TrackableSongPlayer";
 
 export function LocalDailyBrief() {
@@ -21,9 +21,41 @@ export function LocalDailyBrief() {
   });
 
   const country = location?.country || "";
-  const { data: charts = [], isLoading: chartsLoading } = useCountryCharts(
-    country || "Global", "All", "combined", "single", "daily",
-  );
+  const { data: charts = [], isLoading: chartsLoading, isError: chartsError } = useQuery({
+    queryKey: ["news-country-top5", country],
+    enabled: !!country,
+    staleTime: 300_000,
+    queryFn: async () => {
+      const base = supabase.from("chart_entries");
+      // Resolve the latest edition for this country, never a different country's chart.
+      const { data: latest, error: latestError } = await base
+        .select("chart_date")
+        .eq("country", country)
+        .in("chart_type", ["combined_single", "combined"])
+        .order("chart_date", { ascending: false })
+        .limit(1).maybeSingle();
+      if (latestError) throw latestError;
+      if (!latest?.chart_date) return [];
+      const { data, error } = await supabase.from("chart_entries")
+        .select("id, rank, song_id, chart_type, trend, trend_change, songs(title, audio_url, audio_generation_status, bands(name, artist_name))")
+        .eq("country", country)
+        .eq("chart_date", latest.chart_date)
+        .in("chart_type", ["combined_single", "combined"])
+        .order("rank", { ascending: true }).limit(60);
+      if (error) throw error;
+      const seen = new Set<string>();
+      return (data ?? []).filter((row: any) => {
+        if (!row.song_id || seen.has(row.song_id)) return false;
+        seen.add(row.song_id);
+        return true;
+      }).slice(0, 5).map((row: any) => ({
+        id: row.id, song_id: row.song_id, title: row.songs?.title || "Untitled",
+        artist: row.songs?.bands?.artist_name || row.songs?.bands?.name || "Independent",
+        audio_url: row.songs?.audio_url, audio_generation_status: row.songs?.audio_generation_status,
+        trend: row.trend, trend_change: row.trend_change,
+      }));
+    },
+  });
   const { data: visits = [], isError: visitsError } = useQuery({
     queryKey: ["news-active-professors"],
     staleTime: 300_000,
@@ -84,10 +116,10 @@ export function LocalDailyBrief() {
     <div className="grid gap-5 lg:grid-cols-2">
       <section className="border border-foreground/40 bg-card/60 p-4 lg:col-span-2">
         <h2 className="mb-2 flex items-center gap-2 font-serif text-xl font-black"><Music2 className="h-5 w-5" />
-          Top 5 Songs — {country || "World"}
+          Top 5 Songs — {country || "Select a city"}
         </h2>
-        {!country && <p className="text-xs text-muted-foreground mb-2">Travel to a city to see its national chart. Showing the global chart.</p>}
-        {chartsLoading ? <p className="text-sm text-muted-foreground">Loading charts…</p> :
+        {!country && <p className="text-xs text-muted-foreground mb-2">Select a current city to see its national chart.</p>}
+        {chartsError ? <p className="text-sm text-muted-foreground">National charts are temporarily unavailable.</p> : chartsLoading && country ? <p className="text-sm text-muted-foreground">Loading charts…</p> :
           charts.length ? (
             <ol className="divide-y divide-border/50">
               {charts.slice(0, 5).map((track, index) => (
@@ -97,7 +129,7 @@ export function LocalDailyBrief() {
                     <p className="font-semibold">{track.title}</p>
                     <p className="text-xs text-muted-foreground">{track.artist} · {track.trend === "new" ? "New entry" : track.trend === "up" ? "▲" : track.trend === "down" ? "▼" : "—"} {track.trend_change || ""}</p>
                   </div>
-                  {!track.is_fake && track.audio_url && <div className="w-full sm:w-60">
+                  {track.audio_url && <div className="w-full sm:w-60">
                     <TrackableSongPlayer songId={track.song_id} audioUrl={track.audio_url} title={track.title} artist={track.artist} generationStatus={track.audio_generation_status} compact source="country_charts" />
                   </div>}
                 </li>
