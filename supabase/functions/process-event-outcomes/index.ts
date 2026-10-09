@@ -53,10 +53,14 @@ Deno.serve(async (req) => {
 
     let outcomesProcessed = 0;
     let lowHealthOutcomes = 0;
+    const skippedReasons: Record<string, number> = {};
 
     for (const playerEvent of pendingOutcomes || []) {
       const event = playerEvent.random_events;
-      if (!event) continue;
+      if (!event) {
+        skippedReasons.missing_catalogue_event = (skippedReasons.missing_catalogue_event ?? 0) + 1;
+        continue;
+      }
 
       // Core effects and completion are an atomic, event-locked DB transaction.
       // If another worker processed this event, no rewards are repeated.
@@ -66,9 +70,14 @@ Deno.serve(async (req) => {
       );
       if (applyError) {
         console.error(`[${JOB_NAME}] Failed to apply event ${playerEvent.id}`, applyError);
+        skippedReasons.rpc_error = (skippedReasons.rpc_error ?? 0) + 1;
         continue;
       }
-      if (!result?.applied) continue;
+      if (!result?.applied) {
+        const reason = String(result?.reason ?? 'unknown');
+        skippedReasons[reason] = (skippedReasons[reason] ?? 0) + 1;
+        continue;
+      }
 
       // Database trigger delivers the inbox item, activity feed record and any
       // hospitalization atomically with the outcome. No extra writes here.
@@ -101,11 +110,11 @@ Deno.serve(async (req) => {
       supabaseClient: supabase,
       durationMs: Date.now() - startTime,
       processedCount: outcomesProcessed,
-      resultSummary: { outcomesProcessed, lowHealthOutcomes, expiredCount },
+      resultSummary: { outcomesProcessed, lowHealthOutcomes, expiredCount, skippedReasons },
     });
 
     return new Response(
-      JSON.stringify({ success: true, outcomesProcessed, lowHealthOutcomes, expiredCount }),
+      JSON.stringify({ success: true, outcomesProcessed, lowHealthOutcomes, expiredCount, skippedReasons }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
