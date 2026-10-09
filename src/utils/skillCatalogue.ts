@@ -551,10 +551,11 @@ export async function getUnlockedSkillsForProfile(profileId: string) {
     .map((s: any) => s.skill_slug);
 }
 export async function getAvailableSkillsForProfile(profileId: string) {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("skill_progress")
     .select("skill_slug,current_level")
     .eq("profile_id", profileId);
+  if (error) throw error;
   const progress = Object.fromEntries(
     (data ?? []).map((s: any) => [s.skill_slug, s.current_level ?? 0]),
   );
