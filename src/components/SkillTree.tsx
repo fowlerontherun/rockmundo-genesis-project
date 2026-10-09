@@ -440,7 +440,7 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
     return prerequisites.length > 0 && prerequisites.every((req) =>
       (progress.find((p) => p.skill_slug === req.prerequisite_skill_slug)?.current_level ?? 0) >= req.required_level
     );
-  }).slice(0, 5), [skills, progress, learnedSlugs]);
+  }).filter((skill) => (availabilityQuery.data ?? []).some((item) => item.slug === skill.slug && item.status === "available_to_unlock")).slice(0, 5), [skills, progress, learnedSlugs, availabilityQuery.data]);
 
   const availabilityBySlug = useMemo(
     () =>
@@ -504,8 +504,8 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
   }, [profile?.id, progress, skills, shareMoment]);
 
   useEffect(() => {
-    if (!profile?.id || unlockedNextTiers.length === 0) return;
-    unlockedNextTiers.forEach(({ from, next }) => {
+    if (!profile?.id || unlockedNextTiers.length === 0 || availabilityQuery.isLoading) return;
+    unlockedNextTiers.filter(({ next }) => availabilityBySlug.get(next.slug)?.status === "available_to_unlock").forEach(({ from, next }) => {
       const key = `rockmundo:skill-tier-unlock:${profile.id}:${next.slug}`;
       if (localStorage.getItem(key)) return;
       localStorage.setItem(key, "1");
@@ -513,7 +513,7 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
         description: `You maxed ${from.display_name}. The next tier is now visible in your skill tree and can be learned through Education.`,
       });
     });
-  }, [profile?.id, unlockedNextTiers]);
+  }, [profile?.id, unlockedNextTiers, availabilityBySlug, availabilityQuery.isLoading]);
 
   if (loading || catalogueQuery.isLoading) {
     return (
