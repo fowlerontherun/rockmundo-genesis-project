@@ -67,7 +67,7 @@ serve(async (req) => {
       logStep("No existing customer found, will create new");
     }
 
-    const origin = req.headers.get("origin") || "https://rockmundo-genesis-project.lovable.app";
+    const origin = req.headers.get("origin") || "https://rockmundo.uk";
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,

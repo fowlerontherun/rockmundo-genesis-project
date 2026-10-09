@@ -68,7 +68,7 @@ serve(async (req) => {
     const currency = parseCurrency(requestedCurrency);
     logStep("Currency resolved", { currency });
 
-    const origin = req.headers.get("origin") || "https://rockmundo-genesis-project.lovable.app";
+    const origin = req.headers.get("origin") || "https://rockmundo.uk";
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,

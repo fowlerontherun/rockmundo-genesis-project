@@ -17,6 +17,21 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.772",
+    date: "2026-10-09",
+    changes: [
+      { type: "improvement", description: "Homepage search and social information now names rockmundo.uk everywhere: a share-sized 1200x630 preview image, site ownership data for search engines, a sitemap and a robots file that points search bots at it." },
+      { type: "fix", description: "Shared song and blind-box links, and payment return addresses, can no longer carry the hosting web address — they always use rockmundo.uk." },
+    ],
+  },
+  {
+    version: "1.1.771",
+    date: "2026-10-09",
+    changes: [
+      { type: "fix", description: "Repaired a stray line-break code in the shareable moments definitions that left the screen blank on load." },
+    ],
+  },
+  {
     version: "1.1.770",
     date: "2026-10-06",
     changes: [

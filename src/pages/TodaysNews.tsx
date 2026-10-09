@@ -47,11 +47,11 @@ export default function TodaysNewsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("releases")
-        .select("id, title, release_type, release_date, bands(name)")
+        .select("id, title, release_type, scheduled_release_date, bands(name)")
         .eq("release_status", "released")
-        .gte("release_date", dayStart)
-        .lt("release_date", `${tomorrow}T00:00:00`)
-        .order("release_date", { ascending: false })
+        .gte("scheduled_release_date", dayStart)
+        .lt("scheduled_release_date", `${tomorrow}T00:00:00`)
+        .order("scheduled_release_date", { ascending: false })
         .limit(100);
       if (error) throw error;
       return data || [];

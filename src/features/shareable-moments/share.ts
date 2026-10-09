@@ -11,6 +11,11 @@ function canonicalRockMundoUrl(pathOrUrl: string): URL {
   return parsed;
 }
 
+/** Public site address for shared links: always rockmundo.uk, never the hosting preview host. */
+export function canonicalPublicUrl(pathOrUrl: string): string {
+  return canonicalRockMundoUrl(pathOrUrl).toString();
+}
+
 export function referralUrl(code: string, _origin?: string): string {
   const url = canonicalRockMundoUrl(REFERRAL_PATH);
   url.searchParams.set('ref', code.trim().toUpperCase());
