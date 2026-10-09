@@ -94,6 +94,9 @@ GRANT EXECUTE ON FUNCTION public.record_university_attendance_reward(uuid,date,i
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_extension WHERE extname='pg_cron') THEN
+    IF EXISTS (SELECT 1 FROM cron.job WHERE jobname='daily_passive_skill_growth_reconcile') THEN
+      PERFORM cron.unschedule('daily_passive_skill_growth_reconcile');
+    END IF;
     PERFORM cron.schedule('daily_passive_skill_growth_reconcile','0 5 * * *',
       'SELECT public.process_daily_passive_skill_growth(((now() AT TIME ZONE ''UTC'')::date - 1));');
   END IF;
