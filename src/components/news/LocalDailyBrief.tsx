@@ -7,6 +7,7 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TrackableSongPlayer } from "@/components/audio/TrackableSongPlayer";
+import { LocalMayorColumn } from "@/components/news/LocalMayorColumn";
 
 export function LocalDailyBrief() {
   const { profile, profileId } = useActiveProfile();
@@ -166,6 +167,7 @@ export function LocalDailyBrief() {
 
   return (
     <div className="grid gap-5 lg:grid-cols-2">
+      <div className="lg:col-span-2"><LocalMayorColumn cityId={location?.cityId} cityName={location?.city} /></div>
       <section className="border border-foreground/40 bg-card/60 p-4 lg:col-span-2">
         <h2 className="mb-2 flex items-center gap-2 font-serif text-xl font-black"><Music2 className="h-5 w-5" />
           Top 5 Songs — {country || "Choose a city"}
