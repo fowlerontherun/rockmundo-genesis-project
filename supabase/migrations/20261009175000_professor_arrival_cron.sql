@@ -5,7 +5,7 @@ BEGIN
     PERFORM cron.schedule(
       'travelling_professor_arrivals',
       '15 0 * * *',
-      $command$SELECT public.announce_travelling_professors(current_date);$command$
+      $command$SELECT public.announce_travelling_professors((now() AT TIME ZONE 'UTC')::date);$command$
     );
   END IF;
 END
