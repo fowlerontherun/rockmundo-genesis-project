@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -173,8 +174,9 @@ export default function TodaysNewsPage() {
 function NewsCategory({ title, children, defaultOpen = false }: {
   title: string; children: React.ReactNode; defaultOpen?: boolean;
 }) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
   return (
-    <details className="group rounded-md border border-foreground/50 bg-card/30" {...(defaultOpen ? { open: true } : {})}>
+    <details open={isOpen} onToggle={event => setIsOpen(event.currentTarget.open)} className="group rounded-md border border-foreground/50 bg-card/30">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 font-serif text-lg font-black [&::-webkit-details-marker]:hidden">
         <span>{title}</span>
         <ChevronDown aria-hidden="true" className="h-5 w-5 transition-transform group-open:rotate-180" />
