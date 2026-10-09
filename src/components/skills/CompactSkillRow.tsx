@@ -29,6 +29,7 @@ interface CompactSkillRowProps {
     slug: string;
     display_name: string;
     description?: string | null;
+    tier_caps?: unknown;
   };
   progress: {
     current_level: number;
@@ -75,7 +76,8 @@ export const CompactSkillRow = ({
   const standardCost = getTrainingCost(level);
   const cost = xpBalance > 0 && xpBalance < standardCost ? xpBalance : standardCost;
   const canAfford = xpBalance >= cost;
-  const maxLevel = tier === 'basic' ? 10 : tier === 'professional' ? 20 : 30;
+  const configuredMax = Number((skill.tier_caps as { max_level?: number } | null)?.max_level);
+  const maxLevel = Number.isFinite(configuredMax) && configuredMax > 0 ? configuredMax : (tier === 'basic' ? 10 : tier === 'professional' ? 20 : 30);
   const isMaxed = level >= maxLevel;
   const hasProgress = level > 0 || xp > 0;
 
