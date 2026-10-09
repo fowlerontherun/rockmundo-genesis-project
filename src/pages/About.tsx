@@ -9,6 +9,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import logo from "@/assets/rockmundo-new-logo.png";
 import discordLogo from "@/assets/discord-logo.png";
+import { DISCORD_INVITE_URL } from "@/lib/communityLinks";
 
 const About = () => {
   const navigate = useNavigate();
@@ -23,7 +24,7 @@ const About = () => {
   ];
 
   const handleDiscordClick = () => {
-    window.open("https://discord.gg/KB45k3XJuZ", "_blank", "noopener,noreferrer");
+    window.open(DISCORD_INVITE_URL, "_blank", "noopener,noreferrer");
   };
 
   return (

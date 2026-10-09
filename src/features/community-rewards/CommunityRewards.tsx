@@ -9,8 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { copyText, nativeShare, referralUrlWithParams } from "@/features/shareable-moments/share";
 import { trackShareAnalyticsEvent } from "@/features/shareable-moments/analytics";
-
-const DISCORD_INVITE_URL = "https://discord.gg/KB45k3XJuZ";
+import { DISCORD_INVITE_URL } from "@/lib/communityLinks";
 const FACEBOOK_URL = import.meta.env.VITE_ROCKMUNDO_FACEBOOK_URL as string | undefined;
 
 type Reward = {

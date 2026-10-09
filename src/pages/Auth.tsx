@@ -19,6 +19,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useTranslation } from "@/hooks/useTranslation";
 import logo from "@/assets/rockmundo-new-logo.png";
 import discordLogo from "@/assets/discord-logo.png";
+import { DISCORD_INVITE_URL } from "@/lib/communityLinks";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePlayerPresenceStats } from "@/hooks/usePlayerPresenceStats";
@@ -427,11 +428,11 @@ const Auth = () => {
   };
 
   const handleDiscordLinkClick = async () => {
-    const discordUrl = "https://discord.gg/KB45k3XJuZ";
+    const discordUrl = DISCORD_INVITE_URL;
     if (typeof window === "undefined") {
       toast({
         title: t("auth.discordUnavailable"),
-        description: "Open this link manually: https://discord.gg/KB45k3XJuZ",
+        description: `Open this link manually: ${DISCORD_INVITE_URL}`,
         variant: "destructive",
       });
       return;
@@ -457,7 +458,7 @@ const Auth = () => {
         toast({
           title: t("auth.copyLinkManually"),
           description:
-            "Please copy this invite link: https://discord.gg/KB45k3XJuZ",
+            `Please copy this invite link: ${DISCORD_INVITE_URL}`,
           variant: "destructive",
         });
       }
