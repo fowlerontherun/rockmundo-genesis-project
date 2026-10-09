@@ -65,6 +65,38 @@ Deno.serve(async (req) => {
 
     if (cravingError) throw cravingError;
 
+    // Random skill-XP events may only target skills the character has already
+    // learned (level 1+) and has not maxed. Prefetch once for this cron run.
+    const activeProfileIds = (activePlayers || []).map((p) => p.id).filter(Boolean);
+    const { data: skillRows, error: skillRowsError } = activeProfileIds.length > 0
+      ? await supabase
+          .from("skill_progress")
+          .select("profile_id, skill_slug, current_level")
+          .in("profile_id", activeProfileIds)
+          .gte("current_level", 1)
+      : { data: [], error: null };
+    if (skillRowsError) throw skillRowsError;
+
+    const { data: skillDefinitions, error: skillDefinitionsError } = await supabase
+      .from("skill_definitions")
+      .select("slug, tier_caps");
+    if (skillDefinitionsError) throw skillDefinitionsError;
+
+    const skillMaxBySlug = new Map<string, number>();
+    for (const definition of skillDefinitions || []) {
+      const rawMax = Number((definition.tier_caps as any)?.max_level);
+      skillMaxBySlug.set(definition.slug, Number.isFinite(rawMax) && rawMax > 0 ? rawMax : 20);
+    }
+
+    const eligibleSkillsByProfile = new Map<string, string[]>();
+    for (const row of skillRows || []) {
+      const maxLevel = skillMaxBySlug.get(row.skill_slug) ?? 20;
+      if (Number(row.current_level || 0) >= maxLevel) continue;
+      const list = eligibleSkillsByProfile.get(row.profile_id) || [];
+      list.push(row.skill_slug);
+      eligibleSkillsByProfile.set(row.profile_id, list);
+    }
+
     console.log(`[${JOB_NAME}] Found ${allEvents?.length || 0} active events, ${cravingEvents?.length || 0} craving events`);
 
     if ((!allEvents || allEvents.length === 0) && (!cravingEvents || cravingEvents.length === 0)) {
@@ -242,6 +274,7 @@ Deno.serve(async (req) => {
 
       const eligibleEvents = (allEvents || []).filter((event) => {
         if (!event.is_common && seenEventIds.has(event.id)) return false;
+        if (event.awards_random_skill_xp && (eligibleSkillsByProfile.get(player.id)?.length ?? 0) === 0) return false;
         if (event.season && event.season !== currentSeason) return false;
 
         const playerHealth = player.health ?? 100;
@@ -277,6 +310,12 @@ Deno.serve(async (req) => {
       if (eligibleEvents.length === 0) continue;
 
       const selectedEvent = eligibleEvents[Math.floor(Math.random() * eligibleEvents.length)];
+      const skillCandidates = selectedEvent.awards_random_skill_xp
+        ? (eligibleSkillsByProfile.get(player.id) || [])
+        : [];
+      const selectedSkillSlug = skillCandidates.length > 0
+        ? skillCandidates[Math.floor(Math.random() * skillCandidates.length)]
+        : null;
       const releaseCandidates = playerBand ? eligibleReleasesForEvent(selectedEvent, playerBand.id) : [];
       const needsReleaseTarget =
         selectedEvent.requires_released_music || selectedEvent.release_age_min_days !== null ||
@@ -290,6 +329,7 @@ Deno.serve(async (req) => {
         profile_id: player.id,
         event_id: selectedEvent.id,
         target_release_id: selectedRelease?.id ?? null,
+        target_skill_slug: selectedSkillSlug,
         status: "pending_choice",
       });
 
