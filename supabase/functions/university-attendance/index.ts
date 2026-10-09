@@ -13,6 +13,7 @@ const MAX_BONUS_MULTIPLIER = 0.5;
 const REMOTE_LEARNING_XP_PENALTY = 0.10;
 const CONNECTION_FAILURE_CHANCE = 0.25;
 const CONNECTION_FAILURE_XP_PENALTY = 0.50;
+const UNIVERSITY_XP_MULTIPLIER = 1.50;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -240,7 +241,7 @@ serve(async (req) => {
         const minXp = Math.max(1, Number(course.xp_per_day_min ?? 1));
         const maxXp = Math.max(minXp, Number(course.xp_per_day_max ?? minXp));
         const baseXp = Math.floor(Math.random() * (maxXp - minXp + 1) + minXp);
-        let xpEarned = Math.max(1, Math.floor(baseXp * learningMultiplier));
+        let xpEarned = Math.max(1, Math.floor(baseXp * learningMultiplier * UNIVERSITY_XP_MULTIPLIER));
         let connectionFailed = false;
 
         if (isRemote) {

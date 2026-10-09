@@ -29,7 +29,7 @@ const STREAK_MILESTONES = [
 ];
 
 // Base stipend amounts
-const BASE_STIPEND_SXP = 500;
+const BASE_STIPEND_SXP = 600;
 // Daily base AP is rolled randomly between these bounds on every claim.
 const MIN_STIPEND_AP = 1;
 const MAX_STIPEND_AP = 10;
