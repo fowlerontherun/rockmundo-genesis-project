@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Download, Link2, Copy, Share2, Check, Image as ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { RevealResult } from "@/pages/BlindBoxStore";
-import { copyPng, copyText, downloadBlob, nativeShare } from "@/features/shareable-moments/share";
+import { canonicalPublicUrl, copyPng, copyText, downloadBlob, nativeShare } from "@/features/shareable-moments/share";
 import { trackShareAnalyticsEvent } from "@/features/shareable-moments/analytics";
 
 interface Props {
@@ -173,10 +173,8 @@ export function BlindBoxShareSheet({ reveal, open, onOpenChange }: Props) {
   const [copied, setCopied] = useState<string | null>(null);
 
   const shareUrl = useMemo(() => {
-    if (typeof window === "undefined" || !reveal) return "";
-    const base = `${window.location.protocol}//${window.location.host}`;
-    if (reveal.song?.id) return `${base}/song/${reveal.song.id}`;
-    return `${base}/blind-boxes`;
+    if (!reveal) return "";
+    return canonicalPublicUrl(reveal.song?.id ? `/song/${reveal.song.id}` : "/blind-boxes");
   }, [reveal]);
 
   const shareText = useMemo(() => {
