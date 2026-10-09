@@ -393,12 +393,16 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
     // Sort by tier then name
     filtered.sort((a, b) => {
       const tierDiff =
-        tierOrder[getSkillTier(a.slug)] - tierOrder[getSkillTier(b.slug)];
+        tierOrder[resolveSkillTier(a.slug, (a.tier_caps as any)?.tier)] - tierOrder[resolveSkillTier(b.slug, (b.tier_caps as any)?.tier)];
       if (tierDiff !== 0) return tierDiff;
       return a.display_name.localeCompare(b.display_name);
     });
 
-    if (groupFamilies) filtered.sort((a, b) => skillFamilyKey(a.slug).localeCompare(skillFamilyKey(b.slug)) || tierOrder[resolveSkillTier(a.slug, (a.tier_caps as any)?.tier)] - tierOrder[resolveSkillTier(b.slug, (b.tier_caps as any)?.tier)]);
+    if (groupFamilies) filtered.sort((a, b) =>
+      skillFamilyKey(a.slug).localeCompare(skillFamilyKey(b.slug)) ||
+      tierOrder[resolveSkillTier(a.slug, (a.tier_caps as any)?.tier)] - tierOrder[resolveSkillTier(b.slug, (b.tier_caps as any)?.tier)] ||
+      a.display_name.localeCompare(b.display_name)
+    );
     return filtered;
   }, [
     skills,
