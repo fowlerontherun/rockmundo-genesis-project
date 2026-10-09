@@ -60,7 +60,7 @@ const MusicOverview = () => {
       if (!profileId) return [];
       const { data, error } = await (supabase as any)
         .from("releases")
-        .select("id,title,release_type,release_status,release_date,created_at")
+        .select("id,title,release_type,release_status,scheduled_release_date,created_at")
         .eq("user_id", profileId)
         .order("created_at", { ascending: false })
         .limit(5);
