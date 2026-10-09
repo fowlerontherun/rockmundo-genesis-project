@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from './use-toast';
 import { useActiveProfile } from './useActiveProfile';
+import { getPerformanceGrade } from '@/utils/gigPerformanceCalculator';
 
 /**
  * Hook that listens for gig completions and shows notifications
@@ -41,8 +42,8 @@ export const useGigNotifications = () => {
             notifiedGigs.current.add(gig.id);
             
             toast({
-              title: '🎸 Gig Completed!',
-              description: `Rating: ${outcome.overall_rating?.toFixed(1)}/25 • Profit: $${outcome.net_profit?.toLocaleString()} • Fame: +${outcome.fame_gained}`,
+              title: outcome.overall_rating == null ? '🎸 Gig Results Pending' : `🎸 ${getPerformanceGrade(outcome.overall_rating).label} Gig!`,
+              description: `${outcome.overall_rating == null ? 'Rating pending' : `Rating: ${outcome.overall_rating.toFixed(1)}/25`} • Profit: ${(outcome.net_profit ?? 0).toLocaleString()} • Fame: +${outcome.fame_gained ?? 0}`,
               duration: 8000,
             });
           }
