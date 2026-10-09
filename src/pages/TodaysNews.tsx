@@ -94,19 +94,15 @@ export default function TodaysNewsPage() {
         <NewspaperMasthead />
         <BreakingNewsTicker />
 
-        {/* Front page splash */}
-        <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
-          <div className="space-y-5">
-            <LocalDailyBrief />
-            <PersonalUpdates />
-          </div>
-          <aside className="space-y-5 lg:border-l lg:border-border lg:pl-5">
-            <RandomEventsNews />
-          </aside>
-        </div>
-
         <div className="mt-6 space-y-3">
-          <NewsCategory title="Music, Charts & Releases" defaultOpen>
+          <NewsCategory title="Your Character & Local News" defaultOpen>
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+              <PersonalUpdates />
+              <RandomEventsNews />
+            </div>
+            <LocalDailyBrief />
+          </NewsCategory>
+          <NewsCategory title="Music, Charts & Releases">
             <div className="grid gap-4 lg:grid-cols-2">
               <ChartMoversSection />
               <NewsList title="New Releases" items={releasedSongs ?? []} itemKey={r => r.id} defaultOpen
@@ -118,7 +114,7 @@ export default function TodaysNewsPage() {
                 )} />
             </div>
           </NewsCategory>
-          <NewsCategory title="Festivals & Live Events" defaultOpen>
+          <NewsCategory title="Festivals & Live Events">
             <div className="grid gap-4 lg:grid-cols-2">
               <NewsList title="Festival Line-up Announcements" items={festivalBandAnnouncements ?? []} itemKey={a => a.booking_id}
                 renderItem={announcement => (
