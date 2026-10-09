@@ -19,8 +19,10 @@ export async function removeUnpublishedShareCard(mediaUrl: string): Promise<void
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
   const prefix = `/storage/v1/object/public/twaater-media/share-cards/${user.id}/`;
-  const parsed = new URL(mediaUrl);
-  if (!parsed.pathname.startsWith(prefix)) return;
+  let parsed: URL;
+  try { parsed = new URL(mediaUrl); } catch { return; }
+  const trustedUrl = supabase.storage.from("twaater-media").getPublicUrl(`share-cards/${user.id}/example.png`).data.publicUrl;
+  if (parsed.origin !== new URL(trustedUrl).origin || !parsed.pathname.startsWith(prefix)) return;
   const filename = decodeURIComponent(parsed.pathname.slice(prefix.length));
   if (!filename || filename.includes("/")) return;
   const { error } = await supabase.storage.from("twaater-media").remove([`share-cards/${user.id}/${filename}`]);
