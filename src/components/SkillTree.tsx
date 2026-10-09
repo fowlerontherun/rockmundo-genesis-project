@@ -188,19 +188,6 @@ const SKILL_CATEGORIES: SkillCategory[] = [
   },
 ];
 
-const getSkillTier = (slug: string): "basic" | "professional" | "mastery" => {
-  if (slug.includes("_basic_") || slug.startsWith("basic_")) return "basic";
-  if (
-    slug.includes("_professional_") ||
-    slug.startsWith("professional_") ||
-    slug.includes("professional")
-  )
-    return "professional";
-  if (slug.includes("_mastery") || slug.includes("mastery_")) return "mastery";
-  // Default simple slugs (vocals, guitar, etc) to basic
-  return "basic";
-};
-
 const matchesCategory = (slug: string, category: SkillCategory): boolean => {
   const lowerSlug = slug.toLowerCase();
   return category.patterns.some((pattern) => lowerSlug.includes(pattern));
@@ -512,7 +499,7 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
       eyebrow: "SKILL MASTERED",
       headline: skill.display_name,
       subheadline: "Mastered a RockMundo skill",
-      metrics: [{ label: "Level", value: String(mastered.current_level || 0) }, { label: "Tier", value: getSkillTier(skill.slug) }],
+      metrics: [{ label: "Level", value: String(mastered.current_level || 0) }, { label: "Tier", value: resolveSkillTier(skill.slug, (skill.tier_caps as any)?.tier) }],
       destinationUrl,
       referralCode: null,
       createdAt: new Date().toISOString(),
@@ -842,7 +829,7 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
                             {skill.display_name}
                           </p>
                           <Badge variant="outline" className="text-xs mt-0.5">
-                            {getSkillTier(skill.slug)}
+                            {resolveSkillTier(skill.slug, (skill.tier_caps as any)?.tier)}
                           </Badge>
                         </div>
                       ))}
