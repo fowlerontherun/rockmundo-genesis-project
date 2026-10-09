@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CANONICAL_ATTRIBUTE_LINKS, CANONICAL_PREREQUISITES, CANONICAL_ROLE_LINKS, CANONICAL_SKILLS, CANONICAL_SYSTEM_LINKS, CANONICAL_UNLOCK_ROUTES } from "../skillCatalogue";
-import { buildRecommendations, buildSkillDashboardRows, filterAndSortSkillRows, summarizeRoleReadiness } from "../skillsProgressionDashboard";
+import { buildRecommendations, buildSkillDashboardRows, filterAndSortSkillRows, selectSkillLevelGoals, summarizeRoleReadiness } from "../skillsProgressionDashboard";
 
 const rows = () => buildSkillDashboardRows({
   catalogue: CANONICAL_SKILLS,
@@ -48,5 +48,21 @@ describe("skills progression dashboard", () => {
   it("excludes inactive and hidden catalogue rows", () => {
     const built = rows();
     expect(built.every((row) => row.catalogue.is_active && !row.catalogue.is_hidden)).toBe(true);
+  });
+});
+
+describe("skill level-up goals", () => {
+  it("prioritises nearest genuine unlocked level-ups", () => {
+    const goals = selectSkillLevelGoals(rows());
+    expect(goals.map((row) => row.catalogue.slug)).toEqual(["guitar", "vocals"]);
+    expect(goals.every((row) => row.progress.is_unlocked && !row.progress.is_max_level)).toBe(true);
+  });
+
+  it("respects limits and does not mutate dashboard row order", () => {
+    const input = rows();
+    const before = input.map((row) => row.catalogue.slug);
+    expect(selectSkillLevelGoals(input, 1)).toHaveLength(1);
+    expect(selectSkillLevelGoals(input, 0)).toEqual([]);
+    expect(input.map((row) => row.catalogue.slug)).toEqual(before);
   });
 });
