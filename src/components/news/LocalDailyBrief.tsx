@@ -8,6 +8,7 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TrackableSongPlayer } from "@/components/audio/TrackableSongPlayer";
 import { LocalMayorColumn } from "@/components/news/LocalMayorColumn";
+import { NewPlayerWelcome } from "@/components/news/NewPlayerWelcome";
 
 export function LocalDailyBrief() {
   const { profile, profileId } = useActiveProfile();
@@ -252,10 +253,7 @@ export function LocalDailyBrief() {
       {newcomers.length > 0 && <details className="group border border-foreground/40 bg-card/60 p-4">
         <summary className="mb-2 flex cursor-pointer items-center gap-2 font-serif text-lg font-black"><Users className="h-5 w-5" /> New Players · Last 7 Days</summary>
         {newcomers.length ? newcomers.map((p) => (
-          <article key={p.id} className="border-b border-border/50 py-2 text-sm last:border-0">
-            <p className="font-semibold">{p.display_name || "New artist"}</p>
-            <Link className="text-xs font-semibold text-primary underline" to={`/player/${p.id}`}>Meet player · Say hi</Link>
-          </article>
+          <NewPlayerWelcome key={p.id} playerId={p.id} name={p.display_name || "New artist"} />
         )) : null}
       </details>}
     </div>
