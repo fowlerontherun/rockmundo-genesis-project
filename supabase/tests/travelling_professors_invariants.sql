@@ -30,6 +30,27 @@ BEGIN
     OR ends_at <> ((date_trunc('month', starts_at AT TIME ZONE 'UTC') + interval '1 month') AT TIME ZONE 'UTC');
   IF v_count > 0 THEN RAISE EXCEPTION 'Residency boundaries are not UTC calendar months'; END IF;
 
+  SELECT count(*) INTO v_count
+  FROM public.professor_residencies r
+  JOIN public.travelling_professors p ON p.id = r.professor_id
+  WHERE NOT EXISTS (
+    SELECT 1 FROM public.professor_skill_memberships m
+    JOIN public.university_courses uc ON uc.skill_slug = m.skill_slug
+    WHERE m.skill_family = p.skill_family AND uc.university_id = r.university_id
+  );
+  IF v_count > 0 THEN RAISE EXCEPTION 'Professor assigned to university without matching courses: %', v_count; END IF;
+
+  SELECT count(*) INTO v_count FROM (
+    SELECT university_id, starts_at
+    FROM public.professor_residencies
+    GROUP BY university_id, starts_at HAVING count(*) > 1
+  ) duplicate_hosts;
+  IF v_count > 0 THEN RAISE EXCEPTION 'Multiple professors assigned to same host university'; END IF;
+
+  SELECT count(*) INTO v_count FROM public.professor_residencies
+  WHERE starts_at = (date_trunc('month', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC');
+  IF v_count = 0 THEN RAISE EXCEPTION 'No professors scheduled for current UTC month'; END IF;
+
   SELECT count(*) INTO v_count FROM (
     SELECT profile_id, metadata->>'residency_id', count(*) AS total
     FROM public.notifications WHERE type='visiting_professor_arrival'
