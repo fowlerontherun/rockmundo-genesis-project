@@ -16,7 +16,7 @@ export function LocalDailyBrief() {
         .select("current_city_id, cities(name, country)").eq("id", profileId!).maybeSingle();
       if (error) throw error;
       const city = (data as any)?.cities;
-      return { city: city?.name as string | undefined, country: city?.country as string | undefined };
+      return { cityId: (data as any)?.current_city_id as string | undefined, city: city?.name as string | undefined, country: city?.country as string | undefined };
     },
   });
 
@@ -104,6 +104,21 @@ export function LocalDailyBrief() {
     staleTime: 300_000,
   });
 
+  const { data: cityProjects = [] } = useQuery({
+    queryKey: ["news-city-projects", location?.cityId],
+    enabled: !!location?.cityId,
+    staleTime: 300_000,
+    queryFn: async () => {
+      const since = new Date(Date.now() - 7 * 86400000).toISOString();
+      const { data, error } = await supabase.from("city_projects")
+        .select("id, name, status, completed_at, project_type:city_project_types(name, category)")
+        .eq("city_id", location!.cityId!).eq("status", "completed")
+        .gte("completed_at", since).order("completed_at", { ascending: false }).limit(6);
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+
   const orderedVisits = [...visits].sort((a, b) => {
     const score = (v: typeof visits[number]) => {
       if (location?.city && v.universities?.city === location.city) return 2;
@@ -150,6 +165,17 @@ export function LocalDailyBrief() {
           )) : <p className="text-sm text-muted-foreground">No visiting professors are active right now.</p>}
         <Link to="/career/education" className="mt-2 inline-block text-sm text-primary underline">Explore universities</Link>
       </section>
+      {cityProjects.length > 0 && (
+        <section className="border border-foreground/40 bg-card/60 p-4">
+          <h2 className="mb-2 font-serif text-lg font-black">City Improvements — {location?.city}</h2>
+          {cityProjects.map(project => (
+            <article key={project.id} className="border-b border-border/50 py-2 text-sm last:border-0">
+              <p className="font-semibold">{project.name} completed</p>
+              <p className="text-xs text-muted-foreground">{project.project_type?.category?.replace(/_/g, " ") || "City development"} · {new Date(project.completed_at).toLocaleDateString()}</p>
+            </article>
+          ))}
+        </section>
+      )}
       <section className="border border-foreground/40 bg-card/60 p-4">
         <h2 className="mb-2 font-serif text-lg font-black">New Companies · Last 24 Hours</h2>
         {newCompanies.length ? newCompanies.map(company => (
