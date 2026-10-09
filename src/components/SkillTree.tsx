@@ -439,10 +439,18 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
   const nextSteps = useMemo(() => skills.filter((skill) => {
     if (learnedSlugs.has(skill.slug)) return false;
     const prerequisites = getSkillPrerequisites(skill.slug).filter((req) => req.prerequisite_type === "required");
-    return prerequisites.length > 0 && prerequisites.every((req) =>
+    return prerequisites.every((req) =>
       (progress.find((p) => p.skill_slug === req.prerequisite_skill_slug)?.current_level ?? 0) >= req.required_level
     );
-  }).filter((skill) => (availabilityQuery.data ?? []).some((item) => item.slug === skill.slug && item.status === "available_to_unlock")).slice(0, 5), [skills, progress, learnedSlugs, availabilityQuery.data]);
+  }).filter((skill) => (availabilityQuery.data ?? []).some((item) => item.slug === skill.slug && item.status === "available_to_unlock"))
+    .sort((a, b) => {
+      const roleScore = (slug: string) => getSkillRoleLinks(slug).reduce((sum, link) => sum + link.weight, 0);
+      const score = (skill: SkillDefinition) =>
+        (skillFamilies.find((family) => family.key === skillFamilyKey(skill.slug))?.skills.some((item) => item.level > 0) ? 100 : 0) +
+        roleScore(skill.slug) * 10 +
+        (getSkillPrerequisites(skill.slug).some((req) => req.prerequisite_type === "required") ? 5 : 0);
+      return score(b) - score(a) || a.display_name.localeCompare(b.display_name);
+    }).slice(0, 5), [skills, progress, learnedSlugs, availabilityQuery.data, skillFamilies]);
 
   const availabilityBySlug = useMemo(
     () =>
