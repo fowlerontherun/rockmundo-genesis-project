@@ -36,26 +36,6 @@ export function PersonalUpdates() {
         }
       });
 
-      // Gig offers
-      const { data: offers } = await supabase
-        .from("gig_offers")
-        .select("created_at, status, venues(name)")
-        .eq("status", "pending")
-        .gte("created_at", `${today}T00:00:00`)
-        .order("created_at", { ascending: false })
-        .limit(3);
-
-      offers?.forEach((offer: any) => {
-        if (offer.venues) {
-          results.push({
-            type: "offer",
-            title: `Gig offer at ${offer.venues.name}`,
-            detail: "Awaiting response",
-            time: format(new Date(offer.created_at), "HH:mm"),
-          });
-        }
-      });
-
       // Upcoming scheduled activities
       const { data: activities } = await supabase
         .from("player_scheduled_activities")
