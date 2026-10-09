@@ -122,6 +122,8 @@ describe("character promo avatar readiness", () => {
     );
     expect(screen.getByRole("button", { name: "Share now" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Post to Twaater" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Download PNG" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Copy image" })).toBeEnabled();
   });
 
   it("prevents sharing while Avatar V1 capture is missing", () => {
@@ -136,6 +138,9 @@ describe("character promo avatar readiness", () => {
     );
     expect(screen.getByRole("button", { name: "Share now" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Post to Twaater" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Download PNG" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Copy image" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Copy link" })).toBeEnabled();
     expect(screen.getByText(/Avatar preview unavailable/)).toBeInTheDocument();
   });
 });
