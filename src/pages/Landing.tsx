@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { DISCORD_INVITE_URL } from "@/lib/communityLinks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -164,7 +165,7 @@ const GAME_FACTS = [
 ];
 
 const isDev = import.meta.env.DEV;
-const DEFAULT_DISCORD_URL = "https://discord.gg/lovable-dev";
+const DEFAULT_DISCORD_URL = DISCORD_INVITE_URL;
 const numberFormatter = new Intl.NumberFormat("en-GB");
 
 const formatStat = (value: number | null, loading: boolean) => {
