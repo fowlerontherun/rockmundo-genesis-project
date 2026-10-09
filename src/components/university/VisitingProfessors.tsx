@@ -40,7 +40,7 @@ export function VisitingProfessors({ universityId }: { universityId: string }) {
             <p className="font-medium">{visit.name}</p>
             <p className="text-sm text-muted-foreground">
               +70% attendance XP for {visit.skill_family.replace(/_/g, " ")} courses
-              {" · "}Until {new Date(visit.ends_at).toLocaleDateString()}
+              {" · "}Until {new Date(new Date(visit.ends_at).getTime() - 1).toLocaleDateString("en-GB", { timeZone: "UTC" })}
             </p>
           </div>
         ))}
