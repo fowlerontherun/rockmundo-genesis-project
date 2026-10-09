@@ -33,7 +33,7 @@ create policy skill_quest_reward_claims_owner_read on public.skill_quest_reward_
 insert into public.skill_quest_reward_claims(profile_id, quest_id)
 select e.profile_id, e.quest_id
 from public.skill_quest_events e
-where e.quest_id in ('first_live_show','first_finished_song','first_recording','first_crafted_instrument')
+where (e.quest_id, e.source_type) in (('first_live_show','gig_completed'),('first_finished_song','songwriting_completed'),('first_recording','recording_completed'),('first_crafted_instrument','instrument_crafted'))
 group by e.profile_id, e.quest_id
 having count(distinct (e.source_type, e.source_id)) >= 1
 on conflict (profile_id, quest_id) do nothing;
@@ -42,7 +42,7 @@ create or replace function public.enqueue_skill_quest_reward_claim()
 returns trigger language plpgsql security definer set search_path = ''
 as $$
 begin
-  if new.quest_id in ('first_live_show','first_finished_song','first_recording','first_crafted_instrument') then
+  if (new.quest_id, new.source_type) in (('first_live_show','gig_completed'),('first_finished_song','songwriting_completed'),('first_recording','recording_completed'),('first_crafted_instrument','instrument_crafted')) then
     insert into public.skill_quest_reward_claims(profile_id, quest_id)
     values (new.profile_id, new.quest_id)
     on conflict (profile_id, quest_id) do nothing;
@@ -55,3 +55,13 @@ drop trigger if exists enqueue_skill_quest_reward_claim on public.skill_quest_ev
 create trigger enqueue_skill_quest_reward_claim
 after insert on public.skill_quest_events
 for each row execute function public.enqueue_skill_quest_reward_claim();
+
+-- Existing events may have been corrected after a claim was created. Remove
+-- pending claims with no matching evidence; never delete a paid claim.
+delete from public.skill_quest_reward_claims c
+where c.status = 'pending'
+  and not exists (
+    select 1 from public.skill_quest_events e
+    where e.profile_id = c.profile_id and e.quest_id = c.quest_id
+      and (e.quest_id, e.source_type) in (('first_live_show','gig_completed'),('first_finished_song','songwriting_completed'),('first_recording','recording_completed'),('first_crafted_instrument','instrument_crafted'))
+  );
