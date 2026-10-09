@@ -2,6 +2,9 @@
 DO $job$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+    IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'travelling_professor_arrivals') THEN
+      PERFORM cron.unschedule('travelling_professor_arrivals');
+    END IF;
     PERFORM cron.schedule(
       'travelling_professor_arrivals',
       '15 0 * * *',
