@@ -22,7 +22,7 @@ type EnrichedSkillBook = SkillBook & { skill_display_name?: string };
 export const BooksTab = () => {
   const { profileId, userId } = useActiveProfile();
   const { toast } = useToast();
-  const { books, purchases, activeSession, isLoading, purchaseBook, startReading } = useSkillBooks();
+  const { books, purchases, activeSession, isLoading, purchaseBook, startReading, stopReading, isStoppingReading } = useSkillBooks();
   const { processAttendance, isProcessing } = useBookReading();
   const typedBooks = books as EnrichedSkillBook[] | undefined;
   const [selectedBook, setSelectedBook] = useState<EnrichedSkillBook | null>(null);
