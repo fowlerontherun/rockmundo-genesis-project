@@ -34,11 +34,9 @@ export function SongShareButtons({
     ? `🎵 Check out "${songTitle}" by ${artistName} on Rockmundo!`
     : `🎵 Check out "${songTitle}" on Rockmundo!`;
 
-  // Generate public song URL
-  const baseUrl = typeof window !== "undefined" 
-    ? `${window.location.protocol}//${window.location.host}` 
-    : "";
-  const shareUrl = `${baseUrl}/song/${songId}`;
+  // Generate public song URL: always the site address players should see, never the hosting address.
+  const baseUrl = canonicalPublicUrl("/");
+  const shareUrl = `${baseUrl}song/${songId}`;
 
   const handleShare = (platform: string) => {
     const encodedText = encodeURIComponent(shareText);
