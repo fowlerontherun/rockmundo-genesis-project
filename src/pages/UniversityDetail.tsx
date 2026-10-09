@@ -13,6 +13,7 @@ import { GraduationCap, Clock, DollarSign, TrendingUp, Users, ChevronDown, Calen
 import { useToast } from "@/hooks/use-toast";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { EnrollmentProgressCard } from "@/components/university/EnrollmentProgressCard";
+import { VisitingProfessors } from "@/components/university/VisitingProfessors";
 import { AttendanceCard } from "@/components/university/AttendanceCard";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useUniversityAttendance } from "@/hooks/useUniversityAttendance";
@@ -793,9 +794,7 @@ export default function UniversityDetail() {
       backTo="/education"
     >
       <div className="space-y-6">
-
-
-
+        <VisitingProfessors universityId={university.id} />
 
         {/* Show enrollment progress if user is enrolled */}
         {currentEnrollment && (

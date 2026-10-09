@@ -221,3 +221,6 @@ verify_jwt = false
 
 [functions.admin-stripe-audit]
 verify_jwt = true
+
+[functions.university-manual-attendance]
+verify_jwt = true
