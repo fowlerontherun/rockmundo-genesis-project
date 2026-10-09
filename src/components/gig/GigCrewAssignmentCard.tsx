@@ -54,6 +54,20 @@ export function GigCrewAssignmentCard({ gigId, bandId, locked }: {
     },
   });
 
+  const crewPolicyQuery = useQuery({
+    queryKey: ["band-crew-policy", bandId],
+    enabled: !!bandId,
+    queryFn: async (): Promise<boolean> => {
+      const { data, error } = await crewDb
+        .from<{ require_all_crew_for_gigs: boolean }>("bands")
+        .select("require_all_crew_for_gigs")
+        .eq("id", bandId)
+        .single();
+      if (error) throw error;
+      return Boolean(data?.require_all_crew_for_gigs);
+    },
+  });
+
   const assignmentQuery = useQuery({
     queryKey: ["gig-crew-assignments", gigId],
     enabled: !!gigId,
@@ -69,6 +83,7 @@ export function GigCrewAssignmentCard({ gigId, bandId, locked }: {
 
   const roster = rosterQuery.data || [];
   const assignments = assignmentQuery.data || [];
+  const requireAllCrewForGigs = crewPolicyQuery.data ?? false;
   const roles = [...new Set(roster.map((member) => roleOf(member.crew_type)))];
   const assigned = assignments.filter((row) => row.assignment_status === "accepted" && roster.some((member) => member.id === row.band_crew_member_id));
   const payroll = assigned.reduce((sum, item) => sum + Number(item.cost || 0), 0);
@@ -127,7 +142,13 @@ export function GigCrewAssignmentCard({ gigId, bandId, locked }: {
         <CardDescription>Only accepted, attending staff contribute to the show, receive a per-gig salary and earn career experience.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        {(rosterQuery.isError || assignmentQuery.isError) && <p className="text-sm text-destructive">Crew schedule is unavailable.</p>}
+        {(rosterQuery.isError || assignmentQuery.isError || crewPolicyQuery.isError) && <p className="text-sm text-destructive">Crew schedule is unavailable.</p>}
+        {requireAllCrewForGigs && (
+          <div className="rounded-md border bg-muted/30 p-3 text-sm">
+            <p className="font-medium">Automatic crew attendance is on</p>
+            <p className="text-xs text-muted-foreground">Your band leader requires hired crew for every gig, so attendance is managed from Crew Management rather than show by show.</p>
+          </div>
+        )}
         {!rosterQuery.isLoading && !roster.length && (
           <p className="text-sm">No crew hired yet. <Link to="/band-crew" className="underline">Recruit your first crew member</Link>.</p>
         )}
@@ -144,7 +165,7 @@ export function GigCrewAssignmentCard({ gigId, bandId, locked }: {
               </div>
               <Select
                 value={current?.assignment_status === "accepted" && current.band_crew_member_id || "absent"}
-                disabled={locked || savingRole !== null}
+                disabled={locked || requireAllCrewForGigs || savingRole !== null}
                 onValueChange={(value) => void saveRole(role, value)}
               >
                 <SelectTrigger className="w-full sm:w-[280px]" aria-label={roleLabels[role] || role}>
@@ -164,9 +185,9 @@ export function GigCrewAssignmentCard({ gigId, bandId, locked }: {
         })}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="text-sm"><Badge variant="outline">{assigned.length} attending</Badge> <span className="ml-2 text-muted-foreground">Crew payroll: ${payroll.toLocaleString()}</span></div>
-          {!locked && roster.length > 0 && <Button size="sm" onClick={() => void autoAssign()} disabled={savingRole !== null}>Assign available band crew</Button>}
+          {!locked && !requireAllCrewForGigs && roster.length > 0 && <Button size="sm" onClick={() => void autoAssign()} disabled={savingRole !== null}>Assign available band crew</Button>}
         </div>
-        <p className="text-xs text-muted-foreground">Assignments lock when the gig starts. Existing choices are preserved when filling empty roles.</p>
+        <p className="text-xs text-muted-foreground">{requireAllCrewForGigs ? "Assignments are automatic while the band-wide crew policy is enabled." : "Assignments lock when the gig starts. Existing choices are preserved when filling empty roles."}</p>
       </CardContent>
     </Card>
   );
