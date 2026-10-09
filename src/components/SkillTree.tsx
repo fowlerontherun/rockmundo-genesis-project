@@ -65,7 +65,9 @@ interface SkillTreeProps {
 }
 
 type ViewMode = "card" | "list";
-type FilterMode = "all" | "learned" | "education" | "unlearned";
+type FilterMode = "all" | "learned" | "education" | "unlearned" | "maxed";
+const tierOrder = { basic: 0, professional: 1, mastery: 2 } as const;
+const familyKey = (slug: string) => slug.replace(/(^|_)(basic|professional|mastery)(?=_|$)/g, "$1").replace(/_+/g, "_").replace(/^_|_$/g, "");
 
 const SKILL_CATEGORIES: SkillCategory[] = [
   {
@@ -220,8 +222,9 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
   const [showUnlocked, setShowUnlocked] = useState(false);
   const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [filterMode, setFilterMode] = useState<FilterMode>("learned");
-  const [hideMaxed, setHideMaxed] = useState(true);
+  const [filterMode, setFilterMode] = useState<FilterMode>("all");
+  const [hideMaxed, setHideMaxed] = useState(false);
+  const [groupFamilies, setGroupFamilies] = useState(true);
 
   const fetchData = useCallback(async () => {
     try {
@@ -355,6 +358,13 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
       case "learned":
         filtered = filtered.filter((skill) => learnedSlugs.has(skill.slug));
         break;
+      case "maxed":
+        filtered = filtered.filter((skill) => {
+          const level = progress.find((p) => p.skill_slug === skill.slug)?.current_level ?? 0;
+          const cap = Number((skill.tier_caps as any)?.max_level) || 100;
+          return level >= cap;
+        });
+        break;
       case "education":
         filtered = filtered.filter((skill) => educationSlugs.has(skill.slug));
         break;
@@ -375,13 +385,13 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
 
     // Sort by tier then name
     filtered.sort((a, b) => {
-      const tierOrder = { basic: 0, professional: 1, mastery: 2 };
       const tierDiff =
         tierOrder[getSkillTier(a.slug)] - tierOrder[getSkillTier(b.slug)];
       if (tierDiff !== 0) return tierDiff;
       return a.display_name.localeCompare(b.display_name);
     });
 
+    if (groupFamilies) filtered.sort((a, b) => familyKey(a.slug).localeCompare(familyKey(b.slug)) || tierOrder[getSkillTier(a.slug)] - tierOrder[getSkillTier(b.slug)]);
     return filtered;
   }, [
     skills,
@@ -391,6 +401,7 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
     learnedSlugs,
     educationSlugs,
     hideMaxed,
+    groupFamilies,
   ]);
 
   // Count skills per category
@@ -403,6 +414,19 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
     });
     return counts;
   }, [learnedSlugs]);
+
+  const maxedCount = useMemo(() => skills.filter((skill) => {
+    const level = progress.find((p) => p.skill_slug === skill.slug)?.current_level ?? 0;
+    return level >= (Number((skill.tier_caps as any)?.max_level) || 100);
+  }).length, [skills, progress]);
+
+  const nextSteps = useMemo(() => skills.filter((skill) => {
+    if (learnedSlugs.has(skill.slug)) return false;
+    const prerequisites = getSkillPrerequisites(skill.slug);
+    return prerequisites.length > 0 && prerequisites.every((req) =>
+      (progress.find((p) => p.skill_slug === req.prerequisite_skill_slug)?.current_level ?? 0) >= req.required_level
+    );
+  }).slice(0, 5), [skills, progress, learnedSlugs]);
 
   const availabilityBySlug = useMemo(
     () =>
@@ -487,6 +511,16 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
 
   return (
     <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Skill progression summary">
+        <Card><CardContent className="p-3"><p className="text-xs text-muted-foreground">Learned</p><p className="text-xl font-bold">{learnedSlugs.size}</p></CardContent></Card>
+        <Card><CardContent className="p-3"><p className="text-xs text-muted-foreground">Maxed</p><p className="text-xl font-bold">{maxedCount}</p></CardContent></Card>
+        <Card><CardContent className="p-3"><p className="text-xs text-muted-foreground">Not learned</p><p className="text-xl font-bold">{skills.filter((s) => !learnedSlugs.has(s.slug)).length}</p></CardContent></Card>
+        <Card><CardContent className="p-3"><p className="text-xs text-muted-foreground">Next tiers ready</p><p className="text-xl font-bold">{nextSteps.length}</p></CardContent></Card>
+      </div>
+      {nextSteps.length > 0 && <Card><CardHeader className="pb-2"><CardTitle className="text-base">Suggested next skills</CardTitle></CardHeader><CardContent className="space-y-2">
+        {nextSteps.map((skill) => <div key={skill.slug} className="flex flex-wrap items-center justify-between gap-2 text-sm"><span>{skill.display_name}</span><Button size="sm" variant="outline" onClick={() => { setSelectedCategory("all"); setFilterMode("all"); setHideMaxed(false); setGroupFamilies(true); document.getElementById("skill-tree-results")?.scrollIntoView({behavior:"smooth"}); }}>View progression</Button></div>)}
+        <p className="text-xs text-muted-foreground">Prerequisites met based on recorded levels. Check skill availability and Education before training.</p>
+      </CardContent></Card>}
       {/* Header with controls */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
@@ -568,10 +602,12 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
             <ToggleGroupItem value="all" size="sm">
               All
             </ToggleGroupItem>
+            <ToggleGroupItem value="maxed" size="sm">Maxed</ToggleGroupItem>
             <ToggleGroupItem value="unlearned" size="sm">
               Unlearned
             </ToggleGroupItem>
           </ToggleGroup>
+          <Button size="sm" variant={groupFamilies ? "default" : "outline"} onClick={() => setGroupFamilies((v) => !v)}>{groupFamilies ? "Grouped by family" : "Group families"}</Button>
           <Button
             variant={hideMaxed ? "default" : "outline"}
             size="sm"
@@ -603,7 +639,7 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
       )}
 
       {/* Skills display */}
-      <ScrollArea className="h-[500px] rounded-md border p-3">
+      <ScrollArea id="skill-tree-results" className="h-[500px] rounded-md border p-3">
         {filteredSkills.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <p>No skills found matching your filters.</p>
@@ -611,7 +647,10 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
           </div>
         ) : viewMode === "list" ? (
           <div className="space-y-1.5">
-            {filteredSkills.map((skill) => {
+            {filteredSkills.map((skill, index) => {
+              const previous = filteredSkills[index - 1];
+              const family = familyKey(skill.slug);
+              const showFamilyHeading = groupFamilies && (!previous || familyKey(previous.slug) !== family);
               const skillProgress = getSkillProgress(skill.slug);
               const tier = getSkillTier(skill.slug);
               const availability = availabilityBySlug.get(skill.slug);
@@ -635,6 +674,7 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
                 .join(", ");
               return (
                 <div key={skill.id} className="space-y-1">
+                  {showFamilyHeading && <h3 className="rounded bg-muted px-3 py-2 text-sm font-semibold capitalize">{family.replace(/_/g, " ")} <span className="font-normal text-muted-foreground">· Basic → Professional → Mastery</span></h3>}
                   <CompactSkillRow
                     key={skill.id}
                     skill={skill}
