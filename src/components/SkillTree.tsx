@@ -530,7 +530,7 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
         <Card><CardContent className="p-3"><p className="text-xs text-muted-foreground">Suggested unlocks</p><p className="text-xl font-bold">{nextSteps.length}</p></CardContent></Card>
       </div>
       {nextSteps.length > 0 && <Card><CardHeader className="pb-2"><CardTitle className="text-base">Suggested next skills</CardTitle></CardHeader><CardContent className="space-y-2">
-        {nextSteps.map((skill) => <div key={skill.slug} className="flex flex-wrap items-center justify-between gap-2 text-sm"><span>{skill.display_name}</span><Button size="sm" variant="outline" onClick={() => { setSelectedCategory("all"); setFilterMode("all"); setHideMaxed(false); setGroupFamilies(true); document.getElementById("skill-tree-results")?.scrollIntoView({behavior:"smooth"}); }}>View progression</Button></div>)}
+        {nextSteps.map((skill) => <div key={skill.slug} className="flex flex-wrap items-center justify-between gap-2 text-sm"><span>{skill.display_name}</span><Button size="sm" variant="outline" onClick={() => { setSelectedCategory("all"); setFilterMode("all"); setHideMaxed(false); setGroupFamilies(true); setSkillSearch(skillFamilyKey(skill.slug)); setExpandedFamilies((current) => [...new Set([...current, skillFamilyKey(skill.slug)])]); document.getElementById("skill-tree-results")?.scrollIntoView({behavior:"smooth"}); }}>View progression</Button></div>)}
         <p className="text-xs text-muted-foreground">Prerequisites met based on recorded levels. Check skill availability and Education before training.</p>
       </CardContent></Card>}
       <p className="text-xs text-muted-foreground">{skillFamilies.length} skill families in the catalogue</p>
