@@ -167,9 +167,9 @@ export function LocalDailyBrief() {
   });
 
   return (
-    <div className="grid gap-5 lg:grid-cols-2">
-      <LocalMayorColumn cityId={location?.cityId} cityName={location?.city} />
-      <details className="group border border-foreground/40 bg-card/60 p-4 lg:col-span-2">
+    <div className="grid items-start gap-4 md:grid-cols-2">
+      <div className="md:col-span-2"><LocalMayorColumn cityId={location?.cityId} cityName={location?.city} /></div>
+      <details className="group border border-foreground/40 bg-card/60 p-4 md:col-span-2">
         <summary className="mb-2 flex cursor-pointer items-center gap-2 font-serif text-xl font-black"><Music2 className="h-5 w-5" />
           Top 5 Songs — {country || "Choose a city"}
         </summary>
@@ -207,8 +207,14 @@ export function LocalDailyBrief() {
           ) : <p className="text-sm text-muted-foreground">No chart entries available for this country yet.</p>}
         <Link className="mt-2 inline-block text-sm text-primary underline" to="/country-charts">View full country charts</Link>
       </details>
+      {newcomers.length > 0 && <details className="group border border-foreground/40 bg-card/60 p-4">
+        <summary className="mb-2 flex cursor-pointer items-center gap-2 font-serif text-lg font-black"><Users className="h-5 w-5" /> New Players · Last 7 Days ({newcomers.length})</summary>
+        {newcomers.length ? newcomers.map((p) => (
+          <NewPlayerWelcome key={p.id} playerId={p.id} name={p.display_name || "New artist"} />
+        )) : null}
+      </details>}
       {(orderedVisits.length > 0 || visitsError) && <details className="group border border-foreground/40 bg-card/60 p-4">
-        <summary className="mb-2 flex cursor-pointer items-center gap-2 font-serif text-lg font-black"><GraduationCap className="h-5 w-5" /> Visiting Professors · +70% XP</summary>
+        <summary className="mb-2 flex cursor-pointer items-center gap-2 font-serif text-lg font-black"><GraduationCap className="h-5 w-5" /> Visiting Professors · +70% XP ({orderedVisits.length})</summary>
         {visitsError ? <p className="text-sm text-muted-foreground">Professor information is temporarily unavailable.</p> :
           orderedVisits.length ? orderedVisits.map((v) => (
             <article key={v.id} className="border-b border-border/50 py-2 last:border-0">
@@ -221,7 +227,7 @@ export function LocalDailyBrief() {
       </details>}
       {festivalUpgrades.length > 0 && (
         <details className="group border border-foreground/40 bg-card/60 p-4">
-          <summary className="mb-2 cursor-pointer font-serif text-lg font-black">Festival Business Improvements</summary>
+          <summary className="mb-2 cursor-pointer font-serif text-lg font-black">Festival Business Improvements ({festivalUpgrades.length})</summary>
           {festivalUpgrades.map(upgrade => (
             <article key={upgrade.id} className="border-b border-border/50 py-2 text-sm last:border-0">
               <p className="font-semibold">{upgrade.companyName}: {upgrade.category_key.replace(/_/g, " ")} upgraded to level {upgrade.active_level}</p>
@@ -232,7 +238,7 @@ export function LocalDailyBrief() {
       )}
       {cityProjects.length > 0 && (
         <details className="group border border-foreground/40 bg-card/60 p-4">
-          <summary className="mb-2 cursor-pointer font-serif text-lg font-black">City Improvements — {location?.city}</summary>
+          <summary className="mb-2 cursor-pointer font-serif text-lg font-black">City Improvements — {location?.city} ({cityProjects.length})</summary>
           {cityProjects.map(project => (
             <article key={project.id} className="border-b border-border/50 py-2 text-sm last:border-0">
               <p className="font-semibold">{project.name} completed</p>
@@ -242,7 +248,7 @@ export function LocalDailyBrief() {
         </details>
       )}
       {newCompanies.length > 0 && <details className="group border border-foreground/40 bg-card/60 p-4">
-        <summary className="mb-2 cursor-pointer font-serif text-lg font-black">New Companies · Last 24 Hours</summary>
+        <summary className="mb-2 cursor-pointer font-serif text-lg font-black">New Companies · Last 24 Hours ({newCompanies.length})</summary>
         {newCompanies.length ? newCompanies.map(company => (
           <article key={company.id} className="border-b border-border/50 py-2 text-sm last:border-0">
             <p className="font-semibold">{company.name}</p>
@@ -250,12 +256,7 @@ export function LocalDailyBrief() {
           </article>
         )) : null}
       </details>}
-      {newcomers.length > 0 && <details className="group border border-foreground/40 bg-card/60 p-4">
-        <summary className="mb-2 flex cursor-pointer items-center gap-2 font-serif text-lg font-black"><Users className="h-5 w-5" /> New Players · Last 7 Days</summary>
-        {newcomers.length ? newcomers.map((p) => (
-          <NewPlayerWelcome key={p.id} playerId={p.id} name={p.display_name || "New artist"} />
-        )) : null}
-      </details>}
+
     </div>
   );
 }
