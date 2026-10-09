@@ -13,17 +13,6 @@ const corsHeaders = {
 
 const JOB_NAME = "process-event-outcomes";
 
-interface EventEffects {
-  fans?: number;
-  cash?: number;
-  health?: number;
-  energy?: number;
-  fame?: number;
-  xp?: number;
-  skill_xp?: number;
-  skill_slug?: string;
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -63,7 +52,7 @@ Deno.serve(async (req) => {
     console.log(`[${JOB_NAME}] Found ${pendingOutcomes?.length || 0} pending outcomes`);
 
     let outcomesProcessed = 0;
-    let hospitalizationsTriggered = 0;
+    let lowHealthOutcomes = 0;
 
     for (const playerEvent of pendingOutcomes || []) {
       const event = playerEvent.random_events;
@@ -81,94 +70,12 @@ Deno.serve(async (req) => {
       }
       if (!result?.applied) continue;
 
-      const appliedEffects: EventEffects = result.effects ?? {};
-      const effects = appliedEffects;
-      const outcomeMessage = String(result.outcome_message ?? "");
-      const newHealth = Number(result.health_after ?? 100);
-
-      // Log activity
-      await supabase.from("activity_feed").insert({
-        user_id: playerEvent.user_id,
-        activity_type: "random_event_outcome",
-        message: `Event outcome: ${outcomeMessage}`,
-        metadata: { event_id: event.id, effects: appliedEffects },
-      });
-
-      // Create inbox message with outcome details
-      const effectsSummary: string[] = [];
-      if (effects.cash && effects.cash !== 0) effectsSummary.push(`${effects.cash > 0 ? '+' : ''}$${effects.cash}`);
-      if (effects.fame && effects.fame !== 0) effectsSummary.push(`${effects.fame > 0 ? '+' : ''}${effects.fame} fame`);
-      if (effects.fans && effects.fans !== 0) effectsSummary.push(`${effects.fans > 0 ? '+' : ''}${effects.fans} fans`);
-      if (effects.health && effects.health !== 0) effectsSummary.push(`${effects.health > 0 ? '+' : ''}${effects.health} health`);
-      if (effects.energy && effects.energy !== 0) effectsSummary.push(`${effects.energy > 0 ? '+' : ''}${effects.energy} energy`);
-      if (effects.xp && effects.xp !== 0) effectsSummary.push(`${effects.xp > 0 ? '+' : ''}${effects.xp} XP`);
-      if (appliedEffects.skill_xp && appliedEffects.skill_slug) {
-        effectsSummary.push(`+${appliedEffects.skill_xp} ${appliedEffects.skill_slug.replace(/_/g, " ")} skill XP`);
-      }
-      
-      const effectsText = effectsSummary.length > 0 ? `\n\nEffects: ${effectsSummary.join(', ')}` : '';
-      
-      await supabase.from("player_inbox").insert({
-        user_id: playerEvent.user_id,
-        category: "random_event",
-        priority: "normal",
-        title: `📋 Event Outcome: ${event.title}`,
-        message: `${outcomeMessage}${effectsText}`,
-        metadata: { event_id: event.id, player_event_id: playerEvent.id, effects: appliedEffects },
-        related_entity_type: "random_event",
-        related_entity_id: event.id,
-        action_type: null,
-        action_data: null,
-      });
-
+      // Database trigger delivers the inbox item, activity feed record and any
+      // hospitalization atomically with the outcome. No extra writes here.
       outcomesProcessed++;
-
-      // Check for hospitalization (health < 10)
-      if (newHealth < 10) {
-        console.log(`[${JOB_NAME}] Player ${playerEvent.user_id} health dropped to ${newHealth}, triggering hospitalization`);
-        
-        // Get player's current city
-        const { data: playerProfile } = await supabase
-          .from("profiles")
-          .select("current_city_id")
-          .eq("user_id", playerEvent.user_id)
-          .single();
-
-        if (playerProfile?.current_city_id) {
-          // Find hospital in that city
-          const { data: hospital } = await supabase
-            .from("hospitals")
-            .select("*")
-            .eq("city_id", playerProfile.current_city_id)
-            .limit(1)
-            .single();
-
-          if (hospital) {
-            // Calculate recovery days based on effectiveness
-            const recoveryDays = Math.max(1, Math.min(3, Math.ceil((100 - hospital.effectiveness_rating) / 50) + 1));
-            const dischargeDate = new Date();
-            dischargeDate.setDate(dischargeDate.getDate() + recoveryDays);
-
-            // Create hospitalization record
-            await supabase.from("player_hospitalizations").insert({
-              user_id: playerEvent.user_id,
-              hospital_id: hospital.id,
-              reason: `Health emergency from event: ${event.title}`,
-              daily_cost: hospital.cost_per_day,
-              estimated_discharge_at: dischargeDate.toISOString(),
-            });
-
-            // Log hospitalization
-            await supabase.from("activity_feed").insert({
-              user_id: playerEvent.user_id,
-              activity_type: "hospitalized",
-              message: `Rushed to ${hospital.name} for emergency treatment`,
-              metadata: { hospital_id: hospital.id, recovery_days: recoveryDays },
-            });
-
-            hospitalizationsTriggered++;
-          }
-        }
+      if (result.health_after != null && Number(result.health_after) < 10) {
+        // Counts low-health outcomes, not necessarily successful admissions.
+        lowHealthOutcomes++;
       }
     }
 
@@ -186,7 +93,7 @@ Deno.serve(async (req) => {
       console.log(`[${JOB_NAME}] Expired ${expiredCount} old events`);
     }
 
-    console.log(`[${JOB_NAME}] Complete. Processed ${outcomesProcessed} outcomes, ${hospitalizationsTriggered} hospitalizations`);
+    console.log(`[${JOB_NAME}] Complete. Processed ${outcomesProcessed} outcomes, ${lowHealthOutcomes} hospitalizations`);
 
     await completeJobRun({
       jobName: JOB_NAME,
@@ -194,11 +101,11 @@ Deno.serve(async (req) => {
       supabaseClient: supabase,
       durationMs: Date.now() - startTime,
       processedCount: outcomesProcessed,
-      resultSummary: { outcomesProcessed, hospitalizationsTriggered, expiredCount },
+      resultSummary: { outcomesProcessed, lowHealthOutcomes, expiredCount },
     });
 
     return new Response(
-      JSON.stringify({ success: true, outcomesProcessed, hospitalizationsTriggered, expiredCount }),
+      JSON.stringify({ success: true, outcomesProcessed, lowHealthOutcomes, expiredCount }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
