@@ -106,7 +106,7 @@ export const BooksTab = () => {
     return Array.from(cats).sort();
   }, [typedBooks]);
 
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(() => new URLSearchParams(window.location.search).get("skill")?.replace(/_/g, " ") ?? "");
   const [selectedSkill, setSelectedSkill] = useState<string>("all");
 
   const groupedBooks = useMemo(() => {
