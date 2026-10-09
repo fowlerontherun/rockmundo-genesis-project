@@ -65,69 +65,6 @@ function calculateLearningMultiplier(skillSlug: string, attributes: Record<strin
   return 1.0 + bonus;
 }
 
-async function getSkillMaxLevel(client: any, skillSlug: string): Promise<number> {
-  const { data, error } = await client.rpc("progression_skill_max_level", {
-    p_skill_slug: skillSlug,
-  });
-  if (error) throw error;
-  const value = Number(data);
-  return Number.isFinite(value) && value > 0 ? value : 20;
-}
-
-async function getRequiredXp(client: any, level: number): Promise<number> {
-  const { data, error } = await client.rpc("progression_skill_required_xp", {
-    p_level: level,
-  });
-  if (error) throw error;
-  const value = Number(data);
-  return Number.isFinite(value) && value > 0 ? value : 100;
-}
-
-async function awardSkillXp(client: any, profileId: string, skillSlug: string, xpEarned: number) {
-  const maxLevel = await getSkillMaxLevel(client, skillSlug);
-  const { data: progress, error: progressError } = await client
-    .from("skill_progress")
-    .select("id, current_xp, current_level, required_xp")
-    .eq("profile_id", profileId)
-    .eq("skill_slug", skillSlug)
-    .maybeSingle();
-
-  if (progressError) throw progressError;
-
-  let level = Math.min(Math.max(Number(progress?.current_level ?? 0), 0), maxLevel);
-  let currentXp = Math.max(Number(progress?.current_xp ?? 0), 0);
-
-  if (level >= maxLevel) return;
-
-  currentXp += xpEarned;
-  let requiredXp = Number(progress?.required_xp ?? 0) || await getRequiredXp(client, level);
-
-  while (level < maxLevel && currentXp >= requiredXp) {
-    currentXp -= requiredXp;
-    level += 1;
-    requiredXp = level < maxLevel ? await getRequiredXp(client, level) : 0;
-  }
-
-  if (level >= maxLevel) {
-    level = maxLevel;
-    currentXp = 0;
-    requiredXp = 0;
-  }
-
-  const { error: upsertError } = await client
-    .from("skill_progress")
-    .upsert({
-      profile_id: profileId,
-      skill_slug: skillSlug,
-      current_xp: currentXp,
-      current_level: level,
-      required_xp: requiredXp,
-      last_practiced_at: new Date().toISOString(),
-    }, { onConflict: "profile_id,skill_slug" });
-
-  if (upsertError) throw upsertError;
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
