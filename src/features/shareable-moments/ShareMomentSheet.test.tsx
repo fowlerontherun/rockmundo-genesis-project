@@ -23,7 +23,7 @@ vi.mock("./canvas", () => ({
 }));
 
 vi.mock("./avatarCapture", () => ({
-  loadCaptureImage: vi.fn().mockResolvedValue({}),
+  loadCaptureImage: mocks.loadCaptureImage,
 }));
 
 vi.mock("./gallery", () => ({
