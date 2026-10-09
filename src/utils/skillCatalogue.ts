@@ -506,8 +506,9 @@ export function getBlockedReasonForSkill(
 export function getAvailabilityForSkill(
   progress: Record<string, number>,
   slug: string,
+  catalogueSkill?: CanonicalSkill,
 ): SkillAvailability {
-  const skill = getSkillBySlug(slug);
+  const skill = catalogueSkill ?? getSkillBySlug(slug);
   if (!skill)
     return {
       slug,
@@ -557,6 +558,7 @@ export async function getAvailableSkillsForProfile(profileId: string) {
   const progress = Object.fromEntries(
     (data ?? []).map((s: any) => [s.skill_slug, s.current_level ?? 0]),
   );
-  return CANONICAL_SKILLS.map((s) => getAvailabilityForSkill(progress, s.slug));
+  const catalogue = await fetchCanonicalSkillCatalogue();
+  return catalogue.map((s) => getAvailabilityForSkill(progress, s.slug, s));
 }
 export const KNOWN_ATTRIBUTE_KEYS = FULL_ATTRIBUTE_KEYS;
