@@ -232,14 +232,13 @@ Deno.serve(async (req) => {
           const eligibleCravings = matchingCravings.length > 0 ? matchingCravings : cravingEvents;
           const selectedCraving = eligibleCravings[Math.floor(Math.random() * eligibleCravings.length)];
 
-          const { error: insertError } = await supabase.from("player_events").insert({
-            user_id: player.user_id,
-            profile_id: player.id,
-            event_id: selectedCraving.id,
-            status: "pending_choice",
+          const { data: assignedId, error: insertError } = await supabase.rpc("assign_random_event_if_available", {
+            p_user_id: player.user_id,
+            p_profile_id: player.id,
+            p_event_id: selectedCraving.id,
           });
 
-          if (!insertError) {
+          if (!insertError && assignedId) {
             eventsTriggered++;
             console.log(`[${JOB_NAME}] Triggered craving event "${selectedCraving.title}" for ${player.id}`);
             continue;
@@ -329,17 +328,16 @@ Deno.serve(async (req) => {
         ? releaseCandidates[Math.floor(Math.random() * releaseCandidates.length)]
         : null;
 
-      const { error: insertError } = await supabase.from("player_events").insert({
-        user_id: player.user_id,
-        profile_id: player.id,
-        event_id: selectedEvent.id,
-        target_release_id: selectedRelease?.id ?? null,
-        target_skill_slug: selectedSkillSlug,
-        status: "pending_choice",
+      const { data: assignedId, error: insertError } = await supabase.rpc("assign_random_event_if_available", {
+        p_user_id: player.user_id,
+        p_profile_id: player.id,
+        p_event_id: selectedEvent.id,
+        p_target_release_id: selectedRelease?.id ?? null,
+        p_target_skill_slug: selectedSkillSlug,
       });
 
-      if (insertError) {
-        console.error(`[${JOB_NAME}] Failed to create event for ${player.id}:`, insertError);
+      if (insertError || !assignedId) {
+        if (insertError) console.error(`[${JOB_NAME}] Failed to create event for ${player.id}:`, insertError);
         continue;
       }
 
