@@ -24,9 +24,9 @@ tmp2="$(mktemp)"
 trap 'rm -f "$tmp1" "$tmp2"' EXIT
 
 # Separate DB sessions, started without waiting for one another.
-psql "$TEST_SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -v event_id="$TEST_PLAYER_EVENT_ID" -At   -c "select public.apply_random_event_outcome(:'event_id'::uuid)" > "$tmp1" 2>&1 &
+psql "$TEST_SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -At -c "select public.apply_random_event_outcome('$TEST_PLAYER_EVENT_ID'::uuid)" > "$tmp1" 2>&1 &
 p1=$!
-psql "$TEST_SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -v event_id="$TEST_PLAYER_EVENT_ID" -At   -c "select public.apply_random_event_outcome(:'event_id'::uuid)" > "$tmp2" 2>&1 &
+psql "$TEST_SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -At -c "select public.apply_random_event_outcome('$TEST_PLAYER_EVENT_ID'::uuid)" > "$tmp2" 2>&1 &
 p2=$!
 wait "$p1"
 wait "$p2"
