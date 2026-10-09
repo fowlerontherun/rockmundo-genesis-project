@@ -98,6 +98,7 @@ export default function UniversityDetail() {
   const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [courseSearch, setCourseSearch] = useState("");
+  const [hideLockedCourses, setHideLockedCourses] = useState(true);
 
   const { data: university } = useQuery({
     queryKey: ["university", id],
@@ -736,9 +737,18 @@ export default function UniversityDetail() {
   const formatSkillSlug = (slug: string) =>
     slug.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 
-  const filteredCourses = useMemo(() => {
+  const filteredCourses = (() => {
     if (!courses) return [];
     let result = courses;
+    // Only hide courses when prerequisite data is ready; never mistake a loading state for a lock.
+    if (hideLockedCourses && !skillDefinitionsLoading && !skillParentLinksLoading &&
+        !skillDefinitionsError && !skillParentLinksError && skillDefinitions && skillParentLinks) {
+      result = result.filter(course => {
+        const prerequisite = getCoursePrerequisite(course);
+        return (!prerequisite || prerequisite.currentLevel >= prerequisite.requiredLevel) &&
+          getSkillLevel(course.skill_slug) >= course.required_skill_level;
+      });
+    }
     if (courseSearch.trim()) {
       const q = courseSearch.toLowerCase();
       result = result.filter(c =>
@@ -747,7 +757,7 @@ export default function UniversityDetail() {
       );
     }
     return result;
-  }, [courses, courseSearch]);
+  })();
 
   const courseFilterUI = (
     <div className="space-y-3 mb-4">
@@ -760,6 +770,10 @@ export default function UniversityDetail() {
           className="pl-9"
         />
       </div>
+      <Button variant={hideLockedCourses ? "secondary" : "outline"} size="sm"
+        onClick={() => setHideLockedCourses(value => !value)} aria-pressed={hideLockedCourses}>
+        {hideLockedCourses ? "Hide locked courses: On" : "Hide locked courses: Off"}
+      </Button>
       {courseSearch.trim() && (
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">
