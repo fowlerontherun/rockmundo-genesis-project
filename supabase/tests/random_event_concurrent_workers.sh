@@ -10,12 +10,14 @@ case "$TEST_PLAYER_EVENT_ID" in
   *) echo "TEST_PLAYER_EVENT_ID must be a UUID" >&2; exit 2;;
 esac
 
-psql "$TEST_SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -v event_id="$TEST_PLAYER_EVENT_ID" -At <<'SQL'
+fixture="$(psql "$TEST_SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -v event_id="$TEST_PLAYER_EVENT_ID" -At <<'SQL'
 select case when count(*) = 1 then 'READY' else 'INVALID_FIXTURE' end
 from public.player_events
 where id = :'event_id'::uuid and status = 'awaiting_outcome'
   and choice_made in ('a','b') and profile_id is not null;
 SQL
+)"
+if [[ "$fixture" != "READY" ]]; then echo "Invalid awaiting_outcome fixture" >&2; exit 3; fi
 
 tmp1="$(mktemp)"
 tmp2="$(mktemp)"
@@ -31,10 +33,10 @@ wait "$p2"
 cat "$tmp1"
 cat "$tmp2"
 
-psql "$TEST_SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -v event_id="$TEST_PLAYER_EVENT_ID" <<'SQL'
-DO $check$
+psql "$TEST_SUPABASE_DB_URL" -v ON_ERROR_STOP=1 <<SQL
+DO \$check\$
 DECLARE
-  v_event uuid := :'event_id'::uuid;
+  v_event uuid := '$TEST_PLAYER_EVENT_ID'::uuid;
   v_completed integer;
   v_inbox integer;
   v_activity integer;
@@ -53,5 +55,5 @@ BEGIN
   END IF;
   RAISE NOTICE 'PASS: one completed event, one inbox, one activity, no duplicate skill grant';
 END
-$check$;
+\$check\$;
 SQL
