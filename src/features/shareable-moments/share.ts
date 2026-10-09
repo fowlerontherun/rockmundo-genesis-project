@@ -1,12 +1,12 @@
 import type { SharePayload } from './types';
-
-const REFERRAL_PATH = '/auth';
+import { buildReferralUrl } from '@/lib/referralShare';
 
 export function referralUrl(code: string, origin?: string): string {
-  const resolvedOrigin = origin ?? (typeof window === 'undefined' ? 'https://rockmundo.uk' : window.location.origin);
-  const url = new URL(REFERRAL_PATH, resolvedOrigin);
-  url.searchParams.set('ref', code.trim().toUpperCase());
-  return url.toString();
+  if (origin) {
+    const url = new URL(buildReferralUrl(code));
+    return new URL(`${url.pathname}${url.search}`, origin).toString();
+  }
+  return buildReferralUrl(code);
 }
 
 export function referralUrlWithParams(code: string, params: Record<string, string | undefined | null> = {}, origin?: string): string {
