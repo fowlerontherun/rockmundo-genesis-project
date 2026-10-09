@@ -1,10 +1,11 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 
 const mocks = vi.hoisted(() => ({
   markSharePromptSeen: vi.fn(),
   trackShareAnalyticsEvent: vi.fn(),
+  loadCaptureImage: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock("./prompts", () => ({
@@ -110,6 +111,27 @@ describe("ShareMomentSheet contextual prompt gate", () => {
 });
 
 describe("character promo avatar readiness", () => {
+  beforeEach(() => { mocks.loadCaptureImage.mockReset().mockResolvedValue({}); });
+
+  it("blocks image exports when avatar decoding fails", async () => {
+    mocks.loadCaptureImage.mockRejectedValueOnce(new Error("Invalid image"));
+    render(
+      <MemoryRouter>
+        <ShareMomentSheet
+          moment={{ ...moment, type: "character_profile", promptOnly: false, avatar: { dataUrl: "data:image/png;base64,AA==", width: 720, height: 1080 } } as import("./characterProfile").CharacterProfileShareMoment}
+          open
+          onOpenChange={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(screen.getByText(/Avatar preview could not be loaded/)).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "Share now" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Post to Twaater" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Download PNG" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Copy image" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Copy link" })).toBeEnabled();
+  });
+
   it("enables sharing when Avatar V1 capture is available", () => {
     render(
       <MemoryRouter>
