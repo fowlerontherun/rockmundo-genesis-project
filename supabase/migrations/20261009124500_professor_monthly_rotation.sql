@@ -9,7 +9,7 @@ DECLARE
   v_end timestamptz;
   v_count integer;
 BEGIN
-  IF current_user <> 'service_role' THEN
+  IF current_setting('request.jwt.claim.role', true) IS DISTINCT FROM 'service_role' THEN
     RAISE EXCEPTION 'Only the service role can schedule professors' USING ERRCODE = '42501';
   END IF;
   v_start := date_trunc('month', p_month::timestamp) AT TIME ZONE 'UTC';
