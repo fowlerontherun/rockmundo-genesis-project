@@ -2,6 +2,8 @@
 # Run ONLY against an isolated test database with disposable auth user, profile,
 # and event fixture IDs. Never run against production player accounts.
 set -euo pipefail
+: "${TEST_ISOLATED_DATABASE_CONFIRMATION:?Set TEST_ISOLATED_DATABASE_CONFIRMATION=I_CONFIRM_ISOLATED_TEST_DB}"
+if [[ "$TEST_ISOLATED_DATABASE_CONFIRMATION" != "I_CONFIRM_ISOLATED_TEST_DB" ]]; then echo "Isolated DB confirmation required" >&2; exit 2; fi
 : "${TEST_DATABASE_URL:?Set TEST_DATABASE_URL to an isolated test database}"
 : "${TEST_USER_ID:?Supply a disposable auth.users ID}"
 : "${TEST_PROFILE_ID:?Supply the user's disposable profile ID}"
@@ -14,10 +16,15 @@ done
 run_assignment() {
   psql "$TEST_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 \
     -v uid="$TEST_USER_ID" -v pid="$TEST_PROFILE_ID" -v eid="$TEST_EVENT_ID" \
-    -c "select coalesce(public.assign_random_event_if_available(:'uid'::uuid, :'pid'::uuid, :'eid'::uuid)::text, 'BLOCKED');"
+    -f - <<'SQL'
+select coalesce(public.assign_random_event_if_available(:'uid'::uuid, :'pid'::uuid, :'eid'::uuid)::text, 'BLOCKED');
+SQL
 }
 before=$(psql "$TEST_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -v uid="$TEST_USER_ID" \
-  -c "select count(*) from public.player_events where user_id=:'uid'::uuid and (status='pending_choice' or (status='awaiting_outcome' and choice_made_at >= timestamptz '2026-10-09 00:00:00+00'))")
+  -f - <<'SQL'
+select count(*) from public.player_events where user_id=:'uid'::uuid and (status='pending_choice' or (status='awaiting_outcome' and choice_made_at >= timestamptz '2026-10-09 00:00:00+00'));
+SQL
+)
 if [[ "$before" != "0" ]]; then echo "Fixture already has active events ($before)" >&2; exit 2; fi
 dir=$(mktemp -d)
 trap 'rm -rf "$dir"' EXIT
@@ -26,7 +33,10 @@ run_assignment >"$dir/b" 2>"$dir/b.err" & b=$!
 wait "$a" || { cat "$dir/a.err" >&2; exit 1; }
 wait "$b" || { cat "$dir/b.err" >&2; exit 1; }
 after=$(psql "$TEST_DATABASE_URL" -X -qAt -v ON_ERROR_STOP=1 -v uid="$TEST_USER_ID" \
-  -c "select count(*) from public.player_events where user_id=:'uid'::uuid and status='pending_choice'")
+  -f - <<'SQL'
+select count(*) from public.player_events where user_id=:'uid'::uuid and status='pending_choice';
+SQL
+)
 created=$(grep -hEc '^[0-9a-fA-F-]{36}$' "$dir/a" "$dir/b" | awk '{s+=$1} END{print s+0}')
 blocked=$(grep -hc '^BLOCKED$' "$dir/a" "$dir/b" | awk '{s+=$1} END{print s+0}')
 if [[ "$after" != "1" || "$created" != "1" || "$blocked" != "1" ]]; then
