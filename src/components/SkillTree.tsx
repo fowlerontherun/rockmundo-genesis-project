@@ -526,7 +526,7 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
         <Card><CardContent className="p-3"><p className="text-xs text-muted-foreground">Learned</p><p className="text-xl font-bold">{learnedSlugs.size}</p></CardContent></Card>
         <Card><CardContent className="p-3"><p className="text-xs text-muted-foreground">Maxed</p><p className="text-xl font-bold">{maxedCount}</p></CardContent></Card>
         <Card><CardContent className="p-3"><p className="text-xs text-muted-foreground">Not learned</p><p className="text-xl font-bold">{skills.filter((s) => !learnedSlugs.has(s.slug)).length}</p></CardContent></Card>
-        <Card><CardContent className="p-3"><p className="text-xs text-muted-foreground">Next tiers ready</p><p className="text-xl font-bold">{nextSteps.length}</p></CardContent></Card>
+        <Card><CardContent className="p-3"><p className="text-xs text-muted-foreground">Suggested unlocks</p><p className="text-xl font-bold">{nextSteps.length}</p></CardContent></Card>
       </div>
       {nextSteps.length > 0 && <Card><CardHeader className="pb-2"><CardTitle className="text-base">Suggested next skills</CardTitle></CardHeader><CardContent className="space-y-2">
         {nextSteps.map((skill) => <div key={skill.slug} className="flex flex-wrap items-center justify-between gap-2 text-sm"><span>{skill.display_name}</span><Button size="sm" variant="outline" onClick={() => { setSelectedCategory("all"); setFilterMode("all"); setHideMaxed(false); setGroupFamilies(true); document.getElementById("skill-tree-results")?.scrollIntoView({behavior:"smooth"}); }}>View progression</Button></div>)}
@@ -633,11 +633,11 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
       </div>
 
       {/* Clear next-tier unlocks in the tree */}
-      {unlockedNextTiers.length > 0 && (
+      {unlockedNextTiers.some(({ next }) => availabilityBySlug.get(next.slug)?.status === "available_to_unlock") && (
         <div className="mb-2 rounded-md border border-primary/30 bg-primary/5 p-3">
           <p className="text-sm font-semibold">New skill tier unlocked</p>
           <div className="mt-2 space-y-1">
-            {unlockedNextTiers.slice(0, 6).map(({ from, next, started }) => (
+            {unlockedNextTiers.filter(({ next }) => availabilityBySlug.get(next.slug)?.status === "available_to_unlock").slice(0, 6).map(({ from, next, started }) => (
               <div key={next.slug} className="flex flex-wrap items-center gap-2 text-xs">
                 <span className="text-muted-foreground">{from.display_name} maxed →</span>
                 <span className="font-medium">{next.display_name}</span>
