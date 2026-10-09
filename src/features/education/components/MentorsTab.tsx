@@ -24,6 +24,7 @@ export const MentorsTab = () => {
   } = useMentorSessions();
 
   const [filter, setFilter] = useState<'all' | 'available'>('all');
+  const requestedSkill = new URLSearchParams(window.location.search).get('skill');
   const tierAccess = useSkillTierAccess(profile?.id, (mentors ?? []).map((mentor) => mentor.focus_skill));
   const accessBySkill = tierAccess.data ?? new Map<string, boolean>();
 
@@ -43,6 +44,7 @@ export const MentorsTab = () => {
     const locked = isHigherTierSkill(mentor.focus_skill) && accessBySkill.get(mentor.focus_skill) === false;
 
     if (locked) return false;
+    if (requestedSkill && mentor.focus_skill !== requestedSkill) return false;
     if (filter === 'available') return inCity && availableDay;
     return true;
   });
