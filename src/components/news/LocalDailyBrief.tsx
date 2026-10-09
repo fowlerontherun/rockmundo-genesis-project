@@ -50,7 +50,7 @@ export function LocalDailyBrief() {
     queryFn: async () => {
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase.from("profiles")
-        .select("id, username, created_at, cities:current_city_id(name, country)")
+        .select("id, username, created_at, cities(name, country)")
         .gte("created_at", since).order("created_at", { ascending: false }).limit(8);
       if (error) throw error;
       return (data ?? []) as any[];
