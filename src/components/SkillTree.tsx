@@ -302,6 +302,7 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
 
   const handleSkillTrained = () => {
     setRefreshKey((prev) => prev + 1);
+    void availabilityQuery.refetch();
     onXpSpent?.();
   };
 
