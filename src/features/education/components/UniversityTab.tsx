@@ -109,6 +109,7 @@ export const UniversityTab = () => {
   const [searchQuery, setSearchQuery] = useState(() => new URLSearchParams(window.location.search).get("skill") ?? "");
   const [selectedCity, setSelectedCity] = useState<string>("current");
   const [selectedCategory, setSelectedCategory] = useState<SkillCategory>("all");
+  const [hideLockedCourses, setHideLockedCourses] = useState(true);
   const [viewMode, setViewMode] = useState<"universities" | "courses">("universities");
 
   // Fetch profile with current city
@@ -319,7 +320,11 @@ export const UniversityTab = () => {
     if (!courses) return [];
     
     let result = courses;
-    
+
+    if (hideLockedCourses) {
+      result = result.filter(c => !isHigherTierSkill(c.skill_slug) || accessBySkill.get(c.skill_slug) !== false);
+    }
+
     // Filter by city
     if (filterCity) {
       result = result.filter(c => c.universities?.city === filterCity);
@@ -348,7 +353,7 @@ export const UniversityTab = () => {
     }
     
     return result;
-  }, [courses, filterCity, searchQuery, selectedCategory]);
+  }, [courses, filterCity, searchQuery, selectedCategory, hideLockedCourses, accessBySkill]);
 
   // Group filtered universities by city
   const groupedUniversities = useMemo(() => {
@@ -383,6 +388,7 @@ export const UniversityTab = () => {
     setSearchQuery("");
     setSelectedCity("current");
     setSelectedCategory("all");
+    setHideLockedCourses(true);
   };
 
   return (
@@ -446,6 +452,13 @@ export const UniversityTab = () => {
             </SelectContent>
           </Select>
         </div>
+
+        {viewMode === "courses" && (
+          <Button variant={hideLockedCourses ? "secondary" : "outline"} size="sm" className="w-fit gap-2" onClick={() => setHideLockedCourses(v => !v)} aria-pressed={hideLockedCourses}>
+            <Lock className="h-4 w-4" />
+            {hideLockedCourses ? "Hide locked courses: On" : "Hide locked courses: Off"}
+          </Button>
+        )}
 
         {/* Category filter chips — only show in courses view */}
         {viewMode === "courses" && (
