@@ -22,24 +22,6 @@ interface UniversityEnrollment {
   } | null;
 }
 
-const getSkillMaxLevel = async (skillSlug: string): Promise<number> => {
-  const { data, error } = await (supabase as any).rpc("progression_skill_max_level", {
-    p_skill_slug: skillSlug,
-  });
-  if (error) throw error;
-  const value = Number(data);
-  return Number.isFinite(value) && value > 0 ? value : 20;
-};
-
-const getRequiredSkillXp = async (level: number): Promise<number> => {
-  const { data, error } = await (supabase as any).rpc("progression_skill_required_xp", {
-    p_level: level,
-  });
-  if (error) throw error;
-  const value = Number(data);
-  return Number.isFinite(value) && value > 0 ? value : 100;
-};
-
 export function useUniversityAttendance(profileId: string | undefined) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -119,167 +101,13 @@ export function useUniversityAttendance(profileId: string | undefined) {
       const course = enrollment.university_courses;
       if (!course) throw new Error("Course details not found");
 
-      const { data: tierUnlocked, error: tierError } = await (supabase as any).rpc("skill_tier_unlocked", {
-        p_profile_id: profileId,
-        p_slug: course.skill_slug,
+      const { data: award, error } = await supabase.functions.invoke("university-manual-attendance", {
+        body: { enrollmentId: enrollment.id },
       });
-      if (tierError) throw tierError;
-      if (tierUnlocked === false) throw new Error("This skill tier is not unlocked yet");
-
-      const maxLevel = await getSkillMaxLevel(course.skill_slug);
-      const xpMin = Math.max(0, Math.floor(course.xp_per_day_min ?? 0));
-      const xpMax = Math.max(xpMin, Math.floor(course.xp_per_day_max ?? xpMin));
-      const xpEarned = Math.floor(Math.random() * (xpMax - xpMin + 1) + xpMin);
-
-      const today = new Date().toISOString().split("T")[0];
-      const now = new Date();
-
-      const { error: attendanceError } = await supabase
-        .from("player_university_attendance")
-        .insert({
-          enrollment_id: enrollment.id,
-          attendance_date: today,
-          xp_earned: xpEarned,
-          was_locked_out: false,
-        });
-
-      if (attendanceError) throw attendanceError;
-
-      const currentDays = Number(enrollment.days_attended ?? 0);
-      const currentXp = Number(enrollment.total_xp_earned ?? 0);
-
-      const { error: updateError } = await supabase
-        .from("player_university_enrollments")
-        .update({
-          status: "in_progress",
-          days_attended: (Number.isFinite(currentDays) ? currentDays : 0) + 1,
-          total_xp_earned: (Number.isFinite(currentXp) ? currentXp : 0) + xpEarned,
-        })
-        .eq("id", enrollment.id);
-
-      if (updateError) throw updateError;
-
-      const { data: skillProgress } = await supabase
-        .from("skill_progress")
-        .select("id, current_xp, current_level, required_xp")
-        .eq("profile_id", profileId)
-        .eq("skill_slug", course.skill_slug)
-        .maybeSingle();
-
-      if (skillProgress) {
-        let newLevel = Math.min(Math.max(skillProgress.current_level ?? 0, 0), maxLevel);
-        let newCurrentXp = Math.max(skillProgress.current_xp ?? 0, 0);
-        let newRequiredXp = Number(skillProgress.required_xp ?? 0);
-
-        if (newLevel < maxLevel) {
-          if (newRequiredXp <= 0) newRequiredXp = await getRequiredSkillXp(newLevel);
-          newCurrentXp += xpEarned;
-
-          while (newLevel < maxLevel && newCurrentXp >= newRequiredXp) {
-            newCurrentXp -= newRequiredXp;
-            newLevel += 1;
-            newRequiredXp = newLevel < maxLevel ? await getRequiredSkillXp(newLevel) : 0;
-          }
-        }
-
-        if (newLevel >= maxLevel) {
-          newLevel = maxLevel;
-          newCurrentXp = 0;
-          newRequiredXp = 0;
-        }
-
-        const { error: skillError } = await supabase
-          .from("skill_progress")
-          .update({
-            current_xp: newCurrentXp,
-            current_level: newLevel,
-            required_xp: newRequiredXp,
-            last_practiced_at: now.toISOString(),
-          })
-          .eq("id", skillProgress.id);
-
-        if (skillError) throw skillError;
-      } else {
-        let newCurrentXp = xpEarned;
-        let newLevel = 0;
-        let newRequiredXp = await getRequiredSkillXp(0);
-
-        while (newLevel < maxLevel && newCurrentXp >= newRequiredXp) {
-          newCurrentXp -= newRequiredXp;
-          newLevel += 1;
-          newRequiredXp = newLevel < maxLevel ? await getRequiredSkillXp(newLevel) : 0;
-        }
-
-        if (newLevel >= maxLevel) {
-          newLevel = maxLevel;
-          newCurrentXp = 0;
-          newRequiredXp = 0;
-        }
-
-        const { error: skillError } = await supabase.from("skill_progress").insert({
-          profile_id: profileId,
-          skill_slug: course.skill_slug,
-          current_xp: newCurrentXp,
-          current_level: newLevel,
-          required_xp: newRequiredXp,
-          last_practiced_at: now.toISOString(),
-        });
-
-        if (skillError) throw skillError;
-      }
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("experience, user_id")
-        .eq("id", profileId)
-        .single();
-
-      if (profile) {
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .update({
-            experience: (profile.experience || 0) + xpEarned,
-          })
-          .eq("id", profileId);
-
-        if (profileError) throw profileError;
-
-        const { error: ledgerError } = await supabase.from("experience_ledger").insert({
-          user_id: profile.user_id,
-          profile_id: profileId,
-          activity_type: "university_attendance",
-          xp_amount: xpEarned,
-          skill_slug: course.skill_slug,
-          metadata: {
-            enrollment_id: enrollment.id,
-            max_level: maxLevel,
-          },
-        });
-
-        if (ledgerError) throw ledgerError;
-      }
-
-      const endTime = new Date(now);
-      const classEndHour = course.class_end_hour ?? 14;
-      endTime.setHours(classEndHour, 0, 0, 0);
-
-      const { error: statusError } = await supabase
-        .from("profile_activity_statuses")
-        .insert({
-          profile_id: profileId,
-          activity_type: "university_class",
-          status: "active",
-          started_at: now.toISOString(),
-          ends_at: endTime.toISOString(),
-          metadata: {
-            enrollment_id: enrollment.id,
-            course_name: course.name,
-            xp_earned: xpEarned,
-          },
-        });
-
-      if (statusError) throw statusError;
-
+      if (error) throw error;
+      if (!award?.awarded) throw new Error(award?.reason === "already_attended" ? "Already attended today" : "Attendance was not awarded");
+      const xpEarned = Number(award.xp);
+      if (!Number.isFinite(xpEarned)) throw new Error("Invalid attendance reward");
       return { xpEarned };
     },
     onSuccess: (data) => {
