@@ -117,8 +117,8 @@ export function TeachDialog({
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              You earn <span className="font-medium">+30 XP · +8 Mentoring</span>.{" "}
-              {studentDisplayName} earns <span className="font-medium">+25 skill XP</span> in your chosen skill.
+              You earn <span className="font-medium">+30 XP and up to +8 selected-skill XP</span>.{" "}
+              {studentDisplayName} can earn <span className="font-medium">up to +25 skill XP</span> if their skill tier is unlocked and not maxed.
             </p>
           </div>
         )}
