@@ -49,6 +49,7 @@ import {
   getSkillRoleLinks,
   getSkillSystemLinks,
   getAttributeLabel,
+  getSkillUnlockRoutes,
 } from "@/utils/skillCatalogue";
 
 type SkillDefinition = Database["public"]["Tables"]["skill_definitions"]["Row"];
@@ -737,6 +738,10 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
                         {availability.blockedReason.message}
                       </span>
                     )}
+                    {getSkillUnlockRoutes(skill.slug).some((route) => route.route_type === "university_course") && <span>Learn via University courses</span>}
+                    {getSkillUnlockRoutes(skill.slug).some((route) => route.route_type === "book") && <span>Learn via Books</span>}
+                    {getSkillUnlockRoutes(skill.slug).some((route) => route.route_type === "lesson") && <span>Learn via Lessons</span>}
+                    {getSkillUnlockRoutes(skill.slug).some((route) => route.route_type === "starter") && <span>Starter skill</span>}
                     {attrSummary && <span>Attributes: {attrSummary}</span>}
                     {prereqSummary && <span>Prereqs: {prereqSummary}</span>}
                     {systems && <span>Systems: {systems}</span>}
