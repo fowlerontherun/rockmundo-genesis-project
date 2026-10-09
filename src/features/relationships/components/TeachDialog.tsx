@@ -111,7 +111,7 @@ export function TeachDialog({
 
         if (level < maxLevel) {
           if (required <= 0) required = await getRequiredSkillXp(level);
-          remaining += 15;
+          remaining += 25;
           while (level < maxLevel && remaining >= required) {
             remaining -= required;
             level += 1;
@@ -140,7 +140,7 @@ export function TeachDialog({
 
       toast({
         title: `Taught ${formatSkillName(selectedSkill)}!`,
-        description: `+${mentorResult.xp_awarded} XP for you · +15 ${formatSkillName(selectedSkill)} XP for ${studentDisplayName}`,
+        description: `+${mentorResult.xp_awarded} XP for you · +25 ${formatSkillName(selectedSkill)} XP for ${studentDisplayName}`,
       });
 
       queryClient.invalidateQueries({ queryKey: ["friend-rewards"] });
@@ -184,8 +184,8 @@ export function TeachDialog({
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              You earn <span className="font-medium">+20 XP · +5 Mentoring</span>.{" "}
-              {studentDisplayName} earns <span className="font-medium">+15 skill XP</span> in your chosen skill.
+              You earn <span className="font-medium">+30 XP · +8 Mentoring</span>.{" "}
+              {studentDisplayName} earns <span className="font-medium">+25 skill XP</span> in your chosen skill.
             </p>
           </div>
         )}
