@@ -45,57 +45,24 @@ Deno.serve(async (req) => {
 
     console.log(`[choose-event-option] User ${user.id} choosing option ${choice} for event ${playerEventId}`);
 
-    // Get the player event
-    const { data: playerEvent, error: fetchError } = await supabase
-      .from("player_events")
-      .select(`
-        *,
-        random_events (*)
-      `)
-      .eq("id", playerEventId)
-      .eq("user_id", user.id)
-      .eq("status", "pending_choice")
-      .single();
-
-    if (fetchError || !playerEvent) {
-      return new Response(JSON.stringify({ error: "Event not found or already processed" }), {
-        status: 404,
+    // Event status and choice are transitioned atomically by the database.
+    // Use the caller's authenticated identity, never the service-role client.
+    const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: selected, error: choiceError } = await userClient.rpc(
+      "submit_random_event_choice",
+      { p_player_event_id: playerEventId, p_choice: choice },
+    );
+    if (choiceError || !selected?.success) {
+      return new Response(JSON.stringify({ error: choiceError?.message ?? "Event already chosen or unavailable" }), {
+        status: choiceError ? 500 : 409,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    // Update the event with choice
-    const { error: updateError } = await supabase
-      .from("player_events")
-      .update({
-        choice_made: choice,
-        choice_made_at: new Date().toISOString(),
-        status: "awaiting_outcome",
-      })
-      .eq("id", playerEventId);
-
-    if (updateError) {
-      console.error(`[choose-event-option] Failed to update event:`, updateError);
-      return new Response(JSON.stringify({ error: "Failed to record choice" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Add to event history if not common
-    const event = playerEvent.random_events;
-    if (event && !event.is_common) {
-      await supabase
-        .from("player_event_history")
-        .upsert({
-          user_id: user.id,
-          event_id: event.id,
-          first_seen_at: new Date().toISOString(),
-        }, {
-          onConflict: "user_id,event_id",
-          ignoreDuplicates: true,
-        });
-    }
+    const { data: event } = await supabase.from("random_events")
+      .select("id, title, option_a_text, option_b_text")
+      .eq("id", selected.event_id).single();
 
     // Log activity
     await supabase.from("activity_feed").insert({
