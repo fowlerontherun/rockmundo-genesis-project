@@ -69,146 +69,22 @@ Deno.serve(async (req) => {
       const event = playerEvent.random_events;
       if (!event) continue;
 
-      // Get effects based on choice
-      const effects: EventEffects = playerEvent.choice_made === "a"
-        ? (event.option_a_effects as EventEffects)
-        : (event.option_b_effects as EventEffects);
-
-      const outcomeMessage = playerEvent.choice_made === "a"
-        ? event.option_a_outcome_text
-        : event.option_b_outcome_text;
-
-      console.log(`[${JOB_NAME}] Processing outcome for player ${playerEvent.user_id}: ${JSON.stringify(effects)}`);
-
-      // Get current player stats
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("id, cash, health, energy, fame, experience")
-        .eq("user_id", playerEvent.user_id)
-        .single();
-
-      if (profileError || !profile) {
-        console.error(`[${JOB_NAME}] Failed to get profile for ${playerEvent.user_id}`);
+      // Core effects and completion are an atomic, event-locked DB transaction.
+      // If another worker processed this event, no rewards are repeated.
+      const { data: result, error: applyError } = await supabase.rpc(
+        "apply_random_event_outcome",
+        { p_player_event_id: playerEvent.id },
+      );
+      if (applyError) {
+        console.error(`[${JOB_NAME}] Failed to apply event ${playerEvent.id}`, applyError);
         continue;
       }
+      if (!result?.applied) continue;
 
-      const appliedEffects: EventEffects = { ...effects };
-
-      if (event.awards_random_skill_xp) {
-        // A transactional database function owns both the skill update and a
-        // unique event grant record. Retried cron runs cannot award twice.
-        const { data: grant, error: grantError } = await supabase.rpc(
-          "grant_random_event_skill_xp",
-          { p_player_event_id: playerEvent.id },
-        );
-        if (grantError) {
-          console.error(`[${JOB_NAME}] Skill XP grant failed for event ${playerEvent.id}`, grantError);
-          continue;
-        }
-        if (grant?.skill_xp && grant?.skill_slug) {
-          appliedEffects.skill_xp = grant.skill_xp;
-          appliedEffects.skill_slug = grant.skill_slug;
-        }
-      }
-
-      // Calculate new values
-      const newHealth = Math.max(0, Math.min(100, (profile.health ?? 100) + (effects.health ?? 0)));
-      const newEnergy = Math.max(0, Math.min(100, (profile.energy ?? 100) + (effects.energy ?? 0)));
-      const newCash = Math.max(0, (profile.cash ?? 0) + (effects.cash ?? 0));
-      const newFame = Math.max(0, (profile.fame ?? 0) + (effects.fame ?? 0));
-      const newXp = Math.max(0, (profile.experience ?? 0) + (effects.xp ?? 0));
-
-      // Update profile
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({
-          health: newHealth,
-          energy: newEnergy,
-          cash: newCash,
-          fame: newFame,
-          experience: newXp,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("user_id", playerEvent.user_id);
-
-      if (updateError) {
-        console.error(`[${JOB_NAME}] Failed to update profile:`, updateError);
-        continue;
-      }
-
-      // Handle fans effect on band if any + MORALE/REPUTATION from event outcomes (v1.0.963)
-      const { data: bandMember } = await supabase
-        .from("band_members")
-        .select("band_id")
-        .eq("user_id", playerEvent.user_id)
-        .eq("is_touring_member", false)
-        .limit(1)
-        .maybeSingle();
-
-      if (bandMember?.band_id) {
-        const { data: currentBand } = await supabase
-          .from("bands")
-          .select("total_fans, morale, reputation_score")
-          .eq("id", bandMember.band_id)
-          .single();
-
-        if (currentBand) {
-          const bandUpdate: Record<string, any> = {};
-
-          // Fan effect
-          if (effects.fans && effects.fans !== 0) {
-            bandUpdate.total_fans = Math.max(0, (currentBand.total_fans || 0) + effects.fans);
-          }
-
-          // === MORALE FROM EVENT OUTCOMES (v1.0.963) ===
-          // Net positive effects boost morale; net negative effects hurt it
-          const netEffect = (effects.cash ?? 0) + (effects.fans ?? 0) * 10 + (effects.fame ?? 0) * 5 + (effects.health ?? 0) * 2;
-          let moraleShift = 0;
-          if (netEffect > 200) moraleShift = 6;
-          else if (netEffect > 50) moraleShift = 3;
-          else if (netEffect > 0) moraleShift = 1;
-          else if (netEffect < -200) moraleShift = -8;
-          else if (netEffect < -50) moraleShift = -4;
-          else if (netEffect < 0) moraleShift = -2;
-
-          // === REPUTATION FROM HEALTH-DAMAGING EVENTS (v1.0.963) ===
-          // Events that hurt health significantly damage public reputation (scandals, arrests, etc.)
-          let repShift = 0;
-          if ((effects.health ?? 0) <= -20) repShift = -8;
-          else if ((effects.health ?? 0) <= -10) repShift = -4;
-          else if ((effects.fame ?? 0) > 50) repShift = 3;
-
-          const curMorale = (currentBand as any).morale ?? 50;
-          const curRep = (currentBand as any).reputation_score ?? 0;
-
-          if (moraleShift !== 0) bandUpdate.morale = Math.max(0, Math.min(100, curMorale + moraleShift));
-          if (repShift !== 0) bandUpdate.reputation_score = Math.max(-100, Math.min(100, curRep + repShift));
-
-          if (Object.keys(bandUpdate).length > 0) {
-            await supabase.from("bands").update(bandUpdate as any).eq("id", bandMember.band_id);
-            if (moraleShift !== 0 || repShift !== 0) {
-              console.log(`[${JOB_NAME}] Band ${bandMember.band_id} health update: morale ${moraleShift > 0 ? '+' : ''}${moraleShift}, rep ${repShift > 0 ? '+' : ''}${repShift}`);
-            }
-          }
-        }
-      }
-
-      // Mark event as completed
-      const { error: completeError } = await supabase
-        .from("player_events")
-        .update({
-          status: "completed",
-          outcome_applied: true,
-          outcome_applied_at: new Date().toISOString(),
-          outcome_effects: appliedEffects,
-          outcome_message: outcomeMessage,
-        })
-        .eq("id", playerEvent.id);
-
-      if (completeError) {
-        console.error(`[${JOB_NAME}] Failed to complete event:`, completeError);
-        continue;
-      }
+      const appliedEffects: EventEffects = result.effects ?? {};
+      const effects = appliedEffects;
+      const outcomeMessage = String(result.outcome_message ?? "");
+      const newHealth = Number(result.health_after ?? 100);
 
       // Log activity
       await supabase.from("activity_feed").insert({
