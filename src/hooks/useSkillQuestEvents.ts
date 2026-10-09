@@ -10,20 +10,30 @@ export interface SkillQuestEvent {
   recorded_at: string;
 }
 
-/** Read-only view of server-verified activity events. Clients cannot write quest progress. */
+const PAGE_SIZE = 500;
+
+/** Read-only view of all server-verified activity events, not just the newest 500. */
 export function useSkillQuestEvents(profileId?: string | null) {
   return useQuery({
     queryKey: ["skill-quest-events", profileId],
     enabled: !!profileId,
     queryFn: async (): Promise<SkillQuestEvent[]> => {
-      const { data, error } = await supabase
-        .from("skill_quest_events" as never)
-        .select("id,profile_id,quest_id,source_type,source_id,recorded_at")
-        .eq("profile_id", profileId!)
-        .order("recorded_at", { ascending: false })
-        .limit(500);
-      if (error) throw error;
-      return (data ?? []) as unknown as SkillQuestEvent[];
+      const events: SkillQuestEvent[] = [];
+      let offset = 0;
+      for (;;) {
+        const { data, error } = await supabase
+          .from("skill_quest_events" as never)
+          .select("id,profile_id,quest_id,source_type,source_id,recorded_at")
+          .eq("profile_id", profileId!)
+          .order("recorded_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(offset, offset + PAGE_SIZE - 1);
+        if (error) throw error;
+        const page = (data ?? []) as unknown as SkillQuestEvent[];
+        events.push(...page);
+        if (page.length < PAGE_SIZE) return events;
+        offset += PAGE_SIZE;
+      }
     },
     staleTime: 30_000,
   });
