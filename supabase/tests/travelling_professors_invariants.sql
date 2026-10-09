@@ -37,6 +37,20 @@ BEGIN
   ) duplicates;
   IF v_count > 0 THEN RAISE EXCEPTION 'Duplicate professor arrival notifications'; END IF;
 
+  IF (SELECT prosecdef FROM pg_catalog.pg_proc
+      WHERE oid = 'public.university_visiting_professor_bonus(uuid,text,timestamptz)'::regprocedure) THEN
+    RAISE EXCEPTION 'Professor bonus lookup must not be SECURITY DEFINER';
+  END IF;
+
+  IF has_function_privilege('authenticated',
+      'public.rotate_travelling_professors(date)', 'EXECUTE')
+     OR has_function_privilege('authenticated',
+      'public.announce_travelling_professors(date)', 'EXECUTE')
+     OR has_function_privilege('authenticated',
+      'public.rotate_travelling_professors_internal(date)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'Professor scheduling/notification RPC exposed to players';
+  END IF;
+
   IF public.university_visiting_professor_bonus(gen_random_uuid(), '__unknown_skill__', now()) <> 0 THEN
     RAISE EXCEPTION 'Unmatched professor lookup awarded XP bonus';
   END IF;
