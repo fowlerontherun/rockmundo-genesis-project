@@ -58,6 +58,18 @@ describe("AvatarShareStudio capture lifecycle", () => {
     expect(screen.getByRole("button", { name: "Retry avatar capture" })).toBeInTheDocument();
   });
 
+  it("offers retry after capture throws and recovers on the next attempt", () => {
+    mocks.capture.mockImplementationOnce(() => { throw new Error("WebGL capture failed"); });
+    mocks.capture.mockReturnValue({ dataUrl: "data:image/png;base64,AA==", width: 720, height: 1080 });
+    render(<AvatarShareStudio open moment={moment} onOpenChange={vi.fn()} />);
+    act(() => { mocks.onCanvasReady?.(document.createElement("canvas")); });
+    expect(screen.getByRole("button", { name: "Retry avatar capture" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Retry avatar capture" }));
+    act(() => { mocks.onCanvasReady?.(document.createElement("canvas")); });
+    expect(screen.queryByRole("button", { name: "Retry avatar capture" })).not.toBeInTheDocument();
+    expect(mocks.capture).toHaveBeenCalledTimes(2);
+  });
+
   it("clears the timeout when the share studio closes", () => {
     const { rerender } = render(<AvatarShareStudio open moment={moment} onOpenChange={vi.fn()} />);
     rerender(<AvatarShareStudio open={false} moment={moment} onOpenChange={vi.fn()} />);
