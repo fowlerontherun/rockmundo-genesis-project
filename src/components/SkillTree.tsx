@@ -69,7 +69,6 @@ interface SkillTreeProps {
 type ViewMode = "card" | "list";
 type FilterMode = "all" | "learned" | "education" | "unlearned" | "maxed";
 const tierOrder = { basic: 0, professional: 1, mastery: 2 } as const;
-const familyKey = (slug: string) => slug.replace(/(^|_)(basic|professional|mastery)(?=_|$)/g, "$1").replace(/_+/g, "_").replace(/^_|_$/g, "");
 
 const SKILL_CATEGORIES: SkillCategory[] = [
   {
@@ -397,7 +396,7 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
       return a.display_name.localeCompare(b.display_name);
     });
 
-    if (groupFamilies) filtered.sort((a, b) => skillFamilyKey(a.slug).localeCompare(skillFamilyKey(b.slug)) || tierOrder[getSkillTier(a.slug)] - tierOrder[getSkillTier(b.slug)]);
+    if (groupFamilies) filtered.sort((a, b) => skillFamilyKey(a.slug).localeCompare(skillFamilyKey(b.slug)) || tierOrder[resolveSkillTier(a.slug, (a.tier_caps as any)?.tier)] - tierOrder[resolveSkillTier(b.slug, (b.tier_caps as any)?.tier)]);
     return filtered;
   }, [
     skills,
@@ -437,7 +436,7 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
 
   const nextSteps = useMemo(() => skills.filter((skill) => {
     if (learnedSlugs.has(skill.slug)) return false;
-    const prerequisites = getSkillPrerequisites(skill.slug);
+    const prerequisites = getSkillPrerequisites(skill.slug).filter((req) => req.prerequisite_type === "required");
     return prerequisites.length > 0 && prerequisites.every((req) =>
       (progress.find((p) => p.skill_slug === req.prerequisite_skill_slug)?.current_level ?? 0) >= req.required_level
     );
