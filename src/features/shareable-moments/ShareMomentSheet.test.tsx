@@ -32,6 +32,7 @@ vi.mock("./gallery", () => ({
 vi.mock("./twaater", () => ({
   storeTwaaterShareDraft: vi.fn(),
   uploadShareCardToTwaater: vi.fn(),
+  removeUnpublishedShareCard: vi.fn(),
 }));
 
 vi.mock("@/hooks/use-toast", () => ({
