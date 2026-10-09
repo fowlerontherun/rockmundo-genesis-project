@@ -9,16 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TrackableSongPlayer } from "@/components/audio/TrackableSongPlayer";
 
 export function LocalDailyBrief() {
-  const { profileId } = useActiveProfile();
+  const { profile, profileId } = useActiveProfile();
+  const activeCityId = profile?.current_city_id ?? null;
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
   const { data: location } = useQuery({
-    queryKey: ["news-location", profileId],
+    queryKey: ["news-location", profileId, activeCityId],
     enabled: !!profileId,
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles")
-        .select("current_city_id").eq("id", profileId!).maybeSingle();
-      if (error) throw error;
-      const cityId = data?.current_city_id;
+      const cityId = activeCityId;
       if (!cityId) return { cityId: undefined, city: undefined, country: undefined };
       const { data: city, error: cityError } = await supabase.from("cities")
         .select("id, name, country").eq("id", cityId).maybeSingle();
@@ -38,7 +36,7 @@ export function LocalDailyBrief() {
     },
   });
   const selectedCity = selectedCityId ? cities.find(city => city.id === selectedCityId) : undefined;
-  const country = selectedCity?.country || location?.country || "";
+  const country = selectedCityId ? (selectedCity?.country ?? "") : (location?.country ?? "");
   const { data: charts = [], isLoading: chartsLoading, isError: chartsError } = useQuery({
     queryKey: ["news-country-top5", country],
     enabled: !!country,
@@ -170,7 +168,7 @@ export function LocalDailyBrief() {
     <div className="grid gap-5 lg:grid-cols-2">
       <section className="border border-foreground/40 bg-card/60 p-4 lg:col-span-2">
         <h2 className="mb-2 flex items-center gap-2 font-serif text-xl font-black"><Music2 className="h-5 w-5" />
-          Top 5 Songs — {country || "Select a city"}
+          Top 5 Songs — {country || "Choose a city"}
         </h2>
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <span className="text-xs text-muted-foreground">Chart city:</span>
@@ -186,7 +184,7 @@ export function LocalDailyBrief() {
           </Select>
           {selectedCityId && <button type="button" className="text-xs text-primary underline" onClick={() => setSelectedCityId(null)}>Use character's city</button>}
         </div>
-        {!country && <p className="text-xs text-muted-foreground mb-2">Your character has no current city. Choose one above to view its national chart.</p>}
+        {!country && <p className="text-xs text-muted-foreground mb-2">{activeCityId ? "Loading your character’s city, or choose another city above." : "Your character has no current city. Choose one above to view its national chart."}</p>}
         {chartsError ? <p className="text-sm text-muted-foreground">National charts are temporarily unavailable.</p> : chartsLoading && country ? <p className="text-sm text-muted-foreground">Loading charts…</p> :
           charts.length ? (
             <ol className="divide-y divide-border/50">
