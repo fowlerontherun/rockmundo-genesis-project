@@ -254,51 +254,24 @@ serve(async (req) => {
           }
         }
 
-        const { error: attendanceError } = await client
-          .from("player_university_attendance")
-          .insert({
-            enrollment_id: enrollment.id,
-            attendance_date: today,
-            xp_earned: xpEarned,
-            was_locked_out: false,
-            was_remote: isRemote,
-            connection_failed: connectionFailed,
-          });
-        if (attendanceError) throw attendanceError;
-
-        const newDaysAttended = Number(enrollment.days_attended ?? 0) + 1;
-        const isCompleted = new Date(enrollment.scheduled_end_date) <= now;
-        const { error: enrollmentError } = await client
-          .from("player_university_enrollments")
-          .update({
-            status: isCompleted ? "completed" : "in_progress",
-            days_attended: newDaysAttended,
-            total_xp_earned: Number(enrollment.total_xp_earned ?? 0) + xpEarned,
-            actual_completion_date: isCompleted ? now.toISOString() : null,
-          })
-          .eq("id", enrollment.id);
-        if (enrollmentError) throw enrollmentError;
-
-        await awardSkillXp(client, enrollment.profile_id, course.skill_slug, xpEarned);
-
-        await client
-          .from("profiles")
-          .update({ experience: Number(playerProfile.experience ?? 0) + xpEarned })
-          .eq("id", enrollment.profile_id);
-
-        await client.from("experience_ledger").insert({
-          user_id: playerProfile.user_id,
-          profile_id: enrollment.profile_id,
-          activity_type: "university_attendance",
-          xp_amount: xpEarned,
-          skill_slug: course.skill_slug,
-          metadata: {
-            enrollment_id: enrollment.id,
-            completed: isCompleted,
-            was_remote: isRemote,
-            connection_failed: connectionFailed,
+        // The RPC atomically records attendance, skill progression, profile XP,
+        // enrollment totals and the experience ledger. Retrying is safe.
+        const { data: award, error: awardError } = await client.rpc(
+          "record_university_attendance_reward",
+          {
+            p_enrollment_id: enrollment.id,
+            p_attendance_date: today,
+            p_xp: xpEarned,
+            p_remote: isRemote,
+            p_connection_failed: connectionFailed,
           },
-        });
+        );
+        if (awardError) throw awardError;
+        if (!award?.awarded) {
+          skippedCount += 1;
+          continue;
+        }
+        const isCompleted = Boolean(award.completed);
 
         const classStart = new Date(now);
         classStart.setHours(course.class_start_hour || 10, 0, 0, 0);
