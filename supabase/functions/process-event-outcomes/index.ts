@@ -45,6 +45,10 @@ Deno.serve(async (req) => {
         random_events (*)
       `)
       .eq("status", "awaiting_outcome")
+      // Quarantine choices made before the atomic engine went live.
+      // Old worker executions might already have applied effects without
+      // recording completion, so replaying these is unsafe.
+      .gte("choice_made_at", "2026-10-09T00:00:00Z")
       .lt("choice_made_at", today.toISOString());
 
     if (fetchError) throw fetchError;
