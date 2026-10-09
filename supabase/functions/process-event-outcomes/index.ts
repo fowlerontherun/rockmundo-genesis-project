@@ -24,91 +24,6 @@ interface EventEffects {
   skill_slug?: string;
 }
 
-async function getSkillMaxLevel(client: any, skillSlug: string): Promise<number> {
-  const { data, error } = await client.rpc("progression_skill_max_level", {
-    p_skill_slug: skillSlug,
-  });
-  if (error) throw error;
-  const value = Number(data);
-  return Number.isFinite(value) && value > 0 ? value : 20;
-}
-
-async function getRequiredSkillXp(client: any, level: number): Promise<number> {
-  const { data, error } = await client.rpc("progression_skill_required_xp", {
-    p_level: level,
-  });
-  if (error) throw error;
-  const value = Number(data);
-  return Number.isFinite(value) && value > 0 ? value : 100;
-}
-
-async function findEligibleSkill(client: any, profileId: string, preferredSlug?: string | null): Promise<string | null> {
-  const { data: rows, error } = await client
-    .from("skill_progress")
-    .select("skill_slug, current_level")
-    .eq("profile_id", profileId)
-    .gte("current_level", 1);
-  if (error) throw error;
-
-  const ordered = [...(rows || [])].sort((a, b) => {
-    if (a.skill_slug === preferredSlug) return -1;
-    if (b.skill_slug === preferredSlug) return 1;
-    return Math.random() - 0.5;
-  });
-
-  for (const row of ordered) {
-    const maxLevel = await getSkillMaxLevel(client, row.skill_slug);
-    if (Number(row.current_level || 0) < maxLevel) return row.skill_slug;
-  }
-  return null;
-}
-
-async function grantSkillXp(client: any, profileId: string, skillSlug: string, amount: number): Promise<number> {
-  if (amount <= 0) return 0;
-
-  const maxLevel = await getSkillMaxLevel(client, skillSlug);
-  const { data: skill, error: skillLoadError } = await client
-    .from("skill_progress")
-    .select("id, current_xp, current_level, required_xp")
-    .eq("profile_id", profileId)
-    .eq("skill_slug", skillSlug)
-    .maybeSingle();
-  if (skillLoadError) throw skillLoadError;
-  if (!skill || Number(skill.current_level || 0) < 1 || Number(skill.current_level || 0) >= maxLevel) return 0;
-
-  let level = Math.min(Math.max(Number(skill.current_level ?? 0), 0), maxLevel);
-  let remaining = Math.max(Number(skill.current_xp ?? 0), 0);
-  let required = Number(skill.required_xp ?? 0);
-
-  if (required <= 0) required = await getRequiredSkillXp(client, level);
-  remaining += amount;
-
-  while (level < maxLevel && remaining >= required) {
-    remaining -= required;
-    level += 1;
-    required = level < maxLevel ? await getRequiredSkillXp(client, level) : 0;
-  }
-
-  if (level >= maxLevel) {
-    level = maxLevel;
-    remaining = 0;
-    required = 0;
-  }
-
-  const { error: updateError } = await client
-    .from("skill_progress")
-    .update({
-      current_level: level,
-      current_xp: remaining,
-      required_xp: required,
-      last_practiced_at: new Date().toISOString(),
-    })
-    .eq("id", skill.id);
-  if (updateError) throw updateError;
-
-  return amount;
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -180,21 +95,19 @@ Deno.serve(async (req) => {
       const appliedEffects: EventEffects = { ...effects };
 
       if (event.awards_random_skill_xp) {
-        const minXp = Math.max(100, Math.min(500, Number(event.skill_xp_min ?? 100)));
-        const maxXp = Math.max(minXp, Math.min(500, Number(event.skill_xp_max ?? 500)));
-        const targetSkill = await findEligibleSkill(
-          supabase,
-          profile.id,
-          playerEvent.target_skill_slug,
+        // A transactional database function owns both the skill update and a
+        // unique event grant record. Retried cron runs cannot award twice.
+        const { data: grant, error: grantError } = await supabase.rpc(
+          "grant_random_event_skill_xp",
+          { p_player_event_id: playerEvent.id },
         );
-
-        if (targetSkill) {
-          const skillXp = Math.floor(Math.random() * (maxXp - minXp + 1)) + minXp;
-          const awarded = await grantSkillXp(supabase, profile.id, targetSkill, skillXp);
-          if (awarded > 0) {
-            appliedEffects.skill_xp = awarded;
-            appliedEffects.skill_slug = targetSkill;
-          }
+        if (grantError) {
+          console.error(`[${JOB_NAME}] Skill XP grant failed for event ${playerEvent.id}`, grantError);
+          continue;
+        }
+        if (grant?.skill_xp && grant?.skill_slug) {
+          appliedEffects.skill_xp = grant.skill_xp;
+          appliedEffects.skill_slug = grant.skill_slug;
         }
       }
 
