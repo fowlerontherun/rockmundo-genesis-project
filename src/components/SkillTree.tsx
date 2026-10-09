@@ -449,22 +449,18 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
   );
 
   const unlockedNextTiers = useMemo(() => {
-    const normalise = (slug: string) =>
-      slug
-        .replace(/^genres_/, "")
-        .replace(/(^|_)(basic|professional|mastery)(_|$)/g, "_")
-        .replace(/^_+|_+$/g, "");
+    const normalise = skillFamilyKey;
     return progress.flatMap((p) => {
       const from = skills.find((s) => s.slug === p.skill_slug);
       if (!from) return [];
-      const fromTier = getSkillTier(from.slug);
+      const fromTier = resolveSkillTier(from.slug, (from.tier_caps as any)?.tier);
       if (fromTier === "mastery") return [];
       const cap = Number((from.tier_caps as any)?.max_level) || 100;
       if ((p.current_level || 0) < cap) return [];
       const targetTier = fromTier === "basic" ? "professional" : "mastery";
       const core = normalise(from.slug);
       const next = skills.find(
-        (s) => getSkillTier(s.slug) === targetTier && normalise(s.slug) === core,
+        (s) => resolveSkillTier(s.slug, (s.tier_caps as any)?.tier) === targetTier && normalise(s.slug) === core,
       );
       if (!next) return [];
       const nextProgress = progress.find((q) => q.skill_slug === next.slug);
