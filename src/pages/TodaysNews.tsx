@@ -96,7 +96,7 @@ export default function TodaysNewsPage() {
 
         <div className="mt-6 space-y-3">
           <NewsCategory title="Your Character & Local News" defaultOpen>
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+            <div className="grid gap-4 md:grid-cols-2">
               <PersonalUpdates />
               <RandomEventsNews />
             </div>
@@ -105,38 +105,38 @@ export default function TodaysNewsPage() {
           <NewsCategory title="Music, Charts & Releases">
             <div className="grid gap-4 lg:grid-cols-2">
               <ChartMoversSection />
-              <NewsList title="New Releases" items={releasedSongs ?? []} itemKey={r => r.id} defaultOpen
+              {!!releasedSongs?.length && <NewsList title="New Releases" items={releasedSongs ?? []} itemKey={r => r.id} defaultOpen
                 renderItem={release => (
                   <>
                     <p className="font-semibold text-sm font-serif">{release.title}</p>
                     <p className="text-xs text-muted-foreground">{release.bands?.name || "Independent"} · {release.release_type}</p>
                   </>
-                )} />
+                )} />}
             </div>
           </NewsCategory>
           <NewsCategory title="Festivals & Live Events">
             <div className="grid gap-4 lg:grid-cols-2">
-              <NewsList title="Festival Line-up Announcements" items={festivalBandAnnouncements ?? []} itemKey={a => a.booking_id}
+              {!!festivalBandAnnouncements?.length && <NewsList title="Festival Line-up Announcements" items={festivalBandAnnouncements ?? []} itemKey={a => a.booking_id}
                 renderItem={announcement => (
                   <>
                     <p className="font-semibold font-serif">{announcement.band_name} confirmed for {announcement.festival_name}</p>
                     <p className="text-xs text-muted-foreground capitalize">{announcement.billing_position.replaceAll("_", " ")} · {format(new Date(announcement.confirmed_at), "d MMM")}</p>
                   </>
-                )} />
-              <NewsList title="Festival Diary" items={festivals ?? []} itemKey={f => f.id}
+                )} />}
+              {!!festivals?.length && <NewsList title="Festival Diary" items={festivals ?? []} itemKey={f => f.id}
                 renderItem={fest => (
                   <>
                     <p className="font-semibold text-sm font-serif">{fest.title}</p>
                     <p className="text-xs text-muted-foreground">{fest.start_date ? format(new Date(fest.start_date), "EEE d MMM") : fest.event_type}</p>
                   </>
-                )} />
+                )} />}
             </div>
             <BattleOfTheBandsNews />
             <LastNightGigs />
           </NewsCategory>
           <NewsCategory title="Bands & Business">
             <div className="grid gap-4 lg:grid-cols-2">
-              <NewsList title="New Bands Formed" items={newBands ?? []} itemKey={b => b.id}
+              {!!newBands?.length && <NewsList title="New Bands Formed" items={newBands ?? []} itemKey={b => b.id}
                 renderItem={band => (
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -145,7 +145,7 @@ export default function TodaysNewsPage() {
                     </div>
                     {band.created_at && <Badge variant="secondary">{format(new Date(band.created_at), "d MMM")}</Badge>}
                   </div>
-                )} />
+                )} />}
               <DealAnnouncements />
             </div>
           </NewsCategory>
