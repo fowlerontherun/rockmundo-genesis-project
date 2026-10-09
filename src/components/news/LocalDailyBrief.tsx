@@ -97,7 +97,7 @@ export function LocalDailyBrief() {
   const { data: newcomers = [] } = useQuery({
     queryKey: ["news-new-players"],
     queryFn: async () => {
-      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase.from("profiles")
         .select("id, display_name, created_at, current_city_id")
         .gte("created_at", since).order("created_at", { ascending: false }).limit(10);
@@ -167,7 +167,7 @@ export function LocalDailyBrief() {
 
   return (
     <div className="grid gap-5 lg:grid-cols-2">
-      <div className="lg:col-span-2"><LocalMayorColumn cityId={location?.cityId} cityName={location?.city} /></div>
+      <LocalMayorColumn cityId={location?.cityId} cityName={location?.city} />
       <details className="group border border-foreground/40 bg-card/60 p-4 lg:col-span-2">
         <summary className="mb-2 flex cursor-pointer items-center gap-2 font-serif text-xl font-black"><Music2 className="h-5 w-5" />
           Top 5 Songs — {country || "Choose a city"}
@@ -250,7 +250,7 @@ export function LocalDailyBrief() {
         )) : null}
       </details>}
       {newcomers.length > 0 && <details className="group border border-foreground/40 bg-card/60 p-4">
-        <summary className="mb-2 flex cursor-pointer items-center gap-2 font-serif text-lg font-black"><Users className="h-5 w-5" /> New Players · Last 24 Hours</summary>
+        <summary className="mb-2 flex cursor-pointer items-center gap-2 font-serif text-lg font-black"><Users className="h-5 w-5" /> New Players · Last 7 Days</summary>
         {newcomers.length ? newcomers.map((p) => (
           <article key={p.id} className="border-b border-border/50 py-2 text-sm last:border-0">
             <p className="font-semibold">{p.display_name || "New artist"}</p>
