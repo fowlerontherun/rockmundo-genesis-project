@@ -28,7 +28,11 @@ export async function removeUnpublishedShareCard(mediaUrl: string): Promise<void
 }
 
 export function storeTwaaterShareDraft(body: string, mediaUrl: string, shareCooldownKey?: string | null) {
-  sessionStorage.setItem("rockmundoTwaaterShareDraft", JSON.stringify({ body, mediaUrl, mediaType: "image", shareCooldownKey }));
+  try {
+    sessionStorage.setItem("rockmundoTwaaterShareDraft", JSON.stringify({ body, mediaUrl, mediaType: "image", shareCooldownKey }));
+  } catch {
+    throw new Error("Unable to save the Twaater draft. Check your browser storage settings.");
+  }
 }
 
 
