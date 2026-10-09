@@ -41,6 +41,7 @@ DECLARE
   v_inbox integer;
   v_activity integer;
   v_grants integer;
+  v_requires_skill boolean;
 BEGIN
   SELECT count(*) INTO v_completed FROM public.player_events
   WHERE id = v_event AND status = 'completed' AND outcome_applied;
@@ -49,7 +50,11 @@ BEGIN
   SELECT count(*) INTO v_activity FROM public.activity_feed
   WHERE activity_type = 'random_event_outcome' AND metadata->>'player_event_id' = v_event::text;
   SELECT count(*) INTO v_grants FROM public.random_event_skill_xp_grants WHERE player_event_id = v_event;
-  IF v_completed <> 1 OR v_inbox <> 1 OR v_activity <> 1 OR v_grants > 1 THEN
+  SELECT re.awards_random_skill_xp INTO v_requires_skill
+  FROM public.player_events pe JOIN public.random_events re ON re.id=pe.event_id
+  WHERE pe.id=v_event;
+  IF v_completed <> 1 OR v_inbox <> 1 OR v_activity <> 1
+     OR v_grants <> CASE WHEN v_requires_skill THEN 1 ELSE 0 END THEN
     RAISE EXCEPTION 'Concurrent processing mismatch: completed %, inbox %, activity %, skill grants %',
       v_completed, v_inbox, v_activity, v_grants;
   END IF;
