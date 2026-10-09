@@ -41,9 +41,9 @@ BEGIN
     RETURN jsonb_build_object('awarded',false,'reason','tier_locked');
   END IF;
   -- Resolve the bonus at the authoritative reward boundary, never in the browser.
-  -- Attendance date is the effective UTC date; retries cannot re-award the same day.
+  -- Use the actual award instant so a new month's professor is never applied retroactively.
   SELECT public.university_visiting_professor_bonus(e.university_id, c.skill_slug,
-    p_attendance_date::timestamp AT TIME ZONE 'UTC') INTO v_professor_bonus;
+    now()) INTO v_professor_bonus;
   v_awarded_xp := LEAST(170000, floor(p_xp * (1 + COALESCE(v_professor_bonus, 0)))::integer);
   SELECT user_id, experience INTO v_user, v_experience
     FROM public.profiles WHERE id=e.profile_id FOR UPDATE;
