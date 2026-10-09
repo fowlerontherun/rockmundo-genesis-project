@@ -106,7 +106,6 @@ export default function TodaysNewsPage() {
         {/* Front page splash */}
         <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
           <div className="space-y-5">
-            <TopStoryHero />
             <LocalDailyBrief />
             <PersonalUpdates />
           </div>
@@ -125,7 +124,7 @@ export default function TodaysNewsPage() {
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main column */}
           <div className="lg:col-span-2 space-y-5">
-            <SectionDivider title="Entertainment" page="Page 2" />
+            <SectionDivider title="Live Music" page="Page 2" />
 
 
             <BattleOfTheBandsNews />
@@ -163,7 +162,7 @@ export default function TodaysNewsPage() {
               </NewsPanel>
             </div>
 
-            <SectionDivider title="Your Column" page="Page 4" />
+            <SectionDivider title="Festivals & Your Updates" page="Page 4" />
 
 
 
@@ -180,7 +179,7 @@ export default function TodaysNewsPage() {
 
 
 
-            <SectionDivider title="Business & Deals" page="Page 5" />
+            <SectionDivider title="New Bands & Business" page="Page 5" />
 
             <div className="grid gap-4 sm:grid-cols-2">
               <DealAnnouncements />
