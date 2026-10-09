@@ -11,7 +11,7 @@ type Visit = {
 };
 
 export function VisitingProfessors({ universityId }: { universityId: string }) {
-  const { data: visits = [] } = useQuery({
+  const { data: visits = [], isError } = useQuery({
     queryKey: ["visiting_professors", universityId],
     enabled: !!universityId,
     staleTime: 5 * 60 * 1000,
@@ -25,6 +25,7 @@ export function VisitingProfessors({ universityId }: { universityId: string }) {
     },
   });
 
+  if (isError) return <p role="status" className="text-sm text-muted-foreground">Visiting professor information is temporarily unavailable.</p>;
   if (!visits.length) return null;
 
   return (
