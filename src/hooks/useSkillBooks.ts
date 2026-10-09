@@ -179,8 +179,27 @@ export const useSkillBooks = () => {
       readingDays: number;
       autoRead?: boolean;
     }) => {
+      if (profileId !== (await supabase.from("profiles").select("id").eq("id", profileId).eq("user_id", userId).single()).data?.id) {
+        throw new Error("The selected character does not belong to this account.");
+      }
+      const { data: active, error: activeError } = await supabase.from("player_book_reading_sessions")
+        .select("id").eq("profile_id", profileId).eq("status", "reading").limit(1);
+      if (activeError) throw activeError;
+      if (active?.length) throw new Error("Stop your current book before starting another.");
+      const { data: owned, error: ownedError } = await supabase.from("player_book_purchases")
+        .select("id").eq("id", purchaseId).eq("profile_id", profileId).eq("book_id", bookId).maybeSingle();
+      if (ownedError) throw ownedError;
+      if (!owned) throw new Error("You must own this book before reading it.");
+      const { data: book, error: bookError } = await supabase.from("skill_books")
+        .select("skill_slug, base_reading_days").eq("id", bookId).eq("is_active", true).single();
+      if (bookError) throw bookError;
+      const { data: unlocked, error: unlockError } = await supabase.rpc("skill_tier_unlocked", {
+        p_profile_id: profileId, p_slug: book.skill_slug,
+      });
+      if (unlockError) throw unlockError;
+      if (unlocked !== true) throw new Error("This book's skill prerequisites are not unlocked yet. Choose another book.");
       const scheduledEndDate = new Date();
-      scheduledEndDate.setDate(scheduledEndDate.getDate() + readingDays);
+      scheduledEndDate.setDate(scheduledEndDate.getDate() + book.base_reading_days);
 
       // Reuse the most recent stopped session to preserve attendance and earned XP.
       const { data: previous, error: previousError } = await supabase
