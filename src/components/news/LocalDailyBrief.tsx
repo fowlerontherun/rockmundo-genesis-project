@@ -166,10 +166,10 @@ export function LocalDailyBrief() {
 
   return (
     <div className="grid gap-5 lg:grid-cols-2">
-      <section className="border border-foreground/40 bg-card/60 p-4 lg:col-span-2">
-        <h2 className="mb-2 flex items-center gap-2 font-serif text-xl font-black"><Music2 className="h-5 w-5" />
+      <details className="group border border-foreground/40 bg-card/60 p-4 lg:col-span-2">
+        <summary className="mb-2 flex cursor-pointer items-center gap-2 font-serif text-xl font-black"><Music2 className="h-5 w-5" />
           Top 5 Songs — {country || "Choose a city"}
-        </h2>
+        </summary>
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <span className="text-xs text-muted-foreground">Chart city:</span>
           <Select value={selectedCityId || location?.cityId || ""} onValueChange={setSelectedCityId}>
@@ -203,9 +203,9 @@ export function LocalDailyBrief() {
             </ol>
           ) : <p className="text-sm text-muted-foreground">No chart entries available for this country yet.</p>}
         <Link className="mt-2 inline-block text-sm text-primary underline" to="/country-charts">View full country charts</Link>
-      </section>
-      <section className="border border-foreground/40 bg-card/60 p-4">
-        <h2 className="mb-2 flex items-center gap-2 font-serif text-lg font-black"><GraduationCap className="h-5 w-5" /> Visiting Professors · +70% XP</h2>
+      </details>
+      <details className="group border border-foreground/40 bg-card/60 p-4">
+        <summary className="mb-2 flex cursor-pointer items-center gap-2 font-serif text-lg font-black"><GraduationCap className="h-5 w-5" /> Visiting Professors · +70% XP</summary>
         {visitsError ? <p className="text-sm text-muted-foreground">Professor information is temporarily unavailable.</p> :
           orderedVisits.length ? orderedVisits.map((v) => (
             <article key={v.id} className="border-b border-border/50 py-2 last:border-0">
@@ -215,47 +215,47 @@ export function LocalDailyBrief() {
             </article>
           )) : <p className="text-sm text-muted-foreground">No visiting professors are active right now.</p>}
         <Link to="/career/education" className="mt-2 inline-block text-sm text-primary underline">Find professor courses at universities</Link>
-      </section>
+      </details>
       {festivalUpgrades.length > 0 && (
-        <section className="border border-foreground/40 bg-card/60 p-4">
-          <h2 className="mb-2 font-serif text-lg font-black">Festival Business Improvements</h2>
+        <details className="group border border-foreground/40 bg-card/60 p-4">
+          <summary className="mb-2 cursor-pointer font-serif text-lg font-black">Festival Business Improvements</summary>
           {festivalUpgrades.map(upgrade => (
             <article key={upgrade.id} className="border-b border-border/50 py-2 text-sm last:border-0">
               <p className="font-semibold">{upgrade.companyName}: {upgrade.category_key.replace(/_/g, " ")} upgraded to level {upgrade.active_level}</p>
               <p className="text-xs text-muted-foreground">Festival company improvement · {new Date(upgrade.activated_at).toLocaleDateString()}</p>
             </article>
           ))}
-        </section>
+        </details>
       )}
       {cityProjects.length > 0 && (
-        <section className="border border-foreground/40 bg-card/60 p-4">
-          <h2 className="mb-2 font-serif text-lg font-black">City Improvements — {location?.city}</h2>
+        <details className="group border border-foreground/40 bg-card/60 p-4">
+          <summary className="mb-2 cursor-pointer font-serif text-lg font-black">City Improvements — {location?.city}</summary>
           {cityProjects.map(project => (
             <article key={project.id} className="border-b border-border/50 py-2 text-sm last:border-0">
               <p className="font-semibold">{project.name} completed</p>
               <p className="text-xs text-muted-foreground">{project.project_type?.category?.replace(/_/g, " ") || "City development"} · {new Date(project.completed_at).toLocaleDateString()}</p>
             </article>
           ))}
-        </section>
+        </details>
       )}
-      <section className="border border-foreground/40 bg-card/60 p-4">
-        <h2 className="mb-2 font-serif text-lg font-black">New Companies · Last 24 Hours</h2>
+      <details className="group border border-foreground/40 bg-card/60 p-4">
+        <summary className="mb-2 cursor-pointer font-serif text-lg font-black">New Companies · Last 24 Hours</summary>
         {newCompanies.length ? newCompanies.map(company => (
           <article key={company.id} className="border-b border-border/50 py-2 text-sm last:border-0">
             <p className="font-semibold">{company.name}</p>
             <p className="text-xs text-muted-foreground">{company.company_type.replace(/_/g, " ")} · {company.headquarters_city?.name || "Location unlisted"}{company.headquarters_city?.country ? `, ${company.headquarters_city.country}` : ""}</p>
           </article>
         )) : <p className="text-sm text-muted-foreground">No new companies in the last 24 hours.</p>}
-      </section>
-      <section className="border border-foreground/40 bg-card/60 p-4">
-        <h2 className="mb-2 flex items-center gap-2 font-serif text-lg font-black"><Users className="h-5 w-5" /> New Players · Last 24 Hours</h2>
+      </details>
+      <details className="group border border-foreground/40 bg-card/60 p-4">
+        <summary className="mb-2 flex cursor-pointer items-center gap-2 font-serif text-lg font-black"><Users className="h-5 w-5" /> New Players · Last 24 Hours</summary>
         {newcomers.length ? newcomers.map((p) => (
           <article key={p.id} className="border-b border-border/50 py-2 text-sm last:border-0">
             <p className="font-semibold">{p.username || "New artist"}</p>
             <p className="text-xs text-muted-foreground">{p.cities?.name || "City not selected"}{p.cities?.country ? `, ${p.cities.country}` : ""}</p>
           </article>
         )) : <p className="text-sm text-muted-foreground">No new players in the last 24 hours.</p>}
-      </section>
+      </details>
     </div>
   );
 }
