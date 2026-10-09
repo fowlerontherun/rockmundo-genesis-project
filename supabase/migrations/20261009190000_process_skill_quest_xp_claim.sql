@@ -46,8 +46,7 @@ begin
   perform 1 from public.profiles where id = v_claim.profile_id for update;
   insert into public.profile_action_xp_events(profile_id,action_type,xp_amount,metadata)
   values (v_claim.profile_id,'skill_quest_reward',v_claim.reward_amount,
-    jsonb_build_object('quest_id',v_claim.quest_id,'claim_id',v_claim.id,'unique_event_id',v_claim.id::text))
-  ;
+    jsonb_build_object('quest_id',v_claim.quest_id,'claim_id',v_claim.id,'unique_event_id',v_claim.id::text));
 
   -- The existing action XP trigger creates the authoritative wallet/ledger entry.
   select l.id into v_ledger_id from public.xp_ledger l
