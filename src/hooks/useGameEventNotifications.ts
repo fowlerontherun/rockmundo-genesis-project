@@ -172,41 +172,31 @@ export const useGameEventNotifications = () => {
             .single();
           
           if (gig && userBandIdsRef.current.includes(gig.band_id)) {
-            const rating = outcome.overall_rating || 0;
+            // Gig ratings are stored on a 0–25 scale, not a percentage.
+            // Missing ratings must not be interpreted as failed performances.
+            const rawRating = Number(outcome.overall_rating);
+            const hasRating = outcome.overall_rating != null && Number.isFinite(rawRating);
+            const rating = hasRating ? Math.max(0, Math.min(25, rawRating)) : null;
+            const percent = rating === null ? null : Math.round(rating * 4);
             const venueName = (gig.venues as any)?.name || 'Unknown Venue';
-            
-            if (rating >= 90) {
-              notify({
+            const result = percent === null
+              ? { title: 'Gig Results Pending', type: 'info' as const }
+              : percent >= 90 ? { title: '🔥 Legendary Performance!', type: 'success' as const }
+              : percent >= 75 ? { title: 'Fantastic Performance!', type: 'success' as const }
+              : percent >= 60 ? { title: 'Great Gig!', type: 'success' as const }
+              : percent >= 40 ? { title: 'A Mixed Night', type: 'info' as const }
+              : { title: 'Tough Night', type: 'warning' as const };
+
+            notify({
               category: 'gig_result',
-              type: 'success',
-              title: '🔥 Legendary Performance!',
-              message: `Your gig at ${venueName} was incredible! Rating: ${rating}%`,
+              type: result.type,
+              title: result.title,
+              message: percent === null
+                ? `Your gig at ${venueName} has finished. The final performance rating is not available yet.`
+                : `Your gig at ${venueName} finished with a performance rating of ${rating!.toFixed(1)}/25 (${percent}%).`,
               actionPath: '/gig-booking',
+              metadata: { gig_id: outcome.gig_id, rating: rating, rating_percent: percent },
             });
-            } else if (rating >= 70) {
-              notify({
-              category: 'gig_result',
-              type: 'success',
-              title: 'Great Show!',
-              message: `Your gig at ${venueName} went well! Rating: ${rating}%`,
-              actionPath: '/gig-booking',
-            });
-            } else if (rating < 50) {
-              notify({
-              category: 'gig_result',
-              type: 'warning',
-              title: 'Tough Crowd',
-              message: `The gig at ${venueName} didn't go as planned. Rating: ${rating}%`,
-              actionPath: '/gig-booking',
-            });
-            } else {
-              notify({
-              category: 'gig_result',
-              type: 'info',
-              title: 'Gig Complete',
-              message: `Your gig at ${venueName} is finished. Rating: ${rating}%`,
-            });
-            }
           }
         }
       )
