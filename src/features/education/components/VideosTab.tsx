@@ -71,7 +71,7 @@ export const VideosTab = () => {
 
   const [cooldownStatus, setCooldownStatus] = useState(() => getCooldownStatus(profileId));
   const [search, setSearch] = useState("");
-  const [selectedSkill, setSelectedSkill] = useState("all");
+  const [selectedSkill, setSelectedSkill] = useState(() => new URLSearchParams(window.location.search).get("skill") ?? "all");
   const [difficulty, setDifficulty] = useState<DifficultyFilter>("all");
   const [duration, setDuration] = useState<DurationFilter>("all");
   const [selectedTag, setSelectedTag] = useState("all");
