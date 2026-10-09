@@ -19,12 +19,13 @@ export function NewsList<T>({
   defaultOpen = false, className = "",
 }: NewsListProps<T>) {
   const [page, setPage] = useState(0);
+  const [isOpen, setIsOpen] = useState(defaultOpen);
   const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
   useEffect(() => { setPage(0); }, [items.length]);
   const safePage = Math.min(page, totalPages - 1);
   const start = safePage * PAGE_SIZE;
   return (
-    <details open={undefined} className={`group rounded-md border border-foreground/30 bg-card/60 ${className}`} {...(defaultOpen ? { open: true } : {})}>
+    <details open={isOpen} onToggle={event => setIsOpen(event.currentTarget.open)} className={`group rounded-md border border-foreground/30 bg-card/60 ${className}`}>
       <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-3 font-serif font-bold [&::-webkit-details-marker]:hidden">
         <span>{title} <span className="ml-1 text-xs font-normal text-muted-foreground">({items.length})</span></span>
         <ChevronDown aria-hidden="true" className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" />
