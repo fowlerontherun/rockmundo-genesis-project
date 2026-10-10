@@ -188,9 +188,8 @@ async function processAttendance(supabaseClient: any, profileId?: string) {
         p_expected_xp: Number(skillProgress?.current_xp ?? 0),
       });
       if (applyError) {
-        // Serialization failures mean another writer changed the skill after
-        // our read. Do not reuse the stale XP calculation or reroll rewards.
-        // A fresh request can recompute progression safely.
+        // Another writer may have advanced the skill. Keep the session
+        // unclaimed so a subsequent invocation can recompute from fresh data.
         if (applyError.code === "40001") {
           records.push({ session_id: session.id, reason: "progress_changed_retry", error: "Skill progress changed during reading. Please retry." });
           errorCount += 1;
