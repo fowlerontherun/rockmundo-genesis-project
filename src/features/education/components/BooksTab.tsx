@@ -250,13 +250,17 @@ export const BooksTab = () => {
             >
               {isStoppingReading ? "Stopping..." : "Stop Reading / Switch Book"}
             </Button>
-            <Button 
-              onClick={() => processAttendance()} 
-              disabled={isProcessing}
+            <Button
+              onClick={() => processAttendance()}
+              disabled={isProcessing || activeBookLocked || tierAccess.isLoading}
               className="w-full"
               size="sm"
             >
-              {isProcessing ? "Processing..." : "Record Today's Reading"}
+              {isProcessing
+                ? "Processing..."
+                : activeBookLocked
+                  ? "Reading locked — switch books"
+                  : "Record Today's Reading"}
             </Button>
           </CardContent>
         </Card>
