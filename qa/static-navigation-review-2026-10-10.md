@@ -66,3 +66,18 @@ Remaining candidate paths:
 ```
 
 This rerun used read-only GitHub source inspection and the checker matching logic, not a browser or GitHub Actions. Each candidate still requires manual resolution of nested route hierarchy, redirects, route registries and account permissions.
+
+## Festival route investigation — source confirmed
+
+The following four navigation candidates **are mounted as nested React Router children** of `festivalRoutePatterns.edition` in `src/App.tsx`:
+
+- `/festival-company/:festivalCompanyId/editions/:editionId/applications`
+- `/festival-company/:festivalCompanyId/editions/:editionId/finance`
+- `/festival-company/:festivalCompanyId/editions/:editionId/live`
+- `/festival-company/:festivalCompanyId/editions/:editionId/history`
+
+The JSX uses `festivalRoutePatterns.<section>.split("/").at(-1)` to obtain the child segment, which the original static inventory did not resolve. The inventory now resolves these known child patterns, and the test suite includes assertions that they are registered and not flagged by navigation review.
+
+**Classification:** Four static-matcher false positives; no gameplay bug filed. The remaining review queue is expected to fall from 29 to **25** candidates on a successful regenerated inventory. That 25 count is an expectation, not a verified CI result.
+
+**Execution caveat:** GitHub workflow runs have not been returned for the QA branch commits, and browser navigation remains untested.
