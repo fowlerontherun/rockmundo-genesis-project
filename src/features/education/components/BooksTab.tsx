@@ -32,7 +32,7 @@ export const BooksTab = () => {
   const isBookLocked = (book: EnrichedSkillBook) =>
     Boolean(book.skill_slug && isHigherTierSkill(book.skill_slug) && accessBySkill.get(book.skill_slug) === false);
 
-  const activeBookSkill = activeSession?.skill_books?.skill_slug;
+  const activeBookSkill = (activeSession?.skill_books as { skill_slug?: string } | undefined)?.skill_slug;
   const activeBookLocked = Boolean(
     activeBookSkill && isHigherTierSkill(activeBookSkill) &&
     accessBySkill.get(activeBookSkill) === false
