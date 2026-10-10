@@ -6,6 +6,9 @@ on:
       - 'src/config/**'
       - 'src/features/festivals/routes.ts'
       - 'scripts/qa/**'
+      - 'supabase/functions/**'
+      - 'supabase/migrations/**'
+      - 'supabase/tests/**'
       - '.github/workflows/qa-route-inventory.yml'
   workflow_dispatch:
 jobs:
@@ -23,6 +26,7 @@ jobs:
           node scripts/qa/inventory-routes.mjs
           node scripts/qa/generate-test-matrix.mjs
           node scripts/qa/check-navigation.mjs
+          node scripts/qa/inventory-backend.mjs
       - name: Validate generated inventory
         run: node --test scripts/qa/inventory-routes.test.mjs
       - name: Upload QA discovery artifacts
@@ -34,4 +38,5 @@ jobs:
             qa/route-inventory.json
             qa/test-matrix.json
             qa/navigation-review.json
+            qa/backend-inventory.json
           if-no-files-found: warn
