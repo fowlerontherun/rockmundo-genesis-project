@@ -1,0 +1,171 @@
+{
+  "schemaVersion": 1,
+  "description": "Risk-led gameplay audit queue. These are planned checks, not verified defects.",
+  "journeys": [
+    {
+      "id": "gig-completion",
+      "priority": "P1",
+      "area": "Gigs",
+      "roles": [
+        "band-leader",
+        "band-member"
+      ],
+      "routes": [
+        "/band/gigs",
+        "/performance/gig/:gigId"
+      ],
+      "checks": [
+        "Completed gig can be replayed",
+        "Post-gig processing reaches terminal state once",
+        "Rewards and reports agree with ledger",
+        "Repeated processing does not double-award"
+      ],
+      "status": "not-tested",
+      "relatedIssues": [
+        2158
+      ]
+    },
+    {
+      "id": "education-reading",
+      "priority": "P1",
+      "area": "Education",
+      "roles": [
+        "player"
+      ],
+      "routes": [
+        "/education"
+      ],
+      "checks": [
+        "Record daily reading once",
+        "Progress survives refresh",
+        "Blocked book can be switched",
+        "Prerequisites unlock as expected"
+      ],
+      "status": "not-tested",
+      "relatedIssues": []
+    },
+    {
+      "id": "festival-lifecycle",
+      "priority": "P1",
+      "area": "Festivals",
+      "roles": [
+        "organiser",
+        "band-leader",
+        "admin"
+      ],
+      "routes": [
+        "/world/festivals",
+        "/festival-company/:festivalCompanyId/editions/:editionId/schedule"
+      ],
+      "checks": [
+        "Create edition",
+        "Invite and reorder bands",
+        "Ticket sales include players",
+        "Settlement is idempotent",
+        "Close edition and plan next"
+      ],
+      "status": "not-tested",
+      "relatedIssues": []
+    },
+    {
+      "id": "referral-rewards",
+      "priority": "P1",
+      "area": "Referrals",
+      "roles": [
+        "new-player",
+        "referrer",
+        "admin"
+      ],
+      "routes": [
+        "/social/referrals",
+        "/admin/referrals"
+      ],
+      "checks": [
+        "Canonical rockmundo.uk links",
+        "Attribution across signup",
+        "No self-referral or duplicate reward",
+        "Share image uses correct branding"
+      ],
+      "status": "not-tested",
+      "relatedIssues": []
+    },
+    {
+      "id": "progression-xp",
+      "priority": "P1",
+      "area": "Skills",
+      "roles": [
+        "player"
+      ],
+      "routes": [
+        "/skills",
+        "/progression"
+      ],
+      "checks": [
+        "Daily XP only on eligible unmaxed skills",
+        "Stipend and mentoring awards reconcile",
+        "Maxed skills do not overflow",
+        "Repeated jobs do not duplicate XP"
+      ],
+      "status": "not-tested",
+      "relatedIssues": []
+    },
+    {
+      "id": "tour-management",
+      "priority": "P2",
+      "area": "Tours",
+      "roles": [
+        "band-leader"
+      ],
+      "routes": [
+        "/tour-manager",
+        "/world-map"
+      ],
+      "checks": [
+        "Current and historic tours appear",
+        "Cancellation follows refund rules",
+        "World map loads and city pins navigate"
+      ],
+      "status": "not-tested",
+      "relatedIssues": []
+    },
+    {
+      "id": "avatar-clothing",
+      "priority": "P2",
+      "area": "Avatars",
+      "roles": [
+        "player"
+      ],
+      "routes": [
+        "/avatar-designer"
+      ],
+      "checks": [
+        "V1 clothing attaches to correct body slots",
+        "Feminine and masculine outfits render",
+        "Short sleeves preserve arms",
+        "Save persists to gig and social share"
+      ],
+      "status": "not-tested",
+      "relatedIssues": []
+    },
+    {
+      "id": "news-discovery",
+      "priority": "P2",
+      "area": "News",
+      "roles": [
+        "player",
+        "mayor"
+      ],
+      "routes": [
+        "/todays-news"
+      ],
+      "checks": [
+        "City defaults to current location",
+        "Sections paginate and collapse",
+        "New players and local updates appear",
+        "Empty states are not misleading"
+      ],
+      "status": "not-tested",
+      "relatedIssues": []
+    }
+  ]
+}
