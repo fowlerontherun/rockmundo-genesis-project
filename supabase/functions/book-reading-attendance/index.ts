@@ -147,7 +147,10 @@ async function processAttendance(supabaseClient: any, profileId?: string) {
         ? 0
         : Math.round(requiredXp * skillGainPercentage);
       const baseXpPerDay = Math.round(totalSkillXp / totalDays);
-      const randomBonus = Math.floor(Math.random() * 200) + 1;
+      // Stable per session/day: retries must never reroll an XP reward.
+      const bonusSeed = new TextEncoder().encode(`${session.id}:${today}:book-reading-v1`);
+      const bonusDigest = new Uint8Array(await crypto.subtle.digest("SHA-256", bonusSeed));
+      const randomBonus = (((bonusDigest[0] << 8) | bonusDigest[1]) % 200) + 1;
       const dailyXp = currentLevel >= maxLevel
         ? 0
         : Math.floor(Math.max(1, Math.min(200, baseXpPerDay + randomBonus)) * learningMultiplier);
