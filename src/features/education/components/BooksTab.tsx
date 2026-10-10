@@ -32,6 +32,12 @@ export const BooksTab = () => {
   const isBookLocked = (book: EnrichedSkillBook) =>
     Boolean(book.skill_slug && isHigherTierSkill(book.skill_slug) && accessBySkill.get(book.skill_slug) === false);
 
+  const activeBookSkill = activeSession?.skill_books?.skill_slug;
+  const activeBookLocked = Boolean(
+    activeBookSkill && isHigherTierSkill(activeBookSkill) &&
+    accessBySkill.get(activeBookSkill) === false
+  );
+
   const isPurchased = (bookId: string) => 
     purchases?.some((p) => p.book_id === bookId);
 
@@ -219,6 +225,18 @@ export const BooksTab = () => {
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground">XP Earned: {activeSession.total_skill_xp_earned}</p>
+            {activeBookLocked && (
+              <div role="alert" className="space-y-2 rounded-md border border-destructive/40 bg-destructive/5 p-3">
+                <p className="flex items-center gap-2 text-sm font-medium">
+                  <Lock className="h-4 w-4" /> Reading paused: skill prerequisites not unlocked
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  This book cannot earn reading progress until the previous skill tier is mastered.
+                  Stop this session below, then choose an unlocked book from your library.
+                  Any previously recorded reading progress is retained.
+                </p>
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">
               Need to switch books? Stop this session to keep your recorded progress, then select another book.
             </p>
