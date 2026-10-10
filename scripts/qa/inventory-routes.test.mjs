@@ -10,6 +10,8 @@ test('inventory includes known public and festival routes without claiming passe
   const matrix=JSON.parse(fs.readFileSync('qa/test-matrix.json','utf8'));
   const paths=new Set(inv.routes.map(x=>x.path));
   assert.ok(paths.has('/world/festivals'));
+  assert.ok(paths.has('/admin/festivals/:festivalCompanyId/editions/:editionId'));
+  assert.ok(paths.has('/festival-company/:festivalCompanyId/editions/:editionId/schedule'));
   assert.ok(paths.has('/festival-company/:festivalCompanyId/editions/:editionId/settlement'));
   assert.equal(paths.size,inv.routeCount);
   assert.equal(matrix.caseCount,inv.routeCount*7);
