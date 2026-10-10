@@ -7,12 +7,14 @@ test('inventory includes known public and festival routes without claiming passe
   execFileSync(process.execPath,['scripts/qa/inventory-routes.mjs']);
   execFileSync(process.execPath,['scripts/qa/generate-test-matrix.mjs']);
   execFileSync(process.execPath,['scripts/qa/check-navigation.mjs']);
+  execFileSync(process.execPath,['scripts/qa/check-route-parser.mjs']);
   execFileSync(process.execPath,['scripts/qa/inventory-backend.mjs']);
   execFileSync(process.execPath,['scripts/qa/check-priority-journeys.mjs']);
   execFileSync(process.execPath,['scripts/qa/summarize-audit.mjs']);
   const inv=JSON.parse(fs.readFileSync('qa/route-inventory.json','utf8'));
   const matrix=JSON.parse(fs.readFileSync('qa/test-matrix.json','utf8'));
   const navigation=JSON.parse(fs.readFileSync('qa/navigation-review.json','utf8'));
+  const parserReview=JSON.parse(fs.readFileSync('qa/route-parser-review.json','utf8'));
   const backend=JSON.parse(fs.readFileSync('qa/backend-inventory.json','utf8'));
   const summary=JSON.parse(fs.readFileSync('qa/audit-summary.json','utf8'));
   const journeyReview=JSON.parse(fs.readFileSync('qa/journey-route-review.json','utf8'));
@@ -27,6 +29,9 @@ test('inventory includes known public and festival routes without claiming passe
   assert.ok(matrix.cases.every(x=>x.status==='not-tested' && x.issue===null));
   assert.ok(matrix.cases.every(x=>paths.has(x.route)));
   assert.equal(navigation.candidateCount,navigation.candidates.length);
+  assert.equal(parserReview.expressionRouteCount,parserReview.expressionRoutes.length);
+  assert.equal(parserReview.repeatedLiteralCount,parserReview.repeated.length);
+  assert.ok(parserReview.expressionRoutes.every(x=>x.status==='requires-review'));
   assert.ok(navigation.candidates.every(x=>x.status==='requires-review'));
   assert.ok(navigation.candidates.every(x=>paths.has(x.path)));
   assert.equal(backend.surfaceCount,backend.surfaces.length);
