@@ -85,6 +85,7 @@ async function processAttendance(supabaseClient: any, profileId?: string) {
   let totalXpAwarded = 0;
 
   for (const session of sessions || []) {
+    for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const { data: existing } = await supabaseClient
         .from("player_book_reading_attendance")
@@ -96,7 +97,7 @@ async function processAttendance(supabaseClient: any, profileId?: string) {
       if (existing) {
         console.log(`Attendance already recorded for session ${session.id}`);
         records.push({ session_id: session.id, reason: "already_recorded" });
-        continue;
+        break;
       }
 
       const book = session.skill_books;
@@ -113,7 +114,7 @@ async function processAttendance(supabaseClient: any, profileId?: string) {
         console.log(`[Books] Skipping locked tier ${book.skill_slug} on profile ${session.profile_id}`);
         records.push({ session_id: session.id, error: "This book\u0027s skill prerequisites are not unlocked yet." });
         errorCount += 1;
-        continue;
+        break;
       }
 
       const totalDays = Math.max(1, Number(book.base_reading_days) || 1);
@@ -191,15 +192,19 @@ async function processAttendance(supabaseClient: any, profileId?: string) {
         // Another writer may have advanced the skill. Keep the session
         // unclaimed so a subsequent invocation can recompute from fresh data.
         if (applyError.code === "40001") {
+          if (attempt === 0) {
+            console.log(`[Books] Stale progression for session ${session.id}; retrying with fresh skill state`);
+            continue;
+          }
           records.push({ session_id: session.id, reason: "progress_changed_retry", error: "Skill progress changed during reading. Please retry." });
           errorCount += 1;
-          continue;
+          break;
         }
         throw applyError;
       }
       if (applied?.reason) {
         records.push({ session_id: session.id, reason: applied.reason });
-        continue;
+        break;
       }
       const newDaysRead = Number(applied.days_read);
       const isComplete = applied.completed === true;
@@ -255,10 +260,13 @@ async function processAttendance(supabaseClient: any, profileId?: string) {
 
       processedCount += 1;
       console.log(`Processed session ${session.id}: ${dailyXp} XP, day ${newDaysRead}/${totalDays}`);
+      break;
     } catch (error: any) {
       console.error(`Error processing session ${session.id}:`, error);
       records.push({ session_id: session.id, error: error.message });
       errorCount += 1;
+      break;
+    }
     }
   }
 
