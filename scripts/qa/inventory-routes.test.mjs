@@ -34,6 +34,7 @@ test('inventory includes known public and festival routes without claiming passe
   assert.ok(parserReview.expressionRoutes.every(x=>x.status==='requires-review'));
   assert.ok(navigation.candidates.every(x=>x.status==='requires-review'));
   assert.ok(navigation.candidates.every(x=>paths.has(x.path)));
+  assert.equal(navigation.registeredPatterns,inv.routes.filter(r=>r.discoveryKinds.some(k=>k==='jsx-route'||k==='jsx-festival-route')).length);
   assert.equal(backend.surfaceCount,backend.surfaces.length);
   assert.ok(backend.surfaces.every(x=>x.status==='not-tested'));
   assert.ok(backend.surfaces.every(x=>['edge-function','migration','database-test'].includes(x.type)));
