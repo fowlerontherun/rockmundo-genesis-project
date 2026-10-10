@@ -273,9 +273,20 @@ async function processActivityCompletion(supabase: any, activity: ScheduledActiv
     case 'university':
       await supabase.functions.invoke('university-attendance');
       break;
-    case 'reading':
-      await supabase.functions.invoke('book-reading-attendance');
+    case 'reading': {
+      // The attendance endpoint requires a trusted service-role bearer for
+      // global processing. Forward the server-only key explicitly and surface
+      // invocation failures so the activity is not falsely marked complete.
+      const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+      if (!serviceRoleKey) throw new Error('Reading scheduler service credential is missing');
+      const { data, error } = await supabase.functions.invoke('book-reading-attendance', {
+        headers: { Authorization: `Bearer ${serviceRoleKey}` },
+        body: { triggeredBy: 'process-scheduled-activities' },
+      });
+      if (error) throw error;
+      if (data?.success !== true) throw new Error(data?.error ?? 'Reading attendance processing failed');
       break;
+    }
     case 'songwriting':
       await supabase.functions.invoke('cleanup-songwriting');
       break;
