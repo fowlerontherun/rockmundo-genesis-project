@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.774",
+    date: "2026-10-10",
+    changes: [
+      { type: "fix", description: "Synchronized with the latest GitHub main (PR #2663): when the book you're reading becomes locked, the \"Record Today's Reading\" button is now disabled and reads \"Reading locked — switch books\", matching the existing warning card. No database or player records were changed." },
+    ],
+  },
+  {
     version: "1.1.773",
     date: "2026-10-10",
     changes: [

@@ -32,7 +32,7 @@ export const BooksTab = () => {
   const isBookLocked = (book: EnrichedSkillBook) =>
     Boolean(book.skill_slug && isHigherTierSkill(book.skill_slug) && accessBySkill.get(book.skill_slug) === false);
 
-  const activeBookSkill = activeSession?.skill_books?.skill_slug;
+  const activeBookSkill = (activeSession?.skill_books as { skill_slug?: string } | undefined)?.skill_slug;
   const activeBookLocked = Boolean(
     activeBookSkill && isHigherTierSkill(activeBookSkill) &&
     accessBySkill.get(activeBookSkill) === false
@@ -250,13 +250,17 @@ export const BooksTab = () => {
             >
               {isStoppingReading ? "Stopping..." : "Stop Reading / Switch Book"}
             </Button>
-            <Button 
-              onClick={() => processAttendance()} 
-              disabled={isProcessing}
+            <Button
+              onClick={() => processAttendance()}
+              disabled={isProcessing || activeBookLocked || tierAccess.isLoading}
               className="w-full"
               size="sm"
             >
-              {isProcessing ? "Processing..." : "Record Today's Reading"}
+              {isProcessing
+                ? "Processing..."
+                : activeBookLocked
+                  ? "Reading locked — switch books"
+                  : "Record Today's Reading"}
             </Button>
           </CardContent>
         </Card>
