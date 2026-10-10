@@ -6,8 +6,10 @@ import {execFileSync} from 'node:child_process';
 test('inventory includes known public and festival routes without claiming passes',()=>{
   execFileSync(process.execPath,['scripts/qa/inventory-routes.mjs']);
   execFileSync(process.execPath,['scripts/qa/generate-test-matrix.mjs']);
+  execFileSync(process.execPath,['scripts/qa/check-navigation.mjs']);
   const inv=JSON.parse(fs.readFileSync('qa/route-inventory.json','utf8'));
   const matrix=JSON.parse(fs.readFileSync('qa/test-matrix.json','utf8'));
+  const navigation=JSON.parse(fs.readFileSync('qa/navigation-review.json','utf8'));
   const paths=new Set(inv.routes.map(x=>x.path));
   assert.ok(paths.has('/world/festivals'));
   assert.ok(paths.has('/admin/festivals/:festivalCompanyId/editions/:editionId'));
@@ -18,4 +20,7 @@ test('inventory includes known public and festival routes without claiming passe
   assert.ok(inv.routes.every(x=>x.status==='not-tested'));
   assert.ok(matrix.cases.every(x=>x.status==='not-tested' && x.issue===null));
   assert.ok(matrix.cases.every(x=>paths.has(x.route)));
+  assert.equal(navigation.candidateCount,navigation.candidates.length);
+  assert.ok(navigation.candidates.every(x=>x.status==='requires-review'));
+  assert.ok(navigation.candidates.every(x=>paths.has(x.path)));
 });
