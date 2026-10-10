@@ -19,7 +19,7 @@ type ReplayPayload = {
   commerce?: unknown;
   luthieryInstruments?: unknown;
 };
-type ReplayRow = { id: string; gig_id: string; gig_outcome_id: string; viewer_version: number; event_schema_version: number; simulation_seed: string; duration_ms: number; event_payload: ReplayPayload | unknown[]; generated_at: string; generation_status: GigReplayStatus; checksum: string | null };
+type ReplayRow = { id: string; gig_id: string; gig_outcome_id: string; viewer_version: string | number; event_schema_version: number; simulation_seed: string; duration_ms: number; event_payload: ReplayPayload | unknown[]; generated_at: string; generation_status: GigReplayStatus; checksum: string | null };
 export interface GigViewerReplayResult { state: GigViewerReplayLoadState; replay: GigViewerReplay | null; reason?: string }
 
 export async function getGigViewerReplay(gigId: string): Promise<GigViewerReplayResult> {
@@ -40,7 +40,14 @@ export async function getGigViewerReplay(gigId: string): Promise<GigViewerReplay
     return { state: "unavailable", replay: null, reason: "schema_unavailable" };
   }
   if (error) throw createGigExperienceLoadError(gigId, "replay", "gig_viewer_replays", error);
-  const rows = (data ?? []) as ReplayRow[];
+  // PostgreSQL stores viewer_version as TEXT. Normalize at the data boundary
+  // before strict version comparisons and schema validation.
+  const rows = ((data ?? []) as ReplayRow[]).map((row) => ({
+    ...row,
+    viewer_version: typeof row.viewer_version === "string" && /^\d+$/.test(row.viewer_version)
+      ? Number(row.viewer_version)
+      : row.viewer_version,
+  })) as (ReplayRow & { viewer_version: number })[];
   if (!rows.length) return { state: "unavailable", replay: null, reason: "legacy_unavailable" };
   // A newer retry may still be generating or may have failed. Prefer an already
   // completed compatible replay so a successful gig remains watchable.
