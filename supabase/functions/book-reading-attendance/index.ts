@@ -170,82 +170,28 @@ async function processAttendance(supabaseClient: any, profileId?: string) {
         newRequiredXp = 0;
       }
 
-      const { error: attendanceError } = await supabaseClient
-        .from("player_book_reading_attendance")
-        .insert({
-          reading_session_id: session.id,
-          reading_date: today,
-          skill_xp_earned: dailyXp,
-          was_locked_out: false,
-        });
-      if (attendanceError) throw attendanceError;
-
-      const { error: skillError } = await supabaseClient
-        .from("skill_progress")
-        .upsert(
-          {
-            profile_id: session.profile_id,
-            skill_slug: book.skill_slug,
-            current_xp: remainingXp,
-            current_level: newLevel,
-            required_xp: newRequiredXp,
-            last_practiced_at: new Date().toISOString(),
-          },
-          { onConflict: "profile_id,skill_slug" },
-        );
-      if (skillError) throw skillError;
-
-      const newDaysRead = session.days_read + 1;
-      const isComplete = newDaysRead >= totalDays;
+      // The RPC owns the attendance claim and every critical XP/progress write.
+      // A failed RPC rolls back the whole day; no partial attendance can block retries.
+      const { data: applied, error: applyError } = await supabaseClient.rpc("apply_book_reading_day", {
+        p_session_id: session.id,
+        p_reading_date: today,
+        p_skill_slug: book.skill_slug,
+        p_daily_xp: dailyXp,
+        p_current_level: newLevel,
+        p_current_xp: remainingXp,
+        p_required_xp: newRequiredXp,
+        p_total_days: totalDays,
+        p_expected_level: Number(skillProgress?.current_level ?? 0),
+        p_expected_xp: Number(skillProgress?.current_xp ?? 0),
+      });
+      if (applyError) throw applyError;
+      if (applied?.reason) {
+        records.push({ session_id: session.id, reason: applied.reason });
+        continue;
+      }
+      const newDaysRead = Number(applied.days_read);
+      const isComplete = applied.completed === true;
       totalXpAwarded += dailyXp;
-
-      const { error: updateError } = await supabaseClient
-        .from("player_book_reading_sessions")
-        .update({
-          days_read: newDaysRead,
-          total_skill_xp_earned: session.total_skill_xp_earned + dailyXp,
-          status: isComplete ? "completed" : "reading",
-          actual_completion_date: isComplete ? new Date().toISOString() : null,
-        })
-        .eq("id", session.id);
-      if (updateError) throw updateError;
-
-      if (isComplete) {
-        await supabaseClient
-          .from("player_book_purchases")
-          .update({ is_read: true })
-          .eq("id", session.purchase_id);
-      }
-
-      const { data: profile } = await supabaseClient
-        .from("profiles")
-        .select("experience")
-        .eq("id", session.profile_id)
-        .maybeSingle();
-
-      if (profile && dailyXp > 0) {
-        await supabaseClient
-          .from("profiles")
-          .update({ experience: (profile.experience || 0) + dailyXp })
-          .eq("id", session.profile_id);
-      }
-
-      await supabaseClient
-        .from("experience_ledger")
-        .insert({
-          user_id: session.user_id,
-          profile_id: session.profile_id,
-          activity_type: "book_reading",
-          skill_slug: book.skill_slug,
-          xp_amount: dailyXp,
-          metadata: {
-            book_id: session.book_id,
-            day: newDaysRead,
-            total_days: totalDays,
-            completed: isComplete,
-            max_level: maxLevel,
-          },
-        });
 
       records.push({
         session_id: session.id,
