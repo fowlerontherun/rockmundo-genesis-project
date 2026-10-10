@@ -89,3 +89,17 @@ Inspection of `src/config/hubNavigation.ts` and `src/config/fmNavigation.ts` con
 The current inventory's broad string-literal extraction conflates navigation destinations, active-tab matching aliases, and URL registry patterns. The resulting 25-candidate estimate must therefore **not** be used as a count of broken links.
 
 Action: separate `path` / `subTabs[].path` navigation destinations from `matchPaths` classification patterns in the next parser revision, then investigate only unmatched clickable destinations. Runtime verification remains required.
+
+## Destination-only rerun — latest QA branch
+
+Using the revised checker rules against the four source files (JSX literal routes, festival registry JSX routes, nested festival edition child expressions, and actual `path` / `rootPath` navigation destinations):
+
+- **176** unique navigation destinations extracted from hub and FM navigation configuration.
+- **465** unique registered route patterns resolved from JSX (including nested festival section patterns).
+- **0** unmatched destinations under the current static pathname matcher.
+
+The prior 29 (and projected 25) review candidates are **closed as static extraction/matching false positives**, not fixed gameplay defects. In particular, `matchPaths` aliases are not clickable destinations. This is a read-only source-level rerun, not a successful CI job or browser test.
+
+### Remaining limitations
+
+The checker does not verify runtime redirects, route guards, authorization, network calls, UI crashes, stale navigation links in other components, or whether a destination has meaningful page content. A nested relative route may be over-approximated by the static matcher. Proceed with browser smoke tests and high-risk gameplay journeys.
