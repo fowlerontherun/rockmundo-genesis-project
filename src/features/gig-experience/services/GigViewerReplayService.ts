@@ -19,8 +19,39 @@ type ReplayPayload = {
   commerce?: unknown;
   luthieryInstruments?: unknown;
 };
+type RawReplayRow = Omit<ReplayRow, "viewer_version" | "event_schema_version"> & { viewer_version: unknown; event_schema_version: unknown };
 type ReplayRow = { id: string; gig_id: string; gig_outcome_id: string; viewer_version: number; event_schema_version: number; simulation_seed: string; duration_ms: number; event_payload: ReplayPayload | unknown[]; generated_at: string; generation_status: GigReplayStatus; checksum: string | null };
 export interface GigViewerReplayResult { state: GigViewerReplayLoadState; replay: GigViewerReplay | null; reason?: string }
+
+/**
+ * Normalizes a stored version value at the database boundary. The
+ * gig_viewer_replays.viewer_version column is TEXT (e.g. "2"); only strict
+ * positive-integer numbers or numeric strings are accepted. Anything else
+ * becomes NaN so strict compatibility checks still reject it.
+ */
+export function normalizeReplayVersion(value: unknown): number {
+  if (typeof value === "number") return Number.isInteger(value) && value > 0 ? value : Number.NaN;
+  if (typeof value === "string" && /^\s*\d+\s*$/.test(value)) {
+    const parsed = Number(value.trim());
+    return parsed > 0 ? parsed : Number.NaN;
+  }
+  return Number.NaN;
+}
+
+export function normalizeReplayRow(raw: RawReplayRow): ReplayRow {
+  return { ...raw, viewer_version: normalizeReplayVersion(raw.viewer_version), event_schema_version: normalizeReplayVersion(raw.event_schema_version) };
+}
+
+/** Prefers ready rows on the current version, then ready supported rows, then pending/other rows. */
+export function selectReplayRow(rows: ReplayRow[]): ReplayRow | undefined {
+  const current = (c: ReplayRow) => c.viewer_version === GIG_VIEWER_VERSION && c.event_schema_version === GIG_EVENT_SCHEMA_VERSION;
+  const supported = (c: ReplayRow) => isSupportedReplayVersion(c.viewer_version, c.event_schema_version);
+  return rows.find((c) => c.generation_status === "ready" && current(c))
+    ?? rows.find((c) => c.generation_status === "ready" && supported(c))
+    ?? rows.find(current)
+    ?? rows.find(supported)
+    ?? rows[0];
+}
 
 export async function getGigViewerReplay(gigId: string): Promise<GigViewerReplayResult> {
   const { data, error } = await (supabase as any)
@@ -40,15 +71,11 @@ export async function getGigViewerReplay(gigId: string): Promise<GigViewerReplay
     return { state: "unavailable", replay: null, reason: "schema_unavailable" };
   }
   if (error) throw createGigExperienceLoadError(gigId, "replay", "gig_viewer_replays", error);
-  const rows = (data ?? []) as ReplayRow[];
+  const rows = ((data ?? []) as RawReplayRow[]).map(normalizeReplayRow);
   if (!rows.length) return { state: "unavailable", replay: null, reason: "legacy_unavailable" };
   // A newer retry may still be generating or may have failed. Prefer an already
   // completed compatible replay so a successful gig remains watchable.
-  const row = rows.find((candidate) => candidate.generation_status === "ready" && candidate.viewer_version === GIG_VIEWER_VERSION && candidate.event_schema_version === GIG_EVENT_SCHEMA_VERSION)
-    ?? rows.find((candidate) => candidate.generation_status === "ready" && isSupportedReplayVersion(candidate.viewer_version, candidate.event_schema_version))
-    ?? rows.find((candidate) => candidate.viewer_version === GIG_VIEWER_VERSION && candidate.event_schema_version === GIG_EVENT_SCHEMA_VERSION)
-    ?? rows.find((candidate) => isSupportedReplayVersion(candidate.viewer_version, candidate.event_schema_version))
-    ?? rows[0];
+  const row = selectReplayRow(rows)!;
   if (row.generation_status === "generating") return { state: "generating", replay: null };
   if (row.generation_status === "failed") return { state: "failed", replay: null };
   if (row.generation_status === "legacy_unavailable") return { state: "unavailable", replay: null, reason: "legacy_unavailable" };
