@@ -104,34 +104,7 @@ export const useSkillBooks = () => {
       profileId: string;
       price: number;
     }) => {
-      // Deduct cash
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("cash")
-        .eq("id", profileId)
-        .single();
-
-      if (!profile) throw new Error("Profile not found");
-      
-      const { error: cashError } = await supabase
-        .from("profiles")
-        .update({ cash: profile.cash - price })
-        .eq("id", profileId);
-
-      if (cashError) throw cashError;
-
-      // Create purchase
-      const { data, error } = await supabase
-        .from("player_book_purchases")
-        .insert({
-          user_id: userId,
-          profile_id: profileId,
-          book_id: bookId,
-          purchase_price: price,
-        })
-        .select()
-        .single();
-
+      const { data, error } = await supabase.rpc("purchase_skill_book", { p_profile_id: profileId, p_book_id: bookId });
       if (error) throw error;
       return data;
     },
