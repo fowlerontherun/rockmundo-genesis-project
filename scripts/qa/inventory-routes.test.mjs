@@ -23,6 +23,11 @@ test('inventory includes known public and festival routes without claiming passe
   assert.ok(paths.has('/admin/festivals/:festivalCompanyId/editions/:editionId'));
   assert.ok(paths.has('/festival-company/:festivalCompanyId/editions/:editionId/schedule'));
   assert.ok(paths.has('/festival-company/:festivalCompanyId/editions/:editionId/settlement'));
+  for (const section of ['applications','finance','live','history']) {
+    const route='/festival-company/:festivalCompanyId/editions/:editionId/'+section;
+    assert.ok(inv.routes.some(r=>r.path===route && r.discoveryKinds.includes('jsx-festival-route')),`Missing mounted festival section: ${section}`);
+    assert.ok(!navigation.candidates.some(r=>r.path===route),`False positive navigation mismatch: ${section}`);
+  }
   assert.equal(paths.size,inv.routeCount);
   assert.equal(matrix.caseCount,inv.routeCount*7);
   assert.ok(inv.routes.every(x=>x.status==='not-tested'));
