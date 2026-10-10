@@ -6,6 +6,7 @@ on:
       - 'src/config/**'
       - 'src/features/festivals/routes.ts'
       - 'scripts/qa/**'
+      - 'qa/priority-journeys.json'
       - 'supabase/functions/**'
       - 'supabase/migrations/**'
       - 'supabase/tests/**'
