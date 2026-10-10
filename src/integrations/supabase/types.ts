@@ -66072,6 +66072,21 @@ export type Database = {
         Args: { p_month?: string }
         Returns: number
       }
+      apply_book_reading_day: {
+        Args: {
+          p_current_level: number
+          p_current_xp: number
+          p_daily_xp: number
+          p_expected_level: number
+          p_expected_xp: number
+          p_reading_date: string
+          p_required_xp: number
+          p_session_id: string
+          p_skill_slug: string
+          p_total_days: number
+        }
+        Returns: Json
+      }
       apply_child_interaction: {
         Args: {
           p_child_id: string
