@@ -219,6 +219,19 @@ export const BooksTab = () => {
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground">XP Earned: {activeSession.total_skill_xp_earned}</p>
+            <p className="text-xs text-muted-foreground">
+              Need to switch books? Stop this session to keep your recorded progress, then select another book.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => stopReading(activeSession.id)}
+              disabled={isStoppingReading || isProcessing}
+              className="w-full"
+              size="sm"
+            >
+              {isStoppingReading ? "Stopping..." : "Stop Reading / Switch Book"}
+            </Button>
             <Button 
               onClick={() => processAttendance()} 
               disabled={isProcessing}
