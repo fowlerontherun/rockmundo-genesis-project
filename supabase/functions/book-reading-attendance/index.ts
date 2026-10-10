@@ -184,7 +184,21 @@ async function processAttendance(supabaseClient: any, profileId?: string) {
         p_expected_level: Number(skillProgress?.current_level ?? 0),
         p_expected_xp: Number(skillProgress?.current_xp ?? 0),
       });
-      if (applyError) throw applyError;
+      if (applyError) {
+        // The RPC raises SQLSTATE 40001 when another writer changes the skill
+        // after our calculation. No attendance/XP was committed in that case.
+        // Surface a retryable result instead of presenting it as a lost day.
+        if (applyError.code === "40001") {
+          records.push({
+            session_id: session.id,
+            reason: "retryable_progress_conflict",
+            error: "Skill progress changed while reading was recorded. Please try again.",
+          });
+          errorCount += 1;
+          continue;
+        }
+        throw applyError;
+      }
       if (applied?.reason) {
         records.push({ session_id: session.id, reason: applied.reason });
         continue;
