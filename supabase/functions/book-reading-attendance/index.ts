@@ -58,7 +58,7 @@ async function getRequiredSkillXp(client: any, level: number): Promise<number> {
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-triggered-by",
+    "authorization, x-client-info, apikey, content-type, x-triggered-by, x-cron-secret",
 };
 
 async function processAttendance(supabaseClient: any, profileId?: string) {
@@ -330,7 +330,17 @@ serve(async (req) => {
     // caller-supplied trigger metadata must never grant access to all profiles.
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const bearer = authorization?.replace(/^Bearer\\s+/i, "").trim();
-    if (!serviceRoleKey || !bearer || bearer !== serviceRoleKey) {
+    // Database cron cannot safely embed a service-role key. Reuse the
+    // existing internal cron secret verifier, with the secret held in Vault.
+    let cronAuthorized = false;
+    const cronSecret = req.headers.get("x-cron-secret");
+    if (cronSecret) {
+      const { data, error } = await supabaseClient.rpc("verify_internal_cron_secret", {
+        p_secret: cronSecret,
+      });
+      cronAuthorized = !error && data === true;
+    }
+    if ((!serviceRoleKey || bearer !== serviceRoleKey) && !cronAuthorized) {
       return new Response(JSON.stringify({ error: "Scheduled reading processing requires service authentication." }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
