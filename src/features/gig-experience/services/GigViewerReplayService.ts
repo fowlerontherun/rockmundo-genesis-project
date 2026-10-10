@@ -42,7 +42,11 @@ export async function getGigViewerReplay(gigId: string): Promise<GigViewerReplay
   if (error) throw createGigExperienceLoadError(gigId, "replay", "gig_viewer_replays", error);
   const rows = (data ?? []) as ReplayRow[];
   if (!rows.length) return { state: "unavailable", replay: null, reason: "legacy_unavailable" };
-  const row = rows.find((candidate) => candidate.viewer_version === GIG_VIEWER_VERSION && candidate.event_schema_version === GIG_EVENT_SCHEMA_VERSION)
+  // A newer retry may still be generating or may have failed. Prefer an already
+  // completed compatible replay so a successful gig remains watchable.
+  const row = rows.find((candidate) => candidate.generation_status === "ready" && candidate.viewer_version === GIG_VIEWER_VERSION && candidate.event_schema_version === GIG_EVENT_SCHEMA_VERSION)
+    ?? rows.find((candidate) => candidate.generation_status === "ready" && isSupportedReplayVersion(candidate.viewer_version, candidate.event_schema_version))
+    ?? rows.find((candidate) => candidate.viewer_version === GIG_VIEWER_VERSION && candidate.event_schema_version === GIG_EVENT_SCHEMA_VERSION)
     ?? rows.find((candidate) => isSupportedReplayVersion(candidate.viewer_version, candidate.event_schema_version))
     ?? rows[0];
   if (row.generation_status === "generating") return { state: "generating", replay: null };
