@@ -81,3 +81,11 @@ The JSX uses `festivalRoutePatterns.<section>.split("/").at(-1)` to obtain the c
 **Classification:** Four static-matcher false positives; no gameplay bug filed. The remaining review queue is expected to fall from 29 to **25** candidates on a successful regenerated inventory. That 25 count is an expectation, not a verified CI result.
 
 **Execution caveat:** GitHub workflow runs have not been returned for the QA branch commits, and browser navigation remains untested.
+
+## Navigation classification — 2026-10-10 follow-up
+
+Inspection of `src/config/hubNavigation.ts` and `src/config/fmNavigation.ts` confirms that many unmatched values are inside **`matchPaths`**, which group existing routes under a navigation tab. They are not necessarily clickable destination URLs. Examples include `/fan-management`, `/performance/gig`, `/bands`, `/family` and `/companies/festivals`.
+
+The current inventory's broad string-literal extraction conflates navigation destinations, active-tab matching aliases, and URL registry patterns. The resulting 25-candidate estimate must therefore **not** be used as a count of broken links.
+
+Action: separate `path` / `subTabs[].path` navigation destinations from `matchPaths` classification patterns in the next parser revision, then investigate only unmatched clickable destinations. Runtime verification remains required.
