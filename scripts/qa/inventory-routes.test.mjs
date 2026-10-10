@@ -36,7 +36,8 @@ test('inventory includes known public and festival routes without claiming passe
   assert.equal(summary.checklistCases,matrix.caseCount);
   assert.equal(summary.backendSurfaces,backend.surfaceCount);
   assert.equal(summary.confirmedBugs,0);
-  assert.equal(journeyReview.journeys,8);
+  const configuredJourneys=JSON.parse(fs.readFileSync('qa/priority-journeys.json','utf8')).journeys;
+  assert.equal(journeyReview.journeys,configuredJourneys.length);
   assert.equal(journeyReview.unmatchedRouteReferences,journeyReview.missing.length);
   assert.ok(journeyReview.results.every(j=>j.routes.every(r=>r.status!=='pass')));
 });
