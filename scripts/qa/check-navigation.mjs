@@ -3,7 +3,8 @@
 import fs from 'node:fs';
 const inventory=JSON.parse(fs.readFileSync('qa/route-inventory.json','utf8'));
 const routes=inventory.routes;
-const registered=routes.filter(r=>r.discoveryKinds.some(k=>k==='jsx-route'||k==='jsx-festival-route'||k==='festival-route-pattern'));
+// Festival registry definitions alone do not prove the route is mounted in JSX.
+const registered=routes.filter(r=>r.discoveryKinds.some(k=>k==='jsx-route'||k==='jsx-festival-route'));
 const nav=routes.filter(r=>r.discoveryKinds.some(k=>k.startsWith('navigation')));
 const normalize=p=>p.replace(/\/+$/,'')||'/';
 const match=(pattern,url)=>{
