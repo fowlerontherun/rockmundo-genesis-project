@@ -27,6 +27,7 @@ jobs:
           node scripts/qa/inventory-routes.mjs
           node scripts/qa/generate-test-matrix.mjs
           node scripts/qa/check-navigation.mjs
+          node scripts/qa/check-route-parser.mjs
           node scripts/qa/inventory-backend.mjs
           node scripts/qa/check-priority-journeys.mjs
           node scripts/qa/summarize-audit.mjs
@@ -41,6 +42,7 @@ jobs:
             qa/route-inventory.json
             qa/test-matrix.json
             qa/navigation-review.json
+            qa/route-parser-review.json
             qa/backend-inventory.json
             qa/audit-summary.json
             qa/priority-journeys.json
