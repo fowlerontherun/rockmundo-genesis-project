@@ -22,6 +22,7 @@ jobs:
         run: |
           node scripts/qa/inventory-routes.mjs
           node scripts/qa/generate-test-matrix.mjs
+          node scripts/qa/check-navigation.mjs
       - name: Validate generated inventory
         run: node --test scripts/qa/inventory-routes.test.mjs
       - name: Upload QA discovery artifacts
@@ -32,4 +33,5 @@ jobs:
           path: |
             qa/route-inventory.json
             qa/test-matrix.json
+            qa/navigation-review.json
           if-no-files-found: warn
