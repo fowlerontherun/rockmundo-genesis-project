@@ -1,0 +1,35 @@
+name: QA Route Inventory
+on:
+  pull_request:
+    paths:
+      - 'src/App.tsx'
+      - 'src/config/**'
+      - 'src/features/festivals/routes.ts'
+      - 'scripts/qa/**'
+      - '.github/workflows/qa-route-inventory.yml'
+  workflow_dispatch:
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Generate discovery inventory
+        run: |
+          node scripts/qa/inventory-routes.mjs
+          node scripts/qa/generate-test-matrix.mjs
+      - name: Validate generated inventory
+        run: node --test scripts/qa/inventory-routes.test.mjs
+      - name: Upload QA discovery artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-route-discovery
+          path: |
+            qa/route-inventory.json
+            qa/test-matrix.json
+          if-no-files-found: warn
