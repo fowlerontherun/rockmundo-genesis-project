@@ -36,16 +36,6 @@ for (const file of sources) {
       if (pattern && pattern.startsWith(festivalPatterns.get('edition') + '/')) add(pattern,file,'jsx-festival-route');
     }
   }
-  // Festival edition child routes are relative expressions mounted under the edition shell.
-  // Resolve only the known registry + final-segment expression, not arbitrary JSX.
-  if (file === 'src/App.tsx' && source.includes('path={festivalRoutePatterns.edition}')) {
-    for (const m of source.matchAll(/<Route\\b[^>]*?\\bpath\\s*=\\s*\\{festivalRoutePatterns\\.(\\w+)\\.split\\(["']\\/["']\\)\\.at\\(-1\\)\\}/gs)) {
-      const pattern = festivalPatterns.get(m[1]);
-      const parent = festivalPatterns.get('edition');
-      if (pattern && parent && pattern.startsWith(parent + '/'))
-        add(pattern,file,'jsx-festival-route');
-    }
-  }
   for (const m of source.matchAll(/\bpath\s*:\s*["'](\/[^"']*)["']/g))
     add(m[1],file,'navigation-or-config');
   for (const m of source.matchAll(/\brootPath\s*:\s*["'](\/[^"']*)["']/g))
