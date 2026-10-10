@@ -7,6 +7,10 @@ const root = process.cwd();
 const read = file => fs.existsSync(path.join(root,file)) ? fs.readFileSync(path.join(root,file),'utf8') : '';
 const sources = ['src/App.tsx','src/features/festivals/routes.ts','src/config/hubNavigation.ts','src/config/fmNavigation.ts'];
 const entries = new Map();
+const festivalPatterns = new Map();
+const festivalSource = read('src/features/festivals/routes.ts');
+const festivalBlock = festivalSource.match(/export const festivalRoutePatterns\s*=\s*\{([\s\S]*?)\}\s*as const/);
+if (festivalBlock) for (const m of festivalBlock[1].matchAll(/(\w+)\s*:\s*["'](\/[^"']+)["']/g)) festivalPatterns.set(m[1],m[2]);
 const add = (route, file, kind) => {
   if (!route || route === '*' || route.includes('$') || route.includes('{')) return;
   const key = route.startsWith('/') ? route : '/' + route;
@@ -16,10 +20,14 @@ const add = (route, file, kind) => {
   entries.set(key,existing);
 };
 for (const file of sources) {
-  const source = read(file);
+  const source = read(file).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   if (!source) { console.warn('Missing source:',file); process.exitCode = 1; continue; }
   for (const m of source.matchAll(/<Route\b[^>]*?\bpath\s*=\s*["']([^"']+)["']/gs))
     add(m[1],file,'jsx-route');
+  for (const m of source.matchAll(/<Route\b[^>]*?\bpath\s*=\s*\{festivalRoutePatterns\.(\w+)\}/gs)) {
+    const pattern = festivalPatterns.get(m[1]);
+    if (pattern) add(pattern,file,'jsx-festival-route');
+  }
   for (const m of source.matchAll(/\bpath\s*:\s*["'](\/[^"']*)["']/g))
     add(m[1],file,'navigation-or-config');
   for (const m of source.matchAll(/\brootPath\s*:\s*["'](\/[^"']*)["']/g))
