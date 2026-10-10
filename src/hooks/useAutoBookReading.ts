@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -12,8 +11,8 @@ export const useAutoBookReading = (userId: string | null) => {
 
     const checkReadingSessions = async () => {
       try {
-        // Trigger book reading attendance edge function
-        await supabase.functions.invoke('book-reading-attendance');
+        // Only the trusted scheduler may process all players' attendance.
+        // Client refreshes must never trigger the global processing endpoint.
         
         queryClient.invalidateQueries({ queryKey: ["skill-books"] });
         queryClient.invalidateQueries({ queryKey: ["player-skills"] });

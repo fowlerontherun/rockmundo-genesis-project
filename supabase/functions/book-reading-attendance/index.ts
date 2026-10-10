@@ -325,6 +325,17 @@ serve(async (req) => {
   // Scheduled jobs without a user token retain the existing all-session behaviour.
   const authorization = req.headers.get("authorization");
   let manualProfileId: string | undefined;
+  if (payload?.manual !== true) {
+    // Scheduled/global processing is privileged. The public anon key and
+    // caller-supplied trigger metadata must never grant access to all profiles.
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const bearer = authorization?.replace(/^Bearer\\s+/i, "").trim();
+    if (!serviceRoleKey || !bearer || bearer !== serviceRoleKey) {
+      return new Response(JSON.stringify({ error: "Scheduled reading processing requires service authentication." }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+  }
   if (payload?.manual === true) {
     if (!authorization) return new Response(JSON.stringify({ error: "Please sign in again." }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     const { data: auth, error: authError } = await supabaseClient.auth.getUser(authorization.replace(/^Bearer\s+/i, ""));
