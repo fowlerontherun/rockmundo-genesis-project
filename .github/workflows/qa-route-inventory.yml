@@ -1,5 +1,18 @@
 name: QA Route Inventory
 on:
+  push:
+    branches:
+      - 'qa/gamewide-audit-phase1'
+    paths:
+      - 'src/App.tsx'
+      - 'src/config/**'
+      - 'src/features/festivals/routes.ts'
+      - 'scripts/qa/**'
+      - 'qa/priority-journeys.json'
+      - 'supabase/functions/**'
+      - 'supabase/migrations/**'
+      - 'supabase/tests/**'
+      - '.github/workflows/qa-route-inventory.yml'
   pull_request:
     paths:
       - 'src/App.tsx'
