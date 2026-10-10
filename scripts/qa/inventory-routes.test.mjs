@@ -8,10 +8,12 @@ test('inventory includes known public and festival routes without claiming passe
   execFileSync(process.execPath,['scripts/qa/generate-test-matrix.mjs']);
   execFileSync(process.execPath,['scripts/qa/check-navigation.mjs']);
   execFileSync(process.execPath,['scripts/qa/inventory-backend.mjs']);
+  execFileSync(process.execPath,['scripts/qa/summarize-audit.mjs']);
   const inv=JSON.parse(fs.readFileSync('qa/route-inventory.json','utf8'));
   const matrix=JSON.parse(fs.readFileSync('qa/test-matrix.json','utf8'));
   const navigation=JSON.parse(fs.readFileSync('qa/navigation-review.json','utf8'));
   const backend=JSON.parse(fs.readFileSync('qa/backend-inventory.json','utf8'));
+  const summary=JSON.parse(fs.readFileSync('qa/audit-summary.json','utf8'));
   const paths=new Set(inv.routes.map(x=>x.path));
   assert.ok(paths.has('/world/festivals'));
   assert.ok(paths.has('/admin/festivals/:festivalCompanyId/editions/:editionId'));
@@ -28,6 +30,10 @@ test('inventory includes known public and festival routes without claiming passe
   assert.equal(backend.surfaceCount,backend.surfaces.length);
   assert.ok(backend.surfaces.every(x=>x.status==='not-tested'));
   assert.ok(backend.surfaces.every(x=>['edge-function','migration','database-test'].includes(x.type)));
+  assert.equal(summary.routeCandidates,inv.routeCount);
+  assert.equal(summary.checklistCases,matrix.caseCount);
+  assert.equal(summary.backendSurfaces,backend.surfaceCount);
+  assert.equal(summary.confirmedBugs,0);
 });
 
 test('priority gameplay journeys are uniquely identified and never pre-marked as passed',()=>{
