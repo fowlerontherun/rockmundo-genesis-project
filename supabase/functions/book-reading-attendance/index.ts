@@ -85,6 +85,7 @@ async function processAttendance(supabaseClient: any, profileId?: string) {
   let totalXpAwarded = 0;
 
   for (const session of sessions || []) {
+    for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const { data: existing } = await supabaseClient
         .from("player_book_reading_attendance")
@@ -96,7 +97,7 @@ async function processAttendance(supabaseClient: any, profileId?: string) {
       if (existing) {
         console.log(`Attendance already recorded for session ${session.id}`);
         records.push({ session_id: session.id, reason: "already_recorded" });
-        continue;
+        break;
       }
 
       const book = session.skill_books;
@@ -113,7 +114,7 @@ async function processAttendance(supabaseClient: any, profileId?: string) {
         console.log(`[Books] Skipping locked tier ${book.skill_slug} on profile ${session.profile_id}`);
         records.push({ session_id: session.id, error: "This book\u0027s skill prerequisites are not unlocked yet." });
         errorCount += 1;
-        continue;
+        break;
       }
 
       const totalDays = Math.max(1, Number(book.base_reading_days) || 1);
@@ -147,7 +148,10 @@ async function processAttendance(supabaseClient: any, profileId?: string) {
         ? 0
         : Math.round(requiredXp * skillGainPercentage);
       const baseXpPerDay = Math.round(totalSkillXp / totalDays);
-      const randomBonus = Math.floor(Math.random() * 200) + 1;
+      // Stable per session/day: retries must never reroll an XP reward.
+      const bonusSeed = new TextEncoder().encode(`${session.id}:${today}:book-reading-v1`);
+      const bonusDigest = new Uint8Array(await crypto.subtle.digest("SHA-256", bonusSeed));
+      const randomBonus = (((bonusDigest[0] << 8) | bonusDigest[1]) % 200) + 1;
       const dailyXp = currentLevel >= maxLevel
         ? 0
         : Math.floor(Math.max(1, Math.min(200, baseXpPerDay + randomBonus)) * learningMultiplier);
@@ -185,23 +189,22 @@ async function processAttendance(supabaseClient: any, profileId?: string) {
         p_expected_xp: Number(skillProgress?.current_xp ?? 0),
       });
       if (applyError) {
-        // The RPC raises SQLSTATE 40001 when another writer changes the skill
-        // after our calculation. No attendance/XP was committed in that case.
-        // Surface a retryable result instead of presenting it as a lost day.
+        // Another writer may have advanced the skill. Keep the session
+        // unclaimed so a subsequent invocation can recompute from fresh data.
         if (applyError.code === "40001") {
-          records.push({
-            session_id: session.id,
-            reason: "retryable_progress_conflict",
-            error: "Skill progress changed while reading was recorded. Please try again.",
-          });
+          if (attempt === 0) {
+            console.log(`[Books] Stale progression for session ${session.id}; retrying with fresh skill state`);
+            continue;
+          }
+          records.push({ session_id: session.id, reason: "progress_changed_retry", error: "Skill progress changed during reading. Please retry." });
           errorCount += 1;
-          continue;
+          break;
         }
         throw applyError;
       }
       if (applied?.reason) {
         records.push({ session_id: session.id, reason: applied.reason });
-        continue;
+        break;
       }
       const newDaysRead = Number(applied.days_read);
       const isComplete = applied.completed === true;
@@ -257,10 +260,13 @@ async function processAttendance(supabaseClient: any, profileId?: string) {
 
       processedCount += 1;
       console.log(`Processed session ${session.id}: ${dailyXp} XP, day ${newDaysRead}/${totalDays}`);
+      break;
     } catch (error: any) {
       console.error(`Error processing session ${session.id}:`, error);
       records.push({ session_id: session.id, error: error.message });
       errorCount += 1;
+      break;
+    }
     }
   }
 
