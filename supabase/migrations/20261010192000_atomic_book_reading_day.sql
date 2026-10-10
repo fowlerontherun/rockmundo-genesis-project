@@ -39,6 +39,8 @@ BEGIN
     RETURN jsonb_build_object('reason', 'locked_tier');
   END IF;
 
+  -- Serialize even when the skill_progress row has not been created yet.
+  PERFORM pg_advisory_xact_lock(hashtextextended(v_session.profile_id::text || ':' || p_skill_slug, 0));
   -- Serialize all writes to this skill and reject stale XP calculations.
   -- The Edge Function must retry by re-reading progression on a mismatch.
   SELECT current_level, current_xp INTO v_skill_level, v_skill_xp
