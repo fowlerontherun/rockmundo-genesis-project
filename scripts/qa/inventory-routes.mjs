@@ -28,6 +28,14 @@ for (const file of sources) {
     const pattern = festivalPatterns.get(m[1]);
     if (pattern) add(pattern,file,'jsx-festival-route');
   }
+  // Resolve nested festival edition sections expressed as the final URL segment.
+  // They are children of the edition shell, not independent top-level routes.
+  if (file === 'src/App.tsx' && /<Route\s+path=\{festivalRoutePatterns\.edition\}/.test(source)) {
+    for (const m of source.matchAll(/<Route\b[^>]*?\bpath\s*=\s*\{festivalRoutePatterns\.(\w+)\.split\(["']\/["']\)\.at\(-1\)\}/gs)) {
+      const pattern = festivalPatterns.get(m[1]);
+      if (pattern && pattern.startsWith(festivalPatterns.get('edition') + '/')) add(pattern,file,'jsx-festival-route');
+    }
+  }
   // Festival edition child routes are relative expressions mounted under the edition shell.
   // Resolve only the known registry + final-segment expression, not arbitrary JSX.
   if (file === 'src/App.tsx' && source.includes('path={festivalRoutePatterns.edition}')) {
