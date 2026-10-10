@@ -26,3 +26,43 @@ For each remaining mismatch: identify the source navigation control, resolve any
 ## Execution status
 
 The QA workflow has not returned a confirmed run for the latest branch commits. The above snapshot was produced by source inspection rather than GitHub Actions. The static matcher was updated after this snapshot to handle query/hash URLs and wildcard patterns; rerun it before treating 36 as the current candidate count.
+
+## Follow-up static rerun — refined matcher
+
+After query/hash normalization and wildcard handling, the same source snapshot yields **29 navigation review candidates** (down from 36). Seven candidates were eliminated by correcting matcher limitations, not by fixing gameplay.
+
+Remaining candidate paths:
+
+```text
+/festival-company/:festivalCompanyId/editions/:editionId/applications
+/festival-company/:festivalCompanyId/editions/:editionId/finance
+/festival-company/:festivalCompanyId/editions/:editionId/live
+/festival-company/:festivalCompanyId/editions/:editionId/history
+/fan-management
+/family
+/gear-history
+/release
+/bands
+/performance/gig
+/finance
+/university
+/company
+/venue-business
+/recording-studio-business
+/rehearsal-studio-business
+/merch-factory
+/logistics-company
+/security-firm
+/festival-company
+/companies/festivals
+/world/*
+/world-environment
+/events/narratives
+/community
+/player
+/players
+/nightclub
+/booking
+```
+
+This rerun used read-only GitHub source inspection and the checker matching logic, not a browser or GitHub Actions. Each candidate still requires manual resolution of nested route hierarchy, redirects, route registries and account permissions.
