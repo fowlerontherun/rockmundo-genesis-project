@@ -1,0 +1,67 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {execFileSync} from 'node:child_process';
+
+test('inventory includes known public and festival routes without claiming passes',()=>{
+  execFileSync(process.execPath,['scripts/qa/inventory-routes.mjs']);
+  execFileSync(process.execPath,['scripts/qa/generate-test-matrix.mjs']);
+  execFileSync(process.execPath,['scripts/qa/check-navigation.mjs']);
+  execFileSync(process.execPath,['scripts/qa/check-route-parser.mjs']);
+  execFileSync(process.execPath,['scripts/qa/inventory-backend.mjs']);
+  execFileSync(process.execPath,['scripts/qa/check-priority-journeys.mjs']);
+  execFileSync(process.execPath,['scripts/qa/summarize-audit.mjs']);
+  const inv=JSON.parse(fs.readFileSync('qa/route-inventory.json','utf8'));
+  const matrix=JSON.parse(fs.readFileSync('qa/test-matrix.json','utf8'));
+  const navigation=JSON.parse(fs.readFileSync('qa/navigation-review.json','utf8'));
+  const parserReview=JSON.parse(fs.readFileSync('qa/route-parser-review.json','utf8'));
+  const backend=JSON.parse(fs.readFileSync('qa/backend-inventory.json','utf8'));
+  const summary=JSON.parse(fs.readFileSync('qa/audit-summary.json','utf8'));
+  const journeyReview=JSON.parse(fs.readFileSync('qa/journey-route-review.json','utf8'));
+  const paths=new Set(inv.routes.map(x=>x.path));
+  assert.ok(paths.has('/world/festivals'));
+  assert.ok(paths.has('/admin/festivals/:festivalCompanyId/editions/:editionId'));
+  assert.ok(paths.has('/festival-company/:festivalCompanyId/editions/:editionId/schedule'));
+  assert.ok(paths.has('/festival-company/:festivalCompanyId/editions/:editionId/settlement'));
+  for (const section of ['applications','finance','live','history']) {
+    const route='/festival-company/:festivalCompanyId/editions/:editionId/'+section;
+    assert.ok(inv.routes.some(r=>r.path===route && r.discoveryKinds.includes('jsx-festival-route')),`Missing mounted festival section: ${section}`);
+    assert.ok(!navigation.candidates.some(r=>r.path===route),`False positive navigation mismatch: ${section}`);
+  }
+  assert.equal(paths.size,inv.routeCount);
+  assert.equal(matrix.caseCount,inv.routeCount*7);
+  assert.ok(inv.routes.every(x=>x.status==='not-tested'));
+  assert.ok(matrix.cases.every(x=>x.status==='not-tested' && x.issue===null));
+  assert.ok(matrix.cases.every(x=>paths.has(x.route)));
+  assert.equal(navigation.candidateCount,navigation.candidates.length);
+  assert.equal(parserReview.expressionRouteCount,parserReview.expressionRoutes.length);
+  assert.equal(parserReview.repeatedLiteralCount,parserReview.repeated.length);
+  assert.ok(parserReview.expressionRoutes.every(x=>x.status==='requires-review'));
+  assert.ok(navigation.candidates.every(x=>x.status==='requires-review'));
+  assert.ok(navigation.candidates.every(x=>typeof x.path==='string' && x.path.startsWith('/')));
+  assert.ok(navigation.scope.includes('matchPaths excluded'));
+  assert.equal(navigation.registeredPatterns,inv.routes.filter(r=>r.discoveryKinds.some(k=>k==='jsx-route'||k==='jsx-festival-route')).length);
+  assert.equal(backend.surfaceCount,backend.surfaces.length);
+  assert.ok(backend.surfaces.every(x=>x.status==='not-tested'));
+  assert.ok(backend.surfaces.every(x=>['edge-function','migration','database-test'].includes(x.type)));
+  assert.equal(summary.routeCandidates,inv.routeCount);
+  assert.equal(summary.checklistCases,matrix.caseCount);
+  assert.equal(summary.backendSurfaces,backend.surfaceCount);
+  assert.equal(summary.confirmedBugs,0);
+  const configuredJourneys=JSON.parse(fs.readFileSync('qa/priority-journeys.json','utf8')).journeys;
+  assert.equal(journeyReview.journeys,configuredJourneys.length);
+  assert.equal(journeyReview.unverifiedRouteReferences,journeyReview.missing.length);
+  assert.equal(journeyReview.unmatchedRouteReferences,journeyReview.missing.filter(r=>r.reason==='requires-route-review').length);
+  assert.ok(journeyReview.results.every(j=>j.routes.every(r=>r.registeredInJsx===true || r.status!=='registered-not-tested')));
+  assert.ok(journeyReview.results.every(j=>j.routes.every(r=>r.status!=='pass')));
+});
+
+test('priority gameplay journeys are uniquely identified and never pre-marked as passed',()=>{
+  const data=JSON.parse(fs.readFileSync('qa/priority-journeys.json','utf8'));
+  const ids=data.journeys.map(j=>j.id);
+  assert.equal(new Set(ids).size,ids.length);
+  assert.ok(data.journeys.length>=8);
+  assert.ok(data.journeys.every(j=>j.status==='not-tested'));
+  assert.ok(data.journeys.every(j=>['P0','P1','P2','P3','P4'].includes(j.priority)));
+  assert.ok(data.journeys.every(j=>j.checks.length>0 && j.roles.length>0));
+});

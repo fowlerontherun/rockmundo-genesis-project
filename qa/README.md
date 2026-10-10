@@ -22,3 +22,31 @@ Run `node scripts/qa/inventory-routes.mjs` from repository root. The generated `
 ## Next iteration
 
 Improve parser for nested/array-based route definitions and generate a machine-readable test matrix. Add CI artifact publishing and a GitHub issue deduplication workflow.
+
+## Run the complete discovery suite
+
+From the repository root:
+
+```sh
+node scripts/qa/inventory-routes.mjs
+node scripts/qa/generate-test-matrix.mjs
+node scripts/qa/check-navigation.mjs
+node scripts/qa/inventory-backend.mjs
+node --test scripts/qa/inventory-routes.test.mjs
+```
+
+The dedicated QA GitHub Actions workflow publishes four JSON artifacts:
+`qa/route-inventory.json`, `qa/test-matrix.json`,
+`qa/navigation-review.json` and `qa/backend-inventory.json`.
+
+Navigation gaps are **candidates for manual review**, not automatically confirmed defects. Backend discovery covers checked-in Edge Function entry points, SQL migrations and SQL tests; it cannot verify deployed database functions, triggers, cron schedules, or live behaviour.
+
+## Prioritisation and issue policy
+
+- **P0**: security compromise, data loss, payment integrity or widespread game outage — escalate immediately.
+- **P1**: core gameplay blocked, lost rewards/progression, broken gig settlement or significant economy corruption.
+- **P2**: important feature broken with a workaround or meaningful player impact.
+- **P3**: minor feature, UX or display problem.
+- **P4**: cosmetic or low-impact improvement.
+
+For each **verified** defect, record environment, build/commit, role, fixture, steps, expected/actual result, evidence, affected route/backend surface, impact, priority and an existing-issue search. Do not create duplicates; link to an existing issue when applicable. No issue should be filed solely because a route is untested or a navigation candidate is unmatched.

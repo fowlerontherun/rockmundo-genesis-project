@@ -1,0 +1,63 @@
+name: QA Route Inventory
+on:
+  push:
+    branches:
+      - 'qa/gamewide-audit-phase1'
+    paths:
+      - 'src/App.tsx'
+      - 'src/config/**'
+      - 'src/features/festivals/routes.ts'
+      - 'scripts/qa/**'
+      - 'qa/priority-journeys.json'
+      - 'supabase/functions/**'
+      - 'supabase/migrations/**'
+      - 'supabase/tests/**'
+      - '.github/workflows/qa-route-inventory.yml'
+  pull_request:
+    paths:
+      - 'src/App.tsx'
+      - 'src/config/**'
+      - 'src/features/festivals/routes.ts'
+      - 'scripts/qa/**'
+      - 'qa/priority-journeys.json'
+      - 'supabase/functions/**'
+      - 'supabase/migrations/**'
+      - 'supabase/tests/**'
+      - '.github/workflows/qa-route-inventory.yml'
+  workflow_dispatch:
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Generate discovery inventory
+        run: |
+          node scripts/qa/inventory-routes.mjs
+          node scripts/qa/generate-test-matrix.mjs
+          node scripts/qa/check-navigation.mjs
+          node scripts/qa/check-route-parser.mjs
+          node scripts/qa/inventory-backend.mjs
+          node scripts/qa/check-priority-journeys.mjs
+          node scripts/qa/summarize-audit.mjs
+      - name: Validate generated inventory
+        run: node --test scripts/qa/inventory-routes.test.mjs
+      - name: Upload QA discovery artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-route-discovery
+          path: |
+            qa/route-inventory.json
+            qa/test-matrix.json
+            qa/navigation-review.json
+            qa/route-parser-review.json
+            qa/backend-inventory.json
+            qa/audit-summary.json
+            qa/priority-journeys.json
+            qa/journey-route-review.json
+          if-no-files-found: warn

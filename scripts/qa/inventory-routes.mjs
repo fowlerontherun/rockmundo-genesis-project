@@ -1,31 +1,69 @@
 #!/usr/bin/env node
-// Static inventory only: never accesses a live site or production database.
+// Discovery-only inventory. No browser, network, or database access.
 import fs from 'node:fs';
 import path from 'node:path';
 
 const root = process.cwd();
-const read = p => fs.existsSync(path.join(root,p)) ? fs.readFileSync(path.join(root,p),'utf8') : '';
+const read = file => fs.existsSync(path.join(root,file)) ? fs.readFileSync(path.join(root,file),'utf8') : '';
 const sources = ['src/App.tsx','src/features/festivals/routes.ts','src/config/hubNavigation.ts','src/config/fmNavigation.ts'];
-const routes = new Map();
+const entries = new Map();
+const festivalPatterns = new Map();
+const festivalSource = read('src/features/festivals/routes.ts');
+const festivalBlock = festivalSource.match(/export const festivalRoutePatterns\s*=\s*\{([\s\S]*?)\}\s*as const/);
+if (festivalBlock) for (const m of festivalBlock[1].matchAll(/(\w+)\s*:\s*["'](\/[^"']+)["']/g)) festivalPatterns.set(m[1],m[2]);
+const add = (route, file, kind) => {
+  if (!route || route === '*' || route.includes('$') || route.includes('{')) return;
+  const key = route.startsWith('/') ? route : '/' + route;
+  const existing = entries.get(key) ?? {path:key,sources:[],discoveryKinds:[],status:'not-tested',testCases:[],issues:[]};
+  if (!existing.sources.includes(file)) existing.sources.push(file);
+  if (!existing.discoveryKinds.includes(kind)) existing.discoveryKinds.push(kind);
+  entries.set(key,existing);
+};
 for (const file of sources) {
-  const content = read(file);
-  const re = /<Route\b[^>]*?\bpath\s*=\s*["']([^"']+)["']/gs;
-  for (const m of content.matchAll(re)) {
-    const key = m[1];
-    const record = routes.get(key) || { path:key, sources:[], status:'not-tested', notes:'' };
-    if (!record.sources.includes(file)) record.sources.push(file);
-    routes.set(key,record);
+  const source = read(file).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  if (!source) { console.warn('Missing source:',file); process.exitCode = 1; continue; }
+  for (const m of source.matchAll(/<Route\b[^>]*?\bpath\s*=\s*["']([^"']+)["']/gs))
+    add(m[1],file,'jsx-route');
+  for (const m of source.matchAll(/<Route\b[^>]*?\bpath\s*=\s*\{festivalRoutePatterns\.(\w+)\}/gs)) {
+    const pattern = festivalPatterns.get(m[1]);
+    if (pattern) add(pattern,file,'jsx-festival-route');
   }
-  // Also recognise route config objects using path: '/...'
-  const obj = /\bpath\s*:\s*["'](\/[^"']*)["']/g;
-  for (const m of content.matchAll(obj)) {
-    const record = routes.get(m[1]) || {path:m[1],sources:[],status:'not-tested',notes:''};
-    if (!record.sources.includes(file)) record.sources.push(file);
-    routes.set(m[1],record);
+  // Resolve nested festival edition sections expressed as the final URL segment.
+  // They are children of the edition shell, not independent top-level routes.
+  if (file === 'src/App.tsx' && /<Route\s+path=\{festivalRoutePatterns\.edition\}/.test(source)) {
+    for (const m of source.matchAll(/<Route\b[^>]*?\bpath\s*=\s*\{festivalRoutePatterns\.(\w+)\.split\(["']\/["']\)\.at\(-1\)\}/gs)) {
+      const pattern = festivalPatterns.get(m[1]);
+      if (pattern && pattern.startsWith(festivalPatterns.get('edition') + '/')) add(pattern,file,'jsx-festival-route');
+    }
+  }
+  for (const m of source.matchAll(/\bpath\s*:\s*["'](\/[^"']*)["']/g))
+    add(m[1],file,'navigation-or-config');
+  for (const m of source.matchAll(/\brootPath\s*:\s*["'](\/[^"']*)["']/g))
+    add(m[1],file,'navigation-or-config');
+  for (const m of source.matchAll(/["'](\/[^"'\s]+)["']/g)) {
+    if (file.endsWith('fmNavigation.ts') || file.endsWith('hubNavigation.ts'))
+      add(m[1],file,'navigation-reference');
+  }
+  if (file.endsWith('festivals/routes.ts')) {
+    const block = source.match(/export const festivalRoutePatterns\s*=\s*\{([\s\S]*?)\}\s*as const/);
+    if (block) for (const m of block[1].matchAll(/:\s*["'](\/[^"']+)["']/g))
+      add(m[1],file,'festival-route-pattern');
   }
 }
-const inventory=[...routes.values()].sort((a,b)=>a.path.localeCompare(b.path));
-const output='qa/route-inventory.json';
+// Dynamic JSX expressions, nested relative routes, and redirects require separate review.
+const routes = [...entries.values()].sort((a,b)=>a.path.localeCompare(b.path));
+const output = 'qa/route-inventory.json';
 fs.mkdirSync(path.dirname(output),{recursive:true});
-fs.writeFileSync(output,JSON.stringify({generatedAt:new Date().toISOString(),sourceFiles:sources,routeCount:inventory.length,limitations:['Static extraction only','Nested relative routes require manual resolution','Dynamic routes need fixtures','Feature workflows, edge functions, jobs and role coverage tracked separately'],routes:inventory},null,2)+'\n');
-console.log('Wrote '+inventory.length+' discovered route patterns to '+output);
+fs.writeFileSync(output,JSON.stringify({
+  generatedAt:new Date().toISOString(),
+  sourceFiles:sources,
+  routeCount:routes.length,
+  limitations:[
+    'Discovery only: no route has been executed or verified',
+    'Navigation references may not resolve to registered routes',
+    'Nested relative routes and JSX expression paths need manual resolution',
+    'Dynamic routes need fixtures and role-aware browser tests',
+    'Jobs, database operations, dialogs and workflows need separate inventories'
+  ],routes
+},null,2)+'\n');
+console.log('Discovered '+routes.length+' candidate routes; all not-tested: '+output);
