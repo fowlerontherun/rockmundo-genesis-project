@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.773",
+    date: "2026-10-10",
+    changes: [
+      { type: "fix", description: "Completed gig 3D replays load again: stored replay versions saved as text are now read correctly, so ready replays are no longer rejected as unsupported. Gig results and rewards are unchanged." },
+    ],
+  },
+  {
     version: "1.1.772",
     date: "2026-10-09",
     changes: [
