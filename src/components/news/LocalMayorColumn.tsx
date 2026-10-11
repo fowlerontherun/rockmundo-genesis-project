@@ -13,8 +13,9 @@ export function LocalMayorColumn({ cityId, cityName }: { cityId?: string | null;
         .order("published_at", { ascending: false }).limit(1).maybeSingle();
       if (error) throw error;
       if (!data) return null;
-      const { data: mayor } = await supabase.from("profiles")
+      const { data: mayor, error: mayorError } = await supabase.from("profiles")
         .select("display_name").eq("id", data.mayor_profile_id).maybeSingle();
+      if (mayorError) throw mayorError;
       return { ...data, author: mayor?.display_name || "City Mayor" } as {
         id: string; headline: string; body: string; published_at: string; author: string;
       };
