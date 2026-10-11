@@ -145,6 +145,9 @@ export function BandSettingsTab({
       toast({ title: 'Ad Cancelled' });
       queryClient.invalidateQueries({ queryKey: ['band-member-ads', bandId] });
     },
+    onError: (error: Error) => {
+      toast({ title: 'Could not cancel ad', description: error.message, variant: 'destructive' });
+    },
   });
 
   const handleLeaveBand = async () => {
