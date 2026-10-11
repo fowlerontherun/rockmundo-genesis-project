@@ -1615,6 +1615,7 @@ const Songwriting = () => {
     const creativeBrief = {
       genre: formState.genre,
       writing_mode: formState.writingMode,
+      additional_notes: formState.additionalNotes,
       familiarity_tags: formState.genre ? [formState.genre] : [],
       co_writers: coWriterEntries,
       producers: formState.producers,
