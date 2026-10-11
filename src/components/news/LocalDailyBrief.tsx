@@ -83,7 +83,7 @@ export function LocalDailyBrief() {
         .select("id, university_id, name, skill_family, starts_at, ends_at")
         .lte("starts_at", new Date().toISOString())
         .gt("ends_at", new Date().toISOString())
-        .order("ends_at", { ascending: true }).limit(10);
+        .order("ends_at", { ascending: true }).limit(100);
       if (error) throw error;
       const raw = (data ?? []) as Array<{
         id: string; university_id: string; name: string; skill_family: string;
@@ -167,7 +167,7 @@ export function LocalDailyBrief() {
       return 0;
     };
     return score(b) - score(a) || new Date(a.ends_at).getTime() - new Date(b.ends_at).getTime();
-  });
+  }).slice(0, 10);
 
   return (
     <div className="grid items-start gap-4 md:grid-cols-2">

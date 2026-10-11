@@ -3,17 +3,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FileText, Guitar, Mic } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export function ClassifiedAds() {
   const { data: ads } = useQuery({
     queryKey: ["classified-ads"],
     queryFn: async () => {
-      const items: Array<{ type: string; title: string; detail: string }> = [];
+      const items: Array<{ type: string; title: string; detail: string; bandId: string | null }> = [];
 
       // Band member ads
       const { data: memberAds } = await supabase
         .from("band_member_ads")
-        .select("instrument_role, vocal_role, description, bands(name)")
+        .select("band_id, instrument_role, vocal_role, description, bands(name)")
         .eq("status", "active")
         .order("created_at", { ascending: false })
         .limit(6);
@@ -21,6 +22,7 @@ export function ClassifiedAds() {
       memberAds?.forEach((ad: any) => {
         items.push({
           type: "wanted",
+          bandId: ad.band_id,
           title: `WANTED: ${ad.instrument_role}${ad.vocal_role ? ` / ${ad.vocal_role}` : ""} for ${ad.bands?.name || "a band"}`,
           detail: ad.description || "Serious inquiries only.",
         });
@@ -58,6 +60,7 @@ export function ClassifiedAds() {
                 <p className="text-xs font-bold tracking-wide">{ad.title}</p>
               </div>
               <p className="text-[11px] text-muted-foreground">{ad.detail}</p>
+              {ad.bandId && <Link to={`/bands/${ad.bandId}/recruitment`} className="text-xs text-primary underline">View recruitment</Link>}
             </div>
           ))
         ) : (

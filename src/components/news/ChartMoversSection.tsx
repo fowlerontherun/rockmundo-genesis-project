@@ -8,7 +8,16 @@ export function ChartMoversSection() {
   const { data: movers, isPending, isError, refetch } = useQuery({
     queryKey: ["chart-movers"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: edition, error: editionError } = await supabase
+        .from("chart_entries")
+        .select("chart_date, country")
+        .eq("chart_type", "top40")
+        .order("chart_date", { ascending: false })
+        .limit(1).maybeSingle();
+      if (editionError) throw editionError;
+      if (!edition) return [];
+
+      let query = supabase
         .from("chart_entries")
         .select(`
           rank,
@@ -18,15 +27,22 @@ export function ChartMoversSection() {
           songs!inner(id, title, band_id, bands(name))
         `)
         .eq("chart_type", "top40")
-        .not("trend", "is", null)
-        .order("created_at", { ascending: false })
-        .limit(20);
+        .eq("chart_date", edition.chart_date)
+        .not("trend", "is", null);
+      if (edition.country) query = query.eq("country", edition.country);
+      const { data, error } = await query.order("trend_change", { ascending: false }).limit(100);
 
       if (error) throw error;
 
       // Get biggest movers (up or down)
+      const seen = new Set<string>();
       const sorted = (data || [])
-        .filter((entry: any) => entry.trend_change && entry.trend_change > 0)
+        .filter((entry: any) => {
+          const songId = entry.songs?.id;
+          if (!songId || seen.has(songId) || !entry.trend_change || entry.trend_change <= 0) return false;
+          seen.add(songId);
+          return true;
+        })
         .sort((a: any, b: any) => (b.trend_change || 0) - (a.trend_change || 0))
         .slice(0, 5);
 
