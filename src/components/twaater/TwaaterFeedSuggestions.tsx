@@ -21,11 +21,12 @@ export const TwaaterFeedSuggestions = ({ currentAccountId, onDismiss }: TwaaterF
     queryKey: ["twaater-feed-suggestions", currentAccountId],
     queryFn: async () => {
       // Get accounts the user already follows
-      const { data: following } = await supabase
+      const { data: following, error: followingError } = await supabase
         .from("twaater_follows")
         .select("followed_account_id")
         .eq("follower_account_id", currentAccountId);
 
+      if (followingError) throw followingError;
       const followingIds = following?.map(f => f.followed_account_id) || [];
       followingIds.push(currentAccountId); // Exclude self
 
