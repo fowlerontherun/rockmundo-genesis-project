@@ -241,7 +241,7 @@ export function FMChatDock() {
 
   return (
     <div className="fixed bottom-0 left-3 z-40 flex flex-row-reverse items-end gap-2 pointer-events-none">
-      {threads.map((t, index) => (
+      {open && threads.map((t, index) => (
         <div
           key={t.profileId}
           className={cn(

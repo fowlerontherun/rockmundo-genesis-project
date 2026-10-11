@@ -32,7 +32,8 @@ export const LinkReleaseDialog = ({ open, onOpenChange, onSelect }: LinkReleaseD
       const { data: memberships } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("profile_id", profileId);
+        .eq("profile_id", profileId)
+        .eq("member_status", "active");
 
       const bandIds = memberships?.map((m) => m.band_id) || [];
 
