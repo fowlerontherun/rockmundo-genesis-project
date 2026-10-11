@@ -91,7 +91,9 @@ export function parseBandFestivalAppearances(data: unknown): BandFestivalAppeara
 export async function fetchMyBandFestivalAppearances(): Promise<BandFestivalAppearance[]> {
   const { data, error } = await (supabase as any).rpc("get_my_band_festival_appearances");
   if (error) throw new Error(error.message || "Could not load band Festival appearances");
-  return parseBandFestivalAppearances(data);
+  return parseBandFestivalAppearances(data).filter(appearance =>
+    !["cancelled", "canceled", "declined", "rejected", "withdrawn"].includes(appearance.bookingStatus.toLowerCase())
+  );
 }
 
 /** Festival date is a venue-local calendar date; avoid UTC parsing shifts. */
