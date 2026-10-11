@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { GraduationCap, Music2, Users } from "lucide-react";
@@ -14,6 +14,9 @@ export function LocalDailyBrief() {
   const { profile, profileId } = useActiveProfile();
   const activeCityId = profile?.current_city_id ?? null;
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
+  useEffect(() => {
+    setSelectedCityId(null);
+  }, [profileId, activeCityId]);
   const { data: location } = useQuery({
     queryKey: ["news-location", profileId, activeCityId],
     enabled: !!profileId,
@@ -78,6 +81,8 @@ export function LocalDailyBrief() {
     queryFn: async () => {
       const { data, error } = await (supabase as any).from("active_professor_residencies")
         .select("id, university_id, name, skill_family, starts_at, ends_at")
+        .lte("starts_at", new Date().toISOString())
+        .gt("ends_at", new Date().toISOString())
         .order("ends_at", { ascending: true }).limit(10);
       if (error) throw error;
       const raw = (data ?? []) as Array<{
