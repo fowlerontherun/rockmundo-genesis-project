@@ -106,6 +106,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [activePurchaseProductId, setActivePurchaseProductId] = useState<string | null>(null);
   const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
+  const [failedFestivalLogo, setFailedFestivalLogo] = useState<string | null>(null);
 
   if (isLoading) return <main className="p-8" role="status">Loading Festival…</main>;
   if (isError || !f) return <main className="p-8" role="alert">Festival not found.</main>;
@@ -153,11 +154,11 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
     <main>
       <header className="bg-gradient-to-br from-violet-950 to-fuchsia-900 p-6 text-white md:p-12">
         <div className="mx-auto flex max-w-6xl flex-col gap-6 md:flex-row md:items-center">
-          {f.logoReference ? (
-            <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white/10 p-3 shadow-xl backdrop-blur md:h-36 md:w-36">
-              <img src={f.logoReference} alt={`${f.name} logo`} className="max-h-full max-w-full object-contain" />
-            </div>
-          ) : null}
+          <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white/10 p-3 shadow-xl backdrop-blur md:h-36 md:w-36">
+            {f.logoReference && failedFestivalLogo !== f.logoReference ? (
+              <img src={f.logoReference} alt={`${f.name} logo`} className="max-h-full max-w-full object-contain" onError={() => setFailedFestivalLogo(f.logoReference)} />
+            ) : <span className="text-center text-xl font-bold">{f.name}</span>}
+          </div>
           <div className="min-w-0">
             <div className="flex flex-wrap gap-2">
               <Badge>{eventPhaseLabel}</Badge>
