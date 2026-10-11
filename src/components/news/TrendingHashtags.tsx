@@ -5,11 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Hash, TrendingUp } from "lucide-react";
 
 export function TrendingHashtags() {
-  const { data: trending } = useQuery({
+  const { data: trending, isPending, isError, refetch } = useQuery({
     queryKey: ["trending-hashtags"],
     queryFn: async () => {
       // Get recent twaats and extract hashtags
-      const { data: twaats } = await supabase
+      const { data: twaats, error } = await supabase
         .from("twaats")
         .select("body, created_at")
         .eq("visibility", "public")
@@ -19,6 +19,7 @@ export function TrendingHashtags() {
         .order("created_at", { ascending: false })
         .limit(500);
 
+      if (error) throw error;
       if (!twaats) return [];
 
       // Extract and count hashtags
@@ -51,7 +52,11 @@ export function TrendingHashtags() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
-        {trending && trending.length > 0 ? (
+        {isPending ? (
+          <p role="status" className="text-sm text-muted-foreground py-2">Loading trending topics…</p>
+        ) : isError ? (
+          <div role="alert" className="flex items-center justify-between gap-2 py-2"><p className="text-sm text-destructive">Trending topics are unavailable right now.</p><button type="button" className="text-sm underline" onClick={() => void refetch()}>Retry</button></div>
+        ) : trending && trending.length > 0 ? (
           trending.map((item, index) => (
             <div key={item.tag} className="flex items-center justify-between py-1">
               <div className="flex items-center gap-2">
