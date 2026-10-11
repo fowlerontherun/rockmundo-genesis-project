@@ -1657,6 +1657,7 @@ const Songwriting = () => {
           initial_lyrics: payload.initial_lyrics ?? null,
           lyrics: payload.initial_lyrics ?? null,
           creative_brief: payload.creative_brief,
+          instruments: formState.instruments,
         });
         setIsDialogOpen(false);
         resetForm();
