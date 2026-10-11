@@ -262,6 +262,7 @@ export function parseFestivalSitePlanResult(
       !festivalSitePlanStatuses.includes(p.status as FestivalSitePlanStatus))
   )
     return fail();
+  if (obj(p) && Number(p.usableCapacity) + Number(p.reservedCapacity) > Number(p.totalCapacity)) return fail();
   const facilityKeys = [
     "toiletsRequired",
     "medicalPointsRequired",
