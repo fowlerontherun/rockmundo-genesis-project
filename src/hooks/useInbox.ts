@@ -212,7 +212,7 @@ export function useUnreadInboxCount() {
 
       if (error) {
         console.error('[useUnreadInboxCount] Error:', error);
-        return 0;
+        throw error;
       }
 
       return (data ?? []).filter((message: any) =>
