@@ -40,6 +40,7 @@ export const MaterialInventory = ({
 }: MaterialInventoryProps) => {
   const categories = ["wood", "electronics", "hardware", "strings", "finish", "pedal_components", "amp_components"];
   const [tierFilter, setTierFilter] = useState<number | "all">("all");
+  const [purchaseQuantities, setPurchaseQuantities] = useState<Record<string, number>>({});
 
   const availableMaterials = mode === "inventory"
     ? materialsCatalog.filter((m) => playerMaterials.some((pm) => pm.material_id === m.id && pm.quantity > 0))
@@ -120,11 +121,12 @@ export const MaterialInventory = ({
                           <>
                             <span className="text-xs text-muted-foreground">${mat.base_cost}</span>
                             {qty > 0 && <Badge variant="secondary" className="text-xs">×{qty}</Badge>}
+                            <input type="number" aria-label={`Quantity of ${mat.name} to purchase`} min={1} max={99} step={1} value={purchaseQuantities[mat.id] ?? 1} onChange={(event) => setPurchaseQuantities(previous => ({ ...previous, [mat.id]: Number(event.target.value) }))} className="h-7 w-14 rounded border bg-background px-1 text-sm" />
                             <Button
                               size="sm"
                               variant="outline"
-                              disabled={isPurchasing}
-                              onClick={() => onPurchase(mat.id, 1)}
+                              disabled={isPurchasing || !Number.isSafeInteger(purchaseQuantities[mat.id] ?? 1) || (purchaseQuantities[mat.id] ?? 1) < 1 || (purchaseQuantities[mat.id] ?? 1) > 99}
+                              onClick={() => onPurchase(mat.id, purchaseQuantities[mat.id] ?? 1)}
                               className="h-7 px-2"
                             >
                               <ShoppingCart className="w-3 h-3" />
