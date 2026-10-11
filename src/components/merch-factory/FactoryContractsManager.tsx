@@ -178,7 +178,7 @@ export function FactoryContractsManager({ factoryId }: FactoryContractsManagerPr
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => endContract.mutate({ contractId: c.id, factoryId })}
+                        onClick={() => { if (window.confirm(`End the factory contract with ${c.client_band?.name || "this client"}? This cannot be undone.`)) endContract.mutate({ contractId: c.id, factoryId }); }}
                         disabled={endContract.isPending}
                       >
                         <XCircle className="h-4 w-4" />
