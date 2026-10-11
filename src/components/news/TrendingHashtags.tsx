@@ -25,10 +25,10 @@ export function TrendingHashtags() {
       // Extract and count hashtags
       const hashtagCounts: Record<string, number> = {};
       twaats.forEach((twaat) => {
-        const matches = twaat.body.match(/#(\w+)/g);
+        const matches = [...new Set((twaat.body.match(/#(\w+)/g) ?? []).map(tag => tag.toLowerCase()))];
         if (matches) {
           matches.forEach((tag) => {
-            const normalized = tag.toLowerCase();
+            const normalized = tag;
             hashtagCounts[normalized] = (hashtagCounts[normalized] || 0) + 1;
           });
         }
