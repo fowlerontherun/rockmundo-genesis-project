@@ -72,12 +72,12 @@ export function parseLyricsToSections(lyrics: string): LyricsSection[] {
     let type = 'verse';
     let label = match[1].trim();
     
-    if (sectionHeader.includes('verse')) {
+    if (sectionHeader.includes('pre-chorus') || sectionHeader.includes('prechorus')) {
+      type = 'prechorus';
+    } else if (sectionHeader.includes('verse')) {
       type = 'verse';
     } else if (sectionHeader.includes('chorus')) {
       type = 'chorus';
-    } else if (sectionHeader.includes('pre-chorus') || sectionHeader.includes('prechorus')) {
-      type = 'prechorus';
     } else if (sectionHeader.includes('bridge')) {
       type = 'bridge';
     } else if (sectionHeader.includes('intro')) {
