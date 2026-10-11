@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 export const RandomEventsNews = () => {
   const { userId, profileId } = useActiveProfile();
 
-  const { data: pendingEvents } = useQuery({
+  const { data: pendingEvents, isError, refetch } = useQuery({
     queryKey: ["pending-random-events", userId, profileId],
     queryFn: async () => {
       if (!userId) return [];
@@ -31,6 +31,8 @@ export const RandomEventsNews = () => {
     },
     enabled: !!userId,
   });
+
+  if (isError) return <Card><CardContent role="alert" className="flex items-center justify-between gap-3 py-4"><p className="text-sm text-destructive">Pending events could not be loaded.</p><Button variant="outline" size="sm" onClick={() => void refetch()}>Retry</Button></CardContent></Card>;
 
   if (!pendingEvents || pendingEvents.length === 0) {
     return null;

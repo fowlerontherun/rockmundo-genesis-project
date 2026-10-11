@@ -14,7 +14,7 @@ export const OtherBandsGigOutcomes = () => {
   const [showReport, setShowReport] = useState(false);
 
   // Get all bands' gig outcomes today
-  const { data: allGigs } = useQuery({
+  const { data: allGigs, isError, refetch } = useQuery({
     queryKey: ["news-all-gigs-today", today],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -35,6 +35,8 @@ export const OtherBandsGigOutcomes = () => {
       return data || [];
     },
   });
+
+  if (isError) return <Card><CardContent role="alert" className="flex items-center justify-between gap-3 py-4"><p className="text-sm text-destructive">Gig results could not be loaded.</p><Button variant="outline" size="sm" onClick={() => void refetch()}>Retry</Button></CardContent></Card>;
 
   if (!allGigs || allGigs.length === 0) {
     return null;
