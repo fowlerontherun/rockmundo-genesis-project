@@ -10,20 +10,22 @@ export function PersonalUpdates() {
   const { profileId } = useActiveProfile();
   const today = new Date().toISOString().split('T')[0];
 
-  const { data: updates } = useQuery({
+  const { data: updates, isPending, isError, refetch } = useQuery({
     queryKey: ["personal-updates", profileId, today],
     queryFn: async () => {
       if (!profileId) return [];
       const results: Array<{ type: string; title: string; detail: string; time: string }> = [];
 
       // Band invitations
-      const { data: invites } = await supabase
+      const { data: invites, error: invitesError } = await supabase
         .from("band_invitations")
         .select("created_at, status, bands(name)")
         .eq("invited_user_id", profileId)
         .eq("status", "pending")
         .order("created_at", { ascending: false })
         .limit(3);
+
+      if (invitesError) throw invitesError;
 
       invites?.forEach((invite: any) => {
         if (invite.bands) {
@@ -37,7 +39,7 @@ export function PersonalUpdates() {
       });
 
       // Upcoming scheduled activities
-      const { data: activities } = await supabase
+      const { data: activities, error: activitiesError } = await supabase
         .from("player_scheduled_activities")
         .select("activity_type, scheduled_start")
         .eq("profile_id", profileId)
@@ -45,6 +47,8 @@ export function PersonalUpdates() {
         .gte("scheduled_start", new Date().toISOString())
         .order("scheduled_start", { ascending: true })
         .limit(3);
+
+      if (activitiesError) throw activitiesError;
 
       activities?.forEach((activity) => {
         results.push({
@@ -80,7 +84,11 @@ export function PersonalUpdates() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
-        {updates && updates.length > 0 ? (
+        {isPending ? (
+          <p role="status" className="text-sm text-muted-foreground py-2">Loading your updates…</p>
+        ) : isError ? (
+          <div role="alert" className="flex items-center justify-between gap-2 py-2"><p className="text-sm text-destructive">Your updates are unavailable right now.</p><button type="button" className="text-sm underline" onClick={() => void refetch()}>Retry</button></div>
+        ) : updates && updates.length > 0 ? (
           updates.map((update, index) => (
             <div key={index} className="flex items-start gap-2 py-1">
               {getIcon(update.type)}
