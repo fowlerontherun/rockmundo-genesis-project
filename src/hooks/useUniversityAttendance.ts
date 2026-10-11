@@ -75,12 +75,18 @@ export function useUniversityAttendance(profileId: string | undefined) {
     enabled: !!profileId,
   });
 
+  const [attendanceDate, setAttendanceDate] = useState(() => new Date().toISOString().slice(0, 10));
+  useEffect(() => {
+    const interval = setInterval(() => setAttendanceDate(new Date().toISOString().slice(0, 10)), 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
   const { data: todayAttendance } = useQuery({
-    queryKey: ["today_university_attendance", enrollment?.id],
+    queryKey: ["today_university_attendance", enrollment?.id, attendanceDate],
     queryFn: async () => {
       if (!enrollment?.id) return null;
 
-      const today = new Date().toISOString().split("T")[0];
+      const today = attendanceDate;
       const { data, error } = await supabase
         .from("player_university_attendance")
         .select("*")

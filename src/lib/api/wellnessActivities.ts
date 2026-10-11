@@ -151,17 +151,20 @@ export async function evaluateGate(profileId: string, activityType: string) {
   };
 }
 
+const safeWellnessValue = (value: number | null | undefined, fallback: number) =>
+  Math.min(100, Math.max(0, Number.isFinite(value) ? Number(value) : fallback));
+
 export function wellnessVitalsToCore(v: WellnessVitals): WellnessCoreValues {
   return {
     ...createDefaultWellnessCore({ health: v.health, energy: v.energy, mood: v.mood, stress: v.stress }),
-    physical_health: v.physical_health ?? v.health,
-    happiness: v.happiness ?? v.mood,
-    fatigue: v.fatigue ?? createDefaultWellnessCore({ energy: v.energy }).fatigue,
-    sleep_quality: v.sleep_quality ?? 72,
-    nutrition: v.nutrition ?? 68,
-    fitness: v.fitness ?? 55,
-    motivation: v.motivation ?? v.mood,
-    burnout_risk: v.burnout_risk ?? Math.min(100, Math.round((v.stress ?? 30) * 0.45)),
+    physical_health: safeWellnessValue(v.physical_health ?? v.health, 80),
+    happiness: safeWellnessValue(v.happiness ?? v.mood, 72),
+    fatigue: safeWellnessValue(v.fatigue ?? createDefaultWellnessCore({ energy: v.energy }).fatigue, 35),
+    sleep_quality: safeWellnessValue(v.sleep_quality ?? 72, 72),
+    nutrition: safeWellnessValue(v.nutrition ?? 68, 68),
+    fitness: safeWellnessValue(v.fitness ?? 55, 55),
+    motivation: safeWellnessValue(v.motivation ?? v.mood, 72),
+    burnout_risk: safeWellnessValue(v.burnout_risk ?? Math.min(100, Math.round((v.stress ?? 30) * 0.45)), 30),
   };
 }
 
