@@ -47,10 +47,12 @@ export function LocalDailyBrief() {
       const base = supabase.from("chart_entries");
       // Resolve the latest edition for this country, never a different country's chart.
       const { data: latest, error: latestError } = await base
-        .select("chart_date")
+        .select("chart_date, chart_type")
         .eq("country", country)
         .in("chart_type", ["combined_single", "combined"])
         .order("chart_date", { ascending: false })
+        // Prefer the singles chart if both chart types share the latest edition date.
+        .order("chart_type", { ascending: false })
         .limit(1).maybeSingle();
       if (latestError) throw latestError;
       if (!latest?.chart_date) return [];
@@ -58,15 +60,11 @@ export function LocalDailyBrief() {
         .select("id, rank, song_id, chart_type, trend, trend_change, songs(title, audio_url, audio_generation_status, bands(name, artist_name))")
         .eq("country", country)
         .eq("chart_date", latest.chart_date)
-        .in("chart_type", ["combined_single", "combined"])
-        .order("rank", { ascending: true }).limit(60);
+        .eq("chart_type", latest.chart_type)
+        .order("rank", { ascending: true }).limit(5);
       if (error) throw error;
-      const seen = new Set<string>();
-      return (data ?? []).filter((row: any) => {
-        if (!row.song_id || seen.has(row.song_id)) return false;
-        seen.add(row.song_id);
-        return true;
-      }).slice(0, 5).map((row: any) => ({
+      return (data ?? []).filter((row: any) => !!row.song_id).map((row: any) => ({
+        rank: row.rank,
         id: row.id, song_id: row.song_id, title: row.songs?.title || "Untitled",
         artist: row.songs?.bands?.artist_name || row.songs?.bands?.name || "Independent",
         audio_url: row.songs?.audio_url, audio_generation_status: row.songs?.audio_generation_status,
@@ -191,9 +189,9 @@ export function LocalDailyBrief() {
         {chartsError ? <p className="text-sm text-muted-foreground">National charts are temporarily unavailable.</p> : chartsLoading && country ? <p className="text-sm text-muted-foreground">Loading charts…</p> :
           charts.length ? (
             <ol className="divide-y divide-border/50">
-              {charts.slice(0, 5).map((track, index) => (
+              {charts.slice(0, 5).map((track) => (
                 <li key={track.id} className="flex flex-wrap items-center gap-3 py-2 text-sm">
-                  <strong className="w-7 font-mono">#{index + 1}</strong>
+                  <strong className="w-7 font-mono">#{track.rank}</strong>
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold">{track.title}</p>
                     <p className="text-xs text-muted-foreground">{track.artist} · {track.trend === "new" ? "New entry" : track.trend === "up" ? "▲" : track.trend === "down" ? "▼" : "—"} {track.trend_change || ""}</p>
