@@ -145,6 +145,19 @@ export default function PlayerProfile() {
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  const declineRequest = useMutation({
+    mutationFn: async () => {
+      if (!friendship?.id) throw new Error("No friendship");
+      await respondToFriendship(friendship.id, "declined");
+    },
+    onSuccess: () => {
+      toast({ title: "Friend request declined" });
+      queryClient.invalidateQueries({ queryKey: ["friendship-status"] });
+      queryClient.invalidateQueries({ queryKey: ["player-connection"] });
+    },
+    onError: (error: Error) => toast({ title: "Could not decline request", description: error.message, variant: "destructive" }),
+  });
+
   // Accept friend request
   const acceptRequest = useMutation({
     mutationFn: async () => {
@@ -266,7 +279,7 @@ export default function PlayerProfile() {
             {restrictedBySafety && <Button size="sm" variant="secondary" disabled>{blockedByViewer ? "You blocked this player" : "This player is unavailable."}</Button>}
             {!restrictedBySafety && (connection.data === "not_connected" || !friendship) && <Button size="sm" onClick={() => sendRequest.mutate()} disabled={sendRequest.isPending || connection.send.isPending || socialPermission.data?.can_send_friend_request === false}><UserPlus className="h-4 w-4 mr-1" /> Add Friend</Button>}
             {(connection.data === "outgoing_pending" || isPendingSent) && <Button size="sm" variant="secondary" disabled><Clock className="h-4 w-4 mr-1" /> Request Sent</Button>}
-            {(connection.data === "incoming_pending" || isPendingReceived) && <><Button size="sm" onClick={() => acceptRequest.mutate()} disabled={acceptRequest.isPending}><UserPlus className="h-4 w-4 mr-1" /> Accept Request</Button><Button size="sm" variant="outline" onClick={() => friendship?.id && respondToFriendship(friendship.id, "declined").then(() => queryClient.invalidateQueries({ queryKey: ["friendship-status"] }))}>Decline</Button></>}
+            {(connection.data === "incoming_pending" || isPendingReceived) && <><Button size="sm" onClick={() => acceptRequest.mutate()} disabled={acceptRequest.isPending}><UserPlus className="h-4 w-4 mr-1" /> Accept Request</Button><Button size="sm" variant="outline" onClick={() => declineRequest.mutate()} disabled={declineRequest.isPending || !friendship?.id}>Decline</Button></>}
             {(connection.data === "friends" || isFriend) && <Button size="sm" asChild variant="outline"><Link to={`/social/messages?friend=${playerId}`}>Say hi · Message</Link></Button>}
             {(connection.data === "friends" || isFriend) && <Button size="sm" variant="destructive" onClick={() => window.confirm("Remove this friend? Friends-only profile access will be lost.") && removeFriend.mutate()} disabled={removeFriend.isPending}><UserMinus className="h-4 w-4 mr-1" /> Remove Friend</Button>}
             {connection.data === "restricted" && <Button size="sm" variant="secondary" disabled>This player is not accepting requests</Button>}
