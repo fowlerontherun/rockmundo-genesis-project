@@ -161,7 +161,11 @@ export function useChatRoom(channelKey: string | null) {
   const sendMessage = useCallback(
     async (text: string) => {
       const body = text.trim();
-      if (!body || !channelKey || !userId) return false;
+      if (!body || !channelKey || !userId || !profileId) return false;
+      if (body.length > 500) {
+        toast.error("Messages cannot exceed 500 characters. Shorten your message and try again.");
+        return false;
+      }
 
       setSending(true);
       try {
@@ -169,7 +173,7 @@ export function useChatRoom(channelKey: string | null) {
           user_id: userId,
           profile_id: profileId,
           channel: channelKey,
-          message: body.slice(0, 500),
+          message: body,
         } as any);
 
         if (error) throw error;
@@ -193,6 +197,6 @@ export function useChatRoom(channelKey: string | null) {
     error,
     sendMessage,
     refetch: fetchMessages,
-    canPost: Boolean(userId && channelKey),
+    canPost: Boolean(userId && profileId && channelKey),
   };
 }
