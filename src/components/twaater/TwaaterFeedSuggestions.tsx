@@ -58,7 +58,10 @@ export const TwaaterFeedSuggestions = ({ currentAccountId, onDismiss }: TwaaterF
       queryClient.invalidateQueries({ queryKey: ["twaater-feed-suggestions"] });
       queryClient.invalidateQueries({ queryKey: ["twaater-follower-count"] });
       toast({ title: "Followed!", description: "You're now following this account." });
-    },
+    },,
+    onError: (error: Error) => {
+      toast({ title: "Could not follow account", description: error.message, variant: "destructive" });
+    }
   });
 
   if (!suggestions?.length) return null;
