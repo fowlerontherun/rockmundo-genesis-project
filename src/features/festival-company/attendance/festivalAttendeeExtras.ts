@@ -180,7 +180,7 @@ export const parseFestivalCheckInResult = (value: unknown): FestivalCheckInResul
     !isUuid(value.festivalLaunchId) ||
     !isUuid(value.festivalEditionId) ||
     value.status !== "attending" ||
-    typeof value.checkedInAt !== "string" ||
+    (typeof value.checkedInAt !== "string" || !value.checkedInAt.trim() || !Number.isFinite(Date.parse(value.checkedInAt))) ||
     value.ticketStatus !== "used" ||
     typeof value.wristbandIssued !== "boolean" ||
     typeof value.alreadyCheckedIn !== "boolean"
