@@ -22,6 +22,8 @@ export const useBookReading = () => {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["active_reading_session"] });
       queryClient.invalidateQueries({ queryKey: ["my_book_purchases"] });
+      queryClient.invalidateQueries({ queryKey: ["education-summary-active-books"] });
+      queryClient.invalidateQueries({ queryKey: ["education-summary-yesterday"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
 
       const results = Array.isArray(data.results) ? data.results : [];
