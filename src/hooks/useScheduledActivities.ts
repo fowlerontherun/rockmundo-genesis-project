@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { startOfDay, endOfDay, addDays } from "date-fns";
@@ -52,8 +53,9 @@ export interface CreateActivityData {
 }
 
 export function useScheduledActivities(date: Date, userId?: string) {
+  const { profileId } = useActiveProfile();
   return useQuery({
-    queryKey: ['scheduled-activities', date.toISOString().split('T')[0], userId],
+    queryKey: ['scheduled-activities', date.toISOString().split('T')[0], userId, profileId],
     queryFn: async () => {
       if (!userId) return [];
 
@@ -296,8 +298,9 @@ export function useScheduledActivities(date: Date, userId?: string) {
 }
 
 export function useWeekScheduledActivities(startDate: Date, userId?: string) {
+  const { profileId } = useActiveProfile();
   return useQuery({
-    queryKey: ['week-scheduled-activities', startDate.toISOString().split('T')[0], userId],
+    queryKey: ['week-scheduled-activities', startDate.toISOString().split('T')[0], userId, profileId],
     queryFn: async () => {
       if (!userId) return [];
 

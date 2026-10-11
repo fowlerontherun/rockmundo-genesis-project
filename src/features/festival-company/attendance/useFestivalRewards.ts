@@ -11,6 +11,6 @@ export const useMyFestivalRewardSummary = (attendanceId?: string, enabled = true
     staleTime: 20_000,
     refetchOnWindowFocus: "always",
     refetchOnReconnect: "always",
-    refetchInterval: 45_000,
+    refetchInterval: (query) => query.state.data?.settled ? false : 45_000,
     refetchIntervalInBackground: false,
   });
