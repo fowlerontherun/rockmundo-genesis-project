@@ -1,4 +1,3 @@
-import { trackShareAnalyticsEvent } from "./analytics";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -17,5 +16,4 @@ export function shouldOfferSharePrompt(kind: string, sourceId: string, tier: Sha
 
 export function markSharePromptSeen(kind: string, sourceId: string, now = Date.now()) {
   if (typeof localStorage !== "undefined") localStorage.setItem(sharePromptKey(kind, sourceId), String(now));
-  trackShareAnalyticsEvent("share_prompt_viewed", { momentType: kind, channel: "prompt" });
 }
