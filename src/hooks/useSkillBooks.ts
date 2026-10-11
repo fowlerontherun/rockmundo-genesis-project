@@ -207,11 +207,11 @@ export const useSkillBooks = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["active_reading_session"] });
       toast({
         title: "Reading Started",
-        description: "You'll read for 1 hour at 11 PM each night.",
+        description: variables.autoRead ? "Automatic nightly reading is enabled." : "Reading started. Record your daily reading manually in Education > Books.",
       });
     },
     onError: (error: Error) => {

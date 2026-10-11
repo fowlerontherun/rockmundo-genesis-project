@@ -392,7 +392,7 @@ export const PlayerLearningNetwork = () => {
                   <div className="flex justify-between"><span className="text-muted-foreground">Seats</span><span>{playerClass.enrolled_count ?? 0}/{playerClass.max_students}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Price</span><span>${(playerClass.price_minor / 100).toFixed(2)}</span></div>
                   <div className="flex flex-wrap gap-2">
-                    <Button className="min-w-32 flex-1" disabled={busy || playerClass.is_enrolled || playerClass.status !== "open"} onClick={() => void run(() => supabase.rpc("enrol_player_education_class", { p_class_id: playerClass.id, p_student_profile_id: profile.id }), "Enrolled in player class.")}>{playerClass.is_enrolled ? "Enrolled" : "Join class"}</Button>
+                    <Button className="min-w-32 flex-1" disabled={busy || playerClass.is_enrolled || playerClass.status !== "open" || playerClass.enrolled_count >= playerClass.max_students} onClick={() => void run(() => supabase.rpc("enrol_player_education_class", { p_class_id: playerClass.id, p_student_profile_id: profile.id }), "Enrolled in player class.")}>{playerClass.is_enrolled ? "Enrolled" : playerClass.enrolled_count >= playerClass.max_students ? "Class full" : "Join class"}</Button>
                     <SafetyActions
                       compact
                       targetProfileId={playerClass.teacher_profile_id}
