@@ -90,11 +90,12 @@ export default function PlayerProfile() {
   }, [profile, currentUser, playerId, shareOpen, location.pathname, location.search, navigate]);
 
   // Friendship status
-  const { data: profilePresence } = useQuery({
+  const { data: profilePresence, isError: profilePresenceError, refetch: retryProfilePresence } = useQuery({
     queryKey: ["player-profile-presence", playerId],
     queryFn: async () => {
       if (!playerId || !profile) return null;
-      const { data } = await supabase.from("profile_activity_statuses").select("profile_id,activity_type,status,started_at,updated_at,ends_at,metadata").eq("profile_id", playerId).is("completed_at", null).order("updated_at", { ascending: false }).limit(1).maybeSingle();
+      const { data, error: presenceError } = await supabase.from("profile_activity_statuses").select("profile_id,activity_type,status,started_at,updated_at,ends_at,metadata").eq("profile_id", playerId).is("completed_at", null).order("updated_at", { ascending: false }).limit(1).maybeSingle();
+      if (presenceError) throw presenceError;
       return mergePresenceProfiles([{ id: profile.id, user_id: profile.user_id, username: profile.username, display_name: profile.display_name, avatar_url: profile.avatar_url, city_name: profile.city_name, updated_at: profile.created_at } as any], data ? [data as any] : [], new Set())[0];
     },
     enabled: !!playerId && !!profile,
@@ -290,6 +291,8 @@ export default function PlayerProfile() {
       />
 
       {profile.social_profile?.status_message && <Card><CardContent className="p-4 text-sm font-medium">{profile.social_profile.status_message}</CardContent></Card>}
+
+      {profilePresenceError && <div role="alert" className="flex items-center gap-3 rounded border border-destructive/40 p-3 text-sm"><span>Player activity status could not be loaded.</span><Button size="sm" variant="outline" onClick={() => void retryProfilePresence()}>Retry</Button></div>}
 
       {/* Stats row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
