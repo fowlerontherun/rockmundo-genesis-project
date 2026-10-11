@@ -27,10 +27,11 @@ export const useSkillBooks = () => {
       if (error) throw error;
 
       // Fetch skill definitions separately
-      const { data: skillsData } = await supabase
+      const { data: skillsData, error: skillsError } = await supabase
         .from("skill_definitions")
         .select("slug, display_name");
 
+      if (skillsError) throw skillsError;
       const { map: mergedSkillMap } = mergeSkillDefinitions(skillsData ?? []);
 
       // Map books with skill info
