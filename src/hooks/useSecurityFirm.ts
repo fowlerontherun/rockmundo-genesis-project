@@ -150,7 +150,8 @@ export const useAvailableSecurityFirms = (cityId: string | undefined) => {
           *,
           companies!inner(name, headquarters_city_id, status)
         `)
-        .eq("companies.status", "active");
+        .eq("companies.status", "active")
+        .eq("companies.headquarters_city_id", cityId!);
 
       if (error) throw error;
       
@@ -159,7 +160,7 @@ export const useAvailableSecurityFirms = (cityId: string | undefined) => {
         company_name: firm.companies?.name || 'Unknown',
       }));
     },
-    enabled: true,
+    enabled: !!cityId,
   });
 };
 
