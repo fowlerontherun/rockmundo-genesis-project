@@ -20,7 +20,7 @@ describe("Today's News expandable section layout", () => {
   });
 
   it("keeps date-bound daily stories", () => {
-    expect(page).toContain('.lt("created_at", `${nextDay}T00:00:00`)');
-    expect(page).toContain('.lt("release_date", `${nextDay}T00:00:00`)');
+    expect(page).toContain('.lt("created_at", `${tomorrow}T00:00:00`)');
+    expect(page).toContain('.lt("scheduled_release_date", `${tomorrow}T00:00:00`)');
   });
 });
