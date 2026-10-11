@@ -12,10 +12,12 @@ export const OtherBandsGigOutcomes = () => {
   const today = format(new Date(), "yyyy-MM-dd");
   const [selectedOutcome, setSelectedOutcome] = useState<any>(null);
   const [showReport, setShowReport] = useState(false);
+  const [page, setPage] = useState(0);
+  const pageSize = 10;
 
   // Get all bands' gig outcomes today
   const { data: allGigs, isError, refetch } = useQuery({
-    queryKey: ["news-all-gigs-today", today],
+    queryKey: ["news-all-gigs-today", today, page],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("gig_outcomes")
@@ -30,7 +32,7 @@ export const OtherBandsGigOutcomes = () => {
         `)
         .gte("completed_at", `${today}T00:00:00`)
         .order("completed_at", { ascending: false })
-        .limit(20);
+        .range(page * pageSize, (page + 1) * pageSize);
       if (error) throw error;
       return data || [];
     },
@@ -38,7 +40,7 @@ export const OtherBandsGigOutcomes = () => {
 
   if (isError) return <Card><CardContent role="alert" className="flex items-center justify-between gap-3 py-4"><p className="text-sm text-destructive">Gig results could not be loaded.</p><Button variant="outline" size="sm" onClick={() => void refetch()}>Retry</Button></CardContent></Card>;
 
-  if (!allGigs || allGigs.length === 0) {
+  if (!allGigs || (allGigs.length === 0 && page === 0)) {
     return null;
   }
 
@@ -67,17 +69,17 @@ export const OtherBandsGigOutcomes = () => {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-lg">
             <Mic2 className="h-5 w-5 text-primary" />
-            Today's Gig Results ({allGigs.length})
+            Today's Gig Results
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {allGigs.slice(0, 10).map((gig: any, index: number) => {
+          {allGigs.map((gig: any) => {
             const band = gig.gigs?.bands;
             const venue = gig.gigs?.venues;
             const city = venue?.cities;
 
             return (
-              <div key={index} className="p-3 rounded-lg bg-muted/50 space-y-2">
+              <div key={gig.id} className="p-3 rounded-lg bg-muted/50 space-y-2">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold">{band?.name || "Unknown Band"}</h4>
@@ -120,11 +122,12 @@ export const OtherBandsGigOutcomes = () => {
               </div>
             );
           })}
-          {allGigs.length > 10 && (
-            <p className="text-xs text-muted-foreground text-center">
-              +{allGigs.length - 10} more gigs today
-            </p>
-          )}
+          {allGigs.length === 0 && <p className="text-sm text-muted-foreground">No more gig results on this page.</p>}
+          <div className="flex items-center justify-between gap-3 pt-2">
+            <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((current) => Math.max(0, current - 1))}>Previous</Button>
+            <span className="text-xs text-muted-foreground">Page {page + 1}</span>
+            <Button variant="outline" size="sm" disabled={allGigs.length < pageSize} onClick={() => setPage((current) => current + 1)}>Next</Button>
+          </div>
         </CardContent>
       </Card>
 
