@@ -111,7 +111,7 @@ export function SubmitDemoDialog({ open, onOpenChange, userId, bandId, preselect
   const labels = labelsData ?? [];
 
   // Fetch existing submissions to prevent duplicates
-  const { data: existingSubmissions = [] } = useQuery({
+  const { data: existingSubmissions = [], isError: duplicateLookupError, isPending: duplicateLookupPending, refetch: retryDuplicateLookup } = useQuery({
     queryKey: ["existing-demo-submissions", bandId, profileId],
     queryFn: async () => {
       let query = supabase
@@ -303,6 +303,7 @@ export function SubmitDemoDialog({ open, onOpenChange, userId, bandId, preselect
           )}
         </div>
 
+        {duplicateLookupError && <div role="alert" className="flex items-center gap-2 text-sm text-destructive">Cannot verify existing submissions. <Button size="sm" variant="outline" onClick={() => void retryDuplicateLookup()}>Retry lookup</Button></div>}
         <DialogFooter className="pt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
@@ -313,6 +314,7 @@ export function SubmitDemoDialog({ open, onOpenChange, userId, bandId, preselect
               !selectedSongId || 
               !selectedLabelId || 
               isDuplicateSubmission || 
+              duplicateLookupError || duplicateLookupPending ||
               submitDemoMutation.isPending
             }
           >
