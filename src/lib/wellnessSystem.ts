@@ -141,6 +141,9 @@ export interface WellnessScheduleWindow {
 }
 
 export function validateWellnessScheduleWindow({ startsAt, endsAt, canOverlap = false, existing = [], now = new Date() }: WellnessScheduleWindow): { ok: true } | { ok: false; reason: "past" | "invalid_duration" | "overlap" } {
+  if (![startsAt, endsAt, now].every(date => date instanceof Date && Number.isFinite(date.getTime()))) {
+    return { ok: false, reason: "invalid_duration" };
+  }
   if (startsAt < now) return { ok: false, reason: "past" };
   if (endsAt <= startsAt) return { ok: false, reason: "invalid_duration" };
   if (!canOverlap) {
