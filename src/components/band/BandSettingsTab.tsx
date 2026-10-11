@@ -653,7 +653,7 @@ export function BandSettingsTab({
       </Dialog>
 
       {/* Disband Confirmation Dialog */}
-      <Dialog open={disbandDialogOpen} onOpenChange={setDisbandDialogOpen}>
+      <Dialog open={disbandDialogOpen} onOpenChange={(open) => { setDisbandDialogOpen(open); if (!open) setDisbandConfirmation(''); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Disband Band</DialogTitle>
