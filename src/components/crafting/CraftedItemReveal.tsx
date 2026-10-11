@@ -77,7 +77,7 @@ export const CraftedItemReveal = ({
           )}
         </div>
 
-        <div className="grid gap-2"><Button onClick={onClose} className="w-full">Awesome!</Button>{isMasterwork && <Button variant="outline" onClick={() => setShareMoment({ version: 1, type: "achievement", id: `${recipeName}:${Math.round(qualityRoll)}`, eyebrow: "MASTERWORK", headline: recipeName, subheadline: "Crafted an exceptional item in RockMundo", metrics: [{ label: "Quality", value: `${Math.round(qualityRoll)}%` }, { label: "Grade", value: quality.label }], destinationUrl: window.location.href, referralCode: null, createdAt: new Date().toISOString() })}><Share2 className="mr-2 h-4 w-4" />Share masterwork</Button>}</div>
+        <div className="grid gap-2"><Button onClick={onClose} className="w-full">Awesome!</Button>{isMasterwork && <Button variant="outline" onClick={async () => { const destinationUrl = await referralAwareDestination(profileId, window.location.href, "craft_share"); setShareMoment({ version: 1, type: "achievement", id: `${recipeName}:${Math.round(qualityRoll)}`, eyebrow: "MASTERWORK", headline: recipeName, subheadline: "Crafted an exceptional item in RockMundo", metrics: [{ label: "Quality", value: `${Math.round(qualityRoll)}%` }, { label: "Grade", value: quality.label }], destinationUrl, referralCode: null, createdAt: new Date().toISOString() }); }}><Share2 className="mr-2 h-4 w-4" />Share masterwork</Button>}</div>
       </DialogContent>
     </Dialog>
     <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(next) => { if (!next) setShareMoment(null); }} />
