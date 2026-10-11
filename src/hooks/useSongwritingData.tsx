@@ -99,6 +99,7 @@ type CreateProjectInput = {
 
 type UpdateProjectInput = {
   id: string;
+  instruments?: string[];
   title?: string;
   theme_id?: string | null;
   chord_progression_id?: string | null;
