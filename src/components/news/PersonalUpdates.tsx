@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Bell, Mail, Gift, Calendar } from "lucide-react";
 import { format } from "date-fns";
+import { Link } from "react-router-dom";
 
 export function PersonalUpdates() {
   const { profileId } = useActiveProfile();
@@ -95,6 +96,7 @@ export function PersonalUpdates() {
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm truncate">{update.title}</p>
                 <p className="text-xs text-muted-foreground">{update.detail}</p>
+                {update.type === "invite" && <Link to="/band/members" className="text-xs font-medium text-primary underline">Review invitation</Link>}
               </div>
               {update.time && <Badge variant="outline" className="shrink-0">{update.time}</Badge>}
             </div>
