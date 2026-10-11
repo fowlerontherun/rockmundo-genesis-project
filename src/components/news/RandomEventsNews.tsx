@@ -13,7 +13,7 @@ export const RandomEventsNews = () => {
   const { data: pendingEvents, isError, refetch } = useQuery({
     queryKey: ["pending-random-events", userId, profileId],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!userId || !profileId) return [];
       const { data, error } = await (supabase as any)
         .from("player_events")
         .select(`
@@ -22,14 +22,13 @@ export const RandomEventsNews = () => {
         `)
         .eq("user_id", userId)
         .eq("status", "pending_choice")
+        .or(`profile_id.eq.${profileId},profile_id.is.null`)
         .order("created_at", { ascending: false })
         .limit(5);
       if (error) throw error;
-      return ((data as any[]) || []).filter(
-        (r) => !r.profile_id || !profileId || r.profile_id === profileId,
-      );
+      return (data as any[]) || [];
     },
-    enabled: !!userId,
+    enabled: !!userId && !!profileId,
   });
 
   if (isError) return <Card><CardContent role="alert" className="flex items-center justify-between gap-3 py-4"><p className="text-sm text-destructive">Pending events could not be loaded.</p><Button variant="outline" size="sm" onClick={() => void refetch()}>Retry</Button></CardContent></Card>;
