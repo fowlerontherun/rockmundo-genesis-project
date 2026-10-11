@@ -90,7 +90,9 @@ export const useEnchantmentSystem = () => {
         .filter((ae) => ae.player_equipment_id === playerEquipmentId)
         .map((ae) => ae.enchantment_id);
       const incompatible = enchantment.incompatible_with || [];
-      const conflict = incompatible.find((id) => equippedEnchantmentIds.includes(id));
+      const conflict = equippedEnchantmentIds.find((id) =>
+        incompatible.includes(id) || (catalog.find((entry) => entry.id === id)?.incompatible_with ?? []).includes(enchantmentId)
+      );
       if (conflict) {
         const conflictName = catalog.find((c) => c.id === conflict)?.name || "another enchantment";
         throw new Error(`Incompatible with ${conflictName}`);
