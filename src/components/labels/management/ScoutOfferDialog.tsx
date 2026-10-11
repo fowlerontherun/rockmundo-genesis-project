@@ -46,8 +46,8 @@ export function ScoutOfferDialog({ open, onOpenChange, labelId, labelReputation 
         .order("fame", { ascending: false })
         .limit(20);
 
-      if (searchQuery.length >= 2) {
-        query = query.ilike("name", `%${searchQuery}%`);
+      if (searchQuery.trim().length >= 1) {
+        query = query.ilike("name", `%${searchQuery.trim()}%`);
       }
 
       if (signedBandIds.length > 0) {
