@@ -7,18 +7,20 @@ import { MessageSquare, Heart, Shirt, AlertTriangle } from "lucide-react";
 export function GossipColumn() {
   const today = new Date().toISOString().split("T")[0];
 
-  const { data: gossipItems } = useQuery({
+  const { data: gossipItems, isPending, isError, refetch } = useQuery({
     queryKey: ["gossip-column", today],
     queryFn: async () => {
       const items: Array<{ icon: string; headline: string; detail: string; type: string }> = [];
 
       // Band drama events
-      const { data: drama } = await supabase
+      const { data: drama, error: dramaError } = await supabase
         .from("band_drama_events")
         .select("drama_type, severity, description, bands(name)")
         .gte("created_at", `${today}T00:00:00`)
         .order("created_at", { ascending: false })
         .limit(5);
+
+      if (dramaError) throw dramaError;
 
       drama?.forEach((d: any) => {
         const bandName = d.bands?.name || "A band";
@@ -32,13 +34,15 @@ export function GossipColumn() {
       });
 
       // Reputation events as scandals
-      const { data: repEvents } = await (supabase as any)
+      const { data: repEvents, error: reputationError } = await (supabase as any)
         .from("reputation_events")
         .select("event_type, reputation_change, description, bands(name)")
         .gte("created_at", `${today}T00:00:00`)
         .lt("reputation_change", 0)
         .order("reputation_change", { ascending: true })
         .limit(3);
+
+      if (reputationError) throw reputationError;
 
       repEvents?.forEach((r: any) => {
         items.push({
@@ -73,7 +77,11 @@ export function GossipColumn() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {gossipItems && gossipItems.length > 0 ? (
+        {isPending ? (
+          <p role="status" className="text-sm text-muted-foreground py-2">Loading gossip…</p>
+        ) : isError ? (
+          <div role="alert" className="flex items-center justify-between gap-2 py-2"><p className="text-sm text-destructive">Gossip is unavailable right now.</p><button type="button" className="text-sm underline" onClick={() => void refetch()}>Retry</button></div>
+        ) : gossipItems && gossipItems.length > 0 ? (
           gossipItems.map((item, i) => (
             <div key={i} className="flex items-start gap-2 py-1 border-b border-border/50 last:border-0">
               {getIcon(item.type)}
