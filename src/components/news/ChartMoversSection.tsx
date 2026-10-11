@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowUp, ArrowDown, BarChart3 } from "lucide-react";
 
 export function ChartMoversSection() {
-  const { data: movers } = useQuery({
+  const { data: movers, isPending, isError, refetch } = useQuery({
     queryKey: ["chart-movers"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -44,7 +44,14 @@ export function ChartMoversSection() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
-        {movers && movers.length > 0 ? (
+        {isPending ? (
+          <p role="status" className="text-sm text-muted-foreground py-2">Loading chart movement…</p>
+        ) : isError ? (
+          <div role="alert" className="flex items-center justify-between gap-2 py-2">
+            <p className="text-sm text-destructive">Chart movement is unavailable right now.</p>
+            <button type="button" className="text-sm underline" onClick={() => void refetch()}>Retry</button>
+          </div>
+        ) : movers && movers.length > 0 ? (
           movers.map((entry: any) => (
             <div key={entry.songs.id} className="flex items-center justify-between py-1">
               <div className="flex items-center gap-2">
