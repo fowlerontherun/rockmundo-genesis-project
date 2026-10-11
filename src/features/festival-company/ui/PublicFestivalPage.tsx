@@ -23,6 +23,8 @@ import {
 } from "../application/useFestivalLaunch";
 import { formatFestivalLaunchMoney } from "../domain/festivalLaunch";
 import { getFestivalPublicEventPhase } from "./festivalEventPhase";
+import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 /** Keep the sponsor name visible if a legacy logo URL is unavailable. */
 const SponsorIdentity = ({ name, logoReference }: { name: string; logoReference: string | null }) => {
@@ -95,6 +97,7 @@ const attendanceLabel = (status: string) => {
 export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string } = {}) {
   const { festivalCompanyIdentifier } = useParams();
   const { user } = useAuth();
+  const { profileId } = useActiveProfile();
   const { data: f, isLoading, isError } = usePublicFestival(publicSlug ?? festivalCompanyIdentifier);
   const { data: attendance = [] } = useMyFestivalAttendance(Boolean(user));
   const { data: checkInEligibility = [] } = useMyFestivalCheckInEligibility(Boolean(user));
@@ -173,7 +176,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
               {new Date(f.endsAt).toLocaleDateString("en-GB")}
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
-              <Button variant="secondary" onClick={() => setShareMoment({
+              <Button variant="secondary" onClick={async () => { const destinationUrl = await referralAwareDestination(profileId, window.location.href, "festival_share"); setShareMoment({
                 version: 1,
                 type: "festival",
                 id: f.id,
@@ -187,10 +190,10 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                   ...(f.ticketSales ? [{ label: "Tickets sold", value: f.ticketSales.admissionTicketsSold.toLocaleString("en-GB") }] : []),
                 ].slice(0, 4),
                 artworkUrl: f.heroImageReference || f.logoReference || null,
-                destinationUrl: window.location.href,
+                destinationUrl,
                 referralCode: null,
                 createdAt: new Date().toISOString(),
-              })}>
+              }); }}>
                 <Share2 className="mr-2 h-4 w-4" /> Share Festival
               </Button>
             </div>

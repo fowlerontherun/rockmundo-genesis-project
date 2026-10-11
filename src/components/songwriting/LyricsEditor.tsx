@@ -50,7 +50,8 @@ export function parseLyricsToSections(lyrics: string): LyricsSection[] {
   }
 
   const sections: LyricsSection[] = [];
-  const sectionRegex = /\[(.*?)\]/g;
+  // Only standalone, recognised section labels are structural headers; inline cues remain lyrics.
+  const sectionRegex = /^\[(?:(?:verse|chorus|pre[ -]?chorus|bridge|intro|outro|hook|breakdown|instrumental)(?:\s*\d+)?)\][ \t]*$/gim;
   let lastIndex = 0;
   let match;
   let sectionCounter: Record<string, number> = {};
