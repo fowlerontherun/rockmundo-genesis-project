@@ -29,6 +29,10 @@ export function ChatRoomView({
     lockedMessage ? null : channelKey,
   );
   const [draft, setDraft] = useState("");
+
+  useEffect(() => {
+    setDraft("");
+  }, [channelKey, profileId]);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const resolvedEmptyMessage = emptyMessage ?? fmChatText(language, "defaultEmpty");
   const resolvedPlaceholder = placeholder ?? fmChatText(language, "defaultPlaceholder");
