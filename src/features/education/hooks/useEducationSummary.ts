@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -208,12 +209,18 @@ export const useEducationSummary = () => {
     enabled: !!profile?.id,
   });
 
+  const [localDate, setLocalDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
+  useEffect(() => {
+    const interval = setInterval(() => setLocalDate(format(new Date(), "yyyy-MM-dd")), 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Yesterday's education progress
   const { data: yesterdayProgress, isLoading: progressLoading } = useQuery({
-    queryKey: ["education-summary-yesterday", profile?.id],
+    queryKey: ["education-summary-yesterday", profile?.id, localDate],
     queryFn: async () => {
-      const yesterday = format(subDays(startOfDay(new Date()), 1), "yyyy-MM-dd");
-      const today = format(startOfDay(new Date()), "yyyy-MM-dd");
+      const today = localDate;
+      const yesterday = format(subDays(startOfDay(new Date(`${localDate}T12:00:00`)), 1), "yyyy-MM-dd");
       
       // University attendance yesterday
       const { data: uniAttendance, error: uniError } = await supabase
