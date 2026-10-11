@@ -14,7 +14,7 @@ const MAX_BATTLES_PER_LIST = 5;
 
 export function BattleOfTheBandsNews() {
   const ranges = getBattleNewsDateRanges(new Date());
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["battle-of-the-bands-news", ranges.today],
     queryFn: async () => {
       const [todayResult, yesterdayResult] = await Promise.all([
@@ -34,7 +34,7 @@ export function BattleOfTheBandsNews() {
     staleTime: 5 * 60 * 1000,
   });
 
-  if (!isLoading && !data?.upcoming.length && !data?.results.length) return null;
+  if (!isLoading && !isError && !data?.upcoming.length && !data?.results.length) return null;
 
   return (
     <Card className="border-primary/30">
@@ -43,7 +43,7 @@ export function BattleOfTheBandsNews() {
       </CardTitle></CardHeader>
       <CardContent className="space-y-4">
         <p className="text-xs text-muted-foreground">Showing up to five upcoming battles and five recent results.</p>
-        {isLoading ? <p className="text-sm text-muted-foreground">Loading battle news…</p> : <>
+        {isLoading ? <p className="text-sm text-muted-foreground">Loading battle news…</p> : isError ? <div role="alert" className="flex items-center justify-between gap-3"><p className="text-sm text-destructive">Battle news is unavailable right now.</p><Button variant="outline" size="sm" onClick={() => void refetch()}>Retry</Button></div> : <>
           {data?.upcoming.map((event) => <article key={event.id} className="rounded-lg border bg-muted/30 p-3">
             <div className="mb-2 flex items-center justify-between gap-2"><h4 className="font-semibold font-serif">Battle today in {event.city?.name}</h4><Badge>Today</Badge></div>
             <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
