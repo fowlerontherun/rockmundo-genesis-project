@@ -303,7 +303,7 @@ export function calculateCanonicalReadiness(input: { role: WellnessReadinessRole
   const rawScore = restrictedBy ? 0 : baseValue * Math.max(0.6, multiplier) + additive + boundedPositive * 100 + boundedNegative * 100;
   const score = clampWellness(rawScore);
   const state = WELLNESS_CANONICAL_BALANCE.readinessThresholds.find((threshold) => score >= threshold.min)?.state ?? "unavailable";
-  const performanceModifier = Number(Math.max(1 + WELLNESS_CANONICAL_BALANCE.globalModifierCaps.negative, Math.min(1 + WELLNESS_CANONICAL_BALANCE.globalModifierCaps.positive, 1 + (score - 70) / 250)).toFixed(3));
+  const performanceModifier = restrictedBy ? 0 : Number(Math.max(1 + WELLNESS_CANONICAL_BALANCE.globalModifierCaps.negative, Math.min(1 + WELLNESS_CANONICAL_BALANCE.globalModifierCaps.positive, 1 + (score - 70) / 250)).toFixed(3));
   const summary = `${input.role.split("_").join(" ")} readiness is ${score}: ${normalized.slice(0, 3).map((m) => m.explanation).join(", ") || "current wellness is the main input"}.`;
   return {
     role: input.role,
