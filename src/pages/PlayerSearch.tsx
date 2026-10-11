@@ -120,10 +120,11 @@ export default function PlayerSearch() {
             <Input
               placeholder="Search by username or display name..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              maxLength={80}
+              onChange={(e) => setSearchQuery(e.target.value.slice(0, 80))}
               onKeyDown={handleKeyPress}
             />
-            <Button onClick={handleSearch} disabled={searchQuery.length < 2}>
+            <Button onClick={handleSearch} disabled={searchQuery.trim().length < 2 || searchQuery.length > 80}>
               <Search className="h-4 w-4" />
             </Button>
           </div>
