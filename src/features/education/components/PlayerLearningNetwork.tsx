@@ -117,6 +117,7 @@ export const PlayerLearningNetwork = () => {
 
   const [mentorHeadline, setMentorHeadline] = useState("");
   const [mentorSkill, setMentorSkill] = useState("");
+  const [requestedMentorSkills, setRequestedMentorSkills] = useState<Record<string, string>>({});
   const [mentorCapacity, setMentorCapacity] = useState("2");
 
   const [classSkill, setClassSkill] = useState("");
@@ -287,7 +288,7 @@ export const PlayerLearningNetwork = () => {
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {mentors.map((mentor) => {
-              const focus = mentor.focus_areas?.[0];
+              const focus = requestedMentorSkills[mentor.profile_id] || mentor.focus_areas?.[0];
               return (
                 <Card key={mentor.mentorship_profile_id}>
                   <CardHeader>
@@ -298,7 +299,7 @@ export const PlayerLearningNetwork = () => {
                     <CardDescription>{mentor.headline || "Open to helping developing players."}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm">
-                    <div className="flex items-center justify-between"><span className="text-muted-foreground">Focus</span><span>{skillLabel(focus)}</span></div>
+                    <div className="flex items-center justify-between gap-2"><span className="text-muted-foreground">Focus</span><Select value={focus || ""} onValueChange={(value) => setRequestedMentorSkills(previous => ({ ...previous, [mentor.profile_id]: value }))}><SelectTrigger aria-label={`Mentorship skill for ${mentor.display_name || mentor.username}`} className="w-44"><SelectValue placeholder="Choose skill" /></SelectTrigger><SelectContent>{(mentor.focus_areas ?? []).map(skill => <SelectItem key={skill} value={skill}>{skillLabel(skill)}</SelectItem>)}</SelectContent></Select></div>
                     <div className="flex items-center justify-between"><span className="text-muted-foreground">Verified peak</span><span>Lv {mentor.strongest_level ?? "?"}</span></div>
                     <div className="flex flex-wrap gap-2">
                       <Button className="min-w-40 flex-1" disabled={busy || !focus} onClick={() => void run(() => supabase.rpc("request_community_mentorship", {
