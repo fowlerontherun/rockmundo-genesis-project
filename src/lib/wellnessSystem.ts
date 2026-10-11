@@ -262,7 +262,7 @@ export function normalizeWellnessModifiers(modifiers: WellnessModifier[]): Welln
     const withCap = { ...modifier, cappedValue };
     if (!modifier.mayStack && byGroup.has(modifier.stackingGroup)) {
       const existing = byGroup.get(modifier.stackingGroup)!;
-      if (Math.abs(cappedValue) > Math.abs(existing.cappedValue ?? existing.rawValue)) {
+      if (modifier.priority > existing.priority || (modifier.priority === existing.priority && Math.abs(cappedValue) > Math.abs(existing.cappedValue ?? existing.rawValue))) {
         const index = normalized.findIndex((item) => item.id === existing.id);
         normalized[index] = withCap;
         byGroup.set(modifier.stackingGroup, withCap);
@@ -279,7 +279,14 @@ export function calculateCanonicalReadiness(input: { role: WellnessReadinessRole
   const core = { ...createDefaultWellnessCore(), ...input.core };
   const overall = calculateOverallWellness(core);
   const baseValue = clampWellness(input.baseValue ?? Math.round((overall + core.energy + (100 - core.fatigue) + core.sleep_quality) / 4));
-  const normalized = normalizeWellnessModifiers(input.modifiers ?? []);
+  const normalized = normalizeWellnessModifiers((input.modifiers ?? []).filter(modifier =>
+    modifier.target === input.role ||
+    modifier.target === "performance" ||
+    modifier.target === "recovery" ||
+    modifier.target === "progression" ||
+    modifier.target === "career_sustainability" ||
+    modifier.target === "burnout_pressure"
+  ));
   let additive = 0;
   let multiplier = 1;
   for (const modifier of normalized) {
