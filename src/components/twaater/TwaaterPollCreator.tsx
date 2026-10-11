@@ -52,6 +52,10 @@ export const TwaaterPollCreator = ({ onCreatePoll }: TwaaterPollCreatorProps) =>
       toast({ title: "Please provide at least 2 options", variant: "destructive" });
       return;
     }
+    if (new Set(validOptions.map(option => option.trim().toLocaleLowerCase())).size !== validOptions.length) {
+      toast({ title: "Poll options must be different", variant: "destructive" });
+      return;
+    }
 
     if (onCreatePoll) {
       onCreatePoll(pollData.question.trim(), validOptions, pollData.durationHours);
@@ -65,7 +69,9 @@ export const TwaaterPollCreator = ({ onCreatePoll }: TwaaterPollCreatorProps) =>
     });
   };
 
-  const isValid = Boolean(pollData.question.trim()) && pollData.options.filter((option) => option.trim()).length >= 2;
+  const validOptionLabels = pollData.options.map(option => option.trim()).filter(Boolean);
+  const isValid = Boolean(pollData.question.trim()) && validOptionLabels.length >= 2 &&
+    new Set(validOptionLabels.map(option => option.toLocaleLowerCase())).size === validOptionLabels.length;
 
   return (
     <Card>

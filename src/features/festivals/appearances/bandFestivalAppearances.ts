@@ -37,6 +37,11 @@ export interface BandFestivalAppearance {
 type Row = Record<string, unknown>;
 const text = (value: unknown) => typeof value === "string" ? value : "";
 const nullableText = (value: unknown): string | null => typeof value === "string" && value.trim() ? value : null;
+const validFestivalDate = (value: string): boolean => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T12:00:00Z`);
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+};
 
 export function parseBandFestivalAppearances(data: unknown): BandFestivalAppearance[] {
   if (!Array.isArray(data)) throw new Error("Invalid Festival appearance response");
@@ -48,7 +53,7 @@ export function parseBandFestivalAppearances(data: unknown): BandFestivalAppeara
     const bandId = text(row.band_id);
     const editionId = text(row.edition_id);
     const festivalDate = text(row.festival_date);
-    if (!bookingId || !bandId || !editionId || !/^\d{4}-\d{2}-\d{2}$/.test(festivalDate)) {
+    if (!bookingId || !bandId || !editionId || !validFestivalDate(festivalDate)) {
       throw new Error("Incomplete Festival appearance");
     }
     return {
