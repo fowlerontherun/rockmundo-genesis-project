@@ -107,6 +107,16 @@ export function appearanceOnLocalDay(appearance: BandFestivalAppearance, date: D
   return appearance.festivalDate === key;
 }
 
+const safeFestivalTimezone = (timezone: string | null): string => {
+  if (!timezone) return "UTC";
+  try {
+    new Intl.DateTimeFormat("en-GB", { timeZone: timezone });
+    return timezone;
+  } catch {
+    return "UTC";
+  }
+};
+
 /** Render real set times in the Festival city's zone, not the fan's device zone. */
 export function formatFestivalInstant(
   timestamp: string,
@@ -114,7 +124,7 @@ export function formatFestivalInstant(
 ): string {
   return new Intl.DateTimeFormat("en-GB", {
     hour: "numeric", minute: "2-digit", hour12: true,
-    timeZone: timezone || "UTC",
+    timeZone: safeFestivalTimezone(timezone),
   }).format(new Date(timestamp));
 }
 
