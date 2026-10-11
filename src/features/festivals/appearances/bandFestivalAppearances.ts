@@ -144,7 +144,7 @@ export function appearanceDetailHref(appearance: BandFestivalAppearance): string
 
 export function festivalLocalDateKey(now: Date, venueTimezone: string | null): string {
   const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: venueTimezone || "UTC",
+    timeZone: safeFestivalTimezone(venueTimezone),
     year: "numeric", month: "2-digit", day: "2-digit",
   }).formatToParts(now);
   const part = (type: string) => parts.find((value) => value.type === type)?.value || "";
