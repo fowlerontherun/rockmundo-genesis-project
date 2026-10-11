@@ -8,19 +8,21 @@ import { format } from "date-fns";
 export function DealAnnouncements() {
   const today = new Date().toISOString().split('T')[0];
 
-  const { data: deals } = useQuery({
+  const { data: deals, isPending, isError, refetch } = useQuery({
     queryKey: ["deal-announcements", today],
     queryFn: async () => {
       const results: Array<{ type: string; title: string; detail: string; time: string }> = [];
 
       // Record label signings
-      const { data: contracts } = await supabase
+      const { data: contracts, error: contractsError } = await supabase
         .from("artist_label_contracts")
         .select("created_at, status, bands(name), labels(name)")
         .eq("status", "active")
         .gte("created_at", `${today}T00:00:00`)
         .order("created_at", { ascending: false })
         .limit(5);
+
+      if (contractsError) throw contractsError;
 
       contracts?.forEach((contract: any) => {
         if (contract.bands && contract.labels) {
@@ -56,7 +58,11 @@ export function DealAnnouncements() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
-        {deals && deals.length > 0 ? (
+        {isPending ? (
+          <p role="status" className="text-sm text-muted-foreground py-2">Loading business deals…</p>
+        ) : isError ? (
+          <div role="alert" className="flex items-center justify-between gap-2 py-2"><p className="text-sm text-destructive">Business deals are unavailable right now.</p><button type="button" className="text-sm underline" onClick={() => void refetch()}>Retry</button></div>
+        ) : deals && deals.length > 0 ? (
           deals.map((deal, index) => (
             <div key={index} className="flex items-start gap-2 py-1">
               {getIcon(deal.type)}
