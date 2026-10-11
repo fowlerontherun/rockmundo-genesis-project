@@ -26,23 +26,8 @@ export function ClassifiedAds() {
         });
       });
 
-      // Open band invitations
-      const { data: invites } = await supabase
-        .from("band_invitations")
-        .select("instrument_role, vocal_role, bands(name)")
-        .eq("status", "pending")
-        .order("created_at", { ascending: false })
-        .limit(4);
-
-      invites?.forEach((inv: any) => {
-        items.push({
-          type: "opportunity",
-          title: `${inv.bands?.name || "A band"} looking for ${inv.instrument_role}`,
-          detail: inv.vocal_role
-            ? `Vocal role: ${inv.vocal_role}`
-            : "Join an active band!",
-        });
-      });
+      // Private band invitations belong in the recipient's personal updates,
+      // not in public recruitment classifieds.
 
       return items.slice(0, 8);
     },
