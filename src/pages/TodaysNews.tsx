@@ -27,7 +27,7 @@ export default function TodaysNewsPage() {
   const tomorrow = new Date(Date.parse(`${today}T00:00:00Z`) + 86400000).toISOString().slice(0, 10);
 
   // Keep this edition focused on bands formed today.
-  const { data: newBands } = useQuery({
+  const { data: newBands, isError: newBandsError, refetch: retryNewBands } = useQuery({
     queryKey: ["news-new-bands", today],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -42,7 +42,7 @@ export default function TodaysNewsPage() {
     },
   });
 
-  const { data: releasedSongs } = useQuery({
+  const { data: releasedSongs, isError: releasedSongsError, refetch: retryReleasedSongs } = useQuery({
     queryKey: ["news-releases", today],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -105,6 +105,7 @@ export default function TodaysNewsPage() {
           <NewsCategory title="Music, Charts & Releases" description="New music and chart movement">
             <div className="grid items-start gap-4 md:grid-cols-2">
               <ChartMoversSection />
+              {releasedSongsError && <NewsQueryError label="New releases" onRetry={() => void retryReleasedSongs()} />}
               {!!releasedSongs?.length && <NewsList title="New Releases" items={releasedSongs ?? []} itemKey={r => r.id} defaultOpen
                 renderItem={release => (
                   <>
@@ -138,6 +139,7 @@ export default function TodaysNewsPage() {
           </NewsCategory>
           <NewsCategory title="Bands & Business" description="New bands and music industry announcements">
             <div className="grid gap-4 lg:grid-cols-2">
+              {newBandsError && <NewsQueryError label="New bands" onRetry={() => void retryNewBands()} />}
               {!!newBands?.length && <NewsList title="New Bands Formed" items={newBands ?? []} itemKey={b => b.id}
                 renderItem={band => (
                   <div className="flex items-start justify-between gap-2">
@@ -182,4 +184,11 @@ function NewsCategory({ title, description, children, defaultOpen = false }: {
       <div className="space-y-4 border-t border-border p-4">{children}</div>
     </details>
   );
+}
+
+function NewsQueryError({ label, onRetry }: { label: string; onRetry: () => void }) {
+  return <div role="alert" className="flex items-center justify-between gap-3 rounded-md border border-destructive/30 p-3">
+    <p className="text-sm text-destructive">{label} could not be loaded.</p>
+    <button type="button" className="text-sm text-primary underline" onClick={onRetry}>Retry</button>
+  </div>;
 }
