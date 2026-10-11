@@ -51,12 +51,11 @@ const legacyPostConsequences: GigExperienceDTO["postConsequences"] = {
 export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCapacity, songs = [], experience, xpSummary, fanConversion, momentHighlights, venueRelationship, chemistryMoments, chemistryLevel = 50, chemistryChange = 0, merchItemsSold = 0, ticketPrice = 20, stageBehaviorUsed, gigId }: Props) => {
   const { profileId } = useActiveProfile();
   const report = experience ?? legacyToExperience(outcome, venueName, venueCapacity, songs, merchItemsSold, chemistryChange, stageBehaviorUsed);
-  if (!report) return null;
-  const processing = report.viewer.ready === false || report.gig.status === "processing";
+  const processing = report ? (report.viewer.ready === false || report.gig.status === "processing") : false;
   const [shareInvite, setShareInvite] = useState<{ url: string; text: string } | null>(null);
   const [shareMoment, setShareMoment] = useState<CharacterProfileShareMoment | null>(null);
   useEffect(() => {
-    if (!isOpen || processing || ["cancelled", "canceled", "abandoned"].includes(report.gig.status)) return;
+    if (!isOpen || !report || processing || ["cancelled", "canceled", "abandoned"].includes(report.gig.status)) return;
     if (!profileId) return;
     const key = "rockmundo_gig_referral_share_at";
     const last = Number(localStorage.getItem(key) || 0);
@@ -67,9 +66,9 @@ export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCap
       const url = referralUrlWithParams(data.code, { source: "gig_share" });
       setShareInvite({ url, text: `I just played ${report.gig.venue.name} in RockMundo. Start your own music career and join me.` });
     })();
-  }, [isOpen, processing, profileId, report.gig.status, report.gig.venue.name]);
+  }, [isOpen, processing, profileId, report]);
   useEffect(() => {
-    if (!isOpen || processing || ["cancelled", "canceled", "abandoned"].includes(report.gig.status) || shareMoment) return;
+    if (!isOpen || !report || processing || ["cancelled", "canceled", "abandoned"].includes(report.gig.status) || shareMoment) return;
     const h = headlineFromExperience(report);
     const soldOut = h.capacity > 0 && h.attendance >= h.capacity;
     const exceptionalGrade = ["S", "S+", "A+"].includes(String(h.grade).toUpperCase());
@@ -97,6 +96,7 @@ export const GigOutcomeReport = ({ isOpen, onClose, outcome, venueName, venueCap
     })();
   }, [isOpen, processing, report, gigId, shareMoment, profileId]);
 
+  if (!report) return null;
   const cancelled = ["cancelled", "canceled", "abandoned"].includes(report.gig.status);
 
   return <><Dialog open={isOpen} onOpenChange={onClose}>
