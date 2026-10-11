@@ -70,6 +70,7 @@ function EditorSession({ profileId, initial, model, richClothing, richClothingEr
     catch (failure) { setError(failure instanceof Error ? failure.message : 'Your model could not be saved. Please try again.'); }
   }
   async function reload() {
+    if (dirty && !window.confirm('Reload your saved avatar? Unsaved appearance changes will be lost.')) return;
     const result = await model.query.refetch();
     if (result.data && !result.error) { setBaseline(result.data); setDraft(result.data.appearance); setError(''); setFeedback('Saved model reloaded.'); }
     else setError('Your saved model could not be reloaded. Your edits are still here.');
