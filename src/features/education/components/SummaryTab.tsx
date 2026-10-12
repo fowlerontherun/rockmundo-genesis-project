@@ -34,9 +34,11 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useEducationSummary } from "../hooks/useEducationSummary";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 export const SummaryTab = () => {
   const queryClient = useQueryClient();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const {
     currentCityName,
@@ -50,12 +52,17 @@ export const SummaryTab = () => {
 
   const dropCourseMutation = useMutation({
     mutationFn: async (enrollmentId: string) => {
-      const { error } = await supabase
+      if (!profileId) throw new Error("No active character selected");
+      const { data, error } = await supabase
         .from("player_university_enrollments")
         .update({ status: "dropped", auto_attend: false })
-        .eq("id", enrollmentId);
+        .eq("id", enrollmentId)
+        .eq("profile_id", profileId)
+        .eq("status", "active")
+        .select("id");
 
       if (error) throw error;
+      if (!data?.length) throw new Error("This enrollment is no longer active");
       return enrollmentId;
     },
     onSuccess: () => {
@@ -89,7 +96,7 @@ export const SummaryTab = () => {
   }
 
   const hasActiveEducation = activeBooks.length > 0 || activeEnrollments.length > 0;
-  const hasYesterdayProgress = yesterdayProgress.totalXp > 0;
+  const hasYesterdayProgress = yesterdayProgress.totalXp > 0 || yesterdayProgress.universityAttendance.length > 0 || yesterdayProgress.bookReading.length > 0;
 
   return (
     <div className="space-y-8">
