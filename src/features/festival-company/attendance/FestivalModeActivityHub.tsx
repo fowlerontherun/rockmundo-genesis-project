@@ -59,7 +59,7 @@ export const FestivalModeActivityHub = ({
           <CardTitle className="text-base">Your planned {config.title.toLowerCase()} blocks</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {isLoading ? (
+          {isError ? (<div role="alert" className="text-destructive">Day plan unavailable. <Button variant="outline" size="sm" onClick={() => void refetch()}>Retry</Button></div>) : isLoading ? (
             <p className="text-sm text-muted-foreground" role="status">Loading your Festival plan…</p>
           ) : isError || !plan ? (
             <p className="text-sm text-destructive" role="alert">Your Festival plan could not be loaded.</p>
