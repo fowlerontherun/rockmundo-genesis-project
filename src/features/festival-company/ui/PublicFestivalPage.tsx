@@ -135,7 +135,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   const myFestivalTickets = ticketWallet.filter((ticket) => ticket.festivalSlug === f.slug);
   const myWristband = festivalMemorabilia.find((item) => item.festivalLaunchId === f.id && item.attendanceId === myAttendance?.id);
   const hasAdmissionTicket = myFestivalTickets.some(
-    (ticket) => ticket.productClass === "admission" && !["cancelled", "refunded", "transferred"].includes(ticket.status),
+    (ticket) => ticket.productClass === "admission" && !["cancelled", "refunded", "transferred", "used"].includes(ticket.status),
   );
 
   // The simplified timetable contains automatically generated provisional slots.
