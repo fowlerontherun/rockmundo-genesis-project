@@ -50,13 +50,14 @@ export const useTwaaterBookmarks = (accountId?: string) => {
       if (!accountId) throw new Error("No account ID");
 
       // Check if already bookmarked
-      const { data: existing } = await supabase
+      const { data: existing, error: lookupError } = await supabase
         .from("twaater_bookmarks")
         .select("id")
         .eq("account_id", accountId)
         .eq("twaat_id", twaatId)
         .maybeSingle();
 
+      if (lookupError) throw lookupError;
       if (existing) {
         // Remove bookmark
         const { error } = await supabase
