@@ -14,6 +14,7 @@ export default function SlotPurchaseSuccess() {
   const sessionId = searchParams.get("session_id");
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState("");
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!sessionId) {
@@ -23,6 +24,8 @@ export default function SlotPurchaseSuccess() {
     }
 
     const fulfill = async () => {
+      setStatus("loading");
+      setErrorMsg("");
       try {
         const { data, error } = await supabase.functions.invoke("fulfill-slot-purchase", {
           body: { session_id: sessionId },
@@ -38,7 +41,7 @@ export default function SlotPurchaseSuccess() {
     };
 
     fulfill();
-  }, [sessionId, queryClient]);
+  }, [sessionId, queryClient, attempt]);
 
   return (
     <FMPageScaffold title="Character Slot Purchase" backTo="/hub/premium-store">
@@ -74,7 +77,8 @@ export default function SlotPurchaseSuccess() {
                 <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
                 <h2 className="text-xl font-bold">Something went wrong</h2>
                 <p className="text-sm text-muted-foreground">{errorMsg}</p>
-                <Button variant="outline" onClick={() => navigate("/buy-character-slot")}>Try Again</Button>
+                <p className="text-xs text-muted-foreground">If you have already paid, retry fulfillment with the same checkout session. Do not purchase another slot.</p>
+                <Button variant="outline" disabled={!sessionId} onClick={() => setAttempt((previous) => previous + 1)}>Retry paid session</Button>
               </>
             )}
           </CardContent>
