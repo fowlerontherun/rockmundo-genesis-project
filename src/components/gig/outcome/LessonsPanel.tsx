@@ -14,9 +14,9 @@ export function buildLessons(experience: GigExperienceDTO) {
   const fill = capacity > 0 ? attendance / capacity : 0;
   const best = bestSong(experience.songs);
   const weak = weakestSong(experience.songs);
-  const equipment = experience.analysis.equipmentQuality == null ? null : metricValue(experience.analysis.equipmentQuality, 0);
-  const showCrew = experience.analysis.crewSkill == null ? null : metricValue(experience.analysis.crewSkill, 0);
-  const chemistry = experience.analysis.bandChemistry == null ? null : metricValue(experience.analysis.bandChemistry, 0);
+  const equipment = experience.analysis.equipmentQuality?.status !== "available" ? null : metricValue(experience.analysis.equipmentQuality, 0);
+  const showCrew = experience.analysis.crewSkill?.status !== "available" ? null : metricValue(experience.analysis.crewSkill, 0);
+  const chemistry = experience.analysis.bandChemistry?.status !== "available" ? null : metricValue(experience.analysis.bandChemistry, 0);
 
   if (best && songScore(best) >= 18) worked.push(`${best.title} connected strongly with the crowd.`);
   if (fill >= 0.75) worked.push("Venue demand was healthy for this room size.");
