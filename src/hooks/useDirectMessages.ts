@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { sendDirectMessage as sendDirectMessageService } from "@/features/direct-messages/services/directMessages";
@@ -25,6 +25,7 @@ export function buildChannelId(a: string, b: string) {
 
 export function useDirectMessages(myProfileId?: string | null, otherProfileId?: string | null) {
   const queryClient = useQueryClient();
+  const retryIdentity = useRef<{ key: string; id: string } | null>(null);
   const groupConversationId = otherProfileId?.startsWith("group-")
     ? otherProfileId.slice("group-".length)
     : null;
@@ -122,7 +123,9 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
     mutationFn: async (body: string) => {
       if (!myProfileId) throw new Error("Missing active character");
       if (conversationId) {
-        await sendConversationMessage(conversationId, body, crypto.randomUUID());
+        const identity = `${conversationId}:${body}`;
+        if (retryIdentity.current?.key !== identity) retryIdentity.current = { key: identity, id: crypto.randomUUID() };
+        await sendConversationMessage(conversationId, body, retryIdentity.current.id);
       } else if (directOtherProfileId) {
         await sendDirectMessageService(directOtherProfileId, body);
       } else {
@@ -130,6 +133,7 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
       }
     },
     onSuccess: () => {
+      retryIdentity.current = null;
       queryClient.invalidateQueries({ queryKey: ["direct-messages", conversationId ?? channelId] });
       queryClient.invalidateQueries({ queryKey: ["mobile-conversations", myProfileId] });
     },
