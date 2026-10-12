@@ -42,7 +42,8 @@ export const LastNightGigs = () => {
         .eq("status", "completed")
         .gte("completed_at", yesterdayStart)
         .lte("completed_at", yesterdayEnd)
-        .order("completed_at", { ascending: false });
+        .order("completed_at", { ascending: false })
+        .limit(50);
 
       if (error) throw error;
       return (data || []) as GigWithDetails[];

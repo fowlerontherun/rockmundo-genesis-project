@@ -117,13 +117,14 @@ export const isCapabilityObject = (value: unknown): value is FestivalCompanyCapa
 
 export const getFestivalCompanyCapabilities = async (): Promise<FestivalCompanyCapabilities> => {
   const { data, error } = await (supabase as any).rpc("festival_company_capabilities");
-  if (error || !isCapabilityObject(data)) return disabledFestivalCompanyCapabilities;
+  if (error) throw error;
+  if (!isCapabilityObject(data)) throw new Error("Malformed festival company capabilities");
   return { ...data, companyLimit: Number(data.companyLimit) };
 };
 
 export const getFestivalCompanyFoundingEligibility = async (): Promise<FestivalCompanyFoundingEligibility> => {
   const { data, error } = await (supabase as any).rpc("get_festival_company_founding_eligibility");
-  if (error) return disabledFestivalCompanyEligibility;
+  if (error) throw error;
   return parseFestivalCompanyEligibility(data);
 };
 
@@ -157,8 +158,8 @@ export const isOwnedFestivalCompanySummary = (value: unknown): value is OwnedFes
 
 export const getOwnedFestivalCompanies = async (): Promise<OwnedFestivalCompanySummary[]> => {
   const { data, error } = await (supabase as any).rpc("get_owned_festival_companies");
-  if (error || !Array.isArray(data)) return [];
-  if (!data.every(isOwnedFestivalCompanySummary)) return [];
+  if (error) throw error;
+  if (!Array.isArray(data) || !data.every(isOwnedFestivalCompanySummary)) throw new Error("Invalid owned festival companies response.");
   return data.map((company) => ({
     ...company,
     setupCompleted: Boolean(company.setupCompleted),

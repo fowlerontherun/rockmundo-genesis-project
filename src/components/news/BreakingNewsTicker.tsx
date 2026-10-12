@@ -10,7 +10,7 @@ export function BreakingNewsTicker() {
     queryFn: async () => {
       const items: string[] = [];
 
-      const [{ data: bands }, { data: releases }, { data: contracts }] =
+      const [{ data: bands, error: bandsError }, { data: releases, error: releasesError }, { data: contracts, error: contractsError }] =
         await Promise.all([
           supabase
             .from("bands")
@@ -33,6 +33,7 @@ export function BreakingNewsTicker() {
             .limit(5),
         ]);
 
+      if (bandsError || releasesError || contractsError) throw bandsError || releasesError || contractsError;
       bands?.forEach((b: any) =>
         items.push(`🎸 New band formed: ${b.name} (${b.genre})`),
       );

@@ -68,6 +68,8 @@ export const useSaveFestivalTicketPlan = () => {
       void Promise.all(
         [
           ["festival-company-setup"],
+          ["public-festival"],
+          ["festival-ticket-products"],
           ["owned-festival-companies"],
           [
             "festival-site-plan",

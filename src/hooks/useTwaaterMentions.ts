@@ -20,7 +20,7 @@ export const useTwaaterMentions = (accountId?: string) => {
         `)
         .eq("mentioned_account_id", accountId)
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(500);
 
       if (error) throw error;
 

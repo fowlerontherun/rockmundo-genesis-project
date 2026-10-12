@@ -46,7 +46,7 @@ export const CraftingProgress = ({ sessions, onCollect, isCollecting }: Crafting
               const endMs = new Date(session.completes_at).getTime();
               const totalMs = endMs - startMs;
               const elapsedMs = now - startMs;
-              const progress = Math.min(100, (elapsedMs / totalMs) * 100);
+              const progress = Number.isFinite(totalMs) && totalMs > 0 && Number.isFinite(elapsedMs) ? Math.max(0, Math.min(100, (elapsedMs / totalMs) * 100)) : 0;
               const isReady = now >= endMs;
               const remainingMs = Math.max(0, endMs - now);
               const remainingMin = Math.ceil(remainingMs / 60000);

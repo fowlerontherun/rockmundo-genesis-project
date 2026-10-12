@@ -181,7 +181,9 @@ const TourManager = () => {
     queryKey: ["my-tours", currentBandId],
     queryFn: async () => {
       if (!currentBandId) return [];
-      const { data, error } = await supabase
+      const tours: Tour[] = [];
+      for (let offset = 0; offset < 100_000; offset += 500) {
+        const { data, error } = await supabase
         .from("tours")
         .select(
           `
@@ -190,10 +192,14 @@ const TourManager = () => {
  `,
         )
         .eq("band_id", currentBandId)
-        .order("start_date", { ascending: false });
+        .order("start_date", { ascending: false })
+        .range(offset,offset+499);
+        if (error) throw error;
+        tours.push(...((data ?? []) as Tour[]));
+        if ((data?.length ?? 0) < 500) return tours;
+      }
+      throw new Error("Tour history exceeds pagination safety limit");
 
-      if (error) throw error;
-      return data as Tour[];
     },
     enabled: !!currentBandId,
   });

@@ -150,6 +150,8 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
 
   useEffect(() => { setBody(""); setLinkedType(null); setLinkedId(null); setLinkedTitle(null); setMediaUrl(""); setMediaType(null); setQuotedTwaat(null); setPollDraft(null); setFailedPollPost(null); setScheduledFor(""); setVisibility("public"); }, [accountId]);
 
+  useEffect(() => { setBody(""); setPollDraft(null); setMediaUrl(""); setLinkedId(null); setLinkedType(null); setQuotedTwaat(null); setVisibility("public"); }, [accountId]);
+
   const resetComposer = () => {
     setBody("");
     setShareCooldownKey(null);

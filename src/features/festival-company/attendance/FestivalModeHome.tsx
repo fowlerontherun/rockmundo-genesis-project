@@ -16,10 +16,11 @@ const formatFestivalTime = (value: string, timezone: string) =>
   });
 
 export const FestivalModeHome = ({ attendance }: { attendance: FestivalPlayerAttendance }) => {
-  const { data: plan, isLoading: planLoading } = useMyFestivalDayPlan(attendance.id);
+  const { data: plan, isLoading: planLoading, isError: planError, refetch: retryPlan } = useMyFestivalDayPlan(attendance.id);
 
   return (
     <div className="space-y-4">
+      {planError && <div role="alert" className="p-3 border border-destructive/50">Your day plan could not be loaded. <button className="underline" onClick={() => void retryPlan()}>Retry</button></div>}
       <section className="rounded-2xl bg-gradient-to-br from-violet-950 to-fuchsia-900 p-5 text-white md:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>

@@ -73,7 +73,7 @@ export const SalvagePanel = ({ equipment, materialsCatalog, onSalvage, isSalvagi
       {salvageable.map((item: any) => {
         const rarity = item.equipment?.rarity ?? "common";
         const condition = item.condition ?? 100;
-        const equipped = Boolean(item.is_equipped);
+        const equipped = Boolean(item.is_equipped || item.equipped);
         const yields = computeSalvageYields(item, materialsCatalog);
         return (
           <Card key={item.id} className="border-border/50">

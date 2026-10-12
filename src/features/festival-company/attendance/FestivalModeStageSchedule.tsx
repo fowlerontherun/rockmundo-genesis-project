@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +32,7 @@ export const FestivalModeStageSchedule = ({ attendance }: { attendance: Festival
   const addPerformance = useAddFestivalStagePerformanceToDayPlan(attendance.id);
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedScheduleItemId, setSelectedScheduleItemId] = useState<string | null>(null);
+  const retryKeys = useRef(new Map<string, string>());
 
   useEffect(() => {
     if (!schedule.data) return;
@@ -207,10 +208,12 @@ export const FestivalModeStageSchedule = ({ attendance }: { attendance: Festival
                     type="button"
                     className="w-full"
                     disabled={!preview.data.feasible || addPerformance.isPending}
-                    onClick={() => addPerformance.mutate({
-                      scheduleItemId: preview.data.scheduleItemId,
-                      idempotencyKey: crypto.randomUUID(),
-                    })}
+                    onClick={() => {
+                      const itemId = preview.data.scheduleItemId;
+                      let key = retryKeys.current.get(itemId);
+                      if (!key) { key = crypto.randomUUID(); retryKeys.current.set(itemId,key); }
+                      addPerformance.mutate({ scheduleItemId: itemId, idempotencyKey: key }, { onSuccess: () => retryKeys.current.delete(itemId) });
+                    }}
                   >
                     {addPerformance.isPending ? "Adding…" : "Add performance to My Day"}
                   </Button>

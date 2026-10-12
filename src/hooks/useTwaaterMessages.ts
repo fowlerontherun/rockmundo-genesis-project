@@ -20,7 +20,9 @@ export const useTwaaterMessages = (accountId?: string, loadConversations = true)
     queryFn: async () => {
       if (!accountId) return [];
 
-      const { data, error } = await supabase
+      const rows: any[] = [];
+      for (let offset = 0; offset < 100_000; offset += 500) {
+        const { data, error } = await supabase
         .from("twaater_conversations")
         .select(`
           *,
@@ -28,10 +30,14 @@ export const useTwaaterMessages = (accountId?: string, loadConversations = true)
           participant_2:twaater_accounts!participant_2_id(id, handle, display_name, verified)
         `)
         .or(`participant_1_id.eq.${accountId},participant_2_id.eq.${accountId}`)
-        .order("last_message_at", { ascending: false });
+        .order("last_message_at", { ascending: false })
+        .range(offset,offset+499);
 
-      if (error) throw error;
-      return data;
+        if (error) throw error;
+        rows.push(...(data ?? []));
+        if ((data?.length ?? 0) < 500) return rows;
+      }
+      throw new Error("Conversation history exceeds pagination safety limit");
     },
     enabled: loadConversations && !!accountId,
   });

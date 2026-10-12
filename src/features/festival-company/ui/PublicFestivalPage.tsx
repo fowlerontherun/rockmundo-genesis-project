@@ -117,7 +117,8 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   useEffect(() => { setQuantities({}); setActivePurchaseProductId(null); buy.reset(); }, [festivalCompanyIdentifier, publicSlug, f?.id]);
 
   if (isLoading) return <main className="p-8" role="status">Loading Festival…</main>;
-  if (isError || !f) return <main className="p-8" role="alert">Festival not found.</main>;
+  if (isError) return <main className="p-8" role="alert">Festival details could not be loaded. Please retry.</main>;
+  if (!f) return <main className="p-8" role="alert">Festival not found.</main>;
 
   const eventPhase = getFestivalPublicEventPhase(f.startsAt, f.endsAt);
   const eventPhaseLabel = eventPhase === "upcoming"
@@ -135,7 +136,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   const myFestivalTickets = ticketWallet.filter((ticket) => ticket.festivalSlug === f.slug);
   const myWristband = festivalMemorabilia.find((item) => item.festivalLaunchId === f.id && item.attendanceId === myAttendance?.id);
   const hasAdmissionTicket = myFestivalTickets.some(
-    (ticket) => ticket.productClass === "admission" && !["cancelled", "refunded", "transferred"].includes(ticket.status),
+    (ticket) => ticket.productClass === "admission" && !["cancelled", "refunded", "transferred", "used"].includes(ticket.status),
   );
 
   // The simplified timetable contains automatically generated provisional slots.
@@ -552,7 +553,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
               <section className="rounded-xl border bg-card p-5" aria-labelledby="visitor-ticket-help">
                 <h3 id="visitor-ticket-help" className="text-lg font-bold">Tickets & entry</h3>
                 <p className="mt-1 text-sm text-muted-foreground">Review the published ticket types and their individual access dates before purchasing.</p>
-                {f.ticketProducts.length > 0 ? (
+                {f.ticketProducts.some((product) => product.productClass === "admission") ? (
                   <ul className="mt-3 space-y-2 text-sm">
                     {f.ticketProducts.filter((product) => product.productClass === "admission").map((product) => (
                       <li key={product.id} className="rounded-md border p-2">

@@ -4,10 +4,10 @@ import type { FestivalPlayerAttendance } from "./festivalAttendance";
 import { useMyFestivalRewardSummary } from "./useFestivalRewards";
 
 export const FestivalModeRewards = ({ attendance }: { attendance: FestivalPlayerAttendance }) => {
-  const { data, isLoading, isError, error } = useMyFestivalRewardSummary(attendance.id);
+  const { data, isLoading, isError, error, refetch } = useMyFestivalRewardSummary(attendance.id);
 
   if (isLoading) return <div className="rounded-xl border bg-card p-6" role="status">Loading Festival progress…</div>;
-  if (isError || !data) return <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-6" role="alert">Festival progress could not be loaded. {error instanceof Error ? error.message.replaceAll("_", " ") : ""}</div>;
+  if (isError || !data) return <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-6" role="alert">Festival progress could not be loaded. {error instanceof Error ? error.message.replaceAll("_", " ") : ""} <button type="button" className="underline" onClick={() => void refetch()}>Retry</button></div>;
 
   return (
     <div className="space-y-4">

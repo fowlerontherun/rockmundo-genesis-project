@@ -385,7 +385,7 @@ export function FestivalTicketPlanner({
             Save choices
           </Button>
           <Button
-            disabled={issues.length > 0 || save.isPending || !data.canWrite}
+            disabled={dirty || issues.length > 0 || save.isPending || !data.canWrite}
             onClick={() => persist(true)}
           >
             <CheckCircle2 className="mr-2 h-4 w-4" /> Confirm tickets & budget
