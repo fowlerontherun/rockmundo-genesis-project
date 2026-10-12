@@ -411,7 +411,7 @@ const TourManager = () => {
               .in("gig_id", gigIds)
           : Promise.resolve({ data: [], error: null }),
         setlistIds.length > 0
-          ? supabase.from("setlists").select("id, name").in("id", setlistIds)
+          ? supabase.from("setlists").select("id, name, setlist_songs(count)").in("id", setlistIds)
           : Promise.resolve({ data: [], error: null }),
       ]);
 
@@ -431,7 +431,7 @@ const TourManager = () => {
           longitude: number | null;
         }
       > = {};
-      const setlistsMap: Record<string, { id: string; name: string }> = {};
+      const setlistsMap: Record<string, { id: string; name: string; setlist_songs?: Array<{ count: number }> }> = {};
       // Key gigs by venue+day so repeated venues and time-of-day differences don't break matching.
       const gigsMap: Record<
         string,
@@ -480,7 +480,7 @@ const TourManager = () => {
             setlist_name: g.setlist_id
               ? (setlistsMap[g.setlist_id]?.name ?? null)
               : null,
-            setlist_song_count: null,
+            setlist_song_count: g.setlist_id ? (setlistsMap[g.setlist_id]?.setlist_songs?.[0]?.count ?? null) : null,
             tickets_sold: g.tickets_sold ?? null,
             payment: g.payment ?? null,
             status: g.status ?? null,
