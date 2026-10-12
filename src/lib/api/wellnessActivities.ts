@@ -74,26 +74,28 @@ export async function listWellnessCatalog(): Promise<WellnessCatalogEntry[]> {
     .order("sort_order");
   if (error) throw error;
   const rows = (data ?? []) as unknown as WellnessCatalogEntry[];
-  return rows.map((row) => {
-    const balance = WELLNESS_ACTIVITIES.find((activity) => activity.slug === row.slug);
-    return balance ? { ...row, ...balance, unlock_min_fame: row.unlock_min_fame } : row;
-  }) as any;
+  // Server-managed catalogue settings are authoritative. Static presets must not
+  // overwrite admin balance updates or disagree with the execution RPC.
+  return rows;
 }
 
 export async function listCooldowns(profileId: string): Promise<WellnessCooldown[]> {
   // wellness_cooldowns_view was referenced by older clients but is not created
   // by the repository migrations. The activity log is the authoritative source
   // written by perform_wellness_activity, so derive current cooldowns from it.
-  const { data, error } = await supabase
-    .from("wellness_activity_log" as any)
-    .select("catalog_slug, cooldown_until, performed_at")
-    .eq("profile_id", profileId)
-    .gt("cooldown_until", new Date().toISOString())
-    .order("performed_at", { ascending: false });
-  if (error) throw error;
-
   const latestBySlug = new Map<string, WellnessCooldown>();
-  for (const row of (data ?? []) as any[]) {
+  const now = new Date().toISOString();
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await supabase
+      .from("wellness_activity_log" as any)
+      .select("catalog_slug, cooldown_until, performed_at")
+      .eq("profile_id", profileId)
+      .gt("cooldown_until", now)
+      .order("performed_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(offset, offset + 499);
+    if (error) throw error;
+    for (const row of (data ?? []) as any[]) {
     if (!row?.catalog_slug || !row?.cooldown_until) continue;
     const current = latestBySlug.get(row.catalog_slug);
     if (current && Date.parse(current.cooldown_until) >= Date.parse(row.cooldown_until)) continue;
@@ -101,6 +103,8 @@ export async function listCooldowns(profileId: string): Promise<WellnessCooldown
       catalog_slug: String(row.catalog_slug),
       cooldown_until: String(row.cooldown_until),
     });
+    }
+    if (!data || data.length < 500) break;
   }
   return Array.from(latestBySlug.values());
 }
@@ -148,9 +152,10 @@ export async function evaluateGate(profileId: string, activityType: string) {
   });
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : data;
-  return (row ?? { allowed: true, reason: null, suggestion_slug: null }) as {
-    allowed: boolean; reason: string | null; suggestion_slug: string | null;
-  };
+  if (!row || typeof row !== "object" || typeof (row as any).allowed !== "boolean") {
+    throw new Error("Wellness availability could not be verified. Please retry.");
+  }
+  return row as { allowed: boolean; reason: string | null; suggestion_slug: string | null; };
 }
 
 const safeWellnessValue = (value: number | null | undefined, fallback: number) =>
