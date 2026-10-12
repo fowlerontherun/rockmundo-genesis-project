@@ -20,8 +20,8 @@ export const useTwaaterReport = () => {
       const categoryMap = {
         spam: "spam",
         harassment: "harassment",
-        inappropriate: "other",
-        misinformation: "other",
+        inappropriate: "inappropriate",
+        misinformation: "misinformation",
         other: "other",
       } as const;
       const description = details?.trim() || `Reported Twaater post for ${reason.replace(/_/g, " ")}.`;

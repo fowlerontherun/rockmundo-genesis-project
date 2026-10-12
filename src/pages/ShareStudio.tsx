@@ -39,6 +39,7 @@ export default function ShareStudio() {
   const { data: primaryBand } = usePrimaryBand();
   const [gallery, setGallery] = useState<ShareMomentSnapshot[]>([]);
   const [galleryError, setGalleryError] = useState<string | null>(null);
+  const [identityPromoError, setIdentityPromoError] = useState<string | null>(null);
   const [galleryLoading, setGalleryLoading] = useState(true);
   const [selected, setSelected] = useState<ShareMoment | null>(null);
   const [characterPromo, setCharacterPromo] = useState<CharacterProfileShareMoment | null>(null);
@@ -91,9 +92,15 @@ export default function ShareStudio() {
           <CardDescription>Start with what you want to promote. RockMundo will pull the real game data into the poster editor for you.</CardDescription>
         </CardHeader>
         <CardContent>
+          {identityPromoError && <p role="alert" className="mb-3 text-sm text-destructive">{identityPromoError}</p>}
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {creators.map(({ title, description, action, path, icon: Icon, badge }) => (
-              <button key={title} type="button" onClick={() => { if (!createIdentityPromo(title)) navigate(path); }} className="group rounded-xl border bg-card p-4 text-left transition hover:border-primary/50 hover:bg-primary/[0.03]">
+              <button key={title} type="button" onClick={() => {
+              setIdentityPromoError(null);
+              if (title === "Character Promo" || title === "Band Promo") {
+                if (!createIdentityPromo(title)) setIdentityPromoError(title === "Band Promo" ? "Select or join a band before creating its poster." : "Character information is not yet available. Retry after it loads.");
+              } else navigate(path);
+            }} className="group rounded-xl border bg-card p-4 text-left transition hover:border-primary/50 hover:bg-primary/[0.03]">
                 <div className="mb-3 flex items-center justify-between gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10"><Icon className="h-5 w-5 text-primary" /></span><Badge variant="outline">{badge}</Badge></div>
                 <h3 className="font-semibold">{title}</h3>
                 <p className="mt-1 min-h-10 text-sm text-muted-foreground">{description}</p>

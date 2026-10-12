@@ -70,10 +70,11 @@ Deno.serve(async (req) => {
         created_at,
         release_date,
         release_id,
-        songs!inner(band_id, quality_score)
+        songs!inner(band_id, quality_score, status)
       `)
       .eq('is_active', true)
       .eq('release_type', 'streaming')
+      .eq('songs.status', 'recorded')
       .lte('release_date', new Date().toISOString());
 
     if (streamingError) {
@@ -176,6 +177,7 @@ Deno.serve(async (req) => {
     let releaseMarketingPowerMap = new Map<string, number>();
     let releasePrReachMap = new Map<string, { power: number; updatedAt: string | null }>();
     let releaseMarketingStrategyMap = new Map<string, { focus: string; regions: string[]; saturation: number }>();
+    const strategyPriorityBySong = new Map<string, { power: number; releaseId: string }>();
     if (songIds.length > 0) {
       const eligibleReleaseIds = new Set((streamingReleases || []).map(r => r.release_id).filter(Boolean));
       const { data: releaseSongData } = await supabase
@@ -204,11 +206,21 @@ Deno.serve(async (req) => {
                 effective(existingPr.power, existingPr.updatedAt)) {
               releasePrReachMap.set(rs.song_id, { power: candidatePr, updatedAt: rel.pr_reach_updated_at || null });
             }
-            releaseMarketingStrategyMap.set(rs.song_id, {
-              focus: String(rel.label_marketing_focus || "balanced"),
-              regions: Array.isArray(rel.label_marketing_regions) ? rel.label_marketing_regions : ["global"],
-              saturation: Number(rel.label_marketing_saturation || 0),
-            });
+            // Keep a deterministic strategy from the strongest funded canonical edition.
+            const strategyPriority = Number(rel.label_marketing_power || 0);
+            const previousStrategy = strategyPriorityBySong.get(rs.song_id);
+            if (!previousStrategy || strategyPriority > previousStrategy.power ||
+                (strategyPriority === previousStrategy.power && String(rs.release_id) < previousStrategy.releaseId)) {
+              strategyPriorityBySong.set(rs.song_id, { power: strategyPriority, releaseId: String(rs.release_id) });
+              const rawFocus = String(rel.label_marketing_focus || "balanced").trim().toLowerCase();
+              const normalizedFocus = rawFocus === "streaming" ? "playlist" :
+                (["balanced", "radio", "playlist", "social", "retail"].includes(rawFocus) ? rawFocus : "balanced");
+              releaseMarketingStrategyMap.set(rs.song_id, {
+                focus: normalizedFocus,
+                regions: Array.isArray(rel.label_marketing_regions) ? rel.label_marketing_regions : ["global"],
+                saturation: Number(rel.label_marketing_saturation || 0),
+              });
+            }
           }
         }
       }
@@ -573,6 +585,15 @@ Deno.serve(async (req) => {
     
     console.log(`Updated ${streamUpdates} streaming releases and generated ${salesUpdates} sales (${errorCount} errors)`);
 
+    if (isEffectivelyFailed) {
+      await failJobRun({ jobName: 'update-daily-streams', runId,
+        supabaseClient: supabase, durationMs: Date.now() - startedAt,
+        error: new Error(`Streaming worker failed more than half of its operations (${errorCount} failures)`),
+        resultSummary: { streamUpdates, salesUpdates, errorCount, errorSamples, labelsCredited } });
+      return new Response(JSON.stringify({ success: false, streamUpdates, salesUpdates,
+        errors: errorCount, errorSamples, labelsCredited }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
     await completeJobRun({
       jobName: 'update-daily-streams',
       runId,
