@@ -44,7 +44,9 @@ serve(async (req) => {
     });
 
     // Get released videos
-    const { data: releasedVideos, error: fetchError } = await supabaseClient
+    const releasedVideos: any[] = [];
+    for (let offset = 0; ; offset += 500) {
+    const { data: page, error: fetchError } = await supabaseClient
       .from("music_videos")
       .select(`
         id,
@@ -57,9 +59,14 @@ serve(async (req) => {
         hype_score,
         songs(id, title, quality_score, hype, band_id, user_id)
       `)
-      .eq("status", "released");
+      .eq("status", "released")
+      .order("id", { ascending: true })
+      .range(offset, offset + 499);
 
     if (fetchError) throw fetchError;
+    releasedVideos.push(...(page ?? []));
+    if (!page || page.length < 500) break;
+    }
 
     console.log(`Processing ${releasedVideos?.length || 0} released videos`);
 
