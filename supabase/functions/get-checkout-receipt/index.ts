@@ -48,7 +48,7 @@ serve(async (req) => {
       });
 
       const sessionEmail = session.customer_details?.email ?? session.customer_email ?? null;
-      if (sessionEmail && sessionEmail.toLowerCase() !== user.email.toLowerCase()) {
+      if (session.metadata?.user_id !== user.id || (sessionEmail && sessionEmail.toLowerCase() !== user.email.toLowerCase())) {
         throw new Error("This receipt does not belong to the signed-in account");
       }
 
@@ -109,15 +109,15 @@ serve(async (req) => {
 
     // Current subscription state, independent of the session
     let currentSubscription: Record<string, unknown> | null = null;
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
-    if (customers.data.length > 0) {
+    const customers = await stripe.customers.list({ email: user.email, limit: 100 });
+    for (const customer of customers.data) {
       const subs = await stripe.subscriptions.list({
-        customer: customers.data[0].id,
+        customer: customer.id,
         status: "all",
-        limit: 5,
+        limit: 100,
       });
-      const active = subs.data.find((s) => s.status === "active" || s.status === "trialing") ?? subs.data[0];
-      if (active) {
+      const active = subs.data.find((s) => s.metadata?.user_id === user.id && (s.status === "active" || s.status === "trialing"));
+      if (active && !currentSubscription) {
         const item = active.items.data[0];
         currentSubscription = {
           id: active.id,
