@@ -29,10 +29,11 @@ export function usePartyDonations(partyId: string | undefined, limit = 20) {
       const donorIds = Array.from(new Set(rows.map((r) => r.donor_profile_id)));
       if (donorIds.length === 0) return rows.map((r) => ({ ...r, donor: null }));
 
-      const { data: profiles } = await supabase
+      const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("id, display_name, username, avatar_url")
         .in("id", donorIds);
+      if (profilesError) throw profilesError;
       const map = new Map((profiles ?? []).map((p: any) => [p.id, p]));
       return rows.map((r) => ({ ...r, donor: map.get(r.donor_profile_id) ?? null }));
     },
