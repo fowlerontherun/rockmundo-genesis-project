@@ -216,8 +216,8 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
     filterColumn: 'band_id',
     filterValue: open ? bandId : null,
     onChange: () => {
-      void Promise.all([loadRecruitmentOptions(currentUserId), loadReferredRecruits()]).catch(() => {
-        // An explicit close/reopen retains the normal load-and-retry feedback.
+      void Promise.all([loadRecruitmentOptions(currentUserId), loadReferredRecruits()]).catch((error) => {
+        toast({ title: 'Invitation refresh failed', description: error instanceof Error ? error.message : 'Please reopen this dialog to retry.', variant: 'destructive' });
       });
     },
   });
