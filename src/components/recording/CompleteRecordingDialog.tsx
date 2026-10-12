@@ -85,8 +85,8 @@ export const CompleteRecordingDialog = ({
           description: data.details
         });
       } else if (data?.success) {
-        toast.success("AI audio generated!", {
-          description: data.message || "Your song now has playable audio.",
+        toast.success("AI audio generation started", {
+          description: "Audio is processing. Playable audio will appear once generation finishes.",
           icon: <Music className="h-4 w-4" />
         });
         queryClient.invalidateQueries({ queryKey: ["songs"] });
@@ -113,7 +113,17 @@ export const CompleteRecordingDialog = ({
 
       if (sessionError) throw sessionError;
 
-      // Update session
+      // Do not confirm session completion if its song status cannot be updated.
+      // The full outcome, awards and credits still need an authoritative finalizer.
+      if (session?.song_id) {
+        const { error: songUpdateError } = await supabase
+          .from('songs')
+          .update({ status: 'recorded' })
+          .eq('id', session.song_id);
+        if (songUpdateError) throw songUpdateError;
+        setCurrentSongId(session.song_id);
+      }
+
       const { error: updateError } = await supabase
         .from("recording_sessions")
         .update({
@@ -121,22 +131,10 @@ export const CompleteRecordingDialog = ({
           completed_at: new Date().toISOString(),
         })
         .eq("id", sessionId);
-
       if (updateError) throw updateError;
 
-      // Update song status to recorded
-      if (session?.song_id) {
-        setCurrentSongId(session.song_id);
-        
-        await supabase
-          .from('songs')
-          .update({ status: 'recorded' })
-          .eq('id', session.song_id);
-
-        // Trigger AI audio generation for VIP users if within limits
-        if (canGenerateAudio) {
-          generateAudio(session.song_id);
-        }
+      if (session?.song_id && canGenerateAudio) {
+        void generateAudio(session.song_id);
       }
 
       toast.success("Recording completed!", {
