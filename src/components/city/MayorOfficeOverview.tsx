@@ -54,8 +54,8 @@ const OVERVIEW_RATINGS: CityDevelopmentRatingKey[] = [
 ];
 
 export function MayorOfficeOverview({ city, mayor, politics }: Props) {
-  const { data: treasury } = useCityTreasury(city.id);
-  const { data: projects } = useCityProjects(city.id);
+  const { data: treasury, isError: treasuryError, isPending: treasuryPending, refetch: retryTreasury } = useCityTreasury(city.id);
+  const { data: projects, isError: projectsError, isPending: projectsPending, refetch: retryProjects } = useCityProjects(city.id);
   const { data: election } = useCityElection(city.id);
   const { data: development, isError: developmentError, refetch: retryDevelopment } = useCityDevelopment(city.id);
 
@@ -84,14 +84,14 @@ export function MayorOfficeOverview({ city, mayor, politics }: Props) {
         <KpiCard
           icon={CircleDollarSign}
           label="Available Treasury"
-          value={money(available)}
-          detail={`${money(committed)} committed`}
+          value={treasuryError || treasuryPending ? "—" : money(available)}
+          detail={treasuryError ? "Treasury unavailable" : treasuryPending ? "Loading treasury…" : `${money(committed)} committed`}
         />
         <KpiCard
           icon={Hammer}
           label="Active Projects"
-          value={String(activeProjects.length)}
-          detail={`${projects?.filter((project) => project.status === "completed").length ?? 0} completed`}
+          value={projectsError || projectsPending ? "—" : String(activeProjects.length)}
+          detail={projectsError ? "Projects unavailable" : projectsPending ? "Loading projects…" : `${projects?.filter((project) => project.status === "completed").length ?? 0} completed`}
         />
         <KpiCard
           icon={CalendarDays}
@@ -101,6 +101,7 @@ export function MayorOfficeOverview({ city, mayor, politics }: Props) {
         />
       </div>
 
+      {(treasuryError || projectsError) && <div role="alert" className="text-sm text-destructive">Mayor financial or project data could not be loaded. <Button size="sm" variant="outline" onClick={() => { if (treasuryError) void retryTreasury(); if (projectsError) void retryProjects(); }}>Retry</Button></div>}
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
         <div className="space-y-5">
           <Card>
