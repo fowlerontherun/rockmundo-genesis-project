@@ -37,7 +37,7 @@ export async function listShareMomentSnapshots(): Promise<ShareMomentSnapshot[]>
   const profile = await getActiveProfile(user.id);
   if (!profile) return [];
   const client: any = supabase;
-  const { data, error } = await client.from("share_moment_snapshots").select("id,moment_type,source_id,headline,snapshot,created_at,last_shared_at").eq("user_id", user.id).eq("profile_id", profile.id).order("last_shared_at", { ascending: false }).limit(60);
+  const { data, error } = await client.from("share_moment_snapshots").select("id,moment_type,source_id,headline,snapshot,created_at,last_shared_at").eq("user_id", user.id).eq("profile_id", profile.id).order("last_shared_at", { ascending: false }).limit(1000);
   if (error) throw error;
   return (data || []) as unknown as ShareMomentSnapshot[];
 }
