@@ -45,15 +45,15 @@ const InventoryManager = () => {
 
   // Personal instruments / gear (e.g. from blind boxes)
   const { data: personalGear = [], isLoading: gearLoading, isError: gearError, refetch: retryGear } = useQuery({
-    queryKey: ["inventory-personal-gear", userId],
-    enabled: !!userId,
+    queryKey: ["inventory-personal-gear", profileId],
+    enabled: !!profileId,
     queryFn: async () => {
       const allGear: any[] = [];
       for (let offset = 0; ; offset += 500) {
       const { data, error } = await (supabase as any)
         .from("player_personal_gear")
         .select("id, gear_name, gear_type, quality_rating, condition_rating, purchase_cost, stat_boosts, notes, created_at")
-        .eq("user_id", userId!)
+        .eq("profile_id", profileId!)
         .order("created_at", { ascending: false })
         .order("id", { ascending: false })
         .range(offset, offset + 499);
@@ -67,7 +67,7 @@ const InventoryManager = () => {
 
   const sellGear = useMutation({
     mutationFn: async (gearId: string) => {
-      const { data, error } = await supabase.rpc("sell_personal_gear" as any, { p_gear_id: gearId });
+      const { data, error } = await supabase.rpc("sell_personal_gear_for_profile" as any, { p_gear_id: gearId, p_profile_id: profileId });
       if (error) throw error;
       const result = data as any;
       if (!result?.success) throw new Error(result?.error ?? "Sale failed");
@@ -232,7 +232,7 @@ const InventoryManager = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {!userId ? (
+              {!profileId ? (
                 <p className="text-sm text-muted-foreground">Sign in to view your instruments.</p>
               ) : gearLoading ? (
                 <p className="text-sm text-muted-foreground">Loading instruments...</p>
