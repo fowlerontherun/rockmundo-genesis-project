@@ -52,7 +52,7 @@ export const CollaboratorInviteDialog = ({
       fetchPotentialCollaborators();
       fetchUserCash();
     }
-  }, [open, userBandId]);
+  }, [open, userBandId, projectId, collaborators]);
 
   const fetchUserCash = async () => {
     const { data: { user } } = await supabase.auth.getUser();
