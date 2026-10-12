@@ -43,18 +43,20 @@ export function useCityLawHistory(cityId: string | undefined, limit = 20) {
       const historyWithMayors = await Promise.all(
         (data || []).map(async (item) => {
           if (item.mayor_id) {
-            const { data: mayor } = await supabase
+            const { data: mayor, error: mayorLookupError } = await supabase
               .from("city_mayors")
               .select("profile_id")
               .eq("id", item.mayor_id)
               .single();
             
+            if (mayorLookupError) throw mayorLookupError;
             if (mayor?.profile_id) {
-              const { data: profile } = await supabase
+              const { data: profile, error: mayorProfileError } = await supabase
                 .from("profiles")
                 .select("stage_name")
                 .eq("id", mayor.profile_id)
                 .single();
+              if (mayorProfileError) throw mayorProfileError;
               
               return {
                 ...item,
