@@ -187,7 +187,8 @@ export function ContractOfferCard({ offer, entityName }: ContractOfferCardProps)
       const { error } = await supabase
         .from("artist_label_contracts")
         .update({ status: "rejected" })
-        .eq("id", offer.id);
+        .eq("id", offer.id)
+        .in("status", ["offered", "negotiating"]);
       if (error) throw error;
     },
     onSuccess: () => {
