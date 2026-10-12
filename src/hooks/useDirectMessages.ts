@@ -175,10 +175,14 @@ export function useUnreadDirectMessageCount(myProfileId?: string | null) {
     queryFn: async () => {
       if (!myProfileId) return 0;
       let total = 0;
-      for (let offset = 0; offset < 10_000; offset += 100) {
-        const conversations = await listConversations({ limit: 100, offset });
+      let cursor: string | null = null;
+      for (let page = 0; page < 100; page++) {
+        const conversations = await listConversations({ limit: 100, cursor });
         total += conversations.reduce((sum, conversation) => sum + conversation.unread_count, 0);
         if (conversations.length < 100) return total;
+        const nextCursor: string | null = conversations[conversations.length - 1]?.last_message_at ?? null;
+        if (!nextCursor || nextCursor === cursor) throw new Error("Cannot paginate unread conversations safely");
+        cursor = nextCursor;
       }
       throw new Error("Unread conversations exceed the supported scan limit");
     },
