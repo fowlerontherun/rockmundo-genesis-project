@@ -95,11 +95,13 @@ export async function ensureContextConversation(contextType: ConversationContext
   return data as { conversationId: string; type: "group"; title: string; contextType: string; contextId: string; memberCount: number };
 }
 
-export async function listConversations(options: { archived?: boolean; search?: string; limit?: number; cursor?: string | null } = {}) {
+export async function listConversations(options: { archived?: boolean; search?: string; limit?: number; cursor?: string | null; skipContextSync?: boolean } = {}) {
   // This is idempotent and only materialises/synchronises groups backed by the
   // active character's authoritative band/company/tour/festival relationships.
-  const ensured = await (supabase as any).rpc("ensure_my_context_conversations");
-  if (ensured.error) throw new Error(ensured.error.message || "Unable to synchronise group conversations.");
+  if (!options.skipContextSync) {
+    const ensured = await (supabase as any).rpc("ensure_my_context_conversations");
+    if (ensured.error) throw new Error(ensured.error.message || "Unable to synchronise group conversations.");
+  }
 
   const { data, error } = await (supabase as any).rpc("list_social_conversations_v2", {
     p_include_archived: Boolean(options.archived),
