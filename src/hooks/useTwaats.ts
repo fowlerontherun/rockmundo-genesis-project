@@ -200,9 +200,10 @@ export const useTwaats = (accountId?: string) => {
 
       if (twaatError) throw twaatError;
 
-      // Scheduled Twaats are deliberately inert until the server worker publishes
-      // them. Immediate Twaats can safely run the idempotent outcome engine now.
-      if (!twaat.scheduled_for) {
+      // Outcome effects cannot run for pending moderation or scheduled posts.
+      // Only an explicitly approved public Twaat may be processed as live.
+      if (!twaat.scheduled_for && twaat.visibility === "public" &&
+          twaat.moderation_status === "approved") {
         const { error: outcomeError } = await supabase.functions.invoke("twaater-outcome-engine", {
           body: { twaat_id: twaat.id },
         });
@@ -225,7 +226,7 @@ export const useTwaats = (accountId?: string) => {
         return;
       }
 
-      const isLive = twaat.visibility === "public" && (!twaat.moderation_status || twaat.moderation_status === "approved");
+      const isLive = twaat.visibility === "public" && twaat.moderation_status === "approved";
       toast({
         title: isLive ? "Twaat posted!" : "Twaat submitted",
         description: isLive ? "Your post is now live." : "Your post is awaiting moderation or is not publicly visible.",
