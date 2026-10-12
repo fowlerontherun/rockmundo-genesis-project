@@ -592,10 +592,13 @@ const TourManager = () => {
       .select("date, city_id, cities:city_id(name, country)")
       .eq("tour_id", tour.id)
       .order("date", { ascending: true });
-    const cities = (stops || [])
-      .map((stop: any) => stop.cities?.name)
-      .filter(Boolean);
-    const uniqueCities = Array.from(new Set(cities)) as string[];
+    const seenCityIds = new Set<string>();
+    const uniqueCities = (stops || []).flatMap((stop: any) => {
+      const id = String(stop.city_id ?? "");
+      if (!id || seenCityIds.has(id) || !stop.cities?.name) return [];
+      seenCityIds.add(id);
+      return [`${stop.cities.name}${stop.cities.country ? `, ${stop.cities.country}` : ""}`];
+    }) as string[];
     setShareMoment({
       version: 1,
       type: "tour",

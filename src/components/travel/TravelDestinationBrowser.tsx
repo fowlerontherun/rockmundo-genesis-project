@@ -231,11 +231,11 @@ export function TravelDestinationBrowser({
         ) : (
           <div className="h-[500px] rounded-lg overflow-hidden border">
             <TravelMapSelector
-              cities={destinations.map(d => d.city)}
+              cities={filteredDestinations.map(d => d.city)}
               currentCityId={currentCityId}
               selectedCityId={null}
               onCitySelect={(cityId) => {
-                const dest = destinations.find((d) => d.city.id === cityId);
+                const dest = filteredDestinations.find((d) => d.city.id === cityId);
                 if (dest) onSelectDestination(dest);
               }}
             />

@@ -1,6 +1,8 @@
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Search, Mic2, Music, Disc, Plane, CheckCircle2, Clock } from "lucide-react";
@@ -19,15 +21,18 @@ interface ArtistDevelopmentTrackerProps {
 }
 
 export function ArtistDevelopmentTracker({ labelId }: ArtistDevelopmentTrackerProps) {
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 20;
+  useEffect(() => setPage(0), [labelId]);
   const { data: pipelines = [], isLoading } = useQuery({
-    queryKey: ['artist-dev-pipeline', labelId],
+    queryKey: ['artist-dev-pipeline', labelId, page],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('artist_development_pipeline')
         .select('*')
         .eq('label_id', labelId)
         .order('created_at', { ascending: false })
-        .limit(20);
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
       if (error) throw error;
       return data;
     },
@@ -53,6 +58,7 @@ export function ArtistDevelopmentTracker({ labelId }: ArtistDevelopmentTrackerPr
 
   return (
     <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2 text-sm"><span>Page {page + 1}</span><div className="flex gap-2"><Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))}>Previous</Button><Button variant="outline" size="sm" disabled={pipelines.length < PAGE_SIZE} onClick={() => setPage(p => p + 1)}>Next</Button></div></div>
       {pipelines.map((pipeline) => {
         const completedStages = Array.isArray(pipeline.completed_stages) ? pipeline.completed_stages as string[] : [];
         const currentIdx = STAGES.findIndex(s => s.key === pipeline.current_stage);
