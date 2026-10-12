@@ -37,6 +37,9 @@ export default function RecordingStudio() {
   const { data: sessions, isLoading, error: sessionsError } = useRecordingSessions(profileId || null, session?.user?.id || null);
 
   useEffect(() => {
+    let cancelled = false;
+    setUserBandId(null);
+    setLabelCompanyId(null);
     const loadUserBand = async () => {
       if (!session?.user?.id) return;
 
@@ -45,10 +48,11 @@ export default function RecordingStudio() {
         session.user.id,
       );
 
+      if (cancelled) return;
       if (bandMemberships?.band_id) {
         setUserBandId(bandMemberships.band_id);
         
-        const { data: contract } = await supabase
+        const { data: contract, error: contractError } = await supabase
           .from('artist_label_contracts')
           .select('labels(company_id)')
           .eq('band_id', bandMemberships.band_id)
@@ -56,14 +60,17 @@ export default function RecordingStudio() {
           .limit(1)
           .maybeSingle();
         
-        setLabelCompanyId((contract as any)?.labels?.company_id ?? null);
+        if (cancelled) return;
+        if (contractError) { console.warn("Could not load active label contract", contractError); setLabelCompanyId(null); }
+        else setLabelCompanyId((contract as any)?.labels?.company_id ?? null);
       } else {
         setUserBandId(null);
         setLabelCompanyId(null);
       }
     };
 
-    loadUserBand();
+    void loadUserBand().catch(error => { if (!cancelled) { console.error("Could not resolve recording band", error); setUserBandId(null); setLabelCompanyId(null); } });
+    return () => { cancelled = true; };
   }, [session?.user?.id, profileId]);
 
   const getStatusIcon = (status: string) => {

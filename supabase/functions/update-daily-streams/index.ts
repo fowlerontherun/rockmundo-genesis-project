@@ -103,12 +103,19 @@ Deno.serve(async (req) => {
     const releaseIds = [...new Set((streamingReleases || []).map(r => r.release_id).filter(Boolean))];
     let allTerritories: any[] = [];
     if (releaseIds.length > 0) {
-      const { data: territories } = await supabase
-        .from('release_territories')
-        .select('release_id, country, is_active')
-        .in('release_id', releaseIds)
-        .eq('is_active', true);
-      allTerritories = territories || [];
+      for (let offset = 0; ; offset += 500) {
+        const { data: territories, error: territoryError } = await supabase
+          .from('release_territories')
+          .select('release_id, country, is_active')
+          .in('release_id', releaseIds)
+          .eq('is_active', true)
+          .order('release_id', { ascending: true })
+          .order('country', { ascending: true })
+          .range(offset, offset + 499);
+        if (territoryError) throw territoryError;
+        allTerritories.push(...(territories ?? []));
+        if (!territories || territories.length < 500) break;
+      }
     }
 
     // Pre-fetch label contract info for releases
@@ -300,7 +307,7 @@ Deno.serve(async (req) => {
         const fanBoost = 1 + Math.min(Math.log10(Math.max(bandTotalFans, 1)) * 2, 15);
         const combinedFameMultiplier = Math.sqrt(fameScale * fanBoost);
         const baseStreams = Math.floor((Math.random() * 200 + 50) * combinedFameMultiplier);
-        const releaseDate = release.created_at ? new Date(release.created_at) : new Date();
+        const releaseDate = release.release_date ? new Date(release.release_date) : release.created_at ? new Date(release.created_at) : new Date();
         const daysSinceRelease = (Date.now() - releaseDate.getTime()) / (1000 * 60 * 60 * 24);
         const ageDecay = daysSinceRelease <= 7 ? 1.5
           : daysSinceRelease <= 30 ? 1.0

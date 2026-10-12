@@ -398,14 +398,19 @@ Deno.serve(async (req) => {
           }
 
           // Update demo status
-          await supabase
+          const { data: acceptedUpdate, error: acceptedError } = await supabase
             .from("demo_submissions")
             .update({
               status: "accepted",
               reviewed_at: new Date().toISOString(),
               contract_offer_id: contract.id,
             })
-            .eq("id", demo.id);
+            .eq("id", demo.id)
+            .eq("status", "pending")
+            .select("id")
+            .maybeSingle();
+          if (acceptedError) throw acceptedError;
+          if (!acceptedUpdate) throw new Error(`Demo ${demo.id} was no longer pending when accepting`);
 
           accepted++;
           console.log(`Demo ${demo.id} accepted, contract ${contract.id} created for ${song.title} (A&R skill: ${(arSkillBonus * 100).toFixed(0)}%)`);
@@ -426,14 +431,19 @@ Deno.serve(async (req) => {
           }
 
           // Reject demo
-          await supabase
+          const { data: rejectedUpdate, error: rejectedError } = await supabase
             .from("demo_submissions")
             .update({
               status: "rejected",
               reviewed_at: new Date().toISOString(),
               rejection_reason: decision.reason,
             })
-            .eq("id", demo.id);
+            .eq("id", demo.id)
+            .eq("status", "pending")
+            .select("id")
+            .maybeSingle();
+          if (rejectedError) throw rejectedError;
+          if (!rejectedUpdate) throw new Error(`Demo ${demo.id} was no longer pending when rejecting`);
 
           rejected++;
           console.log(`Demo ${demo.id} rejected: ${decision.reason}`);

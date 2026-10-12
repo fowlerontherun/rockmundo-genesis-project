@@ -17,12 +17,15 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { Music, Star, Send, AlertCircle } from "lucide-react";
+import type { ArtistEntity } from "./types";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 interface SubmitDemoDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userId: string;
   bandId?: string | null;
+  artistEntities?: ArtistEntity[];
   preselectedLabelId?: string | null;
 }
 
@@ -41,32 +44,22 @@ interface LabelOption {
   reputation_score: number;
 }
 
-export function SubmitDemoDialog({ open, onOpenChange, userId, bandId, preselectedLabelId }: SubmitDemoDialogProps) {
+export function SubmitDemoDialog({ open, onOpenChange, userId, bandId, artistEntities, preselectedLabelId }: SubmitDemoDialogProps) {
+  const [selectedArtistId, setSelectedArtistId] = useState<string | null>(null);
+  const selectedArtist = artistEntities?.find(entity => entity.id === selectedArtistId) ?? artistEntities?.[0];
+  const effectiveBandId = artistEntities?.length ? (selectedArtist?.type === "band" ? selectedArtist.bandId ?? selectedArtist.id : null) : bandId;
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
   const [selectedLabelId, setSelectedLabelId] = useState<string | null>(preselectedLabelId ?? null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch user's profile ID (different from auth user ID)
-  const { data: profileData } = useQuery({
-    queryKey: ["user-profile-id", userId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", userId)
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    enabled: open && !!userId,
-  });
-
-  const profileId = profileData?.id;
+  // Character-scoped demo ownership must use the selected profile, not an
+  // arbitrary profile belonging to the same account.
+  const { profileId } = useActiveProfile();
 
   // Fetch recorded songs that can be submitted as demos
   const { data: songs = [], isLoading: songsLoading, isError: songsError, refetch: retrySongs } = useQuery<RecordedSong[]>({
-    queryKey: ["demo-eligible-songs", userId, bandId],
+    queryKey: ["demo-eligible-songs", userId, effectiveBandId],
     queryFn: async () => {
       let query = supabase
         .from("songs")
@@ -74,8 +67,8 @@ export function SubmitDemoDialog({ open, onOpenChange, userId, bandId, preselect
         .eq("status", "recorded")
         .order("quality_score", { ascending: false });
 
-      if (bandId) {
-        query = query.eq("band_id", bandId);
+      if (effectiveBandId) {
+        query = query.eq("band_id", effectiveBandId);
       } else {
         query = query.eq("user_id", userId);
       }
@@ -112,15 +105,15 @@ export function SubmitDemoDialog({ open, onOpenChange, userId, bandId, preselect
 
   // Fetch existing submissions to prevent duplicates
   const { data: existingSubmissions = [], isError: duplicateLookupError, isPending: duplicateLookupPending, refetch: retryDuplicateLookup } = useQuery({
-    queryKey: ["existing-demo-submissions", bandId, profileId],
+    queryKey: ["existing-demo-submissions", effectiveBandId, profileId],
     queryFn: async () => {
       let query = supabase
         .from("demo_submissions")
         .select("song_id, label_id, status")
         .in("status", ["pending", "under_review"]);
 
-      if (bandId) {
-        query = query.eq("band_id", bandId);
+      if (effectiveBandId) {
+        query = query.eq("band_id", effectiveBandId);
       } else if (profileId) {
         query = query.eq("artist_profile_id", profileId);
       }
@@ -129,7 +122,7 @@ export function SubmitDemoDialog({ open, onOpenChange, userId, bandId, preselect
       if (error) throw error;
       return data ?? [];
     },
-    enabled: open && (!!bandId || !!profileId),
+    enabled: open && (!!effectiveBandId || !!profileId),
   });
 
   const submitDemoMutation = useMutation({
@@ -138,15 +131,15 @@ export function SubmitDemoDialog({ open, onOpenChange, userId, bandId, preselect
         throw new Error("Please select a song and label");
       }
 
-      if (!bandId && !profileId) {
+      if (!effectiveBandId && !profileId) {
         throw new Error("Could not find your profile. Please try again.");
       }
 
       const { error } = await supabase.from("demo_submissions").insert({
         song_id: selectedSongId,
         label_id: selectedLabelId,
-        band_id: bandId || null,
-        artist_profile_id: bandId ? null : profileId,
+        band_id: effectiveBandId || null,
+        artist_profile_id: effectiveBandId ? null : profileId,
         status: "pending",
       });
 
@@ -208,6 +201,7 @@ export function SubmitDemoDialog({ open, onOpenChange, userId, bandId, preselect
         </DialogHeader>
 
         <div className="space-y-4">
+          {artistEntities && artistEntities.length > 1 && <div className="space-y-2"><Label>Submitting as</Label><Select value={selectedArtist?.id ?? ""} onValueChange={value => { setSelectedArtistId(value); setSelectedSongId(null); }}><SelectTrigger><SelectValue placeholder="Select a musician or band" /></SelectTrigger><SelectContent>{artistEntities.map(entity => <SelectItem key={entity.id} value={entity.id}>{entity.name} ({entity.type === "band" ? "Band" : "Solo"})</SelectItem>)}</SelectContent></Select></div>}
           {/* Song Selection */}
           <div className="space-y-2">
             <Label>Select a Recorded Song</Label>

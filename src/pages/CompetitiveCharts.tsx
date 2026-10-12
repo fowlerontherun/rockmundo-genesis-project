@@ -45,6 +45,12 @@ const CompetitiveCharts = () => {
   const { data: chartEntries, isLoading } = useQuery({
     queryKey: ["chart-entries", country, genre],
     queryFn: async () => {
+      let latestDateQuery = (supabase as any).from("chart_entries").select("chart_date");
+      if (genre !== "all") latestDateQuery = latestDateQuery.eq("genre", genre);
+      if (country !== "all") latestDateQuery = latestDateQuery.eq("country", country);
+      const { data: latest, error: dateError } = await latestDateQuery.order("chart_date", { ascending: false }).limit(1).maybeSingle();
+      if (dateError) throw dateError;
+      if (!latest?.chart_date) return [];
       let query = (supabase as any)
         .from("chart_entries")
         .select(`
@@ -61,7 +67,7 @@ const CompetitiveCharts = () => {
             profiles:profile_id (display_name, username)
           )
         `)
-        .eq("chart_date", new Date().toISOString().split('T')[0])
+        .eq("chart_date", latest.chart_date)
         .order("rank", { ascending: true });
 
       if (genre !== "all") {
