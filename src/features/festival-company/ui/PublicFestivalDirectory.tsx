@@ -158,7 +158,7 @@ export default function PublicFestivalDirectory() {
             Math.ceil((Date.parse(festival.startsAt) - Date.now()) / 86_400_000),
           );
           const announcedArtists = Array.from(
-            new Set((festival.lineup ?? festival.timetable).map((entry) => entry.artistName).filter(Boolean)),
+            new Set((festival.lineup ?? []).map((entry) => entry.artistName).filter(Boolean)),
           );
           // Admission sell-outs must not be masked by unsold add-ons or VIP upgrades.
           const soldOut = festival.ticketSales && festival.ticketSales.admissionTicketAllocation > 0
