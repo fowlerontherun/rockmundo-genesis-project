@@ -243,7 +243,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
     );
   }
 
-  // Currently generating - show reset button if timed out client-side
+  // An active provider job must not be reset while it is still running.
   if (isGenerating && !isTimedOut) {
     const startedAt = status.audio_generation_started_at 
       ? new Date(status.audio_generation_started_at) 
@@ -265,9 +265,6 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
               <span className="text-xs text-muted-foreground">
                 {minutes}:{seconds.toString().padStart(2, '0')} / 10:00
               </span>
-                  Reset
-                </Button>
-              )}
             </div>
           </AlertDescription>
         </Alert>
