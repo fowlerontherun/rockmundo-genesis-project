@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { signReplicateAttempt } from "../_shared/replicateWebhookAuth.ts"
 
 
 const corsHeaders = {
@@ -114,6 +115,13 @@ serve(async (req) => {
       addLog(`Previous generation appears stuck (${Math.round(elapsed / 60000)} mins), allowing restart`)
     }
     
+    // Keep the admin route on the same auditable attempt lifecycle as the
+    // player generator, including retries and webhook correlation.
+    const { data: attempt, error: attemptError } = await supabase.from("song_generation_attempts")
+      .insert({ song_id: songId, user_id: song.user_id || user.id, triggered_by_user_id: user.id, status: "generating" })
+      .select("id").single()
+    if (attemptError || !attempt?.id) throw new Error(`Could not create generation attempt: ${attemptError?.message || "missing ID"}`)
+
     // Then get the songwriting project if it exists
     let project: any = null
     if (song.songwriting_project_id) {
@@ -156,12 +164,6 @@ serve(async (req) => {
       addLog(`Creator gender: ${creatorGender || 'not set'}`)
     }
 
-    // Admin invocations require the same durable attempt record as player requests.
-    const { data: attempt, error: attemptError } = await supabase.from('song_generation_attempts')
-      .insert({ user_id: song.user_id || user.id, triggered_by_user_id: user.id, song_id: songId, status: 'generating' })
-      .select('id').single();
-    if (attemptError || !attempt) throw new Error(`Could not record admin audio attempt: ${attemptError?.message || 'unknown error'}`);
-
     // Update status to generating
     addLog('Setting status to "generating"...')
     await supabase
@@ -178,8 +180,8 @@ serve(async (req) => {
     // Build comprehensive prompt for MiniMax Music-1.5
     const rawSongTitle = project?.title || song.title || 'Untitled'
     const cleanedSongTitle = cleanProfanity(rawSongTitle)
-    const isAcousticVersion = String(song.version || '').toLowerCase() === 'acoustic';
-    const primaryGenre = isAcousticVersion ? 'acoustic' : (song.genre || project?.genres?.[0] || 'pop').replace(/^Style:\s*/i, '').trim()
+    const originalGenre = (song.genre || project?.genres?.[0] || 'pop').replace(/^Style:\s*/i, '').trim()
+    const primaryGenre = String(song.version || "").toLowerCase() === "acoustic" ? "acoustic" : originalGenre
     const chordProgression = project?.chord_progressions?.progression || null
     const chordName = project?.chord_progressions?.name || null
     const themeName = project?.song_themes?.name || null
@@ -289,9 +291,11 @@ serve(async (req) => {
 
     // Build the style prompt for MiniMax Music-1.5
     let styleParts: string[] = []
+    // Acoustic takes retain the stored song genre, but force an acoustic arrangement even with a custom prompt.
+    if (String(song.version || "").toLowerCase() === "acoustic") {
+      styleParts.push("stripped-back acoustic guitar-led arrangement")
+    }
 
-    // Acoustic versions keep their underlying stored genre, but always render acoustically.
-    if (isAcousticVersion) styleParts.push("stripped-back acoustic guitar-led arrangement");
     // Use custom prompt if provided, otherwise build from metadata
     if (customPrompt) {
       addLog('Using custom prompt provided by admin')
@@ -368,10 +372,6 @@ serve(async (req) => {
     // Combine for full prompt reference
     const fullPrompt = `Style: ${stylePrompt}\n\nLyrics:\n${formattedLyrics}`
 
-    // Save the exact prompt on the durable audit attempt as well as the song.
-    const { error: promptAuditError } = await supabase.from('song_generation_attempts')
-      .update({ prompt_used: fullPrompt }).eq('id', attempt.id);
-    if (promptAuditError) throw promptAuditError;
     // Save prompt for reference
     addLog('Saving prompt to database...')
     await supabase
@@ -379,8 +379,11 @@ serve(async (req) => {
       .update({ audio_prompt: fullPrompt })
       .eq('id', songId)
 
-    // Build webhook URL with songId
-    const webhookUrl = `${supabaseUrl}/functions/v1/replicate-webhook?songId=${songId}`
+    const { error: promptTrackingError } = await supabase.from("song_generation_attempts")
+      .update({ prompt_used: fullPrompt }).eq("id", attempt.id)
+    if (promptTrackingError) throw promptTrackingError
+    const signature = await signReplicateAttempt(attempt.id, songId, supabaseServiceKey)
+    const webhookUrl = `${supabaseUrl}/functions/v1/replicate-webhook?songId=${encodeURIComponent(songId)}&attemptId=${encodeURIComponent(attempt.id)}&signature=${signature}`
     addLog(`Webhook URL: ${webhookUrl}`)
 
     // Create async prediction with webhook using MiniMax Music-1.5
@@ -411,10 +414,10 @@ serve(async (req) => {
       throw new Error(`Replicate API error: ${prediction.detail || prediction.error || predictionResponse.status}`)
     }
 
-    if (!prediction.id) throw new Error('Provider did not return a prediction ID');
-    const { error: predictionLinkError } = await supabase.from('song_generation_attempts')
-      .update({ provider_prediction_id: prediction.id }).eq('id', attempt.id);
-    if (predictionLinkError) throw predictionLinkError;
+    if (!prediction.id) throw new Error("Replicate returned no prediction ID")
+    const { error: trackingError } = await supabase.from("song_generation_attempts")
+      .update({ prediction_id: prediction.id, provider_prediction_id: prediction.id }).eq("id", attempt.id).eq("status", "generating")
+    if (trackingError) throw trackingError
     addLog(`Prediction created: ${prediction.id}`)
     addLog(`Status: ${prediction.status}`)
     addLog(`Web URL: ${prediction.urls?.web || 'N/A'}`)

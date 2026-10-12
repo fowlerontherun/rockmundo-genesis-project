@@ -74,6 +74,23 @@ export const useEnchantmentSystem = () => {
       const enchantment = catalog.find((e) => e.id === enchantmentId);
       if (!enchantment) throw new Error("Enchantment not found");
 
+      const { data: ownedEquipment, error: ownershipError } = await (supabase as any)
+        .from("player_equipment").select("id")
+        .eq("id", playerEquipmentId).eq("profile_id", profileId).maybeSingle();
+      if (ownershipError) throw ownershipError;
+      if (!ownedEquipment) throw new Error("You can only enchant equipment owned by this character.");
+
+      if (enchantment.required_skill_slug && enchantment.min_skill_level > 0) {
+        const { data: skill, error: skillError } = await supabase
+          .from("skill_progress").select("current_level")
+          .eq("profile_id", profileId)
+          .eq("skill_slug", enchantment.required_skill_slug).maybeSingle();
+        if (skillError) throw skillError;
+        if (Number(skill?.current_level ?? 0) < enchantment.min_skill_level) {
+          throw new Error(`This enchantment requires ${enchantment.required_skill_slug} level ${enchantment.min_skill_level}.`);
+        }
+      }
+
       // Check existing enchantments on this equipment
       const existing = appliedEnchantments.filter(
         (ae) =>

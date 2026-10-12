@@ -178,26 +178,40 @@ Deno.serve(async (req) => {
     let releasePrReachMap = new Map<string, { power: number; updatedAt: string | null }>();
     let releaseMarketingStrategyMap = new Map<string, { focus: string; regions: string[]; saturation: number }>();
     if (songIds.length > 0) {
+      const eligibleReleaseIds = new Set((streamingReleases || []).map(r => r.release_id).filter(Boolean));
       const { data: releaseSongData } = await supabase
         .from("release_songs")
-        .select("song_id, release:releases(id, hype_score, label_marketing_power, pr_reach_power, pr_reach_updated_at, label_marketing_focus, label_marketing_regions, label_marketing_saturation, manufacturing_complete_at)")
+        .select("song_id, release_id, release:releases(id, release_status, hype_score, label_marketing_power, pr_reach_power, pr_reach_updated_at, label_marketing_focus, label_marketing_regions, label_marketing_saturation, manufacturing_complete_at)")
         .in("song_id", songIds);
       
       if (releaseSongData) {
         for (const rs of releaseSongData) {
           const rel = (rs as any).release;
-          if (rel) {
-            const existingHype = releaseHypeMap.get(rs.release_id) || 0;
-            releaseHypeMap.set(rs.release_id, Math.max(existingHype, rel.hype_score || 0));
-            const existingPower = releaseMarketingPowerMap.get(rs.release_id) || 0;
-            releaseMarketingPowerMap.set(rs.release_id, Math.max(existingPower, rel.label_marketing_power || 0));
-            const existingPr = releasePrReachMap.get(rs.release_id);
+          // Marketing and hype must come from the canonical released edition,
+          // not an unrelated future draft containing the same song.
+          if (rel && rel.release_status === "released" && eligibleReleaseIds.has(rs.release_id)) {
+            const releaseKey = String(rs.release_id);
+            const existingHype = releaseHypeMap.get(releaseKey) || 0;
+            releaseHypeMap.set(releaseKey, Math.max(existingHype, rel.hype_score || 0));
+            const existingPower = releaseMarketingPowerMap.get(releaseKey) || 0;
+            releaseMarketingPowerMap.set(releaseKey, Math.max(existingPower, rel.label_marketing_power || 0));
+            const existingPr = releasePrReachMap.get(releaseKey);
             const candidatePr = Number(rel.pr_reach_power || 0);
-            if (!existingPr || candidatePr > existingPr.power) {
-              releasePrReachMap.set(rs.release_id, { power: candidatePr, updatedAt: rel.pr_reach_updated_at || null });
+            const effective = (power: number, updatedAt: string | null) => {
+              const timestamp = updatedAt ? Date.parse(updatedAt) : NaN;
+              const age = Number.isFinite(timestamp) ? Math.max(0, (Date.now() - timestamp) / 86400000) : 0;
+              return Math.max(0, power) * Math.pow(0.92, age);
+            };
+            if (!existingPr || effective(candidatePr, rel.pr_reach_updated_at || null) >
+                effective(existingPr.power, existingPr.updatedAt)) {
+              releasePrReachMap.set(releaseKey, { power: candidatePr, updatedAt: rel.pr_reach_updated_at || null });
             }
-            releaseMarketingStrategyMap.set(rs.release_id, {
-              focus: String(rel.label_marketing_focus || "balanced"),
+            // Release-specific strategy, never inherited from another edition of the song.
+            const rawFocus = String(rel.label_marketing_focus || "balanced").trim().toLowerCase();
+            const normalizedFocus = rawFocus === "streaming" ? "playlist" :
+              (["balanced", "radio", "playlist", "social", "retail"].includes(rawFocus) ? rawFocus : "balanced");
+            releaseMarketingStrategyMap.set(releaseKey, {
+              focus: normalizedFocus,
               regions: Array.isArray(rel.label_marketing_regions) ? rel.label_marketing_regions : ["global"],
               saturation: Number(rel.label_marketing_saturation || 0),
             });
@@ -317,7 +331,7 @@ Deno.serve(async (req) => {
           : daysSinceRelease <= 180 ? 0.35
           : 0.2;
         
-        const songHype = releaseHypeMap.get(release.release_id) || 0;
+        const songHype = releaseHypeMap.get(String(release.release_id)) || 0;
         const streamHypeMultiplier = Math.min(3, 1 + (songHype / 500));
 
         // Marketing buys reach; quality determines how strongly listeners convert and
@@ -329,15 +343,15 @@ Deno.serve(async (req) => {
         const breakoutT = Math.max(0, (quality100 - 75) / 25);
         const organicBreakoutMultiplier = 1 + Math.pow(breakoutT, 2) * 1.5; // exceptional songs can reach 2.5x beyond discovery
 
-        const labelMarketingPower = Math.max(0, Math.min(100, releaseMarketingPowerMap.get(release.release_id) || 0));
+        const labelMarketingPower = Math.max(0, Math.min(100, releaseMarketingPowerMap.get(String(release.release_id)) || 0));
         const paidLabelMarketingMultiplier = 1 + Math.pow(labelMarketingPower / 100, 1.2) * 2.5; // 0-100 power => 1.0x-3.5x
-        const prReach = releasePrReachMap.get(release.release_id);
+        const prReach = releasePrReachMap.get(String(release.release_id));
         const storedPrReach = Math.max(0, Math.min(100, Number(prReach?.power || 0)));
         const prUpdatedAt = prReach?.updatedAt ? new Date(prReach.updatedAt).getTime() : Date.now();
         const prAgeDays = Math.max(0, (Date.now() - prUpdatedAt) / 86_400_000);
         const effectivePrReach = storedPrReach * Math.pow(0.92, prAgeDays);
         const publicRelationsMultiplier = 1 + (effectivePrReach / 100) * 1.25; // up to 2.25x earned/owned reach
-        const marketingStrategy = releaseMarketingStrategyMap.get(release.release_id) || { focus: "balanced", regions: ["global"], saturation: 0 };
+        const marketingStrategy = releaseMarketingStrategyMap.get(String(release.release_id)) || { focus: "balanced", regions: ["global"], saturation: 0 };
         const saturation = Math.max(0, Math.min(100, marketingStrategy.saturation));
         const saturationEfficiency = 1 - (saturation / 100) * 0.35;
         const focusStreamMultiplier = marketingStrategy.focus === "playlist" ? 1.35
@@ -357,7 +371,7 @@ Deno.serve(async (req) => {
 
         let regionBreakdown: Array<{ region: string; streams: number; revenue: number }> = [];
         if (hasTerritories) {
-          const preferredRegions = new Set(marketingStrategy.regions.map(region => String(region).toLowerCase()));
+          const preferredRegions = new Set(marketingStrategy.regions.map(region => String(region).trim().toLowerCase()));
           const hasRegionalFocus = preferredRegions.size > 0 && !preferredRegions.has("global");
           const weightedCountries = releaseTerritories.map(t => {
             const fame = bandFans?.get(t.country) || 1;
@@ -568,6 +582,15 @@ Deno.serve(async (req) => {
     
     console.log(`Updated ${streamUpdates} streaming releases and generated ${salesUpdates} sales (${errorCount} errors)`);
 
+    if (isEffectivelyFailed) {
+      await failJobRun({ jobName: 'update-daily-streams', runId,
+        supabaseClient: supabase, durationMs: Date.now() - startedAt,
+        error: new Error(`Streaming worker failed more than half of its operations (${errorCount} failures)`),
+        resultSummary: { streamUpdates, salesUpdates, errorCount, errorSamples, labelsCredited } });
+      return new Response(JSON.stringify({ success: false, streamUpdates, salesUpdates,
+        errors: errorCount, errorSamples, labelsCredited }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
     await completeJobRun({
       jobName: 'update-daily-streams',
       runId,

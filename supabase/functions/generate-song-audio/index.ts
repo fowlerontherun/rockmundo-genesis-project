@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { signReplicateAttempt } from "../_shared/replicateWebhookAuth.ts"
 
 
 const corsHeaders = {
@@ -12,6 +13,7 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  let authorizedSongId: string | null = null
   try {
     const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY')
     if (!REPLICATE_API_KEY) {
@@ -22,7 +24,35 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    const { songId, userId, overrideLyrics } = await req.json()
+    const { songId, overrideLyrics } = await req.json()
+    const authToken = req.headers.get("Authorization")?.replace(/^Bearer /i, "").trim()
+    if (!authToken) return new Response(JSON.stringify({ error: "Authentication required" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" }
+    })
+    const serviceInvocation = authToken === supabaseServiceKey
+    const { data: authData, error: authError } = serviceInvocation
+      ? { data: { user: null }, error: null }
+      : await supabase.auth.getUser(authToken)
+    if (!serviceInvocation && (authError || !authData.user)) return new Response(JSON.stringify({ error: "Invalid authentication" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" }
+    })
+    const { data: ownerSong, error: ownerError } = await supabase.from("songs")
+      .select("user_id, band_id").eq("id", songId).single()
+    if (ownerError || !ownerSong) return new Response(JSON.stringify({ error: "Song not found" }), {
+      status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" }
+    })
+    const userId = serviceInvocation ? ownerSong.user_id : authData.user!.id
+    let allowed = serviceInvocation || ownerSong.user_id === userId
+    if (!allowed && ownerSong.band_id) {
+      const { data: membership, error: membershipError } = await supabase.from("band_members")
+        .select("id").eq("band_id", ownerSong.band_id).eq("user_id", userId).limit(1)
+      if (membershipError) throw membershipError
+      allowed = Boolean(membership?.length)
+    }
+    if (!allowed) return new Response(JSON.stringify({ error: "Song access denied" }), {
+      status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
+    })
+    authorizedSongId = songId
 
     if (!songId || !userId) {
       return new Response(
@@ -210,19 +240,19 @@ serve(async (req) => {
       .select()
       .single()
 
-    if (attemptError || !attempt) {
-      console.error('[generate-song-audio] Failed to create attempt record:', attemptError)
-      throw new Error('Could not record the generation attempt; no provider request was sent')
+    if (attemptError || !attempt?.id) {
+      throw new Error(`Failed to record generation attempt: ${attemptError?.message || "missing attempt ID"}`)
     }
 
     // Update song status to generating
-    await supabase
+    const { error: statusError } = await supabase
       .from('songs')
       .update({ 
         audio_generation_status: 'generating',
         audio_generation_started_at: new Date().toISOString()
       })
       .eq('id', songId)
+    if (statusError) throw statusError
 
     // Extract metadata from songwriting project
     const creativeBrief = project?.creative_brief as Record<string, any> || {}
@@ -439,7 +469,8 @@ serve(async (req) => {
     console.log(`[generate-song-audio] Creating async MiniMax Music prediction...`)
 
     // Build webhook URL with songId
-    const webhookUrl = `${supabaseUrl}/functions/v1/replicate-webhook?songId=${songId}`
+    const callbackSignature = await signReplicateAttempt(attempt.id, songId, supabaseServiceKey)
+    const webhookUrl = `${supabaseUrl}/functions/v1/replicate-webhook?songId=${encodeURIComponent(songId)}&attemptId=${encodeURIComponent(attempt.id)}&signature=${callbackSignature}`
 
     // Create async prediction with webhook using MiniMax Music-1.5
     // Use the models endpoint so we can pass model name instead of version
@@ -468,11 +499,10 @@ serve(async (req) => {
       throw new Error(`Replicate API error: ${prediction.detail || prediction.error || predictionResponse.status}`)
     }
 
-    if (!prediction.id) throw new Error("Provider did not return a prediction ID");
-    const { error: predictionLinkError } = await supabase.from("song_generation_attempts")
-      .update({ provider_prediction_id: prediction.id })
-      .eq("id", attempt.id);
-    if (predictionLinkError) throw predictionLinkError;
+    if (!prediction.id) throw new Error("Replicate returned no prediction ID")
+    const { error: predictionTrackingError } = await supabase.from("song_generation_attempts")
+      .update({ prediction_id: prediction.id, provider_prediction_id: prediction.id }).eq("id", attempt.id).eq("status", "generating")
+    if (predictionTrackingError) throw predictionTrackingError
     console.log(`[generate-song-audio] Async prediction created: ${prediction.id} for song ${songId}`)
     console.log(`[generate-song-audio] Prediction web URL: ${prediction.urls?.web}`)
 
@@ -493,7 +523,7 @@ serve(async (req) => {
       const body = await req.clone().json().catch(() => ({}))
       const { songId, userId } = body
       
-      if (songId) {
+      if (songId && authorizedSongId === songId) {
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!
         const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
         const supabase = createClient(supabaseUrl, supabaseServiceKey)

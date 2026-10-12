@@ -158,13 +158,20 @@ export function CreateLabelDialog({
 
     // Record initial transaction
     if (data?.id && profile?.id) {
-      await supabase.from("label_transactions").insert({
+      const { error: initialLedgerError } = await supabase.from("label_transactions").insert({
         label_id: data.id,
         transaction_type: "deposit",
         amount: 1_000_000,
         description: "Initial label funding",
         initiated_by: profile.id,
       });
+      if (initialLedgerError) {
+        toast({ title: "Label created, but initial funding ledger failed",
+          description: `${initialLedgerError.message}. The label exists; contact support to reconcile its opening transaction.`, variant: "destructive" });
+        await queryClient.invalidateQueries({ queryKey: ["my-labels"] });
+        setIsSubmitting(false);
+        return;
+      }
     }
 
     toast({ title: "Label created", description: "Your label is ready with $1,000,000 starting balance." });
