@@ -135,8 +135,8 @@ export const parseFestivalCheckInEligibility = (value: unknown): FestivalCheckIn
     !isNullableString(value.endsOn) ||
     !isNullableUuid(value.cityId) ||
     !isNullableString(value.cityName) ||
-    typeof value.timezone !== "string" ||
-    typeof value.festivalLocalDate !== "string" ||
+    typeof value.timezone !== "string" || !/^[-_a-zA-Z0-9/]+$/.test(value.timezone) ||
+    typeof value.festivalLocalDate !== "string" || !/^\\d{4}-\\d{2}-\\d{2}$/.test(value.festivalLocalDate) || Number.isNaN(Date.parse(`${value.festivalLocalDate}T00:00:00Z`)) ||
     !isNullableUuid(value.currentCityId) ||
     typeof value.characterIsTraveling !== "boolean" ||
     typeof value.ticketStatus !== "string" ||
