@@ -49,6 +49,16 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
+    // Reject payments that cannot add an entitlement.
+    const { data: slots, error: slotsError } = await supabaseClient.from("character_slots")
+      .select("max_slots,extra_slots_purchased").eq("user_id", user.id).maybeSingle();
+    if (slotsError) throw slotsError;
+    if (Math.max(slots?.max_slots ?? 2, 2 + (slots?.extra_slots_purchased ?? 0)) >= 5) {
+      return new Response(JSON.stringify({ error: "Already at maximum slots (5)" }), {
+        status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
     // Check existing customer

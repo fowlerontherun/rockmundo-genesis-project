@@ -65,47 +65,13 @@ serve(async (req) => {
 
     logStep("Session verified", { sessionId: session.id, paymentStatus: session.payment_status });
 
-    // Get or create character_slots row
-    const { data: existing } = await supabaseClient
-      .from("character_slots")
-      .select("*")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    const currentExtra = existing?.extra_slots_purchased ?? 0;
-    const currentMax = Math.min(2 + currentExtra, 5);
-
-    if (currentMax >= 5) {
-      return new Response(JSON.stringify({ success: false, error: "Already at maximum slots (5)" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400,
-      });
-    }
-
-    if (existing) {
-      const { error } = await supabaseClient
-        .from("character_slots")
-        .update({
-          extra_slots_purchased: currentExtra + 1,
-          max_slots: Math.min(currentMax + 1, 5),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("user_id", user.id);
-
-      if (error) throw error;
-    } else {
-      const { error } = await supabaseClient
-        .from("character_slots")
-        .insert({
-          user_id: user.id,
-          extra_slots_purchased: 1,
-          max_slots: 3,
-        });
-
-      if (error) throw error;
-    }
-
-    logStep("Slot granted", { userId: user.id, newExtra: currentExtra + 1 });
+    // DB transaction checks session redemption and increments entitlement atomically.
+    const { data: redemption, error: redeemError } = await supabaseClient.rpc("redeem_paid_character_slot", {
+      p_user_id: user.id,
+      p_session_id: session.id,
+    });
+    if (redeemError) throw redeemError;
+    logStep("Slot redemption", { userId: user.id, result: redemption });
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
