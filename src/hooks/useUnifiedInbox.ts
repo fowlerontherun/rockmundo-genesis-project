@@ -131,13 +131,13 @@ export function useUnifiedInbox() {
     // player_inbox and notifications. Prefer the richer player_inbox record so
     // users see one item rather than a duplicated event.
     const uniqueNotifications = notificationMessages.filter(
-      (notification) => !inbox.messages.some((message) => messagesRepresentSameEvent(message, notification)),
+      (notification) => ![...inbox.messages, ...inbox.archivedMessages].some((message) => messagesRepresentSameEvent(message, notification)),
     );
 
     return [...inbox.messages, ...uniqueNotifications].sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
     );
-  }, [inbox.messages, notificationMessages]);
+  }, [inbox.messages, inbox.archivedMessages, notificationMessages]);
 
   const duplicateNotificationIds = (inboxId: string) => {
     const message = inbox.messages.find((candidate) => candidate.id === inboxId);
