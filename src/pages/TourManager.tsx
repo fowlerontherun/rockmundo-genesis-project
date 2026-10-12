@@ -538,7 +538,7 @@ const TourManager = () => {
   });
 
   const activeTourCount = myTours.filter(
-    (t) => t.status === "active" || t.status === "scheduled",
+    (t) => t.status === "active" && new Date(`${t.start_date}T12:00:00`).getTime() <= Date.now() && new Date(`${t.end_date}T23:59:59`).getTime() >= Date.now(),
   ).length;
   const totalRevenue =
     bandTotals?.totalRevenue ??
