@@ -31,21 +31,25 @@ export const useMyFestivalAttendance = (enabled = true) => {
   });
 };
 
-export const useMyFestivalCheckInEligibility = (enabled = true) =>
-  useQuery({
-    queryKey: festivalCheckInEligibilityKey,
+export const useMyFestivalCheckInEligibility = (enabled = true) => {
+  const { profileId } = useActiveProfile();
+  return useQuery({
+    queryKey: [...festivalCheckInEligibilityKey, profileId],
     queryFn: getMyFestivalCheckInEligibility,
-    enabled,
+    enabled: enabled && !!profileId,
     staleTime: 15_000,
   });
+};
 
-export const useMyFestivalMemorabilia = (enabled = true) =>
-  useQuery({
-    queryKey: festivalMemorabiliaKey,
+export const useMyFestivalMemorabilia = (enabled = true) => {
+  const { profileId } = useActiveProfile();
+  return useQuery({
+    queryKey: [...festivalMemorabiliaKey, profileId],
     queryFn: getMyFestivalMemorabilia,
-    enabled,
+    enabled: enabled && !!profileId,
     staleTime: 30_000,
   });
+};
 
 const useAttendanceMutationInvalidation = () => {
   const queryClient = useQueryClient();
