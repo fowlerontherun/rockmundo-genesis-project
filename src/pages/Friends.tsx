@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { Heart, Search, Users } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
@@ -23,12 +25,22 @@ function FriendSection({ kind, search }: { kind: "friends" | "incoming" | "outgo
 
 export default function FriendsPage() {
   const [search, setSearch] = useState("");
+  const client = useQueryClient();
   const { counts } = useFriendRequests();
+  const addSuggestedFriend = async (id: string) => {
+    try {
+      await sendConnectionRequest(id);
+      await client.invalidateQueries();
+      toast.success("Friend request sent");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not send friend request");
+    }
+  };
   const friends = useFriends("friends", search);
   return <FMPageScaffold title="Friends" subtitle="Manage friend requests, connections, mutual friends and suggested social links." icon={Heart} backTo="/social" backLabel="Back to Social">
     <div className="space-y-4"><div className="relative"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search friends by name, band, city, instrument or role" /></div>
       <Tabs defaultValue="friends"><TabsList className="flex h-auto flex-wrap"><TabsTrigger value="friends">Friends ({counts.data?.friends ?? 0})</TabsTrigger><TabsTrigger value="incoming">Incoming ({counts.data?.incoming ?? 0})</TabsTrigger><TabsTrigger value="outgoing">Sent ({counts.data?.outgoing ?? 0})</TabsTrigger><TabsTrigger value="suggested">Suggested ({friends.suggestions.data?.length ?? 0})</TabsTrigger><TabsTrigger value="recent">Recently added</TabsTrigger></TabsList>
-        <TabsContent value="friends"><FriendSection kind="friends" search={search} /></TabsContent><TabsContent value="incoming"><FriendSection kind="incoming" search={search} /></TabsContent><TabsContent value="outgoing"><FriendSection kind="outgoing" search={search} /></TabsContent><TabsContent value="recent"><FriendSection kind="recent" search={search} /></TabsContent><TabsContent value="suggested"><div className="space-y-3">{(friends.suggestions.data ?? []).map((friend) => <FriendCard key={friend.id} friend={friend} context="suggestion" onAdd={() => void sendConnectionRequest(friend.id)} />)}{!friends.suggestions.isLoading && !(friends.suggestions.data ?? []).length && <Card><CardContent className="p-6 text-center">No suggestions right now.</CardContent></Card>}</div></TabsContent>
+        <TabsContent value="friends"><FriendSection kind="friends" search={search} /></TabsContent><TabsContent value="incoming"><FriendSection kind="incoming" search={search} /></TabsContent><TabsContent value="outgoing"><FriendSection kind="outgoing" search={search} /></TabsContent><TabsContent value="recent"><FriendSection kind="recent" search={search} /></TabsContent><TabsContent value="suggested"><div className="space-y-3">{(friends.suggestions.data ?? []).map((friend) => <FriendCard key={friend.id} friend={friend} context="suggestion" onAdd={() => void addSuggestedFriend(friend.id)} />)}{!friends.suggestions.isLoading && !(friends.suggestions.data ?? []).length && <Card><CardContent className="p-6 text-center">No suggestions right now.</CardContent></Card>}</div></TabsContent>
       </Tabs></div>
   </FMPageScaffold>;
 }
