@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,7 +19,7 @@ import {
 import { formatMinorMoney } from "../domain/festivalTicketPlan";
 import type { FestivalArtistOpportunity } from "../domain/festivalArtistWorkflows";
 
-const id = () => crypto.randomUUID();
+
 
 type WorkflowRow = Record<string, unknown>;
 
@@ -120,6 +120,8 @@ export default function FestivalArtistOpportunitiesPage() {
   const [artist, setArtist] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const requestIds = useRef(new Map<string,string>());
+  const id = (key: string) => { if (!requestIds.current.has(key)) requestIds.current.set(key, crypto.randomUUID()); return requestIds.current.get(key)!; };
 
   const run = async (action: () => Promise<unknown>) => {
     setError("");
@@ -194,7 +196,7 @@ export default function FestivalArtistOpportunitiesPage() {
         p_minimum_set_minutes: 30,
         p_maximum_set_minutes: 60,
         p_message: null,
-        p_idempotency_key: id(),
+        p_idempotency_key: id(`apply:${opportunity.windowId}:${selected.profile ?? selected.band}`),
       }),
     );
 
@@ -207,7 +209,7 @@ export default function FestivalArtistOpportunitiesPage() {
         p_invitation_id: row.id,
         p_expected_version: number(row, "version", "version", 1),
         p_response: response,
-        p_idempotency_key: id(),
+        p_idempotency_key: id(`invitation:${row.id}:${response}:${number(row, "version", "version", 1)}`),
       }),
     );
 
@@ -217,7 +219,7 @@ export default function FestivalArtistOpportunitiesPage() {
         p_offer_id: row.id,
         p_expected_version: number(row, "offerVersion", "offer_version", 1),
         p_response: response,
-        p_idempotency_key: id(),
+        p_idempotency_key: id(`offer:${row.id}:${response}:${number(row, "offerVersion", "offer_version", 1)}`),
       }),
     );
 
@@ -228,7 +230,7 @@ export default function FestivalArtistOpportunitiesPage() {
       await withdrawInvitation.mutateAsync({
         p_invitation_id: row.id,
         p_expected_version: number(row, "version", "version", 1),
-        p_idempotency_key: id(),
+        p_idempotency_key: id(`withdraw:${row.id}:${number(row, "version", "version", 1)}`),
       });
       setNotice("Festival invitation interest withdrawn.");
     });
