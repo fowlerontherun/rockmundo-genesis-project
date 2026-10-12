@@ -29,7 +29,7 @@ export const CityTreasuryCard = () => {
   const { profileId } = useActiveProfile();
 
   // Get player's current city
-  const { data: profile } = useQuery({
+  const { data: profile, isPending: profilePending, isError: profileError, refetch: retryProfile } = useQuery({
     queryKey: ["profile-city", profileId],
     queryFn: async () => {
       if (!profileId) return null;
@@ -46,7 +46,7 @@ export const CityTreasuryCard = () => {
 
   const cityId = profile?.current_city_id;
 
-  const { data: treasury } = useQuery({
+  const { data: treasury, isPending: treasuryPending, isError: treasuryError, refetch: retryTreasury } = useQuery({
     queryKey: ["city-treasury", cityId],
     queryFn: async () => {
       if (!cityId) return null;
@@ -93,6 +93,8 @@ export const CityTreasuryCard = () => {
   });
 
   if (!treasury) {
+    const loading = !!profileId && (profilePending || (!!cityId && treasuryPending));
+    const failed = profileError || treasuryError;
     return (
       <Card>
         <CardHeader>
@@ -102,7 +104,10 @@ export const CityTreasuryCard = () => {
         <CardContent className="flex h-[150px] items-center justify-center">
           <div className="text-center">
             <Building2 className="mx-auto h-8 w-8 text-muted-foreground/50" />
-            <p className="mt-2 text-sm text-muted-foreground">Move to a city to view its treasury</p>
+            <p className="mt-2 text-sm text-muted-foreground" role={failed ? "alert" : undefined}>
+              {failed ? "Unable to load city treasury." : loading ? "Loading city treasury…" : cityId ? "No treasury records are available for this city." : "Move to a city to view its treasury"}
+            </p>
+            {failed && <button type="button" className="mt-2 underline" onClick={() => void (profileError ? retryProfile() : retryTreasury())}>Retry</button>}
           </div>
         </CardContent>
       </Card>
