@@ -54,24 +54,11 @@ export function useHireVenueStaff() {
       skill_level?: number;
       salary_weekly?: number;
     }) => {
-      const companyId = await getCompanyIdFromVenue(staff.venue_id);
-      const hiringCost = (staff.salary_weekly || 500) * 4;
-
-      await deductCompanyBalance({
-        companyId,
-        amount: hiringCost,
-        description: `Hired venue staff: ${staff.name}`,
-        category: "staff",
+      const { data, error } = await (supabase as any).rpc("buy_subsidiary_asset_atomic", {
+        p_kind: "venue_staff", p_subsidiary_id: staff.venue_id, p_fields: staff,
       });
-
-      const { data, error } = await supabase
-        .from('venue_staff')
-        .insert(staff)
-        .select()
-        .single();
-      
       if (error) throw error;
-      return data;
+            return data;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['venue-staff', variables.venue_id] });
@@ -238,55 +225,11 @@ export function useInstallVenueUpgrade() {
       cost: number;
       description?: string;
     }) => {
-      const companyId = await getCompanyIdFromVenue(upgrade.venue_id);
-
-      if (upgrade.cost > 0) {
-        await deductCompanyBalance({
-          companyId,
-          amount: upgrade.cost,
-          description: `Venue upgrade: ${upgrade.upgrade_type} Lv${upgrade.upgrade_level}`,
-          category: "upgrade",
-        });
-      }
-
-      const { data, error } = await supabase
-        .from('venue_upgrades')
-        .insert(upgrade)
-        .select()
-        .single();
-      
+      const { data, error } = await (supabase as any).rpc("buy_subsidiary_asset_atomic", {
+        p_kind: "venue_upgrade", p_subsidiary_id: upgrade.venue_id, p_fields: upgrade,
+      });
       if (error) throw error;
-
-      // If this is a capacity upgrade, actually increase the venue's capacity
-      if (upgrade.upgrade_type === 'capacity') {
-        const { data: venue, error: venueError } = await supabase
-          .from('venues')
-          .select('capacity')
-          .eq('id', upgrade.venue_id)
-          .single();
-        
-        if (venueError) {
-          console.error('[VenueUpgrade] Failed to read venue capacity:', venueError);
-        } else {
-          const baseCapacity = venue?.capacity || 100;
-          // Multiplicative scaling: each level adds 25% of base, capped at 50,000
-          const newCapacity = Math.min(50000, Math.round(baseCapacity * 1.25));
-          const capacityIncrease = newCapacity - baseCapacity;
-
-          const { error: updateError } = await supabase
-            .from('venues')
-            .update({ capacity: newCapacity })
-            .eq('id', upgrade.venue_id);
-          
-          if (updateError) {
-            console.error('[VenueUpgrade] Failed to update venue capacity:', updateError);
-          } else {
-            console.log(`[VenueUpgrade] Capacity updated: ${baseCapacity} → ${newCapacity} (+${capacityIncrease})`);
-          }
-        }
-      }
-
-      return data;
+            return data;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['venue-upgrades', variables.venue_id] });
