@@ -63,6 +63,8 @@ const checkInMessage = (eligibility: FestivalCheckInEligibility) => {
       return `Travel to ${eligibility.cityName || "the festival city"} before checking in.`;
     case "character_traveling":
       return "Finish your current journey before checking in.";
+    case "schedule_conflict":
+      return "Your schedule conflicts with this festival check-in. Resolve the overlapping commitment before trying again.";
     case "ticket_invalid":
       return "Your admission ticket is no longer valid for check-in.";
     case "festival_cancelled":
