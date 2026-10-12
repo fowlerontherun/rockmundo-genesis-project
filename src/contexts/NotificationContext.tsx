@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
 import { X, Bell, CheckCircle, AlertTriangle, Info, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
