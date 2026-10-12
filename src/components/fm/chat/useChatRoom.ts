@@ -179,7 +179,8 @@ export function useChatRoom(channelKey: string | null) {
         } as any);
 
         if (error) throw error;
-        await fetchMessages();
+        // Sending succeeded independently of reloading the room history.
+        void fetchMessages();
         return true;
       } catch (error) {
         console.error("Failed to send message", error);
