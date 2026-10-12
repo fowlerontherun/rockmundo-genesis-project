@@ -219,6 +219,12 @@ export const CompleteSongDialog = ({
             </div>
           )}
 
+          {polishInProgress && project.locked_until && new Date(project.locked_until).getTime() < Date.now() && (
+            <div role="alert" className="rounded-lg border p-3 space-y-2">
+              <p className="text-sm">The expected polish finish time has passed. Try completing the song; if its session has not resolved yet, you can retry after it updates.</p>
+              <Button disabled={working !== null} onClick={() => void run("finish", onFinish, true)}>{working === "finish" ? "Checking finish..." : "Retry finishing song"}</Button>
+            </div>
+          )}
           {polishResolved && (
             <div className="space-y-3 rounded-lg border p-4">
               <p className="font-semibold">

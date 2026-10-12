@@ -53,10 +53,9 @@ serve(async (req) => {
     const RELEASE_SCOPES = ["single", "ep", "album"] as const;
     type ReleaseScope = (typeof RELEASE_SCOPES)[number];
 
-    const toReleaseScope = (value: unknown): ReleaseScope => {
-      return RELEASE_SCOPES.includes(value as ReleaseScope)
-        ? (value as ReleaseScope)
-        : "single";
+    const toReleaseScope = (value: unknown): ReleaseScope | null => {
+      const normalized = typeof value === "string" ? value.toLowerCase().trim() : "";
+      return RELEASE_SCOPES.includes(normalized as ReleaseScope) ? normalized as ReleaseScope : null;
     };
 
     const scopedType = (base: string, scope: ReleaseScope) => `${base}_${scope}`;
@@ -179,9 +178,7 @@ serve(async (req) => {
       .order("total_streams", { ascending: false })
       .limit(500);
 
-    if (streamingError) {
-      console.error("Error fetching streaming data:", streamingError);
-    }
+    if (streamingError) throw streamingError;
 
     // Filter to only include songs with status = 'recorded'
     // Also exclude b-sides from charting
@@ -223,6 +220,7 @@ serve(async (req) => {
       }
 
       const scope = toReleaseScope((entry as any)?.release?.release_type);
+      if (!scope) continue; // Unknown release types cannot be treated as singles.
       const scopedKey = `${entry.song_id}:${scope}`;
       const existingScoped = streamingAggregatedByScope.get(scopedKey);
       if (existingScoped) {
@@ -277,6 +275,7 @@ serve(async (req) => {
         if (globalData) {
           regionData.set(songId, {
             ...globalData,
+            total_streams: streams,
             weekly_streams: streams,
           });
         }
@@ -427,7 +426,9 @@ serve(async (req) => {
     }>();
 
     // Pre-fetch ALL-TIME cumulative sales per song for total_sales display
-    const { data: allTimeSalesData } = await supabaseClient
+    const allTimeSalesData: any[] = [];
+    for (let offset = 0; ; offset += 500) {
+    const { data: page, error: salesHistoryError } = await supabaseClient
       .from("release_sales")
       .select(`
         quantity_sold,
@@ -435,20 +436,28 @@ serve(async (req) => {
           format_type,
           release:releases!inner(
             release_songs:release_songs!release_songs_release_id_fkey(
-              song:songs!inner(id)
+              song:songs!inner(id),
+              is_b_side
             )
           )
         )
-      `);
+      `)
+      .order("id", { ascending: true }).range(offset, offset + 499);
+    if (salesHistoryError) throw salesHistoryError;
+    allTimeSalesData.push(...(page ?? []));
+    if (!page || page.length < 500) break;
+    }
 
     const allTimeSalesBySong = new Map<string, number>();
     for (const sale of allTimeSalesData || []) {
       const release = sale.release_formats?.release;
       if (!release?.release_songs) continue;
-      for (const rs of release.release_songs) {
-        const songId = rs.song?.id;
-        if (!songId) continue;
-        allTimeSalesBySong.set(songId, (allTimeSalesBySong.get(songId) || 0) + sale.quantity_sold);
+      const eligibleTracks = release.release_songs.filter((track: any) => track.song?.id && !track.is_b_side);
+      if (!eligibleTracks.length) continue;
+      const perSongUnits = sale.quantity_sold / eligibleTracks.length;
+      for (const rs of eligibleTracks) {
+        const songId = rs.song.id;
+        allTimeSalesBySong.set(songId, (allTimeSalesBySong.get(songId) || 0) + perSongUnits);
       }
     }
     console.log(`Pre-fetched all-time sales for ${allTimeSalesBySong.size} songs`);
@@ -520,6 +529,7 @@ serve(async (req) => {
         if (!release || !release.release_songs) continue;
 
         const scope = toReleaseScope((release as any)?.release_type);
+        if (!scope) continue;
         const releaseId = release.id;
         
         // Get all songs and find lead song (track 1)
@@ -539,7 +549,7 @@ serve(async (req) => {
       
       for (const releaseSong of release.release_songs) {
           const song = releaseSong.song;
-          if (!song) continue;
+          if (!song || song.status !== "recorded") continue;
           
           // FIX: Skip b-sides from singles charts - they should not chart individually
           if ((releaseSong as any).is_b_side) continue;
@@ -989,9 +999,7 @@ serve(async (req) => {
       .in("release_formats.format_type", ["cd", "vinyl", "cassette"])
       .gte("sale_date", sevenDaysAgo.toISOString());
 
-    if (albumPhysicalError) {
-      console.error("Error fetching album physical sales:", albumPhysicalError);
-    }
+    if (albumPhysicalError) throw albumPhysicalError;
 
     // Aggregate by release
     const albumSales = new Map<string, { quantity: number; release: any; leadSongId: string | null }>();
@@ -1015,7 +1023,7 @@ serve(async (req) => {
 
     // Only create entries for albums that have a lead song (song_id is required)
     const albumPhysicalEntries = Array.from(albumSales.entries())
-      .filter(([_, data]) => data.leadSongId !== null)
+      .filter(([_, data]) => data.leadSongId !== null && data.release?.release_type === "album")
       .sort((a, b) => b[1].quantity - a[1].quantity)
       .slice(0, 100)
       .map(([releaseId, data], index) => ({
@@ -1135,7 +1143,8 @@ serve(async (req) => {
       const dedupeMap = new Map<string, any>();
       for (const entry of chartEntries) {
         // FIX: Include country in dedupe key to preserve regional chart entries
-        const key = `${entry.song_id || entry.release_id}:${entry.chart_type}:${entry.chart_date}:${entry.country || 'all'}`;
+        const identity = entry.entry_type === "album" && entry.release_id ? entry.release_id : (entry.song_id || entry.release_id);
+        const key = `${identity}:${entry.chart_type}:${entry.chart_date}:${entry.country || 'all'}`;
         const existing = dedupeMap.get(key);
         if (!existing || (entry.combined_score || 0) > (existing.combined_score || 0) || (entry.plays_count || 0) > (existing.plays_count || 0)) {
           dedupeMap.set(key, entry);
@@ -1176,6 +1185,9 @@ serve(async (req) => {
 
       chartsUpdated = dedupedEntries.length;
       console.log(`Successfully inserted ${chartsUpdated} chart entries`);
+    } else {
+      const { error: emptyDeleteError } = await supabaseClient.from("chart_entries").delete().eq("chart_date", chartDate);
+      if (emptyDeleteError) throw emptyDeleteError;
     }
 
     // =========================================================================
@@ -1201,7 +1213,7 @@ serve(async (req) => {
         if (!page || page.length < 500) break;
       }
 
-      if (yesterdayEntries && yesterdayEntries.length > 0) {
+      {
         const yesterdayMap = new Map<string, number>();
         for (const entry of yesterdayEntries) {
           const key = `${entry.song_id}:${entry.chart_type}:${entry.country || 'all'}`;
@@ -1246,17 +1258,24 @@ serve(async (req) => {
     // STEP 10: Update weeks_on_chart — SKIPPED if time budget exceeded
     // =========================================================================
     if (Date.now() - startedAt < TIME_BUDGET_MS) {
-      const { data: allHistoricalEntries } = await supabaseClient
-        .from("chart_entries")
-        .select("song_id, chart_type, chart_date, country")
-        .order("chart_date", { ascending: true });
-
-      if (allHistoricalEntries) {
+      const allHistoricalEntries: any[] = [];
+      for (let offset = 0; ; offset += 500) {
+        const { data: page, error } = await supabaseClient.from("chart_entries")
+          .select("song_id, chart_type, chart_date, country")
+          .order("chart_date", { ascending: true }).order("id", { ascending: true })
+          .range(offset, offset + 499);
+        if (error) throw error;
+        allHistoricalEntries.push(...(page ?? []));
+        if (!page || page.length < 500) break;
+      }
+      {
         const weeksMap = new Map<string, Set<string>>();
         for (const entry of allHistoricalEntries) {
           const key = `${entry.song_id}:${entry.chart_type}:${entry.country || 'all'}`;
           const dates = weeksMap.get(key) || new Set<string>();
-          dates.add(entry.chart_date);
+          const chartDay = new Date(`${entry.chart_date}T00:00:00Z`);
+          chartDay.setUTCDate(chartDay.getUTCDate() - ((chartDay.getUTCDay() + 6) % 7));
+          dates.add(chartDay.toISOString().slice(0, 10));
           weeksMap.set(key, dates);
         }
 

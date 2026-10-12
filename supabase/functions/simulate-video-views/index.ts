@@ -97,6 +97,7 @@ serve(async (req) => {
     }
 
     const sentimentEventInserts: any[] = [];
+    const updatedSongHype = new Map<string, number>();
     const now = new Date();
 
     for (const video of releasedVideos || []) {
@@ -164,10 +165,12 @@ serve(async (req) => {
 
       // Update song hype
       if (song?.id) {
-        await supabaseClient
-          .from("songs")
-          .update({ hype: Math.min(100, Math.max(0, (song.hype || 0) + Math.round(dailyViews * 0.01))) })
-          .eq("id", song.id);
+        const previousHype = updatedSongHype.get(song.id) ?? (song.hype || 0);
+        const nextHype = Math.min(100, Math.max(0, previousHype + Math.round(dailyViews * 0.01)));
+        const { error: songHypeError } = await supabaseClient.from("songs")
+          .update({ hype: nextHype }).eq("id", song.id);
+        if (songHypeError) throw songHypeError;
+        updatedSongHype.set(song.id, nextHype);
       }
 
       // Credit earnings to user
@@ -180,21 +183,22 @@ serve(async (req) => {
 
         if (profile) {
           const newFans = Math.round(dailyViews * 0.001);
-          await supabaseClient
+          const { error: profilePayoutError } = await supabaseClient
             .from("profiles")
             .update({ 
               cash: (profile.cash || 0) + dailyEarnings,
               fans: (profile.fans || 0) + newFans,
             })
             .eq("user_id", song.user_id);
+          if (profilePayoutError) throw profilePayoutError;
         }
       }
 
       // Credit to band balance and create earnings record
       if (song?.band_id && dailyEarnings > 0) {
-        const bandShare = Math.round(dailyEarnings * 0.7);
+        const bandShare = Math.round(dailyEarnings * 0.7 * 100) / 100;
         
-        if (bandShare <= 0) continue;
+        // Do not skip run totals or fan changes for sub-cent band payouts.
 
         const { data: band } = await supabaseClient
           .from("bands")
@@ -227,10 +231,11 @@ serve(async (req) => {
             bandUpdate.morale = Math.min(100, ((moraleBand as any)?.morale ?? 50) + videoMoraleBoost);
           }
 
-          await supabaseClient
+          const { error: bandPayoutError } = await supabaseClient
             .from("bands")
             .update(bandUpdate)
             .eq("id", song.band_id);
+          if (bandPayoutError) throw bandPayoutError;
 
           if (sentimentBoost > 0) {
             sentimentEventInserts.push({
