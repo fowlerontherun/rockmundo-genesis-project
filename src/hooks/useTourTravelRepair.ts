@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -36,6 +37,8 @@ const describeMemberSyncError = (error: Error): string => {
 
 export const useTourTravelRepair = () => {
   const queryClient = useQueryClient();
+  const legKeys = useRef(new Map<string, string>());
+  const memberKeys = useRef(new Map<string, string>());
 
   const invalidateTravelState = () => {
     queryClient.invalidateQueries({ queryKey: ["my-tours"] });
@@ -47,8 +50,12 @@ export const useTourTravelRepair = () => {
   };
 
   const regenerateTravelLegs = useMutation({
-    mutationFn: (tourId: string) => regenerateTourTravelLegs(tourId),
+    mutationFn: (tourId: string) => {
+      if (!legKeys.current.has(tourId)) legKeys.current.set(tourId, crypto.randomUUID());
+      return regenerateTourTravelLegs(tourId, legKeys.current.get(tourId)!);
+    },
     onSuccess: (result) => {
+      legKeys.current.delete(result.tour_id);
       invalidateTravelState();
       if (result.already_repaired || result.created === 0) {
         toast.info(
@@ -64,8 +71,12 @@ export const useTourTravelRepair = () => {
   });
 
   const syncMemberTravel = useMutation({
-    mutationFn: (tourId: string) => syncTourMemberTravel(tourId),
+    mutationFn: (tourId: string) => {
+      if (!memberKeys.current.has(tourId)) memberKeys.current.set(tourId, crypto.randomUUID());
+      return syncTourMemberTravel(tourId, memberKeys.current.get(tourId)!);
+    },
     onSuccess: (result) => {
+      memberKeys.current.delete(result.tour_id);
       invalidateTravelState();
       if (result.created > 0) {
         toast.success(
