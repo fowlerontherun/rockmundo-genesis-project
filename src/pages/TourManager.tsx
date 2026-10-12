@@ -177,7 +177,7 @@ const TourManager = () => {
   });
 
   // Fetch user's band tours - split by status
-  const { data: myTours = [], isLoading: loadingMyTours } = useQuery({
+  const { data: myTours = [], isLoading: loadingMyTours, isError: myToursError, refetch: retryMyTours } = useQuery({
     queryKey: ["my-tours", currentBandId],
     queryFn: async () => {
       if (!currentBandId) return [];
@@ -197,6 +197,7 @@ const TourManager = () => {
     },
     enabled: !!currentBandId,
   });
+  // Failed own-tour queries must not be presented as an empty tour history.
 
   // Classify every owned tour instead of silently dropping legacy/booked lifecycle states.
   // Tour dates are calendar dates, so the final day remains current until local end-of-day.
