@@ -51,6 +51,7 @@ export const useUnderworldInventory = () => {
         `)
         .eq("profile_id", profileId)
         .eq("is_used", false)
+        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
