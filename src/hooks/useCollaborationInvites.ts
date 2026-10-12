@@ -11,6 +11,7 @@ export interface Collaboration {
   id: string;
   project_id: string;
   inviter_user_id: string;
+  inviter_profile_id?: string | null;
   invitee_profile_id: string;
   status: CollaborationStatus;
   is_band_member: boolean;
@@ -102,33 +103,28 @@ export const useCollaborationInvites = (projectId?: string) => {
 
       if (error) throw error;
 
-      const inviterUserIds = Array.from(
-        new Set((data || []).map((invitation) => invitation.inviter_user_id)),
-      );
-      const { data: inviterProfiles, error: inviterProfilesError } = inviterUserIds.length
-        ? await supabase
-            .from("profiles")
-            .select("id, user_id, username, avatar_url, is_active, died_at")
-            .in("user_id", inviterUserIds)
-            .eq("is_active", true)
-            .is("died_at", null)
+      const inviterProfileIds = Array.from(new Set(
+        (data || []).map(invitation => (invitation as any).inviter_profile_id).filter(Boolean) as string[],
+      ));
+      const { data: inviterProfiles, error: inviterProfilesError } = inviterProfileIds.length
+        ? await supabase.from("profiles")
+            .select("id, user_id, username, avatar_url")
+            .in("id", inviterProfileIds)
         : { data: [], error: null };
 
       if (inviterProfilesError) throw inviterProfilesError;
 
-      const inviterByUserId = new Map(
-        (inviterProfiles || []).map((inviter) => [inviter.user_id, inviter]),
+      const inviterByProfileId = new Map(
+        (inviterProfiles || []).map((inviter) => [inviter.id, inviter]),
       );
 
       return (data || []).map((invitation) => ({
         ...invitation,
-        inviter_profile: inviterByUserId.get(invitation.inviter_user_id)
-          ? {
-              id: inviterByUserId.get(invitation.inviter_user_id)!.id,
-              username: inviterByUserId.get(invitation.inviter_user_id)!.username,
-              avatar_url: inviterByUserId.get(invitation.inviter_user_id)!.avatar_url,
-            }
-          : undefined,
+        inviter_profile: (() => {
+          const original = inviterByProfileId.get((invitation as any).inviter_profile_id);
+          if (!original || original.user_id !== invitation.inviter_user_id) return undefined;
+          return { id: original.id, username: original.username, avatar_url: original.avatar_url };
+        })(),
       })) as Collaboration[];
     },
     enabled: !!activeProfileId,
@@ -166,12 +162,13 @@ export const useCollaborationInvites = (projectId?: string) => {
         .insert({
           project_id: params.projectId,
           inviter_user_id: user.id,
+          inviter_profile_id: activeProfileId,
           invitee_profile_id: params.inviteeProfileId,
           is_band_member: params.isBandMember,
           compensation_type: params.compensationType,
           flat_fee_amount: params.compensationType === "flat_fee" ? params.flatFeeAmount : null,
           royalty_percentage: params.compensationType === "royalty" ? params.royaltyPercentage : null,
-        })
+        } as any)
         .select()
         .single();
 
