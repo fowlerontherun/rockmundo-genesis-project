@@ -432,7 +432,7 @@ Deno.serve(async (req) => {
 
         for (const rb of regionBreakdown) {
           const listenerRatio = 0.4 + Math.random() * 0.4;
-          const uniqueListeners = Math.max(1, Math.floor(rb.streams * listenerRatio));
+          const uniqueListeners = rb.streams > 0 ? Math.max(1, Math.floor(rb.streams * listenerRatio)) : 0;
           const skipRate = Number((10 + Math.random() * 25).toFixed(1));
           const completionRate = Number((55 + Math.random() * 35).toFixed(1));
           const ageRoll = Math.random();
