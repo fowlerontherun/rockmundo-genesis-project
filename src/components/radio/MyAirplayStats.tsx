@@ -12,16 +12,17 @@ interface MyAirplayStatsProps {
 export function MyAirplayStats({ userId }: MyAirplayStatsProps) {
   const { profileId } = useActiveProfile();
 
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading, isError, refetch } = useQuery({
     queryKey: ["my-airplay-stats", profileId],
     queryFn: async () => {
       if (!profileId) return null;
       // Get user's songs
-      const { data: userSongs } = await supabase
+      const { data: userSongs, error: songsError } = await supabase
         .from("songs")
         .select("id")
         .eq("profile_id", profileId);
 
+      if (songsError) throw songsError;
       if (!userSongs?.length) {
         return {
           totalPlays: 0,
@@ -37,11 +38,12 @@ export function MyAirplayStats({ userId }: MyAirplayStatsProps) {
       const songIds = userSongs.map((s) => s.id);
 
       // Get all radio plays for user's songs
-      const { data: allPlays } = await supabase
+      const { data: allPlays, error: playsError } = await supabase
         .from("radio_plays")
         .select("id, listeners, hype_gained, streams_boost, station_id, song_id, played_at")
         .in("song_id", songIds);
 
+      if (playsError) throw playsError;
       // Get plays from last 7 days
       const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const weeklyPlays = allPlays?.filter((p) => p.played_at && p.played_at >= weekAgo) || [];
@@ -94,6 +96,8 @@ export function MyAirplayStats({ userId }: MyAirplayStatsProps) {
     },
     enabled: !!profileId,
   });
+
+  if (isError) return <div role="alert" className="text-sm text-destructive">Airplay statistics could not be loaded. <button className="underline" onClick={() => void refetch()}>Retry</button></div>;
 
   if (isLoading) {
     return (
