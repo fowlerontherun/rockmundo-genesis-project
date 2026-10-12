@@ -98,21 +98,25 @@ export default function BandVehicles() {
     queryKey: ["user-band", profileId],
     queryFn: async () => {
       if (!profileId) return null;
-      const { data: membership } = await supabase
+      const { data: membership, error: membershipError } = await supabase
         .from("band_members")
         .select("band_id")
         .eq("profile_id", profileId)
+        .eq("member_status", "active")
+        .order("joined_at", { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
+      if (membershipError) throw membershipError;
       
       if (!membership?.band_id) return null;
       
-      const { data: bandData } = await supabase
+      const { data: bandData, error: bandError } = await supabase
         .from("bands")
         .select("id, name, band_balance, leader_id")
         .eq("id", membership.band_id)
         .single();
       
+      if (bandError) throw bandError;
       return bandData || null;
     },
     enabled: !!profileId,
