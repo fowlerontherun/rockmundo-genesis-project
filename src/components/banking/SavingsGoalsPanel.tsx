@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Loader2, Plus, Target } from "lucide-react";
 import { toast } from "sonner";
@@ -254,6 +254,7 @@ function FundSavingsGoalDialog({
   const [sourceKey, setSourceKey] = useState("");
   const [amount, setAmount] = useState("");
   const [preview, setPreview] = useState<SavingsGoalFundingPreview | null>(null);
+  const previewEpoch = useRef(0);
   const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
   const [loadingSources, setLoadingSources] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -305,6 +306,7 @@ function FundSavingsGoalDialog({
   }, [open, goal.id]);
 
   const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) previewEpoch.current += 1;
     setOpen(nextOpen);
     if (!nextOpen) {
       setAmount("");
@@ -318,6 +320,7 @@ function FundSavingsGoalDialog({
   const preparePreview = async () => {
     if (!source?.eligible || amountMinor === null || amountMinor <= 0) return;
     if (walletNeedsWholeUnits) return;
+    const requestEpoch = ++previewEpoch.current;
 
     setSubmitting(true);
     setError(null);
@@ -328,6 +331,7 @@ function FundSavingsGoalDialog({
         sourceAccountId: source.sourceAccountId,
         amountMinor,
       });
+      if (previewEpoch.current !== requestEpoch) return;
       setPreview(nextPreview);
       setIdempotencyKey(crypto.randomUUID());
     } catch (previewError) {
