@@ -16,10 +16,10 @@ export function DealAnnouncements() {
       // Record label signings
       const { data: contracts, error: contractsError } = await supabase
         .from("artist_label_contracts")
-        .select("created_at, status, bands(name), labels(name)")
+        .select("start_date, updated_at, status, bands(name), labels(name)")
         .eq("status", "active")
-        .gte("created_at", `${today}T00:00:00`)
-        .order("created_at", { ascending: false })
+        .eq("start_date", today)
+        .order("updated_at", { ascending: false })
         .limit(5);
 
       if (contractsError) throw contractsError;
@@ -30,7 +30,7 @@ export function DealAnnouncements() {
             type: "contract",
             title: `${contract.bands.name} signed with ${contract.labels.name}`,
             detail: "New record deal",
-            time: format(new Date(contract.created_at), "HH:mm"),
+            time: format(new Date(contract.updated_at), "HH:mm"),
           });
         }
       });

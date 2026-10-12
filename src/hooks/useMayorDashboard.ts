@@ -126,72 +126,20 @@ export function useUpdateCityLaws() {
     }) => {
       if (!profileId) throw new Error("Must be logged in");
 
-      // Verify user is mayor
-      const { data: mayor, error: mayorError } = await supabase
-        .from("city_mayors")
-        .select("id, policies_enacted")
-        .eq("city_id", cityId)
-        .eq("profile_id", profileId)
-        .eq("is_current", true)
-        .single();
-
-      if (mayorError || !mayor) {
-        throw new Error("You must be the current mayor to update laws");
-      }
-
-      // Get current laws for history tracking
-      const { data: currentLaws } = await supabase
-        .from("city_laws")
-        .select("*")
-        .eq("city_id", cityId)
-        .is("effective_until", null)
-        .single();
-
-      // Prepare update object (exclude id and city_id)
-      const { id, city_id, created_at, effective_from, effective_until, enacted_by_mayor_id, ...cleanUpdates } = updates as any;
-      
-      // Update laws
-      const { data, error } = await supabase
-        .from("city_laws")
-        .update({
-          ...cleanUpdates,
-          enacted_by_mayor_id: mayor.id,
-        })
-        .eq("city_id", cityId)
-        .is("effective_until", null)
-        .select()
-        .single();
-
+      const allowedFields = [
+        "income_tax_rate","sales_tax_rate","travel_tax","alcohol_legal_age",
+        "drug_policy","noise_curfew_hour","busking_license_fee","venue_permit_cost",
+        "prohibited_genres","promoted_genres","festival_permit_required",
+        "max_concert_capacity","community_events_funding",
+      ];
+      const cleanUpdates = Object.fromEntries(
+        Object.entries(updates).filter(([key]) => allowedFields.includes(key)),
+      );
+      const { data, error } = await (supabase as any).rpc("update_city_laws_atomic", {
+        p_profile_id: profileId, p_city_id: cityId, p_updates: cleanUpdates,
+        p_change_reason: changeReason ?? null, p_game_year: gameYear ?? null,
+      });
       if (error) throw error;
-
-      // Record law changes in history
-      if (currentLaws) {
-        const historyEntries = Object.entries(cleanUpdates)
-          .filter(([key, value]) => {
-            const oldValue = (currentLaws as any)[key];
-            return JSON.stringify(oldValue) !== JSON.stringify(value);
-          })
-          .map(([key, value]) => ({
-            city_id: cityId,
-            mayor_id: mayor.id,
-            law_field: key,
-            old_value: String((currentLaws as any)[key]),
-            new_value: String(value),
-            change_reason: changeReason || null,
-            game_year: gameYear || null,
-          }));
-
-        if (historyEntries.length > 0) {
-          await supabase.from("city_law_history").insert(historyEntries);
-        }
-      }
-
-      // Increment policies enacted count
-      await supabase
-        .from("city_mayors")
-        .update({ policies_enacted: (mayor.policies_enacted || 0) + 1 })
-        .eq("id", mayor.id);
-
       return data;
     },
     onSuccess: (_, { cityId }) => {

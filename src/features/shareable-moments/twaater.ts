@@ -1,5 +1,16 @@
 import { supabase } from "@/integrations/supabase/client";
 
+// Track uploads which have not yet been handed off to a Twaater composer.
+const unsubmittedShareCards = new Map<string, string>();
+export async function discardUploadedShareCard(mediaUrl: string): Promise<void> {
+  const path = unsubmittedShareCards.get(mediaUrl);
+  if (!path) return;
+  const { error } = await supabase.storage.from("twaater-media").remove([path]);
+  if (error) throw error;
+  unsubmittedShareCards.delete(mediaUrl);
+}
+
+
 export async function uploadShareCardToTwaater(blob: Blob, filename: string): Promise<string> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Sign in to post this card to Twaater.");
@@ -10,7 +21,9 @@ export async function uploadShareCardToTwaater(blob: Blob, filename: string): Pr
     upsert: false,
   });
   if (error) throw error;
-  return supabase.storage.from("twaater-media").getPublicUrl(path).data.publicUrl;
+  const mediaUrl = supabase.storage.from("twaater-media").getPublicUrl(path).data.publicUrl;
+  unsubmittedShareCards.set(mediaUrl, path);
+  return mediaUrl;
 }
 
 export type TwaaterShareDraft = { body: string; mediaUrl: string; mediaType: "image"; shareCooldownKey?: string | null; userId: string };
@@ -20,6 +33,10 @@ export async function storeTwaaterShareDraft(body: string, mediaUrl: string, sha
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Sign in before sharing to Twaater.");
   const draft: TwaaterShareDraft = { body, mediaUrl, mediaType: "image", shareCooldownKey, userId: user.id };
+  if (fallbackDraft?.mediaUrl && fallbackDraft.mediaUrl !== mediaUrl) {
+    // Replacing an abandoned unsubmitted draft must not leak the old image.
+    await discardUploadedShareCard(fallbackDraft.mediaUrl);
+  }
   fallbackDraft = draft;
   try {
     sessionStorage.setItem("rockmundoTwaaterShareDraft", JSON.stringify(draft));
@@ -39,7 +56,13 @@ export async function consumeTwaaterShareDraft(): Promise<TwaaterShareDraft | nu
   } catch {
     // Continue with the in-memory handoff if browser storage is unavailable.
   }
-  return user && draft?.userId === user.id ? draft : null;
+  if (user && draft?.userId === user.id) {
+    // Twaater now owns the media: never remove a card handed to the composer.
+    unsubmittedShareCards.delete(draft.mediaUrl);
+    return draft;
+  }
+  if (draft?.mediaUrl) await discardUploadedShareCard(draft.mediaUrl);
+  return null;
 }
 
 

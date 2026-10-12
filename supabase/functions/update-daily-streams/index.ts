@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
+import { authorizePrivilegedJob } from "../_shared/privilegedJobAuth.ts";
 import {
   completeJobRun,
   failJobRun,
@@ -23,6 +24,9 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const denied = await authorizePrivilegedJob(req);
+  if (denied) return denied;
 
   const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req);
   const triggeredBy = payload?.triggeredBy ?? req.headers.get('x-triggered-by') ?? undefined;
@@ -57,7 +61,9 @@ Deno.serve(async (req) => {
       requestId: payload?.requestId ?? null,
     });
 
-    const { data: streamingReleases, error: streamingError } = await supabase
+    const streamingReleases: any[] = [];
+    for (let offset = 0; ; offset += 500) {
+    const { data: page, error: streamingError } = await supabase
       .from('song_releases')
       .select(`
         id, 
@@ -75,10 +81,12 @@ Deno.serve(async (req) => {
       .eq('is_active', true)
       .eq('release_type', 'streaming')
       .in('songs.status', ['recorded', 'released'])
-      .lte('release_date', new Date().toISOString());
-
-    if (streamingError) {
-      throw streamingError;
+      .lte('release_date', new Date().toISOString())
+      .order('id', { ascending: true })
+      .range(offset, offset + 499);
+    if (streamingError) throw streamingError;
+    streamingReleases.push(...(page ?? []));
+    if (!page || page.length < 500) break;
     }
 
     // Get active band count for market scaling
@@ -122,28 +130,30 @@ Deno.serve(async (req) => {
     // Pre-fetch label contract info for releases
     let releaseContractMap = new Map<string, { contractId: string; labelId: string; labelCutPct: number; advanceAmount: number; recoupedAmount: number; dealTypeName: string; endDate: string }>();
     if (releaseIds.length > 0) {
-      const { data: releasesWithContracts } = await supabase
+      const { data: releasesWithContracts, error: releaseContractsError } = await supabase
         .from('releases')
         .select('id, label_contract_id, label_revenue_share_pct')
         .in('id', releaseIds)
         .not('label_contract_id', 'is', null);
+      if (releaseContractsError) throw releaseContractsError;
 
       const contractIds = [...new Set((releasesWithContracts || []).map(r => r.label_contract_id).filter(Boolean))];
       if (contractIds.length > 0) {
-        const { data: contracts } = await supabase
+        const { data: contracts, error: contractsError } = await supabase
           .from('artist_label_contracts')
           .select('id, label_id, royalty_label_pct, royalty_artist_pct, advance_amount, recouped_amount, status, deal_type_id, end_date')
           .in('id', contractIds)
           .eq('status', 'active');
-
+        if (contractsError) throw contractsError;
         // Fetch deal type names
         const dealTypeIds = [...new Set((contracts || []).map(c => c.deal_type_id).filter(Boolean))];
         const dealTypeNameMap = new Map<string, string>();
         if (dealTypeIds.length > 0) {
-          const { data: dealTypes } = await supabase
+          const { data: dealTypes, error: dealTypesError } = await supabase
             .from('label_deal_types')
             .select('id, name')
             .in('id', dealTypeIds);
+          if (dealTypesError) throw dealTypesError;
           for (const dt of dealTypes || []) {
             dealTypeNameMap.set(dt.id, dt.name);
           }
@@ -233,7 +243,7 @@ Deno.serve(async (req) => {
         if (!bandCountryFansMap.has(entry.band_id)) {
           bandCountryFansMap.set(entry.band_id, new Map());
         }
-        bandCountryFansMap.get(entry.band_id)!.set(entry.country, entry.fame || 0);
+        bandCountryFansMap.get(entry.band_id)!.set(entry.country, Math.max(0, Number(entry.total_fans || 0)));
       }
     }
 
@@ -259,7 +269,7 @@ Deno.serve(async (req) => {
 
     // === GENRE TREND & SEASONAL MODIFIERS (v1.0.932) ===
     const GAME_EPOCH_MS = new Date("2026-01-01T00:00:00Z").getTime();
-    const gameDaysElapsed = Math.max(0, Math.floor((Date.now() - GAME_EPOCH_MS) / (1000 * 60 * 60 * 24)));
+    const gameDaysElapsed = Math.max(0, Math.floor((Date.now() - GAME_EPOCH_MS) / 86_400_000) * 3);
     function genreHash(s: string): number {
       let h = 0;
       for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
@@ -274,7 +284,7 @@ Deno.serve(async (req) => {
       return Math.max(0.5, Math.min(1.5, 1.0 + wave * 0.35 + drift));
     }
 
-    const monthIndex = new Date().getMonth();
+    const monthIndex = Math.floor((gameDaysElapsed % 360) / 30);
     const season = monthIndex >= 2 && monthIndex <= 4 ? 'spring'
       : monthIndex >= 5 && monthIndex <= 7 ? 'summer'
       : monthIndex >= 8 && monthIndex <= 10 ? 'autumn' : 'winter';
@@ -298,7 +308,11 @@ Deno.serve(async (req) => {
 
     console.log(`Genre trend & seasonal modifiers active: season=${season} (${seasonalStreamMod}x), gameDay=${gameDaysElapsed}`);
 
-    for (const release of streamingReleases || []) {
+    // Rotate the starting release across days so timeouts do not permanently
+    // starve rows near the end of a large catalogue.
+    const rotation = streamingReleases.length ? (Math.floor(Date.now() / 86_400_000) % streamingReleases.length) : 0;
+    const rotatedReleases = [...streamingReleases.slice(rotation), ...streamingReleases.slice(0, rotation)];
+    for (const release of rotatedReleases) {
       if (isNearTimeout()) {
         console.warn(`[update-daily-streams] Approaching timeout after ${streamUpdates} stream updates. Finishing early.`);
         break;
@@ -369,39 +383,39 @@ Deno.serve(async (req) => {
         const dailyStreams = Math.min(5_000_000, dailyStreamsRaw);
         const dailyRevenueDollars = Math.round(dailyStreams * 0.004);
 
-        let regionBreakdown: Array<{ region: string; streams: number; revenue: number }> = [];
-        if (hasTerritories) {
-          const preferredRegions = new Set(marketingStrategy.regions.map(region => String(region).trim().toLowerCase()));
-          const hasRegionalFocus = preferredRegions.size > 0 && !preferredRegions.has("global");
-          const weightedCountries = releaseTerritories.map(t => {
-            const fame = bandFans?.get(t.country) || 1;
-            return { country: t.country,
-              weight: fame * (hasRegionalFocus && preferredRegions.has(String(t.country).toLowerCase()) ? 2 : 1) };
-          });
-          const totalWeight = weightedCountries.reduce((s, c) => s + c.weight, 0);
-          for (const wc of weightedCountries) {
-            const fraction = wc.weight / totalWeight;
-            const regionStreams = Math.max(1, Math.round(dailyStreams * fraction));
-            const regionRevenue = Math.round(regionStreams * 0.004);
-            regionBreakdown.push({ region: wc.country, streams: regionStreams, revenue: regionRevenue });
-          }
-        } else {
-          const REGIONS = ['North America', 'Europe', 'Asia Pacific', 'Latin America', 'UK & Ireland', 'Scandinavia', 'Australia & NZ'];
-          const REGION_WEIGHTS = [0.30, 0.25, 0.20, 0.10, 0.08, 0.04, 0.03];
-          for (let i = 0; i < REGIONS.length; i++) {
-            const regionStreams = Math.max(1, Math.round(dailyStreams * REGION_WEIGHTS[i]));
-            const regionRevenue = Math.round(regionStreams * 0.004);
-            regionBreakdown.push({ region: REGIONS[i], streams: regionStreams, revenue: regionRevenue });
-          }
-        }
+        const releaseTerritoryBreakdown: Array<{ region: string; weight: number }> = hasTerritories
+          ? (() => {
+              const preferred = new Set(marketingStrategy.regions.map(region => String(region).toLowerCase()));
+              const targeted = preferred.size > 0 && !preferred.has("global");
+              return releaseTerritories.map(t => ({
+                region: t.country,
+                weight: Math.max(1, bandFans?.get(t.country) || 0) *
+                  (targeted && preferred.has(String(t.country).toLowerCase()) ? 2 : 1),
+              }));
+            })()
+          : ['North America', 'Europe', 'Asia Pacific', 'Latin America', 'UK & Ireland', 'Scandinavia', 'Australia & NZ']
+            .map((region, index) => ({ region, weight: [30, 25, 20, 10, 8, 4, 3][index] }));
+        const weightTotal = releaseTerritoryBreakdown.reduce((sum, region) => sum + region.weight, 0);
+        let allocatedStreams = 0;
+        let allocatedRevenue = 0;
+        // Allocate remainders to the last region so no rounding can create
+        // streams or revenue absent from the canonical release total.
+        const regionBreakdown = releaseTerritoryBreakdown.map((region, index) => {
+          const last = index === releaseTerritoryBreakdown.length - 1;
+          const streams = last ? dailyStreams - allocatedStreams :
+            Math.floor(dailyStreams * region.weight / weightTotal);
+          const revenue = last ? dailyRevenueDollars - allocatedRevenue :
+            Math.floor(dailyRevenueDollars * region.weight / weightTotal);
+          allocatedStreams += streams;
+          allocatedRevenue += revenue;
+          return { region: region.region, streams, revenue };
+        });
 
-        const { error: updateError } = await supabase
-          .from('song_releases')
-          .update({
-            total_streams: (release.total_streams || 0) + dailyStreams,
-            total_revenue: Math.round((release.total_revenue || 0)) + dailyRevenueDollars,
-          })
-          .eq('id', release.id);
+        const { error: updateError } = await supabase.rpc("increment_song_release_stream_totals", {
+          p_release_id: release.id,
+          p_daily_streams: dailyStreams,
+          p_daily_revenue: dailyRevenueDollars,
+        });
 
         if (updateError) {
           throw updateError;
