@@ -342,15 +342,6 @@ export default function UniversityDetail() {
         }
       }
 
-      // Calculate duration based on quality
-      const adjustedDays = calculateUniversityCourseDuration(
-        course.base_duration_days,
-        university.quality_of_learning,
-      );
-
-      const scheduledEndDate = new Date();
-      scheduledEndDate.setDate(scheduledEndDate.getDate() + adjustedDays);
-
       // The server recalculates price and duration and serialises both tuition
       // deduction and enrollment to prevent unpaid or concurrent admissions.
       const { error } = await (supabase as any).rpc("enroll_university_course_atomic", {
