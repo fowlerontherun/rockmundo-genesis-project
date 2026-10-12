@@ -214,7 +214,7 @@ const TourManager = () => {
   // Tour dates are calendar dates, so the final day remains current until local end-of-day.
   const now = new Date();
   const terminalTourStatuses = new Set(["completed", "cancelled"]);
-  const localTourDate = (value: string | null | undefined) => value && /^\\d{4}-\\d{2}-\\d{2}$/.test(value)
+  const localTourDate = (value: string | null | undefined) => value && /^\d{4}-\d{2}-\d{2}$/.test(value)
     ? new Date(`${value}T12:00:00`) : value ? new Date(value) : new Date(NaN);
   const safeTourDateLabel = (value: string | null | undefined, pattern: string) => {
     const date = localTourDate(value);
