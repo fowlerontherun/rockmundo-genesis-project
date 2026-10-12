@@ -387,7 +387,7 @@ const InventoryManager = () => {
                           )}
 
                           <div className="flex flex-wrap gap-1.5">
-                            {effects.health && (
+                            {effects.health !== null && effects.health !== undefined && (
                               <Badge 
                                 variant="outline" 
                                 className={`gap-1 text-xs ${Number(effects.health) < 0 ? 'text-destructive border-destructive/30' : ''}`}
@@ -395,7 +395,7 @@ const InventoryManager = () => {
                                 <Heart className="h-3 w-3" /> {Number(effects.health) >= 0 ? '+' : ''}{String(effects.health)}
                               </Badge>
                             )}
-                            {effects.energy && (
+                            {effects.energy !== null && effects.energy !== undefined && (
                               <Badge 
                                 variant="outline" 
                                 className={`gap-1 text-xs ${Number(effects.energy) < 0 ? 'text-destructive border-destructive/30' : ''}`}
@@ -403,7 +403,7 @@ const InventoryManager = () => {
                                 <Zap className="h-3 w-3" /> {Number(effects.energy) >= 0 ? '+' : ''}{String(effects.energy)}
                               </Badge>
                             )}
-                            {effects.xp && (
+                            {effects.xp !== null && effects.xp !== undefined && (
                               <Badge 
                                 variant="outline" 
                                 className={`gap-1 text-xs ${Number(effects.xp) < 0 ? 'text-destructive border-destructive/30' : ''}`}
@@ -411,7 +411,7 @@ const InventoryManager = () => {
                                 <Star className="h-3 w-3" /> {Number(effects.xp) >= 0 ? '+' : ''}{String(effects.xp)} XP
                               </Badge>
                             )}
-                            {effects.fame && (
+                            {effects.fame !== null && effects.fame !== undefined && (
                               <Badge 
                                 variant="outline" 
                                 className={`gap-1 text-xs ${Number(effects.fame) < 0 ? 'text-destructive border-destructive/30' : ''}`}

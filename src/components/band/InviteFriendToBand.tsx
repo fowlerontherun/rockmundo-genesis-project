@@ -114,13 +114,20 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
     // Pending invitations and the roster are essential; the friends shortcut is
     // optional. A broken friendship/profile lookup must not prevent inviting
     // other players by public search or hide already-sent invitations.
-    const [inviteResult, memberResult, friendResult] = await Promise.all([
+    const [inviteResult, resolvedInviteResult, memberResult, friendResult] = await Promise.all([
       supabase.from('band_invitations')
         .select('id, invited_user_id, invited_profile_id, instrument_role, status, created_at, responded_at')
         .eq('band_id', bandId)
-        .in('status', ['pending', 'accepted', 'declined', 'cancelled'])
+        .eq('status', 'pending')
         .order('created_at', { ascending: false })
         .limit(80),
+      supabase.from('band_invitations')
+        .select('id, invited_user_id, invited_profile_id, instrument_role, status, created_at, responded_at')
+        .eq('band_id', bandId)
+        .neq('status', 'pending')
+        .not('responded_at', 'is', null)
+        .order('responded_at', { ascending: false })
+        .limit(10),
       supabase.from('band_members')
         .select('user_id')
         .eq('band_id', bandId)
@@ -131,9 +138,10 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
         .or(`requestor_id.eq.${profileId},addressee_id.eq.${profileId}`),
     ]);
     if (inviteResult.error) throw inviteResult.error;
+    if (resolvedInviteResult.error) throw resolvedInviteResult.error;
     if (memberResult.error) throw memberResult.error;
 
-    const invitations = inviteResult.data || [];
+    const invitations = [...(inviteResult.data || []), ...(resolvedInviteResult.data || [])];
     const pendingInvites = invitations.filter((invite) => invite.status === 'pending');
     const resolved = invitations.filter((invite) => invite.status !== 'pending' && invite.responded_at)
       .sort((a, b) => new Date(b.responded_at || 0).getTime() - new Date(a.responded_at || 0).getTime())

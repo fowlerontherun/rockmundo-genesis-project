@@ -476,8 +476,8 @@ export function LabelFinanceTab({ labelId, labelBalance, isBankrupt, balanceWent
                         <TableCell className="text-right">
                           ${artistBreakdown.reduce((s, a) => s + a.recoupedAmount, 0).toLocaleString()}
                         </TableCell>
-                        <TableCell className={cn("text-right", summaryStats.netPL >= 0 ? "text-emerald-500" : "text-destructive")}>
-                          {summaryStats.netPL >= 0 ? "+" : ""}${summaryStats.netPL.toLocaleString()}
+                        <TableCell className={cn("text-right", artistBreakdown.reduce((s, a) => s + a.totalRevenue - a.totalMarketing - a.totalExpenses, 0) >= 0 ? "text-emerald-500" : "text-destructive")}>
+                          {artistBreakdown.reduce((s, a) => s + a.totalRevenue - a.totalMarketing - a.totalExpenses, 0) >= 0 ? "+" : ""}${artistBreakdown.reduce((s, a) => s + a.totalRevenue - a.totalMarketing - a.totalExpenses, 0).toLocaleString()}
                         </TableCell>
                       </TableRow>
                     </TableBody>

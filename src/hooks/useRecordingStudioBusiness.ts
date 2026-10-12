@@ -84,15 +84,17 @@ export function useRecordingStudioTransactions(studioId: string | undefined) {
     queryFn: async () => {
       if (!studioId) return [];
       
-      const { data, error } = await supabase
-        .from('recording_studio_transactions')
-        .select('*')
-        .eq('studio_id', studioId)
-        .order('transaction_date', { ascending: false })
-        .limit(50);
-      
-      if (error) throw error;
-      return data as RecordingStudioTransaction[];
+      const all: RecordingStudioTransaction[] = [];
+      for (let offset = 0; ; offset += 500) {
+        const { data, error } = await supabase
+          .from('recording_studio_transactions').select('*')
+          .eq('studio_id', studioId).order('transaction_date', { ascending: false })
+          .range(offset, offset + 499);
+        if (error) throw error;
+        all.push(...((data ?? []) as RecordingStudioTransaction[]));
+        if (!data || data.length < 500) break;
+      }
+      return all;
     },
     enabled: !!studioId,
   });

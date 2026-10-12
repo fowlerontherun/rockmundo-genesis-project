@@ -206,6 +206,13 @@ const Travel = () => {
         description: `${formatHourToTime(departureHour)} departure · arrives ${format(arrival, "h:mm a")} · fare $${result.fare.toLocaleString()} + $${result.travelTax.toLocaleString()} ${result.fromCityName} travel tax = $${result.totalCost.toLocaleString()}`,
       });
 
+      // The booking has already succeeded. Close the dialog before optional UI refreshes,
+      // so a failed refresh cannot suggest the payment/booking itself failed.
+      setSelectedDestination(null);
+      setSelectedMode(null);
+      setDepartureDate(null);
+      setDepartureHour(null);
+      try {
       const { data: refreshedProfile } = await supabase
         .from("profiles")
         .select("cash,is_traveling,travel_arrives_at")
@@ -220,10 +227,10 @@ const Travel = () => {
         queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] }),
       ]);
 
-      setSelectedDestination(null);
-      setSelectedMode(null);
-      setDepartureDate(null);
-      setDepartureHour(null);
+      } catch (refreshError) {
+        console.warn('Travel booked but the updated schedule could not be refreshed', refreshError);
+        toast.warning('Travel booked, but the updated schedule could not be loaded. Refresh the page to see your booking.');
+      }
     } catch (error: any) {
       toast.error(error.message || "Failed to book travel");
     } finally {

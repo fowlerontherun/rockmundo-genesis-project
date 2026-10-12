@@ -399,7 +399,7 @@ export default function Employment() {
 
       const [startHour, startMin] = job.start_time.split(':').map(Number);
       const [endHour, endMin] = job.end_time.split(':').map(Number);
-      const hours = (endHour + endMin / 60) - (startHour + startMin / 60);
+      const hours = ((endHour + endMin / 60) - (startHour + startMin / 60) + 24) % 24 || 24;
       const earnings = Math.round(job.hourly_wage * hours);
 
       const { data: shift, error: shiftError } = await supabase
@@ -424,6 +424,7 @@ export default function Employment() {
       const now = new Date();
       const endTime = new Date(now);
       endTime.setHours(endHour, endMin, 0, 0);
+      if (endTime.getTime() <= now.getTime()) endTime.setDate(endTime.getDate() + 1);
 
       const { error: statusError } = await supabase
         .from("profile_activity_statuses")

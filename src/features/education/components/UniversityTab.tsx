@@ -377,6 +377,9 @@ export const UniversityTab = () => {
     if (!courses) return {};
     const counts: Record<string, number> = {};
     let cityFiltered = courses;
+    if (hideLockedCourses) {
+      cityFiltered = cityFiltered.filter(c => !isHigherTierSkill(c.skill_slug) || accessBySkill.get(c.skill_slug) !== false);
+    }
     if (filterCity) {
       cityFiltered = cityFiltered.filter(c => c.universities?.city === filterCity);
     }
@@ -385,7 +388,7 @@ export const UniversityTab = () => {
       counts[cat] = (counts[cat] || 0) + 1;
     }
     return counts;
-  }, [courses, filterCity]);
+  }, [courses, filterCity, hideLockedCourses, accessBySkill]);
 
   const hasActiveFilters = searchQuery.trim() || selectedCity !== "current" || selectedCategory !== "all";
 

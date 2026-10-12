@@ -28,7 +28,7 @@ import type { RadioStation } from "@/hooks/useRadioStations";
 
 const RadioBrowser = () => {
   const navigate = useNavigate();
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const { currentCity } = useGameData();
   const { stations, mySubmissions, isLoading, stationsError, submissionsError, retryStations, retrySubmissions } = useRadioStations();
   
@@ -444,7 +444,7 @@ const RadioBrowser = () => {
           {profileId && <MyAirplayStats userId={profileId} />}
           
           {/* Songs in Rotation */}
-          {profileId && <SongsInRotation userId={profileId} />}
+          {userId && <SongsInRotation userId={userId} />}
           
           {/* Submission Breakdown */}
           <p className="text-sm text-muted-foreground">Only verified playback is included in the live airplay panels above. Accepted submissions do not count as plays.</p>

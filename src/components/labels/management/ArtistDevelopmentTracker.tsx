@@ -24,7 +24,7 @@ export function ArtistDevelopmentTracker({ labelId }: ArtistDevelopmentTrackerPr
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 20;
   useEffect(() => setPage(0), [labelId]);
-  const { data: pipelines = [], isLoading } = useQuery({
+  const { data: pipelines = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['artist-dev-pipeline', labelId, page],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -41,6 +41,8 @@ export function ArtistDevelopmentTracker({ labelId }: ArtistDevelopmentTrackerPr
   if (isLoading) {
     return <div className="animate-pulse space-y-3">{[...Array(3)].map((_, i) => <div key={i} className="h-24 bg-muted rounded" />)}</div>;
   }
+
+  if (isError) return <Card role="alert"><CardContent className="p-4">Unable to load development pipelines. <Button size="sm" variant="outline" onClick={() => void refetch()}>Retry</Button></CardContent></Card>;
 
   if (pipelines.length === 0) {
     return (
