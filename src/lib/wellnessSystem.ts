@@ -291,8 +291,13 @@ export function calculateCanonicalReadiness(input: { role: WellnessReadinessRole
     modifier.target === "burnout_pressure")
   );
   const normalized = normalizeWellnessModifiers(eligibleModifiers);
-  const normalizedIds = new Set(normalized.map(m => m.id));
-  const ignoredContributors = (input.modifiers ?? []).filter(m => !normalizedIds.has(m.id));
+  const remainingById = new Map<string, number>();
+  for (const item of normalized) remainingById.set(item.id, (remainingById.get(item.id) ?? 0) + 1);
+  const ignoredContributors = (input.modifiers ?? []).filter(m => {
+    const remaining = remainingById.get(m.id) ?? 0;
+    if (remaining > 0) { remainingById.set(m.id, remaining - 1); return false; }
+    return true;
+  });
   let additive = 0;
   let multiplier = 1;
   for (const modifier of normalized) {
