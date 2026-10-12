@@ -44,7 +44,7 @@ const InventoryManager = () => {
   } = useMyFestivalMemorabilia(Boolean(profileId));
 
   // Personal instruments / gear (e.g. from blind boxes)
-  const { data: personalGear = [], isLoading: gearLoading } = useQuery({
+  const { data: personalGear = [], isLoading: gearLoading, isError: gearError, refetch: retryGear } = useQuery({
     queryKey: ["inventory-personal-gear", userId],
     enabled: !!userId,
     queryFn: async () => {
@@ -78,7 +78,7 @@ const InventoryManager = () => {
 
 
   // Fetch books from player_book_reading_sessions (the real book ownership table)
-  const { data: bookSessions = [], isLoading: booksLoading } = useQuery({
+  const { data: bookSessions = [], isLoading: booksLoading, isError: booksError, refetch: retryBooks } = useQuery({
     queryKey: ["inventory-book-sessions", profileId],
     queryFn: async () => {
       if (!profileId) return [];
@@ -200,7 +200,7 @@ const InventoryManager = () => {
                 <p className="text-sm text-muted-foreground">Sign in to view your instruments.</p>
               ) : gearLoading ? (
                 <p className="text-sm text-muted-foreground">Loading instruments...</p>
-              ) : personalGear.length === 0 ? (
+              ) : gearError ? <div role="alert" className="text-sm text-destructive">Unable to load instruments. <Button size="sm" variant="outline" onClick={() => void retryGear()}>Retry instruments</Button></div> : personalGear.length === 0 ? (
                 <div className="text-center py-8">
                   <Guitar className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
                   <p className="text-muted-foreground">No instruments yet.</p>
@@ -457,7 +457,7 @@ const InventoryManager = () => {
                 <p className="text-sm text-muted-foreground">Sign in to view your book inventory.</p>
               ) : booksLoading ? (
                 <p className="text-sm text-muted-foreground">Loading your books...</p>
-              ) : bookSessions.length === 0 ? (
+              ) : booksError ? <div role="alert" className="text-sm text-destructive">Unable to load your book inventory. <Button size="sm" variant="outline" onClick={() => void retryBooks()}>Retry books</Button></div> : bookSessions.length === 0 ? (
                 <div className="text-center py-8">
                   <BookOpen className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
                   <p className="text-muted-foreground">No books in your library yet.</p>
