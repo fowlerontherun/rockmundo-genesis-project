@@ -174,35 +174,12 @@ export const useCraftingSystem = () => {
 
       const totalCost = material.base_cost * quantity;
 
-      // Check balance
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("cash")
-        .eq("id", profileId)
-        .single();
 
-      if (!profile || profile.cash < totalCost) throw new Error("Insufficient funds");
-
-      // Deduct cost
-      await supabase
-        .from("profiles")
-        .update({ cash: profile.cash - totalCost })
-        .eq("id", profileId);
-
-      // Upsert material inventory
-      const existing = playerMaterials.find((pm) => pm.material_id === materialId);
-      if (existing) {
-        const { error } = await (supabase as any)
-          .from("player_crafting_materials")
-          .update({ quantity: existing.quantity + quantity })
-          .eq("id", existing.id);
-        if (error) throw error;
-      } else {
-        const { error } = await (supabase as any)
-          .from("player_crafting_materials")
-          .insert({ profile_id: profileId, material_id: materialId, quantity });
-        if (error) throw error;
-      }
+      if (!Number.isInteger(quantity) || quantity <= 0 || quantity > 999) throw new Error("Invalid material quantity");
+      const { error } = await (supabase as any).rpc("purchase_crafting_material_atomic", {
+        p_profile_id: profileId, p_material_id: materialId, p_quantity: quantity,
+      });
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["player-crafting-materials", profileId] });
@@ -219,43 +196,10 @@ export const useCraftingSystem = () => {
       const recipe = recipes.find((r) => r.id === recipeId);
       if (!recipe) throw new Error("Recipe not found");
 
-      // Check materials
-      for (const req of recipe.materials_required) {
-        const owned = playerMaterials.find((pm) => pm.material_id === req.material_id);
-        if (!owned || owned.quantity < req.quantity) {
-          throw new Error("Missing required materials");
-        }
-      }
 
-      // Deduct materials
-      for (const req of recipe.materials_required) {
-        const owned = playerMaterials.find((pm) => pm.material_id === req.material_id)!;
-        const newQty = owned.quantity - req.quantity;
-        if (newQty <= 0) {
-          await (supabase as any)
-            .from("player_crafting_materials")
-            .delete()
-            .eq("id", owned.id);
-        } else {
-          await (supabase as any)
-            .from("player_crafting_materials")
-            .update({ quantity: newQty })
-            .eq("id", owned.id);
-        }
-      }
-
-      // Create session
-      const completesAt = new Date(Date.now() + recipe.base_craft_time_minutes * 60 * 1000).toISOString();
-      const { data, error } = await (supabase as any)
-        .from("crafting_sessions")
-        .insert({
-          profile_id: profileId,
-          recipe_id: recipeId,
-          completes_at: completesAt,
-          status: "in_progress",
-        })
-        .select()
-        .single();
+      const { data, error } = await (supabase as any).rpc("start_crafting_session_atomic", {
+        p_profile_id: profileId, p_recipe_id: recipeId,
+      });
       if (error) throw error;
       return data;
     },
@@ -271,38 +215,15 @@ export const useCraftingSystem = () => {
   const collectCraft = useMutation({
     mutationFn: async (sessionId: string) => {
       if (!profileId) throw new Error("Not authenticated");
-      const session = sessions.find((s) => s.id === sessionId);
-      if (!session) throw new Error("Session not found");
-      if (new Date(session.completes_at) > new Date()) throw new Error("Not ready yet");
 
-      // Quality roll: 0-100, influenced by difficulty
-      const baseRoll = Math.random() * 100;
-      const qualityRoll = Math.min(100, Math.max(0, baseRoll));
-      const bonusStats: Record<string, number> = {};
-
-      if (qualityRoll >= 95) {
-        bonusStats.fame_bonus = 15;
-        bonusStats.quality_bonus = 20;
-      } else if (qualityRoll >= 80) {
-        bonusStats.fame_bonus = 10;
-        bonusStats.quality_bonus = 10;
-      } else if (qualityRoll >= 60) {
-        bonusStats.quality_bonus = 5;
-      } else if (qualityRoll < 20) {
-        bonusStats.quality_penalty = -10;
-      }
-
-      const { error } = await (supabase as any)
-        .from("crafting_sessions")
-        .update({
-          status: "collected",
-          quality_roll: qualityRoll,
-          bonus_stats: bonusStats,
-        })
-        .eq("id", sessionId);
+      const { data, error } = await (supabase as any).rpc("collect_crafting_session_atomic", {
+        p_profile_id: profileId, p_session_id: sessionId,
+      });
       if (error) throw error;
-
-      return { qualityRoll, bonusStats };
+      if (!data || typeof data.qualityRoll !== "number") throw new Error("Craft collection response missing");
+      return { qualityRoll: data.qualityRoll as number,
+        bonusStats: data.bonusStats as Record<string, number>,
+        equipmentId: data.equipmentId as string };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["crafting-sessions", profileId] });
@@ -373,56 +294,18 @@ export const useCraftingSystem = () => {
     mutationFn: async ({ equipmentId }: { equipmentId: string }) => {
       if (!profileId) throw new Error("Not authenticated");
 
-      // Re-fetch the row to guard against stale UI state
-      const { data: row, error: fetchErr } = await (supabase as any)
-        .from("player_equipment")
-        .select(
-          `id, equipment_id, condition, is_equipped,
-           equipment:equipment_items!equipment_id (id, name, category, rarity)`
-        )
-        .eq("id", equipmentId)
-        .eq("user_id", profileId)
-        .maybeSingle();
 
-      if (fetchErr) throw fetchErr;
-      if (!row) throw new Error("Equipment not found in your inventory");
-      if (row.is_equipped) throw new Error("Unequip the item before salvaging");
-
-      const yields = computeSalvageYields(row, materialsCatalog);
-      if (yields.length === 0) {
-        throw new Error("This item cannot be salvaged right now");
-      }
-
-      // Award materials (upsert by material_id)
-      for (const y of yields) {
-        const existing = playerMaterials.find((pm) => pm.material_id === y.materialId);
-        if (existing) {
-          const { error } = await (supabase as any)
-            .from("player_crafting_materials")
-            .update({ quantity: existing.quantity + y.quantity })
-            .eq("id", existing.id);
-          if (error) throw error;
-        } else {
-          const { error } = await (supabase as any)
-            .from("player_crafting_materials")
-            .insert({
-              profile_id: profileId,
-              material_id: y.materialId,
-              quantity: y.quantity,
-            });
-          if (error) throw error;
-        }
-      }
-
-      // Destroy the equipment row
-      const { error: delErr } = await (supabase as any)
-        .from("player_equipment")
-        .delete()
-        .eq("id", equipmentId)
-        .eq("user_id", profileId);
-      if (delErr) throw delErr;
-
-      return { yields, itemName: row.equipment?.name ?? "Item" };
+      const { data, error } = await (supabase as any).rpc("salvage_equipment_atomic", {
+        p_profile_id: profileId, p_equipment_id: equipmentId,
+      });
+      if (error) throw error;
+      if (!data || !Array.isArray(data.yields)) throw new Error("Salvage response missing");
+      const yields = (data.yields as Array<{materialId: string; quantity: number}>).map(y => ({
+        materialId: y.materialId,
+        quantity: y.quantity,
+        material: materialsCatalog.find(m => m.id === y.materialId) ?? { name: "Material" } as CraftingMaterial,
+      }));
+      return { yields, itemName: String(data.itemName ?? "Equipment") };
     },
     onSuccess: ({ yields, itemName }) => {
       queryClient.invalidateQueries({ queryKey: ["player-equipment", profileId] });
