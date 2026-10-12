@@ -160,7 +160,7 @@ export const BooksTab = () => {
       <div>
         <h2 className="text-xl font-semibold">Your Library</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Skill books offer passive learning. Choose how long to read each day, then let daily attendance build experience
+          Skill books offer daily learning. Enable automatic reading or record attendance manually to build experience
           over time until completion unlocks the skill gain.
         </p>
       </div>
