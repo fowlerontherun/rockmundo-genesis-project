@@ -129,13 +129,21 @@ export function FMChatDock() {
       if (disposed || !worldReady.current || checking || !newestTimestamp) return;
       checking = true;
       try {
-        const { data, error } = await supabase.from("global_chat")
-          .select("id, profile_id, user_id, created_at")
-          .eq("channel", "world")
-          .gte("created_at", newestTimestamp)
-          .order("created_at", { ascending: true }).limit(100);
-        if (error) throw error;
-        for (const row of data ?? []) handleMessage(row);
+        // Hold the lower bound stable while walking all pages. One 100-row page
+        // can permanently hide later messages that share an identical timestamp.
+        const lowerBound = newestTimestamp;
+        for (let offset = 0; offset < 100_000; offset += 500) {
+          const { data, error } = await supabase.from("global_chat")
+            .select("id, profile_id, user_id, created_at")
+            .eq("channel", "world")
+            .gte("created_at", lowerBound)
+            .order("created_at", { ascending: true })
+            .order("id", { ascending: true })
+            .range(offset, offset + 499);
+          if (error) throw error;
+          for (const row of data ?? []) handleMessage(row);
+          if (!data || data.length < 500) break;
+        }
       } catch (error) {
         console.warn("World Chat notification sync failed", error);
       } finally {
