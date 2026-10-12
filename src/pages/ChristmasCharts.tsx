@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateInGameDate, getMonthName } from "@/utils/gameCalendar";
@@ -12,7 +12,8 @@ import { cn } from "@/lib/utils";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const ChristmasCharts = () => {
-  const gameDate = useMemo(() => calculateInGameDate(), []);
+  const [gameDate, setGameDate] = useState(calculateInGameDate);
+  useEffect(() => { const timer = window.setInterval(() => setGameDate(calculateInGameDate()), 60_000); return () => window.clearInterval(timer); }, []);
   const isDecember = gameDate.gameMonth === 12;
   const daysUntilChristmas = isDecember ? Math.max(0, 25 - gameDate.gameDay) : null;
   const isChristmasDay = isDecember && gameDate.gameDay === 25;
@@ -34,7 +35,9 @@ const ChristmasCharts = () => {
       const startDate = new Date(epochMs + decStartRealDays * 86400000).toISOString().split("T")[0];
       const endDate = new Date(epochMs + decEndRealDays * 86400000).toISOString().split("T")[0];
 
-      const { data, error } = await supabase
+      const salesRows: any[] = [];
+      for (let offset=0; ; offset+=500) {
+        const { data, error } = await supabase
         .from("release_sales")
         .select(`
           release_format_id,
@@ -50,9 +53,12 @@ const ChristmasCharts = () => {
         `)
         .gte("sale_date", startDate)
         .lt("sale_date", endDate)
-        .order("sale_date", { ascending: false });
-
-      if (error) throw error;
+        .order("sale_date", { ascending: false })
+        .range(offset, offset + 499);
+        if (error) throw error;
+        salesRows.push(...(data ?? []));
+        if ((data?.length ?? 0) < 500) break;
+      }
 
       // Aggregate by release
       const releaseMap = new Map<string, {
@@ -64,7 +70,7 @@ const ChristmasCharts = () => {
         totalRevenue: number;
       }>();
 
-      for (const sale of data || []) {
+      for (const sale of salesRows) {
         const fmt = sale.release_format as any;
         const rel = fmt?.release;
         if (!rel) continue;
