@@ -36,7 +36,7 @@ interface PopHistoryRow {
 export default function CitiesTreasury() {
   const [search, setSearch] = useState("");
 
-  const { data: cities = [], isLoading } = useQuery({
+  const { data: cities = [], isLoading, isError: citiesError, refetch: retryCities } = useQuery({
     queryKey: ["cities-treasury-all"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -51,18 +51,23 @@ export default function CitiesTreasury() {
   });
 
   // Population history (last 30 days) for trend chart + 7-day deltas
-  const { data: popHistory = [] } = useQuery({
+  const { data: popHistory = [], isError: historyError, refetch: retryHistory } = useQuery({
     queryKey: ["city-pop-history-30d"],
     queryFn: async () => {
       const since = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
-      const { data, error } = await (supabase as any)
-        .from("city_population_history")
-        .select("city_id,delta,created_at")
-        .gte("created_at", since)
-        .order("created_at", { ascending: true })
-        .limit(20000);
-      if (error) throw error;
-      return (data ?? []) as PopHistoryRow[];
+      const rows: PopHistoryRow[] = [];
+      for (let offset = 0; ; offset += 1000) {
+        const { data, error } = await (supabase as any)
+          .from("city_population_history")
+          .select("city_id,delta,created_at")
+          .gte("created_at", since)
+          .order("created_at", { ascending: true })
+          .range(offset, offset + 999);
+        if (error) throw error;
+        rows.push(...((data ?? []) as PopHistoryRow[]));
+        if (!data || data.length < 1000) break;
+      }
+      return rows;
     },
     staleTime: 60_000,
   });
@@ -174,14 +179,15 @@ export default function CitiesTreasury() {
       backTo="/hub/world-social"
     >
       <div className="space-y-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {(citiesError || historyError) && <div role="alert" className="rounded-md border p-3 text-sm">World treasury data could not be fully loaded. <button className="underline" type="button" onClick={() => { if (citiesError) void retryCities(); if (historyError) void retryHistory(); }}>Retry</button></div>}
+        {!citiesError && <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Stat icon={Users} label="Total population" value={num.format(totals.population)} />
           <Stat icon={Wallet} label="Combined balance" value={fmt.format(totals.balance)} accent="text-emerald-500" />
           <Stat icon={TrendingUp} label="Tax collected" value={fmt.format(totals.collected)} accent="text-primary" />
           <Stat icon={TrendingDown} label="Total spent" value={fmt.format(totals.spent)} accent="text-warning" />
-        </div>
+        </div>}
 
-        <Card>
+        {!historyError && <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm">
               <LineIcon className="h-4 w-4 text-primary" />
@@ -235,7 +241,7 @@ export default function CitiesTreasury() {
               </ResponsiveContainer>
             )}
           </CardContent>
-        </Card>
+        </Card>}
 
 
         <div className="relative">
@@ -272,14 +278,15 @@ export default function CitiesTreasury() {
                       </TableCell>
                     </TableRow>
                   )}
-                  {!isLoading && filtered.length === 0 && (
+                  {citiesError && <TableRow><TableCell colSpan={8} className="text-center py-8">Unable to load cities. Retry above.</TableCell></TableRow>}
+                  {!isLoading && !citiesError && filtered.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-8">
                         No cities match your search.
                       </TableCell>
                     </TableRow>
                   )}
-                  {filtered.map((r) => (
+                  {!citiesError && filtered.map((r) => (
                     <TableRow key={r.id}>
                       <TableCell className="font-medium">
                         <Link to={`/cities/${r.id}`} className="hover:underline">
