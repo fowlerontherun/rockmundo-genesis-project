@@ -178,11 +178,12 @@ export const useSkillBooks = () => {
       // Reuse the most recent stopped session to preserve attendance and earned XP.
       const { data: previous, error: previousError } = await supabase
         .from("player_book_reading_sessions")
-        .select("id")
+        .select("id, days_read")
         .eq("profile_id", profileId).eq("book_id", bookId).eq("purchase_id", purchaseId)
         .eq("status", "abandoned").order("started_at", { ascending: false }).limit(1).maybeSingle();
       if (previousError) throw previousError;
       if (previous) {
+        scheduledEndDate.setDate(scheduledEndDate.getDate() - Math.min(book.base_reading_days, Math.max(0, previous.days_read ?? 0)));
         const { data, error } = await supabase.from("player_book_reading_sessions")
           .update({ status: "reading", auto_read: autoRead ?? false, scheduled_end_date: scheduledEndDate.toISOString() })
           .eq("id", previous.id).eq("profile_id", profileId).eq("status", "abandoned")

@@ -467,7 +467,7 @@ const InventoryManager = () => {
                 </div>
               ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {bookSessions.map((session: any) => {
+                  {bookSessions.filter((session: any, index: number, all: any[]) => all.findIndex((item: any) => (item.skill_books?.id ?? item.book_id ?? item.id) === (session.skill_books?.id ?? session.book_id ?? session.id)) === index).map((session: any) => {
                     const book = session.skill_books;
                     if (!book) return <Card key={session.id} role="status"><CardHeader><CardTitle>Reading record unavailable</CardTitle></CardHeader><CardContent>Reading session {session.id} ({session.status}) exists, but the linked book details could not be loaded.</CardContent></Card>;
                     const isCompleted = session.status === "completed";

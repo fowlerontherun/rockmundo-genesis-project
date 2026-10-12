@@ -68,6 +68,7 @@ const SKILL_CATEGORIES = [
   { value: "instrument", label: "Instruments", icon: Music },
   { value: "vocals", label: "Vocals & Lyrics", icon: Mic },
   { value: "genre", label: "Genres", icon: Radio },
+  { value: "other", label: "Other Skills", icon: GraduationCap },
   { value: "production", label: "Production", icon: Headphones },
   { value: "performance", label: "Performance", icon: Zap },
   { value: "composition", label: "Composition", icon: PenTool },
@@ -93,7 +94,7 @@ function getSkillCategory(slug: string): SkillCategory {
   if (/(ai_music)/.test(slug)) return "technology";
   // Genre
   if (/(rock|pop|rnb|country|reggae|classical|metal|jazz|blues|hip_hop|edm|punk|flamenco|trap|drill|synthwave|hyperpop|indie|lofi|world|african|afrobeats|latin|kpop|jpop|electronica|soul|metalcore|neo_soul|amapiano)/.test(slug)) return "genre";
-  return "genre"; // default to genre for remaining skill slugs
+  return "other"; // unknown skill types are not automatically musical genres
 }
 
 function formatSkillSlug(slug: string): string {

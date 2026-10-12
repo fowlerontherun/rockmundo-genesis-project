@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Brain, Music2, PenLine, Puzzle, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -67,6 +67,7 @@ export function ActiveSongwritingDialog({ open, onOpenChange, project }: ActiveS
   const [answers, setAnswers] = useState<Record<PuzzleType, string>>({ lyrics: "", chords: "", melody: "", arrangement: "" });
   const [scores, setScores] = useState<Record<PuzzleType, number>>({ lyrics: 0, chords: 0, melody: 0, arrangement: 0 });
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [finished, setFinished] = useState(false);
   const [sessionPuzzles, setSessionPuzzles] = useState(buildSessionPuzzles);
 
@@ -93,7 +94,8 @@ export function ActiveSongwritingDialog({ open, onOpenChange, project }: ActiveS
   };
 
   const submit = async () => {
-    if (!profileId || !finished) return;
+    if (!profileId || !finished || savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     try {
       const payload = PUZZLE_ORDER.reduce<Record<string, { id: string; answer: string }>>((result, key) => {
@@ -118,6 +120,7 @@ export function ActiveSongwritingDialog({ open, onOpenChange, project }: ActiveS
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not save Active Writing session");
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };

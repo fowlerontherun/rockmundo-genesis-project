@@ -138,6 +138,9 @@ const Travel = () => {
       const dest = await fetchCityWithCoords(destId);
       if (!dest || dest.latitude == null || dest.longitude == null || currentCity.latitude == null || currentCity.longitude == null) {
         toast.error("Destination not found");
+        const nextParams = new URLSearchParams(searchParams);
+        nextParams.delete("destination");
+        setSearchParams(nextParams, { replace: true });
         return;
       }
 

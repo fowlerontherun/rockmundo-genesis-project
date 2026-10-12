@@ -52,7 +52,7 @@ export function BandChat({ bandId }: BandChatProps) {
           created_at
         `)
         .eq('band_id', bandId)
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
         .limit(100);
 
       if (error) throw error;
@@ -65,7 +65,7 @@ export function BandChat({ bandId }: BandChatProps) {
           .select('user_id, display_name, username')
           .in('user_id', userIds);
 
-        const messagesWithProfiles = data.map(msg => ({
+        const messagesWithProfiles = [...data].reverse().map(msg => ({
           ...msg,
           profile: profiles?.find(p => p.user_id === msg.user_id),
         }));

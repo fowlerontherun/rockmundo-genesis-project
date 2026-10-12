@@ -66,6 +66,7 @@ export default function Employment() {
   const [cityFilter, setCityFilter] = useState<string>("current");
   const [wageRange, setWageRange] = useState<number[]>([0, 100]);
   const [activeTab, setActiveTab] = useState("jobs");
+  const [shiftPage, setShiftPage] = useState(0);
 
   const { data: profile } = useQuery({
     queryKey: ["profile", profileId],
@@ -167,7 +168,7 @@ export default function Employment() {
   });
 
   const { data: shiftHistory } = useQuery<ShiftHistoryWithJob[]>({
-    queryKey: ["shift-history", profile?.id],
+    queryKey: ["shift-history", profile?.id, shiftPage],
     queryFn: async () => {
       if (!profile?.id) return [] as ShiftHistoryWithJob[];
 
@@ -176,7 +177,7 @@ export default function Employment() {
         .select(`*, jobs (title, company_name)`)
         .eq("profile_id", profile.id)
         .order("shift_date", { ascending: false })
-        .limit(20);
+        .range(shiftPage * 20, shiftPage * 20 + 19);
 
       if (error) throw error;
       return (data ?? []) as ShiftHistoryWithJob[];
@@ -988,6 +989,7 @@ export default function Employment() {
                 <CardHeader>
                   <CardTitle>Work History</CardTitle>
                   <CardDescription>Your recent shifts and earnings</CardDescription>
+                  <div className="flex items-center gap-2"><Button size="sm" variant="outline" disabled={shiftPage===0} onClick={() => setShiftPage(p=>Math.max(0,p-1))}>Previous</Button><span>Page {shiftPage+1}</span><Button size="sm" variant="outline" disabled={(shiftHistory?.length ?? 0)<20} onClick={() => setShiftPage(p=>p+1)}>Next</Button></div>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">

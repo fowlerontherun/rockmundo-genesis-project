@@ -100,16 +100,21 @@ export const useEducationVideoPlaylists = (): UseQueryResult<VideoPlaylist[]> =>
   useQuery({
     queryKey: PLAYLIST_QUERY_KEY,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const allResources: YoutubeResourceRow[] = [];
+      for (let offset = 0; ; offset += 500) {
+        const { data, error } = await (supabase as any)
         .from("education_youtube_resources")
         .select("*")
         .order("is_featured", { ascending: false })
         .order("difficulty_level", { ascending: true })
-        .order("title", { ascending: true });
+        .order("title", { ascending: true })
+        .range(offset, offset + 499);
+        if (error) throw error;
+        allResources.push(...((data ?? []) as YoutubeResourceRow[]));
+        if ((data?.length ?? 0) < 500) break;
+      }
 
-      if (error) throw error;
-
-      const rows = (data ?? []) as YoutubeResourceRow[];
+      const rows = allResources;
       const skillSlugs = Array.from(
         new Set(rows.map((row) => row.skill_slug).filter((slug): slug is string => Boolean(slug))),
       );

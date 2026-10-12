@@ -27,7 +27,7 @@ export function CompanyShiftMarketplace() {
   const queryClient = useQueryClient();
   const { profileId } = useActiveProfile();
 
-  const { data: shifts = [], isLoading } = useQuery({
+  const { data: shifts = [], isLoading, isError: shiftsError, refetch: retryShifts } = useQuery({
     queryKey: ["open-company-shifts"],
     queryFn: async (): Promise<OpenShift[]> => {
       const { data, error } = await (supabase as any)
@@ -41,7 +41,7 @@ export function CompanyShiftMarketplace() {
     },
   });
 
-  const { data: myClaims = [] } = useQuery({
+  const { data: myClaims = [], isError: claimsError, refetch: retryClaims } = useQuery({
     queryKey: ["my-shift-claims", profileId],
     queryFn: async () => {
       if (!profileId) return [];
@@ -98,6 +98,8 @@ export function CompanyShiftMarketplace() {
       <CardContent className="space-y-2">
         {isLoading ? (
           <Skeleton className="h-14 w-full" />
+        ) : shiftsError || claimsError ? (
+          <div role="alert" className="py-4 text-sm text-destructive">Could not load shifts or your claims. <Button variant="outline" size="sm" onClick={() => { void retryShifts(); void retryClaims(); }}>Retry</Button></div>
         ) : shifts.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
             No open shifts right now. New shifts are published every morning.

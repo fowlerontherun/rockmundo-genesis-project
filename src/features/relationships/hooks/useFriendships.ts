@@ -52,6 +52,11 @@ export function useFriendships(profileId: string | null | undefined) {
     }
   }, [act]);
 
+  const cancelRequest = useCallback(async (friendshipId: string) => {
+    await act(friendshipId, "cancelled");
+    toast.success("Friend request withdrawn");
+  }, [act]);
+
   const removeFriend = useCallback(async (friendshipId: string) => {
     try {
       await act(friendshipId, "removed");
@@ -75,6 +80,7 @@ export function useFriendships(profileId: string | null | undefined) {
     acceptRequest,
     declineRequest,
     removeFriend,
+    cancelRequest,
     sendRequest,
   };
 }
