@@ -164,6 +164,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
 
   return (
     <main>
+      {festivalDataError && <div role="alert" className="mx-auto max-w-6xl rounded-md border border-destructive/40 p-3 text-sm">Your festival tickets or check-in status could not be verified. Do not rely on the currently displayed eligibility. <button type="button" className="underline" onClick={() => { if (walletError) void retryWallet(); if (eligibilityError) void retryEligibility(); }}>Retry verification</button></div>}
       <header className="bg-gradient-to-br from-violet-950 to-fuchsia-900 p-6 text-white md:p-12">
         <div className="mx-auto flex max-w-6xl flex-col gap-6 md:flex-row md:items-center">
           <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white/10 p-3 shadow-xl backdrop-blur md:h-36 md:w-36">
