@@ -1,7 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { awardActionXp } from "@/utils/progression";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 const STORAGE_KEY_PREFIX = "video_watch_history_";
@@ -63,44 +62,12 @@ interface WatchVideoInput {
   skillSlug: string | null;
 }
 
-const BASIC_VIDEO_UNLOCKS = new Set([
-  "guitar",
-  "bass",
-  "drums",
-  "vocals",
-  "performance",
-  "songwriting",
-]);
-
-const canVideoStartSkill = (skillSlug: string) =>
-  BASIC_VIDEO_UNLOCKS.has(skillSlug) ||
-  skillSlug.startsWith("basic_") ||
-  skillSlug.startsWith("instruments_basic_") ||
-  skillSlug.startsWith("genres_basic_");
-
 const humanizeSkill = (skillSlug: string) =>
   skillSlug
     .replace(/^instruments_/, "")
     .replace(/^genres_/, "")
     .replace(/_/g, " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
-
-const getRequiredSkillXp = async (level: number) => {
-  const { data, error } = await (supabase as any).rpc("progression_skill_required_xp", {
-    p_level: level,
-  });
-  if (error) throw error;
-  return Number(data) || 100;
-};
-
-const getSkillMaxLevel = async (skillSlug: string) => {
-  const { data, error } = await (supabase as any).rpc("progression_skill_max_level", {
-    p_skill_slug: skillSlug,
-  });
-  if (error) throw error;
-  const value = Number(data);
-  return Number.isFinite(value) && value > 0 ? value : 20;
-};
 
 export const useWatchVideo = () => {
   const { toast } = useToast();
@@ -109,131 +76,27 @@ export const useWatchVideo = () => {
 
   return useMutation({
     mutationFn: async ({ videoId, videoName, skillSlug }: WatchVideoInput) => {
-      const status = getCooldownStatus(profileId);
-
-      if (!status.canWatch) throw new Error("cooldown");
       if (!profileId) throw new Error("Not authenticated");
-
-      // Every permitted repeat viewing must have a distinct reward event.
-      const transactionRef = `education-video:${profileId}:${videoId}:${crypto.randomUUID()}`;
-
-      await awardActionXp({
-        amount: XP_PER_VIDEO,
-        category: "education",
-        actionKey: "youtube_video",
-        uniqueEventId: transactionRef,
-        metadata: {
-          video_id: videoId,
-          video_name: videoName,
-          skill_slug: skillSlug?.toLowerCase() || null,
-        },
+      // localStorage is only a UX hint. The server owns the rolling 2-hour
+      // quota, claim idempotency and all-or-nothing XP + skill progression.
+      const { data, error } = await (supabase as any).rpc("reward_education_video_atomic", {
+        p_profile_id: profileId,
+        p_video_id: videoId,
+        p_video_name: videoName,
+        p_skill_slug: skillSlug?.toLowerCase().trim() || null,
       });
-
-      let skillXpAwarded = false;
-      let skillLocked = false;
-      const normalizedSkill = skillSlug?.toLowerCase().trim() || null;
-
-      if (normalizedSkill) {
-        try {
-          const { data: skillDefinition, error: skillDefinitionError } = await supabase
-            .from("skill_definitions")
-            .select("slug")
-            .eq("slug", normalizedSkill)
-            .maybeSingle();
-
-          if (skillDefinitionError) throw skillDefinitionError;
-
-          if (skillDefinition) {
-            if (normalizedSkill.includes("professional") || normalizedSkill.includes("mastery")) {
-              const { data: access, error: accessError } = await (supabase as any).rpc("skill_tier_access_bulk", {
-                p_profile_id: profileId, p_slugs: [normalizedSkill],
-              });
-              if (accessError) throw accessError;
-              if (!Array.isArray(access) || !access.some(row => row.skill_slug === normalizedSkill && row.is_unlocked === true)) {
-                skillLocked = true;
-              }
-            }
-            // An old skill_progress row must never bypass tier prerequisites.
-            if (!skillLocked) {
-            const maxLevel = await getSkillMaxLevel(normalizedSkill);
-            const { data: existingProgress, error: skillLoadError } = await supabase
-              .from("skill_progress")
-              .select("id, current_xp, current_level, required_xp")
-              .eq("profile_id", profileId)
-              .eq("skill_slug", normalizedSkill)
-              .maybeSingle();
-
-            if (skillLoadError) throw skillLoadError;
-
-            if (existingProgress) {
-              let newXp = existingProgress.current_xp + XP_PER_VIDEO;
-              let newLevel = Math.min(existingProgress.current_level, maxLevel);
-              let requiredXp = existingProgress.required_xp || (await getRequiredSkillXp(newLevel));
-
-              while (newLevel < maxLevel && newXp >= requiredXp) {
-                newXp -= requiredXp;
-                newLevel += 1;
-                requiredXp = newLevel < maxLevel ? await getRequiredSkillXp(newLevel) : 0;
-              }
-
-              if (newLevel >= maxLevel) {
-                newLevel = maxLevel;
-                newXp = 0;
-                requiredXp = 0;
-              }
-
-              const { error: skillUpdateError } = await supabase
-                .from("skill_progress")
-                .update({
-                  current_xp: newXp,
-                  current_level: newLevel,
-                  required_xp: requiredXp,
-                  last_practiced_at: new Date().toISOString(),
-                })
-                .eq("id", existingProgress.id);
-
-              if (skillUpdateError) throw skillUpdateError;
-              skillXpAwarded = existingProgress.current_level < maxLevel;
-            } else if (canVideoStartSkill(normalizedSkill)) {
-              let newLevel = 0;
-              let newXp = XP_PER_VIDEO;
-              let requiredXp = await getRequiredSkillXp(newLevel);
-              while (newLevel < maxLevel && newXp >= requiredXp) {
-                newXp -= requiredXp;
-                newLevel++;
-                requiredXp = newLevel < maxLevel ? await getRequiredSkillXp(newLevel) : 0;
-              }
-              if (newLevel >= maxLevel) { newXp = 0; requiredXp = 0; }
-              const { error: skillInsertError } = await supabase.from("skill_progress").insert({
-                profile_id: profileId,
-                skill_slug: normalizedSkill,
-                current_xp: newXp,
-                current_level: newLevel,
-                required_xp: requiredXp,
-                last_practiced_at: new Date().toISOString(),
-              });
-
-              if (skillInsertError) throw skillInsertError;
-              skillXpAwarded = true;
-            } else {
-              skillLocked = true;
-            }
-            }
-          }
-        } catch (skillError) {
-          console.error("Video watched but skill XP could not be applied", skillError);
-        }
+      if (error) {
+        if (error.message.includes("education_video_cooldown")) throw new Error("cooldown");
+        throw error;
       }
-
       const history = getWatchHistory(profileId);
-      history.timestamps.push(Date.now());
+      history.timestamps.push(Date.parse(data.claimedAt) || Date.now());
       saveWatchHistory(history, profileId);
-
       return {
-        xpEarned: XP_PER_VIDEO,
-        skillSlug: normalizedSkill,
-        skillXpAwarded,
-        skillLocked,
+        xpEarned: Number(data.xpEarned),
+        skillSlug: data.skillSlug as string | null,
+        skillXpAwarded: Boolean(data.skillXpAwarded),
+        skillLocked: Boolean(data.skillLocked),
       };
     },
     onSuccess: (data) => {
