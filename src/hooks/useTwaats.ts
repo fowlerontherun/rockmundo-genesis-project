@@ -169,7 +169,7 @@ export const useTwaats = (accountId?: string) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: twaats, isLoading } = useQuery({
+  const { data: twaats, isLoading, error: loadError, refetch } = useQuery({
     queryKey: ["twaats", accountId],
     queryFn: async () => {
       let query = supabase
@@ -180,6 +180,7 @@ export const useTwaats = (accountId?: string) => {
         .order("created_at", { ascending: false })
         .limit(50);
 
+      query = query.eq("visibility", "public");
       if (accountId) query = query.eq("account_id", accountId);
 
       const { data, error } = await query;
@@ -239,10 +240,13 @@ export const useTwaats = (accountId?: string) => {
 
   const deleteTwaatMutation = useMutation({
     mutationFn: async (twaatId: string) => {
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from("twaats")
         .update({ deleted_at: new Date().toISOString() })
-        .eq("id", twaatId);
+        .eq("id", twaatId)
+        .is("deleted_at", null)
+        .select("id");
+      if (!error && (!updated || updated.length === 0)) throw new Error("Twaat was already removed or could not be deleted");
 
       if (error) throw error;
     },
@@ -258,6 +262,8 @@ export const useTwaats = (accountId?: string) => {
   return {
     twaats,
     isLoading,
+    error: loadError,
+    refetch,
     createTwaat: createTwaatMutation.mutate,
     createTwaatAsync: createTwaatMutation.mutateAsync,
     deleteTwaat: deleteTwaatMutation.mutate,

@@ -456,7 +456,7 @@ export const useGameEventNotifications = () => {
           if (isOwner && song) {
             // Check 12-hour cooldown before sending notification
             const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
-            const { data: existingCooldown } = await supabase
+            const { data: existingCooldown, error: cooldownReadError } = await supabase
               .from('chart_notification_cooldowns' as any)
               .select('id, last_notified_at')
               .eq('profile_id', profileId)
@@ -466,10 +466,10 @@ export const useGameEventNotifications = () => {
               .maybeSingle();
             
             // Skip notification if within cooldown period
-            if (existingCooldown) return;
+            if (cooldownReadError || existingCooldown) return;
             
             // Upsert cooldown record
-            await supabase
+            const { error: cooldownWriteError } = await supabase
               .from('chart_notification_cooldowns' as any)
               .upsert({
                 profile_id: profileId,
@@ -477,6 +477,7 @@ export const useGameEventNotifications = () => {
                 chart_type: entry.chart_type,
                 last_notified_at: new Date().toISOString(),
               }, { onConflict: 'profile_id,song_id,chart_type' });
+            if (cooldownWriteError) return;
             
             const chartName = entry.chart_type === 'streaming' ? 'Streaming Charts' :
                             entry.chart_type === 'radio_airplay' ? 'Radio Charts' :

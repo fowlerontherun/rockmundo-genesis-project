@@ -79,7 +79,7 @@ export function MayorUniversitiesTab({ cityId }: Props) {
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
-  const { data: universities = [], isLoading } = useQuery({
+  const { data: universities = [], isLoading, isError: universitiesError, refetch: retryUniversities } = useQuery({
     queryKey: ["mayor-universities", cityId],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
@@ -173,6 +173,8 @@ export function MayorUniversitiesTab({ cityId }: Props) {
   if (isLoading) {
     return <div className="flex items-center gap-2 py-10 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading city universities…</div>;
   }
+
+  if (universitiesError) return <div role="alert" className="p-4 text-sm">Could not load city universities. <button onClick={() => void retryUniversities()}>Retry</button></div>;
 
   return (
     <div className="space-y-4">

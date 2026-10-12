@@ -12,7 +12,7 @@ interface Props {
 }
 
 export function MayorBudgetTab({ cityId, mayorSalary, corruptionScore }: Props) {
-  const { data: treasury } = useCityTreasury(cityId);
+  const { data: treasury, isError: treasuryError, isLoading: treasuryLoading, refetch: retryTreasury } = useCityTreasury(cityId);
   const { data: log } = useMayorActionsLog(cityId, 30);
 
   const balance = treasury?.balance ?? 0;
@@ -25,13 +25,14 @@ export function MayorBudgetTab({ cityId, mayorSalary, corruptionScore }: Props) 
 
   return (
     <div className="space-y-4">
+      {(treasuryError || treasuryLoading) && <div role="status" className="text-sm">{treasuryError ? "City treasury unavailable; figures are hidden until the request succeeds." : "Loading treasury balances…"} {treasuryError && <button type="button" onClick={() => void retryTreasury()}>Retry</button>}</div>}
       {/* Treasury overview */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {!treasuryError && !treasuryLoading && <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard icon={Wallet} label="Balance" value={`$${balance.toLocaleString()}`} accent="text-foreground" />
         <StatCard icon={Lock} label="Committed" value={`$${committed.toLocaleString()}`} accent="text-warning" />
         <StatCard icon={Coins} label="Available" value={`$${available.toLocaleString()}`} accent="text-success" />
         <StatCard icon={TrendingUp} label="Weekly Budget" value={`$${weeklyBudget.toLocaleString()}`} accent="text-primary" />
-      </div>
+      </div>}
 
       <Card>
         <CardHeader>

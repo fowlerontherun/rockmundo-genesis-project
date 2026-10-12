@@ -206,8 +206,10 @@ export function parseFestivalVenueOption(v: unknown): FestivalVenueOption {
     return fail();
   return v as unknown as FestivalVenueOption;
 }
-const numericObject = (v: unknown, keys: string[]) =>
-  obj(v) && keys.every((k) => integer(v[k]));
+const numericObject = (v: unknown, keys: string[], allowFractional: string[] = []) =>
+  obj(v) && keys.every((key) => allowFractional.includes(key)
+    ? typeof v[key] === "number" && Number.isFinite(v[key]) && (v[key] as number) >= 0
+    : integer(v[key]));
 export function parseFestivalSitePlanResult(
   v: unknown,
 ): FestivalSitePlanResult {
@@ -296,7 +298,7 @@ export function parseFestivalSitePlanResult(
     !obj(v.scaleLimits) ||
     typeof v.scaleLimits.requiresSecondaryStage !== "boolean" ||
     typeof v.scaleLimits.requiresAccessibilityPlan !== "boolean" ||
-    !numericObject(v.capacityMetrics, metricKeys)
+    !numericObject(v.capacityMetrics, metricKeys, ["mainStageShare", "peakCrowdConcentration"])
   )
     return fail();
   if (

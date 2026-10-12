@@ -55,7 +55,7 @@ const responseDeadline = (festivalDates: string[]) => {
     ? new Date(`${festivalDates[0]}T12:00:00.000Z`).getTime()
     : now + 30 * DAY_MS;
   const preferred = Math.min(now + 14 * DAY_MS, festivalStart - DAY_MS);
-  return new Date(Math.max(now + DAY_MS, preferred)).toISOString();
+  return new Date(Math.max(now + 60_000, Math.min(preferred, festivalStart - 60_000))).toISOString();
 };
 
 const preferredDate = (festivalDates: string[], requested: string[] = []) =>
@@ -72,6 +72,8 @@ const deadlineFromInput = (value: string, festivalDates: string[]) => {
   if (Number.isNaN(parsed.getTime()) || parsed.getTime() <= Date.now()) {
     return responseDeadline(festivalDates);
   }
+  const festivalStart = festivalDates[0] ? Date.parse(`${festivalDates[0]}T12:00:00Z`) : Infinity;
+  if (parsed.getTime() >= festivalStart) return responseDeadline(festivalDates);
   return parsed.toISOString();
 };
 

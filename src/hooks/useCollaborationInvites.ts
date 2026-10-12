@@ -218,6 +218,7 @@ export const useCollaborationInvites = (projectId?: string) => {
         queryClient.invalidateQueries({ queryKey: ["game-data"] });
         queryClient.invalidateQueries({ queryKey: ["user-cash-balance"] });
         queryClient.invalidateQueries({ queryKey: ["profile-cash"] });
+        queryClient.invalidateQueries({ queryKey: ["luthiery-shop-profile"] });
       }
       toast.success(data.accepted ? "Invitation accepted!" : "Invitation declined");
     },

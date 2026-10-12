@@ -235,7 +235,9 @@ export const useSkillBooks = () => {
     activeSessionQueryError,
     retryActiveSession,
     purchaseBook: purchaseBook.mutate,
+    purchaseBookAsync: purchaseBook.mutateAsync,
     startReading: startReading.mutate,
+    startReadingAsync: startReading.mutateAsync,
     stopReading: stopReading.mutate,
     isStoppingReading: stopReading.isPending,
   };

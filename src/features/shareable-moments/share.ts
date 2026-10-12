@@ -29,7 +29,7 @@ export function referralUrl(code: string, _origin?: string): string {
 export function referralUrlWithParams(code: string, params: Record<string, string | undefined | null> = {}, origin?: string): string {
   const url = new URL(referralUrl(code, origin));
   Object.entries(params).forEach(([key, value]) => {
-    if (value != null && String(value).trim()) url.searchParams.set(key, String(value).trim());
+    if (key.toLowerCase() !== 'ref' && value != null && String(value).trim()) url.searchParams.set(key, String(value).trim());
   });
   return url.toString();
 }
