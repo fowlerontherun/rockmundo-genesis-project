@@ -180,8 +180,9 @@ export function SimplifiedFestivalLineupManager({
   const nameFor = (identity: ArtistIdentity) =>
     (identity.type === "band" ? knownBands.data?.get(identity.bandId) : undefined) ??
     candidateNames.get(identityKey(identity)) ??
-    fallbackIdentityLabel(identity);
+    (bandLookupError && identity.type === "band" ? `Band ${identity.bandId.slice(0, 8)} (name unavailable)` : fallbackIdentityLabel(identity));
 
+  const bandLookupError = knownBands.isError;
   const workflowError =
     reviewApplication.error ??
     inviteArtist.error ??
