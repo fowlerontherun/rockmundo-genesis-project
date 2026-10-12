@@ -373,7 +373,7 @@ export default function FestivalArtistOpportunitiesPage() {
                           withdraw.mutateAsync({
                             p_application_id: row.id,
                             p_expected_version: number(row, "version", "version", 1),
-                            p_idempotency_key: id(),
+                            p_idempotency_key: id(`withdraw-application:${row.id}:${number(row, "version", "version", 1)}`),
                           }),
                         )
                       }
