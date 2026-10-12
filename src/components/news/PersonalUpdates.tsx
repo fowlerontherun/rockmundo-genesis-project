@@ -13,6 +13,8 @@ export function PersonalUpdates() {
 
   const { data: updates, isPending, isError, refetch } = useQuery({
     queryKey: ["personal-updates", profileId, today],
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       if (!profileId) return [];
       const results: Array<{ type: string; title: string; detail: string; time: string }> = [];
