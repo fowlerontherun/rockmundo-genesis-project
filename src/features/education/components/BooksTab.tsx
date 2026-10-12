@@ -22,7 +22,7 @@ type EnrichedSkillBook = SkillBook & { skill_display_name?: string };
 export const BooksTab = () => {
   const { profileId, userId } = useActiveProfile();
   const { toast } = useToast();
-  const { books, purchases, activeSession, isLoading, purchasesError, activeSessionError, retryPurchases, retryActiveSession, purchaseBook, startReading, stopReading, isStoppingReading } = useSkillBooks();
+  const { books, purchases, activeSession, isLoading, purchasesError, activeSessionError, retryPurchases, retryActiveSession, purchaseBookAsync, startReadingAsync, stopReading, isStoppingReading } = useSkillBooks();
   const { processAttendance, isProcessing } = useBookReading();
   const typedBooks = books as EnrichedSkillBook[] | undefined;
   const libraryQueryFailed = purchasesError || activeSessionError;
@@ -77,13 +77,15 @@ export const BooksTab = () => {
       return;
     }
     
-    purchaseBook({
+    try {
+    await purchaseBookAsync({
       bookId: book.id,
       userId: userId,
       profileId: profileId,
       price: book.price,
     });
     setSelectedBook(null);
+    } catch { /* Mutation hook displays error; retain selected book. */ }
   };
 
   const handleStartReading = async () => {
@@ -92,7 +94,8 @@ export const BooksTab = () => {
     const purchase = purchases?.find((p) => p.book_id === selectedBook.id);
     if (!purchase) return;
 
-    startReading({
+    try {
+    await startReadingAsync({
       purchaseId: purchase.id,
       bookId: selectedBook.id,
       userId: userId,
@@ -102,6 +105,7 @@ export const BooksTab = () => {
     });
     setSelectedBook(null);
     setAutoRead(false);
+    } catch { /* Mutation hook displays error; keep reading selection. */ }
   };
 
   // Get unique skill categories for filter
