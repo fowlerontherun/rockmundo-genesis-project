@@ -37,9 +37,12 @@ export function PendingCollaborationInvites() {
   const {
     pendingInvitations,
     loadingInvitations,
+    pendingInvitationsError,
+    retryPendingInvitations,
     respondToInvitation,
   } = useCollaborationInvites();
 
+  if (pendingInvitationsError) return <Card role="alert"><CardContent className="p-4 text-sm">Could not load co-writing invitations. <Button size="sm" variant="outline" onClick={() => void retryPendingInvitations()}>Retry invitations</Button></CardContent></Card>;
   if (loadingInvitations || !pendingInvitations?.length) {
     return null;
   }
