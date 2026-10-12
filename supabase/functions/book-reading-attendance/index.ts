@@ -78,13 +78,36 @@ async function processAttendance(supabaseClient: any, profileId?: string) {
 
   console.log(`Found ${sessions?.length || 0} active reading sessions`);
 
-  const today = new Date().toISOString().split("T")[0];
   const records: Array<Record<string, unknown>> = [];
   let processedCount = 0;
   let errorCount = 0;
   let totalXpAwarded = 0;
 
   for (const session of sessions || []) {
+    // Manual attendance cannot bypass the opted-in nightly auto-read schedule.
+    if (profileId && session.auto_read) {
+      records.push({ session_id: session.id, reason: "automatic_reading_enabled" });
+      continue;
+    }
+    if (!profileId && !session.auto_read) continue;
+    let today: string;
+    try {
+      const { data: character, error: characterError } = await supabaseClient
+        .from("profiles").select("cities:current_city_id(timezone)")
+        .eq("id",session.profile_id).single();
+      if (characterError) throw characterError;
+      const tz = character?.cities?.timezone || "UTC";
+      const formatted = new Intl.DateTimeFormat("en-CA", {
+        timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit",
+      }).formatToParts(new Date());
+      const value = (part: string) => formatted.find(item => item.type === part)?.value || "";
+      today = `${value("year")}-${value("month")}-${value("day")}`;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(today)) throw new Error("Invalid character reading date");
+    } catch (error: any) {
+      records.push({session_id:session.id,error:"Could not verify the character-local reading date: "+error.message});
+      errorCount += 1;
+      continue;
+    }
     for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const { data: existing } = await supabaseClient
@@ -97,7 +120,7 @@ async function processAttendance(supabaseClient: any, profileId?: string) {
       if (existing) {
         console.log(`Attendance already recorded for session ${session.id}`);
         records.push({ session_id: session.id, reason: "already_recorded" });
-        continue;
+        break;
       }
 
       const book = session.skill_books;
@@ -114,7 +137,7 @@ async function processAttendance(supabaseClient: any, profileId?: string) {
         console.log(`[Books] Skipping locked tier ${book.skill_slug} on profile ${session.profile_id}`);
         records.push({ session_id: session.id, error: "This book\u0027s skill prerequisites are not unlocked yet." });
         errorCount += 1;
-        continue;
+        break;
       }
 
       const totalDays = Math.max(1, Number(book.base_reading_days) || 1);
@@ -199,13 +222,13 @@ async function processAttendance(supabaseClient: any, profileId?: string) {
             error: "Skill progress changed while reading was recorded. Please try again.",
           });
           errorCount += 1;
-          continue;
+          break;
         }
         throw applyError;
       }
       if (applied?.reason) {
         records.push({ session_id: session.id, reason: applied.reason });
-        continue;
+        break;
       }
       const newDaysRead = Number(applied.days_read);
       const isComplete = applied.completed === true;
@@ -221,50 +244,16 @@ async function processAttendance(supabaseClient: any, profileId?: string) {
         skill_max_level: maxLevel,
       });
 
-      // === BOOK READING → MORALE (v1.0.974) ===
-      if (session.user_id) {
-        try {
-          const { data: bm } = await supabaseClient
-            .from("band_members")
-            .select("band_id")
-            .eq("user_id", session.user_id)
-            .eq("is_touring_member", false)
-            .limit(1)
-            .maybeSingle();
-          if (bm?.band_id) {
-            const { data: bd } = await supabaseClient
-              .from("bands")
-              .select("morale")
-              .eq("id", bm.band_id)
-              .single();
-            if (bd) {
-              const moraleBoost = isComplete ? 4 : 1;
-              const newMorale = Math.min(100, ((bd as any).morale ?? 50) + moraleBoost);
-              await supabaseClient.from("bands").update({ morale: newMorale } as any).eq("id", bm.band_id);
-              if (isComplete) console.log(`Book completed morale boost: +${moraleBoost} for band ${bm.band_id}`);
-              try {
-                await supabaseClient.from("band_health_events").insert({
-                  band_id: bm.band_id,
-                  event_type: "morale",
-                  delta: moraleBoost,
-                  new_value: newMorale,
-                  source: "book_reading",
-                  description: isComplete ? "Finished reading a skill book" : "Daily book reading session",
-                });
-              } catch (_) {}
-            }
-          }
-        } catch (_e) {
-          // Non-critical morale integration.
-        }
-      }
-
+      // Morale and its event are now committed by apply_book_reading_day
+      // in the same transaction as attendance and XP.
       processedCount += 1;
       console.log(`Processed session ${session.id}: ${dailyXp} XP, day ${newDaysRead}/${totalDays}`);
+      break;
     } catch (error: any) {
       console.error(`Error processing session ${session.id}:`, error);
       records.push({ session_id: session.id, error: error.message });
       errorCount += 1;
+      break;
     }
     }
   }

@@ -342,35 +342,13 @@ export default function UniversityDetail() {
         }
       }
 
-      // Calculate duration based on quality
-      const adjustedDays = calculateUniversityCourseDuration(
-        course.base_duration_days,
-        university.quality_of_learning,
-      );
-
-      const scheduledEndDate = new Date();
-      scheduledEndDate.setDate(scheduledEndDate.getDate() + adjustedDays);
-
-      const { error: enrollError } = await supabase
-        .from("player_university_enrollments")
-        .insert({
-          user_id: userId!,
-          profile_id: profile.id,
-          university_id: university.id,
-          course_id: courseId,
-          scheduled_end_date: scheduledEndDate.toISOString(),
-          payment_amount: finalPrice,
-          status: "enrolled",
-        });
-
-      if (enrollError) throw enrollError;
-
-      const { error: cashError } = await supabase
-        .from("profiles")
-        .update({ cash: profile.cash - finalPrice })
-        .eq("id", profile.id);
-
-      if (cashError) throw cashError;
+      // The server recalculates price and duration and serialises both tuition
+      // deduction and enrollment to prevent unpaid or concurrent admissions.
+      const { error } = await (supabase as any).rpc("enroll_university_course_atomic", {
+        p_profile_id: profile.id,
+        p_course_id: courseId,
+      });
+      if (error) throw error;
 
       return {
         courseName: course.name,
