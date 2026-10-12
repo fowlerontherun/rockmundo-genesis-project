@@ -53,7 +53,7 @@ export function GigCrewProgressReport({ gigId, visible }: { gigId?: string | nul
             <div className="mt-2 grid grid-cols-2 gap-2 text-sm md:grid-cols-3">
               <span>Skill: {member.skill_before} → {member.skill_after}</span>
               <span>Cohesion: {member.cohesion_before} → {member.cohesion_after}</span>
-              <span>Wages: ${Number(member.salary_paid).toLocaleString()}</span>
+              <span>Wages: £{Number(member.salary_paid).toLocaleString("en-GB")}</span>
             </div>
           </div>
         ))}
