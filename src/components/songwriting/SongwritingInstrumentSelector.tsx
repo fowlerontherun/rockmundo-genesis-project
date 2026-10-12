@@ -84,8 +84,8 @@ const SongwritingInstrumentSelectorInner = ({
   const { progress } = useSkillSystem();
 
   const getSkillLevel = (slug: string): number => {
-    const instrument = SONGWRITING_INSTRUMENTS.find((i) => i.slug === slug);
-    const slugsToCheck = [slug, ...(instrument?.alsoMatch ?? [])];
+    // A generic family skill does not prove mastery of every specialist instrument.
+    const slugsToCheck = [slug];
     let maxLevel = 0;
     for (const s of slugsToCheck) {
       const skill = progress?.find((p) => p.skill_slug === s);

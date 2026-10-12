@@ -106,12 +106,13 @@ export async function checkStudioSessionDiscovery(
     }
 
     // Check which mentors the player hasn't discovered yet
-    const { data: existingDiscoveries } = await supabase
+    const { data: existingDiscoveries, error: discoveryLookupError } = await supabase
       .from("player_master_discoveries")
       .select("mentor_id")
       .eq("profile_id", profileId)
       .in("mentor_id", mentors.map(m => m.id));
 
+    if (discoveryLookupError) throw discoveryLookupError;
     const discoveredIds = new Set(existingDiscoveries?.map(d => d.mentor_id) || []);
     const remainingMentors = mentors.filter(m => !discoveredIds.has(m.id));
     let firstDiscovered: MentorDiscoveryResult | null = null;

@@ -133,7 +133,7 @@ export default function UniversityDetail() {
     queryKey: ["university_course_enrollment_counts", id],
     queryFn: async () => {
       const rows: Array<{course_id: string}> = [];
-      for (let offset = 0; offset < 100_000; offset += 500) {
+      for (let offset = 0; ; offset += 500) {
         const { data, error } = await supabase
           .from("player_university_enrollments")
           .select("course_id")
@@ -161,7 +161,7 @@ export default function UniversityDetail() {
       const since = sevenDaysAgo.toISOString().split("T")[0];
 
       const rows: Array<any> = [];
-      for (let offset = 0; offset < 100_000; offset += 500) {
+      for (let offset = 0; ; offset += 500) {
         const { data, error } = await supabase
           .from("player_university_attendance")
           .select(`

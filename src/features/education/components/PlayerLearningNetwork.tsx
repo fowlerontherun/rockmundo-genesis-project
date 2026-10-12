@@ -376,12 +376,12 @@ export const PlayerLearningNetwork = () => {
               <div className="space-y-2"><Label>Duration</Label><Select value={classDuration} onValueChange={setClassDuration}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{[1, 2, 3, 4].map((value) => <SelectItem key={value} value={String(value)}>{value} hour{value > 1 ? "s" : ""}</SelectItem>)}</SelectContent></Select></div>
               <div className="space-y-2"><Label>Seats</Label><Select value={classCapacity} onValueChange={setClassCapacity}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{[1, 2, 3, 4, 5, 6, 7, 8].map((value) => <SelectItem key={value} value={String(value)}>{value}</SelectItem>)}</SelectContent></Select></div>
               <div className="space-y-2 md:col-span-2 lg:col-span-3"><Label>Description</Label><Textarea value={classDescription} onChange={(event) => setClassDescription(event.target.value)} maxLength={800} placeholder="What will players learn?" /></div>
-              <div className="md:col-span-2 lg:col-span-3"><Button disabled={busy || !classSkill || !classTitle || !classDate || !Number.isFinite(Date.parse(classDate)) || Date.parse(classDate) <= Date.now() || !Number.isFinite(Number(classPrice)) || Number(classPrice) < 0 || Number(classPrice) > 100000 || !Number.isSafeInteger(Math.round(Number(classPrice) * 100))} onClick={() => void run(() => supabase.rpc("create_player_education_class", {
+              <div className="md:col-span-2 lg:col-span-3"><Button disabled={busy || !classSkill || !classTitle || !classDate || !Number.isFinite(Date.parse(classDate)) || Date.parse(classDate) <= Date.now() || !classPrice.trim() || !Number.isFinite(Number(classPrice)) || Number(classPrice) < 0 || Number(classPrice) > 100000 || !Number.isSafeInteger(Math.round(Number(classPrice) * 100))} onClick={() => void run(() => supabase.rpc("create_player_education_class", {
                 p_teacher_profile_id: profile.id,
                 p_skill_slug: classSkill,
                 p_title: classTitle,
                 p_description: classDescription,
-                p_price_minor: Math.round(Number(classPrice || 0) * 100),
+                p_price_minor: Math.round(Number(classPrice) * 100),
                 p_duration_hours: Number(classDuration),
                 p_max_students: Number(classCapacity),
                 p_scheduled_at: new Date(classDate).toISOString(),
