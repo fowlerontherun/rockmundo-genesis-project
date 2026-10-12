@@ -30,10 +30,6 @@ export function useParliamentMotions(status?: "open" | "all") {
   });
 }
 
-/* motion hook below */
-    },
-  });
-}
 
 export function useMotion(motionId: string | undefined) {
   return useQuery({
@@ -49,6 +45,7 @@ export function useMotion(motionId: string | undefined) {
       return data as ParliamentMotion | null;
     },
     enabled: !!motionId,
+    refetchInterval: 30_000,
   });
 }
 
