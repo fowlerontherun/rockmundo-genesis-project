@@ -21,7 +21,7 @@ export const LastNightGigs = () => {
   const [showOutcome, setShowOutcome] = useState(false);
 
   const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
   const yesterdayStart = `${yesterday.toISOString().split('T')[0]}T00:00:00`;
   const yesterdayEnd = `${yesterday.toISOString().split('T')[0]}T23:59:59`;
 
@@ -50,6 +50,7 @@ export const LastNightGigs = () => {
   });
 
   const handleViewOutcome = async (gig: GigWithDetails) => {
+    gig.gig_outcomes = [...(gig.gig_outcomes ?? [])].sort((a,b) => String(b.created_at??b.id).localeCompare(String(a.created_at??a.id)));
     setSelectedGig(gig);
     setShowOutcome(true);
   };
