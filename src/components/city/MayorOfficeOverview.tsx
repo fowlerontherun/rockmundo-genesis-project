@@ -57,7 +57,7 @@ export function MayorOfficeOverview({ city, mayor, politics }: Props) {
   const { data: treasury } = useCityTreasury(city.id);
   const { data: projects } = useCityProjects(city.id);
   const { data: election } = useCityElection(city.id);
-  const { data: development } = useCityDevelopment(city.id);
+  const { data: development, isError: developmentError, refetch: retryDevelopment } = useCityDevelopment(city.id);
 
   const balance = Number(treasury?.balance ?? 0);
   const committed = Number(treasury?.pending_commitments ?? 0);
@@ -151,7 +151,7 @@ export function MayorOfficeOverview({ city, mayor, politics }: Props) {
               </div>
             </CardHeader>
             <CardContent>
-              {development ? (
+              {developmentError ? <div role="alert" className="text-sm text-destructive">Could not load city development ratings. <Button size="sm" variant="outline" onClick={() => void retryDevelopment()}>Retry</Button></div> : development ? (
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                   {OVERVIEW_RATINGS.map((key) => (
                     <DevelopmentRatingCard key={key} label={CITY_DEVELOPMENT_LABELS[key]} value={development[key]} />

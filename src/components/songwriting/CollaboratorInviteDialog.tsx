@@ -196,7 +196,8 @@ export const CollaboratorInviteDialog = ({
       return;
     }
 
-    await inviteCollaborator.mutateAsync({
+    try {
+      await inviteCollaborator.mutateAsync({
       projectId,
       inviteeProfileId: selectedCollaborator.id,
       isBandMember: selectedCollaborator.isBandMember,
@@ -204,6 +205,10 @@ export const CollaboratorInviteDialog = ({
       flatFeeAmount: compensationType === "flat_fee" ? flatFeeAmount : undefined,
       royaltyPercentage: compensationType === "royalty" ? royaltyPercentage : undefined,
     });
+    } catch (error) {
+      // The mutation hook reports the failure; keep dialog and selections intact for retry.
+      return;
+    }
 
     // Reset and close
     setSelectedCollaborator(null);
