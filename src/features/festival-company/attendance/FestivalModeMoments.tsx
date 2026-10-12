@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +18,9 @@ export const FestivalModeMoments = ({ attendance }: { attendance: FestivalPlayer
   const trigger = useTriggerFestivalMoment(attendance.id);
   const choose = useChooseFestivalMomentOption(attendance.id);
   const resolve = useResolveFestivalMomentOutcome(attendance.id);
-  const serverNow = data ? Date.parse(data.serverNow) : Date.now();
+  const [localNow, setLocalNow] = useState(() => Date.now());
+  useEffect(() => { const timer = window.setInterval(() => setLocalNow(Date.now()), 1000); return () => window.clearInterval(timer); }, []);
+  const serverNow = data ? Date.parse(data.serverNow) + Math.max(0, localNow - Date.parse(data.serverNow)) : localNow;
   const pending = data?.items.some((item) => item.status === "pending" || item.status === "choice_made") ?? false;
 
   return (
