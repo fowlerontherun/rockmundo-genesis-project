@@ -92,10 +92,12 @@ export interface ScheduleLikeActivity {
   activity_type?: string | null;
   linked_rehearsal_id?: string | null;
   linked_recording_id?: string | null;
+  linked_gig_id?: string | null;
   metadata?: Record<string, any> | null;
 }
 
 function getBandActivityKey(activity: ScheduleLikeActivity): string | null {
+  if (activity.linked_gig_id) return `gig:${activity.linked_gig_id}`;
   if (activity.linked_rehearsal_id) return `rehearsal:${activity.linked_rehearsal_id}`;
   if (activity.linked_recording_id) return `recording:${activity.linked_recording_id}`;
   const metadata = activity.metadata || {};
@@ -200,7 +202,7 @@ export async function checkBandAvailability(
 ): Promise<{ available: boolean; conflicts: ConflictInfo[] }> {
   const memberDetails = await getBandMemberDetails(bandId);
   if (memberDetails.length === 0) {
-    return { available: true, conflicts: [] };
+    throw new Error('Cannot confirm band availability without any active members.');
   }
 
   const profileIds = memberDetails.map(m => m.profileId);
@@ -219,8 +221,7 @@ export async function checkBandAvailability(
 
   const { data: overlapping, error } = await query;
   if (error) {
-    console.warn('Band availability check failed, allowing booking:', error);
-    return { available: true, conflicts: [] };
+    throw new Error('Could not verify band member scheduling conflicts. Please retry.');
   }
 
   const conflicts: ConflictInfo[] = [];
@@ -312,6 +313,8 @@ export async function createBandScheduledActivities(params: BandActivityParams):
     existingQuery = existingQuery.eq('linked_rehearsal_id', params.linkedRehearsalId);
   } else if (params.linkedRecordingId) {
     existingQuery = existingQuery.eq('linked_recording_id', params.linkedRecordingId);
+  } else if (params.linkedGigId) {
+    existingQuery = existingQuery.eq('linked_gig_id', params.linkedGigId);
   } else {
     existingQuery = existingQuery
       .eq('scheduled_start', params.scheduledStart.toISOString())
@@ -482,6 +485,22 @@ export async function joinBandActivityLate(options: {
   }
 
   const linkedId = options.linkedRehearsalId || options.linkedRecordingId;
+  if (!linkedId) return { joined: false, reason: 'The original booking could not be verified.' };
+  const table = options.linkedRehearsalId ? 'band_rehearsals' : 'recording_sessions';
+  const { data: booking, error: bookingError } = await (supabase as any)
+    .from(table).select('id, band_id, scheduled_start, scheduled_end, status')
+    .eq('id', linkedId).eq('band_id', options.bandId).maybeSingle();
+  if (bookingError || !booking) return { joined: false, reason: 'The original booking is no longer available.' };
+  if (!['scheduled', 'in_progress', 'confirmed'].includes(booking.status) ||
+      Date.parse(booking.scheduled_start) !== options.scheduledStart.getTime() ||
+      Date.parse(booking.scheduled_end) !== options.scheduledEnd.getTime() ||
+      Date.parse(booking.scheduled_end) <= Date.now()) {
+    return { joined: false, reason: 'The original booking was cancelled, rescheduled or has already ended.' };
+  }
+  const { data: member, error: memberError } = await (supabase as any).from('band_members')
+    .select('profile_id').eq('band_id', options.bandId).eq('profile_id', options.profileId)
+    .eq('member_status', 'active').maybeSingle();
+  if (memberError || !member) return { joined: false, reason: 'You are not an active member of this band.' };
   const existing = (clashes || []) as any[];
   const alreadyIn = existing.find((row) =>
     (options.linkedRehearsalId && row.linked_rehearsal_id === options.linkedRehearsalId)
