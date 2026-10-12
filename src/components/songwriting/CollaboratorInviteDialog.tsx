@@ -48,7 +48,11 @@ export const CollaboratorInviteDialog = ({
   const [userCash, setUserCash] = useState(0);
 
   const { profileId } = useActiveProfile();
-  const { inviteCollaborator, collaborators } = useCollaborationInvites(projectId);
+  const { inviteCollaborator, collaborators, loadingCollaborators } = useCollaborationInvites(projectId);
+  const allocatedRoyaltyShare = (collaborators ?? [])
+    .filter(c => c.compensation_type === "royalty" && ["pending", "accepted"].includes(c.status))
+    .reduce((total, c) => total + (c.royalty_percentage ?? 0), 0);
+  const remainingRoyaltyShare = Math.max(0, 100 - allocatedRoyaltyShare);
 
   useEffect(() => {
     if (open) {
@@ -210,6 +214,11 @@ export const CollaboratorInviteDialog = ({
 
   const handleSendInvitation = async () => {
     if (!selectedCollaborator) return;
+
+    if (compensationType === "royalty" && (loadingCollaborators || royaltyPercentage > remainingRoyaltyShare)) {
+      toast.error("The royalty share exceeds the amount remaining for this song.");
+      return;
+    }
 
     // Validate flat fee
     if (compensationType === "flat_fee" && flatFeeAmount > userCash) {
@@ -408,7 +417,7 @@ export const CollaboratorInviteDialog = ({
             <span>50%</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            They'll receive {royaltyPercentage}% of all royalties from this song.
+            They'll receive {royaltyPercentage}% of all royalties from this song. {remainingRoyaltyShare}% remains unallocated.
           </p>
         </div>
       )}
@@ -429,6 +438,7 @@ export const CollaboratorInviteDialog = ({
           onClick={handleSendInvitation}
           disabled={
             inviteCollaborator.isPending ||
+            (compensationType === "royalty" && (loadingCollaborators || royaltyPercentage > remainingRoyaltyShare)) ||
             (compensationType === "flat_fee" && flatFeeAmount > userCash)
           }
           className="flex-1"
