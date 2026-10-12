@@ -261,14 +261,17 @@ export function parseFestivalConfiguration(
     !Array.isArray(value.cities)
   )
     return malformed();
-  const scales = value.scales.map(parseScale).filter((entry) => entry !== null);
-  const cities = value.cities.map(parseCity).filter((entry) => entry !== null);
+  const scales = value.scales.map(parseScale);
+  const cities = value.cities.map(parseCity);
+  if (scales.some(entry => entry === null) || cities.some(entry => entry === null)) return malformed();
   const vibes = parseCatalogueList(value.vibes, fallbackVibes);
   const siteTypes = parseCatalogueList(value.siteTypes, fallbackSiteTypes);
   const environmentalPolicies = parseCatalogueList(
     value.environmentalPolicies,
     fallbackEnvironmentalPolicies,
   );
+  if (!(value.annualMonth === null || (Number.isInteger(value.annualMonth) && (value.annualMonth as number) >= 1 && (value.annualMonth as number) <= 12))) return malformed();
+  if (!(value.editionYear === null || (Number.isInteger(value.editionYear) && (value.editionYear as number) >= 1))) return malformed();
   const homeCity = value.homeCity === null ? null : parseCity(value.homeCity);
   const festivalScale = value.festivalScale;
   const start = value.plannedStartDate;
