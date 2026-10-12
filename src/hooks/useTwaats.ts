@@ -167,11 +167,13 @@ export const hydrateTwaaterFeedExtras = async <T extends { id: string; quoted_tw
 };
 
 export const useTwaats = (accountId?: string) => {
+  const [page, setPage] = useState(0);
+  useEffect(() => setPage(0), [accountId]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: twaats, isLoading, error: loadError, refetch } = useQuery({
-    queryKey: ["twaats", accountId],
+    queryKey: ["twaats", accountId, page],
     queryFn: async () => {
       let query = supabase
         .from("twaats")
@@ -179,7 +181,7 @@ export const useTwaats = (accountId?: string) => {
         .is("deleted_at", null)
         .is("scheduled_for", null)
         .order("created_at", { ascending: false })
-        .limit(50);
+        .range(page * 50, page * 50 + 49);
 
       query = query.eq("visibility", "public");
       if (accountId) query = query.eq("account_id", accountId);
@@ -264,6 +266,10 @@ export const useTwaats = (accountId?: string) => {
 
   return {
     twaats,
+    page,
+    hasMore: (twaats?.length ?? 0) === 50,
+    nextPage: () => setPage((current) => current + 1),
+    previousPage: () => setPage((current) => Math.max(0, current - 1)),
     isLoading,
     error: loadError,
     refetch,
