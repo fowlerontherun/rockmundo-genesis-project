@@ -23,7 +23,7 @@ const getCatchUpErrorMessage = (message: string): string => {
   if (message.includes("tour_catch_up_profile_busy")) {
     return "This character is already travelling or unavailable.";
   }
-  return "The catch-up flight could not be arranged. No money was charged.";
+  return "The catch-up flight status could not be confirmed. Refresh your travel plans and balance before retrying.";
 };
 
 export const useTourCatchUp = () => {
@@ -38,6 +38,9 @@ export const useTourCatchUp = () => {
       queryClient.invalidateQueries({ queryKey: ["travel-plans"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       queryClient.invalidateQueries({ queryKey: ["profiles"] });
+      for (const key of ["active-profile", "profile-cash", "player-cash", "luthiery-shop-profile"]) {
+        queryClient.invalidateQueries({ queryKey: [key] });
+      }
       queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });
 
       if (result.already_in_city) {

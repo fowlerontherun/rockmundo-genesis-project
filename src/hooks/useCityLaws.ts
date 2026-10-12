@@ -157,7 +157,8 @@ export function isAfterCurfew(gigHour: number, laws: CityLaws | null): boolean {
     return gigHour >= curfew || gigHour < 6;
   }
   // For extended hours (24, 25, 26 = midnight, 1am, 2am)
-  return gigHour >= (curfew - 24) && gigHour < 6;
+  const normalizedHour = ((gigHour % 24) + 24) % 24;
+  return normalizedHour >= curfew - 24 && normalizedHour < 6;
 }
 
 // Check if player meets alcohol age requirement

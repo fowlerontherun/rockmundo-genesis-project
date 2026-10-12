@@ -51,6 +51,9 @@ export async function deleteShareMomentSnapshot(id: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Sign in to delete a saved share.");
   const client: any = supabase;
-  const { error } = await client.from("share_moment_snapshots").delete().eq("id", id).eq("user_id", user.id);
+  const profile = await getActiveProfile(user.id);
+  if (!profile) throw new Error("No active character selected");
+  const { data, error } = await client.from("share_moment_snapshots").delete().eq("id", id).eq("user_id", user.id).eq("profile_id", profile.id).select("id");
   if (error) throw error;
+  if (!data?.length) throw new Error("Saved share not found or already deleted");
 }
