@@ -86,7 +86,7 @@ export const BandInvitations = ({ onMembershipChanged, highlightedBandId }: Band
     enabled: !!userId && !!profileId,
   });
 
-  const { data: activeMembership, isLoading: isMembershipLoading } = useQuery<ActiveMembership | null>({
+  const { data: activeMembership, isLoading: isMembershipLoading, isError: membershipError, refetch: retryMembership } = useQuery<ActiveMembership | null>({
     queryKey: ["active-band-membership", profileId],
     queryFn: async () => {
       if (!profileId) return null;
@@ -107,6 +107,9 @@ export const BandInvitations = ({ onMembershipChanged, highlightedBandId }: Band
   });
 
   const getAcceptanceBlockReason = (invitation: BandInvitation): string | null => {
+    if (isMembershipLoading || membershipError) {
+      return "Cannot verify current band membership. Retry the lookup before accepting.";
+    }
     if (invitation.bands?.status !== "active") {
       return "This invitation is no longer valid because the band is not active.";
     }
@@ -123,6 +126,7 @@ export const BandInvitations = ({ onMembershipChanged, highlightedBandId }: Band
   const responseMutation = useMutation({
     mutationFn: async ({ invitation, status }: { invitation: BandInvitation; status: "accepted" | "declined" }) => {
       if (status === "accepted") {
+        await queryClient.invalidateQueries({ queryKey: ["active-band-membership", profileId] });
         const blockReason = getAcceptanceBlockReason(invitation);
         if (blockReason) throw new Error(blockReason);
       }
@@ -194,6 +198,13 @@ export const BandInvitations = ({ onMembershipChanged, highlightedBandId }: Band
         </CardContent>
       </Card>
     );
+  }
+
+  if (membershipError) {
+    return <Card role="alert"><CardHeader><CardTitle>Band membership check unavailable</CardTitle></CardHeader>
+      <CardContent className="space-y-2"><p>Invitation acceptance is blocked until your current membership is verified.</p>
+        <Button variant="outline" size="sm" onClick={() => void retryMembership()}>Retry membership</Button>
+      </CardContent></Card>;
   }
 
   if (!invitations || invitations.length === 0) {
