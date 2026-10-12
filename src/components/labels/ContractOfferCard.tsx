@@ -201,6 +201,7 @@ export function ContractOfferCard({ offer, entityName }: ContractOfferCardProps)
 
   const counterOfferMutation = useMutation({
     mutationFn: async () => {
+      if (!Number.isFinite(counterOffer.advance_amount) || counterOffer.advance_amount < 0 || !Number.isInteger(counterOffer.single_quota) || counterOffer.single_quota < 0 || !Number.isInteger(counterOffer.album_quota) || counterOffer.album_quota < 0 || !Number.isFinite(counterOffer.royalty_artist_pct) || counterOffer.royalty_artist_pct < 0 || counterOffer.royalty_artist_pct > 100) throw new Error("Enter a valid non-negative advance, quotas and royalty percentage.");
       const newCounterCount = counterCount + 1;
 
       // On first counter, store originals
