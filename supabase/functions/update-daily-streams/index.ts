@@ -413,17 +413,19 @@ Deno.serve(async (req) => {
         if (release.song_id) {
           const fameGain = Math.floor(dailyStreams / 1000);
           if (fameGain > 0) {
-            await supabase.rpc('update_song_fame', {
+            const { error: fameError } = await supabase.rpc('update_song_fame', {
               p_song_id: release.song_id,
               p_fame_amount: fameGain,
               p_source: 'streaming'
             });
+            if (fameError) throw fameError;
           }
           const hypeChange = Math.floor(dailyStreams / 5000) - 1;
-          await supabase.rpc('update_song_hype', {
+          const { error: hypeError } = await supabase.rpc('update_song_hype', {
             p_song_id: release.song_id,
             p_hype_change: hypeChange
           });
+          if (hypeError) throw hypeError;
         }
 
         const contractInfo = release.release_id ? releaseContractMap.get(release.release_id) : null;

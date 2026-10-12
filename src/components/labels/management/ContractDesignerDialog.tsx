@@ -157,7 +157,7 @@ export function ContractDesignerDialog({
 
       // If from a demo, update the demo status
       if (demoSubmissionId) {
-        await supabase
+        const { error: demoUpdateError } = await supabase
           .from("demo_submissions")
           .update({
             status: "accepted",
@@ -165,6 +165,7 @@ export function ContractDesignerDialog({
             contract_offer_id: contract.id,
           })
           .eq("id", demoSubmissionId);
+        if (demoUpdateError) throw new Error(`Contract created but demo status update failed: ${demoUpdateError.message}`);
       }
 
       // Inbox notification is now handled automatically by the

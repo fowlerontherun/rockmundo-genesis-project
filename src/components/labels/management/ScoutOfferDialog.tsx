@@ -35,7 +35,7 @@ export function ScoutOfferDialog({ open, onOpenChange, labelId, labelReputation 
         .from("artist_label_contracts")
         .select("band_id")
         .eq("label_id", labelId)
-        .in("status", ["active", "offered"])
+        .in("status", ["active", "offered", "accepted_by_artist", "negotiating"])
         .not("band_id", "is", null);
 
       const signedBandIds = (existingContracts ?? []).map(c => c.band_id).filter(Boolean);

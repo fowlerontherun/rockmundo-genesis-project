@@ -234,7 +234,7 @@ export const useCountryCharts = (
 
         if (error) {
           console.error("[useCountryCharts] Error fetching chart entries:", error);
-          return [];
+          throw error;
         }
 
         // FIX: For daily view, estimate daily values from the 7-day rolling weekly_plays
@@ -276,7 +276,7 @@ export const useCountryCharts = (
 
       if (error) {
         console.error("[useCountryCharts] Error fetching chart entries:", error);
-        return [];
+        throw error;
       }
 
       // FALLBACK: If no data in the requested date range, fetch the latest available chart date

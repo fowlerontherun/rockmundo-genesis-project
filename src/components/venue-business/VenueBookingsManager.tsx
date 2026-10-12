@@ -30,7 +30,10 @@ export function VenueBookingsManager({ venueId }: VenueBookingsManagerProps) {
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    if (!bookingDate || !startTime || !endTime || startTime >= endTime || new Date(`${bookingDate}T${startTime}:00`).getTime() <= Date.now()) {
+      window.alert("Choose a future booking date and a start time before the end time.");
+      return;
+    }
     await createBooking.mutateAsync({
       venue_id: venueId,
       booking_type: bookingType,

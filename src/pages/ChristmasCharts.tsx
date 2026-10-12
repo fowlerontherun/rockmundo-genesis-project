@@ -19,7 +19,7 @@ const ChristmasCharts = () => {
   const isAfterChristmas = isDecember && gameDate.gameDay > 25;
 
   // Fetch current December sales race (aggregate sales per release during this December)
-  const { data: decemberRace = [], isLoading: raceLoading } = useQuery({
+  const { data: decemberRace = [], isLoading: raceLoading, isError: raceError, refetch: retryRace } = useQuery({
     queryKey: ["christmas-race", gameDate.gameYear, gameDate.gameMonth],
     queryFn: async () => {
       // We need to compute the real-world date range for in-game December of the current game year
@@ -210,6 +210,8 @@ const ChristmasCharts = () => {
                 <div className="space-y-3">
                   {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}
                 </div>
+              ) : raceError ? (
+                <div role="alert" className="py-8 text-center text-destructive">December sales could not be loaded. <button className="underline" onClick={() => void retryRace()}>Retry</button></div>
               ) : decemberRace.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <Music className="h-10 w-10 mx-auto mb-3 opacity-30" />
