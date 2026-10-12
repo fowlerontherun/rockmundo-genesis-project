@@ -33,7 +33,7 @@ const hasFestivalStory = (status: string) => ["completed", "left_early"].include
 export default function PublicFestivalDirectory() {
   const { user } = useAuth();
   const { data = [], isLoading, isError } = usePublicFestivalDirectory();
-  const { data: attendance = [] } = useMyFestivalAttendance(Boolean(user));
+  const { data: attendance = [], isError: attendanceError, refetch: retryAttendance } = useMyFestivalAttendance(Boolean(user));
   const [storyAttendanceId, setStoryAttendanceId] = useState<string | null>(null);
 
   const activeAttendance = useMemo(
@@ -75,6 +75,7 @@ export default function PublicFestivalDirectory() {
         </div>
       </header>
 
+      {user && attendanceError ? <Card role="alert"><CardContent className="p-4 text-sm">Your festival attendance could not be loaded. <Button variant="outline" size="sm" onClick={() => void retryAttendance()}>Retry attendance</Button></CardContent></Card> : null}
       {user && activeAttendance.length > 0 ? (
         <Card className="border-emerald-500/30 bg-emerald-500/5">
           <CardHeader>
