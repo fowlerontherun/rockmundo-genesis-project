@@ -42,13 +42,13 @@ export const useGigDayReminders = () => {
 
       // Get existing reminders for these gigs (dedupe)
       const gigIds = gigs.map((g: any) => g.id);
-      const { data: existing } = await supabase
+      const { data: existing, error: existingError } = await supabase
         .from("notifications" as any)
         .select("metadata")
         .eq("user_id", user.id)
         .eq("category", "gig_reminder")
-        .order("created_at", { ascending: false })
-        .limit(1000);
+        .in("metadata->>gig_id", gigIds);
+      if (existingError) throw existingError;
       const alreadyNotified = new Set<string>(
         (existing ?? [])
           .map((r: any) => r?.metadata?.gig_id)
