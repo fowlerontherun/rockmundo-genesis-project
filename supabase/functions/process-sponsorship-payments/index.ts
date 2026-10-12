@@ -151,11 +151,15 @@ Deno.serve(async (req) => {
 
         // Check if contract is complete
         if (payment.week_number >= contract.term_weeks) {
-          await supabase
+          const { error: completionError } = await supabase
             .from('sponsorship_contracts')
             .update({ status: 'completed' })
             .eq('id', contract.id)
-          
+          if (completionError) {
+            console.error(`Failed to complete sponsorship contract ${contract.id}:`, completionError)
+            errorCount++
+            continue
+          }
           console.log(`Contract ${contract.id} completed`)
         }
 
@@ -171,6 +175,10 @@ Deno.serve(async (req) => {
 
     console.log(`=== Sponsorship Payments Processing Complete ===`)
     console.log(`Paid: ${paidCount}, Total: $${totalPaid}, Errors: ${errorCount}`)
+
+    if (errorCount > 0) {
+      throw new Error(`${errorCount} sponsorship payment operation(s) failed; job cannot be reported as successful`)
+    }
 
     await completeJobRun({
       jobName: 'process-sponsorship-payments',
