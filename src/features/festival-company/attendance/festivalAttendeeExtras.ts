@@ -208,7 +208,10 @@ export const parseFestivalLeaveEarlyResult = (value: unknown): FestivalLeaveEarl
     !isUuid(value.festivalEditionId) ||
     value.status !== "left_early" ||
     typeof value.checkedInAt !== "string" ||
+    !Number.isFinite(Date.parse(value.checkedInAt as string)) ||
     typeof value.leftAt !== "string" ||
+    !Number.isFinite(Date.parse(value.leftAt as string)) ||
+    Date.parse(value.leftAt as string) < Date.parse(value.checkedInAt as string) ||
     typeof value.alreadyLeft !== "boolean"
   ) {
     throw new Error("malformed_festival_leave_result");
@@ -235,12 +238,15 @@ export const parseFestivalMemorabiliaItem = (value: unknown): FestivalMemorabili
     !isUuid(value.attendanceId) ||
     value.itemType !== "wristband" ||
     typeof value.itemKey !== "string" ||
+    !value.itemKey.trim() ||
     typeof value.displayName !== "string" ||
+    !value.displayName.trim() ||
     !isNullableString(value.description) ||
     typeof value.rarity !== "string" ||
     !RARITIES.has(value.rarity as FestivalMemorabiliaItem["rarity"]) ||
     !isRecord(value.metadata) ||
-    typeof value.issuedAt !== "string"
+    typeof value.issuedAt !== "string" ||
+    !Number.isFinite(Date.parse(value.issuedAt))
   ) {
     throw new Error("malformed_festival_memorabilia");
   }
