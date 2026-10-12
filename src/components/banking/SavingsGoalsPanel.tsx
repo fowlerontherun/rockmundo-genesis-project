@@ -309,7 +309,9 @@ function FundSavingsGoalDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, goal.id]);
 
-  const handleOpenChange = (nextOpen: boolean) => {
+  const handleOpenChange = (nextOpen: boolean, confirmed = false) => {
+    // Preserve the retry identity and preview while an actual funding request is in flight.
+    if (!nextOpen && submitting && !confirmed) return;
     if (!nextOpen) { previewEpoch.current += 1; sourceRequestEpoch.current += 1; }
     setOpen(nextOpen);
     if (!nextOpen) {
@@ -359,7 +361,7 @@ function FundSavingsGoalDialog({
         idempotencyKey,
       });
       toast.success(result.completed ? "Savings goal completed" : "Savings goal funded");
-      handleOpenChange(false);
+      handleOpenChange(false, true);
       onChanged();
     } catch (fundingError) {
       setError(errorMessage(fundingError));
