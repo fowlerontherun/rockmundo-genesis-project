@@ -146,7 +146,7 @@ export const SessionConfigurator = ({
   const effectiveBandId = bandId || fallbackBandId;
 
   // Fetch slot availability
-  const { data: slotAvailability, isLoading: loadingSlots } =
+  const { data: slotAvailability, isLoading: loadingSlots, isError: slotsError, refetch: retrySlots } =
     useStudioAvailability(studio.id, selectedDate, effectiveBandId, true);
 
   // Duration depends on recording type
@@ -303,8 +303,10 @@ export const SessionConfigurator = ({
     const slotCheck = validateRequired(selectedSlotId, "Time slot");
     if (!slotCheck.valid) return slotCheck.message ?? "Choose a time slot.";
 
+    if (loadingSlots || slotsError || !slotAvailability) return "Studio availability could not be verified. Please retry.";
     const slot = STUDIO_SLOTS.find((s) => s.id === selectedSlotId);
-    if (!slot || isSlotInPast(slot, selectedDate)) {
+    if (!slot || isSlotInPast(slot, selectedDate) ||
+        !slotAvailability.some(s => s.slot.id === selectedSlotId && s.isAvailable)) {
       return "Choose an available future time slot.";
     }
 
@@ -395,7 +397,8 @@ export const SessionConfigurator = ({
     }
   };
 
-  const canBook = selectedSlotId && canAfford;
+  const canBook = Boolean(selectedSlotId && canAfford && !loadingSlots && !slotsError &&
+    slotAvailability?.some(s => s.slot.id === selectedSlotId && s.isAvailable));
 
   const handleCancelBookedSession = async (mode: "cancel" | "reschedule") => {
     if (!bookingSummary?.sessionId) {
@@ -503,6 +506,11 @@ export const SessionConfigurator = ({
             <div className="text-center py-4 text-muted-foreground">
               Loading availability...
             </div>
+          ) : slotsError || !slotAvailability ? (
+            <div role="alert" className="rounded border border-destructive/40 p-3 text-sm">
+              Unable to verify studio availability. Booking is disabled.
+              <Button type="button" size="sm" variant="outline" className="ml-2" onClick={() => void retrySlots()}>Retry</Button>
+            </div>
           ) : (
             <RadioGroup
               value={selectedSlotId}
@@ -519,7 +527,7 @@ export const SessionConfigurator = ({
                   );
                   const isBooked = slotData?.isBooked || false;
                   const isPast = isSlotInPast(slot, selectedDate);
-                  const canSelect = !isBooked && !isPast;
+                  const canSelect = Boolean(slotData) && !isBooked && !isPast;
 
                   return (
                     <div
