@@ -145,9 +145,15 @@ export function CreateLabelDialog({
     }
 
     if (data?.id && selectedTerritories.length > 0) {
-      await supabase.from("label_territories").insert(
+      const { error: territoryError } = await supabase.from("label_territories").insert(
         selectedTerritories.map((code) => ({ label_id: data.id, territory_code: code }))
       );
+      if (territoryError) {
+        toast({ title: "Label created, but territories were not saved", description: `${territoryError.message}. The label exists; review its territories before continuing.`, variant: "destructive" });
+        await queryClient.invalidateQueries({ queryKey: ["my-labels"] });
+        setIsSubmitting(false);
+        return;
+      }
     }
 
     // Record initial transaction
