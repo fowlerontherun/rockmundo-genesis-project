@@ -265,6 +265,10 @@ export const useTwaats = (accountId?: string) => {
 
   return {
     twaats,
+    page,
+    hasMore: (twaats?.length ?? 0) === 50,
+    nextPage: () => setPage((current) => current + 1),
+    previousPage: () => setPage((current) => Math.max(0, current - 1)),
     isLoading,
     error: loadError,
     refetch,
