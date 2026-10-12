@@ -13,7 +13,7 @@ import {
 const readableError = (error: Error) => error.message.replaceAll("_", " ");
 
 export const FestivalModeMoments = ({ attendance }: { attendance: FestivalPlayerAttendance }) => {
-  const { data, isLoading, isError } = useMyFestivalMoments(attendance.id);
+  const { data, isLoading, isError, refetch } = useMyFestivalMoments(attendance.id);
   const trigger = useTriggerFestivalMoment(attendance.id);
   const choose = useChooseFestivalMomentOption(attendance.id);
   const resolve = useResolveFestivalMomentOutcome(attendance.id);
@@ -22,6 +22,7 @@ export const FestivalModeMoments = ({ attendance }: { attendance: FestivalPlayer
 
   return (
     <div className="space-y-4">
+      {isError && <div role="alert" className="text-destructive">Moments could not be loaded. <button className="underline" onClick={() => void refetch()}>Retry</button></div>}
       <section className="rounded-2xl border bg-card p-5 md:p-7">
         <Badge variant="secondary">Festival Mode</Badge>
         <h1 className="mt-3 text-3xl font-black">Festival moments</h1>
@@ -31,7 +32,7 @@ export const FestivalModeMoments = ({ attendance }: { attendance: FestivalPlayer
         <Button
           className="mt-4"
           type="button"
-          disabled={trigger.isPending || pending}
+          disabled={trigger.isPending || pending || isError || isLoading}
           onClick={() => trigger.mutate({ idempotencyKey: crypto.randomUUID() })}
         >
           {trigger.isPending ? "Looking…" : pending ? "Finish your current moment" : "Find a moment"}
