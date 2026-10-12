@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { createDefaultWellnessCore, getPerformanceModifier as getCorePerformanceModifier, WELLNESS_ACTIVITIES, type WellnessCoreValues, type WellnessTierKey } from "@/lib/wellnessSystem";
+import { createDefaultWellnessCore, getPerformanceModifier as getCorePerformanceModifier, type WellnessCoreValues, type WellnessTierKey } from "@/lib/wellnessSystem";
 
 export type WellnessCategory = "recovery" | "fitness" | "medical" | "indulgence";
 
