@@ -48,59 +48,9 @@ export function RequestReleaseDialog({
 
   const requestReleaseMutation = useMutation({
     mutationFn: async () => {
-      // Deduct termination fee
-      if (bandId) {
-        const { data: band } = await supabase.from("bands").select("band_balance").eq("id", bandId).single();
-        if (!band || (band.band_balance || 0) < terminationFee) throw new Error("Insufficient band funds for termination fee");
-        
-        await supabase.from("bands").update({ band_balance: (band.band_balance || 0) - terminationFee }).eq("id", bandId);
-        
-        await supabase.from("band_earnings").insert({
-          band_id: bandId,
-          amount: -terminationFee,
-          source: "contract_termination",
-          description: `Early contract termination fee paid to ${labelName}`,
-          earned_by_user_id: profileId,
-        });
-      } else {
-        const { data: profile } = await supabase.from("profiles").select("cash").eq("id", profileId).single();
-        if (!profile || (profile.cash || 0) < terminationFee) throw new Error("Insufficient funds for termination fee");
-        
-        await supabase.from("profiles").update({ cash: (profile.cash || 0) - terminationFee }).eq("id", profileId);
-      }
-
-      // Get contract's label_id to credit the label
-      const { data: contract } = await supabase
-        .from("artist_label_contracts")
-        .select("label_id")
-        .eq("id", contractId)
-        .single();
-
-      // Credit termination fee to label
-      if (contract?.label_id) {
-        const { data: label } = await supabase.from("labels").select("balance").eq("id", contract.label_id).single();
-        if (label) {
-          await supabase.from("labels").update({ balance: (label.balance || 0) + terminationFee }).eq("id", contract.label_id);
-        }
-        await supabase.from("label_financial_transactions").insert({
-          label_id: contract.label_id,
-          transaction_type: "revenue",
-          amount: terminationFee,
-          description: `Early termination fee received`,
-          related_contract_id: contractId,
-        });
-      }
-
-      // Terminate the contract
-      const { error } = await supabase
-        .from("artist_label_contracts")
-        .update({
-          status: "terminated",
-          terminated_at: new Date().toISOString(),
-          termination_fee_paid: terminationFee,
-        })
-        .eq("id", contractId);
-
+      const { error } = await (supabase as any).rpc("terminate_artist_contract_atomic", {
+        p_contract_id: contractId,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
