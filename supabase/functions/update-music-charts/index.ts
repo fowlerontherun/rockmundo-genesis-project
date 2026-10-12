@@ -153,7 +153,9 @@ serve(async (req) => {
     // =========================================================================
     // FIXED: Removed broken nested filter - filter in code instead
     // FIXED: Use explicit foreign key for release_songs to avoid ambiguity
-    const { data: streamingDataRaw, error: streamingError } = await supabaseClient
+    const streamingDataRaw: any[] = [];
+    for (let offset = 0; ; offset += 500) {
+    const { data: streamingPage, error: streamingError } = await supabaseClient
       .from("song_releases")
       .select(`
         id,
@@ -183,10 +185,11 @@ serve(async (req) => {
       `)
       .eq("is_active", true)
       .gte("total_streams", 0)
-      .order("total_streams", { ascending: false })
-      .limit(500);
-
+      .order("id", { ascending: true }).range(offset, offset + 499);
     if (streamingError) throw streamingError;
+    streamingDataRaw.push(...(streamingPage ?? []));
+    if (!streamingPage || streamingPage.length < 500) break;
+    }
 
     // Filter to only include songs with status = 'recorded'
     // Also exclude b-sides from charting

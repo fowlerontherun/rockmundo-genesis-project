@@ -24,6 +24,8 @@ export function BandApplicationsList({ bandId, onMemberAdded }: BandApplications
   const { data: applications, isLoading, isError, error } = useQuery({
     queryKey: ['band-applications', bandId],
     queryFn: async () => {
+      const pendingApplications: any[] = [];
+      for (let offset = 0; ; offset += 500) {
       const { data, error } = await supabase
         .from('band_applications')
         .select(`
@@ -43,10 +45,19 @@ export function BandApplicationsList({ bandId, onMemberAdded }: BandApplications
           )
         `)
         .eq('band_id', bandId)
-        .order('created_at', { ascending: false })
-        .limit(50);
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false }).order('id', { ascending: true })
+        .range(offset, offset + 499);
       if (error) throw error;
-      return data;
+      pendingApplications.push(...(data ?? []));
+      if (!data || data.length < 500) break;
+      }
+      const { data: recentResolved, error: resolvedError } = await supabase
+        .from('band_applications').select('id, instrument_role, vocal_role, message, status, created_at, responded_at, applicant_profile_id, profiles:applicant_profile_id(id, display_name, username, avatar_url)')
+        .eq('band_id', bandId).neq('status', 'pending')
+        .order('created_at', { ascending: false }).limit(50);
+      if (resolvedError) throw resolvedError;
+      return [...pendingApplications, ...(recentResolved ?? [])];
     },
   });
 
@@ -118,7 +129,7 @@ export function BandApplicationsList({ bandId, onMemberAdded }: BandApplications
           <ClipboardList className="h-5 w-5" />
           <CardTitle>Band Applications</CardTitle>
         </div>
-        <CardDescription>{pendingCountError ? "Pending count unavailable" : `${pendingCount ?? "…"} pending application(s)`} • newest first • showing latest 50</CardDescription>
+        <CardDescription>{pendingCountError ? "Pending count unavailable" : `${pendingCount ?? "…"} pending application(s)`} • all pending + latest 50 resolved</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {applications.map((app: any) => {

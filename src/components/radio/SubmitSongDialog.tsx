@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Music, CheckCircle2, XCircle, Lock, MapPin } from "lucide-react";
 import { useRadioStations, type RadioStation } from "@/hooks/useRadioStations";
 
@@ -21,6 +22,7 @@ export const SubmitSongDialog = ({ open, onOpenChange, station }: SubmitSongDial
   const [selectedSongId, setSelectedSongId] = useState<string>("");
   const { submitToStationAsync, isSubmitting } = useRadioStations();
   const { data: primaryBand } = usePrimaryBand();
+  const { profileId } = useActiveProfile();
   const bandData = primaryBand?.bands
     ? {
         id: primaryBand.bands.id,
@@ -69,16 +71,15 @@ export const SubmitSongDialog = ({ open, onOpenChange, station }: SubmitSongDial
 
   // Fetch user's released songs AND songs with upcoming releases
   const { data: songs = [], isLoading } = useQuery({
-    queryKey: ["user-songs-for-radio"],
+    queryKey: ["user-songs-for-radio", profileId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      if (!profileId) return [];
 
       // Get released songs
       const { data: releasedSongs, error: releasedError } = await (supabase as any)
         .from("songs")
         .select("id, title, genre, quality_score, status, band_id")
-        .eq("profile_id", user.id)
+        .eq("profile_id", profileId)
         .eq("status", "released")
         .order("created_at", { ascending: false });
 
@@ -90,7 +91,7 @@ export const SubmitSongDialog = ({ open, onOpenChange, station }: SubmitSongDial
         .select(`
           song:songs!inner(id, title, genre, quality_score, status, user_id, band_id)
         `)
-        .eq("song.user_id", user.id);
+        .eq("song.profile_id", profileId);
 
       if (releaseError) throw releaseError;
 

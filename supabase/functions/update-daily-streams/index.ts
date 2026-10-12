@@ -383,33 +383,43 @@ Deno.serve(async (req) => {
         const dailyStreams = Math.min(5_000_000, dailyStreamsRaw);
         const dailyRevenueDollars = Math.round(dailyStreams * 0.004);
 
-        const releaseTerritoryBreakdown: Array<{ region: string; weight: number }> = hasTerritories
-          ? (() => {
-              const preferred = new Set(marketingStrategy.regions.map(region => String(region).toLowerCase()));
-              const targeted = preferred.size > 0 && !preferred.has("global");
-              return releaseTerritories.map(t => ({
-                region: t.country,
-                weight: Math.max(1, bandFans?.get(t.country) || 0) *
-                  (targeted && preferred.has(String(t.country).toLowerCase()) ? 2 : 1),
-              }));
-            })()
-          : ['North America', 'Europe', 'Asia Pacific', 'Latin America', 'UK & Ireland', 'Scandinavia', 'Australia & NZ']
-            .map((region, index) => ({ region, weight: [30, 25, 20, 10, 8, 4, 3][index] }));
-        const weightTotal = releaseTerritoryBreakdown.reduce((sum, region) => sum + region.weight, 0);
-        let allocatedStreams = 0;
-        let allocatedRevenue = 0;
-        // Allocate remainders to the last region so no rounding can create
-        // streams or revenue absent from the canonical release total.
-        const regionBreakdown = releaseTerritoryBreakdown.map((region, index) => {
-          const last = index === releaseTerritoryBreakdown.length - 1;
-          const streams = last ? dailyStreams - allocatedStreams :
-            Math.floor(dailyStreams * region.weight / weightTotal);
-          const revenue = last ? dailyRevenueDollars - allocatedRevenue :
-            Math.floor(dailyRevenueDollars * region.weight / weightTotal);
-          allocatedStreams += streams;
-          allocatedRevenue += revenue;
-          return { region: region.region, streams, revenue };
-        });
+        // Largest-remainder allocation guarantees that regional analytics reconcile
+        // exactly to the release-wide streams and revenue, including very small totals.
+        const allocateUnits = (total: number, weights: number[]): number[] => {
+          if (!weights.length) return [];
+          const normalized = weights.map(w => Number.isFinite(w) ? Math.max(0, w) : 0);
+          const sum = normalized.reduce((a, b) => a + b, 0);
+          const safeWeights = sum > 0 ? normalized : weights.map(() => 1);
+          const safeSum = safeWeights.reduce((a, b) => a + b, 0);
+          const exact = safeWeights.map(w => (w / safeSum) * total);
+          const counts = exact.map(Math.floor);
+          let remainder = total - counts.reduce((a, b) => a + b, 0);
+          const order = exact.map((n, i) => ({ i, fractional: n - Math.floor(n) }))
+            .sort((a, b) => b.fractional - a.fractional || a.i - b.i);
+          for (const row of order) { if (remainder-- <= 0) break; counts[row.i]++; }
+          return counts;
+        };
+        const weightedRegions: Array<{ region: string; weight: number }> = [];
+        if (hasTerritories) {
+          const preferredRegions = new Set(marketingStrategy.regions.map(region => String(region).trim().toLowerCase()));
+          const hasRegionalFocus = preferredRegions.size > 0 && !preferredRegions.has('global');
+          const weightedCountries = releaseTerritories.map(t => {
+            const fame = bandFans?.get(t.country) || 1;
+            return { country: t.country, weight: fame * (hasRegionalFocus && preferredRegions.has(String(t.country).toLowerCase()) ? 2 : 1) };
+          });
+          weightedRegions.push(...weightedCountries.map(wc => ({ region: wc.country, weight: wc.weight })));
+        } else {
+          const REGIONS = ['North America', 'Europe', 'Asia Pacific', 'Latin America', 'UK & Ireland', 'Scandinavia', 'Australia & NZ'];
+          const REGION_WEIGHTS = [0.30, 0.25, 0.20, 0.10, 0.08, 0.04, 0.03];
+          for (let i = 0; i < REGIONS.length; i++) weightedRegions.push({ region: REGIONS[i], weight: REGION_WEIGHTS[i] });
+        }
+        const allocatedStreams = allocateUnits(dailyStreams, weightedRegions.map(r => r.weight));
+        const allocatedRevenue = allocateUnits(dailyRevenueDollars, allocatedStreams);
+        const regionBreakdown = weightedRegions.map((r, i) => ({ region: r.region, streams: allocatedStreams[i], revenue: allocatedRevenue[i] }));
+        if (regionBreakdown.reduce((n, r) => n + r.streams, 0) !== dailyStreams ||
+            regionBreakdown.reduce((n, r) => n + r.revenue, 0) !== dailyRevenueDollars) {
+          throw new Error('Streaming region allocations do not reconcile to the release total');
+        }
 
         const { error: updateError } = await supabase.rpc("increment_song_release_stream_totals", {
           p_release_id: release.id,
@@ -423,7 +433,7 @@ Deno.serve(async (req) => {
 
         for (const rb of regionBreakdown) {
           const listenerRatio = 0.4 + Math.random() * 0.4;
-          const uniqueListeners = Math.max(1, Math.floor(rb.streams * listenerRatio));
+          const uniqueListeners = rb.streams > 0 ? Math.max(1, Math.floor(rb.streams * listenerRatio)) : 0;
           const skipRate = Number((10 + Math.random() * 25).toFixed(1));
           const completionRate = Number((55 + Math.random() * 35).toFixed(1));
           const ageRoll = Math.random();

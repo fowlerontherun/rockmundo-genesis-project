@@ -177,9 +177,10 @@ Deno.serve(async (req) => {
       .select(`
         id, song_id, label_id, band_id, artist_profile_id, submitted_at,
         songs(title, genre, quality_score),
-        labels(id, name, genre_focus, reputation_score, owner_id, is_bankrupt)
+        labels!inner(id, name, genre_focus, reputation_score, owner_id, is_bankrupt)
       `)
       .eq("status", "pending")
+      .is("labels.owner_id", null).eq("labels.is_bankrupt", false)
       .lt("submitted_at", new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString())
       .order("submitted_at", { ascending: true })
       .limit(50);
@@ -346,21 +347,7 @@ Deno.serve(async (req) => {
         );
 
         if (decision.accepted) {
-          // === MORALE BOOST: Getting accepted by a label is exciting! (v1.0.967) ===
-          if (demo.band_id) {
-            try {
-              const { data: bd } = await supabase.from('bands').select('morale').eq('id', demo.band_id).single();
-              if (bd) {
-                const moraleBoost = 5;
-                const newMorale = Math.min(100, (bd.morale ?? 50) + moraleBoost);
-                await supabase.from('bands').update({ morale: newMorale }).eq('id', demo.band_id);
-                console.log(`Demo accepted → morale +${moraleBoost} for band ${demo.band_id}`);
-                // Health event log
-                try { await supabase.from('band_health_events').insert({ band_id: demo.band_id, event_type: 'morale', delta: moraleBoost, new_value: newMorale, source: 'demo_accepted', description: `Demo accepted by label: ${label.name}` }); } catch (_) {}
-              }
-            } catch (e) { console.log('Morale boost error:', e); }
-          }
-
+          // Create the offer and confirm the state transition BEFORE awarding acceptance morale.
           // Generate contract terms — A&R skill affects term quality
           const terms = generateContractTerms(
             metrics,
@@ -418,6 +405,21 @@ Deno.serve(async (req) => {
             .maybeSingle();
           if (acceptedError) throw acceptedError;
           if (!acceptedUpdate) throw new Error(`Demo ${demo.id} was no longer pending when accepting`);
+
+          // === MORALE BOOST: Getting accepted by a label is exciting! (v1.0.967) ===
+          if (demo.band_id) {
+            try {
+              const { data: bd } = await supabase.from('bands').select('morale').eq('id', demo.band_id).single();
+              if (bd) {
+                const moraleBoost = 5;
+                const newMorale = Math.min(100, (bd.morale ?? 50) + moraleBoost);
+                await supabase.from('bands').update({ morale: newMorale }).eq('id', demo.band_id);
+                console.log(`Demo accepted → morale +${moraleBoost} for band ${demo.band_id}`);
+                // Health event log
+                try { await supabase.from('band_health_events').insert({ band_id: demo.band_id, event_type: 'morale', delta: moraleBoost, new_value: newMorale, source: 'demo_accepted', description: `Demo accepted by label: ${label.name}` }); } catch (_) {}
+              }
+            } catch (e) { console.log('Morale boost error:', e); }
+          }
 
           accepted++;
           console.log(`Demo ${demo.id} accepted, contract ${contract.id} created for ${song.title} (A&R skill: ${(arSkillBonus * 100).toFixed(0)}%)`);

@@ -73,6 +73,8 @@ export const useUnderworldInventory = () => {
 
       if (fetchError || !purchase) throw new Error("Item not found in inventory");
       if (purchase.is_used) throw new Error("Item has already been used");
+      const stackQuantity = Math.max(0, Number(purchase.quantity ?? 1));
+      if (!Number.isInteger(stackQuantity) || stackQuantity < 1) throw new Error("No remaining items in this stack");
       if (purchase.expires_at && Date.parse(purchase.expires_at) <= Date.now()) throw new Error("This purchase has expired");
 
       const product = purchase.product as UnderworldProduct;
@@ -126,12 +128,16 @@ export const useUnderworldInventory = () => {
         if (error) throw error;
       }
 
-      const { error: markUsedError } = await supabase
+      const { data: consumed, error: markUsedError } = await supabase
         .from("underworld_purchases")
-        .update({ is_used: true })
+        .update({ quantity: stackQuantity - 1, is_used: stackQuantity === 1 })
         .eq("id", purchaseId)
-        .eq("profile_id", profileId);
+        .eq("profile_id", profileId)
+        .eq("quantity", stackQuantity)
+        .eq("is_used", false)
+        .select("id").maybeSingle();
       if (markUsedError) throw markUsedError;
+      if (!consumed) throw new Error("Item quantity changed while using it. Refresh inventory and try again.");
 
       let exposure: ExposureResult | null = null;
       if (product?.addiction_type) {
