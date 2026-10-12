@@ -166,6 +166,12 @@ export const useCreateRecordingSession = () => {
           input.song_id,
           scheduledStart.toISOString(),
           input.duration_hours,
+          input.producer_id ?? "self-produce",
+          input.recording_version ?? "standard",
+          input.recording_type ?? "professional",
+          input.orchestra_size ?? "none",
+          paymentSource,
+          input.session_type ?? "default",
         ].join(":");
 
         stage = "confirming payment and recording session";
