@@ -1,6 +1,6 @@
 import { STAGE_INSTRUMENTS, stageAssignment, type InstrumentId } from '@/features/gig-demo-3d/instrumentCatalog';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { PlayerModelPreview } from './PlayerModelPreview';
 import { useEquippedRichClothing, useEquippedStageLuthieryInstruments, usePlayerModel, usePlayerStageTattoos } from './usePlayerModel';
 import { BODY_MUSCLE_LABELS, BODY_MUSCLE_TYPES, defaultAppearance, SLOTS, STYLES, STYLE_LABELS, type PlayerAppearance, type Style } from './appearance';
