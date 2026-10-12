@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useGameData } from "@/hooks/useGameData";
 import { Badge } from "@/components/ui/badge";
@@ -127,16 +127,18 @@ export const PlayerLearningNetwork = () => {
   const [classDuration, setClassDuration] = useState("1");
   const [classCapacity, setClassCapacity] = useState("4");
   const [classDate, setClassDate] = useState("");
+  const loadGeneration = useRef(0);
 
   const teachableSkills = useMemo(
     () => skills.filter((skill) => !skill.skill_slug.startsWith("teaching_") && (skill.current_level ?? 0) >= 5),
     [skills],
   );
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (preserveMessage = false) => {
+    const generation = ++loadGeneration.current;
     if (!profile?.id) return;
     setBusy(true);
-    setMessage(null);
+    if (!preserveMessage) setMessage(null);
     try {
       const [skillResult, mentorProfileResult, mentorResult, mentorshipResult, classResult, myClassResult] = await Promise.all([
         supabase.from("skill_progress").select("skill_slug,current_level,current_xp").eq("profile_id", profile.id).order("current_level", { ascending: false }),
@@ -154,6 +156,7 @@ export const PlayerLearningNetwork = () => {
       if (classResult.error) throw classResult.error;
       if (myClassResult.error) throw myClassResult.error;
 
+      if (generation !== loadGeneration.current) return;
       setSkills(skillResult.data ?? []);
       setMentorProfile(mentorProfileResult.data ?? null);
       setMentors((mentorResult.data ?? []) as unknown as Mentor[]);
@@ -172,14 +175,19 @@ export const PlayerLearningNetwork = () => {
         setMentorSkill(mentorProfileResult.data.focus_areas?.[0] ?? "");
       }
     } catch (error: unknown) {
-      setMessage(errorMessage(error, "Could not load player learning network."));
+      if (generation === loadGeneration.current) setMessage(preserveMessage
+        ? "Action completed, but the list could not refresh. Refresh to verify the latest data."
+        : errorMessage(error, "Could not load player learning network."));
     } finally {
-      setBusy(false);
+      if (generation === loadGeneration.current) setBusy(false);
     }
   }, [profile?.id]);
 
   useEffect(() => {
+    setSkills([]); setMentorProfile(null); setMentors([]); setMentorships([]);
+    setClasses([]); setMyTeaching([]); setMyLearning([]);
     void load();
+    return () => { loadGeneration.current += 1; };
   }, [load]);
 
   const run = async (action: () => PromiseLike<unknown>, success: string) => {
@@ -189,7 +197,7 @@ export const PlayerLearningNetwork = () => {
       const result = await action() as ActionResult;
       if (result.error) throw result.error;
       setMessage(success);
-      await load();
+      await load(true);
     } catch (error: unknown) {
       setMessage(errorMessage(error, "Action failed."));
     } finally {
@@ -268,7 +276,7 @@ export const PlayerLearningNetwork = () => {
                     p_is_open: true,
                     p_headline: mentorHeadline,
                     p_style: "supportive",
-                    p_skill_slugs: [mentorSkill],
+                    p_skill_slugs: Array.from(new Set([...(mentorProfile?.focus_areas ?? []), mentorSkill].filter(Boolean))),
                     p_capacity: Number(mentorCapacity),
                   }), "Mentor profile is open.")}
                 >{mentorProfile?.is_open_to_mentor ? "Update mentor profile" : "Open mentor profile"}</Button>
@@ -278,7 +286,7 @@ export const PlayerLearningNetwork = () => {
                     p_is_open: false,
                     p_headline: mentorHeadline,
                     p_style: "supportive",
-                    p_skill_slugs: mentorSkill ? [mentorSkill] : [],
+                    p_skill_slugs: Array.from(new Set([...(mentorProfile?.focus_areas ?? []), mentorSkill].filter(Boolean))),
                     p_capacity: Number(mentorCapacity),
                   }), "Mentor profile closed.")}>Close</Button>
                 )}
@@ -368,7 +376,7 @@ export const PlayerLearningNetwork = () => {
               <div className="space-y-2"><Label>Duration</Label><Select value={classDuration} onValueChange={setClassDuration}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{[1, 2, 3, 4].map((value) => <SelectItem key={value} value={String(value)}>{value} hour{value > 1 ? "s" : ""}</SelectItem>)}</SelectContent></Select></div>
               <div className="space-y-2"><Label>Seats</Label><Select value={classCapacity} onValueChange={setClassCapacity}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{[1, 2, 3, 4, 5, 6, 7, 8].map((value) => <SelectItem key={value} value={String(value)}>{value}</SelectItem>)}</SelectContent></Select></div>
               <div className="space-y-2 md:col-span-2 lg:col-span-3"><Label>Description</Label><Textarea value={classDescription} onChange={(event) => setClassDescription(event.target.value)} maxLength={800} placeholder="What will players learn?" /></div>
-              <div className="md:col-span-2 lg:col-span-3"><Button disabled={busy || !classSkill || !classTitle || !classDate || !Number.isFinite(Date.parse(classDate)) || Date.parse(classDate) <= Date.now()} onClick={() => void run(() => supabase.rpc("create_player_education_class", {
+              <div className="md:col-span-2 lg:col-span-3"><Button disabled={busy || !classSkill || !classTitle || !classDate || !Number.isFinite(Date.parse(classDate)) || Date.parse(classDate) <= Date.now() || !Number.isFinite(Number(classPrice)) || Number(classPrice) < 0 || Number(classPrice) > 100000 || !Number.isSafeInteger(Math.round(Number(classPrice) * 100))} onClick={() => void run(() => supabase.rpc("create_player_education_class", {
                 p_teacher_profile_id: profile.id,
                 p_skill_slug: classSkill,
                 p_title: classTitle,
