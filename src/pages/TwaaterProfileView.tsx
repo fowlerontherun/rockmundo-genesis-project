@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +18,8 @@ import { useTwaaterModeration } from "@/hooks/useTwaaterModeration";
 
 const TwaaterProfileView = () => {
   const { handle } = useParams();
+  const [postsPage,setPostsPage] = useState(0);
+  useEffect(() => setPostsPage(0), [handle]);
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -79,6 +81,7 @@ const TwaaterProfileView = () => {
       profileAccount?.id,
       viewerAccount?.id,
       selectedAccountFollowsProfile,
+      postsPage,
     ],
     queryFn: async () => {
       if (!profileAccount) return [];
@@ -93,7 +96,7 @@ const TwaaterProfileView = () => {
         .is("deleted_at", null)
         .is("scheduled_for", null)
         .order("created_at", { ascending: false })
-        .limit(200);
+        .range(postsPage * 50, postsPage * 50 + 49);
 
       if (viewerAccount?.id === profileAccount.id) {
         query = query.in("visibility", ["public", "followers"]);
@@ -356,6 +359,7 @@ const TwaaterProfileView = () => {
             </div>
           ) : twaats && twaats.length > 0 ? (
             <div>
+              <div className="flex items-center justify-between gap-2 py-3"><Button variant="outline" size="sm" disabled={postsPage===0} onClick={()=>setPostsPage(p=>Math.max(0,p-1))}>Previous</Button><span>Page {postsPage+1}</span><Button variant="outline" size="sm" disabled={twaats.length < 50} onClick={()=>setPostsPage(p=>p+1)}>Next</Button></div>
               {twaats.map((twaat: any) => (
                 <TwaatCard key={twaat.id} twaat={twaat} viewerAccountId={viewerAccount?.id || ""} />
               ))}
