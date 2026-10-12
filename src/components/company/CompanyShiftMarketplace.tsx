@@ -100,8 +100,6 @@ export function CompanyShiftMarketplace() {
           <Skeleton className="h-14 w-full" />
         ) : shiftsError || claimsError ? (
           <div role="alert" className="py-4 text-sm text-destructive">Could not load shifts or your claims. <Button variant="outline" size="sm" onClick={() => { void retryShifts(); void retryClaims(); }}>Retry</Button></div>
-        ) : false ? (
-          <Skeleton className="h-14 w-full" />
         ) : shifts.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
             No open shifts right now. New shifts are published every morning.
