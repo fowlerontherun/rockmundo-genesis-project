@@ -53,7 +53,7 @@ export function FestivalPublicProfileEditor({ festivalCompanyId }: { festivalCom
   const save = useSaveFestivalPublicProfile();
   const [draft, setDraft] = useState<ProfileDraft>(emptyDraft);
   const [dirty, setDirty] = useState(false);
-  useEffect(() => setDirty(false), [festivalCompanyId]);
+  useEffect(() => {setDirty(false);setDraft(emptyDraft);}, [festivalCompanyId]);
 
   const existing = useMemo(() => {
     const raw = plan.data as { publicProfile?: Record<string, unknown> | null } | undefined;
