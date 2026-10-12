@@ -302,13 +302,11 @@ export function calculateCanonicalReadiness(input: { role: WellnessReadinessRole
     if (remaining > 0) { remainingById.set(m.id, remaining - 1); return false; }
     return true;
   });
-  let additive = 0;
-  let multiplier = 1;
-  for (const modifier of normalized) {
+  // Translate each contribution into score points exactly once.
+  const modifierImpacts = normalized.map(modifier => {
     const value = modifier.cappedValue ?? modifier.rawValue;
-    if (modifier.mode === "multiplicative") multiplier += value;
-    else additive += value * 100;
-  }
+    return modifier.mode === "multiplicative" ? baseValue * value : value * 100;
+  });
   const positiveTotal = normalized.filter((m) => (m.cappedValue ?? 0) > 0).reduce((s, m) => s + (m.cappedValue ?? 0), 0);
   const negativeTotal = normalized.filter((m) => (m.cappedValue ?? 0) < 0).reduce((s, m) => s + (m.cappedValue ?? 0), 0);
   const boundedPositive = Math.min(WELLNESS_CANONICAL_BALANCE.globalModifierCaps.positive, positiveTotal);
@@ -317,7 +315,9 @@ export function calculateCanonicalReadiness(input: { role: WellnessReadinessRole
   const boundedNegative = Math.max(negativeCap, negativeTotal);
   const cappedContributors = normalized.filter((m) => (m.cappedValue ?? m.rawValue) !== m.rawValue || positiveTotal > WELLNESS_CANONICAL_BALANCE.globalModifierCaps.positive || negativeTotal < negativeCap);
   const restrictedBy = (input.restrictions ?? []).find((r) => WELLNESS_CANONICAL_BALANCE.roleRestrictions[input.role]?.includes(r));
-  const rawScore = restrictedBy ? 0 : baseValue * Math.max(0.6, multiplier) + additive + boundedPositive * 100 + boundedNegative * 100;
+  const positiveImpact = Math.min(WELLNESS_CANONICAL_BALANCE.globalModifierCaps.positive * 100, modifierImpacts.filter(v => v > 0).reduce((s, v) => s + v, 0));
+  const negativeImpact = Math.max(negativeCap * 100, modifierImpacts.filter(v => v < 0).reduce((s, v) => s + v, 0));
+  const rawScore = restrictedBy ? 0 : baseValue + positiveImpact + negativeImpact;
   const score = clampWellness(rawScore);
   const state = WELLNESS_CANONICAL_BALANCE.readinessThresholds.find((threshold) => score >= threshold.min)?.state ?? "unavailable";
   const performanceModifier = restrictedBy ? 0 : Number(Math.max(1 + negativeCap, Math.min(1 + WELLNESS_CANONICAL_BALANCE.globalModifierCaps.positive, 1 + (score - 70) / 250)).toFixed(3));
