@@ -72,6 +72,7 @@ export const useUnderworldInventory = () => {
 
       if (fetchError || !purchase) throw new Error("Item not found in inventory");
       if (purchase.is_used) throw new Error("Item has already been used");
+      if (purchase.expires_at && Date.parse(purchase.expires_at) <= Date.now()) throw new Error("This purchase has expired");
 
       const product = purchase.product as UnderworldProduct;
       const rawEffects = product?.effects || purchase.effects_applied || {};
