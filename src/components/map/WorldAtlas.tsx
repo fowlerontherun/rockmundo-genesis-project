@@ -105,7 +105,7 @@ export default function WorldAtlas({ cities, currentCityId, bandId, mode = "expl
         <div className="h-[420px] md:h-[600px] min-w-0 overflow-hidden rounded-lg border">
           <InteractiveWorldMap cities={filtered} currentCityId={currentCityId}
             routeCityIds={plannedStops} routeCities={cities} onCityClick={choose}
-            cityValues={cityFameValues} valueMode={mode === "fame" ? "fame" : "default"} />
+            cityValues={fameUnavailable ? {} : cityFameValues} valueMode={mode === "fame" && !fameUnavailable ? "fame" : "default"} />
         </div>
         <aside className="rounded-lg border p-3 space-y-3" aria-label="Map city details">
           <h3 className="font-semibold">{selected ? selected.name : "Choose a city"}</h3>
