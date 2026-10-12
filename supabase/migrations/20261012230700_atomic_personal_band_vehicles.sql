@@ -90,7 +90,7 @@ DECLARE b public.bands%rowtype;v public.vehicle_catalog%rowtype;v_cost integer;v
 BEGIN
  v_profile:=public._caller_profile_id();
  SELECT * INTO b FROM public.bands WHERE id=p_band_id FOR UPDATE;
- IF NOT FOUND OR b.leader_id NOT IN (auth.uid(),v_profile) THEN RAISE EXCEPTION 'band_vehicle_leader_required'; END IF;
+ IF NOT FOUND OR NOT (coalesce(b.leader_id=auth.uid(),false) OR coalesce(b.leader_id=v_profile,false)) THEN RAISE EXCEPTION 'band_vehicle_leader_required'; END IF;
  SELECT * INTO v FROM public.vehicle_catalog WHERE id=p_vehicle_catalog_id;
  IF NOT FOUND THEN RAISE EXCEPTION 'vehicle_not_in_catalog'; END IF;
  IF p_type NOT IN ('buy','rent','lease') THEN RAISE EXCEPTION 'invalid_vehicle_purchase_type'; END IF;
