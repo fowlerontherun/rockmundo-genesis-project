@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Share2 } from "lucide-react";
 import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
 import type { ShareMoment } from "@/features/shareable-moments/types";
@@ -39,7 +39,9 @@ const SponsorIdentity = ({ name, logoReference }: { name: string; logoReference:
 };
 
 const Countdown = ({ target }: { target: string }) => {
-  const remaining = Math.max(0, Date.parse(target) - Date.now());
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => { const interval = window.setInterval(() => setNow(Date.now()), 30_000); return () => window.clearInterval(interval); }, []);
+  const remaining = Math.max(0, Date.parse(target) - now);
   if (!remaining) return <p className="font-semibold">Festival opening is scheduled now.</p>;
   const minutes = Math.floor(remaining / 60000);
   return (
@@ -112,6 +114,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   const [activePurchaseProductId, setActivePurchaseProductId] = useState<string | null>(null);
   const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
   const [failedFestivalLogo, setFailedFestivalLogo] = useState<string | null>(null);
+  useEffect(() => { setQuantities({}); setActivePurchaseProductId(null); buy.reset(); }, [festivalCompanyIdentifier, publicSlug, f?.id]);
 
   if (isLoading) return <main className="p-8" role="status">Loading Festival…</main>;
   if (isError || !f) return <main className="p-8" role="alert">Festival not found.</main>;

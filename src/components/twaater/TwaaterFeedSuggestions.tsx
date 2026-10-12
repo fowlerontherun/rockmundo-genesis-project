@@ -30,6 +30,10 @@ export const TwaaterFeedSuggestions = ({ currentAccountId, onDismiss }: TwaaterF
       const followingIds = following?.map(f => f.followed_account_id) || [];
       followingIds.push(currentAccountId); // Exclude self
 
+      const { data: blockRows, error: blocksError } = await supabase.from("twaater_blocks").select("blocker_account_id, blocked_account_id").or(`blocker_account_id.eq.${currentAccountId},blocked_account_id.eq.${currentAccountId}`);
+      if (blocksError) throw blocksError;
+      followingIds.push(...(blockRows || []).map(row => row.blocker_account_id === currentAccountId ? row.blocked_account_id : row.blocker_account_id));
+
       // Get popular accounts not already followed
       const { data: accounts, error } = await supabase
         .from("twaater_accounts")

@@ -105,7 +105,7 @@ const minorToMajorInput = (minor: number) => String(Math.max(0, minor) / 100);
 
 const majorInputToMinor = (value: string, fallbackMinor: number) => {
   const major = Number(value);
-  if (!Number.isFinite(major) || major < 0) return Math.max(0, fallbackMinor);
+  if (!value.trim() || !Number.isFinite(major) || major < 0) return Math.max(0, fallbackMinor);
   return Math.round(major * 100);
 };
 

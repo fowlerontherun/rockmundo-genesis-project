@@ -15,10 +15,10 @@ import {
 } from "@/types/city-development";
 
 export function MayorHistoryTab({ cityId }: { cityId: string }) {
-  const { data: actions } = useMayorActionsLog(cityId, 50);
+  const { data: actions } = useMayorActionsLog(cityId, 1000);
   const { data: lawHistory } = useCityLawHistory(cityId);
   const { data: mayors } = useMayorHistory(cityId);
-  const { data: developmentHistory } = useCityDevelopmentHistory(cityId, 50);
+  const { data: developmentHistory } = useCityDevelopmentHistory(cityId, 1000);
 
   return (
     <div className="space-y-5">

@@ -75,6 +75,7 @@ export function FestivalOwnerNpcActsManager({
   });
 
   const submit = () => {
+    if (query.isError || query.isLoading) { toast.error("NPC lineup must load before editing."); return; }
     const fame = Number(draft.fame);
     const setMinutes = Number(draft.setMinutes);
     if (!draft.displayName.trim() || !draft.festivalDate || !Number.isInteger(fame) || fame < 0 || fame > 1000000 || !Number.isInteger(setMinutes) || setMinutes < 10 || setMinutes > 240) {
@@ -172,7 +173,7 @@ export function FestivalOwnerNpcActsManager({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button onClick={submit} disabled={save.isPending}>
+          <Button onClick={submit} disabled={save.isPending || query.isError || query.isLoading}>
             {editing ? <Pencil className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
             {save.isPending ? "Saving…" : editing ? "Update NPC act" : "Add NPC act"}
           </Button>
