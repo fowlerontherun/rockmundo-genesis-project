@@ -338,6 +338,7 @@ const ChristmasCharts = () => {
                   <Crown className="h-5 w-5 text-yellow-500 flex-shrink-0" />
                   <div className="flex-1">
                     <p className="font-semibold text-sm">Year {winner.game_year}</p>
+                    <p className="text-sm">{winner.song_title ?? winner.release_title ?? winner.title ?? "Winning release unavailable"} · {winner.artist_name ?? winner.band_name ?? "Artist unavailable"}</p>
                     <p className="text-xs text-muted-foreground">
                       {winner.total_sales?.toLocaleString() || 0} units sold
                     </p>
