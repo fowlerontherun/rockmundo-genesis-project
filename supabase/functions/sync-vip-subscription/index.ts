@@ -39,26 +39,41 @@ serve(async (req) => {
       const subs = await stripe.subscriptions.list({ customer: c.id, status: "all", limit: 10 });
       for (const s of subs.data) {
         if (s.status !== "active" && s.status !== "trialing") continue;
+        // An email match is not proof of entitlement ownership.
+        if (s.metadata?.user_id !== user.id) continue;
         if (!best || (periodEnd(s) ?? 0) > (periodEnd(best) ?? 0)) best = s;
       }
     }
-    if (!best) return json({ synced: true, active: false });
+    if (!best) {
+      // Revoke only Stripe-backed paid entitlements, never gifts or trials.
+      const { error: revokeError } = await admin.from("vip_subscriptions")
+        .update({ status: "expired" })
+        .eq("user_id", user.id)
+        .eq("subscription_type", "paid")
+        .eq("status", "active")
+        .not("stripe_subscription_id", "is", null);
+      if (revokeError) throw revokeError;
+      return json({ synced: true, active: false });
+    }
 
     const end = periodEnd(best);
     if (!end) return json({ synced: false, reason: "no_period_end" });
     const expiresAt = new Date(end * 1000).toISOString();
     const startsAt = new Date((best.start_date ?? best.created) * 1000).toISOString();
 
-    const { data: existing } = await admin
+    const { data: existing, error: lookupError } = await admin
       .from("vip_subscriptions")
-      .select("id")
+      .select("id,user_id")
       .eq("stripe_subscription_id", best.id)
       .maybeSingle();
+    if (lookupError) throw lookupError;
 
+    if (existing && existing.user_id !== user.id) throw new Error("Subscription ownership mismatch");
     if (existing) {
-      await admin.from("vip_subscriptions").update({ status: "active", expires_at: expiresAt }).eq("id", existing.id);
+      const { error: writeError } = await admin.from("vip_subscriptions").update({ status: "active", expires_at: expiresAt }).eq("id", existing.id).eq("user_id", user.id);
+      if (writeError) throw writeError;
     } else {
-      await admin.from("vip_subscriptions").insert({
+      const { error: writeError } = await admin.from("vip_subscriptions").insert({
         user_id: user.id,
         status: "active",
         subscription_type: "paid",
@@ -66,6 +81,7 @@ serve(async (req) => {
         expires_at: expiresAt,
         stripe_subscription_id: best.id,
       });
+      if (writeError) throw writeError;
     }
     console.log("[SYNC-VIP] synced", { userId: user.id, subscriptionId: best.id, expiresAt });
     return json({ synced: true, active: true, expires_at: expiresAt });

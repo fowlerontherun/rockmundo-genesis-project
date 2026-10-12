@@ -149,6 +149,14 @@ serve(async (req) => {
           break;
         }
 
+        // Reconcile the paid renewal even if subscription.updated arrives late.
+        const renewalEnd = periodEndOf(subscription).toISOString();
+        const { error: renewalError } = await supabaseClient.from("vip_subscriptions")
+          .update({ status: "active", expires_at: renewalEnd })
+          .eq("stripe_subscription_id", subscriptionId)
+          .eq("user_id", userId);
+        if (renewalError) throw new Error(`Failed to persist VIP renewal: ${renewalError.message}`);
+
         const paidAt = invoice.status_transitions?.paid_at
           ? new Date(invoice.status_transitions.paid_at * 1000).toISOString()
           : new Date().toISOString();
@@ -179,7 +187,7 @@ serve(async (req) => {
         }
 
         const currentPeriodEnd = periodEndOf(subscription);
-        const status = subscription.status === "active" ? "active" :
+        const status = ["active", "trialing", "past_due"].includes(subscription.status) ? "active" :
                        subscription.status === "canceled" ? "cancelled" : "expired";
 
         const { error } = await supabaseClient
