@@ -18,7 +18,7 @@ const describeRepairError = (error: Error): string => {
   if (error.message.includes("tour_travel_repair_not_found")) {
     return "This tour no longer exists.";
   }
-  return "Tour travel could not be repaired. No partial travel changes were applied.";
+  return "Tour travel repair could not be confirmed. Refresh the tour before retrying.";
 };
 
 const describeMemberSyncError = (error: Error): string => {
@@ -31,7 +31,7 @@ const describeMemberSyncError = (error: Error): string => {
   if (error.message.includes("tour_member_travel_not_found")) {
     return "This tour no longer exists.";
   }
-  return "Member travel could not be synchronised. No partial bookings were created.";
+  return "Member travel sync could not be confirmed. Refresh bookings before retrying.";
 };
 
 export const useTourTravelRepair = () => {
