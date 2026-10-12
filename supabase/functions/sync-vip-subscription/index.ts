@@ -40,7 +40,7 @@ serve(async (req) => {
       for (const s of subs.data) {
         if (s.status !== "active" && s.status !== "trialing") continue;
         // An email match is not proof of entitlement ownership.
-        if (s.metadata?.user_id !== user.id || c.metadata?.rockmundo_user_id !== user.id) continue;
+        if (s.metadata?.user_id !== user.id) continue;
         if (!best || (periodEnd(s) ?? 0) > (periodEnd(best) ?? 0)) best = s;
       }
     }
