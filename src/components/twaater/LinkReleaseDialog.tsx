@@ -41,6 +41,7 @@ export const LinkReleaseDialog = ({ open, onOpenChange, onSelect }: LinkReleaseD
       const { data: releases, error } = await supabase
         .from("releases")
         .select("id, title, release_type, artwork_url, release_status, band:bands(id, name)")
+        .eq("release_status", "released")
         .or(bandIds.length > 0 ? `band_id.in.(${bandIds.join(",")})` : `band_id.is.null`)
         .order("created_at", { ascending: false });
 

@@ -9,11 +9,12 @@ export function sharePromptKey(kind: string, sourceId: string) {
 
 export function shouldOfferSharePrompt(kind: string, sourceId: string, tier: SharePromptTier = "exceptional", now = Date.now()) {
   if (typeof localStorage === "undefined") return true;
-  const last = Number(localStorage.getItem(sharePromptKey(kind, sourceId)) || 0);
+  let last = 0;
+  try { last = Number(localStorage.getItem(sharePromptKey(kind, sourceId)) || 0); } catch { return true; }
   const cooldown = tier === "exceptional" ? 30 * DAY : 7 * DAY;
   return !last || now - last >= cooldown;
 }
 
 export function markSharePromptSeen(kind: string, sourceId: string, now = Date.now()) {
-  if (typeof localStorage !== "undefined") localStorage.setItem(sharePromptKey(kind, sourceId), String(now));
+  try { if (typeof localStorage !== "undefined") localStorage.setItem(sharePromptKey(kind, sourceId), String(now)); } catch { /* Storage may be blocked; sharing should continue. */ }
 }

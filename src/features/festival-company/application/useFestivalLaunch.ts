@@ -6,7 +6,7 @@ export const festivalDirectoryKey=(filters:Record<string,unknown>={})=>["festiva
 export const festivalTicketWalletKey=["festival-ticket-wallet"] as const;
 export const useFestivalLaunchPlan=(id?:string)=>useQuery({queryKey:festivalLaunchKey(id),enabled:Boolean(id),queryFn:()=>repository.getFestivalLaunchPlan(id!)});
 export const usePublicFestival=(slug?:string)=>useQuery({queryKey:publicFestivalKey(slug),enabled:Boolean(slug),queryFn:()=>repository.getPublicFestival(slug!),refetchInterval:60_000});
-export const usePublicFestivalDirectory=(filters:Record<string,unknown>={})=>useQuery({queryKey:festivalDirectoryKey(filters),queryFn:()=>repository.getPublicFestivalDirectory(filters)});
+export const usePublicFestivalDirectory=(filters:Record<string,unknown>={})=>useQuery({queryKey:festivalDirectoryKey(filters),queryFn:()=>repository.getPublicFestivalDirectory(filters),refetchInterval:60_000});
 export const usePublicFestivalTimetable=(slug?:string)=>useQuery({queryKey:["public-festival-timetable",slug],enabled:Boolean(slug),queryFn:()=>repository.getPublicFestivalTimetable(slug!)});
 export const usePublicFestivalTicketProducts=(launchId?:string)=>useQuery({queryKey:["public-festival-tickets",launchId],enabled:Boolean(launchId),queryFn:()=>repository.getPublicFestivalTicketProducts(launchId!)});
 export const useMyFestivalTickets=(enabled=true)=>useQuery({queryKey:festivalTicketWalletKey,queryFn:repository.getMyFestivalTickets,enabled});

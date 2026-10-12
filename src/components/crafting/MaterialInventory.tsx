@@ -38,7 +38,7 @@ export const MaterialInventory = ({
   isPurchasing,
   mode = "inventory",
 }: MaterialInventoryProps) => {
-  const categories = ["wood", "electronics", "hardware", "strings", "finish", "pedal_components", "amp_components"];
+  const categories = Array.from(new Set(materialsCatalog.map(material => material.category))).sort();
   const [tierFilter, setTierFilter] = useState<number | "all">("all");
   const [purchaseQuantities, setPurchaseQuantities] = useState<Record<string, number>>({});
 
