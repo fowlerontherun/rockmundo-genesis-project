@@ -175,7 +175,9 @@ serve(async (req) => {
       errorCount++;
     }
 
-    const { data: releases, error: releasesError } = await supabaseClient
+    const releases: any[] = [];
+    for (let offset = 0; ; offset += 500) {
+    const { data: releasePage, error: releasesError } = await supabaseClient
       .from("releases")
       .select(`
         id,
@@ -200,9 +202,12 @@ serve(async (req) => {
         release_formats(id, format_type, retail_price, quantity, stockout_demand, distribution_fee_percentage),
         release_songs!release_songs_release_id_fkey(song_id, song:songs(id, quality_score))
       `)
-      .eq("release_status", "released");
-
+      .eq("release_status", "released")
+      .order("id", { ascending: true }).range(offset, offset + 499);
     if (releasesError) throw releasesError;
+    releases.push(...(releasePage ?? []));
+    if (!releasePage || releasePage.length < 500) break;
+    }
 
     const userIds = Array.from(
       new Set((releases || []).map((release) => release.user_id).filter(Boolean))
@@ -313,7 +318,7 @@ serve(async (req) => {
     }
 
     // Pre-fetch data previously queried once per release.
-    const cityIds = [...new Set((releases || []).map((r: any) => r.bands?.[0]?.home_city_id).filter(Boolean))];
+    const cityIds = [...new Set((releases || []).map((r: any) => (Array.isArray(r.bands) ? r.bands[0] : r.bands)?.home_city_id).filter(Boolean))];
     const cityTaxMap = new Map<string, number>();
     if (cityIds.length > 0) {
       const { data: cities } = await supabaseClient.from("cities").select("id, sales_tax_rate").in("id", cityIds);
@@ -357,7 +362,7 @@ serve(async (req) => {
           ? profilesMap.get(release.user_id as string)
           : undefined;
 
-        const band = release.bands?.[0];
+        const band = Array.isArray(release.bands) ? release.bands[0] : release.bands;
         const artistFame = band?.fame || profile?.fame || 0;
         const storedPopularity = band?.popularity || profile?.popularity || 0;
         // Historical fame migrations can leave popularity far behind an artist's
@@ -395,9 +400,14 @@ serve(async (req) => {
         // If no territories, use legacy global logic
         let regionalMultiplier = 1.0;
         if (!hasTerritories) {
-          const firstEntry = countryFansMap.values().next().value;
-          if (firstEntry) {
-            regionalMultiplier = calculateRegionalSalesMultiplier(firstEntry.fame, firstEntry.has_performed, globalFame);
+          const countryRows = [...countryFansMap.values()];
+          const weightTotal = countryRows.reduce((sum, row) => sum + Math.max(0, row.total_fans || 0), 0);
+          if (countryRows.length > 0) {
+            const totalWeighted = countryRows.reduce((sum, row) => {
+              const weight = weightTotal > 0 ? Math.max(0, row.total_fans || 0) : 1;
+              return sum + calculateRegionalSalesMultiplier(row.fame, row.has_performed, globalFame) * weight;
+            }, 0);
+            regionalMultiplier = totalWeighted / (weightTotal > 0 ? weightTotal : countryRows.length);
           }
         }
 

@@ -57,7 +57,9 @@ Deno.serve(async (req) => {
       requestId: payload?.requestId ?? null,
     });
 
-    const { data: streamingReleases, error: streamingError } = await supabase
+    const streamingReleases: any[] = [];
+    for (let offset = 0; ; offset += 500) {
+    const { data: streamingPage, error: streamingError } = await supabase
       .from('song_releases')
       .select(`
         id, 
@@ -75,10 +77,11 @@ Deno.serve(async (req) => {
       .eq('is_active', true)
       .eq('release_type', 'streaming')
       .eq('songs.status', 'recorded')
-      .lte('release_date', new Date().toISOString());
-
-    if (streamingError) {
-      throw streamingError;
+      .lte('release_date', new Date().toISOString())
+      .order('id', { ascending: true }).range(offset, offset + 499);
+    if (streamingError) throw streamingError;
+    streamingReleases.push(...(streamingPage ?? []));
+    if (!streamingPage || streamingPage.length < 500) break;
     }
 
     // Get active band count for market scaling
