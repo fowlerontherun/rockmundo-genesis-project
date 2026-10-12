@@ -24,8 +24,8 @@ BEGIN
  THEN RAISE EXCEPTION 'contract_no_longer_active'; END IF;
  IF v_c.band_id IS NOT NULL THEN
   IF NOT EXISTS(SELECT 1 FROM public.bands b WHERE b.id=v_c.band_id AND
-    (b.leader_id=auth.uid() OR EXISTS (SELECT 1 FROM public.band_members bm
-      WHERE bm.band_id=b.id AND bm.user_id=auth.uid() AND bm.role IN ('leader','manager'))))
+    (b.leader_id IN (auth.uid(),v_profile) OR EXISTS (SELECT 1 FROM public.band_members bm
+      WHERE bm.band_id=b.id AND bm.user_id=auth.uid() AND lower(bm.role) IN ('founder','leader','manager'))))
   THEN RAISE EXCEPTION 'band_leadership_required'; END IF;
  ELSE
   IF v_c.artist_profile_id<>v_profile THEN RAISE EXCEPTION 'solo_contract_not_owned'; END IF;
