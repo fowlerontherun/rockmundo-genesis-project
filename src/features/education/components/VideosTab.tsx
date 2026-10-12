@@ -137,7 +137,7 @@ export const VideosTab = () => {
       if (selectedSkill !== "all" && video.skillSlug !== selectedSkill) return false;
       if (difficulty !== "all" && video.difficulty !== Number(difficulty)) return false;
       if (!matchesDuration(video, duration)) return false;
-      if (selectedTag !== "all" && !video.tags.some((tag) => tag === selectedTag)) return false;
+      if (selectedTag !== "all" && !video.tags.some((tag) => tag.trim() === selectedTag)) return false;
       if (followingOnly && (!video.skillSlug || !subscribedSkills.has(video.skillSlug))) return false;
 
       if (normalizedSearch) {
@@ -438,7 +438,7 @@ export const VideosTab = () => {
             const locked = Boolean(
               video.skillSlug &&
                 isHigherTierSkill(video.skillSlug) &&
-                accessBySkill.get(video.skillSlug) === false,
+                (tierAccess.isLoading || tierAccess.isError || accessBySkill.get(video.skillSlug) !== true),
             );
             return (
               <Card key={video.id} className="flex h-full flex-col transition-all hover:border-primary/50 hover:shadow-md">
@@ -486,7 +486,7 @@ export const VideosTab = () => {
                           key={tag}
                           variant="outline"
                           className="cursor-pointer text-[10px]"
-                          onClick={() => setSelectedTag(tag)}
+                          onClick={() => setSelectedTag(tag.trim())}
                         >
                           {tag}
                         </Badge>

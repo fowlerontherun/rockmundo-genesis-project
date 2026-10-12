@@ -114,7 +114,8 @@ export const useWatchVideo = () => {
       if (!status.canWatch) throw new Error("cooldown");
       if (!profileId) throw new Error("Not authenticated");
 
-      const transactionRef = `education-video:${profileId}:${videoId}:${Math.floor(Date.now() / COOLDOWN_MS)}`;
+      // Every permitted repeat viewing must have a distinct reward event.
+      const transactionRef = `education-video:${profileId}:${videoId}:${crypto.randomUUID()}`;
 
       await awardActionXp({
         amount: XP_PER_VIDEO,
@@ -143,6 +144,17 @@ export const useWatchVideo = () => {
           if (skillDefinitionError) throw skillDefinitionError;
 
           if (skillDefinition) {
+            if (normalizedSkill.includes("professional") || normalizedSkill.includes("mastery")) {
+              const { data: access, error: accessError } = await (supabase as any).rpc("skill_tier_access_bulk", {
+                p_profile_id: profileId, p_slugs: [normalizedSkill],
+              });
+              if (accessError) throw accessError;
+              if (!Array.isArray(access) || !access.some(row => row.skill_slug === normalizedSkill && row.is_unlocked === true)) {
+                skillLocked = true;
+              }
+            }
+            // An old skill_progress row must never bypass tier prerequisites.
+            if (!skillLocked) {
             const maxLevel = await getSkillMaxLevel(normalizedSkill);
             const { data: existingProgress, error: skillLoadError } = await supabase
               .from("skill_progress")
@@ -205,6 +217,7 @@ export const useWatchVideo = () => {
               skillXpAwarded = true;
             } else {
               skillLocked = true;
+            }
             }
           }
         } catch (skillError) {

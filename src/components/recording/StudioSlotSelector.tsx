@@ -32,7 +32,7 @@ export const StudioSlotSelector = ({
   onDateChange,
   onSlotChange
 }: StudioSlotSelectorProps) => {
-  const { data: slotAvailability, isLoading } = useStudioAvailability(
+  const { data: slotAvailability, isLoading, isError, refetch } = useStudioAvailability(
     studioId,
     selectedDate,
     currentBandId,
@@ -89,6 +89,11 @@ export const StudioSlotSelector = ({
             <div className="flex justify-center py-4">
               <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-primary" />
             </div>
+          ) : isError || !slotAvailability ? (
+            <div role="alert" className="space-y-2 rounded border border-destructive/40 p-3 text-sm">
+              <p>Studio availability could not be verified. Booking is temporarily disabled.</p>
+              <Button type="button" variant="outline" size="sm" onClick={() => void refetch()}>Retry availability</Button>
+            </div>
           ) : (
             <>
               {(() => {
@@ -133,7 +138,7 @@ export const StudioSlotSelector = ({
                   const isYourBooking = slotData?.isYourBooking || false;
                   const bookedBy = slotData?.bookedByBand;
                   const isPast = selectedDate && isSlotInPast(slot, selectedDate);
-                  const canSelect = !isBooked && !isPast;
+                  const canSelect = Boolean(slotData) && !isBooked && !isPast;
                   const disabledReason = isPast
                     ? "This time slot has already passed today"
                     : isYourBooking

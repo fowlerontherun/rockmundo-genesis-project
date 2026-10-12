@@ -23,7 +23,8 @@ export async function saveShareMomentSnapshot(moment: ShareMoment) {
     user_id: user.id,
     profile_id: profile?.id || null,
     moment_type: moment.type,
-    source_id: moment.id || `${moment.type}:${moment.createdAt}`,
+    // DB uniqueness does not include the active character; namespace the key.
+    source_id: `${profile.id}:${moment.id || `${moment.type}:${moment.createdAt}`}`,
     headline: moment.headline,
     snapshot: frozen,
     last_shared_at: new Date().toISOString(),

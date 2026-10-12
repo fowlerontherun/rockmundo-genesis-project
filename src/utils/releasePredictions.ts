@@ -63,7 +63,8 @@ export function predictReleaseSales(factors: ReleaseFactors): ReleasePrediction 
   // Base multipliers (conservative)
   const fameMultiplier = Math.max(1, artistFame / 100);
   const popularityMultiplier = Math.max(1, artistPopularity / 100);
-  const quality100 = Math.max(0, Math.min(100, songQuality > 100 ? songQuality / 10 : songQuality));
+  // Saturate values beyond the 0-100 score; do not drop from 100 to 10.1 at 101.
+  const quality100 = Math.max(0, Math.min(100, songQuality));
   const qualityDiscoveryMultiplier = 0.7 + (quality100 / 100) * 0.9;
   const breakoutT = Math.max(0, (quality100 - 75) / 25);
   const qualityMultiplier = qualityDiscoveryMultiplier * (1 + Math.pow(breakoutT, 2) * 1.5);
@@ -81,8 +82,13 @@ export function predictReleaseSales(factors: ReleaseFactors): ReleasePrediction 
   const baseDigitalSales = 10;
   const basePhysicalSales = 5;
 
+  // Eligibility for streams, digital downloads and physical formats is independent.
+  const hasStreaming = formatTypes.includes('streaming');
+  const hasDigital = formatTypes.includes('digital');
+  const physicalFormatCount = Number(formatTypes.includes('cd')) + Number(formatTypes.includes('vinyl'));
+
   // Calculate streaming predictions
-  const weeklyStreams = Math.round(
+  const weeklyStreams = hasStreaming ? Math.round(
     baseWeeklyStreams *
       fameMultiplier *
       popularityMultiplier *
@@ -92,7 +98,7 @@ export function predictReleaseSales(factors: ReleaseFactors): ReleasePrediction 
       labelMultiplier *
       marketingBoost *
       trackCount
-  );
+  ) : 0;
 
   const monthlyStreams = weeklyStreams * 4;
   const firstYearStreams = Math.round(
@@ -100,9 +106,6 @@ export function predictReleaseSales(factors: ReleaseFactors): ReleasePrediction 
   );
 
   // Calculate sales predictions
-  const hasDigital = formatTypes.includes('digital') || formatTypes.includes('streaming');
-  const hasPhysical = formatTypes.includes('cd') || formatTypes.includes('vinyl');
-
   const digitalSales = hasDigital
     ? Math.round(
         baseDigitalSales *
@@ -113,13 +116,14 @@ export function predictReleaseSales(factors: ReleaseFactors): ReleasePrediction 
       )
     : 0;
 
-  const physicalSales = hasPhysical
+  const physicalSales = physicalFormatCount > 0
     ? Math.round(
         basePhysicalSales *
           fameMultiplier *
           popularityMultiplier *
           qualityMultiplier *
           releaseTypeMultiplier *
+          physicalFormatCount *
           0.6 // Physical sales are typically lower
       )
     : 0;

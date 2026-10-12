@@ -24,7 +24,7 @@ export function useStudioAvailability(
       if (!studioId || !date) return [];
 
       // Fetch recording sessions for this studio and date
-      const { data: sessions } = await supabase
+      const { data: sessions, error: availabilityError } = await supabase
         .from('recording_sessions')
         .select(`
           id,
@@ -35,9 +35,10 @@ export function useStudioAvailability(
         `)
         .eq('studio_id', studioId)
         .in('status', ['scheduled', 'in_progress'])
-        .gte('scheduled_start', startOfDay(date).toISOString())
-        .lt('scheduled_start', endOfDay(date).toISOString());
+        .lt('scheduled_start', endOfDay(date).toISOString())
+        .or(`scheduled_end.gt.${startOfDay(date).toISOString()},scheduled_end.is.null`);
 
+      if (availabilityError) throw availabilityError;
       return STUDIO_SLOTS.map(slot => {
         const { start, end } = getSlotTimeRange(slot, date);
         
@@ -81,7 +82,7 @@ export function useStudioWeekAvailability(
       const endDate = new Date(startDate);
       endDate.setDate(endDate.getDate() + 7);
 
-      const { data: sessions } = await supabase
+      const { data: sessions, error: availabilityError } = await supabase
         .from('recording_sessions')
         .select(`
           id,
@@ -92,9 +93,10 @@ export function useStudioWeekAvailability(
         `)
         .eq('studio_id', studioId)
         .in('status', ['scheduled', 'in_progress'])
-        .gte('scheduled_start', startDate.toISOString())
-        .lt('scheduled_start', endDate.toISOString());
+        .lt('scheduled_start', endDate.toISOString())
+        .or(`scheduled_end.gt.${startDate.toISOString()},scheduled_end.is.null`);
 
+      if (availabilityError) throw availabilityError;
       // Group by date and slot
       const availability: Record<string, Record<string, { isBooked: boolean; bandName?: string }>> = {};
       
