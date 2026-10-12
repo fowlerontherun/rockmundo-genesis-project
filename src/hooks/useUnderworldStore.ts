@@ -303,6 +303,7 @@ export const useUnderworldStore = () => {
           boostValue = effects.creativity_boost as number;
         }
 
+        if (!boostType) throw new Error("This product has no supported duration-based boost effect.");
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("Not authenticated");
 
