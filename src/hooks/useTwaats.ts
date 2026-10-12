@@ -225,9 +225,10 @@ export const useTwaats = (accountId?: string) => {
         return;
       }
 
+      const isLive = twaat.visibility === "public" && (!twaat.moderation_status || twaat.moderation_status === "approved");
       toast({
-        title: "Twaat posted!",
-        description: "Your post is now live.",
+        title: isLive ? "Twaat posted!" : "Twaat submitted",
+        description: isLive ? "Your post is now live." : "Your post is awaiting moderation or is not publicly visible.",
       });
     },
     onError: (error: any) => {
