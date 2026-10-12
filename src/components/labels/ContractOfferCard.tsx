@@ -246,10 +246,12 @@ export function ContractOfferCard({ offer, entityName }: ContractOfferCardProps)
 
         // Auto-reject after brief delay
         setTimeout(async () => {
-          await supabase
+          const { error: rejectError } = await supabase
             .from("artist_label_contracts")
             .update({ status: "rejected", last_action_by: "label" })
-            .eq("id", offer.id);
+            .eq("id", offer.id)
+            .eq("status","negotiating");
+          if (rejectError) { toast({title:"Contract response failed",description:rejectError.message,variant:"destructive"}); return; }
 
           // Send inbox notification about rejection
           const { data: members } = await supabase
