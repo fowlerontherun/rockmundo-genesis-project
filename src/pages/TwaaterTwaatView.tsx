@@ -79,10 +79,11 @@ export default function TwaaterTwaatView() {
         `)
         .eq("parent_twaat_id", twaatId)
         .is("deleted_at", null)
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: false })
+        .limit(200);
 
       if (error) throw error;
-      return data || [];
+      return (data || []).reverse();
     },
     enabled: !!twaatId && Boolean(twaat),
   });
