@@ -68,8 +68,11 @@ export function useSecondNomination() {
           status: "approved",
         })
         .eq("status", "pending")
-        .eq("id", candidateId);
+        .is("seconder_profile_id", null)
+        .eq("id", candidateId)
+        .select("id");
       if (error) throw error;
+      if (!data?.length) throw new Error("This nomination has already been seconded");
     },
     onSuccess: () => {
       toast.success("Nomination seconded");
