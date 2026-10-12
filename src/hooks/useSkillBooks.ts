@@ -147,7 +147,7 @@ export const useSkillBooks = () => {
   });
 
   const startReading = useMutation({
-    mutationFn: async ({ purchaseId, bookId, userId, profileId, readingDays, autoRead }: {
+    mutationFn: async ({ purchaseId, bookId, profileId, autoRead }: {
       purchaseId: string;
       bookId: string;
       userId: string;
