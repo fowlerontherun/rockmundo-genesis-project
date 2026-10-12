@@ -208,13 +208,15 @@ export async function createScheduledActivity(params: BookingParams): Promise<st
  * Check if user can start an activity now (no conflicts)
  */
 export async function canStartActivityNow(userId: string): Promise<{ canStart: boolean; reason?: string }> {
+  const profile = await getActiveProfile(userId);
+  if (!profile) return { canStart: false, reason: "Select an active character first." };
   const now = new Date();
   const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
 
   const { data: activeActivities, error: activityLookupError } = await (supabase as any)
     .from('player_scheduled_activities')
     .select('*')
-    .eq('user_id', userId)
+    .eq('profile_id', profile.id)
     .in('status', ['scheduled', 'in_progress'])
     .lte('scheduled_start', oneHourLater.toISOString())
     .gte('scheduled_end', now.toISOString())
