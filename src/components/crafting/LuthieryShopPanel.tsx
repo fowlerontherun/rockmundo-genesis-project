@@ -24,7 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { LuthieryShop, LuthieryShopListing, useLuthieryShops } from "@/hooks/useLuthieryShops";
 
 const formatCurrency = (amount: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(amount || 0);
+  new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(amount || 0);
 
 const materialNames = (listing: LuthieryShopListing) => {
   const materials = listing.provenance_snapshot?.materialSnapshot;
@@ -45,11 +45,13 @@ const reputationLabel = (value: number) => {
 const ShopSettingsForm = ({
   shop,
   currentCityName,
+  currentCityId,
   isBusy,
   onSave,
 }: {
   shop: LuthieryShop;
   currentCityName?: string;
+  currentCityId?: string | null;
   isBusy: boolean;
   onSave: (input: {
     name: string;
@@ -152,7 +154,7 @@ const ShopSettingsForm = ({
             <Label htmlFor="luthiery-shop-open">Open to customers</Label>
             <Switch id="luthiery-shop-open" checked={isOpen} onCheckedChange={setIsOpen} />
           </div>
-          {currentCityName && currentCityName !== shop.city?.name && (
+          {currentCityName && currentCityId && currentCityId !== shop.city_id && (
             <div className="flex items-center justify-between gap-3">
               <div>
                 <Label htmlFor="luthiery-shop-move">Move shop to {currentCityName}</Label>
@@ -535,6 +537,7 @@ export const LuthieryShopPanel = () => {
                   key={myShop.id}
                   shop={myShop}
                   currentCityName={profile?.city?.name}
+          currentCityId={profile?.current_city_id}
                   isBusy={isUpdatingShop}
                   onSave={updateShop}
                 />
