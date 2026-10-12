@@ -164,11 +164,15 @@ export function ContractOfferCard({ offer, entityName }: ContractOfferCardProps)
 
   const acceptMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from("artist_label_contracts")
         .update({ status: "accepted_by_artist" })
-        .eq("id", offer.id);
+        .eq("id", offer.id)
+        .in("status", ["offered", "negotiating"])
+        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+        .select("id").maybeSingle();
       if (error) throw error;
+      if (!updated) throw new Error("The offer is expired or no longer pending. Refresh it before acting.");
     },
     onSuccess: () => {
       toast({
@@ -184,12 +188,15 @@ export function ContractOfferCard({ offer, entityName }: ContractOfferCardProps)
 
   const rejectMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from("artist_label_contracts")
         .update({ status: "rejected" })
         .eq("id", offer.id)
-        .in("status", ["offered", "negotiating"]);
+        .in("status", ["offered", "negotiating"])
+        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+        .select("id").maybeSingle();
       if (error) throw error;
+      if (!updated) throw new Error("The offer is expired or no longer pending. Refresh it before acting.");
     },
     onSuccess: () => {
       toast({ title: "Offer declined", description: "You can always submit another demo later." });

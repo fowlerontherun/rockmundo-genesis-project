@@ -137,10 +137,10 @@ export const UniversityTab = () => {
 
   const currentCityName = (profile?.cities as { name?: string } | null)?.name ?? null;
 
-  const { data: currentEnrollment } = useQuery({
+  const { data: currentEnrollments = [] } = useQuery({
     queryKey: ["current_enrollment", profile?.id],
     queryFn: async () => {
-      if (!profile?.id) return null;
+      if (!profile?.id) return [];
       
       const { data, error } = await supabase
         .from("player_university_enrollments")
@@ -158,15 +158,15 @@ export const UniversityTab = () => {
         .eq("profile_id", profile.id)
         .in("status", ["enrolled", "in_progress"])
         .order("enrolled_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(100);
 
-      if (error && error.code !== "PGRST116") throw error;
-      return data;
+      if (error) throw error;
+      return data ?? [];
     },
     enabled: !!profile?.id,
   });
 
+  const currentEnrollment = currentEnrollments[0] ?? null;
   const { data: professorVisits = [] } = useQuery({
     queryKey: ["active_professor_residencies"],
     queryFn: async () => {
@@ -303,6 +303,7 @@ export const UniversityTab = () => {
     if (!universities) return [];
     
     let result = universities;
+    if (selectedCity === "current" && !currentCityName) return [];
     
     if (filterCity) {
       result = result.filter(u => u.city === filterCity);
@@ -318,16 +319,17 @@ export const UniversityTab = () => {
     }
     
     return result;
-  }, [universities, filterCity, searchQuery]);
+  }, [universities, selectedCity, currentCityName, filterCity, searchQuery]);
 
   // Filter courses
   const filteredCourses = useMemo(() => {
     if (!courses) return [];
     
     let result = courses;
+    if (selectedCity === "current" && !currentCityName) return [];
 
     if (hideLockedCourses) {
-      result = result.filter(c => !isHigherTierSkill(c.skill_slug) || accessBySkill.get(c.skill_slug) !== false);
+      result = result.filter(c => !isHigherTierSkill(c.skill_slug) || accessBySkill.get(c.skill_slug) === true);
     }
 
     // Filter by city
@@ -358,7 +360,7 @@ export const UniversityTab = () => {
     }
     
     return result;
-  }, [courses, filterCity, searchQuery, selectedCategory, hideLockedCourses, accessBySkill]);
+  }, [courses, selectedCity, currentCityName, filterCity, searchQuery, selectedCategory, hideLockedCourses, accessBySkill]);
 
   // Group filtered universities by city
   const groupedUniversities = useMemo(() => {
@@ -377,8 +379,9 @@ export const UniversityTab = () => {
     if (!courses) return {};
     const counts: Record<string, number> = {};
     let cityFiltered = courses;
+    if (selectedCity === "current" && !currentCityName) return {};
     if (hideLockedCourses) {
-      cityFiltered = cityFiltered.filter(c => !isHigherTierSkill(c.skill_slug) || accessBySkill.get(c.skill_slug) !== false);
+      cityFiltered = cityFiltered.filter(c => !isHigherTierSkill(c.skill_slug) || accessBySkill.get(c.skill_slug) === true);
     }
     if (filterCity) {
       cityFiltered = cityFiltered.filter(c => c.universities?.city === filterCity);
@@ -388,7 +391,7 @@ export const UniversityTab = () => {
       counts[cat] = (counts[cat] || 0) + 1;
     }
     return counts;
-  }, [courses, filterCity, hideLockedCourses, accessBySkill]);
+  }, [courses, selectedCity, currentCityName, filterCity, hideLockedCourses, accessBySkill]);
 
   const hasActiveFilters = searchQuery.trim() || selectedCity !== "current" || selectedCategory !== "all";
 
@@ -408,6 +411,7 @@ export const UniversityTab = () => {
         </p>
       </div>
 
+      {currentEnrollments.length > 1 && <Alert role="alert"><AlertDescription>You have {currentEnrollments.length} active university enrollments. Review every course before enrolling again.</AlertDescription></Alert>}
       {currentEnrollment && (
         <Alert className="border-primary/50 bg-primary/10">
           <GraduationCap className="h-4 w-4" />
@@ -421,6 +425,7 @@ export const UniversityTab = () => {
         </Alert>
       )}
 
+      {selectedCity === "current" && !currentCityName && <Alert role="alert"><AlertDescription>Your character city could not be loaded. Choose All Cities to browse worldwide.</AlertDescription></Alert>}
       {/* Filters */}
       <div className="space-y-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -659,13 +664,13 @@ export const UniversityTab = () => {
                 {filteredCourses
                   .slice()
                   .sort((a, b) => {
-                    const aLocked = isHigherTierSkill(a.skill_slug) && accessBySkill.get(a.skill_slug) === false;
-                    const bLocked = isHigherTierSkill(b.skill_slug) && accessBySkill.get(b.skill_slug) === false;
+                    const aLocked = isHigherTierSkill(a.skill_slug) && accessBySkill.get(a.skill_slug) !== true;
+                    const bLocked = isHigherTierSkill(b.skill_slug) && accessBySkill.get(b.skill_slug) !== true;
                     return Number(aLocked) - Number(bLocked) || a.name.localeCompare(b.name);
                   })
                   .slice(0, 50)
                   .map((course) => {
-                  const locked = isHigherTierSkill(course.skill_slug) && accessBySkill.get(course.skill_slug) === false;
+                  const locked = isHigherTierSkill(course.skill_slug) && accessBySkill.get(course.skill_slug) !== true;
                   const effectivePrice = calculateUniversityCoursePrice(
                     course.base_price,
                     course.universities?.course_cost_modifier,

@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/hooks/use-toast";
@@ -408,15 +409,19 @@ export const useUnderworldStore = () => {
     },
   });
 
+  const [boostClock, setBoostClock] = useState(() => Date.now());
+  useEffect(() => { const interval = window.setInterval(() => setBoostClock(Date.now()), 30_000); return () => window.clearInterval(interval); }, []);
+  const validBoosts = activeBoosts.filter(boost => boost.is_active && new Date(boost.expires_at).getTime() > boostClock);
+
   // Check if a specific boost is active
   const hasActiveBoost = (boostType: string): boolean => {
-    return activeBoosts.some((boost) => boost.boost_type === boostType);
+    return validBoosts.some((boost) => boost.boost_type === boostType);
   };
 
   // Get active boost multiplier
   const getBoostMultiplier = (boostType: string): number => {
-    const boost = activeBoosts.find((b) => b.boost_type === boostType);
-    return boost?.boost_value || 1;
+    // Use strongest eligible boost rather than whichever database row was first.
+    return Math.max(1, ...validBoosts.filter(b => b.boost_type === boostType).map(b => Number(b.boost_value) || 1));
   };
 
   return {

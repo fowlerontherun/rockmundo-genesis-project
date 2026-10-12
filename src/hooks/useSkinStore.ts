@@ -286,6 +286,7 @@ export const useInstrumentSkinItems = () => useQuery({
   staleTime: 5 * 60 * 1000,
 });
 
+const instrumentPurchaseRequestKeys = new Map<string, string>();
 export const usePurchaseInstrumentSkin = () => {
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
@@ -300,17 +301,21 @@ export const usePurchaseInstrumentSkin = () => {
       zoneColours?: Record<string, string>;
     }) => {
       if (!profileId) throw new Error('Not authenticated');
+      const purchaseKey = JSON.stringify([profileId, itemId, variantKey ?? null, zoneColours ?? {}]);
+      let requestKey = instrumentPurchaseRequestKeys.get(purchaseKey);
+      if (!requestKey) { requestKey = crypto.randomUUID(); instrumentPurchaseRequestKeys.set(purchaseKey, requestKey); }
       const { data, error } = await (supabase.rpc as any)('purchase_instrument_skin_atomic', {
         p_profile_id: profileId,
         p_item_id: itemId,
-        p_idempotency_key: crypto.randomUUID(),
+        p_idempotency_key: requestKey,
         p_variant_key: variantKey || null,
         p_zone_colors: zoneColours || {},
       });
       if (error) throw error;
       return data as Record<string, any>;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      instrumentPurchaseRequestKeys.delete(JSON.stringify([profileId, variables.itemId, variables.variantKey ?? null, variables.zoneColours ?? {}]));
       queryClient.invalidateQueries({ queryKey: ['owned-skins', profileId] });
       queryClient.invalidateQueries({ queryKey: ['instrument-skin-items'] });
       queryClient.invalidateQueries({ queryKey: ['gig-player-appearances'] });

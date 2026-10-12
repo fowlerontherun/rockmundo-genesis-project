@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -68,6 +69,16 @@ export function ContractDesignerDialog({
   const [manufacturingCovered, setManufacturingCovered] = useState(true);
   const [territories, setTerritories] = useState<string[]>(["NA"]);
   const [loaded, setLoaded] = useState(false);
+  const [selectedDealTypeId, setSelectedDealTypeId] = useState("");
+  const { data: availableDealTypes = [], isLoading: dealTypesLoading, isError: dealTypesError, refetch: retryDealTypes } = useQuery({
+    queryKey: ["label-offer-deal-types", labelId], enabled: open && !!labelId,
+    queryFn: async () => { const { data, error } = await supabase.from("label_deal_types")
+      .select("id,name").or(`label_id.eq.${labelId},label_id.is.null`).order("name");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  useEffect(() => setSelectedDealTypeId(""), [labelId]);
 
   // Load suggested terms when dialog opens
   useEffect(() => {
@@ -116,13 +127,7 @@ export function ContractDesignerDialog({
 
   const sendOfferMutation = useMutation({
     mutationFn: async () => {
-      const { data: dealType } = await supabase
-        .from("label_deal_types")
-        .select("id")
-        .limit(1)
-        .single();
-
-      if (!dealType) throw new Error("No deal types configured");
+      if (!selectedDealTypeId || !availableDealTypes.some(type => type.id === selectedDealTypeId)) throw new Error("Choose an available contract deal type first.");
 
       const startDate = new Date();
       const endDate = new Date();
@@ -130,7 +135,7 @@ export function ContractDesignerDialog({
 
       const insertData: any = {
         label_id: labelId,
-        deal_type_id: dealType.id,
+        deal_type_id: selectedDealTypeId,
         status: "offered",
         advance_amount: advance,
         royalty_artist_pct: artistRoyalty,
@@ -211,6 +216,13 @@ export function ContractDesignerDialog({
           </div>
         ) : (
           <div className="space-y-5">
+            <div className="space-y-2"><Label>Deal type</Label>
+              {dealTypesError ? <p role="alert" className="text-destructive text-sm">Deal types could not load. <Button variant="outline" size="sm" onClick={() => void retryDealTypes()}>Retry</Button></p> : <Select value={selectedDealTypeId} onValueChange={setSelectedDealTypeId} disabled={dealTypesLoading}>
+                <SelectTrigger><SelectValue placeholder={dealTypesLoading ? "Loading deal types..." : "Choose a deal type"} /></SelectTrigger>
+                <SelectContent>{availableDealTypes.map(type => <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>)}</SelectContent>
+              </Select>}
+              {!dealTypesLoading && !dealTypesError && availableDealTypes.length === 0 && <p className="text-sm text-destructive">No deal types configured for this label.</p>}
+            </div>
             {/* Advance */}
             <div className="space-y-2">
               <Label className="flex items-center gap-1">
@@ -358,7 +370,7 @@ export function ContractDesignerDialog({
           </Button>
           <Button
             onClick={() => sendOfferMutation.mutate()}
-            disabled={sendOfferMutation.isPending || !loaded || territories.length === 0}
+            disabled={sendOfferMutation.isPending || !loaded || territories.length === 0 || dealTypesLoading || dealTypesError || !selectedDealTypeId}
           >
             {sendOfferMutation.isPending ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />

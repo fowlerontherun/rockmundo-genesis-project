@@ -17,14 +17,16 @@ export const useSkillBooks = () => {
   const { data: books, isLoading } = useQuery({
     queryKey: ["skill_books"],
     queryFn: async () => {
-      const { data: booksData, error } = await supabase
-        .from("skill_books")
-        .select("*")
-        .eq("is_active", true)
-        .order("category", { ascending: true })
-        .order("title", { ascending: true });
-
-      if (error) throw error;
+      const booksData: SkillBook[] = [];
+      for (let offset = 0; ; offset += 500) {
+        const { data, error } = await supabase.from("skill_books").select("*")
+          .eq("is_active", true).order("category", { ascending: true })
+          .order("title", { ascending: true }).order("id", { ascending: true })
+          .range(offset, offset + 499);
+        if (error) throw error;
+        booksData.push(...(data ?? []));
+        if (!data || data.length < 500) break;
+      }
 
       // Fetch skill definitions separately
       const { data: skillsData, error: skillsError } = await supabase
