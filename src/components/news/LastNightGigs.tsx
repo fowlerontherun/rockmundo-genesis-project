@@ -25,7 +25,7 @@ export const LastNightGigs = () => {
   const yesterdayStart = `${yesterday.toISOString().split('T')[0]}T00:00:00`;
   const yesterdayEnd = `${yesterday.toISOString().split('T')[0]}T23:59:59`;
 
-  const { data: lastNightGigs, isLoading } = useQuery({
+  const { data: lastNightGigs, isLoading, isError, refetch } = useQuery({
     queryKey: ["last-night-gigs", yesterdayStart],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -69,6 +69,8 @@ export const LastNightGigs = () => {
       </Card>
     );
   }
+
+  if (isError) return <Card role="alert"><CardContent className="p-4">Last night’s gigs could not be loaded. <Button size="sm" variant="outline" onClick={() => void refetch()}>Retry</Button></CardContent></Card>;
 
   if (!lastNightGigs || lastNightGigs.length === 0) {
     return (
