@@ -283,7 +283,7 @@ export const SummaryTab = () => {
         ) : (
           <div className="space-y-4">
             {activeEnrollments.map((enrollment) => {
-              const courseDays = enrollment.university_courses?.base_duration_days || 30;
+              const courseDays = Math.max(1, Number((enrollment as any).total_days_required ?? (enrollment as any).duration_days ?? enrollment.university_courses?.base_duration_days ?? 30));
               const progress = (enrollment.days_attended / courseDays) * 100;
               const skill = enrollment.university_courses?.skill_slug || "";
               const skillData = skillProgress[skill];
