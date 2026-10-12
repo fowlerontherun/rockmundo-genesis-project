@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
 
         for (const releaseSong of release.release_songs || []) {
           // Check if already distributed
-          const { data: existing } = await supabase
+          const { data: existing, error: existingError } = await supabase
             .from('song_releases')
             .select('id')
             .eq('song_id', releaseSong.song_id)
@@ -89,6 +89,7 @@ Deno.serve(async (req) => {
             .eq('release_type', 'streaming')
             .eq('is_active', true)
             .maybeSingle();
+          if (existingError) { failedPlatformIds.push(platformId); console.error('Existing release lookup failed', existingError); continue; }
 
           if (!existing) {
             // Get user_id from release or band leader
@@ -103,9 +104,8 @@ Deno.serve(async (req) => {
             }
             
             // Create song release with territory info
-            const { error: insertError } = await supabase
-              .from('song_releases')
-              .insert({
+            const { data: inactive } = await supabase.from('song_releases').select('id').eq('song_id',releaseSong.song_id).eq('platform_id',platformId).eq('release_type','streaming').eq('is_active',false).maybeSingle();
+            const releasePayload = {
                 song_id: releaseSong.song_id,
                 platform_id: platformId,
                 platform_name: platform?.platform_name,
@@ -117,7 +117,10 @@ Deno.serve(async (req) => {
                 is_active: true,
                 total_streams: 0,
                 total_revenue: 0
-              });
+              };
+            const { error: insertError } = inactive?.id
+              ? await supabase.from('song_releases').update({ ...releasePayload, total_streams: undefined, total_revenue: undefined }).eq('id', inactive.id)
+              : await supabase.from('song_releases').insert(releasePayload);
 
             if (insertError) {
               console.error(`Error inserting song_release: ${insertError.message}`);
