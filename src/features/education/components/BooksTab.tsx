@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Loader2, Lock, Search, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,8 @@ export const BooksTab = () => {
   const [selectedBook, setSelectedBook] = useState<EnrichedSkillBook | null>(null);
   const [autoRead, setAutoRead] = useState(false);
   const [bookActionPending, setBookActionPending] = useState(false);
+  // Synchronous lock prevents double-click races before React updates pending state.
+  const bookActionLock = useRef(false);
   const tierAccess = useSkillTierAccess(profileId, (typedBooks ?? []).map((book) => book.skill_slug));
   const accessBySkill = tierAccess.data ?? new Map<string, boolean>();
   const isBookLocked = (book: EnrichedSkillBook) =>
@@ -78,7 +80,8 @@ export const BooksTab = () => {
       return;
     }
     
-    if (bookActionPending) return;
+    if (bookActionPending || bookActionLock.current) return;
+    bookActionLock.current = true;
     setBookActionPending(true);
     try {
     await purchaseBookAsync({
@@ -89,7 +92,7 @@ export const BooksTab = () => {
     });
     setSelectedBook(null);
     } catch { /* Mutation hook displays error; retain selected book. */ }
-    finally { setBookActionPending(false); }
+    finally { bookActionLock.current = false; setBookActionPending(false); }
   };
 
   const handleStartReading = async () => {
@@ -98,7 +101,8 @@ export const BooksTab = () => {
     const purchase = purchases?.find((p) => p.book_id === selectedBook.id);
     if (!purchase) return;
 
-    if (bookActionPending) return;
+    if (bookActionPending || bookActionLock.current) return;
+    bookActionLock.current = true;
     setBookActionPending(true);
     try {
     await startReadingAsync({
@@ -112,7 +116,7 @@ export const BooksTab = () => {
     setSelectedBook(null);
     setAutoRead(false);
     } catch { /* Mutation hook displays error; keep reading selection. */ }
-    finally { setBookActionPending(false); }
+    finally { bookActionLock.current = false; setBookActionPending(false); }
   };
 
   // Get unique skill categories for filter
@@ -362,10 +366,13 @@ export const BooksTab = () => {
             </div>
             {selectedBook && isPurchased(selectedBook.id) && canStartReading() && (
               <div className="flex items-center space-x-2 rounded-lg border bg-muted/20 p-3">
-                <Switch id="auto-read" checked={autoRead} onCheckedChange={setAutoRead} />
+                <Switch id="auto-read" checked={autoRead} disabled={bookActionPending} onCheckedChange={setAutoRead} />
                 <Label htmlFor="auto-read" className="text-sm">
                   Auto-read daily at 11 PM (hands-free progress)
                 </Label>
+                <p role="status" className="text-xs text-muted-foreground">
+                  {autoRead ? "Automatic nightly attendance will be enabled." : "Automatic reading is off. Record attendance yourself each day in Education > Books."}
+                </p>
               </div>
             )}
           </div>
@@ -381,12 +388,12 @@ export const BooksTab = () => {
               </Badge>
             )}
             {selectedBook && !libraryQueryFailed && !isBookLocked(selectedBook) && !isPurchased(selectedBook.id) && !isCompleted(selectedBook.id) && (
-              <Button disabled={bookActionPending} onClick={() => handlePurchase(selectedBook)} className="w-full sm:w-auto">
+              <Button disabled={bookActionPending || !!activeSession || !profileId} onClick={() => handlePurchase(selectedBook)} className="w-full sm:w-auto">
                 Purchase for ${selectedBook.price}
               </Button>
             )}
             {selectedBook && isPurchased(selectedBook.id) && canStartReading() && (
-              <Button disabled={bookActionPending} onClick={handleStartReading} className="w-full sm:w-auto">
+              <Button disabled={bookActionPending || !!activeSession || !profileId} onClick={handleStartReading} className="w-full sm:w-auto">
                 Start Reading
               </Button>
             )}

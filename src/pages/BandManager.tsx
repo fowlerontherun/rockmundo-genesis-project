@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -79,14 +79,25 @@ export default function BandManager() {
   const [members, setMembers] = useState<any[]>([]);
   const [rosterVersion, setRosterVersion] = useState(0);
   const [loading, setLoading] = useState(true);
+  const activeProfileRef = useRef(profileId);
+  const selectedBandRef = useRef(selectedBandId);
+  const latestBandRequest = useRef(0);
+  activeProfileRef.current = profileId;
+  selectedBandRef.current = selectedBandId;
 
   // Enable auto-gig execution for the selected band
   useAutoGigExecution(selectedBandId);
 
   useEffect(() => {
-    if (profileId) {
-      loadUserBands();
-    }
+    // Invalidate both pending band and roster requests on character switch.
+    latestBandRequest.current += 1;
+    setUserBands([]);
+    setSelectedBandId(null);
+    setSelectedBand(null);
+    setMembers([]);
+    setBandDetailsError(null);
+    setLoading(Boolean(profileId));
+    if (profileId) void loadUserBands();
   }, [profileId]);
 
   useEffect(() => {
@@ -103,6 +114,7 @@ export default function BandManager() {
 
     try {
       const bands = await getUserBands(profileId);
+      if (activeProfileRef.current !== profileId) return;
 
       // Filter out disbanded bands
       const activeBands = bands.filter(
@@ -117,16 +129,24 @@ export default function BandManager() {
       const defaultBand = activeFirst || activeBands[0];
 
       if (defaultBand) {
-        setSelectedBandId(defaultBand.band_id);
+        setSelectedBandId(current => activeBands.some((band:any) => band.band_id===current) ? current : defaultBand.band_id);
+      } else {
+        setSelectedBandId(null);
+        setSelectedBand(null);
+        setMembers([]);
       }
     } catch (error) {
       console.error("Error loading bands:", error);
     } finally {
-      setLoading(false);
+      if (activeProfileRef.current === profileId) setLoading(false);
     }
   };
 
   const loadBandDetails = async (bandId: string) => {
+    const sourceProfile = activeProfileRef.current;
+    const request = ++latestBandRequest.current;
+    const isCurrent = () => activeProfileRef.current === sourceProfile &&
+      selectedBandRef.current === bandId && request === latestBandRequest.current;
     try {
       // Load band data
       const { data: band, error: bandError } = await supabase
@@ -137,18 +157,20 @@ export default function BandManager() {
 
       if (bandError) throw bandError;
       if (!band) throw new Error('The selected band could not be found.');
+      if (!isCurrent()) return;
       setSelectedBand(band);
-      await loadBandMembers(bandId);
-      setBandDetailsError(null);
+      await loadBandMembers(bandId, isCurrent);
+      if (isCurrent()) setBandDetailsError(null);
     } catch (error) {
       console.error("Error loading band details:", error);
+      if (!isCurrent()) return;
       setSelectedBand(null);
       setMembers([]);
       setBandDetailsError(error instanceof Error ? error.message : 'Could not load selected band');
     }
   };
 
-  const loadBandMembers = async (bandId: string) => {
+  const loadBandMembers = async (bandId: string, isCurrent = () => selectedBandRef.current === bandId) => {
     // First get all band members (including touring members with null user_id)
     const { data: bandMembersData, error: membersError } = await supabase
       .from("band_members")
@@ -158,7 +180,7 @@ export default function BandManager() {
 
     if (membersError) { toast({ title: "Could not load band members", description: membersError.message, variant: "destructive" }); return; }
     if (!bandMembersData) {
-      setMembers([]);
+      if (isCurrent()) setMembers([]);
       return;
     }
 
@@ -187,7 +209,7 @@ export default function BandManager() {
       return { ...member, profiles: null };
     });
 
-    setMembers(membersWithProfiles);
+    if (isCurrent()) setMembers(membersWithProfiles);
   };
 
   const handleRemoveMember = async (memberId: string) => {

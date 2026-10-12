@@ -127,7 +127,11 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
         if (retryIdentity.current?.key !== identity) retryIdentity.current = { key: identity, id: crypto.randomUUID() };
         await sendConversationMessage(conversationId, body, retryIdentity.current.id);
       } else if (directOtherProfileId) {
-        await sendDirectMessageService(directOtherProfileId, body);
+        const identity = `fallback:${myProfileId}:${directOtherProfileId}:${body}`;
+        if (retryIdentity.current?.key !== identity) {
+          retryIdentity.current = { key: identity, id: crypto.randomUUID() };
+        }
+        await sendDirectMessageService(directOtherProfileId, body, retryIdentity.current.id);
       } else {
         throw new Error("Missing conversation");
       }

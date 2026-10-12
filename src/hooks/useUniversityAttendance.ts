@@ -22,16 +22,16 @@ interface UniversityEnrollment {
   } | null;
 }
 
-export function useUniversityAttendance(profileId: string | undefined) {
+export function useUniversityAttendance(profileId: string | undefined, enrollmentId?: string | null) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: enrollment } = useQuery({
-    queryKey: ["current_enrollment_full", profileId],
+    queryKey: ["current_enrollment_full", profileId, enrollmentId],
     queryFn: async () => {
       if (!profileId) return null;
 
-      const { data, error } = await supabase
+      const enrollmentQuery = supabase
         .from("player_university_enrollments")
         .select(`
           *,
@@ -45,12 +45,14 @@ export function useUniversityAttendance(profileId: string | undefined) {
           )
         `)
         .eq("profile_id", profileId)
-        .in("status", ["enrolled", "in_progress"])
+        .in("status", ["enrolled", "in_progress"]);
+      const { data, error } = await (enrollmentId
+        ? enrollmentQuery.eq("id", enrollmentId)
+        : enrollmentQuery)
         .order("enrolled_at", { ascending: false })
         .limit(1)
-        .single();
-
-      if (error && error.code !== "PGRST116") throw error;
+        .maybeSingle();
+      if (error) throw error;
       return data as UniversityEnrollment | null;
     },
     enabled: !!profileId,

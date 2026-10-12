@@ -4,8 +4,18 @@ import type {FestivalOperationsDraft} from "../domain/festivalOperationsPlan";
 import type {FestivalOperationsActionResult} from "../domain/festivalOperationsWorkflows";
 export const festivalOperationsQueryKey=(id?:string)=>["festival-operations",id] as const;
 export const useFestivalOperationsPlan=(id?:string,enabled=true)=>useQuery({queryKey:festivalOperationsQueryKey(id),enabled:enabled&&Boolean(id),retry:false,queryFn:()=>getFestivalOperationsPlan(id!)});
-export const useSaveFestivalOperationsPlan=()=>{const client=useQueryClient();return useMutation({mutationFn:(input:{festivalCompanyId:string;expectedVersion:number;plan:FestivalOperationsDraft;idempotencyKey:string;complete?:boolean})=>saveFestivalOperationsPlan(input),onSuccess:data=>{client.setQueryData(festivalOperationsQueryKey(data.festivalCompanyId),data);void Promise.all([["festival-jobs"],["company-procurement"],["festival-edition-budget"],["notifications"],["mail"]].map(queryKey=>client.invalidateQueries({queryKey})));}})};
-export const useFestivalOperationsAction=(action:string)=>{const client=useQueryClient();return useMutation({mutationFn:(input:{festivalCompanyId:string;payload:Record<string,unknown>;idempotencyKey:string})=>festivalOperationsAction(action,input.payload,input.idempotencyKey),onSuccess:(_,input)=>void Promise.all([festivalOperationsQueryKey(input.festivalCompanyId),["festival-jobs"],["company-procurement"],["festival-edition-budget"],["notifications"],["mail"]].map(queryKey=>client.invalidateQueries({queryKey})) )})};
+
+// Owner-side operations and supplier actions also change publicly visible staffing,
+// procurement and live-edition availability. Refresh both public and owner consumers.
+const refreshFestivalOperationsViews=(client:ReturnType<typeof useQueryClient>,festivalCompanyId:string)=>
+  Promise.all([
+    festivalOperationsQueryKey(festivalCompanyId),["festival-jobs"],
+    ["company-procurement"],["festival-edition-budget"],["notifications"],["mail"],
+    ["festival-runtime"],["festival-timetable"],["public-festival"],
+    ["festival-directory"],["public-festival-timetable"],
+  ].map(queryKey=>client.invalidateQueries({queryKey})));
+export const useSaveFestivalOperationsPlan=()=>{const client=useQueryClient();return useMutation({mutationFn:(input:{festivalCompanyId:string;expectedVersion:number;plan:FestivalOperationsDraft;idempotencyKey:string;complete?:boolean})=>saveFestivalOperationsPlan(input),onSuccess:data=>{client.setQueryData(festivalOperationsQueryKey(data.festivalCompanyId),data);void refreshFestivalOperationsViews(client,data.festivalCompanyId);}})};
+export const useFestivalOperationsAction=(action:string)=>{const client=useQueryClient();return useMutation({mutationFn:(input:{festivalCompanyId:string;payload:Record<string,unknown>;idempotencyKey:string})=>festivalOperationsAction(action,input.payload,input.idempotencyKey),onSuccess:(_,input)=>void refreshFestivalOperationsViews(client,input.festivalCompanyId)})};
 
 export const useAvailableFestivalVacancies=(filters:Record<string,unknown>={})=>useQuery({queryKey:["festival-jobs",filters],queryFn:()=>getAvailableFestivalStaffVacancies(filters)});
 export const useFestivalSupplierOpportunities=(filters:Record<string,unknown>={})=>useQuery({queryKey:["company-procurement",filters],queryFn:()=>getAvailableFestivalSupplierOpportunities(filters)});

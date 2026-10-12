@@ -54,11 +54,7 @@ export interface CreateActivityData {
   reminder_minutes_before?: number;
 }
 
-export function useScheduledActivities(date: Date, userId?: string) {
-  const { profileId } = useActiveProfile();
-  return useQuery({
-    queryKey: ['scheduled-activities', format(date, 'yyyy-MM-dd'), userId, profileId],
-    queryFn: async () => {
+async function fetchScheduledActivitiesForDay(date: Date, userId?: string, profileId?: string | null): Promise<ScheduledActivity[]> {
       if (!userId) return [];
 
       if (!profileId) return [];
@@ -190,7 +186,42 @@ export function useScheduledActivities(date: Date, userId?: string) {
 
       if (recordingError) throw recordingError;
 
-      // TODO(release): Jam-session and lesson-specific tables should be integrated here once their canonical booked-data source is confirmed.
+      // Canonical booked jam sessions can exist without a mirror schedule row,
+      // especially when a musician joins an existing host's booking.
+      const { data: participatingJams, error: participationError } = await supabase
+        .from("jam_session_participants").select("jam_session_id")
+        .eq("profile_id", profileId).is("left_at", null);
+      if (participationError) throw participationError;
+      const jamIds = [...new Set((participatingJams ?? []).map(j => j.jam_session_id))];
+      const jamSelector = [
+        `creator_profile_id.eq.${profileId}`,
+        ...jamIds.map(jamId => `id.eq.${jamId}`),
+      ].join(",");
+      const { data: bookedJams, error: jamError } = await supabase
+        .from("jam_sessions")
+        .select("id,name,scheduled_start,scheduled_end,status,city_id")
+        .or(jamSelector)
+        .lte("scheduled_start", dayEnd.toISOString())
+        .gte("scheduled_end", dayStart.toISOString())
+        .neq("status", "cancelled");
+      if (jamError) throw jamError;
+      // Lesson/mentor bookings already use player_scheduled_activities above;
+      // merge by their linked ID rather than inventing a second event.
+      const scheduledJamIds = new Set((scheduledData ?? [])
+        .map((row:any) => row.linked_jam_session_id ?? row.metadata?.jam_session_id)
+        .filter(Boolean));
+      const jamActivities: ScheduledActivity[] = (bookedJams ?? [])
+        .filter(jam => jam.scheduled_start && jam.scheduled_end && !scheduledJamIds.has(jam.id))
+        .map(jam => ({
+          id: `jam_${jam.id}`,
+          user_id: userId, profile_id: profileId,
+          activity_type: "jam_session" as const,
+          scheduled_start: jam.scheduled_start!,
+          scheduled_end: jam.scheduled_end!,
+          status: jam.status === "completed" ? "completed" as const : "scheduled" as const,
+          title: `Jam Session: ${jam.name}`,
+          metadata: { jam_session_id: jam.id, source: "jam_sessions" },
+        }));
 
       // Fetch tour travel legs for user's bands
       let travelLegs: any[] = [];
@@ -245,6 +276,7 @@ export function useScheduledActivities(date: Date, userId?: string) {
       const activities: ScheduledActivity[] = [
         ...(scheduledData || []),
         ...festivalActivities,
+        ...jamActivities,
         ...(gigs || []).map((g: any) => {
           // Give gigs a default 4-hour duration for display
           const gigStart = new Date(g.scheduled_date);
@@ -292,7 +324,13 @@ export function useScheduledActivities(date: Date, userId?: string) {
       const allActivities = withoutDuplicateBandScheduleActivities([...activities, ...uniqueWorkShifts]);
 
       return allActivities.sort((a, b) => new Date(a.scheduled_start).getTime() - new Date(b.scheduled_start).getTime());
-    },
+}
+
+export function useScheduledActivities(date: Date, userId?: string) {
+  const { profileId } = useActiveProfile();
+  return useQuery({
+    queryKey: ['scheduled-activities', format(date, 'yyyy-MM-dd'), userId, profileId],
+    queryFn: () => fetchScheduledActivitiesForDay(date, userId, profileId),
     enabled: !!userId,
     staleTime: 60000,
   });
@@ -303,42 +341,23 @@ export function useWeekScheduledActivities(startDate: Date, userId?: string) {
   return useQuery({
     queryKey: ['week-scheduled-activities', format(startDate, 'yyyy-MM-dd'), userId, profileId],
     queryFn: async () => {
-      if (!userId) return [];
-
-      if (!profileId) return [];
-      const activeProfile = { id: profileId };
-
-      const weekStart = startOfDay(startDate);
-      const weekEnd = endOfDay(addDays(startDate, 6));
-
-      const { data, error } = await (supabase as any)
-        .from('player_scheduled_activities')
-        .select('*')
-        .eq('profile_id', activeProfile.id)
-        .lte('scheduled_start', weekEnd.toISOString())
-        .gte('scheduled_end', weekStart.toISOString())
-        .in('status', ['scheduled', 'in_progress', 'completed'])
-        .order('scheduled_start', { ascending: true });
-
-      if (error) throw error;
-
-      let festivalActivities: ScheduledActivity[] = [];
-      const { data: weeklyBands, error: weeklyBandError } = await supabase
-        .from('band_members').select('band_id').eq('profile_id', activeProfile.id).eq('member_status', 'active');
-      if (weeklyBandError) throw weeklyBandError;
-      const activeBandIds = new Set((weeklyBands ?? []).map(row => row.band_id));
-      if (activeBandIds.size) {
-        festivalActivities = (await fetchMyBandFestivalAppearances())
-          .filter(appearance => {
-            const day = localFestivalDate(appearance.festivalDate).getTime();
-            return activeBandIds.has(appearance.bandId) && day >= weekStart.getTime() && day <= weekEnd.getTime();
-          })
-          .map(appearance => festivalAppearanceAsActivity(appearance, userId, activeProfile.id));
+      if (!userId || !profileId) return [];
+      // Weekly view must use the same canonical sources as the day view:
+      // gigs, tour travel, rehearsals, recordings, jam sessions, lessons,
+      // confirmed festivals, work, release milestones and manual activities.
+      const days = await Promise.all(Array.from({ length: 7 }, (_, day) =>
+        fetchScheduledActivitiesForDay(addDays(startDate, day), userId, profileId)
+      ));
+      const byId = new Map<string, ScheduledActivity>();
+      for (const activity of days.flat()) {
+        const linkedId = activity.linked_gig_id ?? activity.linked_rehearsal_id ??
+          activity.linked_recording_id ?? activity.linked_job_shift_id ??
+          activity.metadata?.jam_session_id ?? activity.id;
+        const key = `${activity.activity_type}:${linkedId}`;
+        if (!byId.has(key)) byId.set(key, activity);
       }
-
-      return withoutDuplicateBandScheduleActivities([
-        ...((data || []) as ScheduledActivity[]), ...festivalActivities,
-      ]).sort((a, b) => new Date(a.scheduled_start).getTime() - new Date(b.scheduled_start).getTime());
+      return withoutDuplicateBandScheduleActivities([...byId.values()])
+        .sort((a, b) => Date.parse(a.scheduled_start) - Date.parse(b.scheduled_start));
     },
     enabled: !!userId,
     staleTime: 1000 * 60,

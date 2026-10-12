@@ -71,88 +71,17 @@ export const useEnchantmentSystem = () => {
     }) => {
       if (!profileId) throw new Error("Not authenticated");
 
-      const enchantment = catalog.find((e) => e.id === enchantmentId);
-      if (!enchantment) throw new Error("Enchantment not found");
-
-      const { data: ownedEquipment, error: ownershipError } = await (supabase as any)
-        .from("player_equipment").select("id")
-        .eq("id", playerEquipmentId).eq("profile_id", profileId).maybeSingle();
-      if (ownershipError) throw ownershipError;
-      if (!ownedEquipment) throw new Error("You can only enchant equipment owned by this character.");
-
-      if (enchantment.required_skill_slug && enchantment.min_skill_level > 0) {
-        const { data: skill, error: skillError } = await supabase
-          .from("skill_progress").select("current_level")
-          .eq("profile_id", profileId)
-          .eq("skill_slug", enchantment.required_skill_slug).maybeSingle();
-        if (skillError) throw skillError;
-        if (Number(skill?.current_level ?? 0) < enchantment.min_skill_level) {
-          throw new Error(`This enchantment requires ${enchantment.required_skill_slug} level ${enchantment.min_skill_level}.`);
-        }
-      }
-
-      // Check existing enchantments on this equipment
-      const existing = appliedEnchantments.filter(
-        (ae) =>
-          ae.player_equipment_id === playerEquipmentId &&
-          ae.enchantment_id === enchantmentId
-      );
-      const currentStacks = existing.reduce((sum, e) => sum + e.stack_count, 0);
-      if (currentStacks >= enchantment.max_stacks) {
-        throw new Error(`Max stacks (${enchantment.max_stacks}) reached for this enchantment`);
-      }
-
-      // Check incompatibilities
-      const equippedEnchantmentIds = appliedEnchantments
-        .filter((ae) => ae.player_equipment_id === playerEquipmentId)
-        .map((ae) => ae.enchantment_id);
-      const incompatible = enchantment.incompatible_with || [];
-      const conflict = equippedEnchantmentIds.find((id) =>
-        incompatible.includes(id) || (catalog.find((entry) => entry.id === id)?.incompatible_with ?? []).includes(enchantmentId)
-      );
-      if (conflict) {
-        const conflictName = catalog.find((c) => c.id === conflict)?.name || "another enchantment";
-        throw new Error(`Incompatible with ${conflictName}`);
-      }
-
-      // Check cash
-      if (enchantment.cash_cost > 0) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("cash")
-          .eq("id", profileId)
-          .single();
-        if (!profile || profile.cash < enchantment.cash_cost) {
-          throw new Error(`Insufficient funds (need $${enchantment.cash_cost})`);
-        }
-        await supabase
-          .from("profiles")
-          .update({ cash: profile.cash - enchantment.cash_cost })
-          .eq("id", profileId);
-      }
-
-      // Apply enchantment (upsert stack)
-      if (existing.length > 0) {
-        const { error } = await (supabase as any)
-          .from("equipment_enchantments")
-          .update({ stack_count: currentStacks + 1 })
-          .eq("id", existing[0].id);
-        if (error) throw error;
-      } else {
-        const { error } = await (supabase as any)
-          .from("equipment_enchantments")
-          .insert({
-            player_equipment_id: playerEquipmentId,
-            enchantment_id: enchantmentId,
-            profile_id: profileId,
-            stack_count: 1,
-          });
-        if (error) throw error;
-      }
+      const { error } = await (supabase as any).rpc("apply_equipment_enchantment_atomic", {
+        p_profile_id: profileId,
+        p_player_equipment_id: playerEquipmentId,
+        p_enchantment_id: enchantmentId,
+      });
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["equipment-enchantments", profileId] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["player-crafting-materials", profileId] });
       toast.success("Enchantment applied!");
     },
     onError: (err: any) => toast.error(err.message),

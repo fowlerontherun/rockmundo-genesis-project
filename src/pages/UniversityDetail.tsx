@@ -254,48 +254,32 @@ export default function UniversityDetail() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch ANY current enrollment (not just this university)
-  const { data: currentEnrollment } = useQuery({
+  // Fetch every active enrollment; legacy players can have more than one.
+  const [selectedEnrollmentId, setSelectedEnrollmentId] = useState<string | null>(null);
+  const { data: currentEnrollments = [] } = useQuery({
     queryKey: ["current_enrollment", profile?.id],
     queryFn: async () => {
-      if (!profile?.id) return null;
-      
+      if (!profile?.id) return [];
       const { data, error } = await supabase
         .from("player_university_enrollments")
         .select(`
-          id,
-          status,
-          course_id,
-          university_id,
-          days_attended,
-          total_xp_earned,
-          scheduled_end_date,
-          payment_amount,
-          auto_attend,
-          university_courses (
-            name,
-            base_duration_days
-          ),
-          universities (
-            name
-          ),
-          player_university_attendance (
-            attendance_date,
-            xp_earned,
-            was_locked_out
-          )
+          id, status, course_id, university_id, days_attended,
+          total_xp_earned, scheduled_end_date, payment_amount, auto_attend,
+          university_courses(name,base_duration_days),
+          universities(name),
+          player_university_attendance(attendance_date,xp_earned,was_locked_out)
         `)
         .eq("profile_id", profile.id)
         .in("status", ["enrolled", "in_progress"])
-        .order("enrolled_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (error && error.code !== "PGRST116") throw error;
-      return data;
+        .order("enrolled_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
     },
     enabled: !!profile?.id,
   });
+  const currentEnrollment = currentEnrollments.find(enrollment => enrollment.id === selectedEnrollmentId)
+    ?? currentEnrollments.find(enrollment => enrollment.university_id === id)
+    ?? currentEnrollments[0] ?? null;
 
   const enrollMutation = useMutation({
     mutationFn: async (courseId: string) => {
@@ -738,7 +722,7 @@ export default function UniversityDetail() {
     toggleAutoAttend,
     isTogglingAuto,
     classWindow,
-  } = useUniversityAttendance(profile?.id);
+  } = useUniversityAttendance(profile?.id, currentEnrollment?.id);
 
   const autoAttendEnabled = Boolean((currentEnrollment as any)?.auto_attend);
 
@@ -819,6 +803,18 @@ export default function UniversityDetail() {
       <div className="space-y-6">
         <VisitingProfessors universityId={university.id} />
 
+        {/* Every active enrollment remains accessible, including migrated legacy duplicates. */}
+        {currentEnrollments.length > 1 && (
+          <div role="group" aria-label="Active university enrollments" className="flex flex-wrap gap-2">
+            {currentEnrollments.map(enrollment => (
+              <Button key={enrollment.id} type="button" size="sm"
+                variant={enrollment.id === currentEnrollment?.id ? "default" : "outline"}
+                onClick={() => setSelectedEnrollmentId(enrollment.id)}>
+                {enrollment.university_courses?.name || "Course"} · {enrollment.universities?.name || "University"}
+              </Button>
+            ))}
+          </div>
+        )}
         {/* Show enrollment progress if user is enrolled */}
         {currentEnrollment && (
           <div className="space-y-4">
