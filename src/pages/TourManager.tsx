@@ -204,22 +204,23 @@ const TourManager = () => {
   // Tour dates are calendar dates, so the final day remains current until local end-of-day.
   const now = new Date();
   const terminalTourStatuses = new Set(["completed", "cancelled"]);
+  const localTourDate = (value: string) => new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00` : value);
   const endOfTourDay = (value: string) => {
-    const date = new Date(value);
+    const date = localTourDate(value);
     if (Number.isNaN(date.getTime())) return date;
     date.setHours(23, 59, 59, 999);
     return date;
   };
   const currentTours = myTours.filter((t) => {
     if (terminalTourStatuses.has(t.status)) return false;
-    const startDate = new Date(t.start_date);
+    const startDate = localTourDate(t.start_date);
     const endDate = endOfTourDay(t.end_date);
     if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return t.status === "active";
     return startDate <= now && endDate >= now;
   });
   const upcomingTours = myTours.filter((t) => {
     if (terminalTourStatuses.has(t.status)) return false;
-    const startDate = new Date(t.start_date);
+    const startDate = localTourDate(t.start_date);
     return !Number.isNaN(startDate.getTime()) && startDate > now;
   });
   const historicTours = myTours.filter((t) => {
@@ -545,7 +546,7 @@ const TourManager = () => {
     myTours.reduce((sum, t) => sum + (t.total_revenue || 0), 0);
   const totalFame = bandTotals?.totalFame ?? 0;
   const upcomingShows = myTours.filter(
-    (t) => new Date(t.start_date) > new Date(),
+    (t) => localTourDate(t.start_date) > new Date(),
   ).length;
 
   const getStatusBadge = (status: string) => {
