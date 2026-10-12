@@ -289,7 +289,7 @@ export async function fetchPermissionHistory(
     .select("metadata")
     .eq("user_id", userId)
     .eq("activity_type", "relationship_permission_update")
-    .contains("metadata", { [RELATIONSHIP_METADATA_KEY]: otherProfileId })
+    .contains("metadata", { [RELATIONSHIP_METADATA_KEY]: otherProfileId, [RELATIONSHIP_PAIR_KEY]: buildPairKey(profileId, otherProfileId) })
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
