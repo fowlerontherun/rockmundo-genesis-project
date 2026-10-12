@@ -166,6 +166,7 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
   const { profile } = useGameData();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const [rosterError, setRosterError] = useState(false);
   const [members, setMembers] = useState<MemberWithProfile[]>([]);
   const [statusHistory, setStatusHistory] = useState<Record<string, BandMembershipStatusHistory[]>>({});
   const [selectedMember, setSelectedMember] = useState<MemberWithProfile | null>(null);
@@ -198,6 +199,7 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
 
     const fetchRoster = async () => {
       setLoading(true);
+      setRosterError(false);
       try {
         const { data: bandData } = await supabase
           .from("bands")
@@ -283,8 +285,7 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
       } catch (error) {
         console.error("Failed to load band roster", error);
         if (isMounted) {
-          setMembers([]);
-          setStatusHistory({});
+          setRosterError(true);
         }
       } finally {
         if (isMounted) {
@@ -462,6 +463,8 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
       </div>
     );
   }
+
+  if (rosterError) return <div role="alert" className="rounded border border-destructive p-4 text-sm">Unable to load the band roster. Please retry by reopening this tab.</div>;
 
   return (
     <div className="space-y-6">
