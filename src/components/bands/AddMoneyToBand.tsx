@@ -113,6 +113,7 @@ export function AddMoneyToBand({
 
   useEffect(() => {
     previewRequestEpoch.current++;
+    setSubmitting(false);
     setSources([]);
     setSourceKey("");
     setAmount("");

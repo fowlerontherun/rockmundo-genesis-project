@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useClothingItems, useOwnedSkins, useSaveClothingCustomization } from '@/hooks/useSkinStore';
+import { useClothingItems, useOwnedSkins, useSaveClothingCustomization, type OwnedSkin } from '@/hooks/useSkinStore';
 import { richGarmentSlot } from '@/features/clothing-preview/richGarmentVisuals';
 
 /** Inventory actions save immediately, independently of the unsaved starter
@@ -22,7 +22,7 @@ export function OwnedAccessories({ profileId }: { profileId: string }) {
 }
 
 
-function OwnedAccessoryRow({ profileId, item, ownership }: { profileId: string; item: { id: string; name: string }; ownership: { selected_variant_key: string | null; customization_config: any; is_equipped: boolean } }) {
+function OwnedAccessoryRow({ profileId, item, ownership }: { profileId: string; item: { id: string; name: string }; ownership: OwnedSkin }) {
   // Each accessory has its own mutation state, so saving a hat does not block glasses.
   const save = useSaveClothingCustomization();
   return <div className="player-model-accessories__owned">

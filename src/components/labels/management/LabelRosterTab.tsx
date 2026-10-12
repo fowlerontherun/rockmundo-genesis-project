@@ -93,7 +93,7 @@ export function LabelRosterTab({
     queryKey: ["label-roster-charts", releaseIds],
     queryFn: async () => {
       if (releaseIds.length === 0) return [];
-      const all: Array<{ release_id: string | null; rank: number; chart_type: string; chart_date: string }> = [];
+      const all: Array<{ release_id: string | null; rank: number | null; chart_type: string; chart_date: string }> = [];
       for (let offset = 0; ; offset += 500) {
         const { data, error } = await supabase.from("chart_entries")
           .select("release_id, rank, chart_type, chart_date")
