@@ -32,6 +32,8 @@ serve(async (req) => {
   let videosUpdated = 0;
   let totalViews = 0;
   let totalEarnings = 0;
+  // A release can have multiple videos. Track the cumulative hype applied in this run.
+  const songHypeById = new Map<string, number>();
 
   try {
     runId = await startJobRun({
@@ -164,43 +166,48 @@ serve(async (req) => {
 
       // Update song hype
       if (song?.id) {
-        await supabaseClient
-          .from("songs")
-          .update({ hype: Math.min(100, Math.max(0, (song.hype || 0) + Math.round(dailyViews * 0.01))) })
-          .eq("id", song.id);
+        const previousHype = songHypeById.get(song.id) ?? Number(song.hype || 0);
+        const updatedHype = Math.min(100, Math.max(0, previousHype + Math.round(dailyViews * 0.01)));
+        const { error: hypeError } = await supabaseClient.from("songs")
+          .update({ hype: updatedHype }).eq("id", song.id);
+        if (hypeError) throw hypeError;
+        songHypeById.set(song.id, updatedHype);
       }
 
       // Credit earnings to user
       if (song?.user_id && dailyEarnings > 0) {
-        const { data: profile } = await supabaseClient
+        const { data: profile, error: profileLookupError } = await supabaseClient
           .from("profiles")
           .select("cash, fans")
           .eq("user_id", song.user_id)
           .single();
+        if (profileLookupError) throw profileLookupError;
 
         if (profile) {
           const newFans = Math.round(dailyViews * 0.001);
-          await supabaseClient
-            .from("profiles")
-            .update({ 
+          const { error: playerCreditError } = await supabaseClient.from("profiles")
+            .update({
               cash: (profile.cash || 0) + dailyEarnings,
               fans: (profile.fans || 0) + newFans,
             })
             .eq("user_id", song.user_id);
+          if (playerCreditError) throw playerCreditError;
         }
       }
 
       // Credit to band balance and create earnings record
       if (song?.band_id && dailyEarnings > 0) {
-        const bandShare = Math.round(dailyEarnings * 0.7);
+        const bandShare = Math.round(dailyEarnings * 0.7 * 100) / 100;
         
-        if (bandShare <= 0) continue;
+        // A zero-cent band share is not a reason to omit successfully earned views
+        // from this run's totals.
 
-        const { data: band } = await supabaseClient
+        const { data: band, error: bandLookupError } = await supabaseClient
           .from("bands")
           .select("band_balance, weekly_fans, fan_sentiment_score")
           .eq("id", song.band_id)
           .single();
+        if (bandLookupError) throw bandLookupError;
 
         if (band) {
           // Viral videos boost sentiment (v1.0.951)
@@ -227,10 +234,9 @@ serve(async (req) => {
             bandUpdate.morale = Math.min(100, ((moraleBand as any)?.morale ?? 50) + videoMoraleBoost);
           }
 
-          await supabaseClient
-            .from("bands")
-            .update(bandUpdate)
-            .eq("id", song.band_id);
+          const { error: bandCreditError } = await supabaseClient.from("bands")
+            .update(bandUpdate).eq("id", song.band_id);
+          if (bandCreditError) throw bandCreditError;
 
           if (sentimentBoost > 0) {
             sentimentEventInserts.push({
