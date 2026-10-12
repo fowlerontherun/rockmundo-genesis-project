@@ -33,6 +33,7 @@ export function BreakingNewsTicker() {
             .limit(5),
         ]);
 
+      if (bandsError || releasesError || contractsError) throw bandsError || releasesError || contractsError;
       bands?.forEach((b: any) =>
         items.push(`🎸 New band formed: ${b.name} (${b.genre})`),
       );
