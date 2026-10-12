@@ -190,15 +190,20 @@ export function useVenueFinancials(venueId: string | undefined) {
     queryKey: ['venue-financials', venueId],
     queryFn: async () => {
       if (!venueId) return [];
-      const { data, error } = await supabase
-        .from('venue_financial_transactions')
-        .select('*')
-        .eq('venue_id', venueId)
-        .order('created_at', { ascending: false })
-        .limit(100);
-      
-      if (error) throw error;
-      return data as VenueFinancialTransaction[];
+      const all: VenueFinancialTransaction[] = [];
+      for (let from = 0; from < 100_000; from += 1000) {
+        const { data, error } = await supabase
+          .from('venue_financial_transactions')
+          .select('*')
+          .eq('venue_id', venueId)
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: false })
+          .range(from, from + 999);
+        if (error) throw error;
+        all.push(...(data as VenueFinancialTransaction[] || []));
+        if (!data || data.length < 1000) return all;
+      }
+      throw new Error('Venue transaction history exceeds safe pagination limit');
     },
     enabled: !!venueId,
   });
