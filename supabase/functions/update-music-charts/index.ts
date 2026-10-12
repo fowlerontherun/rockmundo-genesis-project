@@ -178,9 +178,7 @@ serve(async (req) => {
       .order("total_streams", { ascending: false })
       .limit(500);
 
-    if (streamingError) {
-      console.error("Error fetching streaming data:", streamingError);
-    }
+    if (streamingError) throw streamingError;
 
     // Filter to only include songs with status = 'recorded'
     // Also exclude b-sides from charting
@@ -1001,9 +999,7 @@ serve(async (req) => {
       .in("release_formats.format_type", ["cd", "vinyl", "cassette"])
       .gte("sale_date", sevenDaysAgo.toISOString());
 
-    if (albumPhysicalError) {
-      console.error("Error fetching album physical sales:", albumPhysicalError);
-    }
+    if (albumPhysicalError) throw albumPhysicalError;
 
     // Aggregate by release
     const albumSales = new Map<string, { quantity: number; release: any; leadSongId: string | null }>();
