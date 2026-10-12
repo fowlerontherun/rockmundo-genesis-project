@@ -147,14 +147,16 @@ export const useCollaborationInvites = (projectId?: string) => {
       if (params.compensationType === "flat_fee" && params.flatFeeAmount) {
         if (!activeProfileId) throw new Error("Select a character before sending an invitation");
 
-        const { data: profile } = await supabase
+        const { data: profile, error: cashLookupError } = await supabase
           .from("profiles")
           .select("cash")
           .eq("id", activeProfileId)
           .eq("user_id", user.id)
           .single();
 
-        if (!profile || (profile.cash || 0) < params.flatFeeAmount) {
+        if (cashLookupError) throw cashLookupError;
+        if (!profile) throw new Error("Unable to verify this character’s balance. Please retry.");
+        if ((profile.cash || 0) < params.flatFeeAmount) {
           throw new Error("Insufficient funds for flat fee offer");
         }
       }
