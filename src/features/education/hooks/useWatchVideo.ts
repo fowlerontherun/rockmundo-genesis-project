@@ -229,6 +229,8 @@ export const useWatchVideo = () => {
       });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       queryClient.invalidateQueries({ queryKey: ["skill-progress"] });
+      queryClient.invalidateQueries({ queryKey: ["skill_progress"] });
+      queryClient.invalidateQueries({ queryKey: ["education-summary-skills"] });
       queryClient.invalidateQueries({ queryKey: ["skill-catalogue"] });
     },
     onError: (error: Error) => {
