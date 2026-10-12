@@ -22,9 +22,10 @@ type EnrichedSkillBook = SkillBook & { skill_display_name?: string };
 export const BooksTab = () => {
   const { profileId, userId } = useActiveProfile();
   const { toast } = useToast();
-  const { books, purchases, activeSession, isLoading, purchaseBook, startReading, stopReading, isStoppingReading } = useSkillBooks();
+  const { books, purchases, activeSession, isLoading, purchasesError, activeSessionError, retryPurchases, retryActiveSession, purchaseBook, startReading, stopReading, isStoppingReading } = useSkillBooks();
   const { processAttendance, isProcessing } = useBookReading();
   const typedBooks = books as EnrichedSkillBook[] | undefined;
+  const libraryQueryFailed = purchasesError || activeSessionError;
   const [selectedBook, setSelectedBook] = useState<EnrichedSkillBook | null>(null);
   const [autoRead, setAutoRead] = useState(false);
   const tierAccess = useSkillTierAccess(profileId, (typedBooks ?? []).map((book) => book.skill_slug));
@@ -55,6 +56,7 @@ export const BooksTab = () => {
   };
 
   const canStartReading = () =>
+    !libraryQueryFailed &&
     !activeSession &&
     selectedBook &&
     !isBookLocked(selectedBook) &&
@@ -147,6 +149,9 @@ export const BooksTab = () => {
   const hasActiveFilters = searchQuery.trim() || selectedSkill !== "all";
 
   return (
+    <>
+      {libraryQueryFailed && <Card role="alert" className="mb-4"><CardContent className="p-4">Unable to load your book purchases or current reading session. Actions are unavailable until this is resolved. <Button size="sm" variant="outline" onClick={() => { void retryPurchases(); void retryActiveSession(); }}>Retry library</Button></CardContent></Card>}
+
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-semibold">Your Library</h2>
@@ -378,5 +383,6 @@ export const BooksTab = () => {
         </DialogContent>
       </Dialog>
     </div>
+  </>
   );
 };
