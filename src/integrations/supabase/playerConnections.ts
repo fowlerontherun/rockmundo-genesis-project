@@ -53,10 +53,28 @@ export async function listFriendships(profileId: string, kind: FriendListKind, s
     data.push(...(page ?? []));
     if (!page || page.length < 500) break;
   }
-  return data.map((row) => {
+  const summaries: FriendSummary[] = data.map((row) => {
     const other = row.requestor_id === profileId ? row.addressee : row.profiles;
     return { id: other?.id, friendshipId: row.id, characterName: other?.display_name || other?.username || "Unavailable player", username: other?.username, avatarUrl: other?.avatar_url, cityName: other?.city_name, status: row.status, requestedAt: row.created_at, friendshipDate: row.responded_at, mutualFriendCount: 0 };
-  }).filter((row) => row.id && (!search || `${row.characterName} ${row.username ?? ""} ${row.cityName ?? ""}`.toLowerCase().includes(search.toLowerCase())));
+  }).filter(row => Boolean(row.id));
+  const ids = summaries.map(row => row.id);
+  if (ids.length) {
+    for (let offset = 0; offset < ids.length; offset += 100) {
+      const { data: memberships, error } = await (supabase as any).from("band_members")
+        .select("profile_id, instrument_role, role, bands(name)")
+        .in("profile_id", ids.slice(offset, offset + 100))
+        .eq("member_status", "active");
+      if (error) throw error;
+      for (const member of (memberships ?? []) as any[]) {
+        const row = summaries.find(item => item.id === member.profile_id);
+        if (!row) continue;
+        row.bandName ||= member.bands?.name ?? null;
+        row.primaryRole ||= member.instrument_role || member.role || null;
+      }
+    }
+  }
+  const term = search.trim().toLowerCase();
+  return summaries.filter(row => !term || `${row.characterName} ${row.username ?? ""} ${row.cityName ?? ""} ${row.bandName ?? ""} ${row.primaryRole ?? ""}`.toLowerCase().includes(term));
 }
 
 export async function listFriendSuggestions(profileId: string): Promise<FriendSummary[]> {
