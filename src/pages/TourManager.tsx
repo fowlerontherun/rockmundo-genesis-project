@@ -214,7 +214,12 @@ const TourManager = () => {
   // Tour dates are calendar dates, so the final day remains current until local end-of-day.
   const now = new Date();
   const terminalTourStatuses = new Set(["completed", "cancelled"]);
-  const localTourDate = (value: string) => new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00` : value);
+  const localTourDate = (value: string | null | undefined) => value && /^\\d{4}-\\d{2}-\\d{2}$/.test(value)
+    ? new Date(`${value}T12:00:00`) : value ? new Date(value) : new Date(NaN);
+  const safeTourDateLabel = (value: string | null | undefined, pattern: string) => {
+    const date = localTourDate(value);
+    return Number.isNaN(date.getTime()) ? "Date to be confirmed" : format(date, pattern);
+  };
   const endOfTourDay = (value: string) => {
     const date = localTourDate(value);
     if (Number.isNaN(date.getTime())) return date;
@@ -231,7 +236,9 @@ const TourManager = () => {
   const upcomingTours = myTours.filter((t) => {
     if (terminalTourStatuses.has(t.status)) return false;
     const startDate = localTourDate(t.start_date);
-    return !Number.isNaN(startDate.getTime()) && startDate > now;
+    return Number.isNaN(startDate.getTime())
+      ? t.status !== "active"
+      : startDate > now;
   });
   const historicTours = myTours.filter((t) => {
     if (terminalTourStatuses.has(t.status)) return true;
@@ -637,8 +644,8 @@ const TourManager = () => {
       headline: tour.name,
       subheadline: uniqueCities.length ? uniqueCities.slice(0, 5).join(" · ") : `${tour.band?.name || "RockMundo band"} · ${tour.band?.genre || "Live"}`,
       metrics: [
-        { label: "Starts", value: format(new Date(tour.start_date), "MMM d, yyyy") },
-        { label: "Ends", value: format(new Date(tour.end_date), "MMM d, yyyy") },
+        { label: "Starts", value: safeTourDateLabel(tour.start_date, "MMM d, yyyy") },
+        { label: "Ends", value: safeTourDateLabel(tour.end_date, "MMM d, yyyy") },
         ...(stops?.length ? [{ label: "Shows", value: String(stops.length) }] : []),
         ...(uniqueCities.length ? [{ label: "Cities", value: String(uniqueCities.length) }] : []),
       ].slice(0, 4),
@@ -710,7 +717,7 @@ const TourManager = () => {
               <XCircle className="h-3.5 w-3.5" />
               Cancelled
               {tour.cancellation_date
-                ? ` on ${format(new Date(tour.cancellation_date), "MMM d, yyyy")}`
+                ? ` on ${safeTourDateLabel(tour.cancellation_date, "MMM d, yyyy")}`
                 : ""}
               — all remaining shows and travel were cancelled.
             </div>
@@ -719,9 +726,9 @@ const TourManager = () => {
             <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
               <History className="h-3.5 w-3.5" />
               Rescheduled — was{" "}
-              {format(new Date(tour.original_start_date), "MMM d")}
+              {safeTourDateLabel(tour.original_start_date, "MMM d")}
               {tour.original_end_date
-                ? ` – ${format(new Date(tour.original_end_date), "MMM d, yyyy")}`
+                ? ` – ${safeTourDateLabel(tour.original_end_date, "MMM d, yyyy")}`
                 : ""}
               .
             </div>
@@ -729,7 +736,7 @@ const TourManager = () => {
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">
               <Calendar className="h-4 w-4" />
-              {format(new Date(tour.start_date), "MMM d")} –{" "}
+              {safeTourDateLabel(tour.start_date, "MMM d")} –{" "}
               {format(new Date(tour.end_date), "MMM d, yyyy")}
             </span>
           </div>
