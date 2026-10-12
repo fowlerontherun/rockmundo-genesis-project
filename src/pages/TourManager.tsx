@@ -906,6 +906,8 @@ const TourManager = () => {
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
+          ) : myToursError ? (
+            <div role="alert" className="p-4 text-destructive">Your tours could not be loaded. <Button variant="outline" size="sm" onClick={() => void retryMyTours()}>Retry</Button></div>
           ) : currentTours.length === 0 ? (
             <EmptyState
               icon={MapPin}
@@ -933,6 +935,8 @@ const TourManager = () => {
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
+          ) : myToursError ? (
+            <div role="alert" className="p-4 text-destructive">Tour history unavailable. <Button variant="outline" size="sm" onClick={() => void retryMyTours()}>Retry</Button></div>
           ) : upcomingTours.length === 0 ? (
             <EmptyState
               icon={Calendar}
