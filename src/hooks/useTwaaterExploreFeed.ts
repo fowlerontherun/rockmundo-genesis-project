@@ -57,7 +57,7 @@ export const useTwaaterExploreFeed = (excludeAccountId?: string) => {
         .is("scheduled_for", null)
         .gte("created_at", fourteenDaysAgo.toISOString())
         .order("created_at", { ascending: false })
-        .limit(200);
+        .limit(1000);
 
       if (error) throw error;
 
