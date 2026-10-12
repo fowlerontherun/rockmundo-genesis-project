@@ -29,6 +29,7 @@ Deno.serve(async (req) => {
         band_id,
         streaming_platforms,
         scheduled_release_date,
+        manufacturing_complete_at,
         release_songs!release_songs_release_id_fkey(id, song_id)
       `)
       .eq('release_status', 'released')
@@ -120,7 +121,7 @@ Deno.serve(async (req) => {
                 release_id: release.id,
                 user_id: userId,
                 band_id: release.band_id,
-                release_date: release.scheduled_release_date ? `${release.scheduled_release_date}T00:00:00Z` : new Date().toISOString(),
+                release_date: release.scheduled_release_date ? `${release.scheduled_release_date}T00:00:00Z` : (release.manufacturing_complete_at ?? new Date().toISOString()),
                 release_type: 'streaming',
                 is_active: true,
                 total_streams: 0,

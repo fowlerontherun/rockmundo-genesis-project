@@ -76,7 +76,7 @@ export function BandChat({ bandId }: BandChatProps) {
 
         if (generation !== messagesGeneration.current) return;
         setMessages(prev => {
-          const byId = new Map([...messagesWithProfiles, ...prev].map(msg => [msg.id, msg as ChatMessage]));
+          const byId = new Map<string, ChatMessage>([...messagesWithProfiles, ...prev].map(msg => [msg.id, msg as ChatMessage] as const));
           return [...byId.values()].sort((a, b) => a.created_at.localeCompare(b.created_at));
         });
       } else {

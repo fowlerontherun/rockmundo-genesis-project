@@ -18,6 +18,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { Music, Star, Send, AlertCircle } from "lucide-react";
 import type { ArtistEntity } from "./types";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 interface SubmitDemoDialogProps {
   open: boolean;
@@ -52,22 +53,9 @@ export function SubmitDemoDialog({ open, onOpenChange, userId, bandId, artistEnt
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch user's profile ID (different from auth user ID)
-  const { data: profileData } = useQuery({
-    queryKey: ["user-profile-id", userId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", userId)
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    enabled: open && !!userId,
-  });
-
-  const profileId = profileData?.id;
+  // Character-scoped demo ownership must use the selected profile, not an
+  // arbitrary profile belonging to the same account.
+  const { profileId } = useActiveProfile();
 
   // Fetch recorded songs that can be submitted as demos
   const { data: songs = [], isLoading: songsLoading, isError: songsError, refetch: retrySongs } = useQuery<RecordedSong[]>({
