@@ -501,7 +501,7 @@ serve(async (req) => {
 
     if (!prediction.id) throw new Error("Replicate returned no prediction ID")
     const { error: predictionTrackingError } = await supabase.from("song_generation_attempts")
-      .update({ prediction_id: prediction.id }).eq("id", attempt.id).eq("status", "generating")
+      .update({ prediction_id: prediction.id, provider_prediction_id: prediction.id }).eq("id", attempt.id).eq("status", "generating")
     if (predictionTrackingError) throw predictionTrackingError
     console.log(`[generate-song-audio] Async prediction created: ${prediction.id} for song ${songId}`)
     console.log(`[generate-song-audio] Prediction web URL: ${prediction.urls?.web}`)

@@ -118,7 +118,7 @@ serve(async (req) => {
     // Keep the admin route on the same auditable attempt lifecycle as the
     // player generator, including retries and webhook correlation.
     const { data: attempt, error: attemptError } = await supabase.from("song_generation_attempts")
-      .insert({ song_id: songId, user_id: user.id, status: "generating" })
+      .insert({ song_id: songId, user_id: song.user_id || user.id, triggered_by_user_id: user.id, status: "generating" })
       .select("id").single()
     if (attemptError || !attempt?.id) throw new Error(`Could not create generation attempt: ${attemptError?.message || "missing ID"}`)
 
@@ -291,6 +291,10 @@ serve(async (req) => {
 
     // Build the style prompt for MiniMax Music-1.5
     let styleParts: string[] = []
+    // Acoustic takes retain the stored song genre, but force an acoustic arrangement even with a custom prompt.
+    if (String(song.version || "").toLowerCase() === "acoustic") {
+      styleParts.push("stripped-back acoustic guitar-led arrangement")
+    }
 
     // Use custom prompt if provided, otherwise build from metadata
     if (customPrompt) {
@@ -412,7 +416,7 @@ serve(async (req) => {
 
     if (!prediction.id) throw new Error("Replicate returned no prediction ID")
     const { error: trackingError } = await supabase.from("song_generation_attempts")
-      .update({ prediction_id: prediction.id }).eq("id", attempt.id).eq("status", "generating")
+      .update({ prediction_id: prediction.id, provider_prediction_id: prediction.id }).eq("id", attempt.id).eq("status", "generating")
     if (trackingError) throw trackingError
     addLog(`Prediction created: ${prediction.id}`)
     addLog(`Status: ${prediction.status}`)
