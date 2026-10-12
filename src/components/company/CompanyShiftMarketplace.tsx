@@ -61,7 +61,25 @@ export function CompanyShiftMarketplace() {
     enabled: !!profileId,
   });
 
+  const { data: myClaimedShifts = [], isError: claimedShiftError, refetch: retryClaimedShifts } = useQuery({
+    queryKey: ['my-company-claimed-shifts', profileId, myClaims.map(c => c.shift_id).join(',')],
+    enabled: !!profileId && myClaims.length > 0,
+    queryFn: async (): Promise<OpenShift[]> => {
+      const ids = [...new Set(myClaims.map(c => c.shift_id))];
+      const rows: OpenShift[] = [];
+      for (let offset = 0; offset < ids.length; offset += 100) {
+        const { data, error } = await (supabase as any).from('company_shifts')
+          .select('*, companies:company_id(name, company_type)').in('id', ids.slice(offset, offset + 100));
+        if (error) throw error;
+        rows.push(...((data || []) as OpenShift[]));
+      }
+      return rows;
+    },
+  });
+  const visibleShifts = [...shifts, ...myClaimedShifts.filter(shift => !shifts.some(open => open.id === shift.id))];
+
   const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['my-company-claimed-shifts', profileId] });
     queryClient.invalidateQueries({ queryKey: ["open-company-shifts"] });
     queryClient.invalidateQueries({ queryKey: ["my-shift-claims", profileId] });
   };
@@ -104,14 +122,14 @@ export function CompanyShiftMarketplace() {
       <CardContent className="space-y-2">
         {isLoading ? (
           <Skeleton className="h-14 w-full" />
-        ) : shiftsError || claimsError ? (
-          <div role="alert" className="py-4 text-sm text-destructive">Could not load shifts or your claims. <Button variant="outline" size="sm" onClick={() => { void retryShifts(); void retryClaims(); }}>Retry</Button></div>
-        ) : shifts.length === 0 ? (
+        ) : shiftsError || claimsError || claimedShiftError ? (
+          <div role="alert" className="py-4 text-sm text-destructive">Could not load shifts or your claims. <Button variant="outline" size="sm" onClick={() => { void retryShifts(); void retryClaims(); void retryClaimedShifts(); }}>Retry</Button></div>
+        ) : visibleShifts.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
             No open shifts right now. New shifts are published every morning.
           </p>
         ) : (
-          shifts.map((s) => {
+          visibleShifts.map((s) => {
             const myClaim = (myClaims as any[]).find((c) => c.shift_id === s.id);
             const pay = Number(s.wage_per_hour) * s.duration_hours;
             return (
