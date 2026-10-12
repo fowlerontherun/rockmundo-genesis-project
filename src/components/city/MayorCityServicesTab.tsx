@@ -34,8 +34,8 @@ const pct = (multiplier: number | undefined) => {
 
 export function MayorCityServicesTab({ city, laws }: Props) {
   const { data: projects } = useCityProjects(city.id);
-  const { data: development } = useCityDevelopment(city.id);
-  const { data: modifiers } = useCityGameplayModifiers(city.id);
+  const { data: development, isError: developmentError, refetch: retryDevelopment } = useCityDevelopment(city.id);
+  const { data: modifiers, isError: modifiersError, refetch: retryModifiers } = useCityGameplayModifiers(city.id);
   const active = projects?.filter((project) => project.status === "in_progress") ?? [];
   const completed = projects?.filter((project) => project.status === "completed") ?? [];
 
@@ -43,6 +43,7 @@ export function MayorCityServicesTab({ city, laws }: Props) {
 
   return (
     <div className="space-y-5">
+      {(developmentError || modifiersError) && <div role="alert" className="p-3 text-destructive">City ratings or gameplay bonuses could not be loaded. <button className="underline" onClick={() => {void retryDevelopment();void retryModifiers();}}>Retry</button></div>}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">City development & gameplay effects</CardTitle>
