@@ -13,14 +13,19 @@ export const useEducationVideoSubscriptions = (profileId?: string | null) =>
     queryKey: subscriptionQueryKey(profileId),
     enabled: Boolean(profileId),
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("education_youtube_skill_subscriptions")
-        .select("skill_slug")
-        .eq("profile_id", profileId)
-        .order("created_at", { ascending: true });
-
-      if (error) throw error;
-      return new Set<string>((data ?? []).map((row: { skill_slug: string }) => row.skill_slug));
+      const skillSlugs = new Set<string>();
+      for (let offset = 0; offset < 100_000; offset += 500) {
+        const { data, error } = await (supabase as any)
+          .from("education_youtube_skill_subscriptions")
+          .select("skill_slug")
+          .eq("profile_id", profileId)
+          .order("created_at", { ascending: true })
+          .range(offset, offset + 499);
+        if (error) throw error;
+        for (const row of data ?? []) skillSlugs.add(row.skill_slug);
+        if (!data || data.length < 500) break;
+      }
+      return skillSlugs;
     },
     staleTime: 1000 * 60,
   });
