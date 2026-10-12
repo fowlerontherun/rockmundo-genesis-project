@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -145,6 +145,15 @@ const friendlyShopError = (error: any) => {
 export const useLuthieryShops = () => {
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
+  useEffect(() => {
+    if (!profileId) return;
+    const channel = supabase.channel(`luthiery-profile-balance-${profileId}`)
+      .on("postgres_changes", {
+        event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${profileId}`,
+      }, () => { void queryClient.invalidateQueries({ queryKey: ["luthiery-shop-profile", profileId] }); })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [profileId, queryClient]);
 
   const { data: profile = null, isLoading: profileLoading, isError: profileError, refetch: refetchProfile } = useQuery({
     queryKey: ["luthiery-shop-profile", profileId],
