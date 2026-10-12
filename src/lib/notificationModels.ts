@@ -192,7 +192,7 @@ export function normalizeNotification(notification: PersistedNotification): Disp
     priority,
     isRead: !!notification.read_at,
     actionLabel: routePath ? TYPE_ACTION_LABELS[notification.type] ?? "Open" : null,
-    statusLabel: recruitmentMeta?.label ?? (isRecruitment ? "Pending" : null),
+    statusLabel: recruitmentMeta?.label ?? (isRecruitment && !notification.read_at ? "Pending" : null),
     isRecruitment,
     routePath,
   };
