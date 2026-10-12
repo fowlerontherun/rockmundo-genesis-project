@@ -68,11 +68,13 @@ Deno.serve(async (req) => {
         band_id,
         user_id,
         created_at,
+        release_date,
         release_id,
         songs!inner(band_id, quality_score)
       `)
       .eq('is_active', true)
-      .eq('release_type', 'streaming');
+      .eq('release_type', 'streaming')
+      .lte('release_date', new Date().toISOString());
 
     if (streamingError) {
       throw streamingError;
