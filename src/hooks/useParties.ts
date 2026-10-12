@@ -52,10 +52,11 @@ export function usePartyMembers(partyId: string | undefined) {
       const profileIds = memberships.map((m) => m.profile_id);
       if (profileIds.length === 0) return memberships.map((m) => ({ ...m, profile: null }));
 
-      const { data: profiles } = await supabase
+      const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("id, display_name, username, avatar_url, fame")
         .in("id", profileIds);
+      if (profilesError) throw profilesError;
 
       const profileMap = new Map((profiles ?? []).map((p: any) => [p.id, p]));
       return memberships.map((m) => ({ ...m, profile: profileMap.get(m.profile_id) ?? null }));
