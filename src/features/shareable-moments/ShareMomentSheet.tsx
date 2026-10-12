@@ -22,7 +22,7 @@ export function ShareMomentSheet({moment,open,onOpenChange}:{moment:ShareMoment|
  const promptOnly=Boolean(moment?.promptOnly);
  const sheetOpen=open&&(!promptOnly||promptAccepted);
  const canvasRef=useRef<HTMLCanvasElement|null>(null); const avatarRef=useRef<CanvasImageSource|null>(null); const artworkRef=useRef<CanvasImageSource|null>(null); const logoRef=useRef<CanvasImageSource|null>(null); const [format,setFormat]=useState<ShareFormat>("square"); const [done,setDone]=useState<string|null>(null); const [busy,setBusy]=useState<string|null>(null); const [status,setStatus]=useState(""); const [avatarVersion,setAvatarVersion]=useState(0); const [draft,setDraft]=useState<ShareMoment|null>(moment);
- useEffect(()=>{if(open&&moment)setDraft({...moment});},[sheetOpen,moment]);
+ useEffect(()=>{if(open&&moment){setDraft({...moment});setFormat("square");}},[sheetOpen,moment]);
  useEffect(()=>{setPromptAccepted(false);},[moment?.id,moment?.promptSourceId]);
  useEffect(()=>{
    if(open&&promptOnly&&moment){
