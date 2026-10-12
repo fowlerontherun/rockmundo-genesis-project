@@ -40,6 +40,7 @@ export function useFriendships(profileId: string | null | undefined) {
       toast.success("Friend request accepted");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to accept friend request.");
+      throw error;
     }
   }, [act]);
 
