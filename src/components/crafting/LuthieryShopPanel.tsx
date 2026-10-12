@@ -537,7 +537,7 @@ export const LuthieryShopPanel = () => {
                   key={myShop.id}
                   shop={myShop}
                   currentCityName={profile?.city?.name}
-          currentCityId={profile?.current_city_id}
+                  currentCityId={profile?.current_city_id}
                   isBusy={isUpdatingShop}
                   onSave={updateShop}
                 />
