@@ -34,6 +34,7 @@ import {
 interface MemberWithProfile {
   id: string;
   user_id: string | null;
+  profile_id?: string | null;
   travels_with_band?: boolean | null;
   is_touring_member?: boolean | null;
   profiles: {
@@ -74,23 +75,24 @@ export function BandMemberDetailDialog({
   const { toast } = useToast();
   const [sendingRequest, setSendingRequest] = useState(false);
 
+  const memberProfileId = member?.profile_id ?? null;
   const userId = member?.user_id ?? member?.profiles?.user_id;
 
   // Fetch full profile with city name
   const { data: profile, isLoading: profileLoading } = useQuery({
-    queryKey: ["member-profile-detail", userId],
+    queryKey: ["member-profile-detail", memberProfileId],
     queryFn: async () => {
-      if (!userId) return null;
+      if (!memberProfileId) return null;
       const { data, error } = await supabase
         .from("profiles")
         .select("*, cities(name, timezone)")
-        .eq("user_id", userId)
+        .eq("id", memberProfileId)
         .maybeSingle();
 
       if (error) throw error;
       return data;
     },
-    enabled: open && Boolean(userId),
+    enabled: open && Boolean(memberProfileId),
   });
 
   // Fetch skills
