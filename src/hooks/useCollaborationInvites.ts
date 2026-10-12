@@ -132,6 +132,8 @@ export const useCollaborationInvites = (projectId?: string) => {
       })) as Collaboration[];
     },
     enabled: !!activeProfileId,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   // Invite a collaborator
