@@ -146,7 +146,7 @@ export const useLuthieryShops = () => {
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
-  const { data: profile = null, isLoading: profileLoading } = useQuery({
+  const { data: profile = null, isLoading: profileLoading, isError: profileError, refetch: refetchProfile } = useQuery({
     queryKey: ["luthiery-shop-profile", profileId],
     queryFn: async () => {
       if (!profileId) return null;
@@ -161,7 +161,7 @@ export const useLuthieryShops = () => {
     enabled: !!profileId,
   });
 
-  const { data: skillProgress = [], isLoading: skillsLoading } = useQuery({
+  const { data: skillProgress = [], isLoading: skillsLoading, isError: skillProgressError, refetch: refetchSkillProgress } = useQuery({
     queryKey: ["luthiery-shop-skills", profileId],
     queryFn: async () => {
       if (!profileId) return [];
@@ -176,7 +176,7 @@ export const useLuthieryShops = () => {
     enabled: !!profileId,
   });
 
-  const { data: listings = [], isLoading: listingsLoading } = useQuery({
+  const { data: listings = [], isLoading: listingsLoading, isError: listingsError, refetch: refetchListings } = useQuery({
     queryKey: ["luthiery-shop-listings"],
     queryFn: async () => {
       const { data, error } = await (supabase as any).rpc("browse_luthiery_shop_listings");
@@ -185,7 +185,7 @@ export const useLuthieryShops = () => {
     },
   });
 
-  const { data: myShop = null, isLoading: myShopLoading } = useQuery({
+  const { data: myShop = null, isLoading: myShopLoading, isError: myShopError, refetch: refetchMyShop } = useQuery({
     queryKey: ["luthiery-shop-mine", profileId],
     queryFn: async () => {
       if (!profileId) return null;
@@ -200,7 +200,7 @@ export const useLuthieryShops = () => {
     enabled: !!profileId,
   });
 
-  const { data: myListings = [], isLoading: myListingsLoading } = useQuery({
+  const { data: myListings = [], isLoading: myListingsLoading, isError: myListingsError, refetch: refetchMyListings } = useQuery({
     queryKey: ["luthiery-shop-my-listings", profileId],
     queryFn: async () => {
       if (!profileId) return [];
@@ -215,7 +215,7 @@ export const useLuthieryShops = () => {
     enabled: !!profileId,
   });
 
-  const { data: salesHistory = [], isLoading: salesLoading } = useQuery({
+  const { data: salesHistory = [], isLoading: salesLoading, isError: salesHistoryError, refetch: refetchSalesHistory } = useQuery({
     queryKey: ["luthiery-shop-sales", myShop?.id],
     queryFn: async () => {
       if (!myShop?.id) return [];
@@ -230,7 +230,7 @@ export const useLuthieryShops = () => {
     enabled: !!myShop?.id,
   });
 
-  const { data: ownedInstruments = [], isLoading: inventoryLoading } = useQuery({
+  const { data: ownedInstruments = [], isLoading: inventoryLoading, isError: ownedInstrumentsError, refetch: refetchOwnedInstruments } = useQuery({
     queryKey: ["luthiery-shop-owned-instruments", profileId],
     queryFn: async () => {
       if (!profileId) return [];
@@ -416,6 +416,8 @@ export const useLuthieryShops = () => {
     salesHistory,
     ownedInstruments,
     availableInstruments,
+    isError: [profileError,skillProgressError,listingsError,myShopError,myListingsError,salesHistoryError,ownedInstrumentsError].some(Boolean),
+    retry: () => Promise.all([refetchProfile(),refetchSkillProgress(),refetchListings(),refetchMyShop(),refetchMyListings(),refetchSalesHistory(),refetchOwnedInstruments()]),
     isLoading:
       profileLoading ||
       skillsLoading ||

@@ -71,12 +71,13 @@ const ShopSettingsForm = ({
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    if (!commissionRate.trim() || !Number.isFinite(Number(commissionRate)) || Number(commissionRate) < 0 || Number(commissionRate) > 15) return;
     await onSave({
       name,
       brandTagline: tagline,
       brandColour: colour,
       brandLogoUrl: logoUrl,
-      commissionRate: Math.max(0, Math.min(15, Number(commissionRate) || 0)),
+      commissionRate: Number(commissionRate),
       isOpen,
       moveToCurrentCity,
     });
@@ -180,6 +181,8 @@ export const LuthieryShopPanel = () => {
     salesHistory,
     availableInstruments,
     isLoading,
+    isError,
+    retry,
     openShop,
     updateShop,
     createListing,
@@ -208,12 +211,13 @@ export const LuthieryShopPanel = () => {
 
   const handleOpenShop = async (event: FormEvent) => {
     event.preventDefault();
+    if (!openCommission.trim() || !Number.isFinite(Number(openCommission)) || Number(openCommission) < 0 || Number(openCommission) > 15) return;
     await openShop({
       name: openName,
       brandTagline: openTagline,
       brandColour: openColour,
       brandLogoUrl: openLogo,
-      commissionRate: Math.max(0, Math.min(15, Number(openCommission) || 0)),
+      commissionRate: Number(openCommission),
     });
   };
 
@@ -239,6 +243,8 @@ export const LuthieryShopPanel = () => {
       </Card>
     );
   }
+
+  if (isError) return <Card role="alert"><CardContent className="p-6">Luthiery marketplace data could not be loaded. <Button variant="outline" onClick={() => void retry()}>Retry marketplace</Button></CardContent></Card>;
 
   return (
     <Tabs defaultValue="browse" className="space-y-4">

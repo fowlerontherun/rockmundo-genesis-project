@@ -113,18 +113,20 @@ export const useUnderworldStore = () => {
     queryKey: ["purchase-history", profileId],
     queryFn: async () => {
       if (!profileId) return [];
-      const { data, error } = await supabase
-        .from("underworld_purchases")
-        .select(`
-          *,
-          product:underworld_products(*)
-        `)
-        .eq("profile_id", profileId)
-        .order("created_at", { ascending: false })
-        .limit(20);
-
-      if (error) throw error;
-      return (data || []) as UnderworldPurchase[];
+      const history: UnderworldPurchase[] = [];
+      for (let offset = 0; offset < 100_000; offset += 1000) {
+        const { data, error } = await supabase
+          .from("underworld_purchases")
+          .select(`*, product:underworld_products(*)`)
+          .eq("profile_id", profileId)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(offset, offset + 999);
+        if (error) throw error;
+        history.push(...((data || []) as UnderworldPurchase[]));
+        if (!data || data.length < 1000) return history;
+      }
+      throw new Error("Purchase history exceeds pagination safety limit");
     },
     enabled: !!profileId,
   });

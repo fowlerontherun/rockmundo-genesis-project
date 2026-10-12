@@ -135,7 +135,7 @@ export function SongwritingScheduleDialog({
               </SelectTrigger>
               <SelectContent>
                 {Array.from({ length: 24 }, (_, i) => (
-                  <SelectItem key={i} value={i.toString()}>
+                  <SelectItem key={i} value={i.toString()} disabled={!!date && date.toDateString() === new Date().toDateString() && i <= new Date().getHours()}>
                     {i.toString().padStart(2, '0')}:00
                   </SelectItem>
                 ))}

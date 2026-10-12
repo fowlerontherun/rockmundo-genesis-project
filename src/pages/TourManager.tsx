@@ -172,9 +172,7 @@ const TourManager = () => {
         .select("id, name, country, latitude, longitude")
         .order("name");
       if (error) throw error;
-      return (data ?? []).filter(city =>
-        city.latitude != null && city.longitude != null
-      );
+      return data ?? [];
     },
   });
 

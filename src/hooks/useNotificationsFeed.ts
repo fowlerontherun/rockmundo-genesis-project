@@ -29,15 +29,14 @@ export function useNotificationsFeed() {
     enabled: !!userId && !!profileId,
     queryFn: async (): Promise<PersistedNotification[]> => {
       if (!userId || !profileId) return [];
-      const { data, error } = await supabase
-        .from(asAny("notifications"))
-        .select("*")
-        .eq("user_id", userId)
-        .eq("profile_id", profileId)
-        .order("created_at", { ascending: false })
-        .limit(100);
-      if (error) throw error;
-      return (data ?? []) as unknown as PersistedNotification[];
+      const all: PersistedNotification[] = [];
+      for (let start = 0; start < 100_000; start += 1000) {
+        const { data, error } = await supabase.from(asAny("notifications")).select("*").eq("user_id", userId).eq("profile_id", profileId).order("created_at", { ascending: false }).order("id", { ascending: false }).range(start, start + 999);
+        if (error) throw error;
+        all.push(...((data ?? []) as unknown as PersistedNotification[]));
+        if (!data || data.length < 1000) return all;
+      }
+      throw new Error("Notification history exceeds pagination safety limit");
     },
   });
 
