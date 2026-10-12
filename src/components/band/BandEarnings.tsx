@@ -137,10 +137,11 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
       if (earningsData && earningsData.length > 0) {
         const userIds = [...new Set(earningsData.map(e => e.earned_by_user_id).filter(Boolean))];
         if (userIds.length > 0) {
-          const { data: profiles } = await supabase
+          const { data: profiles, error: profilesError } = await supabase
             .from('profiles')
             .select('user_id, display_name')
             .in('user_id', userIds);
+          if (profilesError) throw profilesError;
 
           const earningsWithProfiles = earningsData.map(earning => ({
             ...earning,

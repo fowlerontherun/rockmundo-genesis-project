@@ -379,7 +379,7 @@ const Housing = () => {
                             className="w-full"
                             size="sm"
                             onClick={() => startRental.mutate({ rentalType: rt, country: activeCountry!, weeklyCost })}
-                            disabled={startRental.isPending || !!activeRental}
+                            disabled={startRental.isPending || !!activeRental || rentalError}
                           >
                             {startRental.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Key className="h-4 w-4 mr-1" />}
                             Start Renting

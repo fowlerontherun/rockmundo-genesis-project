@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { Check, X, ClipboardList, User, ExternalLink } from 'lucide-react';
 import { respondBandApplication, type BandApplicationDecision } from '@/services/bandApplications';
-import { getRecruitmentStatusMeta, isRecruitmentActionable } from '@/lib/recruitmentStatus';
+import { getRecruitmentStatusMeta } from '@/lib/recruitmentStatus';
 import { format } from 'date-fns';
 
 interface BandApplicationsListProps {
