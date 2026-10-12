@@ -128,6 +128,8 @@ export function SimplifiedFestivalLineupManager({
     setResponseDeadlineInput(toDateTimeLocalInput(responseDeadline(data.festivalDates)));
   }, [festivalEditionId, data.festivalDates.join("|")]);
   const queryClient = useQueryClient();
+  // Keep a created draft available for retry when the separate send request fails.
+  const pendingOfferBySource = useRef(new Map<string, { id: string; version: number; sendKey: string }>());
   const changeBilling = useMutation({
     mutationFn: async ({ bookingId, position }: { bookingId: string; position: (typeof billingPositions)[number] }) => {
       const { error } = await (supabase as any).rpc("update_festival_booking_billing", { p_booking_id: bookingId, p_position: position });
@@ -225,6 +227,11 @@ export function SimplifiedFestivalLineupManager({
     requestedDates?: string[];
     billingPosition?: (typeof billingPositions)[number];
   }) => {
+    const sourceKey = JSON.stringify([festivalCompanyId, festivalEditionId, input.identity,
+      input.applicationId ?? null, input.invitationId ?? null, input.feeMinor, input.setMinutes,
+      input.requestedDates ?? [], input.billingPosition ?? "support"]);
+    let draft = pendingOfferBySource.current.get(sourceKey);
+    if (!draft) {
     const created = await createOffer.mutateAsync({
       festivalCompanyId,
       festivalEditionId,
@@ -241,13 +248,17 @@ export function SimplifiedFestivalLineupManager({
     });
     const createdOffer = offerVersionFromAction(created);
     if (!createdOffer) throw new Error("festival_artist_offer_invalid");
+    draft = { id: createdOffer.id, version: createdOffer.version, sendKey: crypto.randomUUID() };
+    pendingOfferBySource.current.set(sourceKey, draft);
+    }
     await sendOffer.mutateAsync({
       festivalCompanyId,
       festivalEditionId,
-      offerId: createdOffer.id,
-      expectedVersion: createdOffer.version,
-      idempotencyKey: crypto.randomUUID(),
+      offerId: draft.id,
+      expectedVersion: draft.version,
+      idempotencyKey: draft.sendKey,
     });
+    pendingOfferBySource.current.delete(sourceKey);
   };
 
   const suggestedCandidateFee = (candidate: FestivalArtistCandidate) =>
