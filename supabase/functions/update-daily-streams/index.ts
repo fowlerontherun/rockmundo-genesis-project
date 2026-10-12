@@ -177,6 +177,7 @@ Deno.serve(async (req) => {
     let releaseMarketingPowerMap = new Map<string, number>();
     let releasePrReachMap = new Map<string, { power: number; updatedAt: string | null }>();
     let releaseMarketingStrategyMap = new Map<string, { focus: string; regions: string[]; saturation: number }>();
+    const strategyPriorityBySong = new Map<string, number>();
     if (songIds.length > 0) {
       const eligibleReleaseIds = new Set((streamingReleases || []).map(r => r.release_id).filter(Boolean));
       const { data: releaseSongData } = await supabase
@@ -205,11 +206,19 @@ Deno.serve(async (req) => {
                 effective(existingPr.power, existingPr.updatedAt)) {
               releasePrReachMap.set(rs.song_id, { power: candidatePr, updatedAt: rel.pr_reach_updated_at || null });
             }
-            releaseMarketingStrategyMap.set(rs.song_id, {
-              focus: String(rel.label_marketing_focus || "balanced"),
-              regions: Array.isArray(rel.label_marketing_regions) ? rel.label_marketing_regions : ["global"],
-              saturation: Number(rel.label_marketing_saturation || 0),
-            });
+            // Keep a deterministic strategy from the strongest funded canonical edition.
+            const strategyPriority = Number(rel.label_marketing_power || 0);
+            if (strategyPriority > (strategyPriorityBySong.get(rs.song_id) ?? -1)) {
+              strategyPriorityBySong.set(rs.song_id, strategyPriority);
+              const rawFocus = String(rel.label_marketing_focus || "balanced").trim().toLowerCase();
+              const normalizedFocus = rawFocus === "streaming" ? "playlist" :
+                (["balanced", "radio", "playlist", "social", "retail"].includes(rawFocus) ? rawFocus : "balanced");
+              releaseMarketingStrategyMap.set(rs.song_id, {
+                focus: normalizedFocus,
+                regions: Array.isArray(rel.label_marketing_regions) ? rel.label_marketing_regions : ["global"],
+                saturation: Number(rel.label_marketing_saturation || 0),
+              });
+            }
           }
         }
       }
