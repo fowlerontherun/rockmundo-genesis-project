@@ -100,6 +100,7 @@ export const useCancelFestivalOwnerNpcAct = () => {
     },
     onSuccess: (_, input) => Promise.all([
       client.invalidateQueries({ queryKey: key(input.festivalCompanyId, input.festivalEditionId) }),
+      client.invalidateQueries({ queryKey: ["festival-artist-programme"] }),
       client.invalidateQueries({ queryKey: ["public-festival"] }),
       client.invalidateQueries({ queryKey: ["public-festival-timetable"] }),
     ]),
