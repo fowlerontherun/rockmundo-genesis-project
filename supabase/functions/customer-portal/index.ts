@@ -52,7 +52,7 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     logStep("Found Stripe customer", { customerId });
 
-    const origin = req.headers.get("origin") || "https://rockmundo-genesis-project.lovable.app";
+    const origin = Deno.env.get("ROCKMUNDO_PUBLIC_URL") || "https://rockmundo.uk";
     
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: customerId,
