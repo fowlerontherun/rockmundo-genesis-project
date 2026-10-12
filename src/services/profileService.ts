@@ -63,28 +63,9 @@ export async function activateProfile(profile: ProfileRow, userId: string): Prom
   }
 
   if (switchError) {
-    const { error: activateTargetError } = await supabase
-      .from("profiles")
-      .update({ is_active: true })
-      .eq("id", profile.id)
-      .eq("user_id", userId)
-      .is("died_at", null);
-
-    if (activateTargetError) {
-      throw new Error(`Failed to activate profile: ${activateTargetError.message}`);
-    }
-
-    const { error: deactivateOthersError } = await supabase
-      .from("profiles")
-      .update({ is_active: false })
-      .eq("user_id", userId)
-      .neq("id", profile.id)
-      .eq("is_active", true)
-      .is("died_at", null);
-
-    if (deactivateOthersError) {
-      throw new Error(`Failed to deactivate previous profiles: ${deactivateOthersError.message}`);
-    }
+    // Never emulate the atomic character switch with two unrelated writes.
+    // On unmigrated environments, fail closed rather than leave two active characters.
+    throw new Error('Character switching is temporarily unavailable until the database switch function is installed.');
   }
 
   return { ...profile, is_active: true };
