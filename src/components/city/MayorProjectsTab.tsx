@@ -333,11 +333,10 @@ export function MayorProjectsTab({ cityId, politics }: Props) {
               disabled={propose.isPending}
               onClick={async () => {
                 if (!confirmType) return;
-                await propose.mutateAsync({
-                  cityId,
-                  projectTypeId: confirmType.id,
-                });
-                setConfirmType(null);
+                try {
+                  await propose.mutateAsync({ cityId, projectTypeId: confirmType.id });
+                  setConfirmType(null);
+                } catch { /* Mutation hook displays the error; retain confirmation for retry. */ }
               }}
             >
               {propose.isPending && (
