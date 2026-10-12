@@ -288,6 +288,7 @@ export const useTwaaterFeed = (viewerAccountId?: string, enabled = true) => {
           .eq("visibility", "public")
           .is("deleted_at", null)
           .is("scheduled_for", null)
+          .eq("moderation_status", "approved")
           .order("created_at", { ascending: false })
           .range(page*50,page*50+49);
 
@@ -312,6 +313,7 @@ export const useTwaaterFeed = (viewerAccountId?: string, enabled = true) => {
         .in("visibility", ["public", "followers"])
         .is("deleted_at", null)
         .is("scheduled_for", null)
+        .eq("moderation_status", "approved")
         .order("created_at", { ascending: false })
         .range(page*50,page*50+49);
 
