@@ -139,7 +139,7 @@ export function AttendanceCard({
           <div className="rounded-lg bg-green-500/5 border border-green-500/20 p-3 text-sm text-muted-foreground">
             <p className="flex items-center gap-2">
               <Badge variant="secondary" className="text-xs bg-green-500/20 text-green-700 dark:text-green-300">Auto</Badge>
-              Daily attendance will be automatically recorded at 10 AM
+              Auto-attendance is enabled for your class window ({classWindowLabel}). Confirm the day's attendance above when processed.
             </p>
           </div>
         )}
