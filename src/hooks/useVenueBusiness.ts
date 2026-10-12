@@ -270,7 +270,7 @@ export function useInstallVenueUpgrade() {
         } else {
           const baseCapacity = venue?.capacity || 100;
           // Multiplicative scaling: each level adds 25% of base, capped at 50,000
-          const newCapacity = Math.min(50000, Math.round(baseCapacity * (1 + 0.25 * upgrade.upgrade_level)));
+          const newCapacity = Math.min(50000, Math.round(baseCapacity * 1.25));
           const capacityIncrease = newCapacity - baseCapacity;
 
           const { error: updateError } = await supabase
