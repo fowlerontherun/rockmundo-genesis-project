@@ -92,12 +92,13 @@ export function useElectionCandidates(electionId: string | undefined) {
 
       const candidatesWithProfiles = await Promise.all(
         (data || []).map(async (candidate) => {
-          const { data: profile } = await supabase
+          const { data: profile, error: profileError } = await supabase
             .from("profiles")
             .select("id, stage_name, avatar_url, fame")
             .eq("id", candidate.profile_id)
             .single();
 
+          if (profileError) throw profileError;
           return {
             ...candidate,
             profile: profile || undefined,
