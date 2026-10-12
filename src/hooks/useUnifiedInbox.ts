@@ -116,7 +116,7 @@ export function useUnifiedInbox() {
 
   const scopedNotifications = useMemo(
     () => profileId
-      ? notifications.notifications.filter((notification) => notification.profile_id === profileId)
+      ? notifications.notifications.filter((notification) => (notification.profile_id === profileId || (notification.profile_id === null && notification.metadata?.profile_id == null)))
       : [],
     [notifications.notifications, profileId],
   );
