@@ -46,7 +46,7 @@ const SecurityFirmManagement = () => {
         backTo="/my-companies"
         backLabel="Back to Companies"
         headerActions={
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => document.getElementById("security-firm-upgrades")?.scrollIntoView({ behavior: "smooth", block: "start" })}>
             <Settings className="h-4 w-4 mr-1" />
             Settings
           </Button>
@@ -123,7 +123,7 @@ const SecurityFirmManagement = () => {
         <ContractsList firmId={firm.id} />
 
         {/* Upgrades */}
-        <SecurityUpgradesManager firmId={firm.id} companyBalance={company.balance || 0} />
+        <section id="security-firm-upgrades" aria-label="Security firm settings and upgrades"><SecurityUpgradesManager firmId={firm.id} companyBalance={company.balance || 0} /></section>
       </FMPageScaffold>
     </VipGate>
   );

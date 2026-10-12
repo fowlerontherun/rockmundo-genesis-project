@@ -279,13 +279,16 @@ export function calculateCanonicalReadiness(input: { role: WellnessReadinessRole
   const core = { ...createDefaultWellnessCore(), ...input.core };
   const overall = calculateOverallWellness(core);
   const baseValue = clampWellness(input.baseValue ?? Math.round((overall + core.energy + (100 - core.fatigue) + core.sleep_quality) / 4));
+  const now = Date.now();
   const normalized = normalizeWellnessModifiers((input.modifiers ?? []).filter(modifier =>
-    modifier.target === input.role ||
+    (!modifier.duration?.startsAt || (Number.isFinite(Date.parse(modifier.duration.startsAt)) && Date.parse(modifier.duration.startsAt) <= now)) &&
+    (!modifier.duration?.endsAt || (Number.isFinite(Date.parse(modifier.duration.endsAt)) && Date.parse(modifier.duration.endsAt) > now)) &&
+    (modifier.target === input.role ||
     modifier.target === "performance" ||
     modifier.target === "recovery" ||
     modifier.target === "progression" ||
     modifier.target === "career_sustainability" ||
-    modifier.target === "burnout_pressure"
+    modifier.target === "burnout_pressure")
   ));
   let additive = 0;
   let multiplier = 1;

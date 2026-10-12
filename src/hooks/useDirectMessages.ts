@@ -159,6 +159,9 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
     conversationId,
     isGroupConversation: Boolean(groupConversationId),
     isLoading: messagesQuery.isLoading || conversationQuery.isLoading,
+    error: messagesQuery.error ?? conversationQuery.error,
+    isError: messagesQuery.isError || conversationQuery.isError,
+    retry: () => Promise.all([messagesQuery.refetch(), conversationQuery.refetch()]),
     sendMessage,
     markRead,
   };

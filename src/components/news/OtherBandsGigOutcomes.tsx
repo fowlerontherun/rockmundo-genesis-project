@@ -45,7 +45,7 @@ export const OtherBandsGigOutcomes = () => {
   }
 
   const renderStars = (rating: number | null) => {
-    const stars = Math.round((rating || 0) / 20);
+    const stars = Math.max(0, Math.min(5, Math.round((rating || 0) / 5)));
     return (
       <div className="flex items-center gap-0.5">
         {Array.from({ length: 5 }).map((_, i) => (

@@ -49,9 +49,13 @@ export function EnrollmentProgressCard({ enrollment, onDropCourse }: EnrollmentP
     ? enrollment.player_university_attendance
     : [];
 
-  const totalDays = enrollment.university_courses.base_duration_days;
+  // The scheduled completion date incorporates the university's adjusted course duration.
+  const remainingFromSchedule = enrollment.scheduled_end_date ? Math.max(0, Math.ceil((new Date(enrollment.scheduled_end_date).getTime() - Date.now()) / 86_400_000)) : null;
+  const totalDays = remainingFromSchedule !== null && Number.isFinite(remainingFromSchedule)
+    ? Math.max(1, enrollment.days_attended + remainingFromSchedule)
+    : enrollment.university_courses.base_duration_days;
   const daysAttended = enrollment.days_attended;
-  const progressPercentage = totalDays > 0 ? (daysAttended / totalDays) * 100 : 0;
+  const progressPercentage = enrollment.status === 'completed' ? 100 : totalDays > 0 ? Math.min(100, (daysAttended / totalDays) * 100) : 0;
   const paymentAmount =
     typeof enrollment.payment_amount === "number" && !Number.isNaN(enrollment.payment_amount)
       ? enrollment.payment_amount

@@ -147,9 +147,12 @@ export default function PublicFestivalDirectory() {
 
       <section aria-label="Festival directory" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {data.map((festival) => {
-          const lowest = festival.ticketProducts
-            .filter((product) => product.productClass === "admission" && product.availableQuantity > 0)
-            .sort((left, right) => left.totalMinor - right.totalMinor)[0];
+          const availableAdmission = festival.ticketProducts.filter((product) => product.productClass === "admission" && product.availableQuantity > 0);
+          const admissionCurrencies = new Set(availableAdmission.map((product) => product.currency));
+          // Minor amounts cannot be compared across different currencies.
+          const lowest = admissionCurrencies.size <= 1
+            ? availableAdmission.slice().sort((left, right) => left.totalMinor - right.totalMinor)[0]
+            : undefined;
           const myAttendance = activeAttendance.find(
             (item) => item.festivalLaunchId === festival.id,
           );
@@ -233,6 +236,7 @@ export default function PublicFestivalDirectory() {
                       ? `From ${formatFestivalLaunchMoney(lowest.totalMinor, lowest.currency)}`
                       : soldOut
                         ? "Admission sold out"
+                        : admissionCurrencies.size > 1 ? "See ticket prices in each currency"
                         : "Sales opening soon"}
                   </p>
                   {festival.ticketSales && (

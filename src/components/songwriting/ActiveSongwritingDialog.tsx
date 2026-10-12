@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Brain, Music2, PenLine, Puzzle, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -130,6 +130,8 @@ export function ActiveSongwritingDialog({ open, onOpenChange, project }: ActiveS
     setFinished(false);
     setSessionPuzzles(buildSessionPuzzles());
   };
+
+  useEffect(() => { reset(); }, [project.id]);
 
   return (
     <Dialog open={open} onOpenChange={(value) => { onOpenChange(value); if (!value) reset(); }}>

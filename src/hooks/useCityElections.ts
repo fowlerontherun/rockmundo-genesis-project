@@ -210,12 +210,15 @@ export function useWithdrawCandidacy() {
 
   return useMutation({
     mutationFn: async (candidateId: string) => {
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from("city_candidates")
         .update({ status: "withdrawn" as CandidateStatus })
-        .eq("id", candidateId);
+        .eq("id", candidateId)
+        .neq("status", "withdrawn")
+        .select("id");
 
       if (error) throw error;
+      if (!updated?.length) throw new Error("Candidacy was already withdrawn or is no longer available.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["election-candidates"] });

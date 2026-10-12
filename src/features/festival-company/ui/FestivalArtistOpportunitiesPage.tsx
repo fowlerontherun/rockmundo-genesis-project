@@ -406,6 +406,7 @@ export default function FestivalArtistOpportunitiesPage() {
           ) : (
             data.invitations.map((row) => {
               const status = text(row, "status", "status", "unknown");
+              const suggestedCurrency = text(row, "currencyCode", "currency_code", "GBP");
               const suggestedFee = number(
                 row,
                 "suggestedFeeMinor",
@@ -423,7 +424,7 @@ export default function FestivalArtistOpportunitiesPage() {
                     <Badge className="capitalize">{statusLabel(status)}</Badge>
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Suggested fee {formatMinorMoney(suggestedFee, "GBP")}
+                    Suggested fee {formatMinorMoney(suggestedFee, suggestedCurrency)}
                     {suggestedMinutes ? ` · ${suggestedMinutes} minute set` : ""}
                   </p>
                   {["sent", "viewed"].includes(status) ? (
