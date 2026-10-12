@@ -142,11 +142,16 @@ export function FestivalTicketPlanner({
   );
   const save = useSaveFestivalTicketPlan();
   const [draft, setDraft] = useState<FestivalTicketPlanDraft | null>(null);
+  const [priceInput, setPriceInput] = useState<string | null>(null);
+  const [capacityInput, setCapacityInput] = useState<string | null>(null);
   const retry = useRef<{ hash: string; key: string } | null>(null);
 
+  const loadedKey = useRef<string | null>(null);
   useEffect(() => {
-    if (query.data) setDraft(simpleDraftFromResult(query.data));
-  }, [query.data]);
+    const key = `${festivalCompanyId}:${festivalEditionId ?? ""}`;
+    if (loadedKey.current !== key) { loadedKey.current = key; setDraft(null); }
+    if (query.data && loadedKey.current === key) setDraft(current => current ?? simpleDraftFromResult(query.data!));
+  }, [query.data, festivalCompanyId, festivalEditionId]);
 
   if (site.isLoading) {
     return <p role="status">Checking Festival readiness…</p>;
@@ -246,6 +251,8 @@ export function FestivalTicketPlanner({
       {
         onSuccess: (result) => {
           setDraft(simpleDraftFromResult(result));
+          setPriceInput(null);
+          setCapacityInput(null);
           retry.current = null;
         },
       },
@@ -280,8 +287,9 @@ export function FestivalTicketPlanner({
             <Input
               id="festival-ticket-price"
               inputMode="decimal"
-              value={(admission.priceMinor / 100).toFixed(2)}
+              value={priceInput ?? (admission.priceMinor / 100).toFixed(2)}
               onChange={(event) => {
+                setPriceInput(event.target.value);
                 const amount = parseMoneyToMinor(event.target.value);
                 if (amount === null) return;
                 updateAdmission({ priceMinor: amount, faceValueMinor: amount });
@@ -296,8 +304,8 @@ export function FestivalTicketPlanner({
               type="number"
               min={0}
               max={data.usableSiteCapacity}
-              value={admission.capacityLimit}
-              onChange={(event) => updateCapacity(Number(event.target.value))}
+              value={capacityInput ?? admission.capacityLimit}
+              onChange={(event) => { setCapacityInput(event.target.value); if (event.target.value.trim() !== "") updateCapacity(Number(event.target.value)); }}
             />
             <p className="text-xs text-muted-foreground">
               You can sell fewer tickets than capacity. Demand is recalculated
