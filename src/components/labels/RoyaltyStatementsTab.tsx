@@ -15,7 +15,7 @@ export function RoyaltyStatementsTab({ artistEntities }: RoyaltyStatementsTabPro
   const soloEntity = artistEntities.find((entity) => entity.type === "solo");
   const bandEntities = artistEntities.filter((entity) => entity.type === "band");
 
-  const { data: statements, isLoading } = useQuery<RoyaltyStatementWithRelations[]>({
+  const { data: statements, isLoading, isError, error, refetch } = useQuery<RoyaltyStatementWithRelations[]>({
     queryKey: ["label-royalty-statements", soloEntity?.id, bandEntities.map((band) => band.id).join(",")],
     queryFn: async () => {
       const filters: string[] = [];
@@ -87,6 +87,8 @@ export function RoyaltyStatementsTab({ artistEntities }: RoyaltyStatementsTabPro
       </Card>
     );
   }
+
+  if (isError) return <Card><CardContent className="p-6 text-sm" role="alert">Could not load royalty statements: {error instanceof Error ? error.message : "Unknown error"} <Button size="sm" variant="outline" onClick={() => void refetch()}>Retry</Button></CardContent></Card>;
 
   if (!statements || statements.length === 0) {
     return (

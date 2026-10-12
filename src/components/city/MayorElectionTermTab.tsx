@@ -88,6 +88,7 @@ export function MayorElectionTermTab({ cityId, mayor }: Props) {
                     {candidates.map((candidate) => (
                       <div key={candidate.id} className="rounded-lg border p-3">
                         <div className="font-medium">{candidate.profile?.stage_name ?? "Candidate"}</div>
+                        <Badge variant={candidate.status === "approved" ? "default" : "outline"} className="mt-1">{candidate.status === "approved" ? "Approved" : candidate.status === "pending" ? "Pending approval" : candidate.status}</Badge>
                         <div className="mt-1 text-xs text-muted-foreground">{candidate.campaign_slogan || "No campaign slogan"}</div>
                         {election.status === "voting" && <Badge variant="secondary" className="mt-2">{candidate.vote_count ?? 0} votes</Badge>}
                       </div>

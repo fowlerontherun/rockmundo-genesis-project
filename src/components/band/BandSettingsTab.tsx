@@ -250,9 +250,16 @@ export function BandSettingsTab({
   };
 
   const openTransferDialog = async () => {
-    const leaders = await getEligibleLeaders(bandId, profileId || '');
-    setEligibleLeaders(leaders);
-    setTransferDialogOpen(true);
+    setLoading(true);
+    try {
+      const leaders = await getEligibleLeaders(bandId, profileId || '');
+      setEligibleLeaders(leaders);
+      setTransferDialogOpen(true);
+    } catch (error) {
+      toast({ title: 'Unable to load eligible leaders', description: error instanceof Error ? error.message : 'Please try again.', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleTransferLeadership = async () => {

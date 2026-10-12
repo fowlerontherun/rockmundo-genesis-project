@@ -59,17 +59,18 @@ export function LabelReleasesTab({ labelId }: LabelReleasesTabProps) {
   });
 
   // Get chart entries for these releases
-  const { data: chartData = [] } = useQuery({
+  const { data: chartData = [], isError: chartError, refetch: retryCharts } = useQuery({
     queryKey: ["label-release-charts", labelId, releases.map(r => r.id)],
     queryFn: async () => {
       if (releases.length === 0) return [];
       const releaseIds = releases.map(r => r.id);
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("chart_entries")
         .select("release_id, rank, chart_type, country, chart_date")
         .in("release_id", releaseIds)
         .order("chart_date", { ascending: false })
         .limit(100);
+      if (error) throw error;
       return data || [];
     },
     enabled: releases.length > 0,
@@ -90,6 +91,8 @@ export function LabelReleasesTab({ labelId }: LabelReleasesTabProps) {
       </Card>
     );
   }
+
+  if (chartError) return <Card><CardContent className="p-6 text-sm" role="alert">Chart achievements could not load. <Button size="sm" variant="outline" onClick={() => void retryCharts()}>Retry charts</Button></CardContent></Card>;
 
   const totalRevenue = releases.reduce((sum, r) => sum + (r.total_revenue ?? 0), 0);
   const totalUnits = releases.reduce((sum, r) => sum + (r.total_units_sold ?? 0), 0);

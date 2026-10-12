@@ -427,7 +427,7 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
                           ? 'border-primary bg-primary/10' 
                           : 'border-border hover:border-primary/50'
                       }`}
-                      onClick={() => setSelectedSong(song)}
+                      onClick={() => { if (selectedSong?.id !== song.id) setSelectedStations(new Set()); setSelectedSong(song); }}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">

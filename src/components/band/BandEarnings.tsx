@@ -200,7 +200,7 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
     const sources = SOURCE_GROUPS[sourceFilter];
     if (!sources || sources.length === 0) {
       // "other" = everything not in known groups
-      const allKnown = Object.values(SOURCE_GROUPS).flat();
+      const allKnown = [...Object.values(SOURCE_GROUPS).flat(), 'leader_deposit', 'leader_withdrawal', 'recording', 'refund'];
       return earnings.filter(e => !allKnown.includes(e.source));
     }
     return earnings.filter(e => sources.includes(e.source));
