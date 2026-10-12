@@ -172,8 +172,7 @@ export function festivalAppearanceAsActivity(
   // A premature annual result cannot mark a still-running Festival as played.
   const datesFinished = appearance.festivalEndsOn < localToday;
   const status: ScheduledActivity["status"] =
-    appearance.sessionStatus === "completed"
-      || (appearance.festivalStatus === "completed" && datesFinished) ? "completed"
+    appearance.sessionStatus === "completed" ? "completed"
       : appearance.sessionStatus === "in_progress" ? "in_progress" : "scheduled";
 
   return {
