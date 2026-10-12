@@ -264,7 +264,7 @@ const TourManager = () => {
   } = useTourTravelRepair();
   const { catchUp } = useTourCatchUp();
 
-  const { data: otherToursData, isLoading: loadingOtherTours } = useQuery({
+  const { data: otherToursData, isLoading: loadingOtherTours, isError: otherToursError, refetch: retryOtherTours } = useQuery({
     queryKey: [
       "other-tours",
       currentBandId,
@@ -545,7 +545,7 @@ const TourManager = () => {
     myTours.reduce((sum, t) => sum + (t.total_revenue || 0), 0);
   const totalFame = bandTotals?.totalFame ?? 0;
   const upcomingShows = myTours.filter(
-    (t) => localTourDate(t.start_date) > new Date(),
+    (t) => !["cancelled", "completed"].includes(t.status) && localTourDate(t.start_date) > new Date(),
   ).length;
 
   const getStatusBadge = (status: string) => {
