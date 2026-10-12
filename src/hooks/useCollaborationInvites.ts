@@ -80,7 +80,7 @@ export const useCollaborationInvites = (projectId?: string) => {
   });
 
   // Fetch pending invitations for the current user (as invitee)
-  const { data: pendingInvitations, isLoading: loadingInvitations } = useQuery({
+  const { data: pendingInvitations, isLoading: loadingInvitations, isError: pendingInvitationsError, refetch: retryPendingInvitations } = useQuery({
     queryKey: ["pending-collaboration-invitations", activeProfileId],
     queryFn: async () => {
       if (!activeProfileId) return [];
@@ -252,6 +252,8 @@ export const useCollaborationInvites = (projectId?: string) => {
     loadingCollaborators,
     pendingInvitations,
     loadingInvitations,
+    pendingInvitationsError,
+    retryPendingInvitations,
     inviteCollaborator,
     respondToInvitation,
     cancelInvitation,
