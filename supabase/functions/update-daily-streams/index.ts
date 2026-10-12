@@ -70,10 +70,11 @@ Deno.serve(async (req) => {
         created_at,
         release_date,
         release_id,
-        songs!inner(band_id, quality_score)
+        songs!inner(band_id, quality_score, status)
       `)
       .eq('is_active', true)
       .eq('release_type', 'streaming')
+      .eq('songs.status', 'recorded')
       .lte('release_date', new Date().toISOString());
 
     if (streamingError) {
@@ -573,6 +574,15 @@ Deno.serve(async (req) => {
     
     console.log(`Updated ${streamUpdates} streaming releases and generated ${salesUpdates} sales (${errorCount} errors)`);
 
+    if (isEffectivelyFailed) {
+      await failJobRun({ jobName: 'update-daily-streams', runId,
+        supabaseClient: supabase, durationMs: Date.now() - startedAt,
+        error: new Error(`Streaming worker failed more than half of its operations (${errorCount} failures)`),
+        resultSummary: { streamUpdates, salesUpdates, errorCount, errorSamples, labelsCredited } });
+      return new Response(JSON.stringify({ success: false, streamUpdates, salesUpdates,
+        errors: errorCount, errorSamples, labelsCredited }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
     await completeJobRun({
       jobName: 'update-daily-streams',
       runId,

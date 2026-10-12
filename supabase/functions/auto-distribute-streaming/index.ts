@@ -95,6 +95,7 @@ Deno.serve(async (req) => {
             .select('id')
             .eq('song_id', releaseSong.song_id)
             .eq('platform_id', platformId)
+            .eq('release_id', release.id)
             .eq('release_type', 'streaming')
             .eq('is_active', true)
             .maybeSingle();
@@ -113,7 +114,7 @@ Deno.serve(async (req) => {
             }
             
             // Create song release with territory info
-            const { data: inactive } = await supabase.from('song_releases').select('id').eq('song_id',releaseSong.song_id).eq('platform_id',platformId).eq('release_type','streaming').eq('is_active',false).maybeSingle();
+            const { data: inactive } = await supabase.from('song_releases').select('id').eq('song_id',releaseSong.song_id).eq('platform_id',platformId).eq('release_id',release.id).eq('release_type','streaming').eq('is_active',false).maybeSingle();
             const releasePayload = {
                 song_id: releaseSong.song_id,
                 platform_id: platformId,
