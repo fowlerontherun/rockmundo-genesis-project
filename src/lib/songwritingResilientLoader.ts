@@ -70,7 +70,7 @@ const defaultProjectEnhancements = (project: any) => ({
 export async function loadSongwritingProjectsResilient(client: any, profileId?: string | null, userId?: string | null) {
   const failures: QueryFailure[] = [];
   const legacyUserFallbackAttempted = Boolean(isUuid(profileId) && isUuid(userId));
-  let coreQuery = client.from("songwriting_projects").select(CORE_PROJECT_COLUMNS).order("updated_at", { ascending: false }).limit(100);
+  let coreQuery = client.from("songwriting_projects").select(CORE_PROJECT_COLUMNS).order("updated_at", { ascending: false }).range(0,499);
   coreQuery = withOwnership(coreQuery, profileId, userId);
   const core = await coreQuery;
   if (core.error) {
@@ -78,7 +78,14 @@ export async function loadSongwritingProjectsResilient(client: any, profileId?: 
     logFailure(failure);
     throw Object.assign(core.error, { songwritingFailure: failure, songwritingFailures: [failure] });
   }
-  const projects = Array.isArray(core.data) ? core.data : [];
+  const projects = Array.isArray(core.data) ? [...core.data] : [];
+  for(let offset=500;projects.length===offset && offset<100_000;offset+=500){
+    let nextQuery=client.from("songwriting_projects").select(CORE_PROJECT_COLUMNS).order("updated_at",{ascending:false}).range(offset,offset+499);
+    nextQuery=withOwnership(nextQuery,profileId,userId);
+    const next=await nextQuery;
+    if(next.error) throw next.error;
+    projects.push(...(next.data??[]));
+  }
   const ids = projects.map((p: any) => p.id).filter(isUuid);
 
   let optionalById = new Map<string, any>();
