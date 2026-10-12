@@ -360,7 +360,7 @@ export const useGameEventNotifications = () => {
             .single();
           
           notify({
-              category: 'record_label',
+              category: 'social',
               type: 'offer',
               title: 'Band Invitation!',
               message: `You've been invited to join ${band?.name || 'a band'}!`,
@@ -416,7 +416,7 @@ export const useGameEventNotifications = () => {
           
           if (oldStatus !== 'completed' && newStatus === 'completed') {
             notify({
-              category: 'record_label',
+              category: 'music',
               type: 'success',
               title: 'Song Complete!',
               message: `"${payload.new.title || 'Your song'}" is finished! Quality: ${payload.new.quality_score || 'N/A'}`,
