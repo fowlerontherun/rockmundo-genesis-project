@@ -40,7 +40,7 @@ export const BooksTab = () => {
   );
 
   const isPurchased = (bookId: string) => 
-    purchases?.some((p) => p.book_id === bookId);
+    !libraryQueryFailed && purchases?.some((p) => p.book_id === bookId);
 
   const isCompleted = (bookId: string) => {
     const purchase = purchases?.find((p) => p.book_id === bookId);
@@ -369,7 +369,7 @@ export const BooksTab = () => {
                 <Lock className="mr-1 h-3 w-3" /> Unlock the previous skill tier first
               </Badge>
             )}
-            {selectedBook && !isBookLocked(selectedBook) && !isPurchased(selectedBook.id) && !isCompleted(selectedBook.id) && (
+            {selectedBook && !libraryQueryFailed && !isBookLocked(selectedBook) && !isPurchased(selectedBook.id) && !isCompleted(selectedBook.id) && (
               <Button onClick={() => handlePurchase(selectedBook)} className="w-full sm:w-auto">
                 Purchase for ${selectedBook.price}
               </Button>
