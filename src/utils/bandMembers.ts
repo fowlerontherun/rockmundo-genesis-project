@@ -135,17 +135,6 @@ export async function disbandBand(bandId: string, leaderId: string) {
       throw new Error('Only the band leader can disband the band');
     }
 
-    // 2. Log the disbanding before doing it
-    await supabase.from('band_history').insert({
-      band_id: bandId,
-      event_type: 'disbanded',
-      triggered_by: leaderId,
-      event_data: { 
-        disbanded_at: new Date().toISOString(),
-        band_name: band.name
-      }
-    });
-
     // 3. Update band status to disbanded
     const { error: updateError } = await supabase
       .from('bands')
@@ -157,6 +146,18 @@ export async function disbandBand(bandId: string, leaderId: string) {
 
     if (updateError) throw updateError;
 
+    const { error: historyError } = await supabase.from('band_history').insert({
+      band_id: bandId,
+      event_type: 'disbanded',
+      triggered_by: leaderId,
+      event_data: { 
+        disbanded_at: new Date().toISOString(),
+        band_name: band.name
+      }
+    });
+
+
+    if (historyError) throw historyError;
     return { success: true };
   } catch (error) {
     console.error('Error disbanding band:', error);
