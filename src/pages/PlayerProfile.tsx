@@ -104,15 +104,16 @@ export default function PlayerProfile() {
   const connection = usePlayerConnection(playerId);
   const socialPermission = useSocialPermission(playerId);
 
-  const { data: friendship } = useQuery({
+  const { data: friendship, isError: friendshipError, refetch: retryFriendship } = useQuery({
     queryKey: ["friendship-status", currentUser?.id, playerId],
     queryFn: async () => {
       if (!currentUser?.id || !playerId || currentUser.id === playerId) return null;
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("friendships")
         .select("id, status, requestor_id, addressee_id")
         .or(`and(requestor_id.eq.${currentUser.id},addressee_id.eq.${playerId}),and(requestor_id.eq.${playerId},addressee_id.eq.${currentUser.id})`)
         .maybeSingle();
+      if (error) throw error;
       return data;
     },
     enabled: !!currentUser?.id && !!playerId && currentUser?.id !== playerId,
@@ -231,9 +232,9 @@ export default function PlayerProfile() {
   const isOwnProfile = currentUser?.id === playerId;
   const restrictedBySafety = Boolean(socialPermission.data?.is_interaction_restricted);
   const blockedByViewer = Boolean(socialPermission.data?.is_blocked_by_viewer);
-  const isFriend = friendship?.status === "accepted";
-  const isPendingSent = friendship?.status === "pending" && friendship?.requestor_id === currentUser?.id;
-  const isPendingReceived = friendship?.status === "pending" && friendship?.addressee_id === currentUser?.id;
+  const isFriend = !restrictedBySafety && !friendshipError && friendship?.status === "accepted";
+  const isPendingSent = !restrictedBySafety && !friendshipError && friendship?.status === "pending" && friendship?.requestor_id === currentUser?.id;
+  const isPendingReceived = !restrictedBySafety && !friendshipError && friendship?.status === "pending" && friendship?.addressee_id === currentUser?.id;
 
   const shareMoment: CharacterProfileShareMoment = {
     version: 1,
