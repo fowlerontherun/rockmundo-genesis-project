@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { verifyReplicateAttempt } from "../_shared/replicateWebhookAuth.ts"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,8 +20,9 @@ serve(async (req) => {
     const prediction = await req.json()
     const url = new URL(req.url)
     
-    // Handle song audio callbacks only.
     const songId = url.searchParams.get('songId')
+    const attemptId = url.searchParams.get('attemptId')
+    const callbackSignature = url.searchParams.get('signature')
     
     console.log(`[replicate-webhook] Received webhook for prediction ${prediction.id}, status: ${prediction.status}`)
 
@@ -32,7 +34,30 @@ serve(async (req) => {
       })
     }
 
-    console.log(`[replicate-webhook] Processing for song: ${songId}`)
+    // No client-provided JWT is required, but every callback must carry a
+    // server-signed token tied to the exact song and attempt.
+    if (!attemptId || !callbackSignature ||
+        !(await verifyReplicateAttempt(attemptId, songId, callbackSignature, supabaseServiceKey))) {
+      return new Response(JSON.stringify({ error: "Unauthorized provider callback" }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+    const { data: latest, error: attemptError } = await supabase
+      .from('song_generation_attempts')
+      .select('id, song_id, prediction_id, status')
+      .eq('song_id', songId).order('started_at', { ascending: false }).limit(1).maybeSingle()
+    if (attemptError) throw attemptError
+    if (!latest || latest.id !== attemptId || latest.status !== 'generating') {
+      return new Response(JSON.stringify({ success: true, status: "stale_callback_ignored" }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+    if (latest.prediction_id && latest.prediction_id !== prediction.id) {
+      return new Response(JSON.stringify({ error: "Prediction mismatch" }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+    console.log(`[replicate-webhook] Verified current attempt ${attemptId} for song: ${songId}`)
 
     if (prediction.status === 'failed' || prediction.status === 'canceled') {
       console.error(`[replicate-webhook] Prediction ${prediction.status}:`, prediction.error)
@@ -49,7 +74,7 @@ serve(async (req) => {
           completed_at: new Date().toISOString(),
           error_message: prediction.error || prediction.status
         })
-        .eq('song_id', songId)
+        .eq('id', attemptId)
         .eq('status', 'generating')
 
       return new Response(JSON.stringify({ success: true, status: 'failed' }), {
@@ -170,7 +195,7 @@ serve(async (req) => {
         status: 'completed',
         completed_at: new Date().toISOString()
       })
-      .eq('song_id', songId)
+      .eq('id', attemptId)
       .eq('status', 'generating')
 
     console.log(`[replicate-webhook] SUCCESS: Song ${songId} audio saved`)
