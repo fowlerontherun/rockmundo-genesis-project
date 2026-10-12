@@ -53,7 +53,7 @@ export function MyAirplayStats({ userId }: MyAirplayStatsProps) {
       const totalStreamsBoost = allPlays?.reduce((sum, p) => sum + (p.streams_boost || 0), 0) || 0;
 
       // Count unique stations
-      const activeStations = new Set(allPlays?.map((p) => p.station_id) || []).size;
+      const activeStations = new Set(weeklyPlays.map((p) => p.station_id)).size;
 
       // Find top song
       const songPlayCounts: Record<string, number> = {};
