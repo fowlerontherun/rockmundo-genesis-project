@@ -177,6 +177,7 @@ Deno.serve(async (req) => {
       `)
       .eq("status", "pending")
       .lt("submitted_at", new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString())
+      .order("submitted_at", { ascending: true })
       .limit(50);
 
     if (demosError) {
@@ -322,10 +323,11 @@ Deno.serve(async (req) => {
 
         // Check genre match
         const labelGenres = label.genre_focus ?? [];
-        const songGenre = song.genre?.toLowerCase() ?? "";
-        const genreMatch = labelGenres.some((g: string) =>
-          g.toLowerCase().includes(songGenre) || songGenre.includes(g.toLowerCase())
-        );
+        const songGenre = song.genre?.trim().toLowerCase() ?? "";
+        const genreMatch = Boolean(songGenre) && labelGenres.some((g: string) => {
+          const labelGenre = g.trim().toLowerCase();
+          return Boolean(labelGenre) && (labelGenre.includes(songGenre) || songGenre.includes(labelGenre));
+        });
 
         // Decide if accepted — A&R skill affects acceptance threshold
         const decision = shouldAcceptDemo(

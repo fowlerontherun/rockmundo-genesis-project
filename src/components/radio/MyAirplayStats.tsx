@@ -38,12 +38,19 @@ export function MyAirplayStats({ userId }: MyAirplayStatsProps) {
       const songIds = userSongs.map((s) => s.id);
 
       // Get all radio plays for user's songs
-      const { data: allPlays, error: playsError } = await supabase
+      const allPlays: Array<{ id: string; listeners: number | null; hype_gained: number | null; streams_boost: number | null; station_id: string | null; song_id: string; played_at: string | null }> = [];
+      for (let offset = 0; ; offset += 500) {
+      const { data: page, error: playsError } = await supabase
         .from("radio_plays")
         .select("id, listeners, hype_gained, streams_boost, station_id, song_id, played_at")
-        .in("song_id", songIds);
-
+        .in("song_id", songIds)
+        .order("played_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(offset, offset + 499);
       if (playsError) throw playsError;
+      allPlays.push(...(page ?? []));
+      if (!page || page.length < 500) break;
+      }
       // Get plays from last 7 days
       const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const weeklyPlays = allPlays?.filter((p) => p.played_at && p.played_at >= weekAgo) || [];

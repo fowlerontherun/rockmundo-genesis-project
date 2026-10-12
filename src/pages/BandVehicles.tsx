@@ -94,7 +94,7 @@ export default function BandVehicles() {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
 
   // Fetch user's band
-  const { data: band } = useQuery({
+  const { data: band, isPending: bandLoading, isError: bandError, refetch: retryBand } = useQuery({
     queryKey: ["user-band", profileId],
     queryFn: async () => {
       if (!profileId) return null;
@@ -254,6 +254,9 @@ export default function BandVehicles() {
     if (percent >= 25) return "text-orange-500";
     return "text-red-500";
   };
+
+  if (bandLoading) return <FMPageScaffold title="Band Vehicles" icon={Truck} backTo="/hub/band"><p role="status">Loading your band...</p></FMPageScaffold>;
+  if (bandError) return <FMPageScaffold title="Band Vehicles" icon={Truck} backTo="/hub/band"><Alert variant="destructive"><AlertTriangle className="h-4 w-4" /><AlertTitle>Unable to check band membership</AlertTitle><AlertDescription>Band details could not be loaded. <Button variant="outline" size="sm" onClick={() => void retryBand()}>Retry</Button></AlertDescription></Alert></FMPageScaffold>;
 
   if (!band) {
     return (

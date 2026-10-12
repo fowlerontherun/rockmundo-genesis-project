@@ -442,7 +442,12 @@ export default function Employment() {
       // Apply health drain
       const newHealth = Math.max(0, (profile.health || 100) + (job.health_impact_per_shift || 0));
       const newEnergy = Math.max(0, (profile.energy || 100) - (job.energy_cost_per_shift || 0));
-      await supabase.from("profiles").update({ health: newHealth, energy: newEnergy }).eq("id", profile.id);
+      const { error: wellnessError } = await supabase.from("profiles").update({ health: newHealth, energy: newEnergy }).eq("id", profile.id);
+      if (wellnessError) {
+        // Shift and activity rows already exist: report the partial update without
+        // treating the completed clock-in as retryable (which could duplicate it).
+        toast({ title: "Shift started, but wellness could not be updated", description: wellnessError.message, variant: "destructive" });
+      }
 
       return shift;
     },

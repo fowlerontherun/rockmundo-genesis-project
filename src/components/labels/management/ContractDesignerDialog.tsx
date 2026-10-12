@@ -261,7 +261,7 @@ export function ContractDesignerDialog({
                 <Input
                   type="number"
                   value={singleQuota}
-                  onChange={(e) => setSingleQuota(Math.max(0, Number(e.target.value)))}
+                  onChange={(e) => setSingleQuota(Math.min(20, Math.max(0, Math.trunc(Number(e.target.value) || 0))))}
                   min={0}
                   max={20}
                 />
@@ -271,7 +271,7 @@ export function ContractDesignerDialog({
                 <Input
                   type="number"
                   value={albumQuota}
-                  onChange={(e) => setAlbumQuota(Math.max(0, Number(e.target.value)))}
+                  onChange={(e) => setAlbumQuota(Math.min(10, Math.max(0, Math.trunc(Number(e.target.value) || 0))))}
                   min={0}
                   max={10}
                 />
@@ -285,7 +285,7 @@ export function ContractDesignerDialog({
                 <Input
                   type="number"
                   value={termMonths}
-                  onChange={(e) => setTermMonths(Math.max(6, Number(e.target.value)))}
+                  onChange={(e) => setTermMonths(Math.min(60, Math.max(6, Math.trunc(Number(e.target.value) || 6))))}
                   min={6}
                   max={60}
                 />
