@@ -397,58 +397,10 @@ export default function Employment() {
         throw new Error("You must be in the job's city to clock in");
       }
 
-      const [startHour, startMin] = job.start_time.split(':').map(Number);
-      const [endHour, endMin] = job.end_time.split(':').map(Number);
-      const hours = ((endHour + endMin / 60) - (startHour + startMin / 60) + 24) % 24 || 24;
-      const earnings = Math.round(job.hourly_wage * hours);
-
-      const { data: shift, error: shiftError } = await supabase
-        .from("shift_history")
-        .insert([{
-          employment_id: currentEmployment.id,
-          profile_id: profile.id,
-          job_id: job.id,
-          shift_date: new Date().toISOString().split('T')[0],
-          clock_in_time: new Date().toISOString(),
-          earnings: earnings,
-          health_impact: job.health_impact_per_shift,
-          fame_impact: job.fame_impact_per_shift,
-          xp_earned: Math.round(earnings / 10),
-          status: "in_progress"
-        }])
-        .select()
-        .single();
-
-      if (shiftError) throw shiftError;
-
-      const now = new Date();
-      const endTime = new Date(now);
-      endTime.setHours(endHour, endMin, 0, 0);
-      if (endTime.getTime() <= now.getTime()) endTime.setDate(endTime.getDate() + 1);
-
-      const { error: statusError } = await supabase
-        .from("profile_activity_statuses")
-        .insert([{
-          profile_id: profile.id,
-          activity_type: "work_shift",
-          status: "active",
-          started_at: now.toISOString(),
-          ends_at: endTime.toISOString(),
-          metadata: { job_id: job.id, shift_history_id: shift.id, earnings_pending: earnings }
-        }]);
-
-      if (statusError) throw statusError;
-
-      // Apply health drain
-      const newHealth = Math.max(0, (profile.health || 100) + (job.health_impact_per_shift || 0));
-      const newEnergy = Math.max(0, (profile.energy || 100) - (job.energy_cost_per_shift || 0));
-      const { error: wellnessError } = await supabase.from("profiles").update({ health: newHealth, energy: newEnergy }).eq("id", profile.id);
-      if (wellnessError) {
-        // Shift and activity rows already exist: report the partial update without
-        // treating the completed clock-in as retryable (which could duplicate it).
-        toast({ title: "Shift started, but wellness could not be updated", description: wellnessError.message, variant: "destructive" });
-      }
-
+      const { data: shift, error } = await (supabase as any).rpc("clock_in_work_shift_atomic", {
+        p_profile_id: profile.id, p_employment_id: currentEmployment.id,
+      });
+      if (error) throw error;
       return shift;
     },
     onSuccess: () => {
