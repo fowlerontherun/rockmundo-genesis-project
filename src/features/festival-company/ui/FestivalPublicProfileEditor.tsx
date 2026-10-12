@@ -52,6 +52,8 @@ export function FestivalPublicProfileEditor({ festivalCompanyId }: { festivalCom
   const plan = useFestivalLaunchPlan(festivalCompanyId);
   const save = useSaveFestivalPublicProfile();
   const [draft, setDraft] = useState<ProfileDraft>(emptyDraft);
+  const [dirty, setDirty] = useState(false);
+  useEffect(() => setDirty(false), [festivalCompanyId]);
 
   const existing = useMemo(() => {
     const raw = plan.data as { publicProfile?: Record<string, unknown> | null } | undefined;
@@ -60,7 +62,7 @@ export function FestivalPublicProfileEditor({ festivalCompanyId }: { festivalCom
   }, [plan.data]);
 
   useEffect(() => {
-    if (!existing) return;
+    if (!existing || dirty) return;
     setDraft({
       publicName: asString(existing.publicName ?? existing.public_name),
       tagline: asString(existing.tagline),
@@ -76,13 +78,13 @@ export function FestivalPublicProfileEditor({ festivalCompanyId }: { festivalCom
       termsSummary: asString(existing.termsSummary ?? existing.terms_summary),
       contactSummary: asString(existing.contactSummary ?? existing.contact_summary),
     });
-  }, [existing]);
+  }, [existing, dirty]);
 
   const expectedVersion = Number(existing?.publicVersion ?? existing?.public_version ?? 0) || 0;
   const slug = draft.publicSlug ? slugify(draft.publicSlug) : slugify(draft.publicName);
 
   const set = (key: keyof ProfileDraft) => (event: { target: { value: string } }) =>
-    setDraft((current) => ({ ...current, [key]: event.target.value }));
+    { setDirty(true); setDraft((current) => ({ ...current, [key]: event.target.value })); };
 
   const submit = () => {
     if (!draft.publicName.trim()) {
