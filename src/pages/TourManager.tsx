@@ -174,7 +174,7 @@ const TourManager = () => {
           .select("id, name, country, latitude, longitude")
           .order("name").order("id").range(offset, offset + 499);
         if (error) throw error;
-        cities.push(...(data ?? []));
+        cities.push(...(data ?? []).map(city => ({ ...city, country: city.country ?? "" })));
         if (!data || data.length < 500) break;
       }
       return cities;
@@ -406,7 +406,7 @@ const TourManager = () => {
       if (venuesResult.error) throw venuesResult.error;
       if (citiesResult.error) throw citiesResult.error;
       if (gigsResult.error) throw gigsResult.error;
-      const extraIds = [...new Set((venuesResult.data ?? []).map(v => v.city_id).filter((id): id is string => Boolean(id) && !cityIdSet.has(id)))];
+      const extraIds = [...new Set((venuesResult.data ?? []).map(v => v.city_id).filter((id): id is string => typeof id === "string" && id.length > 0 && !cityIdSet.has(id)))];
       const extraCities = extraIds.length ? await supabase.from("cities")
         .select("id, name, country, latitude, longitude").in("id", extraIds) : { data: [], error: null };
       if (extraCities.error) throw extraCities.error;
