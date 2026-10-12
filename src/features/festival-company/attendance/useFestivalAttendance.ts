@@ -19,14 +19,14 @@ export const useMyFestivalAttendance = (enabled = true) => {
     queryKey: [...festivalPlayerAttendanceKey, profileId],
     queryFn: getMyFestivalAttendance,
     enabled: enabled && !!profileId,
-    staleTime: 5 * 60_000,
+    staleTime: 30_000,
     // This hook is mounted by the shared Layout on every authenticated route.
     // A one-minute polling loop caused the whole app shell to re-render even for
     // players who were nowhere near a festival. Attendance mutations explicitly
     // invalidate this query, so keep only a low-frequency safety refresh here.
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    refetchInterval: 5 * 60_000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchInterval: 60_000,
     refetchIntervalInBackground: false,
   });
 };
