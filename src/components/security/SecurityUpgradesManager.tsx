@@ -108,31 +108,12 @@ export function SecurityUpgradesManager({ firmId, companyBalance = 0 }: Security
         throw new Error('Maximum level reached');
       }
 
-      // Deduct from company balance
-      const companyId = await getCompanyIdFromSecurityFirm(firmId);
-      await deductCompanyBalance({
-        companyId,
-        amount: cost,
-        description: `Security upgrade: ${upgradeType.name} Lv${newLevel}`,
-        category: "upgrade",
+      const { data: installed, error } = await (supabase as any).rpc("purchase_security_firm_upgrade_atomic", {
+        p_firm_id: firmId,
+        p_upgrade_type: upgradeType.type,
       });
-
-      // Insert or update upgrade
-      const { error } = await supabase
-        .from('security_firm_upgrades')
-        .upsert({
-          security_firm_id: firmId,
-          upgrade_type: upgradeType.type,
-          name: upgradeType.name,
-          level: newLevel,
-          cost: cost,
-          effect_value: effect,
-          effect_description: `+${effect}${upgradeType.effectLabel}`,
-        }, {
-          onConflict: 'security_firm_id,upgrade_type',
-        });
-
       if (error) throw error;
+      if (!installed?.level) throw new Error("Security upgrade did not confirm installation");
       return { cost, newLevel };
     },
     onSuccess: (data) => {
