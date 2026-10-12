@@ -174,8 +174,9 @@ export function EnrollmentProgressCard({ enrollment, onDropCourse }: EnrollmentP
             </h4>
             <div className="space-y-2">
               {attendanceRecords
-                .slice(-5)
-                .reverse()
+                .slice()
+                .sort((a, b) => (b.attendance_date ?? "").localeCompare(a.attendance_date ?? ""))
+                .slice(0, 5)
                 .map((record, idx) => {
                   const attendanceDate = record.attendance_date ? new Date(record.attendance_date) : null;
                   const isValidDate = attendanceDate && !isNaN(attendanceDate.getTime());
