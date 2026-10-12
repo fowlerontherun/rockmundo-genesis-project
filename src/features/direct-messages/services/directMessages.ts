@@ -33,11 +33,12 @@ function friendlyDirectMessageError(message?: string) {
   return message;
 }
 
-export async function sendDirectMessage(recipientProfileId: string, body: string): Promise<DirectMessageRow> {
+export async function sendDirectMessage(recipientProfileId: string, body: string, clientMessageId: string): Promise<DirectMessageRow> {
   const input = validateDirectMessageInput(recipientProfileId, body);
-  const { data, error } = await (supabase as any).rpc("send_direct_message", {
-    recipient_profile_id: input.recipientProfileId,
-    message_body: input.body,
+  const { data, error } = await (supabase as any).rpc("send_direct_message_idempotent", {
+    p_recipient_profile_id: input.recipientProfileId,
+    p_message_body: input.body,
+    p_client_message_id: clientMessageId,
   });
 
   if (error) throw new Error(friendlyDirectMessageError(error.message));
