@@ -177,7 +177,7 @@ Deno.serve(async (req) => {
     let releaseMarketingPowerMap = new Map<string, number>();
     let releasePrReachMap = new Map<string, { power: number; updatedAt: string | null }>();
     let releaseMarketingStrategyMap = new Map<string, { focus: string; regions: string[]; saturation: number }>();
-    const strategyPriorityBySong = new Map<string, number>();
+    const strategyPriorityBySong = new Map<string, { power: number; releaseId: string }>();
     if (songIds.length > 0) {
       const eligibleReleaseIds = new Set((streamingReleases || []).map(r => r.release_id).filter(Boolean));
       const { data: releaseSongData } = await supabase
@@ -208,8 +208,10 @@ Deno.serve(async (req) => {
             }
             // Keep a deterministic strategy from the strongest funded canonical edition.
             const strategyPriority = Number(rel.label_marketing_power || 0);
-            if (strategyPriority > (strategyPriorityBySong.get(rs.song_id) ?? -1)) {
-              strategyPriorityBySong.set(rs.song_id, strategyPriority);
+            const previousStrategy = strategyPriorityBySong.get(rs.song_id);
+            if (!previousStrategy || strategyPriority > previousStrategy.power ||
+                (strategyPriority === previousStrategy.power && String(rs.release_id) < previousStrategy.releaseId)) {
+              strategyPriorityBySong.set(rs.song_id, { power: strategyPriority, releaseId: String(rs.release_id) });
               const rawFocus = String(rel.label_marketing_focus || "balanced").trim().toLowerCase();
               const normalizedFocus = rawFocus === "streaming" ? "playlist" :
                 (["balanced", "radio", "playlist", "social", "retail"].includes(rawFocus) ? rawFocus : "balanced");
