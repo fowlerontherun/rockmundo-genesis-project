@@ -130,7 +130,7 @@ export const BooksTab = () => {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter(b =>
         b.title.toLowerCase().includes(q) ||
-        b.author.toLowerCase().includes(q) ||
+        (b.author ?? "").toLowerCase().includes(q) ||
         (b.skill_display_name || b.skill_slug || "").toLowerCase().includes(q)
       );
     }
