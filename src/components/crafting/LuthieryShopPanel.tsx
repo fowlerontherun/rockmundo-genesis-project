@@ -526,7 +526,7 @@ export const LuthieryShopPanel = () => {
               </CardHeader>
               <CardContent>
                 <ShopSettingsForm
-                  key={`${myShop.id}:${myShop.updated_at ?? ""}`}
+                  key={myShop.id}
                   shop={myShop}
                   currentCityName={profile?.city?.name}
                   isBusy={isUpdatingShop}
