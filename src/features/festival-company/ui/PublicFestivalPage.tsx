@@ -537,9 +537,9 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                 <p className="mt-1 text-sm text-muted-foreground">
                   The festival runs from {new Date(f.startsAt).toLocaleDateString("en-GB", { day: "numeric", month: "long" })} to {new Date(f.endsAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}.
                 </p>
-                {f.timetable.length > 0 ? (
+                {confirmedLineup.some((act) => act.startsAt && act.endsAt) ? (
                   <>
-                    <p className="mt-3 text-sm">{f.timetable.length} published performance{f.timetable.length === 1 ? "" : "s"} across {new Set(f.timetable.map((slot) => slot.stageId)).size} stage{new Set(f.timetable.map((slot) => slot.stageId)).size === 1 ? "" : "s"}.</p>
+                    <p className="mt-3 text-sm">{confirmedLineup.filter((act) => act.startsAt && act.endsAt).length} confirmed published performance{confirmedLineup.filter((act) => act.startsAt && act.endsAt).length === 1 ? "" : "s"}.</p>
                     <p className="mt-2 text-sm">See the <strong>Timetable</strong> tab for confirmed stage times.</p>
                   </>
                 ) : <p className="mt-3 text-sm text-muted-foreground">Performance times have not been published yet. Gate opening and curfew times are not confirmed.</p>}

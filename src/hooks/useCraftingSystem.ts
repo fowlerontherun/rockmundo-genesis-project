@@ -157,7 +157,8 @@ export const useCraftingSystem = () => {
         .from("crafting_sessions")
         .select("*, recipe:crafting_recipes(*)")
         .eq("profile_id", profileId)
-        .order("started_at", { ascending: false });
+        .order("started_at", { ascending: false })
+        .limit(200);
       if (error) throw error;
       return data as CraftingSession[];
     },

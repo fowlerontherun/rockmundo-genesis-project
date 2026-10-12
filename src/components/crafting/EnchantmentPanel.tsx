@@ -55,7 +55,7 @@ export const EnchantmentPanel = () => {
     ? getEnchantmentsForEquipment(selectedEquipment)
     : [];
 
-  const categories = Object.keys(CATEGORY_LABELS);
+  const categories = Array.from(new Set([...Object.keys(CATEGORY_LABELS), ...catalog.map(item => item.category)]));
 
   const formatStatMods = (mods: Record<string, number>) =>
     Object.entries(mods)
@@ -170,7 +170,7 @@ export const EnchantmentPanel = () => {
               const catEnchantments = catalog.filter((e) => e.category === cat);
               if (catEnchantments.length === 0) return null;
               const isExpanded = expandedCategory === cat;
-              const info = CATEGORY_LABELS[cat];
+              const info = CATEGORY_LABELS[cat] ?? { label: cat.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()), icon: "✨" };
 
               return (
                 <div key={cat}>

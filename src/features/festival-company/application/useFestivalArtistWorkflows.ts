@@ -63,6 +63,9 @@ const invalidateArtistState = async (
     client.invalidateQueries({ queryKey: festivalArtistOpportunitiesKey }),
     client.invalidateQueries({ queryKey: ["festival-company-setup"] }),
     client.invalidateQueries({ queryKey: ["festival-company-editions"] }),
+    client.invalidateQueries({ queryKey: ["public-festival"] }),
+    client.invalidateQueries({ queryKey: ["public-festival-timetable"] }),
+    client.invalidateQueries({ queryKey: ["festival-directory"] }),
     client.invalidateQueries({ queryKey: ["notifications"] }),
     client.invalidateQueries({ queryKey: ["mail"] }),
   ]);
