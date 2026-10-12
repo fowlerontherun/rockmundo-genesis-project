@@ -2,7 +2,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { startOfDay, endOfDay, addDays } from "date-fns";
+import { startOfDay, endOfDay, addDays, format } from "date-fns";
+import { assertWellnessAllows } from "@/hooks/useActivityBooking";
+import { getActiveProfile } from "@/services/profileService";
 import { getDurationMinutes, validateBookingWindow } from "@/utils/activityBookingTime";
 import { withoutDuplicateBandScheduleActivities } from "@/utils/bandActivityScheduling";
 import { appearanceOnLocalDay, fetchMyBandFestivalAppearances, festivalAppearanceAsActivity, localFestivalDate } from "@/features/festivals/appearances/bandFestivalAppearances";
@@ -55,20 +57,12 @@ export interface CreateActivityData {
 export function useScheduledActivities(date: Date, userId?: string) {
   const { profileId } = useActiveProfile();
   return useQuery({
-    queryKey: ['scheduled-activities', date.toISOString().split('T')[0], userId, profileId],
+    queryKey: ['scheduled-activities', format(date, 'yyyy-MM-dd'), userId, profileId],
     queryFn: async () => {
       if (!userId) return [];
 
-      // Get the active profile for this user
-      const { data: activeProfile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('is_active', true)
-        .is('died_at', null)
-        .maybeSingle();
-
-      if (!activeProfile) return [];
+      if (!profileId) return [];
+      const activeProfile = { id: profileId };
 
       const dayStart = startOfDay(date);
       const dayEnd = endOfDay(date);
@@ -78,8 +72,8 @@ export function useScheduledActivities(date: Date, userId?: string) {
         .from('player_scheduled_activities')
         .select('*')
         .eq('profile_id', activeProfile.id)
-        .gte('scheduled_start', dayStart.toISOString())
         .lte('scheduled_start', dayEnd.toISOString())
+        .gte('scheduled_end', dayStart.toISOString())
         .in('status', ['scheduled', 'in_progress', 'completed']);
 
       if (scheduledError) throw scheduledError;
@@ -87,7 +81,7 @@ export function useScheduledActivities(date: Date, userId?: string) {
       // Fetch active work shifts from profile_activity_statuses
       let workShifts: any[] = [];
       if (activeProfile) {
-        const { data: activeWorkShifts } = await supabase
+        const { data: activeWorkShifts, error: workError } = await supabase
           .from('profile_activity_statuses')
           .select('*, metadata')
           .eq('profile_id', activeProfile.id)
@@ -95,6 +89,8 @@ export function useScheduledActivities(date: Date, userId?: string) {
           .gte('ends_at', dayStart.toISOString())
           .lte('started_at', dayEnd.toISOString());
         
+        if (workError) throw workError;
+
         // Convert to scheduled activity format (for any that don't have a player_scheduled_activities entry)
         workShifts = (activeWorkShifts || []).map((shift: any) => ({
           id: `work_${shift.id}`,
@@ -115,12 +111,13 @@ export function useScheduledActivities(date: Date, userId?: string) {
       }
 
       // Get user's band IDs for filtering
-      const { data: userBands } = await supabase
+      const { data: userBands, error: bandsError } = await supabase
         .from('band_members')
         .select('band_id')
         .eq('profile_id', activeProfile.id)
         .eq('member_status', 'active');
       
+      if (bandsError) throw bandsError;
       const userBandIds = userBands?.map(b => b.band_id) || [];
 
       // The same confirmed booking belongs on every active member's calendar.
@@ -131,13 +128,13 @@ export function useScheduledActivities(date: Date, userId?: string) {
             .filter((appearance) => userBandIds.includes(appearance.bandId) && appearanceOnLocalDay(appearance, date))
             .map((appearance) => festivalAppearanceAsActivity(appearance, userId, activeProfile.id));
         } catch (error) {
-          console.warn("Could not load confirmed Festival appearances", error);
+          throw new Error("Could not verify confirmed Festival appearances", { cause: error });
         }
       }
 
       // Fetch gigs for user's bands
       // Use date-only comparison to avoid timezone issues
-      const dateString = date.toISOString().split('T')[0];
+      const dateString = format(date, 'yyyy-MM-dd');
       
       let gigs: any[] = [];
       if (userBandIds.length > 0) {
@@ -157,12 +154,11 @@ export function useScheduledActivities(date: Date, userId?: string) {
           .lt('scheduled_date', dayAfter.toISOString())
           .in('status', ['scheduled', 'in_progress', 'completed', 'confirmed']);
         
-        if (gigsError) {
-          console.error('Error fetching gigs for schedule:', gigsError);
-        } else {
+        if (gigsError) throw gigsError;
+        else {
           // Filter to only gigs on the actual requested date (client-side for timezone accuracy)
           const filteredGigs = (bandGigs || []).filter((g: any) => {
-            const gigDate = new Date(g.scheduled_date).toISOString().split('T')[0];
+            const gigDate = format(new Date(g.scheduled_date), 'yyyy-MM-dd');
             return gigDate === dateString;
           });
           gigs = filteredGigs;
@@ -172,36 +168,41 @@ export function useScheduledActivities(date: Date, userId?: string) {
       // Fetch rehearsals for user's bands
       let rehearsals: any[] = [];
       if (userBandIds.length > 0) {
-        const { data: bandRehearsals } = await supabase
+        const { data: bandRehearsals, error: rehearsalError } = await supabase
           .from('band_rehearsals')
           .select('*, rehearsal_rooms(name, location), bands:band_id(name)')
           .in('band_id', userBandIds)
-          .gte('scheduled_start', dayStart.toISOString())
           .lte('scheduled_start', dayEnd.toISOString())
+          .gte('scheduled_end', dayStart.toISOString())
           .in('status', ['scheduled', 'in_progress', 'completed']);
+        if (rehearsalError) throw rehearsalError;
         rehearsals = bandRehearsals || [];
       }
 
       // Fetch recordings
-      const { data: recordings } = await supabase
+      const { data: recordings, error: recordingError } = await supabase
         .from('recording_sessions')
         .select('*, city_studios(name), songs:song_id(title)')
-        .eq('user_id', userId)
-        .gte('scheduled_start', dayStart.toISOString())
+        .eq('profile_id', activeProfile.id)
         .lte('scheduled_start', dayEnd.toISOString())
+        .gte('scheduled_end', dayStart.toISOString())
         .in('status', ['scheduled', 'in_progress', 'completed']);
+
+      if (recordingError) throw recordingError;
 
       // TODO(release): Jam-session and lesson-specific tables should be integrated here once their canonical booked-data source is confirmed.
 
       // Fetch tour travel legs for user's bands
       let travelLegs: any[] = [];
       if (userBandIds.length > 0) {
-        const { data: tourTravelLegs } = await (supabase as any)
+        const { data: tourTravelLegs, error: travelError } = await (supabase as any)
           .from('tour_travel_legs')
           .select('*, from_city:from_city_id(name), to_city:to_city_id(name), tours!inner(band_id, name, status)')
-          .gte('departure_date', dayStart.toISOString())
           .lte('departure_date', dayEnd.toISOString())
+          .gte('arrival_date', dayStart.toISOString())
+          .in('tours.band_id', userBandIds)
           .neq('status', 'cancelled');
+        if (travelError) throw travelError;
         
         // Filter for user's bands and exclude cancelled tours
         travelLegs = (tourTravelLegs || []).filter((leg: any) => 
@@ -213,16 +214,17 @@ export function useScheduledActivities(date: Date, userId?: string) {
       // Fetch releases in manufacturing status for user's bands
       let releaseActivities: ScheduledActivity[] = [];
       if (userBandIds.length > 0) {
-        const { data: manufacturingReleases } = await supabase
+        const { data: manufacturingReleases, error: releaseError } = await supabase
           .from('releases')
           .select('*, bands(name)')
           .in('band_id', userBandIds)
           .not('manufacturing_complete_at', 'is', null);
+        if (releaseError) throw releaseError;
         
         releaseActivities = (manufacturingReleases || [])
           .filter((r: any) => {
             // Show on the day manufacturing completes
-            const completeDate = new Date(r.manufacturing_complete_at).toISOString().split('T')[0];
+            const completeDate = format(new Date(r.manufacturing_complete_at), 'yyyy-MM-dd');
             return completeDate === dateString;
           })
           .map((r: any) => ({
@@ -232,7 +234,7 @@ export function useScheduledActivities(date: Date, userId?: string) {
             activity_type: 'release_manufacturing' as const,
             scheduled_start: new Date(new Date(r.manufacturing_complete_at).setHours(12, 0, 0, 0)).toISOString(),
             scheduled_end: new Date(new Date(r.manufacturing_complete_at).setHours(13, 0, 0, 0)).toISOString(),
-            status: 'scheduled' as const,
+            status: (Date.parse(r.manufacturing_complete_at) <= Date.now() ? 'completed' : 'scheduled') as ActivityStatus,
             title: `📀 Release Ready: ${r.title}`,
             description: `${r.bands?.name} — ${r.release_type}`,
             metadata: { auto_scheduled: true, release_id: r.id, release_type: r.release_type },
@@ -270,7 +272,7 @@ export function useScheduledActivities(date: Date, userId?: string) {
           activity_type: 'travel' as const,
           scheduled_start: t.departure_date,
           scheduled_end: t.arrival_date,
-          status: 'scheduled' as const,
+          status: (t.status === 'completed' ? 'completed' : t.status === 'in_progress' || t.status === 'traveling' ? 'in_progress' : 'scheduled') as ActivityStatus,
           title: `Tour Travel: ${t.from_city?.name} → ${t.to_city?.name}`,
           location: t.travel_mode,
           metadata: { tour_travel_leg: true, tour_name: t.tours?.name },
@@ -299,20 +301,12 @@ export function useScheduledActivities(date: Date, userId?: string) {
 export function useWeekScheduledActivities(startDate: Date, userId?: string) {
   const { profileId } = useActiveProfile();
   return useQuery({
-    queryKey: ['week-scheduled-activities', startDate.toISOString().split('T')[0], userId, profileId],
+    queryKey: ['week-scheduled-activities', format(startDate, 'yyyy-MM-dd'), userId, profileId],
     queryFn: async () => {
       if (!userId) return [];
 
-      // Get the active profile for this user
-      const { data: activeProfile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('is_active', true)
-        .is('died_at', null)
-        .maybeSingle();
-
-      if (!activeProfile) return [];
+      if (!profileId) return [];
+      const activeProfile = { id: profileId };
 
       const weekStart = startOfDay(startDate);
       const weekEnd = endOfDay(addDays(startDate, 6));
@@ -321,8 +315,8 @@ export function useWeekScheduledActivities(startDate: Date, userId?: string) {
         .from('player_scheduled_activities')
         .select('*')
         .eq('profile_id', activeProfile.id)
-        .gte('scheduled_start', weekStart.toISOString())
         .lte('scheduled_start', weekEnd.toISOString())
+        .gte('scheduled_end', weekStart.toISOString())
         .in('status', ['scheduled', 'in_progress', 'completed'])
         .order('scheduled_start', { ascending: true });
 
