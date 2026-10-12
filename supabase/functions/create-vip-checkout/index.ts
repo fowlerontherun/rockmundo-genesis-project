@@ -64,11 +64,12 @@ serve(async (req) => {
     }
 
     // Check if customer exists
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+    const customers = await stripe.customers.list({ email: user.email, limit: 100 });
     let customerId: string | undefined;
     
-    if (customers.data.length > 0) {
-      customerId = customers.data[0].id;
+    const ownedCustomer = customers.data.find((customer) => customer.metadata?.rockmundo_user_id === user.id);
+    if (ownedCustomer) {
+      customerId = ownedCustomer.id;
       logStep("Found existing customer", { customerId });
     } else {
       logStep("No existing customer found, will create new");
@@ -76,9 +77,14 @@ serve(async (req) => {
 
     const origin = Deno.env.get("ROCKMUNDO_PUBLIC_URL") || "https://rockmundo.uk";
 
+    if (!customerId) {
+      const customer = await stripe.customers.create({ email: user.email, metadata: { rockmundo_user_id: user.id } });
+      customerId = customer.id;
+    }
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
-      customer_email: customerId ? undefined : user.email,
+      customer_email: undefined,
       line_items: [
         {
           price: priceId,
