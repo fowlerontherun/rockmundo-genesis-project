@@ -14,7 +14,8 @@ export async function referralAwareDestination(
     if (error) throw error;
     if (!data?.code) throw new Error("Referral code is unavailable; the destination cannot be shared with attribution.");
     return withReferral(destinationUrl, data.code, source);
-  } catch (error) {
-    throw error;
+  } catch {
+    // A referral lookup outage must not prevent players from sharing the original destination.
+    return destinationUrl;
   }
 }
