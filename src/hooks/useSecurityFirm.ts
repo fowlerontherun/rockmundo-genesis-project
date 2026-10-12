@@ -104,30 +104,11 @@ export const useHireGuard = () => {
       skillLevel: number;
       salaryPerEvent: number;
     }) => {
-      const companyId = await getCompanyIdFromSecurityFirm(firmId);
-      const hiringCost = salaryPerEvent * 10;
-
-      await deductCompanyBalance({
-        companyId,
-        amount: hiringCost,
-        description: `Hired guard: ${name}`,
-        category: "staff",
+      const { data, error } = await (supabase as any).rpc("buy_subsidiary_asset_atomic", {
+        p_kind: "security_guard", p_subsidiary_id: firmId, p_fields: { name, skill_level: skillLevel, salary_per_event: salaryPerEvent },
       });
-
-      const { data, error } = await supabase
-        .from("security_guards")
-        .insert({
-          security_firm_id: firmId,
-          name,
-          skill_level: skillLevel,
-          salary_per_event: salaryPerEvent,
-          is_npc: true,
-        })
-        .select()
-        .single();
-
       if (error) throw error;
-      return data;
+            return data;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["security-guards", variables.firmId] });

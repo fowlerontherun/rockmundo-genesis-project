@@ -145,36 +145,10 @@ export function useBuyProperty() {
     mutationFn: async ({ housingType, country, marketMultiplier = 1 }: { housingType: HousingType; country: string; marketMultiplier?: number }) => {
       if (!profileId || !userId) throw new Error("Not authenticated");
 
-      const marketPrice = getMarketPrice(housingType.base_price, marketMultiplier);
-
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("cash")
-        .eq("id", profileId)
-        .single();
-      if (profileError) throw profileError;
-      if ((profile.cash || 0) < marketPrice) {
-        throw new Error("Not enough cash to buy this property");
-      }
-
-      const { error: cashError } = await supabase
-        .from("profiles")
-        .update({ cash: (profile.cash || 0) - marketPrice })
-        .eq("id", profileId);
-      if (cashError) throw cashError;
-
-      const dailyUpkeep = Math.round(marketPrice * 0.001);
-      const { error: insertError } = await supabase
-        .from("player_properties")
-        .insert({
-          user_id: userId,
-          profile_id: profileId,
-          housing_type_id: housingType.id,
-          country,
-          purchase_price: marketPrice,
-          daily_upkeep: dailyUpkeep,
-        });
-      if (insertError) throw insertError;
+      const { error } = await (supabase as any).rpc("purchase_housing_atomic", {
+        p_profile_id: profileId, p_housing_type_id: housingType.id,
+      });
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["player-properties"] });
@@ -198,43 +172,19 @@ export function useStartRental() {
       rentalType,
       country,
       weeklyCost,
+      cityId,
     }: {
       rentalType: RentalType;
       country: string;
       weeklyCost: number;
+      cityId: string;
     }) => {
       if (!profileId || !userId) throw new Error("Not authenticated");
 
-      const { data: existing, error: existingError } = await supabase
-        .from("player_rentals")
-        .select("id")
-        .eq("profile_id", profileId)
-        .eq("status", "active")
-        .maybeSingle();
-      if (existingError) throw existingError;
-      if (existing) throw new Error("You already have an active rental. End it first.");
-
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("cash")
-        .eq("id", profileId)
-        .single();
-      if (profileError) throw profileError;
-      if (!profile || (profile.cash || 0) < weeklyCost) {
-        throw new Error("Not enough cash for the first week's rent");
-      }
-
-      await supabase
-        .from("profiles")
-        .update({ cash: (profile.cash || 0) - weeklyCost })
-        .eq("id", profileId);
-
-      const { error } = await supabase.from("player_rentals").insert({
-        user_id: userId,
-        profile_id: profileId,
-        rental_type_id: rentalType.id,
-        country,
-        weekly_cost: weeklyCost,
+      const { error } = await (supabase as any).rpc("start_housing_rental_atomic", {
+        p_profile_id: profileId,
+        p_rental_type_id: rentalType.id,
+        p_city_id: cityId,
       });
       if (error) throw error;
     },

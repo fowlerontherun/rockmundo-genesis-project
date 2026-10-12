@@ -146,30 +146,11 @@ export function useHireRehearsalStaff() {
 
   return useMutation({
     mutationFn: async (staff: Omit<RehearsalRoomStaff, 'id' | 'created_at' | 'updated_at' | 'hire_date' | 'performance_rating' | 'is_active'>) => {
-      const companyId = await getCompanyIdFromRehearsalRoom(staff.room_id);
-      const hiringCost = staff.salary || 1000;
-
-      await deductCompanyBalance({
-        companyId,
-        amount: hiringCost,
-        description: `Hired rehearsal staff: ${staff.name}`,
-        category: "staff",
+      const { data, error } = await (supabase as any).rpc("buy_subsidiary_asset_atomic", {
+        p_kind: "rehearsal_staff", p_subsidiary_id: staff.room_id, p_fields: staff,
       });
-
-      const { data, error } = await supabase
-        .from('rehearsal_room_staff')
-        .insert({
-          room_id: staff.room_id,
-          name: staff.name,
-          role: staff.role,
-          skill_level: staff.skill_level,
-          salary: staff.salary,
-        })
-        .select()
-        .single();
-
       if (error) throw error;
-      return data;
+            return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['rehearsal-room-staff', data.room_id] });
@@ -189,26 +170,11 @@ export function useAddRehearsalEquipment() {
 
   return useMutation({
     mutationFn: async (equipment: Omit<RehearsalRoomEquipment, 'id' | 'created_at' | 'updated_at' | 'condition' | 'is_available'>) => {
-      const companyId = await getCompanyIdFromRehearsalRoom(equipment.room_id);
-      const cost = equipment.hourly_rate ? equipment.hourly_rate * 100 : 5000;
-
-      if (cost > 0) {
-        await deductCompanyBalance({
-          companyId,
-          amount: cost,
-          description: `Rehearsal equipment: ${equipment.equipment_name}`,
-          category: "equipment",
-        });
-      }
-
-      const { data, error } = await supabase
-        .from('rehearsal_room_equipment')
-        .insert(equipment)
-        .select()
-        .single();
-
+      const { data, error } = await (supabase as any).rpc("buy_subsidiary_asset_atomic", {
+        p_kind: "rehearsal_equipment", p_subsidiary_id: equipment.room_id, p_fields: equipment,
+      });
       if (error) throw error;
-      return data;
+            return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['rehearsal-room-equipment', data.room_id] });
@@ -228,26 +194,11 @@ export function useInstallRehearsalUpgrade() {
 
   return useMutation({
     mutationFn: async (upgrade: Omit<RehearsalRoomUpgrade, 'id' | 'created_at' | 'installed_at'>) => {
-      const companyId = await getCompanyIdFromRehearsalRoom(upgrade.room_id);
-      const cost = upgrade.cost || 0;
-
-      if (cost > 0) {
-        await deductCompanyBalance({
-          companyId,
-          amount: cost,
-          description: `Rehearsal upgrade: ${upgrade.name} Lv${upgrade.level}`,
-          category: "upgrade",
-        });
-      }
-
-      const { data, error } = await supabase
-        .from('rehearsal_room_upgrades')
-        .insert(upgrade)
-        .select()
-        .single();
-
+      const { data, error } = await (supabase as any).rpc("buy_subsidiary_asset_atomic", {
+        p_kind: "rehearsal_upgrade", p_subsidiary_id: upgrade.room_id, p_fields: upgrade,
+      });
       if (error) throw error;
-      return data;
+            return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['rehearsal-room-upgrades', data.room_id] });

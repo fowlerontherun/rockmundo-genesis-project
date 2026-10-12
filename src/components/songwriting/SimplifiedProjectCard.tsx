@@ -102,14 +102,16 @@ export const SimplifiedProjectCard = ({
     // Generated Supabase RPC types lag this migration; keep the escape hatch local.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase as any).rpc(
-      "skip_songwriting_polish",
-      { p_profile_id: profileId, p_project_id: project.id },
+      "skip_and_complete_songwriting_project",
+      { p_profile_id: profileId, p_project_id: project.id,
+        p_catalog_status: "private", p_band_id: null },
     );
     if (error) {
       toast.error("Could not keep song as-is", { description: error.message });
       throw error;
     }
-    await finishSong();
+    toast.success("Song created!", { description: `"${project.title}" is now in your private catalog.` });
+    await refreshCompletionState();
   };
   
   const acceptedCollaborators = collaborators?.filter(c => c.status === "accepted") || [];

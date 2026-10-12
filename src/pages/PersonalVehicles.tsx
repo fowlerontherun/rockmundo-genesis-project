@@ -123,43 +123,10 @@ export default function PersonalVehicles() {
   const buyVehicle = useMutation({
     mutationFn: async (vehicle: PersonalVehicleCatalogItem) => {
       if (!profileId) throw new Error("No active character");
-      const { data: currentProfile, error: profileError } = await supabase
-        .from("profiles")
-        .select(PROFILE_QUERY_FIELDS)
-        .eq("id", profileId)
-        .single();
-      if (profileError) throw profileError;
-
-      const cash = currentProfile.cash ?? 0;
-      if (cash < vehicle.price) throw new Error("Not enough cash for this vehicle");
-
-      const metadata = (currentProfile.weekly_bonus_metadata as Record<string, unknown> | null) ?? {};
-      const existingVehicles = Array.isArray(metadata.personal_vehicles)
-        ? (metadata.personal_vehicles as OwnedPersonalVehicle[])
-        : [];
-
-      if (existingVehicles.some((v) => v.id === vehicle.id)) {
-        throw new Error("You already own this model");
-      }
-
-      const updatedVehicles: OwnedPersonalVehicle[] = [
-        ...existingVehicles,
-        {
-          ...vehicle,
-          purchasePrice: vehicle.price,
-          purchasedAt: new Date().toISOString(),
-        },
-      ];
-
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({
-          cash: cash - vehicle.price,
-          weekly_bonus_metadata: { ...metadata, personal_vehicles: updatedVehicles } as any,
-        })
-        .eq("id", profileId);
-
-      if (updateError) throw updateError;
+      const { error } = await (supabase as any).rpc("buy_personal_vehicle_atomic", {
+        p_profile_id: profileId,p_vehicle_id: vehicle.id,p_card: vehicle,
+      });
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["personal-vehicles-profile"] });
@@ -174,33 +141,11 @@ export default function PersonalVehicles() {
   const sellVehicle = useMutation({
     mutationFn: async (vehicleId: string) => {
       if (!profileId) throw new Error("No active character");
-      const { data: currentProfile, error: profileError } = await supabase
-        .from("profiles")
-        .select(PROFILE_QUERY_FIELDS)
-        .eq("id", profileId)
-        .single();
-      if (profileError) throw profileError;
-
-      const metadata = (currentProfile.weekly_bonus_metadata as Record<string, unknown> | null) ?? {};
-      const existingVehicles = Array.isArray(metadata.personal_vehicles)
-        ? (metadata.personal_vehicles as OwnedPersonalVehicle[])
-        : [];
-      const vehicle = existingVehicles.find((v) => v.id === vehicleId);
-      if (!vehicle) throw new Error("Vehicle not found in your garage");
-
-      const sellPrice = Math.round(vehicle.purchasePrice * 0.7);
-      const updatedVehicles = existingVehicles.filter((v) => v.id !== vehicleId);
-
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({
-          cash: (currentProfile.cash ?? 0) + sellPrice,
-          weekly_bonus_metadata: { ...metadata, personal_vehicles: updatedVehicles } as any,
-        })
-        .eq("id", profileId);
-
-      if (updateError) throw updateError;
-      return sellPrice;
+      const { data: sellPrice, error } = await (supabase as any).rpc("sell_personal_vehicle_atomic", {
+        p_profile_id: profileId,p_vehicle_id: vehicleId,
+      });
+      if (error) throw error;
+      return Number(sellPrice);
     },
     onSuccess: (sellPrice) => {
       queryClient.invalidateQueries({ queryKey: ["personal-vehicles-profile"] });

@@ -34,6 +34,8 @@ const ChristmasCharts = () => {
 
       const startDate = new Date(epochMs + decStartRealDays * 86400000).toISOString().split("T")[0];
       const endDate = new Date(epochMs + decEndRealDays * 86400000).toISOString().split("T")[0];
+      // December 25 is game-day 25: eight-hour game days end at real day 118 + 8h.
+      const christmasCutoff = new Date(epochMs + (decStartRealDays + 8) * 86400000 + 8 * 3600000).toISOString();
 
       const salesRows: any[] = [];
       for (let offset=0; ; offset+=500) {
@@ -52,7 +54,7 @@ const ChristmasCharts = () => {
           )
         `)
         .gte("sale_date", startDate)
-        .lt("sale_date", endDate)
+        .lt("sale_date", isChristmasDay || isAfterChristmas ? christmasCutoff : endDate)
         .order("sale_date", { ascending: false })
         .range(offset, offset + 499);
         if (error) throw error;
@@ -104,8 +106,14 @@ const ChristmasCharts = () => {
 
   // Fetch past Christmas Number Ones
   const { data: pastWinners = [], isLoading: winnersLoading } = useQuery({
-    queryKey: ["christmas-number-ones-history"],
+    queryKey: ["christmas-number-ones-history", gameDate.gameYear, isDecember && gameDate.gameDay >= 25],
     queryFn: async () => {
+      if (isDecember && gameDate.gameDay >= 25) {
+        const { error: snapshotError } = await (supabase as any).rpc("get_or_create_christmas_number_one", {
+          p_game_year: gameDate.gameYear,
+        });
+        if (snapshotError) throw snapshotError;
+      }
       const { data, error } = await supabase
         .from("christmas_number_ones" as any)
         .select("*")
@@ -120,7 +128,15 @@ const ChristmasCharts = () => {
     },
   });
 
-  const topRelease = decemberRace[0];
+  const recordedWinner = (pastWinners as any[]).find((winner) => winner.game_year === gameDate.gameYear);
+  const topRelease = (isChristmasDay || isAfterChristmas) && recordedWinner ? {
+    releaseId: recordedWinner.release_id,
+    title: recordedWinner.song_title ?? recordedWinner.release_title ?? "Christmas Number One",
+    artistName: recordedWinner.artist_name ?? "Unknown artist",
+    artworkUrl: null,
+    totalUnits: Number(recordedWinner.total_sales ?? 0),
+    totalRevenue: 0,
+  } : decemberRace[0];
   const maxUnits = topRelease?.totalUnits || 1;
 
   const subtitle = isDecember
@@ -173,7 +189,7 @@ const ChristmasCharts = () => {
                 : "bg-gradient-to-r from-red-500/10 via-background to-green-500/10 border-red-500/20"
             )}
           >
-            {isChristmasDay ? (
+            {isChristmasDay || isAfterChristmas ? (
               <div className="space-y-2">
                 <Crown className="h-10 w-10 text-yellow-400 mx-auto" />
                 <h2 className="text-2xl font-bold">🎄 Christmas Number One! 🎄</h2>
@@ -208,7 +224,7 @@ const ChristmasCharts = () => {
                 December Sales Race
               </CardTitle>
               <CardDescription>
-                Top-selling releases this December — updated live
+                {isChristmasDay || isAfterChristmas ? "Final Christmas-week ranking — later December sales excluded" : "Top-selling releases this December — updated live"}
               </CardDescription>
             </CardHeader>
             <CardContent>

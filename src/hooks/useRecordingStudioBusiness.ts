@@ -144,31 +144,11 @@ export function useHireRecordingStudioStaff() {
 
   return useMutation({
     mutationFn: async (staff: Omit<RecordingStudioStaff, 'id' | 'created_at' | 'updated_at' | 'hire_date' | 'albums_worked' | 'hit_songs' | 'is_active'>) => {
-      const companyId = await getCompanyIdFromRecordingStudio(staff.studio_id);
-      const hiringCost = staff.salary || 1000;
-
-      await deductCompanyBalance({
-        companyId,
-        amount: hiringCost,
-        description: `Hired studio staff: ${staff.name}`,
-        category: "staff",
+      const { data, error } = await (supabase as any).rpc("buy_subsidiary_asset_atomic", {
+        p_kind: "recording_staff", p_subsidiary_id: staff.studio_id, p_fields: staff,
       });
-
-      const { data, error } = await supabase
-        .from('recording_studio_staff')
-        .insert({
-          studio_id: staff.studio_id,
-          name: staff.name,
-          role: staff.role,
-          skill_level: staff.skill_level,
-          specialty: staff.specialty,
-          salary: staff.salary,
-        })
-        .select()
-        .single();
-
       if (error) throw error;
-      return data;
+            return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['recording-studio-staff', data.studio_id] });
@@ -188,26 +168,11 @@ export function useAddRecordingStudioEquipment() {
 
   return useMutation({
     mutationFn: async (equipment: Omit<RecordingStudioEquipment, 'id' | 'created_at' | 'updated_at' | 'condition' | 'is_available'>) => {
-      const companyId = await getCompanyIdFromRecordingStudio(equipment.studio_id);
-      const cost = equipment.value || 0;
-
-      if (cost > 0) {
-        await deductCompanyBalance({
-          companyId,
-          amount: cost,
-          description: `Studio equipment: ${equipment.equipment_name}`,
-          category: "equipment",
-        });
-      }
-
-      const { data, error } = await supabase
-        .from('recording_studio_equipment')
-        .insert(equipment)
-        .select()
-        .single();
-
+      const { data, error } = await (supabase as any).rpc("buy_subsidiary_asset_atomic", {
+        p_kind: "recording_equipment", p_subsidiary_id: equipment.studio_id, p_fields: equipment,
+      });
       if (error) throw error;
-      return data;
+            return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['recording-studio-equipment', data.studio_id] });
@@ -227,26 +192,11 @@ export function useInstallRecordingStudioUpgrade() {
 
   return useMutation({
     mutationFn: async (upgrade: Omit<RecordingStudioUpgrade, 'id' | 'created_at' | 'installed_at'>) => {
-      const companyId = await getCompanyIdFromRecordingStudio(upgrade.studio_id);
-      const cost = upgrade.cost || 0;
-
-      if (cost > 0) {
-        await deductCompanyBalance({
-          companyId,
-          amount: cost,
-          description: `Studio upgrade: ${upgrade.name} Lv${upgrade.level}`,
-          category: "upgrade",
-        });
-      }
-
-      const { data, error } = await supabase
-        .from('recording_studio_upgrades')
-        .insert(upgrade)
-        .select()
-        .single();
-
+      const { data, error } = await (supabase as any).rpc("buy_subsidiary_asset_atomic", {
+        p_kind: "recording_upgrade", p_subsidiary_id: upgrade.studio_id, p_fields: upgrade,
+      });
       if (error) throw error;
-      return data;
+            return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['recording-studio-upgrades', data.studio_id] });
