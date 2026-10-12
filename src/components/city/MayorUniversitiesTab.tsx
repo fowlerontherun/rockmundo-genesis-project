@@ -76,6 +76,8 @@ function cooldownInfo(lastUpgradeAt: string | null) {
 }
 
 export function MayorUniversitiesTab({ cityId }: Props) {
+  const [, setClockTick] = useState(0);
+  useEffect(() => { const timer = window.setInterval(() => setClockTick(n => n+1), 60_000); return () => window.clearInterval(timer); }, []);
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 
