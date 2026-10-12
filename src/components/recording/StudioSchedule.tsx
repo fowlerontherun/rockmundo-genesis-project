@@ -14,7 +14,7 @@ interface StudioScheduleProps {
 export const StudioSchedule = ({ studioId, studioName, currentBandId, onSlotClick }: StudioScheduleProps) => {
   const [startDate, setStartDate] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
 
-  const { data: weekAvailability, isLoading } = useStudioWeekAvailability(
+  const { data: weekAvailability, isLoading, isError, refetch } = useStudioWeekAvailability(
     studioId,
     startDate,
     !!studioId
@@ -32,6 +32,13 @@ export const StudioSchedule = ({ studioId, studioName, currentBandId, onSlotClic
       )
     ])
   ) : undefined;
+
+  if (isError || (!isLoading && !weekAvailability)) {
+    return <div role="alert" className="space-y-2 rounded border border-destructive/40 p-4 text-sm">
+      <p>Studio schedule unavailable. Booking slots cannot be verified.</p>
+      <button type="button" className="underline" onClick={() => void refetch()}>Retry schedule</button>
+    </div>;
+  }
 
   return (
     <FacilitySchedule
