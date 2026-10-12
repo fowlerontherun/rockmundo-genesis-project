@@ -228,21 +228,17 @@ export function useUnreadInboxCount() {
     queryFn: async () => {
       if (!userId || !profileId) return 0;
 
-      const { data, error } = await supabase
-        .from('player_inbox')
-        .select('metadata')
-        .eq('user_id', userId)
-        .eq('is_read', false)
-        .eq('is_archived', false);
-
-      if (error) {
-        console.error('[useUnreadInboxCount] Error:', error);
-        throw error;
+      let count = 0;
+      for (let offset = 0; offset < 100_000; offset += 500) {
+        const { data, error } = await supabase.from('player_inbox')
+          .select('metadata').eq('user_id', userId)
+          .eq('is_read', false).eq('is_archived', false)
+          .order('id', { ascending: true }).range(offset, offset + 499);
+        if (error) throw error;
+        count += (data ?? []).filter(message => isInboxMessageForProfile(message as InboxMessage, profileId)).length;
+        if (!data || data.length < 500) break;
       }
-
-      return (data ?? []).filter((message: any) =>
-        isInboxMessageForProfile(message, profileId)
-      ).length;
+      return count;
     },
     enabled: !!userId && !!profileId,
     refetchInterval: 30000,
