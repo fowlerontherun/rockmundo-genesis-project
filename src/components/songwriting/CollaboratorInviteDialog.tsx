@@ -43,16 +43,28 @@ export const CollaboratorInviteDialog = ({
   const [flatFeeAmount, setFlatFeeAmount] = useState(500);
   const [royaltyPercentage, setRoyaltyPercentage] = useState(15);
   const [loading, setLoading] = useState(false);
+  const [discoveryError, setDiscoveryError] = useState<string | null>(null);
   const [userCash, setUserCash] = useState(0);
 
   const { inviteCollaborator, collaborators } = useCollaborationInvites(projectId);
 
   useEffect(() => {
     if (open) {
+      setSearchQuery("");
+      setSelectedCollaborator(null);
+      setCompensationType("none");
+      setFlatFeeAmount(500);
+      setRoyaltyPercentage(15);
+      setUserCash(0);
+    }
+  }, [open, projectId]);
+
+  useEffect(() => {
+    if (open) {
       fetchPotentialCollaborators();
       fetchUserCash();
     }
-  }, [open, userBandId]);
+  }, [open, userBandId, projectId, collaborators]);
 
   const fetchUserCash = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -72,12 +84,13 @@ export const CollaboratorInviteDialog = ({
 
   const fetchPotentialCollaborators = async () => {
     setLoading(true);
+    setDiscoveryError(null);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
       // Get user's profile ID for friendship matching
-      const { data: userProfile } = await supabase
+      const { data: userProfile, error: profileError } = await supabase
         .from("profiles")
         .select("id")
         .eq("user_id", user.id)
@@ -85,7 +98,8 @@ export const CollaboratorInviteDialog = ({
         .is("died_at", null)
         .single();
       
-      if (!userProfile) return;
+      if (profileError) throw profileError;
+      if (!userProfile) throw new Error("Unable to verify your current character.");
       const userProfileId = userProfile.id;
 
       const collaboratorIds = new Set<string>();
@@ -96,7 +110,7 @@ export const CollaboratorInviteDialog = ({
 
       // Get band members if user is in a band
       if (userBandId) {
-        const { data: bandMembers } = await supabase
+        const { data: bandMembers, error: bandError } = await supabase
           .from("band_members")
           .select(`
             user_id,
@@ -110,6 +124,7 @@ export const CollaboratorInviteDialog = ({
           .eq("band_id", userBandId)
           .neq("user_id", user.id);
 
+        if (bandError) throw bandError;
         bandMembers?.forEach((member: any) => {
           if (member.profiles && !existingIds.has(member.profiles.id)) {
             collaboratorIds.add(member.profiles.id);
@@ -125,24 +140,26 @@ export const CollaboratorInviteDialog = ({
       }
 
       // Get friends - two-step fetch (no FK constraints exist on friendships table)
-      const { data: friendships } = await supabase
+      const { data: friendships, error: friendshipsError } = await supabase
         .from("friendships")
         .select("requestor_id, addressee_id")
         .or(`requestor_id.eq.${userProfileId},addressee_id.eq.${userProfileId}`)
         .eq("status", "accepted");
 
       // Collect friend profile IDs (the other party in each friendship)
+      if (friendshipsError) throw friendshipsError;
       const friendProfileIds = friendships
         ?.map(f => f.requestor_id === userProfileId ? f.addressee_id : f.requestor_id)
         .filter(id => !collaboratorIds.has(id) && !existingIds.has(id)) || [];
 
       // Fetch friend profiles separately
       if (friendProfileIds.length > 0) {
-        const { data: friendProfiles } = await supabase
+        const { data: friendProfiles, error: friendsError } = await supabase
           .from("profiles")
           .select("id, username, display_name, avatar_url")
           .in("id", friendProfileIds);
 
+        if (friendsError) throw friendsError;
         friendProfiles?.forEach((profile) => {
           if (!collaboratorIds.has(profile.id)) {
             collaboratorIds.add(profile.id);
@@ -160,6 +177,8 @@ export const CollaboratorInviteDialog = ({
       setPotentialCollaborators(results);
     } catch (error) {
       console.error("Error fetching potential collaborators:", error);
+      setDiscoveryError("Collaborators could not be loaded. Please retry.");
+      setPotentialCollaborators([]);
     } finally {
       setLoading(false);
     }
@@ -235,6 +254,8 @@ export const CollaboratorInviteDialog = ({
           <div className="flex items-center justify-center h-full">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
+        ) : discoveryError ? (
+          <div role="alert" className="py-6 text-center text-destructive">{discoveryError} <button type="button" className="underline" onClick={() => void fetchPotentialCollaborators()}>Retry</button></div>
         ) : sortedCollaborators.length === 0 ? (
           <div className="text-center text-muted-foreground py-8">
             No collaborators found. Add friends or join a band to invite co-writers.
