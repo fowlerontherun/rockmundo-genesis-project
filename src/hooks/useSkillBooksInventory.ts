@@ -39,16 +39,21 @@ export const useSkillBooksInventory = (profileId?: string) => {
 
       const book = books.find((b) => b.id === bookId);
       if (!book) throw new Error("Book not found");
+      if (book.completed_at) throw new Error("Book already completed");
 
-      const { error: updateError } = await supabase
+      const { data: completedRows, error: updateError } = await supabase
         .from("player_skill_books")
         .update({
           completed_at: new Date().toISOString(),
           progress_percentage: 100,
         })
-        .eq("id", bookId);
+        .eq("id", bookId)
+        .eq("profile_id", profileId)
+        .is("completed_at", null)
+        .select("id");
 
       if (updateError) throw updateError;
+      if (!completedRows?.length) throw new Error("Book was already completed or is no longer available");
 
       const response = await supabase.functions.invoke("progression", {
         body: {

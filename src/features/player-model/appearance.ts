@@ -202,7 +202,7 @@ const STARTER_VISUAL_STYLE_OVERRIDES: Partial<Record<string, Style>> = {
 export function equipmentStyle(appearance: PlayerAppearance, slot: EquipmentSlot): Style {
   const item = visualEquipmentItem(appearance, slot);
   // The masculine casual donor wears knee-length shorts, not trousers.
-  if (slot === 'bottom' && appearance.body.frame === 'masculine') return 'suit';
+  // Respect the selected garment's visual style; only suit garments use the suit donor.
   if (slot === 'footwear' && /boots$/.test(item.id)) return 'punk';
   return STARTER_VISUAL_STYLE_OVERRIDES[item.id] ?? item.style;
 }
