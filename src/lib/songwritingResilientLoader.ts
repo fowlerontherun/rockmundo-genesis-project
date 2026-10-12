@@ -108,7 +108,15 @@ export async function loadSongwritingProjectsResilient(client: any, profileId?: 
 
   let sessionsByProject = new Map<string, any[]>();
   if (ids.length) {
-    const stableSessions = await client.from("songwriting_sessions").select(STABLE_SESSION_COLUMNS).in("project_id", ids);
+    const sessionRows: any[]=[];
+    let sessionError: any=null;
+    for(let offset=0;offset<100_000;offset+=500){
+      const page=await client.from("songwriting_sessions").select(STABLE_SESSION_COLUMNS).in("project_id",ids).order("created_at",{ascending:false}).range(offset,offset+499);
+      if(page.error){sessionError=page.error;break;}
+      sessionRows.push(...(page.data??[]));
+      if((page.data?.length??0)<500)break;
+    }
+    const stableSessions={data:sessionRows,error:sessionError};
     if (stableSessions.error) {
       const failure = normalizeFailure("stable sessions", "songwriting_sessions", stableSessions.error, { selectedColumns: STABLE_SESSION_COLUMNS, profileId, userId });
       failures.push(failure); logFailure(failure, "warn");
