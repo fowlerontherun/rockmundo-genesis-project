@@ -128,7 +128,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
     ? checkInEligibility.find((item) => item.attendanceId === myAttendance.id)
     : undefined;
   const myFestivalTickets = ticketWallet.filter((ticket) => ticket.festivalSlug === f.slug);
-  const myWristband = festivalMemorabilia.find((item) => item.festivalLaunchId === f.id);
+  const myWristband = festivalMemorabilia.find((item) => item.festivalLaunchId === f.id && item.attendanceId === myAttendance?.id);
   const hasAdmissionTicket = myFestivalTickets.some(
     (ticket) => ticket.productClass === "admission" && !["cancelled", "refunded", "transferred"].includes(ticket.status),
   );
