@@ -32,6 +32,7 @@ const money = (value: number) =>
 
 export function SupportContributionCard({ gigId }: { gigId?: string | null }) {
   const [data, setData] = useState<SupportContribution | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [loading, setLoading] = useState(Boolean(gigId));
 
   useEffect(() => {
@@ -50,8 +51,10 @@ export function SupportContributionCard({ gigId }: { gigId?: string | null }) {
       if (!mounted) return;
       if (error) {
         if (import.meta.env.DEV) console.warn("Unable to load support contribution", { gigId, error });
+        setLoadError(true);
         setData(null);
       } else {
+        setLoadError(false);
         setData(contribution && typeof contribution === "object" ? contribution as SupportContribution : null);
       }
       setLoading(false);
@@ -70,6 +73,7 @@ export function SupportContributionCard({ gigId }: { gigId?: string | null }) {
       </Card>
     );
   }
+  if (loadError) return <Card><CardContent role="alert" className="p-4 text-sm">Support contribution report is temporarily unavailable.</CardContent></Card>;
   if (!data) return null;
 
   const demandBoost = Number(data.ticketDemandBoostPercent ?? Math.max(0, ((Number(data.ticketDemandMultiplier) || 1) - 1) * 100));
@@ -86,7 +90,7 @@ export function SupportContributionCard({ gigId }: { gigId?: string | null }) {
               Settled contribution from {data.supportBandName || "the support band"}; these are authoritative post-show values, not projections.
             </CardDescription>
           </div>
-          <Badge variant="outline">20% artist ticket share</Badge>
+          <Badge variant="outline">{Number(data.ticketRevenue) > 0 ? `${((Number(data.supportPayment) / Number(data.ticketRevenue)) * 100).toFixed(1)}% support ticket share` : "Support share unavailable"}</Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
