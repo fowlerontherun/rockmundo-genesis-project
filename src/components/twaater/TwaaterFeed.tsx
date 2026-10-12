@@ -55,7 +55,10 @@ export const TwaaterFeed = ({ viewerAccountId, feedType = "feed" }: TwaaterFeedP
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "twaats" },
         (payload) => {
-          if (payload.new.account_id !== viewerAccountId) {
+          if (payload.new.account_id !== viewerAccountId &&
+              payload.new.visibility === "public" &&
+              payload.new.moderation_status === "approved" &&
+              !payload.new.scheduled_for) {
             setNewTwaatsCount((previous) => previous + 1);
           }
         },
