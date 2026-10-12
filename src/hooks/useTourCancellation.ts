@@ -33,6 +33,9 @@ export const useTourCancellation = () => {
       return data as CancelTourResult;
     },
     onSuccess: (result) => {
+      for (const key of ["profile", "profiles", "active-profile", "profile-cash", "player-cash", "luthiery-shop-profile"]) {
+        queryClient.invalidateQueries({ queryKey: [key] });
+      }
       queryClient.invalidateQueries({ queryKey: ["my-tours"] });
       queryClient.invalidateQueries({ queryKey: ["tours"] });
       queryClient.invalidateQueries({ queryKey: ["tour-gigs"] });

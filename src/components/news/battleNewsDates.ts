@@ -8,9 +8,9 @@ export function getBattleNewsDateRanges(now: Date) {
 
   return {
     today,
-    todayStart: `${today}T00:00:00`,
-    todayEnd: `${today}T23:59:59.999`,
-    yesterdayStart: `${yesterday}T00:00:00`,
-    yesterdayEnd: `${yesterday}T23:59:59.999`,
+    todayStart: new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString(),
+    todayEnd: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, -1).toISOString(),
+    yesterdayStart: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1).toISOString(),
+    yesterdayEnd: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, -1).toISOString(),
   };
 }

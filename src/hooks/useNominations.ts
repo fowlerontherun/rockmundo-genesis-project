@@ -60,7 +60,7 @@ export function useSecondNomination() {
       if (cand.profile_id === profileId) throw new Error("Candidates can't second themselves");
       if (cand.nominator_profile_id === profileId) throw new Error("Nominator can't second");
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("city_candidates")
         .update({
           seconder_profile_id: profileId,
@@ -68,8 +68,11 @@ export function useSecondNomination() {
           status: "approved",
         })
         .eq("status", "pending")
-        .eq("id", candidateId);
+        .is("seconder_profile_id", null)
+        .eq("id", candidateId)
+        .select("id");
       if (error) throw error;
+      if (!data?.length) throw new Error("This nomination has already been seconded");
     },
     onSuccess: () => {
       toast.success("Nomination seconded");
