@@ -36,10 +36,13 @@ export function BandChat({ bandId }: BandChatProps) {
   useEffect(() => {
     const generation = ++messagesGeneration.current;
     setMessages([]);
+    setNewMessage('');
+    // A character switch must unsubscribe even if both characters share a band.
+    if (!profileId) return () => { messagesGeneration.current++; };
     void loadMessages(generation);
     const unsubscribe = subscribeToMessages(generation);
     return () => { messagesGeneration.current++; unsubscribe(); };
-  }, [bandId]);
+  }, [bandId, profileId]);
 
   useEffect(() => {
     scrollToBottom();
