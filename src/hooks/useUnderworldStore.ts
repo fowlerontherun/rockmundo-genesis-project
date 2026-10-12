@@ -269,8 +269,9 @@ export const useUnderworldStore = () => {
           Date.now() + product.duration_hours * 60 * 60 * 1000
         ).toISOString();
 
+        // Only persist active boost effects the game can actually apply.
         // Determine boost type from effects
-        let boostType = "unknown";
+        let boostType = "";
         let boostValue = 1;
 
         if (effects.xp_multiplier) {
