@@ -174,8 +174,13 @@ export function useUnreadDirectMessageCount(myProfileId?: string | null) {
     enabled: !!myProfileId,
     queryFn: async () => {
       if (!myProfileId) return 0;
-      const conversations = await listConversations({ limit: 100 });
-      return conversations.reduce((total, conversation) => total + conversation.unread_count, 0);
+      let total = 0;
+      for (let offset = 0; offset < 10_000; offset += 100) {
+        const conversations = await listConversations({ limit: 100, offset });
+        total += conversations.reduce((sum, conversation) => sum + conversation.unread_count, 0);
+        if (conversations.length < 100) return total;
+      }
+      throw new Error("Unread conversations exceed the supported scan limit");
     },
   });
 
