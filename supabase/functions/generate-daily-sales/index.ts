@@ -791,7 +791,7 @@ serve(async (req) => {
       if (revenue.netRevenue <= 0) continue;
 
       try {
-        const netAmount = Math.round(revenue.netRevenue);
+        const netAmount = Math.round(revenue.netRevenue * 100) / 100;
 
         const { error: earningsError } = await supabaseClient
           .from("band_earnings")
