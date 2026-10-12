@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { catchUpToTour } from "@/lib/api/tourCatchUp";
@@ -28,11 +29,16 @@ const getCatchUpErrorMessage = (message: string): string => {
 
 export const useTourCatchUp = () => {
   const queryClient = useQueryClient();
+  const requestKeys = useRef(new Map<string, string>());
 
   const catchUp = useMutation({
-    mutationFn: ({ tourId, profileId }: CatchUpInput) =>
-      catchUpToTour(tourId, profileId),
+    mutationFn: ({ tourId, profileId }: CatchUpInput) => {
+      const key = `${tourId}:${profileId}`;
+      if (!requestKeys.current.has(key)) requestKeys.current.set(key, crypto.randomUUID());
+      return catchUpToTour(tourId, profileId, requestKeys.current.get(key)!);
+    },
     onSuccess: (result) => {
+      requestKeys.current.delete(`${result.tour_id}:${result.profile_id}`);
       queryClient.invalidateQueries({ queryKey: ["travel-status"] });
       queryClient.invalidateQueries({ queryKey: ["upcoming-travel"] });
       queryClient.invalidateQueries({ queryKey: ["travel-plans"] });
