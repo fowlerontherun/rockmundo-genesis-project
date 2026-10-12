@@ -275,22 +275,10 @@ export function useHireWorker() {
       skill_level?: number;
       salary_weekly?: number;
     }) => {
-      const companyId = await getCompanyIdFromMerchFactory(worker.factory_id);
-      const hiringCost = (worker.salary_weekly || 500) * 4;
-
-      await deductCompanyBalance({
-        companyId,
-        amount: hiringCost,
-        description: `Hired factory worker: ${worker.name}`,
-        category: "staff",
+      const { data, error } = await (supabase as any).rpc("hire_merch_factory_worker_atomic", {
+        p_factory_id: worker.factory_id,
+        p_worker: worker,
       });
-
-      const { data, error } = await supabase
-        .from('merch_factory_workers')
-        .insert(worker)
-        .select()
-        .single();
-      
       if (error) throw error;
       return data;
     },
