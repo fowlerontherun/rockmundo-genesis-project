@@ -91,7 +91,7 @@ export const useWatchVideo = () => {
       }
       const history = getWatchHistory(profileId);
       history.timestamps.push(Date.parse(data.claimedAt) || Date.now());
-      saveWatchHistory(history, profileId);
+      try { saveWatchHistory(history, profileId); } catch { /* Server reward succeeded; browser storage is advisory only. */ }
       return {
         xpEarned: Number(data.xpEarned),
         skillSlug: data.skillSlug as string | null,
