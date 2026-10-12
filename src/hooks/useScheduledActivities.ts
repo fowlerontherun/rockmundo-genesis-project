@@ -323,15 +323,17 @@ export function useWeekScheduledActivities(startDate: Date, userId?: string) {
       if (error) throw error;
 
       let festivalActivities: ScheduledActivity[] = [];
-      try {
+      const { data: weeklyBands, error: weeklyBandError } = await supabase
+        .from('band_members').select('band_id').eq('profile_id', activeProfile.id).eq('member_status', 'active');
+      if (weeklyBandError) throw weeklyBandError;
+      const activeBandIds = new Set((weeklyBands ?? []).map(row => row.band_id));
+      if (activeBandIds.size) {
         festivalActivities = (await fetchMyBandFestivalAppearances())
-          .filter((appearance) => {
+          .filter(appearance => {
             const day = localFestivalDate(appearance.festivalDate).getTime();
-            return day >= weekStart.getTime() && day <= weekEnd.getTime();
+            return activeBandIds.has(appearance.bandId) && day >= weekStart.getTime() && day <= weekEnd.getTime();
           })
-          .map((appearance) => festivalAppearanceAsActivity(appearance, userId, activeProfile.id));
-      } catch (festivalError) {
-        console.warn("Could not load weekly Festival appearances", festivalError);
+          .map(appearance => festivalAppearanceAsActivity(appearance, userId, activeProfile.id));
       }
 
       return withoutDuplicateBandScheduleActivities([
@@ -351,26 +353,23 @@ export function useCreateScheduledActivity() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .is('died_at', null)
-        .single();
+      const profile = await getActiveProfile(user.id);
 
       if (!profile) throw new Error('Profile not found');
+
+      await assertWellnessAllows(profile.id, data.activity_type);
 
       const bookingError = validateBookingWindow(data.scheduled_start, data.scheduled_end);
       if (bookingError) throw new Error(bookingError);
 
       // Check for conflicts
-      const { data: hasConflict } = await (supabase as any).rpc('check_scheduling_conflict', {
+      const { data: hasConflict, error: conflictError } = await (supabase as any).rpc('check_scheduling_conflict', {
         p_user_id: user.id,
         p_start: data.scheduled_start.toISOString(),
         p_end: data.scheduled_end.toISOString(),
       });
 
+      if (conflictError) throw conflictError;
       if (hasConflict) {
         throw new Error('Time slot already occupied. Please choose a different time.');
       }
@@ -519,10 +518,21 @@ export function useDeleteScheduledActivity() {
 
   return useMutation({
     mutationFn: async (activityId: string) => {
+      const { data: activity, error: loadError } = await (supabase as any)
+        .from('player_scheduled_activities').select('*').eq('id', activityId).single();
+      if (loadError) throw loadError;
+      if (!activity) throw new Error("Activity not found");
+      if (activity.linked_gig_id || activity.linked_rehearsal_id || activity.linked_recording_id ||
+          activity.linked_job_shift_id || activity.metadata?.tour_travel_leg ||
+          activity.metadata?.festival_booking_id || activity.metadata?.linked_id ||
+          activity.metadata?.project_id) {
+        throw new Error("Cancel this booking from its original gig, rehearsal, recording, tour or activity page.");
+      }
       const { error } = await (supabase as any)
         .from('player_scheduled_activities')
         .delete()
-        .eq('id', activityId);
+        .eq('id', activityId)
+        .eq('profile_id', activity.profile_id);
 
       if (error) throw error;
     },
