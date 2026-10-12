@@ -30,7 +30,7 @@ export default function TwaaterHashtagView() {
           account:twaater_accounts!twaats_account_id_fkey(id, handle, display_name, verified, owner_type, fame_score),
           metrics:twaat_metrics(*)
         `)
-        .ilike("body", `%#${hashtag.replace(/[\\%_]/g, "\\.ilike("body", `%#${hashtag}%`)")}%`)
+        .ilike("body", `%#${hashtag.replace(/[\\%_]/g, "\\$&")}%`)
         .eq("visibility", "public")
         .is("deleted_at", null)
         .is("scheduled_for", null)
