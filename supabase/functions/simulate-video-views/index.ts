@@ -173,6 +173,11 @@ serve(async (req) => {
         updatedSongHype.set(song.id, nextHype);
       }
 
+      // Split a single monetization pool: 70% to a band, 30% to its creator;
+      // solo tracks retain 100%. Never create 170% of earned revenue.
+      const creatorShare = song?.band_id
+        ? Math.round(dailyEarnings * 0.30 * 100) / 100 : dailyEarnings;
+
       // Credit earnings to user
       if (song?.user_id && dailyEarnings > 0) {
         const { data: profile } = await supabaseClient
@@ -186,7 +191,7 @@ serve(async (req) => {
           const { error: profilePayoutError } = await supabaseClient
             .from("profiles")
             .update({ 
-              cash: (profile.cash || 0) + dailyEarnings,
+              cash: (profile.cash || 0) + creatorShare,
               fans: (profile.fans || 0) + newFans,
             })
             .eq("user_id", song.user_id);
