@@ -466,6 +466,7 @@ export function useStartActivity() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scheduled-activities'] });
+      queryClient.invalidateQueries({ queryKey: ['week-scheduled-activities'] });
       queryClient.invalidateQueries({ queryKey: ['activity-status'] });
       toast({
         title: "Activity Started",
@@ -502,6 +503,7 @@ export function useCompleteActivity() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scheduled-activities'] });
+      queryClient.invalidateQueries({ queryKey: ['week-scheduled-activities'] });
       queryClient.invalidateQueries({ queryKey: ['activity-status'] });
       toast({
         title: "Activity Completed",
