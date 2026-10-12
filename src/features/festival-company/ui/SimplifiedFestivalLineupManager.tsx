@@ -425,7 +425,7 @@ export function SimplifiedFestivalLineupManager({
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={workflowPending}
+                      disabled={workflowPending || !data.canWrite}
                       onClick={() => review(application, "mark_under_review")}
                     >
                       Review
@@ -436,7 +436,7 @@ export function SimplifiedFestivalLineupManager({
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={workflowPending}
+                      disabled={workflowPending || !data.canWrite}
                       onClick={() => review(application, "shortlist")}
                     >
                       Shortlist
@@ -452,7 +452,7 @@ export function SimplifiedFestivalLineupManager({
                         <SelectContent>{billingPositions.map((position) => <SelectItem key={position} value={position} className="capitalize">{billingLabel(position)}</SelectItem>)}</SelectContent>
                       </Select><Button
                       size="sm"
-                      disabled={workflowPending}
+                      disabled={workflowPending || !data.canWrite}
                       onClick={() => void offerApplication(application).catch((error: Error) => toast.error(`Could not send festival offer: ${error.message}`))}
                     >
                       Send offer
@@ -464,7 +464,7 @@ export function SimplifiedFestivalLineupManager({
                     <Button
                       size="sm"
                       variant="ghost"
-                      disabled={workflowPending}
+                      disabled={workflowPending || !data.canWrite}
                       onClick={() => review(application, "reject")}
                     >
                       Reject
@@ -553,7 +553,7 @@ export function SimplifiedFestivalLineupManager({
                         step="1"
                         inputMode="decimal"
                         value={candidateFeeInput(candidate)}
-                        disabled={candidate.relationshipState !== "none"}
+                        disabled={!data.canWrite || candidate.relationshipState !== "none"}
                         onChange={(event) =>
                           setFeeInputs((current) => ({
                             ...current,
@@ -570,7 +570,7 @@ export function SimplifiedFestivalLineupManager({
                       size="sm"
                       variant="outline"
                       disabled={
-                        workflowPending || candidate.relationshipState !== "none"
+                        workflowPending || !data.canWrite || candidate.relationshipState !== "none"
                       }
                       onClick={() => invite(candidate)}
                     >
@@ -666,7 +666,7 @@ export function SimplifiedFestivalLineupManager({
                       </Select>
                       <Button
                         size="sm"
-                        disabled={workflowPending}
+                        disabled={workflowPending || !data.canWrite}
                         onClick={() => void offerInvitation(invitation).catch((error: Error) => toast.error(`Could not send festival offer: ${error.message}`))}
                       >
                         Send offer
@@ -698,7 +698,7 @@ export function SimplifiedFestivalLineupManager({
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={workflowPending || deadlineAwareStatus(offer.status, offer.responseDeadline, ["draft", "countered"]) === "expired"}
+                      disabled={workflowPending || !data.canWrite || deadlineAwareStatus(offer.status, offer.responseDeadline, ["draft", "countered"]) === "expired"}
                       onClick={() => { if (deadlineAwareStatus(offer.status, offer.responseDeadline, ["draft", "countered"]) !== "expired") resendOffer(offer); }}
                     >
                       <Send className="mr-2 h-4 w-4" /> Send offer
@@ -708,7 +708,7 @@ export function SimplifiedFestivalLineupManager({
                     <Button
                       size="sm"
                       variant="ghost"
-                      disabled={workflowPending}
+                      disabled={workflowPending || !data.canWrite}
                       onClick={() => withdrawCurrentOffer(offer)}
                     >
                       Withdraw offer
