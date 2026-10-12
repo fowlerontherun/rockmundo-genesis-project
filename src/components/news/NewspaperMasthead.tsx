@@ -36,7 +36,7 @@ export function NewspaperMasthead() {
   const todayStr = format(new Date(), "yyyy-MM-dd");
   const tagline = TAGLINES[seededIndex(todayStr, TAGLINES.length)];
   const quote = QUOTES[seededIndex(todayStr + "q", QUOTES.length)];
-  const editionNumber = calendar?.gameDay || Math.floor((Date.now() - new Date("2026-01-01").getTime()) / 86400000);
+  const editionNumber = calendar?.gameDay ?? Math.floor((Date.now() - new Date("2026-01-01").getTime()) / 86400000);
 
   return (
     <div className="border-b-4 border-double border-foreground pb-4 mb-6">
