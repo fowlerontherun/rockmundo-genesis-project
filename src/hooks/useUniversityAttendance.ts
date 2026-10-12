@@ -22,12 +22,12 @@ interface UniversityEnrollment {
   } | null;
 }
 
-export function useUniversityAttendance(profileId: string | undefined) {
+export function useUniversityAttendance(profileId: string | undefined, enrollmentId?: string | null) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: enrollment } = useQuery({
-    queryKey: ["current_enrollment_full", profileId],
+    queryKey: ["current_enrollment_full", profileId, enrollmentId],
     queryFn: async () => {
       if (!profileId) return null;
 
@@ -46,12 +46,12 @@ export function useUniversityAttendance(profileId: string | undefined) {
         `)
         .eq("profile_id", profileId)
         .in("status", ["enrolled", "in_progress"])
+          // Selected course is resolved server-side after filtering by the character.
         .order("enrolled_at", { ascending: false })
-        .limit(1)
-        .single();
+        .limit(enrollmentId ? 100 : 1);
 
       if (error && error.code !== "PGRST116") throw error;
-      return data as UniversityEnrollment | null;
+      return ((data ?? []).find((row: any) => !enrollmentId || row.id === enrollmentId) ?? null) as UniversityEnrollment | null;
     },
     enabled: !!profileId,
   });
