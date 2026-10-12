@@ -1099,6 +1099,8 @@ const TourManager = () => {
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
+          ) : otherToursError ? (
+            <div role="alert" className="p-4 text-sm text-destructive">Unable to load other tours. <Button variant="outline" size="sm" onClick={() => void retryOtherTours()}>Retry</Button></div>
           ) : otherToursData?.tours.length === 0 ? (
             <EmptyState
               icon={Music}
