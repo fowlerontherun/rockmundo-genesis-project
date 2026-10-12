@@ -217,7 +217,6 @@ export function useScheduledActivities(date: Date, userId?: string) {
           .from('releases')
           .select('*, bands(name)')
           .in('band_id', userBandIds)
-          .eq('release_status', 'manufacturing')
           .not('manufacturing_complete_at', 'is', null);
         
         releaseActivities = (manufacturingReleases || [])
