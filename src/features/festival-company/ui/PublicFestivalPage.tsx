@@ -553,7 +553,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
               <section className="rounded-xl border bg-card p-5" aria-labelledby="visitor-ticket-help">
                 <h3 id="visitor-ticket-help" className="text-lg font-bold">Tickets & entry</h3>
                 <p className="mt-1 text-sm text-muted-foreground">Review the published ticket types and their individual access dates before purchasing.</p>
-                {f.ticketProducts.length > 0 ? (
+                {f.ticketProducts.some((product) => product.productClass === "admission") ? (
                   <ul className="mt-3 space-y-2 text-sm">
                     {f.ticketProducts.filter((product) => product.productClass === "admission").map((product) => (
                       <li key={product.id} className="rounded-md border p-2">
