@@ -296,7 +296,13 @@ export function parseFestivalSitePlanResult(
     !obj(v.scaleLimits) ||
     typeof v.scaleLimits.requiresSecondaryStage !== "boolean" ||
     typeof v.scaleLimits.requiresAccessibilityPlan !== "boolean" ||
-    !numericObject(v.capacityMetrics, metricKeys)
+    !obj(v.capacityMetrics) ||
+    !metricKeys.every(key => {
+      const value = v.capacityMetrics[key];
+      return (key === "mainStageShare" || key === "peakCrowdConcentration")
+        ? typeof value === "number" && Number.isFinite(value) && value >= 0
+        : integer(value);
+    })
   )
     return fail();
   if (
