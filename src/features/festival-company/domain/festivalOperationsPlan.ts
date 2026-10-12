@@ -16,7 +16,7 @@ export function parseFestivalOperationsResult(value:unknown):FestivalOperationsR
  if(!object(value)||typeof value.festivalCompanyId!=="string"||!UUID.test(value.festivalCompanyId)||!strings(value.departments)||!strings(value.staffingRequirements)||!strings(value.vacancies)||!strings(value.applications)||!strings(value.assignments)||!strings(value.shifts)||!strings(value.supplierRequirements)||!strings(value.quotes)||!strings(value.contracts)||!object(value.budgetSummary)||!object(value.qualityScores)||!Array.isArray(value.issues)||typeof value.readiness!=="boolean"||typeof value.canWrite!=="boolean"||!integer(value.planningVersion))fail();
  const collections=["departments","staffingRequirements","vacancies","applications","assignments","shifts","supplierRequirements","quotes","contracts"] as const;
  for(const key of collections){
-  if(!value[key].every(row=>object(row)&&(!("id" in row)||(typeof row.id==="string"&&UUID.test(row.id)))&&
+  if(!(value[key] as unknown[]).every(row=>object(row)&&(!("id" in row)||(typeof row.id==="string"&&UUID.test(row.id)))&&
    Object.entries(row).every(([field,entry])=>!(field.endsWith("Minor")||field.endsWith("BasisPoints"))||integer(entry)) &&
    (!("status" in row)||typeof row.status==="string")))fail();
  }
