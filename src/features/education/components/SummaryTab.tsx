@@ -376,7 +376,7 @@ export const SummaryTab = () => {
                           </span>
                         </div>
                         <Progress
-                          value={(skillData.xp / skillData.required) * 100}
+                          value={skillData.required > 0 ? Math.min(100, Math.max(0, (skillData.xp / skillData.required) * 100)) : 100}
                           className="h-2"
                         />
                       </div>
