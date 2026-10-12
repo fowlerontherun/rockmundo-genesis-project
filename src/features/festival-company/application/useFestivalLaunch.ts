@@ -1,5 +1,6 @@
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import * as repository from "../data/festivalCompanyRepository";
+import {useActiveProfile} from "@/hooks/useActiveProfile";
 export const festivalLaunchKey=(id?:string)=>["festival-launch",id] as const;
 export const publicFestivalKey=(slug?:string)=>["public-festival",slug] as const;
 export const festivalDirectoryKey=(filters:Record<string,unknown>={})=>["festival-directory",filters] as const;
@@ -9,7 +10,7 @@ export const usePublicFestival=(slug?:string)=>useQuery({queryKey:publicFestival
 export const usePublicFestivalDirectory=(filters:Record<string,unknown>={})=>useQuery({queryKey:festivalDirectoryKey(filters),queryFn:()=>repository.getPublicFestivalDirectory(filters),refetchInterval:60_000});
 export const usePublicFestivalTimetable=(slug?:string)=>useQuery({queryKey:["public-festival-timetable",slug],enabled:Boolean(slug),queryFn:()=>repository.getPublicFestivalTimetable(slug!)});
 export const usePublicFestivalTicketProducts=(launchId?:string)=>useQuery({queryKey:["public-festival-tickets",launchId],enabled:Boolean(launchId),queryFn:()=>repository.getPublicFestivalTicketProducts(launchId!)});
-export const useMyFestivalTickets=(enabled=true)=>useQuery({queryKey:festivalTicketWalletKey,queryFn:repository.getMyFestivalTickets,enabled});
+export const useMyFestivalTickets=(enabled=true)=>{const {profileId}=useActiveProfile();return useQuery({queryKey:[...festivalTicketWalletKey,profileId],queryFn:repository.getMyFestivalTickets,enabled:enabled&&Boolean(profileId)});};
 export const useFestivalPlayerTicketSalesBreakdown=(id?:string)=>useQuery({queryKey:["festival-player-sales-breakdown",id],enabled:Boolean(id),queryFn:()=>repository.getFestivalPlayerTicketSalesBreakdown(id!),refetchInterval:60_000});
 export const useFestivalSalesSummary=(id?:string)=>useQuery({queryKey:["festival-sales-summary",id],enabled:Boolean(id),queryFn:()=>repository.getFestivalTicketSalesSummary(id!),refetchInterval:60_000});
 const useLaunchMutation=<T,>(fn:(i:T)=>Promise<unknown>)=>{const c=useQueryClient();return useMutation({mutationFn:fn,onSuccess:(_,i)=>{const id=(i as {festivalCompanyId?:string}).festivalCompanyId;void Promise.all([c.invalidateQueries({queryKey:festivalLaunchKey(id)}),c.invalidateQueries({queryKey:["festival-sales-summary",id]}),c.invalidateQueries({queryKey:["festival-player-sales-breakdown",id]}),c.invalidateQueries({queryKey:["festival-directory"]}),c.invalidateQueries({queryKey:["public-festival"]}),c.invalidateQueries({queryKey:["public-festival-tickets"]}),c.invalidateQueries({queryKey:["notifications"]}),c.invalidateQueries({queryKey:["mail"]})])}})};
