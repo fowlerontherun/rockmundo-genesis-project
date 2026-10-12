@@ -2398,7 +2398,8 @@ const Songwriting = () => {
                             moodModifiers: formState.moodModifiers,
                             writingMode: formState.writingMode,
                           }}
-                          existingLyrics={formState.additionalNotes}
+                          additionalNotes={formState.additionalNotes}
+                          existingLyrics={formState.lyricsSections?.map((section: any) => section.content ?? "").join("\n") ?? ""}
                           onLyricsGenerated={(lyrics) => {
                             const newSections = parseLyricsToSections(lyrics);
                             setFormState((prev) => ({
