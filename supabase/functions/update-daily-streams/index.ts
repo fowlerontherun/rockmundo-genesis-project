@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
+import { authorizePrivilegedJob } from "../_shared/privilegedJobAuth.ts";
 import {
   completeJobRun,
   failJobRun,
@@ -23,6 +24,9 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const denied = await authorizePrivilegedJob(req);
+  if (denied) return denied;
 
   const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req);
   const triggeredBy = payload?.triggeredBy ?? req.headers.get('x-triggered-by') ?? undefined;
@@ -59,7 +63,7 @@ Deno.serve(async (req) => {
 
     const streamingReleases: any[] = [];
     for (let offset = 0; ; offset += 500) {
-    const { data: streamingPage, error: streamingError } = await supabase
+    const { data: page, error: streamingError } = await supabase
       .from('song_releases')
       .select(`
         id, 
@@ -78,10 +82,11 @@ Deno.serve(async (req) => {
       .eq('release_type', 'streaming')
       .in('songs.status', ['recorded', 'released'])
       .lte('release_date', new Date().toISOString())
-      .order('id', { ascending: true }).range(offset, offset + 499);
+      .order('id', { ascending: true })
+      .range(offset, offset + 499);
     if (streamingError) throw streamingError;
-    streamingReleases.push(...(streamingPage ?? []));
-    if (!streamingPage || streamingPage.length < 500) break;
+    streamingReleases.push(...(page ?? []));
+    if (!page || page.length < 500) break;
     }
 
     // Get active band count for market scaling
@@ -125,12 +130,12 @@ Deno.serve(async (req) => {
     // Pre-fetch label contract info for releases
     let releaseContractMap = new Map<string, { contractId: string; labelId: string; labelCutPct: number; advanceAmount: number; recoupedAmount: number; dealTypeName: string; endDate: string }>();
     if (releaseIds.length > 0) {
-      const { data: releasesWithContracts, error: contractLinksError } = await supabase
+      const { data: releasesWithContracts, error: releaseContractsError } = await supabase
         .from('releases')
         .select('id, label_contract_id, label_revenue_share_pct')
         .in('id', releaseIds)
         .not('label_contract_id', 'is', null);
-      if (contractLinksError) throw contractLinksError;
+      if (releaseContractsError) throw releaseContractsError;
 
       const contractIds = [...new Set((releasesWithContracts || []).map(r => r.label_contract_id).filter(Boolean))];
       if (contractIds.length > 0) {
@@ -140,7 +145,6 @@ Deno.serve(async (req) => {
           .in('id', contractIds)
           .eq('status', 'active');
         if (contractsError) throw contractsError;
-
         // Fetch deal type names
         const dealTypeIds = [...new Set((contracts || []).map(c => c.deal_type_id).filter(Boolean))];
         const dealTypeNameMap = new Map<string, string>();
@@ -239,7 +243,7 @@ Deno.serve(async (req) => {
         if (!bandCountryFansMap.has(entry.band_id)) {
           bandCountryFansMap.set(entry.band_id, new Map());
         }
-        bandCountryFansMap.get(entry.band_id)!.set(entry.country, entry.total_fans || 0);
+        bandCountryFansMap.get(entry.band_id)!.set(entry.country, Math.max(0, Number(entry.total_fans || 0)));
       }
     }
 
@@ -265,7 +269,7 @@ Deno.serve(async (req) => {
 
     // === GENRE TREND & SEASONAL MODIFIERS (v1.0.932) ===
     const GAME_EPOCH_MS = new Date("2026-01-01T00:00:00Z").getTime();
-    const gameDaysElapsed = Math.max(0, Math.floor((Date.now() - GAME_EPOCH_MS) / (1000 * 60 * 60 * 24)));
+    const gameDaysElapsed = Math.max(0, Math.floor((Date.now() - GAME_EPOCH_MS) / 86_400_000) * 3);
     function genreHash(s: string): number {
       let h = 0;
       for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
@@ -280,8 +284,7 @@ Deno.serve(async (req) => {
       return Math.max(0.5, Math.min(1.5, 1.0 + wave * 0.35 + drift));
     }
 
-    // Use the same accelerated game calendar as daily sales.
-    const monthIndex = Math.floor((gameDaysElapsed % 120) / 10);
+    const monthIndex = Math.floor((gameDaysElapsed % 360) / 30);
     const season = monthIndex >= 2 && monthIndex <= 4 ? 'spring'
       : monthIndex >= 5 && monthIndex <= 7 ? 'summer'
       : monthIndex >= 8 && monthIndex <= 10 ? 'autumn' : 'winter';
@@ -305,7 +308,11 @@ Deno.serve(async (req) => {
 
     console.log(`Genre trend & seasonal modifiers active: season=${season} (${seasonalStreamMod}x), gameDay=${gameDaysElapsed}`);
 
-    for (const release of streamingReleases || []) {
+    // Rotate the starting release across days so timeouts do not permanently
+    // starve rows near the end of a large catalogue.
+    const rotation = streamingReleases.length ? (Math.floor(Date.now() / 86_400_000) % streamingReleases.length) : 0;
+    const rotatedReleases = [...streamingReleases.slice(rotation), ...streamingReleases.slice(0, rotation)];
+    for (const release of rotatedReleases) {
       if (isNearTimeout()) {
         console.warn(`[update-daily-streams] Approaching timeout after ${streamUpdates} stream updates. Finishing early.`);
         break;
@@ -414,13 +421,11 @@ Deno.serve(async (req) => {
           throw new Error('Streaming region allocations do not reconcile to the release total');
         }
 
-        const { error: updateError } = await supabase
-          .from('song_releases')
-          .update({
-            total_streams: (release.total_streams || 0) + dailyStreams,
-            total_revenue: Math.round((release.total_revenue || 0)) + dailyRevenueDollars,
-          })
-          .eq('id', release.id);
+        const { error: updateError } = await supabase.rpc("increment_song_release_stream_totals", {
+          p_release_id: release.id,
+          p_daily_streams: dailyStreams,
+          p_daily_revenue: dailyRevenueDollars,
+        });
 
         if (updateError) {
           throw updateError;

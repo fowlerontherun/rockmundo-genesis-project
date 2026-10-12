@@ -324,31 +324,14 @@ export function useSellProperty() {
   return useMutation({
     mutationFn: async ({ property, marketMultiplier = 1 }: { property: PlayerProperty; marketMultiplier?: number }) => {
       if (!profileId || !userId) throw new Error("Not authenticated");
-      const sellPrice = calculateSellPrice(property.purchase_price, marketMultiplier);
-
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("cash")
-        .eq("id", profileId)
-        .single();
-      if (profileError) throw profileError;
-
-      const { error: cashError } = await supabase
-        .from("profiles")
-        .update({ cash: (profile.cash || 0) + sellPrice })
-        .eq("id", profileId);
-      if (cashError) throw cashError;
-
-      const { error: deleteError } = await supabase
-        .from("player_properties")
-        .delete()
-        .eq("id", property.id)
-        .eq("user_id", userId);
-      if (deleteError) {
-        console.error("[Housing] Sell property failed:", { deleteError, propertyId: property.id, userId });
-        throw deleteError;
-      }
-
+      const { data: sellPrice, error: saleError } = await (supabase as any)
+        .rpc("sell_player_property_atomic", {
+          p_profile_id: profileId,
+          p_property_id: property.id,
+          p_multiplier: marketMultiplier,
+        });
+      if (saleError) throw saleError;
+      if (typeof sellPrice !== "number") throw new Error("Property sale payout not confirmed");
       return sellPrice;
     },
     onSuccess: (sellPrice) => {

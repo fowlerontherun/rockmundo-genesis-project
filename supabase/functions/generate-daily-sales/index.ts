@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { authorizePrivilegedJob } from "../_shared/privilegedJobAuth.ts";
 import {
   completeJobRun,
   failJobRun,
@@ -59,6 +60,9 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const denied = await authorizePrivilegedJob(req);
+  if (denied) return denied;
 
   const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req);
   const triggeredBy = payload?.triggeredBy ?? req.headers.get("x-triggered-by") ?? undefined;
@@ -177,7 +181,7 @@ serve(async (req) => {
 
     const releases: any[] = [];
     for (let offset = 0; ; offset += 500) {
-    const { data: releasePage, error: releasesError } = await supabaseClient
+    const { data: page, error: releasesError } = await supabaseClient
       .from("releases")
       .select(`
         id,
@@ -203,10 +207,11 @@ serve(async (req) => {
         release_songs!release_songs_release_id_fkey(song_id, song:songs(id, quality_score))
       `)
       .eq("release_status", "released")
-      .order("id", { ascending: true }).range(offset, offset + 499);
+      .order("id", { ascending: true })
+      .range(offset, offset + 499);
     if (releasesError) throw releasesError;
-    releases.push(...(releasePage ?? []));
-    if (!releasePage || releasePage.length < 500) break;
+    releases.push(...(page ?? []));
+    if (!page || page.length < 500) break;
     }
 
     const userIds = Array.from(
@@ -400,14 +405,12 @@ serve(async (req) => {
         // If no territories, use legacy global logic
         let regionalMultiplier = 1.0;
         if (!hasTerritories) {
-          const countryRows = [...countryFansMap.values()];
-          const weightTotal = countryRows.reduce((sum, row) => sum + Math.max(0, row.total_fans || 0), 0);
-          if (countryRows.length > 0) {
-            const totalWeighted = countryRows.reduce((sum, row) => {
-              const weight = weightTotal > 0 ? Math.max(0, row.total_fans || 0) : 1;
-              return sum + calculateRegionalSalesMultiplier(row.fame, row.has_performed, globalFame) * weight;
-            }, 0);
-            regionalMultiplier = totalWeighted / (weightTotal > 0 ? weightTotal : countryRows.length);
+          const countryFanRows = [...countryFansMap.values()];
+          if (countryFanRows.length) {
+            const totalWeight = countryFanRows.reduce((sum, cf) => sum + Math.max(1, Number(cf.total_fans || 0)), 0);
+            regionalMultiplier = countryFanRows.reduce((sum, cf) =>
+              sum + calculateRegionalSalesMultiplier(cf.fame, cf.has_performed, globalFame) *
+                Math.max(1, Number(cf.total_fans || 0)) / totalWeight, 0);
           }
         }
 
