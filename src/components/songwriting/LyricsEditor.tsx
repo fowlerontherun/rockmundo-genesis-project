@@ -51,7 +51,7 @@ export function parseLyricsToSections(lyrics: string): LyricsSection[] {
 
   const sections: LyricsSection[] = [];
   // Capture the actual header label, retaining material before the first header.
-  const sectionRegex = /^\\[((?:verse|chorus|pre[ -]?chorus|bridge|intro|outro|hook|breakdown|instrumental)(?:\\s*\\d+)?)\\][ \\t]*$/gim;
+  const sectionRegex = /^\[((?:verse|chorus|pre[ -]?chorus|bridge|intro|outro|hook|breakdown|instrumental)(?:\s*\d+)?)\][ \t]*$/gim;
   const matches = Array.from(lyrics.matchAll(sectionRegex));
   if (matches.length && matches[0].index! > 0) {
     const preface = lyrics.slice(0, matches[0].index).trim();
