@@ -165,12 +165,11 @@ export function useAddFleetVehicle() {
 
   return useMutation({
     mutationFn: async (data: Partial<LogisticsFleetVehicle>) => {
-      const { data: result, error } = await supabase
-        .from("logistics_fleet_vehicles")
-        .insert(data as any)
-        .select()
-        .single();
-
+      if (!data.logistics_company_id) throw new Error("Missing logistics company ID");
+      const { data: result, error } = await (supabase as any).rpc("purchase_logistics_fleet_vehicle_atomic", {
+        p_logistics_id: data.logistics_company_id,
+        p_vehicle: data,
+      });
       if (error) throw error;
       return result;
     },
@@ -186,22 +185,10 @@ export function useHireDriver() {
   return useMutation({
     mutationFn: async (data: Partial<LogisticsDriver>) => {
       if (!data.logistics_company_id) throw new Error("Missing logistics company ID");
-      const companyId = await getCompanyIdFromLogistics(data.logistics_company_id);
-      const hiringCost = (data.salary_per_day || 100) * 30;
-
-      await deductCompanyBalance({
-        companyId,
-        amount: hiringCost,
-        description: `Hired driver: ${data.name || 'Unknown'}`,
-        category: "staff",
+      const { data: result, error } = await (supabase as any).rpc("hire_logistics_driver_atomic", {
+        p_logistics_id: data.logistics_company_id,
+        p_driver: data,
       });
-
-      const { data: result, error } = await supabase
-        .from("logistics_drivers")
-        .insert(data as any)
-        .select()
-        .single();
-
       if (error) throw error;
       return result;
     },
@@ -264,24 +251,11 @@ export function usePurchaseLogisticsUpgrade() {
   return useMutation({
     mutationFn: async (data: Partial<LogisticsUpgrade>) => {
       if (!data.logistics_company_id) throw new Error("Missing logistics company ID");
-      const companyId = await getCompanyIdFromLogistics(data.logistics_company_id);
-      const cost = data.cost || 0;
-
-      if (cost > 0) {
-        await deductCompanyBalance({
-          companyId,
-          amount: cost,
-          description: `Logistics upgrade: ${data.upgrade_type || 'Unknown'}`,
-          category: "upgrade",
-        });
-      }
-
-      const { data: result, error } = await supabase
-        .from("logistics_upgrades")
-        .insert(data as any)
-        .select()
-        .single();
-
+      if (!data.upgrade_type) throw new Error("Missing upgrade type");
+      const { data: result, error } = await (supabase as any).rpc("purchase_logistics_upgrade_atomic", {
+        p_logistics_id: data.logistics_company_id,
+        p_upgrade_type: data.upgrade_type,
+      });
       if (error) throw error;
       return result;
     },

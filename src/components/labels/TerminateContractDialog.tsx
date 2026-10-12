@@ -78,66 +78,16 @@ export function TerminateContractDialog({
 
   const terminateMutation = useMutation({
     mutationFn: async () => {
-      // Deduct fee from band or user balance
-      if (contract.band_id) {
-        const { data: band } = await supabase
-          .from("bands")
-          .select("band_balance")
-          .eq("id", contract.band_id)
-          .single();
-
-        if (!band || (band.band_balance || 0) < terminationFee) {
-          throw new Error("Insufficient band balance for termination fee");
-        }
-
-        await supabase
-          .from("bands")
-          .update({ band_balance: (band.band_balance || 0) - terminationFee })
-          .eq("id", contract.band_id);
-
-        // Record the expense
-        await supabase.from("band_earnings").insert({
-          band_id: contract.band_id,
-          amount: -terminationFee,
-          source: "contract_termination",
-          description: `Contract termination fee: ${contract.label_name}`,
-        });
-      } else {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("Not authenticated");
-
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("cash")
-          .eq("id", user.id)
-          .single();
-
-        if (!profile || (profile.cash || 0) < terminationFee) {
-          throw new Error("Insufficient funds for termination fee");
-        }
-
-        await supabase
-          .from("profiles")
-          .update({ cash: (profile.cash || 0) - terminationFee })
-          .eq("id", user.id);
-      }
-
-      // Update contract status
-      const { error } = await supabase
-        .from("artist_label_contracts")
-        .update({
-          status: "terminated",
-          terminated_at: new Date().toISOString(),
-          termination_fee_paid: terminationFee,
-        })
-        .eq("id", contract.id);
-
+      const { data, error } = await (supabase as any).rpc("terminate_artist_contract_atomic", {
+        p_contract_id: contract.id,
+      });
       if (error) throw error;
+      return data as { terminationFee: number };
     },
-    onSuccess: () => {
+    onSuccess: (settlement) => {
       toast({
         title: "Contract terminated",
-        description: `You've paid $${terminationFee.toLocaleString()} to exit your contract with ${contract.label_name}.`,
+        description: `You've paid ${Number(settlement.terminationFee).toLocaleString()} to exit your contract with ${contract.label_name}.`,
       });
       queryClient.invalidateQueries({ queryKey: ["label-contracts"] });
       queryClient.invalidateQueries({ queryKey: ["band"] });

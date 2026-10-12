@@ -210,110 +210,29 @@ export function ContractOfferCard({ offer, entityName }: ContractOfferCardProps)
   const counterOfferMutation = useMutation({
     mutationFn: async () => {
       if (!Number.isFinite(counterOffer.advance_amount) || counterOffer.advance_amount < 0 || !Number.isInteger(counterOffer.single_quota) || counterOffer.single_quota < 0 || !Number.isInteger(counterOffer.album_quota) || counterOffer.album_quota < 0 || !Number.isFinite(counterOffer.royalty_artist_pct) || counterOffer.royalty_artist_pct < 0 || counterOffer.royalty_artist_pct > 100) throw new Error("Enter a valid non-negative advance, quotas and royalty percentage.");
-      const newCounterCount = counterCount + 1;
-
-      // On first counter, store originals
-      const updatePayload: Record<string, any> = {
-        advance_amount: counterOffer.advance_amount,
-        royalty_artist_pct: counterOffer.royalty_artist_pct,
-        royalty_label_pct: 100 - counterOffer.royalty_artist_pct,
-        single_quota: counterOffer.single_quota,
-        album_quota: counterOffer.album_quota,
-        status: "negotiating",
-        counter_count: newCounterCount,
-        last_action_by: "artist",
-      };
-
-      // Store originals on first counter
-      if (counterCount === 0) {
-        updatePayload.original_advance = offer.advance_amount;
-        updatePayload.original_royalty_pct = offer.royalty_artist_pct;
-        updatePayload.original_single_quota = offer.single_quota;
-        updatePayload.original_album_quota = offer.album_quota;
-      }
-
-      const { error } = await supabase
-        .from("artist_label_contracts")
-        .update(updatePayload as any)
-        .eq("id", offer.id);
+      const { data, error } = await (supabase as any).rpc("submit_label_counteroffer_atomic", {
+        p_contract_id: offer.id,
+        p_expected_counter_count: counterCount,
+        p_terms: counterOffer,
+      });
       if (error) throw error;
-
-      return newCounterCount;
+      return data as { status: string; counterCount: number };
     },
-    onSuccess: async (newCounterCount) => {
+    onSuccess: (result) => {
       setShowCounterDialog(false);
-
-      if (newCounterCount >= 3) {
-        // 3rd counter — label auto-rejects
+      if (result.status === "rejected") {
         toast({
           title: "Label walked away!",
-          description: `${offer.label_name} rejected your counter-offer. You pushed too hard.`,
+          description: `${offer.label_name} rejected your final counter-offer.`,
           variant: "destructive",
         });
-
-        // Auto-reject after brief delay
-        setTimeout(async () => {
-          const { error: rejectError } = await supabase
-            .from("artist_label_contracts")
-            .update({ status: "rejected", last_action_by: "label" })
-            .eq("id", offer.id)
-            .eq("status","negotiating");
-          if (rejectError) { toast({title:"Contract response failed",description:rejectError.message,variant:"destructive"}); return; }
-
-          // Send inbox notification about rejection
-          const { data: members } = await supabase
-            .from("band_members")
-            .select("user_id")
-            .or(`band_id.eq.${offer.label_id}`)
-            .limit(1);
-
-          invalidateAll();
-        }, 1500);
       } else {
-        // Label auto-responds by meeting halfway
         toast({
-          title: "Counter-offer sent!",
-          description: `${offer.label_name} is reviewing your terms...`,
+          title: "Label replied to your counter-offer",
+          description: "The revised terms are ready to review.",
         });
-
-        // Simulate label response after 2 seconds
-        setTimeout(async () => {
-          const origAdv = offer.original_advance ?? offer.advance_amount;
-          const origRoy = offer.original_royalty_pct ?? offer.royalty_artist_pct;
-          const origSingle = offer.original_single_quota ?? offer.single_quota;
-          const origAlbum = offer.original_album_quota ?? offer.album_quota;
-
-          // Label concedes 30-50% toward artist's ask (less each round)
-          const concessionRate = newCounterCount === 1 ? 0.45 : 0.3;
-          
-          const labelAdvance = Math.round(origAdv + (counterOffer.advance_amount - origAdv) * concessionRate);
-          const labelRoyalty = Math.round(origRoy + (counterOffer.royalty_artist_pct - origRoy) * concessionRate);
-          const labelSingleQuota = Math.round(origSingle + (counterOffer.single_quota - origSingle) * concessionRate);
-          const labelAlbumQuota = Math.round(origAlbum + (counterOffer.album_quota - origAlbum) * concessionRate);
-
-          const { error: counterError } = await supabase
-            .from("artist_label_contracts")
-            .update({
-              advance_amount: labelAdvance,
-              royalty_artist_pct: labelRoyalty,
-              royalty_label_pct: 100 - labelRoyalty,
-              single_quota: Math.max(1, labelSingleQuota),
-              album_quota: Math.max(0, labelAlbumQuota),
-              status: "offered",
-              last_action_by: "label",
-            })
-            .eq("id", offer.id)
-            .eq("status","negotiating");
-          if (counterError) { toast({title:"Label counter response failed",description:counterError.message,variant:"destructive"}); return; }
-
-          toast({
-            title: `${offer.label_name} countered!`,
-            description: `They've revised their offer. ${countersRemaining - 1} counter${countersRemaining - 1 !== 1 ? 's' : ''} remaining before they walk away.`,
-          });
-
-          invalidateAll();
-        }, 2500);
       }
+      invalidateAll();
     },
     onError: (error: Error) => {
       toast({ title: "Failed to send counter-offer", description: error.message, variant: "destructive" });
