@@ -50,54 +50,34 @@ export function parseLyricsToSections(lyrics: string): LyricsSection[] {
   }
 
   const sections: LyricsSection[] = [];
-  // Only standalone, recognised section labels are structural headers; inline cues remain lyrics.
-  const sectionRegex = /^\[(?:(?:verse|chorus|pre[ -]?chorus|bridge|intro|outro|hook|breakdown|instrumental)(?:\s*\d+)?)\][ \t]*$/gim;
-  let lastIndex = 0;
-  let match;
-  let sectionCounter: Record<string, number> = {};
-
-  while ((match = sectionRegex.exec(lyrics)) !== null) {
-    // Get content before this section (if any, skip it)
-    const sectionHeader = match[1].toLowerCase().trim();
-    const startOfContent = match.index + match[0].length;
-    
-    // Find the next section header or end of string
-    const nextMatch = sectionRegex.exec(lyrics);
-    const endOfContent = nextMatch ? nextMatch.index : lyrics.length;
-    sectionRegex.lastIndex = startOfContent; // Reset to continue from here
-    
-    const content = lyrics.substring(startOfContent, endOfContent).trim();
-    
-    // Determine section type
-    let type = 'verse';
-    let label = match[1].trim();
-    
-    if (sectionHeader.includes('pre-chorus') || sectionHeader.includes('prechorus')) {
-      type = 'prechorus';
-    } else if (sectionHeader.includes('verse')) {
-      type = 'verse';
-    } else if (sectionHeader.includes('chorus')) {
-      type = 'chorus';
-    } else if (sectionHeader.includes('bridge')) {
-      type = 'bridge';
-    } else if (sectionHeader.includes('intro')) {
-      type = 'intro';
-    } else if (sectionHeader.includes('outro')) {
-      type = 'outro';
-    } else if (sectionHeader.includes('hook')) {
-      type = 'hook';
-    } else if (sectionHeader.includes('breakdown')) {
-      type = 'breakdown';
-    } else if (sectionHeader.includes('instrumental')) {
-      type = 'instrumental';
-    }
-    
-    // Generate unique ID
+  // Capture the actual header label, retaining material before the first header.
+  const sectionRegex = /^\\[((?:verse|chorus|pre[ -]?chorus|bridge|intro|outro|hook|breakdown|instrumental)(?:\\s*\\d+)?)\\][ \\t]*$/gim;
+  const matches = Array.from(lyrics.matchAll(sectionRegex));
+  if (matches.length && matches[0].index! > 0) {
+    const preface = lyrics.slice(0, matches[0].index).trim();
+    if (preface) sections.push({ id: 'intro1', type: 'intro', label: 'Intro', content: preface });
+  }
+  const sectionCounter: Record<string, number> = {};
+  for (let index = 0; index < matches.length; index++) {
+    const match = matches[index];
+    const label = match[1].trim();
+    const header = label.toLowerCase();
+    const type = header.includes('pre-chorus') || header.includes('prechorus') || header.includes('pre chorus') ? 'prechorus'
+      : header.includes('verse') ? 'verse'
+      : header.includes('chorus') ? 'chorus'
+      : header.includes('bridge') ? 'bridge'
+      : header.includes('intro') ? 'intro'
+      : header.includes('outro') ? 'outro'
+      : header.includes('hook') ? 'hook'
+      : header.includes('breakdown') ? 'breakdown' : 'instrumental';
     sectionCounter[type] = (sectionCounter[type] || 0) + 1;
-    const id = `${type}${sectionCounter[type]}`;
-    
-    sections.push({ id, type, label, content });
-    lastIndex = endOfContent;
+    sections.push({
+      id: `${type}${sectionCounter[type] + (type === 'intro' && sections.some(s => s.id === 'intro1') ? 1 : 0)}`,
+      type,
+      label,
+      content: lyrics.slice(match.index! + match[0].length,
+        index + 1 < matches.length ? matches[index + 1].index : lyrics.length).trim(),
+    });
   }
 
   // If no sections found, try to create default structure
