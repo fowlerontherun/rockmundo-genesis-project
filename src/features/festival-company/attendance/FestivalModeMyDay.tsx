@@ -56,7 +56,7 @@ const formatFestivalTime = (value: string, timezone: string) =>
 const errorText = (error: Error | null) => error?.message.replaceAll("_", " ") || null;
 
 export const FestivalModeMyDay = ({ attendance }: { attendance: FestivalPlayerAttendance }) => {
-  const { data: plan, isLoading, isError, error } = useMyFestivalDayPlan(attendance.id);
+  const { data: plan, isLoading, isError, error, refetch } = useMyFestivalDayPlan(attendance.id);
   const preview = usePreviewFestivalDayPlanItem();
   const createItem = useCreateFestivalDayPlanItem();
   const cancelItem = useCancelFestivalDayPlanItem(attendance.id);
@@ -146,7 +146,7 @@ export const FestivalModeMyDay = ({ attendance }: { attendance: FestivalPlayerAt
   if (isError || !plan) {
     return (
       <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-6" role="alert">
-        Your Festival day could not be loaded. {error instanceof Error ? errorText(error) : ""}
+        Your Festival day could not be loaded. {error instanceof Error ? errorText(error) : ""} <button type="button" className="underline" onClick={() => void refetch()}>Retry</button>
       </div>
     );
   }
