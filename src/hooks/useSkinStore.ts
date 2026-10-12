@@ -179,6 +179,7 @@ export const useOwnedSkins = () => {
   });
 };
 
+const clothingPurchaseRequestKeys = new Map<string, string>();
 export const usePurchaseSkin = () => {
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
@@ -195,10 +196,13 @@ export const usePurchaseSkin = () => {
       zoneColours?: Record<string, string>;
     }) => {
       if (!profileId) throw new Error("Not authenticated");
+      const purchaseKey = `${profileId}:${itemId}:${variantKey ?? ""}:${JSON.stringify(zoneColours ?? {})}`;
+      let requestKey = clothingPurchaseRequestKeys.get(purchaseKey);
+      if (!requestKey) { requestKey = crypto.randomUUID(); clothingPurchaseRequestKeys.set(purchaseKey, requestKey); }
       const { data, error } = await supabase.rpc('purchase_clothing_item_atomic' as any, {
         p_profile_id: profileId,
         p_item_id: itemId,
-        p_idempotency_key: crypto.randomUUID(),
+        p_idempotency_key: requestKey,
         p_variant_key: variantKey || null,
         p_zone_colors: zoneColours || {},
       } as any);
@@ -206,6 +210,7 @@ export const usePurchaseSkin = () => {
       return data as Record<string, any>;
     },
     onSuccess: () => {
+      clothingPurchaseRequestKeys.clear();
       queryClient.invalidateQueries({ queryKey: ["owned-skins", profileId] });
       queryClient.invalidateQueries({ queryKey: ["active-profile"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });

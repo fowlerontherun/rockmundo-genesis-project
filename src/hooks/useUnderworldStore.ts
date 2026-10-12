@@ -141,6 +141,7 @@ export const useUnderworldStore = () => {
       paymentMethod: "cash" | "crypto";
     }) => {
       if (!profileId) throw new Error("Not logged in");
+      if (product.duration_hours && !["xp_multiplier","fame_multiplier","energy_regen","all_multiplier","gig_quality_boost","gig_earnings_boost","recording_quality_boost","songwriting_quality_boost","creativity_boost"].some(key => Number((product.effects as Record<string, unknown> | null)?.[key]) > 0)) throw new Error("This timed product has no supported boost effect and cannot be purchased.");
 
       // Validate payment
       if (paymentMethod === "cash") {
@@ -269,8 +270,9 @@ export const useUnderworldStore = () => {
           Date.now() + product.duration_hours * 60 * 60 * 1000
         ).toISOString();
 
+        // Only persist active boost effects the game can actually apply.
         // Determine boost type from effects
-        let boostType = "unknown";
+        let boostType = "";
         let boostValue = 1;
 
         if (effects.xp_multiplier) {
@@ -302,6 +304,7 @@ export const useUnderworldStore = () => {
           boostValue = effects.creativity_boost as number;
         }
 
+        if (!boostType) throw new Error("This product has no supported duration-based boost effect.");
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("Not authenticated");
 

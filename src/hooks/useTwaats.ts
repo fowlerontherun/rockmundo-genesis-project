@@ -304,6 +304,7 @@ export const useTwaaterFeed = (viewerAccountId?: string, enabled = true) => {
         .from("twaats")
         .select(twaatDetailsSelect)
         .in("account_id", followedIds)
+        .in("visibility", ["public", "followers"])
         .is("deleted_at", null)
         .is("scheduled_for", null)
         .order("created_at", { ascending: false })

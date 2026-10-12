@@ -47,6 +47,8 @@ export function BandSettingsTab({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
+  const [savingRecruitment, setSavingRecruitment] = useState(false);
+  const [savingApplications, setSavingApplications] = useState(false);
   const [isRecruiting, setIsRecruiting] = useState(initialRecruiting ?? false);
   const [allowApplications, setAllowApplications] = useState(initialAllowApps ?? true);
 
@@ -366,7 +368,9 @@ export function BandSettingsTab({
               </div>
               <Switch
                 checked={isRecruiting}
+                disabled={savingRecruitment}
                 onCheckedChange={async (checked) => {
+                  setSavingRecruitment(true);
                   setIsRecruiting(checked);
                   const { error } = await supabase
                     .from('bands')
@@ -379,6 +383,7 @@ export function BandSettingsTab({
                     toast({ title: checked ? 'Recruiting Enabled' : 'Recruiting Disabled', description: checked ? 'Players can now apply to join your band.' : 'Applications are now closed.' });
                     onBandUpdate();
                   }
+                  setSavingRecruitment(false);
                 }}
               />
             </div>
@@ -393,7 +398,9 @@ export function BandSettingsTab({
               </div>
               <Switch
                 checked={allowApplications}
+                disabled={savingApplications}
                 onCheckedChange={async (checked) => {
+                  setSavingApplications(true);
                   setAllowApplications(checked);
                   const { error } = await supabase
                     .from('bands')
@@ -406,6 +413,7 @@ export function BandSettingsTab({
                     toast({ title: checked ? 'Applications Open' : 'Applications Closed', description: checked ? 'Players can now request to join.' : 'Join requests are now closed.' });
                     onBandUpdate();
                   }
+                  setSavingApplications(false);
                 }}
               />
             </div>

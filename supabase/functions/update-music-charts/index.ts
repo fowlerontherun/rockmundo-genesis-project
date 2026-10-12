@@ -48,7 +48,7 @@ serve(async (req) => {
 
     const chartDate = new Date().toISOString().split("T")[0];
     const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6); // Inclusive seven calendar days (today and six previous dates).
 
     const RELEASE_SCOPES = ["single", "ep", "album"] as const;
     type ReleaseScope = (typeof RELEASE_SCOPES)[number];

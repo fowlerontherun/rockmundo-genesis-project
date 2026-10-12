@@ -187,7 +187,8 @@ export function ContractOfferCard({ offer, entityName }: ContractOfferCardProps)
       const { error } = await supabase
         .from("artist_label_contracts")
         .update({ status: "rejected" })
-        .eq("id", offer.id);
+        .eq("id", offer.id)
+        .in("status", ["offered", "negotiating"]);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -245,10 +246,12 @@ export function ContractOfferCard({ offer, entityName }: ContractOfferCardProps)
 
         // Auto-reject after brief delay
         setTimeout(async () => {
-          await supabase
+          const { error: rejectError } = await supabase
             .from("artist_label_contracts")
             .update({ status: "rejected", last_action_by: "label" })
-            .eq("id", offer.id);
+            .eq("id", offer.id)
+            .eq("status","negotiating");
+          if (rejectError) { toast({title:"Contract response failed",description:rejectError.message,variant:"destructive"}); return; }
 
           // Send inbox notification about rejection
           const { data: members } = await supabase
@@ -281,7 +284,7 @@ export function ContractOfferCard({ offer, entityName }: ContractOfferCardProps)
           const labelSingleQuota = Math.round(origSingle + (counterOffer.single_quota - origSingle) * concessionRate);
           const labelAlbumQuota = Math.round(origAlbum + (counterOffer.album_quota - origAlbum) * concessionRate);
 
-          await supabase
+          const { error: counterError } = await supabase
             .from("artist_label_contracts")
             .update({
               advance_amount: labelAdvance,
@@ -292,7 +295,9 @@ export function ContractOfferCard({ offer, entityName }: ContractOfferCardProps)
               status: "offered",
               last_action_by: "label",
             })
-            .eq("id", offer.id);
+            .eq("id", offer.id)
+            .eq("status","negotiating");
+          if (counterError) { toast({title:"Label counter response failed",description:counterError.message,variant:"destructive"}); return; }
 
           toast({
             title: `${offer.label_name} countered!`,

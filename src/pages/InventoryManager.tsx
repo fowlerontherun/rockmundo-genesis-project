@@ -211,7 +211,7 @@ const InventoryManager = () => {
               ) : (
                 <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                   {personalGear.map((g: any) => {
-                    const refund = Math.max(0, Math.floor((g.purchase_cost ?? 0) / 2));
+                    const refund = Math.max(0, Math.floor((g.purchase_cost ?? 0) / 2)); // Estimate only; final refund is calculated by server.
                     return (
                       <Card key={g.id} className="border-2">
                         <CardHeader className="pb-2">
@@ -248,7 +248,7 @@ const InventoryManager = () => {
                             }}
                           >
                             <DollarSign className="h-3 w-3" />
-                            Sell for ${refund.toLocaleString()}
+                            Estimated ${refund.toLocaleString()}
                           </Button>
                         </CardContent>
                       </Card>

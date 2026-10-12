@@ -11,9 +11,10 @@ export async function referralAwareDestination(
     const { data, error } = await (supabase as any).rpc("get_referral_dashboard", {
       p_profile_id: profileId,
     });
-    if (error || !data?.code) return destinationUrl;
+    if (error) throw error;
+    if (!data?.code) throw new Error("Referral code is unavailable; the destination cannot be shared with attribution.");
     return withReferral(destinationUrl, data.code, source);
-  } catch {
-    return destinationUrl;
+  } catch (error) {
+    throw error;
   }
 }

@@ -45,7 +45,9 @@ export function RoyaltyStatementsTab({ artistEntities }: RoyaltyStatementsTabPro
         return [];
       }
 
-      const { data, error } = await supabase
+      const allStatements: RoyaltyStatementWithRelations[] = [];
+      for (let offset = 0; ; offset += 500) {
+        const { data, error } = await supabase
         .from("label_royalty_statements")
         .select(`
           *,
@@ -62,13 +64,14 @@ export function RoyaltyStatementsTab({ artistEntities }: RoyaltyStatementsTabPro
           release:label_releases(id, title, release_type, release_date)
         `)
         .in("contract_id", contractIds)
-        .order("period_end", { ascending: false });
+        .order("period_end", { ascending: false })
+        .range(offset,offset+499);
 
-      if (error) {
-        throw error;
+        if (error) throw error;
+        allStatements.push(...((data ?? []) as RoyaltyStatementWithRelations[]));
+        if ((data?.length ?? 0) < 500) break;
       }
-
-      return data as RoyaltyStatementWithRelations[];
+      return allStatements;
     },
   });
 

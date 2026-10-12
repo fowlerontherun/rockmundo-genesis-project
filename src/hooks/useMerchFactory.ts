@@ -210,6 +210,10 @@ export function useUpdateProductionStatus() {
   
   return useMutation({
     mutationFn: async ({ orderId, status, factoryId }: { orderId: string; status: string; factoryId: string }) => {
+      const { data: current, error: readError } = await supabase.from("merch_production_queue").select("status").eq("id",orderId).single();
+      if (readError) throw readError;
+      const allowed: Record<string,string[]> = {pending:["in_production","cancelled"],in_production:["quality_check","cancelled"],quality_check:["completed","in_production"],completed:["shipped"],shipped:[],cancelled:[]};
+      if (!(allowed[current.status] ?? []).includes(status)) throw new Error("Production status has changed or transition is invalid.");
       const updates: Record<string, unknown> = { status };
       
       if (status === 'in_production') {
@@ -224,6 +228,7 @@ export function useUpdateProductionStatus() {
         .from('merch_production_queue')
         .update(updates as any)
         .eq('id', orderId)
+        .eq('status', current.status)
         .select()
         .single();
       
@@ -375,13 +380,14 @@ export function useAllBands() {
   return useQuery({
     queryKey: ['merch-factory-band-options'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('bands')
-        .select('id, name')
-        .order('name')
-        .limit(200);
-      if (error) throw error;
-      return (data ?? []) as { id: string; name: string }[];
+      const allBands: { id: string; name: string }[] = [];
+      for (let offset = 0; ; offset += 500) {
+        const { data, error } = await supabase.from("bands").select("id, name").order("name").order("id").range(offset,offset+499);
+        if (error) throw error;
+        allBands.push(...(data ?? []));
+        if ((data?.length ?? 0) < 500) break;
+      }
+      return allBands;
     },
   });
 }

@@ -69,22 +69,27 @@ Deno.serve(async (req) => {
       
       console.log(`Processing release ${release.id} with ${platformIds.length} platforms, ${territoryCountries.length} territories`);
       
+      const failedPlatformIds: string[] = [];
       for (const platformId of platformIds) {
         // Get platform name for logging
-        const { data: platform } = await supabase
+        const { data: platform, error: platformError } = await supabase
           .from('streaming_platforms')
           .select('platform_name')
           .eq('id', platformId)
           .single();
+        if (platformError || !platform) { console.error('Platform lookup failed:', platformError); failedPlatformIds.push(platformId); continue; }
 
         for (const releaseSong of release.release_songs || []) {
           // Check if already distributed
-          const { data: existing } = await supabase
+          const { data: existing, error: existingError } = await supabase
             .from('song_releases')
             .select('id')
             .eq('song_id', releaseSong.song_id)
             .eq('platform_id', platformId)
-            .single();
+            .eq('release_type', 'streaming')
+            .eq('is_active', true)
+            .maybeSingle();
+          if (existingError) { failedPlatformIds.push(platformId); console.error('Existing release lookup failed', existingError); continue; }
 
           if (!existing) {
             // Get user_id from release or band leader
@@ -99,9 +104,8 @@ Deno.serve(async (req) => {
             }
             
             // Create song release with territory info
-            const { error: insertError } = await supabase
-              .from('song_releases')
-              .insert({
+            const { data: inactive } = await supabase.from('song_releases').select('id').eq('song_id',releaseSong.song_id).eq('platform_id',platformId).eq('release_type','streaming').eq('is_active',false).maybeSingle();
+            const releasePayload = {
                 song_id: releaseSong.song_id,
                 platform_id: platformId,
                 platform_name: platform?.platform_name,
@@ -113,10 +117,14 @@ Deno.serve(async (req) => {
                 is_active: true,
                 total_streams: 0,
                 total_revenue: 0
-              });
+              } as const;
+            const { error: insertError } = inactive?.id
+              ? await supabase.from('song_releases').update({ ...releasePayload, total_streams: undefined, total_revenue: undefined }).eq('id', inactive.id)
+              : await supabase.from('song_releases').insert(releasePayload);
 
             if (insertError) {
               console.error(`Error inserting song_release: ${insertError.message}`);
+              if (!failedPlatformIds.includes(platformId)) failedPlatformIds.push(platformId);
             } else {
               distributionCount++;
               console.log(`Distributed song ${releaseSong.song_id} to ${platform?.platform_name || platformId} (${territoryCountries.length} territories)`);
@@ -130,7 +138,7 @@ Deno.serve(async (req) => {
       // Clear streaming_platforms array after distribution
       const { error: updateError } = await supabase
         .from('releases')
-        .update({ streaming_platforms: [] })
+        .update({ streaming_platforms: failedPlatformIds })
         .eq('id', release.id);
 
       if (updateError) {

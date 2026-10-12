@@ -93,7 +93,7 @@ const TwaaterProfileView = () => {
         .is("deleted_at", null)
         .is("scheduled_for", null)
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(200);
 
       if (viewerAccount?.id === profileAccount.id) {
         query = query.in("visibility", ["public", "followers"]);
@@ -116,6 +116,8 @@ const TwaaterProfileView = () => {
   useEffect(() => {
     if (!viewerAccount?.id || !profileAccount?.id || viewerAccount.id === profileAccount.id) return;
 
+    const key = `twaater-view:${viewerAccount.id}:${profileAccount.id}`;
+    if (typeof sessionStorage !== "undefined" && sessionStorage.getItem(key)) return;
     let cancelled = false;
     const recordView = async () => {
       const { error } = await supabase
@@ -126,6 +128,7 @@ const TwaaterProfileView = () => {
         });
 
       if (!error && !cancelled) {
+        if (typeof sessionStorage !== "undefined") sessionStorage.setItem(key, "1");
         queryClient.invalidateQueries({ queryKey: ["twaater-profile", handle] });
       }
     };

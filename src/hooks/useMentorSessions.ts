@@ -95,7 +95,7 @@ export function useMentorSessions() {
     enabled: !!profile?.id,
   });
 
-  const isMentorDiscovered = (_mentorId: string) => true;
+  const isMentorDiscovered = (mentorId: string) => !!discoveries?.some((d) => d.mentor_id === mentorId);
   const hasClaimedDiscovery = (mentorId: string) => !!discoveries?.some((d) => d.mentor_id === mentorId);
   const getDiscovery = (mentorId: string) => discoveries?.find((d) => d.mentor_id === mentorId) ?? null;
 

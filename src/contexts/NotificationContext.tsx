@@ -1,4 +1,6 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
 import { X, Bell, CheckCircle, AlertTriangle, Info, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -53,7 +55,10 @@ const COLOR_MAP = {
 };
 
 export const NotificationProvider = ({ children }: { children: ReactNode }) => {
+  useEffect(() => { const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => { if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") setNotifications([]); }); return () => subscription.unsubscribe(); }, []);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const {profileId,userId} = useActiveProfile();
+  useEffect(() => {setNotifications([]);},[profileId,userId]);
 
   const addNotification = useCallback((notification: Omit<Notification, "id" | "timestamp" | "read">) => {
     const newNotification: Notification = {

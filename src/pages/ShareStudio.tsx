@@ -63,6 +63,7 @@ export default function ShareStudio() {
   };
 
   const removeSnapshot = async (id: string) => {
+    if (!window.confirm("Delete this saved share permanently? This cannot be undone.")) return;
     try { await deleteShareMomentSnapshot(id); setGallery((items) => items.filter((item) => item.id !== id)); }
     catch { setGalleryError("Could not delete this saved share. Please retry."); }
   };

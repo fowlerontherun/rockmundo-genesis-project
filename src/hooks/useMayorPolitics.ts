@@ -75,6 +75,6 @@ function computeUnlocks(levels: PoliticsSkillLevels): MayorPoliticsState['unlock
     decrees: levels.master_statecraft >= POLITICS_THRESHOLDS.PROFESSIONAL,
     referendums: levels.master_statecraft >= POLITICS_THRESHOLDS.MASTER,
     campaignBoost: Math.min(50, Math.floor(levels.professional_campaign_strategy / 16)),
-    projectDiscount: Math.min(15, Math.floor(levels.basic_negotiation / 50) + 5),
+    projectDiscount: Math.min(15, Math.floor(levels.basic_negotiation / 50)),
   };
 }

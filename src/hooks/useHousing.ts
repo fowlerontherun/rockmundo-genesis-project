@@ -204,19 +204,21 @@ export function useStartRental() {
     }) => {
       if (!profileId || !userId) throw new Error("Not authenticated");
 
-      const { data: existing } = await supabase
+      const { data: existing, error: existingError } = await supabase
         .from("player_rentals")
         .select("id")
         .eq("profile_id", profileId)
         .eq("status", "active")
         .maybeSingle();
+      if (existingError) throw existingError;
       if (existing) throw new Error("You already have an active rental. End it first.");
 
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("cash")
         .eq("id", profileId)
         .single();
+      if (profileError) throw profileError;
       if (!profile || (profile.cash || 0) < weeklyCost) {
         throw new Error("Not enough cash for the first week's rent");
       }

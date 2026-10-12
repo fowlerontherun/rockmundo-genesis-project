@@ -142,12 +142,13 @@ export default function BandManager() {
 
   const loadBandMembers = async (bandId: string) => {
     // First get all band members (including touring members with null user_id)
-    const { data: bandMembersData } = await supabase
+    const { data: bandMembersData, error: membersError } = await supabase
       .from("band_members")
       .select("*")
       .eq("band_id", bandId)
       .order("joined_at", { ascending: true });
 
+    if (membersError) { toast({ title: "Could not load band members", description: membersError.message, variant: "destructive" }); return; }
     if (!bandMembersData) {
       setMembers([]);
       return;

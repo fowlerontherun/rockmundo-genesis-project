@@ -280,7 +280,7 @@ export function calculateCanonicalReadiness(input: { role: WellnessReadinessRole
   const overall = calculateOverallWellness(core);
   const baseValue = clampWellness(input.baseValue ?? Math.round((overall + core.energy + (100 - core.fatigue) + core.sleep_quality) / 4));
   const now = Date.now();
-  const normalized = normalizeWellnessModifiers((input.modifiers ?? []).filter(modifier =>
+  const eligibleModifiers = (input.modifiers ?? []).filter(modifier =>
     (!modifier.duration?.startsAt || (Number.isFinite(Date.parse(modifier.duration.startsAt)) && Date.parse(modifier.duration.startsAt) <= now)) &&
     (!modifier.duration?.endsAt || (Number.isFinite(Date.parse(modifier.duration.endsAt)) && Date.parse(modifier.duration.endsAt) > now)) &&
     (modifier.target === input.role ||
@@ -289,7 +289,15 @@ export function calculateCanonicalReadiness(input: { role: WellnessReadinessRole
     modifier.target === "progression" ||
     modifier.target === "career_sustainability" ||
     modifier.target === "burnout_pressure")
-  ));
+  );
+  const normalized = normalizeWellnessModifiers(eligibleModifiers);
+  const remainingById = new Map<string, number>();
+  for (const item of normalized) remainingById.set(item.id, (remainingById.get(item.id) ?? 0) + 1);
+  const ignoredContributors = (input.modifiers ?? []).filter(m => {
+    const remaining = remainingById.get(m.id) ?? 0;
+    if (remaining > 0) { remainingById.set(m.id, remaining - 1); return false; }
+    return true;
+  });
   let additive = 0;
   let multiplier = 1;
   for (const modifier of normalized) {
@@ -314,7 +322,7 @@ export function calculateCanonicalReadiness(input: { role: WellnessReadinessRole
     state,
     performanceModifier,
     risk: clampWellness(100 - score + Math.max(0, core.burnout_risk - 60) / 2),
-    explanation: { finalResult: score, baseValue, positiveContributors: normalized.filter((m) => (m.cappedValue ?? 0) > 0), negativeContributors: normalized.filter((m) => (m.cappedValue ?? 0) < 0), cappedContributors, ignoredContributors: [], appliedRestriction: restrictedBy, suggestedAction: readinessAction(input.role, score), confidence: input.confidence ?? "actual", summary },
+    explanation: { finalResult: score, baseValue, positiveContributors: normalized.filter((m) => (m.cappedValue ?? 0) > 0), negativeContributors: normalized.filter((m) => (m.cappedValue ?? 0) < 0), cappedContributors, ignoredContributors, appliedRestriction: restrictedBy, suggestedAction: readinessAction(input.role, score), confidence: input.confidence ?? "actual", summary },
   };
 }
 

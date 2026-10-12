@@ -33,7 +33,7 @@ function calculateLearningMultiplier(skillSlug: string, attributes: Record<strin
     relevantAttribute = Math.max(attributes.musical_ability ?? 0, attributes.creative_insight ?? 0);
   }
 
-  const bonus = (Math.min(relevantAttribute, MAX_ATTRIBUTE_VALUE) / MAX_ATTRIBUTE_VALUE) * MAX_BONUS_MULTIPLIER;
+  const bonus = (Math.max(0, Math.min(relevantAttribute, MAX_ATTRIBUTE_VALUE)) / MAX_ATTRIBUTE_VALUE) * MAX_BONUS_MULTIPLIER;
   return 1.0 + bonus;
 }
 

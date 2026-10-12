@@ -5,7 +5,7 @@ export function BandMerchWardrobe({ profileId }: { profileId: string }) {
   const merch = useAvatarMerchWearables(profileId);
   if (merch.band.isPending || merch.query.isPending) return <p className="player-model-editor__hint">Loading your band merch…</p>;
   if (!merch.band.data) return <p className="player-model-editor__hint">Join an active band to wear its Merch Studio designs.</p>;
-  if (merch.query.isError) return <p role="status" className="player-model-editor__hint">Band merch could not be loaded. Your current outfit has not changed.</p>;
+  if (merch.query.isError) return <div role="alert" className="player-model-editor__hint">Band merch could not be loaded. Your current outfit has not changed. <button type="button" onClick={() => void merch.query.refetch()}>Retry</button></div>;
 
   const { designs = [], equippedDesignId } = merch.query.data ?? {};
   if (!designs.length) return <p className="player-model-editor__hint">Your band has no wearable Merch Studio apparel yet. Save a T-shirt, hoodie, long-sleeve or crewneck design in Merch Studio first.</p>;
