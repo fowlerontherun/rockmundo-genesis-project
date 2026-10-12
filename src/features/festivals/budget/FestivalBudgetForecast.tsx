@@ -7,6 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useFestivalBudgetForecast } from "./useFestivalBudgetForecast";
+import { Button } from "@/components/ui/button";
 
 const formatMoney = (minor: number, currencyCode: string) =>
   new Intl.NumberFormat("en-GB", {
@@ -33,9 +34,10 @@ export function FestivalBudgetForecast({
         <CardHeader>
           <CardTitle>Budget forecast unavailable</CardTitle>
           <CardDescription>
-            Save the annual Festival plan and ticket choices, then try again.
+            {query.isError ? "The forecast request failed; saved festival settings have not been changed." : "Save the annual Festival plan and ticket choices, then try again."}
           </CardDescription>
         </CardHeader>
+        {query.isError && <CardContent><Button variant="outline" disabled={query.isFetching} onClick={() => void query.refetch()}>Retry forecast</Button></CardContent>}
       </Card>
     );
   }

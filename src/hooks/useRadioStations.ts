@@ -46,7 +46,7 @@ export const useRadioStations = () => {
   const queryClient = useQueryClient();
 
   // Fetch all stations with city info
-  const { data: stations = [], isLoading: stationsLoading } = useQuery({
+  const { data: stations = [], isLoading: stationsLoading, isError: stationsError, refetch: retryStations } = useQuery({
     queryKey: ["radio-stations"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -60,7 +60,7 @@ export const useRadioStations = () => {
   });
 
   // Fetch my submissions
-  const { data: mySubmissions = [], isLoading: submissionsLoading } = useQuery({
+  const { data: mySubmissions = [], isLoading: submissionsLoading, isError: submissionsError, refetch: retrySubmissions } = useQuery({
     queryKey: ["my-radio-submissions", userId, profileId],
     queryFn: async () => {
       if (!userId && !profileId) return [];
@@ -168,6 +168,10 @@ export const useRadioStations = () => {
     stations,
     mySubmissions,
     isLoading: stationsLoading || submissionsLoading,
+    stationsError,
+    submissionsError,
+    retryStations,
+    retrySubmissions,
     getStationSubmissions,
     submitToStation: submitToStation.mutate,
     isSubmitting: submitToStation.isPending,

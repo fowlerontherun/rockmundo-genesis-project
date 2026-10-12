@@ -19,7 +19,7 @@ import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { Radio, Users, MapPin, Star, Music, TrendingUp, Search, Filter, Globe, Zap, Send } from "lucide-react";
 import { SubmitSongDialog } from "@/components/radio/SubmitSongDialog";
 import { CompactSubmissions } from "@/components/radio/CompactSubmissions";
-import { AirplayDashboard } from "@/components/radio/AirplayDashboard";
+
 import { MyAirplayStats } from "@/components/radio/MyAirplayStats";
 import { SongsInRotation } from "@/components/radio/SongsInRotation";
 import { RadioSubmissionWizard } from "@/components/radio/RadioSubmissionWizard";
@@ -30,7 +30,7 @@ const RadioBrowser = () => {
   const navigate = useNavigate();
   const { profileId } = useActiveProfile();
   const { currentCity } = useGameData();
-  const { stations, mySubmissions, isLoading } = useRadioStations();
+  const { stations, mySubmissions, isLoading, stationsError, submissionsError, retryStations, retrySubmissions } = useRadioStations();
   
   const [activeTab, setActiveTab] = useState<"stations" | "submissions" | "airplay">("stations");
   const [selectedStation, setSelectedStation] = useState<RadioStation | null>(null);
@@ -72,10 +72,8 @@ const RadioBrowser = () => {
 
   // Auto-set country filter based on user's current city
   useEffect(() => {
-    if (currentCity?.country && countryFilter === "all") {
-      setCountryFilter(currentCity.country);
-    }
-  }, [currentCity]);
+    setCountryFilter(currentCity?.country ?? "all");
+  }, [profileId, currentCity?.country]);
 
   // Extract unique values for filters
   const filterOptions = useMemo(() => {
@@ -128,21 +126,6 @@ const RadioBrowser = () => {
     });
   }, [stations, searchTerm, stationType, genreFilter, countryFilter, localOnly, currentCity]);
 
-  // Calculate airplay stats
-  const airplayStats = useMemo(() => {
-    const acceptedSubmissions = mySubmissions.filter((s) => s.status === "accepted");
-    return {
-      totalPlays: acceptedSubmissions.length * 15,
-      weeklyPlays: Math.floor(acceptedSubmissions.length * 3),
-      activeStations: acceptedSubmissions.length,
-      topSong: acceptedSubmissions.length > 0 ? {
-        title: acceptedSubmissions[0]?.song?.title || "Unknown",
-        plays: 45,
-      } : null,
-      recentPlays: [],
-    };
-  }, [mySubmissions]);
-
   const activeFilterCount = [
     stationType !== "all",
     countryFilter !== "all" && countryFilter !== currentCity?.country,
@@ -166,6 +149,7 @@ const RadioBrowser = () => {
 
   return (
     <div className="container mx-auto py-8 space-y-6">
+      {(stationsError || submissionsError) && <div role="alert" className="rounded border border-destructive p-3 text-sm text-destructive">Radio data could not be loaded. <Button size="sm" variant="outline" onClick={() => { if (stationsError) void retryStations(); if (submissionsError) void retrySubmissions(); }}>Retry</Button></div>}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
@@ -415,7 +399,7 @@ const RadioBrowser = () => {
                       >
                         View Details
                       </Button>
-                      {station.is_active && (
+                      {station.is_active && station.accepts_submissions && (
                         <Button
                           size="sm"
                           className="flex-1"
@@ -463,7 +447,7 @@ const RadioBrowser = () => {
           {profileId && <SongsInRotation userId={profileId} />}
           
           {/* Submission Breakdown */}
-          <AirplayDashboard stats={airplayStats} submissions={mySubmissions} />
+          <p className="text-sm text-muted-foreground">Only verified playback is included in the live airplay panels above. Accepted submissions do not count as plays.</p>
         </TabsContent>
       </Tabs>
 

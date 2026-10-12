@@ -50,6 +50,16 @@ export function BandApplicationsList({ bandId, onMemberAdded }: BandApplications
     },
   });
 
+  const { data: pendingCount, isError: pendingCountError } = useQuery({
+    queryKey: ['band-application-pending-count', bandId],
+    queryFn: async () => {
+      const { count, error } = await supabase.from('band_applications')
+        .select('id', { count: 'exact', head: true }).eq('band_id', bandId).eq('status', 'pending');
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
   const respondMutation = useMutation({
     mutationFn: async ({ applicationId, decision }: { applicationId: string; decision: BandApplicationDecision }) => {
       return respondBandApplication(applicationId, decision);
@@ -60,6 +70,7 @@ export function BandApplicationsList({ bandId, onMemberAdded }: BandApplications
         description: decision === 'approve' ? 'New member added to the band.' : 'Application has been rejected.',
       });
       queryClient.invalidateQueries({ queryKey: ['band-applications', bandId] });
+      queryClient.invalidateQueries({ queryKey: ['band-application-pending-count', bandId] });
       queryClient.invalidateQueries({ queryKey: ['band-members', bandId] });
       queryClient.invalidateQueries({ queryKey: ['band', bandId] });
       if (result.status === 'accepted' && onMemberAdded) onMemberAdded();
@@ -107,7 +118,7 @@ export function BandApplicationsList({ bandId, onMemberAdded }: BandApplications
           <ClipboardList className="h-5 w-5" />
           <CardTitle>Band Applications</CardTitle>
         </div>
-        <CardDescription>{applications.filter((app: any) => isRecruitmentActionable(app.status)).length} pending application(s) • newest first • showing latest 50</CardDescription>
+        <CardDescription>{pendingCountError ? "Pending count unavailable" : `${pendingCount ?? "…"} pending application(s)`} • newest first • showing latest 50</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {applications.map((app: any) => {

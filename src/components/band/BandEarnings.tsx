@@ -66,6 +66,7 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
     other: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [sourceFilter, setSourceFilter] = useState<string | null>(null);
   const [depositAmount, setDepositAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
@@ -105,25 +106,32 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
 
   const loadEarningsData = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       // Load band info
-      const { data: band } = await supabase
+      const { data: band, error: bandError } = await supabase
         .from('bands')
         .select('band_balance, name')
         .eq('id', bandId)
         .single();
 
+      if (bandError) throw bandError;
       setBandInfo(band);
 
       // Load earnings
-      const { data: earningsData, error } = await supabase
-        .from('band_earnings')
-        .select('id, amount, source, description, created_at, earned_by_user_id')
-        .eq('band_id', bandId)
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
+      const earningsData: Earning[] = [];
+      for (let offset = 0; ; offset += 500) {
+        const { data, error } = await supabase
+          .from('band_earnings')
+          .select('id, amount, source, description, created_at, earned_by_user_id')
+          .eq('band_id', bandId)
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: false })
+          .range(offset, offset + 499);
+        if (error) throw error;
+        earningsData.push(...(data ?? []));
+        if (!data || data.length < 500) break;
+      }
 
       // Load profiles for earnings
       if (earningsData && earningsData.length > 0) {
@@ -170,6 +178,10 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
       }
     } catch (error) {
       console.error('Error loading earnings:', error);
+      setEarnings([]);
+      setBandInfo(null);
+      setStats({ total: 0, gigs: 0, streaming: 0, merchandise: 0, music_video: 0, release_sales: 0, pr: 0, other: 0 });
+      setLoadError(error instanceof Error ? error.message : 'Unable to load band earnings');
     } finally {
       setLoading(false);
     }
@@ -398,6 +410,7 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
 
   return (
     <div className="space-y-6">
+      {loadError && <div role="alert" className="rounded border border-destructive p-3 text-sm text-destructive">Band earnings could not be verified: {loadError} <Button size="sm" variant="outline" onClick={() => void loadEarningsData()}>Retry</Button></div>}
       {/* Balance Card */}
       <Card>
         <CardHeader>

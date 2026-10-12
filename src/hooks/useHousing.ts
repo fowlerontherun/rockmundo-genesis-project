@@ -179,6 +179,7 @@ export function useBuyProperty() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["player-properties"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["player-cash-housing"] });
       toast({ title: "Property Purchased!", description: "You now own this property." });
     },
     onError: (error: Error) => {
@@ -240,6 +241,7 @@ export function useStartRental() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["player-rental"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["player-cash-housing"] });
       toast({ title: "Rental Started!", description: "Your first week's rent has been paid." });
     },
     onError: (error: Error) => {
@@ -352,6 +354,7 @@ export function useSellProperty() {
     onSuccess: (sellPrice) => {
       queryClient.invalidateQueries({ queryKey: ["player-properties"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["player-cash-housing"] });
       queryClient.invalidateQueries({ queryKey: ["profile-cash"] });
       toast({ title: "Property Sold!", description: `You received $${sellPrice.toLocaleString()}.` });
     },
