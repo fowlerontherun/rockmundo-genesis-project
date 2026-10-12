@@ -168,11 +168,16 @@ const TourManager = () => {
   const { data: atlasCities = [] } = useQuery({
     queryKey: ["tour-atlas-cities"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("cities")
-        .select("id, name, country, latitude, longitude")
-        .order("name");
-      if (error) throw error;
-      return data ?? [];
+      const cities: Array<{ id: string; name: string; country: string; latitude: number | null; longitude: number | null }> = [];
+      for (let offset = 0; ; offset += 500) {
+        const { data, error } = await supabase.from("cities")
+          .select("id, name, country, latitude, longitude")
+          .order("name").order("id").range(offset, offset + 499);
+        if (error) throw error;
+        cities.push(...(data ?? []));
+        if (!data || data.length < 500) break;
+      }
+      return cities;
     },
   });
 
@@ -239,7 +244,9 @@ const TourManager = () => {
     const completed = historicTours.find((tour) => tour.status === "completed");
     if (!completed || !shouldOfferSharePrompt("tour-completed", completed.id)) return;
     void (async () => {
-      const destinationUrl = await referralAwareDestination(profileId, `${window.location.origin}/tour-manager?tour=${completed.id}`, "tour_share");
+      let destinationUrl = `${window.location.origin}/tour-manager?tour=${completed.id}`;
+      try { destinationUrl = await referralAwareDestination(profileId, destinationUrl, "tour_share"); }
+      catch (error) { console.warn("Tour referral URL unavailable; using direct tour link", error); }
       setShareMoment({
       version: 1,
       promptOnly: true,
@@ -261,7 +268,7 @@ const TourManager = () => {
       referralCode: null,
       createdAt: new Date().toISOString(),
     });
-    })();
+    })().catch(error => console.error("Unable to prepare tour share prompt", error));
   }, [historicTours, shareMoment, profileId]);
 
   const { cancelTour } = useTourCancellation();
@@ -296,13 +303,14 @@ const TourManager = () => {
         query = query.neq("band_id", currentBandId);
       }
 
-      const from = (otherToursPage - 1) * OTHER_TOURS_PER_PAGE;
-      query = query.range(from, from + OTHER_TOURS_PER_PAGE - 1);
-
-      const { data, count, error } = await query;
-      if (error) throw error;
-
-      let tours = data as Tour[];
+      const allTours: Tour[] = [];
+      for (let offset = 0; ; offset += 500) {
+        const { data, error } = await query.range(offset, offset + 499);
+        if (error) throw error;
+        allTours.push(...((data ?? []) as Tour[]));
+        if (!data || data.length < 500) break;
+      }
+      let tours = allTours;
 
       // Client-side filtering for fame and genre
       if (fameFilter !== "all") {
@@ -320,7 +328,9 @@ const TourManager = () => {
         tours = tours.filter((t) => t.band?.genre === genreFilter);
       }
 
-      return { tours, totalCount: count ?? 0 };
+      const totalCount = tours.length;
+      const from = (otherToursPage - 1) * OTHER_TOURS_PER_PAGE;
+      return { tours: tours.slice(from, from + OTHER_TOURS_PER_PAGE), totalCount };
     },
   });
 
@@ -396,6 +406,10 @@ const TourManager = () => {
       if (venuesResult.error) throw venuesResult.error;
       if (citiesResult.error) throw citiesResult.error;
       if (gigsResult.error) throw gigsResult.error;
+      const extraIds = [...new Set((venuesResult.data ?? []).map(v => v.city_id).filter((id): id is string => Boolean(id) && !cityIdSet.has(id)))];
+      const extraCities = extraIds.length ? await supabase.from("cities")
+        .select("id, name, country, latitude, longitude").in("id", extraIds) : { data: [], error: null };
+      if (extraCities.error) throw extraCities.error;
 
       // Fetch gig outcomes for ratings/revenue and setlist names independently
       const gigIds = (gigsResult.data || []).map((g: any) => g.id);
@@ -472,15 +486,19 @@ const TourManager = () => {
       (venuesResult.data || []).forEach((v) => {
         venuesMap[v.id] = v;
       });
-      (citiesResult.data || []).forEach((c) => {
+      [...(citiesResult.data || []), ...(extraCities.data || [])].forEach((c) => {
         citiesMap[c.id] = c;
       });
       (setlistsResult.data || []).forEach((s: any) => {
         setlistsMap[s.id] = s;
       });
-      (gigsResult.data || []).forEach((g: any) => {
+      const gigOccurrences = new Map<string, number>();
+      (gigsResult.data || []).slice().sort((a: any, b: any) => String(a.scheduled_date).localeCompare(String(b.scheduled_date))).forEach((g: any) => {
         if (g.venue_id) {
-          const key = `${g.venue_id}|${dayKey(g.scheduled_date)}`;
+          const baseKey = `${g.venue_id}|${dayKey(g.scheduled_date)}`;
+          const occurrence = gigOccurrences.get(baseKey) ?? 0;
+          gigOccurrences.set(baseKey, occurrence + 1);
+          const key = `${baseKey}|${occurrence}`;
           gigsMap[key] = {
             id: g.id,
             setlist_id: g.setlist_id,
@@ -503,6 +521,7 @@ const TourManager = () => {
         };
       });
 
+      const stopOccurrences = new Map<string, number>();
       return (data || []).map((tv) => {
         const venue = tv.venue_id ? venuesMap[tv.venue_id] : null;
         const city = venue?.city_id
@@ -510,7 +529,10 @@ const TourManager = () => {
           : tv.city_id
             ? citiesMap[tv.city_id]
             : null;
-        const gigKey = tv.venue_id ? `${tv.venue_id}|${dayKey(tv.date)}` : "";
+        const baseGigKey = tv.venue_id ? `${tv.venue_id}|${dayKey(tv.date)}` : "";
+        const occurrence = stopOccurrences.get(baseGigKey) ?? 0;
+        stopOccurrences.set(baseGigKey, occurrence + 1);
+        const gigKey = baseGigKey ? `${baseGigKey}|${occurrence}` : "";
         const gig = gigKey ? gigsMap[gigKey] : null;
         const outcome = gig?.id ? outcomesMap[gig.id] : null;
         return {
@@ -594,11 +616,12 @@ const TourManager = () => {
   };
 
   const promoteTour = async (tour: Tour) => {
-    const { data: stops } = await (supabase as any)
+    const { data: stops, error: stopsError } = await (supabase as any)
       .from("tour_venues")
       .select("date, city_id, cities:city_id(name, country)")
       .eq("tour_id", tour.id)
       .order("date", { ascending: true });
+    if (stopsError) { toast.error("Unable to load tour stops for the poster. Please retry."); return; }
     const seenCityIds = new Set<string>();
     const uniqueCities = (stops || []).flatMap((stop: any) => {
       const id = String(stop.city_id ?? "");
@@ -781,7 +804,7 @@ const TourManager = () => {
       icon={Map}
       backTo="/hub/band-live"
       headerActions={
-        <Button onClick={() => { setDraftRouteCityIds([]); setWizardOpen(true); }} size="sm">
+        <Button disabled={!currentBandId} title={!currentBandId ? "Join or select a band to create a tour" : undefined} onClick={() => { setDraftRouteCityIds([]); setWizardOpen(true); }} size="sm">
           <Plus className="h-4 w-4 mr-2" />
           Create Tour
         </Button>
@@ -1226,6 +1249,8 @@ const TourManager = () => {
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin text-primary" />
                     </div>
+                  ) : venuesError ? (
+                    <div role="alert" className="text-sm text-destructive">Unable to load scheduled tour stops. <Button size="sm" variant="outline" onClick={() => void retryTourVenues()}>Retry</Button></div>
                   ) : tourVenues.length === 0 ? (
                     <p className="text-sm text-muted-foreground py-4 text-center">
                       No venue dates scheduled for this tour yet.
@@ -1375,7 +1400,7 @@ const TourManager = () => {
                         Catch Up to Tour (£1,500 charter)
                       </Button>
 
-                      <AlertDialog>
+                      {primaryBand?.role === "leader" && <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
                             variant="destructive"
@@ -1391,11 +1416,7 @@ const TourManager = () => {
                             <AlertDialogTitle>Cancel Tour?</AlertDialogTitle>
                             <AlertDialogDescription>
                               This will cancel {selectedTour.name}. Future gigs and travel will be cancelled. Completed shows and tour history will remain visible.
-                              {new Date(
-                                selectedTour.created_at,
-                              ).toDateString() === new Date().toDateString()
-                                ? "Since this tour was booked today, you'll receive a full refund."
-                                : "No refund is available after the booking day."}
+                              Any applicable cancellation refund is calculated by the server using the booking date and tour rules. Review the result before making new bookings.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -1416,7 +1437,7 @@ const TourManager = () => {
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
-                      </AlertDialog>
+                      </AlertDialog>}
                     </div>
                   )}
               </div>
@@ -1435,6 +1456,7 @@ const TourManager = () => {
               Create New Tour - {primaryBand?.bands?.name}
             </DialogTitle>
           </DialogHeader>
+          {!currentBandId && <p role="alert" className="text-sm text-muted-foreground">Select or join a band to plan a tour.</p>}
           {currentBandId && (
             <TourWizard
               bandId={currentBandId}
