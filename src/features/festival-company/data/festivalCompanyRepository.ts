@@ -157,8 +157,8 @@ export const isOwnedFestivalCompanySummary = (value: unknown): value is OwnedFes
 
 export const getOwnedFestivalCompanies = async (): Promise<OwnedFestivalCompanySummary[]> => {
   const { data, error } = await (supabase as any).rpc("get_owned_festival_companies");
-  if (error || !Array.isArray(data)) return [];
-  if (!data.every(isOwnedFestivalCompanySummary)) return [];
+  if (error) throw error;
+  if (!Array.isArray(data) || !data.every(isOwnedFestivalCompanySummary)) throw new Error("Invalid owned festival companies response.");
   return data.map((company) => ({
     ...company,
     setupCompleted: Boolean(company.setupCompleted),
