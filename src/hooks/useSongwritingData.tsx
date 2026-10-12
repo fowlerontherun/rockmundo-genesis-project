@@ -507,7 +507,7 @@ export const useSongwritingData = (profileId?: string | null, userId?: string | 
   const convertToSong = useMutation({
     mutationFn: async ({ projectId, catalogStatus = 'private', bandId }: { projectId: string; quality?: any; catalogStatus?: string; bandId?: string; }) => {
       if (!profileId) throw new Error("Profile ID required");
-      const { data, error } = await (supabase as any).rpc('complete_songwriting_project', {
+      const { data, error } = await (supabase as any).rpc('complete_songwriting_project_with_instruments', {
         p_profile_id: profileId,
         p_project_id: projectId,
         p_catalog_status: catalogStatus,
