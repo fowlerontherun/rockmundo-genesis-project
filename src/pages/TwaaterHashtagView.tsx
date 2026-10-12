@@ -35,10 +35,12 @@ export default function TwaaterHashtagView() {
         .is("deleted_at", null)
         .is("scheduled_for", null)
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(300);
 
       if (error) throw error;
-      return hydrateTwaaterFeedExtras(data || [], account?.id);
+      const escaped = hashtag.replace(/[.*+?^${}()|[\]\\]/g, "\\return hydrateTwaaterFeedExtras(data || [], account?.id);");
+      const exactHashtag = new RegExp(`(^|[^\\p{L}\\p{N}_])#${escaped}(?![\\p{L}\\p{N}_])`, "iu");
+      return hydrateTwaaterFeedExtras((data || []).filter(post => exactHashtag.test(post.body || "")), account?.id);
     },
     enabled: !!hashtag && !personaLoading && !routeAccountLoading,
   });
