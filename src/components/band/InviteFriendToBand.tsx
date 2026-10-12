@@ -71,6 +71,19 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
   const [message, setMessage] = useState('');
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const referralRequest = useRef(0);
+  const invitationViewKey = `${bandId}:${currentUserId}`;
+  const latestInvitationView = useRef(invitationViewKey);
+  latestInvitationView.current = invitationViewKey;
+  useEffect(() => {
+    setFriends([]);
+    setSentInvites([]);
+    setRecentResponses([]);
+    setMemberUserIds(new Set());
+    setPendingUserIds(new Set());
+    setSelectedPlayer('');
+    setPlayerMatches([]);
+    setSelectedPlayerLabel('');
+  }, [bandId, currentUserId]);
   const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
   const [referredRecruits, setReferredRecruits] = useState<Array<{ referral_id: string; profile_id: string; profile_name: string; signup_qualified_at: string | null; invitation_status: string | null }>>([]);
   const { toast } = useToast();
@@ -123,6 +136,8 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
   }, []);
 
   const loadRecruitmentOptions = useCallback(async (profileId: string) => {
+    const sourceViewKey = `${bandId}:${currentUserId}`;
+    const stillCurrent = () => sourceViewKey === latestInvitationView.current;
     // Pending invitations and the roster are essential; the friends shortcut is
     // optional. A broken friendship/profile lookup must not prevent inviting
     // other players by public search or hide already-sent invitations.
@@ -149,6 +164,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
         .eq('status', 'accepted')
         .or(`requestor_id.eq.${profileId},addressee_id.eq.${profileId}`),
     ]);
+    if (!stillCurrent()) return;
     if (inviteResult.error) throw inviteResult.error;
     if (resolvedInviteResult.error) throw resolvedInviteResult.error;
     if (memberResult.error) throw memberResult.error;
@@ -176,6 +192,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
     const friendships = friendResult.error ? [] : (friendResult.data || []);
     const memberIds = new Set(bandMembers.map((m) => m.user_id).filter((id): id is string => !!id));
     const pendingIds = new Set(pendingInvites.map((invite) => invite.invited_user_id).filter((id): id is string => !!id));
+    if (!stillCurrent()) return;
     setMemberUserIds(memberIds);
     setPendingUserIds(pendingIds);
 
@@ -188,6 +205,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
       ? await supabase.from('profiles').select('id, display_name, username, user_id').in('id', profileIds)
       : { data: [], error: null };
 
+    if (!stillCurrent()) return;
     const profileMap = new Map((profilesError ? [] : (profiles || [])).map((profile) => [profile.id, profile]));
     const friendOptions: Friend[] = friendships.flatMap((friendship) => {
       const otherId = friendship.requestor_id === profileId ? friendship.addressee_id : friendship.requestor_id;
@@ -204,6 +222,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
         },
       }];
     });
+    if (!stillCurrent()) return;
     setFriends(friendOptions);
     const displayInvite = (invite: typeof invitations[number]): SentInvitation => {
       const profile = invite.invited_profile_id ? profileMap.get(invite.invited_profile_id) : undefined;
