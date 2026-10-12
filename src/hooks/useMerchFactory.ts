@@ -210,6 +210,10 @@ export function useUpdateProductionStatus() {
   
   return useMutation({
     mutationFn: async ({ orderId, status, factoryId }: { orderId: string; status: string; factoryId: string }) => {
+      const { data: current, error: readError } = await supabase.from("merch_production_queue").select("status").eq("id",orderId).single();
+      if (readError) throw readError;
+      const allowed: Record<string,string[]> = {pending:["in_production","cancelled"],in_production:["completed","cancelled"],completed:["shipped"],shipped:[],cancelled:[]};
+      if (!(allowed[current.status] ?? []).includes(status)) throw new Error("Production status has changed or transition is invalid.");
       const updates: Record<string, unknown> = { status };
       
       if (status === 'in_production') {
@@ -224,6 +228,7 @@ export function useUpdateProductionStatus() {
         .from('merch_production_queue')
         .update(updates as any)
         .eq('id', orderId)
+        .eq('status', current.status)
         .select()
         .single();
       
