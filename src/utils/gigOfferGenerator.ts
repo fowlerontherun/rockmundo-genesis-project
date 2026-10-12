@@ -177,10 +177,14 @@ export async function acceptGigOffer(offerId: string): Promise<{ gigId: string |
  * Reject a gig offer
  */
 export async function rejectGigOffer(offerId: string): Promise<void> {
-  await supabase
+  const { data, error } = await supabase
     .from('gig_offers')
     .update({ status: 'rejected' })
-    .eq('id', offerId);
+    .eq('id', offerId)
+    .eq('status', 'pending')
+    .select('id').maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error('This gig offer is no longer pending.');
 }
 
 /**
