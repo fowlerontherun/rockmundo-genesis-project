@@ -120,7 +120,7 @@ export async function listActiveBlocks(profileId: string): Promise<WellnessBlock
   // ailments, so derive the compact mobile block list from that canonical data.
   const ailments = await listActiveAilments(profileId);
   return ailments
-    .filter((ailment) => Array.isArray(ailment.blocks_activity_types) && ailment.blocks_activity_types.length > 0)
+    .filter((ailment) => Array.isArray(ailment.blocks_activity_types) && ailment.blocks_activity_types.length > 0 && (!ailment.expected_recovery_at || Date.parse(ailment.expected_recovery_at) > Date.now()))
     .map((ailment) => ({
       id: `ailment:${ailment.id}`,
       reason: ailment.description?.trim() || `${ailment.name} is limiting some activities`,
