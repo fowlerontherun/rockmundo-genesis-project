@@ -75,11 +75,12 @@ const SongManager = () => {
     queryFn: async () => {
       if (!profileId) return [];
 
-      const { data: bandMembers } = await supabase
+      const { data: bandMembers, error: membershipError } = await supabase
         .from("band_members")
         .select("band_id")
         .eq("profile_id", profileId);
 
+      if (membershipError) throw membershipError;
       if (!bandMembers || bandMembers.length === 0) return [];
 
       const bandIds = bandMembers.map(bm => bm.band_id);
