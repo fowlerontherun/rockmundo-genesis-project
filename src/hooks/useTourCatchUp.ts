@@ -50,7 +50,7 @@ export const useTourCatchUp = () => {
         return;
       }
 
-      toast.success("Catch-up flight chartered for £1,500. Arrival is in two hours.");
+      toast.success(`Catch-up travel arranged${Number.isFinite(result.fee) ? ` for £${Number(result.fee).toLocaleString("en-GB")}` : ""}.${result.arrival_time ? ` Arrival: ${new Date(result.arrival_time).toLocaleString("en-GB")}.` : ""}`);
     },
     onError: (error: Error) => {
       toast.error(getCatchUpErrorMessage(error.message));
