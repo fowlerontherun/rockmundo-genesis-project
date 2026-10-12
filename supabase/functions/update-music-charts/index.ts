@@ -1033,7 +1033,9 @@ serve(async (req) => {
     // FIXED: Query radio_plays table (has listeners column) instead of radio_playlists
     // radio_playlists only has: id, show_id, song_id, week_start_date, times_played, added_at, removed_at, is_active
     // radio_plays has: id, playlist_id, song_id, show_id, station_id, played_at, listeners, hype_gained, etc.
-    const { data: radioDataRaw, error: radioError } = await supabaseClient
+    const radioDataRaw: any[] = [];
+    for (let offset = 0; ; offset += 500) {
+    const { data: radioPage, error: radioError } = await supabaseClient
       .from("radio_plays")
       .select(`
         song_id,
@@ -1046,10 +1048,13 @@ serve(async (req) => {
           status
         )
       `)
-      .gte("played_at", sevenDaysAgo.toISOString());
-
-    if (radioError) {
-      console.error("Error fetching radio data:", radioError);
+      .gte("played_at", sevenDaysAgo.toISOString())
+      .order("played_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(offset, offset + 499);
+    if (radioError) throw radioError;
+    radioDataRaw.push(...(radioPage ?? []));
+    if (!radioPage || radioPage.length < 500) break;
     }
 
     // Filter to only include songs with status = 'recorded'
@@ -1133,7 +1138,8 @@ serve(async (req) => {
         .eq("chart_date", chartDate)
         .select("id", { count: "exact", head: true });
 
-      console.log(`Deleted ${deleteCount ?? 'unknown'} old entries for ${chartDate}${deleteError ? `, error: ${JSON.stringify(deleteError)}` : ''}`);
+      if (deleteError) throw deleteError;
+      console.log(`Deleted ${deleteCount ?? 'unknown'} old entries for ${chartDate}`);
 
       // Insert in batches to avoid payload limits
       const BATCH_SIZE = 200;
@@ -1149,7 +1155,7 @@ serve(async (req) => {
         }
       }
 
-      chartsUpdated = chartEntries.length;
+      chartsUpdated = dedupedEntries.length;
       console.log(`Successfully inserted ${chartsUpdated} chart entries`);
     }
 
@@ -1164,10 +1170,17 @@ serve(async (req) => {
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayStr = yesterday.toISOString().split("T")[0];
 
-      const { data: yesterdayEntries } = await supabaseClient
-        .from("chart_entries")
-        .select("song_id, chart_type, rank, country")
-        .eq("chart_date", yesterdayStr);
+      const yesterdayEntries: any[] = [];
+      for (let offset = 0; ; offset += 500) {
+        const { data: page, error } = await supabaseClient.from("chart_entries")
+          .select("song_id, chart_type, rank, country")
+          .eq("chart_date", yesterdayStr)
+          .order("id", { ascending: true })
+          .range(offset, offset + 499);
+        if (error) throw error;
+        yesterdayEntries.push(...(page ?? []));
+        if (!page || page.length < 500) break;
+      }
 
       if (yesterdayEntries && yesterdayEntries.length > 0) {
         const yesterdayMap = new Map<string, number>();
@@ -1195,13 +1208,14 @@ serve(async (req) => {
             break;
           }
 
-          await supabaseClient
+          const { error: trendError } = await supabaseClient
             .from("chart_entries")
             .update({ trend, trend_change: trendChange })
             .eq("song_id", entry.song_id)
             .eq("chart_type", entry.chart_type)
             .eq("chart_date", chartDate)
             .eq("country", entry.country || "all");
+          if (trendError) throw trendError;
         }
         console.log("Updated trends for chart entries");
       }
@@ -1236,13 +1250,14 @@ serve(async (req) => {
           const key = `${entry.song_id}:${entry.chart_type}:${entry.country || 'all'}`;
           const weeks = weeksMap.get(key)?.size || 1;
 
-          await supabaseClient
+          const { error: weeksError } = await supabaseClient
             .from("chart_entries")
             .update({ weeks_on_chart: weeks })
             .eq("song_id", entry.song_id)
             .eq("chart_type", entry.chart_type)
             .eq("chart_date", chartDate)
             .eq("country", entry.country || "all");
+          if (weeksError) throw weeksError;
         }
         console.log("Updated weeks_on_chart for entries");
       }
