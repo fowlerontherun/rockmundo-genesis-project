@@ -106,36 +106,12 @@ export function useBuyTicket() {
       if (selectedNumbers.length !== 5) throw new Error("Select 5 numbers");
       if (selectedNumbers.some((n) => n < 1 || n > 30) || new Set(selectedNumbers).size !== 5) throw new Error("Select 5 unique numbers from 1 to 30");
 
-      // Check ticket count for this draw
-      const { count } = await supabase
-        .from("lottery_tickets")
-        .select("*", { count: "exact", head: true })
-        .eq("draw_id", drawId)
-        .eq("profile_id", profileId);
-
-      if ((count || 0) >= MAX_TICKETS_PER_DRAW) throw new Error("Maximum 10 tickets per draw");
-
-      // Deduct cash
-      const { error: cashError } = await supabase
-        .from("profiles")
-        .update({ cash: (profile as any).cash - TICKET_COST })
-        .eq("id", profile.id);
-
-      if (cashError) throw cashError;
-
-      // Insert ticket
-      const { data, error } = await supabase
-        .from("lottery_tickets")
-        .insert({
-          user_id: profileId,
-          profile_id: profile.id,
-          draw_id: drawId,
-          selected_numbers: selectedNumbers,
-          bonus_number: bonusNumber,
-        })
-        .select()
-        .single();
-
+      const { data, error } = await (supabase as any).rpc("buy_lottery_ticket_atomic", {
+        p_profile_id: profileId,
+        p_draw_id: drawId,
+        p_selected_numbers: selectedNumbers,
+        p_bonus_number: bonusNumber,
+      });
       if (error) throw error;
       return data;
     },
@@ -190,34 +166,11 @@ export function useClaimPrize() {
       if (ticket.prize_cash === 0 && ticket.prize_xp === 0 && ticket.prize_fame === 0)
         throw new Error("No prize to claim");
 
-      // Mark as claimed
-      const { error: claimError } = await supabase
-        .from("lottery_tickets")
-        .update({ claimed: true })
-        .eq("id", ticketId);
-
-      if (claimError) throw claimError;
-
-      // Award prizes to profile
-      if (ticket.prize_cash > 0 || ticket.prize_fame > 0) {
-        const { data: currentProfile } = await supabase
-          .from("profiles")
-          .select("id, cash, fame")
-          .eq("id", profileId)
-          .single();
-
-        if (currentProfile) {
-          const updates: Record<string, number> = {};
-          if (ticket.prize_cash > 0) updates.cash = (currentProfile.cash || 0) + ticket.prize_cash;
-          if (ticket.prize_fame > 0) updates.fame = (currentProfile.fame || 0) + ticket.prize_fame;
-          await supabase
-            .from("profiles")
-            .update(updates as any)
-            .eq("id", currentProfile.id);
-        }
-      }
-
-      return ticket;
+      const { data: settled, error: settlementError } = await (supabase as any)
+        .rpc("claim_lottery_prize_atomic", { p_profile_id: profileId, p_ticket_id: ticketId });
+      if (settlementError) throw settlementError;
+      if (!settled?.claimed) throw new Error("Prize settlement was not confirmed");
+      return settled as typeof ticket;
     },
     onSuccess: (ticket) => {
       queryClient.invalidateQueries({ queryKey: ["lottery-tickets"] });
