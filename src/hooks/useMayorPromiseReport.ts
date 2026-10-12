@@ -94,7 +94,7 @@ function classify(
     const closenessTarget = Math.abs(promised - cur);
     const pct = Math.max(0, Math.min(100, Math.round((1 - closenessTarget / targetDelta) * 100)));
 
-    if (pct >= 95) return { status: "fulfilled", pct: 100 };
+    if (cur === promised) return { status: "fulfilled", pct: 100 };
 
     // Determine direction of movement
     const promisedUp = promised > base;
@@ -124,24 +124,26 @@ export function useMayorPromiseReport(cityId: string | undefined) {
       if (!cityId) return null;
 
       // 1. Active mayor
-      const { data: mayor } = await supabase
+      const { data: mayor, error: mayorError } = await supabase
         .from("city_mayors")
         .select("id, election_id, term_start, profile_id")
         .eq("city_id", cityId)
         .eq("is_current", true)
         .maybeSingle();
+      if (mayorError) throw mayorError;
       if (!mayor) return null;
 
       // 2. Winning candidacy → proposed policies
       let proposed: ProposedPolicies = {};
       let candidateId: string | null = null;
       if (mayor.election_id) {
-        const { data: candidate } = await supabase
+        const { data: candidate, error: candidateError } = await supabase
           .from("city_candidates")
           .select("id, proposed_policies")
           .eq("election_id", mayor.election_id)
           .eq("profile_id", mayor.profile_id)
           .maybeSingle();
+        if (candidateError) throw candidateError;
         if (candidate) {
           candidateId = candidate.id;
           proposed = (candidate.proposed_policies || {}) as ProposedPolicies;
@@ -149,21 +151,25 @@ export function useMayorPromiseReport(cityId: string | undefined) {
       }
 
       // 3. Current laws
-      const { data: laws } = await supabase
+      const { data: laws, error: lawsError } = await supabase
         .from("city_laws")
         .select("*")
         .eq("city_id", cityId)
         .is("effective_until", null)
         .maybeSingle();
 
+      if (lawsError) throw lawsError;
+
       // 4. Reconstruct baseline-at-term-start from law_history (if any changes since term start)
       const baseline: Partial<CityLaws> = { ...(laws as CityLaws | null) } as Partial<CityLaws>;
-      const { data: history } = await supabase
+      const { data: history, error: historyError } = await supabase
         .from("city_law_history")
         .select("law_field, old_value, new_value, changed_at, mayor_id")
         .eq("city_id", cityId)
         .eq("mayor_id", mayor.id)
         .order("changed_at", { ascending: true });
+
+      if (historyError) throw historyError;
 
       // For every field changed by THIS mayor, the earliest old_value is the baseline
       const earliestOld: Record<string, string> = {};

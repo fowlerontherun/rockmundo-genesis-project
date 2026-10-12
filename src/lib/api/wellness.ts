@@ -277,7 +277,7 @@ export const setHabitCompletion = async (
       ...data,
       habits,
     },
-    dateKey
+    getDateKey(new Date())
   );
 
   persistToStorage(updated);
@@ -365,7 +365,8 @@ export const getHabitCompletionRate = (
 
   const completions = habit.completedDates.filter(dateKey => {
     const parsed = parseISO(dateKey);
-    return differenceInCalendarDays(referenceDate, parsed) <= days - 1;
+    const difference = differenceInCalendarDays(referenceDate, parsed);
+    return !Number.isNaN(parsed.getTime()) && difference >= 0 && difference < days;
   }).length;
 
   if (habit.targetPerWeek <= 0) {

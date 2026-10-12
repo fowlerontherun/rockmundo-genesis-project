@@ -58,7 +58,7 @@ export function useIsCurrentMayor(cityId: string | undefined) {
         .eq("is_current", true)
         .maybeSingle();
 
-      if (error) return false;
+      if (error) throw error;
       return !!data;
     },
     enabled: !!cityId && !!profileId,
