@@ -13,7 +13,7 @@ interface Props {
 
 export function MayorBudgetTab({ cityId, mayorSalary, corruptionScore }: Props) {
   const { data: treasury, isError: treasuryError, isLoading: treasuryLoading, refetch: retryTreasury } = useCityTreasury(cityId);
-  const { data: log } = useMayorActionsLog(cityId, 30);
+  const { data: log, isLoading: logLoading, isError: logError, refetch: retryLog } = useMayorActionsLog(cityId, 30);
 
   const balance = treasury?.balance ?? 0;
   const committed = treasury?.pending_commitments ?? 0;
@@ -74,7 +74,11 @@ export function MayorBudgetTab({ cityId, mayorSalary, corruptionScore }: Props) 
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {!log || log.length === 0 ? (
+          {logError ? (
+            <div role="alert" className="text-sm">Unable to load mayor actions. <button type="button" className="underline" onClick={() => void retryLog()}>Retry</button></div>
+          ) : logLoading ? (
+            <p className="text-sm text-muted-foreground">Loading mayor actions…</p>
+          ) : !log || log.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">No actions recorded yet.</p>
           ) : (
             <ScrollArea className="h-72">
