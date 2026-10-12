@@ -159,6 +159,9 @@ export const useLuthieryShops = () => {
       return data as ShopProfile;
     },
     enabled: !!profileId,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchInterval: 15_000,
   });
 
   const { data: skillProgress = [], isLoading: skillsLoading, isError: skillProgressError, refetch: refetchSkillProgress } = useQuery({
@@ -216,18 +219,20 @@ export const useLuthieryShops = () => {
   });
 
   const { data: salesHistory = [], isLoading: salesLoading, isError: salesHistoryError, refetch: refetchSalesHistory } = useQuery({
-    queryKey: ["luthiery-shop-sales", myShop?.id],
+    queryKey: ["luthiery-shop-sales", profileId, myShop?.id],
     queryFn: async () => {
-      if (!myShop?.id) return [];
-      const { data, error } = await (supabase as any)
+      if (!profileId) return [];
+      let query = (supabase as any)
         .from("luthiery_shop_sales")
-        .select("*")
-        .eq("shop_id", myShop.id)
+        .select("*");
+      query = myShop?.id ? query.or(`seller_profile_id.eq.${profileId},shop_id.eq.${myShop.id}`)
+        : query.eq("seller_profile_id", profileId);
+      const { data, error } = await query
         .order("sold_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as LuthieryShopSale[];
     },
-    enabled: !!myShop?.id,
+    enabled: !!profileId,
   });
 
   const { data: ownedInstruments = [], isLoading: inventoryLoading, isError: ownedInstrumentsError, refetch: refetchOwnedInstruments } = useQuery({

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -32,6 +32,12 @@ export function SongwritingScheduleDialog({
   const [duration, setDuration] = useState("1");
   const [isSaving, setIsSaving] = useState(false);
   const queryClient = useQueryClient();
+  useEffect(() => {
+    if (!open) return;
+    setDate(new Date());
+    setHour("9");
+    setDuration("1");
+  }, [open, projectId]);
 
   const handleSchedule = async () => {
     if (isSaving) return;

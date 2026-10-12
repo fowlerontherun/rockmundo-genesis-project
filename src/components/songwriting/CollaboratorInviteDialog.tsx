@@ -10,6 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useCollaborationInvites } from "@/hooks/useCollaborationInvites";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Users, DollarSign, Percent, Search, Loader2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -46,6 +47,7 @@ export const CollaboratorInviteDialog = ({
   const [discoveryError, setDiscoveryError] = useState<string | null>(null);
   const [userCash, setUserCash] = useState(0);
 
+  const { profileId } = useActiveProfile();
   const { inviteCollaborator, collaborators } = useCollaborationInvites(projectId);
 
   useEffect(() => {
@@ -64,19 +66,19 @@ export const CollaboratorInviteDialog = ({
       fetchPotentialCollaborators();
       fetchUserCash();
     }
-  }, [open, userBandId, projectId, collaborators]);
+  }, [open, userBandId, projectId, collaborators, profileId]);
 
   const fetchUserCash = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Get active profile
+    if (!profileId) return;
+    // Use the character selected in RockMundo, not any other active row.
     const { data: activeProfile } = await supabase
       .from("profiles")
       .select("id, cash")
       .eq("user_id", user.id)
-      .eq("is_active", true)
-      .is("died_at", null)
+      .eq("id", profileId)
       .single();
 
     setUserCash(activeProfile?.cash || 0);
@@ -90,12 +92,12 @@ export const CollaboratorInviteDialog = ({
       if (!user) return;
 
       // Get user's profile ID for friendship matching
+      if (!profileId) throw new Error("Select a character before searching for collaborators.");
       const { data: userProfile, error: profileError } = await supabase
         .from("profiles")
         .select("id")
         .eq("user_id", user.id)
-        .eq("is_active", true)
-        .is("died_at", null)
+        .eq("id", profileId)
         .single();
       
       if (profileError) throw profileError;

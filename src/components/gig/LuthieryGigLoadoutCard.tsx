@@ -87,6 +87,8 @@ export function LuthieryGigLoadoutCard({ gigId, locked }: { gigId: string; locke
         .eq("assigned_profile_id", profileId)
         .eq("source_type", "member_owned")
         .not("luthiery_snapshot", "is", null)
+        .order("id", { ascending: true })
+        .limit(1)
         .maybeSingle();
       if (error) throw error;
       return (data ?? null) as GigLuthieryLoadout | null;

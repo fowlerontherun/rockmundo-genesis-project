@@ -53,6 +53,8 @@ export function useChatRoom(channelKey: string | null) {
       if (error) throw error;
 
       const rows = ((data ?? []) as any[]).slice().reverse();
+      // Re-fetch names on each refresh: profile renames and character switches must be visible.
+      nameCacheRef.current = {};
 
       const missingProfileIds = Array.from(
         new Set(
@@ -177,7 +179,8 @@ export function useChatRoom(channelKey: string | null) {
         } as any);
 
         if (error) throw error;
-        await fetchMessages();
+        // Sending succeeded independently of reloading the room history.
+        void fetchMessages();
         return true;
       } catch (error) {
         console.error("Failed to send message", error);

@@ -106,7 +106,7 @@ async function resolveRichClothingRows(rows: EquippedClothingRow[]) {
   const result: Record<string, ResolvedEquippedClothing[]> = {};
   for (const row of rows) {
     const item = itemById.get(row.item_id);
-    if (!item) continue;
+    if (!item) throw new Error(`Equipped clothing item ${row.item_id} could not be resolved. Check your inventory or retry.`);
     (result[row.profile_id] ??= []).push(
       resolveEquippedClothingVisual(item, row.selected_variant_key, row.customization_config),
     );
