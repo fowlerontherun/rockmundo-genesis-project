@@ -61,10 +61,14 @@ const SongManager = () => {
         query = query.eq("user_id", user.id!);
       }
 
-      const { data, error } = await query.order("created_at", { ascending: false });
-
-      if (error) throw error;
-      return data;
+      const allSongs: any[] = [];
+      for (let offset = 0; ; offset += 500) {
+        const { data, error } = await query.order("created_at", { ascending: false }).order("id", { ascending: false }).range(offset, offset + 499);
+        if (error) throw error;
+        allSongs.push(...(data ?? []));
+        if (!data || data.length < 500) break;
+      }
+      return allSongs;
     },
     enabled: !!profileId || !!user?.id,
   });
@@ -87,7 +91,7 @@ const SongManager = () => {
 
       const { data, error } = await supabase
         .from("band_song_familiarity")
-        .select("song_id, familiarity_percentage, familiarity_minutes, last_rehearsed_at")
+        .select("song_id, band_id, familiarity_percentage, familiarity_minutes, last_rehearsed_at")
         .in("band_id", bandIds);
 
       if (error) throw error;
@@ -159,7 +163,9 @@ const SongManager = () => {
 
   const getRehearsalLevel = (songId: string) => {
     if (!rehearsalData) return null;
-    return rehearsalData.find(r => r.song_id === songId);
+    // For multiple bands show the highest recorded familiarity, not a random band row.
+    return rehearsalData.filter(r => r.song_id === songId)
+      .sort((a, b) => (b.familiarity_percentage ?? 0) - (a.familiarity_percentage ?? 0))[0] ?? null;
   };
 
   return (

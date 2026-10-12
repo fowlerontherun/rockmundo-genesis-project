@@ -62,7 +62,9 @@ export default function PlayerProfile() {
     const sourceId = `${profile.id}:${candidate.threshold}`;
     let cancelled = false;
     void (async () => {
-      const destinationUrl = await referralAwareDestination(currentUser.id, window.location.href, "achievement_share");
+      let destinationUrl = window.location.href;
+      try { destinationUrl = await referralAwareDestination(currentUser.id, window.location.href, "achievement_share"); }
+      catch (error) { console.warn("Referral link unavailable; sharing direct profile URL", error); }
       if (cancelled) return;
       setMilestoneMoment({
       version: 1,

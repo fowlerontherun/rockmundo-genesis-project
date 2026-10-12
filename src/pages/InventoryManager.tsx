@@ -48,13 +48,20 @@ const InventoryManager = () => {
     queryKey: ["inventory-personal-gear", userId],
     enabled: !!userId,
     queryFn: async () => {
+      const allGear: any[] = [];
+      for (let offset = 0; ; offset += 500) {
       const { data, error } = await (supabase as any)
         .from("player_personal_gear")
         .select("id, gear_name, gear_type, quality_rating, condition_rating, purchase_cost, stat_boosts, notes, created_at")
         .eq("user_id", userId!)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(offset, offset + 499);
       if (error) throw error;
-      return data ?? [];
+      allGear.push(...(data ?? []));
+      if (!data || data.length < 500) break;
+      }
+      return allGear;
     },
   });
 
@@ -83,6 +90,8 @@ const InventoryManager = () => {
     queryFn: async () => {
       if (!profileId) return [];
 
+      const sessions: any[] = [];
+      for (let offset = 0; ; offset += 500) {
       const { data, error } = await supabase
         .from("player_book_reading_sessions")
         .select(`
@@ -90,10 +99,15 @@ const InventoryManager = () => {
           skill_books (id, title, author, skill_slug, price, base_reading_days, skill_percentage_gain, category)
         `)
         .eq("profile_id", profileId)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(offset, offset + 499);
 
       if (error) throw error;
-      return data ?? [];
+      sessions.push(...(data ?? []));
+      if (!data || data.length < 500) break;
+      }
+      return sessions;
     },
     enabled: !!profileId,
   });
@@ -104,6 +118,8 @@ const InventoryManager = () => {
     queryFn: async () => {
       if (!profileId) return [];
 
+      const allProperties: any[] = [];
+      for (let offset = 0; ; offset += 500) {
       const { data, error } = await (supabase as any)
         .from("player_properties")
         .select(`
@@ -111,10 +127,15 @@ const InventoryManager = () => {
           housing_types (name, country, tier, bedrooms, description, base_price, image_url)
         `)
         .eq("profile_id", profileId)
-        .order("purchased_at", { ascending: false });
+        .order("purchased_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(offset, offset + 499);
 
       if (error) throw error;
-      return data ?? [];
+      allProperties.push(...(data ?? []));
+      if (!data || data.length < 500) break;
+      }
+      return allProperties;
     },
     enabled: !!profileId,
   });
@@ -211,7 +232,6 @@ const InventoryManager = () => {
               ) : (
                 <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                   {personalGear.map((g: any) => {
-                    const refund = Math.max(0, Math.floor((g.purchase_cost ?? 0) / 2)); // Estimate only; final refund is calculated by server.
                     return (
                       <Card key={g.id} className="border-2">
                         <CardHeader className="pb-2">
@@ -242,13 +262,13 @@ const InventoryManager = () => {
                             className="w-full gap-1"
                             disabled={sellGear.isPending}
                             onClick={() => {
-                              if (confirm(`Sell ${g.gear_name} for $${refund.toLocaleString()}?`)) {
+                              if (confirm(`Sell ${g.gear_name}? The final refund is calculated by the server and shown after the sale.`)) {
                                 sellGear.mutate(g.id);
                               }
                             }}
                           >
                             <DollarSign className="h-3 w-3" />
-                            Estimated ${refund.toLocaleString()}
+                            Sell item
                           </Button>
                         </CardContent>
                       </Card>
@@ -473,7 +493,7 @@ const InventoryManager = () => {
                     const isCompleted = session.status === "completed";
                     const isReading = session.status === "reading";
                     const progress = book.base_reading_days
-                      ? Math.min(100, Math.round((session.days_read / book.base_reading_days) * 100))
+                      ? Math.min(100, Math.max(0, Math.round((session.days_read / book.base_reading_days) * 100)))
                       : 0;
 
                     return (
@@ -505,7 +525,7 @@ const InventoryManager = () => {
                           <div className="space-y-1">
                             <div className="flex justify-between text-sm">
                               <span className="text-muted-foreground">Progress</span>
-                              <span>Day {session.days_read} / {book.base_reading_days}</span>
+                              <span>Day {Math.min(Math.max(0, Number(session.days_read) || 0), Math.max(0, Number(book.base_reading_days) || 0))} / {book.base_reading_days}</span>
                             </div>
                             <Progress value={progress} />
                           </div>
@@ -564,8 +584,7 @@ const InventoryManager = () => {
               ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {properties.map((purchase: any) => {
-                    const prop = purchase.housing_types;
-                    if (!prop) return null;
+                    const prop = purchase.housing_types ?? { name: "Owned property (details unavailable)", image_url: null, tier: null, bedrooms: null, description: "The property is owned, but its housing type could not be loaded.", base_price: null };
 
                     return (
                       <Card key={purchase.id} className="overflow-hidden border-2 border-primary/20">
