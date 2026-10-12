@@ -225,37 +225,18 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
         if (memberError) throw memberError;
 
         const profileIds = memberData?.map(m => m.profile_id).filter(Boolean) ?? [];
-        const userIds = memberData?.map(m => m.user_id).filter(Boolean) ?? [];
-        const profileData: Array<MemberWithProfile["profiles"]> = [];
-
-        if (profileIds.length > 0) {
-          const { data, error: profileError } = await supabase
-            .from("profiles")
-            .select("id, user_id, display_name, username, avatar_url, rpm_avatar_url, level")
-            .in("id", profileIds);
-          if (profileError) throw profileError;
-
-          profileData.push(...(data ?? []));
-        }
-
-        if (userIds.length > 0) {
-          const { data, error: profileError } = await supabase
-            .from("profiles")
-            .select("id, user_id, display_name, username, avatar_url, rpm_avatar_url, level")
-            .in("user_id", userIds);
-          if (profileError) throw profileError;
-
-          profileData.push(...(data ?? []));
-        }
-
-        const profilesById = new Map(profileData.filter(Boolean).map(p => [p!.id, p]));
-        const profilesByUserId = new Map(profileData.filter(Boolean).map(p => [p!.user_id, p]));
-
+        // Roster avatars belong to the joined character, never an arbitrary
+        // same-account profile. Touring/NPC members have no character avatar.
+        const { data: profileData, error: profileError } = profileIds.length
+          ? await supabase.from("profiles")
+              .select("id, user_id, display_name, username, avatar_url, rpm_avatar_url, level")
+              .in("id", profileIds)
+          : { data: [], error: null };
+        if (profileError) throw profileError;
+        const profilesById = new Map((profileData ?? []).map(p => [p.id, p]));
         const membersWithProfiles: MemberWithProfile[] = (memberData ?? []).map(member => ({
           ...member,
-          profiles: (member.profile_id ? profilesById.get(member.profile_id) : null)
-            ?? (member.user_id ? profilesByUserId.get(member.user_id) : null)
-            ?? null
+          profiles: member.profile_id ? profilesById.get(member.profile_id) ?? null : null,
         }));
 
         const { data: historyData, error: historyError } = await (supabase as any)
