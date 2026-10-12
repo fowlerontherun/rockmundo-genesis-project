@@ -75,12 +75,18 @@ const CityTreasuryDetail = () => {
       const [cityRes, treasuryRes, ledgerRes] = await Promise.all([
         supabase.from("cities").select("id, name, country").eq("id", cityId!).maybeSingle(),
         supabase.from("city_treasury").select("*").eq("city_id", cityId!).maybeSingle(),
-        supabase
-          .from("city_treasury_ledger")
-          .select("*")
-          .eq("city_id", cityId!)
-          .order("created_at", { ascending: false })
-          .limit(1000),
+        (async () => {
+          const rows: LedgerEntry[] = [];
+          for (let offset = 0; ; offset += 1000) {
+            const { data, error } = await supabase.from("city_treasury_ledger")
+              .select("*").eq("city_id", cityId!)
+              .order("created_at", { ascending: false }).range(offset, offset + 999);
+            if (error) return { data: null, error };
+            rows.push(...((data ?? []) as LedgerEntry[]));
+            if (!data || data.length < 1000) break;
+          }
+          return { data: rows, error: null };
+        })(),
       ]);
       if (cityRes.error) throw cityRes.error;
       if (treasuryRes.error) throw treasuryRes.error;

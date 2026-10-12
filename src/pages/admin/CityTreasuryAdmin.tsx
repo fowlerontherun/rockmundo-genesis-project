@@ -81,29 +81,36 @@ const CityTreasuryAdmin = () => {
         .select("id, name, country")
         .order("name");
       if (citiesError) throw citiesError;
-      setCities(citiesData || []);
+
 
       // Fetch all treasuries
       const { data: treasuryData, error: treasuryError } = await supabase
         .from("city_treasury")
         .select("*");
       if (treasuryError) throw treasuryError;
-      setTreasuries(treasuryData || []);
+
 
       // Fetch recent ledger entries (all tax types)
-      const { data: ledgerData, error: ledgerError } = await supabase
-        .from("city_treasury_ledger")
-        .select("*")
-        .in("type", ["gig_income_tax", "record_sales_tax", "merch_sales_tax"])
-        .order("created_at", { ascending: false })
-        .limit(200);
-      if (ledgerError) throw ledgerError;
+      const ledgerData: LedgerEntry[] = [];
+      for (let offset = 0; ; offset += 1000) {
+        const { data, error: ledgerError } = await supabase
+          .from("city_treasury_ledger")
+          .select("*")
+          .in("type", ["gig_income_tax", "record_sales_tax", "merch_sales_tax"])
+          .order("created_at", { ascending: false })
+          .range(offset, offset + 999);
+        if (ledgerError) throw ledgerError;
+        ledgerData.push(...((data ?? []) as LedgerEntry[]));
+        if (!data || data.length < 1000) break;
+      }
 
       // Enrich ledger with city names
       const enrichedLedger = (ledgerData || []).map((entry) => ({
         ...entry,
         city: citiesData?.find((c) => c.id === entry.city_id),
       }));
+      setCities(citiesData || []);
+      setTreasuries(treasuryData || []);
       setLedger(enrichedLedger);
     } catch (error) {
       console.error("Error fetching treasury data:", error);
