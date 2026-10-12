@@ -64,12 +64,16 @@ export const useAutoRecordingCompletion = (userId: string | null, profileId?: st
           });
 
           if (completionError) throw completionError;
+          const payload = completionResult as { success?: boolean; completedSessions?: number } | null;
+          if (payload?.success !== true || !Number.isInteger(payload.completedSessions) || (payload.completedSessions ?? -1) < 0) {
+            throw new Error("Recording worker returned an unconfirmed completion result");
+          }
           
           queryClient.invalidateQueries({ queryKey: ["recording-sessions"] });
           queryClient.invalidateQueries({ queryKey: ["recordings"] });
           queryClient.invalidateQueries({ queryKey: ["recorded-songs-list"] });
 
-          const completedCount = (completionResult as any)?.completedSessions ?? completingSessions.length;
+          const completedCount = payload.completedSessions!;
           if (completedCount > 0) {
             toast({
               title: "Recording Complete!",
