@@ -625,9 +625,9 @@ export const LuthieryWorkbench = ({
               <Button type="button" className="w-full" variant={confirmedCurrent ? "outline" : "default"} onClick={() => setReviewOpen(true)}>
                 Review build
               </Button>
-              {confirmedCurrent && craftedCurrent && onCraft && (
+              {craftedCurrent && onCraft && (
                 <Button type="button" variant="secondary" className="w-full" disabled={isCrafting}
-                  onClick={() => { setCraftedFingerprint(null); setConfirmedCraftKey(createCraftRequestKey()); }}>
+                  onClick={() => { setCraftedFingerprint(null); setConfirmedCraftKey(createCraftRequestKey()); if (!confirmedCurrent) setReviewOpen(true); }}>
                   Craft another identical instrument
                 </Button>
               )}
