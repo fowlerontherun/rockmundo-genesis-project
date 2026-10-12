@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,6 +52,8 @@ export function LabelCampaignStrategyCard({ labelId }: Props) {
   const [priority, setPriority] = useState<string | null>(null);
   const [focus, setFocus] = useState<string | null>(null);
   const [regions, setRegions] = useState<string | null>(null);
+
+  useEffect(() => { setPriority(null); setFocus(null); setRegions(null); }, [labelId]);
 
   const selectedPriority = priority ?? current?.priority_release_id ?? "none";
   const selectedFocus = focus ?? current?.marketing_focus ?? "balanced";
