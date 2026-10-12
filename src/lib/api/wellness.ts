@@ -1,4 +1,6 @@
 import { differenceInCalendarDays, parseISO } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { getActiveProfile } from "@/services/profileService";
 
 export interface HealthStat {
   id: string;
@@ -55,7 +57,7 @@ const defaultWellnessData: WellnessOverviewData = {
       unit: "bpm",
       change: -3,
       changeDirection: "down",
-      description: "A calm baseline indicates steady recovery.",
+      description: "Sample indicator only; not a measured health reading.",
     },
     {
       id: "sleep-quality",
@@ -64,7 +66,7 @@ const defaultWellnessData: WellnessOverviewData = {
       unit: "%",
       change: 4,
       changeDirection: "up",
-      description: "Consistent routines are paying off.",
+      description: "Sample indicator only; not a measured health reading.",
     },
     {
       id: "hydration",
@@ -73,7 +75,7 @@ const defaultWellnessData: WellnessOverviewData = {
       unit: "%",
       change: 6,
       changeDirection: "up",
-      description: "On track with the daily hydration target.",
+      description: "Sample indicator only; not a measured health reading.",
     },
     {
       id: "stress-index",
@@ -82,7 +84,7 @@ const defaultWellnessData: WellnessOverviewData = {
       unit: "%",
       change: -5,
       changeDirection: "down",
-      description: "Breathing exercises are reducing overall stress.",
+      description: "Sample indicator only; not a measured health reading.",
     },
   ],
   appointments: [
@@ -94,7 +96,7 @@ const defaultWellnessData: WellnessOverviewData = {
       location: "City Performance Clinic",
       type: "Recovery",
       status: "confirmed",
-      notes: "Focus on shoulder mobility and stability work.",
+      notes: "Sample appointment — not a confirmed booking.",
     },
     {
       id: "appt-nutrition",
@@ -104,7 +106,7 @@ const defaultWellnessData: WellnessOverviewData = {
       location: "Harmony Wellness Center",
       type: "Consultation",
       status: "pending",
-      notes: "Review meal plans ahead of the upcoming tour.",
+      notes: "Sample appointment — not a confirmed booking.",
     },
   ],
   habits: [
@@ -145,40 +147,42 @@ const defaultWellnessData: WellnessOverviewData = {
   lastUpdated: new Date().toISOString(),
 };
 
-let inMemoryStore: WellnessOverviewData | null = null;
+const inMemoryStore = new Map<string, WellnessOverviewData>();
 
 const cloneData = (data: WellnessOverviewData): WellnessOverviewData =>
   JSON.parse(JSON.stringify(data)) as WellnessOverviewData;
 
 export const getDateKey = (date: Date): string => date.toISOString().split("T")[0];
 
-const loadFromStorage = (): WellnessOverviewData => {
-  if (typeof window !== "undefined" && window.localStorage) {
-    const raw = window.localStorage.getItem(WELLNESS_STORAGE_KEY);
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw) as WellnessOverviewData;
-        return cloneData(parsed);
-      } catch (error) {
-        console.warn("Failed to parse stored wellness data", error);
-      }
-    }
-  }
-
-  if (inMemoryStore) {
-    return cloneData(inMemoryStore);
-  }
-
-  inMemoryStore = cloneData(defaultWellnessData);
-  return cloneData(defaultWellnessData);
+const getScopedStorageKey = async (): Promise<string | null> => {
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error) throw error;
+  if (!user) return null;
+  const profile = await getActiveProfile(user.id);
+  return profile ? `${WELLNESS_STORAGE_KEY}:${user.id}:${profile.id}` : null;
 };
 
-const persistToStorage = (data: WellnessOverviewData) => {
+const loadFromStorage = async (): Promise<WellnessOverviewData> => {
+  const key = await getScopedStorageKey();
+  if (!key) return cloneData(defaultWellnessData);
+  try {
+    const raw = typeof window !== "undefined" ? window.localStorage.getItem(key) : null;
+    if (raw) return cloneData(JSON.parse(raw) as WellnessOverviewData);
+  } catch (error) {
+    console.warn("Unable to load stored wellness data", error);
+  }
+  return cloneData(inMemoryStore.get(key) ?? defaultWellnessData);
+};
+
+const persistToStorage = async (data: WellnessOverviewData): Promise<void> => {
+  const key = await getScopedStorageKey();
+  if (!key) return;
   const snapshot = cloneData(data);
-  if (typeof window !== "undefined" && window.localStorage) {
-    window.localStorage.setItem(WELLNESS_STORAGE_KEY, JSON.stringify(snapshot));
-  } else {
-    inMemoryStore = snapshot;
+  inMemoryStore.set(key, snapshot);
+  try {
+    if (typeof window !== "undefined") window.localStorage.setItem(key, JSON.stringify(snapshot));
+  } catch {
+    // Keep the active character's data in memory when storage is unavailable.
   }
 };
 
@@ -243,7 +247,7 @@ const sanitizeWellnessData = (
 
 export const fetchWellnessOverview = async (): Promise<WellnessOverviewData> => {
   const referenceDateKey = getDateKey(new Date());
-  const data = loadFromStorage();
+  const data = await loadFromStorage();
   return sanitizeWellnessData(data, referenceDateKey);
 };
 
@@ -252,7 +256,7 @@ export const setHabitCompletion = async (
   dateKey: string,
   completed: boolean
 ): Promise<WellnessOverviewData> => {
-  const data = loadFromStorage();
+  const data = await loadFromStorage();
   const habits = data.habits.map(habit => {
     if (habit.id !== habitId) {
       return habit;
@@ -280,7 +284,7 @@ export const setHabitCompletion = async (
     getDateKey(new Date())
   );
 
-  persistToStorage(updated);
+  await persistToStorage(updated);
   return cloneData(updated);
 };
 
@@ -288,7 +292,7 @@ export const logCustomHabitCompletion = async (
   habitId: string,
   completionDateIso: string
 ): Promise<WellnessOverviewData> => {
-  const data = loadFromStorage();
+  const data = await loadFromStorage();
   const referenceKey = getDateKey(new Date());
   const normalizedDate = getDateKey(parseISO(completionDateIso));
 
@@ -314,14 +318,14 @@ export const logCustomHabitCompletion = async (
     referenceKey
   );
 
-  persistToStorage(updated);
+  await persistToStorage(updated);
   return cloneData(updated);
 };
 
 export const upsertAppointment = async (
   appointment: WellnessAppointment
 ): Promise<WellnessOverviewData> => {
-  const data = loadFromStorage();
+  const data = await loadFromStorage();
   const appointments = data.appointments.some(item => item.id === appointment.id)
     ? data.appointments.map(item => (item.id === appointment.id ? appointment : item))
     : [...data.appointments, appointment];
@@ -332,14 +336,14 @@ export const upsertAppointment = async (
     lastUpdated: new Date().toISOString(),
   };
 
-  persistToStorage(updated);
+  await persistToStorage(updated);
   return cloneData(updated);
 };
 
 export const deleteAppointment = async (
   appointmentId: string
 ): Promise<WellnessOverviewData> => {
-  const data = loadFromStorage();
+  const data = await loadFromStorage();
   const appointments = data.appointments.filter(
     appointment => appointment.id !== appointmentId
   );
@@ -350,7 +354,7 @@ export const deleteAppointment = async (
     lastUpdated: new Date().toISOString(),
   };
 
-  persistToStorage(updated);
+  await persistToStorage(updated);
   return cloneData(updated);
 };
 
@@ -376,9 +380,13 @@ export const getHabitCompletionRate = (
   return Math.min(100, Math.round((completions / habit.targetPerWeek) * 100));
 };
 
-export const resetWellnessData = () => {
-  inMemoryStore = cloneData(defaultWellnessData);
-  if (typeof window !== "undefined" && window.localStorage) {
-    window.localStorage.removeItem(WELLNESS_STORAGE_KEY);
+export const resetWellnessData = async (): Promise<void> => {
+  const key = await getScopedStorageKey();
+  if (!key) return;
+  inMemoryStore.delete(key);
+  try {
+    if (typeof window !== "undefined") window.localStorage.removeItem(key);
+  } catch {
+    // Reset remains usable even when browser storage is denied.
   }
 };
