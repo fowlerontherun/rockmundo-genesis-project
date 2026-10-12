@@ -26,7 +26,7 @@ export default function PlayerSearch() {
   const [debouncedQuery, setDebouncedQuery] = useState(initialQuery);
   const [dmTarget, setDmTarget] = useState<{ profileId: string; displayName: string } | null>(null);
   const { profile } = useGameData();
-  const { friendships, sendRequest, acceptRequest, removeFriend } = useFriendships(profile?.id);
+  const { friendships, sendRequest, acceptRequest, removeFriend, cancelRequest } = useFriendships(profile?.id);
   const { toast } = useToast();
 
   const { data: players, isLoading, isError, error } = useQuery({
@@ -89,8 +89,7 @@ export default function PlayerSearch() {
 
   const handleWithdraw = async (friendshipId: string) => {
     try {
-      await removeFriend(friendshipId);
-      toast({ title: "Friend request withdrawn" });
+      await cancelRequest(friendshipId);
     } catch {
       toast({ title: "Failed to withdraw request", variant: "destructive" });
     }
