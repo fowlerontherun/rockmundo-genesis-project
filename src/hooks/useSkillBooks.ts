@@ -183,7 +183,7 @@ export const useSkillBooks = () => {
         .eq("status", "abandoned").order("started_at", { ascending: false }).limit(1).maybeSingle();
       if (previousError) throw previousError;
       if (previous) {
-        scheduledEndDate.setDate(new Date().getDate() + Math.max(0, book.base_reading_days - (previous.days_read ?? 0)) - book.base_reading_days);
+        scheduledEndDate.setDate(scheduledEndDate.getDate() - Math.min(book.base_reading_days, Math.max(0, previous.days_read ?? 0)));
         const { data, error } = await supabase.from("player_book_reading_sessions")
           .update({ status: "reading", auto_read: autoRead ?? false, scheduled_end_date: scheduledEndDate.toISOString() })
           .eq("id", previous.id).eq("profile_id", profileId).eq("status", "abandoned")
