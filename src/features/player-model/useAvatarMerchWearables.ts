@@ -24,7 +24,15 @@ export function useAvatarMerchWearables(profileId: string | null | undefined) {
       if (equippedResult.error) throw equippedResult.error;
       const designs = ((designResult.data ?? []) as unknown as MerchWearableDesign[]).filter(design => !!merchWearableKind(design.product_type));
       const equippedDesignId = equippedResult.data?.design_id as string | undefined;
-      const selected = designs.find(design => design.id === equippedDesignId);
+      // Equipped merchandise may belong to a different band than the primary band.
+      let selected = designs.find(design => design.id === equippedDesignId);
+      if (equippedDesignId && !selected) {
+        const { data: wornDesign, error: wornError } = await supabase.from('tshirt_designs')
+          .select('id,band_id,design_name,product_type,artwork_url,background_color,design_data')
+          .eq('id', equippedDesignId).maybeSingle();
+        if (wornError) throw wornError;
+        if (wornDesign && merchWearableKind(wornDesign.product_type)) selected = wornDesign as MerchWearableDesign;
+      }
       const equipped: ResolvedMerchWearable | null = selected ? {
         design_id: selected.id,
         band_id: selected.band_id,
