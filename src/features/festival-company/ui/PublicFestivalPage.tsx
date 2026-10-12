@@ -117,7 +117,8 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   useEffect(() => { setQuantities({}); setActivePurchaseProductId(null); buy.reset(); }, [festivalCompanyIdentifier, publicSlug, f?.id]);
 
   if (isLoading) return <main className="p-8" role="status">Loading Festival…</main>;
-  if (isError || !f) return <main className="p-8" role="alert">Festival not found.</main>;
+  if (isError) return <main className="p-8" role="alert">Festival details could not be loaded. Please retry.</main>;
+  if (!f) return <main className="p-8" role="alert">Festival not found.</main>;
 
   const eventPhase = getFestivalPublicEventPhase(f.startsAt, f.endsAt);
   const eventPhaseLabel = eventPhase === "upcoming"
