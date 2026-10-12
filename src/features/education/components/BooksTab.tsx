@@ -28,6 +28,7 @@ export const BooksTab = () => {
   const libraryQueryFailed = purchasesError || activeSessionError;
   const [selectedBook, setSelectedBook] = useState<EnrichedSkillBook | null>(null);
   const [autoRead, setAutoRead] = useState(false);
+  const [bookActionPending, setBookActionPending] = useState(false);
   const tierAccess = useSkillTierAccess(profileId, (typedBooks ?? []).map((book) => book.skill_slug));
   const accessBySkill = tierAccess.data ?? new Map<string, boolean>();
   const isBookLocked = (book: EnrichedSkillBook) =>
@@ -77,6 +78,8 @@ export const BooksTab = () => {
       return;
     }
     
+    if (bookActionPending) return;
+    setBookActionPending(true);
     try {
     await purchaseBookAsync({
       bookId: book.id,
@@ -86,6 +89,7 @@ export const BooksTab = () => {
     });
     setSelectedBook(null);
     } catch { /* Mutation hook displays error; retain selected book. */ }
+    finally { setBookActionPending(false); }
   };
 
   const handleStartReading = async () => {
@@ -94,6 +98,8 @@ export const BooksTab = () => {
     const purchase = purchases?.find((p) => p.book_id === selectedBook.id);
     if (!purchase) return;
 
+    if (bookActionPending) return;
+    setBookActionPending(true);
     try {
     await startReadingAsync({
       purchaseId: purchase.id,
@@ -106,6 +112,7 @@ export const BooksTab = () => {
     setSelectedBook(null);
     setAutoRead(false);
     } catch { /* Mutation hook displays error; keep reading selection. */ }
+    finally { setBookActionPending(false); }
   };
 
   // Get unique skill categories for filter
@@ -374,12 +381,12 @@ export const BooksTab = () => {
               </Badge>
             )}
             {selectedBook && !libraryQueryFailed && !isBookLocked(selectedBook) && !isPurchased(selectedBook.id) && !isCompleted(selectedBook.id) && (
-              <Button onClick={() => handlePurchase(selectedBook)} className="w-full sm:w-auto">
+              <Button disabled={bookActionPending} onClick={() => handlePurchase(selectedBook)} className="w-full sm:w-auto">
                 Purchase for ${selectedBook.price}
               </Button>
             )}
             {selectedBook && isPurchased(selectedBook.id) && canStartReading() && (
-              <Button onClick={handleStartReading} className="w-full sm:w-auto">
+              <Button disabled={bookActionPending} onClick={handleStartReading} className="w-full sm:w-auto">
                 Start Reading
               </Button>
             )}
