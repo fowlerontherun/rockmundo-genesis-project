@@ -5,47 +5,53 @@ import { Button } from "@/components/ui/button";
 import { Crown, CheckCircle, Loader2, Sparkles } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { useVipStatus } from "@/hooks/useVipStatus";
+import { supabase } from "@/integrations/supabase/client";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 export default function VipSuccess() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const { profileId } = useActiveProfile();
-  const [countdown, setCountdown] = useState(5);
+  const { userId } = useActiveProfile();
+  const { data: vipStatus, refetch: refetchVip } = useVipStatus();
+  const [receiptVerified, setReceiptVerified] = useState(false);
+  const [receiptError, setReceiptError] = useState(false);
 
   const sessionId = searchParams.get("session_id");
 
   useEffect(() => {
-    // Invalidate VIP status to refresh
-    if (profileId) {
-      queryClient.invalidateQueries({ queryKey: ["vip-status", profileId] });
+    if (!userId || !sessionId) {
+      setReceiptError(true);
+      return;
     }
-  }, [profileId, queryClient]);
-
-  useEffect(() => {
-    // Auto-redirect countdown
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          navigate("/home");
-          return 0;
+    let cancelled = false;
+    void supabase.functions.invoke("get-checkout-receipt", { body: { sessionId } })
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        const receipt = data?.receipt;
+        if (error || !receipt || receipt.session_id !== sessionId || receipt.status !== "complete" || !["paid", "no_payment_required"].includes(receipt.payment_status)) {
+          setReceiptError(true);
+          return;
         }
-        return prev - 1;
-      });
-    }, 1000);
+        setReceiptVerified(true);
+        void queryClient.invalidateQueries({ queryKey: ["vip-status", userId] });
+        void refetchVip();
+      })
+      .catch(() => { if (!cancelled) setReceiptError(true); });
+    return () => { cancelled = true; };
+  }, [sessionId, userId, queryClient, refetchVip]);
 
-    return () => clearInterval(timer);
-  }, [navigate]);
+  const activated = receiptVerified && vipStatus?.isVip === true;
 
   return (
-    <FMPageScaffold title="VIP Membership Activated" icon={Crown} backTo="/hub/premium-store">
+    <FMPageScaffold title={activated ? "VIP Membership Activated" : "VIP Checkout Status"} icon={Crown} backTo="/hub/premium-store">
       <div className="flex items-center justify-center min-h-[600px]">
       <Card className="max-w-md w-full bg-gradient-to-br from-amber-500/10 via-background to-background border-amber-500/30">
         <CardContent className="p-8 text-center space-y-6">
-          {/* Success Animation */}
+          {/* Checkout confirmation */}
           <div className="relative mx-auto w-fit">
-            <div className="absolute inset-0 animate-ping rounded-full bg-green-500/30" />
+            {activated && <div className="absolute inset-0 animate-ping rounded-full bg-green-500/30" />}
             <div className="relative rounded-full bg-green-500/20 p-4">
               <CheckCircle className="h-12 w-12 text-green-500" />
             </div>
@@ -59,13 +65,13 @@ export default function VipSuccess() {
           </div>
 
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold">Welcome to VIP!</h1>
+            <h1 className="text-2xl font-bold">{activated ? "Welcome to VIP!" : receiptError ? "Unable to verify checkout" : "Confirming VIP subscription"}</h1>
             <p className="text-muted-foreground">
-              Your subscription is now active. You have full access to all VIP features!
+              {activated ? "Your subscription is active and VIP access is ready." : receiptError ? "We could not verify this checkout. Please check your receipt or contact support." : "Your payment and VIP entitlement are being verified. Access will appear after confirmation."}
             </p>
           </div>
 
-          <div className="space-y-3 text-left bg-muted/30 rounded-lg p-4">
+          {activated && <div className="space-y-3 text-left bg-muted/30 rounded-lg p-4">
             <h3 className="font-semibold text-sm">You can now:</h3>
             <ul className="text-sm space-y-2 text-muted-foreground">
               <li className="flex items-center gap-2">
@@ -93,7 +99,7 @@ export default function VipSuccess() {
                 VIP gig audio, awards & exclusive chat
               </li>
             </ul>
-          </div>
+          </div>}
 
           <div className="space-y-2">
             <Button 
@@ -112,9 +118,7 @@ export default function VipSuccess() {
               View receipt & subscription status
             </Button>
             
-            <p className="text-xs text-muted-foreground">
-              Redirecting in {countdown} seconds...
-            </p>
+
           </div>
         </CardContent>
       </Card>
