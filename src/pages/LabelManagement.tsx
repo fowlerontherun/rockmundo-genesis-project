@@ -57,12 +57,13 @@ function useLabelDemoCount(labelId: string | undefined) {
     queryKey: ['label-demo-count', labelId],
     queryFn: async () => {
       if (!labelId) return 0;
-      const { count } = await supabase
+      const { count, error } = await supabase
         .from('demo_submissions')
         .select('*', { count: 'exact', head: true })
         .eq('label_id', labelId)
         .eq('status', 'pending');
-      return count || 0;
+      if (error) throw error;
+      return count ?? 0;
     },
     enabled: !!labelId,
   });
@@ -73,12 +74,13 @@ function usePendingContractCount(labelId: string | undefined) {
     queryKey: ['label-pending-contract-count', labelId],
     queryFn: async () => {
       if (!labelId) return 0;
-      const { count } = await supabase
+      const { count, error } = await supabase
         .from('artist_label_contracts')
         .select('*', { count: 'exact', head: true })
         .eq('label_id', labelId)
         .eq('status', 'offered');
-      return count || 0;
+      if (error) throw error;
+      return count ?? 0;
     },
     enabled: !!labelId,
   });
@@ -118,8 +120,8 @@ export default function LabelManagement() {
   const { profileId } = useActiveProfile();
   
   const { data: label, isLoading } = useLabelByIdOrCompanyId(labelId);
-  const { data: pendingDemoCount = 0 } = useLabelDemoCount(label?.id);
-  const { data: pendingContractCount = 0 } = usePendingContractCount(label?.id);
+  const { data: pendingDemoCount = 0, isError: demoCountError } = useLabelDemoCount(label?.id);
+  const { data: pendingContractCount = 0, isError: contractCountError } = usePendingContractCount(label?.id);
   const { data: stats } = useLabelOverviewStats(label?.id);
   
   if (isLoading) {
@@ -192,6 +194,7 @@ export default function LabelManagement() {
           </>
         }
       >
+        {(demoCountError || contractCountError) && <div role="alert" className="rounded border border-destructive p-3 text-sm text-destructive">Pending demo or contract totals could not be verified. Refresh to retry.</div>}
         <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
           {label.genre_focus?.length > 0 && (
             <span className="flex items-center gap-1">

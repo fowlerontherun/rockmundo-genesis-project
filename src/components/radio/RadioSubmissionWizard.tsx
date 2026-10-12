@@ -161,6 +161,7 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
         .from("radio_stations")
         .select("*")
         .eq("is_active", true)
+        .eq("accepts_submissions", true)
         .in("country", markets)
         .order("listener_base", { ascending: false });
       if (error) throw error;
@@ -239,6 +240,10 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
       const reasons: string[] = [];
       let isEligible = true;
 
+      if (!station.accepts_submissions) {
+        isEligible = false;
+        reasons.push("Station is not accepting submissions");
+      }
       // Check if already submitted
       if (existingSubmissions.includes(station.id)) {
         isEligible = false;

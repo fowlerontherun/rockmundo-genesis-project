@@ -120,11 +120,10 @@ export function VenueShowsHistory({ venueId, capacity }: VenueShowsHistoryProps)
     return map;
   }, [transactions]);
 
-  const now = Date.now();
   const filtered = useMemo(() => {
     return gigs.filter((gig) => {
-      const time = new Date(gig.scheduled_date).getTime();
-      const isHistoric = time < now || ["completed", "cancelled", "failed"].includes(gig.status);
+      // Elapsed but unresolved gigs are still active/stuck, not completed history.
+      const isHistoric = ["completed", "cancelled", "failed"].includes(gig.status);
       if (view === "current" && isHistoric) return false;
       if (view === "history" && !isHistoric) return false;
       if (status !== "all" && gig.status !== status) return false;
@@ -133,7 +132,7 @@ export function VenueShowsHistory({ venueId, capacity }: VenueShowsHistoryProps)
       if (dateTo && gig.scheduled_date.slice(0, 10) > dateTo) return false;
       return true;
     });
-  }, [gigs, view, status, search, dateFrom, dateTo, now]);
+  }, [gigs, view, status, search, dateFrom, dateTo]);
 
   const summary = useMemo(() => {
     return filtered.reduce(
