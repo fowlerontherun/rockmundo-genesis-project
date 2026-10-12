@@ -47,6 +47,15 @@ const number = (
 };
 
 const statusLabel = (status: string) => status.replaceAll("_", " ");
+const festivalForRow = (row: WorkflowRow, opportunities: FestivalArtistOpportunity[]) => {
+  const companyId = text(row, "festivalCompanyId", "festival_company_id");
+  const name = text(row, "festivalName", "festival_name") ||
+    opportunities.find(o => o.festivalCompanyId === companyId)?.name ||
+    (companyId ? `Festival ${companyId.slice(0, 8)}` : "Festival name unavailable");
+  const editionDate = value(row, "festivalDate", "festival_date");
+  return `${name}${dateLabel(editionDate) ? ` · ${dateLabel(editionDate)}` : ""}`;
+};
+
 
 const dateLabel = (raw: unknown) => {
   if (typeof raw !== "string" || !raw) return null;
@@ -358,7 +367,7 @@ export default function FestivalArtistOpportunitiesPage() {
               return (
                 <article className="rounded-lg border p-3" key={String(row.id)}>
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <strong>Festival application</strong>
+                    <strong>Application · {festivalForRow(row, opportunities)}</strong>
                     <Badge variant="secondary" className="capitalize">
                       {statusLabel(status)}
                     </Badge>
@@ -422,7 +431,7 @@ export default function FestivalArtistOpportunitiesPage() {
               return (
                 <article className="rounded-lg border p-3" key={String(row.id)}>
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <strong>Festival invitation</strong>
+                    <strong>Invitation · {festivalForRow(row, opportunities)}</strong>
                     <Badge className="capitalize">{statusLabel(status)}</Badge>
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">
@@ -505,7 +514,7 @@ export default function FestivalArtistOpportunitiesPage() {
               return (
                 <article className="rounded-lg border p-3" key={String(row.id)}>
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <strong>Festival performance offer</strong>
+                    <strong>Performance offer · {festivalForRow(row, opportunities)}</strong>
                     <Badge variant="secondary" className="capitalize">
                       {statusLabel(status)}
                     </Badge>
@@ -581,7 +590,7 @@ export default function FestivalArtistOpportunitiesPage() {
               return (
                 <article className="rounded-lg border p-3" key={String(row.id)}>
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <strong>Festival booking</strong>
+                    <strong>Booking · {festivalForRow(row, opportunities)}</strong>
                     <Badge
                       variant={
                         ["awaiting_schedule", "confirmed", "scheduled"].includes(

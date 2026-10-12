@@ -14,6 +14,12 @@ export interface FestivalOperationsDraft {staffBudgetMinor:number;supplierBudget
 function fail():never{throw new Error(FESTIVAL_OPERATIONS_ERROR)}
 export function parseFestivalOperationsResult(value:unknown):FestivalOperationsResult {
  if(!object(value)||typeof value.festivalCompanyId!=="string"||!UUID.test(value.festivalCompanyId)||!strings(value.departments)||!strings(value.staffingRequirements)||!strings(value.vacancies)||!strings(value.applications)||!strings(value.assignments)||!strings(value.shifts)||!strings(value.supplierRequirements)||!strings(value.quotes)||!strings(value.contracts)||!object(value.budgetSummary)||!object(value.qualityScores)||!Array.isArray(value.issues)||typeof value.readiness!=="boolean"||typeof value.canWrite!=="boolean"||!integer(value.planningVersion))fail();
+ const collections=["departments","staffingRequirements","vacancies","applications","assignments","shifts","supplierRequirements","quotes","contracts"] as const;
+ for(const key of collections){
+  if(!(value[key] as unknown[]).every(row=>object(row)&&(!("id" in row)||(typeof row.id==="string"&&UUID.test(row.id)))&&
+   Object.entries(row).every(([field,entry])=>!(field.endsWith("Minor")||field.endsWith("BasisPoints"))||integer(entry)) &&
+   (!("status" in row)||typeof row.status==="string")))fail();
+ }
  const money=["staffBudgetMinor","supplierBudgetMinor","contingencyMinor","staffCommitmentsMinor","supplierCommitmentsMinor","artistCommitmentsMinor"]; if(!money.every(k=>integer(value.budgetSummary[k])))fail();
  const scores=["staffingCoverageBasisPoints","supplierCoverageBasisPoints","safetyReadinessScore","productionReadinessScore","guestExperienceScore","artistExperienceScore","overallOperationsScore"]; if(!scores.every(k=>integer(value.qualityScores[k])))fail();
  if(value.operationsPlan!==null){if(!object(value.operationsPlan)||typeof value.operationsPlan.id!=="string"||!UUID.test(value.operationsPlan.id)||typeof value.operationsPlan.currencyCode!=="string"||!/^[A-Z]{3}$/.test(value.operationsPlan.currencyCode)||!statuses.includes(String(value.operationsPlan.status) as FestivalOperationsStatus)||!integer(value.operationsPlan.staffBudgetMinor)||!integer(value.operationsPlan.supplierBudgetMinor)||!integer(value.operationsPlan.contingencyBudgetMinor)||!integer(value.operationsPlan.planningVersion)||!["npc_only","player_preferred","mixed"].includes(String(value.operationsPlan.staffingMode))||!["npc_only","player_company_preferred","mixed"].includes(String(value.operationsPlan.procurementMode)))fail();}

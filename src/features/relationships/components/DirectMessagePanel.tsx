@@ -8,6 +8,7 @@ import { useDirectMessages } from "@/hooks/useDirectMessages";
 import { Loader2, SendHorizontal } from "lucide-react";
 import { format } from "date-fns";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { ReportSocialTargetDialog } from "@/features/social-safety/components/ReportSocialTargetDialog";
 
 interface DirectMessagePanelProps {
   channel: string;
@@ -77,6 +78,7 @@ export function DirectMessagePanel({ channel, currentUserId, otherDisplayName }:
                       }`}
                     >
                       <p className="whitespace-pre-wrap break-words">{message.body}</p>
+                      {!isSelf && otherProfileId && <ReportSocialTargetDialog reportedProfileId={otherProfileId} targetType="direct_message" targetId={message.id} context={{ surface: "player_direct_message_panel" }} triggerLabel="Report message" />}
                       <p className="mt-1 text-right text-xs opacity-70">
                         {message.created_at ? format(new Date(message.created_at), "MMM d, HH:mm") : "Just now"}
                       </p>

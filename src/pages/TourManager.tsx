@@ -329,7 +329,7 @@ const TourManager = () => {
   );
 
   // Fetch tour venues/dates for selected tour with associated gig setlists
-  const { data: tourVenues = [], isLoading: loadingVenues } = useQuery({
+  const { data: tourVenues = [], isLoading: loadingVenues, isError: venuesError, refetch: retryTourVenues } = useQuery({
     queryKey: ["tour-venues", selectedTour?.id],
     queryFn: async () => {
       if (!selectedTour?.id) return [];
@@ -1175,6 +1175,7 @@ const TourManager = () => {
               <div className="space-y-6 pr-4">
                 {/* New Detail Panel with real stats */}
                 <TourDetailPanel tour={selectedTour} />
+                {venuesError && <div role="alert" className="rounded-md border border-destructive p-3 text-sm text-destructive">Tour stops, venues or gig details could not be loaded. <button className="underline" type="button" onClick={() => void retryTourVenues()}>Retry details</button></div>}
 
                 {selectedTour.description && (
                   <div className="space-y-1">
