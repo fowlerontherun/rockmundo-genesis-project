@@ -81,7 +81,7 @@ export function ScoutOfferDialog({ open, onOpenChange, labelId, labelReputation 
   const selectedBand = bands.find(b => b.id === selectedBandId);
 
   const handleSendOffer = () => {
-    if (!selectedBandId) return;
+    if (!selectedBand) return;
     setDesignerOpen(true);
   };
 
@@ -105,7 +105,7 @@ export function ScoutOfferDialog({ open, onOpenChange, labelId, labelReputation 
               <Input
                 placeholder="Search bands by name..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => { setSearchQuery(e.target.value); setSelectedBandId(null); }}
                 className="pl-9"
               />
             </div>
@@ -178,7 +178,7 @@ export function ScoutOfferDialog({ open, onOpenChange, labelId, labelReputation 
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSendOffer} disabled={!selectedBandId}>
+            <Button onClick={handleSendOffer} disabled={!selectedBand}>
               <Send className="h-4 w-4 mr-2" />
               Design Offer
             </Button>

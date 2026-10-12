@@ -459,6 +459,7 @@ serve(async (req) => {
             format_type,
             release:releases!inner(
               id,
+              title,
               release_type,
               release_songs:release_songs!release_songs_release_id_fkey(
                 song:songs!inner(

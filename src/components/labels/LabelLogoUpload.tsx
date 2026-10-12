@@ -47,13 +47,13 @@ export function LabelLogoUpload({ logoUrl, onLogoChange, labelName, disabled }: 
     try {
       // Generate unique filename
       const fileExt = file.name.split(".").pop();
-      const fileName = `label-logo-${Date.now()}.${fileExt}`;
+      const fileName = `label-logo-${crypto.randomUUID()}.${fileExt}`;
       const filePath = `label-logos/${fileName}`;
 
       // Upload to Supabase storage
       const { error: uploadError } = await supabase.storage
         .from("avatars")
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, file, { upsert: false });
 
       if (uploadError) throw uploadError;
 
