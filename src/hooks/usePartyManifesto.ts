@@ -84,8 +84,9 @@ export function useDeletePlank() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { id: string; party_id: string }) => {
-      const { error } = await supabase.from("party_manifestos").delete().eq("id", input.id);
+      const { data, error } = await supabase.from("party_manifestos").delete().eq("id", input.id).eq("party_id", input.party_id).select("id");
       if (error) throw error;
+      if (!data?.length) throw new Error("Plank not found or already deleted");
     },
     onSuccess: (_, vars) => {
       toast.success("Plank removed");
