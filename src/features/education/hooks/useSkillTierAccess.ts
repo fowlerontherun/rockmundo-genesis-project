@@ -21,7 +21,7 @@ export const useSkillTierAccess = (
       return new Map<string, boolean>(
         (data ?? []).map((row: { skill_slug: string; is_unlocked: boolean }) => [
           row.skill_slug,
-          row.is_unlocked !== false,
+          row.is_unlocked === true,
         ]),
       );
     },
