@@ -125,7 +125,7 @@ export default function PlayersBrowser() {
 
   // For each visible player, load their accepted friendships, intersect with mine.
   const { data: mutualsMap } = useQuery({
-    queryKey: ["players-mutuals", profile?.id, visibleIds.join(","), myFriendIds.size],
+    queryKey: ["players-mutuals", profile?.id, visibleIds.join(","), [...myFriendIds].sort().join(",")],
     enabled: Boolean(profile?.id) && visibleIds.length > 0 && myFriendIds.size > 0,
     staleTime: 60_000,
     queryFn: async () => {
