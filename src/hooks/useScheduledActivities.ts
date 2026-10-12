@@ -481,6 +481,12 @@ export function useCompleteActivity() {
 
   return useMutation({
     mutationFn: async (activityId: string) => {
+      const { data: existing, error: loadError } = await (supabase as any)
+        .from('player_scheduled_activities').select('activity_type').eq('id', activityId).single();
+      if (loadError) throw loadError;
+      if (existing?.activity_type === 'songwriting') {
+        throw new Error('Songwriting must be finished through its own session-completion workflow.');
+      }
       const { data, error } = await (supabase as any)
         .from('player_scheduled_activities')
         .update({
