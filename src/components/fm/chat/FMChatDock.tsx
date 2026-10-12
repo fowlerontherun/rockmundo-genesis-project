@@ -98,6 +98,7 @@ export function FMChatDock() {
     let disposed = false;
     let currentUserId: string | undefined;
     let newestTimestamp: string | null = null;
+    let newestScannedId: string | null = null;
     let checking = false;
     const pending: Array<{ id: string; profile_id?: string | null; user_id?: string; created_at: string }> = [];
     worldReady.current = false;
@@ -110,7 +111,6 @@ export function FMChatDock() {
         return;
       }
       seenWorldIds.current.add(row.id);
-      if (!newestTimestamp || row.created_at > newestTimestamp) newestTimestamp = row.created_at;
       if (seenWorldIds.current.size > 300) {
         seenWorldIds.current = new Set(Array.from(seenWorldIds.current).slice(-150));
       }
@@ -132,6 +132,8 @@ export function FMChatDock() {
         // Hold the lower bound stable while walking all pages. One 100-row page
         // can permanently hide later messages that share an identical timestamp.
         const lowerBound = newestTimestamp;
+        let lastTimestamp = newestTimestamp;
+        let lastId = newestScannedId;
         for (let offset = 0; offset < 100_000; offset += 500) {
           const { data, error } = await supabase.from("global_chat")
             .select("id, profile_id, user_id, created_at")
@@ -141,9 +143,19 @@ export function FMChatDock() {
             .order("id", { ascending: true })
             .range(offset, offset + 499);
           if (error) throw error;
-          for (const row of data ?? []) handleMessage(row);
+          for (const row of data ?? []) {
+            // High-water cursor prevents re-counting old messages when a whole
+            // burst shares one timestamp and the recent-ID cache has rotated.
+            if (lastTimestamp && row.created_at < lastTimestamp) continue;
+            if (lastTimestamp && row.created_at === lastTimestamp && lastId && row.id <= lastId) continue;
+            handleMessage(row);
+            lastTimestamp = row.created_at;
+            lastId = row.id;
+          }
           if (!data || data.length < 500) break;
         }
+        newestTimestamp = lastTimestamp;
+        newestScannedId = lastId;
       } catch (error) {
         console.warn("World Chat notification sync failed", error);
       } finally {
@@ -174,6 +186,7 @@ export function FMChatDock() {
       const initial = latest.data?.[0];
       if (initial) {
         newestTimestamp = initial.created_at;
+        newestScannedId = initial.id;
         seenWorldIds.current.add(initial.id);
       } else {
         newestTimestamp = new Date().toISOString();
