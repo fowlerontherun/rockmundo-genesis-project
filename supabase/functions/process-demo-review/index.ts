@@ -299,17 +299,20 @@ Deno.serve(async (req) => {
             release_count: releaseCount ?? 0,
           };
         } else if (demo.artist_profile_id) {
-          const { data: profile } = await supabase
+          const { data: profile, error: profileError } = await supabase
             .from("profiles")
-            .select("fame, fans")
+            .select("fame, fans, user_id")
             .eq("id", demo.artist_profile_id)
             .single();
+          if (profileError) throw profileError;
 
-          const { count: releaseCount } = await supabase
+          const { count: releaseCount, error: releaseCountError } = await supabase
             .from("releases")
             .select("*", { count: "exact", head: true })
-            .eq("user_id", demo.artist_profile_id)
+            .eq("profile_id", demo.artist_profile_id)
+            .is("band_id", null)
             .eq("release_status", "released");
+          if (releaseCountError) throw releaseCountError;
 
           metrics = {
             fame: profile?.fame ?? 0,

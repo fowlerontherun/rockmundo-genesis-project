@@ -46,7 +46,9 @@ Deno.serve(async (req) => {
     const now = new Date().toISOString()
 
     // Get all scheduled payments that are due
-    const { data: duePayments, error: paymentsError } = await supabase
+    const duePayments: any[] = [];
+    for (let offset = 0; ; offset += 500) {
+    const { data: page, error: paymentsError } = await supabase
       .from('sponsorship_payments')
       .select(`
         *,
@@ -54,10 +56,12 @@ Deno.serve(async (req) => {
       `)
       .eq('status', 'scheduled')
       .lte('scheduled_at', now)
-
-    if (paymentsError) {
-      console.error('Error fetching due payments:', paymentsError)
-      throw paymentsError
+      .order('scheduled_at', { ascending: true })
+      .order('id', { ascending: true })
+      .range(offset, offset + 499)
+    if (paymentsError) throw paymentsError
+    duePayments.push(...(page ?? []))
+    if (!page || page.length < 500) break
     }
 
     console.log(`Found ${duePayments?.length || 0} payments due`)

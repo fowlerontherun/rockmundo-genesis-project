@@ -60,6 +60,7 @@ serve(async (req) => {
         songs(id, title, quality_score, hype, band_id, user_id)
       `)
       .eq("status", "released")
+      .or(`release_date.is.null,release_date.lte.${new Date().toISOString()}`)
       .order("id", { ascending: true })
       .range(offset, offset + 499);
 
@@ -80,16 +81,18 @@ serve(async (req) => {
     }
     if (bandIds.size > 0) {
       try {
-        const { data: bandExtras } = await supabaseClient
+        const { data: bandExtras, error: bandExtrasError } = await supabaseClient
           .from('bands')
           .select('id, fan_sentiment_score, reputation_score')
           .in('id', Array.from(bandIds));
+        if (bandExtrasError) throw bandExtrasError;
         for (const b of bandExtras || []) {
           bandSentimentMap.set(b.id, (b as any).fan_sentiment_score ?? 0);
           bandReputationMap.set(b.id, (b as any).reputation_score ?? 0);
         }
       } catch (e) {
         console.error("Error fetching band sentiment/reputation for videos:", e);
+        throw e;
       }
     }
 
