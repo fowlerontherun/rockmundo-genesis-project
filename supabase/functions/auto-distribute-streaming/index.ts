@@ -19,20 +19,24 @@ Deno.serve(async (req) => {
     console.log('Starting auto-distribute-streaming function...');
 
     // Find releases that completed manufacturing and have streaming platforms
-    const { data: allReleases, error: releasesError } = await supabase
+    const allReleases: any[] = [];
+    for (let offset = 0; ; offset += 500) {
+    const { data: page, error: releasesError } = await supabase
       .from('releases')
       .select(`
         id,
         user_id,
         band_id,
         streaming_platforms,
+        scheduled_release_date,
         release_songs!release_songs_release_id_fkey(id, song_id)
       `)
-      .eq('release_status', 'released');
-
-    if (releasesError) {
-      console.error('Error fetching releases:', releasesError);
-      throw releasesError;
+      .eq('release_status', 'released')
+      .order('id', { ascending: true })
+      .range(offset, offset + 499);
+    if (releasesError) throw releasesError;
+    allReleases.push(...(page ?? []));
+    if (!page || page.length < 500) break;
     }
 
     // Filter to only releases with non-empty streaming_platforms arrays
@@ -63,6 +67,10 @@ Deno.serve(async (req) => {
       .eq('is_active', true);
 
     for (const release of releases) {
+      if (!release.release_songs?.length) {
+        console.warn(`Release ${release.id} has no linked songs; retaining queued streaming platforms for retry`);
+        continue;
+      }
       const platformIds = release.streaming_platforms || [];
       const releaseTerritories = (allTerritories || []).filter(t => t.release_id === release.id);
       const territoryCountries = releaseTerritories.map(t => t.country);
@@ -112,7 +120,7 @@ Deno.serve(async (req) => {
                 release_id: release.id,
                 user_id: userId,
                 band_id: release.band_id,
-                release_date: new Date().toISOString(),
+                release_date: release.scheduled_release_date ? `${release.scheduled_release_date}T00:00:00Z` : new Date().toISOString(),
                 release_type: 'streaming',
                 is_active: true,
                 total_streams: 0,
