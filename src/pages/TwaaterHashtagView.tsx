@@ -38,7 +38,7 @@ export default function TwaaterHashtagView() {
         .limit(300);
 
       if (error) throw error;
-      const escaped = hashtag.replace(/[.*+?^${}()|[\]\\]/g, "\\return hydrateTwaaterFeedExtras(data || [], account?.id);");
+      const escaped = hashtag.replace(/[^\p{L}\p{N}_]/gu, "");
       const exactHashtag = new RegExp(`(^|[^\\p{L}\\p{N}_])#${escaped}(?![\\p{L}\\p{N}_])`, "iu");
       return hydrateTwaaterFeedExtras((data || []).filter(post => exactHashtag.test(post.body || "")), account?.id);
     },
