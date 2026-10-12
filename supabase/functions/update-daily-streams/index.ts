@@ -177,22 +177,31 @@ Deno.serve(async (req) => {
     let releasePrReachMap = new Map<string, { power: number; updatedAt: string | null }>();
     let releaseMarketingStrategyMap = new Map<string, { focus: string; regions: string[]; saturation: number }>();
     if (songIds.length > 0) {
+      const eligibleReleaseIds = new Set((streamingReleases || []).map(r => r.release_id).filter(Boolean));
       const { data: releaseSongData } = await supabase
         .from("release_songs")
-        .select("song_id, release:releases(id, hype_score, label_marketing_power, pr_reach_power, pr_reach_updated_at, label_marketing_focus, label_marketing_regions, label_marketing_saturation, manufacturing_complete_at)")
+        .select("song_id, release_id, release:releases(id, release_status, hype_score, label_marketing_power, pr_reach_power, pr_reach_updated_at, label_marketing_focus, label_marketing_regions, label_marketing_saturation, manufacturing_complete_at)")
         .in("song_id", songIds);
       
       if (releaseSongData) {
         for (const rs of releaseSongData) {
           const rel = (rs as any).release;
-          if (rel) {
+          // Marketing and hype must come from the canonical released edition,
+          // not an unrelated future draft containing the same song.
+          if (rel && rel.release_status === "released" && eligibleReleaseIds.has(rs.release_id)) {
             const existingHype = releaseHypeMap.get(rs.song_id) || 0;
             releaseHypeMap.set(rs.song_id, Math.max(existingHype, rel.hype_score || 0));
             const existingPower = releaseMarketingPowerMap.get(rs.song_id) || 0;
             releaseMarketingPowerMap.set(rs.song_id, Math.max(existingPower, rel.label_marketing_power || 0));
             const existingPr = releasePrReachMap.get(rs.song_id);
             const candidatePr = Number(rel.pr_reach_power || 0);
-            if (!existingPr || candidatePr > existingPr.power) {
+            const effective = (power: number, updatedAt: string | null) => {
+              const timestamp = updatedAt ? Date.parse(updatedAt) : NaN;
+              const age = Number.isFinite(timestamp) ? Math.max(0, (Date.now() - timestamp) / 86400000) : 0;
+              return Math.max(0, power) * Math.pow(0.92, age);
+            };
+            if (!existingPr || effective(candidatePr, rel.pr_reach_updated_at || null) >
+                effective(existingPr.power, existingPr.updatedAt)) {
               releasePrReachMap.set(rs.song_id, { power: candidatePr, updatedAt: rel.pr_reach_updated_at || null });
             }
             releaseMarketingStrategyMap.set(rs.song_id, {
