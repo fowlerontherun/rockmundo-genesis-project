@@ -129,34 +129,26 @@ export async function fetchRelationshipEvents({
   }
 
   const pairKey = buildPairKey(profileId, otherProfileId);
-  const { data, error } = await supabase
-    .from("activity_feed")
-    .select("id, user_id, activity_type, message, metadata, created_at")
-    .in("user_id", userIds)
-    .order("created_at", { ascending: false })
-    .limit(limit * 2);
-
-  if (error) {
-    if (error.code === "42501" || error.code === "P0001") {
-      // RLS rejection when attempting to read the friend's activity feed; retry with current user only
-      const fallback = await supabase
-        .from("activity_feed")
+  const collect = async (ids: string[]) => {
+    const rows: Array<{ activity_type: string; created_at: string; id: string; message: string; metadata: any; user_id: string }> = [];
+    for (let offset = 0; offset < 100_000; offset += 500) {
+      const { data, error } = await supabase.from("activity_feed")
         .select("id, user_id, activity_type, message, metadata, created_at")
-        .eq("user_id", userIds[0])
+        .in("user_id", ids)
         .order("created_at", { ascending: false })
-        .limit(limit * 2);
-
-      if (fallback.error) {
-        throw fallback.error;
-      }
-
-      return filterRelationshipEvents(fallback.data ?? [], otherProfileId, pairKey, limit);
+        .range(offset, offset + 499);
+      if (error) throw error;
+      rows.push(...(data ?? []));
+      if (filterRelationshipEvents(rows, otherProfileId, pairKey, limit).length >= limit || !data || data.length < 500) break;
     }
-
+    return filterRelationshipEvents(rows, otherProfileId, pairKey, limit);
+  };
+  try {
+    return await collect(userIds);
+  } catch (error: any) {
+    if (error.code === "42501" || error.code === "P0001") return collect([userIds[0]]);
     throw error;
   }
-
-  return filterRelationshipEvents(data ?? [], otherProfileId, pairKey, limit);
 }
 
 function filterRelationshipEvents(

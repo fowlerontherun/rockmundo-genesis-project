@@ -94,6 +94,12 @@ function dedupeKeys(message: InboxMessage) {
 }
 
 export function messagesRepresentSameEvent(left: InboxMessage, right: InboxMessage) {
+  // A shared gig/session identifier alone does not prove that two updates are the same event.
+  const leftType = left.metadata?.event_type ?? left.metadata?.type ?? left.metadata?.action;
+  const rightType = right.metadata?.event_type ?? right.metadata?.type ?? right.metadata?.action;
+  if (leftType && rightType && leftType !== rightType) return false;
+  if (left.metadata?.outcome_id && right.metadata?.outcome_id && left.metadata.outcome_id !== right.metadata.outcome_id) return false;
+  if (Math.abs(Date.parse(left.created_at) - Date.parse(right.created_at)) > 90_000) return false;
   const leftKeys = dedupeKeys(left);
   if (leftKeys.size === 0) return false;
   const rightKeys = dedupeKeys(right);
@@ -110,7 +116,7 @@ export function useUnifiedInbox() {
 
   const scopedNotifications = useMemo(
     () => profileId
-      ? notifications.notifications.filter((notification) => notification.profile_id === profileId)
+      ? notifications.notifications.filter((notification) => (notification.profile_id === profileId || (notification.profile_id === null && notification.metadata?.profile_id == null)))
       : [],
     [notifications.notifications, profileId],
   );
@@ -125,13 +131,13 @@ export function useUnifiedInbox() {
     // player_inbox and notifications. Prefer the richer player_inbox record so
     // users see one item rather than a duplicated event.
     const uniqueNotifications = notificationMessages.filter(
-      (notification) => !inbox.messages.some((message) => messagesRepresentSameEvent(message, notification)),
+      (notification) => ![...inbox.messages, ...inbox.archivedMessages].some((message) => messagesRepresentSameEvent(message, notification)),
     );
 
     return [...inbox.messages, ...uniqueNotifications].sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
     );
-  }, [inbox.messages, notificationMessages]);
+  }, [inbox.messages, inbox.archivedMessages, notificationMessages]);
 
   const duplicateNotificationIds = (inboxId: string) => {
     const message = inbox.messages.find((candidate) => candidate.id === inboxId);

@@ -37,14 +37,15 @@ export const useReachMilestoneReminders = () => {
       if (remaining <= 0) return; // already crossed — reach unlock itself fires elsewhere
 
       // Dedupe: one reminder per (profile, next tier)
-      const { data: existing } = await supabase
+      const { data: existing, error: lookupError } = await supabase
         .from("notifications" as any)
         .select("id, metadata")
         .eq("user_id", user.id)
         .eq("category", "achievement")
-        .order("created_at", { ascending: false })
-        .limit(50);
+        .contains("metadata", { reminder_kind: "reach_milestone", milestone: next.tier, profile_id: profileId })
+        .limit(1);
 
+      if (lookupError) throw lookupError;
       const alreadySent = (existing ?? []).some(
         (n: any) =>
           n?.metadata?.reminder_kind === "reach_milestone" &&

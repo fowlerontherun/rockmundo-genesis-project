@@ -63,20 +63,42 @@ export function useInbox(category?: InboxCategory | 'all') {
         queryBuilder = queryBuilder.eq('category', category);
       }
 
-      const { data, error } = await queryBuilder;
-
-      if (error) {
-        console.error('[useInbox] Error fetching inbox:', error);
-        throw error;
+      const rows: InboxMessage[] = [];
+      for (let offset = 0; offset < 100_000; offset += 500) {
+        const { data, error } = await queryBuilder.range(offset, offset + 499);
+        if (error) {
+          console.error('[useInbox] Error fetching inbox:', error);
+          throw error;
+        }
+        rows.push(...((data || []) as InboxMessage[]));
+        if (!data || data.length < 500) break;
       }
 
       // Untagged legacy rows are not safe to infer in a multi-character account.
       // A genuinely account-wide message must opt in with metadata.scope=account.
-      const rows = (data || []) as InboxMessage[];
       return rows.filter((message) => isInboxMessageForProfile(message, profileId));
     },
     enabled: !!userId && !!profileId,
     refetchInterval: 30000,
+  });
+
+  // Keep archived counterparts available for cross-source duplicate suppression.
+  const archivedQuery = useQuery({
+    queryKey: ['inbox-archived', userId, profileId],
+    enabled: !!userId && !!profileId,
+    queryFn: async () => {
+      if (!userId || !profileId) return [] as InboxMessage[];
+      const archived: InboxMessage[] = [];
+      for (let offset = 0; offset < 100_000; offset += 500) {
+        const { data, error } = await supabase.from('player_inbox')
+          .select('*').eq('user_id', userId).eq('is_archived', true)
+          .order('created_at', { ascending: false }).range(offset, offset + 499);
+        if (error) throw error;
+        archived.push(...((data ?? []) as InboxMessage[]));
+        if (!data || data.length < 500) break;
+      }
+      return archived.filter(message => isInboxMessageForProfile(message, profileId));
+    },
   });
 
   // Real-time subscription for new messages
@@ -95,6 +117,7 @@ export function useInbox(category?: InboxCategory | 'all') {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ['inbox'] });
+          queryClient.invalidateQueries({ queryKey: ['inbox-archived'] });
           queryClient.invalidateQueries({ queryKey: ['inbox-unread-count'] });
         }
       )
@@ -160,6 +183,7 @@ export function useInbox(category?: InboxCategory | 'all') {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inbox'] });
+      queryClient.invalidateQueries({ queryKey: ['inbox-archived'] });
       queryClient.invalidateQueries({ queryKey: ['inbox-unread-count'] });
     },
   });
@@ -185,6 +209,7 @@ export function useInbox(category?: InboxCategory | 'all') {
 
   return {
     messages: query.data || [],
+    archivedMessages: archivedQuery.data || [],
     isLoading: query.isLoading,
     error: query.error,
     markAsRead: markAsRead.mutate,
@@ -203,21 +228,17 @@ export function useUnreadInboxCount() {
     queryFn: async () => {
       if (!userId || !profileId) return 0;
 
-      const { data, error } = await supabase
-        .from('player_inbox')
-        .select('metadata')
-        .eq('user_id', userId)
-        .eq('is_read', false)
-        .eq('is_archived', false);
-
-      if (error) {
-        console.error('[useUnreadInboxCount] Error:', error);
-        throw error;
+      let count = 0;
+      for (let offset = 0; offset < 100_000; offset += 500) {
+        const { data, error } = await supabase.from('player_inbox')
+          .select('metadata').eq('user_id', userId)
+          .eq('is_read', false).eq('is_archived', false)
+          .order('id', { ascending: true }).range(offset, offset + 499);
+        if (error) throw error;
+        count += (data ?? []).filter(message => isInboxMessageForProfile(message as InboxMessage, profileId)).length;
+        if (!data || data.length < 500) break;
       }
-
-      return (data ?? []).filter((message: any) =>
-        isInboxMessageForProfile(message, profileId)
-      ).length;
+      return count;
     },
     enabled: !!userId && !!profileId,
     refetchInterval: 30000,

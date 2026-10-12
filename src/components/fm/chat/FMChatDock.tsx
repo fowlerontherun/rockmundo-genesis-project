@@ -98,6 +98,7 @@ export function FMChatDock() {
     let disposed = false;
     let currentUserId: string | undefined;
     let newestTimestamp: string | null = null;
+    let newestScannedId: string | null = null;
     let checking = false;
     const pending: Array<{ id: string; profile_id?: string | null; user_id?: string; created_at: string }> = [];
     worldReady.current = false;
@@ -110,7 +111,6 @@ export function FMChatDock() {
         return;
       }
       seenWorldIds.current.add(row.id);
-      if (!newestTimestamp || row.created_at > newestTimestamp) newestTimestamp = row.created_at;
       if (seenWorldIds.current.size > 300) {
         seenWorldIds.current = new Set(Array.from(seenWorldIds.current).slice(-150));
       }
@@ -129,13 +129,33 @@ export function FMChatDock() {
       if (disposed || !worldReady.current || checking || !newestTimestamp) return;
       checking = true;
       try {
-        const { data, error } = await supabase.from("global_chat")
-          .select("id, profile_id, user_id, created_at")
-          .eq("channel", "world")
-          .gte("created_at", newestTimestamp)
-          .order("created_at", { ascending: true }).limit(100);
-        if (error) throw error;
-        for (const row of data ?? []) handleMessage(row);
+        // Hold the lower bound stable while walking all pages. One 100-row page
+        // can permanently hide later messages that share an identical timestamp.
+        const lowerBound = newestTimestamp;
+        let lastTimestamp = newestTimestamp;
+        let lastId = newestScannedId;
+        for (let offset = 0; offset < 100_000; offset += 500) {
+          const { data, error } = await supabase.from("global_chat")
+            .select("id, profile_id, user_id, created_at")
+            .eq("channel", "world")
+            .gte("created_at", lowerBound)
+            .order("created_at", { ascending: true })
+            .order("id", { ascending: true })
+            .range(offset, offset + 499);
+          if (error) throw error;
+          for (const row of data ?? []) {
+            // High-water cursor prevents re-counting old messages when a whole
+            // burst shares one timestamp and the recent-ID cache has rotated.
+            if (lastTimestamp && row.created_at < lastTimestamp) continue;
+            if (lastTimestamp && row.created_at === lastTimestamp && lastId && row.id <= lastId) continue;
+            handleMessage(row);
+            lastTimestamp = row.created_at;
+            lastId = row.id;
+          }
+          if (!data || data.length < 500) break;
+        }
+        newestTimestamp = lastTimestamp;
+        newestScannedId = lastId;
       } catch (error) {
         console.warn("World Chat notification sync failed", error);
       } finally {
@@ -166,6 +186,7 @@ export function FMChatDock() {
       const initial = latest.data?.[0];
       if (initial) {
         newestTimestamp = initial.created_at;
+        newestScannedId = initial.id;
         seenWorldIds.current.add(initial.id);
       } else {
         newestTimestamp = new Date().toISOString();
@@ -208,12 +229,72 @@ export function FMChatDock() {
       if (!room || (openRef.current && activeRoomRef.current === room)) return;
       setUnreadRooms((current) => ({ ...current, [room]: current[room] + 1 }));
     };
+    let disposed = false;
+    const lastScanned = new Map<string, string>();
+    const seenRoomIds = new Set<string>();
+    let checking = false;
+    const processRow = (row: { id: string; profile_id?: string | null; user_id?: string; channel?: string; created_at: string }) => {
+      if (seenRoomIds.has(row.id)) return;
+      seenRoomIds.add(row.id);
+      handle(row);
+    };
+    const reconcile = async () => {
+      if (disposed || checking) return;
+      checking = true;
+      try {
+        for (const channelKey of channels) {
+          if (disposed) break;
+          const from = lastScanned.get(channelKey);
+          if (!from) {
+            const { data, error } = await supabase.from("global_chat")
+              .select("id, created_at").eq("channel", channelKey)
+              .order("created_at", { ascending: false }).limit(1);
+            if (error) throw error;
+            if (data?.[0]) {
+              lastScanned.set(channelKey, data[0].created_at);
+              seenRoomIds.add(data[0].id);
+            } else {
+              lastScanned.set(channelKey, new Date().toISOString());
+            }
+            continue;
+          }
+          let latest = from;
+          for (let offset = 0; offset < 100_000; offset += 500) {
+            const { data, error } = await supabase.from("global_chat")
+              .select("id, profile_id, user_id, channel, created_at")
+              .eq("channel", channelKey).gte("created_at", from)
+              .order("created_at", { ascending: true })
+              .order("id", { ascending: true }).range(offset, offset + 499);
+            if (error) throw error;
+            for (const row of data ?? []) {
+              processRow(row);
+              if (row.created_at > latest) latest = row.created_at;
+            }
+            if (!data || data.length < 500) break;
+          }
+          lastScanned.set(channelKey, latest);
+        }
+      } catch (error) {
+        console.warn("Chat room unread reconciliation failed", error);
+      } finally {
+        checking = false;
+      }
+    };
     const subscriptions = channels.map((channelKey) => supabase
       .channel(`chat-dock-unread-${myProfileId}-${channelKey}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "global_chat", filter: `channel=eq.${channelKey}` },
-        (payload) => handle(payload.new as { profile_id?: string | null; user_id?: string; channel?: string }))
-      .subscribe());
-    return () => { subscriptions.forEach((subscription) => { void supabase.removeChannel(subscription); }); };
+        (payload) => processRow(payload.new as { id: string; profile_id?: string | null; user_id?: string; channel?: string; created_at: string }))
+      .subscribe((status) => { if (status === "SUBSCRIBED") void reconcile(); }));
+    void reconcile();
+    const timer = window.setInterval(() => void reconcile(), 15000);
+    const onVisible = () => { if (document.visibilityState === "visible") void reconcile(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+      subscriptions.forEach((subscription) => { void supabase.removeChannel(subscription); });
+    };
   }, [authUserId, bandId, myProfileId]);
 
   const rooms = useMemo(

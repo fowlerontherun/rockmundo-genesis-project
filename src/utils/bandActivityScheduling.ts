@@ -227,7 +227,7 @@ export async function checkBandAvailability(
   for (const row of (Array.isArray(overlapping) ? overlapping : []) as any[]) {
     const member = memberDetails.find(m => m.profileId === row.profile_id);
     conflicts.push({
-      userId: member?.userId || row.profile_id,
+      userId: member?.userId || "",
       profileId: row.profile_id,
       userName: member?.name,
       activityTitle: row.title || 'Unknown activity',
@@ -423,9 +423,16 @@ export async function notifyAbsentBandMembers(params: AbsentMemberNotificationPa
   const label = describeActivityType(params.activityType);
 
   await Promise.all(params.conflicts.map(async (conflict) => {
-    if (!conflict.userId) return;
+    let userId = conflict.userId;
+    if (!userId && conflict.profileId) {
+      const { data: owner, error } = await (supabase as any).from("profiles")
+        .select("user_id").eq("id", conflict.profileId).maybeSingle();
+      if (error) throw error;
+      userId = owner?.user_id || "";
+    }
+    if (!userId) return;
     await pushNotification({
-      userId: conflict.userId,
+      userId,
       profileId: conflict.profileId ?? null,
       category: 'social',
       type: 'warning',

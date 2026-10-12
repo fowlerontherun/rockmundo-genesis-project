@@ -65,12 +65,12 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
       let query = (supabase as any)
         .from("direct_messages")
         .select("*")
-        .order("created_at", { ascending: true })
+        .order("created_at", { ascending: false })
         .limit(100);
       query = conversationId ? query.eq("conversation_id", conversationId) : query.eq("channel_id", directChannelId);
       const { data, error } = await query;
       if (error) throw error;
-      return (data ?? []) as DirectMessageRow[];
+      return ((data ?? []) as DirectMessageRow[]).reverse();
     },
   });
 
@@ -183,7 +183,7 @@ export function useUnreadDirectMessageCount(myProfileId?: string | null) {
       let total = 0;
       let cursor: string | null = null;
       for (let page = 0; page < 100; page++) {
-        const conversations = await listConversations({ limit: 100, cursor });
+        const conversations = await listConversations({ limit: 100, cursor, skipContextSync: true });
         total += conversations.reduce((sum, conversation) => sum + conversation.unread_count, 0);
         if (conversations.length < 100) return total;
         const nextCursor: string | null = conversations[conversations.length - 1]?.last_message_at ?? null;

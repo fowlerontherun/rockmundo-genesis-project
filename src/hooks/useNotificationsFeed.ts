@@ -31,7 +31,7 @@ export function useNotificationsFeed() {
       if (!userId || !profileId) return [];
       const all: PersistedNotification[] = [];
       for (let start = 0; start < 100_000; start += 1000) {
-        const { data, error } = await supabase.from(asAny("notifications")).select("*").eq("user_id", userId).eq("profile_id", profileId).order("created_at", { ascending: false }).order("id", { ascending: false }).range(start, start + 999);
+        const { data, error } = await supabase.from(asAny("notifications")).select("*").eq("user_id", userId).or(`profile_id.eq.${profileId},profile_id.is.null`).order("created_at", { ascending: false }).order("id", { ascending: false }).range(start, start + 999);
         if (error) throw error;
         all.push(...((data ?? []) as unknown as PersistedNotification[]));
         if (!data || data.length < 1000) return all;
@@ -46,7 +46,7 @@ export function useNotificationsFeed() {
       .channel(`notifications:${userId}:${profileId}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "notifications", filter: `profile_id=eq.${profileId}` },
+        { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
         () => {
           qc.invalidateQueries({ queryKey: [...QUERY_KEY, userId, profileId] });
         }
@@ -64,7 +64,8 @@ export function useNotificationsFeed() {
         .from(asAny("notifications"))
         .update({ read_at: new Date().toISOString() } as never)
         .eq("id", id)
-        .eq("profile_id", profileId);
+        .eq("user_id", userId!)
+        .or(`profile_id.eq.${profileId},profile_id.is.null`);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: [...QUERY_KEY, userId, profileId] }),
@@ -77,7 +78,7 @@ export function useNotificationsFeed() {
         .from(asAny("notifications"))
         .update({ read_at: new Date().toISOString() } as never)
         .eq("user_id", userId)
-        .eq("profile_id", profileId)
+        .or(`profile_id.eq.${profileId},profile_id.is.null`)
         .is("read_at", null);
       if (error) throw error;
     },
@@ -91,7 +92,8 @@ export function useNotificationsFeed() {
         .from(asAny("notifications"))
         .delete()
         .eq("id", id)
-        .eq("profile_id", profileId);
+        .eq("user_id", userId!)
+        .or(`profile_id.eq.${profileId},profile_id.is.null`);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: [...QUERY_KEY, userId, profileId] }),
@@ -104,7 +106,7 @@ export function useNotificationsFeed() {
         .from(asAny("notifications"))
         .delete()
         .eq("user_id", userId)
-        .eq("profile_id", profileId);
+        .or(`profile_id.eq.${profileId},profile_id.is.null`);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: [...QUERY_KEY, userId, profileId] }),

@@ -49,6 +49,13 @@ export default function ShareStudio() {
     finally { setGalleryLoading(false); }
   };
   useEffect(() => { setGallery([]); trackShareAnalyticsEvent("share_studio_opened", { channel: "studio" }); void reloadGallery(); }, [profile?.id]);
+  useEffect(() => {
+    const onFocus = () => { void reloadGallery(); };
+    const onVisible = () => { if (document.visibilityState === "visible") void reloadGallery(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { window.removeEventListener("focus", onFocus); document.removeEventListener("visibilitychange", onVisible); };
+  }, [profile?.id]);
   const createIdentityPromo = (title: string) => {
     if (title === "Character Promo" && profile) {
       setCharacterPromo({ version: 1, type: "character_profile", id: `promo:${profile.id}`, eyebrow: "ROCKMUNDO ARTIST", headline: profile.display_name || profile.username || "RockMundo artist", subheadline: "Building a music career in RockMundo", metrics: [{ label: "Career level", value: String(profile.level || 1) }, { label: "Fame", value: Number(profile.fame || 0).toLocaleString() }, { label: "Fans", value: Number(profile.fans || 0).toLocaleString() }], destinationUrl: `${window.location.origin}/player/${profile.id}`, visualTheme: "spotlight", visualLayout: "hero", createdAt: new Date().toISOString() });

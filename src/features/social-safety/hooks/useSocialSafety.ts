@@ -28,7 +28,9 @@ export function useSocialSafety(viewerProfileId: string | null, targetProfileId:
     enabled: Boolean(viewerProfileId && targetProfileId && viewerProfileId !== targetProfileId),
   });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: socialSafetyStatusQueryKey(viewerProfileId, targetProfileId) });
+  const invalidate = () => Promise.all([
+    ["social-safety-status"], ["friendships"], ["friend-suggestions"], ["player-connection"], ["player-connections"], ["friend-request-counts"], ["players-browser"]
+  ].map(queryKey => queryClient.invalidateQueries({ queryKey })));
 
   const blockMutation = useMutation({
     mutationFn: ({ note }: SafetyActionInput = {}) => blockProfile(targetProfileId!, note),
