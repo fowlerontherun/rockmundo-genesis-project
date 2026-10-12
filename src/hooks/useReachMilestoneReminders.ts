@@ -42,8 +42,8 @@ export const useReachMilestoneReminders = () => {
         .select("id, metadata")
         .eq("user_id", user.id)
         .eq("category", "achievement")
-        .order("created_at", { ascending: false })
-        .limit(50);
+        .contains("metadata", { reminder_kind: "reach_milestone", milestone: next.tier, profile_id: profileId })
+        .limit(1);
 
       const alreadySent = (existing ?? []).some(
         (n: any) =>
