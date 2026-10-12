@@ -35,19 +35,21 @@ export function TravelDestinationBrowser({
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
 
   useEffect(() => {
+    let cancelled = false;
     const load = async () => {
       setLoading(true);
       try {
         const baseQuotes = await getDestinationsFromCity(currentCityId);
         const data = await applyCityDevelopmentToTravelQuotes(currentCityId, baseQuotes);
-        setDestinations(data);
+        if (!cancelled) setDestinations(data);
       } catch (error) {
-        console.error("Error loading destinations:", error);
+        if (!cancelled) console.error("Error loading destinations:", error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
-    load();
+    void load();
+    return () => { cancelled = true; };
   }, [currentCityId]);
 
   const filteredDestinations = useMemo(() => {
