@@ -225,6 +225,7 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
                 : "The post is live but the poll could not be attached."),
             variant: "destructive",
           });
+          return; // Keep the poll draft available for repair; the twaat has already been posted.
         }
       }
 
