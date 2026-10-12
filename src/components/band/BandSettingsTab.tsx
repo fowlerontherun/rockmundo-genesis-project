@@ -49,6 +49,8 @@ export function BandSettingsTab({
   const [loading, setLoading] = useState(false);
   const [isRecruiting, setIsRecruiting] = useState(initialRecruiting ?? false);
   const [allowApplications, setAllowApplications] = useState(initialAllowApps ?? true);
+
+  useEffect(() => { setIsRecruiting(initialRecruiting ?? false); setAllowApplications(initialAllowApps ?? true); }, [bandId, initialRecruiting, initialAllowApps]);
   
   // Hiatus dialog state
   const [hiatusDialogOpen, setHiatusDialogOpen] = useState(false);
@@ -253,6 +255,7 @@ export function BandSettingsTab({
     setLoading(true);
     try {
       const leaders = await getEligibleLeaders(bandId, profileId || '');
+      setNewLeaderId('');
       setEligibleLeaders(leaders);
       setTransferDialogOpen(true);
     } catch (error) {
