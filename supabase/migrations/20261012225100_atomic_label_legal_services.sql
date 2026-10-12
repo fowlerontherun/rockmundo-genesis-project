@@ -36,8 +36,10 @@ BEGIN
      *coalesce(v_c.termination_fee_pct,50)/100 +
    greatest(0,coalesce(v_c.advance_amount,0)-coalesce(v_c.recouped_amount,0)));
  IF v_c.band_id IS NOT NULL THEN
-  UPDATE public.bands SET band_balance=band_balance-v_fee
-   WHERE id=v_c.band_id AND band_balance>=v_fee;
+  -- A band_earnings insertion triggers the canonical band_balance update.
+  -- Hold the band lock and validate funds, but do not debit cash separately.
+  PERFORM 1 FROM public.bands WHERE id=v_c.band_id
+    AND coalesce(band_balance,0)>=v_fee FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'insufficient_band_contract_funds'; END IF;
   IF v_fee>0 THEN
    INSERT INTO public.band_earnings(band_id,amount,source,description)
