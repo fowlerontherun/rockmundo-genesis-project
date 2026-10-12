@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,8 @@ interface ScoutReportsPanelProps {
 }
 
 export function ScoutReportsPanel({ labelId }: ScoutReportsPanelProps) {
+  const queryClient = useQueryClient();
+  const updateStatus = useMutation({mutationFn: async ({id,status}:{id:string;status:"contacted"|"rejected"}) => {const {error}=await supabase.from("label_scout_reports").update({status}).eq("id",id).eq("label_id",labelId).eq("status","new");if(error)throw error;},onSuccess:()=>void queryClient.invalidateQueries({queryKey:["label-scout-reports",labelId]})});
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ['label-scout-reports', labelId],
     queryFn: async () => {
@@ -98,11 +100,11 @@ export function ScoutReportsPanel({ labelId }: ScoutReportsPanelProps) {
                 </div>
                 {report.status === 'new' && (
                   <div className="flex gap-1 shrink-0">
-                    <Button size="sm" variant="ghost" className="h-7 px-2 text-xs">
+                    <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" disabled={updateStatus.isPending} onClick={() => updateStatus.mutate({id:report.id,status:"contacted"})}>
                       <UserCheck className="h-3 w-3 mr-1" />
                       Contact
                     </Button>
-                    <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-muted-foreground">
+                    <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-muted-foreground" disabled={updateStatus.isPending} onClick={() => updateStatus.mutate({id:report.id,status:"rejected"})}>
                       <UserX className="h-3 w-3" />
                     </Button>
                   </div>
