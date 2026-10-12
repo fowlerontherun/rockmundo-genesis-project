@@ -109,12 +109,12 @@ export function ProductionQueue({ factoryId }: ProductionQueueProps) {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem disabled={status !== order.status && !ALLOWED_NEXT[order.status]?.includes("pending")} value="pending">Pending</SelectItem>
-                            <SelectItem disabled={status !== order.status && !ALLOWED_NEXT[order.status]?.includes("in_production")} value="in_production">In Production</SelectItem>
-                            <SelectItem disabled={status !== order.status && !ALLOWED_NEXT[order.status]?.includes("quality_check")} value="quality_check">Quality Check</SelectItem>
-                            <SelectItem disabled={status !== order.status && !ALLOWED_NEXT[order.status]?.includes("completed")} value="completed">Completed</SelectItem>
-                            <SelectItem disabled={status !== order.status && !ALLOWED_NEXT[order.status]?.includes("shipped")} value="shipped">Shipped</SelectItem>
-                            <SelectItem disabled={status !== order.status && !ALLOWED_NEXT[order.status]?.includes("cancelled")} value="cancelled">Cancel</SelectItem>
+                            <SelectItem disabled={"pending" !== order.status && !ALLOWED_NEXT[order.status]?.includes("pending")} value="pending">Pending</SelectItem>
+                            <SelectItem disabled={"in_production" !== order.status && !ALLOWED_NEXT[order.status]?.includes("in_production")} value="in_production">In Production</SelectItem>
+                            <SelectItem disabled={"quality_check" !== order.status && !ALLOWED_NEXT[order.status]?.includes("quality_check")} value="quality_check">Quality Check</SelectItem>
+                            <SelectItem disabled={"completed" !== order.status && !ALLOWED_NEXT[order.status]?.includes("completed")} value="completed">Completed</SelectItem>
+                            <SelectItem disabled={"shipped" !== order.status && !ALLOWED_NEXT[order.status]?.includes("shipped")} value="shipped">Shipped</SelectItem>
+                            <SelectItem disabled={"cancelled" !== order.status && !ALLOWED_NEXT[order.status]?.includes("cancelled")} value="cancelled">Cancel</SelectItem>
                           </SelectContent>
                         </Select>
                       )}
