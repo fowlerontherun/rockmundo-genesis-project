@@ -21,7 +21,7 @@ export const FestivalModeRewards = ({ attendance }: { attendance: FestivalPlayer
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card><CardHeader><CardTitle className="text-sm">Skill XP</CardTitle></CardHeader><CardContent><p className="text-3xl font-black">{data.skillXp}</p><p className="text-xs text-muted-foreground">Maximum 600 per attendance</p></CardContent></Card>
-        <Card><CardHeader><CardTitle className="text-sm">Attribute Points</CardTitle></CardHeader><CardContent><p className="text-3xl font-black">{data.attributePoints}</p><p className="text-xs text-muted-foreground">Completion-weighted, capped at 2</p></CardContent></Card>
+        <Card><CardHeader><CardTitle className="text-sm">Attribute Points</CardTitle></CardHeader><CardContent><p className="text-3xl font-black">{data.attributePoints}</p><p className="text-xs text-muted-foreground">Completion-weighted, capped at 3</p></CardContent></Card>
         <Card><CardHeader><CardTitle className="text-sm">Inspiration</CardTitle></CardHeader><CardContent><p className="text-3xl font-black">{data.inspiration}</p><p className="text-xs text-muted-foreground">Festival condition snapshot</p></CardContent></Card>
         <Card><CardHeader><CardTitle className="text-sm">Status</CardTitle></CardHeader><CardContent><Badge variant={data.settled ? "default" : "secondary"}>{data.settled ? "Settled" : "Building"}</Badge><p className="mt-2 text-xs text-muted-foreground">{data.settled ? "Reward locked and replay-safe" : "Final reward settles when attendance ends"}</p></CardContent></Card>
       </section>

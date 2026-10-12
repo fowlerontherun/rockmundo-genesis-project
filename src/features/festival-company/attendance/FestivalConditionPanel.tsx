@@ -13,7 +13,7 @@ const conditionLabels = [
 ] as const;
 
 export const FestivalConditionPanel = ({ attendanceId }: { attendanceId: string }) => {
-  const { data, isLoading, isError } = useMyFestivalConditions(attendanceId);
+  const { data, isLoading, isError, refetch } = useMyFestivalConditions(attendanceId);
 
   return (
     <Card>
@@ -24,7 +24,7 @@ export const FestivalConditionPanel = ({ attendanceId }: { attendanceId: string 
         {isLoading ? (
           <p className="text-sm text-muted-foreground" role="status">Checking how you’re doing…</p>
         ) : isError || !data ? (
-          <p className="text-sm text-destructive" role="alert">Your Festival condition could not be loaded.</p>
+          <div role="alert" className="space-y-2"><p className="text-sm text-destructive">Your Festival condition could not be loaded.</p><button type="button" className="text-sm underline" onClick={() => void refetch()}>Retry</button></div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {conditionLabels.map(([key, label]) => (

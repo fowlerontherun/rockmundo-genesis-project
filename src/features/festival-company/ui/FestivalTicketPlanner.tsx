@@ -213,6 +213,7 @@ export function FestivalTicketPlanner({
   };
 
   const updateCapacity = (requested: number) => {
+    if (!Number.isFinite(requested)) return;
     const capacity = Math.min(
       data.usableSiteCapacity,
       Math.max(0, Math.floor(requested)),

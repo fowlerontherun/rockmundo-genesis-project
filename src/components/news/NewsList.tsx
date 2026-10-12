@@ -21,7 +21,8 @@ export function NewsList<T>({
   const [page, setPage] = useState(0);
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
-  useEffect(() => { setPage(0); }, [items.length]);
+  const listIdentity = items.map(itemKey).join('\u0000');
+  useEffect(() => { setPage(0); }, [listIdentity]);
   const safePage = Math.min(page, totalPages - 1);
   const start = safePage * PAGE_SIZE;
   return (

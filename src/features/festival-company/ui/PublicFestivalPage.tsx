@@ -110,6 +110,8 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   const buy = usePurchaseFestivalTickets();
   const checkIn = useCheckInToFestival();
   const leaveEarly = useLeaveFestivalEarly();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 10_000); return () => window.clearInterval(timer); }, []);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [activePurchaseProductId, setActivePurchaseProductId] = useState<string | null>(null);
   const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
@@ -120,7 +122,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   if (isError) return <main className="p-8" role="alert">Festival details could not be loaded. Please retry.</main>;
   if (!f) return <main className="p-8" role="alert">Festival not found.</main>;
 
-  const eventPhase = getFestivalPublicEventPhase(f.startsAt, f.endsAt);
+  const eventPhase = getFestivalPublicEventPhase(f.startsAt, f.endsAt, now);
   const eventPhaseLabel = eventPhase === "upcoming"
     ? "Upcoming Festival"
     : eventPhase === "in_progress"

@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import {
   checkInToFestival,
   getMyFestivalAttendance,
@@ -12,21 +13,23 @@ export const festivalCheckInEligibilityKey = ["festival-check-in-eligibility"] a
 export const festivalMemorabiliaKey = ["festival-memorabilia"] as const;
 const festivalTicketWalletKey = ["festival-ticket-wallet"] as const;
 
-export const useMyFestivalAttendance = (enabled = true) =>
-  useQuery({
-    queryKey: festivalPlayerAttendanceKey,
+export const useMyFestivalAttendance = (enabled = true) => {
+  const { profileId } = useActiveProfile();
+  return useQuery({
+    queryKey: [...festivalPlayerAttendanceKey, profileId],
     queryFn: getMyFestivalAttendance,
-    enabled,
-    staleTime: 5 * 60_000,
+    enabled: enabled && !!profileId,
+    staleTime: 30_000,
     // This hook is mounted by the shared Layout on every authenticated route.
     // A one-minute polling loop caused the whole app shell to re-render even for
     // players who were nowhere near a festival. Attendance mutations explicitly
     // invalidate this query, so keep only a low-frequency safety refresh here.
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    refetchInterval: 5 * 60_000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchInterval: 60_000,
     refetchIntervalInBackground: false,
   });
+};
 
 export const useMyFestivalCheckInEligibility = (enabled = true) =>
   useQuery({
