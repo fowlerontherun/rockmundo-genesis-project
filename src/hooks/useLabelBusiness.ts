@@ -85,43 +85,14 @@ export function useHireLabelStaff() {
       specialty_genre?: string;
       salary_monthly?: number;
     }) => {
-      const hiringCost = staff.salary_monthly || 2000;
-
-      // Try to deduct from parent company if label is a subsidiary
-      try {
-        const companyId = await getCompanyIdFromLabel(staff.label_id);
-        await deductCompanyBalance({
-          companyId,
-          amount: hiringCost,
-          description: `Hired label staff: ${staff.name} (${staff.role})`,
-          category: "staff",
-        });
-      } catch (e) {
-        // Label may not have a parent company — deduct from label balance instead
-        const { data: label, error: labelError } = await supabase
-          .from('labels')
-          .select('balance')
-          .eq('id', staff.label_id)
-          .single();
-
-        if (labelError || !label) throw new Error("Label not found");
-        if ((label.balance || 0) < hiringCost) {
-          throw new Error(`Insufficient label funds. Need $${hiringCost.toLocaleString()} but only have $${(label.balance || 0).toLocaleString()}`);
-        }
-
-        const { error: updateError } = await supabase
-          .from('labels')
-          .update({ balance: (label.balance || 0) - hiringCost })
-          .eq('id', staff.label_id);
-        if (updateError) throw updateError;
-      }
-
-      const { data, error } = await supabase
-        .from('label_staff')
-        .insert(staff)
-        .select()
-        .single();
-      
+      const { data, error } = await (supabase as any).rpc("hire_label_staff_atomic", {
+        p_label_id: staff.label_id,
+        p_name: staff.name,
+        p_role: staff.role,
+        p_skill_level: staff.skill_level ?? 1,
+        p_specialty_genre: staff.specialty_genre ?? null,
+        p_salary_monthly: staff.salary_monthly ?? 3000,
+      });
       if (error) throw error;
       return data;
     },
