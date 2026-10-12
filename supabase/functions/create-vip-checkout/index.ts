@@ -55,6 +55,13 @@ serve(async (req) => {
     logStep("Price ID received", { priceId, currency });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+    // Only operator-approved VIP subscription prices may grant VIP entitlements.
+    const approvedPrices = (Deno.env.get("STRIPE_VIP_PRICE_IDS") ?? "").split(",").map(p => p.trim()).filter(Boolean);
+    if (!approvedPrices.includes(priceId)) throw new Error("Invalid VIP subscription price");
+    const selectedPrice = await stripe.prices.retrieve(priceId);
+    if (!selectedPrice.active || selectedPrice.type !== "recurring" || selectedPrice.currency !== currency) {
+      throw new Error("VIP price is inactive or does not match the requested currency");
+    }
 
     // Check if customer exists
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
@@ -67,7 +74,7 @@ serve(async (req) => {
       logStep("No existing customer found, will create new");
     }
 
-    const origin = req.headers.get("origin") || "https://rockmundo.uk";
+    const origin = Deno.env.get("ROCKMUNDO_PUBLIC_URL") || "https://rockmundo.uk";
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
