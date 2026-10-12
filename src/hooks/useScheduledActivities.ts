@@ -394,7 +394,7 @@ export function useCreateScheduledActivity() {
           description: data.description,
           location: data.location,
           metadata: data.metadata || {},
-          reminder_minutes_before: data.reminder_minutes_before || 15,
+          reminder_minutes_before: data.reminder_minutes_before ?? 15,
         })
         .select()
         .single();
