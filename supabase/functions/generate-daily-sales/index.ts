@@ -335,10 +335,13 @@ serve(async (req) => {
 
     const campaignsByRelease = new Map<string, any[]>();
     if (releaseIds.length > 0) {
-      const { data: campaigns } = await (supabaseClient.from("promotional_campaigns" as any) as any)
-        .select("release_id, effects")
+      const { data: campaigns, error: campaignsError } = await (supabaseClient.from("promotional_campaigns" as any) as any)
+        .select("release_id, effects, start_date, end_date")
         .in("release_id", releaseIds)
-        .eq("status", "active");
+        .eq("status", "active")
+        .lte("start_date", new Date().toISOString())
+        .gte("end_date", new Date().toISOString());
+      if (campaignsError) throw campaignsError;
       for (const campaign of campaigns || []) {
         const rows = campaignsByRelease.get(campaign.release_id) || [];
         rows.push(campaign);
@@ -621,22 +624,25 @@ serve(async (req) => {
               // Route sales tax to band's home city treasury
               if (homeCityId && salesTaxAmount > 0) {
                 try {
-                  await supabaseClient.rpc("credit_city_treasury", {
+                  const { error: taxCreditError } = await supabaseClient.rpc("credit_city_treasury", {
                     p_city_id: homeCityId,
                     p_amount: salesTaxAmount,
                     p_type: "record_sales_tax",
                     p_description: `${format.format_type} sales tax (${(salesTaxRate * 100).toFixed(1)}%)`,
                     p_reference_id: release.id,
                   });
+                  if (taxCreditError) throw taxCreditError;
                 } catch (e) {
+                  errorCount++;
                   console.error("Failed to credit city treasury for sales tax", e);
                 }
               }
 
-              await supabaseClient.rpc("increment_release_revenue", {
+              const { error: releaseRevenueError } = await supabaseClient.rpc("increment_release_revenue", {
                 release_id: release.id,
                 amount: grossRevenue,
               });
+              if (releaseRevenueError) { errorCount++; console.error("Revenue increment failed", releaseRevenueError); }
 
               const formatColumn = format.format_type === "digital" ? "digital_sales" 
                 : format.format_type === "cd" ? "cd_sales"
@@ -655,7 +661,8 @@ serve(async (req) => {
                 if (currentRelease) {
                   updateObj.total_units_sold = (currentRelease.total_units_sold || 0) + actualSales;
                   updateObj[formatColumn] = (currentRelease[formatColumn] || 0) + actualSales;
-                  await supabaseClient.from("releases").update(updateObj).eq("id", release.id);
+                  const { error: unitCounterError } = await supabaseClient.from("releases").update(updateObj).eq("id", release.id);
+                  if (unitCounterError) { errorCount++; console.error("Release unit counter update failed", unitCounterError); }
                 }
               }
 
@@ -751,13 +758,12 @@ serve(async (req) => {
         }
         // Hype decay: 5% per day after first week
         const hypeScoreVal = (release as any).hype_score || 0;
+        let resultingHype = hypeScoreVal;
         const releaseDateVal = (release as any).manufacturing_complete_at || release.created_at;
         const daysSinceVal = releaseDateVal ? (Date.now() - new Date(releaseDateVal).getTime()) / (1000 * 60 * 60 * 24) : 999;
         if (daysSinceVal > 7 && hypeScoreVal > 0) {
           const decayedHype = Math.floor(hypeScoreVal * 0.95);
-          await supabaseClient.from("releases")
-            .update({ hype_score: decayedHype } as any)
-            .eq("id", release.id);
+          resultingHype = decayedHype;
         }
 
         // Apply active campaign hype boosts
@@ -769,12 +775,13 @@ serve(async (req) => {
             campaignHypeBoost += (campaign.effects?.hypeBoost || 0);
           }
           if (campaignHypeBoost > 0) {
-            const currentHype = (release as any).hype_score || 0;
-            const newHype = Math.min(1000, currentHype + campaignHypeBoost);
-            await supabaseClient.from("releases")
-              .update({ hype_score: newHype } as any)
-              .eq("id", release.id);
+            resultingHype = Math.min(1000, resultingHype + campaignHypeBoost);
           }
+        }
+        if (resultingHype !== hypeScoreVal) {
+          const { error: hypeError } = await supabaseClient.from("releases")
+            .update({ hype_score: resultingHype } as any).eq("id", release.id);
+          if (hypeError) throw hypeError;
         }
 
       } catch (releaseError) {
@@ -791,7 +798,7 @@ serve(async (req) => {
       if (revenue.netRevenue <= 0) continue;
 
       try {
-        const netAmount = Math.round(revenue.netRevenue);
+        const netAmount = Math.round(revenue.netRevenue * 100) / 100;
 
         const { error: earningsError } = await supabaseClient
           .from("band_earnings")
@@ -887,6 +894,15 @@ serve(async (req) => {
     console.log(`Credited ${labelsCredited} labels with royalty revenue`);
     console.log(`Processed marketing for ${labelsMarketingProcessed} labels before sales`);
 
+    if (errorCount > 0) {
+      await failJobRun({ jobName: "generate-daily-sales", runId, supabaseClient,
+        durationMs: Date.now() - startedAt,
+        error: new Error(`${errorCount} daily sales or payout operations failed`),
+        resultSummary: { releasesProcessed, totalSales, errorCount, bandsCredited, labelsCredited } });
+      return new Response(JSON.stringify({ success: false, partial: true, totalSales, releasesProcessed, errors: errorCount,
+        bandsCredited, labelsCredited, labelsMarketingProcessed }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     await completeJobRun({
       jobName: "generate-daily-sales",
       runId,
