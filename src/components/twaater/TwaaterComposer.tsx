@@ -85,6 +85,7 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
   const [quotedTwaat, setQuotedTwaat] = useState<any>(null);
   const [visibility, setVisibility] = useState<"public" | "followers">("public");
   const [pollDraft, setPollDraft] = useState<PollDraft | null>(null);
+  const [failedPollPost, setFailedPollPost] = useState<{id:string; scheduledFor:string|null}|null>(null);
   const [showPollDialog, setShowPollDialog] = useState(false);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [scheduledFor, setScheduledFor] = useState("");
@@ -158,6 +159,7 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
     setQuotedTwaat(null);
     setVisibility("public");
     setPollDraft(null);
+    setFailedPollPost(null);
     setScheduledFor("");
   };
 
@@ -175,6 +177,11 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
   };
 
   const handlePost = async () => {
+    if (failedPollPost && pollDraft) {
+      try { await createPoll(failedPollPost.id, pollDraft, failedPollPost.scheduledFor); setFailedPollPost(null); resetComposer(); }
+      catch (error) { toast({title:"Poll still not attached", description:error instanceof Error ? error.message : "Retry the poll",variant:"destructive"}); }
+      return;
+    }
     if (!body.trim()) return;
 
     let scheduledIso: string | undefined;
@@ -225,7 +232,8 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
                 : "The post is live but the poll could not be attached."),
             variant: "destructive",
           });
-          return; // Keep the poll draft available for repair; the twaat has already been posted.
+          setFailedPollPost({id:twaat.id,scheduledFor:twaat.scheduled_for ?? null});
+          return; // Retry attaches to the original post instead of creating a duplicate.
         }
       }
 
