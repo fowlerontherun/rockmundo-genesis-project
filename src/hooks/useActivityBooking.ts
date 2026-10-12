@@ -49,10 +49,7 @@ export async function assertWellnessAllows(
   // Use `in` so unknown values (e.g. cast from `any`) log a warning instead of
   // silently bypassing the gate.
   if (!(activityType in WELLNESS_GATE_MAP)) {
-    console.warn(
-      `[assertWellnessAllows] unmapped activityType "${activityType}" — skipping wellness gate. Add it to WELLNESS_GATE_MAP.`,
-    );
-    return;
+    throw new Error(`Unknown activity type "${activityType}" cannot bypass wellness restrictions.`);
   }
   const gateType = WELLNESS_GATE_MAP[activityType];
   if (gateType === null) return;
