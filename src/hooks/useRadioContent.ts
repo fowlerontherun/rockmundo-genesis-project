@@ -28,14 +28,13 @@ export const useAllRadioContent = () => {
 export const getRandomContent = (content: RadioContent[]): RadioContent | null => {
   if (content.length === 0) return null;
 
-  // Build weighted array
-  const weightedArray: RadioContent[] = [];
+  // Weighted reservoir selection avoids allocating play_weight copies of each item.
+  let total = 0;
+  let selected: RadioContent | null = null;
   for (const item of content) {
-    const weight = item.play_weight || 1;
-    for (let i = 0; i < weight; i++) {
-      weightedArray.push(item);
-    }
+    const weight = Number.isFinite(item.play_weight) && item.play_weight > 0 ? Math.min(item.play_weight, 10000) : 1;
+    total += weight;
+    if (Math.random() * total < weight) selected = item;
   }
-
-  return weightedArray[Math.floor(Math.random() * weightedArray.length)] ?? null;
+  return selected;
 };
