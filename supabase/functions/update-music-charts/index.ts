@@ -53,10 +53,9 @@ serve(async (req) => {
     const RELEASE_SCOPES = ["single", "ep", "album"] as const;
     type ReleaseScope = (typeof RELEASE_SCOPES)[number];
 
-    const toReleaseScope = (value: unknown): ReleaseScope => {
-      return RELEASE_SCOPES.includes(value as ReleaseScope)
-        ? (value as ReleaseScope)
-        : "single";
+    const toReleaseScope = (value: unknown): ReleaseScope | null => {
+      const normalized = typeof value === "string" ? value.toLowerCase().trim() : "";
+      return RELEASE_SCOPES.includes(normalized as ReleaseScope) ? normalized as ReleaseScope : null;
     };
 
     const scopedType = (base: string, scope: ReleaseScope) => `${base}_${scope}`;
@@ -223,6 +222,7 @@ serve(async (req) => {
       }
 
       const scope = toReleaseScope((entry as any)?.release?.release_type);
+      if (!scope) continue; // Unknown release types cannot be treated as singles.
       const scopedKey = `${entry.song_id}:${scope}`;
       const existingScoped = streamingAggregatedByScope.get(scopedKey);
       if (existingScoped) {
@@ -531,6 +531,7 @@ serve(async (req) => {
         if (!release || !release.release_songs) continue;
 
         const scope = toReleaseScope((release as any)?.release_type);
+        if (!scope) continue;
         const releaseId = release.id;
         
         // Get all songs and find lead song (track 1)
