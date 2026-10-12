@@ -176,7 +176,7 @@ export function LuthieryGigLoadoutCard({ gigId, locked }: { gigId: string; locke
               </Select>
               <Button
                 variant="outline"
-                disabled={locked || !selectedId || selectedId === loadoutQuery.data?.player_equipment_id || saveMutation.isPending}
+                disabled={locked || !selectedId || selectedId === loadoutQuery.data?.player_equipment_id || saveMutation.isPending || removeMutation.isPending}
                 onClick={() => saveMutation.mutate(selectedId)}
               >
                 {saveMutation.isPending ? "Assigning…" : "Use for gig"}
