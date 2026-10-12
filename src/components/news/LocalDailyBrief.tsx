@@ -84,16 +84,17 @@ export function LocalDailyBrief() {
     queryKey: ["news-active-professors"],
     staleTime: 300_000,
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("active_professor_residencies")
-        .select("id, university_id, name, skill_family, starts_at, ends_at")
-        .lte("starts_at", new Date().toISOString())
-        .gt("ends_at", new Date().toISOString())
-        .order("ends_at", { ascending: true }).limit(1000);
-      if (error) throw error;
-      const raw = (data ?? []) as Array<{
-        id: string; university_id: string; name: string; skill_family: string;
-        starts_at: string; ends_at: string;
-      }>;
+      const raw: Array<{ id: string; university_id: string; name: string; skill_family: string; starts_at: string; ends_at: string }> = [];
+      const now = new Date().toISOString();
+      for (let offset = 0; ; offset += 1000) {
+        const { data, error } = await (supabase as any).from("active_professor_residencies")
+          .select("id, university_id, name, skill_family, starts_at, ends_at")
+          .lte("starts_at", now).gt("ends_at", now)
+          .order("ends_at", { ascending: true }).range(offset, offset + 999);
+        if (error) throw error;
+        raw.push(...(data ?? []));
+        if (!data || data.length < 1000) break;
+      }
       const ids = raw.map(v => v.university_id);
       if (!ids.length) return [];
       const { data: schools, error: schoolError } = await supabase.from("universities")
