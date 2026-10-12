@@ -175,51 +175,11 @@ export default function BandVehicles() {
     }) => {
       if (!band?.id) throw new Error("No band found");
 
-      const vehicle = catalog.find((v) => v.id === vehicleId);
-      if (!vehicle) throw new Error("Vehicle not found");
-
-      const cost =
-        type === "buy"
-          ? vehicle.purchase_cost
-          : type === "lease"
-          ? vehicle.lease_monthly_cost
-          : vehicle.rental_daily_cost * 7; // 1 week rental
-
-      if ((band.band_balance || 0) < cost) {
-        throw new Error(`Insufficient funds. Need $${cost.toLocaleString()}`);
-      }
-
-      // Deduct cost from band balance
-      const { error: balanceError } = await supabase
-        .from("bands")
-        .update({ band_balance: (band.band_balance || 0) - cost })
-        .eq("id", band.id);
-
-      if (balanceError) throw balanceError;
-
-      // Create vehicle record
-      const { error: vehicleError } = await supabase.from("band_vehicles").insert({
-        band_id: band.id,
-        vehicle_catalog_id: vehicleId,
-        name: vehicle.name,
-        vehicle_type: vehicle.vehicle_type,
-        capacity_units: vehicle.capacity_units,
-        is_owned: type === "buy",
-        is_leased: type === "lease",
-        comfort_rating: vehicle.comfort_rating,
-        speed_modifier: vehicle.speed_modifier,
-        rental_daily_cost: type === "rent" ? vehicle.rental_daily_cost : 0,
-        rental_start_date: type === "rent" ? new Date().toISOString() : null,
-        rental_end_date:
-          type === "rent"
-            ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-            : null,
-        purchase_date: type === "buy" ? new Date().toISOString() : null,
+      const { data: cost, error } = await (supabase as any).rpc("acquire_band_vehicle_atomic", {
+        p_band_id: band.id,p_vehicle_catalog_id: vehicleId,p_type: type,
       });
-
-      if (vehicleError) throw vehicleError;
-
-      return { cost, type };
+      if (error) throw error;
+      return { cost: Number(cost), type };
     },
     onSuccess: ({ cost, type }) => {
       toast({
