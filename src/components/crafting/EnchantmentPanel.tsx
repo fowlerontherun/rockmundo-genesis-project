@@ -236,6 +236,8 @@ export const EnchantmentPanel = () => {
                               <div className="flex items-center justify-between">
                                 <span className="text-xs text-muted-foreground">
                                   ${ench.cash_cost} · Lv.{ench.min_skill_level}+
+                                  {ench.material_cost ? ` · Materials: ${JSON.stringify(ench.material_cost)}` : ""}
+                                  {ench.incompatible_with?.length ? ` · Incompatible: ${ench.incompatible_with.join(", ")}` : ""}
                                 </span>
                                 <Button
                                   size="sm"
