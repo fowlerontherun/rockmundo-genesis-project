@@ -25,6 +25,10 @@ export const TwaaterFeed = ({ viewerAccountId, feedType = "feed" }: TwaaterFeedP
     isLoading: feedLoading,
     error: feedError,
     refetch: refetchRegular,
+    page: regularPage,
+    hasMore: regularHasMore,
+    nextPage: nextRegularPage,
+    previousPage: previousRegularPage,
   } = useTwaaterFeed(viewerAccountId, regularEnabled);
   const {
     data: aiFeed,
@@ -40,7 +44,7 @@ export const TwaaterFeed = ({ viewerAccountId, feedType = "feed" }: TwaaterFeedP
 
   useEffect(() => {
     setVisibleCount(20);
-  }, [viewerAccountId, feedType, useAI]);
+  }, [viewerAccountId, feedType, useAI, regularPage]);
 
   useEffect(() => {
     if (feedType !== "feed") return;
@@ -89,7 +93,7 @@ export const TwaaterFeed = ({ viewerAccountId, feedType = "feed" }: TwaaterFeedP
     </Card>
   );
 
-  if (!items?.length) return (
+  if (!items?.length && regularPage === 0) return (
     <Card style={{ backgroundColor: "hsl(var(--twaater-card))" }}>
       <CardContent className="py-12 text-center text-muted-foreground">
         No {feedType === "mentions" ? "mentions" : "twaats"} yet
@@ -159,6 +163,13 @@ export const TwaaterFeed = ({ viewerAccountId, feedType = "feed" }: TwaaterFeedP
           currentAccountId={viewerAccountId}
           showDateSeparators={feedType === "feed"}
         />
+        {feedType === "feed" && !useAI && (
+          <div className="flex justify-center gap-2 py-4" role="navigation" aria-label="Chronological feed pages">
+            <Button variant="outline" disabled={regularPage === 0} onClick={previousRegularPage}>Newer posts</Button>
+            <span className="self-center text-xs text-muted-foreground">Page {regularPage + 1}</span>
+            <Button variant="outline" disabled={!regularHasMore} onClick={nextRegularPage}>Older posts</Button>
+          </div>
+        )}
         {items.length > visibleCount && (
           <div className="flex justify-center py-4">
             <Button
