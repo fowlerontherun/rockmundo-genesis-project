@@ -103,7 +103,7 @@ export const useEducationSummary = () => {
   });
 
   // Active book reading sessions
-  const { data: activeBooks, isLoading: booksLoading } = useQuery({
+  const { data: activeBooks, isLoading: booksLoading, isError: booksError } = useQuery({
     queryKey: ["education-summary-active-books", profile?.id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -135,7 +135,7 @@ export const useEducationSummary = () => {
   });
 
   // Active university enrollments
-  const { data: activeEnrollments, isLoading: enrollmentsLoading } = useQuery({
+  const { data: activeEnrollments, isLoading: enrollmentsLoading, isError: enrollmentsError } = useQuery({
     queryKey: ["education-summary-active-enrollments", profile?.id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -173,7 +173,7 @@ export const useEducationSummary = () => {
   });
 
   // Completed university enrollments (last 10)
-  const { data: completedEnrollments, isLoading: completedLoading } = useQuery({
+  const { data: completedEnrollments, isLoading: completedLoading, isError: completedError } = useQuery({
     queryKey: ["education-summary-completed-enrollments", profile?.id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -216,7 +216,7 @@ export const useEducationSummary = () => {
   }, []);
 
   // Yesterday's education progress
-  const { data: yesterdayProgress, isLoading: progressLoading } = useQuery({
+  const { data: yesterdayProgress, isLoading: progressLoading, isError: progressError } = useQuery({
     queryKey: ["education-summary-yesterday", profile?.id, localDate],
     queryFn: async () => {
       const today = localDate;
@@ -249,12 +249,13 @@ export const useEducationSummary = () => {
           id,
           xp_amount,
           metadata,
-          skill_slug
+          skill_slug,
+          activity_type
         `)
         .eq("profile_id", profile!.id)
-        .eq("activity_type", "book_reading")
-        .gte("created_at", `${yesterday}T00:00:00`)
-        .lt("created_at", `${today}T00:00:00`);
+        .in("activity_type", ["book_reading", "youtube_video", "mentor_session"])
+        .gte("created_at", new Date(`${yesterday}T00:00:00`).toISOString())
+        .lt("created_at", new Date(`${today}T00:00:00`).toISOString());
 
       if (bookError) throw bookError;
 
@@ -267,7 +268,7 @@ export const useEducationSummary = () => {
         university_name: a.player_university_enrollments?.universities?.name || null,
       }));
 
-      const bookReading = (bookProgress || []).map((b: any) => ({
+      const bookReading = (bookProgress || []).filter((b: any) => b.activity_type === "book_reading").map((b: any) => ({
         session_id: b.id,
         xp_earned: b.xp_amount,
         book_title: b.metadata?.book_title || b.skill_slug || null,
@@ -275,7 +276,7 @@ export const useEducationSummary = () => {
 
       const totalXp = 
         universityAttendance.reduce((sum, a) => sum + (a.xp_earned || 0), 0) +
-        bookReading.reduce((sum, b) => sum + (b.xp_earned || 0), 0);
+        (bookProgress || []).reduce((sum, b) => sum + (b.xp_amount || 0), 0);
 
       return {
         universityAttendance,
@@ -330,5 +331,6 @@ export const useEducationSummary = () => {
     yesterdayProgress: yesterdayProgress || { universityAttendance: [], bookReading: [], totalXp: 0 },
     skillProgress: skillProgress || {},
     isLoading: booksLoading || enrollmentsLoading || completedLoading || progressLoading,
+    isError: booksError || enrollmentsError || completedError || progressError,
   };
 };

@@ -41,14 +41,16 @@ export async function checkVenueGigDiscovery(
     }
 
     // Check which mentors the player hasn't discovered yet
-    const { data: existingDiscoveries } = await supabase
+    const { data: existingDiscoveries, error: discoveryLookupError } = await supabase
       .from("player_master_discoveries")
       .select("mentor_id")
       .eq("profile_id", profileId)
       .in("mentor_id", mentors.map(m => m.id));
 
+    if (discoveryLookupError) throw discoveryLookupError;
     const discoveredIds = new Set(existingDiscoveries?.map(d => d.mentor_id) || []);
-    const undiscoveredMentor = mentors.find(m => !discoveredIds.has(m.id));
+    const eligibleMentors = mentors.filter(m => !discoveredIds.has(m.id));
+    const undiscoveredMentor = eligibleMentors[0];
 
     if (!undiscoveredMentor) {
       return null;
@@ -65,6 +67,14 @@ export async function checkVenueGigDiscovery(
     if (discoverError) {
       console.error("[MentorDiscovery] Error discovering mentor:", discoverError);
       return null;
+    }
+    // Discover each mentor eligible at the same venue or studio event.
+    for (const nextMentor of eligibleMentors.slice(1)) {
+      const { error: additionalError } = await supabase.rpc("discover_master", {
+        p_profile_id: profileId, p_mentor_id: nextMentor.id,
+        p_method: "venue_gig", p_metadata: { venue_id: venueId }
+      });
+      if (additionalError) throw additionalError;
     }
 
     return {
@@ -109,14 +119,16 @@ export async function checkStudioSessionDiscovery(
     }
 
     // Check which mentors the player hasn't discovered yet
-    const { data: existingDiscoveries } = await supabase
+    const { data: existingDiscoveries, error: discoveryLookupError } = await supabase
       .from("player_master_discoveries")
       .select("mentor_id")
       .eq("profile_id", profileId)
       .in("mentor_id", mentors.map(m => m.id));
 
+    if (discoveryLookupError) throw discoveryLookupError;
     const discoveredIds = new Set(existingDiscoveries?.map(d => d.mentor_id) || []);
-    const undiscoveredMentor = mentors.find(m => !discoveredIds.has(m.id));
+    const eligibleMentors = mentors.filter(m => !discoveredIds.has(m.id));
+    const undiscoveredMentor = eligibleMentors[0];
 
     if (!undiscoveredMentor) {
       return null;
@@ -133,6 +145,14 @@ export async function checkStudioSessionDiscovery(
     if (discoverError) {
       console.error("[MentorDiscovery] Error discovering mentor:", discoverError);
       return null;
+    }
+    // Discover each mentor eligible at the same venue or studio event.
+    for (const nextMentor of eligibleMentors.slice(1)) {
+      const { error: additionalError } = await supabase.rpc("discover_master", {
+        p_profile_id: profileId, p_mentor_id: nextMentor.id,
+        p_method: "studio_session", p_metadata: { studio_id: studioId }
+      });
+      if (additionalError) throw additionalError;
     }
 
     return {

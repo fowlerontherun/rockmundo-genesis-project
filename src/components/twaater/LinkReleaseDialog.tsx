@@ -29,12 +29,13 @@ export const LinkReleaseDialog = ({ open, onOpenChange, onSelect }: LinkReleaseD
       if (!profileId) return [];
 
       // Get user's bands
-      const { data: memberships } = await supabase
+      const { data: memberships, error: membershipError } = await supabase
         .from("band_members")
         .select("band_id")
         .eq("profile_id", profileId)
         .eq("member_status", "active");
 
+      if (membershipError) throw membershipError;
       const bandIds = memberships?.map((m) => m.band_id) || [];
 
       // Never show releases owned by unrelated solo artists when this character has no bands.

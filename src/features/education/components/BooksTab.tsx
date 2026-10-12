@@ -134,7 +134,7 @@ export const BooksTab = () => {
     let filtered = typedBooks;
 
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+      const q = searchQuery.trim().toLowerCase();
       filtered = filtered.filter(b =>
         b.title.toLowerCase().includes(q) ||
         (b.author ?? "").toLowerCase().includes(q) ||

@@ -378,6 +378,9 @@ export async function deleteBandScheduledActivities(
   linkedRehearsalId?: string,
   linkedRecordingId?: string
 ): Promise<void> {
+  if (!linkedRehearsalId && !linkedRecordingId) {
+    throw new Error('A linked event ID is required to delete band schedule entries.');
+  }
   let query = supabase
     .from('player_scheduled_activities' as any)
     .delete()

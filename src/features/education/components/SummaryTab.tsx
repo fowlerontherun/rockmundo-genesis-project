@@ -48,6 +48,7 @@ export const SummaryTab = () => {
     yesterdayProgress,
     skillProgress,
     isLoading,
+    isError: summaryError,
   } = useEducationSummary();
 
   const dropCourseMutation = useMutation({
@@ -100,6 +101,7 @@ export const SummaryTab = () => {
 
   return (
     <div className="space-y-8">
+      {summaryError && <Alert variant="destructive" role="alert"><AlertCircle className="h-4 w-4" /><AlertTitle>Education data unavailable</AlertTitle><AlertDescription>One or more education reports failed to load. Refresh before relying on these totals.</AlertDescription></Alert>}
       {/* Yesterday's Progress */}
       <section className="space-y-4">
         <div className="flex items-center gap-2">

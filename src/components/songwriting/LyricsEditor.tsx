@@ -51,13 +51,17 @@ export function parseLyricsToSections(lyrics: string): LyricsSection[] {
 
   const sections: LyricsSection[] = [];
   // Only standalone, recognised section labels are structural headers; inline cues remain lyrics.
-  const sectionRegex = /^\[(?:(?:verse|chorus|pre[ -]?chorus|bridge|intro|outro|hook|breakdown|instrumental)(?:\s*\d+)?)\][ \t]*$/gim;
-  let lastIndex = 0;
+  const sectionRegex = /^\[((?:verse|chorus|pre[ -]?chorus|bridge|intro|outro|hook|breakdown|instrumental)(?:\s*\d+)?)\][ \t]*$/gim;
   let match;
-  let sectionCounter: Record<string, number> = {};
+  const sectionCounter: Record<string, number> = {};
+  // Preserve opening lines before the first structured section header.
+  const firstHeader = lyrics.search(sectionRegex);
+  if (firstHeader > 0 && lyrics.slice(0, firstHeader).trim()) {
+    sections.push({ id: 'intro1', type: 'intro', label: 'Intro', content: lyrics.slice(0, firstHeader).trim() });
+    sectionCounter.intro = 1;
+  }
 
   while ((match = sectionRegex.exec(lyrics)) !== null) {
-    // Get content before this section (if any, skip it)
     const sectionHeader = match[1].toLowerCase().trim();
     const startOfContent = match.index + match[0].length;
     
@@ -97,7 +101,6 @@ export function parseLyricsToSections(lyrics: string): LyricsSection[] {
     const id = `${type}${sectionCounter[type]}`;
     
     sections.push({ id, type, label, content });
-    lastIndex = endOfContent;
   }
 
   // If no sections found, try to create default structure

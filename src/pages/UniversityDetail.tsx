@@ -100,7 +100,7 @@ export default function UniversityDetail() {
   const [courseSearch, setCourseSearch] = useState("");
   const [hideLockedCourses, setHideLockedCourses] = useState(true);
 
-  const { data: university } = useQuery({
+  const { data: university, isPending: universityPending, isError: universityError } = useQuery({
     queryKey: ["university", id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -132,15 +132,17 @@ export default function UniversityDetail() {
   const { data: courseEnrollmentCounts } = useQuery({
     queryKey: ["university_course_enrollment_counts", id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("player_university_enrollments")
-        .select("course_id")
-        .eq("university_id", id)
-        .in("status", ["enrolled", "in_progress"]);
-
-      if (error) throw error;
-
-      return (data || []).reduce((acc, enrollment) => {
+      const rows: Array<{ course_id: string }> = [];
+      for (let offset = 0; ; offset += 500) {
+        const { data, error } = await supabase.from("player_university_enrollments")
+          .select("course_id").eq("university_id", id)
+          .in("status", ["enrolled", "in_progress"])
+          .order("id", { ascending: true }).range(offset, offset + 499);
+        if (error) throw error;
+        rows.push(...(data ?? []));
+        if (!data || data.length < 500) break;
+      }
+      return rows.reduce((acc, enrollment) => {
         const courseId = (enrollment as { course_id: string }).course_id;
         acc[courseId] = (acc[courseId] || 0) + 1;
         return acc;
@@ -156,21 +158,18 @@ export default function UniversityDetail() {
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       const since = sevenDaysAgo.toISOString().split("T")[0];
 
-      const { data, error } = await supabase
-        .from("player_university_attendance")
-        .select(`
-          xp_earned,
-          player_university_enrollments!inner (
-            course_id,
-            university_id
-          )
-        `)
-        .eq("player_university_enrollments.university_id", id)
-        .gte("attendance_date", since);
-
-      if (error) throw error;
-
-      return (data || []).reduce((acc, record) => {
+      const rows: any[] = [];
+      for (let offset = 0; ; offset += 500) {
+        const { data, error } = await supabase.from("player_university_attendance")
+          .select(`id, xp_earned, player_university_enrollments!inner (course_id, university_id)`)
+          .eq("player_university_enrollments.university_id", id)
+          .gte("attendance_date", since)
+          .order("id", { ascending: true }).range(offset, offset + 499);
+        if (error) throw error;
+        rows.push(...(data ?? []));
+        if (!data || data.length < 500) break;
+      }
+      return rows.reduce((acc, record) => {
         const enrollment = (record as any).player_university_enrollments;
         if (!enrollment?.course_id) {
           return acc;
@@ -790,7 +789,9 @@ export default function UniversityDetail() {
   if (!university) {
     return (
       <FMPageScaffold title="University" icon={GraduationCap} backTo="/education">
-        <FMPageSkeleton kpiCount={3} actionCount={1} bodyBlocks={2} showTabs />
+        {universityPending ? <FMPageSkeleton kpiCount={3} actionCount={1} bodyBlocks={2} showTabs /> : (
+          <p role="alert" className="p-6 text-sm text-destructive">{universityError ? "University data could not be loaded. Please retry." : "University not found."}</p>
+        )}
       </FMPageScaffold>
     );
   }
