@@ -329,6 +329,8 @@ export const useUnderworldStore = () => {
           product_id: product.id,
           paid_with: paymentMethod,
           cash_amount: paymentMethod === "cash" ? product.price_cash : null,
+          token_id: paymentMethod === "crypto" ? product.price_token_id : null,
+          token_amount: paymentMethod === "crypto" ? product.price_token_amount : null,
           effects_applied: effects,
           expires_at: expiresAt,
           is_used: !shouldStoreInInventory, // If stored in inventory, mark as not used

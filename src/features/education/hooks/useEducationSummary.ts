@@ -201,7 +201,7 @@ export const useEducationSummary = () => {
         .eq("profile_id", profile!.id)
         .eq("status", "completed")
         .order("actual_completion_date", { ascending: false })
-        .limit(10);
+        .limit(200);
 
       if (error) throw error;
       return data as CompletedEnrollment[];

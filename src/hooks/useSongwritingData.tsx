@@ -222,6 +222,7 @@ export const useSongwritingData = (profileId?: string | null, userId?: string | 
               .from('songwriting_projects')
               .update({ is_locked: false, locked_until: null })
               .eq('id', p.id)
+              .then(({ error }) => { if (error) throw error; })
           )
         ).catch((error) => {
           logger.warn("Expired songwriting project unlock failed", {

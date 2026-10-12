@@ -11,6 +11,14 @@ interface ProductionQueueProps {
   factoryId: string;
 }
 
+const ALLOWED_NEXT: Record<string, string[]> = {
+  pending: ['in_production', 'cancelled'],
+  in_production: ['quality_check', 'cancelled'],
+  quality_check: ['completed', 'in_production'],
+  completed: ['shipped'],
+  shipped: [], cancelled: [],
+};
+
 const STATUS_CONFIG = {
   pending: { label: 'Pending', variant: 'secondary' as const, icon: Clock },
   in_production: { label: 'In Production', variant: 'default' as const, icon: ClipboardList },
@@ -25,6 +33,8 @@ export function ProductionQueue({ factoryId }: ProductionQueueProps) {
   const updateStatus = useUpdateProductionStatus();
   
   const handleStatusChange = (orderId: string, newStatus: string) => {
+    const currentStatus = orders?.find(order => order.id === orderId)?.status;
+    if (!currentStatus || !ALLOWED_NEXT[currentStatus]?.includes(newStatus)) return;
     updateStatus.mutate({ orderId, status: newStatus, factoryId });
   };
   
@@ -99,12 +109,12 @@ export function ProductionQueue({ factoryId }: ProductionQueueProps) {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="in_production">In Production</SelectItem>
-                            <SelectItem value="quality_check">Quality Check</SelectItem>
-                            <SelectItem value="completed">Completed</SelectItem>
-                            <SelectItem value="shipped">Shipped</SelectItem>
-                            <SelectItem value="cancelled">Cancel</SelectItem>
+                            <SelectItem disabled={"pending" !== order.status && !ALLOWED_NEXT[order.status]?.includes("pending")} value="pending">Pending</SelectItem>
+                            <SelectItem disabled={"in_production" !== order.status && !ALLOWED_NEXT[order.status]?.includes("in_production")} value="in_production">In Production</SelectItem>
+                            <SelectItem disabled={"quality_check" !== order.status && !ALLOWED_NEXT[order.status]?.includes("quality_check")} value="quality_check">Quality Check</SelectItem>
+                            <SelectItem disabled={"completed" !== order.status && !ALLOWED_NEXT[order.status]?.includes("completed")} value="completed">Completed</SelectItem>
+                            <SelectItem disabled={"shipped" !== order.status && !ALLOWED_NEXT[order.status]?.includes("shipped")} value="shipped">Shipped</SelectItem>
+                            <SelectItem disabled={"cancelled" !== order.status && !ALLOWED_NEXT[order.status]?.includes("cancelled")} value="cancelled">Cancel</SelectItem>
                           </SelectContent>
                         </Select>
                       )}
