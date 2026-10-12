@@ -42,7 +42,7 @@ export const LinkSongDialog = ({ open, onOpenChange, onSelect }: LinkSongDialogP
       const { data: songs, error } = await supabase
         .from("songs")
         .select("id, title, genre, quality_score, audio_url, status, band:bands(id, name)")
-        .or(`band_id.in.(${bandIds.join(",")}),user_id.eq.${profileId}`)
+        .or(bandIds.length ? `band_id.in.(${bandIds.join(",")}),user_id.eq.${profileId}` : `user_id.eq.${profileId}`)
         .in("status", ["recorded", "released"])
         .neq("archived", true)
         .order("created_at", { ascending: false });
