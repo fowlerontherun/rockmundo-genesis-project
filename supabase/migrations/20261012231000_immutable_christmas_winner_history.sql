@@ -18,6 +18,7 @@ ALTER TABLE public.christmas_number_ones
  ADD COLUMN IF NOT EXISTS total_sales bigint NOT NULL DEFAULT 0,
  ADD COLUMN IF NOT EXISTS awarded_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.christmas_number_ones ENABLE ROW LEVEL SECURITY;
+GRANT SELECT ON public.christmas_number_ones TO authenticated;
 DROP POLICY IF EXISTS christmas_number_ones_public_read ON public.christmas_number_ones;
 CREATE POLICY christmas_number_ones_public_read ON public.christmas_number_ones FOR SELECT TO authenticated USING(true);
 REVOKE INSERT,UPDATE,DELETE ON public.christmas_number_ones FROM PUBLIC,anon,authenticated;
@@ -46,7 +47,7 @@ BEGIN
   coalesce(nullif(r.artist_name,''),nullif(b.artist_name,''),nullif(b.name,''),'Unknown Artist') AS artist_name,
   coalesce((SELECT s.title FROM public.release_songs rsong
     JOIN public.songs s ON s.id=rsong.song_id WHERE rsong.release_id=r.id
-    ORDER BY rsong.id LIMIT 1),r.title) AS song_title,
+    ORDER BY rsong.track_number,rsong.id LIMIT 1),r.title) AS song_title,
   sum(rs.quantity_sold)::bigint AS total_sales
  INTO v_result FROM public.release_sales rs
  JOIN public.release_formats rf ON rf.id=rs.release_format_id
