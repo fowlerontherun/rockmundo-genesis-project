@@ -46,7 +46,7 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
 
   const messagesQuery = useQuery({
     queryKey: ["direct-messages", conversationId ?? channelId],
-    enabled: !!myProfileId && !!channelId,
+    enabled: !!myProfileId && !!channelId && (!!groupConversationId || !!conversationId),
     queryFn: async (): Promise<DirectMessageRow[]> => {
       if (groupConversationId) {
         const messages = await getConversationMessages(groupConversationId, { limit: 100 });
@@ -77,7 +77,7 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
     if (!channelId) return;
     const filter = groupConversationId
       ? `conversation_id=eq.${groupConversationId}`
-      : `channel_id=eq.${directChannelId}`;
+      : conversationId ? `conversation_id=eq.${conversationId}` : `channel_id=eq.${directChannelId}`;
     const channel = supabase
       .channel(`dm-${channelId}`)
       .on(

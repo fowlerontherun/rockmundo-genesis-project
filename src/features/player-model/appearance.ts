@@ -167,7 +167,29 @@ export function defaultAppearance(seed = ''): PlayerAppearance {
 }
 export function resolveAppearance(value: unknown, seed = ''): PlayerAppearance {
   const parsed = appearanceSchema.safeParse(value);
-  if (!parsed.success) return defaultAppearance(seed);
+  if (!parsed.success) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return defaultAppearance(seed);
+    const raw = value as Record<string, unknown>;
+    const defaults = defaultAppearance(seed);
+    const section = (key: string) => raw[key] && typeof raw[key] === 'object' && !Array.isArray(raw[key]) ? raw[key] as Record<string, unknown> : {};
+    const equipment = section('equipment');
+    const equipmentSection = (key: string) => equipment[key] && typeof equipment[key] === 'object' && !Array.isArray(equipment[key]) ? equipment[key] as Record<string, unknown> : {};
+    const merged = {
+      ...defaults, version: 1 as const,
+      body: { ...defaults.body, ...section('body') },
+      head: { ...defaults.head, ...section('head') },
+      equipment: {
+        top: { ...defaults.equipment.top, ...equipmentSection('top') },
+        bottom: { ...defaults.equipment.bottom, ...equipmentSection('bottom') },
+        footwear: { ...defaults.equipment.footwear, ...equipmentSection('footwear') },
+        instrument: { ...defaults.equipment.instrument, ...equipmentSection('instrument') },
+      },
+      accessories: { ...defaults.accessories, ...section('accessories') },
+    };
+    const repaired = appearanceSchema.safeParse(merged);
+    if (repaired.success) return resolveAppearance(repaired.data, seed);
+    return defaults;
+  }
   return {
     ...parsed.data,
     body: { ...parsed.data.body, breastSize: parsed.data.body.breastSize ?? 1, muscle: parsed.data.body.muscle ?? 'natural' },

@@ -158,6 +158,8 @@ export function isAfterCurfew(gigHour: number, laws: CityLaws | null): boolean {
   }
   // For extended hours (24, 25, 26 = midnight, 1am, 2am)
   const normalizedHour = ((gigHour % 24) + 24) % 24;
+  // An early-morning curfew starts at midnight for 24, 01:00 for 25, etc.
+  // A 00:30 gig must be allowed under a 01:00 curfew.
   return normalizedHour >= curfew - 24 && normalizedHour < 6;
 }
 
