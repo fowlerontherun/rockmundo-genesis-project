@@ -167,12 +167,12 @@ export const searchProfilesByQuery = async (
   query: string,
   excludeProfileIds: string[] = [],
 ): Promise<FriendProfileRow[]> => {
-  const { data, error } = await supabase
+  let request = supabase
     .from("profiles")
     .select(PROFILE_SELECTION)
-    .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
-    .order("username")
-    .limit(20);
+    .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`);
+  if (excludeProfileIds.length) request = request.not("id", "in", `(${excludeProfileIds.join(",")})`);
+  const { data, error } = await request.order("username").limit(20);
 
   if (error) throw error;
   const rows = (data as FriendProfileRow[]) ?? [];
