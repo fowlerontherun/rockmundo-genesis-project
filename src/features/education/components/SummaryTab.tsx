@@ -48,6 +48,7 @@ export const SummaryTab = () => {
     yesterdayProgress,
     skillProgress,
     isLoading,
+    hasError,
   } = useEducationSummary();
 
   const dropCourseMutation = useMutation({
