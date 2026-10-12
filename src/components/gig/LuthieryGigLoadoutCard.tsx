@@ -155,6 +155,8 @@ export function LuthieryGigLoadoutCard({ gigId, locked }: { gigId: string; locke
       <CardContent className="space-y-3">
         {instrumentsQuery.isLoading || loadoutQuery.isLoading ? (
           <p className="text-sm text-muted-foreground">Loading crafted instruments…</p>
+        ) : instrumentsQuery.isError || loadoutQuery.isError ? (
+          <div role="alert" className="text-destructive">Could not load instruments or gig assignment. <Button onClick={() => {void instrumentsQuery.refetch();void loadoutQuery.refetch();}}>Retry</Button></div>
         ) : equippedOptions.length === 0 && !snapshot ? (
           <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
             No equipped player-crafted guitar or bass is available. Equip one from Personal Gear first.
@@ -162,7 +164,7 @@ export function LuthieryGigLoadoutCard({ gigId, locked }: { gigId: string; locke
         ) : (
           <>
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Select value={selectedId} onValueChange={setSelectedId} disabled={locked || saveMutation.isPending}>
+              <Select value={selectedId} onValueChange={setSelectedId} disabled={locked || saveMutation.isPending || removeMutation.isPending}>
                 <SelectTrigger className="flex-1"><SelectValue placeholder="Choose an equipped crafted instrument" /></SelectTrigger>
                 <SelectContent>
                   {equippedOptions.map((item) => (
@@ -183,7 +185,7 @@ export function LuthieryGigLoadoutCard({ gigId, locked }: { gigId: string; locke
                 <Button
                   variant="ghost"
                   size="icon"
-                  disabled={locked || removeMutation.isPending}
+                  disabled={locked || saveMutation.isPending || removeMutation.isPending}
                   onClick={() => removeMutation.mutate()}
                   aria-label="Remove crafted instrument from gig"
                 >
