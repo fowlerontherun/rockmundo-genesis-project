@@ -19,11 +19,18 @@ export function useParliamentMotions(status?: "open" | "all") {
         .from("world_parliament_motions")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(status === "all" ? 500 : 100);
       if (!status || status === "open") q = q.eq("status", "open");
       const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as ParliamentMotion[];
+    },
+    refetchInterval: 30_000,
+    placeholderData: undefined,
+  });
+}
+
+/* motion hook below */
     },
   });
 }
