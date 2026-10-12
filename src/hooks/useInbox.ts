@@ -63,16 +63,19 @@ export function useInbox(category?: InboxCategory | 'all') {
         queryBuilder = queryBuilder.eq('category', category);
       }
 
-      const { data, error } = await queryBuilder;
-
-      if (error) {
-        console.error('[useInbox] Error fetching inbox:', error);
-        throw error;
+      const rows: InboxMessage[] = [];
+      for (let offset = 0; offset < 100_000; offset += 500) {
+        const { data, error } = await queryBuilder.range(offset, offset + 499);
+        if (error) {
+          console.error('[useInbox] Error fetching inbox:', error);
+          throw error;
+        }
+        rows.push(...((data || []) as InboxMessage[]));
+        if (!data || data.length < 500) break;
       }
 
       // Untagged legacy rows are not safe to infer in a multi-character account.
       // A genuinely account-wide message must opt in with metadata.scope=account.
-      const rows = (data || []) as InboxMessage[];
       return rows.filter((message) => isInboxMessageForProfile(message, profileId));
     },
     enabled: !!userId && !!profileId,
