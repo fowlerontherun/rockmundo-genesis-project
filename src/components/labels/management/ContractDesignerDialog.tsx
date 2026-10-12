@@ -73,7 +73,7 @@ export function ContractDesignerDialog({
   const { data: availableDealTypes = [], isLoading: dealTypesLoading, isError: dealTypesError, refetch: retryDealTypes } = useQuery({
     queryKey: ["label-offer-deal-types", labelId], enabled: open && !!labelId,
     queryFn: async () => { const { data, error } = await supabase.from("label_deal_types")
-      .select("id,name").eq("label_id", labelId).order("name");
+      .select("id,name").or(`label_id.eq.${labelId},label_id.is.null`).order("name");
       if (error) throw error;
       return data ?? [];
     },

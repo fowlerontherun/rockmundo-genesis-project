@@ -140,7 +140,7 @@ export const UniversityTab = () => {
   const { data: currentEnrollments = [] } = useQuery({
     queryKey: ["current_enrollment", profile?.id],
     queryFn: async () => {
-      if (!profile?.id) return null;
+      if (!profile?.id) return [];
       
       const { data, error } = await supabase
         .from("player_university_enrollments")

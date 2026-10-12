@@ -52,6 +52,7 @@ function EditorSession({ profileId, initial, model, richClothing, richClothingEr
   useEffect(() => {
     if (!newerRevision || dirty) return;
     setBaseline(initial);
+    currentDraft.current = initial.appearance;
     setDraft(initial.appearance);
   }, [initial, dirty, newerRevision]);
   const previewAssignment = stageAssignment(role);
