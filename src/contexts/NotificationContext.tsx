@@ -54,7 +54,7 @@ const COLOR_MAP = {
 };
 
 export const NotificationProvider = ({ children }: { children: ReactNode }) => {
-  useEffect(() => { const { data: { subscription } } = supabase.auth.onAuthStateChange(() => setNotifications([])); return () => subscription.unsubscribe(); }, []);
+  useEffect(() => { const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => { if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") setNotifications([]); }); return () => subscription.unsubscribe(); }, []);
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const addNotification = useCallback((notification: Omit<Notification, "id" | "timestamp" | "read">) => {
