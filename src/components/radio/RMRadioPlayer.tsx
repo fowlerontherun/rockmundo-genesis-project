@@ -147,6 +147,7 @@ let globalState: RadioState = {
 let stateListeners: Set<() => void> = new Set();
 let lastHostSegmentTime: number = Date.now(); // Track when last host segment played
 let chartNumberOneSong: Song | null = null; // Cached #1 chart song
+let lastRadioInventorySignature = "";
 let pendingHostSegment: boolean = false; // Flag: next track should be host segment
 
 const notifyListeners = () => {
@@ -194,22 +195,31 @@ export const RadioProvider = ({ children }: { children: React.ReactNode }) => {
 
   const initializePlaylist = useCallback(
     (songs: Song[], content: RadioContent[]) => {
-      if (songs.length === 0) return;
-      if (globalState.playlist.length > 0) return; // Already initialized
-
-      const shuffledSongs = shuffleArray(songs);
-      const playlist = buildPlaylistWithContent(shuffledSongs, content);
-
+      // Reconcile updated inventory, preserving the currently playing audio where possible.
+      const signature = JSON.stringify({
+        songs: songs.map(song => [song.id, song.audio_url]).sort((a, b) => a[0].localeCompare(b[0])),
+        content: content.map(item => [item.id, item.audio_url]).sort((a, b) => a[0].localeCompare(b[0])),
+      });
+      if (signature === lastRadioInventorySignature && globalState.playlist.length > 0) return;
+      lastRadioInventorySignature = signature;
+      const playlist = buildPlaylistWithContent(shuffleArray(songs), content);
+      const current = globalState.currentItem;
+      const playingUrl = current ? getAudioUrl(current) : null;
+      const preservedIndex = playingUrl ? playlist.findIndex(item => getAudioUrl(item) === playingUrl) : -1;
+      const preservePlayback = Boolean(globalState.isPlaying && current &&
+        (preservedIndex >= 0 || current.type === "host-segment" || current.type === "chart-number-one"));
+      const index = preservedIndex >= 0 ? preservedIndex : 0;
       globalState = {
         ...globalState,
         playlist,
-        currentIndex: 0,
-        currentItem: playlist[0] || null,
+        currentIndex: index,
+        currentItem: preservePlayback ? current : playlist[index] || null,
       };
-
-      const audioUrl = playlist[0] ? getAudioUrl(playlist[0]) : null;
-      if (globalAudio && audioUrl) {
-        globalAudio.src = audioUrl;
+      const audioUrl = globalState.currentItem ? getAudioUrl(globalState.currentItem) : null;
+      if (globalAudio && audioUrl && !preservePlayback) globalAudio.src = audioUrl;
+      if (!playlist.length && !preservePlayback) {
+        globalAudio?.pause();
+        globalState = { ...globalState, isPlaying: false };
       }
       notifyListeners();
     },
@@ -385,7 +395,7 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
   const { data: radioContent, isLoading: radioContentLoading } = useRadioContent();
 
   // Fetch all songs with audio
-  const { data: allSongs, isLoading: songsLoading } = useQuery({
+  const { data: allSongs, isLoading: songsLoading, isError: songsError, refetch: retrySongs } = useQuery({
     queryKey: ["rm-radio-songs"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -404,10 +414,7 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
         .order("created_at", { ascending: false })
         .limit(500);
 
-      if (error) {
-        console.error("[RMRadio] Error fetching songs:", error);
-        return [];
-      }
+      if (error) throw error;
 
       return (data || []).map((song) => ({
         id: song.id,
@@ -425,6 +432,8 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
   useQuery({
     queryKey: ["rm-radio-chart-number-one"],
     queryFn: async () => {
+      // Stale #1 audio must not survive an empty/failed chart refresh.
+      chartNumberOneSong = null;
       const { data, error } = await supabase
         .from("chart_singles")
         .select("song_id, title, band_name, total_streams")
@@ -438,11 +447,12 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
 
       const chartSong = data[0];
       // Get the audio_url from songs table
-      const { data: songData } = await supabase
+      const { data: songData, error: songError } = await supabase
         .from("songs")
         .select("audio_url")
         .eq("id", chartSong.song_id)
-        .single();
+        .maybeSingle();
+      if (songError) throw songError;
 
       if (songData?.audio_url) {
         chartNumberOneSong = {
@@ -461,7 +471,7 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
   // Initialize playlist when songs AND content have loaded (so jingles/adverts are interleaved)
   useEffect(() => {
     if (radioContentLoading) return; // wait for jingles/adverts before building playlist
-    if (allSongs && allSongs.length > 0 && !radio.isInitialized) {
+    if (allSongs) {
       radio.initializePlaylist(allSongs, radioContent || []);
     }
   }, [allSongs, radioContent, radioContentLoading, radio.isInitialized]);
@@ -522,7 +532,7 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
             />
             RM Radio
             <Badge variant="outline" className="ml-2">
-              {state.playlist.length} songs
+              {state.playlist.filter(item => item.type === "song").length} songs
             </Badge>
           </DialogTitle>
         </DialogHeader>
@@ -534,6 +544,11 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
               <span className="ml-2 text-muted-foreground">
                 Loading songs...
               </span>
+            </div>
+          ) : songsError ? (
+            <div role="alert" className="text-center py-8 text-destructive">
+              <p>Unable to load the song library right now.</p>
+              <Button variant="outline" className="mt-3" onClick={() => void retrySongs()}>Retry</Button>
             </div>
           ) : state.playlist.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
@@ -681,8 +696,8 @@ export const RMRadioPlayer = ({ open, onOpenChange }: RMRadioPlayerProps) => {
 
               {/* Queue Info */}
               <div className="text-center text-xs text-muted-foreground">
-                Song {state.currentIndex + 1} of {state.playlist.length} •
-                Continuous play
+                {state.currentItem?.type === "content" ? "Station break" : state.currentItem?.type === "host-segment" ? "Host segment" : state.currentItem?.type === "chart-number-one" ? "Chart number one" : "Song"}
+                {" "}• Queue item {state.currentIndex + 1} of {state.playlist.length} • Continuous play
               </div>
             </>
           )}
