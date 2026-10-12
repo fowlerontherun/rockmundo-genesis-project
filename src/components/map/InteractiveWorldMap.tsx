@@ -213,6 +213,7 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
       markers.current = [];
 
       // Add new markers
+      const maxFame = Math.max(1, ...Object.values(cityValues));
       cities.forEach((city) => {
         // Never place unknown cities at a guessed coordinate.
         if (city.latitude == null || city.longitude == null ||
@@ -221,7 +222,7 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
         const coordinates = { lat: city.latitude, lng: city.longitude };
         const isCurrentCity = city.id === currentCityId;
         const fameValue = Math.max(0, cityValues[city.id] ?? 0);
-        const maxFame = Math.max(1, ...Object.values(cityValues));
+
         const fameRatio = Math.min(1, fameValue / maxFame);
         const fameHue = 220 - Math.round(fameRatio * 220);
         const markerColor = valueMode === "fame" ? `hsl(${fameHue} 85% 55%)` : 'hsl(var(--primary))';
