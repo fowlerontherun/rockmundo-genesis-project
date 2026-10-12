@@ -61,8 +61,8 @@ function effectValue(key: string, value: number) {
 }
 
 export function MayorProjectsTab({ cityId, politics }: Props) {
-  const { data: types } = useCityProjectTypes();
-  const { data: projects } = useCityProjects(cityId);
+  const { data: types, isError: typesError, isPending: typesPending, refetch: retryTypes } = useCityProjectTypes();
+  const { data: projects, isError: projectsError, isPending: projectsPending, refetch: retryProjects } = useCityProjects(cityId);
   const { data: treasury } = useCityTreasury(cityId);
   const propose = useProposeCityProject();
   const cancel = useCancelCityProject();
@@ -109,7 +109,9 @@ export function MayorProjectsTab({ cityId, politics }: Props) {
 
   return (
     <div className="space-y-4">
-      <Tabs defaultValue="catalog">
+      {(typesError || projectsError) && <div role="alert" className="text-sm text-destructive">Project information could not be loaded. <Button variant="outline" size="sm" onClick={() => { if (typesError) void retryTypes(); if (projectsError) void retryProjects(); }}>Retry</Button></div>}
+      {(typesPending || projectsPending) && <p role="status" className="text-sm text-muted-foreground">Loading city projects…</p>}
+      {!typesError && !projectsError && !typesPending && !projectsPending && <Tabs defaultValue="catalog">
         <TabsList>
           <TabsTrigger value="catalog">Catalog</TabsTrigger>
           <TabsTrigger value="active">Active ({active.length})</TabsTrigger>
@@ -283,7 +285,7 @@ export function MayorProjectsTab({ cityId, politics }: Props) {
             ))
           )}
         </TabsContent>
-      </Tabs>
+      </Tabs>}
 
       <Dialog
         open={!!confirmType}
