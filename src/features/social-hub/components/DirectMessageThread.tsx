@@ -41,7 +41,7 @@ export function DirectMessageThread({
   useEffect(() => {
     if (messages.length) markRead.mutate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages.length]);
+  }, [messages[messages.length - 1]?.id, messages[messages.length - 1]?.read_at]);
 
   const handleSend = () => {
     if (!draft.trim() || sendMessage.isPending) return;
