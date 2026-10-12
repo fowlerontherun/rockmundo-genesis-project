@@ -58,8 +58,6 @@ export const useVipStatus = () => {
         .limit(1)
         .maybeSingle();
 
-      console.log('[useVipStatus] Query result:', { data, error });
-
       if (error) {
         console.error("Error fetching VIP status:", error);
         throw error;
@@ -88,6 +86,8 @@ export const useVipStatus = () => {
       };
     },
     enabled: !!userId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 15_000,
+    refetchInterval: 15_000,
+    refetchOnWindowFocus: true,
   });
 };
