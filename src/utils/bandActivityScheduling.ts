@@ -224,10 +224,7 @@ export async function checkBandAvailability(
   }
 
   const conflicts: ConflictInfo[] = [];
-  const seen = new Set<string>();
   for (const row of (Array.isArray(overlapping) ? overlapping : []) as any[]) {
-    if (seen.has(row.profile_id)) continue;
-    seen.add(row.profile_id);
     const member = memberDetails.find(m => m.profileId === row.profile_id);
     conflicts.push({
       userId: member?.userId || row.profile_id,
