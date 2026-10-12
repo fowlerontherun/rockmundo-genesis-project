@@ -44,7 +44,17 @@ serve(async (req) => {
         if (!best || (periodEnd(s) ?? 0) > (periodEnd(best) ?? 0)) best = s;
       }
     }
-    if (!best) return json({ synced: true, active: false });
+    if (!best) {
+      // Revoke only Stripe-backed paid entitlements, never gifts or trials.
+      const { error: revokeError } = await admin.from("vip_subscriptions")
+        .update({ status: "expired" })
+        .eq("user_id", user.id)
+        .eq("subscription_type", "paid")
+        .eq("status", "active")
+        .not("stripe_subscription_id", "is", null);
+      if (revokeError) throw revokeError;
+      return json({ synced: true, active: false });
+    }
 
     const end = periodEnd(best);
     if (!end) return json({ synced: false, reason: "no_period_end" });
