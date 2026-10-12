@@ -637,15 +637,16 @@ function TransferDialog({
   onDone: () => void | Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
-  const [destinationId, setDestinationId] = useState(accounts[0]?.id ?? "");
+  const eligibleDestinations = accounts.filter((account) => account.id !== fromAccount.id && account.currencyCode === fromAccount.currencyCode);
+  const [destinationId, setDestinationId] = useState(() => eligibleDestinations[0]?.id ?? "");
   const [amount, setAmount] = useState("");
   const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
   const amountMinor = useMemo(() => parseAmountMinor(amount), [amount]);
-  const valid = amountMinor !== null && amountMinor > 0 && Boolean(destinationId);
+  const valid = amountMinor !== null && amountMinor > 0 && eligibleDestinations.some((account) => account.id === destinationId);
 
   const resetDialog = () => {
     setAmount("");
-    setDestinationId(accounts[0]?.id ?? "");
+    setDestinationId(eligibleDestinations[0]?.id ?? "");
     setIdempotencyKey(null);
   };
 
@@ -678,7 +679,7 @@ function TransferDialog({
     if (!nextOpen && !mutation.isPending) resetDialog();
   };
 
-  if (accounts.length === 0) return null;
+  if (eligibleDestinations.length === 0) return null;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -706,7 +707,7 @@ function TransferDialog({
             >
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {accounts.map((account) => (
+                {eligibleDestinations.map((account) => (
                   <SelectItem key={account.id} value={account.id}>
                     {account.nickname || account.providerName} · {account.accountType.replace("_", " ")}
                   </SelectItem>
