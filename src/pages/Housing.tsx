@@ -329,7 +329,7 @@ const Housing = () => {
                 <Button
                   variant="destructive"
                   size="sm"
-                  onClick={() => endRental.mutate(activeRental.id)}
+                  onClick={() => { if (window.confirm('End your current rental lease? This action cannot be undone.')) endRental.mutate(activeRental.id); }}
                   disabled={endRental.isPending}
                 >
                   End Lease
@@ -496,7 +496,7 @@ const Housing = () => {
                           variant="destructive"
                           size="sm"
                           className="flex-1"
-                          onClick={() => sellProperty.mutate({ property: pp, marketMultiplier: mult })}
+                          onClick={() => { if (window.confirm(`Sell this property for ${formatPrice(sellPrice)}? You will lose ownership.`)) sellProperty.mutate({ property: pp, marketMultiplier: mult }); }}
                           disabled={sellProperty.isPending}
                         >
                           Sell {formatPrice(sellPrice)}

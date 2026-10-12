@@ -96,7 +96,8 @@ export const BandInvitations = ({ onMembershipChanged, highlightedBandId }: Band
         .select("band_id, bands:band_id(name, status, is_solo_artist)")
         .eq("profile_id", profileId)
         .eq("member_status", "active")
-        .eq("is_touring_member", false);
+        .eq("is_touring_member", false)
+        .order("band_id", { ascending: true });
 
       if (error) throw error;
       return (((data || []) as any[]).find((membership: any) => membership.bands?.status === "active") || null) as ActiveMembership | null;
@@ -263,7 +264,7 @@ export const BandInvitations = ({ onMembershipChanged, highlightedBandId }: Band
                     title={acceptanceBlockReason || undefined}
                   >
                     <CheckCircle2 className="mr-1 h-4 w-4" />
-                    {responseMutation.isPending ? "Saving..." : isMembershipLoading ? "Checking..." : "Accept"}
+                    {responseMutation.isPending && responseMutation.variables?.invitation.id === invitation.id ? "Saving..." : isMembershipLoading ? "Checking..." : "Accept"}
                   </Button>
                   <Button
                     size="sm"

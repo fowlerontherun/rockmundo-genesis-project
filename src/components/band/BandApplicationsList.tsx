@@ -172,7 +172,7 @@ export function BandApplicationsList({ bandId, onMemberAdded }: BandApplications
                   disabled={respondMutation.isPending}
                 >
                   <Check className="h-4 w-4 mr-1" />
-                  {respondMutation.isPending ? 'Saving...' : 'Approve'}
+                  {respondMutation.isPending && respondMutation.variables?.applicationId === app.id ? 'Saving...' : 'Approve'}
                 </Button>
               </div>
             ) : (

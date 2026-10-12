@@ -19,7 +19,7 @@ interface SubmitSongDialogProps {
 
 export const SubmitSongDialog = ({ open, onOpenChange, station }: SubmitSongDialogProps) => {
   const [selectedSongId, setSelectedSongId] = useState<string>("");
-  const { submitToStation, isSubmitting } = useRadioStations();
+  const { submitToStationAsync, isSubmitting } = useRadioStations();
   const { data: primaryBand } = usePrimaryBand();
   const bandData = primaryBand?.bands
     ? {
@@ -123,18 +123,21 @@ export const SubmitSongDialog = ({ open, onOpenChange, station }: SubmitSongDial
     enabled: open,
   });
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedSongId) return;
     const song = songs.find(s => s.id === selectedSongId);
 
-    submitToStation({
-      stationId: station.id,
-      songId: selectedSongId,
-      bandId: song?.band_id,
-    });
-
-    onOpenChange(false);
-    setSelectedSongId("");
+    try {
+      await submitToStationAsync({
+        stationId: station.id,
+        songId: selectedSongId,
+        bandId: song?.band_id,
+      });
+      onOpenChange(false);
+      setSelectedSongId("");
+    } catch {
+      // The hook displays the error toast. Retain the selection for retry.
+    }
   };
 
   const isGenreMatch = (songGenre: string) => {

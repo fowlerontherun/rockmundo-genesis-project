@@ -174,6 +174,7 @@ export const useRadioStations = () => {
     retrySubmissions,
     getStationSubmissions,
     submitToStation: submitToStation.mutate,
+    submitToStationAsync: submitToStation.mutateAsync,
     isSubmitting: submitToStation.isPending,
   };
 };
