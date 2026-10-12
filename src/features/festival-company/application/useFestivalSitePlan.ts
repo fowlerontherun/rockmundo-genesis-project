@@ -56,6 +56,7 @@ export const useSaveFestivalSitePlan = () => {
           ["festival-company-setup"],
           ["owned-festival-companies"],
           ["festival-configuration", data.festivalCompanyId],
+          ["festival-ticket-plan", data.festivalCompanyId],
           ["festival-company-editions", data.festivalCompanyId],
         ].map((queryKey) => client.invalidateQueries({ queryKey })),
       );
