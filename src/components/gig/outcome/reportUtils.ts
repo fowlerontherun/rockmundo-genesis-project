@@ -3,7 +3,7 @@ import type { GigExperienceDTO, GigExperienceSongDTO } from "@/features/gig-expe
 import { getPerformanceGrade } from "@/utils/gigPerformanceCalculator";
 
 export const numberFormat = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
-export const money = (value: number) => `${value < 0 ? "-" : ""}$${numberFormat.format(Math.abs(value))}`;
+export const money = (value: number) => new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(value);
 export const pct = (value: number) => `${Math.round(value)}%`;
 export const score = (value: number) => `${value.toFixed(1)}/25`;
 
