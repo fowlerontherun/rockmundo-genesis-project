@@ -31,7 +31,7 @@ export default function WorldAtlas({ cities, currentCityId, bandId, mode = "expl
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [playedFilter, setPlayedFilter] = useState<"all" | "played" | "unplayed">("all");
   const [plannedStops, setPlannedStops] = useState<string[]>([]);
-  const { data: cityFans = [] } = useQuery({
+  const { data: cityFans = [], isError: fameError, isPending: fameLoading, refetch: retryFame } = useQuery({
     queryKey: ["atlas-city-fame", bandId],
     enabled: !!bandId,
     queryFn: async () => {
@@ -43,11 +43,12 @@ export default function WorldAtlas({ cities, currentCityId, bandId, mode = "expl
     },
   });
   const fame = useMemo(() => new Map(cityFans.map(row => [row.city_id, row])), [cityFans]);
+  const fameUnavailable = Boolean(bandId && (fameError || fameLoading));
   const hasPlayed = (cityId: string) => (fame.get(cityId)?.gigs_in_city ?? 0) > 0;
   const filtered = useMemo(() => cities.filter(city =>
-    (playedFilter === "all" || (playedFilter === "played" ? hasPlayed(city.id) : !hasPlayed(city.id))) &&
+    (fameUnavailable || playedFilter === "all" || (playedFilter === "played" ? hasPlayed(city.id) : !hasPlayed(city.id))) &&
     `${city.name} ${city.country}`.toLowerCase().includes(search.trim().toLowerCase())
-  ), [cities, search, playedFilter, fame]);
+  ), [cities, search, playedFilter, fame, fameUnavailable]);
   // Hidden/filtered cities must not remain actionable in the details panel.
   const selected = filtered.find(city => city.id === selectedId);
   const routePoints: RoutePoint[] = plannedStops.flatMap((id, index) => {
@@ -66,13 +67,17 @@ export default function WorldAtlas({ cities, currentCityId, bandId, mode = "expl
   };
   return (
     <div className="space-y-4">
+      {fameError && <div role="alert" className="rounded border border-destructive/40 p-3 text-sm">
+        City fame and gig history could not be loaded. Played/unplayed filters are suspended.
+        <Button size="sm" variant="outline" className="ml-2" onClick={() => void retryFame()}>Retry fame</Button>
+      </div>}
       <div className="flex flex-wrap gap-2 items-center">
         <Input aria-label="Search cities or countries" placeholder="Search cities or countries" value={search}
           onChange={event => setSearch(event.target.value)} className="max-w-sm" />
         {bandId && <div className="flex flex-wrap gap-1" role="group" aria-label="Filter cities by gig history">
           <Button size="sm" variant={playedFilter === "all" ? "default" : "outline"} onClick={() => setPlayedFilter("all")}>All cities</Button>
-          <Button size="sm" variant={playedFilter === "played" ? "default" : "outline"} onClick={() => setPlayedFilter("played")}>Played</Button>
-          <Button size="sm" variant={playedFilter === "unplayed" ? "default" : "outline"} onClick={() => setPlayedFilter("unplayed")}>Not played</Button>
+          <Button size="sm" disabled={fameUnavailable} variant={playedFilter === "played" ? "default" : "outline"} onClick={() => setPlayedFilter("played")}>Played</Button>
+          <Button size="sm" disabled={fameUnavailable} variant={playedFilter === "unplayed" ? "default" : "outline"} onClick={() => setPlayedFilter("unplayed")}>Not played</Button>
         </div>}
         <Badge variant="secondary">{filtered.length} cities</Badge>
       </div>
@@ -107,7 +112,7 @@ export default function WorldAtlas({ cities, currentCityId, bandId, mode = "expl
           {selected ? <>
             <p className="text-sm text-muted-foreground">{selected.country}</p>
             {selected.dominant_genre && <p className="text-sm">Music scene: {selected.dominant_genre}</p>}
-            {bandId && <div className="text-sm space-y-1">
+            {bandId && !fameUnavailable && <div className="text-sm space-y-1">
               <p>Local fame: {(selectedFame?.city_fame ?? 0).toLocaleString()}</p>
               <p>Fans: {(selectedFame?.total_fans ?? 0).toLocaleString()}</p>
               <p>Previous gigs: {selectedFame?.gigs_in_city ?? 0}</p>
@@ -134,7 +139,7 @@ export default function WorldAtlas({ cities, currentCityId, bandId, mode = "expl
             {filtered.map(city => <button key={city.id} type="button" onClick={() => choose(city.id)}
               className={`block w-full rounded px-2 py-1 text-left text-sm hover:bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${selectedId === city.id ? "bg-muted" : ""}`}>
               {city.name} <span className="text-muted-foreground">· {city.country}</span>
-              {bandId && <span className="float-right">{(fame.get(city.id)?.city_fame ?? 0).toLocaleString()}</span>}
+              {bandId && !fameUnavailable && <span className="float-right">{(fame.get(city.id)?.city_fame ?? 0).toLocaleString()}</span>}
             </button>)}
             {filtered.length === 0 && <p className="text-sm text-muted-foreground">No matching cities.</p>}
           </div>
