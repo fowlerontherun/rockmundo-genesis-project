@@ -139,6 +139,7 @@ export default function BandManager() {
       if (!band) throw new Error('The selected band could not be found.');
       setSelectedBand(band);
       await loadBandMembers(bandId);
+      setBandDetailsError(null);
     } catch (error) {
       console.error("Error loading band details:", error);
       setSelectedBand(null);

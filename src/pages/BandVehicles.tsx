@@ -255,7 +255,7 @@ export default function BandVehicles() {
     return "text-red-500";
   };
 
-  if (bandLoading) return <FMPageScaffold title="Band Vehicles" icon={Truck} backTo="/hub/band"><p role="status">Loading your band...</p></FMPageScaffold>;
+  if (bandLoading && profileId) return <FMPageScaffold title="Band Vehicles" icon={Truck} backTo="/hub/band"><p role="status">Loading your band...</p></FMPageScaffold>;
   if (bandError) return <FMPageScaffold title="Band Vehicles" icon={Truck} backTo="/hub/band"><Alert variant="destructive"><AlertTriangle className="h-4 w-4" /><AlertTitle>Unable to check band membership</AlertTitle><AlertDescription>Band details could not be loaded. <Button variant="outline" size="sm" onClick={() => void retryBand()}>Retry</Button></AlertDescription></Alert></FMPageScaffold>;
 
   if (!band) {

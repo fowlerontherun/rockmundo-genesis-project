@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -70,6 +70,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
   const [vocalRole, setVocalRole] = useState<string | undefined>(undefined);
   const [message, setMessage] = useState('');
   const [referralCode, setReferralCode] = useState<string | null>(null);
+  const referralRequest = useRef(0);
   const [shareMoment, setShareMoment] = useState<ShareMoment | null>(null);
   const [referredRecruits, setReferredRecruits] = useState<Array<{ referral_id: string; profile_id: string; profile_name: string; signup_qualified_at: string | null; invitation_status: string | null }>>([]);
   const { toast } = useToast();
@@ -80,14 +81,20 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
   const externalRecruitmentText = `Join me in RockMundo and help build ${bandName}. Create your musician with my invite, then I can recruit you into the band: ${externalRecruitmentUrl}`;
 
   const loadReferralCode = useCallback(async () => {
+    const request = ++referralRequest.current;
     setReferralCode(null);
     if (!currentUserId) return;
     const { data, error } = await (supabase as any).rpc('get_referral_dashboard', { p_profile_id: currentUserId });
+    if (request !== referralRequest.current) return;
     if (error) throw error;
     setReferralCode(data?.code ?? null);
   }, [currentUserId]);
 
-  useEffect(() => { setReferralCode(null); }, [currentUserId]);
+  useEffect(() => {
+    referralRequest.current++;
+    setReferralCode(null);
+    return () => { referralRequest.current++; };
+  }, [currentUserId]);
 
   const loadReferredRecruits = useCallback(async () => {
     const { data, error } = await (supabase as any).rpc('get_band_referral_recruits', { p_band_id: bandId });
