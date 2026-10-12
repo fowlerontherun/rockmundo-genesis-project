@@ -31,7 +31,7 @@ export function useUniversityAttendance(profileId: string | undefined, enrollmen
     queryFn: async () => {
       if (!profileId) return null;
 
-      const { data, error } = await supabase
+      const enrollmentQuery = supabase
         .from("player_university_enrollments")
         .select(`
           *,
@@ -45,13 +45,15 @@ export function useUniversityAttendance(profileId: string | undefined, enrollmen
           )
         `)
         .eq("profile_id", profileId)
-        .in("status", ["enrolled", "in_progress"])
-          // Selected course is resolved server-side after filtering by the character.
+        .in("status", ["enrolled", "in_progress"]);
+      const { data, error } = await (enrollmentId
+        ? enrollmentQuery.eq("id", enrollmentId)
+        : enrollmentQuery)
         .order("enrolled_at", { ascending: false })
-        .limit(enrollmentId ? 100 : 1);
-
-      if (error && error.code !== "PGRST116") throw error;
-      return ((data ?? []).find((row: any) => !enrollmentId || row.id === enrollmentId) ?? null) as UniversityEnrollment | null;
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data as UniversityEnrollment | null;
     },
     enabled: !!profileId,
   });
