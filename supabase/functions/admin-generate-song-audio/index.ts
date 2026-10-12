@@ -156,6 +156,12 @@ serve(async (req) => {
       addLog(`Creator gender: ${creatorGender || 'not set'}`)
     }
 
+    // Admin invocations require the same durable attempt record as player requests.
+    const { data: attempt, error: attemptError } = await supabase.from('song_generation_attempts')
+      .insert({ user_id: song.user_id || user.id, triggered_by_user_id: user.id, song_id: songId, status: 'generating' })
+      .select('id').single();
+    if (attemptError || !attempt) throw new Error(`Could not record admin audio attempt: ${attemptError?.message || 'unknown error'}`);
+
     // Update status to generating
     addLog('Setting status to "generating"...')
     await supabase
@@ -172,7 +178,8 @@ serve(async (req) => {
     // Build comprehensive prompt for MiniMax Music-1.5
     const rawSongTitle = project?.title || song.title || 'Untitled'
     const cleanedSongTitle = cleanProfanity(rawSongTitle)
-    const primaryGenre = (song.genre || project?.genres?.[0] || 'pop').replace(/^Style:\s*/i, '').trim()
+    const isAcousticVersion = String(song.version || '').toLowerCase() === 'acoustic';
+    const primaryGenre = isAcousticVersion ? 'acoustic' : (song.genre || project?.genres?.[0] || 'pop').replace(/^Style:\s*/i, '').trim()
     const chordProgression = project?.chord_progressions?.progression || null
     const chordName = project?.chord_progressions?.name || null
     const themeName = project?.song_themes?.name || null
@@ -283,6 +290,8 @@ serve(async (req) => {
     // Build the style prompt for MiniMax Music-1.5
     let styleParts: string[] = []
 
+    // Acoustic versions keep their underlying stored genre, but always render acoustically.
+    if (isAcousticVersion) styleParts.push("stripped-back acoustic guitar-led arrangement");
     // Use custom prompt if provided, otherwise build from metadata
     if (customPrompt) {
       addLog('Using custom prompt provided by admin')
@@ -359,6 +368,10 @@ serve(async (req) => {
     // Combine for full prompt reference
     const fullPrompt = `Style: ${stylePrompt}\n\nLyrics:\n${formattedLyrics}`
 
+    // Save the exact prompt on the durable audit attempt as well as the song.
+    const { error: promptAuditError } = await supabase.from('song_generation_attempts')
+      .update({ prompt_used: fullPrompt }).eq('id', attempt.id);
+    if (promptAuditError) throw promptAuditError;
     // Save prompt for reference
     addLog('Saving prompt to database...')
     await supabase
@@ -398,6 +411,10 @@ serve(async (req) => {
       throw new Error(`Replicate API error: ${prediction.detail || prediction.error || predictionResponse.status}`)
     }
 
+    if (!prediction.id) throw new Error('Provider did not return a prediction ID');
+    const { error: predictionLinkError } = await supabase.from('song_generation_attempts')
+      .update({ provider_prediction_id: prediction.id }).eq('id', attempt.id);
+    if (predictionLinkError) throw predictionLinkError;
     addLog(`Prediction created: ${prediction.id}`)
     addLog(`Status: ${prediction.status}`)
     addLog(`Web URL: ${prediction.urls?.web || 'N/A'}`)

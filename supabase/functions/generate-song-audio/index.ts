@@ -210,8 +210,9 @@ serve(async (req) => {
       .select()
       .single()
 
-    if (attemptError) {
+    if (attemptError || !attempt) {
       console.error('[generate-song-audio] Failed to create attempt record:', attemptError)
+      throw new Error('Could not record the generation attempt; no provider request was sent')
     }
 
     // Update song status to generating
@@ -467,6 +468,11 @@ serve(async (req) => {
       throw new Error(`Replicate API error: ${prediction.detail || prediction.error || predictionResponse.status}`)
     }
 
+    if (!prediction.id) throw new Error("Provider did not return a prediction ID");
+    const { error: predictionLinkError } = await supabase.from("song_generation_attempts")
+      .update({ provider_prediction_id: prediction.id })
+      .eq("id", attempt.id);
+    if (predictionLinkError) throw predictionLinkError;
     console.log(`[generate-song-audio] Async prediction created: ${prediction.id} for song ${songId}`)
     console.log(`[generate-song-audio] Prediction web URL: ${prediction.urls?.web}`)
 
