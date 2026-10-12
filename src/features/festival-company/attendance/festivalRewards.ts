@@ -33,6 +33,7 @@ export const parseFestivalRewardSummary = (value: unknown): FestivalRewardSummar
     || !isBoundedInteger(value.distinctActivityTypes, 12)
     || !isBoundedInteger(value.inspiration, 100)
     || !(value.settledAt === null || (typeof value.settledAt === "string" && value.settledAt.trim() !== "" && Number.isFinite(Date.parse(value.settledAt))))
+    || (value.settled !== (value.settledAt !== null))
     || !isRecord(value.breakdown)
     || typeof value.serverNow !== "string" || !value.serverNow.trim() || !Number.isFinite(Date.parse(value.serverNow))) {
     throw new Error("malformed_festival_reward_summary");

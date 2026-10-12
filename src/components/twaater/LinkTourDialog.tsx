@@ -33,7 +33,8 @@ export const LinkTourDialog = ({ open, onOpenChange, onSelect }: LinkTourDialogP
       const { data: memberships } = await (supabase as any)
         .from("band_members")
         .select("band_id")
-        .eq("profile_id", profileId);
+        .eq("profile_id", profileId)
+        .eq("member_status", "active");
 
       const bandIds = memberships?.map((m: any) => m.band_id) || [];
       if (bandIds.length === 0) return [];

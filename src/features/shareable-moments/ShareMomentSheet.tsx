@@ -38,7 +38,7 @@ export function ShareMomentSheet({moment,open,onOpenChange}:{moment:ShareMoment|
  useEffect(()=>{let cancelled=false;const image=new Image();image.onload=()=>{if(!cancelled){logoRef.current=image;setAvatarVersion(v=>v+1)}};image.onerror=()=>{if(!cancelled)setAvatarVersion(v=>v+1)};image.src=rockmundoLogo;return()=>{cancelled=true};},[]);
  useEffect(()=>{if(sheetOpen&&draft&&canvasRef.current){renderShareMoment(canvasRef.current,draft,format,avatarRef.current,artworkRef.current,logoRef.current);trackShareAnalyticsEvent("share_rendered",{momentType:draft.type,format,template:draft.referralTemplate||draft.visualTheme||null,channel:"render"});}},[sheetOpen,draft,format,avatarVersion]);
  if(!moment||!draft)return null;
- if(promptOnly&&!promptAccepted){
+ if(open&&promptOnly&&!promptAccepted){
    return <div
      role="region"
      aria-label="Share this RockMundo moment"

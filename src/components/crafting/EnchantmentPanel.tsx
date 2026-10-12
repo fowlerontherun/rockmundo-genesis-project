@@ -138,7 +138,7 @@ export const EnchantmentPanel = () => {
                       </span>
                       <span className="text-[10px] text-muted-foreground">
                         {ae.enchantment?.stat_modifier
-                          ? formatStatMods(ae.enchantment.stat_modifier)
+                          ? formatStatMods(Object.fromEntries(Object.entries(ae.enchantment.stat_modifier).map(([key, value]) => [key, value * Math.max(1, ae.stack_count || 1)])))
                           : ""}
                       </span>
                     </div>

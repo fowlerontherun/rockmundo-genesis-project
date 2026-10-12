@@ -139,14 +139,16 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
     mutationFn: async () => {
       if (!myProfileId) return;
       if (conversationId) {
-        await (supabase as any).rpc("mark_conversation_read", { conversation_id: conversationId, read_message_id: null });
+        const { error } = await (supabase as any).rpc("mark_conversation_read", { conversation_id: conversationId, read_message_id: null });
+        if (error) throw error;
       } else if (directChannelId) {
-        await (supabase as any)
+        const { error } = await (supabase as any)
           .from("direct_messages")
           .update({ read_at: new Date().toISOString() })
           .eq("channel_id", directChannelId)
           .eq("recipient_profile_id", myProfileId)
           .is("read_at", null);
+        if (error) throw error;
       }
       queryClient.invalidateQueries({ queryKey: ["dm-unread", myProfileId] });
       queryClient.invalidateQueries({ queryKey: ["mobile-conversations", myProfileId] });

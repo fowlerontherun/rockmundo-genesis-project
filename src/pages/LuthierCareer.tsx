@@ -27,6 +27,8 @@ function LuthierCareerInner() {
   const basicLevel = levelFor("luthiery_basic_technical");
   const unlocked = basicLevel > 0;
 
+  if (loading) return <div role="status" className="p-6 text-sm">Loading Luthier career eligibility…</div>;
+
   return (
     <FMPageScaffold
       title="Luthier"
