@@ -18,7 +18,9 @@ export function useActiveProfile() {
       return getActiveProfile(user.id);
     },
     enabled: !!user?.id,
-    staleTime: 60 * 1000, // 1 minute
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   return {
