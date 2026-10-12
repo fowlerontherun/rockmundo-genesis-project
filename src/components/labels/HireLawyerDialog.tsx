@@ -38,27 +38,7 @@ export function HireLawyerDialog({
 
   const hireLawyerMutation = useMutation({
     mutationFn: async () => {
-      // Get profile ID from user ID
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("id, cash")
-        .eq("user_id", userId)
-        .single();
-
-      if (profileError || !profile) throw new Error("Could not find profile");
-      if (profile.cash < LAWYER_COST) throw new Error("Insufficient funds");
-
-      // Deduct cost and activate lawyer
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          cash: profile.cash - LAWYER_COST,
-          has_active_lawyer: true,
-          lawyer_hired_at: new Date().toISOString(),
-          lawyer_expires_at: null, // Permanent until contract signed
-        })
-        .eq("id", profile.id);
-
+      const { error } = await (supabase as any).rpc("hire_artist_lawyer_atomic");
       if (error) throw error;
     },
     onSuccess: () => {
