@@ -9,7 +9,7 @@ export function NewPlayerWelcome({ playerId, name }: { playerId: string; name: s
   const connection = usePlayerConnection(playerId);
   const permission = useSocialPermission(playerId);
   const isSelf = profileId === playerId;
-  const restricted = permission.data?.is_interaction_restricted || permission.data?.can_send_friend_request === false;
+  const restricted = !permission.data || permission.isError || permission.data.is_interaction_restricted || permission.data.can_send_friend_request === false;
   const state = connection.data;
 
   return (
