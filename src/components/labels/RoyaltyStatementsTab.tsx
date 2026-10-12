@@ -127,7 +127,7 @@ export function RoyaltyStatementsTab({ artistEntities }: RoyaltyStatementsTabPro
                 <TableHead>Release</TableHead>
                 <TableHead className="text-right">Artist share</TableHead>
                 <TableHead className="text-right">Label share</TableHead>
-                <TableHead className="text-right">Recoup balance</TableHead>
+                <TableHead className="text-right">Current recoup balance</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
