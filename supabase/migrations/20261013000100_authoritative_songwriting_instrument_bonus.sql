@@ -35,3 +35,20 @@ BEGIN
 END $$;
 REVOKE ALL ON FUNCTION public.complete_songwriting_project_with_instruments(uuid,uuid,text,uuid) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.complete_songwriting_project_with_instruments(uuid,uuid,text,uuid) TO authenticated;
+
+-- The 'keep song as-is' path gets the exact same authoritative bonus and
+-- remains all-or-nothing with the skipped final polish.
+CREATE OR REPLACE FUNCTION public.skip_and_complete_songwriting_project_with_instruments(
+ p_profile_id uuid,p_project_id uuid,p_catalog_status text DEFAULT 'private',p_band_id uuid DEFAULT NULL
+) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
+DECLARE v_result jsonb;
+BEGIN
+ PERFORM public.skip_songwriting_polish(p_profile_id,p_project_id);
+ v_result:=public.complete_songwriting_project_with_instruments(
+   p_profile_id,p_project_id,p_catalog_status,p_band_id);
+ RETURN v_result||jsonb_build_object('polishSkipped',true);
+END $$;
+REVOKE ALL ON FUNCTION public.skip_and_complete_songwriting_project_with_instruments(uuid,uuid,text,uuid)
+ FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.skip_and_complete_songwriting_project_with_instruments(uuid,uuid,text,uuid)
+ TO authenticated;
