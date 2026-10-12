@@ -13,118 +13,36 @@ export default function DonationSuccess() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get("session_id");
-  const { profileId, userId } = useActiveProfile();
+  const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const [processed, setProcessed] = useState(false);
   const [processing, setProcessing] = useState(true);
+  const [failure, setFailure] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    const processRewards = async () => {
-      if (!profileId || processed) return;
-
-      try {
-        // Award XP via experience_ledger
-        const { error: xpError } = await supabase
-          .from("experience_ledger")
-          .insert({
-            user_id: userId,
-            profile_id: profileId,
-            activity_type: "project_donation",
-            xp_amount: 1000,
-            metadata: { session_id: sessionId, description: "Thank you for your generous donation to Rockmundo!" },
-          });
-
-        if (xpError) console.error("XP error:", xpError);
-
-        // Update profile experience
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("experience")
-          .eq("id", profileId)
-          .single();
-
-        if (profile) {
-          await supabase
-            .from("profiles")
-            .update({ experience: (profile.experience || 0) + 1000 })
-            .eq("id", profileId);
-        }
-
-        // Check if donation achievement exists, if not create it
-        let achievementId: string | null = null;
-        const { data: existingAchievement } = await supabase
-          .from("achievements")
-          .select("id")
-          .eq("name", "Project Supporter")
-          .single();
-
-        if (existingAchievement) {
-          achievementId = existingAchievement.id;
-        } else {
-          const { data: newAchievement } = await supabase
-            .from("achievements")
-            .insert({
-              name: "Project Supporter",
-              description: "Generously donated to support Rockmundo development",
-              icon: "heart",
-              category: "special",
-              rarity: "legendary",
-              requirements: { donation: true },
-              rewards: { xp: 1000, badge: "supporter" },
-            })
-            .select("id")
-            .single();
-          achievementId = newAchievement?.id ?? null;
-        }
-
-        // Award achievement if not already owned
-        if (achievementId) {
-          const { data: existingPlayerAchievement } = await supabase
-            .from("player_achievements")
-            .select("id")
-            .eq("profile_id", profileId)
-            .eq("achievement_id", achievementId)
-            .single();
-
-          if (!existingPlayerAchievement) {
-            await supabase.from("player_achievements").insert({
-              user_id: userId,
-              achievement_id: achievementId,
-              progress: { donation: true },
-              unlocked_at: new Date().toISOString(),
-            });
-          }
-        }
-
-        // Log activity
-        await supabase.from("activity_feed").insert({
-          user_id: userId,
-          activity_type: "donation",
-          message: "Made a generous donation to support Rockmundo! 💖",
-          earnings: 0,
-          metadata: { session_id: sessionId, xp_earned: 1000 },
-        });
-
-        setProcessed(true);
-
-        toast({
-          title: "Rewards Claimed! 🎉",
-          description: "You received 1000 XP and the Project Supporter achievement!",
-        });
-      } catch (error) {
-        console.error("Error processing rewards:", error);
-        toast({
-          title: "Processing Error",
-          description: "There was an issue processing your rewards. Please contact support.",
-          variant: "destructive",
-        });
-      } finally {
-        setProcessing(false);
-      }
-    };
-
-    processRewards();
-  }, [profileId, processed, sessionId, toast]);
+    if (!profileId) return;
+    if (!sessionId) {
+      setFailure("No paid checkout session was provided.");
+      setProcessing(false);
+      return;
+    }
+    let cancelled = false;
+    setProcessing(true);
+    setFailure(null);
+    void supabase.functions.invoke("fulfill-donation-reward", {
+      body: { session_id: sessionId, profile_id: profileId },
+    }).then(({ data, error }) => {
+      if (cancelled) return;
+      if (error || !data?.success) throw error ?? new Error(data?.error || "Could not redeem donation");
+      setProcessed(true);
+      toast({ title: "Donation rewards confirmed!", description: "Your verified payment was processed securely." });
+    }).catch((err) => {
+      if (cancelled) return;
+      setFailure(err instanceof Error ? err.message : "Could not verify this donation.");
+    }).finally(() => { if (!cancelled) setProcessing(false); });
+    return () => { cancelled = true; };
+  }, [profileId, sessionId, attempt, toast]);
 
   return (
     <FMPageScaffold title="Thank You" icon={Heart} backTo="/hub/career-business">
@@ -145,7 +63,7 @@ export default function DonationSuccess() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="p-4 rounded-lg bg-gradient-to-br from-amber-500/10 to-transparent border border-amber-500/30">
               <Sparkles className="h-8 w-8 text-amber-500 mx-auto mb-2" />
-              <p className="font-semibold text-amber-400">+1000 XP</p>
+              <p className="font-semibold text-amber-400">{processed ? "+1000 XP" : "1000 XP pending"}</p>
               <p className="text-xs text-muted-foreground">Experience Earned</p>
             </div>
 
@@ -157,9 +75,11 @@ export default function DonationSuccess() {
           </div>
 
           <Badge className="bg-gradient-to-r from-pink-500 to-amber-500 text-white px-4 py-2">
-            {processing ? "Processing rewards..." : "Rewards Claimed!"}
+            {processing ? "Verifying payment..." : processed ? "Rewards Claimed!" : "Rewards not confirmed"}
           </Badge>
 
+          {failure && <p role="alert" className="text-sm text-destructive">{failure}</p>}
+          {!processed && !processing && <Button variant="outline" onClick={() => setAttempt((n) => n + 1)}>Retry verified payment</Button>}
           <Button
             onClick={() => navigate("/home")}
             className="w-full bg-gradient-to-r from-pink-500 to-amber-500 hover:from-pink-600 hover:to-amber-600 text-white"
