@@ -102,15 +102,12 @@ export async function checkTimeSlotAvailable(
       p_exclude_id: excludeId || null,
     });
 
-    // If RPC fails, assume no conflict to allow booking to proceed
-    if (rpcError) {
-      console.warn('Scheduling conflict check failed:', rpcError);
-      return { available: false };
-    }
+    // A failed authoritative check is not a conflict-free time slot.
+    if (rpcError) throw new Error('Could not verify schedule availability: ' + rpcError.message);
 
     if (hasConflict) {
       // Get the conflicting activity details
-      const { data: conflict } = await (supabase as any)
+      const { data: conflict, error: conflictError } = await (supabase as any)
         .from('player_scheduled_activities')
         .select('*')
         .eq('user_id', userId)
@@ -118,14 +115,14 @@ export async function checkTimeSlotAvailable(
         .or(`and(scheduled_start.lte.${start.toISOString()},scheduled_end.gt.${start.toISOString()}),and(scheduled_start.lt.${end.toISOString()},scheduled_end.gte.${end.toISOString()}),and(scheduled_start.gte.${start.toISOString()},scheduled_end.lte.${end.toISOString()})`)
         .limit(1)
         .maybeSingle();
-
+      if (conflictError) throw new Error('Unable to load scheduling conflict details: ' + conflictError.message);
       return { available: false, conflictingActivity: conflict };
     }
 
     return { available: true };
   } catch (error) {
     console.warn('Error checking time slot availability:', error);
-    return { available: false };
+    throw error instanceof Error ? error : new Error('Could not verify scheduling conflicts. Please retry.');
   }
 }
 
