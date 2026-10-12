@@ -73,12 +73,14 @@ export function ContractDesignerDialog({
   useEffect(() => {
     if (!open || loaded) return;
 
+    let cancelled = false;
     const loadDefaults = async () => {
       try {
         const metrics = bandId
           ? await fetchBandMetrics(bandId)
           : { fame: bandFame, total_fans: bandFans, release_count: 0 };
 
+        if (cancelled) return;
         const terms = generateContractTerms(metrics, labelReputation, songQuality);
         setAdvance(terms.advance_amount);
         setArtistRoyalty(terms.royalty_artist_pct);
@@ -90,17 +92,18 @@ export function ContractDesignerDialog({
         setTerritories(terms.territories);
         setLoaded(true);
       } catch (e) {
+        if (cancelled) return;
         console.error("Failed to load contract defaults", e);
         setLoaded(true);
       }
     };
-    loadDefaults();
+    void loadDefaults();
+    return () => { cancelled = true; };
   }, [open, loaded, bandId, bandFame, bandFans, labelReputation, songQuality]);
 
-  // Reset loaded state when dialog closes
-  useEffect(() => {
-    if (!open) setLoaded(false);
-  }, [open]);
+  // Reset suggested terms when the dialog closes or another band is selected.
+  useEffect(() => { setLoaded(false); }, [bandId]);
+  useEffect(() => { if (!open) setLoaded(false); }, [open]);
 
   const toggleTerritory = (t: string) => {
     setTerritories((prev) =>

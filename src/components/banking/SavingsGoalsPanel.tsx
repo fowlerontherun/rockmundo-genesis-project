@@ -257,6 +257,7 @@ function FundSavingsGoalDialog({
   const previewEpoch = useRef(0);
   const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
   const [loadingSources, setLoadingSources] = useState(false);
+  const sourceRequestEpoch = useRef(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -276,11 +277,13 @@ function FundSavingsGoalDialog({
   };
 
   const loadSources = async () => {
+    const requestEpoch = ++sourceRequestEpoch.current;
     setLoadingSources(true);
     setError(null);
     resetPreview();
     try {
       const result = await getSavingsGoalFundingSources(goal.id);
+      if (sourceRequestEpoch.current !== requestEpoch) return;
       const nextSources = result.sources ?? [];
       const eligibleSources = nextSources.filter((candidate) => candidate.eligible);
       const preferredSource =
@@ -290,11 +293,12 @@ function FundSavingsGoalDialog({
       setSources(nextSources);
       setSourceKey(preferredSource ? sourceKeyFor(preferredSource) : "");
     } catch (loadError) {
+      if (sourceRequestEpoch.current !== requestEpoch) return;
       setSources([]);
       setSourceKey("");
       setError(errorMessage(loadError));
     } finally {
-      setLoadingSources(false);
+      if (sourceRequestEpoch.current === requestEpoch) setLoadingSources(false);
     }
   };
 
@@ -306,7 +310,7 @@ function FundSavingsGoalDialog({
   }, [open, goal.id]);
 
   const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) previewEpoch.current += 1;
+    if (!nextOpen) { previewEpoch.current += 1; sourceRequestEpoch.current += 1; }
     setOpen(nextOpen);
     if (!nextOpen) {
       setAmount("");
@@ -342,7 +346,7 @@ function FundSavingsGoalDialog({
   };
 
   const confirmFunding = async () => {
-    if (!source?.eligible || !preview || !idempotencyKey) return;
+    if (submitting || !source?.eligible || !preview || !idempotencyKey) return;
 
     setSubmitting(true);
     setError(null);
@@ -403,7 +407,7 @@ function FundSavingsGoalDialog({
                   setError(null);
                   resetPreview();
                 }}
-                disabled={!hasEligibleSource}
+                disabled={!hasEligibleSource || submitting}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select wallet or account" />
@@ -437,6 +441,7 @@ function FundSavingsGoalDialog({
                 min="0"
                 step={source?.sourceKind === "wallet" ? "1" : "0.01"}
                 value={amount}
+                disabled={submitting}
                 onChange={(event) => {
                   setAmount(event.target.value);
                   setError(null);

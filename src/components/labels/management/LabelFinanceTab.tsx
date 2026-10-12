@@ -127,19 +127,21 @@ export function LabelFinanceTab({ labelId, labelBalance, isBankrupt, balanceWent
 
       // Get band names
       const bandIds = [...new Set(contracts.map(c => c.band_id).filter(Boolean))];
-      const { data: bands } = await supabase
+      const { data: bands, error: bandsError } = await supabase
         .from("bands")
         .select("id, name")
         .in("id", bandIds);
+      if (bandsError) throw bandsError;
       const bandMap = new Map((bands || []).map(b => [b.id, b.name]));
 
       // Get revenue per contract
       const contractIds = contracts.map(c => c.id);
-      const { data: revTx } = await supabase
+      const { data: revTx, error: revError } = await supabase
         .from("label_financial_transactions")
         .select("related_contract_id, transaction_type, amount")
         .eq("label_id", labelId)
         .in("related_contract_id", contractIds);
+      if (revError) throw revError;
 
       // Aggregate per contract
       const contractRevMap = new Map<string, { revenue: number; marketing: number; expenses: number }>();

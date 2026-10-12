@@ -89,31 +89,37 @@ export function LabelRosterTab({
 
   // Get chart entries for releases
   const releaseIds = releases.map((r) => r.id);
-  const { data: chartEntries = [] } = useQuery({
+  const { data: chartEntries = [], isError: chartError, refetch: retryCharts } = useQuery({
     queryKey: ["label-roster-charts", releaseIds],
     queryFn: async () => {
       if (releaseIds.length === 0) return [];
-      const { data } = await supabase
-        .from("chart_entries")
-        .select("release_id, rank, chart_type, chart_date")
-        .in("release_id", releaseIds)
-        .order("chart_date", { ascending: false })
-        .limit(200);
-      return data || [];
+      const all: Array<{ release_id: string | null; rank: number | null; chart_type: string; chart_date: string }> = [];
+      for (let offset = 0; ; offset += 500) {
+        const { data, error } = await supabase.from("chart_entries")
+          .select("release_id, rank, chart_type, chart_date")
+          .in("release_id", releaseIds)
+          .order("chart_date", { ascending: false })
+          .range(offset, offset + 499);
+        if (error) throw error;
+        all.push(...(data ?? []));
+        if (!data || data.length < 500) break;
+      }
+      return all;
     },
     enabled: releaseIds.length > 0,
   });
 
   // Get financial data per contract
-  const { data: financialsByContract = new Map() } = useQuery({
+  const { data: financialsByContract = new Map(), isError: financialError, refetch: retryFinancials } = useQuery({
     queryKey: ["label-roster-financials", labelId, contractIds],
     queryFn: async () => {
       if (contractIds.length === 0) return new Map();
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("label_financial_transactions")
         .select("related_contract_id, transaction_type, amount")
         .eq("label_id", labelId)
         .in("related_contract_id", contractIds);
+      if (error) throw error;
 
       const map = new Map<string, { revenue: number; marketing: number }>();
       (data || []).forEach((tx) => {
@@ -146,6 +152,11 @@ export function LabelRosterTab({
         queryKey: ["label-roster-contracts", labelId],
       });
       queryClient.invalidateQueries({ queryKey: ["label-artists", labelId] });
+      queryClient.invalidateQueries({ queryKey: ["label-all-contracts", labelId] });
+      queryClient.invalidateQueries({ queryKey: ["label-pending-contract-count", labelId] });
+      queryClient.invalidateQueries({ queryKey: ["label-artist-breakdown", labelId] });
+      queryClient.invalidateQueries({ queryKey: ["label-finance-summary", labelId] });
+      queryClient.invalidateQueries({ queryKey: ["label-releases"] });
       toast.success("Artist released from roster");
     },
     onError: () => toast.error("Failed to release artist"),
@@ -172,6 +183,8 @@ export function LabelRosterTab({
       </Card>
     );
   }
+
+  if (chartError || financialError) return <Card role="alert"><CardContent className="p-6 text-sm text-destructive">Roster charts or finances could not be verified. <Button variant="outline" size="sm" onClick={() => { if (chartError) void retryCharts(); if (financialError) void retryFinancials(); }}>Retry</Button></CardContent></Card>;
 
   return (
     <div className="space-y-4">

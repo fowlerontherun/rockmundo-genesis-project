@@ -51,7 +51,7 @@ export function CreateLabelReleaseDialog({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const contractOptions = useMemo(() => contracts.filter((contract) => contract.status !== "terminated"), [contracts]);
+  const contractOptions = useMemo(() => contracts.filter((contract) => contract.status === "active"), [contracts]);
 
   const handleToggleTerritory = (code: string) => {
     setSelectedTerritories((prev) =>
@@ -80,7 +80,18 @@ export function CreateLabelReleaseDialog({
       return;
     }
 
+    if (!contractOptions.some((contract) => contract.id === selectedContractId)) {
+      toast({ title: "Inactive contract", description: "You may plan releases only for active label contracts.", variant: "destructive" });
+      return;
+    }
     setIsSubmitting(true);
+    const { data: currentContract, error: contractError } = await supabase.from("artist_label_contracts")
+      .select("status").eq("id", selectedContractId).maybeSingle();
+    if (contractError || currentContract?.status !== "active") {
+      toast({ title: "Contract no longer active", description: contractError?.message || "Refresh your contract list before planning a release.", variant: "destructive" });
+      setIsSubmitting(false);
+      return;
+    }
     const { error } = await supabase.from("label_releases").insert({
       contract_id: selectedContractId,
       title: title.trim(),
