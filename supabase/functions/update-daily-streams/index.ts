@@ -57,7 +57,9 @@ Deno.serve(async (req) => {
       requestId: payload?.requestId ?? null,
     });
 
-    const { data: streamingReleases, error: streamingError } = await supabase
+    const streamingReleases: any[] = [];
+    for (let offset = 0; ; offset += 500) {
+    const { data: streamingPage, error: streamingError } = await supabase
       .from('song_releases')
       .select(`
         id, 
@@ -75,10 +77,11 @@ Deno.serve(async (req) => {
       .eq('is_active', true)
       .eq('release_type', 'streaming')
       .in('songs.status', ['recorded', 'released'])
-      .lte('release_date', new Date().toISOString());
-
-    if (streamingError) {
-      throw streamingError;
+      .lte('release_date', new Date().toISOString())
+      .order('id', { ascending: true }).range(offset, offset + 499);
+    if (streamingError) throw streamingError;
+    streamingReleases.push(...(streamingPage ?? []));
+    if (!streamingPage || streamingPage.length < 500) break;
     }
 
     // Get active band count for market scaling
@@ -122,28 +125,31 @@ Deno.serve(async (req) => {
     // Pre-fetch label contract info for releases
     let releaseContractMap = new Map<string, { contractId: string; labelId: string; labelCutPct: number; advanceAmount: number; recoupedAmount: number; dealTypeName: string; endDate: string }>();
     if (releaseIds.length > 0) {
-      const { data: releasesWithContracts } = await supabase
+      const { data: releasesWithContracts, error: contractLinksError } = await supabase
         .from('releases')
         .select('id, label_contract_id, label_revenue_share_pct')
         .in('id', releaseIds)
         .not('label_contract_id', 'is', null);
+      if (contractLinksError) throw contractLinksError;
 
       const contractIds = [...new Set((releasesWithContracts || []).map(r => r.label_contract_id).filter(Boolean))];
       if (contractIds.length > 0) {
-        const { data: contracts } = await supabase
+        const { data: contracts, error: contractsError } = await supabase
           .from('artist_label_contracts')
           .select('id, label_id, royalty_label_pct, royalty_artist_pct, advance_amount, recouped_amount, status, deal_type_id, end_date')
           .in('id', contractIds)
           .eq('status', 'active');
+        if (contractsError) throw contractsError;
 
         // Fetch deal type names
         const dealTypeIds = [...new Set((contracts || []).map(c => c.deal_type_id).filter(Boolean))];
         const dealTypeNameMap = new Map<string, string>();
         if (dealTypeIds.length > 0) {
-          const { data: dealTypes } = await supabase
+          const { data: dealTypes, error: dealTypesError } = await supabase
             .from('label_deal_types')
             .select('id, name')
             .in('id', dealTypeIds);
+          if (dealTypesError) throw dealTypesError;
           for (const dt of dealTypes || []) {
             dealTypeNameMap.set(dt.id, dt.name);
           }
@@ -233,7 +239,7 @@ Deno.serve(async (req) => {
         if (!bandCountryFansMap.has(entry.band_id)) {
           bandCountryFansMap.set(entry.band_id, new Map());
         }
-        bandCountryFansMap.get(entry.band_id)!.set(entry.country, entry.fame || 0);
+        bandCountryFansMap.get(entry.band_id)!.set(entry.country, entry.total_fans || 0);
       }
     }
 
@@ -274,7 +280,8 @@ Deno.serve(async (req) => {
       return Math.max(0.5, Math.min(1.5, 1.0 + wave * 0.35 + drift));
     }
 
-    const monthIndex = new Date().getMonth();
+    // Use the same accelerated game calendar as daily sales.
+    const monthIndex = Math.floor((gameDaysElapsed % 120) / 10);
     const season = monthIndex >= 2 && monthIndex <= 4 ? 'spring'
       : monthIndex >= 5 && monthIndex <= 7 ? 'summer'
       : monthIndex >= 8 && monthIndex <= 10 ? 'autumn' : 'winter';
@@ -369,30 +376,42 @@ Deno.serve(async (req) => {
         const dailyStreams = Math.min(5_000_000, dailyStreamsRaw);
         const dailyRevenueDollars = Math.round(dailyStreams * 0.004);
 
-        let regionBreakdown: Array<{ region: string; streams: number; revenue: number }> = [];
+        // Largest-remainder allocation guarantees that regional analytics reconcile
+        // exactly to the release-wide streams and revenue, including very small totals.
+        const allocateUnits = (total: number, weights: number[]): number[] => {
+          if (!weights.length) return [];
+          const normalized = weights.map(w => Number.isFinite(w) ? Math.max(0, w) : 0);
+          const sum = normalized.reduce((a, b) => a + b, 0);
+          const safeWeights = sum > 0 ? normalized : weights.map(() => 1);
+          const safeSum = safeWeights.reduce((a, b) => a + b, 0);
+          const exact = safeWeights.map(w => (w / safeSum) * total);
+          const counts = exact.map(Math.floor);
+          let remainder = total - counts.reduce((a, b) => a + b, 0);
+          const order = exact.map((n, i) => ({ i, fractional: n - Math.floor(n) }))
+            .sort((a, b) => b.fractional - a.fractional || a.i - b.i);
+          for (const row of order) { if (remainder-- <= 0) break; counts[row.i]++; }
+          return counts;
+        };
+        const weightedRegions: Array<{ region: string; weight: number }> = [];
         if (hasTerritories) {
           const preferredRegions = new Set(marketingStrategy.regions.map(region => String(region).trim().toLowerCase()));
-          const hasRegionalFocus = preferredRegions.size > 0 && !preferredRegions.has("global");
+          const hasRegionalFocus = preferredRegions.size > 0 && !preferredRegions.has('global');
           const weightedCountries = releaseTerritories.map(t => {
             const fame = bandFans?.get(t.country) || 1;
-            return { country: t.country,
-              weight: fame * (hasRegionalFocus && preferredRegions.has(String(t.country).toLowerCase()) ? 2 : 1) };
+            return { country: t.country, weight: fame * (hasRegionalFocus && preferredRegions.has(String(t.country).toLowerCase()) ? 2 : 1) };
           });
-          const totalWeight = weightedCountries.reduce((s, c) => s + c.weight, 0);
-          for (const wc of weightedCountries) {
-            const fraction = wc.weight / totalWeight;
-            const regionStreams = Math.max(1, Math.round(dailyStreams * fraction));
-            const regionRevenue = Math.round(regionStreams * 0.004);
-            regionBreakdown.push({ region: wc.country, streams: regionStreams, revenue: regionRevenue });
-          }
+          weightedRegions.push(...weightedCountries.map(wc => ({ region: wc.country, weight: wc.weight })));
         } else {
           const REGIONS = ['North America', 'Europe', 'Asia Pacific', 'Latin America', 'UK & Ireland', 'Scandinavia', 'Australia & NZ'];
           const REGION_WEIGHTS = [0.30, 0.25, 0.20, 0.10, 0.08, 0.04, 0.03];
-          for (let i = 0; i < REGIONS.length; i++) {
-            const regionStreams = Math.max(1, Math.round(dailyStreams * REGION_WEIGHTS[i]));
-            const regionRevenue = Math.round(regionStreams * 0.004);
-            regionBreakdown.push({ region: REGIONS[i], streams: regionStreams, revenue: regionRevenue });
-          }
+          for (let i = 0; i < REGIONS.length; i++) weightedRegions.push({ region: REGIONS[i], weight: REGION_WEIGHTS[i] });
+        }
+        const allocatedStreams = allocateUnits(dailyStreams, weightedRegions.map(r => r.weight));
+        const allocatedRevenue = allocateUnits(dailyRevenueDollars, allocatedStreams);
+        const regionBreakdown = weightedRegions.map((r, i) => ({ region: r.region, streams: allocatedStreams[i], revenue: allocatedRevenue[i] }));
+        if (regionBreakdown.reduce((n, r) => n + r.streams, 0) !== dailyStreams ||
+            regionBreakdown.reduce((n, r) => n + r.revenue, 0) !== dailyRevenueDollars) {
+          throw new Error('Streaming region allocations do not reconcile to the release total');
         }
 
         const { error: updateError } = await supabase
@@ -409,7 +428,7 @@ Deno.serve(async (req) => {
 
         for (const rb of regionBreakdown) {
           const listenerRatio = 0.4 + Math.random() * 0.4;
-          const uniqueListeners = Math.max(1, Math.floor(rb.streams * listenerRatio));
+          const uniqueListeners = rb.streams > 0 ? Math.max(1, Math.floor(rb.streams * listenerRatio)) : 0;
           const skipRate = Number((10 + Math.random() * 25).toFixed(1));
           const completionRate = Number((55 + Math.random() * 35).toFixed(1));
           const ageRoll = Math.random();

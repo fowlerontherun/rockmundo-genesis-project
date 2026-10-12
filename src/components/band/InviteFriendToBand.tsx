@@ -131,7 +131,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
         .select('id, invited_user_id, invited_profile_id, instrument_role, status, created_at, responded_at')
         .eq('band_id', bandId)
         .eq('status', 'pending')
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false }).order('id', { ascending: true })
         .limit(80),
       supabase.from('band_invitations')
         .select('id, invited_user_id, invited_profile_id, instrument_role, status, created_at, responded_at')
@@ -153,7 +153,21 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
     if (resolvedInviteResult.error) throw resolvedInviteResult.error;
     if (memberResult.error) throw memberResult.error;
 
-    const invitations = [...(inviteResult.data || []), ...(resolvedInviteResult.data || [])];
+    const pendingPages = [...(inviteResult.data || [])];
+    let inviteOffset = 80;
+    let lastPageLength = inviteResult.data?.length ?? 0;
+    while (lastPageLength === 80) {
+      const { data: page, error: pageError } = await supabase.from('band_invitations')
+        .select('id, invited_user_id, invited_profile_id, instrument_role, status, created_at, responded_at')
+        .eq('band_id', bandId).eq('status', 'pending')
+        .order('created_at', { ascending: false }).order('id', { ascending: true })
+        .range(inviteOffset, inviteOffset + 79);
+      if (pageError) throw pageError;
+      pendingPages.push(...(page ?? []));
+      lastPageLength = page?.length ?? 0;
+      inviteOffset += 80;
+    }
+    const invitations = [...pendingPages, ...(resolvedInviteResult.data || [])];
     const pendingInvites = invitations.filter((invite) => invite.status === 'pending');
     const resolved = invitations.filter((invite) => invite.status !== 'pending' && invite.responded_at)
       .sort((a, b) => new Date(b.responded_at || 0).getTime() - new Date(a.responded_at || 0).getTime())

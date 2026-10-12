@@ -59,7 +59,7 @@ export function SubmitDemoDialog({ open, onOpenChange, userId, bandId, artistEnt
 
   // Fetch recorded songs that can be submitted as demos
   const { data: songs = [], isLoading: songsLoading, isError: songsError, refetch: retrySongs } = useQuery<RecordedSong[]>({
-    queryKey: ["demo-eligible-songs", userId, effectiveBandId],
+    queryKey: ["demo-eligible-songs", profileId, effectiveBandId],
     queryFn: async () => {
       let query = supabase
         .from("songs")
@@ -70,7 +70,8 @@ export function SubmitDemoDialog({ open, onOpenChange, userId, bandId, artistEnt
       if (effectiveBandId) {
         query = query.eq("band_id", effectiveBandId);
       } else {
-        query = query.eq("user_id", userId);
+        if (!profileId) return [];
+        query = query.eq("profile_id", profileId);
       }
 
       const { data, error } = await query;

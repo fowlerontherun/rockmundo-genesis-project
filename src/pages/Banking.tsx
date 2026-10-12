@@ -116,6 +116,22 @@ export default function Banking() {
     staleTime: 0,
     refetchOnMount: "always",
   });
+  const [statementPage, setStatementPage] = useState(0);
+  const { data: statementRows = [], isLoading: statementLoading, isError: statementError, refetch: retryStatement } = useQuery({
+    queryKey: ["banking-statement-history", profileId, statementPage],
+    enabled: !!profileId,
+    queryFn: async (): Promise<BankingActivity[]> => {
+      const { data: rows, error } = await supabase.from("bank_transactions")
+        .select("id, description, tx_type, amount_minor, currency_code, created_at")
+        .eq("profile_id", profileId!)
+        .order("created_at", { ascending: false }).order("id", { ascending: false })
+        .range(statementPage * 25, statementPage * 25 + 24);
+      if (error) throw error;
+      return (rows || []).map(row => ({ id: row.id, description: row.description,
+        txType: row.tx_type, createdAt: row.created_at, amountMinor: row.amount_minor,
+        currencyCode: row.currency_code }));
+    },
+  });
   const isLoading = isProfileLoading || (Boolean(profileId) && isDashboardLoading);
   const error =
     profileError ??
@@ -132,6 +148,7 @@ export default function Banking() {
       queryClient.invalidateQueries({ queryKey: ["active-profile"] }),
       queryClient.invalidateQueries({ queryKey: ["financial-account"] }),
       queryClient.invalidateQueries({ queryKey: ["financial-transactions"] }),
+      queryClient.invalidateQueries({ queryKey: ["banking-statement-history"] }),
     ]);
   };
 
@@ -173,7 +190,7 @@ export default function Banking() {
 
   const accounts = (data?.accounts ?? []) as BankingAccount[];
   const goals = data?.savingsGoals ?? [];
-  const recent = (data?.recentActivity ?? []) as BankingActivity[];
+  const recent = statementRows;
   const summary = data?.savingsSummary;
   const currency = summary?.currencyCode ?? "GBP";
 
@@ -252,7 +269,9 @@ export default function Banking() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
-                {recent.length === 0 ? (
+                {statementError ? <div role="alert" className="text-sm text-destructive">Could not load transaction history. <Button size="sm" variant="outline" onClick={() => void retryStatement()}>Retry</Button></div> : statementLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading transactions...</p>
+                ) : recent.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No transactions yet.</p>
                 ) : (
                   recent.map((transaction) => (
@@ -275,6 +294,11 @@ export default function Banking() {
                     </div>
                   ))
                 )}
+                <div className="flex items-center justify-between pt-3">
+                  <Button variant="outline" size="sm" disabled={statementPage === 0 || statementLoading} onClick={() => setStatementPage(p => Math.max(0, p - 1))}>Previous</Button>
+                  <span className="text-xs text-muted-foreground">Page {statementPage + 1}</span>
+                  <Button variant="outline" size="sm" disabled={statementLoading || statementError || recent.length < 25} onClick={() => setStatementPage(p => p + 1)}>Older transactions</Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
