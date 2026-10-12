@@ -102,7 +102,7 @@ export const SimplifiedProjectCard = ({
     // Generated Supabase RPC types lag this migration; keep the escape hatch local.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase as any).rpc(
-      "skip_and_complete_songwriting_project",
+      "skip_and_complete_songwriting_project_with_instruments",
       { p_profile_id: profileId, p_project_id: project.id,
         p_catalog_status: "private", p_band_id: null },
     );
