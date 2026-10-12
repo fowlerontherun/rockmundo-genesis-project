@@ -7,7 +7,7 @@ const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 
 export function useMentorSessions() {
   const { toast } = useToast();
-  const { profile: activeProfile, profileId, userId } = useActiveProfile();
+  const { profile: activeProfile } = useActiveProfile();
   const queryClient = useQueryClient();
 
   const profile = activeProfile ? {
