@@ -53,6 +53,8 @@ export function useChatRoom(channelKey: string | null) {
       if (error) throw error;
 
       const rows = ((data ?? []) as any[]).slice().reverse();
+      // Re-fetch names on each refresh: profile renames and character switches must be visible.
+      nameCacheRef.current = {};
 
       const missingProfileIds = Array.from(
         new Set(
