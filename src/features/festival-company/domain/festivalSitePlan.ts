@@ -255,6 +255,7 @@ export function parseFestivalSitePlanResult(
       !integer(p.totalCapacity, 1) ||
       !integer(p.usableCapacity, 1) ||
       !integer(p.reservedCapacity) ||
+      !(p.minimumAge === null || integer(p.minimumAge, 0)) ||
       !nullableTime(p.curfewTime) ||
       !nullableTime(p.gatesOpenTime) ||
       !str(p.dailyOpenTime) ||
