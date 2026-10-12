@@ -103,6 +103,9 @@ export async function loadSongwritingProjectsResilient(client: any, profileId?: 
     if (completion.error) {
       const failure = normalizeFailure("completion project details", "songwriting_projects", completion.error, { selectedColumns: COMPLETION_PROJECT_COLUMNS, profileId, userId, legacyUserFallbackAttempted });
       failures.push(failure); logFailure(failure, "warn");
+      // Completion/polish state governs irreversible actions. Never replace a
+      // failed read with defaults that make completed work look unfinished.
+      throw Object.assign(completion.error, { songwritingFailure: failure, songwritingFailures: failures });
     } else completionById = new Map((completion.data || []).map((row: any) => [row.id, row]));
   }
 
