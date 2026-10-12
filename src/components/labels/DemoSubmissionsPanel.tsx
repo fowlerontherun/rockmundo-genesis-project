@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,8 +40,9 @@ const STATUS_CONFIG: Record<string, { icon: React.ReactNode; variant: "default" 
 };
 
 export function DemoSubmissionsPanel({ userId, bandId }: DemoSubmissionsPanelProps) {
+  const [page, setPage] = useState(0);
   const { data: submissions = [], isLoading } = useQuery<DemoSubmission[]>({
-    queryKey: ["demo-submissions", userId, bandId],
+    queryKey: ["demo-submissions", userId, bandId, page],
     queryFn: async () => {
       let query = supabase
         .from("demo_submissions")
@@ -55,7 +58,7 @@ export function DemoSubmissionsPanel({ userId, bandId }: DemoSubmissionsPanelPro
           labels(name, reputation_score)
         `)
         .order("submitted_at", { ascending: false })
-        .limit(10);
+        .range(page * 10, page * 10 + 9);
 
       if (bandId) {
         query = query.eq("band_id", bandId);
@@ -92,6 +95,7 @@ export function DemoSubmissionsPanel({ userId, bandId }: DemoSubmissionsPanelPro
         </CardTitle>
       </CardHeader>
       <CardContent>
+        <div className="flex items-center justify-end gap-2 pb-2"><Button size="sm" variant="outline" disabled={page === 0} onClick={() => setPage(p => Math.max(0,p-1))}>Previous</Button><span className="text-xs">Page {page+1}</span><Button size="sm" variant="outline" disabled={submissions.length < 10} onClick={() => setPage(p => p+1)}>Next</Button></div>
         <ScrollArea className="h-48">
           <div className="space-y-3">
             {submissions.map((submission) => {
