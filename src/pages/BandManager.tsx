@@ -75,6 +75,7 @@ export default function BandManager() {
   const [userBands, setUserBands] = useState<any[]>([]);
   const [selectedBandId, setSelectedBandId] = useState<string | null>(null);
   const [selectedBand, setSelectedBand] = useState<any>(null);
+  const [bandDetailsError, setBandDetailsError] = useState<string | null>(null);
   const [members, setMembers] = useState<any[]>([]);
   const [rosterVersion, setRosterVersion] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -89,8 +90,11 @@ export default function BandManager() {
   }, [profileId]);
 
   useEffect(() => {
+    setSelectedBand(null);
+    setMembers([]);
+    setBandDetailsError(null);
     if (selectedBandId) {
-      loadBandDetails(selectedBandId);
+      void loadBandDetails(selectedBandId);
     }
   }, [selectedBandId]);
 
@@ -125,18 +129,21 @@ export default function BandManager() {
   const loadBandDetails = async (bandId: string) => {
     try {
       // Load band data
-      const { data: band } = await supabase
+      const { data: band, error: bandError } = await supabase
         .from("bands")
         .select("*")
         .eq("id", bandId)
         .single();
 
-      if (band) {
-        setSelectedBand(band);
-        await loadBandMembers(bandId);
-      }
+      if (bandError) throw bandError;
+      if (!band) throw new Error('The selected band could not be found.');
+      setSelectedBand(band);
+      await loadBandMembers(bandId);
     } catch (error) {
       console.error("Error loading band details:", error);
+      setSelectedBand(null);
+      setMembers([]);
+      setBandDetailsError(error instanceof Error ? error.message : 'Could not load selected band');
     }
   };
 
@@ -162,10 +169,11 @@ export default function BandManager() {
     // Fetch profiles for human members only
     let profilesData: any[] = [];
     if (profileIds.length > 0) {
-      const { data } = await supabase
+      const { data, error: profilesError } = await supabase
         .from("profiles")
         .select("id, user_id, display_name, username")
         .in("id", profileIds);
+      if (profilesError) { toast({ title: "Could not load member profiles", description: profilesError.message, variant: "destructive" }); throw profilesError; }
       profilesData = data || [];
     }
 
@@ -283,6 +291,8 @@ export default function BandManager() {
       </HubLayout>
     );
   }
+
+  if (bandDetailsError && userBands.length > 0) return <div role="alert" className="container mx-auto p-6 text-destructive">Could not load band details: {bandDetailsError} <button type="button" className="underline" onClick={() => selectedBandId && void loadBandDetails(selectedBandId)}>Retry</button></div>;
 
   if (!selectedBand || userBands.length === 0) {
     return (

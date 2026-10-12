@@ -48,7 +48,8 @@ export default function WorldAtlas({ cities, currentCityId, bandId, mode = "expl
     (playedFilter === "all" || (playedFilter === "played" ? hasPlayed(city.id) : !hasPlayed(city.id))) &&
     `${city.name} ${city.country}`.toLowerCase().includes(search.trim().toLowerCase())
   ), [cities, search, playedFilter, fame]);
-  const selected = cities.find(city => city.id === selectedId);
+  // Hidden/filtered cities must not remain actionable in the details panel.
+  const selected = filtered.find(city => city.id === selectedId);
   const routePoints: RoutePoint[] = plannedStops.flatMap((id, index) => {
     const city = cities.find(item => item.id === id);
     if (!city || city.latitude == null || city.longitude == null ||

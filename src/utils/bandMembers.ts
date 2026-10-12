@@ -182,6 +182,6 @@ export async function getEligibleLeaders(bandId: string, currentLeaderId: string
     return data || [];
   } catch (error) {
     console.error('Error getting eligible leaders:', error);
-    return [];
+    throw error;
   }
 }

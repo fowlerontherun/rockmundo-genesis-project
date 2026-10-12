@@ -80,9 +80,14 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
   const externalRecruitmentText = `Join me in RockMundo and help build ${bandName}. Create your musician with my invite, then I can recruit you into the band: ${externalRecruitmentUrl}`;
 
   const loadReferralCode = useCallback(async () => {
+    setReferralCode(null);
+    if (!currentUserId) return;
     const { data, error } = await (supabase as any).rpc('get_referral_dashboard', { p_profile_id: currentUserId });
-    if (!error && data?.code) setReferralCode(data.code);
+    if (error) throw error;
+    setReferralCode(data?.code ?? null);
   }, [currentUserId]);
+
+  useEffect(() => { setReferralCode(null); }, [currentUserId]);
 
   const loadReferredRecruits = useCallback(async () => {
     const { data, error } = await (supabase as any).rpc('get_band_referral_recruits', { p_band_id: bandId });

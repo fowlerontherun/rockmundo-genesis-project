@@ -137,7 +137,7 @@ export function BandMemberDetailDialog({
   });
 
   // Check friendship status
-  const { data: friendshipStatus, refetch: refetchFriendship } = useQuery({
+  const { data: friendshipStatus, isPending: friendshipLoading, isError: friendshipError, refetch: refetchFriendship } = useQuery({
     queryKey: ["friendship-status", currentProfileId, profile?.id],
     queryFn: async () => {
       if (!currentProfileId || !profile?.id) return null;
@@ -401,7 +401,9 @@ export function BandMemberDetailDialog({
 
         {/* Actions */}
         <div className="flex gap-2 pt-2">
-          {isSelf ? (
+          {friendshipLoading || friendshipError ? (
+            <Button variant="outline" className="flex-1" disabled>{friendshipError ? "Friendship status unavailable" : "Checking friendship..."}</Button>
+          ) : isSelf ? (
             <Button variant="outline" className="flex-1" disabled>
               This is you
             </Button>
