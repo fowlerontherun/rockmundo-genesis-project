@@ -93,7 +93,8 @@ export default function WorldAtlas({ cities, currentCityId, bandId, mode = "expl
           })}
         </ol>
         <TourRouteMap points={routePoints} />
-        {onPlanRoute && <Button onClick={() => onPlanRoute(plannedStops)}>Continue in tour planner</Button>}
+        {routePoints.length !== plannedStops.length && <p role="alert" className="text-sm text-destructive">One or more stops have missing or invalid map coordinates. Remove those stops before continuing.</p>}
+        {onPlanRoute && <Button disabled={routePoints.length !== plannedStops.length} onClick={() => onPlanRoute(plannedStops)}>Continue in tour planner</Button>}
       </section>}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
         <div className="h-[420px] md:h-[600px] min-w-0 overflow-hidden rounded-lg border">

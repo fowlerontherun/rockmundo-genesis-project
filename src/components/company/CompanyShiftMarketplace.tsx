@@ -30,14 +30,20 @@ export function CompanyShiftMarketplace() {
   const { data: shifts = [], isLoading, isError: shiftsError, refetch: retryShifts } = useQuery({
     queryKey: ["open-company-shifts"],
     queryFn: async (): Promise<OpenShift[]> => {
+      const shifts: OpenShift[] = [];
+      for (let offset = 0; ; offset += 500) {
       const { data, error } = await (supabase as any)
         .from("company_shifts")
         .select("*, companies:company_id(name, company_type)")
         .eq("status", "open")
         .order("wage_per_hour", { ascending: false })
-        .limit(60);
+        .order("id", { ascending: true })
+        .range(offset, offset + 499);
       if (error) throw error;
-      return (data ?? []) as OpenShift[];
+      shifts.push(...((data ?? []) as OpenShift[]));
+      if (!data || data.length < 500) break;
+      }
+      return shifts;
     },
   });
 

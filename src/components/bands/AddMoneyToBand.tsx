@@ -90,6 +90,7 @@ export function AddMoneyToBand({
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [preview, setPreview] = useState<FundingPreview | null>(null);
+  const previewRequestEpoch = useRef(0);
   const [confirmationKey, setConfirmationKey] = useState<string | null>(null);
   const [sourcesLoading, setSourcesLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -111,6 +112,7 @@ export function AddMoneyToBand({
   }, [fixedBandId]);
 
   useEffect(() => {
+    previewRequestEpoch.current++;
     setSources([]);
     setSourceKey("");
     setAmount("");
@@ -196,6 +198,7 @@ export function AddMoneyToBand({
   }, [loadSources]);
 
   const resetPreview = () => {
+    previewRequestEpoch.current++;
     setPreview(null);
     setConfirmationKey(null);
   };
@@ -204,6 +207,7 @@ export function AddMoneyToBand({
     if (!source?.eligible || amountMinor === null || amountMinor <= 0) return;
     if (walletNeedsWholeUnits) return;
 
+    const requestEpoch = ++previewRequestEpoch.current;
     setSubmitting(true);
     setError(null);
     try {
@@ -216,14 +220,15 @@ export function AddMoneyToBand({
           p_amount_minor: amountMinor,
         },
       );
+      if (requestEpoch !== previewRequestEpoch.current) return;
       if (previewError) throw previewError;
 
       setPreview(data as FundingPreview);
       setConfirmationKey(crypto.randomUUID());
     } catch (previewError) {
-      setError(fundingErrorMessage(previewError));
+      if (requestEpoch === previewRequestEpoch.current) setError(fundingErrorMessage(previewError));
     } finally {
-      setSubmitting(false);
+      if (requestEpoch === previewRequestEpoch.current) setSubmitting(false);
     }
   };
 

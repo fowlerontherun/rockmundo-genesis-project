@@ -130,14 +130,14 @@ export function MyContractsTab({ artistEntities, userId }: MyContractsTabProps) 
 
   // Fetch contract offers (status = 'offered')
   const { data: contractOffers = [] } = useQuery({
-    queryKey: ["contract-offers", soloEntity?.id, primaryBandId],
+    queryKey: ["contract-offers", soloEntity?.id, bandEntities.map(band => band.id).join(",")],
     queryFn: async () => {
       const filters: string[] = [];
       if (soloEntity?.id) {
         filters.push(`artist_profile_id.eq.${soloEntity.id}`);
       }
-      if (primaryBandId) {
-        filters.push(`band_id.eq.${primaryBandId}`);
+      if (bandEntities.length > 0) {
+        filters.push(`band_id.in.(${bandEntities.map(band => `"${band.id}"`).join(",")})`);
       }
 
       if (filters.length === 0) return [];
@@ -146,6 +146,7 @@ export function MyContractsTab({ artistEntities, userId }: MyContractsTabProps) 
         .from("artist_label_contracts")
         .select(`
           id,
+          band_id,
           status,
           label_id,
           advance_amount,
@@ -272,7 +273,7 @@ export function MyContractsTab({ artistEntities, userId }: MyContractsTabProps) 
             <div key={offer.id} id={`offer-${offer.id}`} className="transition-all duration-300 rounded-lg">
               <ContractOfferCard
                 offer={offer}
-                entityName={primaryBandId ? bandEntities[0]?.name ?? "Your Band" : soloEntity?.name ?? "You"}
+                entityName={bandEntities.find(band => band.id === offer.band_id)?.name ?? soloEntity?.name ?? "Your Band"}
               />
             </div>
           ))}

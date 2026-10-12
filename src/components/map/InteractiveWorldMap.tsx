@@ -161,10 +161,17 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
           setIsLoading(false);
           setMapReady(true);
         });
+        let resourceErrorCount = 0;
         map.current.on('error', event => {
           const message = event.error instanceof Error ? event.error.message : String(event.error ?? 'unknown map error');
           console.warn('World map resource error:', event.error);
           logDiagnostic('resource error', message);
+          // Isolated tile failures are recoverable. Repeated resource failures
+          // mean the map is unusable and must be made visible to the player.
+          if (++resourceErrorCount >= 3) {
+            setMapError('Map tiles or style resources could not be loaded.');
+            setIsLoading(false);
+          }
         });
         timeoutId = window.setTimeout(() => {
           if (!map.current?.loaded()) {

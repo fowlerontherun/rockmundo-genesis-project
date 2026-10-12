@@ -229,19 +229,21 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
         const profileData: Array<MemberWithProfile["profiles"]> = [];
 
         if (profileIds.length > 0) {
-          const { data } = await supabase
+          const { data, error: profileError } = await supabase
             .from("profiles")
             .select("id, user_id, display_name, username, avatar_url, rpm_avatar_url, level")
             .in("id", profileIds);
+          if (profileError) throw profileError;
 
           profileData.push(...(data ?? []));
         }
 
         if (userIds.length > 0) {
-          const { data } = await supabase
+          const { data, error: profileError } = await supabase
             .from("profiles")
             .select("id, user_id, display_name, username, avatar_url, rpm_avatar_url, level")
             .in("user_id", userIds);
+          if (profileError) throw profileError;
 
           profileData.push(...(data ?? []));
         }

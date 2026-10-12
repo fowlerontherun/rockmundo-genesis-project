@@ -94,7 +94,7 @@ export function BandMemberDetailDialog({
   });
 
   // Fetch skills
-  const { data: skills, isLoading: skillsLoading } = useQuery({
+  const { data: skills, isLoading: skillsLoading, isError: skillsError, refetch: retrySkills } = useQuery({
     queryKey: ["member-skills", profile?.id],
     queryFn: async () => {
       if (!profile?.id) return [];
@@ -112,7 +112,7 @@ export function BandMemberDetailDialog({
   });
 
   // Fetch today's schedule
-  const { data: schedule } = useQuery({
+  const { data: schedule, isLoading: scheduleLoading, isError: scheduleError, refetch: retrySchedule } = useQuery({
     queryKey: ["member-schedule", userId],
     queryFn: async () => {
       if (!userId) return [];
@@ -338,7 +338,7 @@ export function BandMemberDetailDialog({
                   <Skeleton key={i} className="h-14" />
                 ))}
               </div>
-            ) : skills && skills.length > 0 ? (
+            ) : skillsError ? (<p role="alert" className="text-sm text-destructive">Skills could not be loaded. <Button variant="outline" size="sm" onClick={() => void retrySkills()}>Retry</Button></p>) : skills && skills.length > 0 ? (
               <div className="grid grid-cols-3 gap-3">
                 {skills.map((skill) => (
                   <div
@@ -372,7 +372,7 @@ export function BandMemberDetailDialog({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {schedule && schedule.length > 0 ? (
+            {scheduleLoading ? <p role="status">Loading schedule...</p> : scheduleError ? <p role="alert" className="text-sm text-destructive">Schedule could not be loaded. <Button size="sm" variant="outline" onClick={() => void retrySchedule()}>Retry</Button></p> : schedule && schedule.length > 0 ? (
               <div className="space-y-2">
                 {schedule.map((activity) => (
                   <div

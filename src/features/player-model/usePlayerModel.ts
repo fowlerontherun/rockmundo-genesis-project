@@ -213,9 +213,9 @@ export function useGigPlayerModels(profileIds: string[]) {
       const optionalStageResult = (label: string, settled: PromiseSettledResult<StageRpcResult>): StageRpcResult => {
         if (settled.status === 'rejected') {
           console.warn(`[gig-player-models] ${label} request could not load`, settled.reason);
-          return { data: [], error: { message: settled.reason instanceof Error ? settled.reason.message : String(settled.reason) } };
+          throw settled.reason;
         }
-        if (settled.value.error) console.warn(`[gig-player-models] ${label} could not load`, settled.value.error);
+        if (settled.value.error) throw settled.value.error;
         return settled.value;
       };
 
@@ -231,6 +231,7 @@ export function useGigPlayerModels(profileIds: string[]) {
       } else {
         const reason = legacySettled.status === 'rejected' ? legacySettled.reason : legacySettled.value.error;
         console.warn('[gig-player-models] legacy avatar fallback could not load', reason);
+        throw reason;
       }
 
       const appearances = resolveGigStageAppearances(
@@ -244,6 +245,7 @@ export function useGigPlayerModels(profileIds: string[]) {
           richClothing = await resolveRichClothingRows((clothingResult.data || []) as EquippedClothingRow[]);
         } catch (error) {
           console.warn('[gig-player-models] rich clothing catalogue could not load', error);
+          throw error;
         }
       }
 
