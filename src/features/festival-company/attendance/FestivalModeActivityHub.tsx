@@ -37,7 +37,7 @@ export const FestivalModeActivityHub = ({
   kind: HubKind;
 }) => {
   const config = hubConfig[kind];
-  const { data: plan, isLoading, isError } = useMyFestivalDayPlan(attendance.id);
+  const { data: plan, isLoading, isError, refetch } = useMyFestivalDayPlan(attendance.id);
   const resolver = useResolveFestivalPlanActivity(attendance.id);
   const serverNow = plan ? Date.parse(plan.serverNow) : 0;
   const relevantItems = (plan?.items || []).filter(
