@@ -29,6 +29,7 @@ interface AILyricsGeneratorProps {
   genre: string;
   chordProgression: string | ChordProgression;
   creativeBrief?: CreativeBrief;
+  additionalNotes?: string;
   existingLyrics?: string;
   onLyricsGenerated: (lyrics: string) => void;
 }
@@ -39,6 +40,7 @@ export const AILyricsGenerator = ({
   genre,
   chordProgression,
   creativeBrief,
+  additionalNotes,
   existingLyrics,
   onLyricsGenerated
 }: AILyricsGeneratorProps) => {
@@ -64,6 +66,7 @@ export const AILyricsGenerator = ({
           genre,
           chordProgression,
           creativeBrief,
+          additionalNotes,
           existingLyrics
         }
       });
