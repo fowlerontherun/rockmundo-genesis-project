@@ -135,7 +135,7 @@ export const FestivalModeMyDay = ({ attendance }: { attendance: FestivalPlayerAt
       durationMinutes,
       activityType,
       title: title.trim(),
-      idempotencyKey: requestKey.current.id,
+      idempotencyKey: requestKey.current!.id,
     }, {
       onSuccess: () => {
         requestKey.current = null;
