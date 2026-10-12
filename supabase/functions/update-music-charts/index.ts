@@ -69,7 +69,9 @@ serve(async (req) => {
     // =========================================================================
     // FIXED: Removed broken nested filter - Supabase doesn't support .eq() on deeply nested relations
     // We fetch all data and filter in code instead
-    const { data: weeklyStreamDataRaw, error: weeklyStreamError } = await supabaseClient
+    const weeklyStreamDataRaw: any[] = [];
+    for (let offset = 0; ; offset += 500) {
+    const { data: page, error: weeklyStreamError } = await supabaseClient
       .from("streaming_analytics_daily")
       .select(`
         song_release_id,
@@ -87,10 +89,13 @@ serve(async (req) => {
           )
         )
       `)
-      .gte("analytics_date", sevenDaysAgo.toISOString().split("T")[0]);
-
-    if (weeklyStreamError) {
-      console.error("Error fetching weekly streaming data:", weeklyStreamError);
+      .gte("analytics_date", sevenDaysAgo.toISOString().split("T")[0])
+      .order("analytics_date", { ascending: false })
+      .order("id", { ascending: true })
+      .range(offset, offset + 499);
+    if (weeklyStreamError) throw weeklyStreamError;
+    weeklyStreamDataRaw.push(...(page ?? []));
+    if (!page || page.length < 500) break;
     }
 
     // Filter to only include songs with status = 'recorded' in code
@@ -449,7 +454,9 @@ serve(async (req) => {
     console.log(`Pre-fetched all-time sales for ${allTimeSalesBySong.size} songs`);
 
     for (const salesType of salesTypes) {
-      const { data: salesData, error: salesError } = await supabaseClient
+      const salesData: any[] = [];
+      for (let offset = 0; ; offset += 500) {
+      const { data: page, error: salesError } = await supabaseClient
         .from("release_sales")
         .select(`
           release_format_id,
@@ -478,11 +485,12 @@ serve(async (req) => {
         `)
         .eq("release_formats.format_type", salesType.format)
         .gte("sale_date", sevenDaysAgo.toISOString())
-        .order("quantity_sold", { ascending: false });
-
-      if (salesError) {
-        console.error(`Error fetching ${salesType.type} data:`, salesError);
-        continue;
+        .order("quantity_sold", { ascending: false })
+        .order("id", { ascending: true })
+        .range(offset, offset + 499);
+      if (salesError) throw salesError;
+      salesData.push(...(page ?? []));
+      if (!page || page.length < 500) break;
       }
 
       console.log(`Fetched ${salesData?.length || 0} ${salesType.type} entries`);
@@ -1099,8 +1107,19 @@ serve(async (req) => {
     chartEntries.push(...radioEntries);
     console.log(`Generated ${radioEntries.length} radio airplay entries`);
 
-    // Create radio_airplay_single entries (all radio plays are for singles currently)
-    const radioSingleEntries = radioEntries.map((entry, index) => ({
+    // Radio plays are not all singles: include only songs linked to a single release.
+    const singleSongIds = new Set<string>();
+    const eligibleRadioIds = [...new Set(radioEntries.map(entry => entry.song_id).filter(Boolean))];
+    for (let offset = 0; offset < eligibleRadioIds.length; offset += 100) {
+      const { data: scopedSongs, error: scopeError } = await supabaseClient
+        .from("release_songs")
+        .select("song_id, release:releases!inner(release_type)")
+        .in("song_id", eligibleRadioIds.slice(offset, offset + 100))
+        .eq("release.release_type", "single");
+      if (scopeError) throw scopeError;
+      for (const song of scopedSongs ?? []) singleSongIds.add(song.song_id);
+    }
+    const radioSingleEntries = radioEntries.filter(entry => singleSongIds.has(entry.song_id)).map((entry, index) => ({
       ...entry,
       chart_type: "radio_airplay_single",
       rank: index + 1,
