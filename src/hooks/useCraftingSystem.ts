@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
-import { computeSalvageYields } from "@/utils/salvageYields";
 import type { LuthieryBuildSelection } from "@/data/luthieryWorkbench";
 
 export interface CraftingMaterial {
