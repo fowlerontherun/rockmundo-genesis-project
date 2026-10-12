@@ -60,7 +60,7 @@ export function useSecondNomination() {
       if (cand.profile_id === profileId) throw new Error("Candidates can't second themselves");
       if (cand.nominator_profile_id === profileId) throw new Error("Nominator can't second");
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("city_candidates")
         .update({
           seconder_profile_id: profileId,
