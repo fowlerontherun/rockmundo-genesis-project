@@ -93,7 +93,7 @@ const TwaaterProfileView = () => {
         .is("deleted_at", null)
         .is("scheduled_for", null)
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(200);
 
       if (viewerAccount?.id === profileAccount.id) {
         query = query.in("visibility", ["public", "followers"]);
