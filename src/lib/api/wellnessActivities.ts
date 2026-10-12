@@ -94,7 +94,9 @@ export async function listCooldowns(profileId: string): Promise<WellnessCooldown
 
   const latestBySlug = new Map<string, WellnessCooldown>();
   for (const row of (data ?? []) as any[]) {
-    if (!row?.catalog_slug || !row?.cooldown_until || latestBySlug.has(row.catalog_slug)) continue;
+    if (!row?.catalog_slug || !row?.cooldown_until) continue;
+    const current = latestBySlug.get(row.catalog_slug);
+    if (current && Date.parse(current.cooldown_until) >= Date.parse(row.cooldown_until)) continue;
     latestBySlug.set(row.catalog_slug, {
       catalog_slug: String(row.catalog_slug),
       cooldown_until: String(row.cooldown_until),
