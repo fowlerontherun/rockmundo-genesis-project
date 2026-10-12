@@ -101,8 +101,6 @@ export function SecurityUpgradesManager({ firmId, companyBalance = 0 }: Security
     mutationFn: async (upgradeType: UpgradeType) => {
       const currentLevel = upgrades?.find(u => u.upgrade_type === upgradeType.type)?.level || 0;
       const newLevel = currentLevel + 1;
-      const cost = upgradeType.baseCost * newLevel;
-      const effect = upgradeType.baseEffect * newLevel;
 
       if (currentLevel >= upgradeType.maxLevel) {
         throw new Error('Maximum level reached');
@@ -114,7 +112,7 @@ export function SecurityUpgradesManager({ firmId, companyBalance = 0 }: Security
       });
       if (error) throw error;
       if (!installed?.level) throw new Error("Security upgrade did not confirm installation");
-      return { cost, newLevel };
+      return { cost: Number(installed.cost), newLevel: Number(installed.level) };
     },
     onSuccess: (data) => {
       toast.success(`Upgrade installed! Level ${data.newLevel}`);
