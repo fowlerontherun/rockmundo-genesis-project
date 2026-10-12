@@ -42,12 +42,13 @@ export function useMayorPolitics(profileId: string | undefined) {
       if (!profileId) {
         return { levels: DEFAULT_LEVELS, totalLevel: 0, unlocks: computeUnlocks(DEFAULT_LEVELS) };
       }
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("skill_progress")
         .select("skill_slug, current_level, current_xp")
         .eq("profile_id", profileId)
         .in("skill_slug", POLITICS_SKILLS as unknown as string[]);
 
+      if (error) throw error;
       const levels: PoliticsSkillLevels = { ...DEFAULT_LEVELS };
       let totalLevel = 0;
       for (const row of data ?? []) {
