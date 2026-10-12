@@ -104,9 +104,9 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   const { profileId } = useActiveProfile();
   const { data: f, isLoading, isError } = usePublicFestival(publicSlug ?? festivalCompanyIdentifier);
   const { data: attendance = [] } = useMyFestivalAttendance(Boolean(user));
-  const { data: checkInEligibility = [] } = useMyFestivalCheckInEligibility(Boolean(user));
+  const { data: checkInEligibility = [], isError: eligibilityError, refetch: retryEligibility } = useMyFestivalCheckInEligibility(Boolean(user));
   const { data: festivalMemorabilia = [] } = useMyFestivalMemorabilia(Boolean(user));
-  const { data: ticketWallet = [] } = useMyFestivalTickets(Boolean(user));
+  const { data: ticketWallet = [], isError: walletError, refetch: retryWallet } = useMyFestivalTickets(Boolean(user));
   const buy = usePurchaseFestivalTickets();
   const checkIn = useCheckInToFestival();
   const leaveEarly = useLeaveFestivalEarly();
@@ -129,12 +129,13 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
       ? "Festival dates under way"
       : "Festival dates ended";
 
-  const myAttendance = attendance.find(
-    (item) => item.festivalLaunchId === f.id && item.status !== "cancelled" && item.status !== "refunded",
-  );
+  const myAttendance = attendance
+    .filter((item) => item.festivalLaunchId === f.id && item.status !== "cancelled" && item.status !== "refunded")
+    .sort((a, b) => Number(b.status === "attending") - Number(a.status === "attending"))[0];
   const myCheckInEligibility = myAttendance
     ? checkInEligibility.find((item) => item.attendanceId === myAttendance.id)
     : undefined;
+  const festivalDataError = walletError || eligibilityError;
   const myFestivalTickets = ticketWallet.filter((ticket) => ticket.festivalSlug === f.slug);
   const myWristband = festivalMemorabilia.find((item) => item.festivalLaunchId === f.id && item.attendanceId === myAttendance?.id);
   const hasAdmissionTicket = myFestivalTickets.some(
