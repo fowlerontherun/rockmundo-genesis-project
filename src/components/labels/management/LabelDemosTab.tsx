@@ -23,6 +23,8 @@ export function LabelDemosTab({ labelId, labelReputation, genreFocus, isPlayerOw
   const { data: demos = [], isLoading } = useQuery({
     queryKey: ["label-management-demos", labelId],
     queryFn: async () => {
+      const demos: any[] = [];
+      for (let offset = 0; ; offset += 500) {
       const { data, error } = await supabase
         .from("demo_submissions")
         .select(`
@@ -32,10 +34,13 @@ export function LabelDemosTab({ labelId, labelReputation, genreFocus, isPlayerOw
         `)
         .eq("label_id", labelId)
         .order("submitted_at", { ascending: false })
-        .limit(50);
-
+        .order("id", { ascending: false })
+        .range(offset, offset + 499);
       if (error) throw error;
-      return data || [];
+      demos.push(...(data ?? []));
+      if (!data || data.length < 500) break;
+      }
+      return demos;
     },
   });
 

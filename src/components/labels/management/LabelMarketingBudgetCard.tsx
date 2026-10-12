@@ -76,15 +76,16 @@ export function LabelMarketingBudgetCard({ labelId, labelBalance }: LabelMarketi
     ? `${Math.floor(marketingCooldownMs / 86_400_000)}d ${Math.ceil((marketingCooldownMs % 86_400_000) / 3_600_000)}h`
     : null;
 
-  const { data: signedCount = 0 } = useQuery({
+  const { data: signedCount = 0, isError: signedCountError, refetch: retrySignedCount } = useQuery({
     queryKey: ["label-signed-count", labelId],
     queryFn: async () => {
-      const { count } = await supabase
+      const { count, error } = await supabase
         .from("artist_label_contracts")
         .select("*", { count: "exact", head: true })
         .eq("label_id", labelId)
         .eq("status", "active");
-      return count || 0;
+      if (error) throw error;
+      return count ?? 0;
     },
   });
 
@@ -147,10 +148,11 @@ export function LabelMarketingBudgetCard({ labelId, labelBalance }: LabelMarketi
           </div>
         </div>
 
+        {signedCountError && <div role="alert" className="text-sm text-destructive">Signed-artist totals are unavailable. <Button size="sm" variant="outline" onClick={() => void retrySignedCount()}>Retry</Button></div>}
         <div className="bg-muted/50 rounded-lg p-3 text-sm flex items-start gap-2">
           <Info className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
           <p className="text-muted-foreground">
-            Marketing is charged to the label every day and builds hype on upcoming and recent releases from your {signedCount} signed artist{signedCount !== 1 ? "s" : ""}. Hype feeds directly into record sales and streaming demand. Department upgrades make every marketing dollar more effective and unlock larger budgets.
+            Marketing is charged to the label every day and builds hype on upcoming and recent releases from {signedCountError ? "your signed artists (count unavailable)" : `${signedCount} signed artist${signedCount !== 1 ? "s" : ""}`}. Hype feeds directly into record sales and streaming demand. Department upgrades make every marketing dollar more effective and unlock larger budgets.
           </p>
         </div>
 

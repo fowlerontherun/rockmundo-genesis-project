@@ -58,7 +58,7 @@ export function LabelUpgradesTab({ labelId, labelBalance }: LabelUpgradesTabProp
   const purchaseInFlight = useRef(false);
   const [purchasePending, setPurchasePending] = useState(false);
 
-  const { data: upgradeState, isLoading } = useQuery({
+  const { data: upgradeState, isLoading, isError: upgradeStateError, refetch: retryUpgradeState } = useQuery({
     queryKey: ["label-upgrade-state", labelId],
     queryFn: async () => {
       const { data, error } = await (supabase as any).rpc("get_label_upgrade_state", {
@@ -135,6 +135,9 @@ export function LabelUpgradesTab({ labelId, labelBalance }: LabelUpgradesTabProp
 
   if (isLoading) {
     return <div className="text-center py-8 text-muted-foreground">Loading upgrades...</div>;
+  }
+  if (upgradeStateError || !upgradeState) {
+    return <div role="alert" className="rounded border border-destructive p-3 text-sm text-destructive">Unable to verify upgrade levels and cooldowns. <Button size="sm" variant="outline" onClick={() => void retryUpgradeState()}>Retry</Button></div>;
   }
 
   return (

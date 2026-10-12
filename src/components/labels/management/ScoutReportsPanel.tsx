@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,16 +12,19 @@ interface ScoutReportsPanelProps {
 
 export function ScoutReportsPanel({ labelId }: ScoutReportsPanelProps) {
   const queryClient = useQueryClient();
+  const [page, setPage] = useState(0);
+  const pageSize = 20;
+  useEffect(() => setPage(0), [labelId]);
   const updateStatus = useMutation({mutationFn: async ({id,status}:{id:string;status:"contacted"|"rejected"}) => {const {error}=await supabase.from("label_scout_reports").update({status}).eq("id",id).eq("label_id",labelId).eq("status","new");if(error)throw error;},onSuccess:()=>void queryClient.invalidateQueries({queryKey:["label-scout-reports",labelId]})});
-  const { data: reports = [], isLoading } = useQuery({
-    queryKey: ['label-scout-reports', labelId],
+  const { data: reports = [], isLoading, isError, refetch } = useQuery({
+    queryKey: ['label-scout-reports', labelId, page],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('label_scout_reports')
         .select('*')
         .eq('label_id', labelId)
         .order('created_at', { ascending: false })
-        .limit(20);
+        .range(page * pageSize, (page + 1) * pageSize - 1);
       if (error) throw error;
       return data;
     },
@@ -47,7 +51,9 @@ export function ScoutReportsPanel({ labelId }: ScoutReportsPanelProps) {
     return <div className="animate-pulse space-y-3">{[...Array(3)].map((_, i) => <div key={i} className="h-20 bg-muted rounded" />)}</div>;
   }
 
-  if (reports.length === 0) {
+  if (isError) return <Card role="alert"><CardContent className="p-4">Unable to load scout reports. <Button size="sm" variant="outline" onClick={() => void refetch()}>Retry</Button></CardContent></Card>;
+
+  if (page === 0 && reports.length === 0) {
     return (
       <Card>
         <CardContent className="py-12 text-center">
@@ -70,6 +76,7 @@ export function ScoutReportsPanel({ labelId }: ScoutReportsPanelProps) {
         </h3>
       </div>
 
+      <div className="flex items-center justify-between text-sm"><span>Page {page + 1}</span><div className="flex gap-2"><Button size="sm" variant="outline" disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))}>Previous</Button><Button size="sm" variant="outline" disabled={reports.length < pageSize} onClick={() => setPage(p => p + 1)}>Next</Button></div></div>
       <div className="space-y-2">
         {reports.map((report) => (
           <Card key={report.id} className="bg-card/60">

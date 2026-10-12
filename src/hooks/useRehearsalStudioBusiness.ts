@@ -86,15 +86,17 @@ export function useRehearsalRoomTransactions(roomId: string | undefined) {
     queryFn: async () => {
       if (!roomId) return [];
       
-      const { data, error } = await supabase
-        .from('rehearsal_room_transactions')
-        .select('*')
-        .eq('room_id', roomId)
-        .order('transaction_date', { ascending: false })
-        .limit(50);
-      
-      if (error) throw error;
-      return data as RehearsalRoomTransaction[];
+      const all: RehearsalRoomTransaction[] = [];
+      for (let offset = 0; ; offset += 500) {
+        const { data, error } = await supabase
+          .from('rehearsal_room_transactions').select('*')
+          .eq('room_id', roomId).order('transaction_date', { ascending: false })
+          .range(offset, offset + 499);
+        if (error) throw error;
+        all.push(...((data ?? []) as RehearsalRoomTransaction[]));
+        if (!data || data.length < 500) break;
+      }
+      return all;
     },
     enabled: !!roomId,
   });

@@ -65,7 +65,7 @@ export function SubmitDemoDialog({ open, onOpenChange, userId, bandId, preselect
   const profileId = profileData?.id;
 
   // Fetch recorded songs that can be submitted as demos
-  const { data: songs = [] } = useQuery<RecordedSong[]>({
+  const { data: songs = [], isLoading: songsLoading, isError: songsError, refetch: retrySongs } = useQuery<RecordedSong[]>({
     queryKey: ["demo-eligible-songs", userId, bandId],
     queryFn: async () => {
       let query = supabase
@@ -88,7 +88,7 @@ export function SubmitDemoDialog({ open, onOpenChange, userId, bandId, preselect
   });
 
   // Fetch available labels
-  const { data: labelsData } = useQuery({
+  const { data: labelsData, isLoading: labelsLoading, isError: labelsError, refetch: retryLabels } = useQuery({
     queryKey: ["labels-for-demo"],
     queryFn: async (): Promise<LabelOption[]> => {
       const { data, error } = await supabase
@@ -211,7 +211,7 @@ export function SubmitDemoDialog({ open, onOpenChange, userId, bandId, preselect
           {/* Song Selection */}
           <div className="space-y-2">
             <Label>Select a Recorded Song</Label>
-            {songs.length === 0 ? (
+            {songsError ? <div role="alert" className="text-sm text-destructive">Songs could not be loaded. <Button size="sm" variant="outline" onClick={() => void retrySongs()}>Retry</Button></div> : songsLoading ? <p className="text-sm text-muted-foreground">Loading songs...</p> : songs.length === 0 ? (
               <Card>
                 <CardContent className="p-4 text-center text-sm text-muted-foreground">
                   <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -252,7 +252,9 @@ export function SubmitDemoDialog({ open, onOpenChange, userId, bandId, preselect
           {/* Label Selection */}
           <div className="space-y-2">
             <Label>Select a Label</Label>
-            <Select value={selectedLabelId ?? ""} onValueChange={setSelectedLabelId}>
+            {labelsError && <div role="alert" className="text-sm text-destructive">Record labels could not be loaded. <Button size="sm" variant="outline" onClick={() => void retryLabels()}>Retry</Button></div>}
+            {labelsLoading && <p className="text-sm text-muted-foreground">Loading labels...</p>}
+            <Select value={selectedLabelId ?? ""} onValueChange={setSelectedLabelId} disabled={labelsLoading || labelsError}>
               <SelectTrigger>
                 <SelectValue placeholder="Choose a record label" />
               </SelectTrigger>
@@ -314,7 +316,7 @@ export function SubmitDemoDialog({ open, onOpenChange, userId, bandId, preselect
               !selectedSongId || 
               !selectedLabelId || 
               isDuplicateSubmission || 
-              duplicateLookupError || duplicateLookupPending ||
+              duplicateLookupError || duplicateLookupPending || songsLoading || songsError || labelsLoading || labelsError ||
               submitDemoMutation.isPending
             }
           >

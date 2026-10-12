@@ -4,13 +4,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Music, Award } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface LabelGenreExpertiseProps {
   labelId: string;
 }
 
 export function LabelGenreExpertise({ labelId }: LabelGenreExpertiseProps) {
-  const { data: expertise = [], isLoading } = useQuery({
+  const { data: expertise = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['label-genre-expertise', labelId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -26,6 +27,8 @@ export function LabelGenreExpertise({ labelId }: LabelGenreExpertiseProps) {
   if (isLoading) {
     return <div className="animate-pulse h-32 bg-muted rounded" />;
   }
+
+  if (isError) return <Card role="alert"><CardContent className="p-4">Unable to load label genre expertise. <Button size="sm" variant="outline" onClick={() => void refetch()}>Retry</Button></CardContent></Card>;
 
   if (expertise.length === 0) {
     return (

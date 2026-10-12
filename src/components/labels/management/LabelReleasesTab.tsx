@@ -26,15 +26,15 @@ export function LabelReleasesTab({ labelId }: LabelReleasesTabProps) {
   const [viewMode, setViewMode] = useState<"all" | "released" | "pipeline">("all");
 
   // Query actual releases from releases table via label contracts
-  const { data: releases = [], isLoading } = useQuery({
+  const { data: releases = [], isLoading, isError: releasesError, refetch: retryReleases } = useQuery({
     queryKey: ["label-management-releases", labelId],
     queryFn: async () => {
       // Get contract IDs for this label
-      const { data: contracts } = await supabase
+      const { data: contracts, error: contractsError } = await supabase
         .from("artist_label_contracts")
         .select("id")
-        .eq("label_id", labelId)
-        .in("status", ["active", "completed"]);
+        .eq("label_id", labelId);
+      if (contractsError) throw contractsError;
 
       if (!contracts || contracts.length === 0) return [];
       const contractIds = contracts.map(c => c.id);
@@ -50,7 +50,6 @@ export function LabelReleasesTab({ labelId }: LabelReleasesTabProps) {
           bands:band_id(id, name, genre, fame)
         `)
         .in("label_contract_id", contractIds)
-        .neq("release_status", "cancelled")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -80,6 +79,8 @@ export function LabelReleasesTab({ labelId }: LabelReleasesTabProps) {
     return <Card><CardContent className="p-6 text-center text-muted-foreground">Loading releases...</CardContent></Card>;
   }
 
+  if (releasesError) return <Card role="alert"><CardContent className="p-6 text-sm text-destructive">Releases could not be loaded. <Button size="sm" variant="outline" onClick={() => void retryReleases()}>Retry</Button></CardContent></Card>;
+
   if (releases.length === 0) {
     return (
       <Card>
@@ -97,7 +98,7 @@ export function LabelReleasesTab({ labelId }: LabelReleasesTabProps) {
   const totalRevenue = releases.reduce((sum, r) => sum + (r.total_revenue ?? 0), 0);
   const totalUnits = releases.reduce((sum, r) => sum + (r.total_units_sold ?? 0), 0);
   const releasedReleases = releases.filter(r => r.release_status === "released");
-  const pipelineReleases = releases.filter(r => r.release_status !== "released");
+  const pipelineReleases = releases.filter(r => r.release_status !== "released" && r.release_status !== "cancelled");
 
   // Best chart position per release
   const bestChartByRelease = new Map<string, number>();
