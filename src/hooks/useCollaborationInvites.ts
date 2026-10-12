@@ -232,13 +232,15 @@ export const useCollaborationInvites = (projectId?: string) => {
   // Cancel a pending invitation
   const cancelInvitation = useMutation({
     mutationFn: async (collaborationId: string) => {
-      const { error } = await supabase
+      const { data: deleted, error } = await supabase
         .from("songwriting_collaborations")
         .delete()
         .eq("id", collaborationId)
-        .eq("status", "pending");
+        .eq("status", "pending")
+        .select("id");
 
       if (error) throw error;
+      if (!deleted?.length) throw new Error("This invitation is no longer pending or cannot be cancelled.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["project-collaborators", projectId] });
