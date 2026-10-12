@@ -42,13 +42,18 @@ export async function getFriendRequestCounts(profileId?: string | null): Promise
 }
 
 export async function listFriendships(profileId: string, kind: FriendListKind, search = ""): Promise<FriendSummary[]> {
-  let query = (supabase as any).from("friendships").select("id, requestor_id, addressee_id, status, created_at, responded_at, profiles!friendships_requestor_id_fkey(id, username, display_name, avatar_url, city_name), addressee:profiles!friendships_addressee_id_fkey(id, username, display_name, avatar_url, city_name)").or(`requestor_id.eq.${profileId},addressee_id.eq.${profileId}`).order("updated_at", { ascending: false }).limit(50);
+  let query = (supabase as any).from("friendships").select("id, requestor_id, addressee_id, status, created_at, responded_at, profiles!friendships_requestor_id_fkey(id, username, display_name, avatar_url, city_name), addressee:profiles!friendships_addressee_id_fkey(id, username, display_name, avatar_url, city_name)").or(`requestor_id.eq.${profileId},addressee_id.eq.${profileId}`).order("updated_at", { ascending: false });
   if (kind === "friends" || kind === "recent") query = query.eq("status", "accepted");
   if (kind === "incoming") query = query.eq("status", "pending").eq("addressee_id", profileId);
   if (kind === "outgoing") query = query.eq("status", "pending").eq("requestor_id", profileId);
-  const { data, error } = await query;
-  if (error) throw error;
-  return ((data ?? []) as any[]).map((row) => {
+  const data: any[] = [];
+  for (let offset = 0; offset < 100_000; offset += 500) {
+    const { data: page, error } = await query.range(offset, offset + 499);
+    if (error) throw error;
+    data.push(...(page ?? []));
+    if (!page || page.length < 500) break;
+  }
+  return data.map((row) => {
     const other = row.requestor_id === profileId ? row.addressee : row.profiles;
     return { id: other?.id, friendshipId: row.id, characterName: other?.display_name || other?.username || "Unavailable player", username: other?.username, avatarUrl: other?.avatar_url, cityName: other?.city_name, status: row.status, requestedAt: row.created_at, friendshipDate: row.responded_at, mutualFriendCount: 0 };
   }).filter((row) => row.id && (!search || `${row.characterName} ${row.username ?? ""} ${row.cityName ?? ""}`.toLowerCase().includes(search.toLowerCase())));
@@ -63,7 +68,9 @@ export async function listFriendSuggestions(profileId: string): Promise<FriendSu
   const { data: blockRows } = await (supabase as any).from("player_blocks").select("blocker_id, blocked_id").or(`blocker_id.eq.${profileId},blocked_id.eq.${profileId}`).is("removed_at", null);
   const blockedIds = ((blockRows ?? []) as any[]).map((row) => row.blocker_id === profileId ? row.blocked_id : row.blocker_id);
   const exclude = new Set([profileId, ...existing.map((f) => f.id), ...incoming.map((f) => f.id), ...outgoing.map((f) => f.id), ...blockedIds]);
-  const { data, error } = await (supabase as any).from("profiles").select("id, username, display_name, avatar_url, city_name").limit(12);
+  let candidateQuery = (supabase as any).from("profiles").select("id, username, display_name, avatar_url, city_name");
+  if (exclude.size) candidateQuery = candidateQuery.not("id", "in", `(${[...exclude].join(",")})`);
+  const { data, error } = await candidateQuery.order("created_at", { ascending: false }).limit(6);
   if (error) throw error;
-  return ((data ?? []) as any[]).filter((p) => !exclude.has(p.id)).slice(0, 6).map((p) => ({ id: p.id, friendshipId: "", characterName: p.display_name || p.username || "Player", username: p.username, avatarUrl: p.avatar_url, cityName: p.city_name, status: "pending", requestedAt: new Date().toISOString(), mutualFriendCount: 0, primaryRole: "Suggested because they are active in the community" }));
+  return ((data ?? []) as any[]).slice(0, 6).map((p) => ({ id: p.id, friendshipId: "", characterName: p.display_name || p.username || "Player", username: p.username, avatarUrl: p.avatar_url, cityName: p.city_name, status: "pending", requestedAt: new Date().toISOString(), mutualFriendCount: 0, primaryRole: "Suggested because they are active in the community" }));
 }
