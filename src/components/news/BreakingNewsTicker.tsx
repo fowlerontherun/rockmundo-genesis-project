@@ -22,8 +22,8 @@ export function BreakingNewsTicker() {
             .from("releases")
             .select("title, bands(name)")
             .eq("release_status", "released")
-            .gte("release_date", `${today}T00:00:00`)
-            .order("release_date", { ascending: false })
+            .gte("scheduled_release_date", today)
+            .order("scheduled_release_date", { ascending: false })
             .limit(5),
           supabase
             .from("artist_label_contracts")
