@@ -1,6 +1,6 @@
 import { STAGE_INSTRUMENTS, stageAssignment, type InstrumentId } from '@/features/gig-demo-3d/instrumentCatalog';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PlayerModelPreview } from './PlayerModelPreview';
 import { useEquippedRichClothing, useEquippedStageLuthieryInstruments, usePlayerModel, usePlayerStageTattoos } from './usePlayerModel';
 import { BODY_MUSCLE_LABELS, BODY_MUSCLE_TYPES, defaultAppearance, SLOTS, STYLES, STYLE_LABELS, type PlayerAppearance, type Style } from './appearance';
@@ -46,6 +46,7 @@ function EditorSession({ profileId, initial, model, richClothing, richClothingEr
 
   const [draft, setDraft] = useState(initial.appearance), [baseline, setBaseline] = useState(initial), [role, setRole] = useState('other'), [activeTab, setActiveTab] = useState<EditorTab>('body');
   const [feedback, setFeedback] = useState(''), [error, setError] = useState('');
+  const currentDraft = useRef(draft);
   const dirty = JSON.stringify(draft) !== JSON.stringify(baseline.appearance);
   const newerRevision = initial.revision !== baseline.revision;
   useEffect(() => {
@@ -61,7 +62,7 @@ function EditorSession({ profileId, initial, model, richClothing, richClothingEr
         ? visual.instrumentKind === 'electric_guitar'
         : false,
   ) ?? null;
-  const change = (next: PlayerAppearance) => { setDraft(next); setFeedback(''); setError(''); };
+  const change = (next: PlayerAppearance) => { currentDraft.current = next; setDraft(next); setFeedback(''); setError(''); };
   const setBody = (value: Partial<PlayerAppearance['body']>) => change({ ...draft, body: { ...draft.body, ...value } });
   const outfit = (style: Style) => change({ ...draft, equipment: { ...draft.equipment, ...Object.fromEntries(SLOTS.map(slot => [slot, { ...draft.equipment[slot], itemId: `starter.${slot}.${style}` }])) } });
   const basicOutfit = (preset: typeof BASIC_OUTFITS[number]) => change({ ...draft, equipment: {
@@ -73,7 +74,8 @@ function EditorSession({ profileId, initial, model, richClothing, richClothingEr
   async function save() {
     if (newerRevision) { setError("Your saved avatar changed elsewhere. Reload it before saving."); return; }
     setError(''); setFeedback('');
-    try { const saved = await model.save.mutateAsync({ profileId, appearance: draft, revision: baseline.revision }); setBaseline(saved); setDraft(saved.appearance); setFeedback('Avatar saved. Your character will wear this look in gig viewers.'); }
+    const submittedDraft = draft;
+    try { const saved = await model.save.mutateAsync({ profileId, appearance: submittedDraft, revision: baseline.revision }); setBaseline(saved); if (currentDraft.current === submittedDraft) { currentDraft.current = saved.appearance; setDraft(saved.appearance); } setFeedback('Avatar saved. Your character will wear this look in gig viewers.'); }
     catch (failure) { setError(failure instanceof Error ? failure.message : 'Your model could not be saved. Please try again.'); }
   }
   async function reload() {
@@ -133,7 +135,7 @@ function EditorSession({ profileId, initial, model, richClothing, richClothingEr
           <OutfitLooks appearance={draft} onChange={change} />
           {SLOTS.map(slot => <StarterWardrobe key={slot} slot={slot} appearance={draft} onChange={change} topIsOverridden={!!merchWearable} />)}
           <BandMerchWardrobe profileId={profileId} />
-          <div className="player-model-editor__item"><label htmlFor="instrument-finish">Instrument finish</label><span>Standard</span><input id="instrument-finish" type="color" value={draft.equipment.instrument.color} onChange={event => change({ ...draft, equipment: { ...draft.equipment, instrument: { ...draft.equipment.instrument, color: event.target.value } } })} /></div>
+          <div className="player-model-editor__item"><label htmlFor="instrument-finish">Instrument finish</label><span>Standard</span><input id="instrument-finish" type="color" disabled={Boolean(previewLuthieryInstrument)} title={previewLuthieryInstrument ? "Equipped crafted instrument controls its own finish" : undefined} value={draft.equipment.instrument.color} onChange={event => change({ ...draft, equipment: { ...draft.equipment, instrument: { ...draft.equipment.instrument, color: event.target.value } } })} />{previewLuthieryInstrument && <p className="player-model-editor__hint">The equipped crafted instrument controls its own finish.</p>}</div>
         </fieldset>}
         <div className="player-model-editor__save">
           <div className="player-model-editor__save-state" aria-live="polite">{baseline.revision == null ? 'Create your first saved stage model' : dirty ? 'You have unsaved changes' : 'Your stage model is saved'}</div>

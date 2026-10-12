@@ -426,8 +426,7 @@ function OpenAccountDialog({
         <DialogHeader>
           <DialogTitle>Open a bank account</DialogTitle>
           <DialogDescription>
-            Current (0%), savings (2.5% APR), or fixed deposit (3–8% APR, locked). The
-            account uses this character&apos;s {currencyCode} wallet.
+            Choose a current, savings or fixed deposit account. The bank determines the applicable interest rate and lock terms when opening the account. It uses this character&apos;s {currencyCode} wallet.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
@@ -489,7 +488,7 @@ function OpenAccountDialog({
                 <SelectContent>
                   {[3, 6, 12, 24, 36].map((months) => (
                     <SelectItem key={months} value={String(months)}>
-                      {months} months ({(3 + months * 0.25).toFixed(2)}% APR)
+                      {months} months (APR confirmed by bank)
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -670,7 +669,7 @@ function TransferDialog({
           <DialogTitle>Transfer between {fromAccount.currencyCode} accounts</DialogTitle>
           <DialogDescription>
             Currency conversion is not performed. Only matching-currency destinations are
-            shown. A network-error retry will reuse the original operation.
+            shown. The transfer details are locked after the first attempt to preserve its idempotency key. Close the dialog to start a different transfer.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
@@ -678,10 +677,8 @@ function TransferDialog({
             <Label>To account</Label>
             <Select
               value={destinationId}
-              onValueChange={(value) => {
-                setDestinationId(value);
-                setIdempotencyKey(null);
-              }}
+              disabled={Boolean(idempotencyKey)}
+              onValueChange={setDestinationId}
             >
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -700,10 +697,8 @@ function TransferDialog({
               min="0"
               step="0.01"
               value={amount}
-              onChange={(event) => {
-                setAmount(event.target.value);
-                setIdempotencyKey(null);
-              }}
+              disabled={Boolean(idempotencyKey)}
+              onChange={(event) => setAmount(event.target.value)}
             />
           </div>
         </div>
