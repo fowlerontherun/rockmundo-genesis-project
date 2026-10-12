@@ -51,15 +51,17 @@ export async function fetchSocialSafetyStatus(viewerProfileId: string, targetPro
   uuidSchema.parse(viewerProfileId);
   uuidSchema.parse(targetProfileId);
 
-  const [{ data: isBlocked, error: blockError }, { data: isMuted, error: muteError }] = await Promise.all([
-    (supabase as any).rpc("are_profiles_blocked", { first_profile_id: viewerProfileId, second_profile_id: targetProfileId }),
+  // UI "Unblock" must only reflect a block owned by the viewer, not the target's block.
+  const [{ data: ownBlock, error: blockError }, { data: isMuted, error: muteError }] = await Promise.all([
+    (supabase as any).from("player_blocks").select("id").eq("blocker_id", viewerProfileId)
+      .eq("blocked_id", targetProfileId).is("removed_at", null).limit(1),
     (supabase as any).rpc("is_profile_muted", { viewer_profile_id: viewerProfileId, target_profile_id: targetProfileId }),
   ]);
 
   if (blockError) throw blockError;
   if (muteError) throw muteError;
 
-  return { isBlocked: Boolean(isBlocked), isMuted: Boolean(isMuted) };
+  return { isBlocked: Boolean(ownBlock?.length), isMuted: Boolean(isMuted) };
 }
 
 export async function blockProfile(targetProfileId: string, note?: string) {
