@@ -755,7 +755,7 @@ export function SimplifiedFestivalLineupManager({
                   </p>
                   {["confirmed", "awaiting_schedule"].includes(booking.status) && data.canWrite ? (
                     <div className="mt-2 max-w-52">
-                      <Select value={booking.billingPosition} disabled={changeBilling.isPending} onValueChange={(position) => changeBilling.mutate({ bookingId: booking.id, position: position as (typeof billingPositions)[number] })}>
+                      <Select value={booking.billingPosition} disabled={changeBilling.isPending || !data.canWrite} onValueChange={(position) => changeBilling.mutate({ bookingId: booking.id, position: position as (typeof billingPositions)[number] })}>
                         <SelectTrigger aria-label={`Billing position for ${nameFor(booking.identity)}`}><SelectValue /></SelectTrigger>
                         <SelectContent>{billingPositions.map((position) => <SelectItem key={position} value={position} className="capitalize">{billingLabel(position)}</SelectItem>)}</SelectContent>
                       </Select>

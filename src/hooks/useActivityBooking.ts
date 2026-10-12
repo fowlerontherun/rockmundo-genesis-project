@@ -40,7 +40,7 @@ const WELLNESS_GATE_MAP: Record<ActivityType, string | null> = {
 
 /**
  * Throw if the active character is wellness-blocked from this activity type.
- * Fail-open on transport errors so a flaky network never blocks gameplay.
+ * Deny when the gate cannot be verified; the server owns the final decision.
  */
 export async function assertWellnessAllows(
   profileId: string,
@@ -57,8 +57,8 @@ export async function assertWellnessAllows(
   try {
     res = await evaluateGate(profileId, gateType);
   } catch (e) {
-    console.warn("[assertWellnessAllows] gate RPC failed, allowing:", e);
-    return;
+    console.error("[assertWellnessAllows] gate RPC failed:", e);
+    throw new Error("Unable to verify wellness eligibility. Please retry.");
   }
   if (!res.allowed) {
     const hint = res.suggestion_slug
@@ -104,8 +104,8 @@ export async function checkTimeSlotAvailable(
 
     // If RPC fails, assume no conflict to allow booking to proceed
     if (rpcError) {
-      console.warn('Scheduling conflict check failed, proceeding:', rpcError);
-      return { available: true };
+      console.warn('Scheduling conflict check failed:', rpcError);
+      return { available: false };
     }
 
     if (hasConflict) {
@@ -125,8 +125,7 @@ export async function checkTimeSlotAvailable(
     return { available: true };
   } catch (error) {
     console.warn('Error checking time slot availability:', error);
-    // On error, allow booking to proceed
-    return { available: true };
+    return { available: false };
   }
 }
 
@@ -211,14 +210,15 @@ export async function canStartActivityNow(userId: string): Promise<{ canStart: b
   const profile = await getActiveProfile(userId);
   if (!profile) return { canStart: false, reason: "Select an active character first." };
   const now = new Date();
-  const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
+  // Only activities already underway block an immediate start; future bookings
+  // require a duration-aware check when an end time is available.
 
   const { data: activeActivities, error: activityLookupError } = await (supabase as any)
     .from('player_scheduled_activities')
     .select('*')
     .eq('profile_id', profile.id)
     .in('status', ['scheduled', 'in_progress'])
-    .lte('scheduled_start', oneHourLater.toISOString())
+    .lte('scheduled_start', now.toISOString())
     .gte('scheduled_end', now.toISOString())
     .limit(1);
 

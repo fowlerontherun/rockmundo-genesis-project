@@ -44,7 +44,7 @@ export const useTourCatchUp = () => {
       queryClient.invalidateQueries({ queryKey: ["travel-plans"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       queryClient.invalidateQueries({ queryKey: ["profiles"] });
-      for (const key of ["active-profile", "profile-cash", "player-cash", "luthiery-shop-profile"]) {
+      for (const key of ["active-profile", "profile-cash", "player-cash", "luthiery-shop-profile", "user-cash-balance", "game-data"]) {
         queryClient.invalidateQueries({ queryKey: [key] });
       }
       queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });

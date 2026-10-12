@@ -283,7 +283,11 @@ export const SummaryTab = () => {
         ) : (
           <div className="space-y-4">
             {activeEnrollments.map((enrollment) => {
-              const courseDays = enrollment.university_courses?.base_duration_days || 30;
+              const start = Date.parse(enrollment.enrolled_at);
+              const end = enrollment.scheduled_end_date ? Date.parse(enrollment.scheduled_end_date) : NaN;
+              const actualDays = Number.isFinite(start) && Number.isFinite(end) && end > start
+                ? Math.ceil((end - start) / 86_400_000) : null;
+              const courseDays = Math.max(1, actualDays ?? enrollment.university_courses?.base_duration_days ?? 30);
               const progress = (enrollment.days_attended / courseDays) * 100;
               const skill = enrollment.university_courses?.skill_slug || "";
               const skillData = skillProgress[skill];
@@ -376,7 +380,7 @@ export const SummaryTab = () => {
                           </span>
                         </div>
                         <Progress
-                          value={(skillData.xp / skillData.required) * 100}
+                          value={skillData.required > 0 ? Math.min(100, Math.max(0, (skillData.xp / skillData.required) * 100)) : 100}
                           className="h-2"
                         />
                       </div>
