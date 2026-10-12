@@ -70,6 +70,7 @@ export const AILyricsGenerator = ({
 
       if (error) throw error;
 
+      if (typeof data?.lyrics !== "string" || !data.lyrics.trim()) throw new Error("The lyric generator returned no lyrics. Please try again.");
       if (data?.lyrics) {
         onLyricsGenerated(data.lyrics);
         
