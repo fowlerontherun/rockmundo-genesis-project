@@ -32,12 +32,12 @@ export const BooksTab = () => {
   const tierAccess = useSkillTierAccess(profileId, (typedBooks ?? []).map((book) => book.skill_slug));
   const accessBySkill = tierAccess.data ?? new Map<string, boolean>();
   const isBookLocked = (book: EnrichedSkillBook) =>
-    Boolean(book.skill_slug && isHigherTierSkill(book.skill_slug) && accessBySkill.get(book.skill_slug) === false);
+    Boolean(book.skill_slug && isHigherTierSkill(book.skill_slug) && (tierAccess.isLoading || tierAccess.isError || accessBySkill.get(book.skill_slug) !== true));
 
   const activeBookSkill = activeSession?.skill_books?.skill_slug;
   const activeBookLocked = Boolean(
     activeBookSkill && isHigherTierSkill(activeBookSkill) &&
-    accessBySkill.get(activeBookSkill) === false
+    (tierAccess.isLoading || tierAccess.isError || accessBySkill.get(activeBookSkill) !== true)
   );
 
   const isPurchased = (bookId: string) => 
