@@ -155,58 +155,12 @@ export const useSkillBooks = () => {
       readingDays: number;
       autoRead?: boolean;
     }) => {
-      if (profileId !== (await supabase.from("profiles").select("id").eq("id", profileId).eq("user_id", userId).single()).data?.id) {
-        throw new Error("The selected character does not belong to this account.");
-      }
-      const { data: active, error: activeError } = await supabase.from("player_book_reading_sessions")
-        .select("id").eq("profile_id", profileId).eq("status", "reading").limit(1);
-      if (activeError) throw activeError;
-      if (active?.length) throw new Error("Stop your current book before starting another.");
-      const { data: owned, error: ownedError } = await supabase.from("player_book_purchases")
-        .select("id").eq("id", purchaseId).eq("profile_id", profileId).eq("book_id", bookId).maybeSingle();
-      if (ownedError) throw ownedError;
-      if (!owned) throw new Error("You must own this book before reading it.");
-      const { data: book, error: bookError } = await supabase.from("skill_books")
-        .select("skill_slug, base_reading_days").eq("id", bookId).eq("is_active", true).single();
-      if (bookError) throw bookError;
-      const { data: unlocked, error: unlockError } = await supabase.rpc("skill_tier_unlocked", {
-        p_profile_id: profileId, p_slug: book.skill_slug,
+      const { data, error } = await (supabase as any).rpc("start_book_reading_atomic", {
+        p_profile_id: profileId,
+        p_purchase_id: purchaseId,
+        p_book_id: bookId,
+        p_auto_read: autoRead ?? false,
       });
-      if (unlockError) throw unlockError;
-      if (unlocked !== true) throw new Error("This book's skill prerequisites are not unlocked yet. Choose another book.");
-      const scheduledEndDate = new Date();
-      scheduledEndDate.setDate(scheduledEndDate.getDate() + book.base_reading_days);
-
-      // Reuse the most recent stopped session to preserve attendance and earned XP.
-      const { data: previous, error: previousError } = await supabase
-        .from("player_book_reading_sessions")
-        .select("id, days_read")
-        .eq("profile_id", profileId).eq("book_id", bookId).eq("purchase_id", purchaseId)
-        .eq("status", "abandoned").order("started_at", { ascending: false }).limit(1).maybeSingle();
-      if (previousError) throw previousError;
-      if (previous) {
-        scheduledEndDate.setDate(scheduledEndDate.getDate() - Math.min(book.base_reading_days, Math.max(0, previous.days_read ?? 0)));
-        const { data, error } = await supabase.from("player_book_reading_sessions")
-          .update({ status: "reading", auto_read: autoRead ?? false, scheduled_end_date: scheduledEndDate.toISOString() })
-          .eq("id", previous.id).eq("profile_id", profileId).eq("status", "abandoned")
-          .select().single();
-        if (error) throw error;
-        return data;
-      }
-
-      const { data, error } = await supabase
-        .from("player_book_reading_sessions")
-        .insert({
-          user_id: userId,
-          profile_id: profileId,
-          book_id: bookId,
-          purchase_id: purchaseId,
-          scheduled_end_date: scheduledEndDate.toISOString(),
-          auto_read: autoRead ?? false,
-        })
-        .select()
-        .single();
-
       if (error) throw error;
       return data;
     },
