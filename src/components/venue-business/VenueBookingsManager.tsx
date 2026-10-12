@@ -54,7 +54,7 @@ export function VenueBookingsManager({ venueId }: VenueBookingsManagerProps) {
     updateStatus.mutate({ bookingId, status, venueId });
   };
   
-  const upcomingBookings = bookings?.filter(b => b.status !== 'completed' && b.status !== 'cancelled') || [];
+  const upcomingBookings = (bookings?.filter(b => b.status !== 'completed' && b.status !== 'cancelled') || []).sort((a, b) => new Date(a.booking_date).getTime() - new Date(b.booking_date).getTime());
   const pastBookings = bookings?.filter(b => b.status === 'completed' || b.status === 'cancelled') || [];
   
   if (isLoading) {
