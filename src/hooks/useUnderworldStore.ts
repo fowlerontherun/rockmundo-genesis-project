@@ -141,6 +141,7 @@ export const useUnderworldStore = () => {
       paymentMethod: "cash" | "crypto";
     }) => {
       if (!profileId) throw new Error("Not logged in");
+      if (product.duration_hours && !["xp_multiplier","fame_multiplier","energy_regen","all_multiplier","gig_quality_boost","gig_earnings_boost","recording_quality_boost","songwriting_quality_boost","creativity_boost"].some(key => Number((product.effects as Record<string, unknown> | null)?.[key]) > 0)) throw new Error("This timed product has no supported boost effect and cannot be purchased.");
 
       // Validate payment
       if (paymentMethod === "cash") {
