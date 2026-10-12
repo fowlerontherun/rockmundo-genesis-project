@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -166,6 +166,9 @@ export function SimplifiedFestivalLineupManager({
   const withdrawInvitation = useFestivalEditionArtistAction("withdrawInvitation");
   const withdrawOffer = useFestivalEditionArtistAction("withdrawOffer");
 
+  const rememberedCandidates = useRef(new Map<string, string>());
+  useEffect(() => { rememberedCandidates.current.clear(); }, [festivalEditionId]);
+  useEffect(() => { for (const candidate of candidates.data?.items ?? []) rememberedCandidates.current.set(identityKey(candidate.identity), candidate.displayName); }, [candidates.data?.items]);
   const candidateNames = useMemo(
     () =>
       new Map(
@@ -180,6 +183,7 @@ export function SimplifiedFestivalLineupManager({
   const nameFor = (identity: ArtistIdentity) =>
     (identity.type === "band" ? knownBands.data?.get(identity.bandId) : undefined) ??
     candidateNames.get(identityKey(identity)) ??
+    rememberedCandidates.current.get(identityKey(identity)) ??
     (bandLookupError && identity.type === "band" ? `Band ${identity.bandId.slice(0, 8)} (name unavailable)` : fallbackIdentityLabel(identity));
 
   const bandLookupError = knownBands.isError;
