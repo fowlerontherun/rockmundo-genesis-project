@@ -104,10 +104,16 @@ export function useMentorSessions() {
     return DAY_NAMES[day] || 'Unknown';
   };
 
-  const isAvailableToday = (availableDay: number | null, mentorTimeZone = "UTC") => {
+  const isAvailableToday = (availableDay: number | null, timezone?: string | null) => {
     if (availableDay === null || availableDay === undefined) return true;
-    const localWeekday = new Intl.DateTimeFormat("en-GB", { weekday: "long", timeZone: mentorTimeZone }).format(new Date());
-    return DAY_NAMES[availableDay] === localWeekday;
+    try {
+      const weekday = new Intl.DateTimeFormat("en-US", {
+        timeZone: timezone || "UTC", weekday: "long",
+      }).format(new Date());
+      return DAY_NAMES.indexOf(weekday) === availableDay;
+    } catch {
+      return false; // Unknown mentor timezone: don't book on an unverified day.
+    }
   };
 
   const isInMentorCity = (mentorCityId: string | null) => {
@@ -151,7 +157,7 @@ export function useMentorSessions() {
         throw new Error(`Travel to ${cityName} to train with this master`);
       }
 
-      if (mentor.available_day !== null && !isAvailableToday(mentor.available_day, (mentor.city as any)?.timezone || "UTC")) {
+      if (mentor.available_day !== null && !isAvailableToday(mentor.available_day, mentor.city?.timezone)) {
         const dayName = getDayName(mentor.available_day);
         throw new Error(`${mentor.name} is only available on ${dayName}s`);
       }
@@ -311,7 +317,7 @@ export function useMentorSessions() {
       return { canBook: false, reason: `Travel to ${cityName}` };
     }
 
-    if (mentor.available_day !== null && !isAvailableToday(mentor.available_day, (mentor.city as any)?.timezone || "UTC")) {
+    if (mentor.available_day !== null && !isAvailableToday(mentor.available_day, mentor.city?.timezone)) {
       const dayName = getDayName(mentor.available_day);
       return { canBook: false, reason: `Available ${dayName}s` };
     }

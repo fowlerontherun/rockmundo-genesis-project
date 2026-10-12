@@ -68,112 +68,20 @@ Deno.serve(async (req) => {
 
     for (const payment of duePayments || []) {
       try {
-        const contract = payment.contract
-        if (!contract || contract.status !== 'active') {
-          console.log(`Skipping payment ${payment.id} - contract not active`)
-          continue
+        const { data, error } = await supabase.rpc('process_sponsorship_installment_atomic', {
+          p_payment_id: payment.id,
+        });
+        if (error) throw error;
+        const result = data as { status: string; amount: number } | null;
+        if (result?.status === 'paid') {
+          paidCount++;
+          totalPaid += Number(result.amount || 0);
+        } else if (result?.status === 'cancelled') {
+          console.log(`Cancelled obsolete installment ${payment.id}: contract not active`);
         }
-
-        // Pay to band balance
-        const { data: band, error: bandError } = await supabase
-          .from('bands')
-          .select('band_balance, morale')
-          .eq('id', payment.band_id)
-          .single()
-
-        if (bandError) {
-          console.error(`Error fetching band ${payment.band_id}:`, bandError)
-          errorCount++
-          continue
-        }
-
-        const newBalance = (band.band_balance || 0) + payment.amount
-
-        // === SPONSORSHIP PAYMENT → MORALE (v1.0.965) ===
-        // Getting paid by sponsors gives a small morale boost
-        const curMorale = (band as any).morale ?? 50;
-        const moraleBoost = payment.amount >= 5000 ? 3 : payment.amount >= 1000 ? 2 : 1;
-
-        const { error: updateBandError } = await supabase
-          .from('bands')
-          .update({
-            band_balance: newBalance,
-            morale: Math.min(100, curMorale + moraleBoost),
-          } as any)
-          .eq('id', payment.band_id)
-
-        if (updateBandError) {
-          console.error(`Error updating band balance:`, updateBandError)
-          errorCount++
-          continue
-        }
-
-        // Log the earning
-        await supabase
-          .from('band_earnings')
-          .insert({
-            band_id: payment.band_id,
-            amount: payment.amount,
-            source: 'sponsorship',
-            description: `Weekly sponsorship payment (Week ${payment.week_number})`,
-            metadata: {
-              contract_id: contract.id,
-              payment_id: payment.id,
-              brand_id: contract.brand_id,
-            }
-          })
-
-        // Mark payment as paid
-        const { error: updatePaymentError } = await supabase
-          .from('sponsorship_payments')
-          .update({
-            status: 'paid',
-            paid_at: now,
-          })
-          .eq('id', payment.id)
-
-        if (updatePaymentError) {
-          console.error(`Error marking payment as paid:`, updatePaymentError)
-          errorCount++
-          continue
-        }
-
-        // Update contract weeks_paid and total_paid
-        const newTotalPaid = (contract.total_paid || 0) + payment.amount
-        const { error: updateContractError } = await supabase
-          .from('sponsorship_contracts')
-          .update({
-            weeks_paid: payment.week_number,
-            total_paid: newTotalPaid,
-            last_payment_at: now,
-          })
-          .eq('id', contract.id)
-
-        if (updateContractError) {
-          console.error(`Error updating contract:`, updateContractError)
-        }
-
-        // Check if contract is complete
-        if (payment.week_number >= contract.term_weeks) {
-          const { error: completionError } = await supabase
-            .from('sponsorship_contracts')
-            .update({ status: 'completed' })
-            .eq('id', contract.id)
-          if (completionError) {
-            console.error(`Failed to complete sponsorship contract ${contract.id}:`, completionError)
-            errorCount++
-            continue
-          }
-          console.log(`Contract ${contract.id} completed`)
-        }
-
-        paidCount++
-        totalPaid += payment.amount
-        console.log(`Paid $${payment.amount} for contract ${contract.id} (Week ${payment.week_number})`)
-
       } catch (error) {
-        console.error(`Exception processing payment ${payment.id}:`, error)
-        errorCount++
+        console.error(`Failed atomic installment processing ${payment.id}:`, error);
+        errorCount++;
       }
     }
 
