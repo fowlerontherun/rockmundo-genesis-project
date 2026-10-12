@@ -63,11 +63,12 @@ serve(async (req) => {
 
     const { data: existing, error: lookupError } = await admin
       .from("vip_subscriptions")
-      .select("id")
+      .select("id,user_id")
       .eq("stripe_subscription_id", best.id)
       .maybeSingle();
     if (lookupError) throw lookupError;
 
+    if (existing && existing.user_id !== user.id) throw new Error("Subscription ownership mismatch");
     if (existing) {
       const { error: writeError } = await admin.from("vip_subscriptions").update({ status: "active", expires_at: expiresAt }).eq("id", existing.id).eq("user_id", user.id);
       if (writeError) throw writeError;
