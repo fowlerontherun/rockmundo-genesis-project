@@ -173,11 +173,24 @@ export function useUniversityAttendance(profileId: string | undefined) {
     },
   });
 
+  const { data: universityTimeZone } = useQuery({
+    queryKey: ["university-class-timezone", enrollment?.university_id],
+    enabled: !!enrollment?.university_id,
+    queryFn: async () => {
+      const { data: uni, error: uniError } = await supabase.from("universities")
+        .select("city").eq("id", enrollment!.university_id).single();
+      if (uniError) throw uniError;
+      const { data: city, error: cityError } = await supabase.from("cities")
+        .select("timezone").eq("name", uni.city).limit(1).maybeSingle();
+      if (cityError) throw cityError;
+      return city?.timezone || null;
+    },
+  });
   const [isWithinClassWindow, setIsWithinClassWindow] = useState(false);
 
   useEffect(() => {
     const evaluateWindow = () => {
-      if (!enrollment || !enrollment.university_courses) {
+      if (!enrollment || !enrollment.university_courses || !universityTimeZone) {
         setIsWithinClassWindow(false);
         return;
       }
@@ -189,14 +202,16 @@ export function useUniversityAttendance(profileId: string | undefined) {
       const endHour = Math.min(Math.max(rawEnd, startHour + 1), 24);
 
       const now = new Date();
-      const hour = now.getUTCHours();
+      const hour = Number(new Intl.DateTimeFormat("en-GB", {
+        hour: "2-digit", hourCycle: "h23", timeZone: universityTimeZone,
+      }).format(now));
       setIsWithinClassWindow(hour >= startHour && hour < endHour);
     };
 
     evaluateWindow();
     const interval = setInterval(evaluateWindow, 60 * 1000);
     return () => clearInterval(interval);
-  }, [enrollment?.id, enrollment?.university_courses?.class_start_hour, enrollment?.university_courses?.class_end_hour]);
+  }, [enrollment?.id, enrollment?.university_courses?.class_start_hour, enrollment?.university_courses?.class_end_hour, universityTimeZone]);
 
   const canAttendClass = useMemo(() => {
     if (!enrollment || activityStatus || todayAttendance || attendancePending || attendanceError || activityPending || activityError) return false;
