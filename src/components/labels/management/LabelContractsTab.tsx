@@ -56,11 +56,14 @@ export function LabelContractsTab({ labelId }: LabelContractsTabProps) {
 
   const withdrawMutation = useMutation({
     mutationFn: async (contractId: string) => {
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from("artist_label_contracts")
         .update({ status: "terminated", terminated_at: new Date().toISOString() })
-        .eq("id", contractId);
+        .eq("id", contractId)
+        .eq("status", "offered")
+        .select("id");
       if (error) throw error;
+      if (!updated?.length) throw new Error("This contract is no longer an offered contract.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["label-all-contracts", labelId] });
@@ -122,11 +125,14 @@ export function LabelContractsTab({ labelId }: LabelContractsTabProps) {
 
   const rejectMutation = useMutation({
     mutationFn: async (contractId: string) => {
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from("artist_label_contracts")
         .update({ status: "rejected" })
-        .eq("id", contractId);
+        .eq("id", contractId)
+        .in("status", ["offered", "negotiating"])
+        .select("id");
       if (error) throw error;
+      if (!updated?.length) throw new Error("Contract is no longer pending rejection.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["label-all-contracts", labelId] });
