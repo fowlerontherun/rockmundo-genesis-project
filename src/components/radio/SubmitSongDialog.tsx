@@ -209,9 +209,9 @@ export const SubmitSongDialog = ({ open, onOpenChange, station }: SubmitSongDial
                         ? "border-primary bg-accent"
                         : "border-border hover:bg-accent/50"
                     } transition-colors cursor-pointer`}
-                    onClick={() => setSelectedSongId(song.id)}
+                    onClick={() => { if (genreMatch) setSelectedSongId(song.id); }}
                   >
-                    <RadioGroupItem value={song.id} id={song.id} />
+                    <RadioGroupItem value={song.id} id={song.id} disabled={!genreMatch} />
                     <Label
                       htmlFor={song.id}
                       className="flex-1 cursor-pointer flex items-center justify-between"
@@ -255,7 +255,7 @@ export const SubmitSongDialog = ({ open, onOpenChange, station }: SubmitSongDial
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!selectedSongId || isSubmitting || !hasEnoughFame || !hasVisitedCountry}
+            disabled={!selectedSongId || !isGenreMatch(songs.find(song => song.id === selectedSongId)?.genre || "") || isSubmitting || !hasEnoughFame || !hasVisitedCountry}
           >
             {isSubmitting ? "Submitting..." : "Submit Song"}
           </Button>

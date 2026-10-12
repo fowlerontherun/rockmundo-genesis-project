@@ -53,7 +53,7 @@ export const useSkillBooks = () => {
     },
   });
 
-  const { data: purchases } = useQuery({
+  const { data: purchases, isError: purchasesError, error: purchasesQueryError, refetch: retryPurchases } = useQuery({
     queryKey: ["my_book_purchases", profileId],
     queryFn: async () => {
       if (!profileId) return [];
@@ -77,7 +77,7 @@ export const useSkillBooks = () => {
     enabled: !!profileId,
   });
 
-  const { data: activeSession } = useQuery({
+  const { data: activeSession, isError: activeSessionError, error: activeSessionQueryError, refetch: retryActiveSession } = useQuery({
     queryKey: ["active_reading_session", profileId],
     queryFn: async () => {
       if (!profileId) return null;
@@ -228,6 +228,12 @@ export const useSkillBooks = () => {
     purchases,
     activeSession,
     isLoading,
+    purchasesError,
+    purchasesQueryError,
+    retryPurchases,
+    activeSessionError,
+    activeSessionQueryError,
+    retryActiveSession,
     purchaseBook: purchaseBook.mutate,
     startReading: startReading.mutate,
     stopReading: stopReading.mutate,

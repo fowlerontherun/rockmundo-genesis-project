@@ -214,7 +214,7 @@ export async function canStartActivityNow(userId: string): Promise<{ canStart: b
   const now = new Date();
   const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
 
-  const { data: activeActivities } = await (supabase as any)
+  const { data: activeActivities, error: activityLookupError } = await (supabase as any)
     .from('player_scheduled_activities')
     .select('*')
     .eq('user_id', userId)
@@ -222,6 +222,8 @@ export async function canStartActivityNow(userId: string): Promise<{ canStart: b
     .lte('scheduled_start', oneHourLater.toISOString())
     .gte('scheduled_end', now.toISOString())
     .limit(1);
+
+  if (activityLookupError) return { canStart: false, reason: 'Unable to verify your schedule. Please try again.' };
 
   if (activeActivities && activeActivities.length > 0) {
     const activity = activeActivities[0];
