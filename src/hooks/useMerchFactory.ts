@@ -380,13 +380,14 @@ export function useAllBands() {
   return useQuery({
     queryKey: ['merch-factory-band-options'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('bands')
-        .select('id, name')
-        .order('name')
-        .limit(200);
-      if (error) throw error;
-      return (data ?? []) as { id: string; name: string }[];
+      const allBands: { id: string; name: string }[] = [];
+      for (let offset = 0; ; offset += 500) {
+        const { data, error } = await supabase.from("bands").select("id, name").order("name").order("id").range(offset,offset+499);
+        if (error) throw error;
+        allBands.push(...(data ?? []));
+        if ((data?.length ?? 0) < 500) break;
+      }
+      return allBands;
     },
   });
 }
