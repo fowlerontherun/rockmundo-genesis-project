@@ -37,7 +37,13 @@ const getDisplayedQuality = (project: SongwritingProject) => {
 
 const getTimeSummary = (project: SongwritingProject) => {
   const sessions = (project.songwriting_sessions ?? []).filter(
-    (session) => Boolean(session.completed_at || (session.session_end && (session.xp_earned > 0 || session.music_progress_gained > 0 || session.lyrics_progress_gained > 0))),
+    (session) => Boolean(session.completed_at) ||
+      (session as { status?: string }).status === "completed" ||
+      Boolean(session.session_end && (
+        session.xp_earned > 0 ||
+        session.music_progress_gained > 0 ||
+        session.lyrics_progress_gained > 0
+      )),
   );
   const byType = new Map<string, { sessions: number; hours: number }>();
 

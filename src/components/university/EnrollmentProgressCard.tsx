@@ -237,7 +237,7 @@ export function EnrollmentProgressCard({ enrollment, onDropCourse }: EnrollmentP
                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                 <AlertDialogDescription>
                   Dropping this course will forfeit your enrollment fee of $
-                  {paymentAmount.toLocaleString()}. XP and skill progress already earned are kept, but unfinished attendance ends. This action
+                  {paymentAmount.toLocaleString()} and end your enrollment. XP and skill progress already earned remain yours. This action
                   cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>

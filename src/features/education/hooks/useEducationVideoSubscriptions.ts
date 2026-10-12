@@ -13,18 +13,20 @@ export const useEducationVideoSubscriptions = (profileId?: string | null) =>
     queryKey: subscriptionQueryKey(profileId),
     enabled: Boolean(profileId),
     queryFn: async () => {
-      const subscriptions = new Set<string>();
+      const skillSlugs = new Set<string>();
       for (let offset = 0; ; offset += 500) {
         const { data, error } = await (supabase as any)
           .from("education_youtube_skill_subscriptions")
-          .select("skill_slug").eq("profile_id", profileId)
+          .select("skill_slug")
+          .eq("profile_id", profileId)
           .order("created_at", { ascending: true })
-          .order("skill_slug", { ascending: true }).range(offset, offset + 499);
+          .order("skill_slug", { ascending: true })
+          .range(offset, offset + 499);
         if (error) throw error;
-        for (const row of data ?? []) subscriptions.add(row.skill_slug);
+        for (const row of data ?? []) skillSlugs.add(row.skill_slug);
         if (!data || data.length < 500) break;
       }
-      return subscriptions;
+      return skillSlugs;
     },
     staleTime: 1000 * 60,
   });

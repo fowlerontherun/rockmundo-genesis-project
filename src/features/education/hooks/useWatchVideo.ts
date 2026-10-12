@@ -183,12 +183,20 @@ export const useWatchVideo = () => {
               if (skillUpdateError) throw skillUpdateError;
               skillXpAwarded = existingProgress.current_level < maxLevel;
             } else if (canVideoStartSkill(normalizedSkill)) {
-              const requiredXp = await getRequiredSkillXp(0);
+              let newLevel = 0;
+              let newXp = XP_PER_VIDEO;
+              let requiredXp = await getRequiredSkillXp(newLevel);
+              while (newLevel < maxLevel && newXp >= requiredXp) {
+                newXp -= requiredXp;
+                newLevel++;
+                requiredXp = newLevel < maxLevel ? await getRequiredSkillXp(newLevel) : 0;
+              }
+              if (newLevel >= maxLevel) { newXp = 0; requiredXp = 0; }
               const { error: skillInsertError } = await supabase.from("skill_progress").insert({
                 profile_id: profileId,
                 skill_slug: normalizedSkill,
-                current_xp: XP_PER_VIDEO,
-                current_level: 0,
+                current_xp: newXp,
+                current_level: newLevel,
                 required_xp: requiredXp,
                 last_practiced_at: new Date().toISOString(),
               });

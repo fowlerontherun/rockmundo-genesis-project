@@ -100,7 +100,7 @@ export default function UniversityDetail() {
   const [courseSearch, setCourseSearch] = useState("");
   const [hideLockedCourses, setHideLockedCourses] = useState(true);
 
-  const { data: university, isPending: universityPending, isError: universityError } = useQuery({
+  const { data: university, isLoading: universityLoading, isError: universityError, refetch: retryUniversity } = useQuery({
     queryKey: ["university", id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -132,12 +132,14 @@ export default function UniversityDetail() {
   const { data: courseEnrollmentCounts } = useQuery({
     queryKey: ["university_course_enrollment_counts", id],
     queryFn: async () => {
-      const rows: Array<{ course_id: string }> = [];
+      const rows: Array<{course_id: string}> = [];
       for (let offset = 0; ; offset += 500) {
-        const { data, error } = await supabase.from("player_university_enrollments")
-          .select("course_id").eq("university_id", id)
+        const { data, error } = await supabase
+          .from("player_university_enrollments")
+          .select("course_id")
+          .eq("university_id", id)
           .in("status", ["enrolled", "in_progress"])
-          .order("id", { ascending: true }).range(offset, offset + 499);
+          .order("id").range(offset, offset + 499);
         if (error) throw error;
         rows.push(...(data ?? []));
         if (!data || data.length < 500) break;
@@ -158,13 +160,20 @@ export default function UniversityDetail() {
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       const since = sevenDaysAgo.toISOString().split("T")[0];
 
-      const rows: any[] = [];
+      const rows: Array<any> = [];
       for (let offset = 0; ; offset += 500) {
-        const { data, error } = await supabase.from("player_university_attendance")
-          .select(`id, xp_earned, player_university_enrollments!inner (course_id, university_id)`)
+        const { data, error } = await supabase
+          .from("player_university_attendance")
+          .select(`
+            xp_earned,
+            player_university_enrollments!inner (
+              course_id,
+              university_id
+            )
+          `)
           .eq("player_university_enrollments.university_id", id)
           .gte("attendance_date", since)
-          .order("id", { ascending: true }).range(offset, offset + 499);
+          .order("id").range(offset, offset + 499);
         if (error) throw error;
         rows.push(...(data ?? []));
         if (!data || data.length < 500) break;
@@ -789,9 +798,8 @@ export default function UniversityDetail() {
   if (!university) {
     return (
       <FMPageScaffold title="University" icon={GraduationCap} backTo="/education">
-        {universityPending ? <FMPageSkeleton kpiCount={3} actionCount={1} bodyBlocks={2} showTabs /> : (
-          <p role="alert" className="p-6 text-sm text-destructive">{universityError ? "University data could not be loaded. Please retry." : "University not found."}</p>
-        )}
+        {universityLoading ? <FMPageSkeleton kpiCount={3} actionCount={1} bodyBlocks={2} showTabs /> :
+          <div role="alert" className="space-y-3 p-6"><p>{universityError ? "University details could not be loaded." : "University not found."}</p><Button onClick={() => void retryUniversity()}>Retry</Button></div>}
       </FMPageScaffold>
     );
   }

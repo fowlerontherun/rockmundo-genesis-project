@@ -219,8 +219,9 @@ export const useEducationSummary = () => {
   const { data: yesterdayProgress, isLoading: progressLoading, isError: progressError } = useQuery({
     queryKey: ["education-summary-yesterday", profile?.id, localDate],
     queryFn: async () => {
-      const today = localDate;
-      const yesterday = format(subDays(startOfDay(new Date(`${localDate}T12:00:00`)), 1), "yyyy-MM-dd");
+      const todayStart = startOfDay(new Date(`${localDate}T12:00:00`));
+      const yesterdayStart = subDays(todayStart, 1);
+      const yesterday = format(yesterdayStart, "yyyy-MM-dd");
       
       // University attendance yesterday
       const { data: uniAttendance, error: uniError } = await supabase
@@ -254,8 +255,8 @@ export const useEducationSummary = () => {
         `)
         .eq("profile_id", profile!.id)
         .in("activity_type", ["book_reading", "youtube_video", "mentor_session"])
-        .gte("created_at", new Date(`${yesterday}T00:00:00`).toISOString())
-        .lt("created_at", new Date(`${today}T00:00:00`).toISOString());
+        .gte("created_at", yesterdayStart.toISOString())
+        .lt("created_at", todayStart.toISOString());
 
       if (bookError) throw bookError;
 
@@ -276,7 +277,8 @@ export const useEducationSummary = () => {
 
       const totalXp = 
         universityAttendance.reduce((sum, a) => sum + (a.xp_earned || 0), 0) +
-        (bookProgress || []).reduce((sum, b) => sum + (b.xp_amount || 0), 0);
+        bookReading.reduce((sum, b) => sum + (b.xp_earned || 0), 0) +
+        (bookProgress || []).filter((b: any) => b.activity_type !== "book_reading").reduce((sum, b) => sum + (b.xp_amount || 0), 0);
 
       return {
         universityAttendance,
@@ -331,6 +333,6 @@ export const useEducationSummary = () => {
     yesterdayProgress: yesterdayProgress || { universityAttendance: [], bookReading: [], totalXp: 0 },
     skillProgress: skillProgress || {},
     isLoading: booksLoading || enrollmentsLoading || completedLoading || progressLoading,
-    isError: booksError || enrollmentsError || completedError || progressError,
+    hasError: booksError || enrollmentsError || completedError || progressError,
   };
 };

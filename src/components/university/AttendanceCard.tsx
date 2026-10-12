@@ -37,11 +37,9 @@ export function AttendanceCard({
   const startHour = Math.min(Math.max(Math.floor(classWindow.start), 0), 23);
   const endHour = Math.min(Math.max(Math.floor(classWindow.end), startHour + 1), 24);
   const now = new Date();
-  // Display the same UTC window used for attendance eligibility.
   const currentHour = now.getUTCHours();
   const isClassTime = currentHour >= startHour && currentHour < endHour;
-  const utcHourLabel = (hour: number) => `${(hour % 12) || 12} ${hour % 24 < 12 ? "AM" : "PM"}`;
-  const classWindowLabel = `${utcHourLabel(startHour)} - ${utcHourLabel(endHour)} UTC`;
+  const classWindowLabel = `${startHour.toString().padStart(2,"0")}:00–${endHour.toString().padStart(2,"0")}:00 UTC`;
 
   return (
     <Card className="border-primary/20">
