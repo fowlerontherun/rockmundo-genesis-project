@@ -217,12 +217,12 @@ export function LocalDailyBrief() {
           ) : <p className="text-sm text-muted-foreground">No chart entries available for this country yet.</p>}
         <Link className="mt-2 inline-block text-sm text-primary underline" to="/country-charts">View full country charts</Link>
       </details>
-      {<details className="group border border-foreground/40 bg-card/60 p-4">
+      <details className="group border border-foreground/40 bg-card/60 p-4">
         <summary className="mb-2 flex cursor-pointer items-center gap-2 font-serif text-lg font-black"><Users className="h-5 w-5" /> New Players · Last 7 Days ({newcomers.length})</summary>
         {newcomersPending ? <p role="status" className="text-sm text-muted-foreground">Checking for new players…</p> : newcomersError ? <div role="alert" className="flex items-center justify-between gap-3"><p className="text-sm text-destructive">New players could not be loaded. This is not an empty list.</p><button type="button" className="text-sm text-primary underline" onClick={() => void refetchNewcomers()}>Retry</button></div> : newcomers.length ? newcomers.map((p) => (
           <NewPlayerWelcome key={p.id} playerId={p.id} name={p.display_name || "New artist"} />
         )) : <p className="text-sm text-muted-foreground">No new characters joined in the last 7 days.</p>}
-      </details>}
+      </details>
       {(orderedVisits.length > 0 || visitsError) && <details className="group border border-foreground/40 bg-card/60 p-4">
         <summary className="mb-2 flex cursor-pointer items-center gap-2 font-serif text-lg font-black"><GraduationCap className="h-5 w-5" /> Visiting Professors · +70% XP ({orderedVisits.length})</summary>
         {visitsError ? <p className="text-sm text-muted-foreground">Professor information is temporarily unavailable.</p> :
