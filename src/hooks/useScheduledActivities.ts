@@ -432,6 +432,9 @@ export function useStartActivity() {
         .single();
       if (loadError) throw loadError;
 
+      if (!activity || activity.status !== 'scheduled') throw new Error('Only scheduled activities can be started.');
+      const now = Date.now();
+      if (Date.parse(activity.scheduled_start) > now || Date.parse(activity.scheduled_end) <= now) throw new Error('This activity cannot be started outside its scheduled time window.');
       if (activity?.activity_type === 'songwriting') {
         const projectId = activity.metadata?.project_id || activity.metadata?.projectId;
         const effortHours = Number(activity.metadata?.duration_hours || activity.duration_minutes / 60 || 1);
@@ -454,6 +457,7 @@ export function useStartActivity() {
           started_at: new Date().toISOString(),
         })
         .eq('id', activityId)
+        .eq('status', 'scheduled')
         .select()
         .single();
 
