@@ -61,10 +61,11 @@ export function FestivalOwnerNpcActsManager({
   }, [draft.festivalDate, festivalDates]);
 
   const editing = Boolean(draft.id);
-  const isDj = draft.genre === "DJ / electronic";
-  const reset = () => setDraft(emptyDraft(festivalDates));
+  const [actIsDj, setActIsDj] = useState(false);
+  const isDj = actIsDj;
+  const reset = () => {setDraft(emptyDraft(festivalDates));setActIsDj(false);};
 
-  const edit = (act: FestivalOwnerNpcAct) => setDraft({
+  const edit = (act: FestivalOwnerNpcAct) => {setActIsDj((act.genre ?? "").toLowerCase().includes("dj") || (act.genre ?? "").toLowerCase().includes("electronic"));setDraft({
     id: act.id,
     displayName: act.displayName,
     genre: act.genre ?? "",
@@ -73,7 +74,7 @@ export function FestivalOwnerNpcActsManager({
     festivalDate: act.festivalDate,
     stageId: act.stageId ?? "auto",
     billingPosition: act.billingPosition,
-  });
+  });};
 
   const submit = () => {
     if (query.isError || query.isLoading) { toast.error("NPC lineup must load before editing."); return; }
@@ -121,7 +122,7 @@ export function FestivalOwnerNpcActsManager({
       <CardContent className="space-y-5">
         <div className="flex flex-wrap gap-2" role="group" aria-label="NPC act type">
           <Button type="button" variant={!isDj ? "default" : "outline"} onClick={() => setDraft((d) => ({ ...d, genre: d.genre === "DJ / electronic" ? "" : d.genre, setMinutes: d.setMinutes === "60" ? "45" : d.setMinutes }))}>NPC band</Button>
-          <Button type="button" variant={isDj ? "default" : "outline"} onClick={() => setDraft((d) => ({ ...d, genre: "DJ / electronic", setMinutes: "60" }))}>DJ</Button>
+          <Button type="button" variant={isDj ? "default" : "outline"} onClick={() => {setActIsDj(true);setDraft((d) => ({ ...d, genre: "DJ / electronic", setMinutes: "60" }));}}>DJ</Button>
         </div>
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-1.5 lg:col-span-2">
