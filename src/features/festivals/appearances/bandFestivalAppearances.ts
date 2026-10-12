@@ -163,10 +163,10 @@ export function festivalAppearanceAsActivity(
 ): ScheduledActivity {
   const start = appearance.timeConfirmed && appearance.confirmedStartAt
     ? new Date(appearance.confirmedStartAt)
-    : localFestivalDate(appearance.festivalDate);
+    : new Date(`${appearance.festivalDate}T00:00:00`);
   const end = appearance.timeConfirmed && appearance.confirmedEndAt
     ? new Date(appearance.confirmedEndAt)
-    : new Date(start.getTime() + 60 * 1000);
+    : new Date(`${appearance.festivalDate}T23:59:59.999`);
 
   const localToday = festivalLocalDateKey(today, appearance.venueTimezone);
   // A premature annual result cannot mark a still-running Festival as played.

@@ -258,7 +258,10 @@ export function normalizeWellnessModifiers(modifiers: WellnessModifier[]): Welln
     if (seen.has(modifier.id)) continue;
     seen.add(modifier.id);
     const value = Number.isFinite(modifier.rawValue) ? modifier.rawValue : 0;
-    const cappedValue = Number(Math.max(WELLNESS_CANONICAL_BALANCE.globalModifierCaps.negative, Math.min(WELLNESS_CANONICAL_BALANCE.globalModifierCaps.positive, value)).toFixed(4));
+    const lowerCap = (modifier.category === "condition" || modifier.category === "safety_cap") && value < WELLNESS_CANONICAL_BALANCE.globalModifierCaps.negative
+      ? WELLNESS_CANONICAL_BALANCE.globalModifierCaps.severeNegative
+      : WELLNESS_CANONICAL_BALANCE.globalModifierCaps.negative;
+    const cappedValue = Number(Math.max(lowerCap, Math.min(WELLNESS_CANONICAL_BALANCE.globalModifierCaps.positive, value)).toFixed(4));
     const withCap = { ...modifier, cappedValue };
     if (!modifier.mayStack && byGroup.has(modifier.stackingGroup)) {
       const existing = byGroup.get(modifier.stackingGroup)!;
@@ -308,13 +311,15 @@ export function calculateCanonicalReadiness(input: { role: WellnessReadinessRole
   const positiveTotal = normalized.filter((m) => (m.cappedValue ?? 0) > 0).reduce((s, m) => s + (m.cappedValue ?? 0), 0);
   const negativeTotal = normalized.filter((m) => (m.cappedValue ?? 0) < 0).reduce((s, m) => s + (m.cappedValue ?? 0), 0);
   const boundedPositive = Math.min(WELLNESS_CANONICAL_BALANCE.globalModifierCaps.positive, positiveTotal);
-  const boundedNegative = Math.max(WELLNESS_CANONICAL_BALANCE.globalModifierCaps.negative, negativeTotal);
-  const cappedContributors = normalized.filter((m) => (m.cappedValue ?? m.rawValue) !== m.rawValue || positiveTotal > WELLNESS_CANONICAL_BALANCE.globalModifierCaps.positive || negativeTotal < WELLNESS_CANONICAL_BALANCE.globalModifierCaps.negative);
+  const severePenalty = normalized.some(m => (m.category === "condition" || m.category === "safety_cap") && m.rawValue < WELLNESS_CANONICAL_BALANCE.globalModifierCaps.negative);
+  const negativeCap = severePenalty ? WELLNESS_CANONICAL_BALANCE.globalModifierCaps.severeNegative : WELLNESS_CANONICAL_BALANCE.globalModifierCaps.negative;
+  const boundedNegative = Math.max(negativeCap, negativeTotal);
+  const cappedContributors = normalized.filter((m) => (m.cappedValue ?? m.rawValue) !== m.rawValue || positiveTotal > WELLNESS_CANONICAL_BALANCE.globalModifierCaps.positive || negativeTotal < negativeCap);
   const restrictedBy = (input.restrictions ?? []).find((r) => WELLNESS_CANONICAL_BALANCE.roleRestrictions[input.role]?.includes(r));
   const rawScore = restrictedBy ? 0 : baseValue * Math.max(0.6, multiplier) + additive + boundedPositive * 100 + boundedNegative * 100;
   const score = clampWellness(rawScore);
   const state = WELLNESS_CANONICAL_BALANCE.readinessThresholds.find((threshold) => score >= threshold.min)?.state ?? "unavailable";
-  const performanceModifier = restrictedBy ? 0 : Number(Math.max(1 + WELLNESS_CANONICAL_BALANCE.globalModifierCaps.negative, Math.min(1 + WELLNESS_CANONICAL_BALANCE.globalModifierCaps.positive, 1 + (score - 70) / 250)).toFixed(3));
+  const performanceModifier = restrictedBy ? 0 : Number(Math.max(1 + negativeCap, Math.min(1 + WELLNESS_CANONICAL_BALANCE.globalModifierCaps.positive, 1 + (score - 70) / 250)).toFixed(3));
   const summary = `${input.role.split("_").join(" ")} readiness is ${score}: ${normalized.slice(0, 3).map((m) => m.explanation).join(", ") || "current wellness is the main input"}.`;
   return {
     role: input.role,
