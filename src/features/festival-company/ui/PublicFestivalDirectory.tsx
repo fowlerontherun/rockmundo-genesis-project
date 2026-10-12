@@ -148,7 +148,7 @@ export default function PublicFestivalDirectory() {
 
       <section aria-label="Festival directory" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {data.map((festival) => {
-          const availableAdmission = festival.ticketProducts.filter((product) => product.productClass === "admission" && product.availableQuantity > 0);
+          const availableAdmission = festival.ticketProducts.filter((product) => product.productClass === "admission" && product.availableQuantity > 0 && product.saleStatus === "tickets_on_sale" && festival.launchStatus === "tickets_on_sale");
           const admissionCurrencies = new Set(availableAdmission.map((product) => product.currency));
           // Minor amounts cannot be compared across different currencies.
           const lowest = admissionCurrencies.size <= 1
