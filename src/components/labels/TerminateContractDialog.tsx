@@ -84,10 +84,10 @@ export function TerminateContractDialog({
       if (error) throw error;
       return data as { terminationFee: number };
     },
-    onSuccess: () => {
+    onSuccess: (settlement) => {
       toast({
         title: "Contract terminated",
-        description: `You've paid $${terminationFee.toLocaleString()} to exit your contract with ${contract.label_name}.`,
+        description: `You've paid ${Number(settlement.terminationFee).toLocaleString()} to exit your contract with ${contract.label_name}.`,
       });
       queryClient.invalidateQueries({ queryKey: ["label-contracts"] });
       queryClient.invalidateQueries({ queryKey: ["band"] });
