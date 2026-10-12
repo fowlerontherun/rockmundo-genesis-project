@@ -59,7 +59,13 @@ export function LabelRosterTab({
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      const soloIds = [...new Set((data ?? []).map(contract => contract.artist_profile_id).filter((id): id is string => Boolean(id)))];
+      if (!soloIds.length) return (data ?? []).map(contract => ({ ...contract, soloProfile: null }));
+      const { data: soloProfiles, error: soloError } = await supabase.from("profiles")
+        .select("id, display_name, username, fame, fans").in("id", soloIds);
+      if (soloError) throw soloError;
+      const byId = new Map((soloProfiles ?? []).map(profile => [profile.id, profile]));
+      return (data ?? []).map(contract => ({ ...contract, soloProfile: contract.artist_profile_id ? byId.get(contract.artist_profile_id) ?? null : null }));
     },
   });
 
@@ -221,7 +227,8 @@ export function LabelRosterTab({
       ) : (
         <div className="space-y-3">
           {activeContracts.map((contract) => {
-            const band = contract.bands as any;
+            const solo = contract.soloProfile;
+            const band = (contract.bands as any) ?? (solo ? { name: solo.display_name || solo.username || "Solo artist", genre: "Solo", fame: solo.fame, total_fans: solo.fans } : null);
             const contractReleases = releases.filter(
               (r) => r.label_contract_id === contract.id,
             );

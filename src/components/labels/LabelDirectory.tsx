@@ -130,7 +130,7 @@ function LabelExpandedDetails({ labelId, bandGenre }: { labelId: string; bandGen
 }
 
 export function LabelDirectory({ artistEntities, dealTypes, territories }: LabelDirectoryProps) {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const [searchTerm, setSearchTerm] = useState("");
   const [territoryFilter, setTerritoryFilter] = useState<string>("all");
   const [reputationFilter, setReputationFilter] = useState<string>("all");
@@ -512,8 +512,9 @@ export function LabelDirectory({ artistEntities, dealTypes, territories }: Label
       <SubmitDemoDialog
         open={isDemoDialogOpen}
         onOpenChange={setIsDemoDialogOpen}
-        userId={profileId ?? ""}
+        userId={userId ?? ""}
         bandId={primaryBand?.bandId}
+        artistEntities={artistEntities}
         preselectedLabelId={selectedLabelId}
       />
 
