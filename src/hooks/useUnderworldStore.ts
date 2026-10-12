@@ -347,7 +347,7 @@ export const useUnderworldStore = () => {
       // === Crime → Arrest check ===
       // Drug purchases and contraband have a chance of arrest
       let arrestResult = null;
-      const isDrugPurchase = product.category === 'consumable' || product.category === 'drug';
+      const isDrugPurchase = product.category === 'drug' || Boolean(product.addiction_type);
       if (isDrugPurchase) {
         // Dynamic import to avoid circular deps
         const { rollForArrest } = await import("@/utils/crimeSystem");
