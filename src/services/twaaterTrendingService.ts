@@ -109,7 +109,7 @@ export const extractTrendingTopics = (twaats: TrendingTwaatRow[]): TrendingTopic
   twaats.forEach((twaat) => {
     const body = typeof twaat.body === "string" ? twaat.body : "";
     const hashtags: string[] = body.match(/#[a-zA-Z0-9_]+/g) ?? [];
-    hashtags.forEach((tag) => {
+    new Set(hashtags.map(tag => tag.toLowerCase())).forEach((tag) => {
       const normalized = tag.toLowerCase();
       hashtagCounts.set(normalized, (hashtagCounts.get(normalized) || 0) + 1);
     });
