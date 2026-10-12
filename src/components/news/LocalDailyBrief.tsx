@@ -34,10 +34,15 @@ export function LocalDailyBrief() {
     queryKey: ["news-available-cities"],
     staleTime: 15 * 60 * 1000,
     queryFn: async () => {
-      const { data, error } = await supabase.from("cities")
-        .select("id, name, country").order("name").limit(2000);
-      if (error) throw error;
-      return data ?? [];
+      const cities: Array<{ id: string; name: string; country: string }> = [];
+      for (let offset = 0; ; offset += 1000) {
+        const { data, error } = await supabase.from("cities")
+          .select("id, name, country").order("name").range(offset, offset + 999);
+        if (error) throw error;
+        cities.push(...(data ?? []));
+        if (!data || data.length < 1000) break;
+      }
+      return cities;
     },
   });
   const selectedCity = selectedCityId ? cities.find(city => city.id === selectedCityId) : undefined;
@@ -83,7 +88,7 @@ export function LocalDailyBrief() {
         .select("id, university_id, name, skill_family, starts_at, ends_at")
         .lte("starts_at", new Date().toISOString())
         .gt("ends_at", new Date().toISOString())
-        .order("ends_at", { ascending: true }).limit(100);
+        .order("ends_at", { ascending: true }).limit(1000);
       if (error) throw error;
       const raw = (data ?? []) as Array<{
         id: string; university_id: string; name: string; skill_family: string;
