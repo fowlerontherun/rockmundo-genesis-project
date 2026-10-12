@@ -104,9 +104,9 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   const { profileId } = useActiveProfile();
   const { data: f, isLoading, isError } = usePublicFestival(publicSlug ?? festivalCompanyIdentifier);
   const { data: attendance = [] } = useMyFestivalAttendance(Boolean(user));
-  const { data: checkInEligibility = [] } = useMyFestivalCheckInEligibility(Boolean(user));
+  const { data: checkInEligibility = [], isError: eligibilityError, refetch: retryEligibility } = useMyFestivalCheckInEligibility(Boolean(user));
   const { data: festivalMemorabilia = [] } = useMyFestivalMemorabilia(Boolean(user));
-  const { data: ticketWallet = [] } = useMyFestivalTickets(Boolean(user));
+  const { data: ticketWallet = [], isError: walletError, refetch: retryWallet } = useMyFestivalTickets(Boolean(user));
   const buy = usePurchaseFestivalTickets();
   const checkIn = useCheckInToFestival();
   const leaveEarly = useLeaveFestivalEarly();
@@ -129,12 +129,13 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
       ? "Festival dates under way"
       : "Festival dates ended";
 
-  const myAttendance = attendance.find(
-    (item) => item.festivalLaunchId === f.id && item.status !== "cancelled" && item.status !== "refunded",
-  );
+  const myAttendance = attendance
+    .filter((item) => item.festivalLaunchId === f.id && item.status !== "cancelled" && item.status !== "refunded")
+    .sort((a, b) => Number(b.status === "attending") - Number(a.status === "attending"))[0];
   const myCheckInEligibility = myAttendance
     ? checkInEligibility.find((item) => item.attendanceId === myAttendance.id)
     : undefined;
+  const festivalDataError = walletError || eligibilityError;
   const myFestivalTickets = ticketWallet.filter((ticket) => ticket.festivalSlug === f.slug);
   const myWristband = festivalMemorabilia.find((item) => item.festivalLaunchId === f.id && item.attendanceId === myAttendance?.id);
   const hasAdmissionTicket = myFestivalTickets.some(
@@ -163,6 +164,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
 
   return (
     <main>
+      {festivalDataError && <div role="alert" className="mx-auto max-w-6xl rounded-md border border-destructive/40 p-3 text-sm">Your festival tickets or check-in status could not be verified. Do not rely on the currently displayed eligibility. <button type="button" className="underline" onClick={() => { if (walletError) void retryWallet(); if (eligibilityError) void retryEligibility(); }}>Retry verification</button></div>}
       <header className="bg-gradient-to-br from-violet-950 to-fuchsia-900 p-6 text-white md:p-12">
         <div className="mx-auto flex max-w-6xl flex-col gap-6 md:flex-row md:items-center">
           <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white/10 p-3 shadow-xl backdrop-blur md:h-36 md:w-36">
