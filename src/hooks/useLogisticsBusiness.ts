@@ -237,10 +237,15 @@ export function useUpdateContractStatus() {
 
   return useMutation({
     mutationFn: async ({ contractId, status }: { contractId: string; status: string }) => {
+      const { data: previous, error: readError } = await supabase.from("logistics_contracts").select("status").eq("id",contractId).single();
+      if (readError) throw readError;
+      const transitions: Record<string,string[]>={pending:["active","cancelled"],active:["completed","cancelled"],completed:[],cancelled:[]};
+      if (!(transitions[previous.status] ?? []).includes(status)) throw new Error("Contract status is no longer eligible for this change.");
       const { data: result, error } = await supabase
         .from("logistics_contracts")
         .update({ status, updated_at: new Date().toISOString() })
         .eq("id", contractId)
+        .eq("status", previous.status)
         .select()
         .single();
 
