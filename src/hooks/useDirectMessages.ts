@@ -183,7 +183,7 @@ export function useUnreadDirectMessageCount(myProfileId?: string | null) {
       let total = 0;
       let cursor: string | null = null;
       for (let page = 0; page < 100; page++) {
-        const conversations = await listConversations({ limit: 100, cursor });
+        const conversations = await listConversations({ limit: 100, cursor, skipContextSync: true });
         total += conversations.reduce((sum, conversation) => sum + conversation.unread_count, 0);
         if (conversations.length < 100) return total;
         const nextCursor: string | null = conversations[conversations.length - 1]?.last_message_at ?? null;
