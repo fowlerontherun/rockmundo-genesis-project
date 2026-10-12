@@ -49,37 +49,33 @@ export async function checkVenueGigDiscovery(
 
     if (discoveriesError) throw discoveriesError;
     const discoveredIds = new Set(existingDiscoveries?.map(d => d.mentor_id) || []);
-    const undiscoveredMentor = mentors.find(m => !discoveredIds.has(m.id));
-
-    if (!undiscoveredMentor) {
-      return null;
+    const remainingMentors = mentors.filter(m => !discoveredIds.has(m.id));
+    let firstDiscovered: MentorDiscoveryResult | null = null;
+    for (const mentor of remainingMentors) {
+      const { error: discoverError } = await supabase.rpc("discover_master", {
+        p_profile_id: profileId,
+        p_mentor_id: mentor.id,
+        p_method: "venue_gig",
+        p_metadata: { venue_id: venueId }
+      });
+      if (discoverError) {
+        console.error("[MentorDiscovery] Failed to discover mentor", mentor.id, discoverError);
+        continue;
+      }
+      firstDiscovered ??= {
+        success: true,
+        mentor: {
+          id: mentor.id,
+          name: mentor.name,
+          specialty: mentor.specialty,
+          lore_biography: mentor.lore_biography || "",
+          focus_skill: mentor.focus_skill,
+          city: mentor.city as { name: string; country: string } | undefined,
+        },
+        method: "venue_gig",
+      };
     }
-
-    // Trigger discovery via RPC
-    const { error: discoverError } = await supabase.rpc("discover_master", {
-      p_profile_id: profileId,
-      p_mentor_id: undiscoveredMentor.id,
-      p_method: "venue_gig",
-      p_metadata: { venue_id: venueId }
-    });
-
-    if (discoverError) {
-      console.error("[MentorDiscovery] Error discovering mentor:", discoverError);
-      return null;
-    }
-
-    return {
-      success: true,
-      mentor: {
-        id: undiscoveredMentor.id,
-        name: undiscoveredMentor.name,
-        specialty: undiscoveredMentor.specialty,
-        lore_biography: undiscoveredMentor.lore_biography || "",
-        focus_skill: undiscoveredMentor.focus_skill,
-        city: undiscoveredMentor.city as { name: string; country: string } | undefined,
-      },
-      method: "venue_gig"
-    };
+    return firstDiscovered;
   } catch (error) {
     console.error("[MentorDiscovery] Unexpected error:", error);
     return null;
@@ -117,37 +113,33 @@ export async function checkStudioSessionDiscovery(
       .in("mentor_id", mentors.map(m => m.id));
 
     const discoveredIds = new Set(existingDiscoveries?.map(d => d.mentor_id) || []);
-    const undiscoveredMentor = mentors.find(m => !discoveredIds.has(m.id));
-
-    if (!undiscoveredMentor) {
-      return null;
+    const remainingMentors = mentors.filter(m => !discoveredIds.has(m.id));
+    let firstDiscovered: MentorDiscoveryResult | null = null;
+    for (const mentor of remainingMentors) {
+      const { error: discoverError } = await supabase.rpc("discover_master", {
+        p_profile_id: profileId,
+        p_mentor_id: mentor.id,
+        p_method: "studio_session",
+        p_metadata: { studio_id: studioId }
+      });
+      if (discoverError) {
+        console.error("[MentorDiscovery] Failed to discover mentor", mentor.id, discoverError);
+        continue;
+      }
+      firstDiscovered ??= {
+        success: true,
+        mentor: {
+          id: mentor.id,
+          name: mentor.name,
+          specialty: mentor.specialty,
+          lore_biography: mentor.lore_biography || "",
+          focus_skill: mentor.focus_skill,
+          city: mentor.city as { name: string; country: string } | undefined,
+        },
+        method: "studio_session",
+      };
     }
-
-    // Trigger discovery
-    const { error: discoverError } = await supabase.rpc("discover_master", {
-      p_profile_id: profileId,
-      p_mentor_id: undiscoveredMentor.id,
-      p_method: "studio_session",
-      p_metadata: { studio_id: studioId }
-    });
-
-    if (discoverError) {
-      console.error("[MentorDiscovery] Error discovering mentor:", discoverError);
-      return null;
-    }
-
-    return {
-      success: true,
-      mentor: {
-        id: undiscoveredMentor.id,
-        name: undiscoveredMentor.name,
-        specialty: undiscoveredMentor.specialty,
-        lore_biography: undiscoveredMentor.lore_biography || "",
-        focus_skill: undiscoveredMentor.focus_skill,
-        city: undiscoveredMentor.city as { name: string; country: string } | undefined,
-      },
-      method: "studio_session"
-    };
+    return firstDiscovered;
   } catch (error) {
     console.error("[MentorDiscovery] Unexpected error:", error);
     return null;
