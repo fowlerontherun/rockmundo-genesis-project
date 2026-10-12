@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,9 +38,11 @@ export const FestivalModeActivityHub = ({
   kind: HubKind;
 }) => {
   const config = hubConfig[kind];
-  const { data: plan, isLoading, isError, refetch } = useMyFestivalDayPlan(attendance.id);
+  const { data: plan, dataUpdatedAt, isLoading, isError, refetch } = useMyFestivalDayPlan(attendance.id);
+  const [clock, setClock] = useState(() => Date.now());
+  useEffect(() => { const timer = window.setInterval(() => setClock(Date.now()), 1000); return () => window.clearInterval(timer); }, []);
   const resolver = useResolveFestivalPlanActivity(attendance.id);
-  const serverNow = plan ? Date.parse(plan.serverNow) : 0;
+  const serverNow = plan ? Date.parse(plan.serverNow) + Math.max(0, clock - dataUpdatedAt) : 0;
   const relevantItems = (plan?.items || []).filter(
     (item) => config.types.has(item.activityType as FestivalExecutableActivityType) && item.status !== "cancelled",
   );

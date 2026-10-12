@@ -13,8 +13,33 @@ export async function uploadShareCardToTwaater(blob: Blob, filename: string): Pr
   return supabase.storage.from("twaater-media").getPublicUrl(path).data.publicUrl;
 }
 
-export function storeTwaaterShareDraft(body: string, mediaUrl: string, shareCooldownKey?: string | null) {
-  sessionStorage.setItem("rockmundoTwaaterShareDraft", JSON.stringify({ body, mediaUrl, mediaType: "image", shareCooldownKey }));
+export type TwaaterShareDraft = { body: string; mediaUrl: string; mediaType: "image"; shareCooldownKey?: string | null; userId: string };
+let fallbackDraft: TwaaterShareDraft | null = null;
+
+export async function storeTwaaterShareDraft(body: string, mediaUrl: string, shareCooldownKey?: string | null): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Sign in before sharing to Twaater.");
+  const draft: TwaaterShareDraft = { body, mediaUrl, mediaType: "image", shareCooldownKey, userId: user.id };
+  fallbackDraft = draft;
+  try {
+    sessionStorage.setItem("rockmundoTwaaterShareDraft", JSON.stringify(draft));
+  } catch {
+    // Storage can be denied by browser privacy settings. Same-tab navigation still works.
+  }
+}
+
+export async function consumeTwaaterShareDraft(): Promise<TwaaterShareDraft | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  let draft = fallbackDraft;
+  fallbackDraft = null;
+  try {
+    const raw = sessionStorage.getItem("rockmundoTwaaterShareDraft");
+    sessionStorage.removeItem("rockmundoTwaaterShareDraft");
+    if (raw) draft = JSON.parse(raw) as TwaaterShareDraft;
+  } catch {
+    // Continue with the in-memory handoff if browser storage is unavailable.
+  }
+  return user && draft?.userId === user.id ? draft : null;
 }
 
 

@@ -29,7 +29,7 @@ function drawWrappedText(ctx: CanvasRenderingContext2D, text: string, x: number,
     while (value && ctx.measureText(value + '…').width > maxWidth) value = value.slice(0, -1);
     lines[last] = value.replace(/[\s,.;:-]+$/, '') + '…';
   }
-  lines.forEach((value, index) => ctx.fillText(value, x, y + index * lineHeight));
+  lines.forEach((value, index) => ctx.fillText(value, x, y + index * lineHeight, maxWidth));
   return lines.length * lineHeight;
 }
 
@@ -204,7 +204,7 @@ export function renderShareMoment(canvas: HTMLCanvasElement, moment: ShareMoment
     else drawWrappedText(ctx, metric.value, valueX, y, valueWidth, 38, 1);
   });
 
-  if(moment.type==='referral'&&moment.callToAction){const cta=moment.callToAction.toUpperCase();ctx.font=`800 ${Math.round(width*.024)}px Inter, system-ui, sans-serif`;const ctaW=Math.min(textWidth,ctx.measureText(cta).width+width*.055);const ctaH=Math.round(width*.052);const ctaY=height-pad-ctaH-Math.round(width*.035);ctx.fillStyle=accent;ctx.beginPath();ctx.roundRect(textX,ctaY,ctaW,ctaH,ctaH*.28);ctx.fill();ctx.fillStyle='#020617';ctx.fillText(cta,textX+width*.025,ctaY+ctaH*.66);}
+  if(moment.type==='referral'&&moment.callToAction){const cta=moment.callToAction.toUpperCase();ctx.font=`800 ${Math.round(width*.024)}px Inter, system-ui, sans-serif`;const ctaW=Math.min(textWidth,ctx.measureText(cta).width+width*.055);const ctaH=Math.round(width*.052);const ctaY=height-pad-ctaH-Math.round(width*.035);ctx.fillStyle=accent;ctx.beginPath();ctx.roundRect(textX,ctaY,ctaW,ctaH,ctaH*.28);ctx.fill();ctx.fillStyle='#020617';ctx.fillText(cta,textX+width*.025,ctaY+ctaH*.66,Math.max(1,ctaW-width*.05));}
   ctx.fillStyle = '#ffffff88'; ctx.font = '500 21px Inter, system-ui, sans-serif';
   ctx.fillText('Build your music career at rockmundo.uk', textX, height - pad);
 }

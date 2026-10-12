@@ -40,7 +40,9 @@ export const LinkGigDialog = ({ open, onOpenChange, onSelect }: LinkGigDialogPro
       if (bandIds.length === 0) return [];
 
       // Fetch gigs
-      const { data: gigs, error } = await supabase
+      const gigs: any[] = [];
+      for (let offset = 0; offset < 10000; offset += 500) {
+        const { data, error } = await supabase
         .from("gigs")
         .select(`
           id, status, scheduled_date, ticket_price,
@@ -50,10 +52,12 @@ export const LinkGigDialog = ({ open, onOpenChange, onSelect }: LinkGigDialogPro
         .in("band_id", bandIds)
         .in("status", ["scheduled", "confirmed", "completed"])
         .order("scheduled_date", { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
-      return gigs || [];
+        .range(offset, offset + 499);
+        if (error) throw error;
+        gigs.push(...(data ?? []));
+        if (!data || data.length < 500) break;
+      }
+      return gigs;
     },
     enabled: open && !!profileId,
   });

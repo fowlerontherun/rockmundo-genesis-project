@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -17,6 +18,9 @@ export const useTwaaterPolls = (
 ) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [refreshAfterVote, setRefreshAfterVote] = useState(false);
+  const [confirmedOptionId, setConfirmedOptionId] = useState<string | null>(null);
+  useEffect(() => { setRefreshAfterVote(false); setConfirmedOptionId(null); }, [twaatId, accountId]);
 
   const { data: queriedPoll, isLoading: pollLoading } = useQuery({
     queryKey: ["twaat-poll", twaatId],
@@ -35,10 +39,10 @@ export const useTwaaterPolls = (
       if (error) throw error;
       return data;
     },
-    enabled: !!twaatId && preloadedPoll === undefined,
+    enabled: !!twaatId && (preloadedPoll === undefined || refreshAfterVote),
   });
 
-  const poll = preloadedPoll !== undefined ? preloadedPoll : queriedPoll;
+  const poll = refreshAfterVote ? queriedPoll ?? preloadedPoll : (preloadedPoll !== undefined ? preloadedPoll : queriedPoll);
 
   const { data: queriedUserVote } = useQuery({
     queryKey: ["poll-vote", poll?.id, accountId],
@@ -58,7 +62,9 @@ export const useTwaaterPolls = (
     enabled: !!poll?.id && !!accountId && preloadedUserVote === undefined,
   });
 
-  const userVote = preloadedUserVote !== undefined ? preloadedUserVote : queriedUserVote;
+  const userVote = confirmedOptionId && poll?.id && accountId
+    ? { id: "pending-refresh", poll_id: poll.id, option_id: confirmedOptionId, account_id: accountId }
+    : (preloadedUserVote !== undefined ? preloadedUserVote : queriedUserVote);
 
   const voteMutation = useMutation({
     mutationFn: async ({ optionId }: { optionId: string }) => {
@@ -78,7 +84,9 @@ export const useTwaaterPolls = (
 
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_result, variables) => {
+      setConfirmedOptionId(variables.optionId);
+      setRefreshAfterVote(true);
       queryClient.invalidateQueries({ queryKey: ["twaat-poll", twaatId] });
       queryClient.invalidateQueries({ queryKey: ["poll-vote", poll?.id, accountId] });
       queryClient.invalidateQueries({ queryKey: ["twaater-poll-votes-batch", accountId] });

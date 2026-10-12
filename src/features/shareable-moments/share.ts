@@ -7,7 +7,7 @@ function canonicalRockMundoUrl(pathOrUrl: string): URL {
   const parsed = new URL(pathOrUrl, ROCKMUNDO_PUBLIC_ORIGIN);
   // Rewrite only RockMundo/hosting preview links; preserve unrelated external destinations.
   const host = parsed.hostname.toLowerCase();
-  if (host === 'rockmundo.uk' || host === 'www.rockmundo.uk' || host.endsWith('.lovable.app') || host.endsWith('.lovableproject.com')) {
+  if (host === 'rockmundo.uk' || host === 'www.rockmundo.uk' || host.endsWith('.lovable.app') || host.endsWith('.lovableproject.com') || host === 'preview.example-host.dev') {
     parsed.protocol = 'https:';
     parsed.hostname = 'rockmundo.uk';
     parsed.port = '';

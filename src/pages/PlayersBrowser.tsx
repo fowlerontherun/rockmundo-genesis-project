@@ -51,15 +51,15 @@ async function fetchPlayers(search: string, page: number, viewerProfileId?: stri
   if (!rows.length) return [];
 
   const cityIds = Array.from(new Set(rows.map((r) => r.current_city_id).filter(Boolean)));
-  const userIds = rows.map((r) => r.user_id).filter(Boolean);
+  const profileIds = rows.map((r) => r.id);
 
   const [cityRes, bandRes] = await Promise.all([
     cityIds.length ? (supabase as any).from("cities").select("id, name").in("id", cityIds) : Promise.resolve({ data: [] }),
-    userIds.length
+    profileIds.length
       ? (supabase as any)
           .from("band_members")
-          .select("user_id, instrument_role, role, bands(name)")
-          .in("user_id", userIds)
+          .select("profile_id, instrument_role, role, bands(name)")
+          .in("profile_id", profileIds)
           .eq("member_status", "active")
       : Promise.resolve({ data: [] }),
   ]);
@@ -68,7 +68,7 @@ async function fetchPlayers(search: string, page: number, viewerProfileId?: stri
   ((cityRes as any).data ?? []).forEach((c: any) => cityMap.set(c.id, c.name));
   const bandMap = new Map<string, { name: string; role: string | null }[]>();
   ((bandRes as any).data ?? []).forEach((bm: any) => {
-    const key = bm.user_id;
+    const key = bm.profile_id;
     if (!bm.bands?.name) return;
     const arr = bandMap.get(key) ?? [];
     arr.push({ name: bm.bands.name, role: bm.instrument_role || bm.role || null });
@@ -86,7 +86,7 @@ async function fetchPlayers(search: string, page: number, viewerProfileId?: stri
     fame: r.fame ?? 0,
     fans: r.fans ?? 0,
     city_name: r.current_city_id ? cityMap.get(r.current_city_id) ?? null : null,
-    bands: bandMap.get(r.user_id) ?? [],
+    bands: bandMap.get(r.id) ?? [],
   }));
 }
 

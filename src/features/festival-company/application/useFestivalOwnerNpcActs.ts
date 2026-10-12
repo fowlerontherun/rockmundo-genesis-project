@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useRef } from "react";
 
 export type FestivalOwnerNpcAct = {
   id: string;
@@ -47,6 +48,7 @@ export const useFestivalOwnerNpcActs = (festivalCompanyId: string, festivalEditi
 
 export const useUpsertFestivalOwnerNpcAct = () => {
   const client = useQueryClient();
+  const requestKeys = useRef(new Map<string,string>());
   return useMutation({
     mutationFn: async (input: {
       festivalCompanyId: string;
@@ -60,6 +62,8 @@ export const useUpsertFestivalOwnerNpcAct = () => {
       stageId?: string | null;
       billingPosition: FestivalOwnerNpcAct["billingPosition"];
     }) => {
+      const signature = JSON.stringify(input);
+      if (!requestKeys.current.has(signature)) requestKeys.current.set(signature, crypto.randomUUID());
       const { data, error } = await festivalNpcRpc.rpc("upsert_festival_owner_npc_lineup_act", {
         p_festival_company_id: input.festivalCompanyId,
         p_festival_edition_id: input.festivalEditionId,
@@ -71,38 +75,47 @@ export const useUpsertFestivalOwnerNpcAct = () => {
         p_festival_date: input.festivalDate,
         p_stage_id: input.stageId ?? null,
         p_billing_position: input.billingPosition,
-        p_idempotency_key: crypto.randomUUID(),
+        p_idempotency_key: requestKeys.current.get(signature)!,
       });
       if (error) throw error;
       return data as FestivalOwnerNpcAct;
     },
-    onSuccess: (_, input) => Promise.all([
+    onSuccess: (_, input) => {
+      requestKeys.current.delete(JSON.stringify(input));
+      return Promise.all([
       client.invalidateQueries({ queryKey: key(input.festivalCompanyId, input.festivalEditionId) }),
       client.invalidateQueries({ queryKey: ["festival-artist-programme"] }),
       client.invalidateQueries({ queryKey: ["public-festival"] }),
       client.invalidateQueries({ queryKey: ["public-festival-timetable"] }),
-    ]),
+    ]);
+    },
   });
 };
 
 export const useCancelFestivalOwnerNpcAct = () => {
   const client = useQueryClient();
+  const requestKeys = useRef(new Map<string,string>());
   return useMutation({
     mutationFn: async (input: { festivalCompanyId: string; festivalEditionId: string; npcActId: string }) => {
+      const signature = JSON.stringify(input);
+      if (!requestKeys.current.has(signature)) requestKeys.current.set(signature, crypto.randomUUID());
       const { data, error } = await festivalNpcRpc.rpc("cancel_festival_owner_npc_lineup_act", {
         p_festival_company_id: input.festivalCompanyId,
         p_festival_edition_id: input.festivalEditionId,
         p_npc_act_id: input.npcActId,
-        p_idempotency_key: crypto.randomUUID(),
+        p_idempotency_key: requestKeys.current.get(signature)!,
       });
       if (error) throw error;
       return data;
     },
-    onSuccess: (_, input) => Promise.all([
+    onSuccess: (_, input) => {
+      requestKeys.current.delete(JSON.stringify(input));
+      return Promise.all([
       client.invalidateQueries({ queryKey: key(input.festivalCompanyId, input.festivalEditionId) }),
       client.invalidateQueries({ queryKey: ["festival-artist-programme"] }),
       client.invalidateQueries({ queryKey: ["public-festival"] }),
       client.invalidateQueries({ queryKey: ["public-festival-timetable"] }),
-    ]),
+    ]);
+    },
   });
 };

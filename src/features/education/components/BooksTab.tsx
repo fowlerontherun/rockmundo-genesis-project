@@ -272,7 +272,7 @@ export const BooksTab = () => {
               className="w-full"
               size="sm"
             >
-              {isProcessing ? "Processing..." : activeBookLocked ? "Reading locked — switch books" : "Record Today's Reading"
+              {isProcessing ? "Processing..." : activeBookLocked ? "Reading locked — switch books" : "Record Today's Reading"}
             </Button>
           </CardContent>
         </Card>

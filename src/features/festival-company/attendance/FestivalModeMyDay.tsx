@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,7 +56,7 @@ const formatFestivalTime = (value: string, timezone: string) =>
 const errorText = (error: Error | null) => error?.message.replaceAll("_", " ") || null;
 
 export const FestivalModeMyDay = ({ attendance }: { attendance: FestivalPlayerAttendance }) => {
-  const { data: plan, isLoading, isError, error, refetch } = useMyFestivalDayPlan(attendance.id);
+  const { data: plan, dataUpdatedAt, isLoading, isError, error, refetch } = useMyFestivalDayPlan(attendance.id);
   const preview = usePreviewFestivalDayPlanItem();
   const createItem = useCreateFestivalDayPlanItem();
   const cancelItem = useCancelFestivalDayPlanItem(attendance.id);
@@ -67,6 +67,9 @@ export const FestivalModeMyDay = ({ attendance }: { attendance: FestivalPlayerAt
   const [activityType, setActivityType] = useState<FestivalPlanActivityType>("eat");
   const [title, setTitle] = useState("Get some food");
   const [previewKey, setPreviewKey] = useState<string | null>(null);
+  const requestKey = useRef<{fingerprint:string;id:string}|null>(null);
+  const [clock, setClock] = useState(() => Date.now());
+  useEffect(() => { const timer = window.setInterval(() => setClock(Date.now()), 1000); return () => window.clearInterval(timer); }, []);
 
   const activityOptions = useMemo(() => {
     const options = [...baseActivityOptions];
@@ -123,6 +126,8 @@ export const FestivalModeMyDay = ({ attendance }: { attendance: FestivalPlayerAt
   const submitPlan = (event: FormEvent) => {
     event.preventDefault();
     if (!selectedDate || !title.trim() || !currentPreview?.feasible) return;
+    const fingerprint = JSON.stringify([attendance.id,selectedDate,localStart,durationMinutes,activityType,title.trim()]);
+    if (requestKey.current?.fingerprint !== fingerprint) requestKey.current = {fingerprint,id:crypto.randomUUID()};
     createItem.mutate({
       attendanceId: attendance.id,
       festivalDate: selectedDate,
@@ -130,9 +135,10 @@ export const FestivalModeMyDay = ({ attendance }: { attendance: FestivalPlayerAt
       durationMinutes,
       activityType,
       title: title.trim(),
-      idempotencyKey: crypto.randomUUID(),
+      idempotencyKey: requestKey.current!.id,
     }, {
       onSuccess: () => {
+        requestKey.current = null;
         setPreviewKey(null);
         preview.reset();
       },
@@ -151,7 +157,7 @@ export const FestivalModeMyDay = ({ attendance }: { attendance: FestivalPlayerAt
     );
   }
 
-  const serverNow = Date.parse(plan.serverNow);
+  const serverNow = Date.parse(plan.serverNow) + Math.max(0, clock - dataUpdatedAt);
 
   return (
     <div className="space-y-4">

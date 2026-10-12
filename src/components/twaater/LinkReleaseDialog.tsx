@@ -37,12 +37,15 @@ export const LinkReleaseDialog = ({ open, onOpenChange, onSelect }: LinkReleaseD
 
       const bandIds = memberships?.map((m) => m.band_id) || [];
 
+      // Never show releases owned by unrelated solo artists when this character has no bands.
+      if (bandIds.length === 0) return [];
+
       // Fetch releases
       const { data: releases, error } = await supabase
         .from("releases")
         .select("id, title, release_type, artwork_url, release_status, band:bands(id, name)")
         .eq("release_status", "released")
-        .or(bandIds.length > 0 ? `band_id.in.(${bandIds.join(",")})` : `band_id.is.null`)
+        .in("band_id", bandIds)
         .order("created_at", { ascending: false });
 
       if (error) throw error;

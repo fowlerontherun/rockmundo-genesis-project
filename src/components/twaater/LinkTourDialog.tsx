@@ -40,7 +40,9 @@ export const LinkTourDialog = ({ open, onOpenChange, onSelect }: LinkTourDialogP
       if (bandIds.length === 0) return [];
 
       // Fetch tours
-      const { data: tours, error } = await supabase
+      const tours: any[] = [];
+      for (let offset = 0; offset < 10000; offset += 500) {
+        const { data, error } = await supabase
         .from("tours")
         .select(`
           id, name, status, start_date, end_date,
@@ -48,10 +50,12 @@ export const LinkTourDialog = ({ open, onOpenChange, onSelect }: LinkTourDialogP
         `)
         .in("band_id", bandIds)
         .order("start_date", { ascending: false })
-        .limit(30);
-
-      if (error) throw error;
-      return tours || [];
+        .range(offset, offset + 499);
+        if (error) throw error;
+        tours.push(...(data ?? []));
+        if (!data || data.length < 500) break;
+      }
+      return tours;
     },
     enabled: open && !!profileId,
   });

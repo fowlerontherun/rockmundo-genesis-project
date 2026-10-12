@@ -47,7 +47,7 @@ export const getMyFestivalMemorabilia = async (): Promise<FestivalMemorabiliaIte
 };
 
 export const checkInToFestival = async (attendanceId: string): Promise<FestivalCheckInResult> => {
-  await syncMyFestivalAttendanceLifecycle();
+  // The check-in RPC is authoritative. An unrelated lifecycle sync outage must not prevent it.
   const { data, error } = await attendanceRpc("check_in_to_festival", {
     p_attendance_id: attendanceId,
   });
