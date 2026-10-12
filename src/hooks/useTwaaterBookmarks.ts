@@ -27,9 +27,23 @@ export const useTwaaterBookmarks = (accountId?: string) => {
 
       if (error) throw error;
 
+      const privateAuthors = Array.from(new Set((data || [])
+        .map((bookmark: any) => bookmark.twaat)
+        .filter((twaat: any) => twaat && twaat.visibility === "followers" && twaat.account_id !== accountId)
+        .map((twaat: any) => twaat.account_id))) as string[];
+      let followedAuthors = new Set<string>();
+      if (privateAuthors.length) {
+        const { data: follows, error: followError } = await supabase.from("twaater_follows")
+          .select("followed_account_id").eq("follower_account_id", accountId)
+          .in("followed_account_id", privateAuthors);
+        if (followError) throw followError;
+        followedAuthors = new Set((follows || []).map((follow) => follow.followed_account_id));
+      }
       const rows = (data || []).filter((bookmark: any) => {
         const twaat = bookmark.twaat;
-        return twaat && !twaat.deleted_at && !twaat.scheduled_for && twaat.visibility === "public";
+        return twaat && !twaat.deleted_at && !twaat.scheduled_for &&
+          (twaat.visibility === "public" || (twaat.visibility === "followers" &&
+            (twaat.account_id === accountId || followedAuthors.has(twaat.account_id))));
       });
       const twaats = rows.map((bookmark: any) => bookmark.twaat);
       const hydrated = await hydrateTwaaterFeedExtras(twaats, accountId);
