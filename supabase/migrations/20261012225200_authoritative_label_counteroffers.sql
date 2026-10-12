@@ -12,8 +12,8 @@ BEGIN
  IF NOT FOUND OR v.status<>'offered' THEN RAISE EXCEPTION 'contract_not_available_for_counter'; END IF;
  IF v.band_id IS NOT NULL THEN
   IF NOT EXISTS(SELECT 1 FROM public.bands b WHERE b.id=v.band_id AND
-    (b.leader_id=auth.uid() OR EXISTS(SELECT 1 FROM public.band_members bm
-     WHERE bm.band_id=b.id AND bm.user_id=auth.uid() AND bm.role IN ('leader','manager'))))
+    (b.leader_id IN (auth.uid(),v_profile) OR EXISTS(SELECT 1 FROM public.band_members bm
+     WHERE bm.band_id=b.id AND bm.user_id=auth.uid() AND lower(bm.role) IN ('founder','leader','manager'))))
   THEN RAISE EXCEPTION 'band_leadership_required'; END IF;
  ELSIF v.artist_profile_id IS DISTINCT FROM v_profile THEN RAISE EXCEPTION 'solo_artist_required'; END IF;
  IF coalesce(v.counter_count,0)<>p_expected_counter_count THEN RAISE EXCEPTION 'stale_contract_terms'; END IF;
