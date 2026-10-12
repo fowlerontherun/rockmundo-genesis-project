@@ -443,18 +443,18 @@ serve(async (req) => {
 
           switch (format.format_type) {
             case "digital":
-              baseSales = digitalMin + Math.floor(Math.random() * (digitalMax - digitalMin));
+              baseSales = digitalMin + Math.floor(Math.random() * (digitalMax - digitalMin + 1));
               break;
             case "streaming":
               continue;
             case "cd":
-              baseSales = cdMin + Math.floor(Math.random() * (cdMax - cdMin));
+              baseSales = cdMin + Math.floor(Math.random() * (cdMax - cdMin + 1));
               break;
             case "vinyl":
-              baseSales = vinylMin + Math.floor(Math.random() * (vinylMax - vinylMin));
+              baseSales = vinylMin + Math.floor(Math.random() * (vinylMax - vinylMin + 1));
               break;
             case "cassette":
-              baseSales = cassetteMin + Math.floor(Math.random() * (cassetteMax - cassetteMin));
+              baseSales = cassetteMin + Math.floor(Math.random() * (cassetteMax - cassetteMin + 1));
               break;
           }
 
