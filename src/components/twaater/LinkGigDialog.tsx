@@ -33,7 +33,8 @@ export const LinkGigDialog = ({ open, onOpenChange, onSelect }: LinkGigDialogPro
       const { data: memberships } = await supabase
         .from("band_members")
         .select("band_id")
-        .eq("profile_id", profileId);
+        .eq("profile_id", profileId)
+        .eq("member_status", "active");
 
       const bandIds = memberships?.map((m) => m.band_id) || [];
       if (bandIds.length === 0) return [];
