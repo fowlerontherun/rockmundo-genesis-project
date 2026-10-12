@@ -50,6 +50,9 @@ export function FestivalOwnerSalesPreview({
   const playerSales = useFestivalPlayerTicketSalesBreakdown(isLaunched ? festivalCompanyId : undefined);
   const current = publicFestival.data;
 
+  if (launch.isLoading || publicFestival.isLoading || sales.isLoading || playerSales.isLoading) return <Card><CardContent className="p-4" role="status">Loading Festival ticket sales…</CardContent></Card>;
+  if (launch.isError || publicFestival.isError || sales.isError || playerSales.isError) return <Card><CardContent role="alert" className="p-4">Festival sales information could not be loaded. <Button variant="outline" onClick={() => {void launch.refetch();void publicFestival.refetch();void sales.refetch();void playerSales.refetch();}}>Retry</Button></CardContent></Card>;
+
   // Annual companies can hold old launch records while planning a new year.
   // Never display a previous edition's orders on the new edition screen.
   if (!isLaunched || !slug || !current || !festivalDates.length ||
