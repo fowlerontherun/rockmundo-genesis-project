@@ -92,7 +92,8 @@ export function useNotificationsFeed() {
         .from(asAny("notifications"))
         .delete()
         .eq("id", id)
-        .eq("profile_id", profileId);
+        .eq("user_id", userId!)
+        .or(`profile_id.eq.${profileId},profile_id.is.null`);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: [...QUERY_KEY, userId, profileId] }),
@@ -105,7 +106,7 @@ export function useNotificationsFeed() {
         .from(asAny("notifications"))
         .delete()
         .eq("user_id", userId)
-        .eq("profile_id", profileId);
+        .or(`profile_id.eq.${profileId},profile_id.is.null`);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: [...QUERY_KEY, userId, profileId] }),
