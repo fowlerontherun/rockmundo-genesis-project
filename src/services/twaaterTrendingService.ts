@@ -50,7 +50,7 @@ export const fetchRecentTwaatsForTrending = async (): Promise<TrendingTwaatRow[]
     .is("scheduled_for", null)
     .gte("created_at", getYesterdayIso())
     .order("created_at", { ascending: false })
-    .limit(100);
+    .limit(1000);
 
   return supabaseArrayOrThrow(data as TrendingTwaatRow[] | null, error, {
     scope: "twaaterTrendingService",
