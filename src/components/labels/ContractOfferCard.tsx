@@ -284,7 +284,7 @@ export function ContractOfferCard({ offer, entityName }: ContractOfferCardProps)
           const labelSingleQuota = Math.round(origSingle + (counterOffer.single_quota - origSingle) * concessionRate);
           const labelAlbumQuota = Math.round(origAlbum + (counterOffer.album_quota - origAlbum) * concessionRate);
 
-          await supabase
+          const { error: counterError } = await supabase
             .from("artist_label_contracts")
             .update({
               advance_amount: labelAdvance,
@@ -295,7 +295,9 @@ export function ContractOfferCard({ offer, entityName }: ContractOfferCardProps)
               status: "offered",
               last_action_by: "label",
             })
-            .eq("id", offer.id);
+            .eq("id", offer.id)
+            .eq("status","negotiating");
+          if (counterError) { toast({title:"Label counter response failed",description:counterError.message,variant:"destructive"}); return; }
 
           toast({
             title: `${offer.label_name} countered!`,
