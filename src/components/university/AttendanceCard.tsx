@@ -37,12 +37,9 @@ export function AttendanceCard({
   const startHour = Math.min(Math.max(Math.floor(classWindow.start), 0), 23);
   const endHour = Math.min(Math.max(Math.floor(classWindow.end), startHour + 1), 24);
   const now = new Date();
-  const currentHour = now.getHours();
+  const currentHour = now.getUTCHours();
   const isClassTime = currentHour >= startHour && currentHour < endHour;
-  const classWindowLabel = `${format(new Date().setHours(startHour, 0, 0, 0), "h a")} - ${format(
-    new Date().setHours(endHour, 0, 0, 0),
-    "h a",
-  )}`;
+  const classWindowLabel = `${startHour.toString().padStart(2,"0")}:00–${endHour.toString().padStart(2,"0")}:00 UTC`;
 
   return (
     <Card className="border-primary/20">
