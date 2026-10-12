@@ -216,12 +216,72 @@ export function FMChatDock() {
       if (!room || (openRef.current && activeRoomRef.current === room)) return;
       setUnreadRooms((current) => ({ ...current, [room]: current[room] + 1 }));
     };
+    let disposed = false;
+    const lastScanned = new Map<string, string>();
+    const seenRoomIds = new Set<string>();
+    let checking = false;
+    const processRow = (row: { id: string; profile_id?: string | null; user_id?: string; channel?: string; created_at: string }) => {
+      if (seenRoomIds.has(row.id)) return;
+      seenRoomIds.add(row.id);
+      handle(row);
+    };
+    const reconcile = async () => {
+      if (disposed || checking) return;
+      checking = true;
+      try {
+        for (const channelKey of channels) {
+          if (disposed) break;
+          const from = lastScanned.get(channelKey);
+          if (!from) {
+            const { data, error } = await supabase.from("global_chat")
+              .select("id, created_at").eq("channel", channelKey)
+              .order("created_at", { ascending: false }).limit(1);
+            if (error) throw error;
+            if (data?.[0]) {
+              lastScanned.set(channelKey, data[0].created_at);
+              seenRoomIds.add(data[0].id);
+            } else {
+              lastScanned.set(channelKey, new Date().toISOString());
+            }
+            continue;
+          }
+          let latest = from;
+          for (let offset = 0; offset < 100_000; offset += 500) {
+            const { data, error } = await supabase.from("global_chat")
+              .select("id, profile_id, user_id, channel, created_at")
+              .eq("channel", channelKey).gte("created_at", from)
+              .order("created_at", { ascending: true })
+              .order("id", { ascending: true }).range(offset, offset + 499);
+            if (error) throw error;
+            for (const row of data ?? []) {
+              processRow(row);
+              if (row.created_at > latest) latest = row.created_at;
+            }
+            if (!data || data.length < 500) break;
+          }
+          lastScanned.set(channelKey, latest);
+        }
+      } catch (error) {
+        console.warn("Chat room unread reconciliation failed", error);
+      } finally {
+        checking = false;
+      }
+    };
     const subscriptions = channels.map((channelKey) => supabase
       .channel(`chat-dock-unread-${myProfileId}-${channelKey}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "global_chat", filter: `channel=eq.${channelKey}` },
-        (payload) => handle(payload.new as { profile_id?: string | null; user_id?: string; channel?: string }))
-      .subscribe());
-    return () => { subscriptions.forEach((subscription) => { void supabase.removeChannel(subscription); }); };
+        (payload) => processRow(payload.new as { id: string; profile_id?: string | null; user_id?: string; channel?: string; created_at: string }))
+      .subscribe((status) => { if (status === "SUBSCRIBED") void reconcile(); }));
+    void reconcile();
+    const timer = window.setInterval(() => void reconcile(), 15000);
+    const onVisible = () => { if (document.visibilityState === "visible") void reconcile(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+      subscriptions.forEach((subscription) => { void supabase.removeChannel(subscription); });
+    };
   }, [authUserId, bandId, myProfileId]);
 
   const rooms = useMemo(
