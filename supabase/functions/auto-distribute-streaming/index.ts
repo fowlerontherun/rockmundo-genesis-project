@@ -69,6 +69,7 @@ Deno.serve(async (req) => {
       
       console.log(`Processing release ${release.id} with ${platformIds.length} platforms, ${territoryCountries.length} territories`);
       
+      const failedPlatformIds: string[] = [];
       for (const platformId of platformIds) {
         // Get platform name for logging
         const { data: platform, error: platformError } = await supabase
@@ -76,7 +77,7 @@ Deno.serve(async (req) => {
           .select('platform_name')
           .eq('id', platformId)
           .single();
-        if (platformError || !platform) { console.error('Platform lookup failed:', platformError); continue; }
+        if (platformError || !platform) { console.error('Platform lookup failed:', platformError); failedPlatformIds.push(platformId); continue; }
 
         for (const releaseSong of release.release_songs || []) {
           // Check if already distributed
@@ -120,6 +121,7 @@ Deno.serve(async (req) => {
 
             if (insertError) {
               console.error(`Error inserting song_release: ${insertError.message}`);
+              if (!failedPlatformIds.includes(platformId)) failedPlatformIds.push(platformId);
             } else {
               distributionCount++;
               console.log(`Distributed song ${releaseSong.song_id} to ${platform?.platform_name || platformId} (${territoryCountries.length} territories)`);
@@ -133,7 +135,7 @@ Deno.serve(async (req) => {
       // Clear streaming_platforms array after distribution
       const { error: updateError } = await supabase
         .from('releases')
-        .update({ streaming_platforms: [] })
+        .update({ streaming_platforms: failedPlatformIds })
         .eq('id', release.id);
 
       if (updateError) {
