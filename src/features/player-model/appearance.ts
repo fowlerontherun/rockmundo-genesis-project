@@ -168,27 +168,26 @@ export function defaultAppearance(seed = ''): PlayerAppearance {
 export function resolveAppearance(value: unknown, seed = ''): PlayerAppearance {
   const parsed = appearanceSchema.safeParse(value);
   if (!parsed.success) {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return defaultAppearance(seed);
-    const raw = value as Record<string, unknown>;
+    if (!value || typeof value !== "object" || Array.isArray(value)) return defaultAppearance(seed);
     const defaults = defaultAppearance(seed);
-    const section = (key: string) => raw[key] && typeof raw[key] === 'object' && !Array.isArray(raw[key]) ? raw[key] as Record<string, unknown> : {};
-    const equipment = section('equipment');
-    const equipmentSection = (key: string) => equipment[key] && typeof equipment[key] === 'object' && !Array.isArray(equipment[key]) ? equipment[key] as Record<string, unknown> : {};
-    const merged = {
-      ...defaults, version: 1 as const,
-      body: { ...defaults.body, ...section('body') },
-      head: { ...defaults.head, ...section('head') },
-      equipment: {
-        top: { ...defaults.equipment.top, ...equipmentSection('top') },
-        bottom: { ...defaults.equipment.bottom, ...equipmentSection('bottom') },
-        footwear: { ...defaults.equipment.footwear, ...equipmentSection('footwear') },
-        instrument: { ...defaults.equipment.instrument, ...equipmentSection('instrument') },
-      },
-      accessories: { ...defaults.accessories, ...section('accessories') },
+    // Validate each persisted setting independently. One invalid/removed item or
+    // future optional field must not discard the player's entire saved avatar.
+    const repair = (schema: any, incoming: unknown, fallback: unknown): unknown => {
+      const objectSchema = schema?.shape ? schema : schema?.unwrap?.();
+      if (objectSchema?.shape && incoming && typeof incoming === "object" && !Array.isArray(incoming)) {
+        const source = incoming as Record<string, unknown>;
+        const base = (fallback && typeof fallback === "object" ? fallback : {}) as Record<string, unknown>;
+        const repaired: Record<string, unknown> = {};
+        for (const [field, fieldSchema] of Object.entries(objectSchema.shape as Record<string, unknown>)) {
+          repaired[field] = repair(fieldSchema, source[field] ?? base[field], base[field]);
+        }
+        const checked = schema.safeParse(repaired);
+        return checked.success ? checked.data : fallback;
+      }
+      const checked = schema.safeParse(incoming);
+      return checked.success ? checked.data : fallback;
     };
-    const repaired = appearanceSchema.safeParse(merged);
-    if (repaired.success) return resolveAppearance(repaired.data, seed);
-    return defaults;
+    return resolveAppearance(repair(appearanceSchema, value, defaults), seed);
   }
   return {
     ...parsed.data,
