@@ -73,10 +73,13 @@ export const VipStatusCard = ({ compact = false }: VipStatusCardProps) => {
       }
     };
 
-    // Calculate progress based on 30-day period
-    const totalDays = 30;
-    const daysUsed = totalDays - (vipStatus.daysRemaining || 0);
-    const progressPercent = Math.min(100, Math.max(0, (daysUsed / totalDays) * 100));
+    // Use the actual subscription term, including annual, trial and gifted VIP.
+    const startsAt = vipStatus.subscription ? Date.parse(vipStatus.subscription.starts_at) : NaN;
+    const expiresAt = vipStatus.expiresAt?.getTime() ?? NaN;
+    const termMs = expiresAt - startsAt;
+    const remainingPercent = Number.isFinite(termMs) && termMs > 0
+      ? Math.min(100, Math.max(0, ((expiresAt - Date.now()) / termMs) * 100))
+      : 0;
 
     if (compact) {
       return (
@@ -118,7 +121,7 @@ export const VipStatusCard = ({ compact = false }: VipStatusCardProps) => {
             </span>
           </div>
           
-          <Progress value={100 - progressPercent} className="h-2" />
+          <Progress value={remainingPercent} className="h-2" />
           
           {vipStatus.expiresAt && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
