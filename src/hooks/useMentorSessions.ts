@@ -175,124 +175,14 @@ export function useMentorSessions() {
         }
       }
 
-      const { data: tierUnlocked, error: tierError } = await (supabase as any).rpc("skill_tier_unlocked", {
+      // Cooldown, discovery, funds, XP, ledger and session record commit together.
+      const { data, error } = await (supabase as any).rpc("book_mentor_session_atomic", {
         p_profile_id: profile.id,
-        p_slug: mentor.focus_skill,
+        p_mentor_id: mentorId,
       });
-      if (tierError) throw tierError;
-      if (tierUnlocked === false) throw new Error("This skill tier is not unlocked yet");
-
-      const maxLevel = await getSkillMaxLevel(mentor.focus_skill);
-      const skill = skillProgress?.find((s) => s.skill_slug === mentor.focus_skill);
-      const currentLevel = skill?.current_level || 0;
-      const xpEarned = Math.floor(mentor.base_xp * (1 + currentLevel * 0.1));
-
-      const { data: attrs } = await supabase
-        .from('player_attributes')
-        .select('*')
-        .eq('profile_id', profile.id)
-        .maybeSingle();
-
-      const baseSkillValue = Math.floor(xpEarned * mentor.skill_gain_ratio);
-      const { xp: skillValueGained } = applyLearningMultiplier(baseSkillValue, mentor.focus_skill, attrs);
-
-      if (!userId) throw new Error("Not signed in");
-
-      const { error: sessionError } = await supabase
-        .from("player_mentor_sessions")
-        .insert({
-          user_id: userId,
-          profile_id: profile.id,
-          mentor_id: mentorId,
-          xp_earned: xpEarned,
-          skill_value_gained: skillValueGained,
-          attribute_gains: mentor.attribute_keys || {},
-        });
-      if (sessionError) throw sessionError;
-
-      let newLevel = Math.min(Math.max(skill?.current_level || 0, 0), maxLevel);
-      let newXp = Math.max(skill?.current_xp || 0, 0);
-      let newRequiredXp = Number(skill?.required_xp ?? 0);
-
-      if (newLevel < maxLevel) {
-        if (newRequiredXp <= 0) newRequiredXp = await getRequiredSkillXp(newLevel);
-        newXp += skillValueGained;
-        while (newLevel < maxLevel && newXp >= newRequiredXp) {
-          newXp -= newRequiredXp;
-          newLevel += 1;
-          newRequiredXp = newLevel < maxLevel ? await getRequiredSkillXp(newLevel) : 0;
-        }
-      }
-
-      if (newLevel >= maxLevel) {
-        newLevel = maxLevel;
-        newXp = 0;
-        newRequiredXp = 0;
-      }
-
-      if (skill) {
-        const { error: skillError } = await supabase
-          .from("skill_progress")
-          .update({
-            current_xp: newXp,
-            current_level: newLevel,
-            required_xp: newRequiredXp,
-            last_practiced_at: new Date().toISOString(),
-          })
-          .eq("id", skill.id);
-        if (skillError) throw skillError;
-      } else {
-        let insertXp = skillValueGained;
-        let insertLevel = 0;
-        let insertRequiredXp = await getRequiredSkillXp(0);
-
-        while (insertLevel < maxLevel && insertXp >= insertRequiredXp) {
-          insertXp -= insertRequiredXp;
-          insertLevel += 1;
-          insertRequiredXp = insertLevel < maxLevel ? await getRequiredSkillXp(insertLevel) : 0;
-        }
-
-        if (insertLevel >= maxLevel) {
-          insertLevel = maxLevel;
-          insertXp = 0;
-          insertRequiredXp = 0;
-        }
-
-        const { error: skillError } = await supabase.from("skill_progress").insert({
-          profile_id: profile.id,
-          skill_slug: mentor.focus_skill,
-          current_xp: insertXp,
-          current_level: insertLevel,
-          required_xp: insertRequiredXp,
-          last_practiced_at: new Date().toISOString(),
-        });
-        if (skillError) throw skillError;
-      }
-
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({
-          cash: profile.cash - mentor.cost,
-          experience: (profile.experience || 0) + xpEarned,
-        })
-        .eq("id", profile.id);
-      if (profileError) throw profileError;
-
-      const { error: ledgerError } = await supabase.from("experience_ledger").insert({
-        user_id: userId,
-        profile_id: profile.id,
-        activity_type: "mentor_session",
-        xp_amount: xpEarned,
-        skill_slug: mentor.focus_skill,
-        metadata: {
-          mentor_id: mentorId,
-          mentor_name: mentor.name,
-          max_level: maxLevel,
-        },
-      });
-      if (ledgerError) throw ledgerError;
-
-      return { xpEarned, skillValueGained, mentor };
+      if (error) throw error;
+      if (!data?.sessionId) throw new Error("Mentor session was not confirmed.");
+      return { xpEarned: Number(data.xpEarned), skillValueGained: Number(data.skillValueGained), mentor };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
