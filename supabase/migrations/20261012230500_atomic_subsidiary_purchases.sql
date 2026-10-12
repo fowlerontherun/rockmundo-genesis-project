@@ -42,9 +42,10 @@ BEGIN
   v_amount:=(p_fields->>'cost')::numeric;
  END IF;
  IF v_amount IS NULL OR v_amount<=0 OR v_amount>100000000 THEN RAISE EXCEPTION 'invalid_purchase_amount'; END IF;
- IF length(v_name)<2 THEN RAISE EXCEPTION 'name_required'; END IF;
  IF p_kind LIKE '%_upgrade' THEN
+  IF length(v_name)<2 THEN v_name:=initcap(replace(coalesce(v_type,''),'_',' ')); END IF;
   IF v_type IS NULL THEN RAISE EXCEPTION 'upgrade_type_required'; END IF;
+
   IF p_kind='venue_upgrade' THEN
    SELECT coalesce(max(upgrade_level),0)+1 INTO v_level FROM public.venue_upgrades
    WHERE venue_id=p_subsidiary_id AND upgrade_type=v_type;
@@ -55,11 +56,12 @@ BEGIN
    SELECT coalesce(max(level),0)+1 INTO v_level FROM public.rehearsal_room_upgrades
    WHERE room_id=p_subsidiary_id AND upgrade_type=v_type;
   END IF;
-  IF v_level>5 AND p_kind<>'venue_upgrade' OR v_level>20 THEN RAISE EXCEPTION 'upgrade_level_maximum'; END IF;
+  IF (v_level>5 AND p_kind<>'venue_upgrade') OR v_level>20 THEN RAISE EXCEPTION 'upgrade_level_maximum'; END IF;
   IF (p_fields->>'level') IS NOT NULL AND (p_fields->>'level')::integer<>v_level
    OR (p_fields->>'upgrade_level') IS NOT NULL AND (p_fields->>'upgrade_level')::integer<>v_level
    THEN RAISE EXCEPTION 'stale_upgrade_level'; END IF;
  END IF;
+ IF length(v_name)<2 THEN RAISE EXCEPTION 'name_required'; END IF;
  v_key:='subsidiary-asset-'||gen_random_uuid()::text;
  PERFORM public.deduct_company_balance(v_company_id,v_amount,
    'Subsidiary asset: '||p_kind||' - '||v_name,
