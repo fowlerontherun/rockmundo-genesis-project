@@ -106,6 +106,7 @@ serve(async (req) => {
 
     // Aggregate weekly streams by song AND by region
     const weeklyStreamsMap = new Map<string, number>();
+    const weeklyStreamsByDistribution = new Map<string, number>();
     const weeklyStreamsByRegion = new Map<string, Map<string, number>>(); // region -> (songId -> streams)
     const uniqueRegions = new Set<string>();
     const songInfoMap = new Map<string, any>();
@@ -115,6 +116,8 @@ serve(async (req) => {
       if (!songId) continue;
 
       const streams = entry.daily_streams || 0;
+      if (entry.song_release_id) weeklyStreamsByDistribution.set(entry.song_release_id,
+        (weeklyStreamsByDistribution.get(entry.song_release_id) || 0) + streams);
       const region = entry.listener_region || "all";
 
       // Global aggregate
@@ -149,6 +152,7 @@ serve(async (req) => {
     const { data: streamingDataRaw, error: streamingError } = await supabaseClient
       .from("song_releases")
       .select(`
+        id,
         song_id,
         total_streams,
         release_id,
@@ -222,15 +226,17 @@ serve(async (req) => {
       const scope = toReleaseScope((entry as any)?.release?.release_type);
       if (!scope) continue; // Unknown release types cannot be treated as singles.
       const scopedKey = `${entry.song_id}:${scope}`;
+      const scopedWeeklyStreams = weeklyStreamsByDistribution.get(entry.id) || 0;
       const existingScoped = streamingAggregatedByScope.get(scopedKey);
       if (existingScoped) {
         existingScoped.total_streams += entry.total_streams;
+        existingScoped.weekly_streams += scopedWeeklyStreams;
       } else {
         streamingAggregatedByScope.set(scopedKey, {
           song_id: entry.song_id,
           scope,
           total_streams: entry.total_streams,
-          weekly_streams: weeklyStreams,
+          weekly_streams: scopedWeeklyStreams,
           song: entry.songs,
         });
       }
@@ -417,6 +423,8 @@ serve(async (req) => {
     ];
 
     // Store sales data for combined chart calculation
+    const singleSaleSongIds = new Set<string>();
+    const releaseSalesById = new Map<string, { releaseId: string; releaseTitle: string; releaseType: ReleaseScope; totalSales: number; leadSongId: string; genre: string }>();
     const weeklySalesMap = new Map<string, {
       digital: number;
       cd: number;
@@ -597,7 +605,8 @@ serve(async (req) => {
 
           const scopedKey = `${song.id}:${scope}`;
           const currentScopedSales = songSalesByScope.get(scopedKey) || 0;
-          songSalesByScope.set(scopedKey, currentScopedSales + sale.quantity_sold);
+          songSalesByScope.set(scopedKey, currentScopedSales + perTrackSales);
+          if (scope === "single") singleSaleSongIds.add(song.id);
 
           if (!songInfoByScope.has(scopedKey)) {
             songInfoByScope.set(scopedKey, {
@@ -610,6 +619,10 @@ serve(async (req) => {
         
         // Aggregate for album/EP charts (one entry per release)
         if ((scope === "album" || scope === "ep") && releaseId && leadSongId) {
+          const existingRelease = releaseSalesById.get(releaseId);
+          if (existingRelease) existingRelease.totalSales += sale.quantity_sold;
+          else releaseSalesById.set(releaseId, { releaseId, releaseTitle: release.title || "Untitled", releaseType: scope,
+            totalSales: sale.quantity_sold, leadSongId, genre: leadSong?.genre || "Unknown" });
           const existing = albumSalesAgg.get(releaseId);
           if (existing) {
             existing.totalSales += sale.quantity_sold;
@@ -796,6 +809,7 @@ serve(async (req) => {
 
     // Create combined chart entries (base combined chart for all songs)
     const combinedEntries = Array.from(combinedScores.values())
+      .filter(entry => streamingAggregated.has(entry.songId) || weeklySalesMap.has(entry.songId))
       .sort((a, b) => b.combinedScore - a.combinedScore)
       .slice(0, 100)
       .map((entry, index) => ({
@@ -816,11 +830,10 @@ serve(async (req) => {
 
     // Create combined_single entries
     // combined_single should only include tracks released as singles
-    const singleSongIds = new Set(
-      Array.from(streamingAggregatedByScope.values())
-        .filter((entry) => entry.scope === "single")
-        .map((entry) => entry.song_id)
-    );
+    const singleSongIds = new Set([
+      ...Array.from(streamingAggregatedByScope.values()).filter(entry => entry.scope === "single").map(entry => entry.song_id),
+      ...singleSaleSongIds,
+    ]);
 
     const combinedSingleEntries = Array.from(combinedScores.values())
       .filter((entry) => singleSongIds.has(entry.songId))
@@ -859,17 +872,8 @@ serve(async (req) => {
     for (const [releaseId, albumData] of albumStreamingAggregated) {
       const streamUnits = Math.floor(albumData.weeklyStreams / STREAM_TO_UNIT_RATIO);
       
-      // FIX: Include album-level sales in combined score
-      // Sum all song-level sales for this release's songs
-      let albumSalesUnits = 0;
-      for (const entry of streamingData || []) {
-        if (entry.release_id === releaseId) {
-          const songSalesData = weeklySalesMap.get(entry.song_id);
-          if (songSalesData) {
-            albumSalesUnits += songSalesData.digital + songSalesData.cd + songSalesData.vinyl + songSalesData.cassette;
-          }
-        }
-      }
+      // Only count sales of this specific release; a reused lead song may appear elsewhere.
+      const albumSalesUnits = releaseSalesById.get(releaseId)?.totalSales || 0;
       const combinedScore = streamUnits + albumSalesUnits;
 
       if (combinedScore > 0) {
@@ -883,6 +887,16 @@ serve(async (req) => {
           genre: albumData.genre,
         });
       }
+    }
+
+    // Sales-only albums/EPs belong in combined charts even without streaming distribution.
+    for (const [releaseId, sale] of releaseSalesById) {
+      if (albumCombinedScores.has(releaseId)) continue;
+      albumCombinedScores.set(releaseId, {
+        releaseId, releaseTitle: sale.releaseTitle, releaseType: sale.releaseType,
+        combinedScore: sale.totalSales, weeklyStreams: 0,
+        leadSongId: sale.leadSongId, genre: sale.genre,
+      });
     }
 
     // Create combined_album entries
