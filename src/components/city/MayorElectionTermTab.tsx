@@ -13,9 +13,9 @@ interface Props {
 }
 
 export function MayorElectionTermTab({ cityId, mayor }: Props) {
-  const { data: election } = useCityElection(cityId);
-  const { data: history } = useCityElectionHistory(cityId);
-  const { data: candidates } = useElectionCandidates(election?.id);
+  const { data: election, isError: electionError, refetch: retryElection } = useCityElection(cityId);
+  const { data: history, isError: historyError, refetch: retryHistory } = useCityElectionHistory(cityId);
+  const { data: candidates, isError: candidatesError, refetch: retryCandidates } = useElectionCandidates(election?.id);
 
   const start = mayor?.term_start ? new Date(mayor.term_start) : null;
   const end = mayor?.term_end ? new Date(mayor.term_end) : null;
@@ -26,6 +26,7 @@ export function MayorElectionTermTab({ cityId, mayor }: Props) {
 
   return (
     <div className="space-y-5">
+      {(electionError || historyError || candidatesError) && <div role="alert" className="rounded border border-destructive/40 p-3 text-sm">Election information could not be fully loaded. <Button size="sm" variant="outline" onClick={() => { if (electionError) void retryElection(); if (historyError) void retryHistory(); if (candidatesError) void retryCandidates(); }}>Retry election data</Button></div>}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <Card>
           <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Crown className="h-4 w-4" /> Current term</CardTitle></CardHeader>
@@ -66,7 +67,7 @@ export function MayorElectionTermTab({ cityId, mayor }: Props) {
           </div>
         </CardHeader>
         <CardContent>
-          {!election ? (
+          {electionError ? <div role="alert" className="text-sm text-destructive">Current election is unavailable.</div> : !election ? (
             <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">No nomination or voting phase is active right now.</div>
           ) : (
             <div className="space-y-4">
@@ -81,7 +82,7 @@ export function MayorElectionTermTab({ cityId, mayor }: Props) {
               </div>
               <div>
                 <div className="mb-2 flex items-center gap-2 text-sm font-medium"><Users className="h-4 w-4" /> Candidates</div>
-                {!candidates?.length ? (
+                {candidatesError ? <p role="alert" className="text-sm text-destructive">Candidate list unavailable.</p> : !candidates?.length ? (
                   <p className="text-sm text-muted-foreground">No approved candidates yet.</p>
                 ) : (
                   <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
@@ -104,7 +105,7 @@ export function MayorElectionTermTab({ cityId, mayor }: Props) {
       <Card>
         <CardHeader><CardTitle className="flex items-center gap-2 text-base"><CheckCircle2 className="h-4 w-4" /> Election history</CardTitle></CardHeader>
         <CardContent className="space-y-2">
-          {!history?.length ? (
+          {historyError ? <p role="alert" className="text-sm text-destructive">Election history unavailable.</p> : !history?.length ? (
             <p className="text-sm text-muted-foreground">No election history recorded yet.</p>
           ) : history.slice(0, 8).map((row) => (
             <div key={row.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
