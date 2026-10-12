@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { blockPlayer, getSocialPermissions, listBlockedPlayers, listMyReports, submitPlayerReport, unblockPlayer, type BlockReasonCategory, type ReportCategory } from "@/services/socialSafety";
 
 export function useSocialPermission(targetProfileId?: string | null) {
-  return useQuery({ queryKey: ["social-permission", targetProfileId], queryFn: () => getSocialPermissions(targetProfileId!), enabled: !!targetProfileId });
+  const { profileId } = useActiveProfile();
+  return useQuery({ queryKey: ["social-permission", profileId, targetProfileId], queryFn: () => getSocialPermissions(targetProfileId!), enabled: !!profileId && !!targetProfileId });
 }
 
 export function useBlockedPlayers(search = "") {
