@@ -1,6 +1,5 @@
 import { Badge } from "@/components/ui/badge";
 import { useGameCalendar } from "@/hooks/useGameCalendar";
-import { format } from "date-fns";
 
 const TAGLINES = [
   "All the News That Rocks",
@@ -33,7 +32,7 @@ function seededIndex(seed: string, len: number) {
 
 export function NewspaperMasthead() {
   const { data: calendar } = useGameCalendar();
-  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const todayStr = calendar ? `${calendar.gameYear}-${calendar.gameMonth}-${calendar.gameDay}` : "loading";
   const tagline = TAGLINES[seededIndex(todayStr, TAGLINES.length)];
   const quote = QUOTES[seededIndex(todayStr + "q", QUOTES.length)];
   const editionNumber = calendar?.gameDay ?? Math.floor((Date.now() - new Date("2026-01-01").getTime()) / 86400000);
@@ -42,7 +41,7 @@ export function NewspaperMasthead() {
     <div className="border-b-4 border-double border-foreground pb-4 mb-6">
       {/* Top bar */}
       <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground border-b border-border pb-1 mb-2">
-        <span>{format(new Date(), "EEEE, MMMM d, yyyy")}</span>
+        <span>{calendar ? `${calendar.monthName} ${calendar.gameDay}, Year ${calendar.gameYear}` : "Loading game date…"}</span>
         <span>Edition No. {editionNumber}</span>
         <span>
           {calendar && (
