@@ -93,7 +93,7 @@ export default function TodaysNewsPage() {
       <div className="mx-auto max-w-[1400px] border-x border-y-2 border-foreground/70 bg-card/40 px-3 py-4 sm:px-6 sm:py-6">
         <NewspaperMasthead />
         <BreakingNewsTicker />
-        {(newBandsError || releasedSongsError || festivalAnnouncementsError || festivalsError) && <div role="alert" className="p-3 text-destructive">Some news sections could not be loaded. <button className="underline" onClick={() => { void retryNewBands(); void retryReleasedSongs(); void retryAnnouncements(); void retryFestivals(); }}>Retry news</button></div>
+        {(newBandsError || releasedSongsError || festivalAnnouncementsError || festivalsError) && <div role="alert" className="p-3 text-destructive">Some news sections could not be loaded. <button className="underline" onClick={() => { void retryNewBands(); void retryReleasedSongs(); void retryAnnouncements(); void retryFestivals(); }}>Retry news</button></div>}
 
         <div className="mt-6 space-y-3">
           <NewsCategory title="Your Character & Local News" description="Your location, local highlights and recent character activity" defaultOpen>
