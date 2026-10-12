@@ -51,10 +51,11 @@ export function useSecondNomination() {
 
       const { data: cand } = await supabase
         .from("city_candidates")
-        .select("id, profile_id, nominator_profile_id, seconder_profile_id")
+        .select("id, profile_id, nominator_profile_id, seconder_profile_id, status")
         .eq("id", candidateId)
         .maybeSingle();
       if (!cand) throw new Error("Nomination not found");
+      if (cand.status !== "pending") throw new Error("This nomination is no longer eligible for seconding");
       if (cand.seconder_profile_id) throw new Error("Already seconded");
       if (cand.profile_id === profileId) throw new Error("Candidates can't second themselves");
       if (cand.nominator_profile_id === profileId) throw new Error("Nominator can't second");
@@ -66,6 +67,7 @@ export function useSecondNomination() {
           seconded_at: new Date().toISOString(),
           status: "approved",
         })
+        .eq("status", "pending")
         .eq("id", candidateId);
       if (error) throw error;
     },
