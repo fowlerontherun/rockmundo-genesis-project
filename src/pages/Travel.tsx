@@ -62,7 +62,15 @@ const Travel = () => {
 
   useEffect(() => {
     const loadTravelData = async () => {
-      if (!profileId) return;
+      if (!profileId) {
+        setProfile(null);
+        setCurrentCity(null);
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      setProfile(null);
+      setCurrentCity(null);
 
       try {
         const { data: profileData } = await supabase

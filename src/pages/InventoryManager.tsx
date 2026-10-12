@@ -90,24 +90,39 @@ const InventoryManager = () => {
     queryFn: async () => {
       if (!profileId) return [];
 
-      const sessions: any[] = [];
+      const ownedBooks: any[] = [];
       for (let offset = 0; ; offset += 500) {
-      const { data, error } = await supabase
-        .from("player_book_reading_sessions")
-        .select(`
-          *,
-          skill_books (id, title, author, skill_slug, price, base_reading_days, skill_percentage_gain, category)
-        `)
-        .eq("profile_id", profileId)
-        .order("created_at", { ascending: false })
-        .order("id", { ascending: false })
-        .range(offset, offset + 499);
-
-      if (error) throw error;
-      sessions.push(...(data ?? []));
-      if (!data || data.length < 500) break;
+        const { data, error } = await supabase.from("player_book_purchases")
+          .select(`
+            *,
+            skill_books (id, title, author, skill_slug, price, base_reading_days, skill_percentage_gain, category),
+            player_book_reading_sessions!player_book_reading_sessions_purchase_id_fkey (
+              id, status, days_read, total_skill_xp_earned, actual_completion_date, started_at
+            )
+          `)
+          .eq("profile_id", profileId)
+          .order("created_at", { ascending: false })
+          .range(offset, offset + 499);
+        if (error) throw error;
+        for (const purchase of data ?? []) {
+          const sessions = Array.isArray(purchase.player_book_reading_sessions)
+            ? [...purchase.player_book_reading_sessions] : [];
+          sessions.sort((a, b) => Date.parse(b.started_at ?? "") - Date.parse(a.started_at ?? ""));
+          const session = sessions.find(s => s.status === "reading") ?? sessions[0];
+          ownedBooks.push({
+            ...session,
+            id: purchase.id,
+            book_id: purchase.book_id,
+            skill_books: purchase.skill_books,
+            status: session?.status ?? "owned",
+            days_read: session?.days_read ?? 0,
+            total_skill_xp_earned: session?.total_skill_xp_earned ?? 0,
+            started_at: session?.started_at ?? purchase.created_at,
+          });
+        }
+        if (!data || data.length < 500) break;
       }
-      return sessions;
+      return ownedBooks;
     },
     enabled: !!profileId,
   });
@@ -460,7 +475,7 @@ const InventoryManager = () => {
           </Card>
         </TabsContent>
 
-        {/* Book Library Tab - now using player_book_reading_sessions */}
+        {/* Book Library Tab - ownership comes from purchases, with optional reading progress */}
         <TabsContent value="books" className="space-y-4 mt-4">
           <Card>
             <CardHeader>
@@ -544,7 +559,7 @@ const InventoryManager = () => {
 
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Clock className="h-3 w-3" />
-                            <span>Started {new Date(session.started_at).toLocaleDateString()}</span>
+                            <span>{session.status === "owned" ? "Purchased" : "Started"} {session.started_at ? new Date(session.started_at).toLocaleDateString() : "date unavailable"}</span>
                           </div>
                         </CardContent>
                       </Card>

@@ -281,7 +281,8 @@ export const useCountryCharts = (
       }
 
       // FALLBACK: If no data in the requested date range, fetch the latest available chart date
-      if (!data || data.length === 0) {
+      // An explicitly selected historical year must never display modern data.
+      if ((!data || data.length === 0) && !(timeRange === "yearly" && selectedYear !== "current")) {
         console.log("[useCountryCharts] No data in range, falling back to latest available chart data");
         
         const { data: latestDateData } = await supabase

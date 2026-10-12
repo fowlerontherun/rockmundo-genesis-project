@@ -27,6 +27,8 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
   
   const { 
     data: status,
+    isError: statusError,
+    refetch: retryStatus,
     isGenerating, 
     isCompleted, 
     isFailed, 
@@ -37,33 +39,6 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
   } = useSongGenerationStatus(songId);
   
   const { data: limits } = useSongGenerationLimits();
-
-  const handleReset = async () => {
-    if (!profileId) return;
-    setRetrying(true);
-    try {
-      // Reset the stuck status to 'failed' so it can be retried
-      const { error } = await supabase
-        .from('songs')
-        .update({ audio_generation_status: 'failed' })
-        .eq('id', songId);
-
-      if (error) {
-        console.error('Reset generation status error:', error);
-        toast.error("Failed to reset generation status");
-      } else {
-        toast.success("Generation status reset", {
-          description: "You can now retry generating audio."
-        });
-        queryClient.invalidateQueries({ queryKey: ["song-generation-status", songId] });
-      }
-    } catch (err) {
-      console.error('Reset failed:', err);
-      toast.error("Failed to reset generation status");
-    } finally {
-      setRetrying(false);
-    }
-  };
 
   const handleOpenLyricsDialog = async () => {
     setLoadingLyrics(true);
@@ -155,16 +130,8 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
 
     setRetrying(true);
     try {
-      // Reset status to 'failed' AND clear audio_url so edge function allows regeneration
-      const { error: resetError } = await supabase
-        .from('songs')
-        .update({ audio_generation_status: 'failed', audio_url: null })
-        .eq('id', songId);
-
-      if (resetError) {
-        console.error('Reset before retry error:', resetError);
-      }
-
+      // Never erase the existing master before the provider confirms a new job.
+      // The authoritative worker decides whether a failed/timed-out job may restart.
       const { data, error } = await supabase.functions.invoke('generate-song-audio', {
         body: { songId, userId: profileId }
       });
@@ -222,6 +189,11 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
     </Dialog>
   );
 
+  if (statusError) return <div role="alert" className="rounded-md border border-destructive/40 p-3 text-sm">
+    Could not load audio generation status.
+    <Button type="button" size="sm" variant="outline" className="ml-2" onClick={() => void retryStatus()}>Retry status</Button>
+    {lyricsDialog}
+  </div>;
   if (!status) return <>{lyricsDialog}</>;
 
   // Already completed with audio - show success, admin can regenerate
@@ -293,18 +265,6 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
               <span className="text-xs text-muted-foreground">
                 {minutes}:{seconds.toString().padStart(2, '0')} / 10:00
               </span>
-              {minutes >= 5 && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleReset}
-                  disabled={retrying}
-                >
-                  {retrying ? (
-                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                  ) : (
-                    <AlertCircle className="h-3 w-3 mr-1" />
-                  )}
                   Reset
                 </Button>
               )}

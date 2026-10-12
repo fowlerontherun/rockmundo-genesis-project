@@ -88,16 +88,17 @@ export function LuthieryGigLoadoutCard({ gigId, locked }: { gigId: string; locke
         .eq("source_type", "member_owned")
         .not("luthiery_snapshot", "is", null)
         .order("id", { ascending: true })
-        .limit(1)
-        .maybeSingle();
+        .limit(100);
       if (error) throw error;
-      return (data ?? null) as GigLuthieryLoadout | null;
+      // More than one instrument role can be assigned to one performer.
+      return (data ?? []) as GigLuthieryLoadout[];
     },
   });
 
+  const primaryLoadout = loadoutQuery.data?.[0] ?? null;
   useEffect(() => {
-    setSelectedId(loadoutQuery.data?.player_equipment_id ?? "");
-  }, [loadoutQuery.data?.player_equipment_id]);
+    setSelectedId(primaryLoadout?.player_equipment_id ?? "");
+  }, [primaryLoadout?.player_equipment_id]);
 
   const equippedOptions = useMemo(
     () => (instrumentsQuery.data ?? []).filter((item) => item.is_equipped),
@@ -141,7 +142,7 @@ export function LuthieryGigLoadoutCard({ gigId, locked }: { gigId: string; locke
     onError: (error) => toast({ title: "Could not remove instrument", description: friendlyError(error), variant: "destructive" }),
   });
 
-  const snapshot = loadoutQuery.data?.luthiery_snapshot;
+  const snapshot = primaryLoadout?.luthiery_snapshot;
   const materials = Array.isArray(snapshot?.materialSnapshot)
     ? snapshot!.materialSnapshot!.map((entry) => entry.materialName).filter(Boolean)
     : [];
@@ -155,6 +156,16 @@ export function LuthieryGigLoadoutCard({ gigId, locked }: { gigId: string; locke
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
+        {(loadoutQuery.data?.length ?? 0) > 1 && (
+          <div className="rounded border p-3 text-sm">
+            <p className="font-medium">All assigned crafted instruments</p>
+            <ul className="mt-1 list-disc pl-5">
+              {loadoutQuery.data!.map(item => (
+                <li key={item.id}>{item.luthiery_snapshot?.instrumentName ?? "Crafted instrument"} — {item.equipment_role}</li>
+              ))}
+            </ul>
+          </div>
+        )}
         {instrumentsQuery.isLoading || loadoutQuery.isLoading ? (
           <p className="text-sm text-muted-foreground">Loading crafted instruments…</p>
         ) : instrumentsQuery.isError || loadoutQuery.isError ? (
@@ -178,7 +189,7 @@ export function LuthieryGigLoadoutCard({ gigId, locked }: { gigId: string; locke
               </Select>
               <Button
                 variant="outline"
-                disabled={locked || !selectedId || selectedId === loadoutQuery.data?.player_equipment_id || saveMutation.isPending || removeMutation.isPending}
+                disabled={locked || !selectedId || selectedId === primaryLoadout?.player_equipment_id || saveMutation.isPending || removeMutation.isPending}
                 onClick={() => saveMutation.mutate(selectedId)}
               >
                 {saveMutation.isPending ? "Assigning…" : "Use for gig"}
@@ -204,8 +215,8 @@ export function LuthieryGigLoadoutCard({ gigId, locked }: { gigId: string; locke
                     {snapshot.instrumentName}
                   </div>
                   <div className="flex gap-2">
-                    <Badge variant="secondary">Quality {loadoutQuery.data?.quality_score ?? snapshot.finalQuality ?? 0}</Badge>
-                    <Badge variant="secondary">Condition {loadoutQuery.data?.condition_score ?? 100}%</Badge>
+                    <Badge variant="secondary">Quality {primaryLoadout?.quality_score ?? snapshot.finalQuality ?? 0}</Badge>
+                    <Badge variant="secondary">Condition {primaryLoadout?.condition_score ?? 100}%</Badge>
                   </div>
                 </div>
                 <div className="grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
@@ -216,7 +227,7 @@ export function LuthieryGigLoadoutCard({ gigId, locked }: { gigId: string; locke
                     <span className="h-3 w-3 rounded-full border" style={{ backgroundColor: snapshot.colour ?? "#8b5a2b" }} />
                     <strong className="text-foreground">{snapshot.colour ?? "Custom"}</strong>
                   </span>
-                  <span>Reliability: <strong className="text-foreground">{loadoutQuery.data?.reliability_score ?? 0}/100</strong></span>
+                  <span>Reliability: <strong className="text-foreground">{primaryLoadout?.reliability_score ?? 0}/100</strong></span>
                 </div>
                 {materials.length > 0 && <p className="mt-2 text-xs text-muted-foreground">Materials: {materials.join(" · ")}</p>}
               </div>

@@ -43,9 +43,10 @@ const CraftingWorkshopInner = () => {
   const [revealData, setRevealData] = useState<{
     open: boolean;
     recipeName: string;
+    sourceId: string;
     qualityRoll: number;
     bonusStats: Record<string, number> | null;
-  }>({ open: false, recipeName: "", qualityRoll: 0, bonusStats: null });
+  }>({ open: false, recipeName: "", sourceId: "", qualityRoll: 0, bonusStats: null });
 
   const unlockedRecipeIds = new Set(blueprints.map((b) => b.recipe_id));
   const activeSessions = sessions.filter((s) => s.status === "in_progress" || s.status === "completed");
@@ -57,6 +58,7 @@ const CraftingWorkshopInner = () => {
         setRevealData({
           open: true,
           recipeName: session?.recipe?.name || "Crafted Item",
+          sourceId: sessionId,
           qualityRoll: result.qualityRoll,
           bonusStats: result.bonusStats,
         });
@@ -134,6 +136,7 @@ const CraftingWorkshopInner = () => {
               setRevealData({
                 open: true,
                 recipeName: result.instrumentName,
+                sourceId: result.playerEquipmentId,
                 qualityRoll: result.finalQuality,
                 bonusStats: result.finalStats,
               })
@@ -213,6 +216,7 @@ const CraftingWorkshopInner = () => {
         open={revealData.open}
         onClose={() => setRevealData((prev) => ({ ...prev, open: false }))}
         recipeName={revealData.recipeName}
+        sourceId={revealData.sourceId}
         qualityRoll={revealData.qualityRoll}
         bonusStats={revealData.bonusStats}
       />

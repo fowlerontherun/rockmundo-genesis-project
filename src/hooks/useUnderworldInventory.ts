@@ -76,10 +76,24 @@ export const useUnderworldInventory = () => {
       if (purchase.expires_at && Date.parse(purchase.expires_at) <= Date.now()) throw new Error("This purchase has expired");
 
       const product = purchase.product as UnderworldProduct;
-      const rawEffects = product?.effects || purchase.effects_applied || {};
+      // Keep the immutable purchase-time reward; catalogue edits must not
+      // retroactively change effects of inventory items already paid for.
+      const rawEffects = purchase.effects_applied ?? {};
       const effects: EffectsRecord = typeof rawEffects === "object" && rawEffects !== null && !Array.isArray(rawEffects)
         ? rawEffects as EffectsRecord
         : {};
+
+      // Fail before applying any of the other item effects when a skill reward
+      // cannot be delivered. Do not consume a paid XP item without its XP.
+      let ownedSkillProgress: { id: string; current_xp: number | null } | null = null;
+      if (effects.skill_slug && effects.skill_xp) {
+        const { data, error } = await supabase.from("skill_progress")
+          .select("id, current_xp").eq("profile_id", profileId)
+          .eq("skill_slug", String(effects.skill_slug)).maybeSingle();
+        if (error) throw error;
+        if (!data) throw new Error("Unlock this skill before using the XP item.");
+        ownedSkillProgress = data;
+      }
 
       if (effects.health || effects.energy || effects.xp || effects.fame || effects.cash) {
         const { data: profile, error: profileFetchError } = await supabase
@@ -103,22 +117,13 @@ export const useUnderworldInventory = () => {
         }
       }
 
-      if (effects.skill_slug && effects.skill_xp) {
-        const { data: skillProgress, error: skillFetchError } = await supabase
-          .from("skill_progress")
-          .select("*")
-          .eq("profile_id", profileId)
-          .eq("skill_slug", String(effects.skill_slug))
-          .single();
-
-        if (!skillFetchError && skillProgress) {
-          const skillXpToAdd = typeof effects.skill_xp === "number" ? effects.skill_xp : parseInt(String(effects.skill_xp), 10);
-          const { error: skillUpdateError } = await supabase
-            .from("skill_progress")
-            .update({ current_xp: (skillProgress.current_xp || 0) + skillXpToAdd })
-            .eq("id", skillProgress.id);
-          if (skillUpdateError) throw skillUpdateError;
-        }
+      if (ownedSkillProgress && effects.skill_xp) {
+        const skillXpToAdd = Number(effects.skill_xp);
+        if (!Number.isFinite(skillXpToAdd) || skillXpToAdd <= 0) throw new Error("Invalid item skill reward");
+        const { error } = await supabase.from("skill_progress")
+          .update({ current_xp: (ownedSkillProgress.current_xp || 0) + skillXpToAdd })
+          .eq("id", ownedSkillProgress.id);
+        if (error) throw error;
       }
 
       const { error: markUsedError } = await supabase

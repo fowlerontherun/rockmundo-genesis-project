@@ -14,6 +14,7 @@ interface CraftedItemRevealProps {
   open: boolean;
   onClose: () => void;
   recipeName: string;
+  sourceId: string;
   qualityRoll: number;
   bonusStats: Record<string, number> | null;
 }
@@ -22,6 +23,7 @@ export const CraftedItemReveal = ({
   open,
   onClose,
   recipeName,
+  sourceId,
   qualityRoll,
   bonusStats,
 }: CraftedItemRevealProps) => {
@@ -31,14 +33,14 @@ export const CraftedItemReveal = ({
   const { profileId } = useActiveProfile();
   useEffect(() => {
     if (!open || !isMasterwork || shareMoment) return;
-    const sourceId = `${recipeName}:${Math.round(qualityRoll)}`;
-    if (!shouldOfferSharePrompt("craft-masterwork", sourceId)) return;
+    const uniqueSourceId = sourceId || `${recipeName}:${Math.round(qualityRoll)}`;
+    if (!shouldOfferSharePrompt("craft-masterwork", uniqueSourceId)) return;
     void (async () => {
       const destinationUrl = await referralAwareDestination(profileId, window.location.href, "craft_share");
       setShareMoment({ version: 1,
-      promptOnly: true, promptKind: "craft-masterwork", promptSourceId: sourceId, promptLabel: "Share masterwork", type: "achievement", id: sourceId, eyebrow: "MASTERWORK", headline: recipeName, subheadline: "Crafted an exceptional item in RockMundo", metrics: [{ label: "Quality", value: `${Math.round(qualityRoll)}%` }, { label: "Grade", value: quality.label }], destinationUrl, referralCode: null, createdAt: new Date().toISOString() });
+      promptOnly: true, promptKind: "craft-masterwork", promptSourceId: uniqueSourceId, promptLabel: "Share masterwork", type: "achievement", id: uniqueSourceId, eyebrow: "MASTERWORK", headline: recipeName, subheadline: "Crafted an exceptional item in RockMundo", metrics: [{ label: "Quality", value: `${Math.round(qualityRoll)}%` }, { label: "Grade", value: quality.label }], destinationUrl, referralCode: null, createdAt: new Date().toISOString() });
     })();
-  }, [open, isMasterwork, recipeName, qualityRoll, quality.label, shareMoment, profileId]);
+  }, [open, isMasterwork, recipeName, qualityRoll, quality.label, shareMoment, profileId, sourceId]);
 
   return (
     <>
@@ -77,7 +79,7 @@ export const CraftedItemReveal = ({
           )}
         </div>
 
-        <div className="grid gap-2"><Button onClick={onClose} className="w-full">Awesome!</Button>{isMasterwork && <Button variant="outline" onClick={async () => { const destinationUrl = await referralAwareDestination(profileId, window.location.href, "craft_share"); setShareMoment({ version: 1, type: "achievement", id: `${recipeName}:${Math.round(qualityRoll)}`, eyebrow: "MASTERWORK", headline: recipeName, subheadline: "Crafted an exceptional item in RockMundo", metrics: [{ label: "Quality", value: `${Math.round(qualityRoll)}%` }, { label: "Grade", value: quality.label }], destinationUrl, referralCode: null, createdAt: new Date().toISOString() }); }}><Share2 className="mr-2 h-4 w-4" />Share masterwork</Button>}</div>
+        <div className="grid gap-2"><Button onClick={onClose} className="w-full">Awesome!</Button>{isMasterwork && <Button variant="outline" onClick={async () => { const destinationUrl = await referralAwareDestination(profileId, window.location.href, "craft_share"); setShareMoment({ version: 1, type: "achievement", id: sourceId || `${recipeName}:${Math.round(qualityRoll)}`, eyebrow: "MASTERWORK", headline: recipeName, subheadline: "Crafted an exceptional item in RockMundo", metrics: [{ label: "Quality", value: `${Math.round(qualityRoll)}%` }, { label: "Grade", value: quality.label }], destinationUrl, referralCode: null, createdAt: new Date().toISOString() }); }}><Share2 className="mr-2 h-4 w-4" />Share masterwork</Button>}</div>
       </DialogContent>
     </Dialog>
     <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(next) => { if (!next) setShareMoment(null); }} />

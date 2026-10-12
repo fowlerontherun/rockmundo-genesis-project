@@ -144,6 +144,19 @@ export const useUnderworldStore = () => {
       if (!profileId) throw new Error("Not logged in");
       if (product.duration_hours && !["xp_multiplier","fame_multiplier","energy_regen","all_multiplier","gig_quality_boost","gig_earnings_boost","recording_quality_boost","songwriting_quality_boost","creativity_boost"].some(key => Number((product.effects as Record<string, unknown> | null)?.[key]) > 0)) throw new Error("This timed product has no supported boost effect and cannot be purchased.");
 
+      // Validate eligibility before debiting cash or tokens: an instant skill
+      // reward with no progress row must not consume the player's purchase.
+      const requestedEffects = product.effects || {};
+      const timed = product.duration_hours !== null && product.duration_hours > 0;
+      const storedForLater = (product.category === "consumable" && !timed) || product.category === "skill_book";
+      if (!storedForLater && requestedEffects.skill_slug && requestedEffects.skill_xp) {
+        const { data: skill, error: skillError } = await supabase.from("skill_progress")
+          .select("id").eq("profile_id", profileId)
+          .eq("skill_slug", String(requestedEffects.skill_slug)).maybeSingle();
+        if (skillError) throw skillError;
+        if (!skill) throw new Error("Unlock this skill before buying an instant skill XP reward.");
+      }
+
       // Validate payment
       if (paymentMethod === "cash") {
         if (!product.price_cash) throw new Error("Product cannot be purchased with cash");
@@ -249,7 +262,10 @@ export const useUnderworldStore = () => {
               .eq("skill_slug", String(effects.skill_slug))
               .single();
 
-            if (!skillFetchError && skillProgress) {
+            if (skillFetchError || !skillProgress) {
+              throw skillFetchError || new Error("Skill progress is unavailable; reward was not applied.");
+            }
+            {
               const skillXpToAdd = typeof effects.skill_xp === 'number' ? effects.skill_xp : parseInt(String(effects.skill_xp), 10);
               const { error: skillUpdateError } = await supabase
                 .from("skill_progress")
@@ -347,7 +363,7 @@ export const useUnderworldStore = () => {
       // === Crime → Arrest check ===
       // Drug purchases and contraband have a chance of arrest
       let arrestResult = null;
-      const isDrugPurchase = product.category === 'consumable' || product.category === 'drug';
+      const isDrugPurchase = product.category === 'drug' || Boolean(product.addiction_type);
       if (isDrugPurchase) {
         // Dynamic import to avoid circular deps
         const { rollForArrest } = await import("@/utils/crimeSystem");
