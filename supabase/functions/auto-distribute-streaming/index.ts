@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
                 is_active: true,
                 total_streams: 0,
                 total_revenue: 0
-              };
+              } as const;
             const { error: insertError } = inactive?.id
               ? await supabase.from('song_releases').update({ ...releasePayload, total_streams: undefined, total_revenue: undefined }).eq('id', inactive.id)
               : await supabase.from('song_releases').insert(releasePayload);
