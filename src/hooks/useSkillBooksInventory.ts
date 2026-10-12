@@ -41,35 +41,13 @@ export const useSkillBooksInventory = (profileId?: string) => {
       if (!book) throw new Error("Book not found");
       if (book.completed_at) throw new Error("Book already completed");
 
-      const { data: completedRows, error: updateError } = await supabase
-        .from("player_skill_books")
-        .update({
-          completed_at: new Date().toISOString(),
-          progress_percentage: 100,
-        })
-        .eq("id", bookId)
-        .eq("profile_id", profileId)
-        .is("completed_at", null)
-        .select("id");
-
-      if (updateError) throw updateError;
-      if (!completedRows?.length) throw new Error("Book was already completed or is no longer available");
-
-      const response = await supabase.functions.invoke("progression", {
-        body: {
-          action: "award_action_xp",
-          amount: book.xp_reward,
-          category: "education",
-          action_key: "book_reading",
-          metadata: {
-            book_id: book.book_id,
-            book_title: book.book_title,
-            skill_focus: book.skill_focus,
-          },
-        },
+      const { data, error } = await (supabase as any).rpc("complete_legacy_skill_book_atomic", {
+        p_profile_id: profileId,
+        p_book_id: bookId,
       });
+      if (error) throw error;
+      if (!data?.success) throw new Error("Book completion was not confirmed.");
 
-      if (response.error) throw response.error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["skill-books-inventory", profileId] });
