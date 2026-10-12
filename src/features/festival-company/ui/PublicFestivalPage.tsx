@@ -485,7 +485,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                         className="ml-2 w-16 rounded border bg-background p-2"
                         type="number"
                         min={1}
-                        max={Math.min(p.purchaseLimit, p.availableQuantity)}
+                        max={Math.max(1, Math.min(p.purchaseLimit, p.availableQuantity))}
                         value={quantities[p.id] ?? 1}
                         disabled={eventPhase === "dates_ended" || f.launchStatus !== "tickets_on_sale" || p.saleStatus !== "tickets_on_sale" || p.availableQuantity === 0}
                         onChange={(e) => setQuantities((previous) => ({ ...previous, [p.id]: Number(e.target.value) }))}

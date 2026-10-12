@@ -99,6 +99,7 @@ export function LocalDailyBrief() {
     },
   });
   const { data: newcomers = [], isError: newcomersError, refetch: refetchNewcomers } = useQuery({
+    refetchInterval: 300_000,
     queryKey: ["news-new-players"],
     queryFn: async () => {
       const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();

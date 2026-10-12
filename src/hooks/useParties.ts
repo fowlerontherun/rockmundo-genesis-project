@@ -70,11 +70,12 @@ export function useMyParty() {
     queryKey: ["my-party", profileId],
     queryFn: async () => {
       if (!profileId) return null;
-      const { data: membership } = await supabase
+      const { data: membership, error: membershipError } = await supabase
         .from("party_memberships")
         .select("*, party:political_parties(*)")
         .eq("profile_id", profileId)
         .maybeSingle();
+      if (membershipError) throw membershipError;
       return membership as (PartyMembership & { party: PoliticalParty }) | null;
     },
     enabled: !!profileId,

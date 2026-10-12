@@ -177,7 +177,7 @@ const TourManager = () => {
   });
 
   // Fetch user's band tours - split by status
-  const { data: myTours = [], isLoading: loadingMyTours } = useQuery({
+  const { data: myTours = [], isLoading: loadingMyTours, isError: myToursError, refetch: retryMyTours } = useQuery({
     queryKey: ["my-tours", currentBandId],
     queryFn: async () => {
       if (!currentBandId) return [];
@@ -197,6 +197,7 @@ const TourManager = () => {
     },
     enabled: !!currentBandId,
   });
+  // Failed own-tour queries must not be presented as an empty tour history.
 
   // Classify every owned tour instead of silently dropping legacy/booked lifecycle states.
   // Tour dates are calendar dates, so the final day remains current until local end-of-day.
@@ -905,6 +906,8 @@ const TourManager = () => {
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
+          ) : myToursError ? (
+            <div role="alert" className="p-4 text-destructive">Your tours could not be loaded. <Button variant="outline" size="sm" onClick={() => void retryMyTours()}>Retry</Button></div>
           ) : currentTours.length === 0 ? (
             <EmptyState
               icon={MapPin}
@@ -932,6 +935,8 @@ const TourManager = () => {
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
+          ) : myToursError ? (
+            <div role="alert" className="p-4 text-destructive">Tour history unavailable. <Button variant="outline" size="sm" onClick={() => void retryMyTours()}>Retry</Button></div>
           ) : upcomingTours.length === 0 ? (
             <EmptyState
               icon={Calendar}

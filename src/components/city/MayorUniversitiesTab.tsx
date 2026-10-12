@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { GraduationCap, Loader2, Sparkles, Star } from "lucide-react";
 import { toast } from "sonner";
@@ -76,6 +76,8 @@ function cooldownInfo(lastUpgradeAt: string | null) {
 }
 
 export function MayorUniversitiesTab({ cityId }: Props) {
+  const [, setClockTick] = useState(0);
+  useEffect(() => { const timer = window.setInterval(() => setClockTick(n => n+1), 60_000); return () => window.clearInterval(timer); }, []);
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
 

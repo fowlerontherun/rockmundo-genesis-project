@@ -416,7 +416,7 @@ export const useSongwritingData = (profileId?: string | null, userId?: string | 
       if (error) throw error;
 
       logGameActivity({
-        userId: profileId,
+        userId: userId ?? profileId,
         activityType: 'songwriting_session_completed',
         activityCategory: 'songwriting',
         description: `Completed songwriting session with +${data?.music_progress_gained ?? 0} music, +${data?.lyrics_progress_gained ?? 0} lyrics progress`,
@@ -516,7 +516,7 @@ export const useSongwritingData = (profileId?: string | null, userId?: string | 
       if (error) throw error;
 
       logGameActivity({
-        userId: profileId,
+        userId: userId ?? profileId,
         bandId,
         activityType: 'song_created',
         activityCategory: 'songwriting',

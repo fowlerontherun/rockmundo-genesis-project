@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -273,8 +274,10 @@ export const useTwaats = (accountId?: string) => {
 };
 
 export const useTwaaterFeed = (viewerAccountId?: string, enabled = true) => {
+  const [page,setPage]=useState(0);
+  useEffect(()=>setPage(0),[viewerAccountId]);
   const { data: feed, isLoading, error, refetch } = useQuery({
-    queryKey: ["twaater-feed", viewerAccountId],
+    queryKey: ["twaater-feed", viewerAccountId, page],
     queryFn: async () => {
       if (!viewerAccountId) {
         const { data, error } = await supabase
@@ -284,7 +287,7 @@ export const useTwaaterFeed = (viewerAccountId?: string, enabled = true) => {
           .is("deleted_at", null)
           .is("scheduled_for", null)
           .order("created_at", { ascending: false })
-          .limit(50);
+          .range(page*50,page*50+49);
 
         if (error) throw error;
         return await hydrateTwaaterFeedExtras((data || []) as unknown as TwaatWithDetails[], viewerAccountId);
@@ -308,7 +311,7 @@ export const useTwaaterFeed = (viewerAccountId?: string, enabled = true) => {
         .is("deleted_at", null)
         .is("scheduled_for", null)
         .order("created_at", { ascending: false })
-        .limit(50);
+        .range(page*50,page*50+49);
 
       if (error) throw error;
       return await hydrateTwaaterFeedExtras((data || []) as unknown as TwaatWithDetails[], viewerAccountId);
@@ -318,5 +321,5 @@ export const useTwaaterFeed = (viewerAccountId?: string, enabled = true) => {
     refetchOnWindowFocus: false,
   });
 
-  return { feed, isLoading, error, refetch };
+  return { feed, isLoading, error, refetch, page, nextPage:()=>setPage(p=>p+1), previousPage:()=>setPage(p=>Math.max(0,p-1)), hasMore:(feed?.length??0)===50 };
 };

@@ -48,7 +48,7 @@ export default function ShareStudio() {
     catch { setGalleryError("Could not load your saved shares. Please retry."); }
     finally { setGalleryLoading(false); }
   };
-  useEffect(() => { trackShareAnalyticsEvent("share_studio_opened", { channel: "studio" }); void reloadGallery(); }, []);
+  useEffect(() => { setGallery([]); trackShareAnalyticsEvent("share_studio_opened", { channel: "studio" }); void reloadGallery(); }, [profile?.id]);
   const createIdentityPromo = (title: string) => {
     if (title === "Character Promo" && profile) {
       setCharacterPromo({ version: 1, type: "character_profile", id: `promo:${profile.id}`, eyebrow: "ROCKMUNDO ARTIST", headline: profile.display_name || profile.username || "RockMundo artist", subheadline: "Building a music career in RockMundo", metrics: [{ label: "Career level", value: String(profile.level || 1) }, { label: "Fame", value: Number(profile.fame || 0).toLocaleString() }, { label: "Fans", value: Number(profile.fans || 0).toLocaleString() }], destinationUrl: `${window.location.origin}/player/${profile.id}`, visualTheme: "spotlight", visualLayout: "hero", createdAt: new Date().toISOString() });

@@ -157,6 +157,8 @@ export function FestivalTicketPlanner({
     return <p role="status">Checking Festival readiness…</p>;
   }
 
+  if (site.isError) return <Alert variant="destructive"><AlertDescription>Festival site readiness could not be checked. <button className="underline" onClick={() => void site.refetch()}>Retry</button></AlertDescription></Alert>;
+
   if (!site.data?.ready) {
     return (
       <Alert>

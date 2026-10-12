@@ -343,7 +343,7 @@ export const SummaryTab = () => {
                         <AlertTitle className="text-sm">Remote Learning Active</AlertTitle>
                         <AlertDescription className="text-xs">
                           You're in {currentCityName} but this university is in {enrollment.universities?.city}.
-                          Classes will be attended via Zoom (10% less effective, risk of connection issues).
+                          Classes will be attended remotely. Connection failures may reduce the XP earned; check your attendance results for the actual award.
                         </AlertDescription>
                       </Alert>
                     )}

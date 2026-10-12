@@ -15,18 +15,22 @@ export function useParliamentMotions(status?: "open" | "all") {
   return useQuery({
     queryKey: ["parliament-motions", status ?? "open"],
     queryFn: async () => {
-      let q = supabase
-        .from("world_parliament_motions")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(100);
-      if (!status || status === "open") q = q.eq("status", "open");
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []) as ParliamentMotion[];
+      const all: ParliamentMotion[]=[];
+      for(let offset=0;offset<100_000;offset+=500){
+        let q = supabase.from("world_parliament_motions").select("*").order("created_at",{ascending:false}).range(offset,offset+499);
+        if (!status || status === "open") q=q.eq("status","open");
+        const {data,error}=await q;
+        if(error) throw error;
+        all.push(...((data??[]) as ParliamentMotion[]));
+        if((data?.length??0)<500) return all;
+      }
+      throw new Error("Parliament motion history exceeds supported pagination limit");
     },
+    refetchInterval: 30_000,
+    placeholderData: undefined,
   });
 }
+
 
 export function useMotion(motionId: string | undefined) {
   return useQuery({
@@ -42,6 +46,7 @@ export function useMotion(motionId: string | undefined) {
       return data as ParliamentMotion | null;
     },
     enabled: !!motionId,
+    refetchInterval: 30_000,
   });
 }
 

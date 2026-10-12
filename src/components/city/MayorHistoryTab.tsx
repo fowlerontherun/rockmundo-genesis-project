@@ -15,13 +15,14 @@ import {
 } from "@/types/city-development";
 
 export function MayorHistoryTab({ cityId }: { cityId: string }) {
-  const { data: actions } = useMayorActionsLog(cityId, 1000);
-  const { data: lawHistory } = useCityLawHistory(cityId);
-  const { data: mayors } = useMayorHistory(cityId);
-  const { data: developmentHistory } = useCityDevelopmentHistory(cityId, 1000);
+  const { data: actions, isError: actionsError, refetch: retryactions } = useMayorActionsLog(cityId, 1000);
+  const { data: lawHistory, isError: lawHistoryError, refetch: retrylawHistory } = useCityLawHistory(cityId);
+  const { data: mayors, isError: mayorsError, refetch: retrymayors } = useMayorHistory(cityId);
+  const { data: developmentHistory, isError: developmentHistoryError, refetch: retrydevelopmentHistory } = useCityDevelopmentHistory(cityId, 1000);
 
   return (
     <div className="space-y-5">
+      {(actionsError || lawHistoryError || mayorsError || developmentHistoryError) && <div role="alert" className="p-3 text-destructive">History could not be fully loaded. <button className="underline" onClick={() => {void retryactions();void retrylawHistory();void retrymayors();void retrydevelopmentHistory();}}>Retry</button></div>}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">

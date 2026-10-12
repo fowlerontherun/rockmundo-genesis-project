@@ -9,7 +9,9 @@ export function TrendingHashtags() {
     queryKey: ["trending-hashtags"],
     queryFn: async () => {
       // Get recent twaats and extract hashtags
-      const { data: twaats, error } = await supabase
+      const twaats: {body:string; created_at:string}[]=[];
+      for(let offset=0; offset < 100_000; offset+=500) {
+        const { data, error } = await supabase
         .from("twaats")
         .select("body, created_at")
         .eq("visibility", "public")
@@ -17,10 +19,13 @@ export function TrendingHashtags() {
         .is("scheduled_for", null)
         .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
         .order("created_at", { ascending: false })
-        .limit(500);
+        .range(offset,offset+499);
+        if(error) throw error;
+        twaats.push(...(data??[]));
+        if((data?.length??0)<500) break;
+      }
 
-      if (error) throw error;
-      if (!twaats) return [];
+      if (!twaats.length) return [];
 
       // Extract and count hashtags
       const hashtagCounts: Record<string, number> = {};

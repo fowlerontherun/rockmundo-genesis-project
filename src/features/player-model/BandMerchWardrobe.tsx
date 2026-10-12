@@ -4,6 +4,7 @@ import { useAvatarMerchWearables } from './useAvatarMerchWearables';
 export function BandMerchWardrobe({ profileId }: { profileId: string }) {
   const merch = useAvatarMerchWearables(profileId);
   if (merch.band.isPending || merch.query.isPending) return <p className="player-model-editor__hint">Loading your band merch…</p>;
+  if (merch.band.isError) return <div role="alert" className="player-model-editor__hint">Could not check your active band. <button type="button" onClick={() => void merch.band.refetch()}>Retry</button></div>;
   if (!merch.band.data) return <p className="player-model-editor__hint">Join an active band to wear its Merch Studio designs.</p>;
   if (merch.query.isError) return <div role="alert" className="player-model-editor__hint">Band merch could not be loaded. Your current outfit has not changed. <button type="button" onClick={() => void merch.query.refetch()}>Retry</button></div>;
 
