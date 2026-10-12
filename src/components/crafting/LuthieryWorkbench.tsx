@@ -88,7 +88,8 @@ export const LuthieryWorkbench = ({
   );
   const quality = getQualityLabel(outcome.quality);
   const selectionFingerprint = JSON.stringify(selection);
-  const confirmedCurrent = confirmedFingerprint === selectionFingerprint && confirmedSpec !== null;
+  const buildFingerprint = JSON.stringify({ selection, materials: playerMaterials.map(m => [m.material_id, m.quantity]), catalogue: materialsCatalog.map(m => [m.id, m.quality_tier]), skills: luthieryProgress });
+  const confirmedCurrent = confirmedFingerprint === buildFingerprint && confirmedSpec !== null;
   const craftedCurrent = craftedFingerprint === selectionFingerprint;
 
   const handleCraft = async () => {
@@ -124,16 +125,10 @@ export const LuthieryWorkbench = ({
         return { ...current, instrumentKind };
       }
 
-      const fallback =
-        LUTHIERY_SHAPES.find(
-          (candidate) =>
-            candidate.instrumentKinds.includes(instrumentKind) &&
-            isLuthieryRequirementMet(candidate.requirement, progress),
-        ) ??
-        LUTHIERY_SHAPES.find((candidate) => candidate.instrumentKinds.includes(instrumentKind)) ??
-        LUTHIERY_SHAPES[0];
-
-      return { ...current, instrumentKind, shapeId: fallback.id };
+      const fallback = LUTHIERY_SHAPES.find(candidate =>
+        candidate.instrumentKinds.includes(instrumentKind) &&
+        isLuthieryRequirementMet(candidate.requirement, progress));
+      return fallback ? { ...current, instrumentKind, shapeId: fallback.id } : current;
     });
   };
 
@@ -630,6 +625,12 @@ export const LuthieryWorkbench = ({
               <Button type="button" className="w-full" variant={confirmedCurrent ? "outline" : "default"} onClick={() => setReviewOpen(true)}>
                 Review build
               </Button>
+              {confirmedCurrent && craftedCurrent && onCraft && (
+                <Button type="button" variant="secondary" className="w-full" disabled={isCrafting}
+                  onClick={() => { setCraftedFingerprint(null); setConfirmedCraftKey(createCraftRequestKey()); }}>
+                  Craft another identical instrument
+                </Button>
+              )}
               {confirmedCurrent && onCraft && (
                 <Button
                   type="button"
@@ -654,7 +655,7 @@ export const LuthieryWorkbench = ({
         progress={progress}
         onConfirm={(spec) => {
           setConfirmedSpec(spec);
-          setConfirmedFingerprint(selectionFingerprint);
+          setConfirmedFingerprint(buildFingerprint);
           setConfirmedCraftKey(createCraftRequestKey());
           setCraftedFingerprint(null);
         }}
