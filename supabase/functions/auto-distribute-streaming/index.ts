@@ -71,11 +71,12 @@ Deno.serve(async (req) => {
       
       for (const platformId of platformIds) {
         // Get platform name for logging
-        const { data: platform } = await supabase
+        const { data: platform, error: platformError } = await supabase
           .from('streaming_platforms')
           .select('platform_name')
           .eq('id', platformId)
           .single();
+        if (platformError || !platform) { console.error('Platform lookup failed:', platformError); continue; }
 
         for (const releaseSong of release.release_songs || []) {
           // Check if already distributed
@@ -84,7 +85,9 @@ Deno.serve(async (req) => {
             .select('id')
             .eq('song_id', releaseSong.song_id)
             .eq('platform_id', platformId)
-            .single();
+            .eq('release_type', 'streaming')
+            .eq('is_active', true)
+            .maybeSingle();
 
           if (!existing) {
             // Get user_id from release or band leader
