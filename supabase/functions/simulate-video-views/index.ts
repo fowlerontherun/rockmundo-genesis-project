@@ -156,7 +156,7 @@ serve(async (req) => {
       if (song?.id) {
         await supabaseClient
           .from("songs")
-          .update({ hype: (song.hype || 0) + Math.round(dailyViews * 0.01) })
+          .update({ hype: Math.min(100, Math.max(0, (song.hype || 0) + Math.round(dailyViews * 0.01))) })
           .eq("id", song.id);
       }
 
@@ -269,7 +269,8 @@ serve(async (req) => {
 
     // Batch insert sentiment events (v1.0.951)
     if (sentimentEventInserts.length > 0) {
-      await supabaseClient.from('band_sentiment_events').insert(sentimentEventInserts);
+      const { error: sentimentError } = await supabaseClient.from('band_sentiment_events').insert(sentimentEventInserts);
+      if (sentimentError) throw sentimentError;
       console.log(`Logged ${sentimentEventInserts.length} video sentiment events`);
     }
 
