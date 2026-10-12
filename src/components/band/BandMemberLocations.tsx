@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MapPin, MessageSquare, RefreshCw } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -28,11 +28,15 @@ type LocationMember = {
 export function BandMemberLocations({ bandId, currentProfileId }: BandMemberLocationsProps) {
   const { toast } = useToast();
   const [members, setMembers] = useState<LocationMember[]>([]);
+  const requestSeq = useRef(0);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [sendingTo, setSendingTo] = useState<string | null>(null);
 
   const loadLocations = async (showRefreshState = false) => {
+    const request = ++requestSeq.current;
+    setLoadError(null);
     if (showRefreshState) setRefreshing(true);
     else setLoading(true);
 
@@ -74,6 +78,7 @@ export function BandMemberLocations({ bandId, currentProfileId }: BandMemberLoca
       const profilesById = new Map((profiles ?? []).map((profile) => [profile.id, profile]));
       const citiesById = new Map((cities ?? []).map((city) => [city.id, city]));
 
+      if (request !== requestSeq.current) return;
       setMembers(
         (bandMembers ?? []).map((member) => {
           const profile = member.profile_id ? profilesById.get(member.profile_id) : null;
@@ -96,6 +101,9 @@ export function BandMemberLocations({ bandId, currentProfileId }: BandMemberLoca
         }),
       );
     } catch (error) {
+      if (request !== requestSeq.current) return;
+      setMembers([]);
+      setLoadError(error instanceof Error ? error.message : "Could not load locations");
       console.error("Failed to load band member locations", error);
       toast({
         title: "Couldn't load member locations",
@@ -103,13 +111,14 @@ export function BandMemberLocations({ bandId, currentProfileId }: BandMemberLoca
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (request === requestSeq.current) { setLoading(false); setRefreshing(false); }
     }
   };
 
   useEffect(() => {
+    setMembers([]);
     void loadLocations();
+    return () => { requestSeq.current++; };
   }, [bandId]);
 
   const currentMember = useMemo(
@@ -170,6 +179,7 @@ export function BandMemberLocations({ bandId, currentProfileId }: BandMemberLoca
         </Button>
       </CardHeader>
       <CardContent>
+        {loadError && <p role="alert" className="text-sm text-destructive">Member locations could not be verified: {loadError}. <button type="button" className="underline" onClick={() => void loadLocations(true)}>Retry</button></p>}
         {loading ? (
           <div className="space-y-3">
             {[0, 1, 2].map((item) => (

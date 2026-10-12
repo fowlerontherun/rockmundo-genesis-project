@@ -171,6 +171,7 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
   const [statusHistory, setStatusHistory] = useState<Record<string, BandMembershipStatusHistory[]>>({});
   const [selectedMember, setSelectedMember] = useState<MemberWithProfile | null>(null);
   const [bandLeaderId, setBandLeaderId] = useState<string | null>(null);
+  const [travelUpdating, setTravelUpdating] = useState<string | null>(null);
   const [updatingRoleMemberId, setUpdatingRoleMemberId] = useState<string | null>(null);
   const [draftPerformanceRoles, setDraftPerformanceRoles] = useState<Record<string, string[]>>({});
 
@@ -197,19 +198,22 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
   useEffect(() => {
     let isMounted = true;
 
+    setBandLeaderId(null);
+    setSelectedMember(null);
+    setMembers([]);
     const fetchRoster = async () => {
       setLoading(true);
       setRosterError(false);
       try {
-        const { data: bandData } = await supabase
+        const { data: bandData, error: bandError } = await supabase
           .from("bands")
           .select("leader_id")
           .eq("id", bandId)
           .single();
 
-        if (bandData) {
-          setBandLeaderId(bandData.leader_id);
-        }
+        if (bandError) throw bandError;
+        if (!isMounted) return;
+        setBandLeaderId(bandData?.leader_id ?? null);
 
         const { data: memberData, error: memberError } = await supabase
           .from("band_members")
@@ -302,6 +306,7 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
   }, [bandId]);
 
   const handleTravelToggle = async (memberId: string, currentValue: boolean) => {
+    if (travelUpdating) return;
     const member = members.find((candidate) => candidate.id === memberId);
     if (!member || !canEditMember(member)) {
       toast({
@@ -312,6 +317,7 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
       return;
     }
 
+    setTravelUpdating(memberId);
     try {
       const { error } = await (supabase as any).rpc("set_band_member_travel", {
         p_member_id: memberId,
@@ -339,6 +345,8 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
         description: error instanceof Error ? error.message : "Could not update travel setting",
         variant: "destructive",
       });
+    } finally {
+      setTravelUpdating(null);
     }
   };
 
@@ -687,7 +695,7 @@ export function BandRosterTab({ bandId }: BandRosterTabProps) {
                             <Switch
                               checked={member.travels_with_band ?? false}
                               onCheckedChange={() => handleTravelToggle(member.id, member.travels_with_band ?? false)}
-                              disabled={!canEdit}
+                              disabled={!canEdit || travelUpdating !== null}
                             />
 
                             <span className="text-xs text-muted-foreground">

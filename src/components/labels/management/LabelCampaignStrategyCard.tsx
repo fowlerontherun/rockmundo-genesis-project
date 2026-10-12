@@ -23,7 +23,7 @@ const FOCUS = [
 export function LabelCampaignStrategyCard({ labelId }: Props) {
   const queryClient = useQueryClient();
 
-  const { data } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["label-marketing-strategy", labelId],
     queryFn: async () => {
       const [{ data: label, error: lErr }, { data: contracts, error: cErr }] = await Promise.all([
@@ -61,6 +61,7 @@ export function LabelCampaignStrategyCard({ labelId }: Props) {
 
   const save = useMutation({
     mutationFn: async () => {
+      if (isError || !data) throw new Error("Marketing strategy has not been verified. Reload before saving.");
       const parsedRegions = regionText.split(",").map(s => s.trim()).filter(Boolean);
       const { error } = await (supabase as any).rpc("set_label_marketing_strategy", {
         p_label_id: labelId,
@@ -90,6 +91,8 @@ export function LabelCampaignStrategyCard({ labelId }: Props) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {isLoading && <p role="status" className="text-sm">Loading saved campaign strategy...</p>}
+        {isError && <p role="alert" className="text-sm text-destructive">Campaign strategy could not be loaded. <Button variant="outline" size="sm" onClick={() => void refetch()}>Retry</Button></p>}
         <div className="space-y-2">
           <Label>Priority release</Label>
           <Select value={selectedPriority} onValueChange={setPriority}>
@@ -131,7 +134,7 @@ export function LabelCampaignStrategyCard({ labelId }: Props) {
           Repeated heavy promotion builds audience saturation, reducing the marginal return of additional spend. Pausing or shifting campaigns lets that pressure fall over time.
         </p>
 
-        <Button className="w-full" onClick={() => save.mutate()} disabled={save.isPending}>
+        <Button className="w-full" onClick={() => save.mutate()} disabled={save.isPending || isLoading || isError || !data}>
           {save.isPending ? "Saving..." : "Save Campaign Strategy"}
         </Button>
       </CardContent>

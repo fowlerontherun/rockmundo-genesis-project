@@ -40,7 +40,7 @@ export function ReleasePipelineTab({
   const [selectedRelease, setSelectedRelease] =
     useState<ReleaseWithRelations | null>(null);
 
-  const { data, isLoading } = useQuery<{
+  const { data, isLoading, isError, refetch } = useQuery<{
     contracts: ContractWithRelations[];
     releases: ReleaseWithRelations[];
   }>({
@@ -142,6 +142,8 @@ export function ReleasePipelineTab({
       </Card>
     );
   }
+
+  if (isError) return <Card role="alert"><CardContent className="p-6 text-sm text-destructive">Could not load release pipeline. <Button variant="outline" size="sm" onClick={() => void refetch()}>Retry</Button></CardContent></Card>;
 
   return (
     <div className="space-y-6">

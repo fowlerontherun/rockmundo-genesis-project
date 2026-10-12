@@ -63,14 +63,18 @@ export function LabelReleasesTab({ labelId }: LabelReleasesTabProps) {
     queryFn: async () => {
       if (releases.length === 0) return [];
       const releaseIds = releases.map(r => r.id);
-      const { data, error } = await supabase
-        .from("chart_entries")
-        .select("release_id, rank, chart_type, country, chart_date")
-        .in("release_id", releaseIds)
-        .order("chart_date", { ascending: false })
-        .limit(100);
-      if (error) throw error;
-      return data || [];
+      const all: Array<{ release_id: string | null; rank: number; chart_type: string; country: string | null; chart_date: string }> = [];
+      for (let offset = 0; ; offset += 500) {
+        const { data, error } = await supabase.from("chart_entries")
+          .select("release_id, rank, chart_type, country, chart_date")
+          .in("release_id", releaseIds)
+          .order("chart_date", { ascending: false })
+          .range(offset, offset + 499);
+        if (error) throw error;
+        all.push(...(data ?? []));
+        if (!data || data.length < 500) break;
+      }
+      return all;
     },
     enabled: releases.length > 0,
   });
