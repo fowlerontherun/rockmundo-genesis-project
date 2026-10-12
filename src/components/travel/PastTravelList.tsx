@@ -37,7 +37,9 @@ export const PastTravelList = ({ profileId }: PastTravelListProps) => {
   const { data: travelHistory, isLoading } = useQuery({
     queryKey: ["past-travel", profileId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const data: Array<{ id: string; from_city_id: string | null; to_city_id: string | null; transport_type: string; cost_paid: number; travel_duration_hours: number; departure_time: string; arrival_time: string; status: string; }> = [];
+      for (let offset = 0; ; offset += 500) {
+        const { data: page, error } = await supabase
         .from("player_travel_history")
         .select(`
           id,
@@ -53,10 +55,13 @@ export const PastTravelList = ({ profileId }: PastTravelListProps) => {
         .eq("profile_id", profileId)
         .in("status", ["completed", "cancelled"])
         .order("departure_time", { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
-      if (!data || data.length === 0) return [];
+        .order("id", { ascending: false })
+        .range(offset, offset + 499);
+        if (error) throw error;
+        data.push(...(page ?? []));
+        if (!page || page.length < 500) break;
+      }
+      if (data.length === 0) return [];
 
       // Collect all city IDs
       const cityIds = [...new Set([

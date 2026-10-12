@@ -55,6 +55,7 @@ const Travel = () => {
   const [isBooking, setIsBooking] = useState(false);
   const [travelTaxPreview, setTravelTaxPreview] = useState(0);
   const [travelTaxLoading, setTravelTaxLoading] = useState(false);
+  const [travelTaxError, setTravelTaxError] = useState(false);
 
   const [departureDate, setDepartureDate] = useState<Date | null>(null);
   const [departureHour, setDepartureHour] = useState<number | null>(null);
@@ -111,9 +112,13 @@ const Travel = () => {
 
     let cancelled = false;
     setTravelTaxLoading(true);
+    setTravelTaxError(false);
     void getTravelTaxForDeparture(currentCity.id, departure.toISOString())
       .then((tax) => {
         if (!cancelled) setTravelTaxPreview(tax);
+      })
+      .catch(() => {
+        if (!cancelled) { setTravelTaxPreview(0); setTravelTaxError(true); }
       })
       .finally(() => {
         if (!cancelled) setTravelTaxLoading(false);
@@ -389,7 +394,7 @@ const Travel = () => {
                   <div className="flex items-center justify-between"><span>Transport fare</span><span className="font-medium">${selectedOption.cost.toLocaleString()}</span></div>
                   <div className="mt-2 flex items-center justify-between">
                     <span>{currentCity?.name ?? "Departure city"} travel tax</span>
-                    <span className="font-medium">{travelTaxLoading ? "Checking…" : `$${travelTaxPreview.toLocaleString()}`}</span>
+                    <span className="font-medium">{travelTaxError ? "Unavailable — change departure to retry" : travelTaxLoading ? "Checking…" : `${travelTaxPreview.toLocaleString()}`}</span>
                   </div>
                   <div className="mt-3 flex items-center justify-between border-t pt-3 text-base font-semibold"><span>Estimated total</span><span>${previewTotal.toLocaleString()}</span></div>
                   <p className="mt-2 text-xs text-muted-foreground">City transport investment is included in the displayed fare/time. The server recalculates the route, Transport rating and mayor-set tax before charging your character.</p>
@@ -402,7 +407,7 @@ const Travel = () => {
             <Button variant="outline" onClick={() => setSelectedDestination(null)}>{t("common.cancel")}</Button>
             <Button
               onClick={handleBookTravel}
-              disabled={!selectedMode || isBooking || !hasValidDeparture || !selectedOption?.available || travelTaxLoading}
+              disabled={!selectedMode || isBooking || !hasValidDeparture || !selectedOption?.available || travelTaxLoading || travelTaxError}
             >
               {isBooking ? t("travel.booking") : t("travel.bookTravel")}
               {selectedOption && <span className="ml-2">(${previewTotal.toLocaleString()})</span>}

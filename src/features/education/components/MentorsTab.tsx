@@ -35,7 +35,9 @@ export const MentorsTab = () => {
   const getSkillProgress = (skillSlug: string) => {
     const skill = skillProgress?.find((s) => s.skill_slug === skillSlug);
     if (!skill) return 0;
-    return Math.floor((skill.current_xp / skill.required_xp) * 100);
+    if (!Number.isFinite(skill.required_xp) || skill.required_xp <= 0) return 0;
+    const fraction = (Number(skill.current_xp) / skill.required_xp) * 100;
+    return Number.isFinite(fraction) ? Math.max(0, Math.min(100, Math.floor(fraction))) : 0;
   };
 
   const filteredMentors = mentors?.filter(mentor => {

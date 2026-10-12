@@ -57,8 +57,11 @@ export function VenueBookingsManager({ venueId }: VenueBookingsManagerProps) {
     updateStatus.mutate({ bookingId, status, venueId });
   };
   
-  const upcomingBookings = (bookings?.filter(b => b.status !== 'completed' && b.status !== 'cancelled') || []).sort((a, b) => new Date(a.booking_date).getTime() - new Date(b.booking_date).getTime());
-  const pastBookings = bookings?.filter(b => b.status === 'completed' || b.status === 'cancelled') || [];
+  // An unresolved booking for an elapsed date must not be presented as upcoming.
+  const today = new Date().toISOString().slice(0, 10);
+  const isPastBooking = (b: { status: string; booking_date: string }) => ['completed', 'cancelled'].includes(b.status) || b.booking_date.slice(0, 10) < today;
+  const upcomingBookings = (bookings?.filter(b => !isPastBooking(b)) || []).sort((a, b) => new Date(a.booking_date).getTime() - new Date(b.booking_date).getTime());
+  const pastBookings = bookings?.filter(isPastBooking) || [];
   
   if (isLoading) {
     return <div className="text-center py-4">Loading bookings...</div>;
@@ -167,7 +170,7 @@ export function VenueBookingsManager({ venueId }: VenueBookingsManagerProps) {
               <div>
                 <h4 className="text-sm font-medium mb-2">Upcoming</h4>
                 <div className="space-y-2">
-                  {upcomingBookings.slice(0, 5).map((booking) => {
+                  {upcomingBookings.map((booking) => {
                     const typeInfo = BOOKING_TYPES.find(t => t.value === booking.booking_type);
                     return (
                       <div 

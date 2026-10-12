@@ -177,13 +177,14 @@ export const useCountryCharts = (
 
       // For daily, get just the latest date. For other ranges, aggregate across dates.
       if (timeRange === "daily") {
-        // Get the latest chart_date
-        const { data: latestDateData } = await supabase
-          .from("chart_entries")
-          .select("chart_date")
-          .order("chart_date", { ascending: false })
-          .limit(1)
-          .single();
+        // Resolve the most recent edition for this chart, country and genre.
+        let latestQuery = supabase.from("chart_entries").select("chart_date")
+          .in("chart_type", chartTypeFilter);
+        if (country !== "Global") latestQuery = latestQuery.or(`country.eq.${country},country.eq.all`);
+        if (genre !== "All") latestQuery = latestQuery.eq("genre", genre);
+        const { data: latestDateData, error: latestError } = await latestQuery
+          .order("chart_date", { ascending: false }).limit(1).maybeSingle();
+        if (latestError) throw latestError;
 
         const latestChartDate = latestDateData?.chart_date;
 
@@ -616,15 +617,15 @@ export const useChartHistory = (songId: string, chartType: ChartType) => {
         .select("chart_date, rank, plays_count")
         .eq("song_id", songId)
         .eq("chart_type", chartType)
-        .order("chart_date", { ascending: true })
-        .limit(90); // Last 90 days
+        .order("chart_date", { ascending: false })
+        .limit(90); // Fetch newest 90 dates, then display oldest to newest
 
       if (error) {
         console.error("[useChartHistory] Error:", error);
         return [];
       }
 
-      return (data || []).map(entry => ({
+      return (data || []).slice().reverse().map(entry => ({
         date: entry.chart_date,
         rank: entry.rank,
         plays_count: entry.plays_count || 0,

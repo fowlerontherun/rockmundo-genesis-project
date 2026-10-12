@@ -106,8 +106,8 @@ const Housing = () => {
 
   const { data: housingTypes, isLoading: loadingHousing } = useHousingTypes(activeCountry);
   const { data: rentalTypes, isLoading: loadingRentals } = useRentalTypes();
-  const { data: playerProperties, isLoading: loadingProperties } = usePlayerProperties();
-  const { data: activeRental, isLoading: loadingRental } = usePlayerRental();
+  const { data: playerProperties, isLoading: loadingProperties, isError: propertiesError, refetch: retryProperties } = usePlayerProperties();
+  const { data: activeRental, isLoading: loadingRental, isError: rentalError, refetch: retryRental } = usePlayerRental();
 
   const buyProperty = useBuyProperty();
   const startRental = useStartRental();
@@ -316,6 +316,7 @@ const Housing = () => {
 
         {/* RENT TAB */}
         <TabsContent value="rent" className="space-y-4">
+          {rentalError && <div role="alert" className="rounded border border-destructive p-3 text-destructive">Could not verify your rental. <Button variant="outline" size="sm" onClick={() => void retryRental()}>Retry</Button></div>}
           {activeRental && (
             <Card className="border-primary/50 bg-primary/5">
               <CardHeader>
@@ -378,7 +379,7 @@ const Housing = () => {
                             className="w-full"
                             size="sm"
                             onClick={() => startRental.mutate({ rentalType: rt, country: activeCountry!, weeklyCost })}
-                            disabled={startRental.isPending || !!activeRental}
+                            disabled={startRental.isPending || !!activeRental || rentalError}
                           >
                             {startRental.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Key className="h-4 w-4 mr-1" />}
                             Start Renting
@@ -395,9 +396,10 @@ const Housing = () => {
 
         {/* OWNED TAB */}
         <TabsContent value="owned" className="space-y-4">
+          {propertiesError && <div role="alert" className="rounded border border-destructive p-3 text-destructive">Could not load your properties. <Button variant="outline" size="sm" onClick={() => void retryProperties()}>Retry</Button></div>}
           {loadingProperties ? (
             <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
-          ) : !playerProperties?.length ? (
+          ) : propertiesError ? null : !playerProperties?.length ? (
             <EmptyState icon={Home} title="No Properties" description="You don't own any properties yet." />
           ) : (
             <>

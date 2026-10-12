@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,6 +55,8 @@ const AVAILABLE_UPGRADES: Upgrade[] = [
 export function LabelUpgradesTab({ labelId, labelBalance }: LabelUpgradesTabProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const purchaseInFlight = useRef(false);
+  const [purchasePending, setPurchasePending] = useState(false);
 
   const { data: upgradeState, isLoading } = useQuery({
     queryKey: ["label-upgrade-state", labelId],
@@ -82,6 +85,7 @@ export function LabelUpgradesTab({ labelId, labelBalance }: LabelUpgradesTabProp
   };
 
   const handlePurchaseUpgrade = async (upgrade: Upgrade) => {
+    if (purchaseInFlight.current) return;
     const currentLevel = getUpgradeLevel(upgrade.type);
     const nextLevel = currentLevel + 1;
     const cost = Math.round(upgrade.cost * (1 + (nextLevel - 1) * 0.65));
@@ -95,6 +99,8 @@ export function LabelUpgradesTab({ labelId, labelBalance }: LabelUpgradesTabProp
       return;
     }
 
+    purchaseInFlight.current = true;
+    setPurchasePending(true);
     try {
       const { data, error } = await (supabase as any).rpc("purchase_label_upgrade", {
         p_label_id: labelId,
@@ -121,6 +127,9 @@ export function LabelUpgradesTab({ labelId, labelBalance }: LabelUpgradesTabProp
         description: error?.message || "Could not complete the upgrade purchase",
         variant: "destructive",
       });
+    } finally {
+      purchaseInFlight.current = false;
+      setPurchasePending(false);
     }
   };
 
@@ -190,7 +199,7 @@ export function LabelUpgradesTab({ labelId, labelBalance }: LabelUpgradesTabProp
                   <Button
                     size="sm"
                     onClick={() => handlePurchaseUpgrade(upgrade)}
-                    disabled={!canAfford || cooldown.onCooldown}
+                    disabled={!canAfford || cooldown.onCooldown || purchasePending}
                   >
                     {cooldown.onCooldown ? (
                       <>Available in {cooldown.label}</>

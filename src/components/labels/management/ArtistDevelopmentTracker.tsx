@@ -61,8 +61,8 @@ export function ArtistDevelopmentTracker({ labelId }: ArtistDevelopmentTrackerPr
       <div className="flex items-center justify-between gap-2 text-sm"><span>Page {page + 1}</span><div className="flex gap-2"><Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))}>Previous</Button><Button variant="outline" size="sm" disabled={pipelines.length < PAGE_SIZE} onClick={() => setPage(p => p + 1)}>Next</Button></div></div>
       {pipelines.map((pipeline) => {
         const completedStages = Array.isArray(pipeline.completed_stages) ? pipeline.completed_stages as string[] : [];
-        const currentIdx = STAGES.findIndex(s => s.key === pipeline.current_stage);
-        const progress = pipeline.completed_at ? 100 : ((currentIdx + 1) / STAGES.length) * 100;
+        const completedCount = STAGES.filter(stage => completedStages.includes(stage.key)).length;
+        const progress = pipeline.completed_at ? 100 : Math.min(100, Math.round((completedCount / STAGES.length) * 100));
 
         return (
           <Card key={pipeline.id} className="bg-card/60">

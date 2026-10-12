@@ -76,7 +76,7 @@ export function BandSettingsTab({
   const [adBudget, setAdBudget] = useState(500);
 
   // Fetch existing ads
-  const { data: activeAds = [] } = useQuery({
+  const { data: activeAds = [], isError: adsError, refetch: retryAds } = useQuery({
     queryKey: ['band-member-ads', bandId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -494,6 +494,7 @@ export function BandSettingsTab({
             <CardDescription>Pay in-game money to advertise for specific roles. Higher budgets get more visibility.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {adsError && <div role="alert" className="text-sm text-destructive">Recruitment ads could not be loaded. <Button size="sm" variant="outline" onClick={() => void retryAds()}>Retry</Button></div>}
             {activeAds.length > 0 && (
               <div className="space-y-2">
                 {activeAds.map((ad: any) => (
