@@ -65,12 +65,12 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
       let query = (supabase as any)
         .from("direct_messages")
         .select("*")
-        .order("created_at", { ascending: true })
+        .order("created_at", { ascending: false })
         .limit(100);
       query = conversationId ? query.eq("conversation_id", conversationId) : query.eq("channel_id", directChannelId);
       const { data, error } = await query;
       if (error) throw error;
-      return (data ?? []) as DirectMessageRow[];
+      return ((data ?? []) as DirectMessageRow[]).reverse();
     },
   });
 
