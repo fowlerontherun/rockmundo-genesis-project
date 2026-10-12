@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -122,6 +122,9 @@ export function SimplifiedFestivalLineupManager({
   const [responseDeadlineInput, setResponseDeadlineInput] = useState(() =>
     toDateTimeLocalInput(responseDeadline(data.festivalDates)),
   );
+  useEffect(() => {
+    setResponseDeadlineInput(toDateTimeLocalInput(responseDeadline(data.festivalDates)));
+  }, [festivalEditionId, data.festivalDates.join("|")]);
   const queryClient = useQueryClient();
   const changeBilling = useMutation({
     mutationFn: async ({ bookingId, position }: { bookingId: string; position: (typeof billingPositions)[number] }) => {
@@ -692,8 +695,8 @@ export function SimplifiedFestivalLineupManager({
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={workflowPending}
-                      onClick={() => resendOffer(offer)}
+                      disabled={workflowPending || deadlineAwareStatus(offer.status, offer.responseDeadline, ["draft", "countered"]) === "expired"}
+                      onClick={() => { if (deadlineAwareStatus(offer.status, offer.responseDeadline, ["draft", "countered"]) !== "expired") resendOffer(offer); }}
                     >
                       <Send className="mr-2 h-4 w-4" /> Send offer
                     </Button>
