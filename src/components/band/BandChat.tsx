@@ -31,17 +31,21 @@ export function BandChat({ bandId }: BandChatProps) {
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesGeneration = useRef(0);
 
   useEffect(() => {
-    loadMessages();
-    subscribeToMessages();
+    const generation = ++messagesGeneration.current;
+    setMessages([]);
+    void loadMessages(generation);
+    const unsubscribe = subscribeToMessages(generation);
+    return () => { messagesGeneration.current++; unsubscribe(); };
   }, [bandId]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  const loadMessages = async () => {
+  const loadMessages = async (generation: number) => {
     try {
       const { data, error } = await supabase
         .from('band_chat_messages')
@@ -70,16 +74,20 @@ export function BandChat({ bandId }: BandChatProps) {
           profile: profiles?.find(p => p.user_id === msg.user_id),
         }));
 
-        setMessages(messagesWithProfiles as ChatMessage[]);
+        if (generation !== messagesGeneration.current) return;
+        setMessages(prev => {
+          const byId = new Map([...messagesWithProfiles, ...prev].map(msg => [msg.id, msg as ChatMessage]));
+          return [...byId.values()].sort((a, b) => a.created_at.localeCompare(b.created_at));
+        });
       } else {
-        setMessages([]);
+        if (generation === messagesGeneration.current) setMessages(prev => prev);
       }
     } catch (error) {
       console.error('Error loading messages:', error);
     }
   };
 
-  const subscribeToMessages = () => {
+  const subscribeToMessages = (generation: number) => {
     const channel = supabase
       .channel(`band_chat_${bandId}`)
       .on(
@@ -103,7 +111,8 @@ export function BandChat({ bandId }: BandChatProps) {
             profile,
           };
 
-          setMessages((prev) => [...prev, newMsg]);
+          if (generation !== messagesGeneration.current) return;
+          setMessages(prev => prev.some(msg => msg.id === newMsg.id) ? prev : [...prev, newMsg]);
         }
       )
       .subscribe();

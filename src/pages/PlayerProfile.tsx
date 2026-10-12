@@ -60,8 +60,10 @@ export default function PlayerProfile() {
     const candidate = candidates.find(({ kind, threshold }) => shouldOfferSharePrompt(`${kind}-milestone`, `${profile.id}:${threshold}`));
     if (!candidate) return;
     const sourceId = `${profile.id}:${candidate.threshold}`;
+    let cancelled = false;
     void (async () => {
       const destinationUrl = await referralAwareDestination(currentUser.id, window.location.href, "achievement_share");
+      if (cancelled) return;
       setMilestoneMoment({
       version: 1,
       promptOnly: true,
@@ -77,7 +79,8 @@ export default function PlayerProfile() {
       destinationUrl,
       createdAt: new Date().toISOString(),
     });
-    })();
+    })().catch(error => { if (!cancelled) console.warn("Could not prepare milestone share", error); });
+    return () => { cancelled = true; };
   }, [profile, currentUser, playerId, milestoneMoment]);
 
   useEffect(() => {

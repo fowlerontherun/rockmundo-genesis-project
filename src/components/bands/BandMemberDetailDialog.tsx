@@ -83,7 +83,7 @@ export function BandMemberDetailDialog({
       if (!userId) return null;
       const { data, error } = await supabase
         .from("profiles")
-        .select("*, cities(name)")
+        .select("*, cities(name, timezone)")
         .eq("user_id", userId)
         .maybeSingle();
 
@@ -113,27 +113,32 @@ export function BandMemberDetailDialog({
 
   // Fetch today's schedule
   const { data: schedule, isLoading: scheduleLoading, isError: scheduleError, refetch: retrySchedule } = useQuery({
-    queryKey: ["member-schedule", userId],
+    queryKey: ["member-schedule", profile?.id, (profile?.cities as any)?.timezone],
     queryFn: async () => {
-      if (!userId) return [];
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
+      if (!profile?.id) return [];
+      const timeZone = (profile.cities as any)?.timezone || "UTC";
+      const now = new Date();
+      const parts = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);
+      const val = (type: string) => parts.find(part => part.type === type)?.value || "";
+      const localDate = `${val("year")}-${val("month")}-${val("day")}`;
 
       const { data, error } = await supabase
         .from("player_scheduled_activities")
         .select("id, activity_type, scheduled_start, scheduled_end")
-        .eq("user_id", userId)
-        .gte("scheduled_start", today.toISOString())
-        .lt("scheduled_start", tomorrow.toISOString())
+        .eq("profile_id", profile.id)
+        .gte("scheduled_start", new Date(Date.parse(`${localDate}T00:00:00Z`) - 36 * 3600000).toISOString())
+        .lt("scheduled_start", new Date(Date.parse(`${localDate}T00:00:00Z`) + 60 * 3600000).toISOString())
         .order("scheduled_start", { ascending: true })
-        .limit(5);
+        .limit(100);
 
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []).filter(activity => {
+        const activityDate = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(activity.scheduled_start));
+        const get = (type: string) => activityDate.find(part => part.type === type)?.value || "";
+        return `${get("year")}-${get("month")}-${get("day")}` === localDate;
+      }).slice(0, 5);
     },
-    enabled: open && Boolean(userId),
+    enabled: open && Boolean(profile?.id),
   });
 
   // Check friendship status

@@ -376,10 +376,10 @@ export const useCountryCharts = (
       // Filter entries based on release category to ensure proper data
       const filteredData = (data || []).filter(entry => {
         if (releaseCategory === "album") {
-          return entry.entry_type === "album";
+          return entry.entry_type === "album" && String(entry.chart_type || "").endsWith("_album");
         }
         if (releaseCategory === "ep") {
-          return entry.entry_type === "album";
+          return entry.entry_type === "album" && String(entry.chart_type || "").endsWith("_ep");
         }
         // For singles/default view, exclude album entries so only standalone singles appear
         return entry.entry_type !== "album";
