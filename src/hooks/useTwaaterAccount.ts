@@ -10,7 +10,7 @@ export const useTwaaterAccount = (ownerType: "persona" | "band", ownerId?: strin
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: account, isLoading } = useQuery({
+  const { data: account, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["twaater-account", ownerType, ownerId],
     queryFn: async () => {
       if (!ownerId) return null;
@@ -88,6 +88,9 @@ export const useTwaaterAccount = (ownerType: "persona" | "band", ownerId?: strin
   return {
     account,
     isLoading,
+    isError,
+    error,
+    refetch,
     createAccount: createAccountMutation.mutate,
     updateAccount: updateAccountMutation.mutate,
     isCreating: createAccountMutation.isPending,
