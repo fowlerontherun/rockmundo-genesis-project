@@ -24,9 +24,16 @@ export const useTwaaterMentions = (accountId?: string) => {
 
       if (error) throw error;
 
+      const followersOnlyAuthors = Array.from(new Set((data || []).filter((mention: any) => mention.twaat?.visibility === "followers" && mention.twaat?.account_id !== accountId).map((mention: any) => mention.twaat.account_id)));
+      let followedAuthorIds = new Set<string>();
+      if (followersOnlyAuthors.length) {
+        const { data: follows, error: followsError } = await supabase.from("twaater_follows").select("followed_account_id").eq("follower_account_id", accountId!).in("followed_account_id", followersOnlyAuthors);
+        if (followsError) throw followsError;
+        followedAuthorIds = new Set((follows || []).map(row => row.followed_account_id));
+      }
       const rows = (data || []).filter((mention: any) => {
         const twaat = mention.twaat;
-        return twaat && !twaat.deleted_at && !twaat.scheduled_for && twaat.visibility === "public";
+        return twaat && !twaat.deleted_at && !twaat.scheduled_for && (twaat.visibility === "public" || twaat.account_id === accountId || (twaat.visibility === "followers" && followedAuthorIds.has(twaat.account_id)));
       });
       const twaats = rows.map((mention: any) => mention.twaat);
       const hydrated = await hydrateTwaaterFeedExtras(twaats, accountId);
