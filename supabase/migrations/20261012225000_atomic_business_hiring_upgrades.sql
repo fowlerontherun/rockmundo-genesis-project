@@ -94,7 +94,7 @@ BEGIN
  -- A fleet vehicle with a catalog entry uses the catalog's listed cost.
  -- The submitted cost is retained only where there is no catalog selection.
  IF p_vehicle->>'vehicle_catalog_id' IS NOT NULL THEN
-  SELECT coalesce(price,0) INTO v_cost FROM public.vehicle_catalog
+  SELECT coalesce(purchase_cost,0) INTO v_cost FROM public.vehicle_catalog
   WHERE id=(p_vehicle->>'vehicle_catalog_id')::uuid;
   IF NOT FOUND OR v_cost<=0 THEN RAISE EXCEPTION 'vehicle_catalog_price_missing'; END IF;
  END IF;
@@ -164,10 +164,17 @@ BEGIN
  PERFORM public.deduct_company_balance(f.company_id,v_base*v_level,
   'Security upgrade: '||v_name||' '||v_level,'upgrade',
   'security-upgrade-'||gen_random_uuid()::text);
- INSERT INTO public.security_firm_upgrades(security_firm_id,upgrade_type,name,level,cost,effect_value,effect_description)
- VALUES(f.id,p_upgrade_type,v_name,v_level,v_base*v_level,v_effect*v_level,
-  '+'||(v_effect*v_level)::text||'%')
+ UPDATE public.security_firm_upgrades SET level=v_level,cost=v_base*v_level,
+  name=v_name,effect_value=v_effect*v_level,
+  effect_description='+'||(v_effect*v_level)::text||'%'
+ WHERE security_firm_id=f.id AND upgrade_type=p_upgrade_type
  RETURNING * INTO v_row;
+ IF NOT FOUND THEN
+  INSERT INTO public.security_firm_upgrades(security_firm_id,upgrade_type,name,level,cost,effect_value,effect_description)
+  VALUES(f.id,p_upgrade_type,v_name,v_level,v_base*v_level,v_effect*v_level,
+   '+'||(v_effect*v_level)::text||'%')
+  RETURNING * INTO v_row;
+ END IF;
  RETURN v_row;
 END $$;
 
