@@ -354,6 +354,7 @@ serve(async (req) => {
 
     // Sanitize existing lyrics
     const existingLyrics = typeof body.existingLyrics === 'string' ? body.existingLyrics.slice(0, 5000).trim() : '';
+    const additionalNotes = typeof body.additionalNotes === 'string' ? body.additionalNotes.slice(0, 2000).trim() : '';
 
     // Sanitize creative brief
     let creativeBrief = null;
@@ -513,6 +514,7 @@ ${noteParts.join('\n')}`;
     if (looksLikeNotes) {
       songNotesContext += `\n\nAdditional songwriter notes:\n${trimmedExisting}`;
     }
+    if (additionalNotes) songNotesContext += `\n\nAdditional songwriter guidance:\n${additionalNotes}`;
 
     const prompt = `You are an elite professional songwriter creating COMPLETELY UNIQUE, ORIGINAL lyrics. This song must be DISTINCTLY DIFFERENT from anything you've written before.
 
