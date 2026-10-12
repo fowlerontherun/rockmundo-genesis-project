@@ -52,6 +52,7 @@ export function FestivalOwnerNpcActsManager({
   const save = useUpsertFestivalOwnerNpcAct();
   const cancel = useCancelFestivalOwnerNpcAct();
   const [draft, setDraft] = useState<Draft>(() => emptyDraft(festivalDates));
+  useEffect(() => { setDraft(emptyDraft(festivalDates)); }, [festivalEditionId]);
 
   useEffect(() => {
     if (!draft.festivalDate && festivalDates[0]) {
