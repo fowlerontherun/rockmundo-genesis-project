@@ -103,7 +103,7 @@ export const TwaaterFeed = ({ viewerAccountId, feedType = "feed" }: TwaaterFeedP
 
   // Keep the complete Twaat object. Older code rebuilt a legacy subset here,
   // which silently discarded media, quote hydration and promotion fields.
-  const visibleItems = items.slice(0, visibleCount);
+  const visibleItems = (items ?? []).slice(0, visibleCount);
   const timelineTwaats = visibleItems.map((twaat: any) => ({
     ...twaat,
     account: {
@@ -170,7 +170,7 @@ export const TwaaterFeed = ({ viewerAccountId, feedType = "feed" }: TwaaterFeedP
             <Button variant="outline" disabled={!regularHasMore} onClick={nextRegularPage}>Older posts</Button>
           </div>
         )}
-        {items.length > visibleCount && (
+        {(items?.length ?? 0) > visibleCount && (
           <div className="flex justify-center py-4">
             <Button
               variant="outline"
