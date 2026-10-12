@@ -48,7 +48,7 @@ export const useGigDayReminders = () => {
         .eq("user_id", user.id)
         .eq("category", "gig_reminder")
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(1000);
       const alreadyNotified = new Set<string>(
         (existing ?? [])
           .map((r: any) => r?.metadata?.gig_id)
