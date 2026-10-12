@@ -475,6 +475,14 @@ export async function joinBandActivityLate(options: {
   linkedRecordingId?: string | null;
   metadata?: Record<string, any>;
 }): Promise<{ joined: boolean; reason?: string }> {
+  const [{ data: auth }, { data: owner, error: ownerError }] = await Promise.all([
+    supabase.auth.getUser(),
+    (supabase as any).from('profiles').select('user_id').eq('id', options.profileId).maybeSingle(),
+  ]);
+  if (ownerError || !auth.user || owner?.user_id !== auth.user.id ||
+      (options.userId && options.userId !== owner.user_id)) {
+    return { joined: false, reason: 'The selected character does not belong to your account.' };
+  }
   const { data: clashes, error: clashError } = await (supabase as any)
     .from('player_scheduled_activities')
     .select('id, title, activity_type, scheduled_start, scheduled_end, linked_rehearsal_id, linked_recording_id')
@@ -521,7 +529,7 @@ export async function joinBandActivityLate(options: {
   const { error } = await (supabase as any)
     .from('player_scheduled_activities')
     .insert({
-      user_id: options.userId ?? null,
+      user_id: owner.user_id,
       profile_id: options.profileId,
       activity_type: options.activityType,
       scheduled_start: options.scheduledStart.toISOString(),
