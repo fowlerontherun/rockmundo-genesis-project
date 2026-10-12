@@ -351,7 +351,7 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
         toast.info(`${results.pending.length} submissions pending review`);
       }
 
-      onComplete?.();
+      // Keep the results step visible; the user closes it after reviewing outcomes.
     },
     onError: (error: any) => {
       toast.error("Submission failed", { description: error.message });
@@ -585,6 +585,7 @@ export function RadioSubmissionWizard({ bandId, onComplete }: RadioSubmissionWiz
         {/* Step 4: Results */}
         {step === 4 && (
           <div className="space-y-4">
+            <Button variant="outline" onClick={() => onComplete?.()}>Close results</Button>
             <h3 className="font-semibold flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5 text-green-500" />
               Submission Complete!
