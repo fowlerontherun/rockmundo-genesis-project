@@ -56,7 +56,7 @@ export function useUniversityAttendance(profileId: string | undefined) {
     enabled: !!profileId,
   });
 
-  const { data: activityStatus } = useQuery({
+  const { data: activityStatus, isPending: activityPending, isError: activityError } = useQuery({
     queryKey: ["university_activity_status", profileId],
     queryFn: async () => {
       if (!profileId) return null;
@@ -81,7 +81,7 @@ export function useUniversityAttendance(profileId: string | undefined) {
     return () => clearInterval(interval);
   }, []);
 
-  const { data: todayAttendance } = useQuery({
+  const { data: todayAttendance, isPending: attendancePending, isError: attendanceError } = useQuery({
     queryKey: ["today_university_attendance", enrollment?.id, attendanceDate],
     queryFn: async () => {
       if (!enrollment?.id) return null;
@@ -199,9 +199,9 @@ export function useUniversityAttendance(profileId: string | undefined) {
   }, [enrollment?.id, enrollment?.university_courses?.class_start_hour, enrollment?.university_courses?.class_end_hour]);
 
   const canAttendClass = useMemo(() => {
-    if (!enrollment || activityStatus || todayAttendance) return false;
+    if (!enrollment || activityStatus || todayAttendance || attendancePending || attendanceError || activityPending || activityError) return false;
     return isWithinClassWindow;
-  }, [enrollment, activityStatus, todayAttendance, isWithinClassWindow]);
+  }, [enrollment, activityStatus, todayAttendance, isWithinClassWindow, attendancePending, attendanceError, activityPending, activityError]);
 
   const classStartHour = Math.min(
     Math.max(enrollment?.university_courses?.class_start_hour ?? 10, 0),
