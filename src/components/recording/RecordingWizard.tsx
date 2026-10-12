@@ -13,6 +13,7 @@ import type { RecordingProducer } from "@/hooks/useRecordingData";
 interface RecordingWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onBookingComplete?: () => void | Promise<void>;
   userId: string;
   profileId?: string | null;
   currentCityId: string;
@@ -20,7 +21,7 @@ interface RecordingWizardProps {
   labelCompanyId?: string | null;
 }
 
-export const RecordingWizard = ({ open, onOpenChange, userId, profileId, currentCityId, bandId, labelCompanyId }: RecordingWizardProps) => {
+export const RecordingWizard = ({ open, onOpenChange, onBookingComplete, userId, profileId, currentCityId, bandId, labelCompanyId }: RecordingWizardProps) => {
   const [activeTab, setActiveTab] = useState("studio");
   const [selectedStudio, setSelectedStudio] = useState<any>(null);
   const [recordingType, setRecordingType] = useState<'demo' | 'professional' | null>(null);
@@ -65,6 +66,8 @@ export const RecordingWizard = ({ open, onOpenChange, userId, profileId, current
   };
 
   const handleSessionComplete = () => {
+    // Called only after the new booking succeeds. No cancellation on wizard dismissal.
+    void onBookingComplete?.();
     onOpenChange(false);
     setSelectedStudio(null);
     setRecordingType(null);
