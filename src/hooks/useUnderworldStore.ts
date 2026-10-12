@@ -121,7 +121,7 @@ export const useUnderworldStore = () => {
         `)
         .eq("profile_id", profileId)
         .order("created_at", { ascending: false })
-        .limit(20);
+        .limit(1000);
 
       if (error) throw error;
       return (data || []) as UnderworldPurchase[];
