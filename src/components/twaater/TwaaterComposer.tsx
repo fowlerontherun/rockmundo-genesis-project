@@ -30,7 +30,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/components/ui/use-toast";
 import { useTwaaterRuntimeConfig } from "@/hooks/useTwaaterRuntimeConfig";
-import { reconcilePublishedTwaaterShareReceipts, registerTwaaterSharePublicationReceipt } from "@/features/shareable-moments/twaater";
+import { consumeTwaaterShareDraft, reconcilePublishedTwaaterShareReceipts, registerTwaaterSharePublicationReceipt } from "@/features/shareable-moments/twaater";
 
 interface TwaaterComposerProps {
   accountId: string;
@@ -119,22 +119,18 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
   });
 
   useEffect(() => {
-    const stored = sessionStorage.getItem("rockmundoTwaaterShareDraft");
-    if (!stored) return;
-    try {
-      const draft = JSON.parse(stored) as { body?: string; mediaUrl?: string; mediaType?: "image"; shareCooldownKey?: string | null };
-      if (draft.body) setBody(draft.body);
-      if (draft.shareCooldownKey) setShareCooldownKey(draft.shareCooldownKey);
-      if (draft.mediaUrl) {
-        setMediaUrl(draft.mediaUrl);
-        setMediaType(draft.mediaType || "image");
-      }
-    } catch {
-      // Ignore stale/corrupt Share Studio drafts.
-    } finally {
-      sessionStorage.removeItem("rockmundoTwaaterShareDraft");
-    }
-  }, []);
+    let cancelled = false;
+    void consumeTwaaterShareDraft().then((draft) => {
+      if (cancelled || !draft) return;
+      setBody(draft.body);
+      setShareCooldownKey(draft.shareCooldownKey || null);
+      setMediaUrl(draft.mediaUrl);
+      setMediaType(draft.mediaType);
+    }).catch(() => {
+      // A malformed or inaccessible draft should not block composing.
+    });
+    return () => { cancelled = true; };
+  }, [accountId]);
 
   useEffect(() => {
     const stored = sessionStorage.getItem("quoteTwaat");
@@ -209,8 +205,8 @@ export const TwaaterComposer = ({ accountId }: TwaaterComposerProps) => {
         linked_type: linkedType || undefined,
         linked_id: linkedId || undefined,
         visibility,
-        media_url: mediaUrl || undefined,
-        media_type: mediaType || undefined,
+        media_url: config.mediaUploadsEnabled ? mediaUrl || undefined : undefined,
+        media_type: config.mediaUploadsEnabled ? mediaType || undefined : undefined,
         quoted_twaat_id: quotedTwaat?.id || undefined,
         scheduled_for: scheduledIso,
       });
