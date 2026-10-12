@@ -33,12 +33,15 @@ let mapLibrePromise: Promise<MapLibreRuntime> | null = null;
 function loadMapLibre(): Promise<MapLibreRuntime> {
   if (window.maplibregl) return Promise.resolve(window.maplibregl);
   if (mapLibrePromise) return mapLibrePromise;
-  mapLibrePromise = Promise.all([
+  mapLibrePromise = Promise.race([
+    Promise.all([
     new Promise<void>((resolve, reject) => {
       const existing = document.querySelector<HTMLLinkElement>('link[data-rockmundo-maplibre]');
-      if (existing?.sheet) { resolve(); return; }
+      if (existing?.sheet || (existing && existing.dataset.loaded === 'true')) { resolve(); return; }
       const css = existing ?? document.createElement('link');
-      css.addEventListener('load', () => resolve(), { once: true });
+      css.addEventListener('load', () => { css.dataset.loaded = 'true'; resolve(); }, { once: true });
+      // Existing links can have fired load before listeners were registered.
+      if (existing && existing.sheet) { resolve(); return; }
       css.addEventListener('error', () => reject(new Error('MapLibre stylesheet failed to load')), { once: true });
       if (!existing) {
         css.rel = 'stylesheet';
@@ -51,7 +54,15 @@ function loadMapLibre(): Promise<MapLibreRuntime> {
       if (window.maplibregl) { resolve(); return; }
       const existing = document.querySelector<HTMLScriptElement>('script[data-rockmundo-maplibre]');
       const script = existing ?? document.createElement('script');
-      script.addEventListener('load', () => window.maplibregl ? resolve() : reject(new Error('MapLibre runtime did not initialise')), { once: true });
+      if (existing && (existing.dataset.loaded === 'true' || window.maplibregl)) {
+        if (window.maplibregl) { resolve(); return; }
+        reject(new Error('MapLibre script loaded but runtime was unavailable'));
+        return;
+      }
+      script.addEventListener('load', () => {
+        script.dataset.loaded = 'true';
+        window.maplibregl ? resolve() : reject(new Error('MapLibre runtime did not initialise'));
+      }, { once: true });
       script.addEventListener('error', () => reject(new Error('MapLibre runtime failed to load')), { once: true });
       if (!existing) {
         script.src = MAPLIBRE_SCRIPT_URL;
@@ -60,6 +71,9 @@ function loadMapLibre(): Promise<MapLibreRuntime> {
         document.head.appendChild(script);
       }
     }),
+    ]),
+    new Promise<never>((_, reject) => window.setTimeout(
+      () => reject(new Error('MapLibre assets timed out. Check your connection and retry.')), 12000)),
   ]).then(() => {
     if (!window.maplibregl) throw new Error('MapLibre runtime did not initialise');
     return window.maplibregl;
@@ -177,7 +191,11 @@ const InteractiveWorldMap = ({ cities, currentCityId, onCityClick, routeCityIds 
           if (!map.current?.loaded()) {
             const currentRect = container.getBoundingClientRect();
             logDiagnostic(`still not loaded after 8s; container=${Math.round(currentRect.width)}x${Math.round(currentRect.height)}; styleLoaded=${map.current?.isStyleLoaded() ?? false}`);
-            setIsLoading(false);
+            if (!disposed) {
+              setMapError('The world map did not finish loading. Check your connection and try again.');
+              setMapReady(false);
+              setIsLoading(false);
+            }
           }
         }, 8000);
       } catch (error) {

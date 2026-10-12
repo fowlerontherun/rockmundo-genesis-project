@@ -39,7 +39,7 @@ const SongManager = () => {
   const { data: songs, isLoading, isError, refetch } = useQuery({
     queryKey: ["user-songs", profileId, user?.id],
     queryFn: async () => {
-      if (!profileId && !user?.id) return [];
+      if (!profileId) return [];
 
       let query = supabase
         .from("songs")
@@ -51,15 +51,9 @@ const SongManager = () => {
           )
         `);
 
-      // Only show songs belonging to the active character.
-      // Legacy songs with no character recorded fall back to the account owner.
-      if (profileId && user?.id) {
-        query = query.or(`profile_id.eq.${profileId},and(profile_id.is.null,user_id.eq.${user.id})`);
-      } else if (profileId) {
-        query = query.eq("profile_id", profileId);
-      } else {
-        query = query.eq("user_id", user.id!);
-      }
+      // Account-owned legacy rows may belong to a different character slot.
+      // Never fall back to account ownership in a character-specific catalog.
+      query = query.eq("profile_id", profileId);
 
       const allSongs: any[] = [];
       for (let offset = 0; ; offset += 500) {
@@ -70,7 +64,7 @@ const SongManager = () => {
       }
       return allSongs;
     },
-    enabled: !!profileId || !!user?.id,
+    enabled: !!profileId,
   });
 
   // Fetch rehearsal levels for songs (scoped to the active character's bands)

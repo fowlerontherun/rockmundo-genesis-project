@@ -192,6 +192,7 @@ serve(async (req) => {
 
       const ppgIns = await admin.from("player_personal_gear").insert({
         user_id: user.id,
+        profile_id: profile.id,
         gear_type: instrument.type,
         gear_name: displayName,
         quality_rating: quality,

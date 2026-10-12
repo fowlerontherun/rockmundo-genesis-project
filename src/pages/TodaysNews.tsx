@@ -22,9 +22,12 @@ import { LocalDailyBrief } from "@/components/news/LocalDailyBrief";
 import { NewsList } from "@/components/news/NewsList";
 
 export default function TodaysNewsPage() {
-  const today = new Date().toISOString().split("T")[0];
-  const dayStart = `${today}T00:00:00`;
-  const tomorrow = new Date(Date.parse(`${today}T00:00:00Z`) + 86400000).toISOString().slice(0, 10);
+  // Use player-local calendar boundaries rather than UTC dates, so activity
+  // around midnight is assigned to the correct edition of Today's News.
+  const localNow = new Date();
+  const today = format(localNow, "yyyy-MM-dd");
+  const dayStart = new Date(localNow.getFullYear(), localNow.getMonth(), localNow.getDate()).toISOString();
+  const tomorrow = new Date(localNow.getFullYear(), localNow.getMonth(), localNow.getDate() + 1).toISOString();
 
   // Keep this edition focused on bands formed today.
   const { data: newBands, isError: newBandsError, refetch: retryNewBands } = useQuery({
@@ -34,7 +37,7 @@ export default function TodaysNewsPage() {
         .from("bands")
         .select("id, name, genre, created_at, popularity, total_fans")
         .gte("created_at", dayStart)
-        .lt("created_at", `${tomorrow}T00:00:00`)
+        .lt("created_at", tomorrow)
         .order("created_at", { ascending: false })
         .limit(100);
       if (error) throw error;
@@ -50,7 +53,7 @@ export default function TodaysNewsPage() {
         .select("id, title, release_type, scheduled_release_date, bands(name)")
         .eq("release_status", "released")
         .gte("scheduled_release_date", dayStart)
-        .lt("scheduled_release_date", `${tomorrow}T00:00:00`)
+        .lt("scheduled_release_date", tomorrow)
         .order("scheduled_release_date", { ascending: false })
         .limit(100);
       if (error) throw error;
@@ -63,7 +66,11 @@ export default function TodaysNewsPage() {
     queryFn: async () => {
       const { data, error } = await (supabase as any).rpc("recent_festival_band_announcements", { p_limit: 100 });
       if (error) throw error;
-      return (data ?? []) as Array<{ booking_id: string; band_name: string; festival_name: string; billing_position: string; confirmed_at: string }>;
+      return ((data ?? []) as Array<{ booking_id: string; band_name: string; festival_name: string; billing_position: string; confirmed_at: string }>)
+        .filter(announcement => {
+          const confirmed = Date.parse(announcement.confirmed_at);
+          return Number.isFinite(confirmed) && confirmed >= Date.parse(dayStart) && confirmed < Date.parse(tomorrow);
+        });
     },
   });
 
@@ -75,7 +82,7 @@ export default function TodaysNewsPage() {
         .select("id, title, event_type, start_date, end_date")
         .eq("event_type", "festival")
         .gte("start_date", dayStart)
-        .lt("start_date", `${tomorrow}T00:00:00`)
+        .lt("start_date", tomorrow)
         .order("start_date", { ascending: true })
         .limit(100);
       if (error) throw error;

@@ -61,6 +61,14 @@ const Travel = () => {
   const [departureHour, setDepartureHour] = useState<number | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+    setSelectedDestination(null);
+    setSelectedMode(null);
+    setDepartureDate(null);
+    setDepartureHour(null);
+    setProfile(null);
+    setCurrentCity(null);
+    setLoading(Boolean(profileId));
     const loadTravelData = async () => {
       if (!profileId) {
         setProfile(null);
@@ -73,24 +81,26 @@ const Travel = () => {
       setCurrentCity(null);
 
       try {
-        const { data: profileData } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("*, cities:current_city_id(*)")
           .eq("id", profileId)
           .single();
-
+        if (profileError) throw profileError;
+        if (cancelled) return;
         if (profileData) {
           setProfile(profileData);
           if (profileData.cities) setCurrentCity(profileData.cities);
         }
       } catch (error) {
-        console.error("Error loading travel data:", error);
+        if (!cancelled) console.error("Error loading travel data:", error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     void loadTravelData();
+    return () => { cancelled = true; };
   }, [profileId]);
 
   const handleSelectDestination = (destination: SelectedDestination) => {
