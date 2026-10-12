@@ -415,6 +415,7 @@ const TourManager = () => {
       ]);
 
       if (outcomesResult.error) throw outcomesResult.error;
+      if (setlistsResult.error) throw setlistsResult.error;
 
       const venuesMap: Record<
         string,

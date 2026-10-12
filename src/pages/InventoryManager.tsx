@@ -99,7 +99,7 @@ const InventoryManager = () => {
   });
 
   // Fetch house keys from player_properties
-  const { data: properties = [], isLoading: propertiesLoading } = useQuery({
+  const { data: properties = [], isLoading: propertiesLoading, isError: propertiesError, refetch: retryProperties } = useQuery({
     queryKey: ["inventory-properties", profileId],
     queryFn: async () => {
       if (!profileId) return [];
@@ -351,7 +351,7 @@ const InventoryManager = () => {
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {inventoryItems.map((item) => {
                     const product = item.product;
-                    if (!product) return null;
+                    if (!product) return <Card key={item.id} role="status"><CardHeader><CardTitle>Unresolved inventory item</CardTitle></CardHeader><CardContent>Item {item.id} is owned, but its product details are unavailable. Please contact support if this persists.</CardContent></Card>;
                     
                     const CategoryIcon = categoryIcons[product.category] || Package;
                     const rarityClass = rarityStyles[product.rarity] || "border-muted";
@@ -469,7 +469,7 @@ const InventoryManager = () => {
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {bookSessions.map((session: any) => {
                     const book = session.skill_books;
-                    if (!book) return null;
+                    if (!book) return <Card key={session.id} role="status"><CardHeader><CardTitle>Reading record unavailable</CardTitle></CardHeader><CardContent>Reading session {session.id} ({session.status}) exists, but the linked book details could not be loaded.</CardContent></Card>;
                     const isCompleted = session.status === "completed";
                     const isReading = session.status === "reading";
                     const progress = book.base_reading_days
@@ -553,7 +553,7 @@ const InventoryManager = () => {
                 <p className="text-sm text-muted-foreground">Sign in to view your property keys.</p>
               ) : propertiesLoading ? (
                 <p className="text-sm text-muted-foreground">Loading your property keys...</p>
-              ) : properties.length === 0 ? (
+              ) : propertiesError ? (<div role="alert">Unable to load property keys. <Button variant="outline" size="sm" onClick={() => void retryProperties()}>Retry keys</Button></div>) : properties.length === 0 ? (
                 <div className="text-center py-8">
                   <Home className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
                   <p className="text-muted-foreground">No house keys yet.</p>

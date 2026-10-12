@@ -104,15 +104,16 @@ export default function PlayerProfile() {
   const connection = usePlayerConnection(playerId);
   const socialPermission = useSocialPermission(playerId);
 
-  const { data: friendship } = useQuery({
+  const { data: friendship, isError: friendshipError, refetch: retryFriendship } = useQuery({
     queryKey: ["friendship-status", currentUser?.id, playerId],
     queryFn: async () => {
       if (!currentUser?.id || !playerId || currentUser.id === playerId) return null;
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("friendships")
         .select("id, status, requestor_id, addressee_id")
         .or(`and(requestor_id.eq.${currentUser.id},addressee_id.eq.${playerId}),and(requestor_id.eq.${playerId},addressee_id.eq.${currentUser.id})`)
         .maybeSingle();
+      if (error) throw error;
       return data;
     },
     enabled: !!currentUser?.id && !!playerId && currentUser?.id !== playerId,
@@ -231,9 +232,9 @@ export default function PlayerProfile() {
   const isOwnProfile = currentUser?.id === playerId;
   const restrictedBySafety = Boolean(socialPermission.data?.is_interaction_restricted);
   const blockedByViewer = Boolean(socialPermission.data?.is_blocked_by_viewer);
-  const isFriend = friendship?.status === "accepted";
-  const isPendingSent = friendship?.status === "pending" && friendship?.requestor_id === currentUser?.id;
-  const isPendingReceived = friendship?.status === "pending" && friendship?.addressee_id === currentUser?.id;
+  const isFriend = !restrictedBySafety && !friendshipError && friendship?.status === "accepted";
+  const isPendingSent = !restrictedBySafety && !friendshipError && friendship?.status === "pending" && friendship?.requestor_id === currentUser?.id;
+  const isPendingReceived = !restrictedBySafety && !friendshipError && friendship?.status === "pending" && friendship?.addressee_id === currentUser?.id;
 
   const shareMoment: CharacterProfileShareMoment = {
     version: 1,
@@ -278,11 +279,12 @@ export default function PlayerProfile() {
         ) : (
           <>
             {restrictedBySafety && <Button size="sm" variant="secondary" disabled>{blockedByViewer ? "You blocked this player" : "This player is unavailable."}</Button>}
-            {!restrictedBySafety && (connection.data === "not_connected" || !friendship) && <Button size="sm" onClick={() => sendRequest.mutate()} disabled={sendRequest.isPending || connection.send.isPending || socialPermission.data?.can_send_friend_request === false}><UserPlus className="h-4 w-4 mr-1" /> Add Friend</Button>}
-            {(connection.data === "outgoing_pending" || isPendingSent) && <Button size="sm" variant="secondary" disabled><Clock className="h-4 w-4 mr-1" /> Request Sent</Button>}
-            {(connection.data === "incoming_pending" || isPendingReceived) && <><Button size="sm" onClick={() => acceptRequest.mutate()} disabled={acceptRequest.isPending}><UserPlus className="h-4 w-4 mr-1" /> Accept Request</Button><Button size="sm" variant="outline" onClick={() => declineRequest.mutate()} disabled={declineRequest.isPending || !friendship?.id}>Decline</Button></>}
-            {(connection.data === "friends" || isFriend) && <Button size="sm" asChild variant="outline"><Link to={`/social/messages?friend=${playerId}`}>Say hi · Message</Link></Button>}
-            {(connection.data === "friends" || isFriend) && <Button size="sm" variant="destructive" onClick={() => window.confirm("Remove this friend? Friends-only profile access will be lost.") && removeFriend.mutate()} disabled={removeFriend.isPending}><UserMinus className="h-4 w-4 mr-1" /> Remove Friend</Button>}
+            {!restrictedBySafety && !friendshipError && (connection.data === "not_connected" || !friendship) && <Button size="sm" onClick={() => sendRequest.mutate()} disabled={sendRequest.isPending || connection.send.isPending || socialPermission.data?.can_send_friend_request === false}><UserPlus className="h-4 w-4 mr-1" /> Add Friend</Button>}
+            {(!restrictedBySafety && !friendshipError && (connection.data === "outgoing_pending" || isPendingSent)) && <Button size="sm" variant="secondary" disabled><Clock className="h-4 w-4 mr-1" /> Request Sent</Button>}
+            {(!restrictedBySafety && !friendshipError && (connection.data === "incoming_pending" || isPendingReceived)) && <><Button size="sm" onClick={() => acceptRequest.mutate()} disabled={acceptRequest.isPending}><UserPlus className="h-4 w-4 mr-1" /> Accept Request</Button><Button size="sm" variant="outline" onClick={() => declineRequest.mutate()} disabled={declineRequest.isPending || !friendship?.id}>Decline</Button></>}
+            {(!restrictedBySafety && !friendshipError && (connection.data === "friends" || isFriend)) && <Button size="sm" asChild variant="outline"><Link to={`/social/messages?friend=${playerId}`}>Say hi · Message</Link></Button>}
+            {(!restrictedBySafety && !friendshipError && (connection.data === "friends" || isFriend)) && <Button size="sm" variant="destructive" onClick={() => window.confirm("Remove this friend? Friends-only profile access will be lost.") && removeFriend.mutate()} disabled={removeFriend.isPending}><UserMinus className="h-4 w-4 mr-1" /> Remove Friend</Button>}
+            {friendshipError && <Button size="sm" variant="outline" onClick={() => void retryFriendship()}>Friendship unavailable — Retry</Button>}
             {connection.data === "restricted" && <Button size="sm" variant="secondary" disabled>This player is not accepting requests</Button>}
             <SafetyActions targetProfileId={playerId!} targetName={profile.display_name || profile.username || "this player"} isBlockedByViewer={blockedByViewer} />
             {!restrictedBySafety && <FutureProfileActions />}

@@ -1492,6 +1492,7 @@ const Songwriting = () => {
         chord_progression_id: null,
         initial_lyrics: undefined,
         creative_brief: creativeBrief,
+        genres: [quickCreateGenre],
         instruments: [],
       });
       toast.success(

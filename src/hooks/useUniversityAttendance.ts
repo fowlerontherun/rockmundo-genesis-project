@@ -122,6 +122,7 @@ export function useUniversityAttendance(profileId: string | undefined) {
       queryClient.invalidateQueries({ queryKey: ["current_enrollment"] });
       queryClient.invalidateQueries({ queryKey: ["current_enrollment_full"] });
       queryClient.invalidateQueries({ queryKey: ["skill_progress"] });
+      queryClient.invalidateQueries({ queryKey: ["education-summary-skills"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       queryClient.invalidateQueries({ queryKey: ["activity_feed"] });
       queryClient.invalidateQueries({ queryKey: ["university_course_performance"] });

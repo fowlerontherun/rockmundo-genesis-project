@@ -177,7 +177,11 @@ export const UniversityTab = () => {
     },
     staleTime: 5 * 60 * 1000,
   });
-  const professorByUniversity = useMemo(() => new Map(professorVisits.map((visit) => [visit.university_id, visit])), [professorVisits]);
+  const professorByUniversity = useMemo(() => {
+    const groups = new Map<string, typeof professorVisits>();
+    for (const visit of professorVisits) groups.set(visit.university_id, [...(groups.get(visit.university_id) ?? []), visit]);
+    return groups;
+  }, [professorVisits]);
 
   const { data: universities, isLoading } = useQuery({
     queryKey: ["universities"],
@@ -577,7 +581,7 @@ export const UniversityTab = () => {
                         <CardHeader className="pb-3">
                           <CardTitle className="text-base leading-snug">{uni.name}</CardTitle>
                           {professorByUniversity.has(uni.id) && (
-                            <p className="text-xs font-medium text-amber-600">Visiting: {professorByUniversity.get(uni.id)?.name} · +70% {professorByUniversity.get(uni.id)?.skill_family.replace(/_/g, " ")} XP</p>
+                            <p className="text-xs font-medium text-amber-600">Visiting: {(professorByUniversity.get(uni.id) ?? []).map(visit => `${visit.name} · +70% ${visit.skill_family.replace(/_/g, " ")} XP`).join("; ")}</p>
                           )}
                           <div className="flex flex-wrap gap-2">
                             <Badge variant="secondary" className="text-xs">

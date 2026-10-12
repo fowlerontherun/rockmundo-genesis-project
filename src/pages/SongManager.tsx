@@ -36,7 +36,7 @@ const SongManager = () => {
   const recalcMetrics = useRecalculateSongMetrics();
 
 
-  const { data: songs, isLoading } = useQuery({
+  const { data: songs, isLoading, isError, refetch } = useQuery({
     queryKey: ["user-songs", profileId, user?.id],
     queryFn: async () => {
       if (!profileId && !user?.id) return [];
@@ -220,7 +220,7 @@ const SongManager = () => {
         <div className="text-center py-12 text-muted-foreground">
           Loading your song catalog...
         </div>
-      ) : filteredSongs.length === 0 ? (
+      ) : isError ? (<Card role="alert" className="p-6">Your song catalog could not be loaded. <Button variant="outline" onClick={() => void refetch()}>Retry songs</Button></Card>) : filteredSongs.length === 0 ? (
         <Card className="p-12 text-center">
           <Music className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
           <h3 className="text-xl font-semibold mb-2">No songs found</h3>
