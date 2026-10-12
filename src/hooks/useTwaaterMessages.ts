@@ -138,10 +138,11 @@ export const useTwaaterConversation = (conversationId?: string, accountId?: stri
           sender:twaater_accounts!sender_id(id, handle, display_name, verified)
         `)
         .eq("conversation_id", conversationId)
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: false })
+        .limit(200);
 
       if (error) throw error;
-      return data;
+      return (data ?? []).reverse();
     },
     enabled: !!conversationId && !!accountId,
   });
