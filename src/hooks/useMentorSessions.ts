@@ -2,27 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
-import { applyLearningMultiplier } from "@/utils/skillLearningMultiplier";
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
-const getSkillMaxLevel = async (skillSlug: string): Promise<number> => {
-  const { data, error } = await (supabase as any).rpc("progression_skill_max_level", {
-    p_skill_slug: skillSlug,
-  });
-  if (error) throw error;
-  const value = Number(data);
-  return Number.isFinite(value) && value > 0 ? value : 20;
-};
-
-const getRequiredSkillXp = async (level: number): Promise<number> => {
-  const { data, error } = await (supabase as any).rpc("progression_skill_required_xp", {
-    p_level: level,
-  });
-  if (error) throw error;
-  const value = Number(data);
-  return Number.isFinite(value) && value > 0 ? value : 100;
-};
 
 export function useMentorSessions() {
   const { toast } = useToast();
