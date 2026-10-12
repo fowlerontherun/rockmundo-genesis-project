@@ -252,6 +252,7 @@ const readinessAction = (role: WellnessReadinessRole, score: number) => {
 export function normalizeWellnessModifiers(modifiers: WellnessModifier[]): WellnessModifier[] {
   const seen = new Set<string>();
   const byGroup = new Map<string, WellnessModifier>();
+  const restrictedGroups = new Set(modifiers.filter(m => !m.mayStack).map(m => m.stackingGroup));
   const sorted = [...modifiers].sort((a, b) => WELLNESS_PIPELINE_ORDER.indexOf(a.category) - WELLNESS_PIPELINE_ORDER.indexOf(b.category) || b.priority - a.priority || a.id.localeCompare(b.id));
   const normalized: WellnessModifier[] = [];
   for (const modifier of sorted) {
@@ -263,7 +264,7 @@ export function normalizeWellnessModifiers(modifiers: WellnessModifier[]): Welln
       : WELLNESS_CANONICAL_BALANCE.globalModifierCaps.negative;
     const cappedValue = Number(Math.max(lowerCap, Math.min(WELLNESS_CANONICAL_BALANCE.globalModifierCaps.positive, value)).toFixed(4));
     const withCap = { ...modifier, cappedValue };
-    if (!modifier.mayStack && byGroup.has(modifier.stackingGroup)) {
+    if (restrictedGroups.has(modifier.stackingGroup) && byGroup.has(modifier.stackingGroup)) {
       const existing = byGroup.get(modifier.stackingGroup)!;
       if (modifier.priority > existing.priority || (modifier.priority === existing.priority && Math.abs(cappedValue) > Math.abs(existing.cappedValue ?? existing.rawValue))) {
         const index = normalized.findIndex((item) => item.id === existing.id);
@@ -273,7 +274,7 @@ export function normalizeWellnessModifiers(modifiers: WellnessModifier[]): Welln
       continue;
     }
     normalized.push(withCap);
-    if (!modifier.mayStack) byGroup.set(modifier.stackingGroup, withCap);
+    if (restrictedGroups.has(modifier.stackingGroup)) byGroup.set(modifier.stackingGroup, withCap);
   }
   return normalized;
 }
