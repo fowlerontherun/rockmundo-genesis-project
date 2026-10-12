@@ -76,7 +76,7 @@ export const CityTreasuryCard = () => {
     enabled: !!cityId,
   });
 
-  const { data: ledger = [] } = useQuery({
+  const { data: ledger = [], isError: ledgerError, refetch: retryLedger } = useQuery({
     queryKey: ["city-treasury-ledger", cityId],
     queryFn: async () => {
       if (!cityId) return [];
@@ -138,6 +138,7 @@ export const CityTreasuryCard = () => {
       </Card>
 
       {/* Ledger */}
+      {ledgerError && <div role="alert" className="p-3 text-sm">Recent transactions could not be loaded. <button onClick={() => void retryLedger()}>Retry</button></div>}
       {ledger.length > 0 && (
         <Card>
           <CardHeader>
