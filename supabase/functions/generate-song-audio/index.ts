@@ -25,7 +25,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const { songId, overrideLyrics } = await req.json()
-    const authToken = req.headers.get("Authorization")?.match(/^Bearer\\s+(.+)$/i)?.[1]
+    const authToken = req.headers.get("Authorization")?.replace(/^Bearer /i, "").trim()
     if (!authToken) return new Response(JSON.stringify({ error: "Authentication required" }), {
       status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" }
     })
