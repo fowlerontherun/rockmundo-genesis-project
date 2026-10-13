@@ -41,7 +41,16 @@ BEGIN
  IF p_parent_profile_id IS NOT NULL THEN
   INSERT INTO public.skill_progress(profile_id,skill_slug,current_level,current_xp,required_xp)
   SELECT v_new,key,floor((value::numeric)*0.1)::integer,0,100
-  FROM jsonb_each_text(v_skills) WHERE value ~ '^[0-9]+(\\.[0-9]+)?$'
+  FROM jsonb_each_text(v_skills) WHERE value ~ '^[0-9]+
+  AND floor((value::numeric)*0.1)>0;
+ END IF;
+ UPDATE public.profiles SET is_active=false WHERE user_id=v_user AND id<>v_new AND is_active;
+ UPDATE public.profiles SET is_active=true WHERE id=v_new;
+ RETURN v_new;
+END $$;
+REVOKE ALL ON FUNCTION public.create_recovery_character_atomic(uuid,text,text) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.create_recovery_character_atomic(uuid,text,text) TO authenticated;
+
   AND floor((value::numeric)*0.1)>0;
  END IF;
  UPDATE public.profiles SET is_active=false WHERE user_id=v_user AND id<>v_new AND is_active;
