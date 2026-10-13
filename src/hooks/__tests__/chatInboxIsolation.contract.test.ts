@@ -19,6 +19,11 @@ describe("character-scoped messaging and inbox source contracts", () => {
     expect(hook).toContain('["dm-unread", myProfileId, activeProfileId]');
   });
 
+  it("keeps direct-channel fallback history visible after a conversation exists", () => {
+    expect(hook).toContain("conversation_id.eq.${conversationId},and(conversation_id.is.null,channel_id.eq.${directChannelId})");
+    expect(hook).toContain('.is("conversation_id", null)');
+  });
+
   it("marks only loaded visible notification IDs read", () => {
     expect(inbox).toContain("notifications.markAllRead(scopedNotifications.filter(");
     expect(notifications).toContain("const scopedIds = [...new Set(visibleNotificationIds)].filter((id) => eligibleIds.has(id))");
