@@ -54,6 +54,7 @@ export function useInbox(category?: InboxCategory | 'all') {
       if (!userId || !profileId) return [];
 
       const rows: InboxMessage[] = [];
+      let complete = false;
       let cursor: { created_at: string; id: string } | null = null;
       for (let page = 0; page < 200; page++) {
         let queryBuilder = supabase
@@ -71,13 +72,15 @@ export function useInbox(category?: InboxCategory | 'all') {
         const { data, error } = await queryBuilder;
         if (error) throw error;
         rows.push(...((data ?? []) as InboxMessage[]));
-        if (!data || data.length < 500) break;
+        if (!data || data.length < 500) { complete = true; break; }
         const next = lastCreatedAtIdCursor(data);
         if (!next || (cursor && next.created_at === cursor.created_at && next.id === cursor.id)) {
           throw new Error('Inbox pagination failed to advance');
         }
         cursor = next;
       }
+
+      if (!complete) throw new Error('Inbox history exceeds pagination safety limit');
 
       // Untagged legacy rows are not safe to infer in a multi-character account.
       // A genuinely account-wide message must opt in with metadata.scope=account.
@@ -94,6 +97,7 @@ export function useInbox(category?: InboxCategory | 'all') {
     queryFn: async () => {
       if (!userId || !profileId) return [] as InboxMessage[];
       const archived: InboxMessage[] = [];
+      let complete = false;
       let cursor: { created_at: string; id: string } | null = null;
       for (let page = 0; page < 200; page++) {
         let queryBuilder = supabase.from('player_inbox')
@@ -105,13 +109,14 @@ export function useInbox(category?: InboxCategory | 'all') {
         const { data, error } = await queryBuilder;
         if (error) throw error;
         archived.push(...((data ?? []) as InboxMessage[]));
-        if (!data || data.length < 500) break;
+        if (!data || data.length < 500) { complete = true; break; }
         const next = lastCreatedAtIdCursor(data);
         if (!next || (cursor && next.created_at === cursor.created_at && next.id === cursor.id)) {
           throw new Error('Archived inbox pagination failed to advance');
         }
         cursor = next;
       }
+      if (!complete) throw new Error('Archived inbox history exceeds pagination safety limit');
       return archived.filter(message => isInboxMessageForProfile(message, profileId));
     },
   });
