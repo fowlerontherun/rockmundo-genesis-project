@@ -111,6 +111,9 @@ Deno.serve(async (req) => {
     // Pre-fetch all territories for releases linked to these song_releases
     const releaseIds = [...new Set((streamingReleases || []).map(r => r.release_id).filter(Boolean))];
     let allTerritories: any[] = [];
+    // All releases on one label contract share the same recoupment balance.
+    // Per-release copies can otherwise recoup the same advance multiple times.
+    const contractRecoupedToday = new Map<string, number>();
     if (releaseIds.length > 0) {
       for (let offset = 0; ; offset += 500) {
         const { data: territories, error: territoryError } = await supabase
@@ -481,16 +484,20 @@ Deno.serve(async (req) => {
 
         const contractInfo = release.release_id ? releaseContractMap.get(release.release_id) : null;
         const isDealExcluded = contractInfo && (
-          contractInfo.dealTypeName === "Distribution Deal" ||
           (contractInfo.dealTypeName === "Licensing Deal" && new Date(contractInfo.endDate) < new Date())
         );
 
         if (contractInfo && !isDealExcluded && bandId && dailyRevenueDollars > 0) {
-          const labelShareDollars = Math.round(dailyRevenueDollars * contractInfo.labelCutPct);
+          // Distribution deals earn the same capped platform margin as physical sales.
+          const effectiveLabelCut = contractInfo.dealTypeName === "Distribution Deal"
+            ? Math.min(contractInfo.labelCutPct, 0.20)
+            : contractInfo.labelCutPct;
+          const labelShareDollars = Math.round(dailyRevenueDollars * effectiveLabelCut);
           const bandShareDollars = dailyRevenueDollars - labelShareDollars;
-          const advanceRemaining = Math.max(0, contractInfo.advanceAmount - contractInfo.recoupedAmount);
+          const priorRecouped = contractRecoupedToday.get(contractInfo.contractId) ?? contractInfo.recoupedAmount;
+          const advanceRemaining = Math.max(0, contractInfo.advanceAmount - priorRecouped);
           const recoupmentFromThis = Math.min(labelShareDollars, advanceRemaining);
-          contractInfo.recoupedAmount += recoupmentFromThis;
+          contractRecoupedToday.set(contractInfo.contractId, priorRecouped + recoupmentFromThis);
           const labelKey = `${contractInfo.labelId}:${contractInfo.contractId}`;
           const existing = labelRevenueAccumulator.get(labelKey) || { labelRevenue: 0, recoupmentApplied: 0, contractId: contractInfo.contractId };
           existing.labelRevenue += labelShareDollars;
@@ -502,7 +509,7 @@ Deno.serve(async (req) => {
               band_id: bandId,
               amount: bandShareDollars,
               source: 'streaming',
-              description: `Daily streaming revenue (after ${Math.round(contractInfo.labelCutPct * 100)}% label share)`,
+              description: `Daily streaming revenue (after ${Math.round(effectiveLabelCut * 100)}% label share)`,
               metadata: { 
                 song_release_id: release.id, 
                 streams: dailyStreams,
