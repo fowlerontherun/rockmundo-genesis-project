@@ -120,6 +120,25 @@ export const CompleteRecordingDialog = ({
       if (error) throw error;
       if (!session || session.profile_id !== profileId) throw new Error("Recording does not belong to the active character");
 
+      if (session.status !== "completed" && ["scheduled", "in_progress"].includes(session.status)) {
+        const { data: result, error: completionError } = await supabase.functions.invoke("complete-recording-sessions", {
+          body: { sessionId, profileId, triggeredBy: "manual-recording-completion" },
+        });
+        if (completionError) throw completionError;
+        if (result?.success !== true) throw new Error(result?.error || "Recording processor did not confirm completion");
+        const { data: updated, error: updatedError } = await supabase.from("recording_sessions")
+          .select("status, song_id").eq("id", sessionId).eq("profile_id", profileId).single();
+        if (updatedError) throw updatedError;
+        if (updated.status === "completed") {
+          if (updated.song_id) setCurrentSongId(updated.song_id);
+          toast.success("Recording completed!", {
+            description: `"${songTitle}" was finalized by the recording processor.`,
+          });
+          onOpenChange(false);
+          return;
+        }
+        if ((result.errors ?? 0) > 0) throw new Error("Recording processing failed; it can be retried safely once the error is resolved.");
+      }
       await queryClient.invalidateQueries({ queryKey: ["recording_sessions"] });
       await queryClient.invalidateQueries({ queryKey: ["songs"] });
       if (session.status === "completed") {
@@ -150,7 +169,7 @@ export const CompleteRecordingDialog = ({
             Complete Recording
           </DialogTitle>
           <DialogDescription>
-            Check whether the recording processor has finalized "{songTitle}". Final quality, credits, experience and morale must be awarded by the processor.
+            Request finalisation through the recording processor or check whether it has finalized "{songTitle}". Final quality, credits, experience and morale must be awarded by the processor.
           </DialogDescription>
         </DialogHeader>
         
@@ -212,7 +231,7 @@ export const CompleteRecordingDialog = ({
           </Button>
           <Button onClick={handleComplete} disabled={completing || generatingAudio}>
             {completing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Check Recording Status
+            Complete or Check Recording
           </Button>
         </div>
       </DialogContent>
