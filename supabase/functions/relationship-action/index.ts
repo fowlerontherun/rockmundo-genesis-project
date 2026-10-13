@@ -303,13 +303,15 @@ Deno.serve(async (req) => {
 
     await admin.from("activity_feed").insert({
       user_id: user.id,
+      profile_id,
       activity_type: `relationship_${action}`,
       message: message ?? `${config.label} with friend`,
       metadata: {
+        ...(metadata ?? {}),
+        // No client-provided field may impersonate another relationship.
         relationship_profile_id: other_profile_id,
         relationship_pair_key: pk,
-        affinity_value: config.xp,
-        ...(metadata ?? {}),
+        relationship_actor_profile_id: profile_id,
       },
     });
 
