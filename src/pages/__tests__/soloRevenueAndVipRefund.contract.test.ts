@@ -23,5 +23,7 @@ describe("solo payments and refunded VIP subscriptions",()=>{
   expect(stripe).toContain("latestId !== invoiceId");
   expect(stripe).toContain('p_status: "expired"');
   expect(stripe).toContain('rpc("apply_ordered_stripe_vip_status"');
+  expect(stripe).toContain('from("stripe_vip_refunded_invoices")');
+  expect(stripe).toContain('if (refunded) status = "expired"');
  });
 });
