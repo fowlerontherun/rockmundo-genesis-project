@@ -59,7 +59,9 @@ export async function getGigViewerReplay(gigId: string): Promise<GigViewerReplay
     .select("id,gig_id,gig_outcome_id,viewer_version,event_schema_version,simulation_seed,duration_ms,event_payload,generated_at,generation_status,checksum")
     .eq("gig_id", gigId)
     .order("generated_at", { ascending: false })
-    .limit(5);
+    // Keep enough history to find a previously ready replay even after
+    // several generating/failed retries. Five rows was too restrictive.
+    .limit(100);
   if (error && isGigSchemaCompatibilityError(error)) {
     logGigExperienceFallback(
       gigId,
