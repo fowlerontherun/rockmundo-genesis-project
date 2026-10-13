@@ -6,6 +6,19 @@
 -- player_profile_activity, player_career_milestones, profile_badges and
 -- achievement tables exist. These migrations are not fully deployed in the
 -- connected production environment; do not apply out of order.
+DO $migration_gate$
+DECLARE v_missing text[];
+BEGIN
+ SELECT array_agg(t.name) INTO v_missing
+ FROM (VALUES ('player_profiles'),('player_profile_badges'),
+              ('player_profile_activity'),('player_career_milestones'),
+              ('profile_badges'),('achievements')) AS t(name)
+ WHERE to_regclass('public.' || t.name) IS NULL;
+ IF v_missing IS NOT NULL THEN
+   RAISE EXCEPTION 'public_profile_dependencies_missing: %',array_to_string(v_missing,',');
+ END IF;
+END $migration_gate$;
+
 CREATE OR REPLACE FUNCTION public.get_public_profile_detail(
   target_profile_id uuid, viewer_profile_id uuid DEFAULT NULL)
 RETURNS jsonb
@@ -184,5 +197,22 @@ USING (
     AND NOT EXISTS(SELECT 1 FROM public.player_profiles settings
       WHERE settings.profile_id=profile_id
       AND (settings.visibility::text<>'public' OR NOT settings.show_activity))
+  )
+);
+
+-- Published career history must not remain visible through a direct API read.
+DROP POLICY IF EXISTS "Public career milestones are readable" ON public.player_career_milestones;
+DROP POLICY IF EXISTS "Public milestones follow character privacy" ON public.player_career_milestones;
+CREATE POLICY "Public milestones follow character privacy"
+ON public.player_career_milestones FOR SELECT TO authenticated
+USING (
+  EXISTS(SELECT 1 FROM public.profiles p
+    WHERE p.id=profile_id AND p.user_id=auth.uid())
+  OR (
+    is_public
+    AND NOT public._social_blocked(public._caller_profile_id(),profile_id)
+    AND NOT EXISTS(SELECT 1 FROM public.player_profiles settings
+      WHERE settings.profile_id=profile_id
+      AND (settings.visibility::text<>'public' OR NOT settings.show_career_history))
   )
 );
