@@ -36,6 +36,7 @@ Deno.serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   let runId: string | null = null;
+  let claimedDay: string | null = null;
   const startedAt = Date.now();
   let streamUpdates = 0;
   let salesUpdates = 0;
@@ -50,6 +51,15 @@ Deno.serve(async (req) => {
   const labelRevenueAccumulator = new Map<string, { labelRevenue: number; recoupmentApplied: number; contractId: string }>();
 
   try {
+    const runDate = new Date().toISOString().slice(0, 10);
+    const { data: claimed, error: claimError } = await supabase.rpc("claim_streaming_simulation_day", { p_day: runDate });
+    if (claimError) throw claimError;
+    if (!claimed) {
+      return new Response(JSON.stringify({ success: true, alreadyProcessed: true, runDate }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    claimedDay = runDate;
     console.log('Starting daily streams and sales update...');
 
     runId = await startJobRun({
@@ -618,6 +628,11 @@ Deno.serve(async (req) => {
         supabaseClient: supabase, durationMs: Date.now() - startedAt,
         error: new Error(`Streaming worker failed more than half of its operations (${errorCount} failures)`),
         resultSummary: { streamUpdates, salesUpdates, errorCount, errorSamples, labelsCredited } });
+      const { error: failedClaimError } = await supabase.rpc("finish_streaming_simulation_day", {
+        p_day: claimedDay, p_success: false,
+        p_error: `Streaming worker had ${errorCount} failed operations`,
+      });
+      if (failedClaimError) throw failedClaimError;
       return new Response(JSON.stringify({ success: false, streamUpdates, salesUpdates,
         errors: errorCount, errorSamples, labelsCredited }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -639,6 +654,10 @@ Deno.serve(async (req) => {
       },
     });
 
+    const { error: finalizeError } = await supabase.rpc("finish_streaming_simulation_day", {
+      p_day: claimedDay, p_success: true,
+    });
+    if (finalizeError) throw finalizeError;
     return new Response(
       JSON.stringify({
         success: !isEffectivelyFailed,
@@ -651,6 +670,12 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
+    if (claimedDay) {
+      const { error: failClaimError } = await supabase.rpc("finish_streaming_simulation_day", {
+        p_day: claimedDay, p_success: false, p_error: getErrorMessage(error),
+      });
+      if (failClaimError) console.error("Could not finalize failed streaming day", failClaimError);
+    }
     await failJobRun({
       jobName: 'update-daily-streams',
       runId,
