@@ -292,72 +292,18 @@ export function BandEarnings({ bandId, isLeader = false }: BandEarningsProps) {
     }
 
     const note = transactionNote.trim();
-    const bandDelta = type === 'deposit' ? parsedAmount : -parsedAmount;
-    const personalDelta = -bandDelta;
-
     setSubmitting(true);
 
     try {
-      // Get latest profile balance
-      const { data: latestProfile } = await supabase
-        .from('profiles')
-        .select('id, cash')
-        .eq('id', profileId!)
-        .single();
-
-      if (!latestProfile) {
-        toast({
-          title: 'Profile required',
-          description: 'Create your artist profile before managing shared funds.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      const currentPersonalCash = latestProfile.cash || 0;
-      const nextPersonalCash = currentPersonalCash + personalDelta;
-      const currentBandBalance = bandInfo.band_balance || 0;
-      const nextBandBalance = currentBandBalance + bandDelta;
-
-      // Validation checks
-      if (type === 'withdraw' && nextBandBalance < 0) {
-        toast({
-          title: 'Insufficient funds',
-          description: 'Your band balance is too low for this withdrawal.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      if (type === 'deposit' && nextPersonalCash < 0) {
-        toast({
-          title: 'Not enough personal funds',
-          description: 'You do not have enough personal cash to make this deposit.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Update personal cash
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ cash: nextPersonalCash })
-        .eq('id', latestProfile.id);
-
-      if (profileError) throw profileError;
-
-      // Insert into band_earnings - trigger will update band_balance automatically
-      const { error: earningsError } = await supabase
-        .from('band_earnings')
-        .insert({
-          band_id: bandId,
-          amount: bandDelta,
-          source: type === 'deposit' ? 'leader_deposit' : 'leader_withdrawal',
-          description: note || null,
-          earned_by_user_id: profileId,
-        });
-
-      if (earningsError) throw earningsError;
+      const { data: balanceAfter, error: transferError } = await (supabase as any).rpc("transfer_band_leader_funds_atomic", {
+        p_band_id: bandId,
+        p_profile_id: profileId,
+        p_amount: parsedAmount,
+        p_direction: type,
+        p_note: note || null,
+      });
+      if (transferError) throw transferError;
+      if (typeof balanceAfter !== "number") throw new Error("Band transfer could not be confirmed");
 
       toast({
         title: type === 'deposit' ? 'Deposit successful' : 'Withdrawal successful',
