@@ -451,81 +451,32 @@ export const useGameEventNotifications = () => {
     channels.push(songwritingChannel);
 
     // === CHART ENTRY (Song charts for the first time or improves position) ===
-    // Rate limited to once every 12 hours per song/chart type
+    // Server atomically creates the alert and claims the 12-hour cooldown.
+    // Client-side read + upsert was not safe across multiple active tabs.
     const chartChannel = supabase
       .channel('chart-notifications')
       .on(
         'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'chart_entries'
-        },
+        { event: 'INSERT', schema: 'public', table: 'chart_entries' },
         async (payload) => {
           const entry = payload.new;
-          
-          // Only notify for top 40 entries
-          if (entry.rank > 40) return;
-          
-          const { data: song } = await supabase
-            .from('songs')
-            .select('title, user_id, band_id')
-            .eq('id', entry.song_id)
-            .single();
-          
-          const isOwner = song?.user_id === user.id || isCurrentBand(song?.band_id);
-          
-          if (isOwner && song) {
-            // Prevent two near-simultaneous chart events from passing the same
-            // cooldown check while a durable notification is still in flight.
-            const chartKey = `${profileId}:${entry.song_id}:${entry.chart_type}`;
-            if (chartInFlightRef.current.has(chartKey)) return;
-            chartInFlightRef.current.add(chartKey);
-            try {
-              const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
-              const { data: existingCooldown, error: cooldownReadError } = await supabase
-                .from('chart_notification_cooldowns' as any)
-                .select('id, last_notified_at')
-                .eq('profile_id', profileId)
-                .eq('song_id', entry.song_id)
-                .eq('chart_type', entry.chart_type)
-                .gte('last_notified_at', twelveHoursAgo)
-                .maybeSingle();
-              if (cooldownReadError || existingCooldown) return;
+          if (!entry?.id || typeof entry.rank !== 'number' || entry.rank > 40) return;
+          if (activeIdentityRef.current.userId !== user.id ||
+              activeIdentityRef.current.profileId !== profileId) return;
 
-              const chartName = entry.chart_type === 'streaming' ? 'Streaming Charts' :
-                entry.chart_type === 'radio_airplay' ? 'Radio Charts' :
-                entry.chart_type === 'record_sales' ? 'Sales Charts' : 'Charts';
-
-              const deliveredId = await notify(entry.rank <= 10 ? {
-                category: 'achievement',
-                type: 'achievement',
-                title: '🏆 Top 10 Hit!',
-                message: `"${song.title}" is #${entry.rank} on the ${chartName}!`,
-                actionPath: '/country-charts',
-              } : {
-                category: 'achievement',
-                type: 'success',
-                title: 'Charting!',
-                message: `"${song.title}" entered the ${chartName} at #${entry.rank}!`,
-                actionPath: '/country-charts',
-              });
-              // Failed delivery must never consume a 12-hour cooldown.
-              if (!deliveredId || activeIdentityRef.current.profileId !== profileId) return;
-              const { error: cooldownWriteError } = await supabase
-                .from('chart_notification_cooldowns' as any)
-                .upsert({
-                  profile_id: profileId,
-                  song_id: entry.song_id,
-                  chart_type: entry.chart_type,
-                  last_notified_at: new Date().toISOString(),
-                }, { onConflict: 'profile_id,song_id,chart_type' });
-              if (cooldownWriteError) console.error('[notifications] chart cooldown persistence failed', cooldownWriteError);
-            } finally {
-              chartInFlightRef.current.delete(chartKey);
-            }
+          const chartKey = `${profileId}:${entry.song_id}:${entry.chart_type}`;
+          if (chartInFlightRef.current.has(chartKey)) return;
+          chartInFlightRef.current.add(chartKey);
+          try {
+            const { error } = await (supabase as any).rpc('create_chart_entry_notification', {
+              p_profile_id: profileId,
+              p_chart_entry_id: entry.id,
+            });
+            if (error) console.error('[notifications] chart alert persistence failed', error);
+          } finally {
+            chartInFlightRef.current.delete(chartKey);
           }
-        }
+        },
       )
       .subscribe();
     channels.push(chartChannel);
