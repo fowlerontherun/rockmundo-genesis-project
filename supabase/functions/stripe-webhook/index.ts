@@ -209,6 +209,30 @@ serve(async (req) => {
       case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice;
         logStep("Payment failed", { invoiceId: invoice.id, customerId: invoice.customer });
+        const parent = invoice.parent;
+        const subscriptionRef = parent?.type === "subscription_details"
+          ? parent.subscription_details?.subscription
+          : null;
+        const subscriptionId = typeof subscriptionRef === "string" ? subscriptionRef : subscriptionRef?.id;
+        if (!subscriptionId) {
+          logStep("Failed invoice is not linked to a subscription", { invoiceId: invoice.id });
+          break;
+        }
+        // Stripe is authoritative for the current state. Do not infer cancellation
+        // from a single failed invoice: the subscription may still be in grace.
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        const { data: existing, error: lookupError } = await supabaseClient
+          .from("vip_subscriptions")
+          .select("user_id")
+          .eq("stripe_subscription_id", subscriptionId)
+          .maybeSingle();
+        if (lookupError) throw lookupError;
+        const userId = subscription.metadata?.user_id
+          || parent?.subscription_details?.metadata?.user_id
+          || existing?.user_id;
+        if (!userId) throw new Error("Cannot reconcile failed VIP invoice without subscription owner");
+        await applyVipStripeStatus(supabaseClient, subscription, userId, event);
+        logStep("Failed invoice subscription status reconciled", { subscriptionId, status: subscription.status });
         break;
       }
 
