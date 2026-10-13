@@ -270,6 +270,7 @@ export async function handleAwardActionXp(
   }
 
   const transactionRef = typeof eventId === "string" && eventId.trim().length > 0 ? eventId.trim() : undefined;
+  if (!transactionRef) throw new Error("Action XP requires a stable idempotency key");
 
   if (transactionRef) {
     const { data: existingLedger, error: existingLedgerError } = await client
