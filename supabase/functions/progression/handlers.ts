@@ -331,8 +331,8 @@ export async function handleAwardActionXp(
 ): Promise<ProfileState> {
   const profileId = profileState.profile.id;
 
-  if (amount <= 0) {
-    throw new Error("XP amount must be positive");
+  if (!Number.isSafeInteger(amount) || amount <= 0 || amount > 250) {
+    throw new Error("Action XP amount must be an integer between 1 and 250");
   }
 
   const transactionRef = typeof eventId === "string" && eventId.trim().length > 0 ? eventId.trim() : undefined;
@@ -374,6 +374,29 @@ export async function handleAwardActionXp(
     healthDrain = Math.round(hourlyRate * hours);
   }
 
+  // Log the XP grant to ledger (will be processed daily)
+  const { error: ledgerError } = await client
+    .from("experience_ledger")
+    .insert({
+      user_id: userId,
+      profile_id: profileId,
+      activity_type: actionKey,
+      xp_amount: amount,
+      metadata: {
+        category,
+        action_key: actionKey,
+        health_drain: healthDrain,
+        pending_daily_process: true,
+        transaction_ref: transactionRef ?? null,
+        ...metadata,
+      },
+    });
+
+  if (ledgerError) {
+    throw new Error(ledgerError.message || "Failed to log XP in ledger");
+  }
+
+  // Never drain health when the XP ledger write failed.
   // Update profile health if needed
   if (healthDrain > 0) {
     const currentHealth = profileState.profile.health ?? 100;
@@ -396,27 +419,6 @@ export async function handleAwardActionXp(
   // The actual wallet update happens in the daily process-daily-activity-xp function
   // This ensures activities are auto-credited the next day with the 250 SXP cap
 
-  // Log the XP grant to ledger (will be processed daily)
-  const { error: ledgerError } = await client
-    .from("experience_ledger")
-    .insert({
-      user_id: userId,
-      profile_id: profileId,
-      activity_type: actionKey,
-      xp_amount: amount,
-      metadata: {
-        category,
-        action_key: actionKey,
-        health_drain: healthDrain,
-        pending_daily_process: true,
-        transaction_ref: transactionRef ?? null,
-        ...metadata,
-      },
-    });
-
-  if (ledgerError) {
-    throw new Error(ledgerError.message || "Failed to log XP in ledger");
-  }
 
   return await fetchProfileState(client, profileId);
 }
