@@ -8,7 +8,12 @@ export const usePlaytimeTracker = (profileId: string | null) => {
     const MAX_IDLE_MS = 2 * 60 * 1000;
     let lastInputAt = 0;
     let inFlight = false;
-    const onInput = () => { if (document.visibilityState === "visible") lastInputAt = Date.now(); };
+    let resetClock = true;
+    const onInput = () => {
+      if (document.visibilityState !== "visible") return;
+      if (!lastInputAt || Date.now() - lastInputAt >= MAX_IDLE_MS) resetClock = true;
+      lastInputAt = Date.now();
+    };
     const canCredit = () => document.visibilityState === "visible"
       && lastInputAt > 0 && Date.now() - lastInputAt < MAX_IDLE_MS;
     const tick = async () => {
@@ -17,8 +22,10 @@ export const usePlaytimeTracker = (profileId: string | null) => {
       try {
         const { error } = await supabase.rpc("record_active_character_playtime" as any, {
           p_profile_id: profileId,
+          p_reset: resetClock,
         });
         if (error) console.warn("Could not persist active playtime:", error.message);
+        else resetClock = false;
       } finally {
         inFlight = false;
       }
