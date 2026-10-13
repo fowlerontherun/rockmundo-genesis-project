@@ -65,11 +65,12 @@ export async function processRetirement(
     }
 
     // 2. Fetch player skills from skill_progress
-    const { data: skillProgressData } = await supabase
+    const { data: skillProgressData, error: skillReadError } = await supabase
       .from("skill_progress")
       .select("skill_slug, current_level")
       .eq("profile_id", profileId);
 
+    if (skillReadError) throw skillReadError;
     const skillsMap: Record<string, number> = {};
     if (skillProgressData) {
       for (const row of skillProgressData) {
@@ -80,12 +81,13 @@ export async function processRetirement(
     }
 
     // 3. Fetch player attributes (flat structure with attribute columns)
-    const { data: playerAttributesData } = await supabase
+    const { data: playerAttributesData, error: attributesError } = await supabase
       .from("player_attributes")
       .select("charisma, looks, mental_focus, musicality, physical_endurance, stage_presence, crowd_engagement, social_reach")
       .eq("profile_id", profileId)
       .single();
 
+    if (attributesError) throw attributesError;
     const attributesMap: Record<string, number> = {};
     if (playerAttributesData) {
       const attrKeys = ['charisma', 'looks', 'mental_focus', 'musicality', 'physical_endurance', 'stage_presence', 'crowd_engagement', 'social_reach'];
@@ -97,19 +99,31 @@ export async function processRetirement(
       });
     }
 
-    // 4. Calculate career stats (using RPC or simple count)
-    const songCount = 0;
+    // Career totals must be owned by the retiring character. Never
+    // substitute account-wide or global figures for missing data.
+    const { count: songCount, error: songCountError } = await supabase
+      .from("songs").select("id", { count: "exact", head: true })
+      .eq("user_id", userId);
+    if (songCountError) throw songCountError;
+    const { count: albumCount, error: albumCountError } = await supabase
+      .from("releases").select("id", { count: "exact", head: true })
+      .eq("user_id", userId).eq("release_type", "album");
+    if (albumCountError) throw albumCountError;
+    // Gigs can be band-owned and are not unambiguously attributable to
+    // a single character. Avoid fabricating a lifetime gig total.
     const gigCount = 0;
-    const albumCount = 0;
-
-    // 5. Get peak chart position
-    const { data: chartData } = await supabase
-      .from("chart_entries")
-      .select("rank")
-      .order("rank", { ascending: true })
-      .limit(1);
-
-    const peakPosition = chartData?.[0]?.rank || null;
+    const { data: songs, error: songIdsError } = await supabase
+      .from("songs").select("id").eq("user_id", userId);
+    if (songIdsError) throw songIdsError;
+    let peakPosition: number | null = null;
+    if (songs?.length) {
+      const { data: chartData, error: chartError } = await supabase
+        .from("chart_entries").select("rank")
+        .in("song_id", songs.map(s => s.id))
+        .order("rank", { ascending: true }).limit(1);
+      if (chartError) throw chartError;
+      peakPosition = chartData?.[0]?.rank ?? null;
+    }
 
     // 6. Get current generation number
     const { data: generations } = await supabase
@@ -154,16 +168,17 @@ export async function processRetirement(
     }
 
     // 9. Create character generation record
-    await supabase.from("character_generations").insert({
+    const { error: generationError } = await supabase.from("character_generations").insert({
       user_id: userId,
       generation_number: currentGeneration + 1,
       parent_character_id: hofEntry.id,
       inherited_cash: inheritance.cash,
       inherited_skills: inheritance.skills,
     });
+    if (generationError) throw generationError;
 
     // 10. Reset profile for new character
-    await supabase
+    const { error: resetError } = await supabase
       .from("profiles")
       .update({
         display_name: null,
@@ -180,14 +195,16 @@ export async function processRetirement(
         character_birth_date: null,
       })
       .eq("id", profileId);
+    if (resetError) throw resetError;
 
     // 11. Reset or apply inherited skills via skill_progress
     if (Object.keys(inheritance.skills).length > 0) {
       // Delete existing skill_progress entries
-      await supabase
+      const { error: deleteSkillsError } = await supabase
         .from("skill_progress")
         .delete()
         .eq("profile_id", profileId);
+      if (deleteSkillsError) throw deleteSkillsError;
 
       // Insert inherited skills
       const skillInserts = Object.entries(inheritance.skills)
@@ -201,7 +218,8 @@ export async function processRetirement(
         }));
 
       if (skillInserts.length > 0) {
-        await supabase.from("skill_progress").insert(skillInserts);
+        const { error: insertSkillsError } = await supabase.from("skill_progress").insert(skillInserts);
+        if (insertSkillsError) throw insertSkillsError;
       }
     }
 
