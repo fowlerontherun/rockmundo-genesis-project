@@ -2,10 +2,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { sendFriendRequest } from "@/integrations/supabase/friends";
 
 export type ConnectionState = "self" | "not_connected" | "outgoing_pending" | "incoming_pending" | "friends" | "blocked_by_viewer" | "viewer_blocked" | "restricted" | "unavailable";
-export type ManagedFriendshipStatus = "pending" | "accepted" | "declined" | "cancelled" | "removed" | "expired" | "blocked";
+export type ManagedFriendshipStatus = "suggested" | "pending" | "accepted" | "declined" | "cancelled" | "removed" | "expired" | "blocked";
 export type FriendListKind = "friends" | "incoming" | "outgoing" | "recent";
 
-export interface FriendSummary { id: string; friendshipId: string; characterName: string; username?: string | null; avatarUrl?: string | null; cityName?: string | null; bandName?: string | null; primaryRole?: string | null; status: ManagedFriendshipStatus; requestedAt: string; friendshipDate?: string | null; mutualFriendCount: number; }
+export interface FriendSummary { id: string; friendshipId: string; characterName: string; username?: string | null; avatarUrl?: string | null; cityName?: string | null; bandName?: string | null; primaryRole?: string | null; status: ManagedFriendshipStatus; requestedAt: string; friendshipDate?: string | null; mutualFriendCount: number | null; }
 
 export async function getConnectionState(targetProfileId: string, viewerProfileId?: string | null): Promise<ConnectionState> {
   const { data, error } = await (supabase as any).rpc("get_connection_state", {
@@ -42,7 +42,7 @@ export async function getFriendRequestCounts(profileId?: string | null): Promise
 }
 
 export async function listFriendships(profileId: string, kind: FriendListKind, search = ""): Promise<FriendSummary[]> {
-  let query = (supabase as any).from("friendships").select("id, requestor_id, addressee_id, status, created_at, responded_at, profiles!friendships_requestor_id_fkey(id, username, display_name, avatar_url, city_name), addressee:profiles!friendships_addressee_id_fkey(id, username, display_name, avatar_url, city_name)").or(`requestor_id.eq.${profileId},addressee_id.eq.${profileId}`).order("updated_at", { ascending: false });
+  let query = (supabase as any).from("friendships").select("id, requestor_id, addressee_id, status, created_at, responded_at, profiles!friendships_requestor_id_fkey(id, username, display_name, avatar_url), addressee:profiles!friendships_addressee_id_fkey(id, username, display_name, avatar_url)").or(`requestor_id.eq.${profileId},addressee_id.eq.${profileId}`).order("updated_at", { ascending: false });
   if (kind === "friends" || kind === "recent") query = query.eq("status", "accepted");
   if (kind === "incoming") query = query.eq("status", "pending").eq("addressee_id", profileId);
   if (kind === "outgoing") query = query.eq("status", "pending").eq("requestor_id", profileId);
@@ -55,7 +55,7 @@ export async function listFriendships(profileId: string, kind: FriendListKind, s
   }
   const summaries: FriendSummary[] = data.map((row) => {
     const other = row.requestor_id === profileId ? row.addressee : row.profiles;
-    return { id: other?.id, friendshipId: row.id, characterName: other?.display_name || other?.username || "Unavailable player", username: other?.username, avatarUrl: other?.avatar_url, cityName: other?.city_name, status: row.status, requestedAt: row.created_at, friendshipDate: row.responded_at, mutualFriendCount: 0 };
+    return { id: other?.id, friendshipId: row.id, characterName: other?.display_name || other?.username || "Unavailable player", username: other?.username, avatarUrl: other?.avatar_url, cityName: null, status: row.status, requestedAt: row.created_at, friendshipDate: row.responded_at, mutualFriendCount: null };
   }).filter(row => Boolean(row.id));
   const ids = summaries.map(row => row.id);
   if (ids.length) {
@@ -73,22 +73,52 @@ export async function listFriendships(profileId: string, kind: FriendListKind, s
       }
     }
   }
+  // A server-authorised aggregate includes mutual friends invisible under
+  // direct friendship RLS. Never display a fabricated "0 mutual friends" when
+  // counts are unavailable or this is not an accepted friendship.
+  if (ids.length && (kind === "friends" || kind === "recent")) {
+    const { data: counts, error: countError } = await (supabase as any)
+      .rpc("get_mutual_friend_counts", {
+        p_profile_id: profileId,
+        p_other_profile_ids: ids,
+      });
+    if (!countError && counts && typeof counts === "object") {
+      for (const friend of summaries) {
+        const value = Number((counts as Record<string, unknown>)[friend.id]);
+        if (Number.isSafeInteger(value) && value >= 0 &&
+            Object.prototype.hasOwnProperty.call(counts, friend.id)) {
+          friend.mutualFriendCount = value;
+        }
+      }
+    }
+  }
   const term = search.trim().toLowerCase();
   return summaries.filter(row => !term || `${row.characterName} ${row.username ?? ""} ${row.cityName ?? ""} ${row.bandName ?? ""} ${row.primaryRole ?? ""}`.toLowerCase().includes(term));
 }
 
 export async function listFriendSuggestions(profileId: string): Promise<FriendSummary[]> {
-  const [existing, incoming, outgoing] = await Promise.all([
-    listFriendships(profileId, "friends"),
-    listFriendships(profileId, "incoming"),
-    listFriendships(profileId, "outgoing"),
-  ]);
-  const { data: blockRows } = await (supabase as any).from("player_blocks").select("blocker_id, blocked_id").or(`blocker_id.eq.${profileId},blocked_id.eq.${profileId}`).is("removed_at", null);
-  const blockedIds = ((blockRows ?? []) as any[]).map((row) => row.blocker_id === profileId ? row.blocked_id : row.blocker_id);
-  const exclude = new Set([profileId, ...existing.map((f) => f.id), ...incoming.map((f) => f.id), ...outgoing.map((f) => f.id), ...blockedIds]);
-  let candidateQuery = (supabase as any).from("profiles").select("id, username, display_name, avatar_url, city_name");
-  if (exclude.size) candidateQuery = candidateQuery.not("id", "in", `(${[...exclude].join(",")})`);
-  const { data, error } = await candidateQuery.order("created_at", { ascending: false }).limit(6);
-  if (error) throw error;
-  return ((data ?? []) as any[]).slice(0, 6).map((p) => ({ id: p.id, friendshipId: "", characterName: p.display_name || p.username || "Player", username: p.username, avatarUrl: p.avatar_url, cityName: p.city_name, status: "pending", requestedAt: new Date().toISOString(), mutualFriendCount: 0, primaryRole: "Suggested because they are active in the community" }));
+  if (!profileId) return [];
+
+  // Do not read raw profiles or client-visible blocks. The SECURITY DEFINER
+  // function checks both block directions, live-character status and profile
+  // visibility before returning any identity or city fields.
+  const { data, error } = await (supabase as any).rpc(
+    "get_safe_friend_suggestions",
+    { p_profile_id: profileId, p_limit: 6 },
+  );
+  if (error) throw error; // Denied / unavailable check must fail closed.
+  if (!Array.isArray(data)) throw new Error("Friend suggestion response is invalid.");
+
+  return data.map((p: any) => ({
+    id: p.id,
+    friendshipId: "",
+    characterName: p.display_name || p.username || "Player",
+    username: p.username,
+    avatarUrl: p.avatar_url,
+    cityName: p.city_name ?? null,
+    status: "suggested" as const,
+    requestedAt: "",
+    mutualFriendCount: null,
+    primaryRole: null,
+  }));
 }
