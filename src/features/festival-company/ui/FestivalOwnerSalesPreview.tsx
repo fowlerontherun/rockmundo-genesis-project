@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { festivalRoutes } from "@/features/festivals/routes";
 import {
   useFestivalLaunchPlan,
-  useFestivalSalesSummary,
-  useFestivalPlayerTicketSalesBreakdown,
+  useFestivalSalesSummaryForLaunch,
+  useFestivalPlayerTicketSalesBreakdownForLaunch,
   usePublicFestival,
 } from "../application/useFestivalLaunch";
 
@@ -46,9 +46,11 @@ export function FestivalOwnerSalesPreview({
   const isLaunched = launchedStatuses.has(launchInfo?.launchStatus ?? "");
   const slug = isLaunched ? launchInfo?.publicSlug ?? undefined : undefined;
   const publicFestival = usePublicFestival(slug);
-  const sales = useFestivalSalesSummary(isLaunched ? festivalCompanyId : undefined);
-  const playerSales = useFestivalPlayerTicketSalesBreakdown(isLaunched ? festivalCompanyId : undefined);
   const current = publicFestival.data;
+  const launchId = isLaunched && festivalDates.length > 0 &&
+    current?.startsAt.slice(0, 10) === festivalDates[0] ? current.id : undefined;
+  const sales = useFestivalSalesSummaryForLaunch(launchId ? festivalCompanyId : undefined, launchId);
+  const playerSales = useFestivalPlayerTicketSalesBreakdownForLaunch(launchId ? festivalCompanyId : undefined, launchId);
 
   if (launch.isLoading || publicFestival.isLoading || sales.isLoading || playerSales.isLoading) return <Card><CardContent className="p-4" role="status">Loading Festival ticket sales…</CardContent></Card>;
   if (launch.isError || publicFestival.isError || sales.isError || playerSales.isError) return <Card><CardContent role="alert" className="p-4">Festival sales information could not be loaded. <Button variant="outline" onClick={() => {void launch.refetch();void publicFestival.refetch();void sales.refetch();void playerSales.refetch();}}>Retry</Button></CardContent></Card>;
