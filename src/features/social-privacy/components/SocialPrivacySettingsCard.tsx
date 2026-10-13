@@ -20,6 +20,8 @@ const visibilityOptions = [
 const dmOptions = [
   { value: "everyone", label: "Everyone" },
   { value: "friends", label: "Friends only" },
+  { value: "friends_and_band", label: "Friends and bandmates" },
+  { value: "existing_conversations", label: "Existing conversations only" },
   { value: "none", label: "No one" },
 ] as const;
 
