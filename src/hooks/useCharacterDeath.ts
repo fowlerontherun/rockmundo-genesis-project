@@ -2,6 +2,23 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
 
+async function assertRecoverySlotAvailable(userId: string): Promise<number> {
+  const { data: slot, error: slotError } = await supabase.from("character_slots")
+    .select("extra_slots_purchased").eq("user_id", userId).maybeSingle();
+  if (slotError) throw slotError;
+  const maxSlots = Math.min(5, 2 + (slot?.extra_slots_purchased ?? 0));
+  const { count, error: countError } = await supabase.from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId).is("deleted_at", null).is("died_at", null);
+  if (countError) throw countError;
+  if (count === null || count >= maxSlots) throw new Error("No character slots available");
+  const { data: last, error: lastError } = await supabase.from("profiles")
+    .select("slot_number").eq("user_id", userId)
+    .order("slot_number", { ascending: false }).limit(1);
+  if (lastError) throw lastError;
+  return (last?.[0]?.slot_number ?? 0) + 1;
+}
+
 export interface DeadCharacter {
   id: string;
   profile_id: string;
@@ -110,19 +127,14 @@ export function useCharacterDeath() {
         if (inherited > 0) inheritedSkills[skill] = inherited;
       }
 
-      // Get next slot number
-      const { count } = await supabase
-        .from("profiles")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id);
-
-      const slotNumber = (count ?? 0) + 1;
+      const slotNumber = await assertRecoverySlotAvailable(user.id);
 
       // Deactivate all other profiles
-      await supabase
+      const { error: deactivateError } = await supabase
         .from("profiles")
         .update({ is_active: false })
         .eq("user_id", user.id);
+      if (deactivateError) throw deactivateError;
 
       const fallbackUsername = `child-of-${parent.character_name.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 24)}-${slotNumber}`;
 
@@ -162,7 +174,8 @@ export function useCharacterDeath() {
       }));
 
       if (skillInserts.length > 0) {
-        await supabase.from("skill_progress").insert(skillInserts);
+        const { error: skillsError } = await supabase.from("skill_progress").insert(skillInserts);
+        if (skillsError) throw new Error(`Character ${newProfile.id} needs inherited-skill reconciliation: ${skillsError.message}`);
       }
 
       return newProfile.id;
@@ -203,33 +216,21 @@ export function useCharacterDeath() {
       const displayName = input?.displayName?.trim() || undefined;
       const providedUsername = input?.username?.trim() || undefined;
 
-      const { count } = await supabase
-        .from("profiles")
+      // Recovery is only valid when no living character exists. Never wipe
+      // healthy siblings or zero their balances on a stale recovery screen.
+      const { count: livingCount, error: livingError } = await supabase.from("profiles")
         .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id);
+        .eq("user_id", user.id).is("died_at", null).is("deleted_at", null);
+      if (livingError) throw livingError;
+      if (livingCount === null || livingCount !== 0)
+        throw new Error("A living character already exists. Switch to that character instead.");
+      const slotNumber = await assertRecoverySlotAvailable(user.id);
 
-      const slotNumber = (count ?? 0) + 1;
-
-      // Retire any prior profiles for this user so their old fame, money and
-      // fan following stay with the retired characters and never bleed into the
-      // fresh start.
-      const nowIso = new Date().toISOString();
-      await supabase
-        .from("profiles")
-        .update({
-          is_active: false,
-          died_at: nowIso,
-          fame: 0,
-          cash: 0,
-          fans: 0,
-        } as any)
-        .eq("user_id", user.id)
-        .is("died_at", null);
-
-      await supabase
+      const { error: deactivateError } = await supabase
         .from("profiles")
         .update({ is_active: false })
         .eq("user_id", user.id);
+      if (deactivateError) throw deactivateError;
 
       const fallbackUsername = `player-${user.id.slice(0, 8)}-${slotNumber}`;
 
