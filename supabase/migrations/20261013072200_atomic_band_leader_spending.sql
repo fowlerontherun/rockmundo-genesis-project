@@ -19,7 +19,9 @@ BEGIN
  IF v_balance < p_budget THEN RAISE EXCEPTION 'Insufficient band funds'; END IF;
  v_boost := CASE WHEN p_budget>=2000 THEN 3.0 WHEN p_budget>=1000 THEN 2.0
                  WHEN p_budget>=500 THEN 1.5 ELSE 1.0 END;
- UPDATE public.bands SET band_balance=v_balance-p_budget WHERE id=p_band_id;
+ -- Band balance is a projection of band_earnings: charge through its ledger trigger.
+ INSERT INTO public.band_earnings(band_id,amount,source,description,earned_by_user_id,profile_id)
+ VALUES(p_band_id,-p_budget,'recruitment_ad','Paid recruitment advert',p_profile_id,p_profile_id);
  INSERT INTO public.band_member_ads(band_id,posted_by_profile_id,instrument_role,vocal_role,
    description,budget_spent,visibility_boost)
  VALUES(p_band_id,p_profile_id,p_instrument,NULLIF(p_vocal,'none'),NULLIF(p_description,''),
@@ -60,7 +62,7 @@ BEGIN
  VALUES(p_band_id,v_delta,
         CASE WHEN p_direction='deposit' THEN 'leader_deposit' ELSE 'leader_withdrawal' END,
         LEFT(NULLIF(p_note,''),400),p_profile_id,p_profile_id);
- RETURN v_balance+v_delta;
+ RETURN (SELECT COALESCE(band_balance,0) FROM public.bands WHERE id=p_band_id);
 END; $$;
 REVOKE ALL ON FUNCTION public.transfer_band_leader_funds_atomic(uuid,uuid,integer,text,text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.transfer_band_leader_funds_atomic(uuid,uuid,integer,text,text) TO authenticated;
