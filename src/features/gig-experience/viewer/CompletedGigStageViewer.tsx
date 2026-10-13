@@ -1,4 +1,4 @@
-import { useGigExperience } from "../hooks";
+import { useGigExperience, useGigViewerReplay } from "../hooks";
 import { GigViewerShell } from "./GigViewerShell";
 import { LiveGigStageView } from "./LiveGigStageView";
 import { GigViewerFallback } from "./GigViewerFallback";
@@ -19,6 +19,7 @@ export function CompletedGigStageViewer({
   onClose?: () => void;
 }) {
   const { data: experience, error, isLoading, isError, refetch } = useGigExperience(gigId);
+  const storedReplay = useGigViewerReplay(gigId, Boolean(experience?.viewer.replayAvailable));
   const noop = () => {};
   const close = onClose ?? noop;
   const diagnostic = isError ? getGigExperienceErrorDisplay(error, gigId) : null;
@@ -43,6 +44,13 @@ export function CompletedGigStageViewer({
         onClose={onClose}
       />
     );
+  }
+
+  // Historical descriptors can claim ready while the stored payload has gone
+  // missing. Use the same deterministic read-only 3D presentation as live gigs.
+  if (experience.viewer.replayAvailable && storedReplay.isError && experience.songs.length > 0) {
+    return <LiveGigStageView gigId={gigId} experience={experience}
+      onViewResult={onViewResult ?? noop} onClose={close} />;
   }
 
   if (experience.viewer.replayAvailable) {
