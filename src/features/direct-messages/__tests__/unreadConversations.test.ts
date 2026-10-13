@@ -27,7 +27,12 @@ describe("unread conversation pagination", () => {
     await expect(countUnreadConversations(fetchPage, verify)).rejects.toThrow("Character switched");
   });
 
-  it("fails instead of undercounting when a page cannot be advanced", async () => {
+  it("returns zero for a new empty thread that has no message timestamp", async () => {
+    const fetchPage = vi.fn(async () => [{ unread_count: 0, last_message_at: null }]);
+    expect(await countUnreadConversations(fetchPage, async () => {})).toBe(0);
+  });
+
+  it("fails instead of undercounting when the cursor cannot be advanced", async () => {
     const fetchPage = vi.fn(async () => [{ unread_count: 2, last_message_at: null }]);
     await expect(countUnreadConversations(fetchPage, async () => {})).rejects.toThrow("Cannot paginate");
   });
