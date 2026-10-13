@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { Inbox as InboxIcon } from "lucide-react";
 import { useUnifiedInbox } from "@/hooks/useUnifiedInbox";
-import { resolveCompanionPath } from "@/mobile/routeRegistry";
+import { resolveNotificationActionPath } from "@/mobile/routeRegistry";
 import { EmptyState } from "../components/EmptyState";
 import { MobileInstantChat } from "../components/MobileInstantChat";
 import { MobileEntityCard, MobileErrorState, MobileLoadingSkeleton, MobilePageShell, MobileSectionHeader, MobileStatusBadge } from "../components/MobilePrimitives";
@@ -23,7 +23,7 @@ function InboxPage() {
     {inbox.unreadCount > 0 && <div className="flex justify-end"><button className="rm-tap rounded-xl border px-3 py-2 text-xs font-semibold" onClick={inbox.markAllAsRead}>Mark all read</button></div>}
     {inbox.error ? <MobileErrorState message="Inbox could not be loaded." onRetry={() => inbox.refetch()} /> : inbox.isLoading ? <MobileLoadingSkeleton /> : inbox.messages.length === 0 ? <EmptyState title="Inbox is clear" message="New game messages, outcomes and alerts will appear here." /> : <div className="space-y-2">{inbox.messages.map(message => {
       const route = message.action_type === "navigate" && typeof message.action_data?.route === "string" ? message.action_data.route : null;
-      return <MobileEntityCard key={message.id} title={message.title} subtitle={`${message.message} • ${fmt(message.created_at)}`} icon={<InboxIcon />} meta={<MobileStatusBadge tone={message.is_read ? "neutral" : "danger"}>{message.is_read ? "Read" : "New"}</MobileStatusBadge>} onPress={() => { inbox.markAsRead(message.id); if (route) navigate(resolveCompanionPath(route)); }} />;
+      return <MobileEntityCard key={message.id} title={message.title} subtitle={`${message.message} • ${fmt(message.created_at)}`} icon={<InboxIcon />} meta={<MobileStatusBadge tone={message.is_read ? "neutral" : "danger"}>{message.is_read ? "Read" : "New"}</MobileStatusBadge>} onPress={() => { inbox.markAsRead(message.id); if (route) navigate(resolveNotificationActionPath(route) ?? "/mobile/inbox"); }} />;
     })}</div>}
   </MobilePageShell>;
 }
