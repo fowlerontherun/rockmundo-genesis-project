@@ -634,7 +634,7 @@ export function BandSettingsTab({
                 </SelectTrigger>
                 <SelectContent>
                   {eligibleLeaders.map((leader) => (
-                    <SelectItem key={leader.user_id} value={leader.user_id}>
+                    <SelectItem key={leader.profile_id} value={leader.profile_id}>
                       {leader.profiles?.display_name || leader.profiles?.username || 'Unknown'}
                     </SelectItem>
                   ))}
