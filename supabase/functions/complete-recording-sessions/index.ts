@@ -17,9 +17,39 @@ const corsHeaders = {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
 
-  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req)
+  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null; sessionId?: string; profileId?: string }>(req)
   const triggeredBy = payload?.triggeredBy ?? req.headers.get('x-triggered-by') ?? undefined
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+
+  const authorization = req.headers.get('authorization')
+  const bearer = authorization?.replace(/^Bearer\\s+/i, '').trim()
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  let manuallyRequestedSessionId: string | null = null
+  if (payload?.sessionId) {
+    if (!bearer || !payload.profileId) {
+      return new Response(JSON.stringify({ error: 'Authenticated character and session required' }), { status: 401, headers: corsHeaders })
+    }
+    const { data: auth, error: authError } = await supabase.auth.getUser(bearer)
+    if (authError || !auth.user) {
+      return new Response(JSON.stringify({ error: 'Not authenticated' }), { status: 401, headers: corsHeaders })
+    }
+    const { data: owned, error: ownedError } = await supabase.from('recording_sessions')
+      .select('id, scheduled_end, status, profile_id, user_id')
+      .eq('id', payload.sessionId)
+      .eq('profile_id', payload.profileId).maybeSingle()
+    const { data: profile, error: profileError } = await supabase.from('profiles')
+      .select('id').eq('id', payload.profileId).eq('user_id', auth.user.id).maybeSingle()
+    if (ownedError || profileError || !owned || !profile) {
+      return new Response(JSON.stringify({ error: 'Recording not owned by active character' }), { status: 403, headers: corsHeaders })
+    }
+    if (!['scheduled', 'in_progress'].includes(owned.status) || !owned.scheduled_end ||
+      Date.parse(owned.scheduled_end) > Date.now()) {
+      return new Response(JSON.stringify({ error: 'Recording is not ready for completion' }), { status: 409, headers: corsHeaders })
+    }
+    manuallyRequestedSessionId = owned.id
+  } else if (!serviceKey || bearer !== serviceKey) {
+    return new Response(JSON.stringify({ error: 'Global recording processing requires service authentication' }), { status: 403, headers: corsHeaders })
+  }
 
   let runId: string | null = null
   const startedAt = Date.now()
@@ -39,17 +69,19 @@ Deno.serve(async (req) => {
     })
 
     try {
-      await supabase.rpc('auto_prepare_recording_travel')
+      if (!manuallyRequestedSessionId) await supabase.rpc('auto_prepare_recording_travel')
     } catch (travelPrepError) {
       console.error('Recording travel preparation failed:', travelPrepError)
     }
 
     const nowIso = new Date().toISOString()
-    const { data: rawSessions, error: sessionsError } = await supabase
+    let sessionsQuery = supabase
       .from('recording_sessions')
       .select('*')
       .in('status', ['in_progress', 'scheduled'])
       .lt('scheduled_end', nowIso)
+    if (manuallyRequestedSessionId) sessionsQuery = sessionsQuery.eq('id', manuallyRequestedSessionId)
+    const { data: rawSessions, error: sessionsError } = await sessionsQuery
     if (sessionsError) throw sessionsError
 
     const songIds = Array.from(new Set((rawSessions || []).map((s: any) => s.song_id).filter(Boolean)))
