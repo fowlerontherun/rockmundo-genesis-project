@@ -91,6 +91,12 @@ export async function recordRelationshipEvent({
     throw new Error("Missing identifiers for relationship event");
   }
 
+  const safeMetadata = { ...(metadata ?? {}) };
+  delete safeMetadata.affinity_value;
+  delete safeMetadata.relationship_pair_key;
+  delete safeMetadata.relationship_profile_id;
+  delete safeMetadata.relationship_actor_profile_id;
+
   const payload: Database["public"]["Tables"]["activity_feed"]["Insert"] = {
     user_id: userId,
     activity_type: activityType,
@@ -99,7 +105,7 @@ export async function recordRelationshipEvent({
     metadata: {
       // Extra descriptive fields are untrusted; never let them replace
       // canonical pair identity or the initiating character.
-      ...metadata,
+      ...safeMetadata,
       [RELATIONSHIP_METADATA_KEY]: otherProfileId,
       [RELATIONSHIP_PAIR_KEY]: buildPairKey(profileId, otherProfileId),
       relationship_actor_profile_id: profileId,
