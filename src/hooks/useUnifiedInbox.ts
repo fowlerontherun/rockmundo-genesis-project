@@ -183,7 +183,7 @@ export function useUnifiedInbox() {
 
   const markAllAsRead = () => {
     inbox.markAllAsRead();
-    notifications.markAllRead();
+    notifications.markAllRead(scopedNotifications.filter((notification) => !notification.read_at).map((notification) => notification.id));
   };
 
   const refetch = async () => {
