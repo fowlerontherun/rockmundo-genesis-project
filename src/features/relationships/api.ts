@@ -13,7 +13,7 @@ import type {
   RelationshipEvent,
   ProfileRow,
 } from "./types";
-import { RELATIONSHIP_EVENT_WEIGHTS, RELATIONSHIP_MILESTONES, FRIENDSHIP_TIERS } from "./config";
+import { RELATIONSHIP_MILESTONES, FRIENDSHIP_TIERS } from "./config";
 
 export type FriendshipStatus = Database["public"]["Enums"]["friendship_status"];
 
@@ -91,17 +91,25 @@ export async function recordRelationshipEvent({
     throw new Error("Missing identifiers for relationship event");
   }
 
-  const affinityValue = RELATIONSHIP_EVENT_WEIGHTS[activityType] ?? 5;
+  const safeMetadata = { ...(metadata ?? {}) };
+  delete safeMetadata.affinity_value;
+  delete safeMetadata.relationship_pair_key;
+  delete safeMetadata.relationship_profile_id;
+  delete safeMetadata.relationship_actor_profile_id;
+
   const payload: Database["public"]["Tables"]["activity_feed"]["Insert"] = {
     user_id: userId,
     activity_type: activityType,
     message,
+    profile_id: profileId,
     metadata: {
+      // Extra descriptive fields are untrusted; never let them replace
+      // canonical pair identity or the initiating character.
+      ...safeMetadata,
       [RELATIONSHIP_METADATA_KEY]: otherProfileId,
       [RELATIONSHIP_PAIR_KEY]: buildPairKey(profileId, otherProfileId),
+      relationship_actor_profile_id: profileId,
       other_profile_user_id: otherUserId ?? null,
-      affinity_value: affinityValue,
-      ...metadata,
     },
   };
 
@@ -135,13 +143,14 @@ export async function fetchRelationshipEvents({
       const { data, error } = await supabase.from("activity_feed")
         .select("id, user_id, activity_type, message, metadata, created_at")
         .in("user_id", ids)
+        .contains("metadata", { [RELATIONSHIP_PAIR_KEY]: pairKey })
         .order("created_at", { ascending: false })
         .range(offset, offset + 499);
       if (error) throw error;
       rows.push(...(data ?? []));
-      if (filterRelationshipEvents(rows, otherProfileId, pairKey, limit).length >= limit || !data || data.length < 500) break;
+      if (filterRelationshipEvents(rows, pairKey, limit).length >= limit || !data || data.length < 500) break;
     }
-    return filterRelationshipEvents(rows, otherProfileId, pairKey, limit);
+    return filterRelationshipEvents(rows, pairKey, limit);
   };
   try {
     return await collect(userIds);
@@ -151,7 +160,7 @@ export async function fetchRelationshipEvents({
   }
 }
 
-function filterRelationshipEvents(
+export function filterRelationshipEvents(
   rows: Array<{ 
     activity_type: string; 
     created_at: string; 
@@ -160,7 +169,6 @@ function filterRelationshipEvents(
     metadata: any; 
     user_id: string;
   }>,
-  otherProfileId: string,
   pairKey: string,
   limit: number,
 ): RelationshipEvent[] {
@@ -175,36 +183,50 @@ function filterRelationshipEvents(
     }))
     .filter((event) => {
       const metadata = event.metadata ?? {};
-      const targetProfileId = (metadata as { [key: string]: unknown })[RELATIONSHIP_METADATA_KEY];
       const targetPairKey = (metadata as { [key: string]: unknown })[RELATIONSHIP_PAIR_KEY];
-      return targetProfileId === otherProfileId || targetPairKey === pairKey;
+      return targetPairKey === pairKey;
     })
     .slice(0, limit);
 
   return filtered;
 }
 
-export function calculateRelationshipSummary(events: RelationshipEvent[]): {
+/**
+ * Relationship XP is awarded by the server-side relationship-action function.
+ * The visible activity timeline is NOT trusted evidence of affinity.
+ */
+export async function fetchVerifiedRelationshipAffinityScore(
+  profileId: string,
+  otherProfileId: string,
+): Promise<number> {
+  if (!profileId || !otherProfileId) return 0;
+  const { data, error } = await (supabase as any).rpc("get_verified_relationship_affinity", {
+    p_profile_id: profileId,
+    p_other_profile_id: otherProfileId,
+  });
+  if (error) throw error;
+  const score = Number(data);
+  if (!Number.isSafeInteger(score) || score < 0) {
+    throw new Error("Invalid verified relationship affinity result");
+  }
+  return score;
+}
+
+export function calculateRelationshipSummary(
+  _events: RelationshipEvent[],
+  verifiedAffinityScore = 0,
+): {
   affinityScore: number;
   tierId: string;
   tierLabel: string;
   tierMinimum: number;
   tierMaximum: number | null;
   progressToNextTier: number;
-  milestoneProgress: Array<{
-    id: string;
-    label: string;
-    threshold: number;
-    achieved: boolean;
-  }>;
+  milestoneProgress: Array<{ id: string; label: string; threshold: number; achieved: boolean }>;
 } {
-  const affinityScore = events.reduce((total, event) => {
-    const weight =
-      (typeof event.metadata?.affinity_value === "number"
-        ? event.metadata.affinity_value
-        : RELATIONSHIP_EVENT_WEIGHTS[event.activityType]) ?? 0;
-    return total + Number(weight);
-  }, 0);
+  // No fallback to client-authored event metadata is allowed.
+  const affinityScore = Number.isSafeInteger(verifiedAffinityScore) &&
+    verifiedAffinityScore >= 0 ? verifiedAffinityScore : 0;
 
   const tier = [...FRIENDSHIP_TIERS].reverse().find((entry) => affinityScore >= entry.minAffinity) ?? FRIENDSHIP_TIERS[0];
   const nextTier = FRIENDSHIP_TIERS.find((entry) => entry.minAffinity > tier.minAffinity);
@@ -323,16 +345,14 @@ export async function fetchBandMemberships(profileId: string): Promise<Array<{
 }
 
 export async function fetchActivityFeedForProfile(profileId: string, limit = 30) {
-  const profile = await fetchProfileById(profileId);
-
-  if (!profile?.user_id) {
-    return [];
-  }
+  if (!profileId) return [];
 
   const { data, error } = await supabase
     .from("activity_feed")
     .select("id, activity_type, message, metadata, created_at")
-    .eq("user_id", profile.user_id)
+    // Account-wide user_id includes sibling characters. Old unscoped rows
+    // deliberately fail closed because they cannot be attributed safely.
+    .eq("profile_id", profileId)
     .order("created_at", { ascending: false })
     .limit(limit);
 

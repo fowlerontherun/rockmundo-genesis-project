@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { calculateRelationshipSummary, fetchRelationshipEvents } from "../api";
+import { calculateRelationshipSummary, fetchRelationshipEvents, fetchVerifiedRelationshipAffinityScore } from "../api";
 import type { RelationshipEvent, RelationshipSummary } from "../types";
 
 interface UseRelationshipEventsParams {
@@ -28,15 +28,19 @@ export function useRelationshipEvents({
         return { events: [], summary: calculateRelationshipSummary([]) };
       }
 
-      const events = await fetchRelationshipEvents({
-        profileId,
-        otherProfileId,
-        userIds: filteredUserIds,
-      });
+      const [events, affinityScore] = await Promise.all([
+        fetchRelationshipEvents({
+          profileId,
+          otherProfileId,
+          userIds: filteredUserIds,
+        }),
+        // Lifetime score is aggregated by the authoritative server ledger.
+        fetchVerifiedRelationshipAffinityScore(profileId, otherProfileId),
+      ]);
 
       return {
         events,
-        summary: calculateRelationshipSummary(events),
+        summary: calculateRelationshipSummary(events, affinityScore),
       };
     },
     enabled: enabled && Boolean(profileId && otherProfileId && filteredUserIds.length > 0),
