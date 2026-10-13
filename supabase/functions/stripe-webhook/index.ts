@@ -206,6 +206,57 @@ serve(async (req) => {
         break;
       }
 
+      case "charge.refunded":
+      case "refund.created":
+      case "refund.updated": {
+        // A full refund of the latest subscription invoice removes the paid
+        // entitlement; partial/old/unrelated refunds must not affect VIP.
+        const refund = event.type.startsWith("refund.")
+          ? event.data.object as Stripe.Refund : null;
+        if (refund && refund.status !== "succeeded") break;
+        const charge = refund
+          ? await stripe.charges.retrieve(typeof refund.charge === "string" ? refund.charge : refund.charge!.id)
+          : event.data.object as Stripe.Charge;
+        if (!charge || charge.amount <= 0 || charge.amount_refunded < charge.amount) {
+          logStep("Ignoring partial or unpaid refund", { eventId: event.id });
+          break;
+        }
+        const invoiceId = typeof charge.invoice === "string" ? charge.invoice : charge.invoice?.id;
+        if (!invoiceId) break;
+        const invoice = await stripe.invoices.retrieve(invoiceId);
+        const parent = invoice.parent;
+        const subscriptionRef = parent?.type === "subscription_details"
+          ? parent.subscription_details?.subscription : null;
+        const subscriptionId = typeof subscriptionRef === "string"
+          ? subscriptionRef : subscriptionRef?.id;
+        if (!subscriptionId) break;
+        const { data: current, error: lookupError } = await supabaseClient
+          .from("vip_subscriptions")
+          .select("user_id")
+          .eq("stripe_subscription_id", subscriptionId)
+          .maybeSingle();
+        if (lookupError) throw lookupError;
+        if (!current?.user_id) break;
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        const latestId = typeof subscription.latest_invoice === "string"
+          ? subscription.latest_invoice : subscription.latest_invoice?.id;
+        if (latestId !== invoiceId) {
+          logStep("Ignoring refund of an earlier VIP billing period", { invoiceId, subscriptionId });
+          break;
+        }
+        const { error } = await supabaseClient.rpc("apply_ordered_stripe_vip_status", {
+          p_subscription_id: subscriptionId,
+          p_user_id: current.user_id,
+          p_status: "expired",
+          p_expires_at: new Date(event.created * 1000).toISOString(),
+          p_event_created: event.created,
+          p_event_id: event.id,
+        });
+        if (error) throw new Error(`VIP refund reconciliation failed: ${error.message}`);
+        logStep("VIP refunded subscription revoked", { subscriptionId, invoiceId, eventId: event.id });
+        break;
+      }
+
       case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice;
         logStep("Payment failed", { invoiceId: invoice.id, customerId: invoice.customer });
