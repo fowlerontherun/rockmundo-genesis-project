@@ -72,21 +72,44 @@ export function sanitizeProfileList(values?: string[] | null) {
 
 export function validatePlayerProfileUpdate(input: PlayerProfileUpdateInput): PlayerProfileUpdateInput {
   if (!input.profile_id) throw new Error("Profile is required before saving social identity settings.");
-  const biography = input.biography == null ? input.biography : sanitizeProfileText(input.biography, BIOGRAPHY_MAX_LENGTH);
-  const status_message = input.status_message == null ? input.status_message : sanitizeProfileText(input.status_message, STATUS_MESSAGE_MAX_LENGTH);
-  return {
-    ...input,
-    biography,
-    status_message,
-    primary_instrument: input.primary_instrument == null ? input.primary_instrument : sanitizeProfileText(input.primary_instrument, 40),
-    vocal_capability: input.vocal_capability == null ? input.vocal_capability : sanitizeProfileText(input.vocal_capability, 40),
-    open_to_work_status: input.open_to_work_status == null ? input.open_to_work_status : sanitizeProfileText(input.open_to_work_status, 60),
-    open_to_band_status: input.open_to_band_status == null ? input.open_to_band_status : sanitizeProfileText(input.open_to_band_status, 60),
-    secondary_instruments: sanitizeProfileList(input.secondary_instruments),
-    preferred_genres: sanitizeProfileList(input.preferred_genres),
-    preferred_roles: sanitizeProfileList(input.preferred_roles),
-    songwriting_specialisms: sanitizeProfileList(input.songwriting_specialisms),
-  };
+
+  // Only include fields supplied by the form. A partial privacy or status edit
+  // must not reset preferences, skills or other profile fields to defaults.
+  const cleaned: PlayerProfileUpdateInput = { profile_id: input.profile_id };
+  const textFields = {
+    biography: BIOGRAPHY_MAX_LENGTH,
+    status_message: STATUS_MESSAGE_MAX_LENGTH,
+    primary_instrument: 40,
+    vocal_capability: 40,
+    open_to_work_status: 60,
+    open_to_band_status: 60,
+  } as const;
+  for (const [key, limit] of Object.entries(textFields)) {
+    const field = key as keyof typeof textFields;
+    if (Object.prototype.hasOwnProperty.call(input, field)) {
+      const value = input[field];
+      (cleaned as unknown as Record<string, unknown>)[field] =
+        value == null ? value : sanitizeProfileText(value, limit);
+    }
+  }
+  const listFields = [
+    "secondary_instruments",
+    "preferred_genres",
+    "preferred_roles",
+    "songwriting_specialisms",
+  ] as const;
+  for (const field of listFields) {
+    if (Object.prototype.hasOwnProperty.call(input, field)) {
+      cleaned[field] = sanitizeProfileList(input[field]);
+    }
+  }
+  const processedKeys = new Set<string>(["profile_id", ...Object.keys(textFields), ...listFields]);
+  for (const [key, value] of Object.entries(input)) {
+    if (!processedKeys.has(key) && value !== undefined) {
+      (cleaned as unknown as Record<string, unknown>)[key] = value;
+    }
+  }
+  return cleaned;
 }
 
 export async function getOwnPlayerSocialProfile(profileId: string): Promise<PlayerSocialProfile | null> {
