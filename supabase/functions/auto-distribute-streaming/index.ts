@@ -133,8 +133,24 @@ Deno.serve(async (req) => {
               : await supabase.from('song_releases').insert(releasePayload);
 
             if (insertError) {
-              console.error(`Error inserting song_release: ${insertError.message}`);
-              if (!failedPlatformIds.includes(platformId)) failedPlatformIds.push(platformId);
+              // Another worker may have inserted the same delivery first.
+              // A unique conflict is only success after verifying an active row.
+              let deliveredByOtherWorker = false;
+              if (insertError.code === '23505') {
+                const { data: concurrentDelivery, error: verifyError } = await supabase
+                  .from('song_releases').select('id')
+                  .eq('song_id',releaseSong.song_id)
+                  .eq('platform_id',platformId)
+                  .eq('release_id',release.id)
+                  .eq('release_type','streaming')
+                  .eq('is_active',true)
+                  .maybeSingle();
+                deliveredByOtherWorker = !verifyError && Boolean(concurrentDelivery);
+              }
+              if (!deliveredByOtherWorker) {
+                console.error(`Error inserting song_release: ${insertError.message}`);
+                if (!failedPlatformIds.includes(platformId)) failedPlatformIds.push(platformId);
+              }
             } else {
               distributionCount++;
               console.log(`Distributed song ${releaseSong.song_id} to ${platform?.platform_name || platformId} (${territoryCountries.length} territories)`);
@@ -145,11 +161,14 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Clear streaming_platforms array after distribution
+      // Atomically remove only completed platforms from the current queue.
+      // Never overwrite newly queued platforms or another worker's progress.
+      const succeeded = platformIds.filter(id => !failedPlatformIds.includes(id));
       const { error: updateError } = await supabase
-        .from('releases')
-        .update({ streaming_platforms: failedPlatformIds })
-        .eq('id', release.id);
+        .rpc('acknowledge_streaming_platform_delivery', {
+          p_release_id: release.id,
+          p_succeeded_platforms: succeeded,
+        });
 
       if (updateError) {
         console.error(`Error clearing streaming_platforms for release ${release.id}:`, updateError.message);
