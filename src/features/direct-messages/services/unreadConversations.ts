@@ -27,12 +27,10 @@ export async function countUnreadConversations(
     total += conversations.reduce((sum, conversation) => sum + conversation.unread_count, 0);
     const nextCursor: string | null = conversations[conversations.length - 1]?.last_message_at ?? null;
     if (!nextCursor) {
-      // The RPC sorts empty conversations (no last message) last. Such rows
-      // cannot contribute unread messages; no timestamp cursor exists for them.
-      const firstEmpty = conversations.findIndex((conversation) => !conversation.last_message_at);
-      if (firstEmpty >= 0 && conversations.slice(firstEmpty).every((conversation) => conversation.unread_count === 0)) {
-        return total;
-      }
+      // Current D4 permits 100 rows per page. A short final page can contain
+      // empty threads (no last_message_at), which have no activity cursor.
+      // Never silently truncate when a full page lacks a usable cursor.
+      if (conversations.length < 100 && conversations[conversations.length - 1]?.unread_count === 0) return total;
       throw new Error("Cannot paginate unread conversations safely");
     }
     if (nextCursor === cursor) {
