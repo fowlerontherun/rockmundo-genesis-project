@@ -292,8 +292,8 @@ Deno.serve(async (req) => {
         const { error: updateError } = await supabase
           .from('recording_sessions')
           .update({
-            status: 'completed',
-            completed_at: new Date().toISOString(),
+            // Keep the session processable until the song and reward stages succeed.
+            status: 'in_progress',
             quality_improvement: qualityImprovement,
             calculation_version: outcome.balanceVersion,
             source_song_quality: outcome.sourceSongQuality,
@@ -336,7 +336,8 @@ Deno.serve(async (req) => {
                   songwriting_project_id: originalSong.songwriting_project_id,
                 })
                 .select('id').single()
-              if (!createError && newSong) {
+              if (createError) throw createError
+              if (newSong) {
                 targetSongId = newSong.id
                 await supabase.from('recording_sessions').update({ song_id: newSong.id }).eq('id', session.id)
               }
@@ -354,6 +355,7 @@ Deno.serve(async (req) => {
             const songUpdate: Record<string, unknown> = { quality_score: newQuality, status: 'recorded', updated_at: new Date().toISOString() }
             if (session.band_id) songUpdate.band_id = session.band_id
             const { error: songUpdateError } = await supabase.from('songs').update(songUpdate).eq('id', session.song_id)
+            if (songUpdateError) throw songUpdateError
             if (!songUpdateError) {
               try {
                 const { data: songData } = await supabase.from('songs').select('audio_url, audio_generation_status').eq('id', session.song_id).single()
@@ -402,6 +404,12 @@ Deno.serve(async (req) => {
             }
           } catch (_) {}
         }
+
+        const { error: completionError } = await supabase.from('recording_sessions')
+          .update({ status: 'completed', completed_at: new Date().toISOString() })
+          .eq('id', session.id)
+          .eq('status', 'in_progress')
+        if (completionError) throw completionError
 
         completedCount++
         totalXpAwarded += xpEarned
