@@ -16,7 +16,12 @@ DECLARE
  v_page integer;
  v_page_size integer;
  v_city text;
+ v_region text;
  v_genre text;
+ v_secondary_instrument text;
+ v_employment text;
+ v_band_status text;
+ v_career_level text;
  v_role text;
  v_instrument text;
  v_fame_min integer;
@@ -38,6 +43,11 @@ BEGIN
  v_page_size:=least(greatest(
    CASE WHEN (v_query->>'pageSize')~'^[0-9]{1,3}$' THEN (v_query->>'pageSize')::integer ELSE 18 END,1),48);
  v_city:=nullif(btrim(v_filters->>'city'),'');
+ v_region:=nullif(btrim(v_filters->>'region'),'');
+ v_secondary_instrument:=nullif(btrim(v_filters->>'secondaryInstrument'),'');
+ v_employment:=nullif(btrim(v_filters->>'employmentStatus'),'');
+ v_band_status:=nullif(btrim(v_filters->>'bandStatus'),'');
+ v_career_level:=nullif(btrim(v_filters->>'careerLevel'),'');
  v_genre:=nullif(btrim(v_filters->>'genre'),'');
  v_role:=nullif(btrim(v_filters->>'role'),'');
  v_instrument:=nullif(btrim(v_filters->>'instrument'),'');
@@ -48,7 +58,7 @@ BEGIN
  -- Unsupported filters are explicit until authoritative data is available.
  SELECT key INTO v_bad_filter
  FROM jsonb_object_keys(v_filters) key
- WHERE key IN ('region','employmentStatus','skillBand')
+ WHERE key IN ('skillBand')
    AND nullif(btrim(coalesce(v_filters->>key,'')),'') IS NOT NULL
    AND v_filters->>key NOT IN ('any','all')
  LIMIT 1;
@@ -123,6 +133,18 @@ BEGIN
     AND (v_search IS NULL OR p.username ILIKE '%'||v_search||'%'
       OR coalesce(p.display_name,'') ILIKE '%'||v_search||'%')
     AND (v_city IS NULL OR (social.show_city AND c.name=v_city))
+    AND (v_region IS NULL OR (social.show_city AND c.region=v_region))
+    AND (v_career_level IS NULL OR v_career_level=p.level::text
+      OR v_career_level='Level '||p.level::text)
+    AND (v_employment IS NULL OR social.open_to_work_status=v_employment
+      OR (v_employment='available' AND social.available_for_employment))
+    AND (v_band_status IS NULL OR
+      (v_band_status IN ('in-band','has-band') AND EXISTS(
+       SELECT 1 FROM public.band_members bm WHERE bm.profile_id=p.id
+        AND coalesce(bm.member_status,'active')='active' AND social.show_career_history))
+      OR (v_band_status IN ('solo','no-band') AND NOT EXISTS(
+       SELECT 1 FROM public.band_members bm WHERE bm.profile_id=p.id
+        AND coalesce(bm.member_status,'active')='active')))
     AND (v_fame_max IS NULL OR coalesce(p.fame,0)<=v_fame_max)
     AND coalesce(p.fame,0)>=v_fame_min
     AND (v_genre IS NULL OR v_genre=ANY(social.preferred_genres)
@@ -135,6 +157,11 @@ BEGIN
        OR EXISTS (SELECT 1 FROM unnest(social.secondary_instruments) s
            WHERE lower(s)=lower(v_instrument))
     )))
+    AND (v_secondary_instrument IS NULL OR (social.show_skills
+       AND EXISTS (SELECT 1 FROM unnest(social.secondary_instruments) s
+        WHERE lower(s)=lower(v_secondary_instrument))))
+    AND (coalesce((v_filters->>'vocalCapability')::boolean,false)=false OR
+      (social.show_skills AND social.vocal_capability IS NOT NULL))
     AND (v_role IS NULL OR (
        (v_role='musician' AND social.show_skills AND
         (social.primary_instrument IS NOT NULL OR cardinality(social.secondary_instruments)>0))
