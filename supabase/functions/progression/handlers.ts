@@ -220,82 +220,16 @@ export async function handleUnlearnSkill(
   metadata: Record<string, unknown> = {},
 ): Promise<{ state: ProfileState; refundedXp: number; skillProgress: SkillProgressRow | null }> {
   const profileId = profileState.profile.id;
-  const { data: skill, error: skillFetchError } = await client
-    .from("skill_progress")
-    .select("*")
-    .eq("profile_id", profileId)
-    .eq("skill_slug", skillSlug)
-    .maybeSingle();
-
-  if (skillFetchError) {
-    throw new Error(skillFetchError.message || "Failed to fetch skill");
-  }
-
-  if (!skill) {
-    throw new Error("No progress found for this skill");
-  }
-
-  const currentLevel = Math.max(0, skill.current_level ?? 0);
-  const currentXp = Math.max(0, skill.current_xp ?? 0);
-
-  // Total XP invested = sum of required XP for each completed level + current xp in progress
-  let totalInvested = currentXp;
-  for (let L = 0; L < currentLevel; L++) {
-    totalInvested += calculateRequiredXp(L);
-  }
-
-  if (totalInvested <= 0) {
-    throw new Error("Nothing to unlearn for this skill");
-  }
-
-  const refundedXp = Math.floor(totalInvested * 0.8);
-
-  // Reset skill progress to zero
-  const { error: resetError } = await client
-    .from("skill_progress")
-    .update({
-      current_xp: 0,
-      current_level: 0,
-      required_xp: calculateRequiredXp(0),
-      last_practiced_at: new Date().toISOString(),
-      metadata: { ...(metadata || {}), unlearned_at: new Date().toISOString(), refunded_xp: refundedXp, balance_version: PROGRESSION_BALANCE_VERSION } as Record<string, string | number | boolean | null>,
-    })
-    .eq("profile_id", profileId)
-    .eq("skill_slug", skillSlug);
-
-  if (resetError) {
-    throw new Error(resetError.message || "Failed to reset skill progress");
-  }
-
-  // Credit refund to wallet
-  const currentSxpBalance = profileState.wallet?.skill_xp_balance ?? profileState.wallet?.xp_balance ?? 0;
-  const currentSxpSpent = profileState.wallet?.skill_xp_spent ?? profileState.wallet?.xp_spent ?? 0;
-  const newSpent = Math.max(0, currentSxpSpent - refundedXp);
-
-  const { error: walletError } = await client
-    .from("player_xp_wallet")
-    .update({
-      skill_xp_balance: currentSxpBalance + refundedXp,
-      skill_xp_spent: newSpent,
-      xp_balance: currentSxpBalance + refundedXp,
-      xp_spent: newSpent,
-      last_recalculated: new Date().toISOString(),
-    })
-    .eq("profile_id", profileId);
-
-  if (walletError) {
-    throw new Error(walletError.message || "Failed to refund SXP");
-  }
-
-  const { data: updatedSkillProgress } = await client
-    .from("skill_progress")
-    .select("*")
-    .eq("profile_id", profileId)
-    .eq("skill_slug", skillSlug)
-    .maybeSingle();
-
-  const state = await fetchProfileState(client, profileId);
-  return { state, refundedXp, skillProgress: updatedSkillProgress };
+  const { data, error } = await client.rpc("unlearn_skill_atomic" as any, {
+    p_profile_id: profileId,
+    p_skill_slug: skillSlug,
+    p_metadata: metadata,
+  });
+  if (error) throw new Error(error.message || "Unable to unlearn skill");
+  const { data: skillProgress, error: readError } = await client.from("skill_progress")
+    .select("*").eq("profile_id",profileId).eq("skill_slug",skillSlug).maybeSingle();
+  if (readError) throw readError;
+  return { state: await fetchProfileState(client, profileId), refundedXp: Number(data ?? 0), skillProgress };
 }
 
 // AP to SXP conversion rate
@@ -331,11 +265,12 @@ export async function handleAwardActionXp(
 ): Promise<ProfileState> {
   const profileId = profileState.profile.id;
 
-  if (amount <= 0) {
-    throw new Error("XP amount must be positive");
+  if (!Number.isSafeInteger(amount) || amount <= 0 || amount > 250) {
+    throw new Error("Action XP amount must be an integer between 1 and 250");
   }
 
   const transactionRef = typeof eventId === "string" && eventId.trim().length > 0 ? eventId.trim() : undefined;
+  if (!transactionRef) throw new Error("Action XP requires a stable idempotency key");
 
   if (transactionRef) {
     const { data: existingLedger, error: existingLedgerError } = await client
@@ -374,6 +309,29 @@ export async function handleAwardActionXp(
     healthDrain = Math.round(hourlyRate * hours);
   }
 
+  // Log the XP grant to ledger (will be processed daily)
+  const { error: ledgerError } = await client
+    .from("experience_ledger")
+    .insert({
+      user_id: userId,
+      profile_id: profileId,
+      activity_type: actionKey,
+      xp_amount: amount,
+      metadata: {
+        category,
+        action_key: actionKey,
+        health_drain: healthDrain,
+        pending_daily_process: true,
+        transaction_ref: transactionRef ?? null,
+        ...metadata,
+      },
+    });
+
+  if (ledgerError) {
+    throw new Error(ledgerError.message || "Failed to log XP in ledger");
+  }
+
+  // Never drain health when the XP ledger write failed.
   // Update profile health if needed
   if (healthDrain > 0) {
     const currentHealth = profileState.profile.health ?? 100;
@@ -396,27 +354,6 @@ export async function handleAwardActionXp(
   // The actual wallet update happens in the daily process-daily-activity-xp function
   // This ensures activities are auto-credited the next day with the 250 SXP cap
 
-  // Log the XP grant to ledger (will be processed daily)
-  const { error: ledgerError } = await client
-    .from("experience_ledger")
-    .insert({
-      user_id: userId,
-      profile_id: profileId,
-      activity_type: actionKey,
-      xp_amount: amount,
-      metadata: {
-        category,
-        action_key: actionKey,
-        health_drain: healthDrain,
-        pending_daily_process: true,
-        transaction_ref: transactionRef ?? null,
-        ...metadata,
-      },
-    });
-
-  if (ledgerError) {
-    throw new Error(ledgerError.message || "Failed to log XP in ledger");
-  }
 
   return await fetchProfileState(client, profileId);
 }
