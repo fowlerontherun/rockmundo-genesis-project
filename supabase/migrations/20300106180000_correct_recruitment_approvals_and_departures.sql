@@ -237,11 +237,11 @@ BEGIN
   IF v_application IS NULL THEN
     -- Legacy memberships: release only if exactly one accepted vacancy
     -- application identifies the departing character; do not guess a slot.
-    SELECT max(a.id) INTO v_application
+    SELECT CASE WHEN count(*)=1 THEN (array_agg(a.id))[1] END
+    INTO v_application
     FROM public.band_applications a WHERE a.band_id=OLD.band_id
       AND a.applicant_profile_id=OLD.profile_id AND a.status='accepted'
-      AND a.vacancy_id IS NOT NULL
-    HAVING count(*)=1;
+      AND a.vacancy_id IS NOT NULL;
   END IF;
   IF v_application IS NULL THEN RETURN NULL; END IF;
 
@@ -261,7 +261,6 @@ BEGIN
   WHERE bm.band_id=OLD.band_id
     AND COALESCE(bm.member_status,'active')='active'
     AND NOT COALESCE(bm.is_touring_member,false);
-  IF TG_OP='DELETE' THEN v_active_members := GREATEST(v_active_members-1,0); END IF;
   SELECT COALESCE(sum(GREATEST(v.positions_available-v.positions_filled,0)),0)
     INTO v_reserved FROM public.band_vacancies v
   WHERE v.band_id=OLD.band_id AND v.id<>v_vacancy AND v.status='open'
