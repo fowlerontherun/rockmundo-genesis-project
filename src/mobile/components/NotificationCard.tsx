@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import type { PersistedNotification } from "@/hooks/useNotificationsFeed";
 import { formatDistanceToNow } from "date-fns";
-import { resolveCompanionPath } from "@/mobile/routeRegistry";
+import { resolveNotificationActionPath } from "@/mobile/routeRegistry";
 
 interface NotificationCardProps {
   n: PersistedNotification;
@@ -15,7 +15,7 @@ export const NotificationCard = ({ n, onRead }: NotificationCardProps) => {
   const unread = !n.read_at;
   const handle = () => {
     if (unread) onRead?.(n.id);
-    const target = resolveCompanionPath(n.action_path);
+    const target = resolveNotificationActionPath(n.action_path);
     if (target) navigate(target);
   };
   return (
