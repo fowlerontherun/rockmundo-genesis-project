@@ -119,19 +119,45 @@ export async function deleteBandVacancy(vacancyId: string) {
   return Boolean(data);
 }
 
+/** Never present filled or past-deadline adverts as available roles. */
+export function isVacancyApplyable(vacancy: Pick<BandVacancy, "status" | "positions_available" | "positions_filled" | "application_deadline">, now = Date.now()) {
+  if (vacancy.status !== "open" || vacancy.positions_filled >= vacancy.positions_available) return false;
+  return !vacancy.application_deadline || new Date(vacancy.application_deadline).getTime() > now;
+}
+
 export async function searchBandVacancies(filters: Record<string, string | boolean | undefined> = {}, page = 0, pageSize = 20) {
-  let query = supabase
-    .from("band_vacancies" as never)
-    .select("*, bands(name, genre, logo_url)")
-    .eq("status", "open")
-    .eq("visibility", "public")
-    .range(page * pageSize, page * pageSize + pageSize - 1)
-    .order("created_at", { ascending: false });
-  if (filters.instrument) query = query.eq("instrument", filters.instrument as string);
-  if (filters.commitment_level) query = query.eq("commitment_level", filters.commitment_level as string);
-  const { data, error } = await query;
-  if (error) throw error;
-  return (data ?? []) as unknown as BandVacancy[];
+  // A PostgREST filter cannot compare two columns (positions_filled <
+  // positions_available). Scan stable server-sorted batches and page *after*
+  // removing already filled records. Filtering a single requested page would
+  // silently leave holes and hide eligible adverts on later pages.
+  const size = Math.max(1, Math.min(100, Math.trunc(pageSize)));
+  const offsetWanted = Math.max(0, Math.trunc(page)) * size;
+  const eligible: BandVacancy[] = [];
+  const now = Date.now();
+  const deadline = new Date(now).toISOString();
+
+  for (let offset = 0; offset < 100_000 && eligible.length < offsetWanted + size; offset += 100) {
+    let query = supabase
+      .from("band_vacancies" as never)
+      .select("*, bands(name, genre, logo_url)")
+      .eq("status", "open")
+      .eq("visibility", "public")
+      .or(`application_deadline.is.null,application_deadline.gt.${deadline}`)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(offset, offset + 99);
+    if (filters.instrument) query = query.eq("instrument", filters.instrument as string);
+    if (filters.commitment_level) query = query.eq("commitment_level", filters.commitment_level as string);
+    const { data, error } = await query;
+    if (error) throw error;
+    const rows = (data ?? []) as unknown as BandVacancy[];
+    eligible.push(...rows.filter((vacancy) => isVacancyApplyable(vacancy, now)));
+    if (rows.length < 100) return eligible.slice(offsetWanted, offsetWanted + size);
+  }
+  if (eligible.length < offsetWanted + size) {
+    throw new Error("The vacancy search exceeded its supported page range.");
+  }
+  return eligible.slice(offsetWanted, offsetWanted + size);
 }
 
 export async function applyToVacancy(
