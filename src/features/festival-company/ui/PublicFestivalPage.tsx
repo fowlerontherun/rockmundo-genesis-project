@@ -27,6 +27,7 @@ import { referralAwareDestination } from "@/features/shareable-moments/referralD
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { SponsorIdentity } from "./SponsorIdentity";
 import { canOfferFestivalCheckIn, canStartFestivalTicketPurchase } from "./publicFestivalEligibility";
+import { canDisplayFestivalCheckInMessage, festivalVisitorSalesLabel, formatFestivalEditionDate, hasIssuedFestivalAdmission, isPublishedFestivalPerformance } from "./festivalPublicDisplay";
 
 const Countdown = ({ target }: { target: string }) => {
   const [now, setNow] = useState(() => Date.now());
@@ -130,16 +131,12 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   const hasPurchasingCharacter = canStartFestivalTicketPurchase(Boolean(user), profileId);
   const myFestivalTickets = ticketWallet.filter((ticket) => ticket.festivalSlug === f.slug);
   const myWristband = festivalMemorabilia.find((item) => item.festivalLaunchId === f.id && item.attendanceId === myAttendance?.id);
-  const hasAdmissionTicket = myFestivalTickets.some(
-    (ticket) => ticket.productClass === "admission" && !["cancelled", "refunded", "transferred", "used"].includes(ticket.status),
-  );
+  const hasAdmissionTicket = hasIssuedFestivalAdmission(myFestivalTickets);
 
   // The simplified timetable contains automatically generated provisional slots.
   // Only the authoritative confirmed lineup may be advertised publicly.
   const confirmedLineup = f.lineup ?? [];
-  const publishedPerformances = confirmedLineup.filter(
-    (entry) => entry.startsAt && entry.endsAt && entry.stageName,
-  );
+  const publishedPerformances = confirmedLineup.filter(isPublishedFestivalPerformance);
   const dayLabel = (festivalDate: string | null) => festivalDate
     ? new Date(`${festivalDate}T12:00:00Z`).toLocaleDateString("en-GB", {
         weekday: "long", day: "numeric", month: "long", timeZone: "UTC",
@@ -174,8 +171,8 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
             <h1 className="mt-4 text-4xl font-black md:text-7xl">{f.name}</h1>
             <p className="mt-3 max-w-3xl text-lg">{f.tagline}</p>
             <p className="mt-5">
-              {f.city}, {f.country} · {new Date(f.startsAt).toLocaleDateString("en-GB")}–
-              {new Date(f.endsAt).toLocaleDateString("en-GB")}
+              {f.city}, {f.country} · {formatFestivalEditionDate(f.startsAt, f.timezone)}–
+              {formatFestivalEditionDate(f.endsAt, f.timezone)}
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               <Button variant="secondary" onClick={async () => { const destinationUrl = await referralAwareDestination(profileId, window.location.href, "festival_share"); setShareMoment({
@@ -186,7 +183,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                 headline: f.name,
                 subheadline: [f.city, f.country, f.tagline].filter(Boolean).join(" · "),
                 metrics: [
-                  { label: "Starts", value: new Date(f.startsAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) },
+                  { label: "Starts", value: formatFestivalEditionDate(f.startsAt, f.timezone, { day: "numeric", month: "short", year: "numeric" }) },
                   { label: "Line-up", value: String(confirmedLineup.length) + " acts" },
                   { label: "Stages", value: String(f.stages.length) },
                   ...(f.ticketSales ? [{ label: "Tickets sold", value: f.ticketSales.admissionTicketsSold.toLocaleString("en-GB") }] : []),
@@ -255,7 +252,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                   {myAttendance.includesCamping ? " · Camping included" : ""}
                   {myAttendance.includesVipArea ? " · VIP access" : ""}
                 </p>
-                {myCheckInEligibility && (
+                {canDisplayFestivalCheckInMessage(Boolean(myCheckInEligibility), Boolean(walletError), Boolean(eligibilityError)) && myCheckInEligibility && (
                   <p className="mt-1 text-sm text-muted-foreground">
                     {checkInMessage(myCheckInEligibility)}
                   </p>
@@ -531,9 +528,9 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                 <h3 className="font-semibold">Your festival at a glance</h3>
                 <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
                   <div><dt className="text-muted-foreground">Location</dt><dd className="font-medium">{[f.city, f.country].filter(Boolean).join(", ")}</dd></div>
-                  <div><dt className="text-muted-foreground">Dates</dt><dd className="font-medium">{new Date(f.startsAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} – {new Date(f.endsAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</dd></div>
+                  <div><dt className="text-muted-foreground">Dates</dt><dd className="font-medium">{formatFestivalEditionDate(f.startsAt, f.timezone, { day: "numeric", month: "long", year: "numeric" })} – {formatFestivalEditionDate(f.endsAt, f.timezone, { day: "numeric", month: "long", year: "numeric" })}</dd></div>
                   <div><dt className="text-muted-foreground">Festival style</dt><dd className="font-medium">{f.festivalType || "Not yet confirmed"}</dd></div>
-                  <div><dt className="text-muted-foreground">Ticket sales</dt><dd className="font-medium">{f.launchStatus === "tickets_on_sale" ? "On sale" : eventPhase === "dates_ended" ? "Festival ended" : "Not currently on sale"}</dd></div>
+                  <div><dt className="text-muted-foreground">Ticket sales</dt><dd className="font-medium">{festivalVisitorSalesLabel(eventPhase, f.launchStatus)}</dd></div>
                 </dl>
               </div>
             </header>
@@ -541,11 +538,11 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
               <section className="rounded-xl border bg-card p-5" aria-labelledby="visitor-opening-times">
                 <h3 id="visitor-opening-times" className="text-lg font-bold">Opening times & performances</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  The festival runs from {new Date(f.startsAt).toLocaleDateString("en-GB", { day: "numeric", month: "long" })} to {new Date(f.endsAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}.
+                  The festival runs from {formatFestivalEditionDate(f.startsAt, f.timezone, { day: "numeric", month: "long" })} to {formatFestivalEditionDate(f.endsAt, f.timezone, { day: "numeric", month: "long", year: "numeric" })}.
                 </p>
-                {confirmedLineup.some((act) => act.startsAt && act.endsAt) ? (
+                {publishedPerformances.length > 0 ? (
                   <>
-                    <p className="mt-3 text-sm">{confirmedLineup.filter((act) => act.startsAt && act.endsAt).length} confirmed published performance{confirmedLineup.filter((act) => act.startsAt && act.endsAt).length === 1 ? "" : "s"}.</p>
+                    <p className="mt-3 text-sm">{publishedPerformances.length} confirmed published performance{publishedPerformances.length === 1 ? "" : "s"}.</p>
                     <p className="mt-2 text-sm">See the <strong>Timetable</strong> tab for confirmed stage times.</p>
                   </>
                 ) : <p className="mt-3 text-sm text-muted-foreground">Performance times have not been published yet. Gate opening and curfew times are not confirmed.</p>}
@@ -572,7 +569,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                 <details className="py-3">
                   <summary className="cursor-pointer font-medium">When is the festival?</summary>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    {new Date(f.startsAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} to {new Date(f.endsAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} in {f.city}, {f.country}.
+                    {formatFestivalEditionDate(f.startsAt, f.timezone, { day: "numeric", month: "long", year: "numeric" })} to {formatFestivalEditionDate(f.endsAt, f.timezone, { day: "numeric", month: "long", year: "numeric" })} in {f.city}, {f.country}.
                   </p>
                 </details>
                 <details className="py-3">
