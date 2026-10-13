@@ -14,11 +14,11 @@ BEGIN
  PERFORM pg_advisory_xact_lock(hashtext('rockmundo:chart:' || p_chart_date::text));
  DELETE FROM public.chart_entries WHERE chart_date=p_chart_date;
  INSERT INTO public.chart_entries
-   (song_id,chart_type,rank,plays_count,weekly_plays,combined_score,chart_date,genre,country,entry_type)
- SELECT song_id,chart_type,rank,plays_count,weekly_plays,combined_score,chart_date,genre,country,entry_type
+   (song_id,chart_type,rank,plays_count,weekly_plays,combined_score,chart_date,genre,country,entry_type,release_id)
+ SELECT song_id,chart_type,rank,plays_count,weekly_plays,combined_score,chart_date,genre,country,entry_type,release_id
  FROM jsonb_to_recordset(p_entries) AS x(
    song_id uuid,chart_type text,rank integer,plays_count bigint,weekly_plays bigint,
-   combined_score bigint,chart_date date,genre text,country text,entry_type text
+   combined_score bigint,chart_date date,genre text,country text,entry_type text,release_id uuid
  );
  GET DIAGNOSTICS v_count=ROW_COUNT;
  RETURN v_count;
