@@ -1,6 +1,9 @@
 import { useEffect, useRef } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { getActiveProfile } from "@/services/profileService";
+import { countUnreadConversations } from "@/features/direct-messages/services/unreadConversations";
 import { sendDirectMessage as sendDirectMessageService } from "@/features/direct-messages/services/directMessages";
 import {
   getConversationMessages,
@@ -46,7 +49,7 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
   const conversationId = groupConversationId ?? conversationQuery.data?.conversation_id ?? null;
 
   const messagesQuery = useQuery({
-    queryKey: ["direct-messages", conversationId ?? channelId],
+    queryKey: ["direct-messages", myProfileId, conversationId ?? channelId],
     enabled: !!myProfileId && !!channelId && (!!groupConversationId || !!conversationId),
     queryFn: async (): Promise<DirectMessageRow[]> => {
       if (groupConversationId) {
@@ -90,7 +93,7 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
           filter,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ["direct-messages", conversationId ?? channelId] });
+          queryClient.invalidateQueries({ queryKey: ["direct-messages", myProfileId, conversationId ?? channelId] });
           queryClient.invalidateQueries({ queryKey: ["direct-conversation", myProfileId, directOtherProfileId] });
           queryClient.invalidateQueries({ queryKey: ["dm-unread", myProfileId] });
           queryClient.invalidateQueries({ queryKey: ["mobile-conversations", myProfileId] });
@@ -98,16 +101,16 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
       )
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
-          void queryClient.invalidateQueries({ queryKey: ["direct-messages", conversationId ?? channelId] });
+          void queryClient.invalidateQueries({ queryKey: ["direct-messages", myProfileId, conversationId ?? channelId] });
           void queryClient.invalidateQueries({ queryKey: ["dm-unread", myProfileId] });
         }
       });
     const timer = window.setInterval(() => {
-      void queryClient.invalidateQueries({ queryKey: ["direct-messages", conversationId ?? channelId] });
+      void queryClient.invalidateQueries({ queryKey: ["direct-messages", myProfileId, conversationId ?? channelId] });
     }, 15000);
     const onVisible = () => {
       if (document.visibilityState === "visible") {
-        void queryClient.invalidateQueries({ queryKey: ["direct-messages", conversationId ?? channelId] });
+        void queryClient.invalidateQueries({ queryKey: ["direct-messages", myProfileId, conversationId ?? channelId] });
         void queryClient.invalidateQueries({ queryKey: ["dm-unread", myProfileId] });
       }
     };
@@ -138,7 +141,7 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
     },
     onSuccess: () => {
       retryIdentity.current = null;
-      queryClient.invalidateQueries({ queryKey: ["direct-messages", conversationId ?? channelId] });
+      queryClient.invalidateQueries({ queryKey: ["direct-messages", myProfileId, conversationId ?? channelId] });
       queryClient.invalidateQueries({ queryKey: ["mobile-conversations", myProfileId] });
     },
   });
@@ -179,22 +182,24 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
 
 export function useUnreadDirectMessageCount(myProfileId?: string | null) {
   const queryClient = useQueryClient();
+  const { userId, profileId: activeProfileId } = useActiveProfile();
   const query = useQuery({
-    queryKey: ["dm-unread", myProfileId],
-    enabled: !!myProfileId,
+    // The RPC determines its viewer from the active character. Never cache a
+    // different character's unread messages under an old profile's key.
+    queryKey: ["dm-unread", myProfileId, activeProfileId],
+    enabled: !!userId && !!myProfileId && activeProfileId === myProfileId,
     queryFn: async () => {
-      if (!myProfileId) return 0;
-      let total = 0;
-      let cursor: string | null = null;
-      for (let page = 0; page < 100; page++) {
-        const conversations = await listConversations({ limit: 100, cursor, skipContextSync: true });
-        total += conversations.reduce((sum, conversation) => sum + conversation.unread_count, 0);
-        if (conversations.length < 100) return total;
-        const nextCursor: string | null = conversations[conversations.length - 1]?.last_message_at ?? null;
-        if (!nextCursor || nextCursor === cursor) throw new Error("Cannot paginate unread conversations safely");
-        cursor = nextCursor;
-      }
-      throw new Error("Unread conversations exceed the supported scan limit");
+      if (!myProfileId || !userId || activeProfileId !== myProfileId) return 0;
+      const verifyActiveProfile = async () => {
+        const activeProfile = await getActiveProfile(userId);
+        if (activeProfile?.id !== myProfileId) {
+          throw new Error("Active character changed while loading unread conversations");
+        }
+      };
+      return countUnreadConversations(
+        (options) => listConversations(options),
+        verifyActiveProfile,
+      );
     },
   });
 
