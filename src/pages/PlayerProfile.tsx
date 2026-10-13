@@ -284,7 +284,7 @@ export default function PlayerProfile() {
         ) : (
           <>
             {restrictedBySafety && <Button size="sm" variant="secondary" disabled>{blockedByViewer ? "You blocked this player" : "This player is unavailable."}</Button>}
-            {!restrictedBySafety && !friendshipError && (connection.data === "not_connected" || !friendship) && <Button size="sm" onClick={() => sendRequest.mutate()} disabled={sendRequest.isPending || connection.send.isPending || socialPermission.data?.can_send_friend_request === false}><UserPlus className="h-4 w-4 mr-1" /> Add Friend</Button>}
+            {!restrictedBySafety && !friendshipError && connection.data === "not_connected" && !friendship && <Button size="sm" onClick={() => sendRequest.mutate()} disabled={sendRequest.isPending || connection.send.isPending || socialPermission.data?.can_send_friend_request === false}><UserPlus className="h-4 w-4 mr-1" /> Add Friend</Button>}
             {(!restrictedBySafety && !friendshipError && (connection.data === "outgoing_pending" || isPendingSent)) && <Button size="sm" variant="secondary" disabled><Clock className="h-4 w-4 mr-1" /> Request Sent</Button>}
             {(!restrictedBySafety && !friendshipError && (connection.data === "incoming_pending" || isPendingReceived)) && (
               friendship?.id && friendship.status === "pending" && friendship.addressee_id === currentUser?.id
