@@ -68,6 +68,11 @@ BEGIN
   END IF;
 
   SELECT * INTO v_settings FROM public.player_profiles WHERE profile_id=target_profile_id;
+  -- A character with no social sharing preferences has not consented to a
+  -- publicly discoverable detailed profile. The owner can still preview it.
+  IF NOT v_owner AND v_settings.profile_id IS NULL THEN
+    RAISE EXCEPTION 'This player profile has not been published' USING ERRCODE='42501';
+  END IF;
   -- Private, friends and band-only scopes require dedicated authenticated
   -- relationship proofs. Never treat them as public just because the caller
   -- supplies a profile ID.
