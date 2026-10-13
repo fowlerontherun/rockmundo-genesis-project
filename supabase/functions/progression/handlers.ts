@@ -69,17 +69,11 @@ function calculateStreakBonuses(streak: number): { bonusSxp: number; bonusAp: nu
 function areConsecutiveDays(date1: string | null, date2: string): boolean {
   if (!date1) return false;
   
-  const d1 = new Date(date1);
-  const d2 = new Date(date2);
-  
-  // Normalize to start of day
-  d1.setHours(0, 0, 0, 0);
-  d2.setHours(0, 0, 0, 0);
-  
-  const diffMs = d2.getTime() - d1.getTime();
-  const diffDays = diffMs / (1000 * 60 * 60 * 24);
-  
-  return diffDays === 1;
+  // YYYY-MM-DD values must be compared on UTC calendar boundaries.
+  const previous = Date.parse(date1.slice(0, 10) + "T00:00:00Z");
+  const current = Date.parse(date2.slice(0, 10) + "T00:00:00Z");
+  return Number.isFinite(previous) && Number.isFinite(current)
+    && current - previous === 86_400_000;
 }
 
 export async function handleClaimDailyXp(
@@ -91,19 +85,6 @@ export async function handleClaimDailyXp(
   const todayIso = new Date().toISOString().slice(0, 10);
   const profileId = profileState.profile.id;
   
-  // Check if already claimed today
-  const { data: existingGrant } = await client
-    .from("profile_daily_xp_grants")
-    .select("*")
-    .eq("profile_id", profileId)
-    .eq("grant_date", todayIso)
-    .eq("source", "daily_stipend")
-    .maybeSingle();
-
-  if (existingGrant) {
-    throw new Error("Daily XP already claimed today");
-  }
-
   // Calculate streak
   const lastClaimDate = profileState.wallet?.last_stipend_claim_date ?? null;
   const currentStreak = profileState.wallet?.stipend_claim_streak ?? 0;
@@ -141,12 +122,6 @@ export async function handleClaimDailyXp(
   const totalSxp = Math.min(DAILY_STIPEND_SXP_CAP, preCapSxp + vipBonusSxp);
   const totalAp = Math.min(DAILY_STIPEND_AP_CAP, preCapAp + vipBonusAp);
 
-  // Get current balances (use new dual currency columns)
-  const currentSxpBalance = profileState.wallet?.skill_xp_balance ?? profileState.wallet?.xp_balance ?? 0;
-  const currentSxpLifetime = profileState.wallet?.skill_xp_lifetime ?? profileState.wallet?.lifetime_xp ?? 0;
-  const currentApBalance = profileState.wallet?.attribute_points_balance ?? 0;
-  const currentApLifetime = profileState.wallet?.attribute_points_lifetime ?? 0;
-
   // Create grant record
   const grantMetadata = {
     ...metadata,
@@ -163,43 +138,13 @@ export async function handleClaimDailyXp(
     milestones_reached: milestones,
   };
 
-  const { error: grantError } = await client
-    .from("profile_daily_xp_grants")
-    .insert({
-      profile_id: profileId,
-      grant_date: todayIso,
-      source: "daily_stipend",
-      xp_amount: totalSxp,
-      attribute_points_amount: totalAp,
-      metadata: grantMetadata,
-    });
-
-  if (grantError) {
-    throw new Error(grantError.message || "Failed to create daily grant");
-  }
-
-  // Update wallet with dual currency and streak
-  const { error: walletError } = await client
-    .from("player_xp_wallet")
-    .upsert({
-      profile_id: profileId,
-      // Dual currency updates
-      skill_xp_balance: currentSxpBalance + totalSxp,
-      skill_xp_lifetime: currentSxpLifetime + totalSxp,
-      attribute_points_balance: currentApBalance + totalAp,
-      attribute_points_lifetime: currentApLifetime + totalAp,
-      // Legacy columns (keep in sync for backwards compatibility)
-      xp_balance: currentSxpBalance + totalSxp,
-      lifetime_xp: currentSxpLifetime + totalSxp,
-      // Streak tracking
-      stipend_claim_streak: newStreak,
-      last_stipend_claim_date: todayIso,
-      last_recalculated: new Date().toISOString(),
-    }, { onConflict: "profile_id" });
-
-  if (walletError) {
-    throw new Error(walletError.message || "Failed to update XP wallet");
-  }
+  const { error: grantError } = await client.rpc("claim_daily_stipend_atomic" as any, {
+    p_profile_id: profileId,
+    p_sxp: totalSxp,
+    p_ap: totalAp,
+    p_metadata: grantMetadata,
+  });
+  if (grantError) throw new Error(grantError.message || "Failed to claim daily stipend");
 
   return await fetchProfileState(client, profileId);
 }
