@@ -125,111 +125,30 @@ export async function processRetirement(
       peakPosition = chartData?.[0]?.rank ?? null;
     }
 
-    // 6. Get current generation number
-    const { data: generations } = await supabase
-      .from("character_generations")
-      .select("generation_number")
-      .eq("user_id", userId)
-      .order("generation_number", { ascending: false })
-      .limit(1);
-
-    const currentGeneration = generations?.[0]?.generation_number || 1;
-
-    // 7. Calculate inheritance
-    const inheritance = calculateInheritance(profile.cash || 0, skillsMap);
-
-    // 8. Create hall of fame entry
-    const { data: hofEntry, error: hofError } = await supabase
-      .from("hall_of_fame")
-      .insert({
-        user_id: userId,
-        character_name: profile.display_name || profile.username || "Unknown Artist",
-        avatar_url: profile.avatar_url,
-        final_age: profile.age || 80,
-        years_active: (profile.age || 80) - 16,
-        total_fame: profile.fame || 0,
-        total_cash_earned: profile.cash || 0,
-        total_songs: songCount || 0,
-        total_gigs: gigCount || 0,
-        total_albums: albumCount || 0,
+    // The database completes the Hall of Fame, generation, reset and skill
+    // replacement in one transaction. Any failure rolls everything back.
+    const { data, error } = await supabase.rpc("finalize_character_retirement" as any, {
+      p_profile_id: profileId,
+      p_type: retirementType,
+      p_stats: {
+        total_songs: songCount ?? 0,
+        total_gigs: gigCount,
+        total_albums: albumCount ?? 0,
         peak_chart_position: peakPosition,
-        notable_achievements: [],
-        final_skills: skillsMap,
-        final_attributes: attributesMap,
-        retirement_type: retirementType,
-        generation_number: currentGeneration,
-      })
-      .select()
-      .single();
-
-    if (hofError) {
-      console.error("Hall of fame insert error:", hofError);
-      return { success: false, error: "Failed to create hall of fame entry" };
-    }
-
-    // 9. Create character generation record
-    const { error: generationError } = await supabase.from("character_generations").insert({
-      user_id: userId,
-      generation_number: currentGeneration + 1,
-      parent_character_id: hofEntry.id,
-      inherited_cash: inheritance.cash,
-      inherited_skills: inheritance.skills,
+      },
+      p_skills: skillsMap,
+      p_attributes: attributesMap,
     });
-    if (generationError) throw generationError;
-
-    // 10. Reset profile for new character
-    const { error: resetError } = await supabase
-      .from("profiles")
-      .update({
-        display_name: null,
-        avatar_url: null,
-        bio: null,
-        age: 16,
-        fame: 0,
-        cash: inheritance.cash,
-        experience: 0,
-        level: 1,
-        health: 100,
-        energy: 100,
-        last_retirement_prompt_age: 0,
-        character_birth_date: null,
-      })
-      .eq("id", profileId);
-    if (resetError) throw resetError;
-
-    // 11. Reset or apply inherited skills via skill_progress
-    if (Object.keys(inheritance.skills).length > 0) {
-      // Delete existing skill_progress entries
-      const { error: deleteSkillsError } = await supabase
-        .from("skill_progress")
-        .delete()
-        .eq("profile_id", profileId);
-      if (deleteSkillsError) throw deleteSkillsError;
-
-      // Insert inherited skills
-      const skillInserts = Object.entries(inheritance.skills)
-        .filter(([, level]) => level > 0)
-        .map(([slug, level]) => ({
-          profile_id: profileId,
-          skill_slug: slug,
-          current_level: level,
-          current_xp: 0,
-          required_xp: 100,
-        }));
-
-      if (skillInserts.length > 0) {
-        const { error: insertSkillsError } = await supabase.from("skill_progress").insert(skillInserts);
-        if (insertSkillsError) throw insertSkillsError;
-      }
-    }
-
+    if (error) throw error;
+    const result = data as { hall_of_fame_id: string; inherited_cash: number; inherited_skills: Record<string, number>; generation_number: number } | null;
+    if (!result?.hall_of_fame_id) throw new Error("Retirement transaction returned no Hall of Fame record");
     return {
       success: true,
-      hallOfFameId: hofEntry.id,
+      hallOfFameId: result.hall_of_fame_id,
       inheritance: {
-        inheritedCash: inheritance.cash,
-        inheritedSkills: inheritance.skills,
-        generationNumber: currentGeneration + 1,
+        inheritedCash: result.inherited_cash,
+        inheritedSkills: result.inherited_skills,
+        generationNumber: result.generation_number,
       },
     };
   } catch (error) {
