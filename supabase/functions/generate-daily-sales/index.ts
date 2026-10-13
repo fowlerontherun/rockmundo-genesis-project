@@ -834,39 +834,25 @@ serve(async (req) => {
           continue;
         }
 
-        const { data: currentBand, error: fetchError } = await supabaseClient
-          .from("bands")
-          .select("band_balance, morale")
-          .eq("id", bandId)
-          .single();
-
-        if (fetchError) {
-          console.error(`Failed to fetch band_balance for band ${bandId}:`, fetchError);
-          errorCount++;
-          continue;
-        }
-
-        // === DAILY SALES → MORALE (v1.0.977) ===
-        // Earning money from sales feels rewarding
-        const curMorale = (currentBand as any).morale ?? 50;
+        // The band_earnings AFTER INSERT trigger updates band_balance within the
+        // same PostgreSQL transaction. Never credit that balance a second time.
+        // Morale is a separate, non-financial side effect.
         const moraleBoost = netAmount >= 1000 ? 3 : netAmount >= 200 ? 2 : netAmount > 0 ? 1 : 0;
-        const newMorale = moraleBoost > 0 ? Math.min(100, curMorale + moraleBoost) : curMorale;
-
-        const newBalance = (currentBand?.band_balance || 0) + netAmount;
-        const updatePayload: any = { band_balance: newBalance };
         if (moraleBoost > 0) {
-          updatePayload.morale = newMorale;
-          console.log(`Daily sales morale: $${netAmount} revenue → morale +${moraleBoost} for band ${bandId}`);
-        }
-        const { error: updateError } = await supabaseClient
-          .from("bands")
-          .update(updatePayload)
-          .eq("id", bandId);
-
-        if (updateError) {
-          console.error(`Failed to update band_balance for band ${bandId}:`, updateError);
-          errorCount++;
-          continue;
+          const { data: currentBand, error: moraleReadError } = await supabaseClient
+            .from("bands").select("morale").eq("id", bandId).single();
+          if (moraleReadError) {
+            console.error(`Unable to read morale for band ${bandId}`, moraleReadError);
+            errorCount++;
+          } else {
+            const newMorale = Math.min(100, ((currentBand as any)?.morale ?? 50) + moraleBoost);
+            const { error: moraleError } = await supabaseClient
+              .from("bands").update({ morale: newMorale }).eq("id", bandId);
+            if (moraleError) {
+              console.error(`Unable to update morale for band ${bandId}`, moraleError);
+              errorCount++;
+            }
+          }
         }
 
         bandsCredited++;
