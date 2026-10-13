@@ -40,7 +40,22 @@ export default function FriendsPage() {
   return <FMPageScaffold title="Friends" subtitle="Manage friend requests, connections, mutual friends and suggested social links." icon={Heart} backTo="/social" backLabel="Back to Social">
     <div className="space-y-4"><div className="relative"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search friends by name, band, city, instrument or role" /></div>
       <Tabs defaultValue="friends"><TabsList className="flex h-auto flex-wrap"><TabsTrigger value="friends">Friends ({counts.data?.friends ?? 0})</TabsTrigger><TabsTrigger value="incoming">Incoming ({counts.data?.incoming ?? 0})</TabsTrigger><TabsTrigger value="outgoing">Sent ({counts.data?.outgoing ?? 0})</TabsTrigger><TabsTrigger value="suggested">Suggested ({friends.suggestions.data?.length ?? 0})</TabsTrigger><TabsTrigger value="recent">Recently added</TabsTrigger></TabsList>
-        <TabsContent value="friends"><FriendSection kind="friends" search={search} /></TabsContent><TabsContent value="incoming"><FriendSection kind="incoming" search={search} /></TabsContent><TabsContent value="outgoing"><FriendSection kind="outgoing" search={search} /></TabsContent><TabsContent value="recent"><FriendSection kind="recent" search={search} /></TabsContent><TabsContent value="suggested"><div className="space-y-3">{(friends.suggestions.data ?? []).map((friend) => <FriendCard key={friend.id} friend={friend} context="suggestion" onAdd={() => void addSuggestedFriend(friend.id)} />)}{!friends.suggestions.isLoading && !(friends.suggestions.data ?? []).length && <Card><CardContent className="p-6 text-center">No suggestions right now.</CardContent></Card>}</div></TabsContent>
+        <TabsContent value="friends"><FriendSection kind="friends" search={search} /></TabsContent><TabsContent value="incoming"><FriendSection kind="incoming" search={search} /></TabsContent><TabsContent value="outgoing"><FriendSection kind="outgoing" search={search} /></TabsContent><TabsContent value="recent"><FriendSection kind="recent" search={search} /></TabsContent><TabsContent value="suggested"><div className="space-y-3">
+          {friends.suggestions.isError ? (
+            <Card role="alert"><CardContent className="flex flex-col gap-3 p-6">
+              <p>Friend suggestions could not be verified safely. No suggestions are shown.</p>
+              <Button variant="outline" onClick={() => void friends.suggestions.refetch()}>Retry suggestions</Button>
+            </CardContent></Card>
+          ) : friends.suggestions.isLoading ? (
+            <Card><CardContent className="p-6" aria-live="polite">Checking eligible players…</CardContent></Card>
+          ) : (friends.suggestions.data ?? []).length > 0 ? (
+            (friends.suggestions.data ?? []).map((friend) =>
+              <FriendCard key={friend.id} friend={friend} context="suggestion" onAdd={() => void addSuggestedFriend(friend.id)} />
+            )
+          ) : (
+            <Card><CardContent className="p-6 text-center">No eligible suggestions right now.</CardContent></Card>
+          )}
+        </div></TabsContent>
       </Tabs></div>
   </FMPageScaffold>;
 }
