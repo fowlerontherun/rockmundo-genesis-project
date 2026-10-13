@@ -1,108 +1,43 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-/**
- * Tracks playtime and keeps the active character's last_login_at fresh while
- * the player is actually using the game. The inactivity-coma job uses this
- * heartbeat (along with auth sign-ins) as account activity.
- */
+/** Credit only recent foreground input. Database RPC serializes overlapping tabs. */
 export const usePlaytimeTracker = (profileId: string | null) => {
-  const lastUpdateRef = useRef<number>(Date.now());
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-
   useEffect(() => {
     if (!profileId) return;
-
-    const UPDATE_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
-    lastUpdateRef.current = Date.now();
-
-    const touchActivity = async () => {
-      if (document.visibilityState === "hidden") return;
-
-      const { error } = await supabase
-        .from("profiles")
-        .update({ last_login_at: new Date().toISOString() })
-        .eq("id", profileId)
-        .is("died_at", null);
-
-      if (error) {
-        console.warn("Failed to update character activity heartbeat:", error.message);
-      }
+    const MAX_IDLE_MS = 2 * 60 * 1000;
+    let lastInputAt = 0;
+    let inFlight = false;
+    let resetClock = true;
+    const onInput = () => {
+      if (document.visibilityState !== "visible") return;
+      if (!lastInputAt || Date.now() - lastInputAt >= MAX_IDLE_MS) resetClock = true;
+      lastInputAt = Date.now();
     };
-
-    const updatePlaytime = async () => {
-      if (document.visibilityState === "hidden") return;
-
-      const now = Date.now();
-      const elapsedMinutes = Math.floor((now - lastUpdateRef.current) / (60 * 1000));
-
-      if (elapsedMinutes < 5) {
-        await touchActivity();
-        return;
-      }
-
+    const canCredit = () => document.visibilityState === "visible"
+      && lastInputAt > 0 && Date.now() - lastInputAt < MAX_IDLE_MS;
+    const tick = async () => {
+      if (inFlight || !canCredit()) return;
+      inFlight = true;
       try {
-        const { data: profile, error: fetchError } = await supabase
-          .from("profiles")
-          .select("total_hours_played")
-          .eq("id", profileId)
-          .single();
-
-        if (fetchError) {
-          console.warn("Failed to fetch profile for playtime update:", fetchError.message);
-          await touchActivity();
-          return;
-        }
-
-        const currentHours = profile?.total_hours_played || 0;
-        const hoursToAdd = elapsedMinutes / 60;
-        const newTotalHours = currentHours + hoursToAdd;
-        const activityAt = new Date(now).toISOString();
-
-        const { error: updateError } = await supabase
-          .from("profiles")
-          .update({
-            total_hours_played: Math.round(newTotalHours),
-            last_login_at: activityAt,
-            updated_at: activityAt,
-          })
-          .eq("id", profileId)
-          .is("died_at", null);
-
-        if (updateError) {
-          console.warn("Failed to update playtime:", updateError.message);
-        } else {
-          lastUpdateRef.current = now;
-        }
-      } catch (err) {
-        console.warn("Playtime tracker error:", err);
-        await touchActivity();
+        const { error } = await supabase.rpc("record_active_character_playtime" as any, {
+          p_profile_id: profileId,
+          p_reset: resetClock,
+        });
+        if (error) console.warn("Could not persist active playtime:", error.message);
+        else resetClock = false;
+      } finally {
+        inFlight = false;
       }
     };
-
-    // Record activity immediately even if the player enters through a deep
-    // link rather than the landing page.
-    void touchActivity();
-
-    intervalRef.current = setInterval(() => {
-      void updatePlaytime();
-    }, UPDATE_INTERVAL_MS);
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        void updatePlaytime();
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
+    for (const name of ["pointerdown", "keydown", "touchstart"] as const) {
+      document.addEventListener(name, onInput, { passive: true });
+    }
+    const interval = window.setInterval(() => void tick(), 60_000);
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-
-      if (document.visibilityState === "visible") {
-        void updatePlaytime();
+      window.clearInterval(interval);
+      for (const name of ["pointerdown", "keydown", "touchstart"] as const) {
+        document.removeEventListener(name, onInput);
       }
     };
   }, [profileId]);
