@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useEffect } from "react";
+import { beforeCreatedAtId, lastCreatedAtIdCursor } from "@/lib/inboxKeyset";
 
 export type InboxCategory = 
   | 'random_event' 
@@ -52,26 +53,30 @@ export function useInbox(category?: InboxCategory | 'all') {
     queryFn: async () => {
       if (!userId || !profileId) return [];
 
-      let queryBuilder = supabase
-        .from('player_inbox')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('is_archived', false)
-        .order('created_at', { ascending: false });
-
-      if (category && category !== 'all') {
-        queryBuilder = queryBuilder.eq('category', category);
-      }
-
       const rows: InboxMessage[] = [];
-      for (let offset = 0; offset < 100_000; offset += 500) {
-        const { data, error } = await queryBuilder.range(offset, offset + 499);
-        if (error) {
-          console.error('[useInbox] Error fetching inbox:', error);
-          throw error;
+      let cursor: { created_at: string; id: string } | null = null;
+      for (let page = 0; page < 200; page++) {
+        let queryBuilder = supabase
+          .from('player_inbox')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('is_archived', false)
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: false })
+          .limit(500);
+        if (category && category !== 'all') {
+          queryBuilder = queryBuilder.eq('category', category);
         }
-        rows.push(...((data || []) as InboxMessage[]));
+        if (cursor) queryBuilder = queryBuilder.or(beforeCreatedAtId(cursor));
+        const { data, error } = await queryBuilder;
+        if (error) throw error;
+        rows.push(...((data ?? []) as InboxMessage[]));
         if (!data || data.length < 500) break;
+        const next = lastCreatedAtIdCursor(data);
+        if (!next || (cursor && next.created_at === cursor.created_at && next.id === cursor.id)) {
+          throw new Error('Inbox pagination failed to advance');
+        }
+        cursor = next;
       }
 
       // Untagged legacy rows are not safe to infer in a multi-character account.
@@ -89,13 +94,23 @@ export function useInbox(category?: InboxCategory | 'all') {
     queryFn: async () => {
       if (!userId || !profileId) return [] as InboxMessage[];
       const archived: InboxMessage[] = [];
-      for (let offset = 0; offset < 100_000; offset += 500) {
-        const { data, error } = await supabase.from('player_inbox')
+      let cursor: { created_at: string; id: string } | null = null;
+      for (let page = 0; page < 200; page++) {
+        let queryBuilder = supabase.from('player_inbox')
           .select('*').eq('user_id', userId).eq('is_archived', true)
-          .order('created_at', { ascending: false }).range(offset, offset + 499);
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: false })
+          .limit(500);
+        if (cursor) queryBuilder = queryBuilder.or(beforeCreatedAtId(cursor));
+        const { data, error } = await queryBuilder;
         if (error) throw error;
         archived.push(...((data ?? []) as InboxMessage[]));
         if (!data || data.length < 500) break;
+        const next = lastCreatedAtIdCursor(data);
+        if (!next || (cursor && next.created_at === cursor.created_at && next.id === cursor.id)) {
+          throw new Error('Archived inbox pagination failed to advance');
+        }
+        cursor = next;
       }
       return archived.filter(message => isInboxMessageForProfile(message, profileId));
     },
