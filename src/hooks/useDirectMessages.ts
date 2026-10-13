@@ -1,9 +1,10 @@
 import { useEffect, useRef } from "react";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { getActiveProfile } from "@/services/profileService";
 import { countUnreadConversations } from "@/features/direct-messages/services/unreadConversations";
+import { mergeMessagePages, nextMessageCursor } from "@/features/direct-messages/services/messageHistory";
 import { sendDirectMessage as sendDirectMessageService } from "@/features/direct-messages/services/directMessages";
 import {
   getConversationMessages,
@@ -48,12 +49,13 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
 
   const conversationId = groupConversationId ?? conversationQuery.data?.conversation_id ?? null;
 
-  const messagesQuery = useQuery({
+  const messagesQuery = useInfiniteQuery({
     queryKey: ["direct-messages", myProfileId, conversationId ?? channelId],
     enabled: !!myProfileId && !!channelId && (!!groupConversationId || !!conversationId),
-    queryFn: async (): Promise<DirectMessageRow[]> => {
+    initialPageParam: null as string | null,
+    queryFn: async ({ pageParam }): Promise<DirectMessageRow[]> => {
       if (groupConversationId) {
-        const messages = await getConversationMessages(groupConversationId, { limit: 100 });
+        const messages = await getConversationMessages(groupConversationId, { limit: 100, cursor: pageParam });
         return messages.map((message) => ({
           id: message.id,
           channel_id: `group:${groupConversationId}`,
@@ -69,7 +71,9 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
         .from("direct_messages")
         .select("*")
         .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
         .limit(100);
+      if (pageParam) query = query.lt("created_at", pageParam);
       // Include older idempotent-fallback rows alongside the established thread.
       // Those rows have the same pair channel_id but no conversation_id.
       query = conversationId
@@ -79,6 +83,7 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
       if (error) throw error;
       return ((data ?? []) as DirectMessageRow[]).reverse();
     },
+    getNextPageParam: (lastPage) => nextMessageCursor(lastPage, 100),
   });
 
   useEffect(() => {
@@ -175,7 +180,10 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
 
   return {
     channelId,
-    messages: messagesQuery.data ?? [],
+    messages: mergeMessagePages(messagesQuery.data?.pages ?? []),
+    hasOlderMessages: Boolean(messagesQuery.hasNextPage),
+    isLoadingOlderMessages: messagesQuery.isFetchingNextPage,
+    loadOlderMessages: () => messagesQuery.fetchNextPage(),
     conversationId,
     isGroupConversation: Boolean(groupConversationId),
     isLoading: messagesQuery.isLoading || conversationQuery.isLoading,
@@ -203,10 +211,22 @@ export function useUnreadDirectMessageCount(myProfileId?: string | null) {
           throw new Error("Active character changed while loading unread conversations");
         }
       };
-      return countUnreadConversations(
+      const conversationUnread = await countUnreadConversations(
         (options) => listConversations(options),
         verifyActiveProfile,
       );
+      // Idempotent direct-send fallback may write outside an established
+      // conversation; these incoming rows do not appear in RPC unread_count.
+      await verifyActiveProfile();
+      const { count, error } = await (supabase as any)
+        .from("direct_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("recipient_profile_id", myProfileId)
+        .is("conversation_id", null)
+        .is("read_at", null);
+      if (error) throw error;
+      await verifyActiveProfile();
+      return conversationUnread + (count ?? 0);
     },
   });
 
