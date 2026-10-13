@@ -25,18 +25,8 @@ import { formatFestivalLaunchMoney } from "../domain/festivalLaunch";
 import { getFestivalPublicEventPhase } from "./festivalEventPhase";
 import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
-
-/** Keep the sponsor name visible if a legacy logo URL is unavailable. */
-const SponsorIdentity = ({ name, logoReference }: { name: string; logoReference: string | null }) => {
-  const [imageFailed, setImageFailed] = useState(false);
-  return (
-    <div className="flex min-h-16 items-center justify-center rounded-lg border bg-background p-3">
-      {logoReference && /^https:\/\//i.test(logoReference) && !imageFailed ? (
-        <img src={logoReference} alt={`${name} logo`} loading="lazy" className="max-h-16 max-w-full object-contain" onError={() => setImageFailed(true)} />
-      ) : <span className="text-center text-lg font-bold">{name}</span>}
-    </div>
-  );
-};
+import { SponsorIdentity } from "./SponsorIdentity";
+import { canOfferFestivalCheckIn, canStartFestivalTicketPurchase } from "./publicFestivalEligibility";
 
 const Countdown = ({ target }: { target: string }) => {
   const [now, setNow] = useState(() => Date.now());
@@ -136,6 +126,8 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
     ? checkInEligibility.find((item) => item.attendanceId === myAttendance.id)
     : undefined;
   const festivalDataError = walletError || eligibilityError;
+  const canCheckIn = canOfferFestivalCheckIn(myCheckInEligibility, walletError, eligibilityError);
+  const hasPurchasingCharacter = canStartFestivalTicketPurchase(Boolean(user), profileId);
   const myFestivalTickets = ticketWallet.filter((ticket) => ticket.festivalSlug === f.slug);
   const myWristband = festivalMemorabilia.find((item) => item.festivalLaunchId === f.id && item.attendanceId === myAttendance?.id);
   const hasAdmissionTicket = myFestivalTickets.some(
@@ -251,7 +243,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                   <span className="text-sm capitalize text-muted-foreground">
                     {myAttendance.status.replaceAll("_", " ")}
                   </span>
-                  {myCheckInEligibility?.canCheckIn && (
+                  {canCheckIn && (
                     <Badge className="bg-emerald-600">Ready to check in</Badge>
                   )}
                   {myWristband && (
@@ -281,7 +273,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {myCheckInEligibility?.canCheckIn && (
+                {canCheckIn && (
                   <Button
                     disabled={checkIn.isPending || leaveEarly.isPending}
                     onClick={() => checkIn.mutate({ attendanceId: myAttendance.id })}
@@ -471,6 +463,9 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
 
             {eventPhase === "dates_ended" && <p role="status" className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">This festival has ended. Ticket purchases are closed; existing tickets remain available in your wallet.</p>}
             {eventPhase !== "dates_ended" && f.launchStatus !== "tickets_on_sale" && <p role="status" className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">Ticket sales are not currently open. You can still review ticket types and any tickets in your wallet.</p>}
+            {user && !profileId && (
+              <p role="status" className="mb-4 rounded-lg border p-3 text-sm">Select an active character from the Character menu before purchasing tickets.</p>
+            )}
             <section className="grid gap-4 md:grid-cols-2">
               {f.ticketProducts.map((p) => (
                 <Card key={p.id}>
@@ -500,8 +495,9 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                       <Button asChild variant="outline"><Link to="/auth">Sign in to purchase</Link></Button>
                     )}
                     {user && <Button
-                      disabled={buy.isPending || eventPhase === "dates_ended" || p.availableQuantity === 0 || f.launchStatus !== "tickets_on_sale" || p.saleStatus !== "tickets_on_sale" || !Number.isSafeInteger(quantities[p.id] ?? 1) || (quantities[p.id] ?? 1) < 1 || (quantities[p.id] ?? 1) > Math.min(p.purchaseLimit, p.availableQuantity)}
+                      disabled={!hasPurchasingCharacter || buy.isPending || eventPhase === "dates_ended" || p.availableQuantity === 0 || f.launchStatus !== "tickets_on_sale" || p.saleStatus !== "tickets_on_sale" || !Number.isSafeInteger(quantities[p.id] ?? 1) || (quantities[p.id] ?? 1) < 1 || (quantities[p.id] ?? 1) > Math.min(p.purchaseLimit, p.availableQuantity)}
                       onClick={() => {
+                        if (!hasPurchasingCharacter) return;
                         buy.reset();
                         setActivePurchaseProductId(p.id);
                         buy.mutate({
@@ -512,7 +508,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                         });
                       }}
                     >
-                      {buy.isPending && activePurchaseProductId === p.id ? "Completing purchase…" : eventPhase === "dates_ended" ? "Festival ended" : p.availableQuantity === 0 ? "Sold out" : f.launchStatus !== "tickets_on_sale" || p.saleStatus !== "tickets_on_sale" ? "Sales unavailable" : "Confirm purchase"}
+                      {buy.isPending && activePurchaseProductId === p.id ? "Completing purchase…" : !hasPurchasingCharacter ? "Select a character" : eventPhase === "dates_ended" ? "Festival ended" : p.availableQuantity === 0 ? "Sold out" : f.launchStatus !== "tickets_on_sale" || p.saleStatus !== "tickets_on_sale" ? "Sales unavailable" : "Confirm purchase"}
                     </Button>}
                     {buy.isError && activePurchaseProductId === p.id && <p role="alert">{buy.error.message.replaceAll("_", " ")}</p>}
                     {buy.isSuccess && activePurchaseProductId === p.id && (
@@ -582,7 +578,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                 <details className="py-3">
                   <summary className="cursor-pointer font-medium">Where can I find the running order?</summary>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    {f.timetable.length ? "Published performance times are available in the Timetable tab." : "The running order has not been published yet. Check the Timetable tab for updates."}
+                    {publishedPerformances.length ? "Published performance times are available in the Timetable tab." : "The running order has not been published yet. Check the Timetable tab for updates."}
                   </p>
                 </details>
                 <details className="py-3">
