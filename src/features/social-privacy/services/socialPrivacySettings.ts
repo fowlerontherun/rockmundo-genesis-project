@@ -2,7 +2,7 @@ import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 
 export const visibilityScopeSchema = z.enum(["public", "friends", "private"]);
-export const dmPermissionSchema = z.enum(["everyone", "friends", "none"]);
+export const dmPermissionSchema = z.enum(["everyone", "friends", "friends_and_band", "existing_conversations", "none"]);
 
 export const socialPrivacySettingsSchema = z.object({
   profileId: z.string().uuid(),
