@@ -142,9 +142,17 @@ export function LabelRosterTab({
     enabled: contractIds.length > 0,
   });
 
-  // Label-side termination requires server-authoritative financial settlement.
-  // Disable the unsafe direct status update until that transaction exists.
-  const labelTerminationUnavailable = true;
+  const releaseArtist = useMutation({
+    mutationFn: async (contractId: string) => {
+      const { error } = await (supabase as any).rpc("label_release_artist_contract_atomic", { p_contract_id: contractId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Artist released");
+      void queryClient.invalidateQueries({ queryKey: ["label-roster-contracts", labelId] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
 
   const activeContracts = contracts.filter((c) => c.status === "active");
 
@@ -543,11 +551,14 @@ export function LabelRosterTab({
                           variant="ghost"
                           size="sm"
                           className="text-destructive hover:text-destructive text-xs h-7"
-                          disabled={labelTerminationUnavailable}
-                          title="Artist termination is temporarily unavailable until outstanding contract finances can be settled safely."
+                          disabled={releaseArtist.isPending || !isRecouped}
+                          onClick={() => {
+                            if (window.confirm("Release this artist? This cannot be undone.")) releaseArtist.mutate(contract.id);
+                          }}
+                          title={isRecouped ? "Release fully recouped contract" : "Unrecouped advances must be settled before release"}
                         >
                           <UserMinus className="h-3 w-3 mr-1" />
-                          Termination Unavailable
+                          {isRecouped ? "Release Artist" : "Settlement Required"}
                         </Button>
                       </div>
                     </div>
