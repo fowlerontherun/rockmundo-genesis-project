@@ -634,7 +634,18 @@ serve(async (req) => {
                     p_unmet_demand_added: inventoryClaim.unmetAdded,
                   });
                   if (restoreError) {
-                    console.error(`Failed to restore inventory after sale insert error for ${format.id}:`, restoreError);
+                    console.error(`CRITICAL: unsold release inventory claim could not be restored for format ${format.id}:`, {
+                      releaseId: release.id,
+                      originalSaleError: saleInsertError,
+                      restorationError: restoreError,
+                      inventoryClaim,
+                    });
+                    // Distinct failure signal for alerting/reconciliation. Never
+                    // misclassify this as an ordinary sale insertion error.
+                    throw new Error(
+                      `CRITICAL_INVENTORY_RECONCILIATION_REQUIRED: format=${format.id} release=${release.id}; sale insert failed and stock restoration also failed`,
+                      { cause: restoreError },
+                    );
                   }
                 }
                 throw saleInsertError;
