@@ -66,20 +66,23 @@ export const handleAdminAwardSpecialXp = async (
     throw new Error("No profiles specified");
   }
 
+  // Retried bulk requests must carry the same stable ID for every profile.
+  const requestId = typeof metadata?.request_id === "string" ? metadata.request_id : "";
+  if (requestId.trim().length < 8) throw new Error("Admin grant requires a stable request_id");
   let updatedCount = 0;
 
   const failures: string[] = [];
   for (const profileId of targetProfileIds) {
-    const { error } = await client.rpc("admin_grant_special_xp_atomic" as any, {
+    const { data: applied, error } = await client.rpc("admin_grant_special_xp_atomic" as any, {
       p_profile_id: profileId,
       p_amount: amount,
       p_reason: reason,
       p_metadata: metadata ?? {},
-      p_request_id: typeof metadata?.request_id === "string" ? metadata.request_id : null,
+      p_request_id: requestId,
     });
     if (error) {
       failures.push(`${profileId}: ${error.message}`);
-    } else {
+    } else if (applied === true) {
       updatedCount++;
     }
   }
