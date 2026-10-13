@@ -16,6 +16,8 @@ export interface PersistedNotification {
   action_path: string | null;
   metadata: Record<string, unknown>;
   read_at: string | null;
+  archived_at?: string | null;
+  deleted_at?: string | null;
   created_at: string;
 }
 
@@ -32,6 +34,7 @@ export function useNotificationsFeed() {
       if (!userId || !profileId) return [];
       const all: PersistedNotification[] = [];
       let cursor: { created_at: string; id: string } | null = null;
+      let complete = false;
       for (let page = 0; page < 100; page++) {
         // PostgREST .or() replaces the previous OR parameter, so combine the
         // character predicate and keyset predicate in a single expression.
@@ -48,14 +51,31 @@ export function useNotificationsFeed() {
           .limit(1000);
         if (error) throw error;
         all.push(...((data ?? []) as unknown as PersistedNotification[]));
-        if (!data || data.length < 1000) return all;
+        if (!data || data.length < 1000) { complete = true; break; }
         const next = lastCreatedAtIdCursor(data);
         if (!next || (cursor && next.created_at === cursor.created_at && next.id === cursor.id)) {
           throw new Error("Notification pagination failed to advance");
         }
         cursor = next;
       }
-      throw new Error("Notification history exceeds pagination safety limit");
+      if (!complete) throw new Error("Notification history exceeds pagination safety limit");
+
+      const { data: states, error: stateError } = await supabase
+        .from(asAny("notification_profile_states"))
+        .select("notification_id,read_at,archived_at,deleted_at")
+        .eq("user_id", userId)
+        .eq("profile_id", profileId);
+      if (stateError) throw stateError;
+      const byId = new Map((states ?? []).map((state: any) => [state.notification_id, state]));
+      return all.map((notification) => {
+        const state: any = byId.get(notification.id);
+        return {
+          ...notification,
+          read_at: state?.read_at ?? notification.read_at,
+          archived_at: state?.archived_at ?? null,
+          deleted_at: state?.deleted_at ?? null,
+        };
+      });
     },
   });
 
@@ -71,87 +91,78 @@ export function useNotificationsFeed() {
         }
       )
       .subscribe();
+    const stateChannel = supabase
+      .channel(`notification-state:${userId}:${profileId}`)
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "notification_profile_states",
+        filter: `profile_id=eq.${profileId}`,
+      }, () => qc.invalidateQueries({ queryKey: [...QUERY_KEY, userId, profileId] }))
+      .subscribe();
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
+      void supabase.removeChannel(stateChannel);
     };
   }, [userId, profileId, qc]);
 
+  const inActiveCharacter = (notification: PersistedNotification) =>
+    notification.profile_id === profileId ||
+    (notification.profile_id === null && (notification.metadata?.profile_id == null || notification.metadata.profile_id === profileId));
+
+  const setState = async (ids: string[], action: "read" | "archive" | "delete") => {
+    if (!userId || !profileId) throw new Error("Select a character to manage notifications");
+    if (ids.length === 0) return;
+    for (let i = 0; i < ids.length; i += 100) {
+      const { error } = await (supabase as any).rpc("set_notification_profile_states", {
+        p_profile_id: profileId,
+        p_notification_ids: ids.slice(i, i + 100),
+        p_action: action,
+      });
+      if (error) throw error;
+    }
+  };
+  const invalidate = () => qc.invalidateQueries({ queryKey: [...QUERY_KEY, userId, profileId] });
+  const eligible = (ids: string[]) => {
+    const allowed = new Set((query.data ?? [])
+      .filter((n) => inActiveCharacter(n) && !n.deleted_at)
+      .map((n) => n.id));
+    return [...new Set(ids)].filter((id) => allowed.has(id));
+  };
+
   const markRead = useMutation({
-    mutationFn: async (id: string) => {
-      if (!profileId) return;
-      const { error } = await supabase
-        .from(asAny("notifications"))
-        .update({ read_at: new Date().toISOString() } as never)
-        .eq("id", id)
-        .eq("user_id", userId!)
-        .or(`profile_id.eq.${profileId},profile_id.is.null`);
-      if (error) throw error;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: [...QUERY_KEY, userId, profileId] }),
+    mutationFn: (id: string) => setState(eligible([id]), "read"),
+    onSuccess: invalidate,
   });
-
   const markAllRead = useMutation({
-    mutationFn: async (visibleNotificationIds: string[]) => {
-      if (!userId || !profileId || visibleNotificationIds.length === 0) return;
-      // An account-level row can be tagged in metadata for another character;
-      // do not bulk update that row just because profile_id is NULL.
-      const eligibleIds = new Set((query.data ?? [])
-        .filter((notification) => notification.profile_id === profileId ||
-          (notification.profile_id === null && notification.metadata?.profile_id == null))
-        .filter((notification) => !notification.read_at)
-        .map((notification) => notification.id));
-      const scopedIds = [...new Set(visibleNotificationIds)].filter((id) => eligibleIds.has(id));
-      for (let offset = 0; offset < scopedIds.length; offset += 100) {
-        const { error } = await supabase
-          .from(asAny("notifications"))
-          .update({ read_at: new Date().toISOString() } as never)
-          .eq("user_id", userId)
-          .in("id", scopedIds.slice(offset, offset + 100))
-          .is("read_at", null);
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: [...QUERY_KEY, userId, profileId] }),
+    mutationFn: (ids: string[]) => setState(eligible(ids), "read"),
+    onSuccess: invalidate,
   });
-
+  const archive = useMutation({
+    mutationFn: (id: string) => setState(eligible([id]), "archive"),
+    onSuccess: invalidate,
+  });
   const dismiss = useMutation({
-    mutationFn: async (id: string) => {
-      if (!profileId) return;
-      const { error } = await supabase
-        .from(asAny("notifications"))
-        .delete()
-        .eq("id", id)
-        .eq("user_id", userId!)
-        .or(`profile_id.eq.${profileId},profile_id.is.null`);
-      if (error) throw error;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: [...QUERY_KEY, userId, profileId] }),
+    mutationFn: (id: string) => setState(eligible([id]), "delete"),
+    onSuccess: invalidate,
   });
-
   const clearAll = useMutation({
-    mutationFn: async () => {
-      if (!userId || !profileId) return;
-      const { error } = await supabase
-        .from(asAny("notifications"))
-        .delete()
-        .eq("user_id", userId)
-        .or(`profile_id.eq.${profileId},profile_id.is.null`);
-      if (error) throw error;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: [...QUERY_KEY, userId, profileId] }),
+    mutationFn: () => setState(eligible((query.data ?? []).filter((n) => !n.archived_at).map((n) => n.id)), "delete"),
+    onSuccess: invalidate,
   });
 
-  const notifications = query.data ?? [];
+  const notifications = (query.data ?? []).filter((n) => !n.deleted_at && !n.archived_at && inActiveCharacter(n));
+  const archivedNotifications = (query.data ?? []).filter((n) => !n.deleted_at && !!n.archived_at && inActiveCharacter(n));
   const unreadCount = notifications.filter((n) => !n.read_at).length;
 
   return {
     notifications,
+    archivedNotifications,
     unreadCount,
     isLoading: query.isLoading,
     error: query.error,
     refetch: query.refetch,
     markRead: markRead.mutate,
     markAllRead: markAllRead.mutate,
+    archive: archive.mutate,
     dismiss: dismiss.mutate,
     clearAll: clearAll.mutate,
   };

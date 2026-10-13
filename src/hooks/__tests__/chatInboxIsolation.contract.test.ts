@@ -26,9 +26,11 @@ describe("character-scoped messaging and inbox source contracts", () => {
 
   it("marks only loaded visible notification IDs read", () => {
     expect(inbox).toContain("notifications.markAllRead(scopedNotifications.filter(");
-    expect(notifications).toContain("const scopedIds = [...new Set(visibleNotificationIds)].filter((id) => eligibleIds.has(id))");
-    expect(notifications).toContain('.in("id", scopedIds.slice(offset, offset + 100))');
-    const markAll = notifications.split("const markAllRead = useMutation({")[1].split("const dismiss = useMutation({")[0];
+    expect(notifications).toContain("mutationFn: (ids: string[]) => setState(eligible(ids), \"read\")");
+    expect(notifications).toContain("const allowed = new Set((query.data ?? [])");
+    expect(notifications).toContain("inActiveCharacter(n) && !n.deleted_at");
+    expect(notifications).toContain("p_notification_ids: ids.slice(i, i + 100)");
+    const markAll = notifications.split("const markAllRead = useMutation({")[1].split("const archive = useMutation({")[0];
     expect(markAll).not.toContain("profile_id.is.null");
   });
 });
