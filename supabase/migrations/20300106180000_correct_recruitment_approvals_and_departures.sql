@@ -229,9 +229,11 @@ BEGIN
      OR COALESCE(OLD.is_touring_member,false)
      OR OLD.profile_id IS NULL THEN RETURN NULL; END IF;
 
-  IF TG_OP='UPDATE' AND NEW.band_id=OLD.band_id AND NEW.profile_id=OLD.profile_id
-     AND COALESCE(NEW.member_status,'active')='active'
-     AND NOT COALESCE(NEW.is_touring_member,false) THEN RETURN NULL; END IF;
+  IF TG_OP='UPDATE' THEN
+    IF NEW.band_id=OLD.band_id AND NEW.profile_id=OLD.profile_id
+       AND COALESCE(NEW.member_status,'active')='active'
+       AND NOT COALESCE(NEW.is_touring_member,false) THEN RETURN NULL; END IF;
+  END IF;
 
   v_application := OLD.recruitment_application_id;
   IF v_application IS NULL THEN
