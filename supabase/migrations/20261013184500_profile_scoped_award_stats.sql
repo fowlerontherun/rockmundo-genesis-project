@@ -30,7 +30,7 @@ BEGIN
     WHEN 'songs_written' THEN
       SELECT count(DISTINCT s.id)::numeric INTO v_value
         FROM public.songs s
-       WHERE (s.profile_id = p_profile_id OR (s.profile_id IS NULL AND s.user_id = v_user_id))
+       WHERE (s.profile_id = p_profile_id)
          AND (s.completed_at IS NOT NULL OR s.status = 'recorded');
       RETURN coalesce(v_value, 0);
     WHEN 'albums_released' THEN
@@ -38,18 +38,26 @@ BEGIN
         FROM public.releases r
        WHERE lower(r.release_type) = 'album'
          AND r.release_status = 'released'
-         AND (r.user_id = v_user_id OR r.band_id IN (
-           SELECT bm.band_id FROM public.band_members bm WHERE bm.profile_id = p_profile_id
-         ));
+         AND (EXISTS(
+             SELECT 1 FROM public.release_songs rs
+             JOIN public.songs authored ON authored.id=rs.song_id
+             WHERE rs.release_id=r.id AND authored.profile_id=p_profile_id
+           ) OR r.band_id IN (
+             SELECT bm.band_id FROM public.band_members bm WHERE bm.profile_id=p_profile_id
+           ));
       RETURN coalesce(v_value, 0);
     WHEN 'eps_released' THEN
       SELECT count(DISTINCT r.id)::numeric INTO v_value
         FROM public.releases r
        WHERE lower(r.release_type) IN ('ep', 'e.p.')
          AND r.release_status = 'released'
-         AND (r.user_id = v_user_id OR r.band_id IN (
-           SELECT bm.band_id FROM public.band_members bm WHERE bm.profile_id = p_profile_id
-         ));
+         AND (EXISTS(
+             SELECT 1 FROM public.release_songs rs
+             JOIN public.songs authored ON authored.id=rs.song_id
+             WHERE rs.release_id=r.id AND authored.profile_id=p_profile_id
+           ) OR r.band_id IN (
+             SELECT bm.band_id FROM public.band_members bm WHERE bm.profile_id=p_profile_id
+           ));
       RETURN coalesce(v_value, 0);
     WHEN 'awards_won' THEN
       SELECT count(DISTINCT aw.id)::numeric INTO v_value
@@ -73,7 +81,6 @@ BEGIN
         FROM public.chart_entries ce
         JOIN public.songs s ON s.id = ce.song_id
        WHERE s.profile_id = p_profile_id
-          OR (s.profile_id IS NULL AND s.user_id = v_user_id)
           OR s.band_id IN (SELECT bm.band_id FROM public.band_members bm WHERE bm.profile_id = p_profile_id);
       RETURN coalesce(v_value, 0);
     WHEN 'top_40' THEN
@@ -82,7 +89,6 @@ BEGIN
         JOIN public.songs s ON s.id = ce.song_id
        WHERE ce.rank BETWEEN 1 AND 40
          AND (s.profile_id = p_profile_id
-          OR (s.profile_id IS NULL AND s.user_id = v_user_id)
           OR s.band_id IN (SELECT bm.band_id FROM public.band_members bm WHERE bm.profile_id = p_profile_id));
       RETURN coalesce(v_value, 0);
     WHEN 'top_10' THEN
@@ -91,7 +97,6 @@ BEGIN
         JOIN public.songs s ON s.id = ce.song_id
        WHERE ce.rank BETWEEN 1 AND 10
          AND (s.profile_id = p_profile_id
-          OR (s.profile_id IS NULL AND s.user_id = v_user_id)
           OR s.band_id IN (SELECT bm.band_id FROM public.band_members bm WHERE bm.profile_id = p_profile_id));
       RETURN coalesce(v_value, 0);
     WHEN 'chart_position' THEN
@@ -99,7 +104,6 @@ BEGIN
         FROM public.chart_entries ce
         JOIN public.songs s ON s.id = ce.song_id
        WHERE s.profile_id = p_profile_id
-          OR (s.profile_id IS NULL AND s.user_id = v_user_id)
           OR s.band_id IN (SELECT bm.band_id FROM public.band_members bm WHERE bm.profile_id = p_profile_id);
       RETURN v_value;
     WHEN 'guitar_skill' THEN
