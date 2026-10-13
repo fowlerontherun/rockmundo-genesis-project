@@ -20,8 +20,6 @@ BEGIN
  SET status='terminated',terminated_at=now(),termination_fee_paid=0,last_action_by=auth.uid()
  WHERE id=p_contract_id AND status='active';
  IF NOT FOUND THEN RAISE EXCEPTION 'CONCURRENT_CONTRACT_CHANGE'; END IF;
- INSERT INTO public.label_financial_transactions(label_id,transaction_type,amount,description,related_contract_id)
- VALUES(v_contract.label_id,'adjustment',0,'Label-initiated contract release after full advance recoupment',p_contract_id);
  RETURN jsonb_build_object('contractId',p_contract_id,'status','terminated','unrecoupedAdvance',0);
 END $$;
 REVOKE ALL ON FUNCTION public.label_release_artist_contract_atomic(uuid) FROM PUBLIC,anon;
