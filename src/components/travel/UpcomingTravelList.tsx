@@ -204,34 +204,18 @@ export const UpcomingTravelList = ({ userId }: UpcomingTravelListProps) => {
         throw new Error("Cannot cancel travel that has already departed");
       }
 
-      // Update status and refund
-      const { error: updateError } = await supabase
-        .from("player_travel_history")
-        .update({ status: "cancelled" })
-        .eq("id", travelId);
+      if (!profileId) throw new Error("Select a character before cancelling travel");
+      const { data: refund, error: cancellationError } = await (supabase as any).rpc("cancel_travel_with_refund_atomic", {
+        p_profile_id: profileId,
+        p_travel_id: travelId,
+      });
+      if (cancellationError) throw cancellationError;
+      if (typeof refund !== "number") throw new Error("Travel refund was not confirmed");
 
-      if (updateError) throw updateError;
-
-      // Refund the cost by updating profile directly
-      if (profileId) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("cash")
-          .eq("id", profileId)
-          .single();
-
-        if (profile) {
-          await supabase
-            .from("profiles")
-            .update({ cash: (profile.cash || 0) + travel.cost_paid })
-            .eq("id", profileId);
-        }
-      }
-
-      return travel;
+      return { ...travel, refund };
     },
     onSuccess: (travel) => {
-      toast.success(`Travel cancelled! $${travel.cost_paid.toLocaleString()} refunded.`);
+      toast.success(`Travel cancelled! ${travel.refund.toLocaleString()} refunded.`);
       queryClient.invalidateQueries({ queryKey: ["upcoming-travel"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
     },
