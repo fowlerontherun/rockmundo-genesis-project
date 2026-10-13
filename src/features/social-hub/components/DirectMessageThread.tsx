@@ -23,7 +23,7 @@ export function DirectMessageThread({
   otherDisplayName,
   compact = false,
 }: Props) {
-  const { channelId, messages, isLoading, sendMessage, markRead } = useDirectMessages(
+  const { channelId, messages, isLoading, sendMessage, markRead, hasOlderMessages, loadOlderMessages, isLoadingOlderMessages } = useDirectMessages(
     myProfileId,
     otherProfileId,
   );
@@ -36,7 +36,7 @@ export function DirectMessageThread({
       "[data-radix-scroll-area-viewport]",
     ) as HTMLDivElement | null;
     if (viewport) viewport.scrollTop = viewport.scrollHeight;
-  }, [messages.length]);
+  }, [messages[messages.length - 1]?.id]);
 
   useEffect(() => {
     if (messages.length) markRead.mutate();
@@ -98,6 +98,14 @@ export function DirectMessageThread({
         )}
         <ScrollArea className={compact ? "min-h-0 flex-1" : "h-[360px]"} ref={scrollRef}>
           <div className="space-y-2 pr-3">
+            {hasOlderMessages && (
+              <div className="flex justify-center">
+                <Button variant="outline" size="sm" disabled={isLoadingOlderMessages}
+                  onClick={() => void loadOlderMessages()}>
+                  {isLoadingOlderMessages ? "Loading earlier messages…" : "Load older messages"}
+                </Button>
+              </div>
+            )}
             {isLoading ? (
               <div className="flex h-32 items-center justify-center text-muted-foreground">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…
