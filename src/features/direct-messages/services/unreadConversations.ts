@@ -26,8 +26,16 @@ export async function countUnreadConversations(
     if (conversations.length === 0) return total;
     total += conversations.reduce((sum, conversation) => sum + conversation.unread_count, 0);
     const nextCursor: string | null = conversations[conversations.length - 1]?.last_message_at ?? null;
-    if (!nextCursor || nextCursor === cursor) {
-      // Fail visibly rather than silently omit a page when paging is unsafe.
+    if (!nextCursor) {
+      // The RPC sorts empty conversations (no last message) last. Such rows
+      // cannot contribute unread messages; no timestamp cursor exists for them.
+      const firstEmpty = conversations.findIndex((conversation) => !conversation.last_message_at);
+      if (firstEmpty >= 0 && conversations.slice(firstEmpty).every((conversation) => conversation.unread_count === 0)) {
+        return total;
+      }
+      throw new Error("Cannot paginate unread conversations safely");
+    }
+    if (nextCursor === cursor) {
       throw new Error("Cannot paginate unread conversations safely");
     }
     cursor = nextCursor;
