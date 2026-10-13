@@ -99,27 +99,36 @@ export async function processRetirement(
       });
     }
 
-    // Career totals must be owned by the retiring character. Never
-    // substitute account-wide or global figures for missing data.
+    // Only songs directly owned by this character count toward their career.
     const { count: songCount, error: songCountError } = await supabase
       .from("songs").select("id", { count: "exact", head: true })
-      .eq("user_id", userId);
+      .eq("profile_id", profileId);
     if (songCountError) throw songCountError;
-    const { count: albumCount, error: albumCountError } = await supabase
-      .from("releases").select("id", { count: "exact", head: true })
-      .eq("user_id", userId).eq("release_type", "album");
+    const { data: ownedSongs, error: ownedSongsError } = await supabase
+      .from("songs").select("id").eq("profile_id", profileId);
+    if (ownedSongsError) throw ownedSongsError;
+    const ownedIds = (ownedSongs ?? []).map(song => song.id);
+    const { data: releaseLinks, error: releaseLinksError } = ownedIds.length
+      ? await supabase.from("release_songs").select("release_id").in("song_id", ownedIds)
+      : { data: [], error: null };
+    if (releaseLinksError) throw releaseLinksError;
+    const releaseIds = [...new Set((releaseLinks ?? []).map(link => link.release_id).filter(Boolean))];
+    const { count: albumCount, error: albumCountError } = releaseIds.length
+      ? await supabase.from("releases").select("id", { count: "exact", head: true })
+        .in("id", releaseIds).eq("release_type", "album")
+      : { count: 0, error: null };
     if (albumCountError) throw albumCountError;
-    // Gigs can be band-owned and are not unambiguously attributable to
-    // a single character. Avoid fabricating a lifetime gig total.
-    const gigCount = 0;
-    const { data: songs, error: songIdsError } = await supabase
-      .from("songs").select("id").eq("user_id", userId);
-    if (songIdsError) throw songIdsError;
+
+    const { data: performances, error: performancesError } = await supabase
+      .from("gig_performances").select("gig_id").eq("user_id", userId);
+    if (performancesError) throw performancesError;
+    const gigCount = new Set((performances ?? []).map(p => p.gig_id)).size;
+
     let peakPosition: number | null = null;
-    if (songs?.length) {
+    if (ownedIds.length) {
       const { data: chartData, error: chartError } = await supabase
         .from("chart_entries").select("rank")
-        .in("song_id", songs.map(s => s.id))
+        .in("song_id", ownedIds)
         .order("rank", { ascending: true }).limit(1);
       if (chartError) throw chartError;
       peakPosition = chartData?.[0]?.rank ?? null;
