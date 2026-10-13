@@ -23,12 +23,11 @@ BEGIN
   WHERE id=p_parent_profile_id AND user_id=v_user AND died_at IS NOT NULL
   AND deleted_at IS NULL FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'INVALID_DEAD_PARENT';END IF;
-  SELECT coalesce(final_skills,'{}'::jsonb) INTO v_skills FROM public.hall_of_immortals
+  SELECT coalesce(final_skills,'{}'::jsonb),coalesce(total_cash_at_death,0)
+  INTO v_skills,v_cash FROM public.hall_of_immortals
   WHERE profile_id=p_parent_profile_id;
-  v_skills:=coalesce(v_skills,'{}'::jsonb);
-  SELECT coalesce(total_cash_at_death,0) INTO v_cash FROM public.hall_of_immortals
-  WHERE profile_id=p_parent_profile_id;
-  v_cash:=floor(coalesce(v_cash,v_parent.cash,0)*0.5);
+  IF NOT FOUND THEN RAISE EXCEPTION 'PARENT_MEMORIAL_REQUIRED_FOR_INHERITANCE'; END IF;
+  v_cash:=floor(v_cash*0.5);
   v_generation:=coalesce(v_parent.generation_number,1)+1;
  END IF;
  SELECT coalesce(max(slot_number),0)+1 INTO v_slot FROM public.profiles WHERE user_id=v_user;
