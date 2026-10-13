@@ -545,17 +545,13 @@ export const useSongwritingData = (profileId?: string | null, userId?: string | 
   // Pause session
   const pauseSession = useMutation({ 
     mutationFn: async ({ sessionId }: { sessionId: string }) => {
-      const { data, error } = await supabase
-        .from("songwriting_sessions")
-        .update({ 
-          session_end: new Date().toISOString(),
-          notes: "Session paused by user"
-        })
-        .eq("id", sessionId)
-        .select()
-        .single();
-
+      if (!profileId) throw new Error("Select a character before pausing");
+      const { data, error } = await (supabase as any).rpc("pause_songwriting_session_atomic", {
+        p_profile_id: profileId,
+        p_session_id: sessionId,
+      });
       if (error) throw error;
+      if (data?.status !== "paused") throw new Error("Session pause was not confirmed");
       return data;
     },
     onSuccess: () => {
