@@ -382,10 +382,11 @@ export const useGameEventNotifications = () => {
           
           notify({
               category: 'social',
-              type: 'offer',
+              type: 'band_invite',
               title: 'Band Invitation!',
               message: `You've been invited to join ${band?.name || 'a band'}!`,
-              actionPath: '/bands',
+              actionPath: '/band/members',
+              metadata: { band_id: invite.band_id, band_invitation_id: invite.id },
             });
         }
       )
