@@ -75,7 +75,7 @@ function friendlyFriendRequestError(message?: string) {
     return "Sign in with an active player profile before sending friend requests.";
   }
   if (/already friends/i.test(message)) return "You are already friends with this player.";
-  if (/declined recently|42901/i.test(message)) {
+  if (/declined recently|cancelled recently|request cooling down|42901/i.test(message)) {
     return "That friend request was declined recently. Please wait before trying again.";
   }
   if (/not found/i.test(message)) return "That player could not be found.";

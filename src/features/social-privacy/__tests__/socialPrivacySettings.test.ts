@@ -50,6 +50,13 @@ describe("social privacy settings service", () => {
     expect(from).toHaveBeenCalledWith("profile_privacy_settings");
   });
 
+  it.each(["friends_and_band", "existing_conversations", "none"] as const)(
+    "accepts and loads contact policy %s", async (permission) => {
+      maybeSingle.mockResolvedValueOnce({ data: { ...dbRow, dm_permission: permission }, error: null });
+      await expect(fetchOwnSocialPrivacySettings(dbRow.profile_id)).resolves.toMatchObject({ dmPermission: permission });
+    },
+  );
+
   it("returns safe defaults for an empty owner row", async () => {
     maybeSingle.mockResolvedValueOnce({ data: null, error: null });
 
