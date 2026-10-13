@@ -70,7 +70,11 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
         .select("*")
         .order("created_at", { ascending: false })
         .limit(100);
-      query = conversationId ? query.eq("conversation_id", conversationId) : query.eq("channel_id", directChannelId);
+      // Include older idempotent-fallback rows alongside the established thread.
+      // Those rows have the same pair channel_id but no conversation_id.
+      query = conversationId
+        ? query.or(`conversation_id.eq.${conversationId},and(conversation_id.is.null,channel_id.eq.${directChannelId})`)
+        : query.eq("channel_id", directChannelId);
       const { data, error } = await query;
       if (error) throw error;
       return ((data ?? []) as DirectMessageRow[]).reverse();
@@ -152,11 +156,14 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
       if (conversationId) {
         const { error } = await (supabase as any).rpc("mark_conversation_read", { conversation_id: conversationId, read_message_id: null });
         if (error) throw error;
-      } else if (directChannelId) {
+      }
+      if (directChannelId) {
+        // The conversation RPC does not cover previously sent fallback rows.
         const { error } = await (supabase as any)
           .from("direct_messages")
           .update({ read_at: new Date().toISOString() })
           .eq("channel_id", directChannelId)
+          .is("conversation_id", null)
           .eq("recipient_profile_id", myProfileId)
           .is("read_at", null);
         if (error) throw error;
