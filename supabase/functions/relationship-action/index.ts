@@ -301,13 +301,19 @@ Deno.serve(async (req) => {
       skill_slug: rewardSkill,
     });
 
+    const safeRelationshipMetadata = { ...(metadata ?? {}) };
+    delete safeRelationshipMetadata.affinity_value;
+    delete safeRelationshipMetadata.relationship_pair_key;
+    delete safeRelationshipMetadata.relationship_profile_id;
+    delete safeRelationshipMetadata.relationship_actor_profile_id;
+
     await admin.from("activity_feed").insert({
       user_id: user.id,
       profile_id,
       activity_type: `relationship_${action}`,
       message: message ?? `${config.label} with friend`,
       metadata: {
-        ...(metadata ?? {}),
+        ...safeRelationshipMetadata,
         // No client-provided field may impersonate another relationship.
         relationship_profile_id: other_profile_id,
         relationship_pair_key: pk,
