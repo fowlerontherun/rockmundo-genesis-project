@@ -120,7 +120,21 @@ export async function getOwnPlayerSocialProfile(profileId: string): Promise<Play
 
 export async function updatePlayerSocialProfile(input: PlayerProfileUpdateInput) {
   const cleaned = validatePlayerProfileUpdate(input);
-  const { data, error } = await supabase.from("player_profiles" as any).upsert(cleaned, { onConflict: "profile_id" }).select("*").single();
+  const { profile_id, ...patch } = cleaned;
+  if (Object.keys(patch).length === 0) {
+    const current = await getOwnPlayerSocialProfile(profile_id);
+    if (current) return current;
+    throw new Error("Choose a setting to update.");
+  }
+  // UPSERT can overwrite omitted columns with INSERT defaults on conflict.
+  // Querying first and issuing an UPDATE with only supplied fields prevents
+  // status/privacy-only edits from wiping existing genres and instruments.
+  const existing = await getOwnPlayerSocialProfile(profile_id);
+  const table = supabase.from("player_profiles" as any);
+  const query = existing
+    ? table.update(patch).eq("profile_id", profile_id)
+    : table.insert({ profile_id, ...patch });
+  const { data, error } = await query.select("*").single();
   if (error) throw error;
   return data as unknown as PlayerSocialProfile;
 }
