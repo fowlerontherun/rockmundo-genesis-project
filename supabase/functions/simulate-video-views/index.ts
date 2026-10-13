@@ -28,6 +28,7 @@ serve(async (req) => {
   );
 
   let runId: string | null = null;
+  let claimedDay: string | null = null;
   const startedAt = Date.now();
   let videosUpdated = 0;
   let totalViews = 0;
@@ -36,6 +37,15 @@ serve(async (req) => {
   const songHypeById = new Map<string, number>();
 
   try {
+    const simulationDay = new Date().toISOString().slice(0, 10);
+    const { data: claimed, error: claimError } = await supabaseClient.rpc("claim_video_simulation_day", { p_day: simulationDay });
+    if (claimError) throw claimError;
+    if (!claimed) {
+      return new Response(JSON.stringify({ success: true, alreadyProcessed: true, runDate: simulationDay }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    claimedDay = simulationDay;
     runId = await startJobRun({
       jobName: "simulate-video-views",
       functionName: "simulate-video-views",
@@ -307,11 +317,23 @@ serve(async (req) => {
       resultSummary: { videosUpdated, totalViews, totalEarnings },
     });
 
+    const { error: finalizeError } = await supabaseClient.rpc("finish_video_simulation_day", {
+      p_day: claimedDay, p_success: true,
+    });
+    if (finalizeError) throw finalizeError;
     return new Response(
       JSON.stringify({ success: true, videosUpdated, totalViews, totalEarnings }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
+    if (claimedDay) {
+      const { error: finishError } = await supabaseClient.rpc("finish_video_simulation_day", {
+        p_day: claimedDay,
+        p_success: false,
+        p_error: getErrorMessage(error),
+      });
+      if (finishError) console.error("Could not record the failed simulation day:", finishError);
+    }
     await failJobRun({
       jobName: "simulate-video-views",
       runId,
