@@ -25,4 +25,18 @@ describe("player profile service", () => {
     const completeness = calculateProfileCompleteness({ biography: "Hi", primary_instrument: "Guitar", preferred_genres: ["Rock"], available_for_collaboration: true, visibility: "public" });
     expect(completeness.percent).toBe(100);
   });
+  it("preserves omitted profile lists and nullable fields during a partial status update", () => {
+    const update = validatePlayerProfileUpdate({ profile_id: "profile-one", status_message: "  Available for gigs  " });
+    expect(update).toEqual({ profile_id: "profile-one", status_message: "Available for gigs" });
+    expect(update).not.toHaveProperty("secondary_instruments");
+    expect(update).not.toHaveProperty("preferred_genres");
+    expect(update).not.toHaveProperty("preferred_roles");
+    expect(update).not.toHaveProperty("songwriting_specialisms");
+  });
+
+  it("sanitizes only explicitly supplied preferences and allows intentional clearing", () => {
+    const update = validatePlayerProfileUpdate({ profile_id: "profile-one", preferred_roles: [" Singer ", "Singer"], preferred_genres: [] });
+    expect(update).toEqual({ profile_id: "profile-one", preferred_roles: ["Singer"], preferred_genres: [] });
+  });
+
 });

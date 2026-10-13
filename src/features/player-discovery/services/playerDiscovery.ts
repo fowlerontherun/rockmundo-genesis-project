@@ -152,7 +152,37 @@ export async function listSavedPlayerSearches(viewerProfileId?: string | null): 
 export async function savePlayerSearch(input: Omit<SavedPlayerSearch, "id" | "userId" | "createdAt" | "updatedAt" | "lastUsedAt">, viewerProfileId?: string | null) { const { data, error } = await (supabase as any).rpc("save_player_search", { viewer_profile_id: viewerProfileId ?? null, saved_search: input }); if (error) throw new Error(/limit/i.test(error.message) ? "Saved search limit reached." : "Could not save this search."); return data as SavedPlayerSearch; }
 export async function updateSavedPlayerSearch(id: string, patch: Partial<SavedPlayerSearch>, viewerProfileId?: string | null) { const { data, error } = await (supabase as any).rpc("update_player_saved_search", { viewer_profile_id: viewerProfileId ?? null, saved_search_id: id, patch }); if (error) throw new Error("Could not update this saved search."); return data as SavedPlayerSearch; }
 export async function deleteSavedPlayerSearch(id: string, viewerProfileId?: string | null) { const { error } = await (supabase as any).rpc("delete_player_saved_search", { viewer_profile_id: viewerProfileId ?? null, saved_search_id: id }); if (error) throw new Error("Could not delete this saved search."); }
-export async function getRecentPlayerSearches() { return JSON.parse(localStorage.getItem("rockmundo:recent-player-searches") ?? "[]"); }
-export async function clearRecentPlayerSearches() { localStorage.removeItem("rockmundo:recent-player-searches"); }
-export function recordRecentPlayerSearch(entry: unknown) { const recent = JSON.parse(localStorage.getItem("rockmundo:recent-player-searches") ?? "[]"); localStorage.setItem("rockmundo:recent-player-searches", JSON.stringify([entry, ...recent].slice(0, 8))); }
+const RECENT_PLAYER_SEARCH_PREFIX = "rockmundo:recent-player-searches:";
+const LEGACY_RECENT_PLAYER_SEARCH_KEY = "rockmundo:recent-player-searches";
+
+export function recentPlayerSearchStorageKey(userId: string): string {
+  if (!userId || !/^[a-f0-9-]{36}$/i.test(userId)) {
+    throw new Error("An authenticated account is required for recent player searches.");
+  }
+  return RECENT_PLAYER_SEARCH_PREFIX + userId;
+}
+function safeRecentPlayerSearches(userId: string): unknown[] {
+  const raw = localStorage.getItem(recentPlayerSearchStorageKey(userId));
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.slice(0, 8) : [];
+  } catch {
+    return [];
+  }
+}
+/** Never migrate unowned legacy searches to the next user of this browser. */
+export async function getRecentPlayerSearches(userId: string) {
+  return safeRecentPlayerSearches(userId);
+}
+export async function clearRecentPlayerSearches(userId: string) {
+  localStorage.removeItem(recentPlayerSearchStorageKey(userId));
+  localStorage.removeItem(LEGACY_RECENT_PLAYER_SEARCH_KEY);
+}
+export function recordRecentPlayerSearch(userId: string, entry: unknown) {
+  const key = recentPlayerSearchStorageKey(userId);
+  localStorage.removeItem(LEGACY_RECENT_PLAYER_SEARCH_KEY);
+  const recent = safeRecentPlayerSearches(userId);
+  localStorage.setItem(key, JSON.stringify([entry, ...recent].slice(0, 8)));
+}
 export function trackPlayerDiscoveryEvent(event: string, payload: Record<string, unknown>) { window.dispatchEvent(new CustomEvent("rockmundo:analytics", { detail: { event, area: "player_discovery", ...payload } })); }
