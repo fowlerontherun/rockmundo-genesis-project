@@ -59,27 +59,13 @@ export const useAutoRecordingCompletion = (userId: string | null, profileId?: st
         ].map(row => [row.id, row])).values());
 
         if (completingSessions.length > 0) {
-          const { data: completionResult, error: completionError } = await supabase.functions.invoke('complete-recording-sessions', {
-            body: { triggeredBy: 'client-auto-recording-completion' },
-          });
-
-          if (completionError) throw completionError;
-          const payload = completionResult as { success?: boolean; completedSessions?: number } | null;
-          if (payload?.success !== true || !Number.isInteger(payload.completedSessions) || (payload.completedSessions ?? -1) < 0) {
-            throw new Error("Recording worker returned an unconfirmed completion result");
-          }
-          
+          // Browser clients must not trigger a global service-role worker.
+          // The scheduled trusted job completes due sessions; refresh local state.
           queryClient.invalidateQueries({ queryKey: ["recording-sessions"] });
           queryClient.invalidateQueries({ queryKey: ["recordings"] });
           queryClient.invalidateQueries({ queryKey: ["recorded-songs-list"] });
 
-          const completedCount = payload.completedSessions!;
-          if (completedCount > 0) {
-            toast({
-              title: "Recording Complete!",
-              description: `${completedCount} recording session(s) have finished.`,
-            });
-          }
+
         }
       } catch (error) {
         console.error('Error checking recording sessions:', error);
