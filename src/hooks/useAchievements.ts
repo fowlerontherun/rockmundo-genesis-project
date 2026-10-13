@@ -45,6 +45,8 @@ export const useAchievements = (profileId?: string) => {
 
   const { data: playerAchievements = [], isLoading: isLoadingPlayer } = useQuery({
     queryKey: ["player-achievements", profileId],
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () => {
       if (!profileId) return [];
 
@@ -64,10 +66,11 @@ export const useAchievements = (profileId?: string) => {
   });
 
   const unlockedIds = new Set(playerAchievements.map(pa => pa.achievement_id));
-  const locked = allAchievements.filter(a => !unlockedIds.has(a.id) && !a.is_hidden);
+  const visibleAchievements = allAchievements.filter(a => !a.is_hidden || unlockedIds.has(a.id));
+  const locked = visibleAchievements.filter(a => !unlockedIds.has(a.id));
   const unlocked = playerAchievements.map(pa => pa.achievement).filter(Boolean) as Achievement[];
 
-  const progressByCategory = allAchievements.reduce((acc, achievement) => {
+  const progressByCategory = visibleAchievements.reduce((acc, achievement) => {
     const category = achievement.category || "Other";
     if (!acc[category]) {
       acc[category] = { total: 0, unlocked: 0 };
@@ -80,16 +83,16 @@ export const useAchievements = (profileId?: string) => {
   }, {} as Record<string, { total: number; unlocked: number }>);
 
   return {
-    allAchievements,
+    allAchievements: visibleAchievements,
     playerAchievements,
     unlockedAchievements: unlocked,
     lockedAchievements: locked,
     progressByCategory,
-    isLoading: isLoadingAll || isLoadingPlayer,
-    totalAchievements: allAchievements.length,
+    isLoading: isLoadingAll || (!!profileId && isLoadingPlayer),
+    totalAchievements: visibleAchievements.length,
     totalUnlocked: unlocked.length,
-    completionPercentage: allAchievements.length > 0 
-      ? Math.round((unlocked.length / allAchievements.length) * 100) 
+    completionPercentage: visibleAchievements.length > 0 
+      ? Math.round((unlocked.length / visibleAchievements.length) * 100) 
       : 0,
   };
 };
