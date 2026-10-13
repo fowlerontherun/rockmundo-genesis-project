@@ -1,3 +1,25 @@
+-- Recover from historical duplicate pending invitations before applying the
+-- unique rule. Keep the newest; cancel older duplicates without changing their
+-- existing notification history.
+WITH ranked AS (
+ SELECT id, row_number() OVER (
+   PARTITION BY from_profile_id,to_profile_id,kind
+   ORDER BY created_at DESC,id DESC
+ ) AS rn
+ FROM public.social_invites WHERE status='pending'::public.social_invite_status
+)
+UPDATE public.social_invites i
+SET status='cancelled'::public.social_invite_status,responded_at=now()
+FROM ranked r WHERE i.id=r.id AND r.rn>1;
+
+CREATE UNIQUE INDEX IF NOT EXISTS social_invites_unique_pending_pair_kind
+ON public.social_invites(from_profile_id,to_profile_id,kind)
+WHERE status='pending'::public.social_invite_status;
+
+-- Clients must use the guarded RPC, rather than inserting bare rows that
+-- would have no authoritative recipient notification.
+REVOKE INSERT ON public.social_invites FROM authenticated,anon;
+
 -- Restore the guarded invite semantics for the CURRENT text-signature RPC
 -- overloads (the earlier enum overloads are not what production currently uses).
 -- No unrelated historical social schema is replayed.
