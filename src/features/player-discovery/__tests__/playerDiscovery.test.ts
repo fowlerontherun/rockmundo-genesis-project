@@ -28,6 +28,18 @@ describe("searchPlayers", () => {
     expect(rpc).toHaveBeenCalledWith("search_player_discovery", expect.objectContaining({ viewer_profile_id: "viewer-1", query: expect.objectContaining({ mode: "session-work", filters: expect.objectContaining({ sessionAvailable: true, instrument: "bass", city: "London", onlineNow: true, skillBand: "skilled" }) }) }));
   });
 
+  it("explains an unsupported filter rather than silently returning unfiltered results", async () => {
+    rpc.mockResolvedValue({ data: null, error: { message: "DISCOVERY_FILTER_NOT_SUPPORTED: skillBand" } });
+    await expect(searchPlayers({ mode: "musicians", filters: { skillBand: "expert" } }, "viewer-1"))
+      .rejects.toThrow("not supported yet");
+  });
+
+  it("requires an authorised viewer when discovery RPC rejects caller identity", async () => {
+    rpc.mockResolvedValue({ data: null, error: { message: "Viewer character not authorised 42501" } });
+    await expect(searchPlayers({ mode: "all" }, "viewer-1"))
+      .rejects.toThrow("active character");
+  });
+
   it("maps match reasons without exposing raw private variables", async () => {
     rpc.mockResolvedValue({ data: { has_more: false, approximate_total: null, results: [{ profile_id: "p1", user_id: "u1", character_name: "Rae", preferred_genres: ["indie rock"], availability: ["Looking for a band"], match: { percentage: 86, category: "Strong match", reasons: ["Same city", "Plays bass"] } }] }, error: null });
     const result = await searchPlayers({ mode: "recommended" }, "viewer-1");
