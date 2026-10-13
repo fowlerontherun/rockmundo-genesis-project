@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import {
-  parseFestivalAttendanceReconciliation,
+  parseFestivalPlayerAttendanceList,
   type FestivalPlayerAttendance,
 } from "./festivalAttendance";
 import {
@@ -21,20 +21,15 @@ type UntypedRpc = (
 
 const attendanceRpc = supabase.rpc.bind(supabase) as unknown as UntypedRpc;
 
-const syncMyFestivalAttendanceLifecycle = async (): Promise<void> => {
-  const { error } = await attendanceRpc("sync_my_festival_attendance_lifecycle");
-  if (error) throw new Error(error.message || "festival_attendance_sync_failed");
-};
-
 export const getMyFestivalAttendance = async (): Promise<FestivalPlayerAttendance[]> => {
-  await syncMyFestivalAttendanceLifecycle();
-  const { data, error } = await attendanceRpc("reconcile_my_festival_attendance");
+  // Attendance completion is handled by the scheduled DB lifecycle job.
+  // Page refreshes must be read-only.
+  const { data, error } = await attendanceRpc("get_my_festival_attendance");
   if (error) throw new Error(error.message || "festival_attendance_unavailable");
-  return parseFestivalAttendanceReconciliation(data).attendance;
+  return parseFestivalPlayerAttendanceList(data);
 };
 
 export const getMyFestivalCheckInEligibility = async (): Promise<FestivalCheckInEligibility[]> => {
-  await syncMyFestivalAttendanceLifecycle();
   const { data, error } = await attendanceRpc("get_my_festival_check_in_eligibility");
   if (error) throw new Error(error.message || "festival_check_in_eligibility_unavailable");
   return parseFestivalCheckInEligibilityList(data);
