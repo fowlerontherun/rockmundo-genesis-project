@@ -58,4 +58,19 @@ describe("unified Inbox deduplication", () => {
 
     expect(messagesRepresentSameEvent(first, second)).toBe(false);
   });
+  it("does not hide a different gig update when only one row has an event type", () => {
+    const first = baseMessage({ metadata: { gig_id: "gig-1", event_type: "gig_completed" } });
+    const second = baseMessage({
+      id: "notification:another-stage",
+      metadata: { gig_id: "gig-1" },
+    });
+    expect(messagesRepresentSameEvent(first, second)).toBe(false);
+  });
+
+  it("does not dedupe events with conflicting lifecycle types", () => {
+    const completed = baseMessage({ metadata: { gig_id: "gig-1", event_type: "gig_completed" } });
+    const settled = baseMessage({ metadata: { gig_id: "gig-1", event_type: "gig_settled" } });
+    expect(messagesRepresentSameEvent(completed, settled)).toBe(false);
+  });
+
 });
