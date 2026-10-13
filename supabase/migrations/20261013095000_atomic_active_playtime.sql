@@ -21,8 +21,10 @@ BEGIN
     SELECT 1 FROM public.profiles WHERE id=p_profile_id AND user_id=v_user
       AND deleted_at IS NULL AND died_at IS NULL
   ) THEN RAISE EXCEPTION 'Not allowed to record character activity' USING ERRCODE='42501'; END IF;
-  INSERT INTO public.character_playtime_heartbeats(profile_id,last_credited_at)
-  VALUES(p_profile_id,v_now) ON CONFLICT(profile_id) DO NOTHING;
+  INSERT INTO public.character_playtime_heartbeats(profile_id,last_credited_at,accumulated_seconds)
+  SELECT p_profile_id,v_now,coalesce(total_hours_played,0)*3600
+  FROM public.profiles WHERE id=p_profile_id
+  ON CONFLICT(profile_id) DO NOTHING;
   SELECT * INTO v_row FROM public.character_playtime_heartbeats
     WHERE profile_id=p_profile_id FOR UPDATE;
   -- A single valid heartbeat can credit no more than the last 120 seconds:
