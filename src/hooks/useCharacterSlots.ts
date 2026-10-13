@@ -44,6 +44,8 @@ async function switchActiveCharacterFallback(userId: string, profileId: string):
     .select("id")
     .eq("id", profileId)
     .eq("user_id", userId)
+    .is("died_at", null)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (targetError) throw targetError;
@@ -64,7 +66,9 @@ async function switchActiveCharacterFallback(userId: string, profileId: string):
     .from("profiles")
     .update({ is_active: true })
     .eq("id", profileId)
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .is("died_at", null)
+    .is("deleted_at", null);
 
   if (activateTargetError) throw activateTargetError;
 }
@@ -103,6 +107,7 @@ async function createCharacterProfileFallback(userId: string): Promise<string> {
     .select("id, slot_number")
     .eq("user_id", userId)
     .is("died_at", null)
+    .is("deleted_at", null)
     .order("slot_number", { ascending: true });
 
   if (existingError) throw existingError;
@@ -154,7 +159,7 @@ async function createCharacterProfileFallback(userId: string): Promise<string> {
   // Seed XP wallet with starter balances
   const STARTER_SXP = 500;
   const STARTER_AP = 10;
-  await supabase
+  const { error: walletError } = await supabase
     .from("player_xp_wallet")
     .upsert({
       profile_id: insertedProfile.id,
@@ -165,6 +170,20 @@ async function createCharacterProfileFallback(userId: string): Promise<string> {
       attribute_points_balance: STARTER_AP,
       attribute_points_lifetime: STARTER_AP,
     }, { onConflict: "profile_id" });
+
+  if (walletError) {
+    // Never report a usable character when starter progression failed to initialize.
+    const { error: cleanupError } = await supabase
+      .from("profiles")
+      .delete()
+      .eq("id", insertedProfile.id)
+      .eq("user_id", userId)
+      .eq("is_active", false);
+    if (cleanupError) {
+      throw new Error(`Starter wallet creation failed; character ${insertedProfile.id} requires reconciliation: ${walletError.message}`);
+    }
+    throw walletError;
+  }
 
   await switchActiveCharacter(userId, insertedProfile.id);
 
@@ -195,7 +214,8 @@ export function useCharacterSlots() {
         .from("profiles")
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id)
-        .is("deleted_at", null);
+        .is("deleted_at", null)
+        .is("died_at", null);
 
 
       if (profileCountError) throw profileCountError;
