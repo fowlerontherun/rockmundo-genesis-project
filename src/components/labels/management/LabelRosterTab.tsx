@@ -142,31 +142,9 @@ export function LabelRosterTab({
     enabled: contractIds.length > 0,
   });
 
-  const dropArtistMutation = useMutation({
-    mutationFn: async (contractId: string) => {
-      const { error } = await supabase
-        .from("artist_label_contracts")
-        .update({
-          status: "terminated",
-          terminated_at: new Date().toISOString(),
-        })
-        .eq("id", contractId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["label-roster-contracts", labelId],
-      });
-      queryClient.invalidateQueries({ queryKey: ["label-artists", labelId] });
-      queryClient.invalidateQueries({ queryKey: ["label-all-contracts", labelId] });
-      queryClient.invalidateQueries({ queryKey: ["label-pending-contract-count", labelId] });
-      queryClient.invalidateQueries({ queryKey: ["label-artist-breakdown", labelId] });
-      queryClient.invalidateQueries({ queryKey: ["label-finance-summary", labelId] });
-      queryClient.invalidateQueries({ queryKey: ["label-releases"] });
-      toast.success("Artist released from roster");
-    },
-    onError: () => toast.error("Failed to release artist"),
-  });
+  // Label-side termination requires server-authoritative financial settlement.
+  // Disable the unsafe direct status update until that transaction exists.
+  const labelTerminationUnavailable = true;
 
   const activeContracts = contracts.filter((c) => c.status === "active");
 
@@ -565,19 +543,11 @@ export function LabelRosterTab({
                           variant="ghost"
                           size="sm"
                           className="text-destructive hover:text-destructive text-xs h-7"
-                          onClick={() => {
-                            if (
-                              confirm(
-                                `Release ${band?.name} from the label? This will terminate their contract.`,
-                              )
-                            ) {
-                              dropArtistMutation.mutate(contract.id);
-                            }
-                          }}
-                          disabled={dropArtistMutation.isPending}
+                          disabled={labelTerminationUnavailable}
+                          title="Artist termination is temporarily unavailable until outstanding contract finances can be settled safely."
                         >
                           <UserMinus className="h-3 w-3 mr-1" />
-                          Drop Artist
+                          Termination Unavailable
                         </Button>
                       </div>
                     </div>
