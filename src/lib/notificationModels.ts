@@ -167,7 +167,12 @@ export function getNotificationRoute(notification: PersistedNotification): strin
   // The Band Manager renders pending invitations even when this player has no
   // band. Highlight the inviting band so the player can act on the right offer.
   if (hasInvitation || notification.type === "band_invite") {
-    return bandId ? `/band/members?recruitedBand=${encodeURIComponent(bandId)}` : "/band/members";
+    const pending = notification.type === "band_invite" ||
+      (notification.type !== "band_invite_response" &&
+        (!getString(metadata.band_invitation_status) || metadata.band_invitation_status === "pending"));
+    return pending && bandId
+      ? `/band/members?recruitedBand=${encodeURIComponent(bandId)}`
+      : "/band/members";
   }
   if (notification.type === "band_request" && bandId) return `/bands/${bandId}`;
   if (notification.action_path === "/band-manager" && !hasApplication) return "/band/members";
