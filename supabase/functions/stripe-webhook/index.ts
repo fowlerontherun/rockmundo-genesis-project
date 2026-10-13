@@ -23,8 +23,20 @@ const applyVipStripeStatus = async (
   userId: string,
   event: Stripe.Event,
 ) => {
-  const status = ["active", "trialing", "past_due"].includes(subscription.status) ? "active"
+  let status = ["active", "trialing", "past_due"].includes(subscription.status) ? "active"
     : subscription.status === "canceled" ? "cancelled" : "expired";
+  const latestInvoiceId = typeof subscription.latest_invoice === "string"
+    ? subscription.latest_invoice : subscription.latest_invoice?.id;
+  if (latestInvoiceId && status === "active") {
+    const { data: refunded, error: refundLookupError } = await client
+      .from("stripe_vip_refunded_invoices")
+      .select("invoice_id")
+      .eq("invoice_id", latestInvoiceId)
+      .eq("stripe_subscription_id", subscription.id)
+      .maybeSingle();
+    if (refundLookupError) throw new Error(`VIP refund lookup failed: ${refundLookupError.message}`);
+    if (refunded) status = "expired";
+  }
   const { data, error } = await client.rpc("apply_ordered_stripe_vip_status", {
     p_subscription_id: subscription.id,
     p_user_id: userId,
@@ -244,6 +256,15 @@ serve(async (req) => {
           logStep("Ignoring refund of an earlier VIP billing period", { invoiceId, subscriptionId });
           break;
         }
+        const { error: recordRefundError } = await supabaseClient
+          .from("stripe_vip_refunded_invoices")
+          .upsert({
+            invoice_id: invoiceId,
+            stripe_subscription_id: subscriptionId,
+            refunded_event_id: event.id,
+            refunded_at: new Date(event.created * 1000).toISOString(),
+          }, { onConflict: "invoice_id" });
+        if (recordRefundError) throw new Error(`Unable to persist VIP refund: ${recordRefundError.message}`);
         const { error } = await supabaseClient.rpc("apply_ordered_stripe_vip_status", {
           p_subscription_id: subscriptionId,
           p_user_id: current.user_id,
