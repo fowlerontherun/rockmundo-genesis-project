@@ -14,7 +14,7 @@ BEGIN
  SELECT * INTO v_wallet FROM public.player_xp_wallet WHERE profile_id=p_profile_id FOR UPDATE;
  IF NOT FOUND OR coalesce(v_wallet.attribute_points_balance,0)<p_cost
  THEN RAISE EXCEPTION 'INSUFFICIENT_ATTRIBUTE_POINTS'; END IF;
- INSERT INTO public.player_attributes(profile_id) VALUES(p_profile_id)
+ INSERT INTO public.player_attributes(profile_id,user_id) SELECT id,user_id FROM public.profiles WHERE id=p_profile_id
  ON CONFLICT(profile_id) DO NOTHING;
  EXECUTE format('SELECT coalesce(%I,0) FROM public.player_attributes WHERE profile_id=$1 FOR UPDATE',p_attribute)
  INTO v_value USING p_profile_id;
