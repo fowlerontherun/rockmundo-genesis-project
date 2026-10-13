@@ -141,7 +141,15 @@ function mapResult(row: any): PlayerDiscoveryResult {
 export async function searchPlayers(query: Partial<PlayerDiscoveryQuery>, viewerProfileId?: string | null): Promise<PlayerDiscoveryResponse> {
   const normalized = normalizeDiscoveryQuery(query);
   const { data, error } = await (supabase as any).rpc("search_player_discovery", { viewer_profile_id: viewerProfileId ?? null, query: normalized });
-  if (error) throw new Error("Player discovery is unavailable right now. Try again or broaden your filters.");
+  if (error) {
+    if (/DISCOVERY_FILTER_NOT_SUPPORTED|DISCOVERY_TRAVEL_FILTER_NOT_SUPPORTED/.test(error.message ?? "")) {
+      throw new Error("This discovery filter is not supported yet. Remove that filter and try again.");
+    }
+    if (/42501|Social profiles require sign-in|Viewer character not authorised/.test(error.message ?? "")) {
+      throw new Error("Sign in and select your active character to discover musicians.");
+    }
+    throw new Error("Player discovery is unavailable right now. Try again or broaden your filters.");
+  }
   const rows = Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [];
   return { results: rows.map(mapResult), page: normalized.page!, pageSize: normalized.pageSize!, hasMore: Boolean(data?.has_more), approximateTotal: data?.approximate_total ?? null };
 }
