@@ -59,64 +59,13 @@ export async function transferLeadership(
   currentLeaderId: string,
   newLeaderId: string
 ) {
-  try {
-    // 1. Verify current leader
-    const { data: band, error: bandError } = await supabase
-      .from('bands')
-      .select('leader_id, name')
-      .eq('id', bandId)
-      .single();
-
-    if (bandError) throw bandError;
-    if (!band) throw new Error('Band not found');
-
-    if (band.leader_id !== currentLeaderId) {
-      throw new Error('Only the current leader can transfer leadership');
-    }
-
-    // 2. Verify new leader is a human member
-    const { data: newLeader, error: memberError } = await supabase
-      .from('band_members')
-      .select('*')
-      .eq('band_id', bandId)
-      .eq('user_id', newLeaderId)
-      .eq('is_touring_member', false)
-      .single();
-
-    if (memberError || !newLeader) {
-      throw new Error('New leader must be a human band member');
-    }
-
-    // 3. Transfer leadership
-    const { error: updateError } = await supabase
-      .from('bands')
-      .update({ leader_id: newLeaderId })
-      .eq('id', bandId);
-
-    if (updateError) throw updateError;
-
-    // 4. Update chemistry (-5 for leadership change)
-    await updateBandChemistry(bandId, 'LEADER_CHANGED', { 
-      from: currentLeaderId, 
-      to: newLeaderId 
-    });
-
-    // 5. Log event
-    await supabase.from('band_history').insert({
-      band_id: bandId,
-      event_type: 'leadership_transfer',
-      triggered_by: currentLeaderId,
-      event_data: { 
-        new_leader_id: newLeaderId,
-        transferred_at: new Date().toISOString()
-      }
-    });
-
-    return { success: true };
-  } catch (error) {
-    console.error('Error transferring leadership:', error);
-    throw error;
-  }
+  const { error } = await supabase.rpc('transfer_band_leadership_atomic' as any, {
+    p_band_id: bandId,
+    p_current_leader_id: currentLeaderId,
+    p_new_leader_id: newLeaderId,
+  });
+  if (error) throw error;
+  return { success: true };
 }
 
 export async function disbandBand(bandId: string, leaderId: string) {
