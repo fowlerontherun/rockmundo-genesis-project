@@ -18,7 +18,7 @@ WHERE status='pending'::public.social_invite_status;
 
 -- Clients must use the guarded RPC, rather than inserting bare rows that
 -- would have no authoritative recipient notification.
-REVOKE INSERT ON public.social_invites FROM authenticated,anon;
+REVOKE INSERT ON public.social_invites FROM PUBLIC,authenticated,anon;
 
 -- Restore the guarded invite semantics for the CURRENT text-signature RPC
 -- overloads (the earlier enum overloads are not what production currently uses).
