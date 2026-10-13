@@ -289,7 +289,8 @@ Deno.serve(async (req) => {
         const newQuality = outcome.finalMasterQuality
         const xpEarned = outcome.xpAwards.reduce((sum, award) => sum + award.amount, 0)
 
-        const { error: updateError } = await supabase
+        // Compare-and-swap claim: only one completion worker may award this session.
+        const { data: claimedSession, error: updateError } = await supabase
           .from('recording_sessions')
           .update({
             status: 'completed',
@@ -305,42 +306,44 @@ Deno.serve(async (req) => {
             updated_at: new Date().toISOString(),
           })
           .eq('id', session.id)
+          .eq('status', session.status)
+          .select('id')
+          .maybeSingle()
         if (updateError) throw updateError
+        if (!claimedSession) {
+          console.log(`Recording session ${session.id} already claimed by another worker`);
+          continue;
+        }
 
         if (session.song_id && session.songs) {
           const originalSong = session.songs
           const recordingVersion = session.recording_version || 'standard'
           if (recordingVersion !== 'standard') {
-            const { data: existingVersion } = await supabase
-              .from('songs').select('id').eq('parent_song_id', session.song_id).eq('version', recordingVersion).maybeSingle()
-            let targetSongId = session.song_id
-            if (existingVersion) {
-              targetSongId = existingVersion.id
-              await supabase.from('songs').update({ quality_score: newQuality, status: 'recorded', updated_at: new Date().toISOString() }).eq('id', existingVersion.id)
-            } else {
-              const versionLabel = recordingVersion === 'acoustic' ? 'Acoustic' : 'Remix'
-              const { data: newSong, error: createError } = await supabase
-                .from('songs')
-                .insert({
-                  user_id: originalSong.user_id,
-                  band_id: session.band_id || originalSong.band_id,
-                  title: `${originalSong.title} (${versionLabel})`,
-                  genre: originalSong.genre,
-                  lyrics: originalSong.lyrics,
-                  quality_score: newQuality,
-                  status: 'recorded',
-                  parent_song_id: session.song_id,
-                  version: recordingVersion,
-                  duration_seconds: originalSong.duration_seconds,
-                  duration_display: originalSong.duration_display,
-                  songwriting_project_id: originalSong.songwriting_project_id,
-                })
-                .select('id').single()
-              if (!createError && newSong) {
-                targetSongId = newSong.id
-                await supabase.from('recording_sessions').update({ song_id: newSong.id }).eq('id', session.id)
-              }
-            }
+            // Keep every acoustic/remix take rather than overwriting the previous version.
+            const versionLabel = recordingVersion === 'acoustic' ? 'Acoustic' : 'Remix'
+            const { data: newSong, error: createError } = await supabase
+              .from('songs')
+              .insert({
+                user_id: originalSong.user_id,
+                band_id: session.band_id || originalSong.band_id,
+                title: `${originalSong.title} (${versionLabel})`,
+                genre: originalSong.genre,
+                lyrics: originalSong.lyrics,
+                quality_score: newQuality,
+                status: 'recorded',
+                parent_song_id: session.song_id,
+                version: recordingVersion,
+                duration_seconds: originalSong.duration_seconds,
+                duration_display: originalSong.duration_display,
+                songwriting_project_id: originalSong.songwriting_project_id,
+              })
+              .select('id').single()
+            if (createError) throw createError;
+            if (!newSong?.id) throw new Error('Recording version could not be created');
+            const targetSongId = newSong.id;
+            const { error: linkError } = await supabase.from('recording_sessions')
+              .update({ song_id: targetSongId }).eq('id', session.id);
+            if (linkError) throw linkError;
             if (targetSongId) {
               try {
                 const { data: versionSongData } = await supabase
