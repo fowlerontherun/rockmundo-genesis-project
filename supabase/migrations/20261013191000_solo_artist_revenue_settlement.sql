@@ -58,9 +58,9 @@ BEGIN
  FROM public.release_formats f JOIN public.releases r ON r.id=f.release_id
  WHERE f.id=NEW.release_format_id;
  IF NOT FOUND THEN RAISE EXCEPTION 'SALE_RELEASE_NOT_FOUND';END IF;
- IF v_band IS NULL THEN
+ IF v_band IS NULL AND coalesce(NEW.net_revenue,0)>0 THEN
   PERFORM public.credit_solo_artist_revenue(v_profile,'release_sale',NEW.id,
-   greatest(0,coalesce(NEW.net_revenue,0))::bigint);
+   greatest(0,coalesce(NEW.band_revenue_amount,NEW.net_revenue,0))::bigint);
  END IF;
  RETURN NEW;
 END $$;
@@ -77,7 +77,7 @@ BEGIN
  FROM public.song_releases sr JOIN public.songs s ON s.id=sr.song_id
  WHERE sr.id=NEW.song_release_id;
  IF NOT FOUND THEN RAISE EXCEPTION 'STREAMING_RELEASE_NOT_FOUND';END IF;
- IF v_band IS NULL THEN
+ IF v_band IS NULL AND coalesce(NEW.daily_revenue,0)>0 THEN
   PERFORM public.credit_solo_artist_revenue(v_profile,'streaming',NEW.id,
    greatest(0,coalesce(NEW.daily_revenue,0))::bigint*100);
  END IF;
@@ -86,3 +86,6 @@ END $$;
 DROP TRIGGER IF EXISTS credit_solo_artist_streaming ON public.streaming_analytics_daily;
 CREATE TRIGGER credit_solo_artist_streaming AFTER INSERT ON public.streaming_analytics_daily
 FOR EACH ROW EXECUTE FUNCTION public.credit_solo_streaming_trigger();
+
+REVOKE ALL ON FUNCTION public.credit_solo_release_sale_trigger() FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION public.credit_solo_streaming_trigger() FROM PUBLIC,anon,authenticated;
