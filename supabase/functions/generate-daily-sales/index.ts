@@ -640,6 +640,24 @@ serve(async (req) => {
                       restorationError: restoreError,
                       inventoryClaim,
                     });
+                    // Persist an actionable retry record; the failed sale was never
+                    // inserted, so restoring this claim cannot duplicate revenue.
+                    const { error: queueError } = await supabaseClient
+                      .from("release_inventory_reconciliation_queue")
+                      .insert({
+                        format_id: format.id,
+                        release_id: release.id,
+                        actual_sold: inventoryClaim.actualSold,
+                        backlog_sold: inventoryClaim.backlogSold,
+                        unmet_added: inventoryClaim.unmetAdded,
+                        failure_reason: String(saleInsertError.message ?? "sale_insert_failed"),
+                        last_error: String(restoreError.message ?? "restore_failed"),
+                      });
+                    if (queueError) {
+                      console.error("CRITICAL: failed to persist inventory reconciliation record", {
+                        formatId: format.id, releaseId: release.id, queueError,
+                      });
+                    }
                     // Distinct failure signal for alerting/reconciliation. Never
                     // misclassify this as an ordinary sale insertion error.
                     throw new Error(
