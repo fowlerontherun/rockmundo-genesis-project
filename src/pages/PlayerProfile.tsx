@@ -406,6 +406,18 @@ export default function PlayerProfile() {
               <p>Albums released: {profile.career_summary?.albums_released ?? 'Not available'}</p>
               <p>Awards: {profile.career_summary?.awards ?? 'Not available'}</p>
             </div>
+            {Array.isArray(profile.career_summary?.milestones) && profile.career_summary.milestones.length > 0 && (
+              <section className="mt-3 space-y-2" aria-label="Published career milestones">
+                <h3 className="text-sm font-semibold">Career milestones</h3>
+                <ul className="space-y-1">
+                  {profile.career_summary.milestones.map((milestone: { milestone_type: string; summary: string; achieved_at: string }, index: number) => (
+                    <li key={`${milestone.milestone_type}:${milestone.achieved_at}:${index}`} className="text-sm text-muted-foreground">
+                      {milestone.summary}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
           </ProfileInfoCard>
 
           <ProfileInfoCard title="Achievements and badges" icon={Star}>
