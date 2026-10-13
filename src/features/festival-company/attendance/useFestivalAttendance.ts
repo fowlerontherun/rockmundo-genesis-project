@@ -38,6 +38,10 @@ export const useMyFestivalCheckInEligibility = (enabled = true) => {
     queryFn: getMyFestivalCheckInEligibility,
     enabled: enabled && !!profileId,
     staleTime: 15_000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
   });
 };
 
