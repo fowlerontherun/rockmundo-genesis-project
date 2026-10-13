@@ -117,68 +117,14 @@ export function useCharacterDeath() {
       const displayName = typeof input === "string" ? undefined : input.displayName?.trim() || undefined;
       const providedUsername = typeof input === "string" ? undefined : input.username?.trim() || undefined;
 
-      const parent = deadCharactersQuery.data?.find((d) => d.profile_id === parentProfileId);
-      if (!parent) throw new Error("Parent character not found");
-
-      const inheritedCash = Math.floor(parent.total_cash_at_death * 0.5);
-      const inheritedSkills: Record<string, number> = {};
-      for (const [skill, val] of Object.entries(parent.final_skills || {})) {
-        const inherited = Math.floor(val * 0.1);
-        if (inherited > 0) inheritedSkills[skill] = inherited;
-      }
-
-      const slotNumber = await assertRecoverySlotAvailable(user.id);
-
-      // Deactivate all other profiles
-      const { error: deactivateError } = await supabase
-        .from("profiles")
-        .update({ is_active: false })
-        .eq("user_id", user.id);
-      if (deactivateError) throw deactivateError;
-
-      const fallbackUsername = `child-of-${parent.character_name.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 24)}-${slotNumber}`;
-
-      // Create new profile
-      const { data: newProfile, error } = await supabase
-        .from("profiles")
-        .insert({
-          user_id: user.id,
-          username: providedUsername || fallbackUsername,
-          display_name: displayName ?? null,
-          avatar_url: null,
-          bio: null,
-          cash: inheritedCash,
-          fame: 0,
-          level: 1,
-          health: 100,
-          energy: 100,
-          experience: 0,
-          age: 16,
-          is_active: true,
-          slot_number: slotNumber,
-          generation_number: (parent.generation_number || 1) + 1,
-          parent_profile_id: parent.profile_id,
-        })
-        .select("id")
-        .single();
-
+      const { data: profileId, error } = await supabase.rpc("create_recovery_character_atomic" as any, {
+        p_parent_profile_id: parentProfileId,
+        p_username: providedUsername ?? null,
+        p_display_name: displayName ?? null,
+      });
       if (error) throw error;
-
-      // Insert inherited skills
-      const skillInserts = Object.entries(inheritedSkills).map(([slug, level]) => ({
-        profile_id: newProfile.id,
-        skill_slug: slug,
-        current_level: level,
-        current_xp: 0,
-        required_xp: 100,
-      }));
-
-      if (skillInserts.length > 0) {
-        const { error: skillsError } = await supabase.from("skill_progress").insert(skillInserts);
-        if (skillsError) throw new Error(`Character ${newProfile.id} needs inherited-skill reconciliation: ${skillsError.message}`);
-      }
-
-      return newProfile.id;
+      if (!profileId) throw new Error("Recovery character creation failed");
+      return profileId as string;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["active-profile"] });
@@ -216,46 +162,11 @@ export function useCharacterDeath() {
       const displayName = input?.displayName?.trim() || undefined;
       const providedUsername = input?.username?.trim() || undefined;
 
-      // Recovery is only valid when no living character exists. Never wipe
-      // healthy siblings or zero their balances on a stale recovery screen.
-      const { count: livingCount, error: livingError } = await supabase.from("profiles")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id).is("died_at", null).is("deleted_at", null);
-      if (livingError) throw livingError;
-      if (livingCount === null || livingCount !== 0)
-        throw new Error("A living character already exists. Switch to that character instead.");
-      const slotNumber = await assertRecoverySlotAvailable(user.id);
-
-      const { error: deactivateError } = await supabase
-        .from("profiles")
-        .update({ is_active: false })
-        .eq("user_id", user.id);
-      if (deactivateError) throw deactivateError;
-
-      const fallbackUsername = `player-${user.id.slice(0, 8)}-${slotNumber}`;
-
-      const { error } = await supabase
-        .from("profiles")
-        .insert({
-          user_id: user.id,
-          username: providedUsername || fallbackUsername,
-          display_name: displayName ?? null,
-          avatar_url: null,
-          bio: null,
-          cash: 10000,
-          fame: 0,
-          level: 1,
-          health: 100,
-          energy: 100,
-          experience: 0,
-          age: 16,
-          is_active: true,
-          slot_number: slotNumber,
-          generation_number: 1,
-        })
-        .select("id")
-        .single();
-
+      const { error } = await supabase.rpc("create_recovery_character_atomic" as any, {
+        p_parent_profile_id: null,
+        p_username: providedUsername ?? null,
+        p_display_name: displayName ?? null,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
