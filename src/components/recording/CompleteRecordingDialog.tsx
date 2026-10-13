@@ -144,7 +144,7 @@ export const CompleteRecordingDialog = ({
             Complete Recording
           </DialogTitle>
           <DialogDescription>
-            Mark the recording session for "{songTitle}" as completed?
+            Check whether the recording processor has finalized "{songTitle}". Final quality, credits, experience and morale must be awarded by the processor.
           </DialogDescription>
         </DialogHeader>
         
@@ -206,7 +206,7 @@ export const CompleteRecordingDialog = ({
           </Button>
           <Button onClick={handleComplete} disabled={completing || generatingAudio}>
             {completing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Complete Recording
+            Check Recording Status
           </Button>
         </div>
       </DialogContent>
