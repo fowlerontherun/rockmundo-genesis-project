@@ -149,8 +149,24 @@ export const useUnderworldStore = () => {
       });
       if (error) throw error;
       if (!data?.success) throw new Error("Underworld transaction was not confirmed");
+      // The purchase trigger has already committed any arrest in the same
+      // transaction. Read the authoritative prison record, never roll in JS.
+      const { data: imprisonment, error: arrestError } = await (supabase as any)
+        .from("player_imprisonments")
+        .select("bail_amount, original_sentence_days, reason")
+        .eq("profile_id", profileId)
+        .eq("status", "imprisoned")
+        .gte("imprisoned_at", new Date(Date.now() - 120_000).toISOString())
+        .order("imprisoned_at", { ascending: false })
+        .limit(1).maybeSingle();
+      if (arrestError) throw arrestError;
       return { success: true, expiresAt: data.expiresAt ?? null,
-        storedInInventory: Boolean(data.storedInInventory), arrestResult: null };
+        storedInInventory: Boolean(data.storedInInventory),
+        arrestResult: imprisonment ? {
+          arrested: true, bailAmount: imprisonment.bail_amount,
+          sentenceDays: imprisonment.original_sentence_days,
+          description: imprisonment.reason,
+        } : null };
     },
     onSuccess: (result, { product }) => {
       queryClient.invalidateQueries({ queryKey: ["user-cash-balance"] });
