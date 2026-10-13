@@ -191,14 +191,16 @@ export function useCharacterSlots() {
       const extraPurchased = slots?.extra_slots_purchased ?? 0;
       const maxSlots = Math.min(baseSlots + extraPurchased, maxAllowedSlots);
 
-      const { count } = await supabase
+      const { count, error: profileCountError } = await supabase
         .from("profiles")
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id)
         .is("deleted_at", null);
 
 
-      const usedSlots = count ?? 1;
+      if (profileCountError) throw profileCountError;
+      if (count === null) throw new Error("Could not verify occupied character slots");
+      const usedSlots = count;
 
       return {
         maxSlots,
