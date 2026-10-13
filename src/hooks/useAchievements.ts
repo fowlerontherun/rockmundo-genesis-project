@@ -35,6 +35,7 @@ export const useAchievements = (profileId?: string) => {
       const { data, error } = await supabase
         .from("achievements")
         .select("*")
+        .or("is_hidden.eq.false,is_hidden.is.null")
         .order("category", { ascending: true });
 
       if (error) throw error;
@@ -66,7 +67,8 @@ export const useAchievements = (profileId?: string) => {
   });
 
   const unlockedIds = new Set(playerAchievements.map(pa => pa.achievement_id));
-  const visibleAchievements = allAchievements.filter(a => !a.is_hidden || unlockedIds.has(a.id));
+  const revealedHidden = unlocked.filter(a => a.is_hidden && !allAchievements.some(publicItem => publicItem.id === a.id));
+  const visibleAchievements = [...allAchievements, ...revealedHidden];
   const locked = visibleAchievements.filter(a => !unlockedIds.has(a.id));
   const unlocked = playerAchievements.map(pa => pa.achievement).filter(Boolean) as Achievement[];
 
