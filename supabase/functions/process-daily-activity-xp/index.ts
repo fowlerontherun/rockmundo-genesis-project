@@ -67,15 +67,20 @@ serve(async (req) => {
 
     console.log(`[ProcessDailyActivityXp] Processing activities for ${grantDate}`);
 
-    // Get all activity XP from yesterday
-    const { data: activities, error: activitiesError } = await client
-      .from("experience_ledger")
-      .select("profile_id, activity_type, xp_amount")
-      .gte("created_at", yesterday.toISOString())
-      .lte("created_at", yesterdayEnd.toISOString());
-
-    if (activitiesError) {
-      throw new Error(`Failed to fetch activities: ${activitiesError.message}`);
+    // Page the entire ledger; PostgREST defaults to a truncated 1,000-row result.
+    const activities: Array<{profile_id:string|null;activity_type:string|null;xp_amount:number|null}> = [];
+    for (let offset = 0; ; offset += 500) {
+      const { data: page, error: activitiesError } = await client
+        .from("experience_ledger")
+        .select("profile_id, activity_type, xp_amount")
+        .gte("created_at", yesterday.toISOString())
+        .lte("created_at", yesterdayEnd.toISOString())
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .range(offset, offset + 499);
+      if (activitiesError) throw new Error(`Failed to fetch activities: ${activitiesError.message}`);
+      activities.push(...(page ?? []));
+      if (!page || page.length < 500) break;
     }
 
     if (!activities || activities.length === 0) {
@@ -123,79 +128,26 @@ serve(async (req) => {
     let skipped = 0;
 
     for (const [profileId, summary] of profileActivities) {
-      // Check if already processed today
-      const { data: existingGrant } = await client
-        .from("profile_daily_xp_grants")
-        .select("id")
-        .eq("profile_id", profileId)
-        .eq("grant_date", grantDate)
-        .eq("source", "activity_bonus")
-        .maybeSingle();
+      const cappedSxp = Math.max(0, Math.min(DAILY_ACTIVITY_XP_CAP, summary.totalXp));
+      const cappedAp = Math.max(0, Math.min(DAILY_ACTIVITY_AP_CAP, summary.totalAp));
+      if (cappedSxp === 0) { skipped++; continue; }
 
-      if (existingGrant) {
-        skipped++;
-        continue;
-      }
-
-      // Cap XP and AP at daily limits
-      const cappedSxp = Math.min(DAILY_ACTIVITY_XP_CAP, summary.totalXp);
-      const cappedAp = Math.min(DAILY_ACTIVITY_AP_CAP, summary.totalAp);
-
-      // Get current wallet balances
-      const { data: wallet } = await client
-        .from("player_xp_wallet")
-        .select("*")
-        .eq("profile_id", profileId)
-        .maybeSingle();
-
-      const currentSxpBalance = wallet?.skill_xp_balance ?? wallet?.xp_balance ?? 0;
-      const currentSxpLifetime = wallet?.skill_xp_lifetime ?? wallet?.lifetime_xp ?? 0;
-      const currentApBalance = wallet?.attribute_points_balance ?? 0;
-      const currentApLifetime = wallet?.attribute_points_lifetime ?? 0;
-
-      // Update wallet with activity bonus
-      const { error: walletError } = await client
-        .from("player_xp_wallet")
-        .upsert({
-          profile_id: profileId,
-          skill_xp_balance: currentSxpBalance + cappedSxp,
-          skill_xp_lifetime: currentSxpLifetime + cappedSxp,
-          attribute_points_balance: currentApBalance + cappedAp,
-          attribute_points_lifetime: currentApLifetime + cappedAp,
-          // Keep legacy columns in sync
-          xp_balance: currentSxpBalance + cappedSxp,
-          lifetime_xp: currentSxpLifetime + cappedSxp,
-          last_recalculated: new Date().toISOString(),
-        }, { onConflict: "profile_id" });
-
-      if (walletError) {
-        console.error(`[ProcessDailyActivityXp] Failed to update wallet for ${profileId}:`, walletError);
-        continue;
-      }
-
-      // Record the grant
-      const { error: grantError } = await client
-        .from("profile_daily_xp_grants")
-        .insert({
-          profile_id: profileId,
-          grant_date: grantDate,
-          source: "activity_bonus",
-          xp_amount: cappedSxp,
-          attribute_points_amount: cappedAp,
-          metadata: {
-            raw_xp: summary.totalXp,
-            capped_sxp: cappedSxp,
-            total_ap: cappedAp,
-            activity_count: summary.activities.length,
-            activities: summary.activities,
-          },
-        });
-
-      if (grantError) {
-        console.error(`[ProcessDailyActivityXp] Failed to create grant for ${profileId}:`, grantError);
-        continue;
-      }
-
+      // One database transaction owns both the idempotency marker and
+      // arithmetic wallet increment. No stale read/modify/write or double pay.
+      const { data: awarded, error: awardError } = await client.rpc("award_daily_activity_xp_atomic", {
+        p_profile_id: profileId,
+        p_grant_date: grantDate,
+        p_xp: cappedSxp,
+        p_ap: cappedAp,
+        p_metadata: {
+          raw_xp: summary.totalXp,
+          total_ap: summary.totalAp,
+          activity_count: summary.activities.length,
+          activities: summary.activities,
+        },
+      });
+      if (awardError) throw new Error(`Failed to award daily activity XP for ${profileId}: ${awardError.message}`);
+      if (!awarded) { skipped++; continue; }
       processed++;
     }
 
