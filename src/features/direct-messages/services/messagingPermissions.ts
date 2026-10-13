@@ -66,9 +66,19 @@ export class MessagingPermissionService {
       return { allowed: false, reason: "blocked_or_restricted", userMessage: neutralRestriction };
     }
     const preference = context.recipientPreference ?? "friends";
-    const relationshipAllowed = Boolean(context.areFriends || context.shareBand || context.shareCompany);
-    const existingAllowed = continuation && Boolean(context.hasExistingConversation);
-    if (preference === "everyone" || relationshipAllowed || existingAllowed) {
+    // Recipient consent is preference-specific. A shared company or an old
+    // thread never overrides a friends-only / disabled preference.
+    const allowedByPreference = (() => {
+      switch (preference) {
+        case "none": return false;
+        case "everyone": return true;
+        case "friends": return Boolean(context.areFriends);
+        case "friends_and_band": return Boolean(context.areFriends || context.shareBand);
+        case "existing_conversations": return continuation && Boolean(context.hasExistingConversation);
+        default: return false;
+      }
+    })();
+    if (allowedByPreference) {
       return { allowed: true, reason: "allowed", userMessage: "Messaging is available." };
     }
     return { allowed: false, reason: "preference_restricted", userMessage: neutralRestriction };
