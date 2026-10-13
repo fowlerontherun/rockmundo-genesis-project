@@ -7,16 +7,23 @@ import {
   normalizeGigExperienceFailure,
 } from "../../diagnostics";
 
-const { useGigExperienceMock } = vi.hoisted(() => ({
+const { useGigExperienceMock, useGigViewerReplayMock } = vi.hoisted(() => ({
   useGigExperienceMock: vi.fn(),
+  useGigViewerReplayMock: vi.fn(() => ({ isError: false })),
 }));
 
 vi.mock("../../hooks", () => ({
   useGigExperience: useGigExperienceMock,
+  useGigViewerReplay: useGigViewerReplayMock,
 }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {} }));
 
 describe("CompletedGigStageViewer diagnostics", () => {
+  it("queries canonical replay only if its descriptor says ready", () => {
+    useGigExperienceMock.mockReturnValue({ data: { viewer: { replayAvailable: false }, songs: [] }, isLoading: false, isError: false });
+    render(<CompletedGigStageViewer gigId="11111111-1111-4111-8111-111111111111" />);
+    expect(useGigViewerReplayMock).toHaveBeenCalledWith("11111111-1111-4111-8111-111111111111", false);
+  });
   it("shows a support reference and keeps retry available after a data failure", () => {
     const gigId = "11111111-1111-4111-8111-111111111111";
     const refetch = vi.fn();
