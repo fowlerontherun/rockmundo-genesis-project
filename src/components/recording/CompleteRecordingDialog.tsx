@@ -104,50 +104,32 @@ export const CompleteRecordingDialog = ({
   const handleComplete = async () => {
     setCompleting(true);
     try {
-      // Get session details
-      const { data: session, error: sessionError } = await supabase
-        .from('recording_sessions')
-        .select('song_id')
-        .eq('id', sessionId)
-        .single();
-
-      if (sessionError) throw sessionError;
-
-      // Do not confirm session completion if its song status cannot be updated.
-      // The full outcome, awards and credits still need an authoritative finalizer.
-      if (session?.song_id) {
-        const { error: songUpdateError } = await supabase
-          .from('songs')
-          .update({ status: 'recorded' })
-          .eq('id', session.song_id);
-        if (songUpdateError) throw songUpdateError;
-        setCurrentSongId(session.song_id);
-      }
-
-      const { error: updateError } = await supabase
+      // Completion is performed by the scheduled authoritative worker.
+      // Never mark a session completed here: that skips quality, credits,
+      // XP, location checks and morale side effects.
+      const { data: session, error } = await supabase
         .from("recording_sessions")
-        .update({
-          status: "completed",
-          completed_at: new Date().toISOString(),
-        })
-        .eq("id", sessionId);
-      if (updateError) throw updateError;
+        .select("status, song_id")
+        .eq("id", sessionId)
+        .single();
+      if (error) throw error;
 
-      if (session?.song_id && canGenerateAudio) {
-        void generateAudio(session.song_id);
+      await queryClient.invalidateQueries({ queryKey: ["recording_sessions"] });
+      await queryClient.invalidateQueries({ queryKey: ["songs"] });
+      if (session.status === "completed") {
+        if (session.song_id) setCurrentSongId(session.song_id);
+        toast.success("Recording completed!", {
+          description: `"${songTitle}" was finalized by the recording processor.`,
+        });
+        onOpenChange(false);
+      } else {
+        toast.info("Recording is awaiting final processing", {
+          description: "Your quality, experience and recording credits will be calculated together when the recording processor finishes. Please check again shortly.",
+        });
       }
-
-      toast.success("Recording completed!", {
-        description: `"${songTitle}" recording session finished successfully.`,
-      });
-
-      // Invalidate queries
-      queryClient.invalidateQueries({ queryKey: ["recording_sessions"] });
-
-      onOpenChange(false);
     } catch (error) {
-      console.error("Error completing recording:", error);
-      toast.error("Failed to complete recording session");
+      console.error("Error checking recording completion:", error);
+      toast.error("Could not check recording status");
     } finally {
       setCompleting(false);
     }
