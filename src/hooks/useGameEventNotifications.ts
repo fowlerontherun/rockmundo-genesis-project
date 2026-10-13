@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { pushNotification, type NotifyCategory } from "@/lib/notify";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
@@ -10,11 +10,24 @@ export const useGameEventNotifications = () => {
   const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const navigate = useNavigate();
-  const userBandIdsRef = useRef<string[]>([]);
+  const userBandIdsRef = useRef<{ profileId: string | null; ids: string[] }>({ profileId: null, ids: [] });
+  const activeIdentityRef = useRef<{ userId: string | null; profileId: string | null }>({ userId: null, profileId: null });
+  const chartInFlightRef = useRef(new Set<string>());
+
+  // Invalidate old callbacks immediately after a character change commits.
+  useLayoutEffect(() => {
+    activeIdentityRef.current = { userId: user?.id ?? null, profileId: profileId ?? null };
+    userBandIdsRef.current = { profileId: profileId ?? null, ids: [] };
+  }, [user?.id, profileId]);
+
+  const isCurrentBand = (bandId?: string | null) =>
+    Boolean(bandId && userBandIdsRef.current.profileId === profileId && userBandIdsRef.current.ids.includes(bandId));
 
   const notify = (args: { category: string; type: string; title: string; message?: string; actionPath?: string; metadata?: Record<string, unknown> }) => {
-    if (!user?.id) return;
-    void pushNotification({
+    if (!user?.id || !profileId ||
+      activeIdentityRef.current.userId !== user.id ||
+      activeIdentityRef.current.profileId !== profileId) return Promise.resolve(null);
+    return pushNotification({
       userId: user.id,
       profileId: profileId ?? null,
       category: args.category as NotifyCategory,
@@ -26,22 +39,27 @@ export const useGameEventNotifications = () => {
     });
   };
 
-  // Fetch active profile's band IDs for filtering band-related notifications
+  // Fetch only for the currently selected character. Ignore late responses
+  // from the previously selected character after a switch/unmount.
   useEffect(() => {
-    if (!profileId) return;
-
+    if (!user?.id || !profileId) return;
+    let cancelled = false;
     const fetchBandIds = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("band_members")
         .select("band_id")
         .eq("profile_id", profileId)
         .eq("member_status", "active");
-      
-      userBandIdsRef.current = data?.map(d => d.band_id) || [];
+      if (cancelled || activeIdentityRef.current.userId !== user.id ||
+        activeIdentityRef.current.profileId !== profileId) return;
+      userBandIdsRef.current = {
+        profileId,
+        ids: error ? [] : (data?.map((row) => row.band_id) ?? []),
+      };
     };
-
-    fetchBandIds();
-  }, [profileId]);
+    void fetchBandIds();
+    return () => { cancelled = true; };
+  }, [user?.id, profileId]);
 
   useEffect(() => {
     if (!user?.id || !profileId) return;
@@ -96,7 +114,7 @@ export const useGameEventNotifications = () => {
           const bandId = payload.new?.band_id;
           
           // Check if this release belongs to the user
-          const isOwner = userId === user.id || userBandIdsRef.current.includes(bandId);
+          const isOwner = userId === user.id || isCurrentBand(bandId);
           
           if (isOwner && oldStatus === 'manufacturing' && newStatus === 'released') {
             notify({
@@ -134,7 +152,7 @@ export const useGameEventNotifications = () => {
               .eq('id', payload.new.song_id)
               .single();
             
-            const isOwner = song?.user_id === user.id || userBandIdsRef.current.includes(song?.band_id);
+            const isOwner = song?.user_id === user.id || isCurrentBand(song?.band_id);
             
             if (isOwner && song) {
               notify({
@@ -171,7 +189,7 @@ export const useGameEventNotifications = () => {
             .eq('id', outcome.gig_id)
             .single();
           
-          if (gig && userBandIdsRef.current.includes(gig.band_id)) {
+          if (gig && isCurrentBand(gig.band_id)) {
             const rating = outcome.overall_rating || 0;
             const venueName = (gig.venues as any)?.name || 'Unknown Venue';
             
@@ -226,7 +244,7 @@ export const useGameEventNotifications = () => {
         async (payload) => {
           const offer = payload.new;
           
-          if (userBandIdsRef.current.includes(offer.band_id)) {
+          if (isCurrentBand(offer.band_id)) {
             const { data: venue } = await supabase
               .from('venues')
               .select('name')
@@ -259,7 +277,7 @@ export const useGameEventNotifications = () => {
         (payload) => {
           const sponsorship = payload.new;
           
-          if (userBandIdsRef.current.includes(sponsorship.band_id) && sponsorship.status === 'pending') {
+          if (isCurrentBand(sponsorship.band_id) && sponsorship.status === 'pending') {
             notify({
               category: 'sponsorship',
               type: 'offer',
@@ -286,7 +304,7 @@ export const useGameEventNotifications = () => {
         async (payload) => {
           const participant = payload.new;
           
-          if (userBandIdsRef.current.includes(participant.band_id) && participant.status === 'invited') {
+          if (isCurrentBand(participant.band_id) && participant.status === 'invited') {
             const { data: festival } = await supabase
               .from('game_events')
               .select('title')
@@ -319,7 +337,7 @@ export const useGameEventNotifications = () => {
         async (payload) => {
           const contract = payload.new;
           
-          if (userBandIdsRef.current.includes(contract.band_id) && contract.status === 'pending') {
+          if (isCurrentBand(contract.band_id) && contract.status === 'pending') {
             const { data: label } = await supabase
               .from('labels')
               .select('name')
@@ -385,7 +403,7 @@ export const useGameEventNotifications = () => {
           const oldStatus = payload.old?.status;
           const newStatus = payload.new?.status;
           
-          if (userBandIdsRef.current.includes(payload.new.band_id) && 
+          if (isCurrentBand(payload.new.band_id) && 
               oldStatus !== 'completed' && newStatus === 'completed') {
             notify({
               category: 'gig_result',
@@ -451,54 +469,56 @@ export const useGameEventNotifications = () => {
             .eq('id', entry.song_id)
             .single();
           
-          const isOwner = song?.user_id === user.id || userBandIdsRef.current.includes(song?.band_id);
+          const isOwner = song?.user_id === user.id || isCurrentBand(song?.band_id);
           
           if (isOwner && song) {
-            // Check 12-hour cooldown before sending notification
-            const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
-            const { data: existingCooldown, error: cooldownReadError } = await supabase
-              .from('chart_notification_cooldowns' as any)
-              .select('id, last_notified_at')
-              .eq('profile_id', profileId)
-              .eq('song_id', entry.song_id)
-              .eq('chart_type', entry.chart_type)
-              .gte('last_notified_at', twelveHoursAgo)
-              .maybeSingle();
-            
-            // Skip notification if within cooldown period
-            if (cooldownReadError || existingCooldown) return;
-            
-            // Upsert cooldown record
-            const { error: cooldownWriteError } = await supabase
-              .from('chart_notification_cooldowns' as any)
-              .upsert({
-                profile_id: profileId,
-                song_id: entry.song_id,
-                chart_type: entry.chart_type,
-                last_notified_at: new Date().toISOString(),
-              }, { onConflict: 'profile_id,song_id,chart_type' });
-            if (cooldownWriteError) return;
-            
-            const chartName = entry.chart_type === 'streaming' ? 'Streaming Charts' :
-                            entry.chart_type === 'radio_airplay' ? 'Radio Charts' :
-                            entry.chart_type === 'record_sales' ? 'Sales Charts' : 'Charts';
-            
-            if (entry.rank <= 10) {
-              notify({
-              category: 'achievement',
-              type: 'achievement',
-              title: `🏆 Top 10 Hit!`,
-              message: `"${song.title}" is #${entry.rank} on the ${chartName}!`,
-              actionPath: '/country-charts',
-            });
-            } else {
-              notify({
-              category: 'achievement',
-              type: 'success',
-              title: 'Charting!',
-              message: `"${song.title}" entered the ${chartName} at #${entry.rank}!`,
-              actionPath: '/country-charts',
-            });
+            // Prevent two near-simultaneous chart events from passing the same
+            // cooldown check while a durable notification is still in flight.
+            const chartKey = `${profileId}:${entry.song_id}:${entry.chart_type}`;
+            if (chartInFlightRef.current.has(chartKey)) return;
+            chartInFlightRef.current.add(chartKey);
+            try {
+              const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
+              const { data: existingCooldown, error: cooldownReadError } = await supabase
+                .from('chart_notification_cooldowns' as any)
+                .select('id, last_notified_at')
+                .eq('profile_id', profileId)
+                .eq('song_id', entry.song_id)
+                .eq('chart_type', entry.chart_type)
+                .gte('last_notified_at', twelveHoursAgo)
+                .maybeSingle();
+              if (cooldownReadError || existingCooldown) return;
+
+              const chartName = entry.chart_type === 'streaming' ? 'Streaming Charts' :
+                entry.chart_type === 'radio_airplay' ? 'Radio Charts' :
+                entry.chart_type === 'record_sales' ? 'Sales Charts' : 'Charts';
+
+              const deliveredId = await notify(entry.rank <= 10 ? {
+                category: 'achievement',
+                type: 'achievement',
+                title: '🏆 Top 10 Hit!',
+                message: `"${song.title}" is #${entry.rank} on the ${chartName}!`,
+                actionPath: '/country-charts',
+              } : {
+                category: 'achievement',
+                type: 'success',
+                title: 'Charting!',
+                message: `"${song.title}" entered the ${chartName} at #${entry.rank}!`,
+                actionPath: '/country-charts',
+              });
+              // Failed delivery must never consume a 12-hour cooldown.
+              if (!deliveredId || activeIdentityRef.current.profileId !== profileId) return;
+              const { error: cooldownWriteError } = await supabase
+                .from('chart_notification_cooldowns' as any)
+                .upsert({
+                  profile_id: profileId,
+                  song_id: entry.song_id,
+                  chart_type: entry.chart_type,
+                  last_notified_at: new Date().toISOString(),
+                }, { onConflict: 'profile_id,song_id,chart_type' });
+              if (cooldownWriteError) console.error('[notifications] chart cooldown persistence failed', cooldownWriteError);
+            } finally {
+              chartInFlightRef.current.delete(chartKey);
             }
           }
         }
@@ -556,7 +576,7 @@ export const useGameEventNotifications = () => {
 
           const ownsNotificationAccount =
             (account?.owner_type === 'persona' && account.owner_id === profileId) ||
-            (account?.owner_type === 'band' && userBandIdsRef.current.includes(account.owner_id));
+            (account?.owner_type === 'band' && isCurrentBand(account.owner_id));
 
           if (ownsNotificationAccount) {
             const typeMessages: Record<string, { title: string; message: string }> = {
@@ -598,7 +618,7 @@ export const useGameEventNotifications = () => {
           const userId = payload.new?.user_id;
           const bandId = payload.new?.band_id;
           
-          const isOwner = userId === user.id || userBandIdsRef.current.includes(bandId);
+          const isOwner = userId === user.id || isCurrentBand(bandId);
           
           if (isOwner && oldStatus === 'generating' && newStatus === 'completed') {
             notify({

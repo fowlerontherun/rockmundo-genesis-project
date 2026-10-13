@@ -97,7 +97,9 @@ export function messagesRepresentSameEvent(left: InboxMessage, right: InboxMessa
   // A shared gig/session identifier alone does not prove that two updates are the same event.
   const leftType = left.metadata?.event_type ?? left.metadata?.type ?? left.metadata?.action;
   const rightType = right.metadata?.event_type ?? right.metadata?.type ?? right.metadata?.action;
-  if (leftType && rightType && leftType !== rightType) return false;
+  // A type present on only one record is not proof of a mirrored event.
+  // Fail open (show both) instead of hiding a legitimate second milestone.
+  if (leftType !== rightType && (leftType != null || rightType != null)) return false;
   if (left.metadata?.outcome_id && right.metadata?.outcome_id && left.metadata.outcome_id !== right.metadata.outcome_id) return false;
   if (Math.abs(Date.parse(left.created_at) - Date.parse(right.created_at)) > 90_000) return false;
   const leftKeys = dedupeKeys(left);

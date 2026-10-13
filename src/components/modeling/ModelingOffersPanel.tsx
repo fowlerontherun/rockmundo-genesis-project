@@ -64,7 +64,7 @@ export const ModelingOffersPanel = ({ userId, playerLooks, playerFame, skillLeve
   const [conflictMessage, setConflictMessage] = useState<string | null>(null);
 
   // Fetch pending offers
-  const { data: pendingOffers, isLoading } = useQuery({
+  const { data: pendingOffers, isLoading, isError, error: offersError, isSuccess: offersLoaded, refetch: refetchOffers } = useQuery({
     queryKey: ["modeling-offers-pending", profileId],
     queryFn: async () => {
       if (!profileId) return [];
@@ -121,16 +121,20 @@ export const ModelingOffersPanel = ({ userId, playerLooks, playerFame, skillLeve
 
   // Auto-generate offers on page visit if none pending
   useEffect(() => {
-    if (isLoading) return;
-    if ((pendingOffers?.length ?? 0) === 0 && isOfferCooldownExpired()) {
+    // No auto-generation until a successful read proves there are no offers.
+    if (!profileId || !offersLoaded || isLoading || isError || !pendingOffers) return;
+    if (pendingOffers.length === 0 && isOfferCooldownExpired()) {
       generateModelingOffersForUser(userId, playerLooks, playerFame, skillLevels).then((count) => {
         if (count > 0) {
           queryClient.invalidateQueries({ queryKey: ["modeling-offers-pending"] });
           toast.info(`${count} new modeling offer${count > 1 ? "s" : ""} arrived!`);
         }
+      }).catch((generationError) => {
+        console.error("[modeling] offer generation failed", generationError);
+        toast.error("Unable to generate modeling offers. Please try again later.");
       });
     }
-  }, [isLoading, pendingOffers?.length, userId, playerLooks, playerFame]);
+  }, [profileId, isLoading, isError, offersLoaded, pendingOffers?.length, userId, playerLooks, playerFame, queryClient]);
 
   // Accept mutation — opens scheduling dialog first, then confirms
   const confirmBooking = useMutation({
@@ -234,6 +238,18 @@ export const ModelingOffersPanel = ({ userId, playerLooks, playerFame, skillLeve
           <Skeleton key={i} className="h-32" />
         ))}
       </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Card role="alert" className="border-destructive/30">
+        <CardContent className="flex flex-col items-start gap-3 p-6">
+          <p className="font-medium text-destructive">Unable to load modeling offers.</p>
+          <p className="text-sm text-muted-foreground">{offersError instanceof Error ? offersError.message : "The offers service is unavailable."}</p>
+          <Button variant="outline" onClick={() => void refetchOffers()}>Retry loading offers</Button>
+        </CardContent>
+      </Card>
     );
   }
 
