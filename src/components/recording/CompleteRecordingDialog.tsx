@@ -102,6 +102,10 @@ export const CompleteRecordingDialog = ({
   };
 
   const handleComplete = async () => {
+    if (!profileId) {
+      toast.error("Select an active character before checking a recording.");
+      return;
+    }
     setCompleting(true);
     try {
       // Completion is performed by the scheduled authoritative worker.
@@ -109,10 +113,12 @@ export const CompleteRecordingDialog = ({
       // XP, location checks and morale side effects.
       const { data: session, error } = await supabase
         .from("recording_sessions")
-        .select("status, song_id")
+        .select("status, song_id, profile_id")
         .eq("id", sessionId)
+        .eq("profile_id", profileId)
         .single();
       if (error) throw error;
+      if (!session || session.profile_id !== profileId) throw new Error("Recording does not belong to the active character");
 
       await queryClient.invalidateQueries({ queryKey: ["recording_sessions"] });
       await queryClient.invalidateQueries({ queryKey: ["songs"] });
