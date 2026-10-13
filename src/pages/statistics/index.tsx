@@ -23,6 +23,12 @@ const PlayerStatistics = () => {
 
   const { performanceStats, songwritingStats, isLoading: isLoadingStats } = usePlayerStatistics(profileId ?? undefined);
 
+  if (!profileId) {
+    return <FMPageScaffold title="Player Statistics" icon={Trophy} backTo="/hub/character">
+      <p className="text-muted-foreground">Select an active character to see achievements and statistics.</p>
+    </FMPageScaffold>;
+  }
+
   if (isLoadingAchievements || isLoadingStats) {
     return (
       <FMPageScaffold title="Player Statistics" icon={Trophy} backTo="/hub/character">
