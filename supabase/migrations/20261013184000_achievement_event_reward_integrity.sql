@@ -8,6 +8,13 @@ CREATE TABLE IF NOT EXISTS public.achievement_processed_events (
  processed_at timestamptz NOT NULL DEFAULT now(),
  PRIMARY KEY (profile_id, achievement_id, source_event_id)
 );
+-- Preserve the last known processed source ID on pre-migration completions.
+INSERT INTO public.achievement_processed_events(profile_id,achievement_id,source_event_id)
+SELECT pa.profile_id,pa.achievement_id,pa.source_event_id
+FROM public.player_achievements pa
+JOIN public.achievement_events ae ON ae.id=pa.source_event_id AND ae.profile_id=pa.profile_id
+WHERE pa.profile_id IS NOT NULL AND pa.source_event_id IS NOT NULL
+ON CONFLICT DO NOTHING;
 ALTER TABLE public.achievement_processed_events ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.achievement_processed_events FROM PUBLIC, anon, authenticated;
 
@@ -91,6 +98,8 @@ BEGIN
     SELECT 1 FROM public.achievement_events
     WHERE id=p_source_event_id AND profile_id=p_profile_id AND is_authoritative
  ) THEN RAISE EXCEPTION 'ACHIEVEMENT_EVENT_NOT_AUTHORITATIVE'; END IF;
+ IF p_source_event_id IS NOT NULL AND NOT public.achievement_event_criteria_met(
+    p_profile_id,v_achievement.id,p_source_event_id) THEN RETURN NULL; END IF;
  IF v_achievement.is_repeatable AND p_source_event_id IS NULL THEN
     RAISE EXCEPTION 'REPEATABLE_ACHIEVEMENT_REQUIRES_EVENT'; END IF;
  -- Serialize different events completing the same award at the same time.
