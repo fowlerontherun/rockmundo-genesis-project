@@ -67,10 +67,10 @@ export const useAchievements = (profileId?: string) => {
   });
 
   const unlockedIds = new Set(playerAchievements.map(pa => pa.achievement_id));
+  const unlocked = playerAchievements.map(pa => pa.achievement).filter(Boolean) as Achievement[];
   const revealedHidden = unlocked.filter(a => a.is_hidden && !allAchievements.some(publicItem => publicItem.id === a.id));
   const visibleAchievements = [...allAchievements, ...revealedHidden];
   const locked = visibleAchievements.filter(a => !unlockedIds.has(a.id));
-  const unlocked = playerAchievements.map(pa => pa.achievement).filter(Boolean) as Achievement[];
 
   const progressByCategory = visibleAchievements.reduce((acc, achievement) => {
     const category = achievement.category || "Other";
