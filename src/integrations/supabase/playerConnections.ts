@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { sendFriendRequest } from "@/integrations/supabase/friends";
 
-export type ConnectionState = "self" | "not_connected" | "outgoing_pending" | "incoming_pending" | "friends" | "blocked_by_viewer" | "viewer_blocked" | "restricted" | "unavailable";
+export type ConnectionState = "self" | "not_connected" | "outgoing_pending" | "incoming_pending" | "friends" | "blocked_by_viewer" | "viewer_blocked" | "restricted" | "request_cooldown" | "unavailable";
 export type ManagedFriendshipStatus = "suggested" | "pending" | "accepted" | "declined" | "cancelled" | "removed" | "expired" | "blocked";
 export type FriendListKind = "friends" | "incoming" | "outgoing" | "recent";
 
