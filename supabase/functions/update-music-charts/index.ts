@@ -1356,35 +1356,25 @@ serve(async (req) => {
       }
 
       if (bandBestRank.size > 0) {
-        const bandIds = [...bandBestRank.keys()];
-        const { data: bandsData } = await supabaseClient
-          .from("bands")
-          .select("id, morale, reputation_score, fan_sentiment_score")
-          .in("id", bandIds);
-
-        for (const band of bandsData || []) {
-          const bestRank = bandBestRank.get(band.id)!;
-          let moraleBoost = 0, repBoost = 0, sentBoost = 0;
-
-          if (bestRank === 1) {
-            moraleBoost = 15; repBoost = 10; sentBoost = 12;
-          } else if (bestRank <= 5) {
-            moraleBoost = 8; repBoost = 5; sentBoost = 8;
+        for (const [bandId, bestRank] of bandBestRank.entries()) {
+          const moraleBoost = bestRank === 1 ? 15 : bestRank <= 5 ? 8 : 4;
+          const repBoost = bestRank === 1 ? 10 : bestRank <= 5 ? 5 : 3;
+          const sentBoost = bestRank === 1 ? 12 : bestRank <= 5 ? 8 : 5;
+          const { data: awarded, error: awardError } = await supabaseClient
+            .rpc("award_chart_band_bonus_once", {
+              p_band_id: bandId,
+              p_chart_date: chartDate,
+              p_best_rank: bestRank,
+              p_morale: moraleBoost,
+              p_reputation: repBoost,
+              p_sentiment: sentBoost,
+            });
+          if (awardError) throw awardError;
+          if (awarded) {
+            console.log(`Chart boost granted for band ${bandId} at rank #${bestRank}`);
           } else {
-            moraleBoost = 4; repBoost = 3; sentBoost = 5;
+            console.log(`Chart reward already granted for band ${bandId} on ${chartDate}`);
           }
-
-          const curMorale = (band as any).morale ?? 50;
-          const curRep = (band as any).reputation_score ?? 0;
-          const curSent = (band as any).fan_sentiment_score ?? 0;
-
-          await supabaseClient.from("bands").update({
-            morale: Math.min(100, curMorale + moraleBoost),
-            reputation_score: Math.min(100, curRep + repBoost),
-            fan_sentiment_score: Math.min(100, curSent + sentBoost),
-          } as any).eq("id", band.id);
-
-          console.log(`Chart boost for band ${band.id}: rank #${bestRank} → morale +${moraleBoost}, rep +${repBoost}, sentiment +${sentBoost}`);
         }
       }
     }
