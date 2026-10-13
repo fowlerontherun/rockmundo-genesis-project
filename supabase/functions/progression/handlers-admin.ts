@@ -36,16 +36,17 @@ export const handleAdminAwardSpecialXp = async (
 
   if (applyToAll) {
     // Get all profile IDs (+ user IDs for ledger)
-    const { data: allProfiles, error: profilesError } = await client
-      .from("profiles")
-      .select("id, user_id");
-
-    if (profilesError) {
-      throw new Error("Failed to fetch profiles");
+    const allProfiles: Array<{id:string;user_id:string|null}> = [];
+    for (let offset = 0;; offset += 500) {
+      const { data: page, error: profilesError } = await client.from("profiles")
+        .select("id, user_id").order("id", { ascending: true })
+        .range(offset, offset + 499);
+      if (profilesError) throw new Error(`Failed to fetch profiles: ${profilesError.message}`);
+      allProfiles.push(...(page ?? []));
+      if (!page || page.length < 500) break;
     }
-
-    targetProfileIds = (allProfiles || []).map((p) => p.id);
-    profileUserMap = new Map((allProfiles || []).map((p) => [p.id, p.user_id]));
+    targetProfileIds = allProfiles.map(p => p.id);
+    profileUserMap = new Map(allProfiles.map(p => [p.id, p.user_id]));
   } else {
     targetProfileIds = profileIds;
 
@@ -67,90 +68,24 @@ export const handleAdminAwardSpecialXp = async (
 
   let updatedCount = 0;
 
+  const failures: string[] = [];
   for (const profileId of targetProfileIds) {
-    try {
-      // Get or create wallet
-      const { data: existingWallet } = await client
-        .from("player_xp_wallet")
-        .select("*")
-        .eq("profile_id", profileId)
-        .maybeSingle();
-
-      const currentBalance = existingWallet?.xp_balance ?? 0;
-      const currentLifetime = existingWallet?.lifetime_xp ?? 0;
-
-      const walletData = {
-        profile_id: profileId,
-        xp_balance: currentBalance + amount,
-        lifetime_xp: currentLifetime + amount,
-        last_recalculated: new Date().toISOString(),
-      };
-
-      let walletSuccess = false;
-
-      if (existingWallet) {
-        const { error: updateError } = await client
-          .from("player_xp_wallet")
-          .update({
-            xp_balance: currentBalance + amount,
-            lifetime_xp: currentLifetime + amount,
-            last_recalculated: new Date().toISOString(),
-          })
-          .eq("profile_id", profileId);
-
-        if (updateError) {
-          console.error(`Failed to update wallet for profile ${profileId}:`, updateError);
-        } else {
-          walletSuccess = true;
-        }
-      } else {
-        const { error: insertError } = await client
-          .from("player_xp_wallet")
-          .insert(walletData);
-
-        if (insertError) {
-          console.error(`Failed to insert wallet for profile ${profileId}:`, insertError);
-        } else {
-          walletSuccess = true;
-        }
-      }
-
-      if (!walletSuccess) {
-        console.error(`Wallet operation failed for profile ${profileId}, skipping`);
-        continue;
-      }
-
-      // Count as rewarded once wallet update succeeded.
+    const { error } = await client.rpc("admin_grant_special_xp_atomic" as any, {
+      p_profile_id: profileId,
+      p_amount: amount,
+      p_reason: reason,
+      p_metadata: metadata ?? {},
+      p_request_id: typeof metadata?.request_id === "string" ? metadata.request_id : null,
+    });
+    if (error) {
+      failures.push(`${profileId}: ${error.message}`);
+    } else {
       updatedCount++;
-
-      // Log the grant (best-effort; do not fail the reward if ledger insert fails)
-      const targetUserId = profileUserMap.get(profileId) ?? null;
-      if (!targetUserId) {
-        console.warn(
-          `Skipping experience_ledger insert for profile ${profileId}: missing user_id on profiles row`,
-        );
-        continue;
-      }
-
-      const { error: ledgerError } = await client.from("experience_ledger").insert({
-        profile_id: profileId,
-        user_id: targetUserId,
-        activity_type: "admin_grant",
-        xp_amount: amount,
-        metadata: {
-          reason,
-          granted_by: userId,
-          ...metadata,
-        },
-      });
-
-      if (ledgerError) {
-        console.error(`Failed to insert experience_ledger for profile ${profileId}:`, ledgerError);
-      }
-    } catch (error) {
-      console.error(`Failed to award XP to profile ${profileId}:`, error);
     }
   }
+  if (failures.length) throw new Error(
+    `XP grants applied to ${updatedCount} of ${targetProfileIds.length} profiles. ${failures.length} failed: ${failures.slice(0, 3).join("; ")}`
+  );
 
   return {
     success: true,
