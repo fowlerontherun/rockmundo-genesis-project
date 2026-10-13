@@ -78,6 +78,9 @@ export const useGameEventNotifications = () => {
           filter: `user_id=eq.${user.id}`
         },
         async (payload) => {
+          // Achievements are earned by a character, not simply an auth user.
+          // Legacy unscoped events must not be attributed to the active character.
+          if (!payload.new.profile_id || payload.new.profile_id !== profileId) return;
           const { data: achievement } = await supabase
             .from('achievements')
             .select('name, description, rarity')
