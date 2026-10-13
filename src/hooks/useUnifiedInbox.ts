@@ -132,14 +132,19 @@ export function useUnifiedInbox() {
     // Some legacy database triggers intentionally write the same event to both
     // player_inbox and notifications. Prefer the richer player_inbox record so
     // users see one item rather than a duplicated event.
+    const archivedNotificationMessages = notifications.archivedNotifications
+      .filter((notification) => profileId && (notification.profile_id === profileId ||
+        (notification.profile_id === null && notification.metadata?.profile_id == null)))
+      .map(notificationToInboxMessage);
     const uniqueNotifications = notificationMessages.filter(
-      (notification) => ![...inbox.messages, ...inbox.archivedMessages].some((message) => messagesRepresentSameEvent(message, notification)),
+      (notification) => ![...inbox.messages, ...inbox.archivedMessages, ...archivedNotificationMessages]
+        .some((message) => messagesRepresentSameEvent(message, notification)),
     );
 
     return [...inbox.messages, ...uniqueNotifications].sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
     );
-  }, [inbox.messages, inbox.archivedMessages, notificationMessages]);
+  }, [inbox.messages, inbox.archivedMessages, notificationMessages, notifications.archivedNotifications, profileId]);
 
   const duplicateNotificationIds = (inboxId: string) => {
     const message = inbox.messages.find((candidate) => candidate.id === inboxId);
@@ -164,12 +169,12 @@ export function useUnifiedInbox() {
   const archiveMessage = (id: string) => {
     const notificationId = notificationIdFromUnifiedId(id);
     if (notificationId) {
-      notifications.dismiss(notificationId);
+      notifications.archive(notificationId);
       return;
     }
 
     inbox.archiveMessage(id);
-    duplicateNotificationIds(id).forEach((duplicateId) => notifications.dismiss(duplicateId));
+    duplicateNotificationIds(id).forEach((duplicateId) => notifications.archive(duplicateId));
   };
 
   const deleteMessage = (id: string) => {
