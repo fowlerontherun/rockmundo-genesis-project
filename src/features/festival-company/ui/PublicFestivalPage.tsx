@@ -27,7 +27,7 @@ import { referralAwareDestination } from "@/features/shareable-moments/referralD
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { SponsorIdentity } from "./SponsorIdentity";
 import { canOfferFestivalCheckIn, canStartFestivalTicketPurchase } from "./publicFestivalEligibility";
-import { canDisplayFestivalCheckInMessage, festivalVisitorSalesLabel, formatFestivalEditionDate, hasIssuedFestivalAdmission } from "./festivalPublicDisplay";
+import { canDisplayFestivalCheckInMessage, festivalVisitorSalesLabel, formatFestivalEditionDate, hasIssuedFestivalAdmission, isPublishedFestivalPerformance } from "./festivalPublicDisplay";
 
 const Countdown = ({ target }: { target: string }) => {
   const [now, setNow] = useState(() => Date.now());
@@ -136,9 +136,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   // The simplified timetable contains automatically generated provisional slots.
   // Only the authoritative confirmed lineup may be advertised publicly.
   const confirmedLineup = f.lineup ?? [];
-  const publishedPerformances = confirmedLineup.filter(
-    (entry) => entry.startsAt && entry.endsAt && entry.stageName,
-  );
+  const publishedPerformances = confirmedLineup.filter(isPublishedFestivalPerformance);
   const dayLabel = (festivalDate: string | null) => festivalDate
     ? new Date(`${festivalDate}T12:00:00Z`).toLocaleDateString("en-GB", {
         weekday: "long", day: "numeric", month: "long", timeZone: "UTC",
