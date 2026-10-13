@@ -66,6 +66,11 @@ describe("notification recruitment normalization", () => {
     expect(display.routePath).toBe("/band/members");
   });
 
+  it("deep-links invitations to the highlighted pending band, before a player joins", () => {
+    const item = { ...base({ band_invitation_id: "invite-1", band_application_id: undefined }, "/band-manager"), type: "band_invite" };
+    expect(getNotificationRoute(item)).toBe("/band/members?recruitedBand=band-1");
+  });
+
   it("opens the actual members route from an old invitation even without band metadata", () => {
     const display = normalizeNotification(base({ band_id: undefined, band_application_id: undefined, band_invitation_id: "invite-1" }, "/band-manager"));
     expect(display.routePath).toBe("/band/members");

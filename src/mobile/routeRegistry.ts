@@ -24,3 +24,18 @@ export function resolveCompanionPath(path?: string | null): string {
   return "/mobile";
 }
 export const mobileRouteAuditSummary = { authenticatedRoutesAudited: 4, unauthenticatedRoutesAudited: 3, dedicatedMobilePatterns: 4, containedFallbackPatterns: 0 };
+
+/** Follow a notification's actual in-game route instead of silently routing every
+ * unsupported action to the mobile schedule. Only internal absolute paths are valid. */
+export function resolveNotificationActionPath(path?: string | null): string | null {
+  if (!path || !path.startsWith("/") || path.startsWith("//") || path.includes("\\")) return null;
+  const companion = resolveCompanionPath(path);
+  const clean = path.split("?")[0].split("#")[0];
+  // Existing mobile destinations remain on the lightweight companion routes.
+  if (clean === "/inbox" || clean === "/social/chat" || clean === "/chat" ||
+      clean === "/skills" || clean === "/character/skills" || clean === "/progression" ||
+      clean === "/schedule" || clean.startsWith("/schedule/") || clean.startsWith("/booking/") ||
+      clean.startsWith("/mobile")) return companion;
+  // The main responsive application owns the remaining game actions.
+  return path;
+}

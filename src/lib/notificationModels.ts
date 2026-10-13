@@ -164,9 +164,16 @@ export function getNotificationRoute(notification: PersistedNotification): strin
   const hasApplication = Boolean(getString(metadata.band_application_id));
   const hasInvitation = Boolean(getString(metadata.band_invitation_id));
   const isRehearsal = notification.type === "rehearsal_outcome" || notification.category === "rehearsal" || Boolean(getString(metadata.rehearsal_id));
-  // All invitation notifications (including older /band-manager links) land on
-  // the actual Band Members route, even when the recipient has no band yet.
-  if (hasInvitation || notification.type === "band_invite") return "/band/members";
+  // The Band Manager renders pending invitations even when this player has no
+  // band. Highlight the inviting band so the player can act on the right offer.
+  if (hasInvitation || notification.type === "band_invite") {
+    const pending = notification.type === "band_invite" ||
+      (notification.type !== "band_invite_response" &&
+        (!getString(metadata.band_invitation_status) || metadata.band_invitation_status === "pending"));
+    return pending && bandId
+      ? `/band/members?recruitedBand=${encodeURIComponent(bandId)}`
+      : "/band/members";
+  }
   if (notification.type === "band_request" && bandId) return `/bands/${bandId}`;
   if (notification.action_path === "/band-manager" && !hasApplication) return "/band/members";
   if (notification.action_path?.includes("?tab=applications") && bandId) return `/bands/${bandId}`;

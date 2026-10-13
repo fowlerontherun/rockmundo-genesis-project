@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getMobileDestination, getMobileRouteMeta, mobileRouteAuditSummary, resolveCompanionPath } from "./routeRegistry";
+import { getMobileDestination, getMobileRouteMeta, mobileRouteAuditSummary, resolveCompanionPath, resolveNotificationActionPath } from "./routeRegistry";
 describe("mobile route registry", () => {
   it("only exposes the four supported companion destinations", () => {
     expect(getMobileRouteMeta("/mobile")?.bottomNav).toBe("schedule");
@@ -13,6 +13,15 @@ describe("mobile route registry", () => {
     expect(resolveCompanionPath("/twaater")).toBe("/mobile");
     expect(resolveCompanionPath("/inbox")).toBe("/mobile/inbox");
     expect(resolveCompanionPath("/skills")).toBe("/mobile/progression");
+  });
+  it("opens real in-game notification actions instead of schedule", () => {
+    expect(resolveNotificationActionPath("/festivals?tab=offers")).toBe("/festivals?tab=offers");
+    expect(resolveNotificationActionPath("/band/members?recruitedBand=abc")).toBe("/band/members?recruitedBand=abc");
+    expect(resolveNotificationActionPath("/gig-booking")).toBe("/gig-booking");
+    expect(resolveNotificationActionPath("/twaater")).toBe("/twaater");
+    expect(resolveNotificationActionPath("/skills")).toBe("/mobile/progression");
+    expect(resolveNotificationActionPath("https://evil.example/path")).toBeNull();
+    expect(resolveNotificationActionPath("//evil.example/path")).toBeNull();
   });
   it("reports the reduced scope", () => {
     expect(mobileRouteAuditSummary.authenticatedRoutesAudited).toBe(4);

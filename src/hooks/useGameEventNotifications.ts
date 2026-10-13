@@ -78,6 +78,9 @@ export const useGameEventNotifications = () => {
           filter: `user_id=eq.${user.id}`
         },
         async (payload) => {
+          // Achievements are earned by a character, not simply an auth user.
+          // Legacy unscoped events must not be attributed to the active character.
+          if (!payload.new.profile_id || payload.new.profile_id !== profileId) return;
           const { data: achievement } = await supabase
             .from('achievements')
             .select('name, description, rarity')
@@ -379,10 +382,11 @@ export const useGameEventNotifications = () => {
           
           notify({
               category: 'social',
-              type: 'offer',
+              type: 'band_invite',
               title: 'Band Invitation!',
               message: `You've been invited to join ${band?.name || 'a band'}!`,
-              actionPath: '/bands',
+              actionPath: '/band/members',
+              metadata: { band_id: invite.band_id, band_invitation_id: invite.id },
             });
         }
       )
