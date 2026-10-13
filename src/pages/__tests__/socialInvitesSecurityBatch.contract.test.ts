@@ -13,7 +13,7 @@ describe("social invite and character privacy batch", () => {
     expect(sql).toContain("invite_kind text");
     expect(sql).toContain("pg_advisory_xact_lock");
     expect(sql).toContain("CREATE UNIQUE INDEX IF NOT EXISTS social_invites_unique_pending_pair_kind");
-    expect(sql).toContain("REVOKE INSERT ON public.social_invites FROM authenticated,anon");
+    expect(sql).toContain("REVOKE INSERT ON public.social_invites FROM PUBLIC,authenticated,anon");
     expect(sql).toContain("kind=v_kind AND status='pending'");
     expect(sql).toContain("IF v_row.id IS NULL THEN");
     expect(sql).toContain("LIMIT 1 FOR UPDATE");
