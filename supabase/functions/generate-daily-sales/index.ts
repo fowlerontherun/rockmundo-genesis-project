@@ -813,23 +813,23 @@ serve(async (req) => {
       try {
         const netAmount = Math.round(revenue.netRevenue * 100) / 100;
 
-        const { error: earningsError } = await supabaseClient
-          .from("band_earnings")
-          .insert({
-            band_id: bandId,
-            amount: netAmount,
-            source: "release_sales",
-            description: `Daily sales revenue: ${revenue.units} units across ${revenue.formats.join(", ")} (net after tax, distribution & label split)`,
-            metadata: {
-              gross_revenue: Math.round(revenue.grossRevenue * 100) / 100,
-              net_revenue: netAmount,
-              total_units: revenue.units,
-              formats: revenue.formats,
-            },
+        // The ledger stores whole dollars. Preserve fractional cents between
+        // daily runs in the same transaction that posts the earnings row.
+        const { data: creditedDollars, error: earningsError } = await supabaseClient
+          .rpc("credit_band_sales_with_carry", {
+            p_band_id: bandId,
+            p_net_minor: Math.round(revenue.netRevenue * 100),
+            p_gross_minor: Math.round(revenue.grossRevenue * 100),
+            p_units: revenue.units,
+            p_formats: revenue.formats,
           });
-
         if (earningsError) {
-          console.error(`Failed to insert band_earnings for band ${bandId}:`, earningsError);
+          console.error(`Failed to post exact sales earnings for band ${bandId}:`, earningsError);
+          errorCount++;
+          continue;
+        }
+        if (typeof creditedDollars !== "number") {
+          console.error(`Sales payout for band ${bandId} was not confirmed`);
           errorCount++;
           continue;
         }
@@ -856,7 +856,7 @@ serve(async (req) => {
         }
 
         bandsCredited++;
-        console.log(`Credited band ${bandId}: $${netAmount} (${revenue.units} units)`);
+        console.log(`Credited band ${bandId}: ${creditedDollars}, carried any fractional cents (${revenue.units} units)`);
       } catch (creditError) {
         console.error(`Error crediting band ${bandId}:`, creditError);
         errorCount++;
