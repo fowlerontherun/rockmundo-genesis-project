@@ -1180,35 +1180,18 @@ serve(async (req) => {
       }));
       console.log(`Deduped ${chartEntries.length} -> ${dedupedEntries.length} chart entries`);
 
-      // Delete old entries for today first to avoid duplicates
-      const { error: deleteError, count: deleteCount } = await supabaseClient
-        .from("chart_entries")
-        .delete()
-        .eq("chart_date", chartDate)
-        .select("id", { count: "exact", head: true });
-
-      if (deleteError) throw deleteError;
-      console.log(`Deleted ${deleteCount ?? 'unknown'} old entries for ${chartDate}`);
-
-      // Insert in batches to avoid payload limits
-      const BATCH_SIZE = 200;
-      for (let i = 0; i < dedupedEntries.length; i += BATCH_SIZE) {
-        const batch = dedupedEntries.slice(i, i + BATCH_SIZE);
-        const { error: insertError } = await supabaseClient
-          .from("chart_entries")
-          .insert(batch);
-
-        if (insertError) {
-          console.error(`Error inserting chart entries batch ${i / BATCH_SIZE + 1}:`, JSON.stringify(insertError));
-          throw insertError;
-        }
-      }
-
-      chartsUpdated = dedupedEntries.length;
-      console.log(`Successfully inserted ${chartsUpdated} chart entries`);
+      const { data: published, error: publishError } = await supabaseClient.rpc("replace_chart_entries_atomic", {
+        p_chart_date: chartDate,
+        p_entries: dedupedEntries,
+      });
+      if (publishError) throw publishError;
+      chartsUpdated = Number(published ?? 0);
     } else {
-      const { error: emptyDeleteError } = await supabaseClient.from("chart_entries").delete().eq("chart_date", chartDate);
-      if (emptyDeleteError) throw emptyDeleteError;
+      const { error: publishError } = await supabaseClient.rpc("replace_chart_entries_atomic", {
+        p_chart_date: chartDate,
+        p_entries: [],
+      });
+      if (publishError) throw publishError;
     }
 
     // =========================================================================
