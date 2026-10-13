@@ -589,9 +589,15 @@ serve(async (req) => {
               const distributionFeeCents = deductions.distributorMinor;
               const manufacturerShareCents = deductions.manufacturerShareMinor;
               const netRevenueCents = deductions.preLabelNetMinor;
-              // Persist the actual split on every sale.  The release snapshot is used,
-              // never the mutable current contract, so historical reports reconcile.
-              const labelShareRate = Math.max(0, Math.min(1, ((release as any).label_revenue_share_pct || 0) / 100));
+              // Record the same effective label rate used for cash settlement.
+              // A missing/inactive contract or expired licence is not payable.
+              const ledgerDealType = contract?.deal_type_name || "Standard Deal";
+              const ledgerLicenceExpired = ledgerDealType === "Licensing Deal"
+                && !!contract?.end_date && new Date(contract.end_date) < new Date();
+              const labelShareRate = contract && release.band_id && !ledgerLicenceExpired
+                ? Math.max(0, Math.min(1, ledgerDealType === "Distribution Deal"
+                    ? Math.min(labelCutPct, 0.20) : labelCutPct))
+                : 0;
               const labelShareCents = Math.round(netRevenueCents * labelShareRate);
               const bandRevenueCents = netRevenueCents - labelShareCents;
               const salesTaxAmount = salesTaxCents / 100;
