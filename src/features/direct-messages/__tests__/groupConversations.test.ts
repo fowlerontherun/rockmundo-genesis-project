@@ -5,6 +5,7 @@ import path from "node:path";
 const root = process.cwd();
 const service = fs.readFileSync(path.join(root, "src/features/direct-messages/services/conversations.ts"), "utf8");
 const hook = fs.readFileSync(path.join(root, "src/hooks/useDirectMessages.ts"), "utf8");
+const unreadService = fs.readFileSync(path.join(root, "src/features/direct-messages/services/unreadConversations.ts"), "utf8");
 
 describe("D4 group conversation client contracts", () => {
   it("synchronises authoritative context groups before listing conversations", () => {
@@ -31,7 +32,8 @@ describe("D4 group conversation client contracts", () => {
   });
 
   it("counts unread messages across direct and group conversations", () => {
-    expect(hook).toContain("listConversations({ limit: 100 })");
-    expect(hook).toContain("conversation.unread_count");
+    expect(hook).toContain("countUnreadConversations(");
+    expect(unreadService).toContain("conversation.unread_count");
+    expect(unreadService).toContain("skipContextSync: page > 0");
   });
 });

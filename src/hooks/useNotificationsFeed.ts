@@ -72,15 +72,25 @@ export function useNotificationsFeed() {
   });
 
   const markAllRead = useMutation({
-    mutationFn: async () => {
-      if (!userId || !profileId) return;
-      const { error } = await supabase
-        .from(asAny("notifications"))
-        .update({ read_at: new Date().toISOString() } as never)
-        .eq("user_id", userId)
-        .or(`profile_id.eq.${profileId},profile_id.is.null`)
-        .is("read_at", null);
-      if (error) throw error;
+    mutationFn: async (visibleNotificationIds: string[]) => {
+      if (!userId || !profileId || visibleNotificationIds.length === 0) return;
+      // An account-level row can be tagged in metadata for another character;
+      // do not bulk update that row just because profile_id is NULL.
+      const eligibleIds = new Set((query.data ?? [])
+        .filter((notification) => notification.profile_id === profileId ||
+          (notification.profile_id === null && notification.metadata?.profile_id == null))
+        .filter((notification) => !notification.read_at)
+        .map((notification) => notification.id));
+      const scopedIds = [...new Set(visibleNotificationIds)].filter((id) => eligibleIds.has(id));
+      for (let offset = 0; offset < scopedIds.length; offset += 100) {
+        const { error } = await supabase
+          .from(asAny("notifications"))
+          .update({ read_at: new Date().toISOString() } as never)
+          .eq("user_id", userId)
+          .in("id", scopedIds.slice(offset, offset + 100))
+          .is("read_at", null);
+        if (error) throw error;
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: [...QUERY_KEY, userId, profileId] }),
   });
