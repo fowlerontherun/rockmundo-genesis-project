@@ -1,6 +1,15 @@
 import type { FestivalIssuedTicket, FestivalLaunchStatus } from "../domain/festivalLaunch";
 import type { FestivalPublicEventPhase } from "./festivalEventPhase";
 
+/** Stage and both endpoints are required before advertising a performance. */
+export function isPublishedFestivalPerformance(entry: {
+  startsAt: string | null;
+  endsAt: string | null;
+  stageName: string | null;
+}): boolean {
+  return Boolean(entry.startsAt && entry.endsAt && entry.stageName?.trim());
+}
+
 /** Never render cached eligibility messages after an authoritative query failure. */
 export function canDisplayFestivalCheckInMessage(
   hasEligibility: boolean,
