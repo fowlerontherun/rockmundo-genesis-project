@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { asAny } from "@/lib/type-helpers";
+import { beforeCreatedAtId, lastCreatedAtIdCursor } from "@/lib/inboxKeyset";
 
 export interface PersistedNotification {
   id: string;
@@ -30,11 +31,29 @@ export function useNotificationsFeed() {
     queryFn: async (): Promise<PersistedNotification[]> => {
       if (!userId || !profileId) return [];
       const all: PersistedNotification[] = [];
-      for (let start = 0; start < 100_000; start += 1000) {
-        const { data, error } = await supabase.from(asAny("notifications")).select("*").eq("user_id", userId).or(`profile_id.eq.${profileId},profile_id.is.null`).order("created_at", { ascending: false }).order("id", { ascending: false }).range(start, start + 999);
+      let cursor: { created_at: string; id: string } | null = null;
+      for (let page = 0; page < 100; page++) {
+        // PostgREST .or() replaces the previous OR parameter, so combine the
+        // character predicate and keyset predicate in a single expression.
+        const before = cursor ? beforeCreatedAtId(cursor) : null;
+        const scope = before
+          ? `and(profile_id.eq.${profileId},or(${before})),and(profile_id.is.null,or(${before}))`
+          : `profile_id.eq.${profileId},profile_id.is.null`;
+        const { data, error } = await supabase.from(asAny("notifications"))
+          .select("*")
+          .eq("user_id", userId)
+          .or(scope)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .limit(1000);
         if (error) throw error;
         all.push(...((data ?? []) as unknown as PersistedNotification[]));
         if (!data || data.length < 1000) return all;
+        const next = lastCreatedAtIdCursor(data);
+        if (!next || (cursor && next.created_at === cursor.created_at && next.id === cursor.id)) {
+          throw new Error("Notification pagination failed to advance");
+        }
+        cursor = next;
       }
       throw new Error("Notification history exceeds pagination safety limit");
     },
