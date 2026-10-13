@@ -154,7 +154,7 @@ export async function fetchRelationshipEvents({
   }
 }
 
-function filterRelationshipEvents(
+export function filterRelationshipEvents(
   rows: Array<{ 
     activity_type: string; 
     created_at: string; 
