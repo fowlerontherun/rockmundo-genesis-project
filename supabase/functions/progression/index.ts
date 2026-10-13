@@ -197,18 +197,9 @@ serve(async (req) => {
       }
 
       case "award_action_xp":
-        result = await handleAwardActionXp(
-          client,
-          user.id,
-          profileState,
-          params.amount,
-          params.category,
-          params.action_key,
-          params.metadata,
-          params.event_id,
-        );
-        break;
-
+        // Client-provided reward amounts cannot be trusted. Until all callers
+        // use server-authoritative game actions, fail closed.
+        throw new Error("DIRECT_ACTION_XP_AWARD_DISABLED");
       case "convert_ap_to_sxp":
         result = await handleConvertApToSxp(
           client,
