@@ -14,6 +14,29 @@ const periodEndOf = (sub: any): Date => {
   return end ? new Date(end * 1000) : new Date(Date.now() + 30 * 86400000);
 };
 
+
+// The DB RPC locks each subscription, so a retried/older event cannot overwrite
+// a newer activation, renewal or cancellation.
+const applyVipStripeStatus = async (
+  client: ReturnType<typeof createClient>,
+  subscription: Stripe.Subscription,
+  userId: string,
+  event: Stripe.Event,
+) => {
+  const status = ["active", "trialing", "past_due"].includes(subscription.status) ? "active"
+    : subscription.status === "canceled" ? "cancelled" : "expired";
+  const { data, error } = await client.rpc("apply_ordered_stripe_vip_status", {
+    p_subscription_id: subscription.id,
+    p_user_id: userId,
+    p_status: status,
+    p_expires_at: periodEndOf(subscription).toISOString(),
+    p_event_created: event.created,
+    p_event_id: event.id,
+  });
+  if (error) throw new Error(`Could not reconcile VIP subscription: ${error.message}`);
+  return data;
+};
+
 const logStep = (step: string, details?: any) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
   console.log(`[STRIPE-WEBHOOK] ${step}${detailsStr}`);
@@ -97,28 +120,8 @@ serve(async (req) => {
           ? session.subscription
           : session.subscription.id;
         const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-        const currentPeriodEnd = periodEndOf(subscription);
-
-        const row = {
-          user_id: userId,
-          status: "active",
-          subscription_type: "paid",
-          starts_at: new Date().toISOString(),
-          expires_at: currentPeriodEnd.toISOString(),
-          stripe_subscription_id: subscriptionId,
-        };
-        const { data: existingRow } = await supabaseClient
-          .from("vip_subscriptions").select("id").eq("stripe_subscription_id", subscriptionId).maybeSingle();
-        const { error } = existingRow
-          ? await supabaseClient.from("vip_subscriptions").update({ status: "active", expires_at: row.expires_at }).eq("id", existingRow.id)
-          : await supabaseClient.from("vip_subscriptions").insert(row);
-
-        if (error) {
-          logStep("Error creating VIP subscription", { message: error.message });
-          throw new Error(`Failed to persist VIP subscription: ${error.message}`);
-        } else {
-          logStep("VIP subscription created/updated", { userId, expiresAt: currentPeriodEnd.toISOString() });
-        }
+        const applied = await applyVipStripeStatus(supabaseClient, subscription, userId, event);
+        logStep("VIP checkout reconciled", { userId, subscriptionId, applied });
         break;
       }
 
@@ -149,13 +152,8 @@ serve(async (req) => {
           break;
         }
 
-        // Reconcile the paid renewal even if subscription.updated arrives late.
-        const renewalEnd = periodEndOf(subscription).toISOString();
-        const { error: renewalError } = await supabaseClient.from("vip_subscriptions")
-          .update({ status: "active", expires_at: renewalEnd })
-          .eq("stripe_subscription_id", subscriptionId)
-          .eq("user_id", userId);
-        if (renewalError) throw new Error(`Failed to persist VIP renewal: ${renewalError.message}`);
+        // Use the same ordered ledger for paid renewals and subscription updates.
+        await applyVipStripeStatus(supabaseClient, subscription, userId, event);
 
         const paidAt = invoice.status_transitions?.paid_at
           ? new Date(invoice.status_transitions.paid_at * 1000).toISOString()
@@ -186,24 +184,8 @@ serve(async (req) => {
           break;
         }
 
-        const currentPeriodEnd = periodEndOf(subscription);
-        const status = ["active", "trialing", "past_due"].includes(subscription.status) ? "active" :
-                       subscription.status === "canceled" ? "cancelled" : "expired";
-
-        const { error } = await supabaseClient
-          .from("vip_subscriptions")
-          .update({
-            status,
-            expires_at: currentPeriodEnd.toISOString(),
-          })
-          .eq("stripe_subscription_id", subscription.id);
-
-        if (error) {
-          logStep("Error updating subscription", { message: error.message });
-          throw new Error(`Failed to update VIP subscription: ${error.message}`);
-        } else {
-          logStep("Subscription updated in DB", { status, expiresAt: currentPeriodEnd.toISOString() });
-        }
+        const applied = await applyVipStripeStatus(supabaseClient, subscription, userId, event);
+        logStep("Subscription status reconciled", { status: subscription.status, applied });
         break;
       }
 
@@ -211,19 +193,16 @@ serve(async (req) => {
         const subscription = event.data.object as Stripe.Subscription;
         logStep("Subscription deleted", { subscriptionId: subscription.id });
 
-        const { error } = await supabaseClient
+        const { data: current, error: lookupError } = await supabaseClient
           .from("vip_subscriptions")
-          .update({
-            status: "cancelled",
-          })
-          .eq("stripe_subscription_id", subscription.id);
-
-        if (error) {
-          logStep("Error marking subscription cancelled", { message: error.message });
-          throw new Error(`Failed to cancel VIP subscription: ${error.message}`);
-        } else {
-          logStep("Subscription marked as cancelled");
-        }
+          .select("user_id")
+          .eq("stripe_subscription_id", subscription.id)
+          .maybeSingle();
+        if (lookupError) throw lookupError;
+        const owner = subscription.metadata?.user_id ?? current?.user_id;
+        if (!owner) throw new Error("Cannot reconcile deleted VIP subscription without owner");
+        const applied = await applyVipStripeStatus(supabaseClient, subscription, owner, event);
+        logStep("Subscription deletion reconciled", { applied });
         break;
       }
 
