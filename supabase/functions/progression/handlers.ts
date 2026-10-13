@@ -159,77 +159,12 @@ export async function handleSpendAttributeXp(
 ): Promise<ProfileState> {
   const profileId = profileState.profile.id;
   
-  // Use attribute_points_balance for spending on attributes
-  const currentApBalance = profileState.wallet?.attribute_points_balance ?? 0;
-
-  console.log(`[SpendAttributeXp] Profile: ${profileId}, Attribute: ${attributeKey}, Cost: ${apCost} AP, Balance: ${currentApBalance} AP`);
-
-  if (apCost <= 0) {
-    throw new Error("AP cost must be positive");
-  }
-
-  if (currentApBalance < apCost) {
-    throw new Error(`Insufficient Attribute Points. You have ${currentApBalance} AP but need ${apCost} AP.`);
-  }
-
-  // Get or create player attributes
-  let { data: attrs } = await client
-    .from("player_attributes")
-    .select("*")
-    .eq("profile_id", profileId)
-    .maybeSingle();
-
-  // Auto-create attributes if missing
-  if (!attrs) {
-    const resolvedUserId = (profileState.profile as any)?.user_id ?? userId;
-    console.log(`[SpendAttributeXp] Creating missing player_attributes for profile: ${profileId}, user: ${resolvedUserId}`);
-
-    if (!resolvedUserId) {
-      throw new Error("Cannot initialize attributes: missing user id");
-    }
-
-    const { data: newAttrs, error: createError } = await client
-      .from("player_attributes")
-      .insert({ profile_id: profileId, user_id: resolvedUserId })
-      .select()
-      .single();
-    
-    if (createError) {
-      console.error(`[SpendAttributeXp] Failed to create attributes:`, createError);
-      throw new Error(`Failed to initialize player attributes: ${createError.message}`);
-    }
-    attrs = newAttrs;
-  }
-
-  // Each AP spent increases the attribute by 1 point
-  const currentValue = (attrs as any)?.[attributeKey] ?? 10;
-  const newValue = currentValue + apCost;
-
-  // Update attribute
-  const { error: attrError } = await client
-    .from("player_attributes")
-    .update({
-      [attributeKey]: newValue,
-      attribute_points_spent: (attrs?.attribute_points_spent ?? 0) + apCost,
-    })
-    .eq("profile_id", profileId);
-
-  if (attrError) {
-    throw new Error(attrError.message || "Failed to update attribute");
-  }
-
-  // Deduct from AP balance
-  const { error: walletError } = await client
-    .from("player_xp_wallet")
-    .update({
-      attribute_points_balance: currentApBalance - apCost,
-      last_recalculated: new Date().toISOString(),
-    })
-    .eq("profile_id", profileId);
-
-  if (walletError) {
-    throw new Error(walletError.message || "Failed to deduct AP");
-  }
+  const { error } = await client.rpc("spend_attribute_points_atomic" as any, {
+    p_profile_id: profileId,
+    p_attribute: attributeKey,
+    p_cost: apCost,
+  });
+  if (error) throw new Error(error.message || "Attribute purchase failed");
 
   return await fetchProfileState(client, profileId);
 }
