@@ -79,7 +79,7 @@ CREATE OR REPLACE FUNCTION public.complete_achievement_for_event(
 RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 DECLARE v_achievement public.achievements%ROWTYPE;
  v_existing public.player_achievements%ROWTYPE;
- v_id uuid;v_user uuid;v_new integer;v_number integer;
+ v_id uuid;v_user uuid;v_new integer;v_number integer;v_has_existing boolean;
  v_reward public.achievement_rewards%ROWTYPE;
 BEGIN
  SELECT * INTO v_achievement FROM public.achievements
@@ -97,7 +97,8 @@ BEGIN
  PERFORM pg_advisory_xact_lock(hashtextextended(p_profile_id::text||':'||v_achievement.id::text,0));
  SELECT * INTO v_existing FROM public.player_achievements
  WHERE profile_id=p_profile_id AND achievement_id=v_achievement.id FOR UPDATE;
- IF FOUND AND (NOT v_achievement.is_repeatable
+ v_has_existing:=FOUND;
+ IF v_has_existing AND (NOT v_achievement.is_repeatable
     OR v_existing.completed_count>=coalesce(v_achievement.repeat_limit,1)) THEN RETURN NULL; END IF;
  IF p_source_event_id IS NOT NULL THEN
    INSERT INTO public.achievement_processed_events(profile_id,achievement_id,source_event_id)
@@ -106,7 +107,7 @@ BEGIN
    GET DIAGNOSTICS v_new=ROW_COUNT;
    IF v_new=0 THEN RETURN NULL; END IF;
  END IF;
- IF FOUND THEN
+ IF v_has_existing THEN
    UPDATE public.player_achievements SET
      completed_count=completed_count+1,
      last_completed_at=now(),
