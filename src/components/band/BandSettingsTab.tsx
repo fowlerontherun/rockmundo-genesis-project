@@ -93,37 +93,16 @@ export function BandSettingsTab({
     mutationFn: async () => {
       if (!profileId) throw new Error('No active profile');
       
-      // Deduct cost from band balance
-      const { data: band, error: bandErr } = await supabase
-        .from('bands')
-        .select('band_balance')
-        .eq('id', bandId)
-        .single();
-      if (bandErr) throw bandErr;
-      
-      const balance = band?.band_balance ?? 0;
-      if (balance < adBudget) throw new Error(`Insufficient band funds. Need $${adBudget}, have $${balance.toLocaleString()}`);
-
-      const visibilityBoost = adBudget >= 2000 ? 3.0 : adBudget >= 1000 ? 2.0 : adBudget >= 500 ? 1.5 : 1.0;
-
-      const { error: adErr } = await supabase
-        .from('band_member_ads')
-        .insert({
-          band_id: bandId,
-          posted_by_profile_id: profileId,
-          instrument_role: adInstrument,
-          vocal_role: adVocalRole && adVocalRole !== 'none' ? adVocalRole : null,
-          description: adDescription || null,
-          budget_spent: adBudget,
-          visibility_boost: visibilityBoost,
-        });
-      if (adErr) throw adErr;
-
-      const { error: balErr } = await supabase
-        .from('bands')
-        .update({ band_balance: balance - adBudget })
-        .eq('id', bandId);
-      if (balErr) throw balErr;
+      const { data: adId, error } = await (supabase as any).rpc("post_band_recruitment_ad_atomic", {
+        p_band_id: bandId,
+        p_profile_id: profileId,
+        p_budget: adBudget,
+        p_instrument: adInstrument,
+        p_vocal: adVocalRole && adVocalRole !== 'none' ? adVocalRole : null,
+        p_description: adDescription || null,
+      });
+      if (error) throw error;
+      if (!adId) throw new Error("Recruitment ad purchase was not confirmed");
     },
     onSuccess: () => {
       toast({ title: 'Ad Posted', description: `Spent $${adBudget} to advertise for a new member.` });
