@@ -22,7 +22,7 @@ describe("notification actions, character ownership and message history regressi
   });
 
   it("keeps mobile notification and inbox links actionable", () => {
-    expect(card).toContain("resolveNotificationActionPath(n.action_path)");
+    expect(card).toContain("resolveNotificationActionPath(getNotificationRoute(n))");
     expect(mobileInbox).toContain("resolveNotificationActionPath(route)");
   });
 
