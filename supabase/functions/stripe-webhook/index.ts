@@ -215,7 +215,7 @@ serve(async (req) => {
           ? event.data.object as Stripe.Refund : null;
         if (refund && refund.status !== "succeeded") break;
         const charge = refund
-          ? await stripe.charges.retrieve(typeof refund.charge === "string" ? refund.charge : refund.charge!.id)
+          ? (refund.charge ? await stripe.charges.retrieve(typeof refund.charge === "string" ? refund.charge : refund.charge.id) : null)
           : event.data.object as Stripe.Charge;
         if (!charge || charge.amount <= 0 || charge.amount_refunded < charge.amount) {
           logStep("Ignoring partial or unpaid refund", { eventId: event.id });
