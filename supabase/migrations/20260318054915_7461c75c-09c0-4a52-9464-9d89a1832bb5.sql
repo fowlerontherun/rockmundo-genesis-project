@@ -1,7 +1,7 @@
 
 -- Add profile_id column to player_behavior_settings
 ALTER TABLE public.player_behavior_settings 
-  ADD COLUMN profile_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE;
+  ADD COLUMN IF NOT EXISTS profile_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE;
 
 -- Backfill profile_id from profiles table for existing rows
 UPDATE public.player_behavior_settings pbs

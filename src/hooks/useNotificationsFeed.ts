@@ -52,7 +52,7 @@ export function useNotificationsFeed() {
         if (error) throw error;
         all.push(...((data ?? []) as unknown as PersistedNotification[]));
         if (!data || data.length < 1000) { complete = true; break; }
-        const next = lastCreatedAtIdCursor(data);
+        const next = lastCreatedAtIdCursor(data as unknown as PersistedNotification[]);
         if (!next || (cursor && next.created_at === cursor.created_at && next.id === cursor.id)) {
           throw new Error("Notification pagination failed to advance");
         }

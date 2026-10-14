@@ -23,7 +23,7 @@ export function DirectMessageThread({
   otherDisplayName,
   compact = false,
 }: Props) {
-  const { channelId, messages, isLoading, canSendMessage, sendMessage, markRead, hasOlderMessages, loadOlderMessages, isLoadingOlderMessages } = useDirectMessages(
+  const { channelId, messages, isLoading, sendMessage, markRead, hasOlderMessages, loadOlderMessages, isLoadingOlderMessages } = useDirectMessages(
     myProfileId,
     otherProfileId,
   );
@@ -39,12 +39,12 @@ export function DirectMessageThread({
   }, [messages[messages.length - 1]?.id]);
 
   useEffect(() => {
-    if (canSendMessage && messages.length) markRead.mutate();
+    if (messages.length) markRead.mutate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages[messages.length - 1]?.id, messages[messages.length - 1]?.read_at]);
 
   const handleSend = () => {
-    if (!canSendMessage || !draft.trim() || sendMessage.isPending) return;
+    if (!draft.trim() || sendMessage.isPending || isLoading) return;
     sendMessage.mutate(draft, { onSuccess: () => setDraft("") });
   };
 
@@ -86,7 +86,6 @@ export function DirectMessageThread({
           compact && "flex min-h-0 flex-col px-2 pb-2",
         )}
       >
-        {!canSendMessage && <p className="mb-2 text-sm text-muted-foreground" role="status">Opening conversation…</p>}
         {sendMessage.isSuccess && (
           <p className="mb-2 rounded-md bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700" role="status">
             Message sent.
@@ -155,7 +154,7 @@ export function DirectMessageThread({
           placeholder={`Message ${otherDisplayName}`}
           aria-label={`Message ${otherDisplayName}`}
           maxLength={2000}
-          disabled={!canSendMessage || sendMessage.isPending}
+          disabled={sendMessage.isPending}
           className={compact ? "min-h-[44px] max-h-[64px] resize-none" : "min-h-[72px]"}
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleSend();
@@ -165,7 +164,7 @@ export function DirectMessageThread({
           <span className={compact ? "sr-only" : undefined}>
             ⌘/Ctrl + Enter to send · {draft.trim().length}/2,000
           </span>
-          <Button onClick={handleSend} disabled={!canSendMessage || sendMessage.isPending || !draft.trim()} size="sm" aria-label={`Send message to ${otherDisplayName}`}>
+          <Button onClick={handleSend} disabled={sendMessage.isPending || isLoading || !draft.trim()} size="sm" aria-label={`Send message to ${otherDisplayName}`}>
             {sendMessage.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             <SendHorizontal className="mr-1 h-4 w-4" /> Send
           </Button>

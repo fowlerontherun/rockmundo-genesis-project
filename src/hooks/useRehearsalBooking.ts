@@ -1,7 +1,7 @@
 import { createElement, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ToastAction } from "@/components/ui/toast";
+import { ToastAction, type ToastActionElement } from "@/components/ui/toast";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useQueryClient } from "@tanstack/react-query";
 import { logGameActivity } from "@/hooks/useGameActivityLog";
@@ -252,7 +252,7 @@ export function useRehearsalBooking() {
                 toast({ title: "Schedule still needs attention", description: "Booking and payment are safe. Try syncing the calendar again.", variant: "destructive" });
               });
             },
-          }, "Retry schedule"),
+          }, "Retry schedule") as unknown as ToastActionElement,
         });
       } else {
         toast({
