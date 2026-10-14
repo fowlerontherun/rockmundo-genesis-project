@@ -6,6 +6,9 @@ CREATE TABLE IF NOT EXISTS public.personal_vehicle_catalog (
 ALTER TABLE public.personal_vehicle_catalog ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS personal_vehicle_catalog_read ON public.personal_vehicle_catalog;
 CREATE POLICY personal_vehicle_catalog_read ON public.personal_vehicle_catalog FOR SELECT TO authenticated USING(true);
+REVOKE ALL ON TABLE public.personal_vehicle_catalog FROM PUBLIC, anon, authenticated;
+GRANT SELECT ON TABLE public.personal_vehicle_catalog TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.personal_vehicle_catalog TO service_role;
 INSERT INTO public.personal_vehicle_catalog(id,name,category,price)
 VALUES ('honda-pcx-125','Honda PCX 125','motorbike',3500),
 ('vespa-gts','Vespa GTS 300','motorbike',7500),

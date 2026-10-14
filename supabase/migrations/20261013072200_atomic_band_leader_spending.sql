@@ -59,7 +59,7 @@ BEGIN
  INSERT INTO public.band_earnings(band_id,amount,source,description,earned_by_user_id,profile_id)
  VALUES(p_band_id,v_delta,
         CASE WHEN p_direction='deposit' THEN 'leader_deposit' ELSE 'leader_withdrawal' END,
-        LEFT(NULLIF(p_note,''),400),p_profile_id,p_profile_id);
+        LEFT(NULLIF(p_note,''),400),auth.uid(),p_profile_id);
  RETURN v_balance+v_delta;
 END; $$;
 REVOKE ALL ON FUNCTION public.transfer_band_leader_funds_atomic(uuid,uuid,integer,text,text) FROM PUBLIC, anon, authenticated;

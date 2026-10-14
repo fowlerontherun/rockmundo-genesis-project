@@ -40,4 +40,4 @@ BEGIN
   RETURN v_total;
 END $$;
 REVOKE ALL ON FUNCTION public.record_active_character_playtime(uuid,boolean) FROM PUBLIC,anon;
-GRANT EXECUTE ON FUNCTION public.record_active_character_playtime(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.record_active_character_playtime(uuid,boolean) TO authenticated;
