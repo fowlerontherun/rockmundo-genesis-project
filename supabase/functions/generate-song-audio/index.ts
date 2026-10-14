@@ -764,12 +764,12 @@ function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, gen
   }
 
   // MiniMax Music requires lyrics within the selected model's character limit — ALWAYS enforce this limit
-  if (normalized.length > 600) {
-    console.log(`[generate-song-audio] Lyrics too long (${normalized.length} chars), truncating to \${maxCharacters} char limit`)
+  if (normalized.length > maxCharacters) {
+    console.log(`[generate-song-audio] Lyrics too long (${normalized.length} chars), truncating to ${maxCharacters} char limit`)
     const sections = normalized.split(/(?=\[(?:Verse|Chorus|Bridge|Pre-Chorus|Outro|Intro|Hook|Post-Chorus))/i)
     let truncated = ''
     for (const section of sections) {
-      if ((truncated + section).length <= 600) {
+      if ((truncated + section).length <= maxCharacters) {
         truncated += section
       } else {
         break
@@ -779,7 +779,7 @@ function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, gen
       normalized = truncated.trim()
     } else {
       // Hard truncate at maxCharacters chars as last resort
-      normalized = normalized.substring(0, 597) + '...'
+      normalized = normalized.substring(0, maxCharacters - 3) + '...'
       const lastNewline = normalized.lastIndexOf('\n')
       if (lastNewline > 100) normalized = normalized.substring(0, lastNewline).trim()
     }
@@ -787,8 +787,8 @@ function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, gen
   }
 
   // Final safety net - absolute hard limit
-  if (normalized.length > 600) {
-    normalized = normalized.substring(0, 597).trim()
+  if (normalized.length > maxCharacters) {
+    normalized = normalized.substring(0, maxCharacters - 3).trim()
     console.log(`[generate-song-audio] Hard-capped lyrics to ${normalized.length} chars`)
   }
 
