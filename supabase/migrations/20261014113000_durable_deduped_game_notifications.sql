@@ -97,7 +97,7 @@ BEGIN
    INTO v_profile,v_band FROM public.twaater_accounts a
    WHERE a.id=nullif(v->>'account_id','')::uuid;
  WHEN 'vip_subscriptions' THEN
-   IF TG_OP<>'INSERT' OR v->>'status'<>'active' THEN RETURN NEW; END IF;
+   IF v->>'status'<>'active' OR (TG_OP='UPDATE' AND prior->>'status'='active') THEN RETURN NEW; END IF;
    v_kind:='vip_activation';v_category:='achievement';
    v_title:='VIP Status Activated';v_message:='Your VIP subscription is active.';
    v_user:=nullif(v->>'user_id','')::uuid;
@@ -175,11 +175,11 @@ BEGIN
  IF v_kind IS NULL OR v->>'id' IS NULL THEN RETURN NEW; END IF;
  v_key:=v_kind||':'||(v->>'id');
 
- IF v_kind='vip_activation' AND v_user IS NOT NULL THEN
+ IF v_kind IN ('vip_activation','band_invite') AND v_user IS NOT NULL THEN
    -- VIP belongs to the account, not to the active character at event time.
    INSERT INTO public.notifications
      (user_id,profile_id,category,type,title,message,action_path,metadata)
-   VALUES(v_user,NULL,v_category,'achievement',v_title,v_message,NULL,
+   VALUES(v_user,NULL,v_category,v_type,v_title,v_message,v_path,
      jsonb_build_object('event_key',v_key,'source','game_event'))
    ON CONFLICT DO NOTHING;
  END IF;
@@ -200,7 +200,7 @@ BEGIN
      v_key,v_category,v_type,v_title,v_message,v_path);
  END IF;
  IF v_band IS NULL AND v_profile IS NULL AND v_user IS NOT NULL
-    AND v_kind<>'vip_activation' THEN
+    AND v_kind NOT IN ('vip_activation','band_invite') THEN
    FOR v_row IN SELECT p.user_id,p.id AS profile_id FROM public.profiles p
        WHERE p.user_id=v_user AND p.is_active IS TRUE AND p.deleted_at IS NULL LOOP
      PERFORM public.persist_game_event_notification(v_row.user_id,v_row.profile_id,
@@ -220,7 +220,7 @@ BEGIN
  FOR entry IN SELECT * FROM (VALUES
    ('chart_entries','INSERT'),
    ('twaater_notifications','INSERT'),
-   ('vip_subscriptions','INSERT'),
+   ('vip_subscriptions','INSERT OR UPDATE'),
    ('gig_outcomes','INSERT'),
    ('recording_sessions','UPDATE'),
    ('player_achievements','INSERT'),
