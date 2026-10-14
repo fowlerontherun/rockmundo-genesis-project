@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS public.label_marketing_daily_runs (
   result jsonb NOT NULL,
   completed_at timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE public.label_marketing_daily_runs ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.label_marketing_daily_runs FROM PUBLIC, anon, authenticated;
 GRANT SELECT, INSERT ON public.label_marketing_daily_runs TO service_role;
 
