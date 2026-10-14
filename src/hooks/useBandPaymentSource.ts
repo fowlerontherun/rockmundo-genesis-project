@@ -103,7 +103,7 @@ export function useBandPaymentSource(bandId: string | null | undefined) {
    * Returns the amount (if any) moved from the player's wallet.
    *
    * Rehearsal bookings are server-atomic and therefore deliberately skip the
-   * pre-funding step. The selected payer is consumed by `useRehearsalBooking`.
+   * pre-funding step. Their selected payer is passed directly with the booking request.
    */
   const prepareFunds = useCallback(
     async (cost: number, note?: string) => {
