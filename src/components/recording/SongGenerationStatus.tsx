@@ -86,23 +86,8 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
     setTrackedAttemptId(null);
     setShowLyricsDialog(false);
     try {
-      // Persist edited lyrics first, but let the admin edge function own generation
-      // state. The player endpoint intentionally blocks songs that already have
-      // audio, which makes completed-song regeneration fail when the client-side
-      // audio reset is rejected or delayed by RLS.
-      if (updatedLyrics !== undefined) {
-        const { error: lyricsError } = await supabase
-          .from('songs')
-          .update({ lyrics: updatedLyrics } as any)
-          .eq('id', songId);
-
-        if (lyricsError) {
-          console.error('Admin regenerate lyrics update error:', lyricsError);
-          toast.error("Failed to save updated lyrics");
-          return;
-        }
-      }
-
+      // The admin endpoint validates and saves edited lyrics before submitting
+      // generation, ensuring they take priority over any linked project lyrics.
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast.error("Your session has expired. Please sign in again.");
@@ -117,7 +102,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ songId, regenerate: true }),
+          body: JSON.stringify({ songId, regenerate: true, overrideLyrics: updatedLyrics }),
         }
       );
 
