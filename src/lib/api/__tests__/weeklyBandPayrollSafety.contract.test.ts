@@ -83,6 +83,18 @@ describe("six weekly payroll safety regressions", () => {
     );
   });
 
+  it("#4119 blocks payroll when the gameplay treasury and finance ledger differ", () => {
+    expect(migration).toContain("FROM public.band_treasuries bt");
+    expect(migration).toContain("bt.balance_minor = a.current_balance_minor");
+    expect(migration).toContain("bt.balance_minor = v_treasury.current_balance_minor");
+    expect(migration).toContain("Payroll cutover blocked: % pay-enabled bands have incompatible treasury ledgers");
+    expect(migration).toContain("Band treasury ledgers diverged; payroll withheld");
+    expect(migration).toContain("v_incompatible_treasuries");
+    expect(migration.indexOf("v_incompatible_treasuries > 0")).toBeLessThan(
+      migration.indexOf("PERFORM cron.unschedule('process-weekly-band-pay')"),
+    );
+  });
+
   it("#4024 prevents lost updates with ordered account locks and relative balance writes", () => {
     expect(migration).toContain("ORDER BY a.id FOR UPDATE");
     expect(migration).toContain("FROM public.bands b\n      WHERE b.id=v_band_id FOR UPDATE");
