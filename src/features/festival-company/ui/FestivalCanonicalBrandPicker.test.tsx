@@ -65,4 +65,14 @@ describe("FestivalCanonicalBrandPicker", () => {
     expect(add).toHaveBeenCalledWith({ festivalCompanyId: COMPANY_ID, brandId: ALPHA_ID });
     expect(screen.getByRole("button", { name: "Added" }).hasAttribute("disabled")).toBe(true);
   });
+  it("falls back to brand name rather than rendering unsafe logo URLs", () => {
+    useFestivalCanonicalBrands.mockReturnValue({
+      isPending: false, isError: false, isSuccess: true,
+      data: { items: [{ ...alpha, logoUrl: "//malicious.invalid/logo.svg" }], totalCount: 1 },
+    });
+    const { container } = render(<FestivalCanonicalBrandPicker festivalCompanyId={COMPANY_ID} />);
+    expect(container.querySelectorAll("img")).toHaveLength(0);
+    expect(screen.getAllByText("Alpha Audio").length).toBeGreaterThan(0);
+  });
+
 });
