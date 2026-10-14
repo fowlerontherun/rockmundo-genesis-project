@@ -58,6 +58,22 @@ BEGIN
       RAISE EXCEPTION 'Payroll treasury reconciliation blocked: account eligibility changed';
     END IF;
 
+    -- An internally reconciled finance-account journal is NOT proof that
+    -- the account is the gameplay band's spendable treasury. The live
+    -- band_treasuries ledger can contain legitimate rehearsal/recording
+    -- bookings absent from financial_accounts. Until their balances match
+    -- and economic authority is reviewed, assigning the role is unsafe.
+    IF NOT EXISTS (
+      SELECT 1 FROM public.band_treasuries bt
+      WHERE bt.band_id = v_target.band_id
+        AND bt.is_primary IS TRUE
+        AND bt.currency_code = v_account.default_currency_code
+        AND bt.balance_minor = v_account.current_balance_minor
+        AND bt.balance_minor = COALESCE(v_band.band_balance,0)::bigint * 100
+    ) THEN
+      RAISE EXCEPTION 'Payroll treasury reconciliation blocked: gameplay and finance balances differ';
+    END IF;
+
     v_prior_role := v_account.metadata->>'account_role';
     IF v_prior_role IS NOT NULL AND v_prior_role <> 'band_treasury' THEN
       RAISE EXCEPTION 'Payroll treasury reconciliation blocked: conflicting account role';
