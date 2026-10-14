@@ -3,6 +3,7 @@ import type { DerivedPlaybackState } from "@/features/gig-experience/viewer/engi
 import type { TotpBroadcastCue } from "./broadcastTimeline";
 import { loadTotpCrowdSounds, pickTotpCrowdSound, type TotpCrowdSound } from "./crowdSoundLibrary";
 import { clampTotpGain, totpMixLevels } from "./broadcastAudioMix";
+import { CrowdReactionCooldown } from "@/features/shared-audio/crowdAudioSelection";
 
 let sharedTotpAudioContext: AudioContext | null = null;
 
@@ -50,6 +51,8 @@ export function useTotpAudienceAudio({
   const lastCueRef = useRef<string | null>(null);
   const lastPulseRef = useRef(0);
   const libraryRef = useRef<TotpCrowdSound[]>([]);
+  const cooldownRef = useRef(new CrowdReactionCooldown());
+  const noiseSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const clipRef = useRef<HTMLAudioElement | null>(null);
   const ambienceClipRef = useRef<HTMLAudioElement | null>(null);
 
@@ -79,7 +82,14 @@ export function useTotpAudienceAudio({
   }, [enabled]);
 
   useEffect(() => {
-    if (!enabled || !playbackState.isPlaying || typeof window === "undefined") return;
+    if (!enabled || !playbackState.isPlaying || typeof window === "undefined") {
+      clipRef.current?.pause();
+      ambienceClipRef.current?.pause();
+      if (ctxRef.current && ambienceRef.current && ctxRef.current.state !== "closed") {
+        ambienceRef.current.gain.setTargetAtTime(0, ctxRef.current.currentTime, 0.05);
+      }
+      return;
+    }
     let ctx = ctxRef.current ?? totpAudioContext();
     if (!ctx) return;
     let master = masterRef.current;
@@ -111,6 +121,7 @@ export function useTotpAudienceAudio({
       src.connect(filter);
       filter.connect(ambience);
       src.start();
+      noiseSourceRef.current = src;
       ctxRef.current = ctx;
       masterRef.current = master;
       ambienceRef.current = ambience;
@@ -145,7 +156,7 @@ export function useTotpAudienceAudio({
           `${cueId}:entrance`,
         );
         const hit = clampTotpGain(mix.audienceHit);
-        playApprovedClip(clipRef, clip, hit)
+        playApprovedClip(clipRef, clip, hit, cooldownRef.current, playbackState.positionMs)
           .catch(() => playStudioCheer(ctx!, master!, hit, 1.1));
         if (!clip) playStudioCheer(ctx, master, hit, 1.1);
       }
@@ -160,7 +171,7 @@ export function useTotpAudienceAudio({
           `${cueId}:applause`,
         );
         const hit = clampTotpGain(mix.audienceHit);
-        playApprovedClip(clipRef, clip, hit)
+        playApprovedClip(clipRef, clip, hit, cooldownRef.current, playbackState.positionMs)
           .catch(() => playStudioCheer(ctx!, master!, hit, 1.8));
         if (!clip) playStudioCheer(ctx, master, hit, 1.8);
       }
@@ -174,13 +185,19 @@ export function useTotpAudienceAudio({
         reaction >= 5 ? 7 : 4,
         `${cueId ?? "performance"}:${Math.floor(playbackState.positionMs / 18_000)}`,
       );
-      playApprovedClip(clipRef, clip, .32 + Math.max(0, reaction) * .018)
+      playApprovedClip(clipRef, clip, .32 + Math.max(0, reaction) * .018, cooldownRef.current, playbackState.positionMs)
         .catch(() => playStudioCheer(ctx!, master!, 0.38 + Math.max(0, reaction) * 0.018, 0.65));
       if (!clip) playStudioCheer(ctx, master, 0.38 + Math.max(0, reaction) * 0.018, 0.65);
     }
   }, [audienceReaction, cue?.id, cue?.type, enabled, playbackState.activePhase, playbackState.isPlaying, playbackState.positionMs]);
 
   useEffect(() => () => {
+    cooldownRef.current.reset();
+    noiseSourceRef.current?.stop();
+    noiseSourceRef.current?.disconnect();
+    noiseSourceRef.current = null;
+    ambienceRef.current?.disconnect();
+    masterRef.current?.disconnect();
     clipRef.current?.pause();
     clipRef.current = null;
     ambienceClipRef.current?.pause();
@@ -224,8 +241,11 @@ async function playApprovedClip(
   clipRef: { current: HTMLAudioElement | null },
   sound: TotpCrowdSound | null,
   volume: number,
+  cooldown?: CrowdReactionCooldown,
+  cueTimeMs = 0,
 ) {
   if (!sound || typeof Audio === "undefined") return;
+  if (cooldown && !cooldown.canPlay(sound.id, cueTimeMs)) return;
   clipRef.current?.pause();
   const audio = new Audio(sound.audio_url);
   audio.preload = "auto";
@@ -233,6 +253,7 @@ async function playApprovedClip(
   clipRef.current = audio;
   audio.onended = () => { if (clipRef.current === audio) clipRef.current = null; };
   await audio.play();
+  cooldown?.record(sound.id, cueTimeMs);
 }
 
 

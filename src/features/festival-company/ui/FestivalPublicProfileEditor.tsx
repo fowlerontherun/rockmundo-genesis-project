@@ -180,6 +180,7 @@ export function FestivalPublicProfileEditor({ festivalCompanyId }: { festivalCom
           <Textarea id="festival-description" rows={4} value={draft.description} onChange={set("description")} />
         </div>
 
+        <p id="festival-profile-facts-guidance" className="text-xs text-muted-foreground">Publish only confirmed visitor information for this festival. Leave unknown facilities, entry policies and refund arrangements blank; the public guide will show a clear unconfirmed state.</p>
         <div className="grid gap-3 md:grid-cols-2">
           {(
             [
@@ -195,7 +196,7 @@ export function FestivalPublicProfileEditor({ festivalCompanyId }: { festivalCom
           ).map(([key, label]) => (
             <div className="space-y-1.5" key={key}>
               <Label htmlFor={`festival-${key}`}>{label}</Label>
-              <Input id={`festival-${key}`} value={draft[key]} onChange={set(key)} />
+              <Textarea id={`festival-${key}`} rows={3} value={draft[key]} onChange={set(key)} maxLength={1200} aria-describedby="festival-profile-facts-guidance" />
             </div>
           ))}
         </div>
