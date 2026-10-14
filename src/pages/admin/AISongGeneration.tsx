@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminRoute } from "@/components/AdminRoute";
@@ -57,6 +57,9 @@ export default function AISongGeneration() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [generationLogs, setGenerationLogs] = useState<string[]>([]);
   const [generationStartTime, setGenerationStartTime] = useState<number | null>(null);
+  const [generationOutcome, setGenerationOutcome] = useState<{
+    status: string; error?: string | null; audioUrl?: string | null; attemptId: string; predictionId?: string | null;
+  } | null>(null);
   const [boostAmount, setBoostAmount] = useState<number>(10);
   const [boostingSongId, setBoostingSongId] = useState<string | null>(null);
 
@@ -101,6 +104,7 @@ export default function AISongGeneration() {
 
       setGenerationLogs(["Starting audio generation..."]);
       setGenerationStartTime(Date.now());
+      setGenerationOutcome(null);
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-generate-song-audio`,
@@ -121,12 +125,11 @@ export default function AISongGeneration() {
         setGenerationLogs(result.logs);
       }
       
-      if (!response.ok) throw new Error(result.error || "Generation failed");
+      if (!response.ok) throw new Error(`[${result.code || "AUDIO_ERROR"}] ${result.error || "Generation failed"} (attempt ${result.attemptId || "not created"})`);
       return result;
     },
     onSuccess: (data) => {
-      const elapsed = generationStartTime ? ((Date.now() - generationStartTime) / 1000).toFixed(1) : "?";
-      toast.success(`Audio generated for "${data.songTitle}" in ${elapsed}s`);
+      toast.info(`Generation submitted for "${data.songTitle}"; awaiting provider result.`);
       if (data.logs) {
         setGenerationLogs(data.logs);
       }
@@ -219,9 +222,11 @@ export default function AISongGeneration() {
 
   const openGenerateDialog = (song: Song) => {
     setSelectedSong(song);
-    setCustomPrompt(song.audio_prompt || "");
+    const savedStyle = (song.audio_prompt || "").split(/\n\s*(?:Lyrics|Song Lyrics)\s*:/i)[0].replace(/^\s*Style\s*:\s*/i, "").trim();
+    setCustomPrompt(savedStyle.slice(0, 300));
     setGenerationLogs([]);
     setGenerationStartTime(null);
+    setGenerationOutcome(null);
     setDialogOpen(true);
   };
 
@@ -231,6 +236,7 @@ export default function AISongGeneration() {
     setCustomPrompt("");
     setGenerationLogs([]);
     setGenerationStartTime(null);
+    setGenerationOutcome(null);
     queryClient.invalidateQueries({ queryKey: ["admin-songs-for-generation"] });
   };
 
@@ -259,7 +265,7 @@ export default function AISongGeneration() {
               AI Song Generation
             </h1>
             <p className="text-muted-foreground">
-              Test and manage AI-generated audio for songs using YuE model on Replicate
+              Test and manage AI-generated audio for songs using MiniMax Music 1.5 on Replicate
             </p>
           </div>
           <Button onClick={() => refetch()} variant="outline">
@@ -510,10 +516,11 @@ export default function AISongGeneration() {
                     placeholder="Leave empty to auto-generate from song metadata..."
                     value={customPrompt}
                     onChange={(e) => setCustomPrompt(e.target.value)}
+                    maxLength={300}
                     rows={4}
                   />
                   <p className="text-xs text-muted-foreground">
-                    If left empty, a prompt will be generated based on genre, theme, and quality score.
+                    Style only (max 300 characters). Lyrics are supplied separately from the saved song. Leave empty to build a style automatically. {customPrompt.length}/300 characters.
                   </p>
                 </div>
               )}
@@ -526,7 +533,7 @@ export default function AISongGeneration() {
                     Generation Log
                     {generationStartTime && (
                       <span className="text-xs text-muted-foreground font-normal">
-                        ({generateMutation.isPending ? "Running" : "Complete"})
+                        ({generateMutation.isPending ? "Submitting" : generationOutcome?.status === "completed" ? "Complete" : generationOutcome?.status === "failed" ? "Failed" : generateMutation.isSuccess ? "Awaiting provider" : "Ready"})
                       </span>
                     )}
                   </Label>
@@ -564,18 +571,23 @@ export default function AISongGeneration() {
               )}
 
               {generateMutation.isSuccess && (
-                <div className="rounded-lg bg-green-500/10 border border-green-500/30 p-3">
-                  <p className="text-sm text-green-400 mb-2 flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4" />
-                    New audio generated successfully!
-                  </p>
-                  <audio controls className="w-full" src={(generateMutation.data as any)?.audioUrl}>
-                    Your browser does not support the audio element.
-                  </audio>
-                </div>
-              )}
+                 <div className="rounded-lg border p-3 space-y-2">
+                   {generationOutcome?.status === "completed" ? (
+                     <>
+                       <p className="text-sm text-green-500 flex items-center gap-2"><CheckCircle className="h-4 w-4" />Audio generated successfully</p>
+                       {generationOutcome.audioUrl && <audio controls className="w-full" src={generationOutcome.audioUrl} />}
+                     </>
+                   ) : generationOutcome?.status === "failed" ? (
+                     <p className="text-sm text-red-500"><XCircle className="h-4 w-4 inline mr-2" />{generationOutcome.error || "Provider failed"}</p>
+                   ) : (
+                     <p className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Request accepted; awaiting provider completion.</p>
+                   )}
+                   <p className="text-xs text-muted-foreground">Attempt ID: {generationOutcome?.attemptId || generateMutation.data?.attemptId}</p>
+                   <p className="text-xs text-muted-foreground">Prediction ID: {generationOutcome?.predictionId || generateMutation.data?.predictionId || "pending"}</p>
+                 </div>
+               )}
 
-              <div className="flex justify-end gap-2">
+               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={closeDialog}>
                   {generateMutation.isSuccess ? "Close" : "Cancel"}
                 </Button>
