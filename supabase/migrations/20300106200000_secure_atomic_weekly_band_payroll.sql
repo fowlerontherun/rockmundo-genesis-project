@@ -131,10 +131,13 @@ BEGIN
       IF v_treasury.account_status<>'active' THEN
         RAISE EXCEPTION 'Band treasury was deactivated';
       END IF;
-      v_each:=floor(
+      -- Legacy band_earnings and activity_feed amounts are whole-major-unit
+      -- integers. Round each member's share DOWN to whole currency units;
+      -- leave any remainder in the band treasury, not an unreported debit.
+      v_each:=(floor(
         floor(v_treasury.available_balance_minor::numeric *
-              v_band.weekly_pay_percent / 100) / v_payable
-      )::bigint;
+              v_band.weekly_pay_percent / 100) / v_payable / 100
+      ) * 100)::bigint;
       IF v_each<=0 THEN CONTINUE; END IF;
       v_total:=v_each*v_payable;
       IF v_total>v_treasury.available_balance_minor THEN
@@ -220,7 +223,7 @@ BEGIN
         ) VALUES (
           v_member.user_id,v_member.profile_id,'band_pay',
           'Received weekly band pay from '||v_band.name,
-          v_each::numeric/100
+          (v_each/100)::integer
         );
       END LOOP;
 
@@ -229,7 +232,7 @@ BEGIN
       INSERT INTO public.band_earnings(
         band_id,amount,source,description,earned_by_user_id
       ) VALUES(
-        v_band_id,-v_total::numeric/100,'weekly_pay',
+        v_band_id,-(v_total/100)::integer,'weekly_pay',
         'Weekly band payroll for '||v_week::text||' ('||v_payable::text||' paid members)',
         v_leader_user_id
       );
