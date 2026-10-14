@@ -80,25 +80,48 @@ staging database to validate the full payout function, then deploy only through
 an approved unique migration identity. Never use `supabase db push` while
 unresolved timestamp collisions remain.
 
-## Existing band-balance projection drift (GitHub #4119)
+## Three-ledger authority conflict — payroll cutover blocked (#4119)
 
-A read-only 14 October audit compared `bands.band_balance` to
-`SUM(band_earnings.amount)` for all 31 bands. **Five** are inconsistent,
-total absolute discrepancy **35,720** major game-currency units:
-WAR DOGS. **-28,000**, JPW **-4,020**, Elysian **+3,000**,
-Betonherz **+400**, and ECHO **+300**. These differences may represent
-legitimate but unjournaled spend/income, not necessarily an accounting
-windfall. In particular, WAR DOGS. currently has an active pay configuration,
-so a payroll expense inserted into `band_earnings` could accidentally
-reset an extra 28,000 units of displayed band balance.
+The game has **three separate financial records** for each pay-enabled band.
+The `band_treasuries` primary row matches the displayed legacy
+`bands.band_balance`. The newer `financial_accounts` primary band account
+is internally journal-balanced but not synchronized with gameplay treasury.
 
-The payroll migration now refuses to install/rewire cron if **any active
-pay-enabled band** has that projection drift. At runtime, it rechecks the
-drift under each band row lock before any settlement or transfer, rolls back
-that band, and reports `partial_failure` if any band failed. This **does
-not repair** the pre-existing discrepancies. Trace actual historic spending
-and journal records before any compensating finance or projection changes.
-The reconciliation work is tracked separately in
+| Band | Gameplay band_treasuries and band_balance | financial_accounts | band_earnings subtotal |
+| --- | ---: | ---: | ---: |
+| Shockmaster | 4,295,646 | 1,284,462 | 4,295,646 |
+| WAR DOGS. | 2,214,211 | 48,074 | 2,242,211 |
+
+For WAR DOGS., the **28,000 difference** between earnings subtotal and
+displayed gameplay balance is explained exactly by three legitimate
+`band_treasury_transactions` AFTER the last earnings entry:
+27,400 recording-session booking + 400 and 200 rehearsal bookings.
+This is not an unexplained credit to correct by increasing band balances.
+Four other bands also differ from earnings sums, and their provenance
+requires similar review. Total absolute difference: 35,720 (31 bands).
+
+The existing `update_band_balance_from_earnings` trigger recomputes
+`bands.band_balance` from **all** earnings after any new earnings row.
+The `bands_sync_treasury_balance_projection` trigger then propagates this
+overwrite into `band_treasuries`, potentially undoing legitimate bookings.
+Simply removing a second direct balance update from payroll prevents one
+bad write but **does not repair this older trigger model**.
+
+The payroll migration is now deliberately fail-closed in TWO ways:
+1. When any pay-enabled band has a mismatch between earnings-only subtotal
+   and displayed balance, the legacy sum-trigger is unsafe to run. Runtime
+   checks also withhold that band's payroll to prevent accidental resets.
+   **Do not fix this by forcing `band_balance = SUM(band_earnings)`.**
+2. When `band_treasuries.balance_minor` differs from the tagged
+   `financial_accounts.current_balance_minor`, the migration cannot
+   establish the payer's true spendable game funds. Reject cutover and
+   payroll until the two systems' authoritative money and journal postings
+   are reconciled with full history; do not add money to make totals equal.
+
+A separate reviewed change to the earnings trigger or a unified money
+posting API is needed, with a full audit of earning producers so no
+already-posted funds can be double credited. Stage transactions and
+concurrency tests before any production action. See
 [issue #4119](https://github.com/fowlerontherun/rockmundo-genesis-project/issues/4119).
 
 ## Required staging and deployment checks
