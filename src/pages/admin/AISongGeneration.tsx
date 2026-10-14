@@ -68,6 +68,9 @@ export default function AISongGeneration() {
   const [audioAudit, setAudioAudit] = useState<Record<string, number | null>>({});
   const [audioAuditing, setAudioAuditing] = useState(false);
   const [auditChecked, setAuditChecked] = useState(0);
+  const [audioAuditPage, setAudioAuditPage] = useState(0);
+  const audioAuditPageSize = 30;
+  useEffect(() => { setAudioAudit({}); setAuditChecked(0); }, [audioAuditPage]);
 
   const { data: songs, isLoading, refetch } = useQuery({
     queryKey: ["admin-songs-for-generation"],
@@ -105,13 +108,14 @@ export default function AISongGeneration() {
 
   // Dedicated query: recently generated tracks may have been created months ago.
   const { data: recentAudioSongs, isLoading: isRecentAudioLoading } = useQuery({
-    queryKey: ["admin-recent-generated-audio"],
+    queryKey: ["admin-recent-generated-audio", audioAuditPage],
     queryFn: async () => {
       const { data, error } = await supabase.from("songs")
         .select("id, title, genre, status, quality_score, audio_url, audio_generation_status, audio_prompt, audio_generated_at, duration_seconds, created_at, band_id, bands(name)")
         .not("audio_url", "is", null)
         .order("audio_generated_at", { ascending: false, nullsFirst: false })
-        .limit(30);
+        .order("id", { ascending: true })
+        .range(audioAuditPage * audioAuditPageSize, (audioAuditPage + 1) * audioAuditPageSize - 1);
       if (error) throw error;
       return data as Song[];
     },
@@ -123,7 +127,7 @@ export default function AISongGeneration() {
     setAudioAudit({});
     setAuditChecked(0);
     try {
-      // Read-only check on 30 recent recordings; no paid generation.
+      // Read-only check of the visible page; no paid generation or audio modification.
       for (const song of recentAudioSongs) {
         const duration = song.audio_url ? await readAudioDuration(song.audio_url) : null;
         setAudioAudit(previous => ({ ...previous, [song.id]: duration }));
@@ -566,8 +570,7 @@ export default function AISongGeneration() {
               <CardHeader>
                 <CardTitle>Recent generated audio duration audit</CardTitle>
                 <CardDescription>
-                  Read playback metadata from the 30 most recently generated recordings and
-                  compare it with the planned song duration. Audio is not changed or regenerated.
+                  Inspect recordings in batches of 30, ordered by generation date, and compare browser-reported playback with the planned song length. No audio is modified.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -575,11 +578,13 @@ export default function AISongGeneration() {
                   <Button variant="outline" onClick={() => { void auditRecentAudio(); }}
                     disabled={audioAuditing || isRecentAudioLoading || !recentAudioSongs?.length}>
                     {audioAuditing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Volume2 className="mr-2 h-4 w-4" />}
-                    {audioAuditing ? "Checking durations..." : "Audit recent audio"}
+                    {audioAuditing ? "Checking durations..." : "Audit displayed audio"}
                   </Button>
                   <span className="text-sm text-muted-foreground" aria-live="polite">
-                    {auditChecked} / {recentAudioSongs?.length || 0} checked
-                  </span>
+                     Page {audioAuditPage + 1} · {auditChecked} / {recentAudioSongs?.length || 0} checked
+                   </span>
+                   <Button type="button" variant="outline" size="sm" disabled={audioAuditPage === 0 || audioAuditing || isRecentAudioLoading} onClick={() => setAudioAuditPage(page => Math.max(0, page - 1))}>Previous 30</Button>
+                   <Button type="button" variant="outline" size="sm" disabled={audioAuditing || isRecentAudioLoading || (recentAudioSongs?.length ?? 0) < audioAuditPageSize} onClick={() => setAudioAuditPage(page => page + 1)}>Next 30</Button>
                 </div>
                 <p className="text-sm text-muted-foreground">
                   A recording is flagged for review if browser-reported duration is less than 80% of
