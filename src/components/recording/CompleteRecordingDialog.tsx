@@ -36,7 +36,7 @@ export const CompleteRecordingDialog = ({
   const { data: vipStatus } = useVipStatus();
   const { profileId } = useActiveProfile();
   const { data: limits } = useSongGenerationLimits();
-  const { isCompleted, hasAudio, cannotRegenerate } = useSongGenerationStatus(currentSongId);
+  const { cannotRegenerate } = useSongGenerationStatus(currentSongId);
 
   // Fetch song ID if not provided
   useEffect(() => {
@@ -53,10 +53,6 @@ export const CompleteRecordingDialog = ({
         });
     }
   }, [propSongId, sessionId]);
-
-  const canGenerateAudio = vipStatus?.isVip && 
-    limits?.can_generate && 
-    !cannotRegenerate;
 
   const generateAudio = async (songId: string) => {
     if (!vipStatus?.isVip || !profileId) return;
@@ -196,12 +192,12 @@ export const CompleteRecordingDialog = ({
                 </Alert>
               )}
 
-              {/* Show warning if song already has audio */}
+              {/* Show warning only while the provider is actively working */}
               {cannotRegenerate && (
                 <Alert className="bg-muted">
                   <Music className="h-4 w-4" />
                   <AlertDescription>
-                    This song already has AI-generated audio. Regeneration is not available.
+                    An AI generation is already running. Existing audio stays available until it finishes.
                   </AlertDescription>
                 </Alert>
               )}
@@ -211,7 +207,7 @@ export const CompleteRecordingDialog = ({
                 <SongGenerationStatus 
                   songId={currentSongId} 
                   songTitle={songTitle}
-                  showRetry={false}
+                  showRetry={true}
                 />
               )}
             </div>
