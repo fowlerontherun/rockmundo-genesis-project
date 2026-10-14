@@ -176,7 +176,7 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
       if (!conversationId || !canSendMessage) {
         throw new Error("Conversation is still loading or unavailable. Try again once it opens.");
       }
-      const identity = [myProfileId, conversationId, directOtherProfileId ?? "", body].join(":");
+      const identity = JSON.stringify([myProfileId, conversationId, directOtherProfileId ?? "", body]);
       // One retry token per *in-flight intent*. A completing request must
       // never clear a separate pending message's idempotency token.
       const id = retryIdentities.current.claim(identity);
