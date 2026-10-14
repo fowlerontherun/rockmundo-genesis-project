@@ -139,7 +139,7 @@ export function BandMemberLocations({ bandId, currentProfileId }: BandMemberLoca
 
     setSendingTo(member.profileId);
     try {
-      await sendDirectMessage(member.profileId, message);
+      await sendDirectMessage(member.profileId, message, crypto.randomUUID());
       toast({
         title: "Location message sent",
         description: `${member.displayName} has been asked to check their location.`,
