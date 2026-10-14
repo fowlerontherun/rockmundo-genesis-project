@@ -1,3 +1,4 @@
+import { it } from "vitest";
 import { getGenerationBlock, type SongAudioState } from "./songRegenerationPolicy.ts";
 
 const completed: SongAudioState = {
@@ -6,7 +7,7 @@ const completed: SongAudioState = {
   audio_generation_started_at: null,
 };
 
-Deno.test("previously completed audio needs explicit confirmation", () => {
+it("previously completed audio needs explicit confirmation", () => {
   if (getGenerationBlock(completed, false) !== "confirmation_required") {
     throw new Error("Automatic generation may overwrite completed audio");
   }
@@ -15,7 +16,7 @@ Deno.test("previously completed audio needs explicit confirmation", () => {
   }
 });
 
-Deno.test("active regeneration cannot be started twice, even with old audio", () => {
+it("active regeneration cannot be started twice, even with old audio", () => {
   const now = Date.parse("2026-10-14T19:00:00Z");
   const generating = {
     ...completed,
@@ -30,7 +31,7 @@ Deno.test("active regeneration cannot be started twice, even with old audio", ()
   }
 });
 
-Deno.test("expired attempt and failed initial song may be retried", () => {
+it("expired attempt and failed initial song may be retried", () => {
   const now = Date.parse("2026-10-14T19:00:00Z");
   const stuck = { ...completed, audio_generation_status: "generating", audio_generation_started_at: "2026-10-14T18:30:00Z" };
   if (getGenerationBlock(stuck, true, now) !== null) throw new Error("Blocked recovery of expired attempt");
@@ -39,7 +40,7 @@ Deno.test("expired attempt and failed initial song may be retried", () => {
   }
 });
 
-Deno.test("failed replacement keeps explicit replacement requirement", () => {
+it("failed replacement keeps explicit replacement requirement", () => {
   const state = { ...completed, audio_generation_status: "failed" };
   if (getGenerationBlock(state, false) !== "confirmation_required") {
     throw new Error("Failed replacement bypassed confirmation");
