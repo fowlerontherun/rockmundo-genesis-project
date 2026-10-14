@@ -691,13 +691,13 @@ function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, gen
   normalized = normalized.replace(/^\n+/, '')
 
   // MiniMax Music requires lyrics within the selected model's character limit — truncate smartly if needed
-  if (normalized.length > 600) {
-    console.log(`[admin-generate-song-audio] Lyrics too long (${normalized.length} chars), truncating to \${maxCharacters} char limit`)
+  if (normalized.length > maxCharacters) {
+    console.log(`[admin-generate-song-audio] Lyrics too long (${normalized.length} chars), truncating to ${maxCharacters} char limit`)
     // Try to truncate at a section boundary
     const sections = normalized.split(/(?=\[(?:Verse|Chorus|Bridge|Pre-Chorus|Outro|Intro|Hook|Post-Chorus))/i)
     let truncated = ''
     for (const section of sections) {
-      if ((truncated + section).length <= 600) {
+      if ((truncated + section).length <= maxCharacters) {
         truncated += section
       } else {
         break
@@ -707,7 +707,7 @@ function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, gen
     if (truncated.trim().length >= 10) {
       normalized = truncated.trim()
     } else {
-      normalized = normalized.substring(0, 600)
+      normalized = normalized.substring(0, maxCharacters)
       const lastNewline = normalized.lastIndexOf('\n')
       if (lastNewline > 100) normalized = normalized.substring(0, lastNewline).trim()
     }
