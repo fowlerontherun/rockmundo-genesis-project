@@ -16,6 +16,8 @@ serve(async (req) => {
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+  let verifiedAttemptId: string | null = null
+  let verifiedSongId: string | null = null
   try {
     const prediction = await req.json()
     const url = new URL(req.url)
@@ -57,6 +59,8 @@ serve(async (req) => {
         status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
+    verifiedAttemptId = attemptId
+    verifiedSongId = songId
     console.log(`[replicate-webhook] Verified current attempt ${attemptId} for song: ${songId}`)
 
     if (prediction.status === 'failed' || prediction.status === 'canceled') {
@@ -95,11 +99,7 @@ serve(async (req) => {
 
     if (!output) {
       console.error('[replicate-webhook] No output in prediction')
-      await supabase.from('songs').update({ audio_generation_status: 'failed' }).eq('id', songId)
-      return new Response(JSON.stringify({ error: 'No output' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
+      throw new Error('Provider marked prediction successful but returned no audio output')
     }
 
     // YuE returns an array — first element is the full audio URL
@@ -112,11 +112,7 @@ serve(async (req) => {
 
     if (!replicateAudioUrl) {
       console.error('[replicate-webhook] Could not extract audio URL from output:', JSON.stringify(output))
-      await supabase.from('songs').update({ audio_generation_status: 'failed' }).eq('id', songId)
-      return new Response(JSON.stringify({ error: 'No audio URL in output' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
+      throw new Error('Provider returned output without a usable audio URL')
     }
 
     console.log(`[replicate-webhook] Downloading audio from: ${replicateAudioUrl.substring(0, 80)}...`)
@@ -206,9 +202,25 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('[replicate-webhook] Error:', error)
+    const message = error instanceof Error ? error.message : String(error)
+    console.error(`[replicate-webhook] Error: song=${verifiedSongId || 'unverified'} attempt=${verifiedAttemptId || 'unverified'}: ${message}`)
+    // Persist downstream failures as well as provider-declared failures. The
+    // diagnostics screen can now distinguish callback/storage errors from stalls.
+    if (verifiedAttemptId && verifiedSongId) {
+      const { error: trackingError } = await supabase.from('song_generation_attempts')
+        .update({status:'failed',completed_at:new Date().toISOString(),error_message:message})
+        .eq('id',verifiedAttemptId).eq('status','generating')
+      if (trackingError) console.error('[replicate-webhook] Error persisting failure:',trackingError)
+      const {data:latest} = await supabase.from('song_generation_attempts')
+        .select('id').eq('song_id',verifiedSongId).order('started_at',{ascending:false}).limit(1).maybeSingle()
+      if (latest?.id === verifiedAttemptId) {
+        const {error: songError} = await supabase.from('songs').update({audio_generation_status:'failed'})
+          .eq('id',verifiedSongId).eq('audio_generation_status','generating')
+        if (songError) console.error('[replicate-webhook] Error updating song status:',songError)
+      }
+    }
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: message, attemptId: verifiedAttemptId }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

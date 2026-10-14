@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminRoute } from "@/components/AdminRoute";
@@ -57,6 +57,9 @@ export default function AISongGeneration() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [generationLogs, setGenerationLogs] = useState<string[]>([]);
   const [generationStartTime, setGenerationStartTime] = useState<number | null>(null);
+  const [generationOutcome, setGenerationOutcome] = useState<{
+    status: string; error?: string | null; audioUrl?: string | null; attemptId: string; predictionId?: string | null;
+  } | null>(null);
   const [boostAmount, setBoostAmount] = useState<number>(10);
   const [boostingSongId, setBoostingSongId] = useState<string | null>(null);
 
@@ -101,6 +104,7 @@ export default function AISongGeneration() {
 
       setGenerationLogs(["Starting audio generation..."]);
       setGenerationStartTime(Date.now());
+      setGenerationOutcome(null);
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-generate-song-audio`,
@@ -121,12 +125,11 @@ export default function AISongGeneration() {
         setGenerationLogs(result.logs);
       }
       
-      if (!response.ok) throw new Error(result.error || "Generation failed");
+      if (!response.ok) throw new Error(`[${result.code || "AUDIO_ERROR"}] ${result.error || "Generation failed"} (attempt ${result.attemptId || "not created"})`);
       return result;
     },
     onSuccess: (data) => {
-      const elapsed = generationStartTime ? ((Date.now() - generationStartTime) / 1000).toFixed(1) : "?";
-      toast.success(`Audio generated for "${data.songTitle}" in ${elapsed}s`);
+      toast.info(`Generation submitted for "${data.songTitle}"; awaiting provider result.`);
       if (data.logs) {
         setGenerationLogs(data.logs);
       }
@@ -137,6 +140,45 @@ export default function AISongGeneration() {
       toast.error(`Generation failed: ${error.message}`);
     },
   });
+
+  // A successful prediction request is not a finished audio file.
+  useEffect(() => {
+    const songId = selectedSong?.id;
+    const attemptId = generateMutation.data?.attemptId as string | undefined;
+    if (!dialogOpen || !songId || !attemptId) return;
+    let active = true;
+    let finished = false;
+    const check = async () => {
+      if (!active || finished) return;
+      try {
+        const {data: {session}} = await supabase.auth.getSession();
+        if (!session) throw new Error("Admin session expired");
+        const url = new URL(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-generate-song-audio`);
+        url.searchParams.set("songId", songId);
+        url.searchParams.set("attemptId", attemptId);
+        const response = await fetch(url.toString(), {headers:{Authorization:`Bearer ${session.access_token}`}});
+        const progress = await response.json();
+        if (!response.ok) throw new Error(progress.error || `Status API returned ${response.status}`);
+        if (!active) return;
+        setGenerationOutcome(progress);
+        if (["completed","failed","cancelled"].includes(progress.status)) {
+          finished = true;
+          clearInterval(interval);
+          setGenerationLogs(previous => [...previous, progress.status === "completed"
+            ? `SUCCESS: Audio saved. Attempt ${attemptId}`
+            : `ERROR: ${progress.error || "Provider failure"} (attempt ${attemptId}, prediction ${progress.predictionId || "unknown"})`]);
+          if (progress.status === "completed") toast.success("Generated song audio is ready");
+          else toast.error(progress.error || "AI audio generation failed");
+          queryClient.invalidateQueries({queryKey:["admin-songs-for-generation"]});
+        }
+      } catch(error) {
+        if (active) console.error("[admin-song-generation] Unable to fetch provider status:",error);
+      }
+    };
+    const interval = setInterval(() => {void check();},4000);
+    void check();
+    return () => {active=false;clearInterval(interval);};
+  },[dialogOpen, selectedSong?.id, generateMutation.data?.attemptId, queryClient]);
 
   const resetStatusMutation = useMutation({
     mutationFn: async (songId: string) => {
@@ -218,19 +260,24 @@ export default function AISongGeneration() {
   };
 
   const openGenerateDialog = (song: Song) => {
+    generateMutation.reset();
     setSelectedSong(song);
-    setCustomPrompt(song.audio_prompt || "");
+    const savedStyle = (song.audio_prompt || "").split(/\n\s*(?:Lyrics|Song Lyrics)\s*:/i)[0].replace(/^\s*Style\s*:\s*/i, "").trim();
+    setCustomPrompt(savedStyle.slice(0, 300));
     setGenerationLogs([]);
     setGenerationStartTime(null);
+    setGenerationOutcome(null);
     setDialogOpen(true);
   };
 
   const closeDialog = () => {
+    generateMutation.reset();
     setDialogOpen(false);
     setSelectedSong(null);
     setCustomPrompt("");
     setGenerationLogs([]);
     setGenerationStartTime(null);
+    setGenerationOutcome(null);
     queryClient.invalidateQueries({ queryKey: ["admin-songs-for-generation"] });
   };
 
@@ -259,7 +306,7 @@ export default function AISongGeneration() {
               AI Song Generation
             </h1>
             <p className="text-muted-foreground">
-              Test and manage AI-generated audio for songs using YuE model on Replicate
+              Test and manage AI-generated audio for songs using MiniMax Music 1.5 on Replicate
             </p>
           </div>
           <Button onClick={() => refetch()} variant="outline">
@@ -510,10 +557,11 @@ export default function AISongGeneration() {
                     placeholder="Leave empty to auto-generate from song metadata..."
                     value={customPrompt}
                     onChange={(e) => setCustomPrompt(e.target.value)}
+                    maxLength={300}
                     rows={4}
                   />
                   <p className="text-xs text-muted-foreground">
-                    If left empty, a prompt will be generated based on genre, theme, and quality score.
+                    Style only (max 300 characters). Lyrics are supplied separately from the saved song. Leave empty to build a style automatically. {customPrompt.length}/300 characters.
                   </p>
                 </div>
               )}
@@ -526,7 +574,7 @@ export default function AISongGeneration() {
                     Generation Log
                     {generationStartTime && (
                       <span className="text-xs text-muted-foreground font-normal">
-                        ({generateMutation.isPending ? "Running" : "Complete"})
+                        ({generateMutation.isPending ? "Submitting" : generationOutcome?.status === "completed" ? "Complete" : generationOutcome?.status === "failed" ? "Failed" : generateMutation.isSuccess ? "Awaiting provider" : "Ready"})
                       </span>
                     )}
                   </Label>
@@ -564,18 +612,23 @@ export default function AISongGeneration() {
               )}
 
               {generateMutation.isSuccess && (
-                <div className="rounded-lg bg-green-500/10 border border-green-500/30 p-3">
-                  <p className="text-sm text-green-400 mb-2 flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4" />
-                    New audio generated successfully!
-                  </p>
-                  <audio controls className="w-full" src={(generateMutation.data as any)?.audioUrl}>
-                    Your browser does not support the audio element.
-                  </audio>
-                </div>
-              )}
+                 <div className="rounded-lg border p-3 space-y-2">
+                   {generationOutcome?.status === "completed" ? (
+                     <>
+                       <p className="text-sm text-green-500 flex items-center gap-2"><CheckCircle className="h-4 w-4" />Audio generated successfully</p>
+                       {generationOutcome.audioUrl && <audio controls className="w-full" src={generationOutcome.audioUrl} />}
+                     </>
+                   ) : generationOutcome?.status === "failed" ? (
+                     <p className="text-sm text-red-500"><XCircle className="h-4 w-4 inline mr-2" />{generationOutcome.error || "Provider failed"}</p>
+                   ) : (
+                     <p className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Request accepted; awaiting provider completion.</p>
+                   )}
+                   <p className="text-xs text-muted-foreground">Attempt ID: {generationOutcome?.attemptId || generateMutation.data?.attemptId}</p>
+                   <p className="text-xs text-muted-foreground">Prediction ID: {generationOutcome?.predictionId || generateMutation.data?.predictionId || "pending"}</p>
+                 </div>
+               )}
 
-              <div className="flex justify-end gap-2">
+               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={closeDialog}>
                   {generateMutation.isSuccess ? "Close" : "Cancel"}
                 </Button>

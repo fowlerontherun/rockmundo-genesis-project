@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { signReplicateAttempt } from "../_shared/replicateWebhookAuth.ts"
+import { normalizeMiniMaxStylePrompt } from "../_shared/musicStylePrompt.ts"
 
 
 const corsHeaders = {
@@ -13,6 +14,13 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  let activeAttemptId: string | null = null
+  let activeSongId: string | null = null
+  const logs: string[] = []
+  const addLog = (message: string) => {
+    logs.push(`[${new Date().toISOString()}] ${message}`)
+    console.log(`[admin-generate-song-audio] ${message}`)
+  }
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -47,6 +55,30 @@ serve(async (req) => {
       )
     }
 
+    if (req.method === 'GET') {
+      const url = new URL(req.url)
+      const songId = url.searchParams.get('songId')
+      const attemptId = url.searchParams.get('attemptId')
+      if (!songId || !attemptId) return new Response(JSON.stringify({error:'songId and attemptId are required'}),{
+        status:400,headers:{...corsHeaders,'Content-Type':'application/json'}
+      })
+      const {data: attempt,error: attemptError} = await supabase.from('song_generation_attempts')
+        .select('id,status,error_message,prediction_id,started_at,completed_at').eq('id',attemptId).eq('song_id',songId).maybeSingle()
+      if (attemptError) throw attemptError
+      if (!attempt) return new Response(JSON.stringify({error:'Attempt not found'}),{
+        status:404,headers:{...corsHeaders,'Content-Type':'application/json'}
+      })
+      const {data: song,error: songError} = await supabase.from('songs')
+        .select('audio_url,audio_generation_status').eq('id',songId).single()
+      if (songError) throw songError
+      return new Response(JSON.stringify({
+        attemptId:attempt.id,status:attempt.status,error:attempt.error_message,
+        predictionId:attempt.prediction_id,songStatus:song.audio_generation_status,
+        audioUrl:attempt.status==='completed'?song.audio_url:null,
+        startedAt:attempt.started_at,completedAt:attempt.completed_at
+      }),{headers:{...corsHeaders,'Content-Type':'application/json'}})
+    }
+
     const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY')
     if (!REPLICATE_API_KEY) {
       return new Response(
@@ -62,14 +94,6 @@ serve(async (req) => {
         JSON.stringify({ error: "Missing required field: songId" }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
-    }
-
-    const logs: string[] = []
-    const addLog = (message: string) => {
-      const timestamp = new Date().toISOString()
-      const logEntry = `[${timestamp}] ${message}`
-      logs.push(logEntry)
-      console.log(`[admin-generate-song-audio] ${message}`)
     }
 
     addLog(`Starting MiniMax Music-1.5 generation for song ${songId} by admin ${user.id}`)
@@ -92,6 +116,8 @@ serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
       )
     }
+
+    activeSongId = songId
 
     // Race condition guard: prevent duplicate generation attempts (admins can override after 15 mins)
     if (song.audio_generation_status === 'generating') {
@@ -121,6 +147,8 @@ serve(async (req) => {
       .insert({ song_id: songId, user_id: song.user_id || user.id, triggered_by_user_id: user.id, status: "generating" })
       .select("id").single()
     if (attemptError || !attempt?.id) throw new Error(`Could not create generation attempt: ${attemptError?.message || "missing ID"}`)
+    activeAttemptId = attempt.id
+    addLog(`Generation attempt: ${attempt.id}`)
 
     // Then get the songwriting project if it exists
     let project: any = null
@@ -358,11 +386,12 @@ serve(async (req) => {
     }
 
     // MiniMax uses comma-separated style description
-    let stylePrompt = styleParts.join(', ').replace(/^Style:\s*/i, '').trim()
-    if (stylePrompt.length < 10) {
-      stylePrompt = `${primaryGenre} vocal song`
-    }
-    addLog(`Style prompt (${stylePrompt.length} chars): "${stylePrompt}"`)
+    const validatedStyle = normalizeMiniMaxStylePrompt(styleParts.join(', '), primaryGenre)
+    const stylePrompt = validatedStyle.prompt
+    addLog(`MiniMax prompt: ${validatedStyle.finalLength} characters (required 10–300)`)
+    if (validatedStyle.removedEmbeddedLyrics) addLog('Separated embedded Lyrics section from admin custom style prompt')
+    if (validatedStyle.wasTruncated) addLog(`Trimmed custom style from ${validatedStyle.originalLength} to ${validatedStyle.finalLength} characters`)
+    addLog(`Validated style: "${stylePrompt}"`)
 
     // Format lyrics for MiniMax Music - standard section markers
     addLog('Formatting lyrics for MiniMax Music (standard format)...')
@@ -384,7 +413,7 @@ serve(async (req) => {
     if (promptTrackingError) throw promptTrackingError
     const signature = await signReplicateAttempt(attempt.id, songId, supabaseServiceKey)
     const webhookUrl = `${supabaseUrl}/functions/v1/replicate-webhook?songId=${encodeURIComponent(songId)}&attemptId=${encodeURIComponent(attempt.id)}&signature=${signature}`
-    addLog(`Webhook URL: ${webhookUrl}`)
+    addLog("Webhook configured; signed callback URL excluded from logs")
 
     // Create async prediction with webhook using MiniMax Music-1.5
     addLog('Creating async MiniMax Music prediction...')
@@ -431,6 +460,7 @@ serve(async (req) => {
         success: true, 
         predictionId: prediction.id,
         prompt: fullPrompt,
+        attemptId: attempt.id,
         songTitle: song.title,
         logs,
         message: 'Generation started asynchronously. Audio will be available in 2-5 minutes.'
@@ -439,29 +469,29 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('[admin-generate-song-audio] Error:', error)
-    
-    // Try to update song status to failed
+    const message = error instanceof Error ? error.message : String(error)
+    const invalidPrompt = /Prompt must be between 10-300 characters|E006|MiniMax style prompt length/i.test(message)
+    const code = invalidPrompt ? 'MINIMAX_INVALID_STYLE_PROMPT' : 'AUDIO_GENERATION_ERROR'
+    addLog(`ERROR [${code}] attempt=${activeAttemptId || 'none'}: ${message}`)
+    console.error(`[admin-generate-song-audio] ${code} song=${activeSongId || 'unresolved'} attempt=${activeAttemptId || 'none'}: ${message}`)
     try {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-      const supabase = createClient(supabaseUrl, supabaseServiceKey)
-      
-      const { songId } = await req.clone().json().catch(() => ({}))
-      if (songId) {
-        await supabase
-          .from('songs')
-          .update({ audio_generation_status: 'failed' })
-          .eq('id', songId)
+      const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+      if (activeAttemptId) {
+        const {error: trackingError} = await db.from('song_generation_attempts')
+          .update({status:'failed',completed_at:new Date().toISOString(),error_message:message})
+          .eq('id',activeAttemptId).eq('status','generating')
+        if (trackingError) console.error('[admin-generate-song-audio] Tracking failed:',trackingError)
       }
-    } catch (e) {
-      console.error('[admin-generate-song-audio] Failed to update status to failed:', e)
+      if (activeSongId) {
+        const {error: statusError} = await db.from('songs').update({audio_generation_status:'failed'}).eq('id',activeSongId)
+        if (statusError) console.error('[admin-generate-song-audio] Status write failed:',statusError)
+      }
+    } catch (trackingError) {
+      console.error('[admin-generate-song-audio] Failure persistence error:',trackingError)
     }
-    
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-    )
+    return new Response(JSON.stringify({error:message,code,attemptId:activeAttemptId,logs}),{
+      headers:{...corsHeaders,'Content-Type':'application/json'},status:invalidPrompt?422:500
+    })
   }
 })
 
