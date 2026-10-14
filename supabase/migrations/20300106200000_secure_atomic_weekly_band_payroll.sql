@@ -14,6 +14,7 @@ DO $treasury_preflight$
 DECLARE
   v_missing integer;
   v_drifted integer;
+  v_incompatible_treasuries integer;
 BEGIN
   SELECT COUNT(*) INTO v_missing
   FROM public.bands b
@@ -51,6 +52,34 @@ BEGIN
   IF v_drifted > 0 THEN
     RAISE EXCEPTION
       'Payroll cutover blocked: % pay-enabled band balances differ from earnings journal', v_drifted
+      USING ERRCODE = '55000';
+  END IF;
+
+  -- There are TWO distinct live treasury systems. A journal-balanced
+  -- financial_accounts record is not proof that it contains the actual
+  -- spendable band funds shown to players via band_treasuries.
+  -- Never switch payout authority while they disagree.
+  SELECT COUNT(*) INTO v_incompatible_treasuries
+  FROM public.bands b
+  WHERE b.status = 'active'::public.band_status
+    AND COALESCE(b.weekly_pay_percent, 0) > 0
+    AND NOT EXISTS (
+      SELECT 1
+      FROM public.band_treasuries bt
+      JOIN public.financial_accounts a
+        ON a.owner_type = 'band'::public.financial_owner_type
+       AND a.owner_id = b.id
+       AND a.metadata->>'account_role' = 'band_treasury'
+       AND a.account_status = 'active'
+      WHERE bt.band_id = b.id
+        AND bt.is_primary IS TRUE
+        AND bt.currency_code = a.default_currency_code
+        AND bt.balance_minor = a.current_balance_minor
+        AND bt.balance_minor = COALESCE(b.band_balance,0)::bigint * 100
+    );
+  IF v_incompatible_treasuries > 0 THEN
+    RAISE EXCEPTION
+      'Payroll cutover blocked: % pay-enabled bands have incompatible treasury ledgers', v_incompatible_treasuries
       USING ERRCODE = '55000';
   END IF;
 END;
@@ -137,6 +166,20 @@ BEGIN
       ORDER BY a.is_primary DESC,a.created_at,a.id LIMIT 1;
       IF v_treasury.id IS NULL THEN
         RAISE EXCEPTION 'Band treasury is missing or inactive';
+      END IF;
+
+      -- Guard against gameplay treasury spending that does not flow into
+      -- financial_accounts. An equivalent balance was required at cutover,
+      -- and it must STILL agree for every subsequent weekly payout.
+      IF NOT EXISTS (
+        SELECT 1 FROM public.band_treasuries bt
+        WHERE bt.band_id = v_band_id
+          AND bt.is_primary IS TRUE
+          AND bt.currency_code = v_treasury.default_currency_code
+          AND bt.balance_minor = v_treasury.current_balance_minor
+          AND bt.balance_minor = COALESCE(v_band.band_balance,0)::bigint * 100
+      ) THEN
+        RAISE EXCEPTION 'Band treasury ledgers diverged; payroll withheld';
       END IF;
 
       SELECT count(DISTINCT bm.profile_id) INTO v_payable
