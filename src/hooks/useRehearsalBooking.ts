@@ -252,7 +252,7 @@ export function useRehearsalBooking() {
                 toast({ title: "Schedule still needs attention", description: "Booking and payment are safe. Try syncing the calendar again.", variant: "destructive" });
               });
             },
-          }, "Retry schedule") as ToastActionElement,
+          }, "Retry schedule") as unknown as ToastActionElement,
         });
       } else {
         toast({

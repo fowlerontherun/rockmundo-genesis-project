@@ -808,7 +808,7 @@ const TourManager = () => {
     <FMPageScaffold
       title="Tour Manager"
       subtitle="Plan and manage your band's tours"
-      icon={Map}
+      icon={MapIcon}
       backTo="/hub/band-live"
       headerActions={
         <Button disabled={!currentBandId} title={!currentBandId ? "Join or select a band to create a tour" : undefined} onClick={() => { setDraftRouteCityIds([]); setWizardOpen(true); }} size="sm">
