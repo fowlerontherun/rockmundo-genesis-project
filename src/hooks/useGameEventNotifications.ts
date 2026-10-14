@@ -517,14 +517,11 @@ export const useGameEventNotifications = () => {
           if (chartInFlightRef.current.has(chartKey)) return;
           chartInFlightRef.current.add(chartKey);
           try {
-            await notify({
-              eventKey: `chart_entry:${entry.id}`,
-              category: "music",
-              type: "achievement",
-              title: "New Chart Entry",
-              message: "Your song has entered the charts.",
-              actionPath: "/charts",
+            const { error } = await (supabase as any).rpc('create_chart_entry_notification', {
+              p_profile_id: profileId,
+              p_chart_entry_id: entry.id,
             });
+            if (error) console.error('[notifications] chart alert persistence failed', error);
           } finally {
             chartInFlightRef.current.delete(chartKey);
           }
