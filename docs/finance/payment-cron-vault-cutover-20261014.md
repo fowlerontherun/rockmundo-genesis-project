@@ -62,6 +62,11 @@ immediately before and after release; it emits **no command strings or secrets**
    );
    ```
 
+   The approval-gated implementation lives in
+   `supabase/production-repairs/sponsorship_cron_vault_cutover_MANUAL_ONLY.sql`.
+   It deliberately is **not** a migration and cannot run without a
+   transaction-local operator approval marker.
+
    In the final reviewed execution wrapper verify exactly one job exists, its
    existing schedule is correct, the Vault secret exists, the destination is
    correct and the atomic RPC has compatible signatures/grants. **Never paste
