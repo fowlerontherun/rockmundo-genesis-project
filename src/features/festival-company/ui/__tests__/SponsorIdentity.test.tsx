@@ -18,6 +18,22 @@ describe("festival sponsor identity", () => {
       .toHaveAttribute("src", "https://assets.example/new.png");
   });
 
+  it("#4068 shows the seeded fictional SVG data URL and safe same-origin assets", () => {
+    const generatedLogo = "data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=";
+    const { rerender } = render(
+      <SponsorIdentity name="Seeded Brand" logoReference={generatedLogo} />,
+    );
+    expect(screen.getByRole("img", { name: "Seeded Brand logo" })).toHaveAttribute("src", generatedLogo);
+    rerender(<SponsorIdentity name="Seeded Brand" logoReference="/assets/brand.svg" />);
+    expect(screen.getByRole("img", { name: "Seeded Brand logo" })).toHaveAttribute("src", "/assets/brand.svg");
+    rerender(<SponsorIdentity name="Seeded Brand" logoReference="data:text/html;base64,PGh0bWw+" />);
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    rerender(<SponsorIdentity name="Seeded Brand" logoReference="//evil.example/logo.svg" />);
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    rerender(<SponsorIdentity name="Seeded Brand" logoReference="javascript:alert(1)" />);
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  });
+
   it("falls back to the sponsor name for non-HTTPS and missing references", () => {
     const { rerender } = render(
       <SponsorIdentity name="Local Gear" logoReference="http://unsafe.example/logo.png" />,
