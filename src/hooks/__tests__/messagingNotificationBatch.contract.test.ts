@@ -38,8 +38,9 @@ describe("notification actions, character ownership and message history regressi
   it("offers historical pagination for both group and direct DMs", () => {
     expect(hooks).toContain("useInfiniteQuery({");
     expect(hooks).toContain("getConversationMessages(groupConversationId, { limit: 100, cursor: pageParam })");
-    expect(hooks).toContain('if (pageParam) query = query.lt("created_at", pageParam)');
-    expect(hooks).toContain("getNextPageParam: (lastPage) => nextMessageCursor(lastPage, 100)");
+    expect(hooks).toContain("directMessageHistoryPredicate(");
+    expect(hooks).toContain("nextDirectMessageCursor(lastPage, 100)");
+    expect(hooks).toContain("nextMessageCursor(lastPage, 100)");
     for (const component of [thread, panel]) {
       expect(component).toContain("hasOlderMessages");
       expect(component).toContain("loadOlderMessages()");
