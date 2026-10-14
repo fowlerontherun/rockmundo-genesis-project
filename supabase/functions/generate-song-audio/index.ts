@@ -78,7 +78,7 @@ serve(async (req) => {
       .eq('id', songId)
       .single()
 
-    if (existingSongError) {
+    if (existingSongError || !existingSong) {
       console.error('[generate-song-audio] Error checking existing song:', existingSongError)
       throw new Error('Failed to check song status')
     }
