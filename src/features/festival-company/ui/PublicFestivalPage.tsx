@@ -411,6 +411,12 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                   <CardTitle>My Festival Wallet</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {walletError ? (
+                    <div role="alert" className="space-y-2">
+                      <p>We could not verify your festival tickets. Your wallet is temporarily unavailable; this does not mean you have no tickets.</p>
+                      <Button type="button" variant="outline" onClick={() => void retryWallet()}>Retry ticket wallet</Button>
+                    </div>
+                  ) : (<>
                   {myFestivalTickets.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
                       You do not have tickets for this festival yet. A valid admission ticket automatically issues one festival wristband to your character inventory.
@@ -432,7 +438,12 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                     </div>
                   )}
 
-                  {myWristband ? (
+                  {memorabiliaError ? (
+                    <div role="alert" className="space-y-2">
+                      <p>Festival keepsakes could not be verified. The status of your wristband is unknown.</p>
+                      <Button type="button" variant="outline" onClick={() => void retryMemorabilia()}>Retry festival keepsakes</Button>
+                    </div>
+                  ) : myWristband ? (
                     <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/5 p-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge className="bg-emerald-600">Wristband issued</Badge>
@@ -451,6 +462,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                       Add-ons and upgrades do not issue extra wristbands; one wristband is linked to the character’s admission for this festival edition.
                     </p>
                   )}
+                  </>)}
                 </CardContent>
               </Card>
             )}
