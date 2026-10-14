@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Play, Edit, Trash2, History, CheckCircle2, Clock, Users, UserPlus, Sparkles } from "lucide-react";
 import type { SongwritingProject } from "@/hooks/useSongwritingData";
 import { CompleteSongDialog } from "./CompleteSongDialog";
+import { songwritingProgressPercent } from "./songwritingProgress";
 import { CollaboratorInviteDialog } from "./CollaboratorInviteDialog";
 import { ActiveSongwritingDialog } from "./ActiveSongwritingDialog";
 import { useCollaborationInvites } from "@/hooks/useCollaborationInvites";
@@ -79,7 +80,7 @@ export const SimplifiedProjectCard = ({
     // Generated Supabase RPC types lag this migration; keep the escape hatch local.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase as any).rpc(
-      "complete_songwriting_project",
+      "complete_songwriting_project_with_instruments",
       {
         p_profile_id: profileId,
         p_project_id: project.id,
@@ -117,8 +118,8 @@ export const SimplifiedProjectCard = ({
   const acceptedCollaborators = collaborators?.filter(c => c.status === "accepted") || [];
   const hasCollaborators = acceptedCollaborators.length > 0;
 
-  const musicPercent = Math.round((project.music_progress / 2000) * 100);
-  const lyricsPercent = Math.round((project.lyrics_progress / 2000) * 100);
+  const musicPercent = songwritingProgressPercent(project.music_progress);
+  const lyricsPercent = songwritingProgressPercent(project.lyrics_progress);
   const avgProgressPerSession = 600;
   const musicRemaining = Math.max(0, 2000 - project.music_progress);
   const lyricsRemaining = Math.max(0, 2000 - project.lyrics_progress);

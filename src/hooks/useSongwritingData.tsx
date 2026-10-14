@@ -182,6 +182,11 @@ export const useSongwritingData = (profileId?: string | null, userId?: string | 
   const { data: projects = [], isLoading: isLoadingProjects, error: projectsError, refetch: refetchProjects } = useQuery({
     queryKey: ['songwriting-projects', profileId, userId],
     enabled: !!profileId || !!userId,
+    // Recheck pending session locks; authoritative background jobs resolve them.
+    refetchInterval: (query) => {
+      const items = query.state.data as SongwritingProject[] | undefined;
+      return items?.some((item) => item.is_locked) ? 30_000 : false;
+    },
     retry: (failureCount, error) => {
       const context = getPostgrestErrorContext(error);
       const nonRetryableCodes = new Set(["PGRST200", "PGRST204", "42703", "42P01"]);
@@ -210,30 +215,9 @@ export const useSongwritingData = (profileId?: string | null, userId?: string | 
         nonCriticalFailureCount: failures.length,
       });
 
-      // Auto-unlock expired projects - do this in background, don't block the query
-      const needsUnlock = loadedProjects.filter(p =>
-        p.is_locked && p.locked_until && p.locked_until < new Date().toISOString()
-      );
-
-      if (needsUnlock.length > 0) {
-        Promise.all(
-          needsUnlock.map(p =>
-            supabase
-              .from('songwriting_projects')
-              .update({ is_locked: false, locked_until: null })
-              .eq('id', p.id)
-              .then(({ error }) => { if (error) throw error; })
-          )
-        ).catch((error) => {
-          logger.warn("Expired songwriting project unlock failed", {
-            endpoint: "songwriting_projects",
-            profileId,
-            userId,
-            error,
-          });
-        });
-      }
-
+      // Server-side session completion is authoritative. An elapsed clock
+      // alone does not prove a writing/polish session has settled, so a read
+      // must NEVER clear is_locked or locked_until in the browser.
       return loadedProjects as SongwritingProject[];
     }
   });
@@ -294,20 +278,25 @@ export const useSongwritingData = (profileId?: string | null, userId?: string | 
   // Update project
   const updateProject = useMutation({
     mutationFn: async ({ id, ...updates }: UpdateProjectInput) => {
-      const { error } = await supabase
+      if (!profileId) throw new Error("Select an active character before editing a song.");
+      const { data, error } = await supabase
         .from('songwriting_projects')
         .update(updates)
-        .eq('id', id);
-      
+        .eq('id', id)
+        .eq('profile_id', profileId)
+        .select('id')
+        .maybeSingle();
+
       if (error) throw error;
-      return id;
+      if (!data) throw new Error("Songwriting project was not found for the active character.");
+      return data.id;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['songwriting-projects', profileId, userId] });
       toast({ title: "Project Updated" });
     },
     onError: (error) => {
-      toast({ title: "Error", description: "Failed to update project", variant: "destructive" });
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to update project", variant: "destructive" });
       console.error("Update project error:", error);
     }
   });
@@ -315,19 +304,24 @@ export const useSongwritingData = (profileId?: string | null, userId?: string | 
   // Delete project
   const deleteProject = useMutation({
     mutationFn: async (projectId: string) => {
-      const { error } = await supabase
+      if (!profileId) throw new Error("Select an active character before deleting a song.");
+      const { data, error } = await supabase
         .from('songwriting_projects')
         .delete()
-        .eq('id', projectId);
-      
+        .eq('id', projectId)
+        .eq('profile_id', profileId)
+        .select('id')
+        .maybeSingle();
+
       if (error) throw error;
+      if (!data) throw new Error("Songwriting project was not found for the active character.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['songwriting-projects', profileId, userId] });
       toast({ title: "Project Deleted" });
     },
     onError: (error) => {
-      toast({ title: "Error", description: "Failed to delete project", variant: "destructive" });
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to delete project", variant: "destructive" });
     }
   });
 
