@@ -19,6 +19,21 @@ describe("six weekly payroll safety regressions", () => {
     expect(migration).toContain("IF auth.uid() IS NOT NULL THEN");
   });
 
+  it("#4082 blocks payroll cron handover before canonical treasuries exist", () => {
+    expect(migration).toContain("DO $treasury_preflight$");
+    expect(migration).toContain("COALESCE(b.weekly_pay_percent, 0) > 0");
+    expect(migration).toContain("a.metadata->>'account_role' = 'band_treasury'");
+    expect(migration).toContain("a.owner_id = b.id");
+    expect(migration).toContain("a.account_status = 'active'");
+    expect(migration).toContain("Payroll cutover blocked:");
+    expect(migration.indexOf("DO $treasury_preflight$")).toBeLessThan(
+      migration.indexOf("CREATE TABLE IF NOT EXISTS public.band_weekly_payroll_settlements"),
+    );
+    expect(migration.indexOf("DO $treasury_preflight$")).toBeLessThan(
+      migration.indexOf("PERFORM cron.unschedule('process-weekly-band-pay')"),
+    );
+  });
+
   it("#4022 schedules one internal Saturday payment with a per-band weekly unique claim", () => {
     expect(migration).toContain("PRIMARY KEY (band_id, week_start)");
     expect(migration).toContain("ON CONFLICT (band_id,week_start) DO NOTHING");
