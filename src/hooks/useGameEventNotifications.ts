@@ -24,13 +24,13 @@ export const useGameEventNotifications = () => {
   const isCurrentBand = (bandId?: string | null) =>
     Boolean(bandId && userBandIdsRef.current.profileId === profileId && userBandIdsRef.current.ids.includes(bandId));
 
-  const notify = (args: { category: string; type: string; title: string; message?: string; actionPath?: string; metadata?: Record<string, unknown>; eventKey?: string }) => {
+  const notify = (args: { category: string; type: string; title: string; message?: string; actionPath?: string; metadata?: Record<string, unknown>; eventKey?: string; accountWide?: boolean }) => {
     if (!user?.id || !profileId ||
       activeIdentityRef.current.userId !== user.id ||
       activeIdentityRef.current.profileId !== profileId) return Promise.resolve(null);
     return pushNotification({
       userId: user.id,
-      profileId: profileId ?? null,
+      profileId: args.accountWide ? null : (profileId ?? null),
       category: args.category as NotifyCategory,
       type: args.type as any,
       title: args.title,
@@ -516,11 +516,14 @@ export const useGameEventNotifications = () => {
           if (chartInFlightRef.current.has(chartKey)) return;
           chartInFlightRef.current.add(chartKey);
           try {
-            const { error } = await (supabase as any).rpc('create_chart_entry_notification', {
-              p_profile_id: profileId,
-              p_chart_entry_id: entry.id,
+            await notify({
+              eventKey: `chart_entry:${entry.id}`,
+              category: "music",
+              type: "achievement",
+              title: "New Chart Entry",
+              message: "Your song has entered the charts.",
+              actionPath: "/charts",
             });
-            if (error) console.error('[notifications] chart alert persistence failed', error);
           } finally {
             chartInFlightRef.current.delete(chartKey);
           }
@@ -546,6 +549,7 @@ export const useGameEventNotifications = () => {
           if (sub.status === 'active') {
             notify({
               eventKey: `vip_activation:${sub.id}`,
+              accountWide: true,
               category: 'achievement',
               type: 'achievement',
               title: '⭐ VIP Status Activated!',
