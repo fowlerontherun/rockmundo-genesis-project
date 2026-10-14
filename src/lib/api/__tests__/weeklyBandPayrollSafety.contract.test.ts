@@ -59,6 +59,15 @@ describe("six weekly payroll safety regressions", () => {
     expect(migration).not.toContain("UPDATE public.profiles SET cash");
   });
 
+  it("#4082 preserves the legacy earnings projection as the earnings trigger owns it", () => {
+    expect(migration).toContain("INSERT INTO public.band_earnings");
+    expect(migration).toContain("band_earnings AFTER INSERT trigger");
+    expect(migration).not.toMatch(/UPDATE\\s+public\\.bands\\s+SET\\s+band_balance\\s*=/);
+    expect(migration).not.toContain("SELECT current_balance_minor::numeric/100");
+    expect(migration).toContain("SET current_balance_minor=current_balance_minor-v_each");
+    expect(migration).toContain("SET current_balance_minor=current_balance_minor+v_each");
+  });
+
   it("#4024 prevents lost updates with ordered account locks and relative balance writes", () => {
     expect(migration).toContain("ORDER BY a.id FOR UPDATE");
     expect(migration).toContain("FROM public.bands b\n      WHERE b.id=v_band_id FOR UPDATE");
