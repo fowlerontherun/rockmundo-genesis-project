@@ -46,7 +46,7 @@ CREATE INDEX IF NOT EXISTS idx_award_show_invites_band ON public.award_show_invi
 -- Seed scripted metadata defaults for existing shows
 UPDATE public.award_shows
 SET host_name = COALESCE(host_name, 'Avery Stone'),
-    host_intro = COALESCE(host_intro, 'Welcome to tonight\'s awards ceremony. We have unforgettable performances and envelope moments ahead.'),
+    host_intro = COALESCE(host_intro, 'Welcome to tonight''s awards ceremony. We have unforgettable performances and envelope moments ahead.'),
     run_of_show = CASE
       WHEN jsonb_array_length(COALESCE(run_of_show, '[]'::jsonb)) > 0 THEN run_of_show
       ELSE jsonb_build_array(
