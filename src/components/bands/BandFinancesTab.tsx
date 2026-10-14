@@ -467,6 +467,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
     treasuryRequestId.current += 1;
     accountsRequestId.current += 1;
     setDashboard(null);
+    setLast30DayExpenses(null);
     setDashboardError(null);
     setContributions([]);
     setPersonalAccounts([]);
