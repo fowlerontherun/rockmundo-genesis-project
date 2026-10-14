@@ -264,11 +264,11 @@ BEGIN
         v_leader_user_id
       );
 
-      -- Compatibility projection: NEVER base payroll on this legacy scalar.
-      UPDATE public.bands SET band_balance=(
-        SELECT current_balance_minor::numeric/100
-        FROM public.financial_accounts WHERE id=v_treasury.id
-      ) WHERE id=v_band_id;
+      -- The band_earnings AFTER INSERT trigger recomputes the legacy
+      -- bands.band_balance projection from the entire earnings history.
+      -- Never overwrite that projection with the canonical finance account
+      -- balance: those are different ledgers and can legitimately diverge.
+      -- The actual transfer already debited the financial_accounts treasury.
 
       v_paid_bands:=v_paid_bands+1;
       v_total_minor:=v_total_minor+v_total;
