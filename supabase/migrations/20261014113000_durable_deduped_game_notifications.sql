@@ -69,6 +69,59 @@ END $$;
 REVOKE ALL ON FUNCTION public.persist_game_event_notification(uuid,uuid,text,text,text,text,text,text)
  FROM PUBLIC,anon,authenticated;
 
+-- The same 12-hour chart cooldown table is used by the existing
+-- create_chart_entry_notification RPC. Trigger and client race safely.
+CREATE TABLE IF NOT EXISTS public.chart_notification_cooldowns (
+ id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+ profile_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+ song_id uuid NOT NULL REFERENCES public.songs(id) ON DELETE CASCADE,
+ chart_type text NOT NULL,
+ last_notified_at timestamptz NOT NULL DEFAULT now(),
+ UNIQUE (profile_id,song_id,chart_type)
+);
+ALTER TABLE public.chart_notification_cooldowns ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.chart_notification_cooldowns FROM PUBLIC,anon,authenticated;
+
+CREATE OR REPLACE FUNCTION public.persist_chart_notification_from_event(
+ p_profile_id uuid,p_event_id uuid,p_song_id uuid,p_chart_type text,p_rank integer
+) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $
+DECLARE v_user uuid;v_claimed boolean;
+BEGIN
+ IF p_rank NOT BETWEEN 1 AND 40 OR p_profile_id IS NULL OR p_song_id IS NULL
+   OR p_event_id IS NULL THEN RETURN; END IF;
+ SELECT p.user_id INTO v_user FROM public.profiles p
+   WHERE p.id=p_profile_id AND p.deleted_at IS NULL;
+ IF v_user IS NULL OR NOT EXISTS(
+   SELECT 1 FROM public.songs s WHERE s.id=p_song_id AND (
+     s.profile_id=p_profile_id OR s.user_id=v_user OR EXISTS(
+       SELECT 1 FROM public.band_members bm
+       WHERE bm.band_id=s.band_id AND bm.profile_id=p_profile_id
+         AND bm.member_status='active'
+     )
+   )
+ ) THEN RETURN; END IF;
+ INSERT INTO public.chart_notification_cooldowns(profile_id,song_id,chart_type,last_notified_at)
+ VALUES(p_profile_id,p_song_id,p_chart_type,now())
+ ON CONFLICT(profile_id,song_id,chart_type) DO UPDATE
+ SET last_notified_at=EXCLUDED.last_notified_at
+ WHERE chart_notification_cooldowns.last_notified_at<=now()-interval '12 hours'
+ RETURNING true INTO v_claimed;
+ IF v_claimed IS DISTINCT FROM true THEN RETURN; END IF;
+ INSERT INTO public.notifications(user_id,profile_id,category,type,title,message,action_path,metadata)
+ VALUES(v_user,p_profile_id,'achievement',
+   CASE WHEN p_rank<=10 THEN 'achievement' ELSE 'success' END,
+   CASE WHEN p_rank<=10 THEN '🏆 Top 10 Hit!' ELSE 'Charting!' END,
+   'Your song is #'||p_rank::text||' on the charts!',
+   '/country-charts',
+   jsonb_build_object('event_key','chart_entry:'||p_event_id::text,
+     'chart_entry_id',p_event_id,'song_id',p_song_id,
+     'chart_type',p_chart_type,'rank',p_rank))
+ ON CONFLICT DO NOTHING;
+END $;
+REVOKE ALL ON FUNCTION public.persist_chart_notification_from_event(uuid,uuid,uuid,text,integer)
+ FROM PUBLIC,anon,authenticated;
+
 -- A single trigger covers the source tables regardless of client presence.
 -- Do not couple financial settlement to Realtime connection or alert delivery.
 CREATE OR REPLACE FUNCTION public.persist_game_event_on_change()
@@ -190,14 +243,24 @@ BEGIN
      WHERE bm.band_id=v_band AND bm.member_status='active'
        AND p.deleted_at IS NULL
    LOOP
-     PERFORM public.persist_game_event_notification(v_row.user_id,v_row.profile_id,
-       v_key,v_category,v_type,v_title,v_message,v_path);
+     IF v_kind='chart_entry' THEN
+       PERFORM public.persist_chart_notification_from_event(v_row.profile_id,
+         (v->>'id')::uuid,(v->>'song_id')::uuid,v->>'chart_type',(v->>'rank')::integer);
+     ELSE
+       PERFORM public.persist_game_event_notification(v_row.user_id,v_row.profile_id,
+         v_key,v_category,v_type,v_title,v_message,v_path);
+     END IF;
    END LOOP;
  END IF;
  IF v_profile IS NOT NULL THEN
    SELECT p.user_id INTO v_user FROM public.profiles p WHERE p.id=v_profile;
-   PERFORM public.persist_game_event_notification(v_user,v_profile,
-     v_key,v_category,v_type,v_title,v_message,v_path);
+   IF v_kind='chart_entry' THEN
+     PERFORM public.persist_chart_notification_from_event(v_profile,
+       (v->>'id')::uuid,(v->>'song_id')::uuid,v->>'chart_type',(v->>'rank')::integer);
+   ELSE
+     PERFORM public.persist_game_event_notification(v_user,v_profile,
+       v_key,v_category,v_type,v_title,v_message,v_path);
+   END IF;
  END IF;
  IF v_band IS NULL AND v_profile IS NULL AND v_user IS NOT NULL
     AND v_kind NOT IN ('vip_activation','band_invite') THEN
