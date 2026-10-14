@@ -99,7 +99,7 @@ serve(async (req) => {
       )
     }
 
-    addLog(`Starting MiniMax Music-1.5 generation for song ${songId} by admin ${user.id}`)
+    addLog(`Starting MiniMax ${generationModel} generation for song ${songId} by admin ${user.id}`)
 
     // Get comprehensive song details with all metadata
     addLog('Fetching comprehensive song details from database...')
@@ -493,9 +493,13 @@ serve(async (req) => {
           .eq('id',activeAttemptId).eq('status','generating')
         if (trackingError) console.error('[admin-generate-song-audio] Tracking failed:',trackingError)
       }
-      if (activeSongId) {
-        const {error: statusError} = await db.from('songs').update({audio_generation_status:'failed'}).eq('id',activeSongId)
-        if (statusError) console.error('[admin-generate-song-audio] Status write failed:',statusError)
+      if (activeSongId && activeAttemptId) {
+        const {data: previousSong} = await db.from('songs').select('audio_url')
+          .eq('id',activeSongId).maybeSingle()
+        const {error: statusError} = await db.from('songs')
+          .update({audio_generation_status:previousSong?.audio_url ? 'completed' : 'failed'})
+          .eq('id',activeSongId).eq('audio_generation_status','generating')
+        if (statusError) console.error('[admin-generate-song-audio] Status recovery failed:',statusError)
       }
     } catch (trackingError) {
       console.error('[admin-generate-song-audio] Failure persistence error:',trackingError)
