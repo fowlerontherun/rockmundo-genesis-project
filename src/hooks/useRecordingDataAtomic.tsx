@@ -153,46 +153,46 @@ export const useCreateRecordingSession = () => {
         >["conflicts"] = [];
 
         if (!isConfirmedRetry) {
-        stage = "checking band availability";
-        if (input.band_id) {
-          const { available, conflicts } = await checkBandAvailability(
-            input.band_id,
-            scheduledStart,
-            scheduledEnd,
-          );
-
-          const skipSet = new Set(
-            Array.isArray(input.skip_profile_ids) ? input.skip_profile_ids : [],
-          );
-          const blockingConflicts = conflicts.filter(
-            (conflict) =>
-              !conflict.profileId || !skipSet.has(conflict.profileId),
-          );
-          excludedConflicts = conflicts.filter(
-            (conflict) =>
-              !!conflict.profileId && skipSet.has(conflict.profileId),
-          );
-
-          if (!available && blockingConflicts.length > 0) {
-            throw new BandUnavailableError(blockingConflicts);
-          }
-        } else {
-          const { available, conflictingActivity } =
-            await checkTimeSlotAvailable(
-              user.id,
+          stage = "checking band availability";
+          if (input.band_id) {
+            const { available, conflicts } = await checkBandAvailability(
+              input.band_id,
               scheduledStart,
               scheduledEnd,
             );
 
-          if (!available) {
-            const conflictTitle = conflictingActivity?.title
-              ? ` “${String(conflictingActivity.title)}”`
-              : "";
-            throw new Error(
-              `You have another activity${conflictTitle} scheduled during this time. Please check your schedule.`,
+            const skipSet = new Set(
+              Array.isArray(input.skip_profile_ids) ? input.skip_profile_ids : [],
             );
+            const blockingConflicts = conflicts.filter(
+              (conflict) =>
+                !conflict.profileId || !skipSet.has(conflict.profileId),
+            );
+            excludedConflicts = conflicts.filter(
+              (conflict) =>
+                !!conflict.profileId && skipSet.has(conflict.profileId),
+            );
+
+            if (!available && blockingConflicts.length > 0) {
+              throw new BandUnavailableError(blockingConflicts);
+            }
+          } else {
+            const { available, conflictingActivity } =
+              await checkTimeSlotAvailable(
+                user.id,
+                scheduledStart,
+                scheduledEnd,
+              );
+
+            if (!available) {
+              const conflictTitle = conflictingActivity?.title
+                ? ` “${String(conflictingActivity.title)}”`
+                : "";
+              throw new Error(
+                `You have another activity${conflictTitle} scheduled during this time. Please check your schedule.`,
+              );
+            }
           }
-        }
 
         }
 
