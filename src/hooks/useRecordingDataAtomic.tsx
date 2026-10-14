@@ -102,9 +102,13 @@ export const useCreateRecordingSession = () => {
         } = await supabase.auth.getUser();
         if (!user) throw new Error("Not authenticated");
 
-        const scheduledStart = input.scheduled_start
-          ? new Date(input.scheduled_start)
-          : new Date(Date.now() + 60_000);
+        if (!input.scheduled_start) {
+          throw new Error("Choose a recording date and start time before booking.");
+        }
+        const scheduledStart = new Date(input.scheduled_start);
+        if (!Number.isFinite(scheduledStart.getTime()) || scheduledStart.getTime() <= Date.now()) {
+          throw new Error("Choose a valid recording start time in the future.");
+        }
         const scheduledEnd = input.scheduled_end
           ? new Date(input.scheduled_end)
           : new Date(
