@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { CrowdReactionCooldown } from "@/features/shared-audio/crowdAudioSelection";
 import type { StorySnapshot } from "../engine/StoryEngine";
 import type { ShowSequenceFrame } from "../engine/ShowSequence";
 import {
@@ -78,6 +79,7 @@ export function useCrowdAmbience({
   const lastPhaseRef = useRef<string | null>(null);
   const lastSongIdRef = useRef<string | null>(null);
   const lastPulseAtRef = useRef(0);
+  const reactionCooldownRef = useRef(new CrowdReactionCooldown());
 
   useEffect(() => {
     let cancelled = false;
@@ -106,6 +108,11 @@ export function useCrowdAmbience({
     const intensity = crowdSizeIntensity(stageType, energy);
     const phase = showFrame?.phase ?? null;
     const sounds = libraryRef.current;
+    const cueTimeMs = Math.max(0, snapshot?.song?.elapsedMs ?? 0);
+    const playReaction = (sound: GigCrowdSound | null, level: number) => {
+      if (!sound || !reactionCooldownRef.current.canPlay(sound.id, cueTimeMs)) return;
+      if (playClip(reactionRef, sound, level)) reactionCooldownRef.current.record(sound.id, cueTimeMs);
+    };
 
     const bedTypes: GigCrowdSoundType[] =
       phase === "encore_break"
@@ -137,20 +144,22 @@ export function useCrowdAmbience({
     const songId = snapshot?.song?.id ?? null;
     if (songId && songId !== lastSongIdRef.current) {
       lastSongIdRef.current = songId;
+      lastPulseAtRef.current = 0;
+      reactionCooldownRef.current.reset();
       const recognition = pickGigCrowdSound(
         sounds,
         ["song_recognition", "crowd_cheer_medium", "crowd_cheer_small"],
         intensity,
         `${songId}:recognition`,
       );
-      playClip(reactionRef, recognition, volume * (0.25 + energy * 0.2));
+      playReaction(recognition, volume * (0.25 + energy * 0.2));
     }
 
     const reaction = snapshot?.reaction ?? null;
     if (reaction && reaction !== lastReactionRef.current) {
       lastReactionRef.current = reaction;
       const clip = pickGigCrowdSound(sounds, reactionTypes(reaction, energy), intensity, `${songId ?? "gig"}:${reaction}`);
-      playClip(reactionRef, clip, volume * (0.3 + energy * 0.28));
+      playReaction(clip, volume * (0.3 + energy * 0.28));
     }
 
     if (phase && phase !== lastPhaseRef.current) {
@@ -167,7 +176,7 @@ export function useCrowdAmbience({
                 : null;
       if (phaseTypes) {
         const clip = pickGigCrowdSound(sounds, phaseTypes, phase === "bows" ? 10 : intensity, `${stageType}:${phase}`);
-        playClip(reactionRef, clip, volume * (phase === "bows" ? 0.65 : 0.5));
+        playReaction(clip, volume * (phase === "bows" ? 0.65 : 0.5));
       }
     }
 
@@ -184,7 +193,7 @@ export function useCrowdAmbience({
         intensity,
         `${songId ?? "song"}:pulse:${Math.floor(elapsedMs / 18_000)}`,
       );
-      playClip(reactionRef, pulse, volume * (0.18 + energy * 0.2));
+      playReaction(pulse, volume * (0.18 + energy * 0.2));
     }
   }, [
     enabled,
@@ -200,6 +209,7 @@ export function useCrowdAmbience({
   ]);
 
   useEffect(() => () => {
+    reactionCooldownRef.current.reset();
     ambientRef.current?.pause();
     reactionRef.current?.pause();
     ambientRef.current = null;
