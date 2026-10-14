@@ -11,20 +11,21 @@ CREATE OR REPLACE FUNCTION public.create_notification(
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp
 AS $$
 DECLARE v_id uuid;v_key text;v_metadata jsonb:=coalesce(p_metadata,'{}'::jsonb);
+ v_trusted boolean:=coalesce(current_setting('request.jwt.claim.role',true),'')='service_role';
 BEGIN
  -- The Data API must NEVER permit clients to place messages in someone
  -- else's inbox. Server-generated notifications are written by DB triggers.
- IF auth.uid() IS NULL OR auth.uid()<>p_user_id THEN
+ IF NOT v_trusted AND (auth.uid() IS NULL OR auth.uid()<>p_user_id) THEN
    RAISE EXCEPTION 'NOTIFICATION_RECIPIENT_NOT_AUTHORISED' USING ERRCODE='42501';
  END IF;
  IF p_profile_id IS NOT NULL AND NOT EXISTS(
    SELECT 1 FROM public.profiles p WHERE p.id=p_profile_id
-   AND p.user_id=auth.uid() AND p.deleted_at IS NULL
+   AND p.user_id=p_user_id AND p.deleted_at IS NULL
  ) THEN RAISE EXCEPTION 'NOTIFICATION_PROFILE_NOT_AUTHORISED' USING ERRCODE='42501'; END IF;
  IF jsonb_typeof(v_metadata)<>'object' THEN
    RAISE EXCEPTION 'NOTIFICATION_METADATA_INVALID' USING ERRCODE='22023'; END IF;
  v_key:=nullif(v_metadata->>'event_key','');
- IF v_key IS NOT NULL AND (length(v_key)>190 OR v_key LIKE 'server:%') THEN
+ IF v_key IS NOT NULL AND (length(v_key)>190 OR (NOT v_trusted AND v_key LIKE 'server:%')) THEN
    RAISE EXCEPTION 'NOTIFICATION_EVENT_KEY_INVALID' USING ERRCODE='22023'; END IF;
  INSERT INTO public.notifications
    (user_id,profile_id,category,type,title,message,action_path,metadata)
@@ -43,7 +44,7 @@ END $$;
 REVOKE ALL ON FUNCTION public.create_notification(uuid,uuid,text,text,text,text,text,jsonb)
  FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.create_notification(uuid,uuid,text,text,text,text,text,jsonb)
- TO authenticated;
+ TO authenticated,service_role;
 
 CREATE OR REPLACE FUNCTION public.persist_game_event_notification(
  p_user_id uuid,p_profile_id uuid,p_event_key text,p_category text,
