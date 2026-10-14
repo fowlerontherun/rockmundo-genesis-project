@@ -11,7 +11,7 @@ import {
   isBandUnavailableError,
 } from "@/utils/bandActivityScheduling";
 import { validateFutureTime } from "@/utils/timeSlotValidation";
-import { consumeAtomicRehearsalPaymentSource } from "@/hooks/useBandPaymentSource";
+import type { BandPaymentSource } from "@/hooks/useBandPaymentSource";
 import {
   confirmRehearsalBookingAtomic,
   hasScheduledBookingProjection,
@@ -33,6 +33,7 @@ interface BookRehearsalParams {
   roomName: string;
   roomLocation: string;
   profileId?: string;
+  paymentSource?: BandPaymentSource;
   bandName?: string;
   /** Members (profile ids) the leader chose to book without. */
   skipProfileIds?: string[];
@@ -102,7 +103,7 @@ export function useRehearsalBooking() {
         throw new BandUnavailableError(blockingConflicts);
       }
 
-      const paymentSource = consumeAtomicRehearsalPaymentSource(params.bandId);
+      const paymentSource = params.paymentSource ?? "band";
       const idempotencyKey = [
         "rehearsal",
         params.bandId,
