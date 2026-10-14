@@ -107,7 +107,8 @@ export const useSkillBooks = () => {
       profileId: string;
       price: number;
     }) => {
-      const { data, error } = await supabase.rpc("purchase_skill_book", { p_profile_id: profileId, p_book_id: bookId });
+      const rpc = supabase.rpc as unknown as (name: string, args: { p_profile_id: string; p_book_id: string }) => Promise<{ data: unknown; error: Error | null }>;
+      const { data, error } = await rpc("purchase_skill_book", { p_profile_id: profileId, p_book_id: bookId });
       if (error) throw error;
       return data;
     },
