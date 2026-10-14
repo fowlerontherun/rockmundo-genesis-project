@@ -46,6 +46,40 @@ gig booking migration. Reconcile the duplicate identity before running normal
 migration tooling; a future-dated filename is not permission to bypass this
 preflight.
 
+## Production schema verification and migration identity (14 October 2026)
+
+Read-only checks against the live RockMundo project confirmed:
+
+- `financial_accounts.available_balance_minor` is a generated stored column
+  (`current_balance_minor - reserved_balance_minor`). Payroll writes only
+  `current_balance_minor`, so PostgreSQL recalculates availability.
+- `financial_transaction_category` includes `wage_payment`, and relevant
+  owner, account status, entry direction and transaction status enum values exist.
+- The `band_earnings` triggers recompute `bands.band_balance` from the earnings
+  ledger after INSERT, UPDATE and DELETE. The original payroll function
+  immediately overwrote that projection with the financial treasury's
+  `current_balance_minor/100`. **This is incorrect because the ledgers diverge.**
+  The corrected migration retains the `band_earnings` expense record
+  but removes the manual `UPDATE public.bands SET band_balance`.
+- Both `process_weekly_band_payroll()` and `book_gig_with_personal_funding(...)`
+  were absent from production, and neither `20300106200000` migration identity
+  appeared in Supabase migration history at the time of inspection.
+- The filenames
+  `20300106200000_secure_atomic_weekly_band_payroll.sql` and
+  `20300106200000_atomic_personal_funded_gig_booking.sql` collide.
+  The repository timestamp verifier rejects unregistered future-dated files
+  and new duplicate timestamp groups. **Do not whitelist this collision as
+  a shortcut.** The wider 2030 dependency order must be resolved into
+  unique, forward-deployable migration identities in a separate reviewed
+  migration-history PR, then checked against staging and production history.
+
+**Current release disposition:** no payroll function deployment, no cron
+rewire, no treasury role change, no live wages or account movements. After
+the canonical treasury metadata repair (#4110) is rehearsed, use a restored
+staging database to validate the full payout function, then deploy only through
+an approved unique migration identity. Never use `supabase db push` while
+unresolved timestamp collisions remain.
+
 ## Required staging and deployment checks
 
 1. First review deployed migration versions; reconcile the canonical treasury setup for both currently pay-enabled bands and prove opening balances are backed by existing ledger funds.
