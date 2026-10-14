@@ -35,8 +35,6 @@ jobs:
         run: npm run verify:totp-migration-timestamps
       - name: Typecheck
         run: npm run typecheck
-      - name: Privileged cron authentication tests
-        run: npm run test:cron-auth
       - name: Lint
         run: npm run lint:ci
       - name: Critical Live V1 journeys

@@ -14,6 +14,13 @@ describe("player discovery query normalization", () => {
     expect(query.sort).toBe("highest-fame");
   });
 
+  it("#4090 rejects nonfinite and extremely large pagination values", () => {
+    expect(normalizeDiscoveryQuery({ page: Number.NaN, pageSize: Number.POSITIVE_INFINITY })).toMatchObject({ page: 1, pageSize: DEFAULT_DISCOVERY_PAGE_SIZE });
+    expect(normalizeDiscoveryQuery({ page: Number.NEGATIVE_INFINITY, pageSize: Number.NaN })).toMatchObject({ page: 1, pageSize: DEFAULT_DISCOVERY_PAGE_SIZE });
+    expect(normalizeDiscoveryQuery({ page: 999_999_999, pageSize: 999 })).toMatchObject({ page: 100_000, pageSize: MAX_DISCOVERY_PAGE_SIZE });
+    expect(normalizeDiscoveryQuery({ page: 0, pageSize: -100 })).toMatchObject({ page: 1, pageSize: 1 });
+  });
+
   it("enforces server pagination limits before the RPC call", () => {
     expect(normalizeDiscoveryQuery({ page: -2, pageSize: 999 }).page).toBe(1);
     expect(normalizeDiscoveryQuery({ pageSize: 999 }).pageSize).toBe(MAX_DISCOVERY_PAGE_SIZE);
@@ -22,6 +29,16 @@ describe("player discovery query normalization", () => {
 });
 
 describe("searchPlayers", () => {
+  it("#4091 rejects malformed successful responses rather than reporting zero matching players", async () => {
+    for (const data of [null, [], {}, { results: null, has_more: false }, { results: [], has_more: "false" },
+      { results: [], has_more: false, approximate_total: -1 }, { results: [], has_more: false, approximate_total: "10" }]) {
+      rpc.mockResolvedValueOnce({ data, error: null });
+      await expect(searchPlayers({ mode: "all" }, "viewer-1")).rejects.toThrow("invalid result");
+    }
+    rpc.mockResolvedValueOnce({ data: { results: [], has_more: false, approximate_total: 0 }, error: null });
+    await expect(searchPlayers({ mode: "all" }, "viewer-1")).resolves.toMatchObject({ results: [], hasMore: false, approximateTotal: 0 });
+  });
+
   it("passes privacy-sensitive filtering to the server-side discovery RPC", async () => {
     rpc.mockResolvedValue({ data: { results: [], has_more: false, approximate_total: null }, error: null });
     await searchPlayers({ mode: "session-work", search: "bas", filters: { instrument: "bass", city: "London", onlineNow: true, skillBand: "skilled" } }, "viewer-1");

@@ -6,7 +6,6 @@ import {
   safeJson,
   startJobRun,
 } from '../_shared/job-logger.ts'
-import { authorizeInternalCronRequest } from '../_shared/internal-cron-auth.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,36 +18,33 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders })
   }
 
-  if (req.method !== 'POST') {
-    return new Response(
-      JSON.stringify({ error: 'Method not allowed' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Allow': 'POST, OPTIONS' } },
-    )
-  }
-
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-  if (!supabaseUrl || !supabaseKey) {
-    console.error('[process-sponsorship-payments] Internal service configuration missing')
-    return new Response(JSON.stringify({ error: 'Service unavailable' }), {
-      status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
-  }
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const supabase = createClient(supabaseUrl, supabaseKey)
 
-  // Authenticate before reading the body, writing job logs or paying anything.
-  // Never accept a bearer JWT/anon key as a substitute for the Vault secret.
-  const authResult = await authorizeInternalCronRequest(req, (secret) =>
-    supabase.rpc('verify_internal_cron_secret', { p_secret: secret }),
+  // The service-role client is privileged and must NEVER execute payouts for
+  // an unauthenticated HTTP caller. The schedule reads its private secret from
+  // Vault at execution time; no hard-coded bearer key is accepted here.
+  const cronSecret = req.headers.get('x-cron-secret')
+  if (!cronSecret) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+  const { data: cronAuthorized, error: cronAuthError } = await supabase.rpc(
+    'verify_internal_cron_secret',
+    { p_secret: cronSecret },
   )
-  if (authResult !== 'authorized') {
-    console.warn('[process-sponsorship-payments] Rejected scheduled invocation', authResult)
-    return new Response(
-      JSON.stringify({ error: authResult === 'unavailable' ? 'Service unavailable' : 'Unauthorized' }),
-      { status: authResult === 'unavailable' ? 503 : 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    )
+  if (cronAuthError || cronAuthorized !== true) {
+    console.warn('[process-sponsorship-payments] Rejected unauthorized invocation')
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
 
+  // Only parse or persist job metadata after the authorization gate.
   const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req)
   const triggeredBy = payload?.triggeredBy ?? req.headers.get('x-triggered-by') ?? undefined
 

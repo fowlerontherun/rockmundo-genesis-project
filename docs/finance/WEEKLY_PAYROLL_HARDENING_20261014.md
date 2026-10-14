@@ -26,6 +26,26 @@ The replacement therefore **fails closed** for those bands until treasury reconc
 
 The production schema also did not expose the `financial_accounts.currency_code` field or `public._move_financial_account_money` helper from newer repository migrations. The replacement uses existing common fields and inserts paired entries directly against the Phase 1 ledger, but all affected migrations must be tested against actual staging schema before deployment.
 
+## Additional fail-closed migration preflight (issue #4082)
+
+A read-only production recount found **two** active pay-enabled bands and
+**zero** active canonical `band_treasury` financial accounts; both bands lack
+the required treasury. The latest historical `band_pay` activity is dated
+10 October 2026, with 25 activity records. No payments with the replacement
+function's `weekly-band-pay:` idempotency-key format exist yet.
+
+The migration now raises `Payroll cutover blocked` **before** creating
+the settlement table/function or unscheduling the existing cron job whenever
+any active pay-enabled band lacks a canonical active treasury. This is a
+release guard, **not** a treasury repair. Never backfill canonical treasuries
+from the legacy `bands.band_balance` scalar without proving the underlying
+funds in the finance ledger. Keep the retired HTTP endpoint unable to pay.
+
+The timestamp prefix `20300106200000` is shared with the personal-funded
+gig booking migration. Reconcile the duplicate identity before running normal
+migration tooling; a future-dated filename is not permission to bypass this
+preflight.
+
 ## Required staging and deployment checks
 
 1. First review deployed migration versions; reconcile the canonical treasury setup for both currently pay-enabled bands and prove opening balances are backed by existing ledger funds.

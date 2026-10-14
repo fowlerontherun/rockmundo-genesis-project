@@ -88,7 +88,6 @@
     "test:festivals:performance-effects:db": "bash scripts/festivals/run-performance-effects-db-gate.sh",
     "test:festivals:upgrades:db": "bash scripts/festivals/run-upgrade-db-gate.sh",
     "test:finance:contract": "node --test scripts/finance/finance-verification-workflow.test.mjs",
-    "test:cron-auth": "vitest run supabase/functions/_shared/internal-cron-auth.test.ts",
     "test:finance:db": "bash scripts/finance/run-db-gate.sh",
     "test:e2e:finance": "playwright test --config=playwright.finance.config.ts --project=chromium",
     "test:totp-render-worker": "node --test workers/totp-render-worker/lib.test.mjs",

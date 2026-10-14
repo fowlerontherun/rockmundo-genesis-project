@@ -31,6 +31,32 @@ describe("payment, distribution and reading security regression contracts", () =
     expect(sql).toContain("WHERE id = p_payment_id FOR UPDATE");
   });
 
+  it("#4082 refuses unauthenticated sponsorship payment HTTP requests", () => {
+    const worker = source("supabase/functions/process-sponsorship-payments/index.ts");
+    expect(worker).toContain('req.headers.get(\'x-cron-secret\')');
+    expect(worker).toContain('rpc(\n    \'verify_internal_cron_secret\'');
+    expect(worker).toContain("cronAuthorized !== true");
+    expect(worker).toContain("status: 401");
+    expect(worker.indexOf("cronAuthorized !== true")).toBeLessThan(
+      worker.indexOf("await startJobRun"),
+    );
+    expect(worker.indexOf("cronAuthorized !== true")).toBeLessThan(
+      worker.indexOf("await safeJson"),
+    );
+  });
+
+  it("#4082 migrates existing sponsorship cron to Vault without storing tokens", () => {
+    const cutover = source("supabase/production-repairs/20261014_sponsorship_cron_vault_auth_cutover.sql");
+    expect(cutover).toContain("cron.alter_job(");
+    expect(cutover).toContain("jobname = 'process-sponsorship-payments-cron'");
+    expect(cutover).toContain("vault.decrypted_secrets");
+    expect(cutover).toContain("'x-cron-secret'");
+    expect(cutover).toContain("process_sponsorship_installment_atomic(uuid)");
+    expect(cutover).not.toMatch(/Bearer\\s+eyJ[a-zA-Z0-9_-]+/);
+    expect(cutover).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
+    expect(cutover).not.toContain("cron.unschedule(");
+  });
+
   it("#2981 retains unsuccessful streaming deliveries for retry", () => {
     const edge = source("supabase/functions/auto-distribute-streaming/index.ts");
     const sql = source("supabase/migrations/20261013074400_streaming_delivery_concurrency.sql");
