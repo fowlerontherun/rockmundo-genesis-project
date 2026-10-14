@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SponsorIdentity } from "./SponsorIdentity";
 import {
   useAddFestivalCanonicalBrandProspect,
   useFestivalCanonicalBrands,
@@ -78,14 +79,9 @@ export function FestivalCanonicalBrandPicker({ festivalCompanyId }: Props) {
           <ul className="grid gap-3 sm:grid-cols-2">
             {brands.data.items.map((brand) => {
               const unavailable = brand.alreadyProspected || brand.alreadyContracted;
-              const imageUrl = brand.logoUrl && (
-                brand.logoUrl.startsWith("https://")
-                || brand.logoUrl.startsWith("data:image/svg+xml;base64,")
-                || brand.logoUrl.startsWith("/")
-              ) ? brand.logoUrl : null;
               return (
                 <li key={brand.brandId} className="flex items-center gap-3 rounded-lg border p-3">
-                  {imageUrl && <img src={imageUrl} alt="" loading="lazy" className="h-12 w-12 shrink-0 object-contain" />}
+                  <div className="w-20 shrink-0"><SponsorIdentity name={brand.brandName} logoReference={brand.logoUrl} /></div>
                   <div className="min-w-0 flex-1">
                     <p className="font-medium">{brand.brandName}</p>
                     <p className="text-sm text-muted-foreground">{brand.category}{brand.region ? ` · ${brand.region}` : ""}</p>
