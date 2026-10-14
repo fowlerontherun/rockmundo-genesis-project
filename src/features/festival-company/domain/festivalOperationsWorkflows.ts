@@ -6,7 +6,7 @@ const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]
 const record=(v:unknown):v is Record<string,unknown>=>!!v&&typeof v==="object"&&!Array.isArray(v);
 const uuid=(v:unknown)=>typeof v==="string"&&UUID.test(v);
 const integer=(v:unknown)=>Number.isSafeInteger(v)&&Number(v)>=0;
-const timestamp=(v:unknown)=>typeof v==="string"&&!Number.isNaN(Date.parse(v));
+const timestamp=(v:unknown):v is string=>typeof v==="string"&&!Number.isNaN(Date.parse(v));
 const currency=(v:unknown)=>typeof v==="string"&&/^[A-Z]{3}$/.test(v);
 export interface FestivalStaffVacancy {id:string;festivalCompanyId:string;title:string;role:string;department:string;employmentType:string;payMinor:number;currencyCode:string;positionsRemaining:number;startsAt:string;endsAt:string;deadline:string;playerEligible:boolean;scheduleCompatibility:string;travelSummary:string}
 export interface FestivalSupplierOpportunity {id:string;festivalCompanyId:string;category:string;description:string|null;quantity:number;unit:string;minimumQuality:number;deliveryStart:string|null;deliveryEnd:string|null;serviceStart:string|null;serviceEnd:string|null;playerCompanyEligible:boolean;eligibility:{canQuote:boolean;authority:string;reasonCodes:string[]}}
