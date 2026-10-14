@@ -39,7 +39,7 @@ export function DirectMessagePanel({ channel, currentUserId, otherDisplayName }:
   }, [messages.length]);
 
   const handleSend = () => {
-    if (!draft.trim() || sendMessage.isPending || !otherProfileId) return;
+    if (!draft.trim() || sendMessage.isPending || loading || !otherProfileId) return;
     sendMessage.mutate(draft, {
       onSuccess: () => setDraft(""),
       onError: (error: unknown) => toast({
@@ -106,7 +106,7 @@ export function DirectMessagePanel({ channel, currentUserId, otherDisplayName }:
           className="min-h-[80px]"
         />
         <div className="flex w-full justify-end">
-          <Button onClick={handleSend} disabled={sendMessage.isPending || !draft.trim() || !otherProfileId}>
+          <Button onClick={handleSend} disabled={sendMessage.isPending || loading || !draft.trim() || !otherProfileId}>
             {sendMessage.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             <SendHorizontal className="mr-1 h-4 w-4" /> Send
           </Button>
