@@ -80,6 +80,27 @@ staging database to validate the full payout function, then deploy only through
 an approved unique migration identity. Never use `supabase db push` while
 unresolved timestamp collisions remain.
 
+## Existing band-balance projection drift (GitHub #4119)
+
+A read-only 14 October audit compared `bands.band_balance` to
+`SUM(band_earnings.amount)` for all 31 bands. **Five** are inconsistent,
+total absolute discrepancy **35,720** major game-currency units:
+WAR DOGS. **-28,000**, JPW **-4,020**, Elysian **+3,000**,
+Betonherz **+400**, and ECHO **+300**. These differences may represent
+legitimate but unjournaled spend/income, not necessarily an accounting
+windfall. In particular, WAR DOGS. currently has an active pay configuration,
+so a payroll expense inserted into `band_earnings` could accidentally
+reset an extra 28,000 units of displayed band balance.
+
+The payroll migration now refuses to install/rewire cron if **any active
+pay-enabled band** has that projection drift. At runtime, it rechecks the
+drift under each band row lock before any settlement or transfer, rolls back
+that band, and reports `partial_failure` if any band failed. This **does
+not repair** the pre-existing discrepancies. Trace actual historic spending
+and journal records before any compensating finance or projection changes.
+The reconciliation work is tracked separately in
+[issue #4119](https://github.com/fowlerontherun/rockmundo-genesis-project/issues/4119).
+
 ## Required staging and deployment checks
 
 1. First review deployed migration versions; reconcile the canonical treasury setup for both currently pay-enabled bands and prove opening balances are backed by existing ledger funds.
