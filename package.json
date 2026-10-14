@@ -70,7 +70,7 @@
     "test:festivals:safety-guard": "vitest run scripts/festivals/assert-safe-test-database.test.mjs",
     "verify:dependencies": "npm ls --all",
     "verify:dependency-lock": "node --test scripts/dependency-lock-integrity.test.mjs",
-    "verify:migration-timestamps": "node scripts/supabase/verify-migration-timestamps.mjs",
+    "verify:migration-timestamps": "node scripts/supabase/verify-migration-timestamps.mjs && node --test scripts/supabase/reconcile-migration-history.test.mjs",
     "audit:migration-history": "node scripts/supabase/reconcile-migration-history.mjs",
     "test:migration-history": "node --test scripts/supabase/reconcile-migration-history.test.mjs",
     "verify:totp-migration-timestamps": "node scripts/supabase/verify-totp-migration-timestamps.mjs",
