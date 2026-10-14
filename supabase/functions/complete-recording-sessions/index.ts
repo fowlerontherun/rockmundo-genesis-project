@@ -327,7 +327,8 @@ Deno.serve(async (req) => {
           effortHours: durationHours,
           bandCohesion: (bandData as any)?.cohesion ?? (bandData as any)?.band_chemistry ?? (bandData as any)?.chemistry ?? 50,
           chemistry: (bandData as any)?.chemistry ?? (bandData as any)?.band_chemistry ?? 50,
-          seed: `${session.id}:${session.updated_at || session.scheduled_end}`,
+          // Session update timestamps change during retries; use immutable booking data.
+          seed: `${session.id}:${session.scheduled_end}`,
         })
 
         const qualityImprovement = outcome.qualityImprovement
