@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -20,11 +20,17 @@ export type BandPaymentSource = "band" | "personal";
 export function useBandPaymentSource(bandId: string | null | undefined) {
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
-  const [source, setSource] = useState<BandPaymentSource>("band");
-
-  useEffect(() => {
-    setSource("band");
-  }, [bandId]);
+  // Associate the selected payer with the exact band and active character.
+  // A profile switch changes effective payer synchronously, without waiting
+  // for an effect or leaking another character's personal payment choice.
+  const identity = `${bandId ?? ""}:${profileId ?? ""}`;
+  const [selection, setSelection] = useState<{ identity: string; source: BandPaymentSource }>({
+    identity, source: "band",
+  });
+  const source: BandPaymentSource = selection.identity === identity ? selection.source : "band";
+  const setSource = useCallback((next: BandPaymentSource) => {
+    setSelection({ identity, source: next });
+  }, [identity]);
 
   const { data: bandRow, isLoading: isBandFundingLoading } = useQuery({
     queryKey: ["band-payment-source-band", bandId],
@@ -102,15 +108,11 @@ export function useBandPaymentSource(bandId: string | null | undefined) {
    * Ensures legacy band-authoritative activities have enough treasury funds.
    * Returns the amount (if any) moved from the player's wallet.
    *
-   * Rehearsal bookings are server-atomic and therefore deliberately skip the
-   * pre-funding step. Their selected payer is passed directly with the booking request.
+   * Rehearsals are not callers: they pass the selected payer directly to
+   * their atomic booking RPC. Never pre-fund them through this legacy helper.
    */
   const prepareFunds = useCallback(
     async (cost: number, note?: string) => {
-      if (bandId && note?.startsWith("Rehearsal booking")) {
-        return 0;
-      }
-
       if (!bandId || source !== "personal" || cost <= 0) return 0;
 
       // Missing treasury behaves as a zero balance here. fundBandFromWallet is
@@ -175,6 +177,7 @@ export function useBandPaymentSource(bandId: string | null | undefined) {
     }),
     [
       source,
+      setSource,
       bandRow?.name,
       bandRow?.treasury_status,
       bandBalance,
