@@ -12,9 +12,14 @@ export function SponsorIdentity({
   logoReference: string | null;
 }) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
-  const secureUrl = logoReference && /^https:\/\//i.test(logoReference)
-    ? logoReference
-    : null;
+  // Canonical fictional brand fallbacks use base64 SVG data URLs. Accept
+  // only a small set of image MIME types; never allow arbitrary data, JS,
+  // HTTP or protocol-relative URLs in a public <img>.
+  const isSafeImage = (url: string) =>
+    /^https:\/\//i.test(url) ||
+    (/^\/(?!\/)[^\\\s]*$/.test(url)) ||
+    /^data:image\/(?:svg\+xml|png|jpeg|webp);base64,[a-z0-9+/]+={0,2}$/i.test(url);
+  const secureUrl = logoReference && isSafeImage(logoReference) ? logoReference : null;
 
   return (
     <div className="flex min-h-16 items-center justify-center rounded-lg border bg-background p-3">
