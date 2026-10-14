@@ -21,6 +21,8 @@ export interface NotifyArgs {
   message?: string;
   actionPath?: string | null;
   metadata?: Record<string, unknown>;
+  /** Stable source-event identity shared by all browser tabs. */
+  eventKey?: string;
 }
 
 /**
@@ -38,7 +40,7 @@ export async function pushNotification(args: NotifyArgs): Promise<string | null>
       p_title: args.title,
       p_message: args.message ?? "",
       p_action_path: args.actionPath ?? null,
-      p_metadata: args.metadata ?? {},
+      p_metadata: { ...(args.metadata ?? {}), ...(args.eventKey ? { event_key: args.eventKey } : {}) },
     } as never);
     if (error) {
       console.error("[notify] create_notification failed", error);
