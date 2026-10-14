@@ -27,6 +27,15 @@ describe("recording payments and completion regression contracts", () => {
     expect(atomic).not.toContain("new Date(Date.now() + 60_000)");
   });
 
+  it("#4087 finds a committed idempotent booking before applying conflicting slot preflight", () => {
+    const atomic = source("src/hooks/useRecordingDataAtomic.tsx");
+    const lookup = atomic.indexOf('.eq("funding_idempotency_key", idempotencyKey)');
+    const availability = atomic.indexOf("await checkBandAvailability(");
+    expect(lookup).toBeGreaterThan(0);
+    expect(availability).toBeGreaterThan(lookup);
+    expect(atomic).toContain("if (!isConfirmedRetry)");
+  });
+
   it("#4087 reports an already paid booking as confirmed despite projection failures", () => {
     const atomic = source("src/hooks/useRecordingDataAtomic.tsx");
     expect(atomic).toContain("let session: { id: string } = { id: booking.bookingId }");
