@@ -25,7 +25,7 @@ BEGIN
  IF NOT FOUND THEN RAISE EXCEPTION 'gear_sale_failed'; END IF;
  UPDATE public.blind_box_openings SET instrument_id=NULL
  WHERE instrument_id=p_gear_id AND profile_id=p_profile_id;
- DELETE FROM public.player_equipment WHERE user_id=p_profile_id AND equipment_id IN (
+ DELETE FROM public.player_equipment WHERE user_id=v_account AND profile_id=p_profile_id AND equipment_id IN (
   SELECT id FROM public.equipment_items WHERE name=v_gear_name AND subcategory='blind_box');
  UPDATE public.profiles SET cash=coalesce(cash,0)+v_refund WHERE id=p_profile_id;
  RETURN jsonb_build_object('success',true,'refund',v_refund);
