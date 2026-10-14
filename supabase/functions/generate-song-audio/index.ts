@@ -473,7 +473,7 @@ serve(async (req) => {
     if (attempt?.id) {
       await supabase
         .from('song_generation_attempts')
-        .update({ prompt_used: fullPrompt })
+        .update({ prompt_used: `Model: ${generationModel}\n${fullPrompt}` })
         .eq('id', attempt.id)
     }
 
@@ -497,8 +497,10 @@ serve(async (req) => {
           lyrics: formattedLyrics,
           bitrate: 128000,
           audio_format: 'mp3',
-          is_instrumental: false,
-          lyrics_optimizer: false,
+          ...(generationModel === 'music-2.6' ? {
+            is_instrumental: false,
+            lyrics_optimizer: false,
+          } : {}),
         },
         webhook: webhookUrl,
         webhook_events_filter: ['completed', 'output'],
