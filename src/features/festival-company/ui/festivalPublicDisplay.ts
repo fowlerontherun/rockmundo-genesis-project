@@ -82,7 +82,7 @@ export function festivalVisitorEventLabel(
 export function isMainFestivalSponsor(
   sponsor: Pick<FestivalPublicSponsor, "relationshipLabel">,
 ): boolean {
-  return /^(?:main|title|principal|headline)(?:\\s+(?:sponsor|partner))?$/i
+  return /^(?:main|title|principal|headline)(?:\s+(?:sponsor|partner))?$/i
     .test(sponsor.relationshipLabel.trim());
 }
 
