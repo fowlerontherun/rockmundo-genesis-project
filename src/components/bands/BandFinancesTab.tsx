@@ -44,6 +44,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { AddMoneyToBand } from "@/components/bands/AddMoneyToBand";
+import { countActiveRegularBandMembers, monthlyBandRunway, RECENT_FINANCE_ENTRY_LIMIT, MAX_MONTHLY_EXPENSE_ROWS } from "./bandFinanceMetrics";
 import {
   DollarSign,
   TrendingUp,
@@ -282,6 +283,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
   const [weeklyPayPct, setWeeklyPayPct] = useState(0);
   const [savingPay, setSavingPay] = useState(false);
   const [memberCount, setMemberCount] = useState(0);
+  const [last30DayExpenses, setLast30DayExpenses] = useState<number | null>(null);
   const [personalAccounts, setPersonalAccounts] = useState<
     EligibleContributionAccount[]
   >([]);
@@ -403,10 +405,10 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
           .select("*")
           .eq("band_id", bandId)
           .order("created_at", { ascending: false })
-          .limit(50),
+          .limit(RECENT_FINANCE_ENTRY_LIMIT),
         supabase
           .from("band_members")
-          .select("id, is_touring_member, user_id")
+          .select("id, member_status, is_touring_member, user_id")
           .eq("band_id", bandId),
       ]);
 
@@ -415,21 +417,45 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
       if (membersError) throw membersError;
 
       if (requestId !== financesRequestId.current) return;
+      // A monthly runway needs all spending in a *time window*, not the average
+      // expense of the latest 50 items. Paginate the expense-only 30-day slice
+      // so a busy band's expenses are not silently capped.
+      let monthlyExpenseTotal: number | null = 0;
+      try {
+        const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        for (let offset = 0; offset < MAX_MONTHLY_EXPENSE_ROWS; offset += 500) {
+          const { data: page, error: expenseError } = await supabase
+            .from("band_earnings")
+            .select("amount")
+            .eq("band_id", bandId)
+            .lt("amount", 0)
+            .gte("created_at", from)
+            .order("created_at", { ascending: false })
+            .range(offset, offset + 499);
+          if (expenseError) throw expenseError;
+          monthlyExpenseTotal += (page ?? []).reduce((total, item) => total + Math.abs(Number(item.amount)), 0);
+          if (!page || page.length < 500) break;
+          if (offset + 500 >= MAX_MONTHLY_EXPENSE_ROWS) throw new Error("Expense history exceeds safe pagination limit");
+        }
+      } catch (expenseError) {
+        console.warn("30-day expense data unavailable; hiding monthly runway", expenseError);
+        monthlyExpenseTotal = null;
+      }
+      if (requestId !== financesRequestId.current) return;
+      setLast30DayExpenses(monthlyExpenseTotal);
       const b = bandData as BandRow;
       setBand(b);
       setEarnings((earningData as BandEarningRow[]) ?? []);
       setWeeklyPayPct(Number(b.weekly_pay_percent ?? 0));
       setIsLeader(!!profileId && profileId === b.leader_id);
-      const realMembers = (membersData ?? []).filter(
-        (m) => !m.is_touring_member,
-      );
-      setMemberCount(realMembers.length);
+      setMemberCount(countActiveRegularBandMembers(membersData ?? []));
       void fetchTreasuryDashboard();
     } catch (caught) {
       if (requestId !== financesRequestId.current) return;
       console.error("Failed to load band finances", caught);
       setBand(null);
       setEarnings([]);
+      setLast30DayExpenses(null);
       setError("We were unable to load the financial data for this band.");
     } finally {
       if (requestId === financesRequestId.current) setLoading(false);
@@ -441,6 +467,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
     treasuryRequestId.current += 1;
     accountsRequestId.current += 1;
     setDashboard(null);
+    setLast30DayExpenses(null);
     setDashboardError(null);
     setContributions([]);
     setPersonalAccounts([]);
@@ -490,7 +517,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
         totalIncome: 0,
         totalExpenses: 0,
         averageDeposit: 0,
-        monthlyRunway: 0,
+        monthlyRunway: monthlyBandRunway(balance, last30DayExpenses),
         recentActivity: [],
         bySource: {} as Record<string, number>,
       };
@@ -505,13 +532,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
     const averageDeposit = deposits.length
       ? Math.round(totalIncome / deposits.length)
       : 0;
-    const averageExpense = expenses.length
-      ? totalExpenses / expenses.length
-      : 0;
-    const monthlyRunway =
-      averageExpense > 0
-        ? Math.max(0, Math.round(balance / averageExpense))
-        : Math.max(0, balance);
+    const monthlyRunway = monthlyBandRunway(balance, last30DayExpenses);
 
     const bySource: Record<string, number> = {};
     for (const e of earnings) {
@@ -528,7 +549,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
       recentActivity: earnings,
       bySource,
     };
-  }, [primaryTreasury, canUseLegacyFallback, band?.band_balance, earnings]);
+  }, [primaryTreasury, canUseLegacyFallback, band?.band_balance, earnings, last30DayExpenses]);
 
   const topSources = useMemo(() => {
     return Object.entries(aggregated.bySource)
@@ -791,8 +812,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-              <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500" /> Total
-              Income
+              <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500" /> Last 50 · Income
             </div>
             <p className="text-2xl font-bold text-emerald-500">
               {formatCurrency(aggregated.totalIncome, treasuryCurrency)}
@@ -803,8 +823,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-              <ArrowDownRight className="h-3.5 w-3.5 text-destructive" /> Total
-              Expenses
+              <ArrowDownRight className="h-3.5 w-3.5 text-destructive" /> Last 50 · Expenses
             </div>
             <p className="text-2xl font-bold text-destructive">
               {formatCurrency(aggregated.totalExpenses, treasuryCurrency)}
@@ -818,13 +837,13 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
               <TrendingUp className="h-3.5 w-3.5" /> Runway
             </div>
             <p className="text-2xl font-bold">
-              {aggregated.monthlyRunway}{" "}
+              {aggregated.monthlyRunway === null ? "N/A" : aggregated.monthlyRunway}
               <span className="text-sm font-normal text-muted-foreground">
-                months
+                {aggregated.monthlyRunway === null ? " (no verified 30-day expenditure)" : " months"}
               </span>
             </p>
             <Progress
-              value={Math.min(100, aggregated.monthlyRunway * 10)}
+              value={aggregated.monthlyRunway === null ? 0 : Math.min(100, aggregated.monthlyRunway * 10)}
               className="mt-1 h-1.5"
             />
           </CardContent>
@@ -888,7 +907,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
             <CardTitle className="text-base flex items-center gap-2">
               <DollarSign className="h-4 w-4" /> Revenue Breakdown
             </CardTitle>
-            <CardDescription>Earnings & expenses by source</CardDescription>
+            <CardDescription>Income and expenses by source · latest 50 entries only</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             {topSources.length === 0 ? (

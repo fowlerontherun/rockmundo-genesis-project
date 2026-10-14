@@ -9,20 +9,6 @@ import {
 
 export type BandPaymentSource = "band" | "personal";
 
-// Rehearsal booking used to top up the band before the booking hook ran. The
-// atomic rehearsal RPC now charges the selected payer itself, but the existing
-// dialog and page are intentionally kept stable. Preserve that payer choice
-// in-memory across the dialog -> page -> hook boundary and consume it once.
-const pendingAtomicRehearsalSources = new Map<string, BandPaymentSource>();
-
-export function consumeAtomicRehearsalPaymentSource(
-  bandId: string,
-): BandPaymentSource {
-  const source = pendingAtomicRehearsalSources.get(bandId) ?? "band";
-  pendingAtomicRehearsalSources.delete(bandId);
-  return source;
-}
-
 /**
  * Shared payer resolution for band activities that cost money.
  *
@@ -117,12 +103,11 @@ export function useBandPaymentSource(bandId: string | null | undefined) {
    * Returns the amount (if any) moved from the player's wallet.
    *
    * Rehearsal bookings are server-atomic and therefore deliberately skip the
-   * pre-funding step. The selected payer is consumed by `useRehearsalBooking`.
+   * pre-funding step. Their selected payer is passed directly with the booking request.
    */
   const prepareFunds = useCallback(
     async (cost: number, note?: string) => {
       if (bandId && note?.startsWith("Rehearsal booking")) {
-        pendingAtomicRehearsalSources.set(bandId, source);
         return 0;
       }
 

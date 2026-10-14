@@ -284,6 +284,7 @@ const Rehearsals = () => {
 
     try {
       const rehearsalId = await bookRehearsal({
+        paymentSource,
         bandId: selectedBand.id,
         roomId,
         duration,

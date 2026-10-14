@@ -21,6 +21,7 @@ import {
 import { formatCurrencyMinor } from "@/services/banking/bankingService";
 import { toast } from "sonner";
 import { HandCoins, Loader2 } from "lucide-react";
+import { fundingPreviewStillCurrent } from "./bandFundingPreview";
 
 type FundingSource = {
   sourceKind: "wallet" | "bank";
@@ -91,6 +92,7 @@ export function AddMoneyToBand({
   const [note, setNote] = useState("");
   const [preview, setPreview] = useState<FundingPreview | null>(null);
   const previewRequestEpoch = useRef(0);
+  const previewedAt = useRef<number | null>(null);
   const [confirmationKey, setConfirmationKey] = useState<string | null>(null);
   const [sourcesLoading, setSourcesLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -118,6 +120,7 @@ export function AddMoneyToBand({
     setSourceKey("");
     setAmount("");
     setNote("");
+    previewedAt.current = null;
     setPreview(null);
     setConfirmationKey(null);
     setError(null);
@@ -200,6 +203,7 @@ export function AddMoneyToBand({
 
   const resetPreview = () => {
     previewRequestEpoch.current++;
+    previewedAt.current = null;
     setPreview(null);
     setConfirmationKey(null);
   };
@@ -225,6 +229,7 @@ export function AddMoneyToBand({
       if (previewError) throw previewError;
 
       setPreview(data as FundingPreview);
+      previewedAt.current = Date.now();
       setConfirmationKey(crypto.randomUUID());
     } catch (previewError) {
       if (requestEpoch === previewRequestEpoch.current) setError(fundingErrorMessage(previewError));
@@ -239,6 +244,29 @@ export function AddMoneyToBand({
     setSubmitting(true);
     setError(null);
     try {
+      // A preview shows balances at a point in time, not a reservation.
+      // Recheck the current server view immediately before confirming.
+      const { data: latest, error: refreshError } = await (supabase as any).rpc(
+        "preview_my_band_funding",
+        {
+          p_band_id: bandId,
+          p_source_kind: source.sourceKind,
+          p_source_account_id: source.sourceAccountId,
+          p_amount_minor: preview.amountMinor,
+        },
+      );
+      if (refreshError) throw refreshError;
+      if (!latest || !fundingPreviewStillCurrent(preview, latest as FundingPreview, previewedAt.current, Date.now())) {
+        if (latest) {
+          setPreview(latest as FundingPreview);
+          previewedAt.current = Date.now();
+          setConfirmationKey(crypto.randomUUID());
+        } else {
+          resetPreview();
+        }
+        setError("Your funding preview has expired or balances changed. Review the updated amounts before confirming again.");
+        return;
+      }
       const { error: fundingError } = await (supabase as any).rpc("fund_my_band", {
         p_band_id: bandId,
         p_source_kind: source.sourceKind,
@@ -374,7 +402,11 @@ export function AddMoneyToBand({
                 <Label>Note (optional)</Label>
                 <Input
                   value={note}
-                  onChange={(event) => setNote(event.target.value)}
+                  onChange={(event) => {
+                    setNote(event.target.value);
+                    resetPreview();
+                    setError(null);
+                  }}
                   placeholder="Rehearsal fund"
                 />
               </div>
