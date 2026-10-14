@@ -1,3 +1,5 @@
+-- Live production band_earnings has a balance-recomputation trigger.
+-- All installment effects remain in one database transaction and payment-row lock.
 -- All installment effects must commit once, or roll back together.
 CREATE OR REPLACE FUNCTION public.process_sponsorship_installment_atomic(p_payment_id uuid)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
@@ -16,16 +18,34 @@ BEGIN
   END IF;
   SELECT * INTO v_contract FROM public.sponsorship_contracts
     WHERE id = v_payment.contract_id FOR UPDATE;
-  IF NOT FOUND OR v_contract.status <> 'active' THEN
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'sponsorship_contract_not_found';
+  END IF;
+  IF v_payment.band_id IS DISTINCT FROM v_contract.band_id
+    OR v_payment.amount IS NULL OR v_payment.amount <= 0 THEN
+    RAISE EXCEPTION 'invalid_sponsorship_installment';
+  END IF;
+  IF v_payment.scheduled_at > now() THEN
+    RAISE EXCEPTION 'sponsorship_installment_not_due';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.band_earnings
+    WHERE band_id = v_payment.band_id AND source = 'sponsorship'
+      AND metadata->>'payment_id' = v_payment.id::text
+  ) THEN
+    RAISE EXCEPTION 'sponsorship_installment_requires_reconciliation';
+  END IF;
+  IF v_contract.status <> 'active' THEN
     UPDATE public.sponsorship_payments SET status = 'cancelled' WHERE id = p_payment_id;
     RETURN jsonb_build_object('status','cancelled','amount',0);
   END IF;
 
   v_morale := CASE WHEN v_payment.amount >= 5000 THEN 3
                    WHEN v_payment.amount >= 1000 THEN 2 ELSE 1 END;
+  -- band_earnings has an AFTER INSERT trigger which recomputes band_balance.
+  -- Never also credit it manually: the earnings ledger is the sole authority.
   UPDATE public.bands
-     SET band_balance = coalesce(band_balance,0) + v_payment.amount,
-         morale = least(100, coalesce(morale,50) + v_morale)
+     SET morale = least(100, coalesce(morale,50) + v_morale)
    WHERE id = v_payment.band_id;
   IF NOT FOUND THEN RAISE EXCEPTION 'sponsorship_band_not_found'; END IF;
 

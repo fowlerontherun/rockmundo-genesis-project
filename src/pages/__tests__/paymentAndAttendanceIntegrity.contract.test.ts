@@ -20,6 +20,17 @@ describe("payment, distribution and reading security regression contracts", () =
     expect(sql).toContain("RAISE EXCEPTION 'sponsorship_band_not_found'");
     expect(sql).toContain("GRANT EXECUTE ON FUNCTION public.process_sponsorship_installment_atomic(uuid) TO service_role");
   });
+  it("sponsorship payments use the earnings trigger as the only band balance authority", () => {
+    const sql = sponsorshipSql();
+    expect(sql).toContain("INSERT INTO public.band_earnings");
+    expect(sql).toContain("SET morale = least(100");
+    expect(sql).not.toMatch(/SET\\s+band_balance\\s*=/);
+    expect(sql).toContain("sponsorship_installment_requires_reconciliation");
+    expect(sql).toContain("sponsorship_installment_not_due");
+    expect(sql).toContain("v_payment.band_id IS DISTINCT FROM v_contract.band_id");
+    expect(sql).toContain("WHERE id = p_payment_id FOR UPDATE");
+  });
+
   it("#2981 retains unsuccessful streaming deliveries for retry", () => {
     const edge = source("supabase/functions/auto-distribute-streaming/index.ts");
     const sql = source("supabase/migrations/20261013074400_streaming_delivery_concurrency.sql");

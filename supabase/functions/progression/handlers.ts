@@ -18,134 +18,24 @@ function cumulativeXpForLevel(level: number): number {
   return total;
 }
 
-// Streak milestone constants (AP kept low — total daily AP hard-capped at 30)
-// SXP boosted; total daily SXP hard-capped at DAILY_STIPEND_SXP_CAP below
-const STREAK_MILESTONES = [
-  { days: 7, bonusSxp: 150, bonusAp: 2 },
-  { days: 14, bonusSxp: 300, bonusAp: 3 },
-  { days: 30, bonusSxp: 500, bonusAp: 5 },
-  { days: 100, bonusSxp: 1000, bonusAp: 8 },
-  { days: 365, bonusSxp: 2000, bonusAp: 12 },
-];
-
-// Base stipend amounts
-const BASE_STIPEND_SXP = 600;
-// Daily base AP is rolled randomly between these bounds on every claim.
-const MIN_STIPEND_AP = 1;
-const MAX_STIPEND_AP = 10;
-// Hard cap on total AP from the daily stipend claim (base + streak bonuses)
-const DAILY_STIPEND_AP_CAP = 30;
-// Hard cap on total SXP from the daily stipend claim (base + streak bonuses)
-const DAILY_STIPEND_SXP_CAP = 2000;
-
-function rollDailyBaseAp(): number {
-  return MIN_STIPEND_AP + Math.floor(Math.random() * (MAX_STIPEND_AP - MIN_STIPEND_AP + 1));
-}
-
+// The claim RPC is the only authority for daily stipend amounts, VIP status,
+// streaks and base AP rolls. Avoid duplicating reward calculations in Edge.
 type SkillProgressRow = Database["public"]["Tables"]["skill_progress"]["Row"];
-
-/**
- * Calculate streak bonuses based on current streak
- */
-function calculateStreakBonuses(streak: number): { bonusSxp: number; bonusAp: number; milestones: number[] } {
-  let bonusSxp = 0;
-  let bonusAp = 0;
-  const milestones: number[] = [];
-
-  for (const milestone of STREAK_MILESTONES) {
-    if (streak >= milestone.days) {
-      bonusSxp += milestone.bonusSxp;
-      bonusAp += milestone.bonusAp;
-      milestones.push(milestone.days);
-    }
-  }
-
-  return { bonusSxp, bonusAp, milestones };
-}
-
-/**
- * Check if two dates are consecutive days
- */
-function areConsecutiveDays(date1: string | null, date2: string): boolean {
-  if (!date1) return false;
-  
-  // YYYY-MM-DD values must be compared on UTC calendar boundaries.
-  const previous = Date.parse(date1.slice(0, 10) + "T00:00:00Z");
-  const current = Date.parse(date2.slice(0, 10) + "T00:00:00Z");
-  return Number.isFinite(previous) && Number.isFinite(current)
-    && current - previous === 86_400_000;
-}
 
 export async function handleClaimDailyXp(
   client: SupabaseClient<Database>,
-  userId: string,
+  _userId: string,
   profileState: ProfileState,
-  metadata: Record<string, unknown> = {},
+  _metadata: Record<string, unknown> = {},
 ): Promise<ProfileState> {
-  const todayIso = new Date().toISOString().slice(0, 10);
+  // The caller's JWT reaches PostgREST through the request-scoped client.
+  // Postgres verifies ownership and calculates the stipend under the wallet lock.
+  // Never forward client-controlled SXP/AP, VIP flags, streak or metadata.
   const profileId = profileState.profile.id;
-  
-  // Calculate streak
-  const lastClaimDate = profileState.wallet?.last_stipend_claim_date ?? null;
-  const currentStreak = profileState.wallet?.stipend_claim_streak ?? 0;
-  
-  let newStreak = 1; // Default to 1 for new or broken streak
-  if (areConsecutiveDays(lastClaimDate, todayIso)) {
-    // Consecutive day - increment streak
-    newStreak = currentStreak + 1;
-  }
-
-  // Calculate bonuses based on new streak
-  const { bonusSxp, bonusAp, milestones } = calculateStreakBonuses(newStreak);
-  const scaledBaseAp = rollDailyBaseAp();
-
-  // VIP bonus: active VIP subscribers get +25% on the daily stipend (SXP and AP)
-  const VIP_BONUS_MULTIPLIER = 0.25;
-  let isVip = false;
-  try {
-    const { data: vipData } = await client
-      .from("vip_subscriptions")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("status", "active")
-      .gte("expires_at", new Date().toISOString())
-      .maybeSingle();
-    isVip = !!vipData;
-  } catch (err) {
-    console.warn("[claim_daily_xp] VIP check failed, proceeding without bonus", err);
-  }
-
-  const preCapSxp = BASE_STIPEND_SXP + bonusSxp;
-  const preCapAp = scaledBaseAp + bonusAp;
-  const vipBonusSxp = isVip ? Math.round(preCapSxp * VIP_BONUS_MULTIPLIER) : 0;
-  const vipBonusAp = isVip ? Math.round(preCapAp * VIP_BONUS_MULTIPLIER) : 0;
-  const totalSxp = Math.min(DAILY_STIPEND_SXP_CAP, preCapSxp + vipBonusSxp);
-  const totalAp = Math.min(DAILY_STIPEND_AP_CAP, preCapAp + vipBonusAp);
-
-  // Create grant record
-  const grantMetadata = {
-    ...metadata,
-    base_sxp: BASE_STIPEND_SXP,
-    base_ap: scaledBaseAp,
-    bonus_sxp: bonusSxp,
-    bonus_ap: bonusAp,
-    vip_bonus_sxp: vipBonusSxp,
-    vip_bonus_ap: vipBonusAp,
-    is_vip: isVip,
-    total_sxp: totalSxp,
-    total_ap: totalAp,
-    streak: newStreak,
-    milestones_reached: milestones,
-  };
-
-  const { error: grantError } = await client.rpc("claim_daily_stipend_atomic" as any, {
+  const { error } = await client.rpc("claim_daily_stipend_atomic" as any, {
     p_profile_id: profileId,
-    p_sxp: totalSxp,
-    p_ap: totalAp,
-    p_metadata: grantMetadata,
   });
-  if (grantError) throw new Error(grantError.message || "Failed to claim daily stipend");
-
+  if (error) throw new Error(error.message || "Failed to claim daily stipend");
   return await fetchProfileState(client, profileId);
 }
 
