@@ -80,6 +80,26 @@ DECLARE
  v_band uuid;v_profile uuid;v_user uuid;v_row record;v_key text;
 BEGIN
  CASE v_table
+ WHEN 'chart_entries' THEN
+   IF TG_OP<>'INSERT' OR coalesce((v->>'rank')::integer,999)>40 THEN RETURN NEW; END IF;
+   v_kind:='chart_entry';v_category:='music';v_title:='New Chart Entry';
+   v_message:='Your song has entered the charts.';v_path:='/charts';
+   SELECT s.profile_id,s.band_id INTO v_profile,v_band FROM public.songs s
+     WHERE s.id=nullif(v->>'song_id','')::uuid;
+ WHEN 'twaater_notifications' THEN
+   IF TG_OP<>'INSERT' THEN RETURN NEW; END IF;
+   v_kind:='twaater_notification';v_category:='social';
+   v_title:='New Twaater Activity';v_message:='Your Twaater account has new activity.';
+   v_path:='/twaater';
+   SELECT CASE WHEN a.owner_type::text='persona' THEN a.owner_id ELSE NULL END,
+          CASE WHEN a.owner_type::text='band' THEN a.owner_id ELSE NULL END
+   INTO v_profile,v_band FROM public.twaater_accounts a
+   WHERE a.id=nullif(v->>'account_id','')::uuid;
+ WHEN 'vip_subscriptions' THEN
+   IF TG_OP<>'INSERT' OR v->>'status'<>'active' THEN RETURN NEW; END IF;
+   v_kind:='vip_activation';v_category:='achievement';
+   v_title:='VIP Status Activated';v_message:='Your VIP subscription is active.';
+   v_user:=nullif(v->>'user_id','')::uuid;
  WHEN 'gig_outcomes' THEN
    IF TG_OP<>'INSERT' THEN RETURN NEW; END IF;
    v_kind:='gig_outcome';v_category:='gig_result';v_title:='Gig Results Available';
@@ -149,6 +169,14 @@ BEGIN
  IF v_kind IS NULL OR v->>'id' IS NULL THEN RETURN NEW; END IF;
  v_key:=v_kind||':'||(v->>'id');
 
+ IF v_kind='vip_activation' AND v_user IS NOT NULL THEN
+   -- VIP belongs to the account, not to the active character at event time.
+   INSERT INTO public.notifications
+     (user_id,profile_id,category,type,title,message,action_path,metadata)
+   VALUES(v_user,NULL,v_category,'achievement',v_title,v_message,NULL,
+     jsonb_build_object('event_key',v_key,'source','game_event'))
+   ON CONFLICT DO NOTHING;
+ END IF;
  IF v_band IS NOT NULL THEN
    FOR v_row IN
      SELECT DISTINCT p.user_id,p.id AS profile_id
@@ -183,6 +211,9 @@ DO $create_game_event_triggers$
 DECLARE entry record;v_trigger text;v_sql text;
 BEGIN
  FOR entry IN SELECT * FROM (VALUES
+   ('chart_entries','INSERT'),
+   ('twaater_notifications','INSERT'),
+   ('vip_subscriptions','INSERT'),
    ('gig_outcomes','INSERT'),
    ('recording_sessions','UPDATE'),
    ('player_achievements','INSERT'),
