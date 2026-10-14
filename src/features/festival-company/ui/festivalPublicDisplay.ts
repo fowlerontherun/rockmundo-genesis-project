@@ -1,4 +1,4 @@
-import type { FestivalIssuedTicket, FestivalLaunchStatus } from "../domain/festivalLaunch";
+import type { FestivalIssuedTicket, FestivalLaunchStatus, FestivalPublicSponsor } from "../domain/festivalLaunch";
 import type { FestivalPublicEventPhase } from "./festivalEventPhase";
 
 /** Stage and both endpoints are required before advertising a performance. */
@@ -7,7 +7,10 @@ export function isPublishedFestivalPerformance(entry: {
   endsAt: string | null;
   stageName: string | null;
 }): boolean {
-  return Boolean(entry.startsAt && entry.endsAt && entry.stageName?.trim());
+  if (!entry.startsAt || !entry.endsAt || !entry.stageName?.trim()) return false;
+  const start = Date.parse(entry.startsAt);
+  const end = Date.parse(entry.endsAt);
+  return Number.isFinite(start) && Number.isFinite(end) && end > start;
 }
 
 /** Never render cached eligibility messages after an authoritative query failure. */
@@ -37,6 +40,8 @@ export function festivalVisitorSalesLabel(
   phase: FestivalPublicEventPhase,
   launchStatus: FestivalLaunchStatus,
 ): string {
+  // An edition cancellation is authoritative, even if dates have passed.
+  if (launchStatus === "cancelled_before_event") return "Festival cancelled";
   if (phase === "dates_ended") return "Festival ended";
   return launchStatus === "tickets_on_sale" ? "On sale" : "Not currently on sale";
 }
@@ -60,4 +65,30 @@ export function formatFestivalEditionDate(
     if (!(error instanceof RangeError)) throw error;
     return new Intl.DateTimeFormat("en-GB", { ...options, timeZone: "UTC" }).format(date);
   }
+}
+
+/** Cancellation takes precedence over a date-derived Upcoming/Live/Ended badge. */
+export function festivalVisitorEventLabel(
+  phase: FestivalPublicEventPhase,
+  launchStatus: FestivalLaunchStatus,
+): string {
+  if (launchStatus === "cancelled_before_event") return "Festival cancelled";
+  return phase === "upcoming" ? "Upcoming Festival"
+    : phase === "in_progress" ? "Festival dates under way"
+    : "Festival dates ended";
+}
+
+/** Display-only ordering; original contract roles and identities stay untouched. */
+export function isMainFestivalSponsor(
+  sponsor: Pick<FestivalPublicSponsor, "relationshipLabel">,
+): boolean {
+  return /^(?:main|title|principal|headline)(?:\\s+(?:sponsor|partner))?$/i
+    .test(sponsor.relationshipLabel.trim());
+}
+
+export function orderFestivalPublicSponsors(
+  sponsors: readonly FestivalPublicSponsor[],
+): FestivalPublicSponsor[] {
+  return [...sponsors].sort((a, b) =>
+    Number(isMainFestivalSponsor(b)) - Number(isMainFestivalSponsor(a)));
 }
