@@ -319,7 +319,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
             </span>
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground">
-                {minutes}:{seconds.toString().padStart(2, '0')} / 10:00
+                {minutes}:{seconds.toString().padStart(2, '0')} / 15:00
               </span>
             </div>
           </AlertDescription>
@@ -339,7 +339,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
           <AlertDescription className="flex items-center justify-between">
             <span>
               {isTimedOut 
-                ? "Generation timed out after 10 minutes" 
+                ? "Generation timed out after 15 minutes" 
                 : "Audio generation failed"}
             </span>
             {showRetry && canRegenerate && (
