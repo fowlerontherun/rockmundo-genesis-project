@@ -10,7 +10,7 @@ import {
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type, x-triggered-by',
+    'authorization, x-client-info, apikey, content-type, x-triggered-by, x-cron-secret',
 }
 
 Deno.serve(async (req) => {
@@ -18,12 +18,35 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders })
   }
 
-  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req)
-  const triggeredBy = payload?.triggeredBy ?? req.headers.get('x-triggered-by') ?? undefined
-
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const supabase = createClient(supabaseUrl, supabaseKey)
+
+  // The service-role client is privileged and must NEVER execute payouts for
+  // an unauthenticated HTTP caller. The schedule reads its private secret from
+  // Vault at execution time; no hard-coded bearer key is accepted here.
+  const cronSecret = req.headers.get('x-cron-secret')
+  if (!cronSecret) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+  const { data: cronAuthorized, error: cronAuthError } = await supabase.rpc(
+    'verify_internal_cron_secret',
+    { p_secret: cronSecret },
+  )
+  if (cronAuthError || cronAuthorized !== true) {
+    console.warn('[process-sponsorship-payments] Rejected unauthorized invocation')
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
+  // Only parse or persist job metadata after the authorization gate.
+  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req)
+  const triggeredBy = payload?.triggeredBy ?? req.headers.get('x-triggered-by') ?? undefined
 
   let runId: string | null = null
   const startedAt = Date.now()
