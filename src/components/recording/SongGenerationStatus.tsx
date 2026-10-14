@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface SongGenerationStatusProps {
   songId: string;
@@ -21,6 +21,8 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [retrying, setRetrying] = useState(false);
+  const [showReplaceDialog, setShowReplaceDialog] = useState(false);
+  const [trackedAttemptId, setTrackedAttemptId] = useState<string | null>(null);
   const [showLyricsDialog, setShowLyricsDialog] = useState(false);
   const [editLyrics, setEditLyrics] = useState("");
   const [loadingLyrics, setLoadingLyrics] = useState(false);
@@ -35,10 +37,31 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
     isTimedOut,
     hasAudio, 
     canRegenerate,
-    cannotRegenerate,
   } = useSongGenerationStatus(songId);
   
   const { data: limits } = useSongGenerationLimits();
+
+  // The song remains marked "completed" when a replacement fails because its
+  // old recording is still playable. Follow the new attempt, not just the song
+  // status, so users see the actual regeneration outcome.
+  const { data: replacementAttempt } = useQuery({
+    queryKey: ["song-generation-attempt", songId, trackedAttemptId],
+    enabled: !!trackedAttemptId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("song_generation_attempts")
+        .select("id,status,error_message")
+        .eq("id", trackedAttemptId!)
+        .eq("song_id", songId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    refetchInterval: (query) =>
+      query.state.data?.status === "generating" || !query.state.data ? 4000 : false,
+  });
+  const replacementPending = replacementAttempt?.status === "generating" ||
+    (!!trackedAttemptId && !replacementAttempt);
+
 
   const handleOpenLyricsDialog = async () => {
     setLoadingLyrics(true);
@@ -60,25 +83,11 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
   const handleAdminRegenerate = async (updatedLyrics?: string) => {
     if (!profileId || !limits?.is_admin) return;
     setRetrying(true);
+    setTrackedAttemptId(null);
     setShowLyricsDialog(false);
     try {
-      // Persist edited lyrics first, but let the admin edge function own generation
-      // state. The player endpoint intentionally blocks songs that already have
-      // audio, which makes completed-song regeneration fail when the client-side
-      // audio reset is rejected or delayed by RLS.
-      if (updatedLyrics !== undefined) {
-        const { error: lyricsError } = await supabase
-          .from('songs')
-          .update({ lyrics: updatedLyrics } as any)
-          .eq('id', songId);
-
-        if (lyricsError) {
-          console.error('Admin regenerate lyrics update error:', lyricsError);
-          toast.error("Failed to save updated lyrics");
-          return;
-        }
-      }
-
+      // The admin endpoint validates and saves edited lyrics before submitting
+      // generation, ensuring they take priority over any linked project lyrics.
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast.error("Your session has expired. Please sign in again.");
@@ -93,7 +102,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ songId }),
+          body: JSON.stringify({ songId, regenerate: true, overrideLyrics: updatedLyrics }),
         }
       );
 
@@ -103,6 +112,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
         console.error('Admin regenerate error:', data);
         toast.error(data?.error || "Failed to regenerate");
       } else if (data?.success) {
+        if (data.attemptId) setTrackedAttemptId(data.attemptId);
         toast.success("Regeneration started!", {
           description: "Song is being regenerated with MiniMax Music."
         });
@@ -117,8 +127,9 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
     }
   };
 
-  const handleRetry = async () => {
+  const handleRetry = async (replaceExisting = false) => {
     if (!profileId || !canRegenerate) return;
+    setShowReplaceDialog(false);
 
     // Check limits before retrying
     if (limits && !limits.can_generate && !limits.is_admin) {
@@ -129,17 +140,26 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
     }
 
     setRetrying(true);
+    setTrackedAttemptId(null);
     try {
       // Never erase the existing master before the provider confirms a new job.
       // The authoritative worker decides whether a failed/timed-out job may restart.
       const { data, error } = await supabase.functions.invoke('generate-song-audio', {
-        body: { songId, userId: profileId }
+        body: { songId, regenerate: replaceExisting }
       });
 
       if (error) {
         console.error('Retry generation error:', error);
-        toast.error("Failed to retry generation");
+        let message = error.message || "Failed to retry generation";
+        if ("context" in error && error.context instanceof Response) {
+          try {
+            const details = await error.context.clone().json();
+            message = details.error || message;
+          } catch { /* response did not contain JSON */ }
+        }
+        toast.error(message);
       } else if (data?.success) {
+        if (data.attemptId) setTrackedAttemptId(data.attemptId);
         toast.success("Generation started!", {
           description: "Your song is being generated."
         });
@@ -157,6 +177,28 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
       setRetrying(false);
     }
   };
+
+  const replaceDialog = (
+    <Dialog open={showReplaceDialog} onOpenChange={setShowReplaceDialog}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Regenerate AI song audio?</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          A new AI generation counts towards your weekly allowance and may
+          produce a different recording. Your current song remains playable
+          until a replacement passes quality and duration validation.
+        </p>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={() => setShowReplaceDialog(false)}>Cancel</Button>
+          <Button onClick={() => void handleRetry(true)} disabled={retrying || !canRegenerate}>
+            {retrying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Regenerate song
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 
   const lyricsDialog = (
     <Dialog open={showLyricsDialog} onOpenChange={setShowLyricsDialog}>
@@ -193,19 +235,30 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
     Could not load audio generation status.
     <Button type="button" size="sm" variant="outline" className="ml-2" onClick={() => void retryStatus()}>Retry status</Button>
     {lyricsDialog}
+    {replaceDialog}
   </div>;
-  if (!status) return <>{lyricsDialog}</>;
+  if (!status) return <>{lyricsDialog}{replaceDialog}</>;
 
   // Already completed with audio - show success, admin can regenerate
-  if (isCompleted && hasAudio) {
+  if (isCompleted && hasAudio && !replacementPending) {
     return (
       <>
         {lyricsDialog}
+        {replaceDialog}
+        {replacementAttempt?.status === "failed" && (
+          <Alert variant="destructive" className="mb-2">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Regeneration failed: {replacementAttempt.error_message || "Provider could not complete a valid replacement"}.
+              Your original audio is still available.
+            </AlertDescription>
+          </Alert>
+        )}
         <Alert className="bg-primary/10 border-primary/30">
           <CheckCircle2 className="h-4 w-4 text-primary" />
           <AlertDescription className="flex items-center justify-between">
             <span className="text-primary font-medium">
-              ✨ AI audio generated successfully!
+              {replacementAttempt?.status === "failed" ? "Previous audio remains available" : "✨ AI audio generated successfully!"}
             </span>
             {limits?.is_admin ? (
               <div className="flex items-center gap-2">
@@ -232,11 +285,13 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
                   Regenerate
                 </Button>
               </div>
-            ) : (
-              <span className="text-xs text-muted-foreground">
-                Regeneration not available
-              </span>
-            )}
+            ) : showRetry ? (
+              <Button variant="outline" size="sm" onClick={() => setShowReplaceDialog(true)}
+                disabled={retrying || !limits?.can_generate}>
+                <RefreshCw className="mr-1 h-4 w-4" />
+                Regenerate
+              </Button>
+            ) : null}
           </AlertDescription>
         </Alert>
       </>
@@ -244,7 +299,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
   }
 
   // Do not reset an active provider job before the authoritative timeout.
-  if (isGenerating && !isTimedOut) {
+  if ((isGenerating && !isTimedOut) || replacementPending) {
     const startedAt = status.audio_generation_started_at 
       ? new Date(status.audio_generation_started_at) 
       : new Date();
@@ -255,6 +310,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
     return (
       <>
         {lyricsDialog}
+        {replaceDialog}
         <Alert className="bg-muted/50 border-muted">
           <Loader2 className="h-4 w-4 animate-spin" />
           <AlertDescription className="flex items-center justify-between">
@@ -263,7 +319,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
             </span>
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground">
-                {minutes}:{seconds.toString().padStart(2, '0')} / 10:00
+                {minutes}:{seconds.toString().padStart(2, '0')} / 15:00
               </span>
             </div>
           </AlertDescription>
@@ -277,19 +333,20 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
     return (
       <>
         {lyricsDialog}
+        {replaceDialog}
         <Alert variant="destructive" className="bg-destructive/10">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="flex items-center justify-between">
             <span>
               {isTimedOut 
-                ? "Generation timed out after 10 minutes" 
+                ? "Generation timed out after 15 minutes" 
                 : "Audio generation failed"}
             </span>
             {showRetry && canRegenerate && (
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={handleRetry}
+                onClick={() => void handleRetry(hasAudio)}
                 disabled={retrying || (limits && !limits.can_generate && !limits.is_admin)}
               >
                 {retrying ? (
@@ -306,5 +363,5 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
     );
   }
 
-  return <>{lyricsDialog}</>;
+  return <>{lyricsDialog}{replaceDialog}</>;
 }

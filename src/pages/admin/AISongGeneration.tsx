@@ -741,9 +741,11 @@ export default function AISongGeneration() {
                 </div>
               )}
 
-              {selectedSong?.audio_url && !generateMutation.isSuccess && (
+              {selectedSong?.audio_url && generationOutcome?.status !== "completed" && (
                 <div className="rounded-lg bg-muted/50 p-3">
-                  <p className="text-sm text-muted-foreground mb-2">Current audio:</p>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Existing recording (kept until the new version passes validation):
+                  </p>
                   <audio controls className="w-full" src={selectedSong.audio_url}>
                     Your browser does not support the audio element.
                   </audio>
@@ -758,7 +760,7 @@ export default function AISongGeneration() {
                        {generationOutcome.audioUrl && <audio controls className="w-full" src={generationOutcome.audioUrl} />}
                      </>
                    ) : generationOutcome?.status === "failed" ? (
-                     <p className="text-sm text-red-500"><XCircle className="h-4 w-4 inline mr-2" />{generationOutcome.error || "Provider failed"}</p>
+                     <p className="text-sm text-red-500"><XCircle className="h-4 w-4 inline mr-2" />{generationOutcome.error || "Provider failed"}. The existing recording has not been replaced.</p>
                    ) : (
                      <p className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Request accepted; awaiting provider completion.</p>
                    )}

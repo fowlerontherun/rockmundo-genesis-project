@@ -46,9 +46,9 @@ export function useSongGenerationStatus(songId: string | null) {
     if (query.data?.audio_generation_status === 'generating' && query.data?.audio_generation_started_at) {
       const startedAt = new Date(query.data.audio_generation_started_at).getTime();
       const now = Date.now();
-      const tenMinutes = 10 * 60 * 1000;
+      const retryTimeout = 15 * 60 * 1000;
 
-      if (now - startedAt > tenMinutes) {
+      if (now - startedAt > retryTimeout) {
         // Timeout detected on client side - will be handled by cleanup cron too
         queryClient.invalidateQueries({ queryKey: ["song-generation-status", songId] });
       }
@@ -62,7 +62,7 @@ export function useSongGenerationStatus(songId: string | null) {
 
   // Check if timed out
   const isTimedOut = isGenerating && query.data?.audio_generation_started_at && 
-    (Date.now() - new Date(query.data.audio_generation_started_at).getTime() > 10 * 60 * 1000);
+    (Date.now() - new Date(query.data.audio_generation_started_at).getTime() > 15 * 60 * 1000);
 
   return {
     ...query,
@@ -71,8 +71,9 @@ export function useSongGenerationStatus(songId: string | null) {
     isFailed: isFailed || isTimedOut,
     isTimedOut,
     hasAudio,
-    // Allow regeneration when failed/timed out regardless of existing audio
-    canRegenerate: isFailed || isTimedOut,
-    cannotRegenerate: hasAudio && isCompleted,
+    // A completed song can be explicitly regenerated while its existing audio
+    // stays playable; only an active provider job blocks a new attempt.
+    canRegenerate: isFailed || isTimedOut || (hasAudio && isCompleted),
+    cannotRegenerate: isGenerating && !isTimedOut,
   };
 }
