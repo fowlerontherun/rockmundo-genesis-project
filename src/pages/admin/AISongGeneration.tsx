@@ -141,6 +141,45 @@ export default function AISongGeneration() {
     },
   });
 
+  // A successful prediction request is not a finished audio file.
+  useEffect(() => {
+    const songId = selectedSong?.id;
+    const attemptId = generateMutation.data?.attemptId as string | undefined;
+    if (!dialogOpen || !songId || !attemptId) return;
+    let active = true;
+    let finished = false;
+    const check = async () => {
+      if (!active || finished) return;
+      try {
+        const {data: {session}} = await supabase.auth.getSession();
+        if (!session) throw new Error("Admin session expired");
+        const url = new URL(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-generate-song-audio`);
+        url.searchParams.set("songId", songId);
+        url.searchParams.set("attemptId", attemptId);
+        const response = await fetch(url.toString(), {headers:{Authorization:`Bearer ${session.access_token}`}});
+        const progress = await response.json();
+        if (!response.ok) throw new Error(progress.error || `Status API returned ${response.status}`);
+        if (!active) return;
+        setGenerationOutcome(progress);
+        if (["completed","failed","cancelled"].includes(progress.status)) {
+          finished = true;
+          clearInterval(interval);
+          setGenerationLogs(previous => [...previous, progress.status === "completed"
+            ? `SUCCESS: Audio saved. Attempt ${attemptId}`
+            : `ERROR: ${progress.error || "Provider failure"} (attempt ${attemptId}, prediction ${progress.predictionId || "unknown"})`]);
+          if (progress.status === "completed") toast.success("Generated song audio is ready");
+          else toast.error(progress.error || "AI audio generation failed");
+          queryClient.invalidateQueries({queryKey:["admin-songs-for-generation"]});
+        }
+      } catch(error) {
+        if (active) console.error("[admin-song-generation] Unable to fetch provider status:",error);
+      }
+    };
+    const interval = setInterval(() => {void check();},4000);
+    void check();
+    return () => {active=false;clearInterval(interval);};
+  },[dialogOpen, selectedSong?.id, generateMutation.data?.attemptId, queryClient]);
+
   const resetStatusMutation = useMutation({
     mutationFn: async (songId: string) => {
       const { error } = await supabase
