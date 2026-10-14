@@ -1,3 +1,4 @@
+import { selectCrowdClip } from "@/features/shared-audio/crowdAudioSelection";
 import { supabase } from "@/integrations/supabase/client";
 
 export type TotpCrowdSoundType =
@@ -70,16 +71,7 @@ export function pickTotpCrowdSound(
   intensity: number,
   seed: string,
 ): TotpCrowdSound | null {
-  const candidates = sounds
-    .filter((sound) => types.includes(sound.sound_type))
-    .sort((a, b) => Math.abs(a.intensity_level - intensity) - Math.abs(b.intensity_level - intensity) || a.id.localeCompare(b.id));
-
-  if (!candidates.length) return null;
-  const bestDistance = Math.abs(candidates[0].intensity_level - intensity);
-  const nearest = candidates.filter((sound) => Math.abs(sound.intensity_level - intensity) === bestDistance);
-  let hash = 0;
-  for (let index = 0; index < seed.length; index += 1) hash = (hash * 31 + seed.charCodeAt(index)) >>> 0;
-  return nearest[hash % nearest.length] ?? nearest[0] ?? null;
+  return selectCrowdClip(sounds, types, intensity, seed, "studio-rolling31");
 }
 
 export function resetTotpCrowdSoundCacheForTests() {
