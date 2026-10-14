@@ -171,7 +171,7 @@ export function useTotpAudienceAudio({
           `${cueId}:applause`,
         );
         const hit = clampTotpGain(mix.audienceHit);
-        playApprovedClip(clipRef, clip, hit)
+        playApprovedClip(clipRef, clip, hit, cooldownRef.current, playbackState.positionMs)
           .catch(() => playStudioCheer(ctx!, master!, hit, 1.8));
         if (!clip) playStudioCheer(ctx, master, hit, 1.8);
       }
