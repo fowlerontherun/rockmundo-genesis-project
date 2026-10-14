@@ -11,7 +11,9 @@ BEGIN;
 -- replacing the cron job, adding settlement structures or paying anyone.
 -- Never seed a treasury by minting a legacy band_balance projection.
 DO $treasury_preflight$
-DECLARE v_missing integer;
+DECLARE
+  v_missing integer;
+  v_drifted integer;
 BEGIN
   SELECT COUNT(*) INTO v_missing
   FROM public.bands b
@@ -28,6 +30,27 @@ BEGIN
   IF v_missing > 0 THEN
     RAISE EXCEPTION
       'Payroll cutover blocked: % active pay-enabled bands have no canonical active treasury', v_missing
+      USING ERRCODE = '55000';
+  END IF;
+
+  -- The earnings AFTER INSERT trigger recalculates the full projection.
+  -- Existing unjournaled direct balance adjustments would otherwise be
+  -- silently undone on the first wage expense. Do not activate cron until
+  -- each eligible band's discrepancy has been explained and repaired.
+  SELECT COUNT(*) INTO v_drifted
+  FROM public.bands b
+  LEFT JOIN (
+    SELECT band_id, SUM(amount)::bigint AS earned_balance
+    FROM public.band_earnings GROUP BY band_id
+  ) e ON e.band_id = b.id
+  WHERE b.status = 'active'::public.band_status
+    AND COALESCE(b.weekly_pay_percent, 0) > 0
+    AND COALESCE(b.band_balance,0)::bigint
+      IS DISTINCT FROM COALESCE(e.earned_balance,0);
+
+  IF v_drifted > 0 THEN
+    RAISE EXCEPTION
+      'Payroll cutover blocked: % pay-enabled band balances differ from earnings journal', v_drifted
       USING ERRCODE = '55000';
   END IF;
 END;
@@ -94,6 +117,15 @@ BEGIN
          OR COALESCE(v_band.weekly_pay_percent,0)<=0 THEN CONTINUE; END IF;
       IF EXISTS (SELECT 1 FROM public.band_weekly_payroll_settlements x
          WHERE x.band_id=v_band_id AND x.week_start=v_week) THEN CONTINUE; END IF;
+
+      -- Recheck under the band row lock: direct band_balance writes can
+      -- create drift after the installation preflight. Refuse to trigger
+      -- a full earnings reprojection for an unreconciled band.
+      IF COALESCE(v_band.band_balance,0)::bigint IS DISTINCT FROM
+        COALESCE((SELECT SUM(amount)::bigint FROM public.band_earnings
+          WHERE band_id=v_band_id),0) THEN
+        RAISE EXCEPTION 'Band earnings projection drift; payroll withheld';
+      END IF;
 
       -- Spend only actual canonical treasury funds. Legacy band_balance is a
       -- projection, not an alternate balance available for payroll.
@@ -283,7 +315,8 @@ BEGIN
   END LOOP;
 
   RETURN jsonb_build_object(
-    'status','completed','week_start',v_week,
+    'status',CASE WHEN v_failed_bands>0 THEN 'partial_failure' ELSE 'completed' END,
+    'week_start',v_week,
     'paid_bands',v_paid_bands,'failed_bands',v_failed_bands,
     'total_paid_minor',v_total_minor,'failures',v_failures
   );
