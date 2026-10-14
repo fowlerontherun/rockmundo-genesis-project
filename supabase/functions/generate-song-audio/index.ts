@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { signReplicateAttempt } from "../_shared/replicateWebhookAuth.ts"
+import { normalizeMiniMaxStylePrompt } from "../_shared/musicStylePrompt.ts"
 
 
 const corsHeaders = {
@@ -14,6 +15,7 @@ serve(async (req) => {
   }
 
   let authorizedSongId: string | null = null
+  let activeAttemptId: string | null = null
   try {
     const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY')
     if (!REPLICATE_API_KEY) {
@@ -243,6 +245,8 @@ serve(async (req) => {
     if (attemptError || !attempt?.id) {
       throw new Error(`Failed to record generation attempt: ${attemptError?.message || "missing attempt ID"}`)
     }
+    activeAttemptId = attempt.id
+    console.log(`[generate-song-audio] Attempt ID: ${activeAttemptId}`)
 
     // Update song status to generating
     const { error: statusError } = await supabase
@@ -439,11 +443,10 @@ serve(async (req) => {
     }
 
     // MiniMax uses comma-separated style description
-    let stylePrompt = styleParts.join(', ').replace(/^Style:\s*/i, '').trim()
-    if (stylePrompt.length < 10) {
-      stylePrompt = `${primaryGenre} vocal song`
-    }
-    console.log(`[generate-song-audio] Style prompt: "${stylePrompt}"`)
+    const styleDetails = normalizeMiniMaxStylePrompt(styleParts.join(', '), primaryGenre)
+    const stylePrompt = styleDetails.prompt
+    console.log(`[generate-song-audio] MiniMax style length ${styleDetails.finalLength}/300; truncated=${styleDetails.wasTruncated}; embeddedLyricsRemoved=${styleDetails.removedEmbeddedLyrics}`)
+    console.log(`[generate-song-audio] Validated style: "${stylePrompt}"`)
 
     // Format lyrics for MiniMax Music - standard section markers work fine
     const formattedLyrics = formatLyricsForMiniMax(rawLyrics, cleanedSongTitle, primaryGenre)
@@ -510,48 +513,35 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         predictionId: prediction.id,
+        attemptId: attempt.id,
         message: `Audio generation started for "${songTitle}". It will be ready in 2-5 minutes.`
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
-    console.error('[generate-song-audio] Error:', error)
-    
-    // Try to update status to failed
+    const message = error instanceof Error ? error.message : String(error)
+    const invalidPrompt = /Prompt must be between 10-300 characters|E006|MiniMax style prompt length/i.test(message)
+    const code = invalidPrompt ? 'MINIMAX_INVALID_STYLE_PROMPT' : 'AUDIO_GENERATION_ERROR'
+    console.error(`[generate-song-audio] ${code} song=${authorizedSongId || 'unauthorized'} attempt=${activeAttemptId || 'none'}: ${message}`)
     try {
-      const body = await req.clone().json().catch(() => ({}))
-      const { songId, userId } = body
-      
-      if (songId && authorizedSongId === songId) {
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-        const supabase = createClient(supabaseUrl, supabaseServiceKey)
-        
-        await supabase
-          .from('songs')
-          .update({ audio_generation_status: 'failed' })
-          .eq('id', songId)
-
-        // Update any generating attempts to failed
-        await supabase
-          .from('song_generation_attempts')
-          .update({
-            status: 'failed',
-            completed_at: new Date().toISOString(),
-            error_message: error.message
-          })
-          .eq('song_id', songId)
-          .eq('status', 'generating')
+      if (authorizedSongId) {
+        const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+        const {error: songError} = await db.from('songs').update({audio_generation_status:'failed'}).eq('id',authorizedSongId)
+        if (songError) console.error('[generate-song-audio] Failed marking song:',songError)
+        if (activeAttemptId) {
+          const {error: attemptError} = await db.from('song_generation_attempts')
+            .update({status:'failed',completed_at:new Date().toISOString(),error_message:message})
+            .eq('id',activeAttemptId).eq('status','generating')
+          if (attemptError) console.error('[generate-song-audio] Failed marking attempt:',attemptError)
+        }
       }
-    } catch (e) {
-      console.error('[generate-song-audio] Failed to update failure status:', e)
+    } catch (trackingError) {
+      console.error('[generate-song-audio] Failure tracking error:',trackingError)
     }
-
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-    )
+    return new Response(JSON.stringify({error:message,code,attemptId:activeAttemptId}),{
+      headers:{...corsHeaders,'Content-Type':'application/json'},status:invalidPrompt?422:500
+    })
   }
 })
 
