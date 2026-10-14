@@ -224,3 +224,7 @@ verify_jwt = true
 
 [functions.university-manual-attendance]
 verify_jwt = true
+
+# Retired HTTP endpoint; no anonymous JWT may invoke even the no-op handler.
+[functions.process-weekly-band-pay]
+verify_jwt = true
