@@ -43,7 +43,7 @@ import {
   Users,
   DollarSign,
   Plus,
-  Map,
+  Map as MapIcon,
   Music,
   Ticket,
   ChevronRight,
@@ -1029,7 +1029,7 @@ const TourManager = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-start gap-4 p-4 border rounded-lg">
-                <Map className="h-6 w-6 text-primary mt-1" />
+                <MapIcon className="h-6 w-6 text-primary mt-1" />
                 <div className="flex-1">
                   <h3 className="font-semibold mb-1">Plan Your Route</h3>
                   <p className="text-sm text-muted-foreground mb-3">
@@ -1234,7 +1234,7 @@ const TourManager = () => {
                     <Card>
                       <CardHeader className="pb-2">
                         <CardTitle className="text-sm flex items-center gap-2">
-                          <Map className="h-4 w-4" />
+                          <MapIcon className="h-4 w-4" />
                           Route Map
                         </CardTitle>
                       </CardHeader>
@@ -1385,7 +1385,7 @@ const TourManager = () => {
                         {regenerateTravelLegs.isPending ? (
                           <Loader2 className="h-4 w-4 animate-spin mr-2" />
                         ) : (
-                          <Map className="h-4 w-4 mr-2" />
+                          <MapIcon className="h-4 w-4 mr-2" />
                         )}
                         Regenerate Travel Schedule
                       </Button>
