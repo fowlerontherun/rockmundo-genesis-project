@@ -54,7 +54,9 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
   const directOtherProfileId = groupConversationId ? null : otherProfileId;
   const directChannelId =
     isActiveCharacter && myProfileId && directOtherProfileId ? buildChannelId(myProfileId, directOtherProfileId) : null;
-  const channelId = groupConversationId ? `group:${groupConversationId}` : directChannelId;
+  const channelId = isActiveCharacter
+    ? (groupConversationId ? `group:${groupConversationId}` : directChannelId)
+    : null;
 
   const conversationQuery = useQuery({
     queryKey: ["direct-conversation", myProfileId, directOtherProfileId, activeProfileId],
@@ -279,7 +281,7 @@ export function useUnreadDirectMessageCount(myProfileId?: string | null) {
   });
 
   useEffect(() => {
-    if (!myProfileId) return;
+    if (!myProfileId || !userId || activeProfileId !== myProfileId) return;
     const channel = supabase
       .channel(`dm-unread-${myProfileId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "direct_messages" }, (payload) => {
@@ -303,7 +305,7 @@ export function useUnreadDirectMessageCount(myProfileId?: string | null) {
       document.removeEventListener("visibilitychange", onVisible);
       void supabase.removeChannel(channel);
     };
-  }, [myProfileId, queryClient]);
+  }, [myProfileId, activeProfileId, userId, queryClient]);
 
   return query;
 }
