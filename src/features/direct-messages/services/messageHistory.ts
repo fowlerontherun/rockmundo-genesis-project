@@ -16,3 +16,31 @@ export function nextMessageCursor(messages: ReadonlyArray<TimestampedMessage>, p
   if (messages.length < pageSize) return undefined;
   return messages[0]?.created_at;
 }
+
+
+/** Direct history is sorted by (created_at DESC, id DESC).
+ * A timestamp alone loses rows when many messages share the boundary instant. */
+export interface DirectMessageCursor {
+  created_at: string;
+  id: string;
+}
+
+export function nextDirectMessageCursor(
+  messages: ReadonlyArray<TimestampedMessage>, pageSize: number,
+): DirectMessageCursor | undefined {
+  if (messages.length < pageSize || !messages[0]) return undefined;
+  return { created_at: messages[0].created_at, id: messages[0].id };
+}
+
+/** PostgREST OR grammar: combine thread membership AND the *same* keyset
+ * predicate, so neither canonical nor legacy fallback messages bypass paging. */
+export function directMessageHistoryPredicate(
+  conversationId: string,
+  channelId: string,
+  cursor?: DirectMessageCursor | null,
+): string {
+  const keyset = cursor
+    ? `,or(created_at.lt.${cursor.created_at},and(created_at.eq.${cursor.created_at},id.lt.${cursor.id}))`
+    : "";
+  return `and(conversation_id.eq.${conversationId}${keyset}),and(conversation_id.is.null,channel_id.eq.${channelId}${keyset})`;
+}
