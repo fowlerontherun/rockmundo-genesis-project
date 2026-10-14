@@ -143,7 +143,7 @@ export async function getGigExperience(gigId: string, client: unknown = supabase
   }
   const outcome = outcomeRows[0] ?? null;
   const outcomeId = outcome?.id ?? null;
-  const [venueCityRes, songPerfsRes, gigSetlistRes, legacySetlistSongsRes, performersRes, replayDescriptorRes, processingRes, consequenceRes] = await Promise.all([
+  const [venueCityRes, songPerfsRes, gigSetlistRes, legacySetlistSongsRes, performersRes, replayDescriptorRes, processingRes, canonicalProcessingRes, consequenceRes] = await Promise.all([
     gig.venues?.city_id
       ? queryClient.from("cities").select("id,name,country,region,climate_type,is_coastal,timezone").eq("id", gig.venues.city_id).maybeSingle()
       : Promise.resolve({ data: null as CityRow | null, error: null }),
@@ -161,6 +161,7 @@ export async function getGigExperience(gigId: string, client: unknown = supabase
     queryClient.from("gig_performers").select("id,profile_id,role_or_instrument,lineup_status,profiles:profiles!gig_performers_profile_id_fkey(display_name,username)").eq("gig_id", gigId).order("created_at", { ascending: true }),
     queryClient.from("gig_viewer_replays").select("viewer_version,duration_ms,generation_status").eq("gig_id", gigId).order("generated_at", { ascending: false }).limit(1).maybeSingle(),
     queryClient.from("gig_post_processing").select("status,processing_version,completed_at").eq("gig_id", gigId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    queryClient.from("gig_post_processing_canonical").select("status,processing_version,completed_at").eq("gig_id", gigId).maybeSingle(),
     queryClient.from("gig_consequence_snapshots").select("category,target_type,target_id,consequence_key,previous_value,delta_value,new_value,status,explanation,source_factors,metadata,created_at").eq("gig_id", gigId).order("created_at", { ascending: true }),
   ]);
 
@@ -220,7 +221,17 @@ export async function getGigExperience(gigId: string, client: unknown = supabase
     null as { viewer_version: number; duration_ms: number; generation_status: string } | null,
     "build a deterministic read-only presentation from canonical gig data",
   );
-  const postProcessing = optionalData(
+  // Prefer the unique canonical ledger. The old processing table can hold
+  // multiple stale "processing" attempts per gig and is not authoritative.
+  // Preserve the legacy fallback on deployments that lack the canonical table.
+  const canonicalProcessing = optionalData(
+    "post_processing",
+    "gig_post_processing_canonical",
+    canonicalProcessingRes as QueryResult<{ status: string; processing_version: string | null; completed_at: string | null }>,
+    null as { status: string; processing_version: string | null; completed_at: string | null } | null,
+    "use the legacy post-gig status if the canonical ledger is unavailable",
+  );
+  const postProcessing = canonicalProcessing ?? optionalData(
     "post_processing",
     "gig_post_processing",
     processingRes as QueryResult<{ status: string; processing_version: string | null; completed_at: string | null }>,
