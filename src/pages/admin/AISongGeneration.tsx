@@ -600,7 +600,7 @@ export default function AISongGeneration() {
                     <TableBody>
                       {recentAudioSongs?.map(song => {
                         const checked = Object.prototype.hasOwnProperty.call(audioAudit, song.id);
-                        const actual = audioAudit[song.id];
+                        const actual = audioAudit[song.id] ?? null;
                         const short = typeof actual === "number" &&
                           isGeneratedAudioShort(actual, song.duration_seconds);
                         return (
