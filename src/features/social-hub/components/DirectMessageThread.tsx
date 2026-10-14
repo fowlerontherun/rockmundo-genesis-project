@@ -44,7 +44,7 @@ export function DirectMessageThread({
   }, [messages[messages.length - 1]?.id, messages[messages.length - 1]?.read_at]);
 
   const handleSend = () => {
-    if (!draft.trim() || sendMessage.isPending) return;
+    if (!draft.trim() || sendMessage.isPending || isLoading) return;
     sendMessage.mutate(draft, { onSuccess: () => setDraft("") });
   };
 
@@ -164,7 +164,7 @@ export function DirectMessageThread({
           <span className={compact ? "sr-only" : undefined}>
             ⌘/Ctrl + Enter to send · {draft.trim().length}/2,000
           </span>
-          <Button onClick={handleSend} disabled={sendMessage.isPending || !draft.trim()} size="sm" aria-label={`Send message to ${otherDisplayName}`}>
+          <Button onClick={handleSend} disabled={sendMessage.isPending || isLoading || !draft.trim()} size="sm" aria-label={`Send message to ${otherDisplayName}`}>
             {sendMessage.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             <SendHorizontal className="mr-1 h-4 w-4" /> Send
           </Button>

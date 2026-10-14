@@ -5,6 +5,8 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { getActiveProfile } from "@/services/profileService";
 import { countUnreadConversations } from "@/features/direct-messages/services/unreadConversations";
 import { mergeMessagePages, nextMessageCursor } from "@/features/direct-messages/services/messageHistory";
+import { directMessageHistoryFilter, nextDirectMessageCursor } from "@/features/direct-messages/services/directMessageKeyset";
+import { MessageRetryIdentities } from "@/features/direct-messages/services/messageRetryIdentity";
 import { sendDirectMessage as sendDirectMessageService } from "@/features/direct-messages/services/directMessages";
 import {
   getConversationMessages,
@@ -29,7 +31,9 @@ export function buildChannelId(a: string, b: string) {
 
 export function useDirectMessages(myProfileId?: string | null, otherProfileId?: string | null) {
   const queryClient = useQueryClient();
-  const retryIdentity = useRef<{ key: string; id: string } | null>(null);
+  const retryIdentities = useRef(new MessageRetryIdentities());
+  const { profileId: activeProfileId } = useActiveProfile();
+  const isCurrentCharacter = Boolean(myProfileId && activeProfileId === myProfileId);
   const groupConversationId = otherProfileId?.startsWith("group-")
     ? otherProfileId.slice("group-".length)
     : null;
@@ -39,8 +43,8 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
   const channelId = groupConversationId ? `group:${groupConversationId}` : directChannelId;
 
   const conversationQuery = useQuery({
-    queryKey: ["direct-conversation", myProfileId, directOtherProfileId],
-    enabled: !!myProfileId && !!directOtherProfileId,
+    queryKey: ["direct-conversation", myProfileId, directOtherProfileId, activeProfileId],
+    enabled: isCurrentCharacter && !!directOtherProfileId,
     queryFn: async () => {
       if (!directOtherProfileId) return null;
       return startDirectConversation(directOtherProfileId);
@@ -50,10 +54,12 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
   const conversationId = groupConversationId ?? conversationQuery.data?.conversation_id ?? null;
 
   const messagesQuery = useInfiniteQuery({
-    queryKey: ["direct-messages", myProfileId, conversationId ?? channelId],
-    enabled: !!myProfileId && !!channelId && (!!groupConversationId || !!conversationId),
+    queryKey: ["direct-messages", myProfileId, conversationId ?? channelId, activeProfileId],
+    enabled: isCurrentCharacter && !!channelId &&
+      (!!groupConversationId || !!conversationId || conversationQuery.isError),
     initialPageParam: null as string | null,
     queryFn: async ({ pageParam }): Promise<DirectMessageRow[]> => {
+      if (!isCurrentCharacter) throw new Error("Active character changed during message loading.");
       if (groupConversationId) {
         const messages = await getConversationMessages(groupConversationId, { limit: 100, cursor: pageParam });
         return messages.map((message) => ({
@@ -73,47 +79,60 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
         .order("created_at", { ascending: false })
         .order("id", { ascending: false })
         .limit(100);
-      if (pageParam) query = query.lt("created_at", pageParam);
-      // Include older idempotent-fallback rows alongside the established thread.
-      // Those rows have the same pair channel_id but no conversation_id.
-      query = conversationId
-        ? query.or(`conversation_id.eq.${conversationId},and(conversation_id.is.null,channel_id.eq.${directChannelId})`)
-        : query.eq("channel_id", directChannelId);
+      // Scope the conversation and the full (created_at,id) cursor in a
+      // single OR predicate. A separate .or() would overwrite the scope.
+      query = query.or(directMessageHistoryFilter(conversationId, directChannelId, pageParam));
       const { data, error } = await query;
       if (error) throw error;
       return ((data ?? []) as DirectMessageRow[]).reverse();
     },
-    getNextPageParam: (lastPage) => nextMessageCursor(lastPage, 100),
+    getNextPageParam: (lastPage) => groupConversationId
+      ? nextMessageCursor(lastPage, 100)
+      : nextDirectMessageCursor(lastPage, 100),
   });
 
   useEffect(() => {
-    if (!channelId) return;
-    const filter = groupConversationId
-      ? `conversation_id=eq.${groupConversationId}`
-      : conversationId ? `conversation_id=eq.${conversationId}` : `channel_id=eq.${directChannelId}`;
-    const channel = supabase
-      .channel(`dm-${channelId}`)
+    if (!channelId || !isCurrentCharacter) return;
+    const targets = groupConversationId
+      ? [{ name: "group", filter: `conversation_id=eq.${groupConversationId}`, fallback: false }]
+      : conversationId
+        ? [
+            { name: "canonical", filter: `conversation_id=eq.${conversationId}`, fallback: false },
+            { name: "fallback", filter: `channel_id=eq.${directChannelId}`, fallback: true },
+          ]
+        : [{ name: "pair", filter: `channel_id=eq.${directChannelId}`, fallback: false }];
+
+    const invalidateThread = () => {
+      void queryClient.invalidateQueries({ queryKey: ["direct-messages", myProfileId] });
+      void queryClient.invalidateQueries({ queryKey: ["direct-conversation", myProfileId] });
+      void queryClient.invalidateQueries({ queryKey: ["dm-unread", myProfileId] });
+      void queryClient.invalidateQueries({ queryKey: ["mobile-conversations", myProfileId] });
+    };
+    const channels = targets.map((target) => supabase
+      .channel(`dm-${channelId}-${target.name}`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "direct_messages",
-          filter,
+          filter: target.filter,
         },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["direct-messages", myProfileId, conversationId ?? channelId] });
-          queryClient.invalidateQueries({ queryKey: ["direct-conversation", myProfileId, directOtherProfileId] });
-          queryClient.invalidateQueries({ queryKey: ["dm-unread", myProfileId] });
-          queryClient.invalidateQueries({ queryKey: ["mobile-conversations", myProfileId] });
+        (payload) => {
+          // The channel_id filter also matches canonical rows; their own
+          // listener handles those, so process only unlinked fallback events.
+          const row = (payload.new ?? payload.old) as Partial<DirectMessageRow> & { conversation_id?: string | null };
+          if (target.fallback && row.conversation_id != null) return;
+          invalidateThread();
         },
       )
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
-          void queryClient.invalidateQueries({ queryKey: ["direct-messages", myProfileId, conversationId ?? channelId] });
+          void queryClient.invalidateQueries({ queryKey: ["direct-messages", myProfileId] });
           void queryClient.invalidateQueries({ queryKey: ["dm-unread", myProfileId] });
         }
-      });
+      }));
+
     const timer = window.setInterval(() => {
       void queryClient.invalidateQueries({ queryKey: ["direct-messages", myProfileId, conversationId ?? channelId] });
     }, 15000);
@@ -127,37 +146,47 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
     return () => {
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisible);
-      void supabase.removeChannel(channel);
+      channels.forEach((channel) => void supabase.removeChannel(channel));
     };
-  }, [channelId, conversationId, directChannelId, directOtherProfileId, groupConversationId, queryClient, myProfileId]);
+  }, [channelId, conversationId, directChannelId, directOtherProfileId, groupConversationId, queryClient, myProfileId, isCurrentCharacter]);
 
   const sendMessage = useMutation({
     mutationFn: async (body: string) => {
-      if (!myProfileId) throw new Error("Missing active character");
-      if (conversationId) {
-        const identity = `${conversationId}:${body}`;
-        if (retryIdentity.current?.key !== identity) retryIdentity.current = { key: identity, id: crypto.randomUUID() };
-        await sendConversationMessage(conversationId, body, retryIdentity.current.id);
-      } else if (directOtherProfileId) {
-        const identity = `fallback:${myProfileId}:${directOtherProfileId}:${body}`;
-        if (retryIdentity.current?.key !== identity) {
-          retryIdentity.current = { key: identity, id: crypto.randomUUID() };
-        }
-        await sendDirectMessageService(directOtherProfileId, body, retryIdentity.current.id);
-      } else {
-        throw new Error("Missing conversation");
+      if (!isCurrentCharacter || !myProfileId) {
+        throw new Error("Active character changed. Reopen this conversation before sending.");
       }
+      if (directOtherProfileId && !conversationId && !conversationQuery.isError) {
+        // A pending canonical thread lookup is not evidence that we should
+        // persist a separate legacy fallback message.
+        throw new Error("Conversation is still opening. Try sending again shortly.");
+      }
+      const trimmed = body.trim();
+      let identity: string;
+      if (conversationId) {
+        identity = `canonical:${myProfileId}:${conversationId}:${trimmed}`;
+        const messageId = retryIdentities.current.getOrCreate(identity, () => crypto.randomUUID());
+        await sendConversationMessage(conversationId, body, messageId);
+        return { identity, messageId };
+      }
+      if (directOtherProfileId && conversationQuery.isError) {
+        // Use legacy idempotent sending only after an explicit failed lookup.
+        identity = `fallback:${myProfileId}:${directOtherProfileId}:${trimmed}`;
+        const messageId = retryIdentities.current.getOrCreate(identity, () => crypto.randomUUID());
+        await sendDirectMessageService(directOtherProfileId, body, messageId);
+        return { identity, messageId };
+      }
+      throw new Error("Conversation is not available for sending.");
     },
-    onSuccess: () => {
-      retryIdentity.current = null;
-      queryClient.invalidateQueries({ queryKey: ["direct-messages", myProfileId, conversationId ?? channelId] });
-      queryClient.invalidateQueries({ queryKey: ["mobile-conversations", myProfileId] });
+    onSuccess: ({ identity, messageId }) => {
+      retryIdentities.current.confirm(identity, messageId);
+      void queryClient.invalidateQueries({ queryKey: ["direct-messages", myProfileId] });
+      void queryClient.invalidateQueries({ queryKey: ["mobile-conversations", myProfileId] });
     },
   });
 
   const markRead = useMutation({
     mutationFn: async () => {
-      if (!myProfileId) return;
+      if (!isCurrentCharacter || !myProfileId) throw new Error("Active character changed during read.");
       if (conversationId) {
         const { error } = await (supabase as any).rpc("mark_conversation_read", { conversation_id: conversationId, read_message_id: null });
         if (error) throw error;
@@ -180,16 +209,20 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
 
   return {
     channelId,
-    messages: mergeMessagePages(messagesQuery.data?.pages ?? []),
-    hasOlderMessages: Boolean(messagesQuery.hasNextPage),
+    messages: isCurrentCharacter ? mergeMessagePages(messagesQuery.data?.pages ?? []) : [],
+    hasOlderMessages: isCurrentCharacter && Boolean(messagesQuery.hasNextPage),
     isLoadingOlderMessages: messagesQuery.isFetchingNextPage,
-    loadOlderMessages: () => messagesQuery.fetchNextPage(),
-    conversationId,
+    loadOlderMessages: () => isCurrentCharacter
+      ? messagesQuery.fetchNextPage()
+      : Promise.reject(new Error("Active character changed during message paging.")),
+    conversationId: isCurrentCharacter ? conversationId : null,
     isGroupConversation: Boolean(groupConversationId),
-    isLoading: messagesQuery.isLoading || conversationQuery.isLoading,
+    isLoading: isCurrentCharacter && (messagesQuery.isLoading || conversationQuery.isLoading),
     error: messagesQuery.error ?? conversationQuery.error,
     isError: messagesQuery.isError || conversationQuery.isError,
-    retry: () => Promise.all([messagesQuery.refetch(), conversationQuery.refetch()]),
+    retry: () => isCurrentCharacter
+      ? Promise.all([messagesQuery.refetch(), conversationQuery.refetch()])
+      : Promise.reject(new Error("Active character changed during message retrieval.")),
     sendMessage,
     markRead,
   };
