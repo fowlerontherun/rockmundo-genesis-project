@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { signReplicateAttempt } from "../_shared/replicateWebhookAuth.ts"
 import { normalizeMiniMaxStylePrompt } from "../_shared/musicStylePrompt.ts"
+import { getGenerationBlock } from "../_shared/songRegenerationPolicy.ts"
 
 
 const corsHeaders = {
@@ -82,41 +83,30 @@ serve(async (req) => {
       throw new Error('Failed to check song status')
     }
 
-    // A replacement cannot bypass the active-job guard just because old audio exists.
-    if (existingSong?.audio_generation_status === 'generating') {
-      const startedAt = existingSong.audio_generation_started_at 
-        ? new Date(existingSong.audio_generation_started_at) 
-        : new Date()
-      const elapsed = Date.now() - startedAt.getTime()
-      
-      // Only allow re-generation if stuck for > 15 minutes
-      if (elapsed < 15 * 60 * 1000) {
-        console.log(`[generate-song-audio] Generation already in progress for ${songId}, started ${Math.round(elapsed / 1000)}s ago`)
-        return new Response(
-          JSON.stringify({ 
-            error: "Generation already in progress", 
-            startedAt: existingSong.audio_generation_started_at,
-            message: "Please wait for the current generation to complete"
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 409 }
-        )
-      }
-      console.log(`[generate-song-audio] Previous generation appears stuck (${Math.round(elapsed / 60000)} mins), allowing restart`)
+    // Check active-job and confirmation policy in that order. Unlike an ordinary
+    // generation, an explicit replacement can have an existing audio URL.
+    const generationBlock = getGenerationBlock(existingSong, replaceExisting)
+    if (generationBlock === "already_generating") {
+      return new Response(
+        JSON.stringify({
+          error: "Generation already in progress. Please wait for the current attempt.",
+          code: "GENERATION_IN_PROGRESS",
+          startedAt: existingSong.audio_generation_started_at,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 409 }
+      )
     }
-
-    // Existing audio remains playable during a replacement attempt. Replacing it
-    // is only allowed after an explicit user action; automatic calls stay idempotent.
-    if (existingSong?.audio_url && !replaceExisting) {
+    if (generationBlock === "confirmation_required") {
       return new Response(
         JSON.stringify({
           error: "This song already has AI audio. Choose Regenerate to request a replacement.",
           code: "REGENERATION_CONFIRMATION_REQUIRED",
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 409 }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 409 }
       )
     }
     if (replaceExisting && existingSong?.audio_url) {
-      console.log(`[generate-song-audio] Explicit replacement requested for song ${songId}; current audio will remain until validation succeeds`)
+      console.log(`[generate-song-audio] Explicit replacement for ${songId}; old audio stays until new audio passes validation`)
     }
 
     // Check weekly generation limit
