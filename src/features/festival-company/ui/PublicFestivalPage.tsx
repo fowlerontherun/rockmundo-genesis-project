@@ -27,7 +27,7 @@ import { referralAwareDestination } from "@/features/shareable-moments/referralD
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { SponsorIdentity } from "./SponsorIdentity";
 import { canOfferFestivalCheckIn, canStartFestivalTicketPurchase } from "./publicFestivalEligibility";
-import { canDisplayFestivalCheckInMessage, festivalVisitorEventLabel, festivalVisitorSalesLabel, formatFestivalEditionDate, hasIssuedFestivalAdmission, isMainFestivalSponsor, isPublishedFestivalPerformance, orderFestivalPublicSponsors } from "./festivalPublicDisplay";
+import { canDisplayFestivalCheckInMessage, festivalVisitorEventLabel, festivalVisitorSalesLabel, formatFestivalEditionDate, formatFestivalEditionTime, hasIssuedFestivalAdmission, isMainFestivalSponsor, isPublishedFestivalPerformance, orderFestivalPublicSponsors } from "./festivalPublicDisplay";
 
 const Countdown = ({ target }: { target: string }) => {
   const [now, setNow] = useState(() => Date.now());
@@ -93,10 +93,10 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   const { festivalCompanyIdentifier } = useParams();
   const { user } = useAuth();
   const { profileId } = useActiveProfile();
-  const { data: f, isLoading, isError } = usePublicFestival(publicSlug ?? festivalCompanyIdentifier);
-  const { data: attendance = [] } = useMyFestivalAttendance(Boolean(user));
+  const { data: f, isLoading, isError, refetch: retryPublicFestival } = usePublicFestival(publicSlug ?? festivalCompanyIdentifier);
+  const { data: attendance = [], isError: attendanceError, refetch: retryAttendance } = useMyFestivalAttendance(Boolean(user));
   const { data: checkInEligibility = [], isError: eligibilityError, refetch: retryEligibility } = useMyFestivalCheckInEligibility(Boolean(user));
-  const { data: festivalMemorabilia = [] } = useMyFestivalMemorabilia(Boolean(user));
+  const { data: festivalMemorabilia = [], isError: memorabiliaError, refetch: retryMemorabilia } = useMyFestivalMemorabilia(Boolean(user));
   const { data: ticketWallet = [], isError: walletError, refetch: retryWallet } = useMyFestivalTickets(Boolean(user));
   const buy = usePurchaseFestivalTickets();
   const checkIn = useCheckInToFestival();
@@ -110,7 +110,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   useEffect(() => { setQuantities({}); setActivePurchaseProductId(null); buy.reset(); }, [festivalCompanyIdentifier, publicSlug, f?.id]);
 
   if (isLoading) return <main className="p-8" role="status">Loading Festival…</main>;
-  if (isError) return <main className="p-8" role="alert">Festival details could not be loaded. Please retry.</main>;
+  if (isError) return <main className="space-y-3 p-8" role="alert"><p>Festival details could not be loaded.</p><Button type="button" variant="outline" onClick={() => void retryPublicFestival()}>Retry festival details</Button></main>;
   if (!f) return <main className="p-8" role="alert">Festival not found.</main>;
 
   const eventPhase = getFestivalPublicEventPhase(f.startsAt, f.endsAt, now);
@@ -118,18 +118,18 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   const eventPhaseLabel = festivalVisitorEventLabel(eventPhase, f.launchStatus);
   const publishedSponsors = orderFestivalPublicSponsors(f.sponsors);
 
-  const myAttendance = attendance
+  const myAttendance = (attendanceError ? [] : attendance)
     .filter((item) => item.festivalLaunchId === f.id && item.status !== "cancelled" && item.status !== "refunded")
     .sort((a, b) => Number(b.status === "attending") - Number(a.status === "attending"))[0];
   const myCheckInEligibility = myAttendance
     ? checkInEligibility.find((item) => item.attendanceId === myAttendance.id)
     : undefined;
-  const festivalDataError = walletError || eligibilityError;
-  const canCheckIn = canOfferFestivalCheckIn(myCheckInEligibility, walletError, eligibilityError);
+  const festivalDataError = walletError || eligibilityError || attendanceError || memorabiliaError;
+  const canCheckIn = !attendanceError && canOfferFestivalCheckIn(myCheckInEligibility, walletError, eligibilityError);
   const hasPurchasingCharacter = canStartFestivalTicketPurchase(Boolean(user), profileId);
   const myFestivalTickets = ticketWallet.filter((ticket) => ticket.festivalSlug === f.slug);
-  const myWristband = festivalMemorabilia.find((item) => item.festivalLaunchId === f.id && item.attendanceId === myAttendance?.id);
-  const hasAdmissionTicket = hasIssuedFestivalAdmission(myFestivalTickets);
+  const myWristband = memorabiliaError ? undefined : festivalMemorabilia.find((item) => item.festivalLaunchId === f.id && item.attendanceId === myAttendance?.id);
+  const hasAdmissionTicket = !walletError && hasIssuedFestivalAdmission(myFestivalTickets);
 
   // The simplified timetable contains automatically generated provisional slots.
   // Only the authoritative confirmed lineup may be advertised publicly.
@@ -151,7 +151,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
 
   return (
     <main>
-      {festivalDataError && <div role="alert" className="mx-auto max-w-6xl rounded-md border border-destructive/40 p-3 text-sm">Your festival tickets or check-in status could not be verified. Do not rely on the currently displayed eligibility. <button type="button" className="underline" onClick={() => { if (walletError) void retryWallet(); if (eligibilityError) void retryEligibility(); }}>Retry verification</button></div>}
+      {festivalDataError && <div role="alert" className="mx-auto max-w-6xl rounded-md border border-destructive/40 p-3 text-sm">Your festival wallet, attendance, keepsakes or check-in status could not be verified. Unverified information is hidden. <button type="button" className="underline" onClick={() => { if (walletError) void retryWallet(); if (eligibilityError) void retryEligibility(); if (attendanceError) void retryAttendance(); if (memorabiliaError) void retryMemorabilia(); }}>Retry verification</button></div>}
       <header className="bg-gradient-to-br from-violet-950 to-fuchsia-900 p-6 text-white md:p-12">
         <div className="mx-auto flex max-w-6xl flex-col gap-6 md:flex-row md:items-center">
           <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white/10 p-3 shadow-xl backdrop-blur md:h-36 md:w-36">
@@ -163,7 +163,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
             <div className="flex flex-wrap gap-2">
               <Badge>{eventPhaseLabel}</Badge>
               <Badge variant="outline" className="border-white/50 text-white">
-                Ticket sales: {eventPhase === "dates_ended" ? "closed" : f.launchStatus.replaceAll("_", " ")}
+                Ticket sales: {festivalVisitorSalesLabel(eventPhase, f.launchStatus)}
               </Badge>
             </div>
             <h1 className="mt-4 text-4xl font-black md:text-7xl">{f.name}</h1>
@@ -362,9 +362,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                               <p>{entry.stageName ?? "Stage to be announced"}</p>
                               <p>
                                 {entry.startsAt
-                                  ? new Date(entry.startsAt).toLocaleTimeString("en-GB", {
-                                      hour: "2-digit", minute: "2-digit", timeZone: f.timezone,
-                                    })
+                                  ? formatFestivalEditionTime(entry.startsAt, f.timezone)
                                   : "Performance time to be announced"}
                               </p>
                             </CardContent>
@@ -393,9 +391,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                       <time className="text-sm">
                         {dayLabel(entry.festivalDate)}
                         <span className="block font-bold">
-                          {new Date(entry.startsAt!).toLocaleTimeString("en-GB", {
-                            hour: "2-digit", minute: "2-digit", timeZone: f.timezone,
-                          })}
+                          {formatFestivalEditionTime(entry.startsAt!, f.timezone)}
                         </span>
                       </time>
                       <div>
@@ -415,6 +411,12 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                   <CardTitle>My Festival Wallet</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {walletError ? (
+                    <div role="alert" className="space-y-2">
+                      <p>We could not verify your festival tickets. Your wallet is temporarily unavailable; this does not mean you have no tickets.</p>
+                      <Button type="button" variant="outline" onClick={() => void retryWallet()}>Retry ticket wallet</Button>
+                    </div>
+                  ) : (<>
                   {myFestivalTickets.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
                       You do not have tickets for this festival yet. A valid admission ticket automatically issues one festival wristband to your character inventory.
@@ -436,7 +438,12 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                     </div>
                   )}
 
-                  {myWristband ? (
+                  {memorabiliaError ? (
+                    <div role="alert" className="space-y-2">
+                      <p>Festival keepsakes could not be verified. The status of your wristband is unknown.</p>
+                      <Button type="button" variant="outline" onClick={() => void retryMemorabilia()}>Retry festival keepsakes</Button>
+                    </div>
+                  ) : myWristband ? (
                     <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/5 p-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge className="bg-emerald-600">Wristband issued</Badge>
@@ -455,6 +462,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                       Add-ons and upgrades do not issue extra wristbands; one wristband is linked to the character’s admission for this festival edition.
                     </p>
                   )}
+                  </>)}
                 </CardContent>
               </Card>
             )}

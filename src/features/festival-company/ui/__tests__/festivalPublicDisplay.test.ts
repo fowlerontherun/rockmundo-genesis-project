@@ -6,6 +6,7 @@ import {
   isMainFestivalSponsor,
   orderFestivalPublicSponsors,
   formatFestivalEditionDate,
+  formatFestivalEditionTime,
   hasIssuedFestivalAdmission,
   isPublishedFestivalPerformance,
 } from "../festivalPublicDisplay";
@@ -68,6 +69,14 @@ describe("public festival visitor facts", () => {
     expect(isMainFestivalSponsor(main)).toBe(true);
     expect(isMainFestivalSponsor(sponsor("Other", "Supporting sponsor"))).toBe(false);
     expect(isMainFestivalSponsor(sponsor("Other", "Title partner"))).toBe(true);
+  });
+
+  it("#4077 safely renders published stage times in the festival timezone", () => {
+    const instant = "2026-10-14T23:30:00Z";
+    expect(formatFestivalEditionTime(instant, "Europe/London")).toMatch(/^00:30$/);
+    expect(formatFestivalEditionTime(instant, "America/Los_Angeles")).toMatch(/^16:30$/);
+    expect(formatFestivalEditionTime(instant, "Invalid/Zone")).toMatch(/^23:30$/);
+    expect(formatFestivalEditionTime("invalid", "Europe/London")).toBe("Time to be announced");
   });
 
   it("#3964 renders the edition's calendar day, not the visitor's local day", () => {
