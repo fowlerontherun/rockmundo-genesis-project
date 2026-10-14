@@ -58,6 +58,12 @@ describe("recording payments and completion regression contracts", () => {
     expect(worker).not.toContain(String.raw`replace(/^Bearer\\s+/i, '')`);
   });
 
+  it("#4109 seeds recording outcomes using immutable booking data", () => {
+    const worker = source("supabase/functions/complete-recording-sessions/index.ts");
+    expect(worker).toContain('seed: `${session.id}:${session.scheduled_end}`');
+    expect(worker).not.toContain("session.updated_at || session.scheduled_end");
+  });
+
   it("#4104 validates booked participant projections rather than later band membership", () => {
     const worker = source("supabase/functions/complete-recording-sessions/index.ts");
     expect(worker).toContain(".eq('linked_recording_id', session.id)");

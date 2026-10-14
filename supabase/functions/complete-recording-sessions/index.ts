@@ -327,7 +327,8 @@ Deno.serve(async (req) => {
           effortHours: durationHours,
           bandCohesion: (bandData as any)?.cohesion ?? (bandData as any)?.band_chemistry ?? (bandData as any)?.chemistry ?? 50,
           chemistry: (bandData as any)?.chemistry ?? (bandData as any)?.band_chemistry ?? 50,
-          seed: `${session.id}:${session.updated_at || session.scheduled_end}`,
+          // Retry-safe: updated_at changes during the recording workflow.
+          seed: `${session.id}:${session.scheduled_end}`,
         })
 
         const qualityImprovement = outcome.qualityImprovement
