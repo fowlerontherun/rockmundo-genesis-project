@@ -267,16 +267,9 @@ const Rehearsals = () => {
     const room = rooms.find((r) => r.id === roomId);
     if (!room) return;
 
+    // The authoritative RPC validates payer funds against current ledger
+    // balances. The legacy band_balance projection is not a booking gate.
     const totalCost = room.hourly_rate * duration;
-    const currentBalance = selectedBand.band_balance || 0;
-    if (paymentSource === "band" && currentBalance < totalCost) {
-      toast({
-        title: t("rehearsals.insufficientFunds"),
-        description: `${t("rehearsals.rehearsalCost")} $${totalCost.toFixed(2)} ${t("rehearsals.bandBalance")} $${currentBalance.toFixed(2)}.`,
-        variant: "destructive",
-      });
-      return;
-    }
 
     const chemistryGain = Math.floor((room.quality_rating / 10) * duration);
     const xpEarned = Math.floor(50 * duration * (room.equipment_quality / 100));
@@ -284,7 +277,6 @@ const Rehearsals = () => {
 
     try {
       const rehearsalId = await bookRehearsal({
-        paymentSource,
         bandId: selectedBand.id,
         roomId,
         duration,
@@ -298,6 +290,7 @@ const Rehearsals = () => {
         roomName: room.name,
         roomLocation: room.location || "",
         bandName: selectedBand.name,
+        paymentSource,
         skipProfileIds,
       });
       setShowBookingDialog(false);
@@ -314,7 +307,8 @@ const Rehearsals = () => {
         });
         return;
       }
-      return;
+      // Preserve the dialog and selected payer when the booking RPC fails.
+      throw error;
     }
   };
 
