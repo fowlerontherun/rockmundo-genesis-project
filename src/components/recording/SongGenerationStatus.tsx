@@ -258,7 +258,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
           <CheckCircle2 className="h-4 w-4 text-primary" />
           <AlertDescription className="flex items-center justify-between">
             <span className="text-primary font-medium">
-              ✨ AI audio generated successfully!
+              {replacementAttempt?.status === "failed" ? "Previous audio remains available" : "✨ AI audio generated successfully!"}
             </span>
             {limits?.is_admin ? (
               <div className="flex items-center gap-2">
