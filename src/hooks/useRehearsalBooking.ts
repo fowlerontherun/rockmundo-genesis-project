@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { createElement, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useQueryClient } from "@tanstack/react-query";
 import { logGameActivity } from "@/hooks/useGameActivityLog";
 import {
@@ -67,6 +69,7 @@ const readableBookingError = (message: string) => {
 export function useRehearsalBooking() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { profileId: activeProfileId } = useActiveProfile();
   const [isBooking, setIsBooking] = useState(false);
 
   const bookRehearsal = async (params: BookRehearsalParams) => {
@@ -103,14 +106,25 @@ export function useRehearsalBooking() {
         throw new BandUnavailableError(blockingConflicts);
       }
 
-      const paymentSource = params.paymentSource ?? "band";
-      const idempotencyKey = [
-        "rehearsal",
+      // Build a stable key from the complete, character-scoped booking intent.
+      // Identical retries reuse it; changed songs, setlists or payers never do.
+      const paymentSource: BandPaymentSource = params.paymentSource ?? "band";
+      const actingProfileId = activeProfileId ?? params.profileId;
+      if (!actingProfileId) throw new Error("Choose an active character to book.");
+      if (params.profileId && params.profileId !== actingProfileId) {
+        throw new Error("Active character changed. Reopen the booking form.");
+      }
+      const idempotencyKey = JSON.stringify([
+        "rehearsal:v2",
+        actingProfileId,
         params.bandId,
         params.roomId,
         params.scheduledStart.toISOString(),
         params.duration,
-      ].join(":");
+        params.songId ?? null,
+        params.setlistId ?? null,
+        paymentSource,
+      ]);
 
       const { data: booking, error } = await confirmRehearsalBookingAtomic({
         bandId: params.bandId,
@@ -131,33 +145,44 @@ export function useRehearsalBooking() {
         throw new Error("The rehearsal booking authority returned no booking id.");
       }
 
-      // Booking/payment are already committed atomically. Scheduled-activity rows
-      // remain a projection, so make this follow-up retry-safe as well.
-      const hasProjection = await hasScheduledBookingProjection(
-        "linked_rehearsal_id",
-        booking.bookingId,
-      );
+      // The booking RPC committed payment already. Projection repair must
+      // never turn a paid booking into a failure or cause a second charge.
+      const repairSchedule = async () => {
+        const hasProjection = await hasScheduledBookingProjection(
+          "linked_rehearsal_id", booking.bookingId,
+        );
+        if (!hasProjection) {
+          await createBandScheduledActivities({
+            bandId: params.bandId,
+            activityType: "rehearsal",
+            scheduledStart: params.scheduledStart,
+            scheduledEnd,
+            title: `Band Rehearsal - ${params.roomName}`,
+            location: params.roomLocation,
+            linkedRehearsalId: booking.bookingId,
+            skipProfileIds: params.skipProfileIds,
+            metadata: {
+              rehearsalId: booking.bookingId,
+              roomId: params.roomId,
+              songId: params.songId,
+              setlistId: params.setlistId,
+            },
+          });
+        }
+      };
 
-      if (!hasProjection) {
-        await createBandScheduledActivities({
-          bandId: params.bandId,
-          activityType: "rehearsal",
-          scheduledStart: params.scheduledStart,
-          scheduledEnd,
-          title: `Band Rehearsal - ${params.roomName}`,
-          location: params.roomLocation,
-          linkedRehearsalId: booking.bookingId,
-          skipProfileIds: params.skipProfileIds,
-          metadata: {
-            rehearsalId: booking.bookingId,
-            roomId: params.roomId,
-            songId: params.songId,
-            setlistId: params.setlistId,
-          },
+      let projectionFailed = false;
+      try {
+        await repairSchedule();
+      } catch (projectionError) {
+        projectionFailed = true;
+        console.error("[rehearsals] Booking paid and committed; calendar projection needs repair:", {
+          bookingId: booking.bookingId, projectionError,
         });
       }
 
       if (!booking.idempotent) {
+        try {
         const {
           data: { user },
         } = await supabase.auth.getUser();
@@ -207,20 +232,40 @@ export function useRehearsalBooking() {
             actionPath: "/rehearsals",
           });
         }
+        } catch (postCommitError) {
+          console.warn("[rehearsals] Noncritical post-booking notification failed:", postCommitError);
+        }
       }
 
-      toast({
-        title:
-          excludedConflicts.length > 0
-            ? "Rehearsal booked without some members"
-            : "Rehearsal Booked!",
-        description:
-          excludedConflicts.length > 0
+      if (projectionFailed) {
+        toast({
+          title: "Rehearsal booked — schedule needs refreshing",
+          description: "Payment and booking succeeded. Use Retry schedule to restore missing calendar entries without paying again.",
+          action: createElement(ToastAction, {
+            altText: "Retry rehearsal schedule",
+            onClick: () => {
+              void repairSchedule().then(() => {
+                void queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });
+                toast({ title: "Schedule updated", description: "Your rehearsal is now on the calendar." });
+              }).catch((repairError) => {
+                console.error("[rehearsals] Calendar repair retry failed:", repairError);
+                toast({ title: "Schedule still needs attention", description: "Booking and payment are safe. Try syncing the calendar again.", variant: "destructive" });
+              });
+            },
+          }, "Retry schedule"),
+        });
+      } else {
+        toast({
+          title: excludedConflicts.length > 0
+            ? "Rehearsal booked without some members" : "Rehearsal Booked!",
+          description: excludedConflicts.length > 0
             ? `${params.duration}-hour rehearsal at ${params.roomName}. ${excludedConflicts.length} member(s) were notified they are not booked in.`
             : `${params.duration}-hour rehearsal scheduled at ${params.roomName} using ${booking.paymentSource} funds.`,
-      });
+        });
+      }
 
-      await Promise.all([
+      // Cache invalidation is not part of booking settlement.
+      void Promise.allSettled([
         queryClient.invalidateQueries({ queryKey: ["all-rehearsals"] }),
         queryClient.invalidateQueries({ queryKey: ["user-bands"] }),
         queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] }),
