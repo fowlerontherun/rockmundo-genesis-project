@@ -130,6 +130,8 @@ export const SimplifiedProjectCard = ({
   const progressBreakdown = project.songwriting_sessions?.find((session) => session.progress_breakdown)?.progress_breakdown || breakdown;
   
   const getStatusText = () => {
+    if (project.status === "converted" || project.song_id) return "Song finished";
+    if (project.status === "completed") return "Writing complete";
     if (!project.locked_until) return "Ready to start";
     const lockedUntil = new Date(project.locked_until);
     const now = new Date();
@@ -139,7 +141,11 @@ export const SimplifiedProjectCard = ({
     return `Completes in ${timeLeft}`;
   };
   
-  const isCompleted = musicPercent >= 100 && lyricsPercent >= 100;
+  const isCompleted =
+    (musicPercent >= 100 && lyricsPercent >= 100) ||
+    project.status === "completed" ||
+    project.status === "converted" ||
+    Boolean(project.song_id);
   const canReviewCompletion =
     isCompleted &&
     project.status !== "converted" &&
