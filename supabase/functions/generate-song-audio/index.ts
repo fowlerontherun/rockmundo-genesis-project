@@ -306,6 +306,10 @@ serve(async (req) => {
     const hadOriginalLyrics = !!(originalSongLyrics?.trim() || originalProjectLyrics?.trim())
     const quality = song.quality_score || project?.quality_score || 50
     const durationSeconds = song.duration_seconds || 180
+    const maxModelDurationSeconds = generationModel === 'music-2.6' ? 360 : 240
+    if (durationSeconds * 0.8 > maxModelDurationSeconds) {
+      throw new Error(`Song requires at least ${Math.ceil(durationSeconds * 0.8)} seconds, but ${generationModel} supports at most ${maxModelDurationSeconds} seconds. Select Music 2.6 or shorten the expected duration before paying for generation.`)
+    }
 
     // Extract from creative_brief if available
     const inspirationAnchor = creativeBrief?.inspirationAnchor || creativeBrief?.inspiration_anchor || null
