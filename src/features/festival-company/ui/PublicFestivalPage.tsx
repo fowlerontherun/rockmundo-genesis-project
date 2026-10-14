@@ -27,7 +27,7 @@ import { referralAwareDestination } from "@/features/shareable-moments/referralD
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { SponsorIdentity } from "./SponsorIdentity";
 import { canOfferFestivalCheckIn, canStartFestivalTicketPurchase } from "./publicFestivalEligibility";
-import { canDisplayFestivalCheckInMessage, festivalVisitorSalesLabel, formatFestivalEditionDate, hasIssuedFestivalAdmission, isPublishedFestivalPerformance } from "./festivalPublicDisplay";
+import { canDisplayFestivalCheckInMessage, festivalVisitorEventLabel, festivalVisitorSalesLabel, formatFestivalEditionDate, hasIssuedFestivalAdmission, isMainFestivalSponsor, isPublishedFestivalPerformance, orderFestivalPublicSponsors } from "./festivalPublicDisplay";
 
 const Countdown = ({ target }: { target: string }) => {
   const [now, setNow] = useState(() => Date.now());
@@ -114,11 +114,9 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   if (!f) return <main className="p-8" role="alert">Festival not found.</main>;
 
   const eventPhase = getFestivalPublicEventPhase(f.startsAt, f.endsAt, now);
-  const eventPhaseLabel = eventPhase === "upcoming"
-    ? "Upcoming Festival"
-    : eventPhase === "in_progress"
-      ? "Festival dates under way"
-      : "Festival dates ended";
+  const cancelled = f.launchStatus === "cancelled_before_event";
+  const eventPhaseLabel = festivalVisitorEventLabel(eventPhase, f.launchStatus);
+  const publishedSponsors = orderFestivalPublicSponsors(f.sponsors);
 
   const myAttendance = attendance
     .filter((item) => item.festivalLaunchId === f.id && item.status !== "cancelled" && item.status !== "refunded")
@@ -197,7 +195,9 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
               </Button>
             </div>
             <div className="mt-5">
-              {eventPhase === "upcoming" ? (
+              {cancelled ? (
+                <p role="alert" className="text-lg font-semibold">This festival edition was cancelled. Ticket sales and festival check-in are closed. Refund arrangements depend on the published ticket terms; no refund outcome is assumed.</p>
+              ) : eventPhase === "upcoming" ? (
                 <Countdown target={f.countdownTarget} />
               ) : eventPhase === "in_progress" ? (
                 <p className="text-lg font-semibold">The Festival dates are under way. Check the line-up and timetable for the published programme.</p>
@@ -307,13 +307,14 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                 <p>{f.description}</p>
                 <section aria-labelledby="festival-sponsors-title" className="mt-8 space-y-4">
                   <h2 id="festival-sponsors-title" className="text-2xl font-bold">Festival partners</h2>
-                  {f.sponsors.length === 0 ? (
+                  {publishedSponsors.length === 0 ? (
                     <p className="text-sm text-muted-foreground">Festival partners have not been announced yet.</p>
                   ) : (
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                      {f.sponsors.map((s) => (
-                        <div key={s.id} className="rounded-xl border p-4">
+                      {publishedSponsors.map((s) => (
+                        <div key={s.id} className={`rounded-xl border p-4 ${isMainFestivalSponsor(s) ? "border-primary/40 bg-primary/5 sm:col-span-2 lg:col-span-3" : ""}`}>
                           <SponsorIdentity name={s.name} logoReference={s.logoReference} />
+                          {isMainFestivalSponsor(s) && <Badge className="mt-3">Main sponsor</Badge>}
                           <h3 className="mt-3 font-semibold">{s.name}</h3>
                           <p className="text-sm text-muted-foreground">{s.relationshipLabel}</p>
                           {s.sponsoredArea && <p className="mt-1 text-sm">Supporting {s.sponsoredArea}</p>}
@@ -459,7 +460,8 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
             )}
 
             {eventPhase === "dates_ended" && <p role="status" className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">This festival has ended. Ticket purchases are closed; existing tickets remain available in your wallet.</p>}
-            {eventPhase !== "dates_ended" && f.launchStatus !== "tickets_on_sale" && <p role="status" className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">Ticket sales are not currently open. You can still review ticket types and any tickets in your wallet.</p>}
+            {cancelled && <p role="alert" className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">This edition was cancelled. No new tickets can be purchased. Any cancellation and refund details are shown only when published by the organiser.</p>}
+            {!cancelled && eventPhase !== "dates_ended" && f.launchStatus !== "tickets_on_sale" && <p role="status" className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">Ticket sales are not currently open. You can still review ticket types and any tickets in your wallet.</p>}
             {user && !profileId && (
               <p role="status" className="mb-4 rounded-lg border p-3 text-sm">Select an active character from the Character menu before purchasing tickets.</p>
             )}
@@ -592,6 +594,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                 </details>
                 <details className="py-3">
                   <summary className="cursor-pointer font-medium">What if the festival is cancelled?</summary>
+                  {cancelled && <p role="status" className="mt-2 text-sm font-medium">This festival edition has been cancelled. No refund is assumed until the organiser confirms the terms.</p>}
                   <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">
                     {f.information.refundPolicy?.trim() || "Refund terms have not been published. Check your ticket conditions and the festival's official updates before making plans."}
                   </p>
@@ -600,11 +603,14 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
             </section>
             <nav aria-label="Festival visitor guide" className="flex flex-wrap gap-2">
               {[
-                ["travel", "Getting here"], ["camping", "Camping"], ["accessibility", "Accessibility"],
-                ["foodAndDrink", "Food & drink"], ["ageGuidance", "Age guidance"],
-                ["terms", "Terms"], ["refundPolicy", "Refunds"], ["contact", "Contact"],
+                ["visitor-opening-times", "Opening times"], ["visitor-ticket-help", "Tickets"],
+                ["visitor-faq-title", "FAQs"], ["travel", "Getting here"],
+                ["camping", "Camping"], ["accessibility", "Accessibility"],
+                ["foodAndDrink", "Food & drink"], ["safety", "Safety & welfare"],
+                ["ageGuidance", "Age guidance"], ["terms", "Terms"],
+                ["refundPolicy", "Refunds"], ["contact", "Contact"], ["sponsors", "Partners"],
               ].map(([key, label]) => (
-                <a key={key} href={`#festival-info-${key}`} className="rounded-full border px-3 py-1.5 text-sm hover:bg-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">{label}</a>
+                <a key={key} href={["visitor-opening-times", "visitor-ticket-help", "visitor-faq-title"].includes(key) ? `#${key}` : `#festival-info-${key}`} className="rounded-full border px-3 py-1.5 text-sm hover:bg-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">{label}</a>
               ))}
             </nav>
             <div className="grid gap-4 md:grid-cols-2">
@@ -634,6 +640,30 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                 </section>
               ))}
             </div>
+            <section id="festival-info-safety" aria-labelledby="festival-info-safety-title" className="scroll-mt-6 rounded-xl border bg-card p-5">
+              <h3 id="festival-info-safety-title" className="text-lg font-bold">Safety & welfare</h3>
+              <p className="mt-2 text-sm text-muted-foreground" role="status">
+                On-site medical assistance, welfare facilities, security and lost-property arrangements
+                have not been confirmed for this edition. Contact the organiser for published assistance
+                details before travelling. No provision or staffing level is promised here.
+              </p>
+            </section>
+            <section id="festival-info-sponsors" aria-labelledby="festival-info-sponsors-title" className="scroll-mt-6 space-y-3 rounded-xl border bg-card p-5">
+              <h3 id="festival-info-sponsors-title" className="text-lg font-bold">Festival partners</h3>
+              {publishedSponsors.length ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {publishedSponsors.map((sponsor) => (
+                    <div key={sponsor.id} className={`rounded-lg border p-3 ${isMainFestivalSponsor(sponsor) ? "border-primary/40 bg-primary/5 sm:col-span-2" : ""}`}>
+                      <SponsorIdentity name={sponsor.name} logoReference={sponsor.logoReference} />
+                      <p className="mt-2 font-semibold">{sponsor.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {isMainFestivalSponsor(sponsor) ? "Main sponsor" : sponsor.relationshipLabel}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : <p className="text-sm text-muted-foreground">Festival partners have not been announced yet.</p>}
+            </section>
             <p className="text-sm text-muted-foreground">
               Only confirmed information is displayed. Please check back for updates before travelling.
             </p>
