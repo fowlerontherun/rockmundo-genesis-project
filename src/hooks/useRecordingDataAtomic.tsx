@@ -106,8 +106,8 @@ export const useCreateRecordingSession = () => {
           throw new Error("Choose a recording date and start time before booking.");
         }
         const scheduledStart = new Date(input.scheduled_start);
-        if (!Number.isFinite(scheduledStart.getTime()) || scheduledStart.getTime() <= Date.now()) {
-          throw new Error("Choose a valid recording start time in the future.");
+        if (!Number.isFinite(scheduledStart.getTime())) {
+          throw new Error("Choose a valid recording start time.");
         }
         const scheduledEnd = input.scheduled_end
           ? new Date(input.scheduled_end)
@@ -115,10 +115,44 @@ export const useCreateRecordingSession = () => {
               scheduledStart.getTime() + input.duration_hours * 60 * 60 * 1000,
             );
 
+        const paymentSource = input.band_id
+          ? (input.payment_source ?? "band")
+          : "personal";
+        const idempotencyKey = [
+          "recording",
+          input.band_id ?? input.profile_id ?? user.id,
+          input.studio_id,
+          input.song_id,
+          scheduledStart.toISOString(),
+          input.duration_hours,
+          input.producer_id ?? "self-produce",
+          input.recording_version ?? "standard",
+          input.recording_type ?? "professional",
+          input.orchestra_size ?? "none",
+          paymentSource,
+          input.session_type ?? "default",
+        ].join(":");
+
+        // Retry the same paid booking even when its own band diary entry now
+        // blocks the preflight slot check. The RPC still enforces idempotency.
+        const { data: priorBooking, error: priorBookingError } = await supabase
+          .from("recording_sessions")
+          .select("id")
+          .eq("funding_idempotency_key", idempotencyKey)
+          .maybeSingle();
+        if (priorBookingError) {
+          console.warn("[recording-booking] Could not verify an idempotent booking retry", priorBookingError);
+        }
+        const isConfirmedRetry = Boolean(priorBooking?.id) && !priorBookingError;
+        if (!isConfirmedRetry && scheduledStart.getTime() <= Date.now()) {
+          throw new Error("Choose a recording start time in the future.");
+        }
+
         let excludedConflicts: Awaited<
           ReturnType<typeof checkBandAvailability>
         >["conflicts"] = [];
 
+        if (!isConfirmedRetry) {
         stage = "checking band availability";
         if (input.band_id) {
           const { available, conflicts } = await checkBandAvailability(
@@ -160,23 +194,7 @@ export const useCreateRecordingSession = () => {
           }
         }
 
-        const paymentSource = input.band_id
-          ? (input.payment_source ?? "band")
-          : "personal";
-        const idempotencyKey = [
-          "recording",
-          input.band_id ?? input.profile_id ?? user.id,
-          input.studio_id,
-          input.song_id,
-          scheduledStart.toISOString(),
-          input.duration_hours,
-          input.producer_id ?? "self-produce",
-          input.recording_version ?? "standard",
-          input.recording_type ?? "professional",
-          input.orchestra_size ?? "none",
-          paymentSource,
-          input.session_type ?? "default",
-        ].join(":");
+        }
 
         stage = "confirming payment and recording session";
         const { data: booking, error } = await confirmRecordingSessionAtomic({
