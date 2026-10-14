@@ -63,7 +63,11 @@ serve(async (req) => {
       )
     }
 
-    console.log(`[generate-song-audio] Starting MiniMax Music generation for song ${songId}, user ${userId}`)
+    // Default remains on the existing model until operators explicitly opt in
+    // to the higher-cost Music 2.6 via a server-side setting.
+    const generationModel = Deno.env.get('ROCKMUNDO_AI_MUSIC_MODEL') === 'music-2.6'
+      ? 'music-2.6' : 'music-1.5'
+    console.log(`[generate-song-audio] Starting ${generationModel} for song ${songId}, user ${userId}`)
 
     // Check if song already has completed audio or is currently generating
     const { data: existingSong, error: existingSongError } = await supabase
@@ -302,6 +306,10 @@ serve(async (req) => {
     const hadOriginalLyrics = !!(originalSongLyrics?.trim() || originalProjectLyrics?.trim())
     const quality = song.quality_score || project?.quality_score || 50
     const durationSeconds = song.duration_seconds || 180
+    const maxModelDurationSeconds = generationModel === 'music-2.6' ? 360 : 240
+    if (durationSeconds * 0.8 > maxModelDurationSeconds) {
+      throw new Error(`Song requires at least ${Math.ceil(durationSeconds * 0.8)} seconds, but ${generationModel} supports at most ${maxModelDurationSeconds} seconds. Select Music 2.6 or shorten the expected duration before paying for generation.`)
+    }
 
     // Extract from creative_brief if available
     const inspirationAnchor = creativeBrief?.inspirationAnchor || creativeBrief?.inspiration_anchor || null
@@ -449,7 +457,7 @@ serve(async (req) => {
     console.log(`[generate-song-audio] Validated style: "${stylePrompt}"`)
 
     // Format lyrics for MiniMax Music - standard section markers work fine
-    const formattedLyrics = formatLyricsForMiniMax(rawLyrics, cleanedSongTitle, primaryGenre)
+    const formattedLyrics = formatLyricsForMiniMax(rawLyrics, cleanedSongTitle, primaryGenre, generationModel === 'music-2.6' ? 3500 : 600)
     console.log(`[generate-song-audio] Formatted lyrics (${formattedLyrics.length} chars)`)
 
     // Combine for full prompt reference
@@ -477,7 +485,7 @@ serve(async (req) => {
 
     // Create async prediction with webhook using MiniMax Music-1.5
     // Use the models endpoint so we can pass model name instead of version
-    const predictionResponse = await fetch('https://api.replicate.com/v1/models/minimax/music-1.5/predictions', {
+    const predictionResponse = await fetch(`https://api.replicate.com/v1/models/minimax/${generationModel}/predictions`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${REPLICATE_API_KEY}`,
@@ -487,8 +495,10 @@ serve(async (req) => {
         input: {
           prompt: stylePrompt,
           lyrics: formattedLyrics,
-          song_type: 'vocal',
           bitrate: 128000,
+          audio_format: 'mp3',
+          is_instrumental: false,
+          lyrics_optimizer: false,
         },
         webhook: webhookUrl,
         webhook_events_filter: ['completed', 'output'],
@@ -695,7 +705,7 @@ function sanitizeLyrics(lyrics: string | null): string | null {
 }
 
 // Format lyrics for MiniMax Music-1.5 - standard section markers
-function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, genre: string): string {
+function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, genre: string, maxCharacters = 600): string {
   if (!rawLyrics || rawLyrics.trim().length === 0) {
     console.log('[generate-song-audio] No lyrics provided, using placeholder')
     return generateVariedPlaceholderLyrics(songTitle, genre)
@@ -757,13 +767,13 @@ function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, gen
     normalized = normalized.replace(/^\n+/, '')
   }
 
-  // MiniMax Music requires lyrics between 10-600 characters — ALWAYS enforce this limit
-  if (normalized.length > 600) {
-    console.log(`[generate-song-audio] Lyrics too long (${normalized.length} chars), truncating to 600 char limit`)
+  // MiniMax Music requires lyrics within the selected model's character limit — ALWAYS enforce this limit
+  if (normalized.length > maxCharacters) {
+    console.log(`[generate-song-audio] Lyrics too long (${normalized.length} chars), truncating to ${maxCharacters} char limit`)
     const sections = normalized.split(/(?=\[(?:Verse|Chorus|Bridge|Pre-Chorus|Outro|Intro|Hook|Post-Chorus))/i)
     let truncated = ''
     for (const section of sections) {
-      if ((truncated + section).length <= 600) {
+      if ((truncated + section).length <= maxCharacters) {
         truncated += section
       } else {
         break
@@ -772,8 +782,8 @@ function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, gen
     if (truncated.trim().length >= 10) {
       normalized = truncated.trim()
     } else {
-      // Hard truncate at 600 chars as last resort
-      normalized = normalized.substring(0, 597) + '...'
+      // Hard truncate at maxCharacters chars as last resort
+      normalized = normalized.substring(0, maxCharacters - 3) + '...'
       const lastNewline = normalized.lastIndexOf('\n')
       if (lastNewline > 100) normalized = normalized.substring(0, lastNewline).trim()
     }
@@ -781,8 +791,8 @@ function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, gen
   }
 
   // Final safety net - absolute hard limit
-  if (normalized.length > 600) {
-    normalized = normalized.substring(0, 597).trim()
+  if (normalized.length > maxCharacters) {
+    normalized = normalized.substring(0, maxCharacters - 3).trim()
     console.log(`[generate-song-audio] Hard-capped lyrics to ${normalized.length} chars`)
   }
 

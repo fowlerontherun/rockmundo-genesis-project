@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { verifyReplicateAttempt } from "../_shared/replicateWebhookAuth.ts"
+import { getMp3DurationSeconds } from "../_shared/mp3Duration.ts"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -66,9 +67,11 @@ serve(async (req) => {
     if (prediction.status === 'failed' || prediction.status === 'canceled') {
       console.error(`[replicate-webhook] Prediction ${prediction.status}:`, prediction.error)
       
+      const { data: previousSong } = await supabase
+        .from('songs').select('audio_url').eq('id', songId).maybeSingle()
       await supabase
         .from('songs')
-        .update({ audio_generation_status: 'failed' })
+        .update({ audio_generation_status: previousSong?.audio_url ? 'completed' : 'failed' })
         .eq('id', songId)
 
       await supabase
@@ -121,7 +124,6 @@ serve(async (req) => {
     const audioResponse = await fetch(replicateAudioUrl)
     if (!audioResponse.ok) {
       console.error(`[replicate-webhook] Failed to download audio: ${audioResponse.status}`)
-      await supabase.from('songs').update({ audio_generation_status: 'failed' }).eq('id', songId)
       throw new Error(`Failed to download audio: ${audioResponse.status}`)
     }
 
@@ -130,10 +132,8 @@ serve(async (req) => {
     const audioBytes = new Uint8Array(audioBuffer)
     console.log(`[replicate-webhook] Audio downloaded: ${(audioBytes.length / 1024 / 1024).toFixed(2)} MB`)
 
-    // MiniMax Music 1.5 is requested at 128 kbps, but a successful prediction
-    // does not guarantee that its audio covers the in-game song duration.
-    // Reject clearly truncated outputs before they can become permanent.
-    // The tolerance accommodates encoder/container overhead and modest bitrate variance.
+    // Do not assume the requested bitrate is constant: output may use VBR.
+    // Measure the actual audio frames and fail closed on invalid/truncated MP3s.
     const { data: song, error: songLookupError } = await supabase
       .from('songs')
       .select('title, duration_seconds')
@@ -142,15 +142,18 @@ serve(async (req) => {
     if (songLookupError || !song) {
       throw new Error(`Cannot validate generated audio: ${songLookupError?.message || 'song not found'}`)
     }
+    const actualSeconds = getMp3DurationSeconds(audioBytes)
+    if (actualSeconds === null) {
+      throw new Error('Generated audio is not a valid complete MP3 file; keeping any existing audio')
+    }
     const targetSeconds = Number(song.duration_seconds)
-    const estimatedSeconds = audioBytes.length * 8 / 128000
     const minimumAcceptedSeconds = Number.isFinite(targetSeconds) && targetSeconds > 0
-      ? Math.max(30, targetSeconds * 0.65)
+      ? Math.max(30, targetSeconds * 0.8)
       : 30
-    console.log(`[replicate-webhook] Audio duration check: song=${songId} expected=${targetSeconds}s estimated_at_128kbps=${estimatedSeconds.toFixed(1)}s minimum=${minimumAcceptedSeconds.toFixed(1)}s bytes=${audioBytes.length}`)
-    if (estimatedSeconds < minimumAcceptedSeconds) {
+    console.log(`[replicate-webhook] Measured audio: song=${songId} expected=${targetSeconds}s actual=${actualSeconds.toFixed(2)}s minimum=${minimumAcceptedSeconds.toFixed(1)}s bytes=${audioBytes.length}`)
+    if (actualSeconds < minimumAcceptedSeconds) {
       throw new Error(
-        `Generated audio appears truncated: about ${estimatedSeconds.toFixed(1)}s at requested 128kbps vs expected ${targetSeconds}s (minimum ${minimumAcceptedSeconds.toFixed(1)}s). Not saving incomplete audio; retry generation.`
+        `Generated audio is too short: ${actualSeconds.toFixed(1)}s vs expected ${targetSeconds}s (minimum ${minimumAcceptedSeconds.toFixed(1)}s). Existing audio preserved; retry with a longer generation.`
       )
     }
 
@@ -171,7 +174,6 @@ serve(async (req) => {
 
     if (uploadError) {
       console.error('[replicate-webhook] Storage upload error:', uploadError)
-      await supabase.from('songs').update({ audio_generation_status: 'failed' }).eq('id', songId)
       throw new Error(`Failed to upload: ${uploadError.message}`)
     }
 
@@ -231,7 +233,10 @@ serve(async (req) => {
       const {data:latest} = await supabase.from('song_generation_attempts')
         .select('id').eq('song_id',verifiedSongId).order('started_at',{ascending:false}).limit(1).maybeSingle()
       if (latest?.id === verifiedAttemptId) {
-        const {error: songError} = await supabase.from('songs').update({audio_generation_status:'failed'})
+        const { data: previousSong } = await supabase.from('songs')
+          .select('audio_url').eq('id',verifiedSongId).maybeSingle()
+        const {error: songError} = await supabase.from('songs')
+          .update({audio_generation_status:previousSong?.audio_url ? 'completed' : 'failed'})
           .eq('id',verifiedSongId).eq('audio_generation_status','generating')
         if (songError) console.error('[replicate-webhook] Error updating song status:',songError)
       }

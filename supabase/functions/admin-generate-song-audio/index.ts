@@ -87,7 +87,10 @@ serve(async (req) => {
       )
     }
 
-    const { songId, customPrompt } = await req.json()
+    const { songId, customPrompt, musicModel } = await req.json()
+    // Only the authenticated admin may explicitly opt in to the higher-cost model.
+    const generationModel = musicModel === 'music-2.6' ? 'music-2.6' : 'music-1.5'
+    addLog(`Selected music model: ${generationModel}`)
 
     if (!songId) {
       return new Response(
@@ -241,6 +244,10 @@ serve(async (req) => {
     const hadOriginalLyrics = !!(originalSongLyrics?.trim() || originalProjectLyrics?.trim())
     const quality = song.quality_score || project?.quality_score || 50
     const durationSeconds = song.duration_seconds || 180
+    const maxModelDurationSeconds = generationModel === 'music-2.6' ? 360 : 240
+    if (durationSeconds * 0.8 > maxModelDurationSeconds) {
+      throw new Error(`Song requires at least ${Math.ceil(durationSeconds * 0.8)} seconds, but ${generationModel} supports at most ${maxModelDurationSeconds} seconds. Select Music 2.6 or shorten the expected duration before paying for generation.`)
+    }
 
     // Extract from creative_brief if available
     const inspirationAnchor = creativeBrief?.inspirationAnchor || creativeBrief?.inspiration_anchor || null
@@ -395,7 +402,7 @@ serve(async (req) => {
 
     // Format lyrics for MiniMax Music - standard section markers
     addLog('Formatting lyrics for MiniMax Music (standard format)...')
-    const formattedLyrics = formatLyricsForMiniMax(rawLyrics, cleanedSongTitle, primaryGenre)
+    const formattedLyrics = formatLyricsForMiniMax(rawLyrics, cleanedSongTitle, primaryGenre, generationModel === 'music-2.6' ? 3500 : 600)
     addLog(`Formatted lyrics (${formattedLyrics.length} chars)`)
 
     // Combine for full prompt reference
@@ -418,7 +425,7 @@ serve(async (req) => {
     // Create async prediction with webhook using MiniMax Music-1.5
     addLog('Creating async MiniMax Music prediction...')
     
-    const predictionResponse = await fetch('https://api.replicate.com/v1/models/minimax/music-1.5/predictions', {
+    const predictionResponse = await fetch(`https://api.replicate.com/v1/models/minimax/${generationModel}/predictions`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${REPLICATE_API_KEY}`,
@@ -428,8 +435,10 @@ serve(async (req) => {
         input: {
           prompt: stylePrompt,
           lyrics: formattedLyrics,
-          song_type: 'vocal',
           bitrate: 128000,
+          audio_format: 'mp3',
+          is_instrumental: false,
+          lyrics_optimizer: false,
         },
         webhook: webhookUrl,
         webhook_events_filter: ['completed', 'output'],
@@ -633,7 +642,7 @@ function sanitizeLyrics(lyrics: string | null): string | null {
 }
 
 // Format lyrics for MiniMax Music-1.5 - standard section markers
-function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, genre: string): string {
+function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, genre: string, maxCharacters = 600): string {
   if (!rawLyrics || rawLyrics.trim().length === 0) {
     console.log('[admin-generate-song-audio] No lyrics provided, using placeholder')
     return generatePlaceholderLyrics(songTitle, genre)
@@ -678,31 +687,31 @@ function formatLyricsForMiniMax(rawLyrics: string | null, songTitle: string, gen
     const midpoint = Math.ceil(lines.length / 2)
     const verse = lines.slice(0, midpoint).join('\n')
     const chorus = lines.slice(midpoint).join('\n') || lines.slice(0, Math.min(4, lines.length)).join('\n')
-    return `[Verse]\n${verse}\n\n[Chorus]\n${chorus}`
+    normalized = `[Verse]\n${verse}\n\n[Chorus]\n${chorus}`
   }
 
   // Clean up extra whitespace
   normalized = normalized.replace(/\n{3,}/g, '\n\n').trim()
   normalized = normalized.replace(/^\n+/, '')
 
-  // MiniMax Music requires lyrics between 10-600 characters — truncate smartly if needed
-  if (normalized.length > 600) {
-    console.log(`[admin-generate-song-audio] Lyrics too long (${normalized.length} chars), truncating to 600 char limit`)
+  // MiniMax Music requires lyrics within the selected model's character limit — truncate smartly if needed
+  if (normalized.length > maxCharacters) {
+    console.log(`[admin-generate-song-audio] Lyrics too long (${normalized.length} chars), truncating to ${maxCharacters} char limit`)
     // Try to truncate at a section boundary
     const sections = normalized.split(/(?=\[(?:Verse|Chorus|Bridge|Pre-Chorus|Outro|Intro|Hook|Post-Chorus))/i)
     let truncated = ''
     for (const section of sections) {
-      if ((truncated + section).length <= 600) {
+      if ((truncated + section).length <= maxCharacters) {
         truncated += section
       } else {
         break
       }
     }
-    // If we got at least one section, use it; otherwise hard truncate at last newline before 600
+    // If we got at least one section, use it; otherwise hard truncate at last newline before limit
     if (truncated.trim().length >= 10) {
       normalized = truncated.trim()
     } else {
-      normalized = normalized.substring(0, 600)
+      normalized = normalized.substring(0, maxCharacters)
       const lastNewline = normalized.lastIndexOf('\n')
       if (lastNewline > 100) normalized = normalized.substring(0, lastNewline).trim()
     }

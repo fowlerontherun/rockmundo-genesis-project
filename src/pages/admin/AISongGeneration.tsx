@@ -54,6 +54,7 @@ export default function AISongGeneration() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [customPrompt, setCustomPrompt] = useState("");
+  const [musicModel, setMusicModel] = useState<"music-1.5" | "music-2.6">("music-1.5");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [generationLogs, setGenerationLogs] = useState<string[]>([]);
   const [generationStartTime, setGenerationStartTime] = useState<number | null>(null);
@@ -98,7 +99,7 @@ export default function AISongGeneration() {
   });
 
   const generateMutation = useMutation({
-    mutationFn: async ({ songId, customPrompt }: { songId: string; customPrompt?: string }) => {
+    mutationFn: async ({ songId, customPrompt, musicModel }: { songId: string; customPrompt?: string; musicModel: "music-1.5" | "music-2.6" }) => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
 
@@ -114,7 +115,7 @@ export default function AISongGeneration() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ songId, customPrompt: customPrompt || undefined }),
+          body: JSON.stringify({ songId, customPrompt: customPrompt || undefined, musicModel }),
         }
       );
 
@@ -262,6 +263,7 @@ export default function AISongGeneration() {
   const openGenerateDialog = (song: Song) => {
     generateMutation.reset();
     setSelectedSong(song);
+    setMusicModel("music-1.5");
     const savedStyle = (song.audio_prompt || "").split(/\n\s*(?:Lyrics|Song Lyrics)\s*:/i)[0].replace(/^\s*Style\s*:\s*/i, "").trim();
     setCustomPrompt(savedStyle.slice(0, 300));
     setGenerationLogs([]);
@@ -285,7 +287,8 @@ export default function AISongGeneration() {
     if (!selectedSong) return;
     generateMutation.mutate({ 
       songId: selectedSong.id, 
-      customPrompt: customPrompt.trim() || undefined 
+      customPrompt: customPrompt.trim() || undefined,
+      musicModel
     });
   };
 
@@ -533,7 +536,7 @@ export default function AISongGeneration() {
             <DialogHeader>
               <DialogTitle>Generate AI Audio</DialogTitle>
               <DialogDescription>
-                Generate audio for "{selectedSong?.title}" using YuE model on Replicate
+                Generate audio for "{selectedSong?.title}" with MiniMax via Replicate
               </DialogDescription>
             </DialogHeader>
             
@@ -548,6 +551,22 @@ export default function AISongGeneration() {
                   <span className="font-medium">{selectedSong?.quality_score || "Not set"}</span>
                 </div>
               </div>
+
+              {!generateMutation.isPending && !generateMutation.isSuccess && (
+                <div className="space-y-2">
+                  <Label htmlFor="ai-music-model">Music model</Label>
+                  <select id="ai-music-model" className="w-full rounded-md border bg-background p-2 text-sm"
+                    value={musicModel} onChange={(e) => setMusicModel(e.target.value as "music-1.5" | "music-2.6")}>
+                    <option value="music-1.5">MiniMax Music 1.5 — approx. $0.03/song, max 4 minutes</option>
+                    <option value="music-2.6">MiniMax Music 2.6 — approx. $0.15/song, max 6 minutes</option>
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    Music 2.6 allows up to 3,500 characters of lyrics and longer songs.
+                    Pricing is per generation, including retries; duration is not guaranteed.
+                    Existing recordings remain available if replacement audio fails validation.
+                  </p>
+                </div>
+              )}
 
               {!generateMutation.isPending && !generateMutation.isSuccess && (
                 <div className="space-y-2">
