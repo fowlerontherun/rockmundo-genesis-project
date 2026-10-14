@@ -206,17 +206,26 @@ export const useCreateRecordingSession = () => {
           );
         }
 
-        const { data: session, error: sessionError } = await supabase
-          .from("recording_sessions")
-          .select("*")
-          .eq("id", booking.bookingId)
-          .single();
-        if (sessionError || !session) {
-          throw new Error(
-            sessionError?.message || "The recording session could not be reloaded.",
-          );
+        // The RPC has committed the payment and booking. A client-side read or
+        // projection failure must never turn the committed charge into a
+        // misleading "booking failed" response (and trigger a second payment).
+        let session: { id: string } = { id: booking.bookingId };
+        try {
+          const { data: loaded, error: loadError } = await supabase
+            .from("recording_sessions")
+            .select("*")
+            .eq("id", booking.bookingId)
+            .single();
+          if (loadError) throw loadError;
+          if (loaded) session = loaded;
+        } catch (loadError) {
+          console.warn("[recording-booking] payment committed; session detail reload failed", {
+            bookingId: booking.bookingId,
+            error: unknownErrorMessage(loadError),
+          });
         }
 
+        try {
         const [{ data: studioData }, { data: songData }] = await Promise.all([
           supabase
             .from("city_studios")
@@ -361,6 +370,13 @@ export const useCreateRecordingSession = () => {
           }
         }
 
+        } catch (projectionError) {
+          console.error("[recording-booking] confirmed payment; follow-up scheduling or notification needs repair", {
+            bookingId: booking.bookingId,
+            error: unknownErrorMessage(projectionError),
+          });
+          toast.warning("Recording booked and paid, but schedule or notifications need refreshing. Do not book or pay again.");
+        }
         return session;
       } catch (bookingError) {
         if (bookingError instanceof BandUnavailableError) throw bookingError;
