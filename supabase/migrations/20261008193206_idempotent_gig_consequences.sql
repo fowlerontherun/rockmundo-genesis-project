@@ -16,23 +16,84 @@ ALTER TABLE public.gig_consequence_snapshots ALTER COLUMN source_factors DROP DE
 ALTER TABLE public.gig_consequence_snapshots ALTER COLUMN source_factors TYPE jsonb USING to_jsonb(source_factors);
 ALTER TABLE public.gig_consequence_snapshots ALTER COLUMN source_factors SET DEFAULT '[]'::jsonb;
 
--- Keep the oldest claim (the completion RPC also selects oldest). Preserve every
--- duplicate's original data in its audit, and reparent evidence before removal.
-DO $$
-DECLARE v record;
+-- Retain EACH superseded processing row, including all original values, before
+-- canonicalizing gig claims. This table is intentionally append-only. Archive
+-- snapshot evidence is copied BEFORE any processing_id relationship is changed.
+CREATE TABLE IF NOT EXISTS public.gig_processing_claim_history (
+  original_processing_id uuid PRIMARY KEY,
+  gig_id uuid NOT NULL,
+  canonical_processing_id uuid NOT NULL,
+  original_row jsonb NOT NULL,
+  snapshot_rows jsonb NOT NULL DEFAULT '[]'::jsonb,
+  original_checksum text NOT NULL,
+  archived_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE public.gig_processing_claim_history ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.gig_processing_claim_history FROM PUBLIC,anon,authenticated;
+GRANT SELECT ON public.gig_processing_claim_history TO service_role;
+-- Never silently accept an already-modified audit record.
+CREATE OR REPLACE FUNCTION public.prevent_gig_claim_history_mutation()
+RETURNS trigger LANGUAGE plpgsql SET search_path='' AS $
 BEGIN
-  FOR v IN SELECT gig_id, (array_agg(id ORDER BY created_at,id))[1] AS keep_id
-    FROM public.gig_post_processing GROUP BY gig_id HAVING count(*) > 1
+  RAISE EXCEPTION 'Historical gig processing claims are immutable' USING ERRCODE='42501';
+END $;
+DROP TRIGGER IF EXISTS gig_claim_history_immutable ON public.gig_processing_claim_history;
+CREATE TRIGGER gig_claim_history_immutable BEFORE UPDATE OR DELETE
+  ON public.gig_processing_claim_history FOR EACH ROW
+  EXECUTE FUNCTION public.prevent_gig_claim_history_mutation();
+REVOKE ALL ON FUNCTION public.prevent_gig_claim_history_mutation() FROM PUBLIC,anon,authenticated;
+
+-- Prevent concurrent inserts while the canonical one-gig index is created.
+LOCK TABLE public.gig_post_processing IN SHARE ROW EXCLUSIVE MODE;
+DO $
+DECLARE v record; v_expected bigint; v_actual bigint;
+BEGIN
+  SELECT count(*)-count(DISTINCT gig_id) INTO v_expected FROM public.gig_post_processing;
+  IF EXISTS (SELECT 1 FROM public.gig_consequence_snapshots s
+    JOIN public.gig_post_processing p ON p.id=s.processing_id
+    WHERE s.gig_id IS DISTINCT FROM p.gig_id) THEN
+    RAISE EXCEPTION 'Gig evidence references a different gig: manual reconciliation required';
+  END IF;
+
+  FOR v IN SELECT gig_id,(array_agg(id ORDER BY created_at,id))[1] AS keep_id
+    FROM public.gig_post_processing GROUP BY gig_id HAVING count(*)>1
   LOOP
-    UPDATE public.gig_post_processing p SET audit_history = p.audit_history ||
-      jsonb_build_array(jsonb_build_object('event','duplicate_claims_reconciled','at',now(),
-        'rows',(SELECT jsonb_agg(to_jsonb(d)) FROM public.gig_post_processing d
-          WHERE d.gig_id=v.gig_id AND d.id<>v.keep_id)))
-      WHERE p.id=v.keep_id;
-    UPDATE public.gig_consequence_snapshots SET processing_id=v.keep_id WHERE gig_id=v.gig_id;
-    DELETE FROM public.gig_post_processing WHERE gig_id=v.gig_id AND id<>v.keep_id;
+    INSERT INTO public.gig_processing_claim_history(
+      original_processing_id,gig_id,canonical_processing_id,
+      original_row,snapshot_rows,original_checksum)
+    SELECT d.id,d.gig_id,v.keep_id,to_jsonb(d),
+       (SELECT COALESCE(jsonb_agg(to_jsonb(s) ORDER BY s.id),'[]'::jsonb)
+        FROM public.gig_consequence_snapshots s
+        WHERE s.processing_id=d.id OR
+          (s.processing_id IS NULL AND s.gig_id=d.gig_id)),
+       md5(to_jsonb(d)::text)
+    FROM public.gig_post_processing d
+    WHERE d.gig_id=v.gig_id AND d.id<>v.keep_id
+    ON CONFLICT (original_processing_id) DO NOTHING;
+
+    SELECT count(*) INTO v_actual FROM public.gig_processing_claim_history a
+      JOIN public.gig_post_processing d ON d.id=a.original_processing_id
+      WHERE d.gig_id=v.gig_id AND d.id<>v.keep_id
+        AND md5(to_jsonb(d)::text)=a.original_checksum;
+    IF v_actual<>(SELECT count(*) FROM public.gig_post_processing
+      WHERE gig_id=v.gig_id AND id<>v.keep_id) THEN
+      RAISE EXCEPTION 'Cannot verify archival of all processing claims for gig %',v.gig_id;
+    END IF;
+
+    UPDATE public.gig_post_processing p SET audit_history=p.audit_history ||
+      jsonb_build_array(jsonb_build_object('event','historical_claims_archived',
+        'at',now(),'archive_count',v_actual)) WHERE p.id=v.keep_id;
+    UPDATE public.gig_consequence_snapshots s SET processing_id=v.keep_id
+      WHERE s.gig_id=v.gig_id AND (s.processing_id IS NULL OR s.processing_id<>v.keep_id);
+    -- Every deleted canonical-table row has an immutable, verified full copy.
+    DELETE FROM public.gig_post_processing
+      WHERE gig_id=v.gig_id AND id<>v.keep_id;
   END LOOP;
-END $$;
+  IF (SELECT count(*) FROM public.gig_processing_claim_history)<v_expected THEN
+    RAISE EXCEPTION 'Incomplete gig claim preservation (% of %)',
+      (SELECT count(*) FROM public.gig_processing_claim_history),v_expected;
+  END IF;
+END $;
 CREATE UNIQUE INDEX IF NOT EXISTS gig_post_processing_one_gig ON public.gig_post_processing(gig_id);
 UPDATE public.gig_consequence_snapshots s SET processing_id=p.id
 FROM public.gig_post_processing p WHERE p.gig_id=s.gig_id AND s.processing_id IS NULL;
@@ -238,11 +299,6 @@ END $$;
 REVOKE ALL ON FUNCTION public.process_pending_gig_consequences(integer) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.process_pending_gig_consequences(integer) TO service_role;
 
--- Existing Supabase projects use pg_cron. Minimal test databases may omit it.
-DO $$
-BEGIN
-  IF EXISTS(SELECT 1 FROM pg_extension WHERE extname='pg_cron') THEN
-    PERFORM cron.schedule('process-gig-consequences','*/5 * * * *',
-      'SELECT public.process_pending_gig_consequences(100)');
-  END IF;
-END $$;
+-- IMPORTANT: intentionally no cron.schedule here.
+-- The service-only processor is installed but remains dormant until a separate,
+-- explicitly approved rollout verifies outcome idempotency on staging and live.
