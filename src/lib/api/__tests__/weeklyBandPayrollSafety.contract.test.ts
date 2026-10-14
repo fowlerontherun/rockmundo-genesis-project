@@ -68,6 +68,21 @@ describe("six weekly payroll safety regressions", () => {
     expect(migration).toContain("SET current_balance_minor=current_balance_minor+v_each");
   });
 
+  it("#4082 refuses payroll cron cutover and payouts for unreconciled band balances", () => {
+    expect(migration).toContain("v_drifted");
+    expect(migration).toContain("FROM public.band_earnings GROUP BY band_id");
+    expect(migration).toContain("Payroll cutover blocked: % pay-enabled band balances differ from earnings journal");
+    expect(migration).toContain("Band earnings projection drift; payroll withheld");
+    expect(migration).toContain("WHERE band_id=v_band_id");
+    expect(migration).toContain("'partial_failure'");
+    expect(migration.indexOf("IF v_drifted > 0 THEN")).toBeLessThan(
+      migration.indexOf("CREATE TABLE IF NOT EXISTS public.band_weekly_payroll_settlements"),
+    );
+    expect(migration.indexOf("IF v_drifted > 0 THEN")).toBeLessThan(
+      migration.indexOf("PERFORM cron.unschedule('process-weekly-band-pay')"),
+    );
+  });
+
   it("#4024 prevents lost updates with ordered account locks and relative balance writes", () => {
     expect(migration).toContain("ORDER BY a.id FOR UPDATE");
     expect(migration).toContain("FROM public.bands b\n      WHERE b.id=v_band_id FOR UPDATE");
