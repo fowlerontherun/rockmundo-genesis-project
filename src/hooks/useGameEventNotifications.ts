@@ -69,9 +69,14 @@ export const useGameEventNotifications = () => {
     const channels: ReturnType<typeof supabase.channel>[] = [];
     let retryHandle: ReturnType<typeof setTimeout> | null = null;
     let stopped = false;
+    let lastReconciledAt = 0;
     const reconcile = async () => {
       if (activeIdentityRef.current.userId !== user.id ||
           activeIdentityRef.current.profileId !== profileId) return;
+      // 15 channel acknowledgements should not trigger 15 concurrent catch-ups.
+      const now = Date.now();
+      if (now - lastReconciledAt < 30_000) return;
+      lastReconciledAt = now;
       const { error } = await (supabase as any).rpc("reconcile_my_game_notifications", {
         p_profile_id: profileId,
       });
