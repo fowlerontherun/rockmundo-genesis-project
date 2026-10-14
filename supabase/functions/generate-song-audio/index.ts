@@ -26,7 +26,8 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    const { songId, overrideLyrics } = await req.json()
+    const { songId, overrideLyrics, regenerate } = await req.json()
+    const replaceExisting = regenerate === true
     const authToken = req.headers.get("Authorization")?.replace(/^Bearer /i, "").trim()
     if (!authToken) return new Response(JSON.stringify({ error: "Authentication required" }), {
       status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -81,29 +82,7 @@ serve(async (req) => {
       throw new Error('Failed to check song status')
     }
 
-    // If song has audio_url, block regeneration regardless of status
-    if (existingSong?.audio_url) {
-      // Auto-recover: if status is 'failed' but audio exists, fix the status
-      if (existingSong.audio_generation_status === 'failed') {
-        await supabase.from('songs')
-          .update({ audio_generation_status: 'completed' })
-          .eq('id', songId)
-        console.log(`[generate-song-audio] Auto-recovered song ${songId}: status was 'failed' but audio_url exists`)
-        return new Response(
-          JSON.stringify({ 
-            error: "Song already has generated audio. Status has been recovered to completed.",
-            recovered: true 
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-        )
-      }
-      return new Response(
-        JSON.stringify({ error: "Song already has generated audio. Regeneration is not allowed." }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      )
-    }
-
-    // Race condition guard: prevent duplicate generation attempts
+    // A replacement cannot bypass the active-job guard just because old audio exists.
     if (existingSong?.audio_generation_status === 'generating') {
       const startedAt = existingSong.audio_generation_started_at 
         ? new Date(existingSong.audio_generation_started_at) 
@@ -123,6 +102,21 @@ serve(async (req) => {
         )
       }
       console.log(`[generate-song-audio] Previous generation appears stuck (${Math.round(elapsed / 60000)} mins), allowing restart`)
+    }
+
+    // Existing audio remains playable during a replacement attempt. Replacing it
+    // is only allowed after an explicit user action; automatic calls stay idempotent.
+    if (existingSong?.audio_url && !replaceExisting) {
+      return new Response(
+        JSON.stringify({
+          error: "This song already has AI audio. Choose Regenerate to request a replacement.",
+          code: "REGENERATION_CONFIRMATION_REQUIRED",
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 409 }
+      )
+    }
+    if (replaceExisting && existingSong?.audio_url) {
+      console.log(`[generate-song-audio] Explicit replacement requested for song ${songId}; current audio will remain until validation succeeds`)
     }
 
     // Check weekly generation limit
@@ -537,16 +531,18 @@ serve(async (req) => {
     const code = invalidPrompt ? 'MINIMAX_INVALID_STYLE_PROMPT' : 'AUDIO_GENERATION_ERROR'
     console.error(`[generate-song-audio] ${code} song=${authorizedSongId || 'unauthorized'} attempt=${activeAttemptId || 'none'}: ${message}`)
     try {
-      if (authorizedSongId) {
+      if (authorizedSongId && activeAttemptId) {
         const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
-        const {error: songError} = await db.from('songs').update({audio_generation_status:'failed'}).eq('id',authorizedSongId)
-        if (songError) console.error('[generate-song-audio] Failed marking song:',songError)
-        if (activeAttemptId) {
-          const {error: attemptError} = await db.from('song_generation_attempts')
-            .update({status:'failed',completed_at:new Date().toISOString(),error_message:message})
-            .eq('id',activeAttemptId).eq('status','generating')
-          if (attemptError) console.error('[generate-song-audio] Failed marking attempt:',attemptError)
-        }
+        const {data: previousSong} = await db.from('songs').select('audio_url')
+          .eq('id',authorizedSongId).maybeSingle()
+        const {error: songError} = await db.from('songs')
+          .update({audio_generation_status:previousSong?.audio_url ? 'completed' : 'failed'})
+          .eq('id',authorizedSongId).eq('audio_generation_status','generating')
+        if (songError) console.error('[generate-song-audio] Failed restoring song status:',songError)
+        const {error: attemptError} = await db.from('song_generation_attempts')
+          .update({status:'failed',completed_at:new Date().toISOString(),error_message:message})
+          .eq('id',activeAttemptId).eq('status','generating')
+        if (attemptError) console.error('[generate-song-audio] Failed marking attempt:',attemptError)
       }
     } catch (trackingError) {
       console.error('[generate-song-audio] Failure tracking error:',trackingError)
