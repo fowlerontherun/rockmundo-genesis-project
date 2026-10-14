@@ -26,7 +26,7 @@ describe("game event notification delivery and recipient security", () => {
     for (const key of [
       "achievement:", "gig_outcome:", "recording_completed:", "band_invite:",
       "rehearsal_completed:", "songwriting_completed:", "vip_activation:",
-      "twaater_notification:", "audio_generated:", "audio_failed:", "chart_entry:",
+      "twaater_notification:", "audio_generated:", "audio_failed:",
     ]) {
       expect(hook).toContain(key);
     }
@@ -47,6 +47,8 @@ describe("game event notification delivery and recipient security", () => {
 
   it("#3986 stores game events in DB triggers without requiring a live browser tab", () => {
     expect(migration).toContain("CREATE OR REPLACE FUNCTION public.persist_game_event_on_change()");
+    expect(migration).toContain("CREATE OR REPLACE FUNCTION public.persist_chart_notification_from_event(");
+    expect(hook).toContain("rpc('create_chart_entry_notification'");
     for (const table of [
       "gig_outcomes", "recording_sessions", "player_achievements",
       "band_invitations", "band_rehearsals", "releases", "songs",
