@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { pushNotification, type NotifyCategory } from "@/lib/notify";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
@@ -10,6 +10,7 @@ export const useGameEventNotifications = () => {
   const { user } = useAuth();
   const { profileId } = useActiveProfile();
   const navigate = useNavigate();
+  const [subscriptionGeneration, setSubscriptionGeneration] = useState(0);
   const userBandIdsRef = useRef<{ profileId: string | null; ids: string[] }>({ profileId: null, ids: [] });
   const activeIdentityRef = useRef<{ userId: string | null; profileId: string | null }>({ userId: null, profileId: null });
   const chartInFlightRef = useRef(new Set<string>());
@@ -23,7 +24,7 @@ export const useGameEventNotifications = () => {
   const isCurrentBand = (bandId?: string | null) =>
     Boolean(bandId && userBandIdsRef.current.profileId === profileId && userBandIdsRef.current.ids.includes(bandId));
 
-  const notify = (args: { category: string; type: string; title: string; message?: string; actionPath?: string; metadata?: Record<string, unknown> }) => {
+  const notify = (args: { category: string; type: string; title: string; message?: string; actionPath?: string; metadata?: Record<string, unknown>; eventKey?: string }) => {
     if (!user?.id || !profileId ||
       activeIdentityRef.current.userId !== user.id ||
       activeIdentityRef.current.profileId !== profileId) return Promise.resolve(null);
@@ -36,6 +37,7 @@ export const useGameEventNotifications = () => {
       message: args.message,
       actionPath: args.actionPath,
       metadata: args.metadata,
+      eventKey: args.eventKey,
     });
   };
 
@@ -65,6 +67,38 @@ export const useGameEventNotifications = () => {
     if (!user?.id || !profileId) return;
 
     const channels: ReturnType<typeof supabase.channel>[] = [];
+    let retryHandle: ReturnType<typeof setTimeout> | null = null;
+    let stopped = false;
+    const reconcile = async () => {
+      if (activeIdentityRef.current.userId !== user.id ||
+          activeIdentityRef.current.profileId !== profileId) return;
+      const { error } = await (supabase as any).rpc("reconcile_my_game_notifications", {
+        p_profile_id: profileId,
+      });
+      if (error) console.error("[notifications] server reconciliation failed", error);
+    };
+    const retrySubscription = (status: string) => {
+      if (status === "SUBSCRIBED") { void reconcile(); return; }
+      if (!["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status) || stopped || retryHandle) return;
+      console.warn("[notifications] Realtime channel failed:", status);
+      retryHandle = setTimeout(() => {
+        retryHandle = null;
+        if (!stopped) setSubscriptionGeneration((current) => current + 1);
+      }, 15_000);
+    };
+    const resume = () => {
+      if (document.visibilityState === "visible") {
+        void reconcile();
+        setSubscriptionGeneration((current) => current + 1);
+      }
+    };
+    const reconnect = () => {
+      void reconcile();
+      setSubscriptionGeneration((current) => current + 1);
+    };
+    document.addEventListener("visibilitychange", resume);
+    window.addEventListener("online", reconnect);
+    void reconcile();
 
     // === ACHIEVEMENTS ===
     const achievementsChannel = supabase
@@ -89,6 +123,7 @@ export const useGameEventNotifications = () => {
 
           if (achievement) {
             notify({
+              eventKey: `achievement:${payload.new.id}`,
               category: 'achievement',
               type: 'achievement',
               title: `Achievement Unlocked!`,
@@ -97,7 +132,7 @@ export const useGameEventNotifications = () => {
           }
         }
       )
-      .subscribe();
+      .subscribe(retrySubscription);
     channels.push(achievementsChannel);
 
     // === RELEASE MANUFACTURING COMPLETION ===
@@ -121,6 +156,7 @@ export const useGameEventNotifications = () => {
           
           if (isOwner && oldStatus === 'manufacturing' && newStatus === 'released') {
             notify({
+              eventKey: `release_manufactured:${payload.new.id}`,
               category: 'release',
               type: 'success',
               title: 'Manufacturing Complete!',
@@ -130,7 +166,7 @@ export const useGameEventNotifications = () => {
           }
         }
       )
-      .subscribe();
+      .subscribe(retrySubscription);
     channels.push(manufacturingChannel);
 
     // === RECORDING SESSION COMPLETION ===
@@ -159,6 +195,7 @@ export const useGameEventNotifications = () => {
             
             if (isOwner && song) {
               notify({
+              eventKey: `recording_completed:${payload.new.id}`,
               category: 'recording',
               type: 'success',
               title: 'Recording Complete!',
@@ -169,7 +206,7 @@ export const useGameEventNotifications = () => {
           }
         }
       )
-      .subscribe();
+      .subscribe(retrySubscription);
     channels.push(recordingChannel);
 
     // === GIG OUTCOMES ===
@@ -198,6 +235,7 @@ export const useGameEventNotifications = () => {
             
             if (rating >= 90) {
               notify({
+              eventKey: `gig_outcome:${outcome.id}`,
               category: 'gig_result',
               type: 'success',
               title: '🔥 Legendary Performance!',
@@ -206,6 +244,7 @@ export const useGameEventNotifications = () => {
             });
             } else if (rating >= 70) {
               notify({
+              eventKey: `gig_outcome:${outcome.id}`,
               category: 'gig_result',
               type: 'success',
               title: 'Great Show!',
@@ -214,6 +253,7 @@ export const useGameEventNotifications = () => {
             });
             } else if (rating < 50) {
               notify({
+              eventKey: `gig_outcome:${outcome.id}`,
               category: 'gig_result',
               type: 'warning',
               title: 'Tough Crowd',
@@ -222,6 +262,7 @@ export const useGameEventNotifications = () => {
             });
             } else {
               notify({
+              eventKey: `gig_outcome:${outcome.id}`,
               category: 'gig_result',
               type: 'info',
               title: 'Gig Complete',
@@ -231,7 +272,7 @@ export const useGameEventNotifications = () => {
           }
         }
       )
-      .subscribe();
+      .subscribe(retrySubscription);
     channels.push(gigOutcomeChannel);
 
     // === GIG OFFERS ===
@@ -255,6 +296,7 @@ export const useGameEventNotifications = () => {
               .single();
             
             notify({
+              eventKey: `gig_offer:${offer.id}`,
               category: 'gig_result',
               type: 'offer',
               title: 'New Gig Offer!',
@@ -264,7 +306,7 @@ export const useGameEventNotifications = () => {
           }
         }
       )
-      .subscribe();
+      .subscribe(retrySubscription);
     channels.push(gigOffersChannel);
 
     // === SPONSOR OFFERS ===
@@ -282,6 +324,7 @@ export const useGameEventNotifications = () => {
           
           if (isCurrentBand(sponsorship.band_id) && sponsorship.status === 'pending') {
             notify({
+              eventKey: `sponsor_offer:${sponsorship.id}`,
               category: 'sponsorship',
               type: 'offer',
               title: 'Sponsorship Offer!',
@@ -291,7 +334,7 @@ export const useGameEventNotifications = () => {
           }
         }
       )
-      .subscribe();
+      .subscribe(retrySubscription);
     channels.push(sponsorChannel);
 
     // === FESTIVAL OFFERS (via game_events participants) ===
@@ -315,6 +358,7 @@ export const useGameEventNotifications = () => {
               .single();
             
             notify({
+              eventKey: `festival_invite:${participant.id}`,
               category: 'offer',
               type: 'offer',
               title: 'Festival Invitation!',
@@ -324,7 +368,7 @@ export const useGameEventNotifications = () => {
           }
         }
       )
-      .subscribe();
+      .subscribe(retrySubscription);
     channels.push(festivalChannel);
 
     // === RECORD LABEL CONTRACT OFFERS ===
@@ -348,6 +392,7 @@ export const useGameEventNotifications = () => {
               .single();
             
             notify({
+              eventKey: `record_deal:${contract.id}`,
               category: 'record_label',
               type: 'offer',
               title: 'Record Deal Offer!',
@@ -357,7 +402,7 @@ export const useGameEventNotifications = () => {
           }
         }
       )
-      .subscribe();
+      .subscribe(retrySubscription);
     channels.push(labelChannel);
 
     // === BAND INVITATIONS ===
@@ -381,6 +426,7 @@ export const useGameEventNotifications = () => {
             .single();
           
           notify({
+              eventKey: `band_invite:${invite.id}`,
               category: 'social',
               type: 'band_invite',
               title: 'Band Invitation!',
@@ -390,7 +436,7 @@ export const useGameEventNotifications = () => {
             });
         }
       )
-      .subscribe();
+      .subscribe(retrySubscription);
     channels.push(bandInviteChannel);
 
     // === REHEARSAL COMPLETION ===
@@ -410,6 +456,7 @@ export const useGameEventNotifications = () => {
           if (isCurrentBand(payload.new.band_id) && 
               oldStatus !== 'completed' && newStatus === 'completed') {
             notify({
+              eventKey: `rehearsal_completed:${payload.new.id}`,
               category: 'gig_result',
               type: 'success',
               title: 'Rehearsal Complete!',
@@ -418,7 +465,7 @@ export const useGameEventNotifications = () => {
           }
         }
       )
-      .subscribe();
+      .subscribe(retrySubscription);
     channels.push(rehearsalChannel);
 
     // === SONGWRITING PROJECT COMPLETION ===
@@ -438,6 +485,7 @@ export const useGameEventNotifications = () => {
           
           if (oldStatus !== 'completed' && newStatus === 'completed') {
             notify({
+              eventKey: `songwriting_completed:${payload.new.id}`,
               category: 'music',
               type: 'success',
               title: 'Song Complete!',
@@ -447,7 +495,7 @@ export const useGameEventNotifications = () => {
           }
         }
       )
-      .subscribe();
+      .subscribe(retrySubscription);
     channels.push(songwritingChannel);
 
     // === CHART ENTRY (Song charts for the first time or improves position) ===
@@ -478,7 +526,7 @@ export const useGameEventNotifications = () => {
           }
         },
       )
-      .subscribe();
+      .subscribe(retrySubscription);
     channels.push(chartChannel);
 
     // === VIP SUBSCRIPTION CHANGES ===
@@ -497,6 +545,7 @@ export const useGameEventNotifications = () => {
           
           if (sub.status === 'active') {
             notify({
+              eventKey: `vip_activation:${sub.id}`,
               category: 'achievement',
               type: 'achievement',
               title: '⭐ VIP Status Activated!',
@@ -504,7 +553,7 @@ export const useGameEventNotifications = () => {
           }
         }
       )
-      .subscribe();
+      .subscribe(retrySubscription);
     channels.push(vipChannel);
 
     // === TWAATER NOTIFICATIONS (mentions, follows, etc.) ===
@@ -545,6 +594,7 @@ export const useGameEventNotifications = () => {
             const msg = typeMessages[notif.type] || { title: 'Twaater', message: 'New activity' };
             
             notify({
+              eventKey: `twaater_notification:${notif.id}`,
               category: 'social',
               type: 'info',
               title: msg.title,
@@ -554,7 +604,7 @@ export const useGameEventNotifications = () => {
           }
         }
       )
-      .subscribe();
+      .subscribe(retrySubscription);
     channels.push(twaaterChannel);
 
     // === AI SONG AUDIO GENERATION COMPLETE ===
@@ -577,6 +627,7 @@ export const useGameEventNotifications = () => {
           
           if (isOwner && oldStatus === 'generating' && newStatus === 'completed') {
             notify({
+              eventKey: `audio_generated:${payload.new.id}`,
               category: 'record_label',
               type: 'success',
               title: '🎵 Audio Generated!',
@@ -585,6 +636,7 @@ export const useGameEventNotifications = () => {
             });
           } else if (isOwner && oldStatus === 'generating' && newStatus === 'failed') {
             notify({
+              eventKey: `audio_failed:${payload.new.id}`,
               category: 'recording',
               type: 'warning',
               title: 'Audio Generation Failed',
@@ -593,11 +645,15 @@ export const useGameEventNotifications = () => {
           }
         }
       )
-      .subscribe();
+      .subscribe(retrySubscription);
     channels.push(audioGenChannel);
 
     return () => {
-      channels.forEach(channel => supabase.removeChannel(channel));
+      stopped = true;
+      if (retryHandle) clearTimeout(retryHandle);
+      document.removeEventListener("visibilitychange", resume);
+      window.removeEventListener("online", reconnect);
+      channels.forEach(channel => void supabase.removeChannel(channel));
     };
-  }, [user?.id, profileId, navigate]);
+  }, [user?.id, profileId, navigate, subscriptionGeneration]);
 };
