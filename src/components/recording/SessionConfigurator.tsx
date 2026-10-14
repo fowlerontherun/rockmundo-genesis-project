@@ -22,12 +22,8 @@ import {
   isBandUnavailableError,
   type ConflictInfo,
 } from "@/utils/bandActivityScheduling";
-import {
-  useCreateRecordingSession,
-  calculateRecordingQuality,
-  ORCHESTRA_OPTIONS,
-  type RecordingProducer,
-} from "@/hooks/useRecordingData";
+import { calculateRecordingQuality, ORCHESTRA_OPTIONS, type RecordingProducer } from "@/hooks/useRecordingData";
+import { useCreateRecordingSession } from "@/hooks/useRecordingDataAtomic";
 import { calculateIndependentPenalty } from "./RecordingTypeSelector";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
