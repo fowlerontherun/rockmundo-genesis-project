@@ -92,3 +92,18 @@ export function orderFestivalPublicSponsors(
   return [...sponsors].sort((a, b) =>
     Number(isMainFestivalSponsor(b)) - Number(isMainFestivalSponsor(a)));
 }
+
+/**
+ * Show published performance times in festival-local time, without allowing an
+ * invalid imported IANA timezone (or timestamp) to crash a public page.
+ */
+export function formatFestivalEditionTime(
+  timestamp: string,
+  timeZone: string,
+): string {
+  return formatFestivalEditionDate(timestamp, timeZone, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).replace("Date to be confirmed", "Time to be announced");
+}
