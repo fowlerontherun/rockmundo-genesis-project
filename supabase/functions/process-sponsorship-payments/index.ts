@@ -6,11 +6,12 @@ import {
   safeJson,
   startJobRun,
 } from '../_shared/job-logger.ts'
+import { authorizeInternalCronRequest } from '../_shared/internal-cron-auth.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type, x-triggered-by',
+    'authorization, x-client-info, apikey, content-type, x-triggered-by, x-cron-secret',
 }
 
 Deno.serve(async (req) => {
@@ -18,12 +19,38 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders })
   }
 
+  if (req.method !== 'POST') {
+    return new Response(
+      JSON.stringify({ error: 'Method not allowed' }),
+      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Allow': 'POST, OPTIONS' } },
+    )
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('[process-sponsorship-payments] Internal service configuration missing')
+    return new Response(JSON.stringify({ error: 'Service unavailable' }), {
+      status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+  const supabase = createClient(supabaseUrl, supabaseKey)
+
+  // Authenticate before reading the body, writing job logs or paying anything.
+  // Never accept a bearer JWT/anon key as a substitute for the Vault secret.
+  const authResult = await authorizeInternalCronRequest(req, (secret) =>
+    supabase.rpc('verify_internal_cron_secret', { p_secret: secret }),
+  )
+  if (authResult !== 'authorized') {
+    console.warn('[process-sponsorship-payments] Rejected scheduled invocation', authResult)
+    return new Response(
+      JSON.stringify({ error: authResult === 'unavailable' ? 'Service unavailable' : 'Unauthorized' }),
+      { status: authResult === 'unavailable' ? 503 : 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    )
+  }
+
   const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req)
   const triggeredBy = payload?.triggeredBy ?? req.headers.get('x-triggered-by') ?? undefined
-
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  const supabase = createClient(supabaseUrl, supabaseKey)
 
   let runId: string | null = null
   const startedAt = Date.now()
