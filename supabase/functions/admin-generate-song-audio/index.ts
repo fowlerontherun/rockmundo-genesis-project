@@ -87,7 +87,7 @@ serve(async (req) => {
       )
     }
 
-    const { songId, customPrompt, musicModel } = await req.json()
+    const { songId, customPrompt, musicModel, overrideLyrics } = await req.json()
     // Only the authenticated admin may explicitly opt in to the higher-cost model.
     const generationModel = musicModel === 'music-2.6' ? 'music-2.6' : 'music-1.5'
     addLog(`Selected music model: ${generationModel}`)
@@ -225,9 +225,27 @@ serve(async (req) => {
     const songLyricsAreAI = originalSongLyrics?.trim()?.startsWith('[AI Generated]') || originalSongLyrics?.trim()?.includes('[AI Generated]')
     const projectLyricsAreAI = originalProjectLyrics?.trim()?.startsWith('[AI Generated]') || originalProjectLyrics?.trim()?.includes('[AI Generated]')
     
-    // Priority: non-AI project lyrics > non-AI song lyrics > AI song lyrics > AI project lyrics > null
+    // An explicit admin edit must win over songwriting-project lyrics.
+    // Saving directly from the browser can fail RLS and the project-lyrics
+    // preference would otherwise silently ignore the edited song lyrics.
     let rawLyrics: string | null = null
-    if (originalProjectLyrics?.trim() && !projectLyricsAreAI) {
+    if (overrideLyrics !== undefined) {
+      if (typeof overrideLyrics !== 'string') {
+        throw new Error('overrideLyrics must be a string')
+      }
+      const editedLyrics = overrideLyrics.trim()
+      if (editedLyrics.length < 10) {
+        throw new Error('Edited lyrics must contain at least 10 characters')
+      }
+      rawLyrics = sanitizeLyrics(editedLyrics)
+      if (!rawLyrics || rawLyrics.length < 10) {
+        throw new Error('Edited lyrics could not be parsed; use a Verse or Chorus section')
+      }
+      const { error: saveLyricsError } = await supabase.from('songs')
+        .update({ lyrics: editedLyrics }).eq('id', songId)
+      if (saveLyricsError) throw new Error(`Could not save edited lyrics: ${saveLyricsError.message}`)
+      addLog(`Saved admin-edited lyrics (${editedLyrics.length} chars); overriding project lyrics for this generation`)
+    } else if (originalProjectLyrics?.trim() && !projectLyricsAreAI) {
       rawLyrics = sanitizeLyrics(originalProjectLyrics)
       addLog('Using non-AI project lyrics (preferred source)')
     } else if (originalSongLyrics?.trim() && !songLyricsAreAI) {
