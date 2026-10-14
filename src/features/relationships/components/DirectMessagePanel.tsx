@@ -24,7 +24,7 @@ export function DirectMessagePanel({ channel, currentUserId, otherDisplayName }:
     const participants = channel.slice(3).split(":").filter(Boolean);
     return participants.find((id) => id !== profileId) ?? null;
   }, [channel, profileId]);
-  const { messages, isLoading: loading, sendMessage, markRead, hasOlderMessages, loadOlderMessages, isLoadingOlderMessages } = useDirectMessages(profileId, otherProfileId);
+  const { messages, isLoading: loading, canSendMessage, sendMessage, markRead, hasOlderMessages, loadOlderMessages, isLoadingOlderMessages } = useDirectMessages(profileId, otherProfileId);
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -34,12 +34,12 @@ export function DirectMessagePanel({ channel, currentUserId, otherDisplayName }:
   }, [messages[messages.length - 1]?.id]);
 
   useEffect(() => {
-    if (messages.length) markRead.mutate();
+    if (canSendMessage && messages.length) markRead.mutate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length]);
 
   const handleSend = () => {
-    if (!draft.trim() || sendMessage.isPending || !otherProfileId) return;
+    if (!canSendMessage || !draft.trim() || sendMessage.isPending || !otherProfileId) return;
     sendMessage.mutate(draft, {
       onSuccess: () => setDraft(""),
       onError: (error: unknown) => toast({
@@ -57,6 +57,7 @@ export function DirectMessagePanel({ channel, currentUserId, otherDisplayName }:
         <CardDescription>Private chat with {otherDisplayName}</CardDescription>
       </CardHeader>
       <CardContent className="flex-1 overflow-hidden">
+        {!canSendMessage && <p className="mb-2 text-sm text-muted-foreground" role="status">Opening conversation…</p>}
         <ScrollArea className="h-[320px]" ref={scrollRef}>
           <div className="space-y-3 pr-4">
             {hasOlderMessages && (
@@ -103,10 +104,11 @@ export function DirectMessagePanel({ channel, currentUserId, otherDisplayName }:
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           placeholder={`Message ${otherDisplayName}`}
+          disabled={!canSendMessage || sendMessage.isPending}
           className="min-h-[80px]"
         />
         <div className="flex w-full justify-end">
-          <Button onClick={handleSend} disabled={sendMessage.isPending || !draft.trim() || !otherProfileId}>
+          <Button onClick={handleSend} disabled={!canSendMessage || sendMessage.isPending || !draft.trim() || !otherProfileId}>
             {sendMessage.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             <SendHorizontal className="mr-1 h-4 w-4" /> Send
           </Button>
