@@ -42,6 +42,12 @@ describe("songwriting completion and final polish", () => {
     expect(hook).toContain("skip_songwriting_polish");
   });
 
+  it("still offers review for legacy completed projects with partial progress", () => {
+    expect(card).toContain('project.status === "completed"');
+    expect(card).toContain('project.status === "converted"');
+    expect(card).toContain("Boolean(project.song_id)");
+  });
+
   it("uses the instrument-aware server completion path after both polish decisions", () => {
     expect(card).toContain('"complete_songwriting_project_with_instruments"');
     expect(card).toContain('"skip_and_complete_songwriting_project_with_instruments"');
