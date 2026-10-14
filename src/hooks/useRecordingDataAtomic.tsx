@@ -102,59 +102,18 @@ export const useCreateRecordingSession = () => {
         } = await supabase.auth.getUser();
         if (!user) throw new Error("Not authenticated");
 
-        const scheduledStart = input.scheduled_start
-          ? new Date(input.scheduled_start)
-          : new Date(Date.now() + 60_000);
+        if (!input.scheduled_start) {
+          throw new Error("Choose a recording date and start time before booking.");
+        }
+        const scheduledStart = new Date(input.scheduled_start);
+        if (!Number.isFinite(scheduledStart.getTime())) {
+          throw new Error("Choose a valid recording start time.");
+        }
         const scheduledEnd = input.scheduled_end
           ? new Date(input.scheduled_end)
           : new Date(
               scheduledStart.getTime() + input.duration_hours * 60 * 60 * 1000,
             );
-
-        let excludedConflicts: Awaited<
-          ReturnType<typeof checkBandAvailability>
-        >["conflicts"] = [];
-
-        stage = "checking band availability";
-        if (input.band_id) {
-          const { available, conflicts } = await checkBandAvailability(
-            input.band_id,
-            scheduledStart,
-            scheduledEnd,
-          );
-
-          const skipSet = new Set(
-            Array.isArray(input.skip_profile_ids) ? input.skip_profile_ids : [],
-          );
-          const blockingConflicts = conflicts.filter(
-            (conflict) =>
-              !conflict.profileId || !skipSet.has(conflict.profileId),
-          );
-          excludedConflicts = conflicts.filter(
-            (conflict) =>
-              !!conflict.profileId && skipSet.has(conflict.profileId),
-          );
-
-          if (!available && blockingConflicts.length > 0) {
-            throw new BandUnavailableError(blockingConflicts);
-          }
-        } else {
-          const { available, conflictingActivity } =
-            await checkTimeSlotAvailable(
-              user.id,
-              scheduledStart,
-              scheduledEnd,
-            );
-
-          if (!available) {
-            const conflictTitle = conflictingActivity?.title
-              ? ` “${String(conflictingActivity.title)}”`
-              : "";
-            throw new Error(
-              `You have another activity${conflictTitle} scheduled during this time. Please check your schedule.`,
-            );
-          }
-        }
 
         const paymentSource = input.band_id
           ? (input.payment_source ?? "band")
@@ -173,6 +132,69 @@ export const useCreateRecordingSession = () => {
           paymentSource,
           input.session_type ?? "default",
         ].join(":");
+
+        // Retry the same paid booking even when its own band diary entry now
+        // blocks the preflight slot check. The RPC still enforces idempotency.
+        const { data: priorBooking, error: priorBookingError } = await supabase
+          .from("recording_sessions")
+          .select("id")
+          .eq("funding_idempotency_key", idempotencyKey)
+          .maybeSingle();
+        if (priorBookingError) {
+          console.warn("[recording-booking] Could not verify an idempotent booking retry", priorBookingError);
+        }
+        const isConfirmedRetry = Boolean(priorBooking?.id) && !priorBookingError;
+        if (!isConfirmedRetry && scheduledStart.getTime() <= Date.now()) {
+          throw new Error("Choose a recording start time in the future.");
+        }
+
+        let excludedConflicts: Awaited<
+          ReturnType<typeof checkBandAvailability>
+        >["conflicts"] = [];
+
+        if (!isConfirmedRetry) {
+          stage = "checking band availability";
+          if (input.band_id) {
+            const { available, conflicts } = await checkBandAvailability(
+              input.band_id,
+              scheduledStart,
+              scheduledEnd,
+            );
+
+            const skipSet = new Set(
+              Array.isArray(input.skip_profile_ids) ? input.skip_profile_ids : [],
+            );
+            const blockingConflicts = conflicts.filter(
+              (conflict) =>
+                !conflict.profileId || !skipSet.has(conflict.profileId),
+            );
+            excludedConflicts = conflicts.filter(
+              (conflict) =>
+                !!conflict.profileId && skipSet.has(conflict.profileId),
+            );
+
+            if (!available && blockingConflicts.length > 0) {
+              throw new BandUnavailableError(blockingConflicts);
+            }
+          } else {
+            const { available, conflictingActivity } =
+              await checkTimeSlotAvailable(
+                user.id,
+                scheduledStart,
+                scheduledEnd,
+              );
+
+            if (!available) {
+              const conflictTitle = conflictingActivity?.title
+                ? ` “${String(conflictingActivity.title)}”`
+                : "";
+              throw new Error(
+                `You have another activity${conflictTitle} scheduled during this time. Please check your schedule.`,
+              );
+            }
+          }
+
+        }
 
         stage = "confirming payment and recording session";
         const { data: booking, error } = await confirmRecordingSessionAtomic({
@@ -202,17 +224,26 @@ export const useCreateRecordingSession = () => {
           );
         }
 
-        const { data: session, error: sessionError } = await supabase
-          .from("recording_sessions")
-          .select("*")
-          .eq("id", booking.bookingId)
-          .single();
-        if (sessionError || !session) {
-          throw new Error(
-            sessionError?.message || "The recording session could not be reloaded.",
-          );
+        // The RPC has committed the payment and booking. A client-side read or
+        // projection failure must never turn the committed charge into a
+        // misleading "booking failed" response (and trigger a second payment).
+        let session: { id: string } = { id: booking.bookingId };
+        try {
+          const { data: loaded, error: loadError } = await supabase
+            .from("recording_sessions")
+            .select("*")
+            .eq("id", booking.bookingId)
+            .single();
+          if (loadError) throw loadError;
+          if (loaded) session = loaded;
+        } catch (loadError) {
+          console.warn("[recording-booking] payment committed; session detail reload failed", {
+            bookingId: booking.bookingId,
+            error: unknownErrorMessage(loadError),
+          });
         }
 
+        try {
         const [{ data: studioData }, { data: songData }] = await Promise.all([
           supabase
             .from("city_studios")
@@ -357,6 +388,13 @@ export const useCreateRecordingSession = () => {
           }
         }
 
+        } catch (projectionError) {
+          console.error("[recording-booking] confirmed payment; follow-up scheduling or notification needs repair", {
+            bookingId: booking.bookingId,
+            error: unknownErrorMessage(projectionError),
+          });
+          toast.warning("Recording booked and paid, but schedule or notifications need refreshing. Do not book or pay again.");
+        }
         return session;
       } catch (bookingError) {
         if (bookingError instanceof BandUnavailableError) throw bookingError;

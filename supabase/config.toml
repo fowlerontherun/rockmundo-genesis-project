@@ -228,3 +228,9 @@ verify_jwt = true
 # Retired HTTP endpoint; no anonymous JWT may invoke even the no-op handler.
 [functions.process-weekly-band-pay]
 verify_jwt = true
+
+
+# Internal finance scheduler: JWT verification is handled by the trusted
+# service-role-only Vault RPC gate in the handler. Never make it public.
+[functions.process-sponsorship-payments]
+verify_jwt = false

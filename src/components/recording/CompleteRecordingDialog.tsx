@@ -129,6 +129,8 @@ export const CompleteRecordingDialog = ({
         const { data: updated, error: updatedError } = await supabase.from("recording_sessions")
           .select("status, song_id").eq("id", sessionId).eq("profile_id", profileId).single();
         if (updatedError) throw updatedError;
+        await queryClient.invalidateQueries({ queryKey: ["recording-sessions"] });
+        await queryClient.invalidateQueries({ queryKey: ["songs"] });
         if (updated.status === "completed") {
           if (updated.song_id) setCurrentSongId(updated.song_id);
           toast.success("Recording completed!", {
@@ -139,7 +141,7 @@ export const CompleteRecordingDialog = ({
         }
         if ((result.errors ?? 0) > 0) throw new Error("Recording processing failed; it can be retried safely once the error is resolved.");
       }
-      await queryClient.invalidateQueries({ queryKey: ["recording_sessions"] });
+      await queryClient.invalidateQueries({ queryKey: ["recording-sessions"] });
       await queryClient.invalidateQueries({ queryKey: ["songs"] });
       if (session.status === "completed") {
         if (session.song_id) setCurrentSongId(session.song_id);

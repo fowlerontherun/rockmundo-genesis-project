@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,6 @@ export default function RecordingStudio() {
   const [userBandId, setUserBandId] = useState<string | null>(null);
   const [labelCompanyId, setLabelCompanyId] = useState<string | null>(null);
   const [bookingActionSessionId, setBookingActionSessionId] = useState<string | null>(null);
-  const pendingReplacementId = useRef<string | null>(null);
   const cancelRecording = useCancelRecordingSession();
   
   const currentCityId = currentCity?.id || "";
@@ -115,10 +114,19 @@ export default function RecordingStudio() {
     const songTitle = recordingSession.songs?.title || 'this recording session';
 
     if (mode === 'reschedule') {
-      // The original reservation stays intact if the new booking is abandoned or fails.
-      pendingReplacementId.current = recordingSession.id;
-      toast.info('Choose a replacement date. The original session remains booked until the replacement succeeds.');
-      setWizardOpen(true);
+      // Never create a second paid booking before the first was cancelled and
+      // refunded. Until there is a server-atomic swap RPC, make this explicit.
+      if (!window.confirm('Rescheduling first cancels and refunds the original session. You will then choose a replacement; the original slot cannot be restored automatically. Continue?')) return;
+      setBookingActionSessionId(recordingSession.id);
+      try {
+        await cancelRecording.mutateAsync({ sessionId: recordingSession.id, reason: 'rescheduled_by_player' });
+        toast.info('Original session cancelled and refunded. Choose the replacement date and complete a new booking.');
+        setWizardOpen(true);
+      } catch (error) {
+        console.warn('Recording replacement blocked: original cancellation failed', error);
+      } finally {
+        setBookingActionSessionId(null);
+      }
       return;
     }
     if (!window.confirm(`Cancel “${songTitle}”? The original session will be cancelled and refunded.`)) return;
@@ -128,21 +136,6 @@ export default function RecordingStudio() {
     } finally {
       setBookingActionSessionId(null);
     }
-  };
-
-  const handleReplacementBooked = async () => {
-    const originalId = pendingReplacementId.current;
-    pendingReplacementId.current = null;
-    if (!originalId) return;
-    setBookingActionSessionId(originalId);
-    try {
-      await cancelRecording.mutateAsync({ sessionId: originalId, reason: 'rescheduled_by_player' });
-      toast.success('Replacement session booked. The original session was cancelled and refunded.');
-    } catch (error) {
-      // Never undo the successful replacement or claim that the original was refunded.
-      toast.error('Replacement booked, but the old session could not be cancelled. Please cancel the original booking manually.');
-      console.warn('Recording replacement created; original cancellation failed', error);
-    } finally { setBookingActionSessionId(null); }
   };
 
   const renderBookingActions = (recordingSession: any) => {
@@ -431,11 +424,7 @@ export default function RecordingStudio() {
 
       <RecordingWizard
         open={wizardOpen}
-        onOpenChange={open => {
-          if (!open) pendingReplacementId.current = null;
-          setWizardOpen(open);
-        }}
-        onBookingComplete={handleReplacementBooked}
+        onOpenChange={setWizardOpen}
         userId={session?.user?.id || ""}
         profileId={profileId}
         currentCityId={currentCityId}

@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
   const authorization = req.headers.get('authorization')
-  const bearer = authorization?.replace(/^Bearer\\s+/i, '').trim()
+  const bearer = authorization?.replace(/^Bearer\s+/i, '').trim()
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
   let manuallyRequestedSessionId: string | null = null
   if (payload?.sessionId) {
@@ -117,13 +117,26 @@ Deno.serve(async (req) => {
           const missingDetails: any[] = []
 
           if (session.band_id) {
-            const { data: members, error: memberError } = await supabase
-              .from('band_members')
-              .select('profile_id, user_id, role, instrument_role')
-              .eq('band_id', session.band_id)
-              .in('member_status', ['active'])
-              .eq('is_touring_member', false)
-            if (memberError) throw memberError
+            // Attendance is the booked participant snapshot, not whoever is
+            // a band member at completion time. This excludes players whom the
+            // band leader explicitly skipped due to scheduling conflicts.
+            const { data: bookedParticipants, error: participantsError } = await supabase
+              .from('player_scheduled_activities')
+              .select('profile_id, user_id')
+              .eq('linked_recording_id', session.id)
+              .in('status', ['scheduled', 'in_progress', 'completed'])
+            if (participantsError) throw participantsError
+            const seenProfileIds = new Set<string>()
+            const members = (bookedParticipants || []).filter((member: any) => {
+              if (!member.profile_id || seenProfileIds.has(member.profile_id)) return false
+              seenProfileIds.add(member.profile_id)
+              return true
+            })
+            if (members.length === 0) {
+              // Missing projection must be repaired, not turn a paid booking
+              // into a false location failure based on later band membership.
+              throw new Error('recording_booked_participants_missing')
+            }
 
             const profileIds = (members || []).map((m: any) => m.profile_id).filter(Boolean)
             const { data: profiles, error: profileError } = profileIds.length
