@@ -42,6 +42,12 @@ describe("songwriting completion and final polish", () => {
     expect(hook).toContain("skip_songwriting_polish");
   });
 
+  it("uses the instrument-aware server completion path after both polish decisions", () => {
+    expect(card).toContain('"complete_songwriting_project_with_instruments"');
+    expect(card).toContain('"skip_and_complete_songwriting_project_with_instruments"');
+    expect(hook).toContain("'complete_songwriting_project_with_instruments'");
+  });
+
   it("resolves timed polish sessions through cleanup", () => {
     expect(migration).toContain("auto_complete_songwriting_polish_sessions");
     expect(cleanup).toContain("auto_complete_songwriting_polish_sessions");
