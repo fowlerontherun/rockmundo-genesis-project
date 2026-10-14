@@ -54,6 +54,7 @@ export interface BookingForecast {
 
 export interface GigBookingSubmission {
   paymentSource?: "band" | "personal";
+  personalTopUpMinor?: number;
   setlistId: string;
   ticketPrice: number;
   selectedDate: Date;
@@ -293,25 +294,14 @@ export const GigBookingDialog = ({ venue, band, setlists, onConfirm, onClose, is
       return;
     }
 
-    try {
-      // Personal override: move the estimated booking amount into the canonical
-      // band treasury first. Buffer only the revenue-derived booking fee; the
-      // City Hall permit is a fixed visible levy and is added exactly.
-      await payment.prepareFunds(
-        venuePermitFee + Math.ceil(estimatedBookingFee * 1.15),
-        "Gig booking and City Hall venue permit (personal funds)"
-      );
-    } catch (error) {
-      toast({
-        title: "Payment failed",
-        description: error instanceof Error ? error.message : "Could not use your personal funds.",
-        variant: "destructive"
-      });
-      return;
-    }
+    // Funding and booking must succeed in one database transaction.
+    const personalTopUpMinor = payment.source === "personal"
+      ? Math.ceil(Math.max(0, venuePermitFee + Math.ceil(estimatedBookingFee * 1.15) - Math.max(0, payment.bandBalance))) * 100
+      : 0;
 
     await onConfirm({
       paymentSource: payment.source,
+      personalTopUpMinor,
       setlistId: selectedSetlistId,
       ticketPrice,
       selectedDate,
