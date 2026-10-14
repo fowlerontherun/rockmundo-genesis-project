@@ -260,6 +260,7 @@ export default function AISongGeneration() {
   };
 
   const openGenerateDialog = (song: Song) => {
+    generateMutation.reset();
     setSelectedSong(song);
     const savedStyle = (song.audio_prompt || "").split(/\n\s*(?:Lyrics|Song Lyrics)\s*:/i)[0].replace(/^\s*Style\s*:\s*/i, "").trim();
     setCustomPrompt(savedStyle.slice(0, 300));
@@ -270,6 +271,7 @@ export default function AISongGeneration() {
   };
 
   const closeDialog = () => {
+    generateMutation.reset();
     setDialogOpen(false);
     setSelectedSong(null);
     setCustomPrompt("");
