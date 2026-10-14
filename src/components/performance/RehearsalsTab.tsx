@@ -195,7 +195,7 @@ export function RehearsalsTab() {
     const totalCost = room.hourly_rate * duration;
     const currentBalance = userBand.band_balance || 0;
 
-    if (currentBalance < totalCost) {
+    if (_paymentSource === "band" && currentBalance < totalCost) {
       toast({
         title: 'Insufficient Funds',
         description: `Your band needs $${totalCost}. Current balance: $${currentBalance}`,
@@ -210,6 +210,7 @@ export function RehearsalsTab() {
 
     try {
       const rehearsalId = await bookRehearsal({
+        paymentSource: _paymentSource,
         bandId: userBand.id,
         roomId,
         duration,
