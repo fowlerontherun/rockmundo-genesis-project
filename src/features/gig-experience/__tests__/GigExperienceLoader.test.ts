@@ -138,6 +138,7 @@ function legacyCompatibilityClient(overrides: Record<string, Route> = {}) {
     ]),
     gig_performers: () => response(null, { status: 404, code: "PGRST205", message: "Could not find public.gig_performers in the schema cache" }),
     gig_viewer_replays: () => response(null, { status: 404, code: "PGRST205", message: "Could not find public.gig_viewer_replays in the schema cache" }),
+    gig_post_processing_canonical: () => response(null, { status: 404, code: "PGRST205", message: "Could not find public.gig_post_processing_canonical in the schema cache" }),
     gig_post_processing: () => response(null, { status: 404, code: "PGRST205", message: "Could not find public.gig_post_processing in the schema cache" }),
     gig_consequence_snapshots: () => response(null, { status: 404, code: "PGRST205", message: "Could not find public.gig_consequence_snapshots in the schema cache" }),
     band_members: () => response([{ id: "member-1", profile_id: "profile-1", instrument_role: "vocals", role: null, member_status: "active", profiles: { display_name: "Alex" } }]),
@@ -146,6 +147,24 @@ function legacyCompatibilityClient(overrides: Record<string, Route> = {}) {
 }
 
 describe("gig experience resilient loader", () => {
+  it("prefers canonical processing status over stale legacy attempts", async () => {
+    const experience = await getGigExperience(gigId, legacyCompatibilityClient({
+      gig_post_processing_canonical: () => response({ status: "pending", processing_version: "consequences-v2", completed_at: null }),
+      gig_post_processing: () => response({ status: "processing", processing_version: "1", completed_at: null }),
+    }));
+
+    expect(experience?.postConsequences.processingStatus).toBe("pending");
+    expect(experience?.postConsequences.processingVersion).toBe("consequences-v2");
+  });
+
+  it("uses old gig processing status when the new ledger is not deployed", async () => {
+    const experience = await getGigExperience(gigId, legacyCompatibilityClient({
+      gig_post_processing: () => response({ status: "processing", processing_version: "1", completed_at: null }),
+    }));
+
+    expect(experience?.postConsequences.processingStatus).toBe("processing");
+  });
+
   it("loads the stage view against the deployed legacy schema", async () => {
     const experience = await getGigExperience(gigId, legacyCompatibilityClient());
 
