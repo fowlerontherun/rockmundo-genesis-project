@@ -130,12 +130,29 @@ serve(async (req) => {
     const audioBytes = new Uint8Array(audioBuffer)
     console.log(`[replicate-webhook] Audio downloaded: ${(audioBytes.length / 1024 / 1024).toFixed(2)} MB`)
 
-    // Get song title for filename
-    const { data: song } = await supabase
+    // MiniMax Music 1.5 is requested at 128 kbps, but a successful prediction
+    // does not guarantee that its audio covers the in-game song duration.
+    // Reject clearly truncated outputs before they can become permanent.
+    // The tolerance accommodates encoder/container overhead and modest bitrate variance.
+    const { data: song, error: songLookupError } = await supabase
       .from('songs')
-      .select('title')
+      .select('title, duration_seconds')
       .eq('id', songId)
       .single()
+    if (songLookupError || !song) {
+      throw new Error(`Cannot validate generated audio: ${songLookupError?.message || 'song not found'}`)
+    }
+    const targetSeconds = Number(song.duration_seconds)
+    const estimatedSeconds = audioBytes.length * 8 / 128000
+    const minimumAcceptedSeconds = Number.isFinite(targetSeconds) && targetSeconds > 0
+      ? Math.max(30, targetSeconds * 0.65)
+      : 30
+    console.log(`[replicate-webhook] Audio duration check: song=${songId} expected=${targetSeconds}s estimated_at_128kbps=${estimatedSeconds.toFixed(1)}s minimum=${minimumAcceptedSeconds.toFixed(1)}s bytes=${audioBytes.length}`)
+    if (estimatedSeconds < minimumAcceptedSeconds) {
+      throw new Error(
+        `Generated audio appears truncated: about ${estimatedSeconds.toFixed(1)}s at requested 128kbps vs expected ${targetSeconds}s (minimum ${minimumAcceptedSeconds.toFixed(1)}s). Not saving incomplete audio; retry generation.`
+      )
+    }
 
     const sanitizedTitle = (song?.title || 'song').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50)
     const timestamp = Date.now()
