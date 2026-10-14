@@ -427,6 +427,7 @@ export const useGameEventNotifications = () => {
           
           notify({
               eventKey: `band_invite:${invite.id}`,
+              accountWide: true,
               category: 'social',
               type: 'band_invite',
               title: 'Band Invitation!',
