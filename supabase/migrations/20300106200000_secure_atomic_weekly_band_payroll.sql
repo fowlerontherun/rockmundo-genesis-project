@@ -6,6 +6,33 @@
 -- 410 and performs no service-role writes.
 BEGIN;
 
+-- A 410-retired HTTP endpoint does not justify automatically switching to a
+-- payroll function that cannot fund all active bands. Fail closed BEFORE
+-- replacing the cron job, adding settlement structures or paying anyone.
+-- Never seed a treasury by minting a legacy band_balance projection.
+DO $treasury_preflight$
+DECLARE v_missing integer;
+BEGIN
+  SELECT COUNT(*) INTO v_missing
+  FROM public.bands b
+  WHERE b.status = 'active'::public.band_status
+    AND COALESCE(b.weekly_pay_percent, 0) > 0
+    AND NOT EXISTS (
+      SELECT 1 FROM public.financial_accounts a
+      WHERE a.owner_type = 'band'::public.financial_owner_type
+        AND a.owner_id = b.id
+        AND a.metadata->>'account_role' = 'band_treasury'
+        AND a.account_status = 'active'
+    );
+
+  IF v_missing > 0 THEN
+    RAISE EXCEPTION
+      'Payroll cutover blocked: % active pay-enabled bands have no canonical active treasury', v_missing
+      USING ERRCODE = '55000';
+  END IF;
+END;
+$treasury_preflight$;
+
 CREATE TABLE IF NOT EXISTS public.band_weekly_payroll_settlements (
   band_id uuid NOT NULL REFERENCES public.bands(id) ON DELETE CASCADE,
   week_start date NOT NULL,
