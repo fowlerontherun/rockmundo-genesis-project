@@ -405,6 +405,8 @@ const GigBooking = () => {
     selectedSlot,
     attendanceForecast,
     estimatedRevenue,
+    paymentSource,
+    personalTopUpMinor,
     ticketOperatorId,
     riderId,
   }: GigBookingSubmission) => {
@@ -454,12 +456,17 @@ const GigBooking = () => {
       // so "8 PM" means 8 PM in Nashville, not 8 PM in the user's browser
       failedStage = 'atomic_rpc';
       const localDate = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
-      const { data, error } = await supabase.rpc('book_gig', {
+      const args = {
         p_band_id: band.id, p_venue_id: bookingVenue.id, p_setlist_id: setlistId,
         p_local_date: localDate, p_slot: selectedSlot, p_ticket_price: ticketPrice,
         p_request_id: requestId, p_rider_id: riderId || undefined,
         p_ticket_operator_id: ticketOperatorId || undefined,
-      });
+      };
+      const { data, error } = paymentSource === 'personal'
+        ? await (supabase as any).rpc('book_gig_with_personal_funding', {
+            ...args, p_topup_minor: personalTopUpMinor ?? 0,
+          })
+        : await supabase.rpc('book_gig', args);
       if (error) throw error;
       const result = data as { gig?: GigRow; booking_fee?: number; scheduled_start?: string } | null;
       if (!result?.gig) throw { code: 'INVALID_RPC_RESPONSE', message: 'book_gig returned no gig' };
