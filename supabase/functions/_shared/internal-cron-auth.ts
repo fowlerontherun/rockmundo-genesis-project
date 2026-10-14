@@ -9,7 +9,7 @@ export type InternalCronAuthResult = "authorized" | "unauthorized" | "unavailabl
 
 export async function authorizeInternalCronRequest(
   request: Pick<Request, "headers">,
-  verifySecret: (secret: string) => Promise<{ data: boolean | null; error: unknown }>,
+  verifySecret: (secret: string) => PromiseLike<{ data: boolean | null; error: unknown }>,
 ): Promise<InternalCronAuthResult> {
   const secret = request.headers.get("x-cron-secret");
   if (!secret || secret.length < 32) return "unauthorized";
