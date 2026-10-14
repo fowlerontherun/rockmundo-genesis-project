@@ -104,15 +104,22 @@ export const DEFAULT_SORT_BY_MODE: Record<DiscoveryMode, DiscoverySort> = {
   employment: "availability", teaching: "relevant-skill", social: "recently-active", nearby: "closest-city", recommended: "best-match",
 };
 
+const MAX_DISCOVERY_PAGE = 100_000;
+
+function finitePageNumber(value: number | undefined, fallback: number, max: number): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+  return Math.min(Math.max(Math.trunc(value), 1), max);
+}
+
 export function normalizeDiscoveryQuery(query: Partial<PlayerDiscoveryQuery>): PlayerDiscoveryQuery {
   const mode = DISCOVERY_MODES.includes(query.mode as DiscoveryMode) ? (query.mode as DiscoveryMode) : "all";
-  const pageSize = Math.min(Math.max(Math.trunc(query.pageSize ?? DEFAULT_DISCOVERY_PAGE_SIZE), 1), MAX_DISCOVERY_PAGE_SIZE);
+  const pageSize = finitePageNumber(query.pageSize, DEFAULT_DISCOVERY_PAGE_SIZE, MAX_DISCOVERY_PAGE_SIZE);
   return {
     mode,
     search: (query.search ?? "").trim().replace(/\s+/g, " ").slice(0, 100),
     filters: { ...MODE_DEFAULT_FILTERS[mode], ...(query.filters ?? {}) },
     sort: DISCOVERY_SORTS.includes(query.sort as DiscoverySort) ? (query.sort as DiscoverySort) : DEFAULT_SORT_BY_MODE[mode],
-    page: Math.max(Math.trunc(query.page ?? 1), 1),
+    page: finitePageNumber(query.page, 1, MAX_DISCOVERY_PAGE),
     pageSize,
   };
 }
@@ -150,8 +157,21 @@ export async function searchPlayers(query: Partial<PlayerDiscoveryQuery>, viewer
     }
     throw new Error("Player discovery is unavailable right now. Try again or broaden your filters.");
   }
-  const rows = Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [];
-  return { results: rows.map(mapResult), page: normalized.page!, pageSize: normalized.pageSize!, hasMore: Boolean(data?.has_more), approximateTotal: data?.approximate_total ?? null };
+  // Successful transport does not guarantee the database returned a valid
+  // result page. A malformed response is an error, not "no matching players".
+  if (!data || typeof data !== "object" || Array.isArray(data) ||
+    !Array.isArray(data.results) || typeof data.has_more !== "boolean" ||
+    (data.approximate_total != null &&
+      (!Number.isSafeInteger(data.approximate_total) || data.approximate_total < 0))) {
+    throw new Error("Player discovery returned an invalid result. Please retry.");
+  }
+  return {
+    results: data.results.map(mapResult),
+    page: normalized.page!,
+    pageSize: normalized.pageSize!,
+    hasMore: data.has_more,
+    approximateTotal: data.approximate_total ?? null,
+  };
 }
 
 export async function getRecommendedPlayers(query: Partial<PlayerDiscoveryQuery>, viewerProfileId?: string | null) { return searchPlayers({ ...query, mode: "recommended" }, viewerProfileId); }
