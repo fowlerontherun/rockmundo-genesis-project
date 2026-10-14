@@ -3,6 +3,7 @@ import { useQuery, useInfiniteQuery, useQueryClient, useMutation } from "@tansta
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { getActiveProfile } from "@/services/profileService";
+import { DirectMessageRetryTracker } from "@/features/direct-messages/services/messageRetry";
 import { countUnreadConversations } from "@/features/direct-messages/services/unreadConversations";
 import { mergeMessagePages, nextMessageCursor, nextDirectMessageCursor, directMessageHistoryPredicate, type DirectMessageCursor } from "@/features/direct-messages/services/messageHistory";
 import {
@@ -28,7 +29,7 @@ export function buildChannelId(a: string, b: string) {
 
 export function useDirectMessages(myProfileId?: string | null, otherProfileId?: string | null) {
   const queryClient = useQueryClient();
-  const retryIdentities = useRef(new Map<string, string>());
+  const retryIdentities = useRef(new DirectMessageRetryTracker());
   const { profileId: activeProfileId, userId } = useActiveProfile();
   const isActiveCharacter = Boolean(userId && myProfileId && activeProfileId === myProfileId);
   const activeIdentityRef = useRef({ userId, activeProfileId });
@@ -178,19 +179,13 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
       const identity = [myProfileId, conversationId, directOtherProfileId ?? "", body].join(":");
       // One retry token per *in-flight intent*. A completing request must
       // never clear a separate pending message's idempotency token.
-      let id = retryIdentities.current.get(identity);
-      if (!id) {
-        id = crypto.randomUUID();
-        retryIdentities.current.set(identity, id);
-      }
+      const id = retryIdentities.current.claim(identity);
       await verifyActiveCharacter();
       await sendConversationMessage(conversationId, body, id);
       return { identity, id };
     },
     onSuccess: ({ identity, id }) => {
-      if (retryIdentities.current.get(identity) === id) {
-        retryIdentities.current.delete(identity);
-      }
+      retryIdentities.current.complete(identity, id);
       if (!isActiveCharacter) return;
       void queryClient.invalidateQueries({ queryKey: ["direct-messages", myProfileId, conversationId ?? channelId] });
       void queryClient.invalidateQueries({ queryKey: ["mobile-conversations", myProfileId] });
