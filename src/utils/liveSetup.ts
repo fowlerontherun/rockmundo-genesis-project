@@ -220,8 +220,12 @@ export function resolveBandEquipmentLiveSetup(
 export function getMemberInstrumentEffectiveScore(item: MemberInstrumentLiveSetupItem): number {
   const quality = clamp(Number(item.quality_score ?? 0));
   const condition = clamp(Number(item.condition_score ?? 100));
-  const snapshotted = Number(item.reliability_score);
-  if (Number.isFinite(snapshotted)) return Math.round(clamp(snapshotted));
+  // A missing reliability snapshot is not a zero-quality instrument:
+  // Number(null) is 0, so only trust an explicit finite snapshot.
+  if (item.reliability_score != null) {
+    const snapshotted = Number(item.reliability_score);
+    if (Number.isFinite(snapshotted)) return Math.round(clamp(snapshotted));
+  }
   return Math.round(quality * 0.45 + condition * 0.55);
 }
 
