@@ -55,7 +55,8 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
 
   const messagesQuery = useInfiniteQuery({
     queryKey: ["direct-messages", myProfileId, conversationId ?? channelId, activeProfileId],
-    enabled: isCurrentCharacter && !!channelId && (!!groupConversationId || !!conversationId),
+    enabled: isCurrentCharacter && !!channelId &&
+      (!!groupConversationId || !!conversationId || conversationQuery.isError),
     initialPageParam: null as string | null,
     queryFn: async ({ pageParam }): Promise<DirectMessageRow[]> => {
       if (!isCurrentCharacter) throw new Error("Active character changed during message loading.");
@@ -209,10 +210,12 @@ export function useDirectMessages(myProfileId?: string | null, otherProfileId?: 
   return {
     channelId,
     messages: isCurrentCharacter ? mergeMessagePages(messagesQuery.data?.pages ?? []) : [],
-    hasOlderMessages: Boolean(messagesQuery.hasNextPage),
+    hasOlderMessages: isCurrentCharacter && Boolean(messagesQuery.hasNextPage),
     isLoadingOlderMessages: messagesQuery.isFetchingNextPage,
-    loadOlderMessages: () => messagesQuery.fetchNextPage(),
-    conversationId,
+    loadOlderMessages: () => isCurrentCharacter
+      ? messagesQuery.fetchNextPage()
+      : Promise.reject(new Error("Active character changed during message paging.")),
+    conversationId: isCurrentCharacter ? conversationId : null,
     isGroupConversation: Boolean(groupConversationId),
     isLoading: isCurrentCharacter && (messagesQuery.isLoading || conversationQuery.isLoading),
     error: messagesQuery.error ?? conversationQuery.error,
