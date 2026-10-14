@@ -59,7 +59,7 @@ export const SummaryTab = () => {
         .update({ status: "dropped", auto_attend: false })
         .eq("id", enrollmentId)
         .eq("profile_id", profileId)
-        .eq("status", "active")
+        .in("status", ["enrolled", "in_progress"])
         .select("id");
 
       if (error) throw error;
