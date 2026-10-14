@@ -85,7 +85,7 @@ REVOKE ALL ON public.chart_notification_cooldowns FROM PUBLIC,anon,authenticated
 CREATE OR REPLACE FUNCTION public.persist_chart_notification_from_event(
  p_profile_id uuid,p_event_id uuid,p_song_id uuid,p_chart_type text,p_rank integer
 ) RETURNS void
-LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $chart_notify$
 DECLARE v_user uuid;v_claimed boolean;
 BEGIN
  IF p_rank NOT BETWEEN 1 AND 40 OR p_profile_id IS NULL OR p_song_id IS NULL
@@ -118,7 +118,7 @@ BEGIN
      'chart_entry_id',p_event_id,'song_id',p_song_id,
      'chart_type',p_chart_type,'rank',p_rank))
  ON CONFLICT DO NOTHING;
-END $;
+END $chart_notify$;
 REVOKE ALL ON FUNCTION public.persist_chart_notification_from_event(uuid,uuid,uuid,text,integer)
  FROM PUBLIC,anon,authenticated;
 
