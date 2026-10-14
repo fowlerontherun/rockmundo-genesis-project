@@ -8,7 +8,7 @@ export function getMp3DurationSeconds(bytes: Uint8Array): number | null {
 
   let start = 0;
   if (bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33) {
-    if (bytes.length < 10 || (bytes[6] | bytes[7] | bytes[8] | bytes[9]) & 0x80) return null;
+    if (bytes.length < 10 || ((bytes[6] | bytes[7] | bytes[8] | bytes[9]) & 0x80) !== 0) return null;
     const tagSize = (bytes[6] << 21) | (bytes[7] << 14) | (bytes[8] << 7) | bytes[9];
     start = 10 + tagSize + ((bytes[5] & 0x10) ? 10 : 0);
   }
@@ -58,8 +58,12 @@ export function getMp3DurationSeconds(bytes: Uint8Array): number | null {
     samples += frame.samples;
     frames++;
   }
-  // Permit a small trailer (e.g. ID3v1 / encoder padding), not missing audio frames.
-  if (frames < 2 || bytes.length - offset > 1024) return null;
+  // A partial final MP3 frame must not be accepted as a valid recording.
+  const trailer = bytes.length - offset;
+  const isId3v1 = trailer === 128 && bytes[offset] === 0x54 &&
+    bytes[offset + 1] === 0x41 && bytes[offset + 2] === 0x47;
+  const isSmallPadding = trailer <= 16 && bytes.subarray(offset).every(b => b === 0);
+  if (frames < 2 || (trailer !== 0 && !isId3v1 && !isSmallPadding)) return null;
   const seconds = samples / initial.sampleRate;
   return Number.isFinite(seconds) && seconds > 0 ? seconds : null;
 }
