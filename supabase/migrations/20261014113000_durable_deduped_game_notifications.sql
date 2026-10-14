@@ -132,6 +132,8 @@ BEGIN
    v_kind:='release_manufactured';v_category:='release';v_title:='Manufacturing Complete';
    v_message:='Your release is now available.';v_path:='/release-manager';
    v_band:=nullif(v->>'band_id','')::uuid;
+   v_user:=nullif(v->>'user_id','')::uuid;
+   v_user:=nullif(v->>'user_id','')::uuid;
  WHEN 'songs' THEN
    IF v->>'audio_generation_status'='completed' AND prior->>'audio_generation_status'='generating' THEN
      v_kind:='audio_generated';v_title:='Audio Generated';v_type:='success';
@@ -141,10 +143,13 @@ BEGIN
    v_category:='recording';v_message:='Your song audio generation status changed.';
    v_path:='/song-catalog';v_band:=nullif(v->>'band_id','')::uuid;
    v_profile:=nullif(v->>'profile_id','')::uuid;
+   v_user:=nullif(v->>'user_id','')::uuid;
  WHEN 'songwriting_projects' THEN
    IF v->>'status'<>'completed' OR prior->>'status'='completed' THEN RETURN NEW; END IF;
    v_kind:='songwriting_completed';v_category:='music';v_title:='Song Complete';
    v_message:='Your songwriting project has completed.';v_path:='/songwriting';
+   v_profile:=nullif(v->>'profile_id','')::uuid;
+   v_user:=nullif(v->>'user_id','')::uuid;
  WHEN 'gig_offers' THEN
    IF TG_OP<>'INSERT' THEN RETURN NEW; END IF;
    v_kind:='gig_offer';v_category:='gig_result';v_title:='New Gig Offer';
@@ -194,7 +199,8 @@ BEGIN
    PERFORM public.persist_game_event_notification(v_user,v_profile,
      v_key,v_category,v_type,v_title,v_message,v_path);
  END IF;
- IF v_band IS NULL AND v_profile IS NULL AND v_user IS NOT NULL THEN
+ IF v_band IS NULL AND v_profile IS NULL AND v_user IS NOT NULL
+    AND v_kind<>'vip_activation' THEN
    FOR v_row IN SELECT p.user_id,p.id AS profile_id FROM public.profiles p
        WHERE p.user_id=v_user AND p.is_active IS TRUE AND p.deleted_at IS NULL LOOP
      PERFORM public.persist_game_event_notification(v_row.user_id,v_row.profile_id,
