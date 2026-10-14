@@ -416,7 +416,7 @@ serve(async (req) => {
       .eq('id', songId)
 
     const { error: promptTrackingError } = await supabase.from("song_generation_attempts")
-      .update({ prompt_used: fullPrompt }).eq("id", attempt.id)
+      .update({ prompt_used: `Model: ${generationModel}\n${fullPrompt}` }).eq("id", attempt.id)
     if (promptTrackingError) throw promptTrackingError
     const signature = await signReplicateAttempt(attempt.id, songId, supabaseServiceKey)
     const webhookUrl = `${supabaseUrl}/functions/v1/replicate-webhook?songId=${encodeURIComponent(songId)}&attemptId=${encodeURIComponent(attempt.id)}&signature=${signature}`
@@ -437,8 +437,10 @@ serve(async (req) => {
           lyrics: formattedLyrics,
           bitrate: 128000,
           audio_format: 'mp3',
-          is_instrumental: false,
-          lyrics_optimizer: false,
+          ...(generationModel === 'music-2.6' ? {
+            is_instrumental: false,
+            lyrics_optimizer: false,
+          } : {}),
         },
         webhook: webhookUrl,
         webhook_events_filter: ['completed', 'output'],

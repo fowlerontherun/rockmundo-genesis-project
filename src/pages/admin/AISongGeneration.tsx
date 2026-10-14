@@ -31,6 +31,7 @@ import {
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { ChartTopSongsSection } from "@/components/admin/ChartTopSongsSection";
 import { TopPlayedSongsSection } from "@/components/admin/TopPlayedSongsSection";
+import { formatAudioDuration, isGeneratedAudioShort, readAudioDuration } from "@/lib/audioDurationAudit";
 
 type Song = {
   id: string;
@@ -42,6 +43,7 @@ type Song = {
   audio_generation_status: string | null;
   audio_prompt: string | null;
   audio_generated_at: string | null;
+  duration_seconds: number | null;
   created_at: string | null;
   band_id: string | null;
   bands?: { name: string } | null;
@@ -63,6 +65,9 @@ export default function AISongGeneration() {
   } | null>(null);
   const [boostAmount, setBoostAmount] = useState<number>(10);
   const [boostingSongId, setBoostingSongId] = useState<string | null>(null);
+  const [audioAudit, setAudioAudit] = useState<Record<string, number | null>>({});
+  const [audioAuditing, setAudioAuditing] = useState(false);
+  const [auditChecked, setAuditChecked] = useState(0);
 
   const { data: songs, isLoading, refetch } = useQuery({
     queryKey: ["admin-songs-for-generation"],
@@ -70,7 +75,7 @@ export default function AISongGeneration() {
       // Get ALL songs from ALL bands (not just current user's)
       const { data: songsData, error: songsError } = await supabase
         .from("songs")
-        .select("id, title, genre, status, quality_score, audio_url, audio_generation_status, audio_prompt, audio_generated_at, created_at, band_id, bands(name)")
+        .select("id, title, genre, status, quality_score, audio_url, audio_generation_status, audio_prompt, audio_generated_at, duration_seconds, created_at, band_id, bands(name)")
         .in("status", ["recorded", "released"])
         .order("created_at", { ascending: false })
         .limit(1000);
@@ -97,6 +102,37 @@ export default function AISongGeneration() {
       }));
     },
   });
+
+  // Dedicated query: recently generated tracks may have been created months ago.
+  const { data: recentAudioSongs, isLoading: isRecentAudioLoading } = useQuery({
+    queryKey: ["admin-recent-generated-audio"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("songs")
+        .select("id, title, genre, status, quality_score, audio_url, audio_generation_status, audio_prompt, audio_generated_at, duration_seconds, created_at, band_id, bands(name)")
+        .not("audio_url", "is", null)
+        .order("audio_generated_at", { ascending: false, nullsFirst: false })
+        .limit(30);
+      if (error) throw error;
+      return data as Song[];
+    },
+  });
+
+  const auditRecentAudio = async () => {
+    if (audioAuditing || !recentAudioSongs?.length) return;
+    setAudioAuditing(true);
+    setAudioAudit({});
+    setAuditChecked(0);
+    try {
+      // Read-only check on 30 recent recordings; no paid generation.
+      for (const song of recentAudioSongs) {
+        const duration = song.audio_url ? await readAudioDuration(song.audio_url) : null;
+        setAudioAudit(previous => ({ ...previous, [song.id]: duration }));
+        setAuditChecked(count => count + 1);
+      }
+    } finally {
+      setAudioAuditing(false);
+    }
+  };
 
   const generateMutation = useMutation({
     mutationFn: async ({ songId, customPrompt, musicModel }: { songId: string; customPrompt?: string; musicModel: "music-1.5" | "music-2.6" }) => {
@@ -309,7 +345,7 @@ export default function AISongGeneration() {
               AI Song Generation
             </h1>
             <p className="text-muted-foreground">
-              Test and manage AI-generated audio for songs using MiniMax Music 1.5 on Replicate
+              Test, audit and manage AI-generated audio using MiniMax Music on Replicate
             </p>
           </div>
           <Button onClick={() => refetch()} variant="outline">
@@ -360,6 +396,10 @@ export default function AISongGeneration() {
             <TabsTrigger value="all-songs" className="flex items-center gap-2">
               <Music className="h-4 w-4" />
               All Songs
+            </TabsTrigger>
+            <TabsTrigger value="audio-health" className="flex items-center gap-2">
+              <Volume2 className="h-4 w-4" />
+              Audio Health
             </TabsTrigger>
             <TabsTrigger value="chart-toppers" className="flex items-center gap-2">
               <Trophy className="h-4 w-4" />
@@ -519,6 +559,81 @@ export default function AISongGeneration() {
             )}
             </CardContent>
           </Card>
+          </TabsContent>
+
+          <TabsContent value="audio-health">
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent generated audio duration audit</CardTitle>
+                <CardDescription>
+                  Read playback metadata from the 30 most recently generated recordings and
+                  compare it with the planned song duration. Audio is not changed or regenerated.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button variant="outline" onClick={() => { void auditRecentAudio(); }}
+                    disabled={audioAuditing || isRecentAudioLoading || !recentAudioSongs?.length}>
+                    {audioAuditing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Volume2 className="mr-2 h-4 w-4" />}
+                    {audioAuditing ? "Checking durations..." : "Audit recent audio"}
+                  </Button>
+                  <span className="text-sm text-muted-foreground" aria-live="polite">
+                    {auditChecked} / {recentAudioSongs?.length || 0} checked
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  A recording is flagged for review if browser-reported duration is less than 80% of
+                  the planned song length (minimum 30 seconds). Unknown means the browser could not read
+                  reliable metadata. Current audio is preserved until a replacement passes validation.
+                </p>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Song</TableHead>
+                        <TableHead>Planned</TableHead>
+                        <TableHead>Audio</TableHead>
+                        <TableHead>Health</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {recentAudioSongs?.map(song => {
+                        const checked = Object.prototype.hasOwnProperty.call(audioAudit, song.id);
+                        const actual = audioAudit[song.id] ?? null;
+                        const short = typeof actual === "number" &&
+                          isGeneratedAudioShort(actual, song.duration_seconds);
+                        return (
+                          <TableRow key={song.id}>
+                            <TableCell className="font-medium">{song.title}</TableCell>
+                            <TableCell>{formatAudioDuration(song.duration_seconds)}</TableCell>
+                            <TableCell>{checked ? formatAudioDuration(actual) : "Not checked"}</TableCell>
+                            <TableCell>
+                              {!checked ? <Badge variant="secondary">Not checked</Badge> :
+                                actual === null ? <Badge variant="outline">Unverifiable</Badge> :
+                                short ? <Badge variant="destructive">Short — review</Badge> :
+                                <Badge variant="secondary">Within tolerance</Badge>}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="outline" size="sm"
+                                onClick={() => openGenerateDialog(song)}
+                                disabled={song.audio_generation_status === "generating"}>
+                                Regenerate
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      {!recentAudioSongs?.length && (
+                        <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">
+                          No recent generated audio available
+                        </TableCell></TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="chart-toppers">
