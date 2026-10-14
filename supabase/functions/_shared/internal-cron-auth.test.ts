@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
 import { authorizeInternalCronRequest } from "./internal-cron-auth";
 
 function request(secret?: string, bearer?: string): Pick<Request, "headers"> {
@@ -29,4 +30,16 @@ describe("privileged cron authentication", () => {
     expect(await authorizeInternalCronRequest(req, vi.fn().mockResolvedValue({ data: true, error: { message: "missing RPC" } }))).toBe("unavailable");
     expect(await authorizeInternalCronRequest(req, vi.fn().mockRejectedValue(new Error("database unavailable")))).toBe("unavailable");
   });
+  it("gates all sponsorship job processing behind POST and the cron verifier", () => {
+    const worker = readFileSync(new URL("../process-sponsorship-payments/index.ts", import.meta.url), "utf8");
+    const authorizeAt = worker.indexOf("await authorizeInternalCronRequest(req");
+    expect(authorizeAt).toBeGreaterThan(0);
+    expect(worker).toContain("req.method !== 'POST'");
+    expect(worker).toContain("x-cron-secret");
+    expect(worker).toContain("verify_internal_cron_secret");
+    expect(authorizeAt).toBeLessThan(worker.indexOf("const payload = await safeJson"));
+    expect(authorizeAt).toBeLessThan(worker.indexOf("runId = await startJobRun"));
+    expect(authorizeAt).toBeLessThan(worker.indexOf("process_sponsorship_installment_atomic"));
+  });
+
 });
