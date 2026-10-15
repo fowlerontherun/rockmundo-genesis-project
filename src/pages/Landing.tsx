@@ -294,7 +294,7 @@ const Landing = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/85 to-background" />
         <div className="relative mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16 md:py-20">
           <div className="mb-8 text-center sm:mb-10">
-            <img src={heroLogo} alt="RockMundo" width={852} height={1075} className="mx-auto mb-5 h-36 w-auto object-contain drop-shadow-2xl sm:h-48 md:h-56" />
+            <img src={heroLogo} alt="RockMundo" width={852} height={1098} className="mx-auto mb-5 h-36 w-auto object-contain drop-shadow-2xl sm:h-48 md:h-56" />
             <div className="mb-4 flex items-center justify-center gap-2 font-oswald text-[10px] text-primary sm:text-xs">
               <Activity className="h-3 w-3" /> Season 2026 · {releaseLabel}
             </div>
