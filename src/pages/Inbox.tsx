@@ -36,6 +36,7 @@ export default function InboxPage() {
     unreadCount,
     isLoading,
     error,
+    partialError,
     markAsRead,
     markAllAsRead,
     archiveMessage,
@@ -106,6 +107,13 @@ export default function InboxPage() {
         onFilterChange={setActiveFilter}
         counts={categoryCounts}
       />
+
+      {!isLoading && !error && partialError && (
+        <div role="alert" className="rounded-lg border border-amber-500/40 p-3 text-sm text-muted-foreground">
+          Some inbox updates could not be loaded, but available messages are shown.
+          <Button variant="outline" size="sm" className="ml-2" onClick={() => void refetch()}>Retry updates</Button>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="space-y-3">
