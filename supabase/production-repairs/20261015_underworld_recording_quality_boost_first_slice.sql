@@ -145,8 +145,7 @@ BEGIN
  RETURN jsonb_build_object('success',true,'purchaseId',v_new_id,
   'storedInInventory',true,'expiresAt',NULL,'replayed',false);
 END
-$function$
-
+$function$;
 
 CREATE OR REPLACE FUNCTION public.consume_underworld_item_atomic(p_profile_id uuid, p_purchase_id uuid)
  RETURNS jsonb
@@ -254,8 +253,7 @@ BEGIN
  RETURN jsonb_build_object('success',true,'productName',v_product.name,
   'productId',v_product.id,'exposure',v_exposure);
 END
-$function$
-
+$function$;
 
 REVOKE ALL ON FUNCTION public.buy_underworld_product_atomic(uuid,uuid,text,uuid) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.buy_underworld_product_atomic(uuid,uuid,text,uuid) TO authenticated,service_role;
