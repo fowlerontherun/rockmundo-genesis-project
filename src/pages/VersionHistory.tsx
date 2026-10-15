@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.777",
+    date: "2026-10-15",
+    changes: [
+      { type: "fix", description: "Replaced the pre-login home screen's centre logo with the exact uploaded blue-on-white RockMundo artwork, increased its display size, and restored the current version number in the release banner." },
+    ],
+  },
+  {
     version: "1.1.775",
     date: "2026-10-15",
     changes: [
