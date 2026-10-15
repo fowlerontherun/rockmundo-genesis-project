@@ -1,9 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/hooks/use-toast";
 import { isUnderworldPurchaseSupported } from "@/utils/underworldPurchaseEligibility";
+import { getOrCreateUnderworldPurchaseRequestId, clearUnderworldPurchaseRequestId } from "@/utils/underworldPurchaseRequest";
 
 export interface UnderworldProduct {
   id: string;
@@ -56,8 +57,6 @@ export const useUnderworldStore = () => {
   const { profileId } = useActiveProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  // A lost response must retry the same intended purchase, not charge twice.
-  const purchaseRequestIds = useRef<Record<string, string>>({});
 
   // Fetch all available products
   const { data: products = [], isLoading: productsLoading } = useQuery({
@@ -148,9 +147,7 @@ export const useUnderworldStore = () => {
       if (!isUnderworldPurchaseSupported(product)) {
         throw new Error("This product is not yet supported by the secure underworld store");
       }
-      const requestKey = `${profileId}:${product.id}:${paymentMethod}`;
-      const requestId = purchaseRequestIds.current[requestKey]
-        ?? (purchaseRequestIds.current[requestKey] = crypto.randomUUID());
+      const requestId = getOrCreateUnderworldPurchaseRequestId(profileId, product.id, paymentMethod);
       const { data, error } = await (supabase as any).rpc("buy_underworld_product_atomic", {
         p_profile_id: profileId,
         p_product_id: product.id,
@@ -179,7 +176,7 @@ export const useUnderworldStore = () => {
         } : null };
     },
     onSuccess: (result, { product, paymentMethod }) => {
-      if (profileId) delete purchaseRequestIds.current[`${profileId}:${product.id}:${paymentMethod}`];
+      if (profileId) clearUnderworldPurchaseRequestId(profileId, product.id, paymentMethod);
       queryClient.invalidateQueries({ queryKey: ["user-cash-balance"] });
       queryClient.invalidateQueries({ queryKey: ["active-boosts"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-history"] });
