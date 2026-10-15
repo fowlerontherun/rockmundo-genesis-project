@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { verifyReplicateAttempt } from "../_shared/replicateWebhookAuth.ts"
 import { getMp3DurationSeconds } from "../_shared/mp3Duration.ts"
+import { assertSafeGeneratedAudioUrl, readBoundedGeneratedAudio } from "../_shared/boundedAudioDownload.ts"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -111,18 +112,11 @@ serve(async (req) => {
       throw new Error('Provider returned output without a usable audio URL')
     }
 
-    console.log(`[replicate-webhook] Downloading audio from: ${replicateAudioUrl.substring(0, 80)}...`)
-
-    // Download audio from Replicate
-    const audioResponse = await fetch(replicateAudioUrl)
-    if (!audioResponse.ok) {
-      console.error(`[replicate-webhook] Failed to download audio: ${audioResponse.status}`)
-      throw new Error(`Failed to download audio: ${audioResponse.status}`)
-    }
-
-    const audioBlob = await audioResponse.blob()
-    const audioBuffer = await audioBlob.arrayBuffer()
-    const audioBytes = new Uint8Array(audioBuffer)
+    // Signed provider URLs may carry sensitive query tokens: do not log them.
+    // A successful prediction cannot allocate unlimited remote bytes.
+    const validatedAudioUrl = assertSafeGeneratedAudioUrl(replicateAudioUrl)
+    const audioResponse = await fetch(validatedAudioUrl)
+    const audioBytes = await readBoundedGeneratedAudio(audioResponse)
     console.log(`[replicate-webhook] Audio downloaded: ${(audioBytes.length / 1024 / 1024).toFixed(2)} MB`)
 
     // Do not assume the requested bitrate is constant: output may use VBR.
