@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { UnderworldProduct } from "@/hooks/useUnderworldStore";
+import { isUnderworldPurchaseSupported } from "@/utils/underworldPurchaseEligibility";
 
 const iconMap: Record<string, LucideIcon> = {
   Zap,
@@ -87,6 +88,7 @@ export const ProductCard = ({ product, onPurchase, userBalance }: ProductCardPro
   const CategoryIcon = categoryIcons[product.category] || Package;
 
   const canAfford = product.price_cash ? userBalance >= product.price_cash : false;
+  const isSupported = isUnderworldPurchaseSupported(product);
   const effects = product.effects || {};
 
   // Format effect descriptions
@@ -181,11 +183,11 @@ export const ProductCard = ({ product, onPurchase, userBalance }: ProductCardPro
           </div>
           <Button
             onClick={() => onPurchase(product)}
-            disabled={!canAfford}
+            disabled={!isSupported || !canAfford}
             size="sm"
             className="gap-2"
           >
-            {canAfford ? "Buy Now" : "Can't Afford"}
+            {!isSupported ? "Coming Soon" : canAfford ? "Buy Now" : "Can't Afford"}
           </Button>
         </div>
       </CardContent>
