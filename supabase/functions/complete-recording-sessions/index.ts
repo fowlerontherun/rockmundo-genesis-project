@@ -89,14 +89,41 @@ Deno.serve(async (req) => {
     if (songIds.length > 0) {
       const { data: songRows } = await supabase
         .from('songs')
-        .select('id, quality_score, title, genre, lyrics, user_id, band_id, parent_song_id, version, duration_seconds, duration_display, songwriting_project_id')
+        .select('id, quality_score, title, genre, lyrics, user_id, band_id, parent_song_id, source_recording_session_id, version, duration_seconds, duration_display, songwriting_project_id')
         .in('id', songIds)
       for (const row of songRows || []) songMap.set((row as any).id, row)
     }
     const sessions = (rawSessions || []).map((s: any) => ({ ...s, songs: s.song_id ? songMap.get(s.song_id) || null : null }))
 
     for (const session of sessions) {
+      let completionClaimId: string | null = null
       try {
+        // #4107: only one cron/manual worker can own this session's lease.
+        const { data: claimId, error: claimError } = await supabase.rpc(
+          'claim_recording_completion', { p_session_id: session.id })
+        if (claimError) throw claimError
+        if (!claimId) continue
+        completionClaimId = claimId
+
+        // #4104: read booked attendance exactly once and use the same
+        // participant snapshot for location AND performance/XP calculations.
+        let bookedParticipants: any[] = []
+        if (session.band_id) {
+          const { data: rows, error: bookedError } = await supabase
+            .from('player_scheduled_activities')
+            .select('profile_id, user_id')
+            .eq('linked_recording_id', session.id)
+            .in('status', ['scheduled', 'in_progress', 'completed'])
+          if (bookedError) throw bookedError
+          const seenProfiles = new Set<string>()
+          bookedParticipants = (rows || []).filter((row: any) => {
+            if (!row.profile_id || seenProfiles.has(row.profile_id)) return false
+            seenProfiles.add(row.profile_id)
+            return true
+          })
+          if (!bookedParticipants.length) throw new Error('recording_booked_participants_missing')
+        }
+
         const studioCityId = session.city_id || null
         let locationCityId = studioCityId
         if (!locationCityId && session.studio_id) {
@@ -120,23 +147,7 @@ Deno.serve(async (req) => {
             // Attendance is the booked participant snapshot, not whoever is
             // a band member at completion time. This excludes players whom the
             // band leader explicitly skipped due to scheduling conflicts.
-            const { data: bookedParticipants, error: participantsError } = await supabase
-              .from('player_scheduled_activities')
-              .select('profile_id, user_id')
-              .eq('linked_recording_id', session.id)
-              .in('status', ['scheduled', 'in_progress', 'completed'])
-            if (participantsError) throw participantsError
-            const seenProfileIds = new Set<string>()
-            const members = (bookedParticipants || []).filter((member: any) => {
-              if (!member.profile_id || seenProfileIds.has(member.profile_id)) return false
-              seenProfileIds.add(member.profile_id)
-              return true
-            })
-            if (members.length === 0) {
-              // Missing projection must be repaired, not turn a paid booking
-              // into a false location failure based on later band membership.
-              throw new Error('recording_booked_participants_missing')
-            }
+            const members = bookedParticipants
 
             const profileIds = (members || []).map((m: any) => m.profile_id).filter(Boolean)
             const { data: profiles, error: profileError } = profileIds.length
@@ -242,7 +253,8 @@ Deno.serve(async (req) => {
                 },
               })
               .eq('id', session.id)
-            if (failError) console.error(`Failed to mark session ${session.id} as failed:`, failError)
+              .eq('completion_claim_id', completionClaimId)
+            if (failError) throw failError
             errorCount++
             continue
           }
@@ -251,7 +263,9 @@ Deno.serve(async (req) => {
         const startTime = new Date(session.scheduled_start)
         const endTime = new Date(session.scheduled_end)
         const durationHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60)
-        const currentQuality = session.songs?.quality_score || 50
+        // A retried session must not feed its previously-updated master back
+        // into the next quality calculation.
+        const currentQuality = session.source_song_quality ?? session.songs?.quality_score ?? 50
 
         const { data: studioData } = session.studio_id
           ? await supabase.from('city_studios').select('quality_rating, equipment_rating').eq('id', session.studio_id).maybeSingle()
@@ -259,9 +273,12 @@ Deno.serve(async (req) => {
         const { data: bandData } = session.band_id
           ? await supabase.from('bands').select('morale, reputation_score, fan_sentiment_score, chemistry, band_chemistry, cohesion').eq('id', session.band_id).maybeSingle()
           : { data: null } as any
-        const { data: memberRows } = session.band_id
-          ? await supabase.from('band_members').select('profile_id, user_id, instrument_role, role, member_status').eq('band_id', session.band_id).in('member_status', ['active'])
-          : { data: [] } as any
+        const { data: memberRows, error: memberRowsError } = session.band_id
+          ? await supabase.from('band_members')
+              .select('profile_id, user_id, instrument_role, role, member_status')
+              .eq('band_id', session.band_id)
+          : { data: [], error: null } as any
+        if (memberRowsError) throw memberRowsError
 
         let soloProfileId = session.profile_id || null
         if (!session.band_id && !soloProfileId && session.user_id) {
@@ -272,20 +289,18 @@ Deno.serve(async (req) => {
         const soloProfiles = !session.band_id
           ? [{ profile_id: soloProfileId, user_id: session.user_id, instrument_role: 'lead_vocals', role: 'lead_vocals' }]
           : []
-        // Never attribute a bandmate's performance to the recording owner.
-        // Some legacy memberships have only a user_id, so resolve that user's
-        // current character instead of reusing the booking character.
-        const resolvedBandMembers = await Promise.all((memberRows || []).map(async (member: any) => {
-          if (member.profile_id) return member
-          if (!member.user_id) throw new Error('recording_performer_profile_missing')
-          const { data: performerProfile, error: performerError } = await supabase
-            .from('profiles').select('id').eq('user_id', member.user_id)
-            .eq('is_active', true).is('died_at', null).maybeSingle()
-          if (performerError) throw performerError
-          if (!performerProfile?.id) throw new Error('recording_performer_profile_missing')
-          return { ...member, profile_id: performerProfile.id }
-        }))
-        const participants = [...resolvedBandMembers, ...soloProfiles]
+        // Each performer is precisely who was booked, even if a member has
+        // since joined/left the band or was explicitly skipped at checkout.
+        const membershipByProfile = new Map((memberRows || [])
+          .filter((row: any) => row.profile_id)
+          .map((row: any) => [row.profile_id, row]))
+        const participants = session.band_id
+          ? bookedParticipants.map((booked: any) => ({
+              ...(membershipByProfile.get(booked.profile_id) || {}),
+              profile_id: booked.profile_id,
+              user_id: booked.user_id,
+            }))
+          : soloProfiles
 
         const performerInputs = await Promise.all(participants.map(async (member: any) => {
           const performerProfileId = member.profile_id
@@ -380,6 +395,8 @@ Deno.serve(async (req) => {
             updated_at: new Date().toISOString(),
           })
           .eq('id', session.id)
+          .eq('completion_claim_id', completionClaimId)
+          .select('id').maybeSingle()
         if (updateError) throw updateError
 
         if (session.song_id && session.songs) {
