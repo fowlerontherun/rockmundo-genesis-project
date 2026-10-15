@@ -54,6 +54,7 @@ export const ItemDetailDialog = ({
       energy_regen: "Energy Regen",
       all_multiplier: "All Stats Multiplier",
       skill_xp: "Skill XP",
+      recording_quality_boost: "Recording master quality (%)",
       skill_slug: "Skill",
     };
     return { label: effectLabels[key] || key, value: String(value) };
@@ -155,7 +156,7 @@ export const ItemDetailDialog = ({
             ) : (
               <>
                 <Zap className="mr-2 h-4 w-4" />
-                Use Item
+                {product.category === "booster" ? "Activate Boost" : "Use Item"}
               </>
             )}
           </Button>
