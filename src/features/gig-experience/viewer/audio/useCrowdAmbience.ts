@@ -151,8 +151,18 @@ export function useCrowdAmbience({
     const existingBed = ambientRef.current;
     const existingUrl = existingBed?.dataset.rockmundoUrl ?? null;
 
-    if (bed && existingUrl !== bed.audio_url) {
-      existingBed?.pause();
+    if (!bed && existingBed) {
+      // An empty or removed catalogue must not keep an obsolete ambience loop.
+      existingBed.pause();
+      existingBed.removeAttribute("src");
+      existingBed.load();
+      ambientRef.current = null;
+    } else if (bed && existingUrl !== bed.audio_url) {
+      if (existingBed) {
+        existingBed.pause();
+        existingBed.removeAttribute("src");
+        existingBed.load();
+      }
       const audio = new Audio(bed.audio_url);
       audio.preload = "auto";
       audio.loop = true;
