@@ -137,6 +137,7 @@ export function useCrowdAmbience({
     if (!enabled || !isPlaying || muted || isDocumentHidden || typeof Audio === "undefined") {
       ambientRef.current?.pause();
       reactionRef.current?.pause();
+      pendingReactionRef.current = null;
       if (!enabled) {
         // Re-entering the viewer must be able to replay its initial cue.
         lastReactionRef.current = null;
@@ -162,6 +163,9 @@ export function useCrowdAmbience({
         if (pendingReactionRef.current !== sound.id) return;
         pendingReactionRef.current = null;
         if (started) reactionCooldownRef.current.record(sound.id, cueTimeMs);
+      }).catch(() => {
+        // Audio construction itself can reject on unsupported/malformed URLs.
+        if (pendingReactionRef.current === sound.id) pendingReactionRef.current = null;
       });
     };
 
