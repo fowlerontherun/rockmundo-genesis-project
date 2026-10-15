@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useToast } from "@/hooks/use-toast";
+import { isUnderworldPurchaseSupported } from "@/utils/underworldPurchaseEligibility";
 
 export interface UnderworldProduct {
   id: string;
@@ -144,6 +145,9 @@ export const useUnderworldStore = () => {
       paymentMethod: "cash" | "crypto";
     }) => {
       if (!profileId) throw new Error("Not logged in");
+      if (!isUnderworldPurchaseSupported(product)) {
+        throw new Error("This product is not yet supported by the secure underworld store");
+      }
       const requestKey = `${profileId}:${product.id}:${paymentMethod}`;
       const requestId = purchaseRequestIds.current[requestKey]
         ?? (purchaseRequestIds.current[requestKey] = crypto.randomUUID());
