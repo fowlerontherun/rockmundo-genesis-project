@@ -17,7 +17,7 @@ describe("#4119: band earnings must be the only credit writer on journalled path
 
   it("does not directly add major event cash before inserting earnings", () => {
     const worker = source("supabase/functions/complete-major-event/index.ts");
-    expect(worker).not.toMatch(/band_balance:\\s*\\(band\\.band_balance/);
+    expect(worker).not.toMatch(/band_balance:\s*\(band\.band_balance/);
     expect(worker).toContain("fame: (band.fame || 0) + fameGained");
     expect(worker).toContain("source: 'major_event'");
     expect(worker).toContain("metadata: { performance_id: performanceId }");
@@ -25,14 +25,31 @@ describe("#4119: band earnings must be the only credit writer on journalled path
     expect(worker).toContain("if (earningsError) throw earningsError");
   });
 
-  it("does not directly credit a release refund before posting earnings", () => {
+  it("requires an authenticated, single-transaction release cancellation authority", () => {
     const dialog = source("src/components/releases/CancelReleaseDialog.tsx");
-    expect(dialog).not.toContain('.update({ band_balance:');
-    expect(dialog).toContain('source: "refund"');
-    expect(dialog).toContain("metadata: { release_id: release.id }");
-    expect(dialog).toContain("if (refundError) throw refundError");
-    // This legacy multi-request flow still needs a server-side atomic,
-    // idempotent cancellation before production replay/automatic retries.
-    expect(dialog).toContain("TODO(#4119)");
+    const sql = source(
+      "supabase/production-repairs/20261015_atomic_release_cancellation_MANUAL_ONLY.sql",
+    );
+    expect(dialog).toContain('.rpc("cancel_release_atomic"');
+    expect(dialog).not.toContain('.from("band_earnings")');
+    expect(dialog).not.toContain('.from("releases")');
+    expect(dialog).not.toContain('minorToMajor(release.total_cost)');
+    expect(dialog).toContain('data.refundMajor');
+    expect(sql).toContain("WHERE id=p_release_id FOR UPDATE");
+    expect(sql).toContain("auth.uid()");
+    expect(sql).toContain("public._caller_profile_id()");
+    expect(sql).toContain("release_cancellation_not_authorized");
+    expect(sql).toContain("release_no_longer_cancellable");
+    expect(sql).toContain("release_has_sales_cannot_refund");
+    expect(sql).toContain("release_format_already_manufactured");
+    expect(sql).toContain("incremental_earnings_trigger_required");
+    expect(sql).toContain("release_refund_requires_manual_payer_reconciliation");
+    expect(sql).toContain("release_refund_ledger_evidence_inconsistent");
+    expect(sql).toContain("release_refund_already_recorded");
+    expect(sql).toContain("v_band_cost_minor<>v_charge_major*100");
+    expect(sql).toContain("UPDATE public.releases SET release_status='cancelled'");
+    expect(sql).toContain("INSERT INTO public.band_earnings");
+    expect(sql).toContain("REVOKE ALL ON FUNCTION public.cancel_release_atomic(uuid)");
+    expect(sql).toContain("GRANT EXECUTE ON FUNCTION public.cancel_release_atomic(uuid)");
   });
 });
