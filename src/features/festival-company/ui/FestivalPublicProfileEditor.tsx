@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useFestivalLaunchPlan, useSaveFestivalPublicProfile } from "../application/useFestivalLaunch";
+import { isSafeSponsorLogoReference, SponsorIdentity } from "./SponsorIdentity";
 
 type ProfileDraft = {
   publicName: string;
@@ -53,7 +54,12 @@ export function FestivalPublicProfileEditor({ festivalCompanyId }: { festivalCom
   const save = useSaveFestivalPublicProfile();
   const [draft, setDraft] = useState<ProfileDraft>(emptyDraft);
   const [dirty, setDirty] = useState(false);
-  useEffect(() => {setDirty(false);setDraft(emptyDraft);}, [festivalCompanyId]);
+  const [versionConflict, setVersionConflict] = useState(false);
+  useEffect(() => {
+    setDirty(false);
+    setVersionConflict(false);
+    setDraft(emptyDraft);
+  }, [festivalCompanyId]);
 
   const existing = useMemo(() => {
     const raw = plan.data as { publicProfile?: Record<string, unknown> | null } | undefined;
@@ -95,6 +101,10 @@ export function FestivalPublicProfileEditor({ festivalCompanyId }: { festivalCom
       toast.error("The public name must contain letters or numbers to build a web address.");
       return;
     }
+    if (draft.logoReference.trim() && !isSafeSponsorLogoReference(draft.logoReference.trim())) {
+      toast.error("Use a secure HTTPS image or a valid same-site logo reference.");
+      return;
+    }
     save.mutate(
       {
         festivalCompanyId,
@@ -126,12 +136,19 @@ export function FestivalPublicProfileEditor({ festivalCompanyId }: { festivalCom
             toast.warning("Saved, but the new profile version could not be verified. Reload before editing again.");
             return;
           }
+          if (Number(refreshed.data?.publicProfile?.publicVersion ??
+                     refreshed.data?.publicProfile?.public_version ?? 0) <= expectedVersion) {
+            toast.warning("Saved, but the updated profile version is not yet available. Reload the published profile before saving again.");
+            return;
+          }
+          setVersionConflict(false);
           setDirty(false);
           toast.success("Public festival profile saved.");
         },
         onError: (error) => {
           const message = error instanceof Error ? error.message : "";
           if (/version|conflict|stale|public_profile_changed/i.test(message)) {
+            setVersionConflict(true);
             toast.error("Someone changed this festival profile. Your draft is preserved; review the published details before retrying.");
           } else {
             toast.error(message === "festival_public_slug_taken"
@@ -178,11 +195,14 @@ export function FestivalPublicProfileEditor({ festivalCompanyId }: { festivalCom
               Add a public image URL for the festival logo. It will appear prominently on the public festival page.
             </p>
           </div>
-          {draft.logoReference ? (
-            <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-xl border bg-muted/30 p-2">
-              <img src={draft.logoReference} alt="Festival logo preview" className="max-h-full max-w-full object-contain" />
+          {draft.logoReference && isSafeSponsorLogoReference(draft.logoReference.trim()) ? (
+            <div className="w-32">
+              <SponsorIdentity name={draft.publicName || "Festival"} logoReference={draft.logoReference.trim()} />
             </div>
           ) : null}
+          {draft.logoReference && !isSafeSponsorLogoReference(draft.logoReference.trim()) && (
+            <p role="alert" className="text-sm text-destructive">Unsafe logo reference — enter an HTTPS or same-site image.</p>
+          )}
         </div>
 
         <div className="space-y-1.5">
@@ -216,8 +236,23 @@ export function FestivalPublicProfileEditor({ festivalCompanyId }: { festivalCom
           ))}
         </div>
 
+        {versionConflict && (
+          <div role="alert" className="rounded-md border p-3 text-sm">
+            The published edition was updated elsewhere. Your unsaved draft is kept.
+            <Button type="button" variant="outline" className="ml-3"
+              onClick={() => {
+                if (!window.confirm("Discard your unsaved changes and reload the current published profile?")) return;
+                void plan.refetch().then(result => {
+                  if (result.isSuccess) { setDirty(false); setVersionConflict(false); }
+                  else toast.error("Could not reload the published festival profile.");
+                });
+              }}>
+              Discard draft and reload published version
+            </Button>
+          </div>
+        )}
         <div className="flex items-center gap-3">
-          <Button onClick={submit} disabled={save.isPending || plan.isLoading}>
+          <Button onClick={submit} disabled={save.isPending || plan.isLoading || versionConflict}>
             {existing ? "Update public profile" : "Publish public profile"}
           </Button>
           {existing ? <span className="text-xs text-muted-foreground">Version {expectedVersion}</span> : null}
