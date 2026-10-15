@@ -113,9 +113,11 @@ export function useCrowdAmbience({
     const pageHide = () => setDocumentHidden(true);
     document.addEventListener("visibilitychange", visibility);
     window.addEventListener("pagehide", pageHide);
+    window.addEventListener("pageshow", visibility);
     return () => {
       document.removeEventListener("visibilitychange", visibility);
       window.removeEventListener("pagehide", pageHide);
+      window.removeEventListener("pageshow", visibility);
     };
   }, []);
 
