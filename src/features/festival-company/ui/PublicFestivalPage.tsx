@@ -25,7 +25,7 @@ import { formatFestivalLaunchMoney } from "../domain/festivalLaunch";
 import { getFestivalPublicEventPhase } from "./festivalEventPhase";
 import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
-import { SponsorIdentity } from "./SponsorIdentity";
+import { isSafeSponsorLogoReference, SponsorIdentity } from "./SponsorIdentity";
 import { canOfferFestivalCheckIn, canStartFestivalTicketPurchase } from "./publicFestivalEligibility";
 import { canDisplayFestivalCheckInMessage, festivalVisitorEventLabel, festivalVisitorSalesLabel, formatFestivalEditionDate, formatFestivalEditionTime, hasIssuedFestivalAdmission, isMainFestivalSponsor, isPublishedFestivalPerformance, orderFestivalPublicSponsors, auditFestivalSponsorSlots, getPublishedFestivalCampingTickets, festivalVisitorContactLink } from "./festivalPublicDisplay";
 
@@ -122,6 +122,12 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   const campingTickets = getPublishedFestivalCampingTickets(f.ticketProducts);
   const campingPublished = campingTickets.length > 0 || !!f.information.camping?.trim();
   const organiserContactLink = festivalVisitorContactLink(f.information.contact);
+  // Historical public projections can predate editor-side URL validation.
+  // Never pass untrusted image protocols on to browsers or share rendering.
+  const verifiedFestivalLogo = f.logoReference &&
+    isSafeSponsorLogoReference(f.logoReference) ? f.logoReference : null;
+  const verifiedFestivalArtwork = f.heroImageReference &&
+    isSafeSponsorLogoReference(f.heroImageReference) ? f.heroImageReference : verifiedFestivalLogo;
 
   const myAttendance = (attendanceError ? [] : attendance)
     .filter((item) => item.festivalLaunchId === f.id && item.status !== "cancelled" && item.status !== "refunded")
@@ -160,8 +166,8 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
       <header className="bg-gradient-to-br from-violet-950 to-fuchsia-900 p-6 text-white md:p-12">
         <div className="mx-auto flex max-w-6xl flex-col gap-6 md:flex-row md:items-center">
           <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white/10 p-3 shadow-xl backdrop-blur md:h-36 md:w-36">
-            {f.logoReference && failedFestivalLogo !== f.logoReference ? (
-              <img src={f.logoReference} alt={`${f.name} logo`} className="max-h-full max-w-full object-contain" onError={() => setFailedFestivalLogo(f.logoReference)} />
+            {verifiedFestivalLogo && failedFestivalLogo !== verifiedFestivalLogo ? (
+              <img src={verifiedFestivalLogo} alt={`${f.name} logo`} className="max-h-full max-w-full object-contain" onError={() => setFailedFestivalLogo(verifiedFestivalLogo)} />
             ) : <span className="text-center text-xl font-bold">{f.name}</span>}
           </div>
           <div className="min-w-0">
@@ -191,7 +197,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                   { label: "Stages", value: String(f.stages.length) },
                   ...(f.ticketSales ? [{ label: "Tickets sold", value: f.ticketSales.admissionTicketsSold.toLocaleString("en-GB") }] : []),
                 ].slice(0, 4),
-                artworkUrl: f.heroImageReference || f.logoReference || null,
+                artworkUrl: verifiedFestivalArtwork,
                 destinationUrl,
                 referralCode: null,
                 createdAt: new Date().toISOString(),
