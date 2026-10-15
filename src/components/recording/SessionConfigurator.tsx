@@ -23,7 +23,7 @@ import {
   type ConflictInfo,
 } from "@/utils/bandActivityScheduling";
 import { calculateRecordingQuality, ORCHESTRA_OPTIONS, type RecordingProducer } from "@/hooks/useRecordingData";
-import { useCreateRecordingSession } from "@/hooks/useRecordingDataAtomic";
+import { useCreateRecordingSession, type CreateRecordingSessionInput } from "@/hooks/useRecordingDataAtomic";
 import { calculateIndependentPenalty } from "./RecordingTypeSelector";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
@@ -119,6 +119,8 @@ export const SessionConfigurator = ({
   } | null>(null);
   const [bookingSummary, setBookingSummary] =
     useState<RecordingBookingSummary | null>(null);
+  // Re-use the EXACT request/idempotency identity after any post-commit failure.
+  const [repairBookingInput, setRepairBookingInput] = useState<CreateRecordingSessionInput | null>(null);
   const cancelSession = useCancelRecordingSession();
 
   // The parent page may fail to resolve the player's band (stricter filters or
@@ -343,7 +345,7 @@ export const SessionConfigurator = ({
 
 
     try {
-      const session = await createSession.mutateAsync({
+      const request: CreateRecordingSessionInput = {
         user_id: userId,
         profile_id: profileId || null,
         band_id: effectiveBandId || null,
@@ -359,7 +361,12 @@ export const SessionConfigurator = ({
         scheduled_end: end.toISOString(),
         payment_source: payer,
         skip_profile_ids: normalizedSkipProfileIds,
-      });
+      };
+      const session = await createSession.mutateAsync(request);
+      // The booking is already paid even if its follow-up diary rows failed.
+      setRepairBookingInput(session.projectionPending
+        ? { ...request, booked_profile_ids: session.bookedProfileIds }
+        : null);
       setConflictState(null);
       setBookingSummary({
         sessionId: (session as any)?.id ?? "",
@@ -373,6 +380,7 @@ export const SessionConfigurator = ({
         totalCost,
         payer,
         payerName: payer === "band" ? bandName : null,
+        projectionPending: session.projectionPending,
       });
     } catch (error: unknown) {
       if (isBandUnavailableError(error)) {
@@ -393,6 +401,25 @@ export const SessionConfigurator = ({
     }
   };
 
+  const handleRepairBookedSession = async () => {
+    if (!repairBookingInput || !bookingSummary?.sessionId || createSession.isPending) return;
+    try {
+      // confirm_recording_session_atomic is idempotent on the same request;
+      // never synthesize a new start time, session or payment reference.
+      const repaired = await createSession.mutateAsync({ ...repairBookingInput, repairOnly: true });
+      if (repaired.id !== bookingSummary.sessionId) {
+        throw new Error("Booking repair returned a different session; no new booking was requested.");
+      }
+      setBookingSummary((previous) => previous
+        ? { ...previous, projectionPending: repaired.projectionPending }
+        : previous);
+      if (!repaired.projectionPending) setRepairBookingInput(null);
+    } catch (error) {
+      // The existing booking remains confirmed. Do not close the receipt.
+      setFormError(getErrorMessage(error, "Could not repair booking details. Your paid session remains confirmed."));
+    }
+  };
+
   const canBook = Boolean(selectedSlotId && canAfford && !loadingSlots && !slotsError &&
     slotAvailability?.some(s => s.slot.id === selectedSlotId && s.isAvailable));
 
@@ -408,6 +435,7 @@ export const SessionConfigurator = ({
         reason: mode === "reschedule" ? "rescheduled_by_player" : "cancelled_by_player",
       });
       setBookingSummary(null);
+      setRepairBookingInput(null);
       if (mode === "reschedule") {
         setSelectedSlotId("");
         setFormError("");
@@ -425,6 +453,8 @@ export const SessionConfigurator = ({
         open={!!bookingSummary}
         summary={bookingSummary}
         isCancelling={cancelSession.isPending}
+        isRepairing={createSession.isPending}
+        onRepair={() => void handleRepairBookedSession()}
         onClose={() => {
           setBookingSummary(null);
           onComplete();

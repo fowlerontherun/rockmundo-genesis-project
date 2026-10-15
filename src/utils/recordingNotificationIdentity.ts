@@ -11,9 +11,17 @@ export function recordingAbsentEventKey(sessionId: string, profileOrUserId: stri
  * primary key prevents duplicate insertions even when recipients cannot read
  * each other's inbox because of RLS. No database migration is needed.
  */
-export async function recordingInboxMessageId(sessionId: string, userId: string): Promise<string> {
+export async function recordingInboxMessageId(
+  sessionId: string, userId: string, profileId?: string,
+): Promise<string> {
   if (!sessionId || !userId) throw new Error("recording_notification_identity_missing");
-  const input = new TextEncoder().encode(`rockmundo:recording:booking:${sessionId}:${userId}`);
+  // Compatibility with older user-level IDs when no character is supplied.
+  // New character-scoped notices use a different deterministic ID per profile,
+  // so an account owning two bandmates never loses one to duplicate suppression.
+  const identity = profileId
+    ? `rockmundo:recording:booking:profile:${sessionId}:${userId}:${profileId}`
+    : `rockmundo:recording:booking:${sessionId}:${userId}`;
+  const input = new TextEncoder().encode(identity);
   const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", input));
   const bytes = hash.slice(0, 16);
   bytes[6] = (bytes[6] & 0x0f) | 0x80; // UUIDv8, custom SHA-256 digest

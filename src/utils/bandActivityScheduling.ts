@@ -20,6 +20,8 @@ export interface BandActivityParams {
   linkedGigId?: string;
   /** Members (profile ids) deliberately left out because they were unavailable. */
   skipProfileIds?: string[];
+  /** Optional fixed roster from the paid booking; do not enrol later joiners on retries. */
+  includeProfileIds?: string[];
 }
 
 
@@ -291,8 +293,9 @@ export async function createBandScheduledActivities(params: BandActivityParams):
   }
 
   const skipSet = new Set(Array.isArray(params.skipProfileIds) ? params.skipProfileIds : []);
+  const includeSet = params.includeProfileIds ? new Set(params.includeProfileIds) : null;
   const validMembers = ((members || []) as any[])
-    .filter(m => m.profile_id && !skipSet.has(m.profile_id))
+    .filter(m => m.profile_id && !skipSet.has(m.profile_id) && (!includeSet || includeSet.has(m.profile_id)))
     .map(m => ({ profileId: m.profile_id as string, userId: (m.user_id as string | null) ?? null }));
 
   if (validMembers.length === 0) {

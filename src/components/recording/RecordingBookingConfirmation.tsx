@@ -24,12 +24,15 @@ export interface RecordingBookingSummary {
   totalCost: number;
   payer: "band" | "personal";
   payerName?: string | null;
+  projectionPending?: boolean;
 }
 
 interface RecordingBookingConfirmationProps {
   open: boolean;
   summary: RecordingBookingSummary | null;
   isCancelling?: boolean;
+  isRepairing?: boolean;
+  onRepair: () => void;
   onClose: () => void;
   onCancelSession: () => void;
   onReschedule: () => void;
@@ -39,6 +42,8 @@ export const RecordingBookingConfirmation = ({
   open,
   summary,
   isCancelling = false,
+  isRepairing = false,
+  onRepair,
   onClose,
   onCancelSession,
   onReschedule,
@@ -50,7 +55,7 @@ export const RecordingBookingConfirmation = ({
   const validWindow = !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime());
 
   return (
-    <Dialog open={open} onOpenChange={(next) => { if (!next && !isCancelling) onClose(); }}>
+    <Dialog open={open} onOpenChange={(next) => { if (!next && !isCancelling && !isRepairing) onClose(); }}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
@@ -58,7 +63,9 @@ export const RecordingBookingConfirmation = ({
             Session booked
           </DialogTitle>
           <DialogDescription>
-            Your studio time is locked in and the diary is blocked for everyone involved.
+            {summary.projectionPending
+              ? "Your payment and studio reservation are confirmed. Diary entries or notifications still need repair."
+              : "Your studio time is locked in and the diary is blocked for everyone involved."}
           </DialogDescription>
         </DialogHeader>
 
@@ -109,6 +116,17 @@ export const RecordingBookingConfirmation = ({
           </div>
         </div>
 
+        {summary.projectionPending && (
+          <div role="status" className="rounded-md border border-amber-500/50 p-3 text-sm">
+            <p className="font-semibold">Booking is paid — do not book again.</p>
+            <p className="mt-1 text-muted-foreground">Retry diary and notification delivery for this same session without paying again.</p>
+            <Button type="button" className="mt-2" variant="outline" onClick={onRepair}
+              disabled={isCancelling || isRepairing}>
+              {isRepairing ? "Repairing…" : "Repair booking details"}
+            </Button>
+          </div>
+        )}
+
         <p className="text-xs text-muted-foreground">
           Cancelling before the session starts frees the studio slot, clears the diary blocks and
           refunds the full cost. Rescheduling cancels this booking and takes you back to pick a new
@@ -120,15 +138,15 @@ export const RecordingBookingConfirmation = ({
             <Button
               variant="destructive"
               onClick={onCancelSession}
-              disabled={isCancelling}
+              disabled={isCancelling || isRepairing}
             >
               {isCancelling ? "Cancelling…" : "Cancel session"}
             </Button>
-            <Button variant="outline" onClick={onReschedule} disabled={isCancelling}>
+            <Button variant="outline" onClick={onReschedule} disabled={isCancelling || isRepairing}>
               Reschedule
             </Button>
           </div>
-          <Button onClick={onClose} disabled={isCancelling}>
+          <Button onClick={onClose} disabled={isCancelling || isRepairing}>
             Done
           </Button>
         </DialogFooter>

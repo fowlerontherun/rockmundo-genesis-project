@@ -127,6 +127,9 @@ export const CompleteRecordingDialog = ({
         if (updatedError) throw updatedError;
         await queryClient.invalidateQueries({ queryKey: ["recording-sessions"] });
         await queryClient.invalidateQueries({ queryKey: ["songs"] });
+        await queryClient.invalidateQueries({ queryKey: ["recorded-songs-list"] });
+        await queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });
+        await queryClient.invalidateQueries({ queryKey: ["week-scheduled-activities"] });
         if (updated.status === "completed") {
           if (updated.song_id) setCurrentSongId(updated.song_id);
           toast.success("Recording completed!", {
@@ -139,6 +142,9 @@ export const CompleteRecordingDialog = ({
       }
       await queryClient.invalidateQueries({ queryKey: ["recording-sessions"] });
       await queryClient.invalidateQueries({ queryKey: ["songs"] });
+      await queryClient.invalidateQueries({ queryKey: ["recorded-songs-list"] });
+      await queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });
+      await queryClient.invalidateQueries({ queryKey: ["week-scheduled-activities"] });
       if (session.status === "completed") {
         if (session.song_id) setCurrentSongId(session.song_id);
         toast.success("Recording completed!", {
@@ -154,6 +160,11 @@ export const CompleteRecordingDialog = ({
       console.error("Error checking recording completion:", error);
       toast.error("Could not check recording status");
     } finally {
+      // Even a timed-out worker response may have committed the completion.
+      // Refetch the session and derived lists on success, error and early return.
+      void queryClient.invalidateQueries({ queryKey: ["recording-sessions"] });
+      void queryClient.invalidateQueries({ queryKey: ["recorded-songs-list"] });
+      void queryClient.invalidateQueries({ queryKey: ["song-generation-status"] });
       setCompleting(false);
     }
   };

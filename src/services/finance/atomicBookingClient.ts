@@ -384,12 +384,18 @@ export async function insertBookingInboxMessages(
   // for every recipient without requiring SELECT access to bandmates' inboxes.
   const values = await Promise.all(rows.map(async (row) => {
     const sessionId = row.metadata.session_id;
-    if (row.metadata.source !== "recording_booking" || typeof sessionId !== "string") {
-      throw new Error("recording_notification_identity_missing");
+    const profileId = row.metadata.profile_id;
+    if (row.metadata.source !== "recording_booking" ||
+        typeof sessionId !== "string" || typeof profileId !== "string" ||
+        !sessionId || !profileId) {
+      // Never insert an unscoped character event that would disappear from
+      // the inbox or leak between playable characters.
+      throw new Error("recording_notification_character_scope_missing");
     }
     return {
       ...row,
-      id: await recordingInboxMessageId(sessionId, row.user_id),
+      id: await recordingInboxMessageId(sessionId, row.user_id, profileId),
+      metadata: { ...row.metadata, profile_id: profileId, scope: "character" },
     };
   }));
   const { error } = await insertFrom("player_inbox").upsert(values, {

@@ -23,7 +23,7 @@ import {
 // without a broad rewrite.
 export * from "./useRecordingData";
 
-interface CreateRecordingSessionInput {
+export interface CreateRecordingSessionInput {
   user_id: string;
   profile_id?: string | null;
   band_id?: string;
@@ -41,6 +41,10 @@ interface CreateRecordingSessionInput {
   scheduled_end?: string;
   payment_source?: "band" | "personal";
   skip_profile_ids?: string[];
+  /** Repair-only requests cannot create or charge a new session. */
+  repairOnly?: boolean;
+  /** Fixed participants from the initial checkout; must not change on retry. */
+  booked_profile_ids?: string[];
 }
 
 const readableRecordingError = (message: string) => {
@@ -144,6 +148,9 @@ export const useCreateRecordingSession = () => {
           console.warn("[recording-booking] Could not verify an idempotent booking retry", priorBookingError);
         }
         const isConfirmedRetry = Boolean(priorBooking?.id) && !priorBookingError;
+        if (input.repairOnly && !isConfirmedRetry) {
+          throw new Error("Paid booking could not be verified. No replacement booking or charge was attempted.");
+        }
         if (!isConfirmedRetry && scheduledStart.getTime() <= Date.now()) {
           throw new Error("Choose a recording start time in the future.");
         }
@@ -196,6 +203,22 @@ export const useCreateRecordingSession = () => {
 
         }
 
+        // Snapshot the intended band characters BEFORE charging. Replaying a
+        // partially-created diary must not silently add a newly joined member.
+        let bookedProfileIds = input.booked_profile_ids ?? [];
+        if (input.band_id && !isConfirmedRetry) {
+          const { data: bookingMembers, error: bookingMembersError } = await supabase
+            .from("band_members").select("profile_id")
+            .eq("band_id", input.band_id).eq("member_status", "active")
+            .eq("is_touring_member", false).not("profile_id", "is", null);
+          if (bookingMembersError) throw bookingMembersError;
+          const skipped = new Set(input.skip_profile_ids ?? []);
+          bookedProfileIds = [...new Set((bookingMembers ?? [])
+            .map(member => member.profile_id)
+            .filter((id): id is string => typeof id === "string" && !!id && !skipped.has(id)))];
+          if (!bookedProfileIds.length) throw new Error("No eligible band characters to schedule for recording.");
+        }
+
         stage = "confirming payment and recording session";
         const { data: booking, error } = await confirmRecordingSessionAtomic({
           bandId: input.band_id ?? null,
@@ -243,6 +266,7 @@ export const useCreateRecordingSession = () => {
           });
         }
 
+        let projectionPending = false;
         try {
         const [{ data: studioData }, { data: songData }] = await Promise.all([
           supabase
@@ -265,8 +289,14 @@ export const useCreateRecordingSession = () => {
           booking.bookingId,
         );
 
-        if (!hasProjection) {
+        // Band projection creation is internally idempotent per participant.
+        // Always reconcile the full band roster, even if one earlier row was
+        // already inserted before a partial post-payment failure.
+        if (input.band_id || !hasProjection) {
           if (input.band_id) {
+            if (bookedProfileIds.length === 0) {
+              throw new Error("Paid band booking has no verified participant snapshot; manual diary repair is required.");
+            }
             await createBandScheduledActivities({
               bandId: input.band_id,
               activityType: "recording",
@@ -277,6 +307,7 @@ export const useCreateRecordingSession = () => {
               location: studioName,
               linkedRecordingId: booking.bookingId,
               skipProfileIds: input.skip_profile_ids,
+              includeProfileIds: bookedProfileIds,
               metadata: {
                 sessionId: booking.bookingId,
                 studioId: input.studio_id,
@@ -300,6 +331,11 @@ export const useCreateRecordingSession = () => {
               },
             });
           }
+        }
+        // Never report a fully repaired diary when even the booking's first
+        // activity projection is still absent.
+        if (!(await hasScheduledBookingProjection("linked_recording_id", booking.bookingId))) {
+          throw new Error("recording_booking_projection_still_missing");
         }
 
         if (input.band_id) {
@@ -342,21 +378,26 @@ export const useCreateRecordingSession = () => {
                 .single(),
               supabase
                 .from("band_members")
-                .select("user_id")
+                .select("user_id, profile_id")
                 .eq("band_id", input.band_id)
-                .eq("member_status", "active"),
+                .eq("member_status", "active")
+                .eq("is_touring_member", false),
             ]);
             const bandName = bandInfo?.name || "Your band";
             const startLabel = scheduledStart.toLocaleString();
-            const memberUserIds = (members ?? [])
-              .map((member) => member.user_id)
-              .filter(
-                (userId): userId is string =>
-                  typeof userId === "string" && userId.length > 0,
-              );
-            const inboxRows: BookingInboxMessage[] = memberUserIds.map(
-              (userId) => ({
-                user_id: userId,
+            const recipientProfiles = (members ?? [])
+              .map(member => member.profile_id)
+              .filter((id): id is string => typeof id === "string" && !!id);
+            const { data: scopedProfiles, error: scopeError } = recipientProfiles.length
+              ? await supabase.from("profiles").select("id, user_id").in("id", recipientProfiles)
+              : { data: [], error: null } as any;
+            if (scopeError) throw scopeError;
+            // Profiles are authoritative for character ownership. Do not
+            // infer the active character from an account-level band member.
+            const inboxRows: BookingInboxMessage[] = (scopedProfiles ?? [])
+              .filter(profile => typeof profile.user_id === "string")
+              .map(profile => ({
+                user_id: profile.user_id,
                 category: "system",
                 priority: "normal",
                 title: `Recording session booked: ${songTitle}`,
@@ -364,13 +405,14 @@ export const useCreateRecordingSession = () => {
                 action_type: "view_recording_session",
                 action_data: { session_id: booking.bookingId },
                 metadata: {
+                  scope: "character",
+                  profile_id: profile.id,
                   source: "recording_booking",
                   session_id: booking.bookingId,
                   band_id: input.band_id,
                   payment_source: booking.paymentSource,
                 },
-              }),
-            );
+              }));
             await insertBookingInboxMessages(inboxRows);
           } catch (notifyError) {
             console.error(
@@ -380,6 +422,7 @@ export const useCreateRecordingSession = () => {
           }
         } else {
           try {
+            if (!input.profile_id) throw new Error("recording_notification_character_scope_missing");
             await insertBookingInboxMessages([
               {
                 user_id: input.user_id,
@@ -390,6 +433,8 @@ export const useCreateRecordingSession = () => {
                 action_type: "view_recording_session",
                 action_data: { session_id: booking.bookingId },
                 metadata: {
+                  scope: "character",
+                  profile_id: input.profile_id,
                   source: "recording_booking",
                   session_id: booking.bookingId,
                   payment_source: booking.paymentSource,
@@ -405,13 +450,15 @@ export const useCreateRecordingSession = () => {
         }
 
         } catch (projectionError) {
+          projectionPending = true;
           console.error("[recording-booking] confirmed payment; follow-up scheduling or notification needs repair", {
             bookingId: booking.bookingId,
             error: unknownErrorMessage(projectionError),
           });
-          toast.warning("Recording booked and paid, but schedule or notifications need refreshing. Do not book or pay again.");
         }
-        return session;
+        // The confirmed booking ID always survives follow-up failure. The UI
+        // can retry the IDENTICAL idempotency key, never a second paid booking.
+        return { ...session, projectionPending, bookedProfileIds };
       } catch (bookingError) {
         if (bookingError instanceof BandUnavailableError) throw bookingError;
         console.error(
@@ -421,15 +468,23 @@ export const useCreateRecordingSession = () => {
         throw new Error(`${unknownErrorMessage(bookingError)} (while ${stage})`);
       }
     },
-    onSuccess: () => {
+    onSuccess: (session) => {
       queryClient.invalidateQueries({ queryKey: ["recording-sessions"] });
       queryClient.invalidateQueries({ queryKey: ["recorded-songs-list"] });
       queryClient.invalidateQueries({ queryKey: ["band-payment-source-band"] });
       queryClient.invalidateQueries({ queryKey: ["band-payment-source-profile"] });
-      toast.success("Recording session booked!");
+      if (session.projectionPending) {
+        toast.warning("Recording booked and paid. The diary or notifications need repair; use Repair booking details. Do not pay again.");
+      } else {
+        toast.success("Recording session booked!");
+      }
     },
-    onError: (error: Error) => {
-      toast.error(`Failed to book recording: ${error.message}`);
+    onError: (error: Error, input) => {
+      if (input.repairOnly) {
+        toast.warning(`Unable to repair diary or notices: ${error.message}. Your confirmed booking is not cancelled.`);
+      } else {
+        toast.error(`Failed to book recording: ${error.message}`);
+      }
     },
   });
 };
