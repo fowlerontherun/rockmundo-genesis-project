@@ -1,5 +1,6 @@
 import type { FestivalIssuedTicket, FestivalLaunchStatus, FestivalPublicSponsor } from "../domain/festivalLaunch";
 import type { FestivalPublicEventPhase } from "./festivalEventPhase";
+import { isSafeSponsorLogoReference } from "./SponsorIdentity";
 
 /** Stage and both endpoints are required before advertising a performance. */
 export function isPublishedFestivalPerformance(entry: {
@@ -122,7 +123,10 @@ export function auditFestivalSponsorSlots(
   return {
     mainCount, supportingCount,
     duplicateIds: new Set(sponsors.map(sponsor => sponsor.id)).size !== sponsors.length,
-    missingLogos: sponsors.filter(sponsor => !sponsor.logoReference?.trim()).length,
+    // A syntactically present but unsafe legacy URL is still a missing usable
+    // brand asset. Never advertise it as a completed sponsor identity.
+    missingLogos: sponsors.filter(sponsor =>
+      !sponsor.logoReference || !isSafeSponsorLogoReference(sponsor.logoReference)).length,
     ready: mainCount === 1 && supportingCount <= 4 &&
       new Set(sponsors.map(sponsor => sponsor.id)).size === sponsors.length,
   };
