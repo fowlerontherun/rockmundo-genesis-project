@@ -622,7 +622,9 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                 ["ageGuidance", "Age guidance"], ["terms", "Terms"],
                 ["refundPolicy", "Refunds"], ["contact", "Contact"], ["sponsors", "Partners"],
               ].map(([key, label]) => (
-                <a key={key} href={["visitor-opening-times", "visitor-ticket-help", "visitor-faq-title"].includes(key) ? `#${key}` : `#festival-info-${key}`} className="rounded-full border px-3 py-1.5 text-sm hover:bg-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">{label}</a>
+                <a key={key} href={["visitor-opening-times", "visitor-ticket-help", "visitor-faq-title"].includes(key) ? `#${key}` : `#festival-info-${key}`}
+                  onClick={() => { document.getElementById(`festival-info-${key}`)?.querySelector("details")?.setAttribute("open", ""); }}
+                  className="rounded-full border px-3 py-1.5 text-sm hover:bg-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">{label}</a>
               ))}
             </nav>
             <div className="grid gap-4 md:grid-cols-2">
