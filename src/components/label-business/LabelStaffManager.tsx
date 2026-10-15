@@ -22,6 +22,7 @@ export function LabelStaffManager({ labelId }: LabelStaffManagerProps) {
   const [staffName, setStaffName] = useState("");
   const [staffRole, setStaffRole] = useState<string>("a_and_r");
   const [specialtyGenre, setSpecialtyGenre] = useState("");
+  const [pendingHireRequestId, setPendingHireRequestId] = useState<string | null>(null);
   
   const { data: staff, isLoading } = useLabelStaff(labelId);
   const hireStaff = useHireLabelStaff();
@@ -32,19 +33,23 @@ export function LabelStaffManager({ labelId }: LabelStaffManagerProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    const requestId = pendingHireRequestId ?? crypto.randomUUID();
+    setPendingHireRequestId(requestId);
     await hireStaff.mutateAsync({
       label_id: labelId,
       name: staffName,
       role: staffRole,
-      skill_level: 1 + Math.random() * 1.5,
+      skill_level: 1,
       specialty_genre: specialtyGenre || undefined,
       salary_monthly: selectedRole?.baseSalary || 3000,
+      request_id: requestId,
     });
     
     setDialogOpen(false);
     setStaffName("");
     setStaffRole("a_and_r");
     setSpecialtyGenre("");
+    setPendingHireRequestId(null);
   };
   
   const handleFire = async (staffId: string) => {
@@ -94,7 +99,7 @@ export function LabelStaffManager({ labelId }: LabelStaffManagerProps) {
                 <Label>Name</Label>
                 <Input
                   value={staffName}
-                  onChange={(e) => setStaffName(e.target.value)}
+                  onChange={(e) => { setStaffName(e.target.value); setPendingHireRequestId(null); }}
                   placeholder="Enter staff name"
                   required
                 />
@@ -102,7 +107,7 @@ export function LabelStaffManager({ labelId }: LabelStaffManagerProps) {
               
               <div className="space-y-2">
                 <Label>Role</Label>
-                <Select value={staffRole} onValueChange={setStaffRole}>
+                <Select value={staffRole} onValueChange={(role) => { setStaffRole(role); setPendingHireRequestId(null); }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select role" />
                   </SelectTrigger>
@@ -126,7 +131,7 @@ export function LabelStaffManager({ labelId }: LabelStaffManagerProps) {
                 <Label>Specialty Genre (Optional)</Label>
                 <Input
                   value={specialtyGenre}
-                  onChange={(e) => setSpecialtyGenre(e.target.value)}
+                  onChange={(e) => { setSpecialtyGenre(e.target.value); setPendingHireRequestId(null); }}
                   placeholder="e.g., Rock, Hip-Hop, Electronic"
                 />
               </div>
