@@ -41,6 +41,8 @@ export interface CreateRecordingSessionInput {
   scheduled_end?: string;
   payment_source?: "band" | "personal";
   skip_profile_ids?: string[];
+  /** Repair-only requests cannot create or charge a new session. */
+  repairOnly?: boolean;
 }
 
 const readableRecordingError = (message: string) => {
@@ -144,6 +146,9 @@ export const useCreateRecordingSession = () => {
           console.warn("[recording-booking] Could not verify an idempotent booking retry", priorBookingError);
         }
         const isConfirmedRetry = Boolean(priorBooking?.id) && !priorBookingError;
+        if (input.repairOnly && !isConfirmedRetry) {
+          throw new Error("Paid booking could not be verified. No replacement booking or charge was attempted.");
+        }
         if (!isConfirmedRetry && scheduledStart.getTime() <= Date.now()) {
           throw new Error("Choose a recording start time in the future.");
         }
@@ -452,8 +457,12 @@ export const useCreateRecordingSession = () => {
         toast.success("Recording session booked!");
       }
     },
-    onError: (error: Error) => {
-      toast.error(`Failed to book recording: ${error.message}`);
+    onError: (error: Error, input) => {
+      if (input.repairOnly) {
+        toast.warning(`Unable to repair diary or notices: ${error.message}. Your confirmed booking is not cancelled.`);
+      } else {
+        toast.error(`Failed to book recording: ${error.message}`);
+      }
     },
   });
 };
