@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,7 +12,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, AlertTriangle } from "lucide-react";
-import { minorToMajor } from "@/lib/releaseMoney";
 
 interface CancelReleaseDialogProps {
   open: boolean;
@@ -31,45 +29,38 @@ export function CancelReleaseDialog({ open, onOpenChange, release }: CancelRelea
   const queryClient = useQueryClient();
 
   const cancelRelease = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (): Promise<{ refundedMajor: number; idempotent: boolean }> => {
       if (!release) throw new Error("No release selected");
 
-      // Only the earnings journal may credit band cash. Direct balance updates
-      // would double-refund once the incremental earnings trigger is installed.
-      // TODO(#4119): replace this multi-request cancellation with an atomic,
-      // idempotent server-side refund before enabling automatic retries.
-      if (release.band_id && release.total_cost && release.total_cost > 0) {
-        const { error: refundError } = await supabase.from("band_earnings").insert({
-          band_id: release.band_id,
-          amount: minorToMajor(release.total_cost),
-          source: "refund",
-          description: `Release cancelled: ${release.title} (manufacturing refund)`,
-          metadata: { release_id: release.id },
-        });
-        if (refundError) throw refundError;
-      }
-
-      // Update release status to cancelled
-      const { error } = await supabase
-        .from("releases")
-        .update({ release_status: "cancelled" })
-        .eq("id", release.id);
-
+      // The RPC locks the release, validates active-character ownership, checks
+      // actual payer/charge records, and atomically updates status + any refund.
+      // Do not write band_earnings or releases separately from this browser.
+      const { data, error } = await (supabase as any).rpc("cancel_release_atomic", {
+        p_release_id: release.id,
+      });
       if (error) throw error;
+      if (data?.success !== true) throw new Error("Release cancellation was not confirmed");
+      const refundedMajor = Number(data.refundMajor ?? 0);
+      if (!Number.isSafeInteger(refundedMajor) || refundedMajor < 0) {
+        throw new Error("Release cancellation returned an invalid refund");
+      }
+      return { refundedMajor, idempotent: data.idempotent === true };
     },
-    onSuccess: () => {
+    onSuccess: ({ refundedMajor, idempotent }) => {
       queryClient.invalidateQueries({ queryKey: ["releases"] });
       toast({
         title: "Release Cancelled",
-        description: release?.total_cost 
-          ? `$${minorToMajor(release.total_cost).toLocaleString()} has been refunded.`
-          : "Release has been cancelled.",
+        description: idempotent
+          ? "This release was already cancelled. No additional refund was issued."
+          : refundedMajor > 0
+            ? `$${refundedMajor.toLocaleString()} in verified band charges was refunded.`
+            : "Release cancelled. No verified band refund was due.",
       });
       onOpenChange(false);
     },
     onError: (error: any) => {
       toast({
-        title: "Error cancelling release",
+        title: "Could not cancel release",
         description: error.message,
         variant: "destructive",
       });
@@ -90,11 +81,12 @@ export function CancelReleaseDialog({ open, onOpenChange, release }: CancelRelea
             <p>
               Are you sure you want to cancel <strong>"{release.title}"</strong>?
             </p>
-            {release.total_cost && release.total_cost > 0 && (
-              <p className="text-sm bg-muted p-2 rounded">
-                Release cost of <strong>${minorToMajor(release.total_cost).toLocaleString()}</strong> will be refunded to your band balance.
-              </p>
-            )}
+            <p className="text-sm bg-muted p-2 rounded">
+              Refunds, where eligible, are calculated from verified band payment
+              records. Cancellation is blocked when payment records are
+              incomplete, the manufacturing has finished, or label-paid costs
+              need separate reconciliation.
+            </p>
             <p className="text-sm text-muted-foreground">
               This action cannot be undone. All associated data will be marked as cancelled.
             </p>
