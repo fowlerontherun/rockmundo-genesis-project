@@ -1,24 +1,43 @@
-/** Browser-reported duration of an existing audio recording. Never mutates files. */
-export async function readAudioDuration(url: string, timeoutMs = 12000): Promise<number | null> {
+/**
+ * Browser decoded duration of an existing MP3, not a filesize/bitrate guess.
+ * VBR or streaming media can report Infinity at loadedmetadata and only
+ * settle on a later durationchange. Never classify that as a short recording.
+ * Audits are abortable when the admin changes song pages or leaves the view.
+ */
+export async function readAudioDuration(
+  url: string, timeoutMs = 12000, signal?: AbortSignal,
+): Promise<number | null> {
+  if (signal?.aborted) return null;
   return new Promise(resolve => {
     const audio = new Audio();
     audio.preload = "metadata";
     let settled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const loaded = () => {
+      if (Number.isFinite(audio.duration) && audio.duration > 0) finish(audio.duration);
+    };
+    const failed = () => finish(null);
     const finish = (duration: number | null) => {
       if (settled) return;
       settled = true;
-      window.clearTimeout(timer);
+      if (timer !== undefined) clearTimeout(timer);
       audio.removeEventListener("loadedmetadata", loaded);
+      audio.removeEventListener("durationchange", loaded);
+      audio.removeEventListener("loadeddata", loaded);
       audio.removeEventListener("error", failed);
+      signal?.removeEventListener("abort", failed);
+      audio.pause();
       audio.removeAttribute("src");
       audio.load();
       resolve(duration);
     };
-    const loaded = () => finish(Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : null);
-    const failed = () => finish(null);
-    const timer = window.setTimeout(failed, timeoutMs);
     audio.addEventListener("loadedmetadata", loaded);
+    audio.addEventListener("durationchange", loaded);
+    audio.addEventListener("loadeddata", loaded);
     audio.addEventListener("error", failed);
+    signal?.addEventListener("abort", failed, { once: true });
+    timer = setTimeout(failed, timeoutMs);
+    if (signal?.aborted) { failed(); return; }
     audio.src = url;
     audio.load();
   });

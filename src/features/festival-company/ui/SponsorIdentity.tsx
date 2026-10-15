@@ -1,5 +1,21 @@
 import { useState } from "react";
 
+/** Public/admin logo gate. Approval and licensing still require human review.
+ * Allow same-origin paths, HTTPS and the canonical seeded base64 monograms;
+ * reject executable, insecure, protocol-relative and credentialed URLs. */
+export function isSafeSponsorLogoReference(reference: string): boolean {
+  if (!reference || reference !== reference.trim()) return false;
+  if (/^\/(?!\/)[^\\\s]*$/.test(reference)) return true;
+  if (/^data:image\/(?:svg\+xml|png|jpeg|webp);base64,[a-z0-9+/]+={0,2}$/i.test(reference)) return true;
+  try {
+    const url = new URL(reference);
+    return url.protocol === "https:" && !!url.hostname && !url.username && !url.password &&
+      !/[\s\\]/.test(reference);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * A failed logo should only hide the *failed URL*. When an organiser corrects
  * the asset, React reuses the same sponsor card and must retry the new URL.
@@ -12,14 +28,8 @@ export function SponsorIdentity({
   logoReference: string | null;
 }) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
-  // Canonical fictional brand fallbacks use base64 SVG data URLs. Accept
-  // only a small set of image MIME types; never allow arbitrary data, JS,
-  // HTTP or protocol-relative URLs in a public <img>.
-  const isSafeImage = (url: string) =>
-    /^https:\/\//i.test(url) ||
-    (/^\/(?!\/)[^\\\s]*$/.test(url)) ||
-    /^data:image\/(?:svg\+xml|png|jpeg|webp);base64,[a-z0-9+/]+={0,2}$/i.test(url);
-  const secureUrl = logoReference && isSafeImage(logoReference) ? logoReference : null;
+  const secureUrl = logoReference && isSafeSponsorLogoReference(logoReference)
+    ? logoReference : null;
 
   return (
     <div className="flex min-h-16 items-center justify-center rounded-lg border bg-background p-3">

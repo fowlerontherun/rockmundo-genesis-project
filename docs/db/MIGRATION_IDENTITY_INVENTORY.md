@@ -46,3 +46,23 @@ Before changing production, reconcile each candidate to its Git blob hash,
 dependency order, exact current schema and function grants, an isolated
 staging test, and an approved backup/rollback checkpoint. **Never run
 `supabase db push` or bulk-apply historical SQL based on this report.**
+
+## Optional exact SQL hash evidence (phase 1)
+
+The history input may also contain a **separately verified SQL source hash**
+alongside a version, when independently collected during a deployment:
+
+```json
+[
+  {"version": "20261015120000", "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+]
+```
+
+Do not invent hashes or assume the Git blob SHA (a different format) matches
+a SQL SHA-256. A matching `history_sql_hash=source_hash_matched_schema_unverified`
+only establishes that the *provided bytes* match. It does **not** certify
+that the function body, privileges, RLS policies, triggers or game data are
+present in production. `source_hash_mismatch_manual_review` must block
+automated deployment, as must entries in `history_hash_collision_versions`.
+Always verify the actual live schema separately and never replay historical
+SQL on the strength of a manifest match.

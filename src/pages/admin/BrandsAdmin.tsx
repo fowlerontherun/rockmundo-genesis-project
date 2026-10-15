@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { isSafeSponsorLogoReference, SponsorIdentity } from "@/features/festival-company/ui/SponsorIdentity";
 import { Loader2, Plus, RefreshCw, Save, Trash2 } from "lucide-react";
 
 interface BrandRecord {
@@ -122,6 +123,19 @@ const BrandsAdmin = () => {
       return;
     }
 
+    const logo = form.logoUrl.trim();
+    if (logo && !isSafeSponsorLogoReference(logo)) {
+      toast.error("Logo must be a safe HTTPS image, a same-site path or a canonical seeded logo.");
+      return;
+    }
+    const activating = form.active && (!editingId || !brands.find(brand => brand.id === editingId)?.is_active);
+    if (activating && !logo) {
+      // Existing active legacy records can still be edited. Newly activated
+      // brands must supply an identifiable image before receiving offers.
+      toast.error("Add an approved brand logo before activating a sponsor.");
+      return;
+    }
+
     setSaving(true);
     const payload = {
       name,
@@ -134,7 +148,7 @@ const BrandsAdmin = () => {
       min_fame_required: Math.max(0, Number(form.minFame) || 0),
       min_fame_threshold: Math.max(0, Number(form.minFame) || 0),
       is_active: form.active,
-      logo_url: form.logoUrl.trim() || null,
+      logo_url: logo || null,
       exclusivity_pref: form.exclusivity,
       targeting_flags: form.targetingFlags
         .split(",")
@@ -335,7 +349,7 @@ const BrandsAdmin = () => {
                       <TableBody>
                         {filteredBrands.map((brand) => (
                           <TableRow key={brand.id}>
-                            <TableCell>{brand.logo_url ? <img src={brand.logo_url} alt={`${brand.name} logo`} loading="lazy" className="h-12 w-20 rounded border object-contain" /> : <span className="text-xs text-muted-foreground">Missing</span>}</TableCell>
+                            <TableCell><div className="w-24"><SponsorIdentity name={brand.name} logoReference={brand.logo_url} /></div></TableCell>
                             <TableCell className="font-semibold">{brand.name}</TableCell>
                             <TableCell>{brand.size}</TableCell>
                             <TableCell>{brand.category}</TableCell>
@@ -385,7 +399,12 @@ const BrandsAdmin = () => {
                   <div className="space-y-2">
                     <Label htmlFor="brand-logo">Logo URL</Label>
                     <Input id="brand-logo" value={form.logoUrl} onChange={(e) => setForm((prev) => ({ ...prev, logoUrl: e.target.value }))} placeholder="https://… or seeded data:image/svg+xml" />
-                    {form.logoUrl && <img src={form.logoUrl} alt="Brand logo preview" className="h-20 w-32 rounded border object-contain" />}
+                    {form.logoUrl && isSafeSponsorLogoReference(form.logoUrl) && (
+                      <div className="mt-2 w-40"><SponsorIdentity name={form.name || "Brand preview"} logoReference={form.logoUrl} /></div>
+                    )}
+                    {form.logoUrl && !isSafeSponsorLogoReference(form.logoUrl) && (
+                      <p role="alert" className="text-sm text-destructive">Unsafe logo reference. Use HTTPS, a same-site image or the seeded SVG.</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label>Category</Label>

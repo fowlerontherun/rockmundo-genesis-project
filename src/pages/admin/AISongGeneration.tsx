@@ -71,13 +71,17 @@ export default function AISongGeneration() {
   const [audioAuditPage, setAudioAuditPage] = useState(0);
   const audioAuditPageSize = 30;
   const auditRunRef = useRef(0);
+  const auditAbortRef = useRef<AbortController | null>(null);
   useEffect(() => {
     // Invalidate an old asynchronous metadata scan on page changes so late
     // audio events cannot contaminate the new page's export or badges.
     auditRunRef.current += 1;
+    auditAbortRef.current?.abort();
+    auditAbortRef.current = null;
     setAudioAudit({});
     setAuditChecked(0);
     setAudioAuditing(false);
+    return () => { auditRunRef.current += 1; auditAbortRef.current?.abort(); };
   }, [audioAuditPage]);
 
   const { data: songs, isLoading, refetch } = useQuery({
@@ -132,6 +136,9 @@ export default function AISongGeneration() {
   const auditRecentAudio = async () => {
     if (audioAuditing || !recentAudioSongs?.length) return;
     const run = ++auditRunRef.current;
+    auditAbortRef.current?.abort();
+    const controller = new AbortController();
+    auditAbortRef.current = controller;
     const songsOnPage = [...recentAudioSongs];
     setAudioAuditing(true);
     setAudioAudit({});
@@ -140,13 +147,16 @@ export default function AISongGeneration() {
       // Read-only playback metadata checks. Never generate/pay for audio here.
       for (const song of songsOnPage) {
         if (run !== auditRunRef.current) break;
-        const duration = song.audio_url ? await readAudioDuration(song.audio_url) : null;
-        if (run !== auditRunRef.current) break;
+        const duration = song.audio_url ? await readAudioDuration(song.audio_url, 12000, controller.signal) : null;
+        if (controller.signal.aborted || run !== auditRunRef.current) break;
         setAudioAudit(previous => ({ ...previous, [song.id]: duration }));
         setAuditChecked(count => count + 1);
       }
     } finally {
-      if (run === auditRunRef.current) setAudioAuditing(false);
+      if (run === auditRunRef.current) {
+        auditAbortRef.current = null;
+        setAudioAuditing(false);
+      }
     }
   };
 

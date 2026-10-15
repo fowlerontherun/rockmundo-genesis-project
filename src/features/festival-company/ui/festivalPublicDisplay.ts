@@ -137,3 +137,19 @@ export function getPublishedFestivalCampingTickets(
     .filter(product => /\bcamp(?:ing)?\b/i.test(`${product.name} ${product.ticketType}`))
     .map(product => ({ name: product.name, saleStatus: product.saleStatus }));
 }
+
+/** Only link an exact organiser-published email or HTTPS destination.
+ * Never reinterpret policy prose or free-text contact details as a URL. */
+export function festivalVisitorContactLink(raw: string | null): string | null {
+  const value = raw?.trim() ?? "";
+  if (!value || /[\r\n]/.test(value)) return null;
+  if (/^[a-z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.[a-z]{2,}$/i.test(value)) {
+    return `mailto:${value}`;
+  }
+  try {
+    const url = new URL(value);
+    if (url.protocol === "https:" && url.hostname && !url.username && !url.password &&
+        !/[\s\\]/.test(value)) return url.href;
+  } catch { /* unpublished text, not a link */ }
+  return null;
+}

@@ -1,8 +1,10 @@
+import { createHash } from "node:crypto";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   buildMigrationIdentityInventory,
   recordedVersionsFromJson,
+  recordedHistoryEvidenceFromJson,
 } from "../scripts/migration-identity-inventory.mjs";
 
 test("#4072 identical timestamp with different SQL is never silently deduplicated", () => {
@@ -43,4 +45,35 @@ test("#4072 reject malformed history and version-free migration filenames", () =
   assert.throws(() => recordedVersionsFromJson([{ version: "DROP TABLE" }]), /nonnumeric/);
   assert.throws(() => recordedVersionsFromJson({ version: "20261015123456" }), /array/);
   assert.throws(() => buildMigrationIdentityInventory([{ path: "manual-repair.sql", content: "select 1" }]), /Invalid migration/);
+});
+
+test("#4072 matched original SQL bytes remain schema-unverified", () => {
+  const content = "select 42;";
+  // SHA256 of the exact SQL content, not the Git blob SHA1.
+  const digest = createHash("sha256").update(content).digest("hex");
+  const parsed = recordedHistoryEvidenceFromJson([
+    { version: "20261015123000", sha256: digest },
+  ]);
+  const inventory = buildMigrationIdentityInventory([
+    { path: "supabase/migrations/20261015123000_reward.sql", content },
+  ], parsed);
+  assert.equal(inventory.entries[0].history_sql_hash, "source_hash_matched_schema_unverified");
+  assert.equal(inventory.entries[0].schema_effects, "not_verified");
+});
+
+test("#4072 detects historic hash drift even with a matching version", () => {
+  const staleDigest = "a".repeat(64);
+  const inventory = buildMigrationIdentityInventory([
+    { path: "supabase/migrations/20261015123100_drift.sql", content: "select 2;" },
+  ], recordedHistoryEvidenceFromJson([
+    { version: "20261015123100", sha256: staleDigest },
+    { version: "20261015123100", sha256: "b".repeat(64) },
+  ]));
+  assert.equal(inventory.entries[0].history_identity, "version_matched_unverified");
+  assert.equal(inventory.entries[0].history_sql_hash, "source_hash_mismatch_manual_review");
+  assert.deepEqual(inventory.history_hash_collision_versions, ["20261015123100"]);
+  assert.equal(inventory.entries[0].deployment_decision, "manual_review_required");
+  assert.throws(() => recordedHistoryEvidenceFromJson([
+    { version: "20261015123100", sha256: "not-a-digest" },
+  ]), /invalid SQL SHA256/);
 });

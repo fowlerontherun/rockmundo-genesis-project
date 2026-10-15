@@ -27,7 +27,7 @@ import { referralAwareDestination } from "@/features/shareable-moments/referralD
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { SponsorIdentity } from "./SponsorIdentity";
 import { canOfferFestivalCheckIn, canStartFestivalTicketPurchase } from "./publicFestivalEligibility";
-import { canDisplayFestivalCheckInMessage, festivalVisitorEventLabel, festivalVisitorSalesLabel, formatFestivalEditionDate, formatFestivalEditionTime, hasIssuedFestivalAdmission, isMainFestivalSponsor, isPublishedFestivalPerformance, orderFestivalPublicSponsors, auditFestivalSponsorSlots, getPublishedFestivalCampingTickets } from "./festivalPublicDisplay";
+import { canDisplayFestivalCheckInMessage, festivalVisitorEventLabel, festivalVisitorSalesLabel, formatFestivalEditionDate, formatFestivalEditionTime, hasIssuedFestivalAdmission, isMainFestivalSponsor, isPublishedFestivalPerformance, orderFestivalPublicSponsors, auditFestivalSponsorSlots, getPublishedFestivalCampingTickets, festivalVisitorContactLink } from "./festivalPublicDisplay";
 
 const Countdown = ({ target }: { target: string }) => {
   const [now, setNow] = useState(() => Date.now());
@@ -120,6 +120,8 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   // Audit the raw immutable projection before display-only deduplication.
   const sponsorAudit = auditFestivalSponsorSlots(f.sponsors);
   const campingTickets = getPublishedFestivalCampingTickets(f.ticketProducts);
+  const campingPublished = campingTickets.length > 0 || !!f.information.camping?.trim();
+  const organiserContactLink = festivalVisitorContactLink(f.information.contact);
 
   const myAttendance = (attendanceError ? [] : attendance)
     .filter((item) => item.festivalLaunchId === f.id && item.status !== "cancelled" && item.status !== "refunded")
@@ -621,7 +623,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                 ["foodAndDrink", "Food & drink"], ["safety", "Safety & welfare"],
                 ["ageGuidance", "Age guidance"], ["terms", "Terms"],
                 ["refundPolicy", "Refunds"], ["contact", "Contact"], ["sponsors", "Partners"],
-              ].map(([key, label]) => (
+              ].filter(([key]) => key !== "camping" || campingPublished).map(([key, label]) => (
                 <a key={key} href={["visitor-opening-times", "visitor-ticket-help", "visitor-faq-title"].includes(key) ? `#${key}` : `#festival-info-${key}`}
                   onClick={() => { document.getElementById(`festival-info-${key}`)?.querySelector("details")?.setAttribute("open", ""); }}
                   className="rounded-full border px-3 py-1.5 text-sm hover:bg-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">{label}</a>
@@ -637,7 +639,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                 ["terms", "Terms & entry", "Conditions of admission"],
                 ["refundPolicy", "Tickets & refunds", "Cancellation and refund information"],
                 ["contact", "Contact the organiser", "Questions and visitor support"],
-              ] as const).map(([key, title, description]) => (
+              ] as const).filter(([key]) => key !== "camping" || campingPublished).map(([key, title, description]) => (
                 <section id={`festival-info-${key}`} key={key} aria-labelledby={`festival-info-title-${key}`} className="scroll-mt-6 rounded-xl border bg-card p-5">
                   <details className="group" open={key === "travel"}>
                     <summary className="cursor-pointer rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
@@ -656,6 +658,13 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                         key === "accessibility" ? "Accessibility arrangements have not been published. Contact the organiser before making travel plans if you need assistance." :
                         "The organiser has not published this information yet."}
                     </p>
+                  )}
+                  {key === "contact" && organiserContactLink && (
+                    <a href={organiserContactLink} target={organiserContactLink.startsWith("https:") ? "_blank" : undefined}
+                      rel={organiserContactLink.startsWith("https:") ? "noopener noreferrer" : undefined}
+                      className="mt-3 inline-block font-medium text-primary underline underline-offset-2">
+                      Contact the organiser
+                    </a>
                   )}
                   {key === "camping" && campingTickets.length > 0 && (
                     <div className="mt-3 rounded-md border p-3 text-sm">
