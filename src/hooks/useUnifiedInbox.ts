@@ -201,7 +201,9 @@ export function useUnifiedInbox() {
     messages,
     unreadCount: messages.filter((message) => !message.is_read).length,
     isLoading: inbox.isLoading || notifications.isLoading,
-    error: inbox.error || notifications.error,
+    // An outage in either source must not hide already available inbox messages.
+    error: inbox.error && notifications.error ? inbox.error : null,
+    partialError: inbox.error && notifications.error ? null : (inbox.error || notifications.error),
     markAsRead,
     markAllAsRead,
     archiveMessage,
