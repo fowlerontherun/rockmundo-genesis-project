@@ -37,8 +37,8 @@ RETURNS boolean LANGUAGE plpgsql IMMUTABLE SECURITY INVOKER SET search_path=''
 AS $validator$
 DECLARE v_value jsonb; v_number numeric;
 BEGIN
- IF jsonb_typeof(p_effects) IS DISTINCT FROM 'object'
-  OR (SELECT count(*) FROM jsonb_each(p_effects))<>1 THEN RETURN false; END IF;
+ IF jsonb_typeof(p_effects) IS DISTINCT FROM 'object' THEN RETURN false; END IF;
+ IF (SELECT count(*) FROM jsonb_each(p_effects))<>1 THEN RETURN false; END IF;
  v_value:=p_effects->'recording_quality_boost';
  IF jsonb_typeof(v_value) IS DISTINCT FROM 'number' THEN RETURN false; END IF;
  v_number:=(v_value #>> '{}')::numeric;
