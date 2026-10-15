@@ -266,7 +266,10 @@ export const useCreateRecordingSession = () => {
           booking.bookingId,
         );
 
-        if (!hasProjection) {
+        // Band projection creation is internally idempotent per participant.
+        // Always reconcile the full band roster, even if one earlier row was
+        // already inserted before a partial post-payment failure.
+        if (input.band_id || !hasProjection) {
           if (input.band_id) {
             await createBandScheduledActivities({
               bandId: input.band_id,
@@ -301,6 +304,11 @@ export const useCreateRecordingSession = () => {
               },
             });
           }
+        }
+        // Never report a fully repaired diary when even the booking's first
+        // activity projection is still absent.
+        if (!(await hasScheduledBookingProjection("linked_recording_id", booking.bookingId))) {
+          throw new Error("recording_booking_projection_still_missing");
         }
 
         if (input.band_id) {
