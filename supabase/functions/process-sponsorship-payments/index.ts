@@ -122,15 +122,18 @@ Deno.serve(async (req) => {
           p_payment_id: payment.id,
         });
         if (error) throw error;
-        const result = data as { status?: string; amount?: number } | null;
+        const result = data as { status?: string; amount?: number; replayed?: boolean } | null;
         // The DB RPC contract returns {status:'paid'|'cancelled',amount}.
         // Unknown / malformed responses are NOT a successful settlement.
-        // A paid amount of zero is possible for an idempotent concurrent retry.
+        // A paid amount of zero is allowed only for a confirmed idempotent replay.
         const amount = result?.amount;
         if (typeof amount !== 'number' || !Number.isSafeInteger(amount) || amount < 0) {
           throw new Error('Invalid atomic sponsorship settlement amount')
         }
-        if (result?.status === 'paid') {
+        if (result?.status === 'paid' && result.replayed === true && amount === 0) {
+          // A replay is not a second payment and must not inflate job totals.
+          console.log(`Sponsorship installment replay already settled: ${payment.id}`);
+        } else if (result?.status === 'paid' && result.replayed === false && amount > 0) {
           paidCount++;
           totalPaid += amount;
         } else if (result?.status === 'cancelled' && amount === 0) {
