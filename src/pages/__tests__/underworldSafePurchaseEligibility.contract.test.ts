@@ -8,6 +8,7 @@ const product: Product = {
   duration_hours: null,
   effects: { health: -8, energy: 25 },
   price_cash: 180,
+  price_token_id: null,
   is_available: true,
 };
 
@@ -37,4 +38,21 @@ describe("underworld first-release catalog eligibility", () => {
     expect(isUnderworldPurchaseSupported({ ...product, price_cash: 0 })).toBe(false);
     expect(isUnderworldPurchaseSupported({ ...product, price_cash: 1000001 })).toBe(false);
   });
+  it("enables only isolated 1-50% recording-quality boosters after explicit release", () => {
+    const recording = {
+      ...product,
+      category: "booster",
+      duration_hours: 24,
+      effects: { recording_quality_boost: 35 },
+    };
+    expect(isUnderworldPurchaseSupported(recording, false)).toBe(false);
+    expect(isUnderworldPurchaseSupported(recording, true)).toBe(true);
+    expect(isUnderworldPurchaseSupported({ ...recording, price_token_id: "token-id" }, true)).toBe(false);
+    expect(isUnderworldPurchaseSupported({ ...recording, effects: { recording_quality_boost: 35, fame: 100 } }, true)).toBe(false);
+    expect(isUnderworldPurchaseSupported({ ...recording, effects: { xp_multiplier: 1.5 } }, true)).toBe(false);
+    expect(isUnderworldPurchaseSupported({ ...recording, effects: { recording_quality_boost: 51 } }, true)).toBe(false);
+    expect(isUnderworldPurchaseSupported({ ...recording, duration_hours: 169 }, true)).toBe(false);
+    expect(isUnderworldPurchaseSupported({ ...recording, duration_hours: 0 }, true)).toBe(false);
+  });
+
 });
