@@ -43,6 +43,8 @@ export interface CreateRecordingSessionInput {
   skip_profile_ids?: string[];
   /** Repair-only requests cannot create or charge a new session. */
   repairOnly?: boolean;
+  /** Fixed participants from the initial checkout; must not change on retry. */
+  booked_profile_ids?: string[];
 }
 
 const readableRecordingError = (message: string) => {
@@ -201,6 +203,22 @@ export const useCreateRecordingSession = () => {
 
         }
 
+        // Snapshot the intended band characters BEFORE charging. Replaying a
+        // partially-created diary must not silently add a newly joined member.
+        let bookedProfileIds = input.booked_profile_ids ?? [];
+        if (input.band_id && !isConfirmedRetry) {
+          const { data: bookingMembers, error: bookingMembersError } = await supabase
+            .from("band_members").select("profile_id")
+            .eq("band_id", input.band_id).eq("member_status", "active")
+            .eq("is_touring_member", false).not("profile_id", "is", null);
+          if (bookingMembersError) throw bookingMembersError;
+          const skipped = new Set(input.skip_profile_ids ?? []);
+          bookedProfileIds = [...new Set((bookingMembers ?? [])
+            .map(member => member.profile_id)
+            .filter((id): id is string => typeof id === "string" && !!id && !skipped.has(id)))];
+          if (!bookedProfileIds.length) throw new Error("No eligible band characters to schedule for recording.");
+        }
+
         stage = "confirming payment and recording session";
         const { data: booking, error } = await confirmRecordingSessionAtomic({
           bandId: input.band_id ?? null,
@@ -276,6 +294,9 @@ export const useCreateRecordingSession = () => {
         // already inserted before a partial post-payment failure.
         if (input.band_id || !hasProjection) {
           if (input.band_id) {
+            if (bookedProfileIds.length === 0) {
+              throw new Error("Paid band booking has no verified participant snapshot; manual diary repair is required.");
+            }
             await createBandScheduledActivities({
               bandId: input.band_id,
               activityType: "recording",
@@ -286,6 +307,7 @@ export const useCreateRecordingSession = () => {
               location: studioName,
               linkedRecordingId: booking.bookingId,
               skipProfileIds: input.skip_profile_ids,
+              includeProfileIds: bookedProfileIds,
               metadata: {
                 sessionId: booking.bookingId,
                 studioId: input.studio_id,
@@ -436,7 +458,7 @@ export const useCreateRecordingSession = () => {
         }
         // The confirmed booking ID always survives follow-up failure. The UI
         // can retry the IDENTICAL idempotency key, never a second paid booking.
-        return { ...session, projectionPending };
+        return { ...session, projectionPending, bookedProfileIds };
       } catch (bookingError) {
         if (bookingError instanceof BandUnavailableError) throw bookingError;
         console.error(
