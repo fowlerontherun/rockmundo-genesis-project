@@ -53,7 +53,10 @@ Deno.serve(async (req) => {
 
   // Only parse or persist job metadata after the authorization gate.
   const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null; dryRun?: boolean }>(req)
-  const triggeredBy = payload?.triggeredBy ?? req.headers.get('x-triggered-by') ?? undefined
+  // The bearer secret is validated via header. Never copy arbitrary caller
+  // JSON into persistent job logs: it could contain credentials or PII.
+  const triggeredBy = 'authenticated_cron'
+  const safePayload = { dryRun: payload?.dryRun === true }
 
   let runId: string | null = null
   const startedAt = Date.now()
@@ -69,8 +72,10 @@ Deno.serve(async (req) => {
       functionName: 'process-sponsorship-payments',
       supabaseClient: supabase,
       triggeredBy,
-      requestPayload: payload ?? null,
-      requestId: payload?.requestId ?? null,
+      requestPayload: safePayload,
+      requestId: typeof payload?.requestId === 'string' &&
+        /^[a-zA-Z0-9:_-]{1,100}$/.test(payload.requestId)
+        ? payload.requestId : null,
     })
 
     const now = new Date().toISOString()
@@ -117,12 +122,21 @@ Deno.serve(async (req) => {
           p_payment_id: payment.id,
         });
         if (error) throw error;
-        const result = data as { status: string; amount: number } | null;
+        const result = data as { status?: string; amount?: number } | null;
+        // The DB RPC contract returns {status:'paid'|'cancelled',amount}.
+        // Unknown / malformed responses are NOT a successful settlement.
+        // A paid amount of zero is possible for an idempotent concurrent retry.
+        const amount = Number(result?.amount);
+        if (!Number.isSafeInteger(amount) || amount < 0) {
+          throw new Error('Invalid atomic sponsorship settlement amount')
+        }
         if (result?.status === 'paid') {
           paidCount++;
-          totalPaid += Number(result.amount || 0);
-        } else if (result?.status === 'cancelled') {
+          totalPaid += amount;
+        } else if (result?.status === 'cancelled' && amount === 0) {
           console.log(`Cancelled obsolete installment ${payment.id}: contract not active`);
+        } else {
+          throw new Error('Unexpected atomic sponsorship settlement status')
         }
       } catch (error) {
         console.error(`Failed atomic installment processing ${payment.id}:`, error);
