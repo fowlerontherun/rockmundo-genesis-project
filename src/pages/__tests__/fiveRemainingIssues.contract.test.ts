@@ -73,6 +73,7 @@ describe("remaining five-issue hardening regressions", () => {
     expect(script).toContain("identical_sql_groups");
     expect(script).toContain("version_matched_unverified");
     expect(script).not.toContain("execute_sql");
-    expect(script).not.toContain("db push");
+    expect(script).toContain("Do not run supabase db push");
+    expect(script).not.toContain("execSync(");
   });
 });
