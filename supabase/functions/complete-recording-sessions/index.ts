@@ -379,7 +379,7 @@ Deno.serve(async (req) => {
         const qualityImprovement = outcome.qualityImprovement
         const newQuality = outcome.finalMasterQuality
 
-        const { error: updateError } = await supabase
+        const { data: updatedSession, error: updateError } = await supabase
           .from('recording_sessions')
           .update({
             // Keep the session processable until the song and reward stages succeed.
@@ -398,42 +398,39 @@ Deno.serve(async (req) => {
           .eq('completion_claim_id', completionClaimId)
           .select('id').maybeSingle()
         if (updateError) throw updateError
+        if (!updatedSession?.id) throw new Error('recording_completion_claim_lost')
 
         if (session.song_id && session.songs) {
           const originalSong = session.songs
           const recordingVersion = session.recording_version || 'standard'
           if (recordingVersion !== 'standard') {
-            // If an earlier attempt already linked this session to its child
-            // version, update that version directly instead of nesting children.
+            // #4114: one immutable acoustic/remix song per *recording*.
+            // Earlier takes and any audio already used on releases remain intact.
+            // Retries find this session's own child rather than a prior take.
             const parentSongId = originalSong.parent_song_id || session.song_id
-            const { data: existingVersion, error: lookupError } =
-              originalSong.parent_song_id && originalSong.version === recordingVersion
+            const { data: existingTake, error: takeLookupError } =
+              originalSong.source_recording_session_id === session.id
                 ? { data: { id: session.song_id }, error: null }
                 : await supabase.from('songs').select('id')
-                  .eq('parent_song_id', parentSongId).eq('version', recordingVersion).maybeSingle()
-            if (lookupError) throw lookupError
-            let targetSongId = session.song_id
-            if (existingVersion) {
-              targetSongId = existingVersion.id
-              const { error: versionUpdateError } = await supabase.from('songs')
-                .update({ quality_score: newQuality, status: 'recorded', updated_at: new Date().toISOString(),
-                  ...(recordingVersion === 'acoustic' ? { genre: 'acoustic' } : {}) })
-                .eq('id', existingVersion.id)
-              if (versionUpdateError) throw versionUpdateError
-            } else {
+                    .eq('source_recording_session_id', session.id).maybeSingle()
+            if (takeLookupError) throw takeLookupError
+            let targetSongId = existingTake?.id || session.song_id
+            if (!existingTake) {
               const versionLabel = recordingVersion === 'acoustic' ? 'Acoustic' : 'Remix'
               const { data: newSong, error: createError } = await supabase
                 .from('songs')
                 .insert({
                   user_id: originalSong.user_id,
+                  profile_id: originalSong.profile_id,
                   band_id: session.band_id || originalSong.band_id,
-                  title: `${originalSong.title} (${versionLabel})`,
-                  // Acoustic is a genre of this take only; never alter the parent composition.
+                  // Stable session suffix avoids ambiguous versions in libraries.
+                  title: `${originalSong.title} (${versionLabel} Take ${session.id.slice(0, 8)})`,
                   genre: recordingVersion === 'acoustic' ? 'acoustic' : originalSong.genre,
                   lyrics: originalSong.lyrics,
                   quality_score: newQuality,
                   status: 'recorded',
                   parent_song_id: parentSongId,
+                  source_recording_session_id: session.id,
                   version: recordingVersion,
                   duration_seconds: originalSong.duration_seconds,
                   duration_display: originalSong.duration_display,
@@ -441,15 +438,18 @@ Deno.serve(async (req) => {
                 })
                 .select('id').single()
               if (createError) throw createError
-              if (!newSong?.id) throw new Error('Recording version was not returned after insert')
+              if (!newSong?.id) throw new Error('Recording take not returned after insert')
               targetSongId = newSong.id
             }
-            // Always repair the session's link, including retries where the
-            // child insert previously committed but linkage failed.
             if (targetSongId !== session.song_id) {
-              const { error: linkError } = await supabase.from('recording_sessions')
-                .update({ song_id: targetSongId }).eq('id', session.id)
+              const { data: linked, error: linkError } = await supabase
+                .from('recording_sessions')
+                .update({ song_id: targetSongId })
+                .eq('id', session.id)
+                .eq('completion_claim_id', completionClaimId)
+                .select('id').maybeSingle()
               if (linkError) throw linkError
+              if (!linked?.id) throw new Error('recording_completion_claim_lost')
             }
             if (targetSongId) {
               try {
@@ -488,28 +488,14 @@ Deno.serve(async (req) => {
         }
         const xpEarned = Number(awardResult.awarded_xp)
 
-        if (session.band_id && qualityImprovement > 0) {
-          try {
-            const { data: bMorale } = await supabase.from('bands').select('morale').eq('id', session.band_id).single()
-            if (bMorale) {
-              const moraleBoost = qualityImprovement >= 25 ? 5 : qualityImprovement >= 15 ? 3 : 1
-              const newMorale = Math.min(100, ((bMorale as any).morale ?? 50) + moraleBoost)
-              await supabase.from('bands').update({ morale: newMorale } as any).eq('id', session.band_id)
-              try {
-                await supabase.from('band_health_events').insert({
-                  band_id: session.band_id, event_type: 'morale', delta: moraleBoost, new_value: newMorale,
-                  source: 'recording_session', description: `Recording session: quality +${qualityImprovement} (${outcome.balanceVersion})`,
-                })
-              } catch (_) {}
-            }
-          } catch (_) {}
-        }
-
-        const { error: completionError } = await supabase.from('recording_sessions')
-          .update({ status: 'completed', completed_at: new Date().toISOString() })
-          .eq('id', session.id)
-          .eq('status', 'in_progress')
+        // The finalization RPC holds a row lock, checks this lease, and applies
+        // morale + completed status together exactly once.
+        const { data: finalized, error: completionError } = await supabase.rpc(
+          'finalize_recording_completion',
+          { p_session_id: session.id, p_claim_id: completionClaimId },
+        )
         if (completionError) throw completionError
+        if (finalized !== true) throw new Error('recording_completion_claim_lost')
 
         completedCount++
         totalXpAwarded += xpEarned
@@ -517,6 +503,13 @@ Deno.serve(async (req) => {
       } catch (error) {
         errorCount += 1
         console.error(`Error processing session ${session.id}:`, error)
+        if (completionClaimId) {
+          const { error: releaseError } = await supabase.rpc(
+            'release_recording_completion',
+            { p_session_id: session.id, p_claim_id: completionClaimId },
+          )
+          if (releaseError) console.error('Recording claim release failed:', releaseError)
+        }
       }
     }
 
