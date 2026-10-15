@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { AlertTriangle, Check, Clock, Loader2, Sparkles } from "lucide-react";
 import { useUnderworldStore, type UnderworldProduct } from "@/hooks/useUnderworldStore";
+import { isUnderworldPurchaseSupported } from "@/utils/underworldPurchaseEligibility";
 
 interface PurchaseDialogProps {
   product: UnderworldProduct | null;
@@ -32,6 +33,7 @@ export const PurchaseDialog = ({
   if (!product) return null;
 
   const canAfford = product.price_cash ? userBalance >= product.price_cash : false;
+  const isSupported = isUnderworldPurchaseSupported(product);
   const remainingBalance = product.price_cash
     ? userBalance - product.price_cash
     : userBalance;
@@ -39,6 +41,7 @@ export const PurchaseDialog = ({
   const effects = product.effects || {};
 
   const handlePurchase = async () => {
+    if (!isSupported) return;
     setIsPurchasing(true);
     try {
       await purchaseProduct.mutateAsync({
@@ -154,6 +157,12 @@ export const PurchaseDialog = ({
             </div>
           </div>
 
+          {!isSupported && (
+            <div className="rounded-lg border p-3 text-sm text-muted-foreground">
+              This product is not yet supported by the secure underworld purchase system.
+            </div>
+          )}
+
           {!canAfford && (
             <div className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
               <AlertTriangle className="h-4 w-4" />
@@ -168,7 +177,7 @@ export const PurchaseDialog = ({
           </Button>
           <Button
             onClick={handlePurchase}
-            disabled={!canAfford || isPurchasing}
+            disabled={!isSupported || !canAfford || isPurchasing}
             className="gap-2"
           >
             {isPurchasing ? (
