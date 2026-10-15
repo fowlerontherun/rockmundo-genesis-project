@@ -18,6 +18,12 @@ BEGIN
 END;
 $preflight$;
 
+-- Additional database uniqueness: even a second writer cannot record a second
+-- canonical refund for the same release under a different idempotency key.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_release_cancel_refund_once
+  ON public.band_earnings ((metadata->>'release_id'))
+  WHERE source='release_cancellation_refund' AND metadata ? 'release_id';
+
 CREATE OR REPLACE FUNCTION public.cancel_release_atomic(p_release_id uuid)
 RETURNS jsonb
 LANGUAGE plpgsql
