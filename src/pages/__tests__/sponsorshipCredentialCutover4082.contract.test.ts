@@ -66,5 +66,7 @@ describe("#4082 staged finance settlement, credential removal and cron replaceme
     expect(dry).toBeGreaterThan(auth);
     expect(payout).toBeGreaterThan(dry);
     expect(worker).toContain("paymentsPaid: 0");
+    expect(worker).toContain("result.replayed === true && amount === 0");
+    expect(worker).toContain("result.replayed === false && amount > 0");
   });
 });
