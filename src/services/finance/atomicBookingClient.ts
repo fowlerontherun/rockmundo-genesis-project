@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { recordingInboxMessageId } from "@/utils/recordingNotificationIdentity";
 
 type RpcError = { message?: string } | null;
 type UntypedRpc = (
@@ -36,6 +37,10 @@ type InsertQuery = PromiseLike<InsertResult>;
 
 interface InsertTable {
   insert(values: Record<string, unknown> | Record<string, unknown>[]): InsertQuery;
+  upsert(
+    values: Record<string, unknown>[],
+    options: { onConflict: string; ignoreDuplicates: boolean },
+  ): InsertQuery;
 }
 
 type UntypedInsertFrom = (table: string) => InsertTable;
@@ -374,8 +379,23 @@ export async function insertBookingInboxMessages(
 ): Promise<void> {
   if (rows.length === 0) return;
 
-  const values = rows.map((row) => ({ ...row }));
-  const { error } = await insertFrom("player_inbox").insert(values);
+  // The finance RPC may have committed the charge before this follow-up
+  // succeeded. Deterministic UUIDs + ON CONFLICT DO NOTHING allow safe replay
+  // for every recipient without requiring SELECT access to bandmates' inboxes.
+  const values = await Promise.all(rows.map(async (row) => {
+    const sessionId = row.metadata.session_id;
+    if (row.metadata.source !== "recording_booking" || typeof sessionId !== "string") {
+      throw new Error("recording_notification_identity_missing");
+    }
+    return {
+      ...row,
+      id: await recordingInboxMessageId(sessionId, row.user_id),
+    };
+  }));
+  const { error } = await insertFrom("player_inbox").upsert(values, {
+    onConflict: "id",
+    ignoreDuplicates: true,
+  });
   if (error) {
     throw new Error(error.message || "booking_notification_insert_failed");
   }
