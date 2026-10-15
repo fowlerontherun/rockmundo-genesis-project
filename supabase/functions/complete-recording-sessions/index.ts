@@ -7,6 +7,7 @@ import {
   startJobRun,
 } from '../_shared/job-logger.ts'
 import { calculateRecordingOutcome } from '../_shared/recordingOutcomeCalculator.ts'
+import { applyRecordingQualityBoost, selectRecordingQualityBoost } from '../_shared/recordingUnderworldBoost.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -376,8 +377,47 @@ Deno.serve(async (req) => {
           seed: `${session.id}:${session.scheduled_end}`,
         })
 
-        const qualityImprovement = outcome.qualityImprovement
-        const newQuality = outcome.finalMasterQuality
+        // Only booked performers may contribute a previously paid, time-valid
+        // recording boost. The scheduled end (not delayed cron execution)
+        // determines eligibility; the strongest single boost applies.
+        // Preserve a previously persisted worker snapshot across retries.
+        const priorBoost = session.outcome_breakdown?.underworldRecordingBoost
+        let recordingBoost: { percent: number; purchaseId: string } | null =
+          priorBoost && Number.isInteger(priorBoost.percent) &&
+          priorBoost.percent >= 1 && priorBoost.percent <= 50 &&
+          typeof priorBoost.purchaseId === 'string' && priorBoost.purchaseId.length > 0
+            ? { percent: priorBoost.percent, purchaseId: priorBoost.purchaseId }
+            : null
+        if (!recordingBoost) {
+          const bookedIds = [...new Set(participants
+            .map((member: any) => member.profile_id)
+            .filter((id: unknown): id is string => typeof id === 'string' && id.length > 0))]
+          if (bookedIds.length > 0) {
+            const { data: boosts, error: boostsError } = await supabase
+              .from('player_active_boosts')
+              .select('profile_id,source_purchase_id,boost_type,boost_value,started_at,expires_at,is_active')
+              .in('profile_id', bookedIds)
+              .eq('boost_type', 'recording_quality_boost')
+              .eq('is_active', true)
+              .lte('started_at', session.scheduled_end)
+              .gt('expires_at', session.scheduled_end)
+              .not('source_purchase_id', 'is', null)
+            if (boostsError) throw new Error(`recording_boost_lookup_failed: ${boostsError.message}`)
+            recordingBoost = selectRecordingQualityBoost(
+              (boosts || []) as any, new Set(bookedIds), session.scheduled_end,
+            )
+          }
+        }
+        const newQuality = applyRecordingQualityBoost(outcome.finalMasterQuality, recordingBoost?.percent ?? 0)
+        const qualityImprovement = Math.round(newQuality - outcome.sourceSongQuality)
+        const outcomeBreakdown = {
+          ...outcome.breakdown,
+          ...(recordingBoost ? { underworldRecordingBoost: {
+            percent: recordingBoost.percent,
+            purchaseId: recordingBoost.purchaseId,
+            appliedToFinalMaster: true,
+          } } : {}),
+        }
 
         const { data: updatedSession, error: updateError } = await supabase
           .from('recording_sessions')
@@ -387,9 +427,9 @@ Deno.serve(async (req) => {
             quality_improvement: qualityImprovement,
             calculation_version: outcome.balanceVersion,
             source_song_quality: outcome.sourceSongQuality,
-            final_master_quality: outcome.finalMasterQuality,
+            final_master_quality: newQuality,
             applied_variance: outcome.appliedVariance,
-            outcome_breakdown: outcome.breakdown,
+            outcome_breakdown: outcomeBreakdown,
             xp_awards: outcome.xpAwards,
             recording_credits: (outcome.breakdown as any).performerBreakdowns || [],
             updated_at: new Date().toISOString(),
