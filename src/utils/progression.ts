@@ -182,11 +182,11 @@ export const spendAttributeXp = async ({
   });
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(await getFunctionErrorMessage(error, "Failed to spend attribute points"));
   }
 
   if (!data?.success) {
-    throw new Error(data?.message ?? "Failed to spend XP on attribute");
+    throw new Error(data?.error ?? data?.message ?? "Failed to spend attribute points");
   }
 
   return data;
