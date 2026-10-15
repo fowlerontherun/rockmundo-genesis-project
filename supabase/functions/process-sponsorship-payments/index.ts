@@ -126,8 +126,8 @@ Deno.serve(async (req) => {
         // The DB RPC contract returns {status:'paid'|'cancelled',amount}.
         // Unknown / malformed responses are NOT a successful settlement.
         // A paid amount of zero is possible for an idempotent concurrent retry.
-        const amount = Number(result?.amount);
-        if (!Number.isSafeInteger(amount) || amount < 0) {
+        const amount = result?.amount;
+        if (typeof amount !== 'number' || !Number.isSafeInteger(amount) || amount < 0) {
           throw new Error('Invalid atomic sponsorship settlement amount')
         }
         if (result?.status === 'paid') {
