@@ -380,14 +380,9 @@ Deno.serve(async (req) => {
         // Only booked performers may contribute a previously paid, time-valid
         // recording boost. The scheduled end (not delayed cron execution)
         // determines eligibility; the strongest single boost applies.
-        // Preserve a previously persisted worker snapshot across retries.
-        const priorBoost = session.outcome_breakdown?.underworldRecordingBoost
-        let recordingBoost: { percent: number; purchaseId: string } | null =
-          priorBoost && Number.isInteger(priorBoost.percent) &&
-          priorBoost.percent >= 1 && priorBoost.percent <= 50 &&
-          typeof priorBoost.purchaseId === 'string' && priorBoost.purchaseId.length > 0
-            ? { percent: priorBoost.percent, purchaseId: priorBoost.purchaseId }
-            : null
+        // Re-verify source, ownership and validity on every retry. Persisted
+        // outcome_breakdown is diagnostic, never an authority to award a boost.
+        let recordingBoost: { percent: number; purchaseId: string } | null = null
         if (!recordingBoost) {
           const bookedIds = [...new Set(participants
             .map((member: any) => member.profile_id)
