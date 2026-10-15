@@ -53,7 +53,13 @@ export const useCancelRecordingSession = () => {
         throw new Error(readableCancelError(error.message || ""));
       }
 
-      const refund = data?.refund ?? {};
+      // #4102: a transport-level 200 is not proof that the old paid
+      // reservation was cancelled and refunded. Never open replacement
+      // booking on a malformed/missing cancellation receipt.
+      if (!data || data.bookingId !== sessionId || !data.refund?.refundId) {
+        throw new Error("Cancellation was not confirmed. The original recording remains booked; do not book a replacement yet.");
+      }
+      const refund = data.refund;
       return {
         sessionId,
         refunded: Number(refund.amountMinor ?? 0) / 100,
