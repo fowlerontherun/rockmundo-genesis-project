@@ -274,6 +274,7 @@ export function useHireWorker() {
       role: string;
       skill_level?: number;
       salary_weekly?: number;
+      request_id: string;
     }) => {
       const { data, error } = await (supabase as any).rpc("hire_merch_factory_worker_atomic", {
         p_factory_id: worker.factory_id,
