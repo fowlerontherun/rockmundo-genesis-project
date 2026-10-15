@@ -1,0 +1,32 @@
+name: Read-only migration identity inventory
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'scripts/migration-identity-inventory.mjs'
+      - 'tests/migrationIdentityInventory.test.mjs'
+      - '.github/workflows/migration-identity-inventory.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Unit tests (no database connection)
+        run: node --test tests/migrationIdentityInventory.test.mjs
+      - name: Generate SHA256 source inventory (no database connection)
+        run: node scripts/migration-identity-inventory.mjs --output migration-identity-report.json
+      - name: Publish review artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-identity-inventory
+          path: migration-identity-report.json
+          retention-days: 7
