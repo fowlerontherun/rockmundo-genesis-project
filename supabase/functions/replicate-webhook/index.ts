@@ -19,6 +19,7 @@ serve(async (req) => {
 
   let verifiedAttemptId: string | null = null
   let verifiedSongId: string | null = null
+  let finalizationAttempted = false
   try {
     const prediction = await req.json()
     const url = new URL(req.url)
@@ -67,22 +68,14 @@ serve(async (req) => {
     if (prediction.status === 'failed' || prediction.status === 'canceled') {
       console.error(`[replicate-webhook] Prediction ${prediction.status}:`, prediction.error)
       
-      const { data: previousSong } = await supabase
-        .from('songs').select('audio_url').eq('id', songId).maybeSingle()
-      await supabase
-        .from('songs')
-        .update({ audio_generation_status: previousSong?.audio_url ? 'completed' : 'failed' })
-        .eq('id', songId)
-
-      await supabase
-        .from('song_generation_attempts')
-        .update({
-          status: 'failed',
-          completed_at: new Date().toISOString(),
-          error_message: prediction.error || prediction.status
+      const { data: failure, error: failureError } = await supabase.rpc(
+        'finish_song_generation_atomic', {
+          p_song_id: songId, p_attempt_id: attemptId, p_status: 'failed',
+          p_error_message: String(prediction.error || prediction.status),
+          p_prediction_id: prediction.id,
         })
-        .eq('id', attemptId)
-        .eq('status', 'generating')
+      if (failureError) throw failureError
+      if (!failure?.applied) console.log('[replicate-webhook] Duplicate/stale failure ignored')
 
       return new Response(JSON.stringify({ success: true, status: 'failed' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -188,30 +181,21 @@ serve(async (req) => {
     const audioUrl = publicUrlData.publicUrl
     console.log(`[replicate-webhook] Public URL: ${audioUrl}`)
 
-    // Update song record
-    const { error: updateError } = await supabase
-      .from('songs')
-      .update({
-        audio_url: audioUrl,
-        audio_generation_status: 'completed',
-        audio_generated_at: new Date().toISOString()
+    // #4122: record the validated audio and finalize the exact attempt in one
+    // transaction. If the RPC fails, neither record is marked completed.
+    finalizationAttempted = true
+    const { data: finalization, error: finalizationError } = await supabase.rpc(
+      'finish_song_generation_atomic', {
+        p_song_id: songId, p_attempt_id: attemptId, p_status: 'completed',
+        p_audio_url: audioUrl, p_prediction_id: prediction.id,
       })
-      .eq('id', songId)
-
-    if (updateError) {
-      console.error('[replicate-webhook] Failed to update song:', updateError)
-      throw new Error(`Failed to update song: ${updateError.message}`)
+    if (finalizationError) throw finalizationError
+    if (!finalization?.applied) {
+      console.warn('[replicate-webhook] Discarding uploaded output from superseded attempt', { songId, attemptId })
+      return new Response(JSON.stringify({ success: true, status: 'stale_callback_ignored' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
-
-    // Update any generating attempts to completed
-    await supabase
-      .from('song_generation_attempts')
-      .update({
-        status: 'completed',
-        completed_at: new Date().toISOString()
-      })
-      .eq('id', attemptId)
-      .eq('status', 'generating')
 
     console.log(`[replicate-webhook] SUCCESS: Song ${songId} audio saved`)
 
@@ -225,21 +209,15 @@ serve(async (req) => {
     console.error(`[replicate-webhook] Error: song=${verifiedSongId || 'unverified'} attempt=${verifiedAttemptId || 'unverified'}: ${message}`)
     // Persist downstream failures as well as provider-declared failures. The
     // diagnostics screen can now distinguish callback/storage errors from stalls.
-    if (verifiedAttemptId && verifiedSongId) {
-      const { error: trackingError } = await supabase.from('song_generation_attempts')
-        .update({status:'failed',completed_at:new Date().toISOString(),error_message:message})
-        .eq('id',verifiedAttemptId).eq('status','generating')
-      if (trackingError) console.error('[replicate-webhook] Error persisting failure:',trackingError)
-      const {data:latest} = await supabase.from('song_generation_attempts')
-        .select('id').eq('song_id',verifiedSongId).order('started_at',{ascending:false}).limit(1).maybeSingle()
-      if (latest?.id === verifiedAttemptId) {
-        const { data: previousSong } = await supabase.from('songs')
-          .select('audio_url').eq('id',verifiedSongId).maybeSingle()
-        const {error: songError} = await supabase.from('songs')
-          .update({audio_generation_status:previousSong?.audio_url ? 'completed' : 'failed'})
-          .eq('id',verifiedSongId).eq('audio_generation_status','generating')
-        if (songError) console.error('[replicate-webhook] Error updating song status:',songError)
-      }
+    // A transient failure in the atomic finalization RPC must remain
+    // retryable. Marking the attempt failed here would make a valid,
+    // signed duplicate webhook look stale and strand uploaded audio.
+    if (verifiedAttemptId && verifiedSongId && !finalizationAttempted) {
+      const { error: failureError } = await supabase.rpc('finish_song_generation_atomic', {
+        p_song_id: verifiedSongId, p_attempt_id: verifiedAttemptId,
+        p_status: 'failed', p_error_message: message,
+      })
+      if (failureError) console.error('[replicate-webhook] Failed atomic callback reconciliation:', failureError)
     }
     return new Response(
       JSON.stringify({ error: message, attemptId: verifiedAttemptId }),

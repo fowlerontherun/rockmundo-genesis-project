@@ -141,17 +141,27 @@ serve(async (req) => {
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 409 }
         )
       }
-      addLog(`Previous generation appears stuck (${Math.round(elapsed / 60000)} mins), allowing restart`)
+      addLog(`Previous generation appears stuck (${Math.round(elapsed / 60000)} mins); an operator must reconcile its attempt before restarting`)
+      return new Response(JSON.stringify({ error: "Existing generation must be reconciled first", code: "GENERATION_IN_PROGRESS", logs }),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
     
-    // Keep the admin route on the same auditable attempt lifecycle as the
-    // player generator, including retries and webhook correlation.
-    const { data: attempt, error: attemptError } = await supabase.from("song_generation_attempts")
-      .insert({ song_id: songId, user_id: song.user_id || user.id, triggered_by_user_id: user.id, status: "generating" })
-      .select("id").single()
-    if (attemptError || !attempt?.id) throw new Error(`Could not create generation attempt: ${attemptError?.message || "missing ID"}`)
+    // Admins use the same song-row claim as players. Only an authenticated
+    // admin edge request may set the quota override on this service-role RPC.
+    const { data: reservation, error: reservationError } = await supabase.rpc(
+      "reserve_song_generation_atomic",
+      { p_song_id: songId, p_user_id: song.user_id || user.id,
+        p_actor_user_id: user.id, p_admin_override: true, p_replace_existing: true },
+    )
+    if (reservationError) throw new Error(`Could not create generation attempt: ${reservationError.message}`)
+    if (!reservation?.ok) {
+      return new Response(JSON.stringify({ error: "Generation is already running or unavailable",
+        code: reservation?.code, logs }),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+    const attempt = { id: reservation.attempt_id as string }
     activeAttemptId = attempt.id
-    addLog(`Generation attempt: ${attempt.id}`)
+    addLog(`Atomic generation reservation: ${attempt.id}`)
 
     // Then get the songwriting project if it exists
     let project: any = null
@@ -195,15 +205,7 @@ serve(async (req) => {
       addLog(`Creator gender: ${creatorGender || 'not set'}`)
     }
 
-    // Update status to generating
-    addLog('Setting status to "generating"...')
-    await supabase
-      .from('songs')
-      .update({ 
-        audio_generation_status: 'generating',
-        audio_generation_started_at: new Date().toISOString()
-      })
-      .eq('id', songId)
+    // The reservation transaction has already updated the song status.
 
     // Extract creative brief from project
     const creativeBrief = project?.creative_brief as Record<string, any> || {}
@@ -505,19 +507,12 @@ serve(async (req) => {
     console.error(`[admin-generate-song-audio] ${code} song=${activeSongId || 'unresolved'} attempt=${activeAttemptId || 'none'}: ${message}`)
     try {
       const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
-      if (activeAttemptId) {
-        const {error: trackingError} = await db.from('song_generation_attempts')
-          .update({status:'failed',completed_at:new Date().toISOString(),error_message:message})
-          .eq('id',activeAttemptId).eq('status','generating')
-        if (trackingError) console.error('[admin-generate-song-audio] Tracking failed:',trackingError)
-      }
       if (activeSongId && activeAttemptId) {
-        const {data: previousSong} = await db.from('songs').select('audio_url')
-          .eq('id',activeSongId).maybeSingle()
-        const {error: statusError} = await db.from('songs')
-          .update({audio_generation_status:previousSong?.audio_url ? 'completed' : 'failed'})
-          .eq('id',activeSongId).eq('audio_generation_status','generating')
-        if (statusError) console.error('[admin-generate-song-audio] Status recovery failed:',statusError)
+        const { error: finishError } = await db.rpc('finish_song_generation_atomic', {
+          p_song_id: activeSongId, p_attempt_id: activeAttemptId,
+          p_status: 'failed', p_error_message: message,
+        })
+        if (finishError) console.error('[admin-generate-song-audio] Atomic failure reconciliation failed:', finishError)
       }
     } catch (trackingError) {
       console.error('[admin-generate-song-audio] Failure persistence error:',trackingError)

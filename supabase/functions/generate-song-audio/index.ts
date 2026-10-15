@@ -234,32 +234,28 @@ serve(async (req) => {
       }
     }
 
-    // Create generation attempt record
-    const { data: attempt, error: attemptError } = await supabase
-      .from('song_generation_attempts')
-      .insert({
-        user_id: userId,
-        song_id: songId,
-        status: 'generating'
-      })
-      .select()
-      .single()
-
-    if (attemptError || !attempt?.id) {
-      throw new Error(`Failed to record generation attempt: ${attemptError?.message || "missing attempt ID"}`)
+    // #4120/#4121: reserve a song slot and the user's weekly quota together
+    // in one PostgreSQL transaction, under song-row and per-user locks.
+    // The preflight limit above is informational; this RPC is authoritative.
+    const { data: reservation, error: reservationError } = await supabase.rpc(
+      'reserve_song_generation_atomic',
+      { p_song_id: songId, p_user_id: userId, p_replace_existing: replaceExisting,
+        p_actor_user_id: userId, p_admin_override: false },
+    )
+    if (reservationError) throw new Error(`Could not reserve AI generation: ${reservationError.message}`)
+    if (!reservation?.ok) {
+      const code = reservation?.code || 'GENERATION_RESERVATION_FAILED'
+      return new Response(JSON.stringify({ error:
+        code === 'WEEKLY_GENERATION_LIMIT' ? 'Weekly generation limit reached' :
+        code === 'GENERATION_IN_PROGRESS' ? 'Generation already in progress' :
+        code === 'REGENERATION_CONFIRMATION_REQUIRED' ? 'Confirm regeneration to replace existing audio' :
+        'Could not reserve AI generation', code, used: reservation?.used, limit: reservation?.limit }),
+        { status: code === 'WEEKLY_GENERATION_LIMIT' ? 429 : 409,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
+    const attempt = { id: reservation.attempt_id as string }
     activeAttemptId = attempt.id
-    console.log(`[generate-song-audio] Attempt ID: ${activeAttemptId}`)
-
-    // Update song status to generating
-    const { error: statusError } = await supabase
-      .from('songs')
-      .update({ 
-        audio_generation_status: 'generating',
-        audio_generation_started_at: new Date().toISOString()
-      })
-      .eq('id', songId)
-    if (statusError) throw statusError
+    console.log(`[generate-song-audio] Atomic reservation attempt ID: ${activeAttemptId}`)
 
     // Extract metadata from songwriting project
     const creativeBrief = project?.creative_brief as Record<string, any> || {}
@@ -538,16 +534,11 @@ serve(async (req) => {
     try {
       if (authorizedSongId && activeAttemptId) {
         const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
-        const {data: previousSong} = await db.from('songs').select('audio_url')
-          .eq('id',authorizedSongId).maybeSingle()
-        const {error: songError} = await db.from('songs')
-          .update({audio_generation_status:previousSong?.audio_url ? 'completed' : 'failed'})
-          .eq('id',authorizedSongId).eq('audio_generation_status','generating')
-        if (songError) console.error('[generate-song-audio] Failed restoring song status:',songError)
-        const {error: attemptError} = await db.from('song_generation_attempts')
-          .update({status:'failed',completed_at:new Date().toISOString(),error_message:message})
-          .eq('id',activeAttemptId).eq('status','generating')
-        if (attemptError) console.error('[generate-song-audio] Failed marking attempt:',attemptError)
+        const { error: finishError } = await db.rpc('finish_song_generation_atomic', {
+          p_song_id: authorizedSongId, p_attempt_id: activeAttemptId,
+          p_status: 'failed', p_error_message: message,
+        })
+        if (finishError) console.error('[generate-song-audio] Failed atomic failure reconciliation:', finishError)
       }
     } catch (trackingError) {
       console.error('[generate-song-audio] Failure tracking error:',trackingError)

@@ -272,10 +272,23 @@ Deno.serve(async (req) => {
         const soloProfiles = !session.band_id
           ? [{ profile_id: soloProfileId, user_id: session.user_id, instrument_role: 'lead_vocals', role: 'lead_vocals' }]
           : []
-        const participants = [...(memberRows || []), ...soloProfiles]
+        // Never attribute a bandmate's performance to the recording owner.
+        // Some legacy memberships have only a user_id, so resolve that user's
+        // current character instead of reusing the booking character.
+        const resolvedBandMembers = await Promise.all((memberRows || []).map(async (member: any) => {
+          if (member.profile_id) return member
+          if (!member.user_id) throw new Error('recording_performer_profile_missing')
+          const { data: performerProfile, error: performerError } = await supabase
+            .from('profiles').select('id').eq('user_id', member.user_id)
+            .eq('is_active', true).is('died_at', null).maybeSingle()
+          if (performerError) throw performerError
+          if (!performerProfile?.id) throw new Error('recording_performer_profile_missing')
+          return { ...member, profile_id: performerProfile.id }
+        }))
+        const participants = [...resolvedBandMembers, ...soloProfiles]
 
         const performerInputs = await Promise.all(participants.map(async (member: any) => {
-          const performerProfileId = member.profile_id || session.profile_id
+          const performerProfileId = member.profile_id
           const { data: profile } = performerProfileId
             ? await supabase.from('profiles').select('health, energy, motivation, physical_health').eq('id', performerProfileId).maybeSingle()
             : { data: null } as any
@@ -301,6 +314,23 @@ Deno.serve(async (req) => {
           }
         }))
 
+        // Player producer rows use a producer-profile ID, not a playable
+        // character ID. Resolve a real active recipient for XP attribution.
+        let producerCharacterId: string | null = null
+        if (session.player_producer_id) {
+          const { data: producerRow, error: producerLookupError } = await supabase
+            .from('player_producer_profiles').select('user_id')
+            .eq('id', session.player_producer_id).maybeSingle()
+          if (producerLookupError) throw producerLookupError
+          if (producerRow?.user_id) {
+            const { data: producerCharacter, error: producerProfileError } = await supabase
+              .from('profiles').select('id').eq('user_id', producerRow.user_id)
+              .eq('is_active', true).is('died_at', null).maybeSingle()
+            if (producerProfileError) throw producerProfileError
+            producerCharacterId = producerCharacter?.id || null
+          }
+        }
+
         const requiredRoles = Array.from(new Set([
           'lead_vocals',
           ...performerInputs.map((p: any) => p.role).filter(Boolean),
@@ -321,7 +351,7 @@ Deno.serve(async (req) => {
           },
           engineer: { kind: 'studio_default', rating: (studioData as any)?.equipment_rating ?? (studioData as any)?.quality_rating ?? 50 },
           producer: session.player_producer_id
-            ? { id: session.player_producer_id, kind: 'player', rating: 55 }
+            ? { id: producerCharacterId, kind: producerCharacterId ? 'player' : 'npc', rating: 55 }
             : session.producer_id ? { id: session.producer_id, kind: 'npc', rating: 60 } : null,
           sessionMode: session.recording_type || session.session_data?.sessionMode || 'professional',
           effortHours: durationHours,
@@ -333,7 +363,6 @@ Deno.serve(async (req) => {
 
         const qualityImprovement = outcome.qualityImprovement
         const newQuality = outcome.finalMasterQuality
-        const xpEarned = outcome.xpAwards.reduce((sum, award) => sum + award.amount, 0)
 
         const { error: updateError } = await supabase
           .from('recording_sessions')
@@ -430,26 +459,17 @@ Deno.serve(async (req) => {
           }
         }
 
-        if (session.band_id) {
-          const { data: bandMembers } = await supabase.from('band_members').select('user_id, profile_id').eq('band_id', session.band_id).eq('member_status', 'active')
-          for (const member of bandMembers || []) {
-            if (member.user_id) {
-              try {
-                await supabase.functions.invoke('progression', { body: {
-                  action: 'award_action_xp', amount: xpEarned, category: 'performance', action_key: 'recording_session',
-                  metadata: { session_id: session.id, song_id: session.song_id, profile_id: member.profile_id, quality_improvement: qualityImprovement, xp_awards: outcome.xpAwards, duration_hours: durationHours, auto_completed: true },
-                } })
-              } catch (e) { console.error(`Failed to award XP to member ${member.profile_id}:`, e) }
-            }
-          }
-        } else if (session.user_id) {
-          try {
-            await supabase.functions.invoke('progression', { body: {
-              action: 'award_action_xp', amount: xpEarned, category: 'performance', action_key: 'recording_session',
-              metadata: { session_id: session.id, song_id: session.song_id, profile_id: session.profile_id, quality_improvement: qualityImprovement, duration_hours: durationHours, auto_completed: true },
-            } })
-          } catch (e) { console.error('Failed to award solo recording XP:', e) }
+        // #4108/#4117: the trusted outcome's per-profile/per-skill awards
+        // are granted once in a single transaction. This RPC reads stored
+        // xp_awards: no caller may submit an arbitrary amount. An RPC error
+        // MUST stop completion so that a later worker run can safely retry.
+        const { data: awardResult, error: awardError } = await supabase
+          .rpc('award_recording_xp_atomic', { p_session_id: session.id })
+        if (awardError) throw new Error(`recording_xp_award_failed: ${awardError.message}`)
+        if (!awardResult || !Number.isFinite(Number(awardResult.awarded_xp))) {
+          throw new Error('recording_xp_award_missing_confirmation')
         }
+        const xpEarned = Number(awardResult.awarded_xp)
 
         if (session.band_id && qualityImprovement > 0) {
           try {
