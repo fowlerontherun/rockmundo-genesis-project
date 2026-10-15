@@ -17,6 +17,20 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.775",
+    date: "2026-10-15",
+    changes: [
+      { type: "improvement", description: "The large logo in the middle of the home screen, seen before signing in, is now the new RockMundo artwork: the R emblem with its guitar-headstock and star cut-outs, the ROCKMUNDO lettering, the LIVE THE DREAM tagline and the four walking band silhouettes, drawn in cream so it reads clearly on the dark page." },
+    ],
+  },
+  {
+    version: "1.1.774",
+    date: "2026-10-10",
+    changes: [
+      { type: "improvement", description: "In the Education library, the 'Record Today's Reading' button is now disabled while a reading is being saved or while book access is still loading, and reads 'Reading locked — switch books' when your active book is locked." },
+    ],
+  },
+  {
     version: "1.1.773",
     date: "2026-10-10",
     changes: [
