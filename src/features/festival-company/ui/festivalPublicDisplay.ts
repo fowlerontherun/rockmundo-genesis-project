@@ -130,6 +130,6 @@ export function getPublishedFestivalCampingTickets(
   products: readonly { name: string; ticketType: string; productClass: string; saleStatus: string }[],
 ): { name: string; saleStatus: string }[] {
   return products
-    .filter(product => /\\bcamp(?:ing)?\\b/i.test(`${product.name} ${product.ticketType}`))
+    .filter(product => /\bcamp(?:ing)?\b/i.test(`${product.name} ${product.ticketType}`))
     .map(product => ({ name: product.name, saleStatus: product.saleStatus }));
 }
