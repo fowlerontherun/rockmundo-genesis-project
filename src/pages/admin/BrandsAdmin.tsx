@@ -87,7 +87,7 @@ const BrandsAdmin = () => {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("catalog");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [filters, setFilters] = useState({ search: "", category: "all", region: "all", active: "all" });
+  const [filters, setFilters] = useState({ search: "", category: "all", region: "all", active: "all", logo: "all" });
   const [form, setForm] = useState(emptyForm);
 
   const loadBrands = async () => {
@@ -239,11 +239,16 @@ const BrandsAdmin = () => {
       const matchesActive =
         filters.active === "all" ||
         (filters.active === "active" ? brand.is_active : !brand.is_active);
-      return matchesSearch && matchesCategory && matchesRegion && matchesActive;
+      const safeLogo = !!brand.logo_url && isSafeSponsorLogoReference(brand.logo_url);
+      const matchesLogo = filters.logo === "all" ||
+        (filters.logo === "missing" ? !safeLogo : safeLogo);
+      return matchesSearch && matchesCategory && matchesRegion && matchesActive && matchesLogo;
     });
   }, [brands, filters]);
 
   const activeCount = brands.filter((brand) => brand.is_active).length;
+  const missingLogoCount = brands.filter((brand) =>
+    !brand.logo_url || !isSafeSponsorLogoReference(brand.logo_url)).length;
   const totalBudget = brands.reduce((sum, brand) => sum + Number(brand.available_budget ?? 0), 0);
 
   return (
@@ -262,7 +267,7 @@ const BrandsAdmin = () => {
           </Button>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-4">
           <Card>
             <CardHeader className="pb-2"><CardDescription>Total brands</CardDescription></CardHeader>
             <CardContent><p className="text-3xl font-bold">{brands.length}</p></CardContent>
@@ -270,6 +275,10 @@ const BrandsAdmin = () => {
           <Card>
             <CardHeader className="pb-2"><CardDescription>Active brands</CardDescription></CardHeader>
             <CardContent><p className="text-3xl font-bold">{activeCount}</p></CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2"><CardDescription>Brand logos to review</CardDescription></CardHeader>
+            <CardContent><p className="text-3xl font-bold">{missingLogoCount}</p></CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2"><CardDescription>Available sponsorship budget</CardDescription></CardHeader>
@@ -289,7 +298,7 @@ const BrandsAdmin = () => {
                 <CardTitle>Filters</CardTitle>
                 <CardDescription>{filteredBrands.length} of {brands.length} brands shown.</CardDescription>
               </CardHeader>
-              <CardContent className="grid gap-3 md:grid-cols-4">
+              <CardContent className="grid gap-3 md:grid-cols-5">
                 <Input
                   value={filters.search}
                   onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
@@ -315,6 +324,14 @@ const BrandsAdmin = () => {
                     <SelectItem value="all">All states</SelectItem>
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={filters.logo} onValueChange={(value) => setFilters((prev) => ({ ...prev, logo: value }))}>
+                  <SelectTrigger aria-label="Logo review filter"><SelectValue placeholder="All logos" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All logos</SelectItem>
+                    <SelectItem value="missing">Missing or unsafe logos</SelectItem>
+                    <SelectItem value="present">Valid logo references</SelectItem>
                   </SelectContent>
                 </Select>
               </CardContent>
@@ -400,7 +417,16 @@ const BrandsAdmin = () => {
                     <Label htmlFor="brand-logo">Logo URL</Label>
                     <Input id="brand-logo" value={form.logoUrl} onChange={(e) => setForm((prev) => ({ ...prev, logoUrl: e.target.value }))} placeholder="https://… or seeded data:image/svg+xml" />
                     {form.logoUrl && isSafeSponsorLogoReference(form.logoUrl) && (
-                      <div className="mt-2 w-40"><SponsorIdentity name={form.name || "Brand preview"} logoReference={form.logoUrl} /></div>
+                      <div className="mt-2 flex gap-2">
+                        <div className="w-40 rounded-lg bg-white p-2 text-slate-950">
+                          <p className="mb-1 text-xs">Light preview</p>
+                          <SponsorIdentity name={form.name || "Brand preview"} logoReference={form.logoUrl} />
+                        </div>
+                        <div className="w-40 rounded-lg bg-slate-950 p-2 text-white" data-theme-preview="dark">
+                          <p className="mb-1 text-xs">Dark preview</p>
+                          <SponsorIdentity name={form.name || "Brand preview"} logoReference={form.logoUrl} />
+                        </div>
+                      </div>
                     )}
                     {form.logoUrl && !isSafeSponsorLogoReference(form.logoUrl) && (
                       <p role="alert" className="text-sm text-destructive">Unsafe logo reference. Use HTTPS, a same-site image or the seeded SVG.</p>
