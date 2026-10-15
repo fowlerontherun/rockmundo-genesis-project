@@ -11,7 +11,10 @@ BEGIN;
 -- replacing the cron job, adding settlement structures or paying anyone.
 -- Never seed a treasury by minting a legacy band_balance projection.
 DO $treasury_preflight$
-DECLARE v_missing integer;
+DECLARE
+  v_missing integer;
+  v_drifted integer;
+  v_incompatible_treasuries integer;
 BEGIN
   SELECT COUNT(*) INTO v_missing
   FROM public.bands b
@@ -28,6 +31,55 @@ BEGIN
   IF v_missing > 0 THEN
     RAISE EXCEPTION
       'Payroll cutover blocked: % active pay-enabled bands have no canonical active treasury', v_missing
+      USING ERRCODE = '55000';
+  END IF;
+
+  -- The earnings AFTER INSERT trigger recalculates the full projection.
+  -- Existing unjournaled direct balance adjustments would otherwise be
+  -- silently undone on the first wage expense. Do not activate cron until
+  -- each eligible band's discrepancy has been explained and repaired.
+  SELECT COUNT(*) INTO v_drifted
+  FROM public.bands b
+  LEFT JOIN (
+    SELECT band_id, SUM(amount)::bigint AS earned_balance
+    FROM public.band_earnings GROUP BY band_id
+  ) e ON e.band_id = b.id
+  WHERE b.status = 'active'::public.band_status
+    AND COALESCE(b.weekly_pay_percent, 0) > 0
+    AND COALESCE(b.band_balance,0)::bigint
+      IS DISTINCT FROM COALESCE(e.earned_balance,0);
+
+  IF v_drifted > 0 THEN
+    RAISE EXCEPTION
+      'Payroll cutover blocked: % pay-enabled band balances differ from earnings journal', v_drifted
+      USING ERRCODE = '55000';
+  END IF;
+
+  -- There are TWO distinct live treasury systems. A journal-balanced
+  -- financial_accounts record is not proof that it contains the actual
+  -- spendable band funds shown to players via band_treasuries.
+  -- Never switch payout authority while they disagree.
+  SELECT COUNT(*) INTO v_incompatible_treasuries
+  FROM public.bands b
+  WHERE b.status = 'active'::public.band_status
+    AND COALESCE(b.weekly_pay_percent, 0) > 0
+    AND NOT EXISTS (
+      SELECT 1
+      FROM public.band_treasuries bt
+      JOIN public.financial_accounts a
+        ON a.owner_type = 'band'::public.financial_owner_type
+       AND a.owner_id = b.id
+       AND a.metadata->>'account_role' = 'band_treasury'
+       AND a.account_status = 'active'
+      WHERE bt.band_id = b.id
+        AND bt.is_primary IS TRUE
+        AND bt.currency_code = a.default_currency_code
+        AND bt.balance_minor = a.current_balance_minor
+        AND bt.balance_minor = COALESCE(b.band_balance,0)::bigint * 100
+    );
+  IF v_incompatible_treasuries > 0 THEN
+    RAISE EXCEPTION
+      'Payroll cutover blocked: % pay-enabled bands have incompatible treasury ledgers', v_incompatible_treasuries
       USING ERRCODE = '55000';
   END IF;
 END;
@@ -95,6 +147,15 @@ BEGIN
       IF EXISTS (SELECT 1 FROM public.band_weekly_payroll_settlements x
          WHERE x.band_id=v_band_id AND x.week_start=v_week) THEN CONTINUE; END IF;
 
+      -- Recheck under the band row lock: direct band_balance writes can
+      -- create drift after the installation preflight. Refuse to trigger
+      -- a full earnings reprojection for an unreconciled band.
+      IF COALESCE(v_band.band_balance,0)::bigint IS DISTINCT FROM
+        COALESCE((SELECT SUM(amount)::bigint FROM public.band_earnings
+          WHERE band_id=v_band_id),0) THEN
+        RAISE EXCEPTION 'Band earnings projection drift; payroll withheld';
+      END IF;
+
       -- Spend only actual canonical treasury funds. Legacy band_balance is a
       -- projection, not an alternate balance available for payroll.
       SELECT * INTO v_treasury FROM public.financial_accounts a
@@ -105,6 +166,20 @@ BEGIN
       ORDER BY a.is_primary DESC,a.created_at,a.id LIMIT 1;
       IF v_treasury.id IS NULL THEN
         RAISE EXCEPTION 'Band treasury is missing or inactive';
+      END IF;
+
+      -- Guard against gameplay treasury spending that does not flow into
+      -- financial_accounts. An equivalent balance was required at cutover,
+      -- and it must STILL agree for every subsequent weekly payout.
+      IF NOT EXISTS (
+        SELECT 1 FROM public.band_treasuries bt
+        WHERE bt.band_id = v_band_id
+          AND bt.is_primary IS TRUE
+          AND bt.currency_code = v_treasury.default_currency_code
+          AND bt.balance_minor = v_treasury.current_balance_minor
+          AND bt.balance_minor = COALESCE(v_band.band_balance,0)::bigint * 100
+      ) THEN
+        RAISE EXCEPTION 'Band treasury ledgers diverged; payroll withheld';
       END IF;
 
       SELECT count(DISTINCT bm.profile_id) INTO v_payable
@@ -264,11 +339,11 @@ BEGIN
         v_leader_user_id
       );
 
-      -- Compatibility projection: NEVER base payroll on this legacy scalar.
-      UPDATE public.bands SET band_balance=(
-        SELECT current_balance_minor::numeric/100
-        FROM public.financial_accounts WHERE id=v_treasury.id
-      ) WHERE id=v_band_id;
+      -- The band_earnings AFTER INSERT trigger recomputes the legacy
+      -- bands.band_balance projection from the entire earnings history.
+      -- Never overwrite that projection with the canonical finance account
+      -- balance: those are different ledgers and can legitimately diverge.
+      -- The actual transfer already debited the financial_accounts treasury.
 
       v_paid_bands:=v_paid_bands+1;
       v_total_minor:=v_total_minor+v_total;
@@ -283,7 +358,8 @@ BEGIN
   END LOOP;
 
   RETURN jsonb_build_object(
-    'status','completed','week_start',v_week,
+    'status',CASE WHEN v_failed_bands>0 THEN 'partial_failure' ELSE 'completed' END,
+    'week_start',v_week,
     'paid_bands',v_paid_bands,'failed_bands',v_failed_bands,
     'total_paid_minor',v_total_minor,'failures',v_failures
   );

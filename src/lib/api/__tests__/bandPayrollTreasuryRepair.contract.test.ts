@@ -27,6 +27,18 @@ describe("payroll treasury provenance repair (#4082)", () => {
     expect(repair).toContain("v_prior_role <> 'band_treasury'");
   });
 
+  it("#4119 refuses to label a journalled finance account as the wrong gameplay treasury", () => {
+    expect(repair).toContain("FROM public.band_treasuries bt");
+    expect(repair).toContain("bt.band_id = v_target.band_id");
+    expect(repair).toContain("bt.is_primary IS TRUE");
+    expect(repair).toContain("bt.balance_minor = v_account.current_balance_minor");
+    expect(repair).toContain("bt.balance_minor = COALESCE(v_band.band_balance,0)::bigint * 100");
+    expect(repair).toContain("gameplay and finance balances differ");
+    expect(repair.indexOf("gameplay and finance balances differ")).toBeLessThan(
+      repair.indexOf("SET metadata = COALESCE"),
+    );
+  });
+
   it("changes only account metadata and cannot mint funds or run payroll", () => {
     const modified = repair.slice(repair.indexOf("DO $reconcile$"), repair.indexOf("COMMIT;"));
     expect(modified).toContain("UPDATE public.financial_accounts a");

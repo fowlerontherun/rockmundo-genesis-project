@@ -50,6 +50,33 @@ This script is **not** a normal sequential migration and is not run by
 identity as part of an approved manual release. It does not automatically
 start payroll. Run in a restored staging database first.
 
+## Critical correction — the two finance ledgers are NOT interchangeable
+
+Subsequent read-only checks found a separate, active
+`public.band_treasuries` for each band, synchronized to the gameplay
+`bands.band_balance` scalar. These are not the same financial accounts
+previously described in this document:
+
+| Band | Gameplay treasury (USD) | `financial_accounts` balance (USD) |
+| --- | ---: | ---: |
+| Shockmaster | 4,295,646.00 | 1,284,462.00 |
+| WAR DOGS. | 2,214,211.00 | 48,074.00 |
+
+A canonical journal balancing to its **own** finance account does not prove
+that this account is the authoritative treasury for gameplay wages.
+For WAR DOGS., an apparently unjournaled 28,000-unit difference from
+`band_earnings` actually comprises one recording booking (27,400)
+and two rehearsal bookings (400 and 200), all recorded correctly in
+`band_treasury_transactions`.
+
+**Important superseding gate:** the proposed metadata-only SQL now also
+checks that the gameplay treasury balance, `bands.band_balance`, and
+`financial_accounts.current_balance_minor` are equal before tagging an
+account for payroll. Both current production bands fail this condition,
+so the script deliberately makes **no changes** until the cross-ledger
+cash authority is redesigned/reconciled. Do not modify those balances simply
+to satisfy the condition. Issue #4119 tracks the required work.
+
 ## Before approving payroll
 
 1. Verify restorable backup/PITR and stage a sanitized copy with these two

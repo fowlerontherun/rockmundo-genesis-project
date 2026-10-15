@@ -46,6 +46,84 @@ gig booking migration. Reconcile the duplicate identity before running normal
 migration tooling; a future-dated filename is not permission to bypass this
 preflight.
 
+## Production schema verification and migration identity (14 October 2026)
+
+Read-only checks against the live RockMundo project confirmed:
+
+- `financial_accounts.available_balance_minor` is a generated stored column
+  (`current_balance_minor - reserved_balance_minor`). Payroll writes only
+  `current_balance_minor`, so PostgreSQL recalculates availability.
+- `financial_transaction_category` includes `wage_payment`, and relevant
+  owner, account status, entry direction and transaction status enum values exist.
+- The `band_earnings` triggers recompute `bands.band_balance` from the earnings
+  ledger after INSERT, UPDATE and DELETE. The original payroll function
+  immediately overwrote that projection with the financial treasury's
+  `current_balance_minor/100`. **This is incorrect because the ledgers diverge.**
+  The corrected migration retains the `band_earnings` expense record
+  but removes the manual `UPDATE public.bands SET band_balance`.
+- Both `process_weekly_band_payroll()` and `book_gig_with_personal_funding(...)`
+  were absent from production, and neither `20300106200000` migration identity
+  appeared in Supabase migration history at the time of inspection.
+- The filenames
+  `20300106200000_secure_atomic_weekly_band_payroll.sql` and
+  `20300106200000_atomic_personal_funded_gig_booking.sql` collide.
+  The repository timestamp verifier rejects unregistered future-dated files
+  and new duplicate timestamp groups. **Do not whitelist this collision as
+  a shortcut.** The wider 2030 dependency order must be resolved into
+  unique, forward-deployable migration identities in a separate reviewed
+  migration-history PR, then checked against staging and production history.
+
+**Current release disposition:** no payroll function deployment, no cron
+rewire, no treasury role change, no live wages or account movements. After
+the canonical treasury metadata repair (#4110) is rehearsed, use a restored
+staging database to validate the full payout function, then deploy only through
+an approved unique migration identity. Never use `supabase db push` while
+unresolved timestamp collisions remain.
+
+## Three-ledger authority conflict — payroll cutover blocked (#4119)
+
+The game has **three separate financial records** for each pay-enabled band.
+The `band_treasuries` primary row matches the displayed legacy
+`bands.band_balance`. The newer `financial_accounts` primary band account
+is internally journal-balanced but not synchronized with gameplay treasury.
+
+| Band | Gameplay band_treasuries and band_balance | financial_accounts | band_earnings subtotal |
+| --- | ---: | ---: | ---: |
+| Shockmaster | 4,295,646 | 1,284,462 | 4,295,646 |
+| WAR DOGS. | 2,214,211 | 48,074 | 2,242,211 |
+
+For WAR DOGS., the **28,000 difference** between earnings subtotal and
+displayed gameplay balance is explained exactly by three legitimate
+`band_treasury_transactions` AFTER the last earnings entry:
+27,400 recording-session booking + 400 and 200 rehearsal bookings.
+This is not an unexplained credit to correct by increasing band balances.
+Four other bands also differ from earnings sums, and their provenance
+requires similar review. Total absolute difference: 35,720 (31 bands).
+
+The existing `update_band_balance_from_earnings` trigger recomputes
+`bands.band_balance` from **all** earnings after any new earnings row.
+The `bands_sync_treasury_balance_projection` trigger then propagates this
+overwrite into `band_treasuries`, potentially undoing legitimate bookings.
+Simply removing a second direct balance update from payroll prevents one
+bad write but **does not repair this older trigger model**.
+
+The payroll migration is now deliberately fail-closed in TWO ways:
+1. When any pay-enabled band has a mismatch between earnings-only subtotal
+   and displayed balance, the legacy sum-trigger is unsafe to run. Runtime
+   checks also withhold that band's payroll to prevent accidental resets.
+   **Do not fix this by forcing `band_balance = SUM(band_earnings)`.**
+2. When `band_treasuries.balance_minor` differs from the tagged
+   `financial_accounts.current_balance_minor`, the migration cannot
+   establish the payer's true spendable game funds. Reject cutover and
+   payroll until the two systems' authoritative money and journal postings
+   are reconciled with full history; do not add money to make totals equal.
+
+A separate reviewed change to the earnings trigger or a unified money
+posting API is needed, with a full audit of earning producers so no
+already-posted funds can be double credited. Stage transactions and
+concurrency tests before any production action. See
+[issue #4119](https://github.com/fowlerontherun/rockmundo-genesis-project/issues/4119).
+
 ## Required staging and deployment checks
 
 1. First review deployed migration versions; reconcile the canonical treasury setup for both currently pay-enabled bands and prove opening balances are backed by existing ledger funds.
