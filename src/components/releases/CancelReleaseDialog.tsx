@@ -88,7 +88,7 @@ export function CancelReleaseDialog({ open, onOpenChange, release }: CancelRelea
               need separate reconciliation.
             </p>
             <p className="text-sm text-muted-foreground">
-              This action cannot be undone. All associated data will be marked as cancelled.
+              This action cannot be undone. The release will be cancelled; existing manufacturing and payment records remain available for audit.
             </p>
           </AlertDialogDescription>
         </AlertDialogHeader>
