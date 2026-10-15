@@ -65,10 +65,12 @@ export default function FameFansGifting() {
         updates.dedicated_fans = (band.dedicated_fans || 0) + Math.floor(fans * 0.3);
         updates.superfans = (band.superfans || 0) + Math.floor(fans * 0.1);
       }
-      if (money > 0) updates.band_balance = (band.band_balance || 0) + money;
+      // band_earnings is the sole cash writer; a second direct update double-credits after #4119.
 
-      const { error } = await supabase.from("bands").update(updates).eq("id", bandId);
-      if (error) throw error;
+      if (Object.keys(updates).length > 0) {
+        const { error } = await supabase.from("bands").update(updates).eq("id", bandId);
+        if (error) throw error;
+      }
 
       // Log the gift in band_fame_events
       if (fame > 0) {
@@ -82,12 +84,13 @@ export default function FameFansGifting() {
 
       // Log money gift as band_earnings
       if (money > 0) {
-        await supabase.from("band_earnings").insert({
+        const { error: earningsError } = await supabase.from("band_earnings").insert({
           band_id: bandId,
           amount: money,
           source: "leader_deposit",
           description: `Admin grant: ${reason}`,
         });
+        if (earningsError) throw earningsError;
       }
     },
     onSuccess: () => {
