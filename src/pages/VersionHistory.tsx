@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.776",
+    date: "2026-10-15",
+    changes: [
+      { type: "improvement", description: "The large logo in the middle of the home screen, seen before signing in, is now the latest RockMundo artwork: the R emblem with its guitar-headstock and star cut-outs, the ROCKMUNDO lettering, the LIVE THE DREAM tagline and the four walking band silhouettes (liberty spikes, spiky hair, tartan skirt and leather jacket), redrawn in cream on a transparent background so it sits cleanly on the dark page." },
+    ],
+  },
+  {
     version: "1.1.775",
     date: "2026-10-15",
     changes: [
