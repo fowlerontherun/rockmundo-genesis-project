@@ -23,7 +23,7 @@ import {
 // without a broad rewrite.
 export * from "./useRecordingData";
 
-interface CreateRecordingSessionInput {
+export interface CreateRecordingSessionInput {
   user_id: string;
   profile_id?: string | null;
   band_id?: string;
@@ -243,6 +243,7 @@ export const useCreateRecordingSession = () => {
           });
         }
 
+        let projectionPending = false;
         try {
         const [{ data: studioData }, { data: songData }] = await Promise.all([
           supabase
@@ -405,13 +406,15 @@ export const useCreateRecordingSession = () => {
         }
 
         } catch (projectionError) {
+          projectionPending = true;
           console.error("[recording-booking] confirmed payment; follow-up scheduling or notification needs repair", {
             bookingId: booking.bookingId,
             error: unknownErrorMessage(projectionError),
           });
-          toast.warning("Recording booked and paid, but schedule or notifications need refreshing. Do not book or pay again.");
         }
-        return session;
+        // The confirmed booking ID always survives follow-up failure. The UI
+        // can retry the IDENTICAL idempotency key, never a second paid booking.
+        return { ...session, projectionPending };
       } catch (bookingError) {
         if (bookingError instanceof BandUnavailableError) throw bookingError;
         console.error(
@@ -421,12 +424,16 @@ export const useCreateRecordingSession = () => {
         throw new Error(`${unknownErrorMessage(bookingError)} (while ${stage})`);
       }
     },
-    onSuccess: () => {
+    onSuccess: (session) => {
       queryClient.invalidateQueries({ queryKey: ["recording-sessions"] });
       queryClient.invalidateQueries({ queryKey: ["recorded-songs-list"] });
       queryClient.invalidateQueries({ queryKey: ["band-payment-source-band"] });
       queryClient.invalidateQueries({ queryKey: ["band-payment-source-profile"] });
-      toast.success("Recording session booked!");
+      if (session.projectionPending) {
+        toast.warning("Recording booked and paid. The diary or notifications need repair; use Repair booking details. Do not pay again.");
+      } else {
+        toast.success("Recording session booked!");
+      }
     },
     onError: (error: Error) => {
       toast.error(`Failed to book recording: ${error.message}`);
