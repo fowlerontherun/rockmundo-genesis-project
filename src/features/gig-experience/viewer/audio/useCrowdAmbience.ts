@@ -41,8 +41,10 @@ function reactionTypes(reaction: string | null, energy: number): GigCrowdSoundTy
       : ["crowd_cheer_small", "ambient_chatter"];
 }
 
-function playClip(ref: { current: HTMLAudioElement | null }, sound: GigCrowdSound | null, volume: number) {
-  if (!sound || typeof Audio === "undefined") return false;
+async function playClip(
+  ref: { current: HTMLAudioElement | null }, sound: GigCrowdSound, volume: number,
+): Promise<boolean> {
+  if (typeof Audio === "undefined") return false;
   const previous = ref.current;
   previous?.pause();
   if (previous) {
@@ -55,10 +57,19 @@ function playClip(ref: { current: HTMLAudioElement | null }, sound: GigCrowdSoun
   audio.volume = clamp(volume, 0.03, 0.9);
   ref.current = audio;
   audio.onended = () => { if (ref.current === audio) ref.current = null; };
-  void audio.play().catch(() => {
+  try {
+    await audio.play();
+    // Autoplay may reject or resolve after the viewer has paused or swapped
+    // the clip. Neither case should consume a reaction cooldown.
+    return ref.current === audio && !audio.paused;
+  } catch {
     if (ref.current === audio) ref.current = null;
-  });
-  return true;
+    audio.onended = null;
+    audio.pause();
+    audio.removeAttribute("src");
+    audio.load();
+    return false;
+  }
 }
 
 /**
@@ -91,6 +102,7 @@ export function useCrowdAmbience({
   const lastSongIdRef = useRef<string | null>(null);
   const lastPulseAtRef = useRef(0);
   const reactionCooldownRef = useRef(new CrowdReactionCooldown());
+  const pendingReactionRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -132,6 +144,7 @@ export function useCrowdAmbience({
         lastSongIdRef.current = null;
         lastPulseAtRef.current = 0;
         reactionCooldownRef.current.reset();
+        pendingReactionRef.current = null;
       }
       return;
     }
@@ -142,8 +155,14 @@ export function useCrowdAmbience({
     const sounds = library;
     const cueTimeMs = Math.max(0, snapshot?.song?.elapsedMs ?? 0);
     const playReaction = (sound: GigCrowdSound | null, level: number) => {
-      if (!sound || !reactionCooldownRef.current.canPlay(sound.id, cueTimeMs)) return;
-      if (playClip(reactionRef, sound, level)) reactionCooldownRef.current.record(sound.id, cueTimeMs);
+      if (!sound || pendingReactionRef.current ||
+          !reactionCooldownRef.current.canPlay(sound.id, cueTimeMs)) return;
+      pendingReactionRef.current = sound.id;
+      void playClip(reactionRef, sound, level).then(started => {
+        if (pendingReactionRef.current !== sound.id) return;
+        pendingReactionRef.current = null;
+        if (started) reactionCooldownRef.current.record(sound.id, cueTimeMs);
+      });
     };
 
     const bedTypes: GigCrowdSoundType[] =
@@ -255,6 +274,7 @@ export function useCrowdAmbience({
   ]);
 
   useEffect(() => () => {
+    pendingReactionRef.current = null;
     reactionCooldownRef.current.reset();
     for (const audio of [ambientRef.current, reactionRef.current]) {
       if (!audio) continue;
