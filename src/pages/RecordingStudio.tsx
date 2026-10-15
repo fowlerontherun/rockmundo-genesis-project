@@ -133,6 +133,9 @@ export default function RecordingStudio() {
     setBookingActionSessionId(recordingSession.id);
     try {
       await cancelRecording.mutateAsync({ sessionId: recordingSession.id, reason: 'cancelled_by_player' });
+    } catch (error) {
+      // No replacement can be booked following an unconfirmed cancellation.
+      console.warn('Recording cancellation not confirmed; original booking remains active', error);
     } finally {
       setBookingActionSessionId(null);
     }
