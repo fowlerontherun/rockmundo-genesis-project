@@ -136,8 +136,8 @@ export function FestivalPublicProfileEditor({ festivalCompanyId }: { festivalCom
             toast.warning("Saved, but the new profile version could not be verified. Reload before editing again.");
             return;
           }
-          if (Number(refreshed.data?.publicProfile?.publicVersion ??
-                     refreshed.data?.publicProfile?.public_version ?? 0) <= expectedVersion) {
+          const published = (refreshed.data as { publicProfile?: Record<string, unknown> } | undefined)?.publicProfile;
+          if (Number(published?.publicVersion ?? published?.public_version ?? 0) <= expectedVersion) {
             toast.warning("Saved, but the updated profile version is not yet available. Reload the published profile before saving again.");
             return;
           }
