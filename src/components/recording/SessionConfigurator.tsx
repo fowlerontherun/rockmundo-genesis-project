@@ -404,7 +404,7 @@ export const SessionConfigurator = ({
     try {
       // confirm_recording_session_atomic is idempotent on the same request;
       // never synthesize a new start time, session or payment reference.
-      const repaired = await createSession.mutateAsync(repairBookingInput);
+      const repaired = await createSession.mutateAsync({ ...repairBookingInput, repairOnly: true });
       if (repaired.id !== bookingSummary.sessionId) {
         throw new Error("Booking repair returned a different session; no new booking was requested.");
       }
