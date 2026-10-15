@@ -33,7 +33,7 @@ describe("underworld atomic migration compatibility", () => {
 
   it("requires a retry-stable UUID and enforces authoritative price", () => {
     expect(client).toContain("p_request_id: requestId");
-    expect(client).toContain("purchaseRequestIds.current[requestKey]");
+    expect(client).toContain("getOrCreateUnderworldPurchaseRequestId(profileId, product.id, paymentMethod)");
     expect(repair).toContain("p_request_id uuid");
     expect(repair).toContain("client_request_id=p_request_id");
     expect(repair).toContain("UNDERWORLD_PURCHASE_REQUEST_KEY_MISMATCH");
