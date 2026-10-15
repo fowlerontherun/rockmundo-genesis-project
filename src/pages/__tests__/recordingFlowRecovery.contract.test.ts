@@ -43,6 +43,9 @@ describe("recording payment, completion and scope safety", () => {
     expect(atomic).toContain("return { ...session, projectionPending };");
     expect(atomic).toContain("if (input.repairOnly && !isConfirmedRetry)");
     expect(atomic).toContain("if (input.band_id || !hasProjection)");
+    expect(atomic).toContain("bookedProfileIds = [...new Set(");
+    expect(atomic).toContain("includeProfileIds: bookedProfileIds");
+    expect(wizard).toContain("booked_profile_ids: session.bookedProfileIds");
     expect(wizard).toContain("repairOnly: true");
     expect(wizard).toContain("repaired.id !== bookingSummary.sessionId");
     expect(receipt).toContain("Booking is paid — do not book again.");
