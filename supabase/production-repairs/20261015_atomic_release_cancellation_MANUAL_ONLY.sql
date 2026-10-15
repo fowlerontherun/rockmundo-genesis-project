@@ -106,10 +106,12 @@ BEGIN
   -- The current production SUM-based trigger would overwrite gameplay
   -- booking deductions. Refuse refunds until the controlled delta repair
   -- has actually been installed (a merged PR is not proof of deployment).
-  IF EXISTS (
+  IF NOT EXISTS (
     SELECT 1 FROM pg_catalog.pg_proc p
     WHERE p.oid='public.update_band_balance_from_earnings()'::regprocedure
-      AND pg_catalog.pg_get_functiondef(p.oid) ILIKE '%SUM(amount)%'
+      AND pg_catalog.pg_get_functiondef(p.oid)
+            LIKE '%v_next := v_band_balance + v_change.delta%'
+      AND pg_catalog.pg_get_functiondef(p.oid) NOT ILIKE '%SUM(amount)%'
   ) THEN
     RAISE EXCEPTION 'incremental_earnings_trigger_required';
   END IF;
