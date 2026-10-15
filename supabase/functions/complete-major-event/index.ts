@@ -94,7 +94,7 @@ serve(async (req) => {
     if (performance.band_id) {
       const { data: band } = await supabase
         .from('bands')
-        .select('fame, total_fans, casual_fans, band_balance, morale, reputation_score, fan_sentiment_score')
+        .select('fame, total_fans, casual_fans, morale, reputation_score, fan_sentiment_score')
         .eq('id', performance.band_id)
         .single();
 
@@ -115,24 +115,24 @@ serve(async (req) => {
         const curRep = (band as any).reputation_score ?? 0;
         const curSent = (band as any).fan_sentiment_score ?? 0;
 
-        await supabase
+        const { error: bandUpdateError } = await supabase
           .from('bands')
           .update({
             fame: (band.fame || 0) + fameGained,
             total_fans: (band.total_fans || 0) + fansGained,
             casual_fans: (band.casual_fans || 0) + fansGained,
-            band_balance: (band.band_balance || 0) + cashEarned,
             morale: Math.max(0, Math.min(100, curMorale + moraleBoost)),
             reputation_score: Math.max(-100, Math.min(100, curRep + repBoost)),
             fan_sentiment_score: Math.max(-100, Math.min(100, curSent + sentBoost)),
           } as any)
           .eq('id', performance.band_id);
+        if (bandUpdateError) throw bandUpdateError;
 
         console.log(`Major event band health: rating ${overallRating} → morale ${moraleBoost > 0 ? '+' : ''}${moraleBoost}, rep ${repBoost > 0 ? '+' : ''}${repBoost}, sent ${sentBoost > 0 ? '+' : ''}${sentBoost}`);
       }
 
-      // Record earnings
-      await supabase
+      // The earnings trigger is the only cash writer. Do not also update bands.band_balance.
+      const { error: earningsError } = await supabase
         .from('band_earnings')
         .insert({
           band_id: performance.band_id,
@@ -140,7 +140,9 @@ serve(async (req) => {
           source: 'major_event',
           description: `Performance at ${event?.name || 'Major Event'}`,
           earned_by_user_id: performance.user_id,
+          metadata: { performance_id: performanceId },
         });
+      if (earningsError) throw earningsError;
     }
 
     // Mark the scheduled activity complete and send the player a persistent inbox result.
