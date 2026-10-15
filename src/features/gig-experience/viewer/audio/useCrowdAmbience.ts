@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CrowdReactionCooldown } from "@/features/shared-audio/crowdAudioSelection";
 import type { StorySnapshot } from "../engine/StoryEngine";
 import type { ShowSequenceFrame } from "../engine/ShowSequence";
@@ -43,7 +43,13 @@ function reactionTypes(reaction: string | null, energy: number): GigCrowdSoundTy
 
 function playClip(ref: { current: HTMLAudioElement | null }, sound: GigCrowdSound | null, volume: number) {
   if (!sound || typeof Audio === "undefined") return false;
-  ref.current?.pause();
+  const previous = ref.current;
+  previous?.pause();
+  if (previous) {
+    previous.onended = null;
+    previous.removeAttribute("src");
+    previous.load();
+  }
   const audio = new Audio(sound.audio_url);
   audio.preload = "auto";
   audio.volume = clamp(volume, 0.03, 0.9);
@@ -72,7 +78,12 @@ export function useCrowdAmbience({
   stageType,
   showFrame = null,
 }: CrowdAmbienceOptions) {
-  const libraryRef = useRef<GigCrowdSound[]>([]);
+  // A ref-only async library load never retriggered the mixer effect when the
+  // viewer was otherwise static (for example on its pre-show frame).
+  const [library, setLibrary] = useState<GigCrowdSound[]>([]);
+  const [isDocumentHidden, setDocumentHidden] = useState(() =>
+    typeof document !== "undefined" && document.visibilityState === "hidden",
+  );
   const ambientRef = useRef<HTMLAudioElement | null>(null);
   const reactionRef = useRef<HTMLAudioElement | null>(null);
   const lastReactionRef = useRef<string | null>(null);
@@ -88,17 +99,30 @@ export function useCrowdAmbience({
     void loadGigCrowdSounds()
       .then((sounds) => {
         if (cancelled) return;
-        libraryRef.current = sounds;
+        setLibrary(sounds);
       })
       .catch(() => {
-        if (!cancelled) libraryRef.current = [];
+        if (!cancelled) setLibrary([]);
       });
 
     return () => { cancelled = true; };
   }, [enabled]);
 
   useEffect(() => {
-    if (!enabled || !isPlaying || muted || typeof Audio === "undefined") {
+    const visibility = () => setDocumentHidden(document.visibilityState === "hidden");
+    const pageHide = () => setDocumentHidden(true);
+    document.addEventListener("visibilitychange", visibility);
+    window.addEventListener("pagehide", pageHide);
+    window.addEventListener("pageshow", visibility);
+    return () => {
+      document.removeEventListener("visibilitychange", visibility);
+      window.removeEventListener("pagehide", pageHide);
+      window.removeEventListener("pageshow", visibility);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!enabled || !isPlaying || muted || isDocumentHidden || typeof Audio === "undefined") {
       ambientRef.current?.pause();
       reactionRef.current?.pause();
       return;
@@ -107,7 +131,7 @@ export function useCrowdAmbience({
     const energy = clamp((snapshot?.crowdEnergy ?? 30) / 100);
     const intensity = crowdSizeIntensity(stageType, energy);
     const phase = showFrame?.phase ?? null;
-    const sounds = libraryRef.current;
+    const sounds = library;
     const cueTimeMs = Math.max(0, snapshot?.song?.elapsedMs ?? 0);
     const playReaction = (sound: GigCrowdSound | null, level: number) => {
       if (!sound || !reactionCooldownRef.current.canPlay(sound.id, cueTimeMs)) return;
@@ -127,8 +151,18 @@ export function useCrowdAmbience({
     const existingBed = ambientRef.current;
     const existingUrl = existingBed?.dataset.rockmundoUrl ?? null;
 
-    if (bed && existingUrl !== bed.audio_url) {
-      existingBed?.pause();
+    if (!bed && existingBed) {
+      // An empty or removed catalogue must not keep an obsolete ambience loop.
+      existingBed.pause();
+      existingBed.removeAttribute("src");
+      existingBed.load();
+      ambientRef.current = null;
+    } else if (bed && existingUrl !== bed.audio_url) {
+      if (existingBed) {
+        existingBed.pause();
+        existingBed.removeAttribute("src");
+        existingBed.load();
+      }
       const audio = new Audio(bed.audio_url);
       audio.preload = "auto";
       audio.loop = true;
@@ -200,6 +234,8 @@ export function useCrowdAmbience({
     muted,
     volume,
     isPlaying,
+    isDocumentHidden,
+    library,
     stageType,
     snapshot?.crowdEnergy,
     snapshot?.reaction,
@@ -210,8 +246,13 @@ export function useCrowdAmbience({
 
   useEffect(() => () => {
     reactionCooldownRef.current.reset();
-    ambientRef.current?.pause();
-    reactionRef.current?.pause();
+    for (const audio of [ambientRef.current, reactionRef.current]) {
+      if (!audio) continue;
+      audio.pause();
+      audio.onended = null;
+      audio.removeAttribute("src");
+      audio.load();
+    }
     ambientRef.current = null;
     reactionRef.current = null;
   }, []);

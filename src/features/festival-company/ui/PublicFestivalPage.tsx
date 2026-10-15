@@ -117,7 +117,8 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   const cancelled = f.launchStatus === "cancelled_before_event";
   const eventPhaseLabel = festivalVisitorEventLabel(eventPhase, f.launchStatus);
   const publishedSponsors = orderFestivalPublicSponsors(f.sponsors);
-  const sponsorAudit = auditFestivalSponsorSlots(publishedSponsors);
+  // Audit the raw immutable projection before display-only deduplication.
+  const sponsorAudit = auditFestivalSponsorSlots(f.sponsors);
   const campingTickets = getPublishedFestivalCampingTickets(f.ticketProducts);
 
   const myAttendance = (attendanceError ? [] : attendance)
@@ -621,7 +622,9 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                 ["ageGuidance", "Age guidance"], ["terms", "Terms"],
                 ["refundPolicy", "Refunds"], ["contact", "Contact"], ["sponsors", "Partners"],
               ].map(([key, label]) => (
-                <a key={key} href={["visitor-opening-times", "visitor-ticket-help", "visitor-faq-title"].includes(key) ? `#${key}` : `#festival-info-${key}`} className="rounded-full border px-3 py-1.5 text-sm hover:bg-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">{label}</a>
+                <a key={key} href={["visitor-opening-times", "visitor-ticket-help", "visitor-faq-title"].includes(key) ? `#${key}` : `#festival-info-${key}`}
+                  onClick={() => { document.getElementById(`festival-info-${key}`)?.querySelector("details")?.setAttribute("open", ""); }}
+                  className="rounded-full border px-3 py-1.5 text-sm hover:bg-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">{label}</a>
               ))}
             </nav>
             <div className="grid gap-4 md:grid-cols-2">
@@ -636,8 +639,14 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                 ["contact", "Contact the organiser", "Questions and visitor support"],
               ] as const).map(([key, title, description]) => (
                 <section id={`festival-info-${key}`} key={key} aria-labelledby={`festival-info-title-${key}`} className="scroll-mt-6 rounded-xl border bg-card p-5">
-                  <h3 id={`festival-info-title-${key}`} className="text-lg font-bold">{title}</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+                  <details className="group" open={key === "travel"}>
+                    <summary className="cursor-pointer rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+                      <h3 id={`festival-info-title-${key}`} className="inline text-lg font-bold">{title}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+                    </summary>
+                    {key === "travel" && (
+                      <p className="mt-3 text-sm">Confirmed festival location: {f.city}, {f.country}. Exact site, parking and transport arrangements are only confirmed when the organiser publishes them below.</p>
+                    )}
                   {f.information[key]?.trim() ? (
                     <p className="mt-4 whitespace-pre-line text-sm leading-relaxed">{f.information[key]}</p>
                   ) : (
@@ -659,6 +668,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                       <p className="mt-2 text-muted-foreground">A camping add-on never replaces an admission ticket. Site facilities are confirmed only by organiser-published information.</p>
                     </div>
                   )}
+                  </details>
                 </section>
               ))}
             </div>
@@ -677,6 +687,16 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
               )}
               {publishedSponsors.length > 0 && !sponsorAudit.ready && sponsorAudit.mainCount > 0 && (
                 <p className="text-sm text-muted-foreground">Sponsor roles are awaiting organiser confirmation. Published partners are displayed without altering their agreements.</p>
+              )}
+              {sponsorAudit.duplicateIds && (
+                <p role="status" className="text-sm text-muted-foreground">
+                  Repeated sponsor entries were consolidated in this guide. Existing sponsorship agreements have not been changed.
+                </p>
+              )}
+              {sponsorAudit.missingLogos > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Some partner logos are awaiting publication; their names remain visible.
+                </p>
               )}
               {publishedSponsors.length ? (
                 <div className="grid gap-3 sm:grid-cols-2">
