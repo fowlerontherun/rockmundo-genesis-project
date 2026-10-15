@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
     if (songIds.length > 0) {
       const { data: songRows } = await supabase
         .from('songs')
-        .select('id, quality_score, title, genre, lyrics, user_id, band_id, parent_song_id, source_recording_session_id, version, duration_seconds, duration_display, songwriting_project_id')
+        .select('id, quality_score, title, genre, lyrics, user_id, profile_id, band_id, parent_song_id, source_recording_session_id, version, duration_seconds, duration_display, songwriting_project_id')
         .in('id', songIds)
       for (const row of songRows || []) songMap.set((row as any).id, row)
     }
