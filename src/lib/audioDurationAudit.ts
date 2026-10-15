@@ -44,8 +44,20 @@ export async function readAudioDuration(
 }
 
 export function isGeneratedAudioShort(actualSeconds: number, expectedSeconds: number | null): boolean {
-  return expectedSeconds !== null && Number.isFinite(expectedSeconds) && expectedSeconds > 0 &&
+  return Number.isFinite(actualSeconds) && actualSeconds >= 0 &&
+    expectedSeconds !== null && Number.isFinite(expectedSeconds) && expectedSeconds > 0 &&
     actualSeconds < Math.max(30, expectedSeconds * 0.8);
+}
+
+/** Distinguish a known healthy recording from an unverified planned length.
+ * Missing duration metadata must never be exported as "within tolerance". */
+export function audioDurationReviewStatus(
+  actualSeconds: number | null,
+  expectedSeconds: number | null,
+): "UNVERIFIABLE" | "LENGTH_UNKNOWN" | "SHORT_REVIEW" | "WITHIN_TOLERANCE" {
+  if (actualSeconds === null || !Number.isFinite(actualSeconds) || actualSeconds < 0) return "UNVERIFIABLE";
+  if (expectedSeconds === null || !Number.isFinite(expectedSeconds) || expectedSeconds <= 0) return "LENGTH_UNKNOWN";
+  return isGeneratedAudioShort(actualSeconds, expectedSeconds) ? "SHORT_REVIEW" : "WITHIN_TOLERANCE";
 }
 
 export function formatAudioDuration(seconds: number | null): string {
@@ -75,8 +87,7 @@ export function buildAudioDurationReviewCsv(
   for (const song of songs) {
     if (!Object.prototype.hasOwnProperty.call(audited, song.id)) continue;
     const actual = audited[song.id];
-    const status = actual == null ? "UNVERIFIABLE"
-      : isGeneratedAudioShort(actual, song.duration_seconds) ? "SHORT_REVIEW" : "WITHIN_TOLERANCE";
+    const status = audioDurationReviewStatus(actual ?? null, song.duration_seconds);
     lines.push([song.id,song.title,song.duration_seconds,actual,status].map(cell).join(","));
   }
   return lines.join("\r\n") + "\r\n";

@@ -73,7 +73,9 @@ export function useTotpAudienceAudio({
   const ambienceRef = useRef<GainNode | null>(null);
   const lastCueRef = useRef<string | null>(null);
   const lastPulseRef = useRef(0);
+  const lastPositionRef = useRef(-1);
   const [library, setLibrary] = useState<TotpCrowdSound[]>([]);
+  const [libraryLoaded, setLibraryLoaded] = useState(false);
   const pageVisible = useBroadcastPageVisible();
   const cooldownRef = useRef(new CrowdReactionCooldown());
   const noiseSourceRef = useRef<AudioBufferSourceNode | null>(null);
@@ -83,10 +85,12 @@ export function useTotpAudienceAudio({
   useEffect(() => {
     if (!enabled || typeof window === "undefined") return;
     let cancelled = false;
+    setLibraryLoaded(false);
     void loadTotpCrowdSounds()
       .then((sounds) => {
         if (cancelled) return;
         setLibrary(sounds);
+        setLibraryLoaded(true);
         const bed = pickTotpCrowdSound(
           sounds,
           ["ambient_chatter", "band_entrance"],
@@ -94,6 +98,12 @@ export function useTotpAudienceAudio({
           "totp:studio-bed",
         );
         if (bed && typeof Audio !== "undefined") {
+          const previous = ambienceClipRef.current;
+          previous?.pause();
+          if (previous) {
+            previous.removeAttribute("src");
+            previous.load();
+          }
           const audio = new Audio(bed.audio_url);
           audio.preload = "auto";
           audio.loop = true;
@@ -101,8 +111,21 @@ export function useTotpAudienceAudio({
           ambienceClipRef.current = audio;
         }
       })
-      .catch(() => { if (!cancelled) setLibrary([]); });
-    return () => { cancelled = true; };
+      .catch(() => {
+        if (!cancelled) {
+          setLibrary([]);
+          setLibraryLoaded(true); // Empty catalogue: use synthetic fallback.
+        }
+      });
+    return () => {
+      cancelled = true;
+      ambienceClipRef.current?.pause();
+      if (ambienceClipRef.current) {
+        ambienceClipRef.current.removeAttribute("src");
+        ambienceClipRef.current.load();
+        ambienceClipRef.current = null;
+      }
+    };
   }, [enabled]);
 
   useEffect(() => {
@@ -163,6 +186,20 @@ export function useTotpAudienceAudio({
       if (recordedBed.paused) void recordedBed.play().catch(() => undefined);
     }
 
+    // Rewind creates a new deterministic cue pass. Do not replay every
+    // 100ms jitter but permit exact repeat after a genuine backwards seek.
+    if (lastPositionRef.current >= 0 &&
+        playbackState.positionMs < lastPositionRef.current - 250) {
+      lastCueRef.current = null;
+      lastPulseRef.current = 0;
+      cooldownRef.current.reset();
+    }
+    lastPositionRef.current = playbackState.positionMs;
+
+    // A render before the asynchronous library arrives must not consume
+    // the presenter/performance cue. On load it can play the real sample;
+    // an empty approved catalogue still permits the existing fallback.
+    if (!libraryLoaded) return;
     const cueId = cue?.id ?? null;
     if (cueId && cueId !== lastCueRef.current) {
       lastCueRef.current = cueId;
@@ -213,7 +250,7 @@ export function useTotpAudienceAudio({
         .catch(() => playStudioCheer(ctx!, master!, 0.38 + Math.max(0, reaction) * 0.018, 0.65));
       if (!clip) playStudioCheer(ctx, master, 0.38 + Math.max(0, reaction) * 0.018, 0.65);
     }
-  }, [audienceReaction, cue?.id, cue?.type, enabled, pageVisible, library, playbackState.activePhase, playbackState.isPlaying, playbackState.positionMs]);
+  }, [audienceReaction, cue?.id, cue?.type, enabled, pageVisible, library, libraryLoaded, playbackState.activePhase, playbackState.isPlaying, playbackState.positionMs]);
 
   useEffect(() => () => {
     cooldownRef.current.reset();

@@ -31,7 +31,7 @@ import {
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { ChartTopSongsSection } from "@/components/admin/ChartTopSongsSection";
 import { TopPlayedSongsSection } from "@/components/admin/TopPlayedSongsSection";
-import { buildAudioDurationReviewCsv, formatAudioDuration, isGeneratedAudioShort, readAudioDuration } from "@/lib/audioDurationAudit";
+import { audioDurationReviewStatus, buildAudioDurationReviewCsv, formatAudioDuration, readAudioDuration } from "@/lib/audioDurationAudit";
 
 type Song = {
   id: string;
@@ -646,8 +646,7 @@ export default function AISongGeneration() {
                       {recentAudioSongs?.map(song => {
                         const checked = Object.prototype.hasOwnProperty.call(audioAudit, song.id);
                         const actual = audioAudit[song.id] ?? null;
-                        const short = typeof actual === "number" &&
-                          isGeneratedAudioShort(actual, song.duration_seconds);
+                        const health = audioDurationReviewStatus(actual, song.duration_seconds);
                         return (
                           <TableRow key={song.id}>
                             <TableCell className="font-medium">{song.title}</TableCell>
@@ -655,8 +654,9 @@ export default function AISongGeneration() {
                             <TableCell>{checked ? formatAudioDuration(actual) : "Not checked"}</TableCell>
                             <TableCell>
                               {!checked ? <Badge variant="secondary">Not checked</Badge> :
-                                actual === null ? <Badge variant="outline">Unverifiable</Badge> :
-                                short ? <Badge variant="destructive">Short — review</Badge> :
+                                health === "UNVERIFIABLE" ? <Badge variant="outline">Unverifiable</Badge> :
+                                health === "LENGTH_UNKNOWN" ? <Badge variant="outline">Planned length unknown</Badge> :
+                                health === "SHORT_REVIEW" ? <Badge variant="destructive">Short — review</Badge> :
                                 <Badge variant="secondary">Within tolerance</Badge>}
                             </TableCell>
                             <TableCell className="text-right">

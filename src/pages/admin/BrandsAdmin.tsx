@@ -122,6 +122,15 @@ const BrandsAdmin = () => {
       toast.error("Brand name is required");
       return;
     }
+    // The editor can otherwise create indistinguishable fictional brands
+    // and confuse canonical festival sponsor identity. Server-side unique
+    // constraints still arbitrate concurrent administrator edits.
+    const identity = name.normalize("NFKC").toLocaleLowerCase();
+    if (brands.some(brand => brand.id !== editingId &&
+      brand.name.trim().normalize("NFKC").toLocaleLowerCase() === identity)) {
+      toast.error("A canonical sponsor with this name already exists.");
+      return;
+    }
 
     const logo = form.logoUrl.trim();
     if (logo && !isSafeSponsorLogoReference(logo)) {
