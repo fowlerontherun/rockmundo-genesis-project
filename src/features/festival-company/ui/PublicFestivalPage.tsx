@@ -27,7 +27,7 @@ import { referralAwareDestination } from "@/features/shareable-moments/referralD
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { SponsorIdentity } from "./SponsorIdentity";
 import { canOfferFestivalCheckIn, canStartFestivalTicketPurchase } from "./publicFestivalEligibility";
-import { canDisplayFestivalCheckInMessage, festivalVisitorEventLabel, festivalVisitorSalesLabel, formatFestivalEditionDate, formatFestivalEditionTime, hasIssuedFestivalAdmission, isMainFestivalSponsor, isPublishedFestivalPerformance, orderFestivalPublicSponsors } from "./festivalPublicDisplay";
+import { canDisplayFestivalCheckInMessage, festivalVisitorEventLabel, festivalVisitorSalesLabel, formatFestivalEditionDate, formatFestivalEditionTime, hasIssuedFestivalAdmission, isMainFestivalSponsor, isPublishedFestivalPerformance, orderFestivalPublicSponsors, auditFestivalSponsorSlots, getPublishedFestivalCampingTickets } from "./festivalPublicDisplay";
 
 const Countdown = ({ target }: { target: string }) => {
   const [now, setNow] = useState(() => Date.now());
@@ -117,6 +117,8 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   const cancelled = f.launchStatus === "cancelled_before_event";
   const eventPhaseLabel = festivalVisitorEventLabel(eventPhase, f.launchStatus);
   const publishedSponsors = orderFestivalPublicSponsors(f.sponsors);
+  const sponsorAudit = auditFestivalSponsorSlots(publishedSponsors);
+  const campingTickets = getPublishedFestivalCampingTickets(f.ticketProducts);
 
   const myAttendance = (attendanceError ? [] : attendance)
     .filter((item) => item.festivalLaunchId === f.id && item.status !== "cancelled" && item.status !== "refunded")
@@ -598,6 +600,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                   <summary className="cursor-pointer font-medium">Is camping included?</summary>
                   <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">
                     {f.information.camping?.trim() || "Camping availability and eligibility have not been confirmed. Do not assume your ticket includes camping."}
+                    {campingTickets.length > 0 && <span className="mt-2 block">Published camping products: {campingTickets.map(product => product.name).join(", ")}. A camping add-on does not grant admission on its own.</span>}
                   </p>
                 </details>
                 <details className="py-3">
@@ -645,6 +648,17 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                         "The organiser has not published this information yet."}
                     </p>
                   )}
+                  {key === "camping" && campingTickets.length > 0 && (
+                    <div className="mt-3 rounded-md border p-3 text-sm">
+                      <p className="font-medium">Published camping ticket options</p>
+                      <ul className="mt-2 list-inside list-disc">
+                        {campingTickets.map((product, index) => (
+                          <li key={index}>{product.name} — {product.saleStatus.replaceAll("_", " ")}</li>
+                        ))}
+                      </ul>
+                      <p className="mt-2 text-muted-foreground">A camping add-on never replaces an admission ticket. Site facilities are confirmed only by organiser-published information.</p>
+                    </div>
+                  )}
                 </section>
               ))}
             </div>
@@ -658,6 +672,12 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
             </section>
             <section id="festival-info-sponsors" aria-labelledby="festival-info-sponsors-title" className="scroll-mt-6 space-y-3 rounded-xl border bg-card p-5">
               <h3 id="festival-info-sponsors-title" className="text-lg font-bold">Festival partners</h3>
+              {publishedSponsors.length > 0 && sponsorAudit.mainCount === 0 && (
+                <p className="text-sm text-muted-foreground">No main sponsor has been announced for this edition.</p>
+              )}
+              {publishedSponsors.length > 0 && !sponsorAudit.ready && sponsorAudit.mainCount > 0 && (
+                <p className="text-sm text-muted-foreground">Sponsor roles are awaiting organiser confirmation. Published partners are displayed without altering their agreements.</p>
+              )}
               {publishedSponsors.length ? (
                 <div className="grid gap-3 sm:grid-cols-2">
                   {publishedSponsors.map((sponsor) => (

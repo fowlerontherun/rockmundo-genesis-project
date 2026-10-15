@@ -34,3 +34,31 @@ export function formatAudioDuration(seconds: number | null): string {
   const rounded = Math.round(seconds);
   return `${Math.floor(rounded / 60)}:${String(rounded % 60).padStart(2, "0")}`;
 }
+
+
+/**
+ * Produce a review-only report from *decoded browser durations*, never from
+ * estimated MP3 filesize. Keep song IDs for targeted operator review.
+ * No audio is modified and this does not start paid regeneration.
+ */
+export function buildAudioDurationReviewCsv(
+  songs: readonly { id: string; title: string; duration_seconds: number | null }[],
+  audited: Readonly<Record<string, number | null>>,
+): string {
+  // A downloaded CSV may be opened in a spreadsheet. Escape all formulas and
+  // embedded delimiters so song titles cannot execute as spreadsheet formulas.
+  const cell = (value: string | number | null) => {
+    const plain = value === null ? "" : String(value);
+    const safe = /^[=+@\-\t\r]/.test(plain.trimStart()) ? "'" + plain : plain;
+    return '"' + safe.replace(/"/g, '""') + '"';
+  };
+  const lines = [["song_id","title","planned_seconds","decoded_audio_seconds","status"].map(cell).join(",")];
+  for (const song of songs) {
+    if (!Object.prototype.hasOwnProperty.call(audited, song.id)) continue;
+    const actual = audited[song.id];
+    const status = actual == null ? "UNVERIFIABLE"
+      : isGeneratedAudioShort(actual, song.duration_seconds) ? "SHORT_REVIEW" : "WITHIN_TOLERANCE";
+    lines.push([song.id,song.title,song.duration_seconds,actual,status].map(cell).join(","));
+  }
+  return lines.join("\r\n") + "\r\n";
+}

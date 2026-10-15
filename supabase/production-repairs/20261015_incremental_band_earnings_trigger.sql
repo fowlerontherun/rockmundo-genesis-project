@@ -14,6 +14,23 @@ BEGIN
     ) THEN
     RAISE EXCEPTION 'Unexpected production earnings trigger: manual review required';
   END IF;
+  -- A duplicate primary treasury makes ledger routing ambiguous. Even if
+  -- amounts happen to match, abort before changing any financial functions.
+  IF EXISTS (
+    SELECT band_id FROM public.band_treasuries
+    WHERE is_primary IS TRUE GROUP BY band_id HAVING count(*) <> 1
+  ) THEN
+    RAISE EXCEPTION 'Multiple primary band treasuries: abort earnings trigger repair';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.band_treasuries
+    WHERE is_primary IS TRUE AND (
+      balance_minor < 0 OR reserved_balance_minor < 0 OR
+      reserved_balance_minor > balance_minor
+    )
+  ) THEN
+    RAISE EXCEPTION 'Reserved or spendable band treasury drift: abort earnings trigger repair';
+  END IF;
   IF EXISTS (
     SELECT 1 FROM public.bands b
     LEFT JOIN public.band_treasuries t
