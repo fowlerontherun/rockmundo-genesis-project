@@ -364,7 +364,9 @@ export const SessionConfigurator = ({
       };
       const session = await createSession.mutateAsync(request);
       // The booking is already paid even if its follow-up diary rows failed.
-      setRepairBookingInput(session.projectionPending ? request : null);
+      setRepairBookingInput(session.projectionPending
+        ? { ...request, booked_profile_ids: session.bookedProfileIds }
+        : null);
       setConflictState(null);
       setBookingSummary({
         sessionId: (session as any)?.id ?? "",
