@@ -40324,6 +40324,58 @@ export type Database = {
           },
         ]
       }
+      notification_profile_states: {
+        Row: {
+          archived_at: string | null
+          deleted_at: string | null
+          notification_id: string
+          profile_id: string
+          read_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          deleted_at?: string | null
+          notification_id: string
+          profile_id: string
+          read_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          deleted_at?: string | null
+          notification_id?: string
+          profile_id?: string
+          read_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_profile_states_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_profile_states_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_profile_states_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           action_path: string | null
@@ -48895,6 +48947,63 @@ export type Database = {
           },
         ]
       }
+      profile_privacy_settings: {
+        Row: {
+          activity_visibility: Database["public"]["Enums"]["profile_visibility_scope"]
+          allow_band_invites: boolean
+          allow_company_invites: boolean
+          city_visibility: Database["public"]["Enums"]["profile_visibility_scope"]
+          created_at: string
+          dm_permission: Database["public"]["Enums"]["profile_dm_permission"]
+          online_status_visibility: Database["public"]["Enums"]["profile_visibility_scope"]
+          profile_id: string
+          profile_visibility: Database["public"]["Enums"]["profile_visibility_scope"]
+          relationship_visibility: Database["public"]["Enums"]["profile_visibility_scope"]
+          updated_at: string
+        }
+        Insert: {
+          activity_visibility?: Database["public"]["Enums"]["profile_visibility_scope"]
+          allow_band_invites?: boolean
+          allow_company_invites?: boolean
+          city_visibility?: Database["public"]["Enums"]["profile_visibility_scope"]
+          created_at?: string
+          dm_permission?: Database["public"]["Enums"]["profile_dm_permission"]
+          online_status_visibility?: Database["public"]["Enums"]["profile_visibility_scope"]
+          profile_id: string
+          profile_visibility?: Database["public"]["Enums"]["profile_visibility_scope"]
+          relationship_visibility?: Database["public"]["Enums"]["profile_visibility_scope"]
+          updated_at?: string
+        }
+        Update: {
+          activity_visibility?: Database["public"]["Enums"]["profile_visibility_scope"]
+          allow_band_invites?: boolean
+          allow_company_invites?: boolean
+          city_visibility?: Database["public"]["Enums"]["profile_visibility_scope"]
+          created_at?: string
+          dm_permission?: Database["public"]["Enums"]["profile_dm_permission"]
+          online_status_visibility?: Database["public"]["Enums"]["profile_visibility_scope"]
+          profile_id?: string
+          profile_visibility?: Database["public"]["Enums"]["profile_visibility_scope"]
+          relationship_visibility?: Database["public"]["Enums"]["profile_visibility_scope"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_privacy_settings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_privacy_settings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           age: number
@@ -50537,6 +50646,52 @@ export type Database = {
             columns: ["studio_id"]
             isOneToOne: false
             referencedRelation: "city_studios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recording_xp_grants: {
+        Row: {
+          awarded_at: string
+          profile_id: string
+          session_id: string
+          skill_slug: string
+          xp_amount: number
+        }
+        Insert: {
+          awarded_at?: string
+          profile_id: string
+          session_id: string
+          skill_slug: string
+          xp_amount: number
+        }
+        Update: {
+          awarded_at?: string
+          profile_id?: string
+          session_id?: string
+          skill_slug?: string
+          xp_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recording_xp_grants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recording_xp_grants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recording_xp_grants_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "recording_sessions"
             referencedColumns: ["id"]
           },
         ]
@@ -65418,6 +65573,57 @@ export type Database = {
         }
         Relationships: []
       }
+      public_profile_privacy_settings: {
+        Row: {
+          allow_band_invites: boolean | null
+          allow_company_invites: boolean | null
+          dm_permission:
+            | Database["public"]["Enums"]["profile_dm_permission"]
+            | null
+          profile_id: string | null
+          profile_visibility:
+            | Database["public"]["Enums"]["profile_visibility_scope"]
+            | null
+        }
+        Insert: {
+          allow_band_invites?: boolean | null
+          allow_company_invites?: boolean | null
+          dm_permission?:
+            | Database["public"]["Enums"]["profile_dm_permission"]
+            | null
+          profile_id?: string | null
+          profile_visibility?:
+            | Database["public"]["Enums"]["profile_visibility_scope"]
+            | null
+        }
+        Update: {
+          allow_band_invites?: boolean | null
+          allow_company_invites?: boolean | null
+          dm_permission?:
+            | Database["public"]["Enums"]["profile_dm_permission"]
+            | null
+          profile_id?: string | null
+          profile_visibility?:
+            | Database["public"]["Enums"]["profile_visibility_scope"]
+            | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_privacy_settings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_privacy_settings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       released_songs: {
         Row: {
           band_id: string | null
@@ -67343,6 +67549,10 @@ export type Database = {
           p_xp: number
         }
         Returns: boolean
+      }
+      award_recording_xp_atomic: {
+        Args: { p_session_id: string }
+        Returns: Json
       }
       award_show_invite_band: {
         Args: {
@@ -70436,6 +70646,17 @@ export type Database = {
           venue_id: string
         }[]
       }
+      finish_song_generation_atomic: {
+        Args: {
+          p_attempt_id: string
+          p_audio_url?: string
+          p_error_message?: string
+          p_prediction_id?: string
+          p_song_id: string
+          p_status: string
+        }
+        Returns: Json
+      }
       finish_streaming_simulation_day: {
         Args: { p_day: string; p_error?: string; p_success: boolean }
         Returns: undefined
@@ -73377,6 +73598,16 @@ export type Database = {
         }
         Returns: Json
       }
+      reserve_song_generation_atomic: {
+        Args: {
+          p_actor_user_id?: string
+          p_admin_override?: boolean
+          p_replace_existing?: boolean
+          p_song_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       reset_twaater_daily_limits: { Args: never; Returns: undefined }
       resign_company_employment: {
         Args: { p_employee_id: string }
@@ -74713,6 +74944,14 @@ export type Database = {
           p_regions?: string[]
         }
         Returns: undefined
+      }
+      set_notification_profile_states: {
+        Args: {
+          p_action: string
+          p_notification_ids: string[]
+          p_profile_id: string
+        }
+        Returns: number
       }
       set_owned_clothing_customization: {
         Args: {
@@ -77395,6 +77634,13 @@ export type Database = {
         | "debt_settlement"
         | "bankruptcy"
         | "score_adjustment"
+      profile_dm_permission:
+        | "everyone"
+        | "friends"
+        | "none"
+        | "friends_and_band"
+        | "existing_conversations"
+      profile_visibility_scope: "public" | "friends" | "private"
       show_type_enum: "concert" | "festival" | "private" | "street"
       social_invite_kind:
         | "gig"
@@ -77825,6 +78071,14 @@ export const Constants = {
         "bankruptcy",
         "score_adjustment",
       ],
+      profile_dm_permission: [
+        "everyone",
+        "friends",
+        "none",
+        "friends_and_band",
+        "existing_conversations",
+      ],
+      profile_visibility_scope: ["public", "friends", "private"],
       show_type_enum: ["concert", "festival", "private", "street"],
       social_invite_kind: [
         "gig",
