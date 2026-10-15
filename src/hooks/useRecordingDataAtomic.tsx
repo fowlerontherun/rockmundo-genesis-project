@@ -351,21 +351,26 @@ export const useCreateRecordingSession = () => {
                 .single(),
               supabase
                 .from("band_members")
-                .select("user_id")
+                .select("user_id, profile_id")
                 .eq("band_id", input.band_id)
-                .eq("member_status", "active"),
+                .eq("member_status", "active")
+                .eq("is_touring_member", false),
             ]);
             const bandName = bandInfo?.name || "Your band";
             const startLabel = scheduledStart.toLocaleString();
-            const memberUserIds = (members ?? [])
-              .map((member) => member.user_id)
-              .filter(
-                (userId): userId is string =>
-                  typeof userId === "string" && userId.length > 0,
-              );
-            const inboxRows: BookingInboxMessage[] = memberUserIds.map(
-              (userId) => ({
-                user_id: userId,
+            const recipientProfiles = (members ?? [])
+              .map(member => member.profile_id)
+              .filter((id): id is string => typeof id === "string" && !!id);
+            const { data: scopedProfiles, error: scopeError } = recipientProfiles.length
+              ? await supabase.from("profiles").select("id, user_id").in("id", recipientProfiles)
+              : { data: [], error: null } as any;
+            if (scopeError) throw scopeError;
+            // Profiles are authoritative for character ownership. Do not
+            // infer the active character from an account-level band member.
+            const inboxRows: BookingInboxMessage[] = (scopedProfiles ?? [])
+              .filter(profile => typeof profile.user_id === "string")
+              .map(profile => ({
+                user_id: profile.user_id,
                 category: "system",
                 priority: "normal",
                 title: `Recording session booked: ${songTitle}`,
@@ -373,13 +378,14 @@ export const useCreateRecordingSession = () => {
                 action_type: "view_recording_session",
                 action_data: { session_id: booking.bookingId },
                 metadata: {
+                  scope: "character",
+                  profile_id: profile.id,
                   source: "recording_booking",
                   session_id: booking.bookingId,
                   band_id: input.band_id,
                   payment_source: booking.paymentSource,
                 },
-              }),
-            );
+              }));
             await insertBookingInboxMessages(inboxRows);
           } catch (notifyError) {
             console.error(
@@ -389,6 +395,7 @@ export const useCreateRecordingSession = () => {
           }
         } else {
           try {
+            if (!input.profile_id) throw new Error("recording_notification_character_scope_missing");
             await insertBookingInboxMessages([
               {
                 user_id: input.user_id,
@@ -399,6 +406,8 @@ export const useCreateRecordingSession = () => {
                 action_type: "view_recording_session",
                 action_data: { session_id: booking.bookingId },
                 metadata: {
+                  scope: "character",
+                  profile_id: input.profile_id,
                   source: "recording_booking",
                   session_id: booking.bookingId,
                   payment_source: booking.paymentSource,
