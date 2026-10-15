@@ -117,7 +117,8 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
   const cancelled = f.launchStatus === "cancelled_before_event";
   const eventPhaseLabel = festivalVisitorEventLabel(eventPhase, f.launchStatus);
   const publishedSponsors = orderFestivalPublicSponsors(f.sponsors);
-  const sponsorAudit = auditFestivalSponsorSlots(publishedSponsors);
+  // Audit the raw immutable projection before display-only deduplication.
+  const sponsorAudit = auditFestivalSponsorSlots(f.sponsors);
   const campingTickets = getPublishedFestivalCampingTickets(f.ticketProducts);
 
   const myAttendance = (attendanceError ? [] : attendance)
@@ -677,6 +678,16 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
               )}
               {publishedSponsors.length > 0 && !sponsorAudit.ready && sponsorAudit.mainCount > 0 && (
                 <p className="text-sm text-muted-foreground">Sponsor roles are awaiting organiser confirmation. Published partners are displayed without altering their agreements.</p>
+              )}
+              {sponsorAudit.duplicateIds && (
+                <p role="status" className="text-sm text-muted-foreground">
+                  Repeated sponsor entries were consolidated in this guide. Existing sponsorship agreements have not been changed.
+                </p>
+              )}
+              {sponsorAudit.missingLogos > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Some partner logos are awaiting publication; their names remain visible.
+                </p>
               )}
               {publishedSponsors.length ? (
                 <div className="grid gap-3 sm:grid-cols-2">
