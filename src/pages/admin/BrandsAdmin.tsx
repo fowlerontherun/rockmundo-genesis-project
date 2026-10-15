@@ -420,11 +420,11 @@ const BrandsAdmin = () => {
                       <div className="mt-2 flex gap-2">
                         <div className="w-40 rounded-lg bg-white p-2 text-slate-950">
                           <p className="mb-1 text-xs">Light preview</p>
-                          <SponsorIdentity name={form.name || "Brand preview"} logoReference={form.logoUrl} />
+                          <SponsorIdentity name={form.name || "Brand preview"} logoReference={form.logoUrl} previewTheme="light" />
                         </div>
                         <div className="w-40 rounded-lg bg-slate-950 p-2 text-white" data-theme-preview="dark">
                           <p className="mb-1 text-xs">Dark preview</p>
-                          <SponsorIdentity name={form.name || "Brand preview"} logoReference={form.logoUrl} />
+                          <SponsorIdentity name={form.name || "Brand preview"} logoReference={form.logoUrl} previewTheme="dark" />
                         </div>
                       </div>
                     )}
