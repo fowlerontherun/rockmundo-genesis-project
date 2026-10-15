@@ -272,10 +272,23 @@ Deno.serve(async (req) => {
         const soloProfiles = !session.band_id
           ? [{ profile_id: soloProfileId, user_id: session.user_id, instrument_role: 'lead_vocals', role: 'lead_vocals' }]
           : []
-        const participants = [...(memberRows || []), ...soloProfiles]
+        // Never attribute a bandmate's performance to the recording owner.
+        // Some legacy memberships have only a user_id, so resolve that user's
+        // current character instead of reusing the booking character.
+        const resolvedBandMembers = await Promise.all((memberRows || []).map(async (member: any) => {
+          if (member.profile_id) return member
+          if (!member.user_id) throw new Error('recording_performer_profile_missing')
+          const { data: performerProfile, error: performerError } = await supabase
+            .from('profiles').select('id').eq('user_id', member.user_id)
+            .eq('is_active', true).is('died_at', null).maybeSingle()
+          if (performerError) throw performerError
+          if (!performerProfile?.id) throw new Error('recording_performer_profile_missing')
+          return { ...member, profile_id: performerProfile.id }
+        }))
+        const participants = [...resolvedBandMembers, ...soloProfiles]
 
         const performerInputs = await Promise.all(participants.map(async (member: any) => {
-          const performerProfileId = member.profile_id || session.profile_id
+          const performerProfileId = member.profile_id
           const { data: profile } = performerProfileId
             ? await supabase.from('profiles').select('health, energy, motivation, physical_health').eq('id', performerProfileId).maybeSingle()
             : { data: null } as any
