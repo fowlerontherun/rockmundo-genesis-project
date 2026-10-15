@@ -89,8 +89,12 @@ export function isMainFestivalSponsor(
 export function orderFestivalPublicSponsors(
   sponsors: readonly FestivalPublicSponsor[],
 ): FestivalPublicSponsor[] {
-  return [...sponsors].sort((a, b) =>
-    Number(isMainFestivalSponsor(b)) - Number(isMainFestivalSponsor(a)));
+  // A repeated projection row is the same sponsor, not an additional slot.
+  // Do not mutate the signed roster; dedupe only the public display.
+  return sponsors
+    .filter((sponsor, index) => sponsors.findIndex((candidate) => candidate.id === sponsor.id) === index)
+    .sort((a, b) =>
+      Number(isMainFestivalSponsor(b)) - Number(isMainFestivalSponsor(a)));
 }
 
 /**
