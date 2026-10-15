@@ -302,7 +302,23 @@ export const useCreateRecordingSession = () => {
           }
         }
 
-        if (!booking.idempotent && input.band_id) {
+        if (input.band_id) {
+          // An idempotent retry can be the first successful opportunity to
+          // deliver absent-member notifications. Recheck *only* deliberately
+          // skipped profiles; the original booking now occupies the band diary.
+          if (booking.idempotent && input.skip_profile_ids?.length) {
+            try {
+              const { conflicts } = await checkBandAvailability(
+                input.band_id, scheduledStart, scheduledEnd,
+              );
+              const skipped = new Set(input.skip_profile_ids);
+              excludedConflicts = conflicts.filter(
+                (conflict) => !!conflict.profileId && skipped.has(conflict.profileId),
+              );
+            } catch (conflictError) {
+              console.warn("[recording-booking] Could not recover skipped-member conflicts", conflictError);
+            }
+          }
           if (excludedConflicts.length > 0) {
             await notifyAbsentBandMembers({
               bandId: input.band_id,
@@ -362,7 +378,7 @@ export const useCreateRecordingSession = () => {
               notifyError,
             );
           }
-        } else if (!booking.idempotent) {
+        } else {
           try {
             await insertBookingInboxMessages([
               {
