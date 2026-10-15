@@ -31,7 +31,7 @@ import {
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { ChartTopSongsSection } from "@/components/admin/ChartTopSongsSection";
 import { TopPlayedSongsSection } from "@/components/admin/TopPlayedSongsSection";
-import { formatAudioDuration, isGeneratedAudioShort, readAudioDuration } from "@/lib/audioDurationAudit";
+import { buildAudioDurationReviewCsv, formatAudioDuration, isGeneratedAudioShort, readAudioDuration } from "@/lib/audioDurationAudit";
 
 type Song = {
   id: string;
@@ -136,6 +136,20 @@ export default function AISongGeneration() {
     } finally {
       setAudioAuditing(false);
     }
+  };
+
+  const exportAudioDurationReview = () => {
+    if (!recentAudioSongs?.length || auditChecked === 0) return;
+    const csv = buildAudioDurationReviewCsv(recentAudioSongs, audioAudit);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const downloadUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = downloadUrl;
+    anchor.download = `rockmundo-audio-duration-review-page-${audioAuditPage + 1}.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(downloadUrl);
   };
 
   const generateMutation = useMutation({
@@ -585,6 +599,10 @@ export default function AISongGeneration() {
                    </span>
                    <Button type="button" variant="outline" size="sm" disabled={audioAuditPage === 0 || audioAuditing || isRecentAudioLoading} onClick={() => setAudioAuditPage(page => Math.max(0, page - 1))}>Previous 30</Button>
                    <Button type="button" variant="outline" size="sm" disabled={audioAuditing || isRecentAudioLoading || (recentAudioSongs?.length ?? 0) < audioAuditPageSize} onClick={() => setAudioAuditPage(page => page + 1)}>Next 30</Button>
+                   <Button type="button" variant="outline" size="sm" onClick={exportAudioDurationReview}
+                     disabled={audioAuditing || auditChecked === 0} title="Export audited durations without regeneration">
+                     Export audited CSV
+                   </Button>
                 </div>
                 <p className="text-sm text-muted-foreground">
                   A recording is flagged for review if browser-reported duration is less than 80% of
