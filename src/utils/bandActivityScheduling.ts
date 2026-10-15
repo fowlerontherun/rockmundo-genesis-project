@@ -4,6 +4,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { checkTimeSlotAvailable } from '@/hooks/useActivityBooking';
 import { pushNotification } from '@/lib/notify';
+import { recordingAbsentEventKey } from '@/utils/recordingNotificationIdentity';
 
 export interface BandActivityParams {
   bandId: string;
@@ -445,6 +446,9 @@ export async function notifyAbsentBandMembers(params: AbsentMemberNotificationPa
       title: `${label} booked without you`,
       message: `${params.bandName || 'Your band'} booked "${params.activityLabel}"${when ? ` for ${when}` : ''}${params.location ? ` at ${params.location}` : ''}. You were busy with ${describeActivityType(conflict.activityType)}${conflict.activityTitle ? ` “${conflict.activityTitle}”` : ''}. You can still join if you free up your schedule.`,
       actionPath: params.actionPath ?? '/rehearsals',
+      eventKey: params.linkedRecordingId
+        ? recordingAbsentEventKey(params.linkedRecordingId, conflict.profileId || userId)
+        : undefined,
       metadata: {
         band_id: params.bandId,
         activity_type: params.activityType,
