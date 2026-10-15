@@ -43,7 +43,7 @@ describe("five open-issue safety improvements", () => {
     expect(csv).toContain('"SHORT_REVIEW"');
     expect(csv).toContain('"WITHIN_TOLERANCE"');
     expect(csv).toContain('"UNVERIFIABLE"');
-    expect(csv).toContain('"'=SUM(1,2)"');
+    expect(csv).toContain("\"'=SUM(1,2)\"");
     expect(csv).toContain('"Song, with ""comma"""');
     expect(csv).not.toContain("not-checked");
     const admin = source("src/pages/admin/AISongGeneration.tsx");
