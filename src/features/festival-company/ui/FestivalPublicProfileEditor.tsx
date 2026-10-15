@@ -118,13 +118,27 @@ export function FestivalPublicProfileEditor({ festivalCompanyId }: { festivalCom
         },
       },
       {
-        onSuccess: () => toast.success("Public festival profile saved."),
-        onError: (error) =>
-          toast.error(
-            error instanceof Error && error.message === "festival_public_slug_taken"
+        onSuccess: async () => {
+          // Refresh the authoritative edition public_version before allowing
+          // another edit, or the next save retries with a stale version.
+          const refreshed = await plan.refetch();
+          if (refreshed.isError) {
+            toast.warning("Saved, but the new profile version could not be verified. Reload before editing again.");
+            return;
+          }
+          setDirty(false);
+          toast.success("Public festival profile saved.");
+        },
+        onError: (error) => {
+          const message = error instanceof Error ? error.message : "";
+          if (/version|conflict|stale|public_profile_changed/i.test(message)) {
+            toast.error("Someone changed this festival profile. Your draft is preserved; review the published details before retrying.");
+          } else {
+            toast.error(message === "festival_public_slug_taken"
               ? "That web address is already used by another festival."
-              : "The public profile could not be saved.",
-          ),
+              : "The public profile could not be saved.");
+          }
+        },
       },
     );
   };
@@ -138,6 +152,7 @@ export function FestivalPublicProfileEditor({ festivalCompanyId }: { festivalCom
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <fieldset disabled={save.isPending || plan.isLoading} className="min-w-0 space-y-4">
         <div className="grid gap-3 md:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="festival-public-name">Public name</Label>
@@ -207,6 +222,7 @@ export function FestivalPublicProfileEditor({ festivalCompanyId }: { festivalCom
           </Button>
           {existing ? <span className="text-xs text-muted-foreground">Version {expectedVersion}</span> : null}
         </div>
+        </fieldset>
       </CardContent>
     </Card>
   );
