@@ -70,10 +70,31 @@ test("#4072 detects historic hash drift even with a matching version", () => {
     { version: "20261015123100", sha256: "b".repeat(64) },
   ]));
   assert.equal(inventory.entries[0].history_identity, "version_matched_unverified");
-  assert.equal(inventory.entries[0].history_sql_hash, "source_hash_mismatch_manual_review");
+  assert.equal(inventory.entries[0].history_sql_hash, "conflicting_history_hashes_manual_review");
   assert.deepEqual(inventory.history_hash_collision_versions, ["20261015123100"]);
   assert.equal(inventory.entries[0].deployment_decision, "manual_review_required");
   assert.throws(() => recordedHistoryEvidenceFromJson([
     { version: "20261015123100", sha256: "not-a-digest" },
   ]), /invalid SQL SHA256/);
+});
+
+test("#4072 contradictory history is unsafe even if one reported digest matches source", () => {
+  const content = "select 100;";
+  const realDigest = createHash("sha256").update(content).digest("hex");
+  const inventory = buildMigrationIdentityInventory([
+    { path: "supabase/migrations/20261015124000_source.sql", content },
+  ], recordedHistoryEvidenceFromJson([
+    { version: "20261015124000", sha256: realDigest },
+    { version: "20261015124000", sha256: "f".repeat(64) },
+  ]));
+  assert.equal(inventory.entries[0].history_sql_hash, "conflicting_history_hashes_manual_review");
+  assert.deepEqual(inventory.history_hash_collision_versions, ["20261015124000"]);
+  assert.equal(inventory.entries[0].deployment_decision, "manual_review_required");
+});
+
+test("#4072 single mismatched history hash is explicitly refused", () => {
+  const inventory = buildMigrationIdentityInventory([
+    { path: "supabase/migrations/20261015124100_source.sql", content: "select 101;" },
+  ], [{ version: "20261015124100", sha256: "0".repeat(64) }]);
+  assert.equal(inventory.entries[0].history_sql_hash, "source_hash_mismatch_manual_review");
 });
