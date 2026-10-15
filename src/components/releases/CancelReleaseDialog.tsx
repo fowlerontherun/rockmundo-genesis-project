@@ -34,29 +34,19 @@ export function CancelReleaseDialog({ open, onOpenChange, release }: CancelRelea
     mutationFn: async () => {
       if (!release) throw new Error("No release selected");
 
-      // Refund manufacturing cost to band balance if applicable
+      // Only the earnings journal may credit band cash. Direct balance updates
+      // would double-refund once the incremental earnings trigger is installed.
+      // TODO(#4119): replace this multi-request cancellation with an atomic,
+      // idempotent server-side refund before enabling automatic retries.
       if (release.band_id && release.total_cost && release.total_cost > 0) {
-        const { data: band } = await supabase
-          .from("bands")
-          .select("band_balance")
-          .eq("id", release.band_id)
-          .single();
-
-        if (band) {
-          const newBalance = (band.band_balance || 0) + minorToMajor(release.total_cost);
-          await supabase
-            .from("bands")
-            .update({ band_balance: newBalance })
-            .eq("id", release.band_id);
-
-          // Record the refund
-          await supabase.from("band_earnings").insert({
-            band_id: release.band_id,
-            amount: minorToMajor(release.total_cost),
-            source: "refund",
-            description: `Release cancelled: ${release.title} (manufacturing refund)`,
-          });
-        }
+        const { error: refundError } = await supabase.from("band_earnings").insert({
+          band_id: release.band_id,
+          amount: minorToMajor(release.total_cost),
+          source: "refund",
+          description: `Release cancelled: ${release.title} (manufacturing refund)`,
+          metadata: { release_id: release.id },
+        });
+        if (refundError) throw refundError;
       }
 
       // Update release status to cancelled
