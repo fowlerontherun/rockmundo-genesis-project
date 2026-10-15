@@ -107,3 +107,29 @@ export function formatFestivalEditionTime(
     hourCycle: "h23",
   }).replace("Date to be confirmed", "Time to be announced");
 }
+
+
+/** Public-only audit. Never hide real signed partners to cosmetically meet a cap. */
+export function auditFestivalSponsorSlots(
+  sponsors: readonly FestivalPublicSponsor[],
+): { mainCount: number; supportingCount: number; duplicateIds: boolean; missingLogos: number; ready: boolean } {
+  const mainCount = sponsors.filter(isMainFestivalSponsor).length;
+  const supportingCount = sponsors.length - mainCount;
+  return {
+    mainCount, supportingCount,
+    duplicateIds: new Set(sponsors.map(sponsor => sponsor.id)).size !== sponsors.length,
+    missingLogos: sponsors.filter(sponsor => !sponsor.logoReference?.trim()).length,
+    ready: mainCount === 1 && supportingCount <= 4 &&
+      new Set(sponsors.map(sponsor => sponsor.id)).size === sponsors.length,
+  };
+}
+
+/** Derived only from published festival ticket products. Never imply an
+ * add-on provides entry or that camping facilities exist without confirmation. */
+export function getPublishedFestivalCampingTickets(
+  products: readonly { name: string; ticketType: string; productClass: string; saleStatus: string }[],
+): { name: string; saleStatus: string }[] {
+  return products
+    .filter(product => /\\bcamp(?:ing)?\\b/i.test(`${product.name} ${product.ticketType}`))
+    .map(product => ({ name: product.name, saleStatus: product.saleStatus }));
+}
