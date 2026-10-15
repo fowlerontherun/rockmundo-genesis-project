@@ -59,6 +59,51 @@ payroll readiness.
    entries does not revoke bearer strings that may have leaked elsewhere.
    Monitor job errors and preserve all ledger history.
 
+## #4082 staged settlement RPC and post-quarantine schedule (follow-up)
+
+A compatible guarded sponsorship RPC is now staged at
+`supabase/production-repairs/20261015_sponsorship_atomic_installment_guarded_MANUAL_ONLY.sql`.
+It does not settle funds or modify any cron jobs merely by being installed.
+The old October migration **must not** be replayed. The new RPC serializes
+the due installment, verifies service-role authorization, prevents duplicate
+payment journal entries, and rejects discrepancies between historical
+`band_earnings`, displayed band money and the primary USD gameplay treasury
+before it credits a cent. The current full-earnings-reprojection trigger can
+overwrite already-spent cash: any such discrepancy **blocks** the installment
+for manual reconciliation rather than minting a correction. Its finance
+indexes and trigger expectations are strictly verified.
+
+After the approved **Phase A** quarantine has removed both old JWT cron jobs
+and credentials are rotated, the *separate* reinstall script
+`supabase/production-repairs/20261015_sponsorship_vault_cron_install_AFTER_QUARANTINE.sql`
+can recreate **only** the sponsorship job. Unlike the older
+`20261014_sponsorship_cron_vault_auth_cutover.sql` (which updates an existing
+job), the new installer correctly handles a quarantined/missing job, refuses
+to overwrite any unexpected scheduler state and stores only a runtime Vault
+query, never a decrypted secret. The obsolete in-place alter script must **not**
+be run after quarantine.
+
+As checked on 15 October, production contained zero sponsorship contracts,
+zero installments (including zero due), and **six bands whose earnings totals
+differ from spendable band balances**. Never backfill, reset, or mint cash to
+make these disappear. Sponsor settlement tests must use staging fixtures and
+verify zero new overpayments, replay idempotency, locked concurrency, invalid
+contract/owner, inaccurate treasury, expired/stale installment, cancellation,
+and exact rollback of status, balance, morale and ledger if any step fails.
+
+Operator stop conditions for the two staged scripts: no verified backup and
+restorable staging clone; any pending unexpected payment; changed balance
+triggers; failed service-role-only RPC permission check; no known-safe
+authentication failure/zero-payment dry run of the deployed Edge function;
+credentials still stored in any cron command; conflicting schedule names;
+no confirmed credential rotation; or unapproved restart window.
+
+Neither staged script should be run automatically by GitHub CI, release
+pipelines, `db push`, or an unreviewed finance migration. Installing an RPC
+alone is not the complete fix; #4082 stays open until both schedulers,
+credential rotation, payroll reconciliation and payment ledgers have been
+verified end-to-end.
+
 ## Phase B: independently restore sponsorship
 
 Only after the server's `verify_internal_cron_secret` authorization gate,
