@@ -17,6 +17,13 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
+  // Never initiate financial operations through GET, HEAD or arbitrary verbs.
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json', Allow: 'POST, OPTIONS' },
+    })
+  }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -45,7 +52,7 @@ Deno.serve(async (req) => {
   }
 
   // Only parse or persist job metadata after the authorization gate.
-  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req)
+  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null; dryRun?: boolean }>(req)
   const triggeredBy = payload?.triggeredBy ?? req.headers.get('x-triggered-by') ?? undefined
 
   let runId: string | null = null
@@ -88,6 +95,21 @@ Deno.serve(async (req) => {
     }
 
     console.log(`Found ${duePayments?.length || 0} payments due`)
+
+    // Authenticated operations can verify the due-set safely without
+    // transferring money. This is mandatory for a cron cutover smoke test.
+    if (payload?.dryRun === true) {
+      await completeJobRun({
+        jobName: 'process-sponsorship-payments', runId,
+        supabaseClient: supabase, durationMs: Date.now() - startedAt,
+        processedCount: 0, errorCount: 0,
+        resultSummary: { dryRun: true, dueCount: duePayments.length, paidCount: 0 },
+      })
+      return new Response(JSON.stringify({
+        success: true, dryRun: true, paymentsDue: duePayments.length, paymentsPaid: 0,
+        totalPaid: 0, errors: 0,
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
 
     for (const payment of duePayments || []) {
       try {
