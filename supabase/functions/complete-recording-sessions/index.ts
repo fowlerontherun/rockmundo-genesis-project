@@ -362,7 +362,11 @@ Deno.serve(async (req) => {
             let targetSongId = session.song_id
             if (existingVersion) {
               targetSongId = existingVersion.id
-              await supabase.from('songs').update({ quality_score: newQuality, status: 'recorded', updated_at: new Date().toISOString() }).eq('id', existingVersion.id)
+              const { error: versionUpdateError } = await supabase.from('songs')
+                .update({ quality_score: newQuality, status: 'recorded', updated_at: new Date().toISOString(),
+                  ...(recordingVersion === 'acoustic' ? { genre: 'acoustic' } : {}) })
+                .eq('id', existingVersion.id)
+              if (versionUpdateError) throw versionUpdateError
             } else {
               const versionLabel = recordingVersion === 'acoustic' ? 'Acoustic' : 'Remix'
               const { data: newSong, error: createError } = await supabase
@@ -371,7 +375,8 @@ Deno.serve(async (req) => {
                   user_id: originalSong.user_id,
                   band_id: session.band_id || originalSong.band_id,
                   title: `${originalSong.title} (${versionLabel})`,
-                  genre: originalSong.genre,
+                  // Acoustic is a genre of this take only; never alter the parent composition.
+                  genre: recordingVersion === 'acoustic' ? 'acoustic' : originalSong.genre,
                   lyrics: originalSong.lyrics,
                   quality_score: newQuality,
                   status: 'recorded',
@@ -385,7 +390,9 @@ Deno.serve(async (req) => {
               if (createError) throw createError
               if (newSong) {
                 targetSongId = newSong.id
-                await supabase.from('recording_sessions').update({ song_id: newSong.id }).eq('id', session.id)
+                const { error: linkError } = await supabase.from('recording_sessions')
+                  .update({ song_id: newSong.id }).eq('id', session.id)
+                if (linkError) throw linkError
               }
             }
             if (targetSongId) {
