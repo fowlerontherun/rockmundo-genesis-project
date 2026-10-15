@@ -17,7 +17,7 @@ describe("#4119: band earnings must be the only credit writer on journalled path
 
   it("does not directly add major event cash before inserting earnings", () => {
     const worker = source("supabase/functions/complete-major-event/index.ts");
-    expect(worker).not.toMatch(/band_balance:\\s*\\(band\\.band_balance/);
+    expect(worker).not.toMatch(/band_balance:\s*\(band\.band_balance/);
     expect(worker).toContain("fame: (band.fame || 0) + fameGained");
     expect(worker).toContain("source: 'major_event'");
     expect(worker).toContain("metadata: { performance_id: performanceId }");
