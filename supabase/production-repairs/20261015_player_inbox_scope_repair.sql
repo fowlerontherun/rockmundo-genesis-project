@@ -129,7 +129,7 @@ WITH unique_character AS (
   HAVING COUNT(*) = 1
 )
 UPDATE public.player_inbox i
-   SET metadata = COALESCE(i.metadata, '{}'::jsonb)
+   SET metadata = COALESCE(i.metadata, '{}'::jsonb) || jsonb_build_object('profile_id', one.profile_id)
   FROM unique_character one
  WHERE i.user_id = one.user_id
    AND NULLIF(i.metadata->>'profile_id', '') IS NULL
