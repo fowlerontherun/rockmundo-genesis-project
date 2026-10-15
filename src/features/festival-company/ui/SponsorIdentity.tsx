@@ -23,16 +23,21 @@ export function isSafeSponsorLogoReference(reference: string): boolean {
 export function SponsorIdentity({
   name,
   logoReference,
+  previewTheme,
 }: {
   name: string;
   logoReference: string | null;
+  previewTheme?: "light" | "dark";
 }) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const secureUrl = logoReference && isSafeSponsorLogoReference(logoReference)
     ? logoReference : null;
 
   return (
-    <div className="flex min-h-16 items-center justify-center rounded-lg border bg-background p-3">
+    <div className={`flex min-h-16 items-center justify-center rounded-lg border p-3 ${
+      previewTheme === "light" ? "bg-white text-slate-900" :
+      previewTheme === "dark" ? "bg-slate-950 text-slate-100" : "bg-background"
+    }`}>
       {secureUrl && failedUrl !== secureUrl ? (
         <img
           src={secureUrl}
