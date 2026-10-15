@@ -156,7 +156,7 @@ BEGIN
     FROM public.band_treasuries bt
     WHERE bt.band_id=v_band.id AND bt.is_primary=true
     FOR UPDATE;
-  IF v_treasury.currency_code IS DISTINCT FROM 'GBP'
+  IF v_treasury.currency_code IS DISTINCT FROM 'USD'
     OR v_treasury.balance_minor IS DISTINCT FROM v_band.band_balance::bigint * 100
     OR v_treasury.balance_minor<0
     OR coalesce(v_treasury.reserved_balance_minor,0)<0
