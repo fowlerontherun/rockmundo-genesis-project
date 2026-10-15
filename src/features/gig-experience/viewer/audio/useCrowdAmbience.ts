@@ -125,6 +125,14 @@ export function useCrowdAmbience({
     if (!enabled || !isPlaying || muted || isDocumentHidden || typeof Audio === "undefined") {
       ambientRef.current?.pause();
       reactionRef.current?.pause();
+      if (!enabled) {
+        // Re-entering the viewer must be able to replay its initial cue.
+        lastReactionRef.current = null;
+        lastPhaseRef.current = null;
+        lastSongIdRef.current = null;
+        lastPulseAtRef.current = 0;
+        reactionCooldownRef.current.reset();
+      }
       return;
     }
 
@@ -176,7 +184,9 @@ export function useCrowdAmbience({
     }
 
     const songId = snapshot?.song?.id ?? null;
-    if (songId && songId !== lastSongIdRef.current) {
+    // Never mark the first cue as consumed before the async sound catalogue
+    // has loaded. Otherwise an initial entrance/applause can be lost forever.
+    if (songId && songId !== lastSongIdRef.current && sounds.length > 0) {
       lastSongIdRef.current = songId;
       lastPulseAtRef.current = 0;
       reactionCooldownRef.current.reset();
@@ -190,13 +200,13 @@ export function useCrowdAmbience({
     }
 
     const reaction = snapshot?.reaction ?? null;
-    if (reaction && reaction !== lastReactionRef.current) {
+    if (reaction && reaction !== lastReactionRef.current && sounds.length > 0) {
       lastReactionRef.current = reaction;
       const clip = pickGigCrowdSound(sounds, reactionTypes(reaction, energy), intensity, `${songId ?? "gig"}:${reaction}`);
       playReaction(clip, volume * (0.3 + energy * 0.28));
     }
 
-    if (phase && phase !== lastPhaseRef.current) {
+    if (phase && phase !== lastPhaseRef.current && sounds.length > 0) {
       lastPhaseRef.current = phase;
       const phaseTypes: GigCrowdSoundType[] | null =
         phase === "band_entry"
