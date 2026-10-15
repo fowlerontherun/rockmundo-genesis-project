@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminRoute } from "@/components/AdminRoute";
@@ -70,7 +70,15 @@ export default function AISongGeneration() {
   const [auditChecked, setAuditChecked] = useState(0);
   const [audioAuditPage, setAudioAuditPage] = useState(0);
   const audioAuditPageSize = 30;
-  useEffect(() => { setAudioAudit({}); setAuditChecked(0); }, [audioAuditPage]);
+  const auditRunRef = useRef(0);
+  useEffect(() => {
+    // Invalidate an old asynchronous metadata scan on page changes so late
+    // audio events cannot contaminate the new page's export or badges.
+    auditRunRef.current += 1;
+    setAudioAudit({});
+    setAuditChecked(0);
+    setAudioAuditing(false);
+  }, [audioAuditPage]);
 
   const { data: songs, isLoading, refetch } = useQuery({
     queryKey: ["admin-songs-for-generation"],
@@ -123,18 +131,22 @@ export default function AISongGeneration() {
 
   const auditRecentAudio = async () => {
     if (audioAuditing || !recentAudioSongs?.length) return;
+    const run = ++auditRunRef.current;
+    const songsOnPage = [...recentAudioSongs];
     setAudioAuditing(true);
     setAudioAudit({});
     setAuditChecked(0);
     try {
-      // Read-only check of the visible page; no paid generation or audio modification.
-      for (const song of recentAudioSongs) {
+      // Read-only playback metadata checks. Never generate/pay for audio here.
+      for (const song of songsOnPage) {
+        if (run !== auditRunRef.current) break;
         const duration = song.audio_url ? await readAudioDuration(song.audio_url) : null;
+        if (run !== auditRunRef.current) break;
         setAudioAudit(previous => ({ ...previous, [song.id]: duration }));
         setAuditChecked(count => count + 1);
       }
     } finally {
-      setAudioAuditing(false);
+      if (run === auditRunRef.current) setAudioAuditing(false);
     }
   };
 
