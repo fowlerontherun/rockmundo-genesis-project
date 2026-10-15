@@ -5,7 +5,7 @@ import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-const SQL_FILE = /^(\\d{14})_(.+)\\.sql$/i;
+const SQL_FILE = /^(\d{14})_(.+)\.sql$/i;
 const sha256 = (content) => createHash("sha256").update(content).digest("hex");
 
 /**
@@ -76,7 +76,7 @@ export function recordedVersionsFromJson(input) {
   return input.map((item) => {
     const version = typeof item === "string" || typeof item === "number"
       ? String(item) : item && typeof item === "object" ? String(item.version ?? "") : "";
-    if (!/^\\d{14,}$/.test(version)) throw new Error("History JSON has a nonnumeric migration version.");
+    if (!/^\d{14,}$/.test(version)) throw new Error("History JSON has a nonnumeric migration version.");
     return version;
   });
 }
