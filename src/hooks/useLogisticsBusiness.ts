@@ -164,7 +164,7 @@ export function useAddFleetVehicle() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: Partial<LogisticsFleetVehicle>) => {
+    mutationFn: async (data: Partial<LogisticsFleetVehicle> & { request_id: string }) => {
       if (!data.logistics_company_id) throw new Error("Missing logistics company ID");
       const { data: result, error } = await (supabase as any).rpc("purchase_logistics_fleet_vehicle_atomic", {
         p_logistics_id: data.logistics_company_id,
@@ -183,7 +183,7 @@ export function useHireDriver() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: Partial<LogisticsDriver>) => {
+    mutationFn: async (data: Partial<LogisticsDriver> & { request_id: string }) => {
       if (!data.logistics_company_id) throw new Error("Missing logistics company ID");
       const { data: result, error } = await (supabase as any).rpc("hire_logistics_driver_atomic", {
         p_logistics_id: data.logistics_company_id,
