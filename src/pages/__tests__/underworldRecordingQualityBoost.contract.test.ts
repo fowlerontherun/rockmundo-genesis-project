@@ -19,7 +19,7 @@ describe("first timed Underworld recording boost cutover", () => {
       "UNDERWORLD_FROZEN_EFFECTS_INVALID",
       "UNDERWORLD_INSUFFICIENT_FUNDS", "UNDERWORLD_PAYMENT_METHOD_NOT_YET_SUPPORTED",
       "UNDERWORLD_PURCHASE_REQUEST_KEY_MISMATCH",
-      "underworld_purchase_arrest_trigger",
+      "AFTER INSERT arrest trigger executes in this SAME transaction",
     ]) expect(sql).toContain(token);
   });
 
