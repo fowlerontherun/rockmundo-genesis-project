@@ -637,8 +637,14 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                 ["contact", "Contact the organiser", "Questions and visitor support"],
               ] as const).map(([key, title, description]) => (
                 <section id={`festival-info-${key}`} key={key} aria-labelledby={`festival-info-title-${key}`} className="scroll-mt-6 rounded-xl border bg-card p-5">
-                  <h3 id={`festival-info-title-${key}`} className="text-lg font-bold">{title}</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+                  <details className="group" open={key === "travel"}>
+                    <summary className="cursor-pointer rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+                      <h3 id={`festival-info-title-${key}`} className="inline text-lg font-bold">{title}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+                    </summary>
+                    {key === "travel" && (
+                      <p className="mt-3 text-sm">Confirmed festival location: {f.city}, {f.country}. Exact site, parking and transport arrangements are only confirmed when the organiser publishes them below.</p>
+                    )}
                   {f.information[key]?.trim() ? (
                     <p className="mt-4 whitespace-pre-line text-sm leading-relaxed">{f.information[key]}</p>
                   ) : (
@@ -660,6 +666,7 @@ export default function PublicFestivalPage({ publicSlug }: { publicSlug?: string
                       <p className="mt-2 text-muted-foreground">A camping add-on never replaces an admission ticket. Site facilities are confirmed only by organiser-published information.</p>
                     </div>
                   )}
+                  </details>
                 </section>
               ))}
             </div>
