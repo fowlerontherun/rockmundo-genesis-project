@@ -46,12 +46,32 @@ serve(async (req) => {
       status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" }
     })
     const userId = serviceInvocation ? ownerSong.user_id : authData.user!.id
-    let allowed = serviceInvocation || ownerSong.user_id === userId
-    if (!allowed && ownerSong.band_id) {
-      const { data: membership, error: membershipError } = await supabase.from("band_members")
-        .select("id").eq("band_id", ownerSong.band_id).eq("user_id", userId).limit(1)
+    if (!songId || !userId) {
+      return new Response(JSON.stringify({ error: "Missing required fields: songId and userId" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" }
+      })
+    }
+
+    // Character-scoped authorization and vocal profile must agree. A user can
+    // have multiple profiles, only one of which is active in this game.
+    const { data: creatorProfile, error: profileError } = await supabase.from("profiles")
+      .select("id, gender").eq("user_id", userId).eq("is_active", true)
+      .is("died_at", null).maybeSingle()
+    if (profileError) throw new Error("Could not resolve active artist profile")
+
+    // Song ownership by itself does not authorize access to a band-owned song
+    // after the author has left the band. Internal service jobs remain trusted.
+    let allowed = serviceInvocation || (!ownerSong.band_id && ownerSong.user_id === userId)
+    if (!allowed && ownerSong.band_id && creatorProfile?.id) {
+      const { data: memberships, error: membershipError } = await supabase.from("band_members")
+        .select("profile_id, member_status, is_touring_member")
+        .eq("band_id", ownerSong.band_id).eq("user_id", userId).limit(20)
       if (membershipError) throw membershipError
-      allowed = Boolean(membership?.length)
+      allowed = (memberships ?? []).some((member) =>
+        (member.member_status == null || member.member_status === "active") &&
+        member.is_touring_member !== true &&
+        (member.profile_id == null || member.profile_id === creatorProfile.id)
+      )
     }
     if (!allowed) return new Response(JSON.stringify({ error: "Song access denied" }), {
       status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -195,14 +215,9 @@ serve(async (req) => {
 
     console.log(`[generate-song-audio] Song data retrieved: ${song.title}`)
 
-    // Get creator's gender for vocal style
-    let creatorGender: string | null = null
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('gender')
-      .eq('user_id', userId)
-      .single()
-    creatorGender = profile?.gender || null
+    // Resolve the already-authorized active character, never an arbitrary
+    // profile belonging to an account with several playable characters.
+    const creatorGender: string | null = creatorProfile?.gender || null
     console.log(`[generate-song-audio] Creator gender: ${creatorGender || 'not set'}`)
 
     // Get band's sound description if song belongs to a band

@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
     if (songIds.length > 0) {
       const { data: songRows } = await supabase
         .from('songs')
-        .select('id, quality_score, title, genre, lyrics, user_id, band_id, duration_seconds, duration_display, songwriting_project_id')
+        .select('id, quality_score, title, genre, lyrics, user_id, band_id, parent_song_id, version, duration_seconds, duration_display, songwriting_project_id')
         .in('id', songIds)
       for (const row of songRows || []) songMap.set((row as any).id, row)
     }
@@ -357,12 +357,23 @@ Deno.serve(async (req) => {
           const originalSong = session.songs
           const recordingVersion = session.recording_version || 'standard'
           if (recordingVersion !== 'standard') {
-            const { data: existingVersion } = await supabase
-              .from('songs').select('id').eq('parent_song_id', session.song_id).eq('version', recordingVersion).maybeSingle()
+            // If an earlier attempt already linked this session to its child
+            // version, update that version directly instead of nesting children.
+            const parentSongId = originalSong.parent_song_id || session.song_id
+            const { data: existingVersion, error: lookupError } =
+              originalSong.parent_song_id && originalSong.version === recordingVersion
+                ? { data: { id: session.song_id }, error: null }
+                : await supabase.from('songs').select('id')
+                  .eq('parent_song_id', parentSongId).eq('version', recordingVersion).maybeSingle()
+            if (lookupError) throw lookupError
             let targetSongId = session.song_id
             if (existingVersion) {
               targetSongId = existingVersion.id
-              await supabase.from('songs').update({ quality_score: newQuality, status: 'recorded', updated_at: new Date().toISOString() }).eq('id', existingVersion.id)
+              const { error: versionUpdateError } = await supabase.from('songs')
+                .update({ quality_score: newQuality, status: 'recorded', updated_at: new Date().toISOString(),
+                  ...(recordingVersion === 'acoustic' ? { genre: 'acoustic' } : {}) })
+                .eq('id', existingVersion.id)
+              if (versionUpdateError) throw versionUpdateError
             } else {
               const versionLabel = recordingVersion === 'acoustic' ? 'Acoustic' : 'Remix'
               const { data: newSong, error: createError } = await supabase
@@ -371,11 +382,12 @@ Deno.serve(async (req) => {
                   user_id: originalSong.user_id,
                   band_id: session.band_id || originalSong.band_id,
                   title: `${originalSong.title} (${versionLabel})`,
-                  genre: originalSong.genre,
+                  // Acoustic is a genre of this take only; never alter the parent composition.
+                  genre: recordingVersion === 'acoustic' ? 'acoustic' : originalSong.genre,
                   lyrics: originalSong.lyrics,
                   quality_score: newQuality,
                   status: 'recorded',
-                  parent_song_id: session.song_id,
+                  parent_song_id: parentSongId,
                   version: recordingVersion,
                   duration_seconds: originalSong.duration_seconds,
                   duration_display: originalSong.duration_display,
@@ -383,10 +395,15 @@ Deno.serve(async (req) => {
                 })
                 .select('id').single()
               if (createError) throw createError
-              if (newSong) {
-                targetSongId = newSong.id
-                await supabase.from('recording_sessions').update({ song_id: newSong.id }).eq('id', session.id)
-              }
+              if (!newSong?.id) throw new Error('Recording version was not returned after insert')
+              targetSongId = newSong.id
+            }
+            // Always repair the session's link, including retries where the
+            // child insert previously committed but linkage failed.
+            if (targetSongId !== session.song_id) {
+              const { error: linkError } = await supabase.from('recording_sessions')
+                .update({ song_id: targetSongId }).eq('id', session.id)
+              if (linkError) throw linkError
             }
             if (targetSongId) {
               try {
