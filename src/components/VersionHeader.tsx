@@ -1,8 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Radio } from "lucide-react";
 
-export const version = "1.0";
-export const releaseLabel = "Live V1";
+export const version = "1.1.777";
+export const releaseLabel = `Live V${version}`;
 
 export function VersionHeader() {
   return (
