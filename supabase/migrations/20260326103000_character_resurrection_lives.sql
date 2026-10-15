@@ -1,4 +1,7 @@
 -- Add resurrection lives and helper function for reviving dead characters
+-- Keep the original RPC return type compatible with the Mar 27 replacement
+-- and later coma-only hardening: PostgreSQL cannot CREATE OR REPLACE a
+-- function with the same parameter types and a different return type.
 
 ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS resurrection_lives integer NOT NULL DEFAULT 3;
@@ -40,7 +43,7 @@ WHERE p.id = h.profile_id
   AND h.lives_remaining_at_death = 0;
 
 CREATE OR REPLACE FUNCTION public.resurrect_character(p_profile_id uuid)
-RETURNS public.profiles
+RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
@@ -91,7 +94,7 @@ BEGIN
     AND user_id = current_user_id
   RETURNING * INTO target_profile;
 
-  RETURN target_profile;
+  RETURN;
 END;
 $$;
 
