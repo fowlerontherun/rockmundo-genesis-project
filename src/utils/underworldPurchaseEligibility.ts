@@ -31,6 +31,7 @@ export const isUnderworldPurchaseSupported = (
     // The first controlled cutover supports exactly one effect, not mixed
     // instant fame/quality/cash/XP products.
     return recordingQualityBoostEnabled &&
+      typeof product.duration_hours === "number" &&
       Number.isInteger(product.duration_hours) &&
       (product.duration_hours ?? 0) >= 1 &&
       (product.duration_hours ?? 0) <= 72 &&
