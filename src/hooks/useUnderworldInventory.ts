@@ -74,6 +74,8 @@ export const useUnderworldInventory = () => {
         success: true,
         product: { name: String(data.productName ?? "Item") },
         exposure: (data.exposure ?? null) as ExposureResult | null,
+        boostType: typeof data.boostType === "string" ? data.boostType : null,
+        expiresAt: typeof data.expiresAt === "string" ? data.expiresAt : null,
       };
     },
     onSuccess: (data) => {
@@ -91,8 +93,10 @@ export const useUnderworldInventory = () => {
           : "";
 
       toast({
-        title: data.exposure?.triggered || data.exposure?.relapsed ? "Item Used — Health Risk" : "Item Used",
-        description: `${data.product?.name || "Item"} effects have been applied.${warning}`,
+        title: data.boostType ? "Timed Boost Activated" : data.exposure?.triggered || data.exposure?.relapsed ? "Item Used — Health Risk" : "Item Used",
+        description: data.boostType && data.expiresAt
+          ? `${data.product?.name || "Boost"} is active until ${new Date(data.expiresAt).toLocaleString()}.`
+          : `${data.product?.name || "Item"} effects have been applied.${warning}`,
         variant: data.exposure?.triggered || data.exposure?.relapsed ? "destructive" : "default",
       });
     },

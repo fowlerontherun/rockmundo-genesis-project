@@ -107,6 +107,9 @@ export const PurchaseDialog = ({
                   +{((effects.fame_multiplier as number) - 1) * 100}% Fame Gain
                 </Badge>
               )}
+              {effects.recording_quality_boost && (
+                <Badge variant="secondary">+{effects.recording_quality_boost}% Recording Master Quality</Badge>
+              )}
               {effects.energy_regen && (
                 <Badge variant="secondary">
                   +{((effects.energy_regen as number) - 1) * 100}% Energy Regen

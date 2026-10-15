@@ -100,6 +100,7 @@ export const ProductCard = ({ product, onPurchase, userBalance }: ProductCardPro
     if (effects.fame) descriptions.push(`+${effects.fame} Fame`);
     if (effects.xp_multiplier) descriptions.push(`+${((effects.xp_multiplier as number) - 1) * 100}% XP`);
     if (effects.fame_multiplier) descriptions.push(`+${((effects.fame_multiplier as number) - 1) * 100}% Fame`);
+    if (effects.recording_quality_boost) descriptions.push(`+${effects.recording_quality_boost}% Recording Master Quality`);
     if (effects.energy_regen) descriptions.push(`+${((effects.energy_regen as number) - 1) * 100}% Energy Regen`);
     if (effects.all_multiplier) descriptions.push(`+${((effects.all_multiplier as number) - 1) * 100}% All Gains`);
     if (effects.skill_slug && effects.skill_xp) {

@@ -10,6 +10,7 @@ const boostIcons: Record<string, React.ReactNode> = {
   fame_multiplier: <Star className="h-4 w-4" />,
   energy_regen: <Zap className="h-4 w-4" />,
   all_multiplier: <Sparkles className="h-4 w-4" />,
+  recording_quality_boost: <Sparkles className="h-4 w-4" />,
 };
 
 const boostLabels: Record<string, string> = {
@@ -17,6 +18,7 @@ const boostLabels: Record<string, string> = {
   fame_multiplier: "Fame Boost",
   energy_regen: "Energy Regen",
   all_multiplier: "All Gains",
+  recording_quality_boost: "Recording Quality",
 };
 
 interface ActiveBoostsIndicatorProps {
@@ -45,7 +47,9 @@ export const ActiveBoostsIndicator = ({ boosts }: ActiveBoostsIndicatorProps) =>
     return `${minutes}m`;
   };
 
-  if (boosts.length === 0) return null;
+  const now = Date.now();
+  const visibleBoosts = boosts.filter(boost => boost.is_active && Date.parse(boost.expires_at) > now);
+  if (visibleBoosts.length === 0) return null;
 
   return (
     <motion.div
@@ -60,7 +64,7 @@ export const ActiveBoostsIndicator = ({ boosts }: ActiveBoostsIndicatorProps) =>
             Active Boosts
           </div>
           <div className="flex flex-wrap gap-2">
-            {boosts.map((boost) => (
+            {visibleBoosts.map((boost) => (
               <Badge
                 key={boost.id}
                 variant="secondary"
@@ -69,9 +73,11 @@ export const ActiveBoostsIndicator = ({ boosts }: ActiveBoostsIndicatorProps) =>
                 {boostIcons[boost.boost_type] || <Sparkles className="h-4 w-4" />}
                 <span>
                   {boostLabels[boost.boost_type] || boost.boost_type}{" "}
-                  {boost.boost_value !== 1 && (
-                    <>+{Math.round((boost.boost_value - 1) * 100)}%</>
-                  )}
+                  {boost.boost_type === "recording_quality_boost"
+                    ? <>+{Math.round(boost.boost_value)}%</>
+                    : boost.boost_value !== 1
+                      ? <>+{Math.round((boost.boost_value - 1) * 100)}%</>
+                      : null}
                 </span>
                 <span className="flex items-center gap-1 text-xs opacity-70">
                   <Clock className="h-3 w-3" />
