@@ -19,6 +19,7 @@ serve(async (req) => {
 
   let verifiedAttemptId: string | null = null
   let verifiedSongId: string | null = null
+  let finalizationAttempted = false
   try {
     const prediction = await req.json()
     const url = new URL(req.url)
@@ -182,6 +183,7 @@ serve(async (req) => {
 
     // #4122: record the validated audio and finalize the exact attempt in one
     // transaction. If the RPC fails, neither record is marked completed.
+    finalizationAttempted = true
     const { data: finalization, error: finalizationError } = await supabase.rpc(
       'finish_song_generation_atomic', {
         p_song_id: songId, p_attempt_id: attemptId, p_status: 'completed',
@@ -207,7 +209,10 @@ serve(async (req) => {
     console.error(`[replicate-webhook] Error: song=${verifiedSongId || 'unverified'} attempt=${verifiedAttemptId || 'unverified'}: ${message}`)
     // Persist downstream failures as well as provider-declared failures. The
     // diagnostics screen can now distinguish callback/storage errors from stalls.
-    if (verifiedAttemptId && verifiedSongId) {
+    // A transient failure in the atomic finalization RPC must remain
+    // retryable. Marking the attempt failed here would make a valid,
+    // signed duplicate webhook look stale and strand uploaded audio.
+    if (verifiedAttemptId && verifiedSongId && !finalizationAttempted) {
       const { error: failureError } = await supabase.rpc('finish_song_generation_atomic', {
         p_song_id: verifiedSongId, p_attempt_id: verifiedAttemptId,
         p_status: 'failed', p_error_message: message,
