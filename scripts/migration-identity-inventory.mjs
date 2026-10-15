@@ -41,6 +41,9 @@ export function buildMigrationIdentityInventory(files, recordedVersions = null) 
       // is still live. An unequal known SQL hash is a mandatory release stop.
       history_sql_hash: knownHistory === null ? "not_provided"
         : !matchingHashes ? "version_not_matched"
+        // A version cannot be verified by cherry-picking the one matching
+        // digest when supplied history contradicts itself.
+        : matchingHashes.size > 1 ? "conflicting_history_hashes_manual_review"
         : matchingHashes.size === 0 ? "not_provided"
         : matchingHashes.has(digest) ? "source_hash_matched_schema_unverified"
         : "source_hash_mismatch_manual_review",
