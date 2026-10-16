@@ -22,6 +22,7 @@ import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { BirthdayExperience } from "@/components/calendar/BirthdayExperience";
 import { FMShell } from "@/components/fm/FMShell";
+import { HalloweenLoginAnnouncement } from "@/features/seasonal/HalloweenEventNotice";
 import { MobileShell } from "@/mobile/shell/MobileShell";
 import { getMobileBridgeTarget } from "@/mobile/routeBridge";
 import { DesktopOnlyGate } from "@/components/DesktopOnlyGate";
@@ -141,6 +142,7 @@ const Layout = () => {
         supportContent={festivalSupportRoute ? <Outlet /> : undefined}
       >
         <FestivalModeHome attendance={activeFestivalAttendance} />
+        <HalloweenLoginAnnouncement userId={user?.id} profileId={profileId} />
       </FestivalModeShell>
     );
   }
@@ -178,6 +180,7 @@ const Layout = () => {
         <NoActiveCharacterGate>
           <CharacterGate>
             <BirthdayExperience />
+            <HalloweenLoginAnnouncement userId={user?.id} profileId={profileId} />
             <Outlet />
           </CharacterGate>
         </NoActiveCharacterGate>
@@ -199,6 +202,7 @@ const Layout = () => {
         <NoActiveCharacterGate>
           <CharacterGate>
             <BirthdayExperience />
+            <HalloweenLoginAnnouncement userId={user?.id} profileId={profileId} />
             <Breadcrumbs />
             <Outlet />
           </CharacterGate>
