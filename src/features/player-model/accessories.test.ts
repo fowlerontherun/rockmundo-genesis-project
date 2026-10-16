@@ -62,7 +62,7 @@ it('restores the saved hairstyle after removing a hat and never alters source ge
 });
 
 it('lets owned accessories replace starters without changing the saved choice or earrings', () => {
-  const a = defaultAppearance(); a.accessories = { ...a.accessories!, hat: 'beanie', glasses: 'round', earrings: 'hoops' };
+  const a = defaultAppearance(); a.accessories = { ...a.accessories!, hat: 'beanie', glasses: 'round', earrings: 'hoops', leftEarring: 'hoops', rightEarring: 'hoops' };
   const clothing = ['headwear', 'eyewear'].map(slot => ({ item: { id: slot, category: slot, wearable_slot: slot } as ClothingItem }));
   const assembled = assemblePlayerModel(library, a, [], clothing);
   expect(assembled.getObjectByName('avatar-hat-beanie')).toBeUndefined();
