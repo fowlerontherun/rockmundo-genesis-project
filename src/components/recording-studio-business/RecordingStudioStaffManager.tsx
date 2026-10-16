@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,7 @@ export function RecordingStudioStaffManager({ studioId }: RecordingStudioStaffMa
   const { data: staff, isLoading } = useRecordingStudioStaff(studioId);
   const hireStaff = useHireRecordingStudioStaff();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const pendingHireIds = useRef(new Map<string,string>());
   const [newStaff, setNewStaff] = useState({
     name: '',
     role: 'assistant_engineer' as const,
@@ -38,11 +39,19 @@ export function RecordingStudioStaffManager({ studioId }: RecordingStudioStaffMa
   const autoSalary = getAutoSalary(newStaff.role, newStaff.skill_level);
 
   const handleHire = async () => {
+    const intentKey = JSON.stringify({ subsidiaryId: studioId, staff: newStaff });
+    let requestId = pendingHireIds.current.get(intentKey);
+    if (!requestId) {
+      requestId = crypto.randomUUID();
+      pendingHireIds.current.set(intentKey, requestId);
+    }
     await hireStaff.mutateAsync({
       studio_id: studioId,
       ...newStaff,
       salary: autoSalary,
+      request_id: requestId,
     });
+    pendingHireIds.current.delete(intentKey);
     setIsDialogOpen(false);
     setNewStaff({ name: '', role: 'assistant_engineer', skill_level: 50, specialty: 'all_genres' });
   };

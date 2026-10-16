@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ export function VenueStaffManager({ venueId }: VenueStaffManagerProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [staffName, setStaffName] = useState("");
   const [staffRole, setStaffRole] = useState<string>("bartender");
+  const pendingHireIds = useRef(new Map<string,string>());
   
   const { data: staff, isLoading } = useVenueStaff(venueId);
   const hireStaff = useHireVenueStaff();
@@ -31,13 +32,21 @@ export function VenueStaffManager({ venueId }: VenueStaffManagerProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    const intentKey = JSON.stringify({ venueId, name: staffName.trim(), role: staffRole });
+    let requestId = pendingHireIds.current.get(intentKey);
+    if (!requestId) {
+      requestId = crypto.randomUUID();
+      pendingHireIds.current.set(intentKey, requestId);
+    }
     await hireStaff.mutateAsync({
       venue_id: venueId,
-      name: staffName,
+      name: staffName.trim(),
       role: staffRole,
-      skill_level: 1 + Math.random() * 1.5,
+      skill_level: 1,
       salary_weekly: selectedRole?.baseSalary || 400,
+      request_id: requestId,
     });
+    pendingHireIds.current.delete(intentKey);
     
     setDialogOpen(false);
     setStaffName("");
