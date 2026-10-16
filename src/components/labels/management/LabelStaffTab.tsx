@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Users, UserPlus, UserMinus, Star, DollarSign, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { STAFF_ROLES } from "@/types/label-business";
 
 interface LabelStaffTabProps {
@@ -34,21 +34,28 @@ function randomName() {
 export function LabelStaffTab({ labelId, labelBalance }: LabelStaffTabProps) {
   const queryClient = useQueryClient();
   const [selectedRole, setSelectedRole] = useState<string>("");
+  const pendingHires = useRef(new Map<string, { requestId: string; name: string }>());
 
-  // Fetch fresh label balance
+  // Label employees are paid from the owning company's balance by the atomic RPC.
   const { data: labelData } = useQuery({
     queryKey: ["label-balance", labelId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: label, error: labelError } = await supabase
         .from("labels")
-        .select("balance")
+        .select("balance, company_id")
         .eq("id", labelId)
         .single();
-      if (error) throw error;
-      return data;
+      if (labelError) throw labelError;
+      if (!label.company_id) return { balance: Number(label.balance ?? 0), canHire: false };
+      const { data: company, error: companyError } = await supabase
+        .from("companies")
+        .select("balance")
+        .eq("id", label.company_id)
+        .single();
+      if (companyError) throw companyError;
+      return { balance: Number(company.balance ?? 0), canHire: true };
     },
   });
-
   const currentBalance = labelData?.balance ?? labelBalance ?? 0;
 
   const { data: staff = [], isLoading } = useQuery({
@@ -69,64 +76,33 @@ export function LabelStaffTab({ labelId, labelBalance }: LabelStaffTabProps) {
     mutationFn: async (role: string) => {
       const roleInfo = STAFF_ROLES.find(r => r.value === role);
       if (!roleInfo) throw new Error("Invalid role");
-
-      const salary = Math.round(roleInfo.baseSalary * (0.8 + Math.random() * 0.4));
-      const hiringCost = salary; // First month salary as hiring cost
-
-      // Check balance
-      const { data: label, error: labelError } = await supabase
-        .from("labels")
-        .select("balance")
-        .eq("id", labelId)
-        .single();
-
-      if (labelError || !label) throw new Error("Could not verify label funds");
-      if ((label.balance || 0) < hiringCost) {
-        throw new Error(`Insufficient funds. Need $${hiringCost.toLocaleString()} but only have $${(label.balance || 0).toLocaleString()}`);
+      // Generate the name and key only once for this hiring intent.
+      // Retain both if a network failure occurs so retrying cannot double-charge.
+      let intent = pendingHires.current.get(role);
+      if (!intent) {
+        intent = { requestId: crypto.randomUUID(), name: randomName() };
+        pendingHires.current.set(role, intent);
       }
 
-      // Deduct from label balance
-      const { error: updateError } = await supabase
-        .from("labels")
-        .update({ balance: (label.balance || 0) - hiringCost })
-        .eq("id", labelId);
-      if (updateError) throw new Error("Failed to deduct hiring cost");
-
-      const skillLevel = 1 + Math.floor(Math.random() * 3); // 1-3 range (max 5), constraint requires 1-5
-
-      const { error } = await supabase
-        .from("label_staff")
-        .insert({
-          label_id: labelId,
-          name: randomName(),
-          role,
-          skill_level: skillLevel,
-          salary_monthly: salary,
-          performance_rating: 50,
-        });
-
-      if (error) {
-        // Refund on failure
-        await supabase
-          .from("labels")
-          .update({ balance: label.balance })
-          .eq("id", labelId);
-        throw error;
-      }
-
-      // Record transaction
-      await supabase.from("label_financial_transactions").insert({
-        label_id: labelId,
-        transaction_type: "expense",
-        amount: hiringCost,
-        description: `Hired ${roleInfo.label} (first month salary)`,
+      const { data, error } = await (supabase as any).rpc("hire_label_staff_atomic", {
+        p_label_id: labelId,
+        p_name: intent.name,
+        p_role: role,
+        p_skill_level: 1,
+        p_specialty_genre: null,
+        p_salary_monthly: roleInfo.baseSalary,
+        p_request_id: intent.requestId,
       });
+      if (error) throw error;
+      pendingHires.current.delete(role);
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["label-staff", labelId] });
       queryClient.invalidateQueries({ queryKey: ["label-balance", labelId] });
       queryClient.invalidateQueries({ queryKey: ["label-management"] });
       queryClient.invalidateQueries({ queryKey: ["my-labels"] });
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
       toast.success("Staff member hired!");
       setSelectedRole("");
     },
@@ -151,7 +127,7 @@ export function LabelStaffTab({ labelId, labelBalance }: LabelStaffTabProps) {
   const totalMonthlySalary = staff.reduce((sum, s) => sum + (s.salary_monthly ?? 0), 0);
   const selectedRoleInfo = STAFF_ROLES.find(r => r.value === selectedRole);
   const estimatedCost = selectedRoleInfo ? selectedRoleInfo.baseSalary : 0;
-  const canAfford = currentBalance >= estimatedCost;
+  const canAfford = labelData?.canHire === true && currentBalance >= estimatedCost;
 
   if (isLoading) {
     return <Card><CardContent className="p-6 text-center text-muted-foreground">Loading staff...</CardContent></Card>;
@@ -168,7 +144,7 @@ export function LabelStaffTab({ labelId, labelBalance }: LabelStaffTabProps) {
                 <UserPlus className="h-4 w-4" /> Hire Staff
               </h3>
               <p className="text-sm text-muted-foreground">
-                Monthly payroll: ${totalMonthlySalary.toLocaleString()}/mo • Balance: ${currentBalance.toLocaleString()}
+                Monthly payroll: ${totalMonthlySalary.toLocaleString()}/mo • Company balance: ${currentBalance.toLocaleString()}
               </p>
             </div>
           </div>
@@ -182,7 +158,7 @@ export function LabelStaffTab({ labelId, labelBalance }: LabelStaffTabProps) {
                   <SelectItem key={role.value} value={role.value}>
                     <div className="flex items-center justify-between gap-4">
                       <span>{role.label}</span>
-                      <span className="text-xs text-muted-foreground">~${role.baseSalary}/mo</span>
+                      <span className="text-xs text-muted-foreground">${role.baseSalary}/mo</span>
                     </div>
                   </SelectItem>
                 ))}
@@ -203,7 +179,7 @@ export function LabelStaffTab({ labelId, labelBalance }: LabelStaffTabProps) {
               </p>
               <p className="text-xs flex items-center gap-1">
                 <DollarSign className="h-3 w-3" />
-                Hiring cost: ~${estimatedCost.toLocaleString()} (first month salary)
+                Hiring cost: ${estimatedCost.toLocaleString()} (first month salary)
                 {!canAfford && (
                   <span className="text-destructive flex items-center gap-1 ml-2">
                     <AlertTriangle className="h-3 w-3" /> Insufficient funds
