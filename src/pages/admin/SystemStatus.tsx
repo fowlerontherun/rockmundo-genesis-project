@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ServerCog, Megaphone, Save, RefreshCw } from "lucide-react";
+import { Loader2, ServerCog, Megaphone, Save, RefreshCw, PartyPopper, CalendarDays } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -17,6 +17,7 @@ import {
   DEFAULT_ANNOUNCEMENT,
   type ServerStatusLevel,
 } from "@/hooks/useSiteConfig";
+import { halloweenEndLabel, halloweenEventPhase } from "@/features/seasonal/halloween2026";
 import {
   Select,
   SelectContent,
@@ -42,6 +43,7 @@ export default function SystemStatusAdmin() {
   const [annBody, setAnnBody] = useState("");
   const [annCtaLabel, setAnnCtaLabel] = useState("");
   const [annCtaUrl, setAnnCtaUrl] = useState("");
+  const [halloweenEnabled, setHalloweenEnabled] = useState(false);
 
   useEffect(() => {
     if (!data) return;
@@ -52,6 +54,7 @@ export default function SystemStatusAdmin() {
     setAnnBody(data.announcement.body || "");
     setAnnCtaLabel(data.announcement.cta_label || "");
     setAnnCtaUrl(data.announcement.cta_url || "");
+    setHalloweenEnabled(!!data.halloween.enabled);
   }, [data]);
 
   const saveKey = async (key: string, value: any) => {
@@ -87,6 +90,21 @@ export default function SystemStatusAdmin() {
     },
     onSuccess: () => {
       toast.success("News banner updated");
+      qc.invalidateQueries({ queryKey: ["site-config"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const saveHalloween = useMutation({
+    mutationFn: async () => {
+      if (!data?.halloween) throw new Error("Halloween event settings are unavailable");
+      if (halloweenEnabled && !data.halloween.rewards_live) {
+        throw new Error("Halloween gig rewards are not live. Do not announce the event until the reward implementation has been deployed and certified.");
+      }
+      await saveKey("halloween_2026_event", { ...data.halloween, enabled: halloweenEnabled });
+    },
+    onSuccess: () => {
+      toast.success("Halloween event announcement updated");
       qc.invalidateQueries({ queryKey: ["site-config"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -227,6 +245,52 @@ export default function SystemStatusAdmin() {
             </div>
           </CardContent>
         </Card>
+        {/* Seasonal event notice is deliberately separate from general news. */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <PartyPopper className="h-5 w-5 text-orange-400" /> Halloween 2026 · The Haunted Stage
+              <Badge variant="outline" className="ml-2">
+                {halloweenEventPhase(data?.halloween) === "active" ? "Active" :
+                  halloweenEventPhase(data?.halloween) === "upcoming" ? "Scheduled" :
+                  halloweenEnabled ? "Outside event window" : "Not enabled"}
+              </Badge>
+            </CardTitle>
+            <CardDescription>
+              Independent of the public news banner. Once enabled and the gig rewards are live, players see an event welcome on their first login and a dashboard reminder, with automatic expiry.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-md border p-3 text-sm">
+              <p className="flex items-center gap-2 font-medium"><CalendarDays className="h-4 w-4 text-orange-400" /> 24 October – 1 November 2026</p>
+              <p className="mt-1 text-muted-foreground">Ends {data?.halloween ? halloweenEndLabel(data.halloween) : "1 November 2026 at 23:59"} (UK time). The event ends automatically even if the switch remains on.</p>
+              <p className="mt-2">Server-side gig rewards: <strong>{data?.halloween.rewards_live ? "Marked ready for rollout" : "Not yet certified"}</strong></p>
+              {!data?.halloween.rewards_live && <p className="mt-1 text-orange-400">Activation is locked until PRs for the +5–15% boost, 500 XP and permanent achievement have been deployed and verified.</p>}
+            </div>
+            <div className="flex items-center justify-between gap-3 rounded-md border p-3">
+              <div>
+                <p className="text-sm font-medium">Show Halloween login announcement</p>
+                <p className="text-xs text-muted-foreground">Only visible in the real-world event window after rewards are ready. Dismissal is per character.</p>
+              </div>
+              <Switch
+                aria-label="Enable Halloween event announcement"
+                checked={halloweenEnabled}
+                onCheckedChange={setHalloweenEnabled}
+                disabled={isLoading || !data?.halloween.rewards_live}
+              />
+            </div>
+            <div className="flex justify-end">
+              <Button
+                onClick={() => saveHalloween.mutate()}
+                disabled={saveHalloween.isPending || isLoading || (halloweenEnabled && !data?.halloween.rewards_live)}
+              >
+                {saveHalloween.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Save className="mr-1 h-4 w-4" />}
+                Save Halloween Event
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
       </div>
     </AdminRoute>
   );
