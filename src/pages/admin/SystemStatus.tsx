@@ -104,11 +104,16 @@ export default function SystemStatusAdmin() {
   }, [data]);
 
   const saveKey = async (key: string, value: any) => {
-    const { error } = await (supabase as any)
+    const { data: saved, error } = await (supabase as any)
       .from("system_settings")
       .update({ value, updated_at: new Date().toISOString() })
-      .eq("key", key);
+      .eq("key", key)
+      .select("key")
+      .maybeSingle();
     if (error) throw error;
+    if (!saved || saved.key !== key) {
+      throw new Error("System settings were not saved. Check your admin permissions and retry.");
+    }
   };
 
   const saveStatus = useMutation({
