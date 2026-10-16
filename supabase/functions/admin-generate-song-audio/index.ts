@@ -422,6 +422,15 @@ serve(async (req) => {
 
     // Format lyrics for MiniMax Music - standard section markers
     addLog('Formatting lyrics for MiniMax Music (standard format)...')
+    // A short model cap silently discarded most lyrics of multi-minute songs (for
+    // example NO PERMISSION: 1814 chars vs Music 1.5's 600-char budget).
+    // Fail before making a paid Replicate request rather than repeatedly producing
+    // incomplete recordings. Never auto-upgrade to the higher-priced Music 2.6.
+    if (generationModel === 'music-1.5' && rawLyrics && rawLyrics.length > 600) {
+      throw new Error(
+        `Music 1.5 cannot fit this song's ${rawLyrics.length}-character lyrics into its 600-character limit. Select Music 2.6 to preserve the full lyrics; no generation was charged.`
+      )
+    }
     const formattedLyrics = formatLyricsForMiniMax(rawLyrics, cleanedSongTitle, primaryGenre, generationModel === 'music-2.6' ? 3500 : 600)
     addLog(`Formatted lyrics (${formattedLyrics.length} chars)`)
 
