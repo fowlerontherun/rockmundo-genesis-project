@@ -33,5 +33,17 @@ BEGIN
  END;
  IF NOT denied THEN RAISE EXCEPTION 'Non-admin could read private Halloween preflight'; END IF;
 END;
-$$;
+$;
+-- An authenticated caller must additionally have the DB-backed admin role.
+SET LOCAL test.admin_uid = '20000000-0000-4000-8000-000000000001';
+DO $
+DECLARE
+ r jsonb;
+BEGIN
+ r := public.admin_halloween_2026_launch_preflight();
+ IF (r->>'database_ready')::boolean IS NOT TRUE THEN
+   RAISE EXCEPTION 'A real authenticated admin was incorrectly blocked';
+ END IF;
+END;
+$;
 ROLLBACK;
