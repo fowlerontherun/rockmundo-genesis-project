@@ -163,6 +163,12 @@ export function useEquippedStageLuthieryInstruments(profileId: string | null | u
     queryKey: ['equipped-stage-luthiery-instruments', profileId ?? null],
     enabled: !!profileId,
     staleTime: 60_000,
+    // Player-crafted gear is an optional avatar layer. Retrying transient
+    // PostgREST/transport failures should not block base Avatar V1/headwear.
+    retry: (failures, error: Error) =>
+      failures < 2 && !/authentication_required|permission denied|jwt|unauthoriz/i.test(error.message),
+    retryDelay: attempt => Math.min(750 * 2 ** attempt, 3_000),
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data, error } = await callStageRpc('get_equipped_stage_luthiery_instruments', { p_profile_ids: [profileId!] });
       if (error) throw error;
@@ -223,7 +229,14 @@ export function useGigPlayerModels(profileIds: string[]) {
       const tattooResult = optionalStageResult('tattoo visuals', tattooSettled);
       const instrumentResult = optionalStageResult('instrument skins', instrumentSettled);
       const merchResult = optionalStageResult('band merch wearables', merchSettled);
-      const luthieryResult = optionalStageResult('player-crafted instruments', luthierySettled);
+      // A failure of this optional cosmetics RPC must not erase the rest of
+      // the gig's stage player models, clothing or Pumpkin Hat visuals.
+      let luthieryResult: StageRpcResult = { data: [], error: null };
+      try {
+        luthieryResult = optionalStageResult('player-crafted instruments', luthierySettled);
+      } catch (error) {
+        console.warn('[gig-player-models] continuing without optional crafted-instrument visuals', error);
+      }
 
       let legacyRows: LegacyStageAppearanceRow[] = [];
       if (legacySettled.status === 'fulfilled' && !legacySettled.value.error) {
