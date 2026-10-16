@@ -17,6 +17,9 @@ describe("Halloween live-event launch protection", () => {
     expect(ui).toContain("confirmedLiveGig");
     expect(ui).toContain("I verified the deployed Edge Functions, automated XP/achievement tests and a genuine gig-start/replay");
     expect(ui).toContain("setHalloweenRewardsReady");
+    expect(ui).toContain('.select("key")');
+    expect(ui).toContain(".maybeSingle()");
+    expect(ui).toContain("if (!saved || saved.key !== key)");
     expect(ui).toContain('rewards_live: halloweenRewardsReady');
   });
 
