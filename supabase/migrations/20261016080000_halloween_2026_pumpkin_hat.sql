@@ -1,3 +1,6 @@
+-- Publication of this staged cosmetic must pass the existing
+-- guard_curated_clothing_publication visual QA checks; never assert a fake pass.
+-- This migration seeds permanent ownership but does not turn on the event.
 -- A real Avatar V1 headwear item. It is owned and equipped through the same
 -- wardrobe tables used by archived and live 3D stage player visuals.
 -- Give one to every existing player character and all new characters through
@@ -13,8 +16,8 @@ INSERT INTO public.avatar_clothing_items (
   'Haunted Pumpkin Hat 2026',
   'A free limited-edition jack-o''-lantern hat for The Haunted Stage. Wear it on stage to join the Halloween celebration. Yours to keep.',
   'hat', 'headwear', 0, false, 'rare',
-  '["#ee781c"]'::jsonb, NULL, DATE '2026-10-24', true, true,
-  'clothing.halloween.2026.pumpkin-hat', 'published', ARRAY['masculine','feminine'],
+  '["#ee781c"]'::jsonb, NULL, DATE '2026-10-24', true, false,
+  'clothing.halloween.2026.pumpkin-hat', 'asset_ready', ARRAY['masculine','feminine'],
   '{"renderer":"avatar-v1-head-bone","frames":["masculine","feminine"],"poses":["idle","singing","guitar","bass","drums"]}'::jsonb,
   '{"fabric":"costume","primaryColor":"#ee781c"}'::jsonb,
   '{"type":"solid"}'::jsonb,
@@ -36,7 +39,9 @@ SET name = EXCLUDED.name,
     release_date = EXCLUDED.release_date,
     is_limited_edition = EXCLUDED.is_limited_edition,
     featured = EXCLUDED.featured,
-    curated_asset_status = EXCLUDED.curated_asset_status,
+    curated_asset_status = CASE
+      WHEN public.avatar_clothing_items.curated_asset_status='published'
+      THEN 'published' ELSE EXCLUDED.curated_asset_status END,
     supported_frames = EXCLUDED.supported_frames,
     validation_notes = EXCLUDED.validation_notes,
     material_config = EXCLUDED.material_config,
