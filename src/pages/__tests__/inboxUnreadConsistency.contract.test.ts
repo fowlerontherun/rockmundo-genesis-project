@@ -7,6 +7,16 @@ const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8"
 describe("inbox unread and loading consistency (issue #4190)", () => {
   it("uses the unified visible inbox count for the bottom navigation badge", () => {
     const bar = read("src/components/fm/BottomActionBar.tsx");
+    const otherBadges = [
+      "src/components/FloatingAvatarWidget.tsx",
+      "src/components/ui/HorizontalNavigation.tsx",
+      "src/components/ui/navigation.tsx",
+    ];
+    for (const path of otherBadges) {
+      const source = read(path);
+      expect(source).toContain("useUnifiedInboxUnreadCount()");
+      expect(source).not.toContain("useUnreadInboxCount()");
+    }
     expect(bar).toContain("useUnifiedInboxUnreadCount()");
     expect(bar).not.toContain("useUnreadInboxCount()");
   });
