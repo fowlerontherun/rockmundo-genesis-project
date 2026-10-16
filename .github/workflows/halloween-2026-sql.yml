@@ -5,6 +5,7 @@ on:
     paths:
       - 'supabase/migrations/20261016*halloween*'
       - 'supabase/migrations/20261016103000_halloween_2026_gig_rewards.sql'
+      - 'supabase/migrations/20261016114500_preserve_halloween_first_reward_audit_on_retry.sql'
       - 'supabase/migrations/20261016111000_gig_immutable_stage_costume_snapshots.sql'
       - 'supabase/tests/halloween_2026*.sql'
       - 'supabase/tests/gig_stage_visual_snapshots.sql'
@@ -47,6 +48,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261016103000_halloween_2026_gig_rewards.sql
       - name: Apply immutable stage wardrobe migration
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261016111000_gig_immutable_stage_costume_snapshots.sql
+      - name: Apply audit-preservation fix for gig completion retries
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261016114500_preserve_halloween_first_reward_audit_on_retry.sql
       - name: Run weighted rewards and permissions regression
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/halloween_2026_rewards.sql
       - name: Run immutable snapshot permissions regression
