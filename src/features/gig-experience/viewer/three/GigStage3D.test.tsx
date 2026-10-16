@@ -3,12 +3,13 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import GigStage3D from './GigStage3D';
 import { ConcertScene } from '@/features/gig-demo-3d/ConcertScene';
+import { useGigPlayerModels } from '@/features/player-model/usePlayerModel';
 import { derivePlaybackState } from '../engine/PlaybackController';
 import { DEFAULT_CROWD_TUNING } from '../engine/CrowdTuning';
 import { makeStageReplay } from './test-fixtures';
 
 vi.mock('@/features/gig-demo-3d/ConcertScene', () => ({ ConcertScene: vi.fn() }));
-vi.mock('@/features/player-model/usePlayerModel', () => ({ useGigPlayerModels: () => ({ data: undefined, isFetching: false, isError: false }) }));
+vi.mock('@/features/player-model/usePlayerModel', () => ({ useGigPlayerModels: vi.fn(() => ({ data: undefined, isFetching: false, isError: false })) }));
 const engine = { setSettings: vi.fn(), setFrame: vi.fn(), setEffects: vi.fn(), setCrowdTuning: vi.fn(), destroy: vi.fn() };
 let onState: (state: 'loading' | 'ready' | 'error', message?: string) => void;
 beforeEach(() => { vi.clearAllMocks(); vi.mocked(ConcertScene).mockImplementation((_canvas, _settings, _stats, state) => { onState = state; state('ready'); return engine as unknown as ConcertScene; }); });
@@ -29,4 +30,17 @@ it('provides recovery when WebGL cannot start', async () => {
   const replay = await makeStageReplay();
   render(<MemoryRouter><GigStage3D replay={replay} experience={null} playbackState={derivePlaybackState(replay, 0)} reducedMotion cameraMode="venue_wide" tier="low" archetype="pub" tuning={DEFAULT_CROWD_TUNING} pyrotechnics={false} pyroIntensity={0} /></MemoryRouter>);
   expect(screen.getByRole('alert')).toHaveTextContent('3D graphics could not start'); expect(screen.getByRole('button', { name: 'Retry 3D stage' })).toBeEnabled();
+});
+
+it('uses the immutable replay wardrobe instead of loading a changed live outfit', async () => {
+  const replay = await makeStageReplay();
+  const frozen = { appearances: {}, richClothing: { 'ab000000-0000-4000-8000-000000000001': [] } };
+  replay.playerModelsSnapshot = frozen;
+  render(<MemoryRouter><GigStage3D replay={replay} experience={null}
+    playbackState={derivePlaybackState(replay, 0)} reducedMotion
+    cameraMode="venue_wide" tier="standard" archetype="club"
+    tuning={DEFAULT_CROWD_TUNING} pyrotechnics={false} pyroIntensity={0} /></MemoryRouter>);
+  // No current-wardrobe query is allowed once replay evidence exists.
+  expect(vi.mocked(useGigPlayerModels)).toHaveBeenCalledWith([]);
+  expect(ConcertScene).toHaveBeenCalledOnce();
 });
