@@ -57,6 +57,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261016114500_preserve_halloween_first_reward_audit_on_retry.sql
       - name: Install deferred outcome and song result reconciliation
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261016130000_halloween_2026_deferred_outcome_reward_reconciliation.sql
+      - name: Require published Pumpkin Hat in all authoritative reward paths
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261016205500_halloween_2026_reward_publication_interlock.sql
       - name: Run weighted rewards and permissions regression
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/halloween_2026_rewards.sql
       - name: Run immutable snapshot permissions regression
@@ -69,6 +71,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/halloween_2026_ineligible_gigs.sql
       - name: Exercise festival and tour multi-gig first-reward isolation
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/halloween_2026_tour_festival_multigig.sql
+      - name: Prove unpublished hat cannot earn performance boosts or first XP
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/halloween_2026_reward_publication_interlock.sql
       - name: Apply admin-only Halloween launch preflight
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261016120000_halloween_2026_admin_launch_preflight.sql
       - name: Support service-role SQL console checks without a JWT
