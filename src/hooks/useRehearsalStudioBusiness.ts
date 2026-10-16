@@ -169,7 +169,7 @@ export function useAddRehearsalEquipment() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (equipment: Omit<RehearsalRoomEquipment, 'id' | 'created_at' | 'updated_at' | 'condition' | 'is_available'>) => {
+    mutationFn: async (equipment: { room_id: string; catalog_id: string; request_id: string }) => {
       const { data, error } = await (supabase as any).rpc("buy_subsidiary_asset_atomic", {
         p_kind: "rehearsal_equipment", p_subsidiary_id: equipment.room_id, p_fields: equipment,
       });
@@ -178,6 +178,7 @@ export function useAddRehearsalEquipment() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['rehearsal-room-equipment', data.room_id] });
+      queryClient.invalidateQueries({ queryKey: ['subsidiary-equipment-catalog', 'rehearsal_equipment'] });
       COMPANY_BALANCE_QUERY_KEYS.forEach(k => queryClient.invalidateQueries({ queryKey: [k] }));
       toast({ title: "Equipment Added", description: `${data.equipment_name} has been added to inventory.` });
     },
