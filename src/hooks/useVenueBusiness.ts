@@ -224,6 +224,7 @@ export function useInstallVenueUpgrade() {
       upgrade_level: number;
       cost: number;
       description?: string;
+      request_id: string;
     }) => {
       const { data, error } = await (supabase as any).rpc("buy_subsidiary_asset_atomic", {
         p_kind: "venue_upgrade", p_subsidiary_id: upgrade.venue_id, p_fields: upgrade,

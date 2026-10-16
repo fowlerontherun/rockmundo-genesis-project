@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,7 @@ function getUpgradeCost(upgradeType: string, level: number): number {
 export function RecordingStudioUpgradesManager({ studioId }: RecordingStudioUpgradesManagerProps) {
   const { data: upgrades, isLoading } = useRecordingStudioUpgrades(studioId);
   const installUpgrade = useInstallRecordingStudioUpgrade();
+  const pendingUpgradeIds = useRef(new Map<string, string>());
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const getUpgradeLevel = (upgradeType: string) => {
@@ -43,6 +44,13 @@ export function RecordingStudioUpgradesManager({ studioId }: RecordingStudioUpgr
     const nextLevel = currentLevel + 1;
     const maxLevel = STUDIO_UPGRADE_TYPES.find(t => t.value === upgradeType)?.maxLevel || 20;
     if (nextLevel > maxLevel) return;
+    const retryKey = `${studioId}:${upgradeType}:${nextLevel}`;
+    let requestId = pendingUpgradeIds.current.get(retryKey);
+    if (!requestId) {
+      requestId = crypto.randomUUID();
+      pendingUpgradeIds.current.set(retryKey, requestId);
+    }
+
 
     const cost = getUpgradeCost(upgradeType, nextLevel);
     const upgradeInfo = STUDIO_UPGRADE_TYPES.find(t => t.value === upgradeType);
@@ -54,8 +62,10 @@ export function RecordingStudioUpgradesManager({ studioId }: RecordingStudioUpgr
       level: nextLevel,
       cost,
       effect_value: nextLevel * 10,
+      request_id: requestId,
       effect_description: `Improves ${upgradeInfo?.label?.toLowerCase()} quality by ${nextLevel * 10}%`,
     });
+    pendingUpgradeIds.current.delete(retryKey);
     setIsDialogOpen(false);
   };
 
