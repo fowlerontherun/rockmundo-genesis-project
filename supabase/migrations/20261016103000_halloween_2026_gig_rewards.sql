@@ -65,11 +65,18 @@ AS $$
 DECLARE
   v_start timestamptz := ('2026-10-24 00:00 Europe/London')::timestamptz;
   v_end timestamptz := ('2026-11-02 00:00 Europe/London')::timestamptz;
+  v_settings jsonb;
 BEGIN
   IF NEW.started_at IS NULL
      OR NEW.started_at < v_start OR NEW.started_at >= v_end
      OR NEW.status NOT IN ('in_progress','live')
      OR NOT (OLD.started_at IS NULL OR OLD.status NOT IN ('in_progress','live'))
+  THEN RETURN NEW; END IF;
+
+  SELECT value INTO v_settings FROM public.system_settings
+   WHERE key = 'halloween_2026_event';
+  IF coalesce(v_settings->>'enabled','false') <> 'true'
+     OR coalesce(v_settings->>'rewards_live','false') <> 'true'
   THEN RETURN NEW; END IF;
 
   INSERT INTO public.halloween_2026_gig_outfits
