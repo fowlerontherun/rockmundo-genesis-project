@@ -8,6 +8,7 @@ const root = path.resolve(__dirname, "../../..");
 const read = (p: string) => fs.readFileSync(path.join(root, p), "utf8");
 const ui = read("src/pages/admin/SystemStatus.tsx");
 const sql = read("supabase/migrations/20261016120000_halloween_2026_admin_launch_preflight.sql");
+const serviceRoleFix = read("supabase/migrations/20261016121000_halloween_2026_preflight_service_role_console.sql");
 
 describe("Halloween live-event launch protection", () => {
   it("uses a database-backed preflight and separately confirms real-world gig checks", () => {
@@ -34,5 +35,7 @@ describe("Halloween live-event launch protection", () => {
     expect(sql).toContain("public.has_role((SELECT auth.uid()), 'admin'::public.app_role)");
     expect(sql).toContain("RAISE EXCEPTION 'admin_only'");
     expect(sql).not.toContain("UPDATE public.system_settings");
+    expect(serviceRoleFix).toContain("pg_catalog.current_setting('role',true) IS DISTINCT FROM 'service_role'");
+    expect(serviceRoleFix).toContain("public.has_role((SELECT auth.uid()), 'admin'::public.app_role)");
   });
 });
