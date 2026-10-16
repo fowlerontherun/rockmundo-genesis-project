@@ -134,13 +134,11 @@ serve(async (req) => {
       throw new Error('Generated audio is not a valid complete MP3 file; keeping any existing audio')
     }
     const targetSeconds = Number(song.duration_seconds)
-    const minimumAcceptedSeconds = Number.isFinite(targetSeconds) && targetSeconds > 0
-      ? Math.max(30, targetSeconds * 0.8)
-      : 30
+    const minimumAcceptedSeconds = 60
     console.log(`[replicate-webhook] Measured audio: song=${songId} expected=${targetSeconds}s actual=${actualSeconds.toFixed(2)}s minimum=${minimumAcceptedSeconds.toFixed(1)}s bytes=${audioBytes.length}`)
     if (actualSeconds < minimumAcceptedSeconds) {
       throw new Error(
-        `Generated audio is too short: ${actualSeconds.toFixed(1)}s vs expected ${targetSeconds}s (minimum ${minimumAcceptedSeconds.toFixed(1)}s). Existing audio preserved; retry with a longer generation.`
+        `Generated audio is too short: ${actualSeconds.toFixed(1)}s (minimum 60.0s). Existing audio preserved.`
       )
     }
 
