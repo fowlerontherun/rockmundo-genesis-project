@@ -12,7 +12,7 @@ import { HowToPlayDialog } from "@/components/HowToPlayDialog";
 import { ActivityStatusIndicator } from "@/components/ActivityStatusIndicator";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { PrisonStatusIndicator } from "@/components/prison/PrisonStatusIndicator";
-import { useUnreadInboxCount } from "@/hooks/useInbox";
+import { useUnifiedInboxUnreadCount } from "@/hooks/useUnifiedInbox";
 import { RMRadioButton } from "@/components/radio/RMRadioPlayer";
 import { VersionHeader } from "@/components/VersionHeader";
 import { CharacterSwitcher } from "@/components/character/CharacterSwitcher";
@@ -35,7 +35,7 @@ const HorizontalNavigation = () => {
   const { signOut } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
-  const { data: unreadInboxCount } = useUnreadInboxCount();
+  const unreadInboxCount = useUnifiedInboxUnreadCount();
   const { isAdmin } = useUserRole();
   const [mobileOpen, setMobileOpen] = useState(false);
 
