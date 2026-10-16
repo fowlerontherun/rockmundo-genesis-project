@@ -52,6 +52,7 @@ jobs:
             src/features/player-model/accessories.test.ts \
             src/features/player-model/PlayerModelEditor.test.tsx \
             src/features/player-model/luthieryLoadRecovery.test.ts \
+            src/features/player-model/equippedWardrobeSource.test.ts \
             src/features/clothing-preview/curatedGarmentAssets.test.ts \
             src/features/clothing-preview/equippedAvatarHeadwear.test.ts \
             src/features/clothing-preview/pumpkinHatV1Routing.test.ts \
