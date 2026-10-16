@@ -47,7 +47,7 @@ describe("Halloween login event", () => {
     expect(within(dialog).getByText(/\+5%, \+10% or \+15%/)).toBeTruthy();
     expect(within(dialog).getByText(/500 bonus XP/)).toBeTruthy();
     expect(within(dialog).getByText(/Pumpkin Headliner 2026/)).toBeTruthy();
-    expect(within(dialog).getByText(/1 November 2026/)).toBeTruthy();
+    expect(within(dialog).getAllByText(/1 November 2026/)).toHaveLength(2);
     fireEvent.click(within(dialog).getByRole("button", { name: "Maybe later" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(localStorage.getItem(halloweenDismissalKey("u1","c1"))).toBe("seen");
