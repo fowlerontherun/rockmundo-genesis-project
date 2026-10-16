@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePlayerPresenceStats } from "@/hooks/usePlayerPresenceStats";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
+import { HalloweenPublicBanner } from "@/features/seasonal/HalloweenEventNotice";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TermsDialog, TERMS_VERSION } from "@/components/legal/TermsDialog";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -495,6 +496,7 @@ const Auth = () => {
           </Button>
         </div>
 
+        <HalloweenPublicBanner />
         {announcement?.enabled && (announcement.title || announcement.body) && (
           <Alert className="mb-4 border-primary/40 bg-primary/10 text-foreground">
             <AlertCircle className="h-4 w-4 text-primary" />
