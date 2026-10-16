@@ -263,8 +263,24 @@ export const useSaveClothingCustomization = () => {
       }
       return persisted;
     },
-    onSuccess: (_data, variables) => {
+    onSuccess: (saved, variables) => {
       const savedProfileId = variables.profileId ?? profileId;
+      // The save RPC has confirmed this exact ownership and equip state.
+      // Reflect that persisted result immediately; waiting for a separate
+      // PostgREST refetch caused an equipped Pumpkin Hat to remain invisible
+      // while the stage endpoint or inventory refetch was slow.
+      if (savedProfileId) {
+        queryClient.setQueryData<OwnedSkin[]>(['owned-skins', savedProfileId], rows =>
+          rows?.map(row => row.item_type === 'clothing' && row.item_id === variables.itemId
+            ? {
+                ...row,
+                is_equipped: saved.is_equipped,
+                ...(variables.variantKey !== undefined ? { selected_variant_key: variables.variantKey } : {}),
+                ...(variables.zoneColours !== undefined ? { customization_config: variables.zoneColours } : {}),
+              }
+            : row),
+        );
+      }
       queryClient.invalidateQueries({ queryKey: ['owned-skins', savedProfileId] });
       queryClient.invalidateQueries({ queryKey: ['player-owned-skins', savedProfileId] });
       queryClient.invalidateQueries({ queryKey: ['equipped-rich-clothing', savedProfileId] });
