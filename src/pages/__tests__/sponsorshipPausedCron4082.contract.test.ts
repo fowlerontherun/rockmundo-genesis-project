@@ -30,6 +30,6 @@ describe('#4082 existing paused sponsorship job staging', () => {
     expect(file).toContain('SPONSORSHIP_JOB_ID_DRIFT');
     expect(file).toContain('PAYMENT_JOBS_NOT_QUARANTINED');
     expect(file).toContain('STAGED_SPONSORSHIP_COMMAND_VERIFICATION_FAILED');
-    expect(file).toContain('STAGED_SPONSORSHIP_COMMAND_VERIFICATION_FAILED');
+    expect(file).toContain('SPONSORSHIP_VAULT_OR_AUTH_PREREQUISITE_MISSING');
   });
 });
