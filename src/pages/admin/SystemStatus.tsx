@@ -148,7 +148,7 @@ export default function SystemStatusAdmin() {
         throw new Error("Database readiness checks did not pass. Re-run preflight before arming rewards.");
       }
       if (halloweenRewardsReady && !data.halloween.rewards_live && !confirmedLiveGig) {
-        throw new Error("Confirm the deployed functions and a real gig end-to-end test before marking rewards live.");
+        throw new Error("Confirm deployed functions, isolated reward tests and a real gig-start/replay check before marking rewards live.");
       }
       if (halloweenEnabled && !halloweenRewardsReady) {
         throw new Error("Cannot announce Halloween while server-side gig rewards are disabled.");
@@ -357,7 +357,7 @@ export default function SystemStatusAdmin() {
               <div>
                 <p className="text-sm font-medium">Mark live gig rewards verified</p>
                 <p className="text-xs text-muted-foreground">
-                  Explicit release approval, not a test: confirm live Edge Functions, gig outcome, 500 XP, achievement and replay visuals yourself. Disabling is always allowed.
+                  Pre-launch sign-off: verify deployed Edge Functions, isolated XP/achievement tests and a real gig-start/replay. The first live Halloween reward can only be checked after launch. Disabling is always allowed.
                 </p>
               </div>
               <Switch aria-label="Mark Halloween gig rewards verified"
@@ -367,7 +367,7 @@ export default function SystemStatusAdmin() {
             {halloweenRewardsReady && !data?.halloween.rewards_live && (
               <label className="flex items-start gap-2 text-sm">
                 <Checkbox checked={confirmedLiveGig} onCheckedChange={(checked) => setConfirmedLiveGig(checked === true)} />
-                I personally verified the deployed Edge Functions and completed a genuine gig and replay smoke test. Do not certify on database checks alone.
+                I verified the deployed Edge Functions, automated XP/achievement tests and a genuine gig-start/replay smoke test. Live Halloween payouts require a separate post-launch check.
               </label>
             )}
             <div className="flex items-center justify-between gap-3 rounded-md border p-3">
