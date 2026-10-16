@@ -10,6 +10,7 @@ on:
       - 'supabase/migrations/20261016121000_halloween_2026_preflight_service_role_console.sql'
       - 'supabase/migrations/20261016123000_halloween_2026_readonly_gig_smoke_metrics.sql'
       - 'supabase/migrations/20261016130000_halloween_2026_deferred_outcome_reward_reconciliation.sql'
+      - 'supabase/migrations/20261016134500_halloween_preflight_requires_published_pumpkin_hat.sql'
       - 'supabase/migrations/20261016111000_gig_immutable_stage_costume_snapshots.sql'
       - 'supabase/tests/halloween_2026*.sql'
       - 'supabase/tests/gig_stage_visual_snapshots.sql'
@@ -70,6 +71,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261016120000_halloween_2026_admin_launch_preflight.sql
       - name: Support service-role SQL console checks without a JWT
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261016121000_halloween_2026_preflight_service_role_console.sql
+      - name: Enforce Pumpkin Hat publication in launch preflight
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261016134500_halloween_preflight_requires_published_pumpkin_hat.sql
       - name: Verify ready-state checklist and reject non-admin calls
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/halloween_2026_admin_preflight.sql
       - name: Apply privacy-safe gig snapshot diagnostic
