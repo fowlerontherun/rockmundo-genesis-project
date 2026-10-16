@@ -23,6 +23,18 @@ describe("Halloween live-event launch protection", () => {
     expect(ui).toContain('rewards_live: halloweenRewardsReady');
   });
 
+  it("shows only private aggregate gig smoke evidence and still requires manual visual QA", () => {
+    expect(ui).toContain('Live gig snapshot smoke-test evidence');
+    expect(ui).toContain('gigs_started_since_install');
+    expect(ui).toContain('missing_performer_snapshots');
+    expect(ui).toContain('captured_performer_snapshots');
+    expect(ui).toContain('first_reward_claims');
+    const liveSql = read("supabase/migrations/20261016123000_halloween_2026_readonly_gig_smoke_metrics.sql");
+    expect(liveSql).toContain("'requires_human_visual_inspection',true");
+    expect(liveSql).toContain("LEFT JOIN public.gig_stage_visual_snapshots");
+    expect(liveSql).not.toContain("'profile_id',");
+  });
+
   it("will not publish public event announcements while rewards are unarmed", () => {
     expect(ui).toContain("if (halloweenEnabled && !halloweenRewardsReady)");
     expect(ui).toContain('Cannot announce Halloween while server-side gig rewards are disabled.');

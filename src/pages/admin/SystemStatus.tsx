@@ -35,6 +35,14 @@ type HalloweenPreflight = {
   checks: Record<string, boolean>;
   event_enabled: boolean;
   rewards_armed: boolean;
+  live_gig_evidence?: {
+    gigs_started_since_install: number;
+    expected_performer_snapshots: number;
+    captured_performer_snapshots: number;
+    missing_performer_snapshots: number;
+    first_reward_claims: number;
+    requires_human_visual_inspection: boolean;
+  };
 };
 
 const HALLOWEEN_CHECK_LABELS: Record<string, string> = {
@@ -357,6 +365,25 @@ export default function SystemStatusAdmin() {
                   </ul>
                 </>
               )}
+            </div>
+            <div className="space-y-2 rounded-md border p-3" aria-label="Live gig snapshot smoke-test evidence">
+              <p className="font-semibold text-sm">Post-deployment gig snapshot evidence</p>
+              <p className="text-xs text-muted-foreground">
+                Read-only counts; live data appears only after a new gig starts. These numbers are not a visual replay test.
+              </p>
+              {halloweenPreflight?.live_gig_evidence ? (
+                <dl className="grid grid-cols-2 gap-2 text-sm">
+                  <div><dt className="text-muted-foreground text-xs">Gigs started since snapshot install</dt><dd>{halloweenPreflight.live_gig_evidence.gigs_started_since_install}</dd></div>
+                  <div><dt className="text-muted-foreground text-xs">Performers snapshotted</dt><dd>{halloweenPreflight.live_gig_evidence.captured_performer_snapshots} / {halloweenPreflight.live_gig_evidence.expected_performer_snapshots}</dd></div>
+                  <div><dt className="text-muted-foreground text-xs">Missing costume snapshots</dt><dd className={halloweenPreflight.live_gig_evidence.missing_performer_snapshots > 0 ? "text-destructive font-medium" : ""}>{halloweenPreflight.live_gig_evidence.missing_performer_snapshots}</dd></div>
+                  <div><dt className="text-muted-foreground text-xs">First-time Halloween XP claims</dt><dd>{halloweenPreflight.live_gig_evidence.first_reward_claims}</dd></div>
+                </dl>
+              ) : <p className="text-xs text-muted-foreground">Deploy the updated read-only preflight to display live smoke-test counts.</p>}
+              <p className="text-xs text-orange-400">
+                {halloweenPreflight?.live_gig_evidence?.gigs_started_since_install === 0
+                  ? "No post-deployment gig available for manual 3D replay inspection yet."
+                  : "Check a real completed gig replay visually after changing the performer's current outfit. These counts cannot certify the replay."}
+              </p>
             </div>
             <div className="flex items-center justify-between gap-3 rounded-md border p-3">
               <div>
