@@ -8,7 +8,7 @@ VALUES (
  'clothing',false
 );
 SET LOCAL ROLE service_role;
-DO $preflightcheck$preflightcheck$
+DO $preflightcheck$
 DECLARE
  r jsonb;
 BEGIN
@@ -22,7 +22,7 @@ BEGIN
 END;
 $preflightcheck$;
 SET LOCAL ROLE authenticated;
-DO $preflightcheck$preflightcheck$
+DO $preflightcheck$
 DECLARE
  denied boolean := false;
 BEGIN
