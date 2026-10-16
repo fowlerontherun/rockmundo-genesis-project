@@ -276,7 +276,7 @@ export default function SystemStatusAdmin() {
                 aria-label="Enable Halloween event announcement"
                 checked={halloweenEnabled}
                 onCheckedChange={setHalloweenEnabled}
-                disabled={isLoading || !data?.halloween.rewards_live}
+                disabled={isLoading || (!data?.halloween.rewards_live && !halloweenEnabled)}
               />
             </div>
             <div className="flex justify-end">
