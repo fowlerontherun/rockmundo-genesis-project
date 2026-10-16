@@ -162,8 +162,9 @@ export const useNewArrivals = () => {
   });
 };
 
-export const useOwnedSkins = () => {
-  const { profileId } = useActiveProfile();
+export const useOwnedSkins = (targetProfileId?: string | null) => {
+  const { profileId: activeProfileId } = useActiveProfile();
+  const profileId = targetProfileId === undefined ? activeProfileId : targetProfileId;
   return useQuery({
     queryKey: ["owned-skins", profileId],
     queryFn: async () => {
