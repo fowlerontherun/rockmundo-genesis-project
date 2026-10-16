@@ -69,8 +69,8 @@ AFTER UPDATE OF status,started_at ON public.gigs
 FOR EACH ROW EXECUTE FUNCTION public.capture_gig_stage_visual_snapshots();
 
 -- Preserve the first captured truth even under an accidental privileged
--- replay retry or duplicate start transition. A service_role may INSERT an
--- absent row but must not rewrite a historical appearance.
+-- replay retry or duplicate start transition. Updates are blocked but ON
+-- DELETE CASCADE must remain functional for gig/profile erasure requests.
 CREATE OR REPLACE FUNCTION public.reject_gig_stage_snapshot_mutation()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
 AS $$
@@ -81,7 +81,7 @@ $$;
 REVOKE ALL ON FUNCTION public.reject_gig_stage_snapshot_mutation() FROM PUBLIC, anon, authenticated;
 DROP TRIGGER IF EXISTS trg_immutable_gig_stage_visual_snapshots ON public.gig_stage_visual_snapshots;
 CREATE TRIGGER trg_immutable_gig_stage_visual_snapshots
-BEFORE UPDATE OR DELETE ON public.gig_stage_visual_snapshots
+BEFORE UPDATE ON public.gig_stage_visual_snapshots
 FOR EACH ROW EXECUTE FUNCTION public.reject_gig_stage_snapshot_mutation();
 
 NOTIFY pgrst, 'reload schema';
