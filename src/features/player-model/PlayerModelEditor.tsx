@@ -95,7 +95,7 @@ function EditorSession({ profileId, initial, model, richClothing, richClothingEr
         <summary>Technical error details</summary>
         <p className="break-words">{luthieryStatus.message}</p>
       </details>}
-    </div>
+    </div>}
     {newerRevision && dirty && <p role="alert" className="text-sm text-destructive">A newer saved avatar is available. Reload it before saving to avoid overwriting newer changes.</p>}
     <div className="player-model-editor__intro"><div><span className="player-model-editor__eyebrow">YOUR LOOK. YOUR STAGE.</span><h2>Create your full-body avatar</h2><p>Shape your face and character, dress them head to toe, add accessories and tattoos, and take the same look on stage.</p></div><span className="player-model-editor__badge">LIVE AVATAR · VERSION 1</span></div>
     <div className="player-model-editor__layout">
