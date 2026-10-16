@@ -1,0 +1,62 @@
+name: Halloween 2026 Isolated SQL Gate
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/20261016*halloween*'
+      - 'supabase/migrations/20261016103000_halloween_2026_gig_rewards.sql'
+      - 'supabase/migrations/20261016114500_preserve_halloween_first_reward_audit_on_retry.sql'
+      - 'supabase/migrations/20261016111000_gig_immutable_stage_costume_snapshots.sql'
+      - 'supabase/tests/halloween_2026*.sql'
+      - 'supabase/tests/gig_stage_visual_snapshots.sql'
+      - 'scripts/halloween/**'
+      - '.github/workflows/halloween-2026-sql.yml'
+  workflow_dispatch:
+
+jobs:
+  isolated-sql:
+    name: Run real Halloween triggers on ephemeral PostgreSQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: rockmundo_halloween_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d rockmundo_halloween_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: test
+      PGPASSWORD: test
+      PGDATABASE: rockmundo_halloween_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify psql available
+        run: psql --version
+      - name: Create representative isolated schema
+        run: psql -X -v ON_ERROR_STOP=1 -f scripts/halloween/isolated-db-schema.sql
+      - name: Apply authoritative Halloween reward migration
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261016103000_halloween_2026_gig_rewards.sql
+      - name: Apply immutable stage wardrobe migration
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261016111000_gig_immutable_stage_costume_snapshots.sql
+      - name: Apply audit-preservation fix for gig completion retries
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261016114500_preserve_halloween_first_reward_audit_on_retry.sql
+      - name: Run weighted rewards and permissions regression
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/halloween_2026_rewards.sql
+      - name: Run immutable snapshot permissions regression
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/gig_stage_visual_snapshots.sql
+      - name: Exercise stage start and unequip in real PostgreSQL
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/halloween_2026_gig_start_snapshot.sql
+      - name: Verify first-time Halloween XP and achievement survive worker retries
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/halloween_2026_positive_reward_claim.sql
+      - name: Verify cancelled and unqualified gigs receive no rewards
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/halloween_2026_ineligible_gigs.sql
