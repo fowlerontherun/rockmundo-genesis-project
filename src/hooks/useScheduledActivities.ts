@@ -178,7 +178,7 @@ async function fetchScheduledActivitiesForDay(date: Date, userId?: string, profi
       // Fetch recordings
       const { data: recordings, error: recordingError } = await supabase
         .from('recording_sessions')
-        .select('*, city_studios(name), songs:song_id(title)')
+        .select('*, city_studios(name), songs:songs!recording_sessions_song_id_fkey(title)')
         .eq('profile_id', activeProfile.id)
         .lte('scheduled_start', dayEnd.toISOString())
         .gte('scheduled_end', dayStart.toISOString())
