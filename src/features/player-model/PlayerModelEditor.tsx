@@ -86,7 +86,16 @@ function EditorSession({ profileId, initial, model, richClothing, richClothingEr
     else setError('Your saved model could not be reloaded. Your edits are still here.');
   }
   return <section className="player-model-editor" aria-label="Full-body avatar creator">
-    {luthieryError && <p role="alert" className="text-sm text-destructive">Your equipped crafted instruments could not load. Retry by reopening the designer.</p>}
+    {luthieryError && <div role="status" className="rounded-md border border-amber-500/40 p-3 text-sm">
+      <p>Crafted instrument visuals could not load. Your avatar, Pumpkin Hat and other accessories are unaffected.</p>
+      <button type="button" className="mt-2 underline" disabled={luthieryInstruments.isFetching} onClick={() => void luthieryInstruments.refetch()}>
+        {luthieryInstruments.isFetching ? 'Retrying crafted instruments…' : 'Retry crafted instruments'}
+      </button>
+      {luthieryInstruments.error instanceof Error && <details className="mt-2 text-xs text-muted-foreground">
+        <summary>Technical error details</summary>
+        <p className="break-words">{luthieryInstruments.error.message}</p>
+      </details>}
+    </div>
     {newerRevision && dirty && <p role="alert" className="text-sm text-destructive">A newer saved avatar is available. Reload it before saving to avoid overwriting newer changes.</p>}
     <div className="player-model-editor__intro"><div><span className="player-model-editor__eyebrow">YOUR LOOK. YOUR STAGE.</span><h2>Create your full-body avatar</h2><p>Shape your face and character, dress them head to toe, add accessories and tattoos, and take the same look on stage.</p></div><span className="player-model-editor__badge">LIVE AVATAR · VERSION 1</span></div>
     <div className="player-model-editor__layout">
