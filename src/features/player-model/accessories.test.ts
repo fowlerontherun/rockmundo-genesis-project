@@ -75,6 +75,41 @@ it('lets owned accessories replace starters without changing the saved choice or
   disposeModel(assembled); disposeModel(actor.root);
 });
 
+it.each(['masculine', 'feminine'] as const)('shows the gifted Pumpkin Hat on %s wardrobe avatars and animated gig performers', frame => {
+  const appearance = defaultAppearance();
+  appearance.body.frame = frame;
+  appearance.accessories = { ...appearance.accessories!, hat: 'beanie' };
+  const clothing = [{
+    item: {
+      id: 'halloween-pumpkin-2026',
+      name: 'Haunted Pumpkin Hat 2026',
+      category: 'hat',
+      wearable_slot: 'headwear',
+      curated_asset_key: 'clothing.halloween.2026.pumpkin-hat',
+      render_config: { headwearStyle: 'pumpkin' },
+      material_config: { primaryColor: '#ee781c' },
+    } as ClothingItem,
+  }];
+  const model = assemblePlayerModel(library, appearance, [], clothing);
+  expect(model.getObjectByName('avatar-hat-beanie')).toBeUndefined();
+  const hat = model.getObjectByName('avatar-owned-hat-pumpkin-2026');
+  expect(hat).toBeTruthy();
+  expect(hat!.getObjectByName('pumpkin-crown')).toBeTruthy();
+  expect(hat!.getObjectByName('pumpkin-eye')).toBeTruthy();
+  expect(hat!.getObjectByName('pumpkin-mouth')).toBeTruthy();
+  expect(hat!.getObjectByName('pumpkin-stalk')).toBeTruthy();
+  expect(hat!.parent).toBe(model.getObjectByName('avatar-accessories'));
+  const actor = new Musician(model, 'guitar', [2, 0, -1], 0, undefined, appearance, undefined, undefined, clothing);
+  actor.update(1.5, .9, false);
+  const stageHat = actor.root.getObjectByName('avatar-owned-hat-pumpkin-2026');
+  expect(stageHat).toBeTruthy();
+  expect(stageHat!.parent?.parent).toBe(actor.bones.get('Head'));
+  actor.update(5, .9, false);
+  expect(actor.root.getObjectByName('pumpkin-mouth')).toBeTruthy();
+  disposeModel(model);
+  disposeModel(actor.root);
+});
+
 it('round-trips lens and independent earring controls and rejects malformed settings', () => {
   const a = defaultAppearance(); a.accessories = { ...a.accessories!, hat: 'cowboy', glasses: 'aviator', lensTint: 'clear', lensColor: '#338b8d', leftEarring: 'studs', rightEarring: 'drops' };
   expect(resolveAppearance(JSON.parse(JSON.stringify(a)))).toEqual(a);

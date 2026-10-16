@@ -140,6 +140,17 @@ export function addAccessories(
   const profile = avatarQualityProfile(quality);
   const accessories = { hat: 'none', hatColor: '#20232b', glasses: 'none', glassesColor: '#20232b', earrings: 'none', leftEarring: appearance.accessories?.earrings ?? 'none', rightEarring: appearance.accessories?.earrings ?? 'none', earringColor: '#d8ad49', ...(appearance.accessories ?? {}) };
   const storeSlots = new Set(richClothing.map(row => richGarmentSlot(row.item)));
+  const ownedHeadwear = [...richClothing].reverse().find(row => richGarmentSlot(row.item) === 'headwear');
+  const headwearStyles = new Set(['pumpkin', 'cap', 'beanie', 'bucket', 'cowboy', 'fedora']);
+  const requestedHeadwearStyle = String(ownedHeadwear?.item.render_config?.headwearStyle || '').toLowerCase();
+  const ownedHeadwearStyle = ownedHeadwear
+    ? headwearStyles.has(requestedHeadwearStyle) ? requestedHeadwearStyle
+      : ownedHeadwear.item.curated_asset_key === 'clothing.halloween.2026.pumpkin-hat' ? 'pumpkin'
+      : 'cap'
+    : null;
+  const candidateHatColor = ownedHeadwear?.variant?.color || ownedHeadwear?.item.material_config?.primaryColor;
+  const ownedHatColor = typeof candidateHatColor === 'string' && /^#[0-9a-f]{6}$/i.test(candidateHatColor)
+    ? candidateHatColor : '#ee781c';
   if (storeSlots.has('headwear')) accessories.hat = 'none';
   if (storeSlots.has('eyewear')) accessories.glasses = 'none';
   if (accessories.hat === 'none' && accessories.glasses === 'none' && (accessories.leftEarring ?? accessories.earrings) === 'none' && (accessories.rightEarring ?? accessories.earrings) === 'none' && !storeSlots.has('headwear') && !storeSlots.has('eyewear')) return;
@@ -185,6 +196,11 @@ export function addAccessories(
     const style = accessories.hat === 'baseball_cap' ? 'cap' : accessories.hat === 'bucket_hat' ? 'bucket' : accessories.hat;
     const hat = buildHeadAccessory({ slot: 'headwear', style, color: accessories.hatColor }, bounds, quality);
     hat.name = `avatar-hat-${accessories.hat}`;
+    anchor.add(hat);
+  }
+  if (ownedHeadwearStyle) {
+    const hat = buildHeadAccessory({ slot: 'headwear', style: ownedHeadwearStyle, color: ownedHatColor }, bounds, quality);
+    hat.name = ownedHeadwearStyle === 'pumpkin' ? 'avatar-owned-hat-pumpkin-2026' : `avatar-owned-hat-${ownedHeadwearStyle}`;
     anchor.add(hat);
   }
   if (accessories.glasses !== 'none') {

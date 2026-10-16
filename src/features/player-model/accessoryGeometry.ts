@@ -145,7 +145,61 @@ export function buildHeadAccessory(
       const mesh = add(new T.SphereGeometry(1, Math.max(24, profile.accessorySegments * 2), Math.max(12, profile.accessorySegments), 0, Math.PI * 2, 0, Math.PI / 2), 'hat-crown', c.x, bottom, c.z);
       mesh.scale.set(rx, height, rz); return mesh;
     };
-    if (spec.style === 'cap' || spec.style === 'beanie') {
+    if (spec.style === 'pumpkin') {
+      // Event wearables are real head-bone meshes, shared by wardrobe and gig
+      // rendering; all dimensions are measured from the Avatar V1 head.
+      const orange = new T.MeshStandardMaterial({ color: '#ee781c', roughness: .72 });
+      const darkOrange = new T.MeshStandardMaterial({ color: '#ad4a13', roughness: .88 });
+      const carved = new T.MeshStandardMaterial({ color: '#21120b', roughness: 1, side: T.DoubleSide });
+      const green = new T.MeshStandardMaterial({ color: '#50782a', roughness: .8 });
+      const middle = bottom + h * .245;
+      const pumpkin = add(
+        new T.SphereGeometry(1, Math.max(32, profile.accessorySegments * 2), Math.max(20, profile.accessorySegments)),
+        'pumpkin-crown', c.x, middle, c.z, orange,
+      );
+      pumpkin.scale.set(rx * 1.03, h * .285, rz * 1.04);
+      // Subtle segmented pumpkin ridges, visible from behind as well as front.
+      for (const angle of [-.85, -.43, .43, .85, Math.PI, Math.PI + .85, Math.PI - .85]) {
+        const points = Array.from({ length: 17 }, (_, i) => {
+          const t = .16 + i / 16 * (Math.PI - .32);
+          return new T.Vector3(
+            c.x + rx * 1.035 * Math.sin(t) * Math.sin(angle),
+            middle + h * .289 * Math.cos(t),
+            c.z + rz * 1.045 * Math.sin(t) * Math.cos(angle),
+          );
+        });
+        add(new T.TubeGeometry(new T.CatmullRomCurve3(points), 24, w * .006, 5, false), 'pumpkin-ridge', 0, 0, 0, darkOrange);
+      }
+      // Cutout shapes sit just ahead of the crown for readable expression in
+      // performance wide shots, without emissive lighting or extra textures.
+      const front = c.z + rz * 1.045;
+      for (const side of [-1, 1]) {
+        const eye = new T.Shape();
+        eye.moveTo(-rx * .16, -h * .04);
+        eye.lineTo(0, h * .087);
+        eye.lineTo(rx * .16, -h * .04);
+        eye.closePath();
+        add(new T.ShapeGeometry(eye), 'pumpkin-eye', c.x + side * rx * .29, middle + h * .05, front, carved);
+      }
+      const mouth = new T.Shape();
+      mouth.moveTo(-rx * .51, -h * .055);
+      mouth.lineTo(-rx * .26, -h * .15);
+      mouth.lineTo(-rx * .13, -h * .11);
+      mouth.lineTo(0, -h * .165);
+      mouth.lineTo(rx * .13, -h * .11);
+      mouth.lineTo(rx * .26, -h * .15);
+      mouth.lineTo(rx * .51, -h * .055);
+      mouth.lineTo(rx * .38, -h * .19);
+      mouth.lineTo(0, -h * .235);
+      mouth.lineTo(-rx * .38, -h * .19);
+      mouth.closePath();
+      add(new T.ShapeGeometry(mouth), 'pumpkin-mouth', c.x, middle, front, carved);
+      const stalk = add(
+        new T.CylinderGeometry(w * .033, w * .06, h * .155, 9),
+        'pumpkin-stalk', c.x, middle + h * .32, c.z, green,
+      );
+      stalk.rotation.z = -.2;
+    } else if (spec.style === 'cap' || spec.style === 'beanie') {
       dome(h * (spec.style === 'cap' ? .29 : .36));
       ring('hat-band', rx * .96, bottom + h * .025, h * (spec.style === 'beanie' ? .045 : .018));
       if (spec.style === 'cap') {
