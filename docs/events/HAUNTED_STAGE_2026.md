@@ -84,3 +84,32 @@ A file being present is **not** proof its test has passed. Validate migration or
 ### Deferred outcome safety
 
 The initial 500 XP claim is settled on completion when a completed `gig_outcomes` record and performed song already exist. The late-outcome reconciliation migration additionally retries **only** the same idempotent Halloween settlement when an outcome becomes completed or a performed song is inserted **after** the gig has reached `completed`. These triggers never cycle gig status, replay other settlements or reroll outfit bonuses. A gig started while Halloween was disabled does not acquire a snapshot later and is never eligible. The permanent `halloween_2026_first_rewards` claim and `ON CONFLICT DO NOTHING` guarantee at-most-once XP, and the saved report audit is reconstructed from claim rows on retries. Post-launch verification must include a delayed result as well as a normal result.
+
+
+### Server-side Pumpkin Hat publication interlock
+
+The release switches alone are insufficient evidence that the real Avatar V1
+Pumpkin Hat has been visually approved. A hat staged with
+`curated_asset_status='asset_ready'` is **not** `published`. Migration
+`20261016205500_halloween_2026_reward_publication_interlock.sql`
+requires actual catalogue publication at three independent authorities:
+gig-start outfit capture, server-read performance bonus, and deferred/completed
+first XP/achievement settlement.
+
+- An unpublished item produces no Halloween reward-eligible gig outfit snapshot,
+  even if `enabled` and `rewards_live` are both true.
+- Publishing after the gig started never backfills that missing outfit snapshot.
+- Temporarily removing publication stops new score/XP payouts; pre-existing
+  historical snapshots and earned permanent rewards are not erased.
+- No migration changes player equipment, seeds fake visual-QA status, awards XP,
+  or modifies the admin activation flags.
+- `supabase/tests/halloween_2026_reward_publication_interlock.sql` exercises
+  real PostgreSQL start triggers, bonus reads, delayed claims, publication
+  toggles and idempotent 500 XP on a rolled-back disposable test database. The
+  matching Vitest contract ensures the replacement function bodies differ only
+  by the new publication check.
+
+**Sign-off remains separate:** inspect and approve the actual Pumpkin Hat in
+masculine and feminine Avatar V1 wardrobe, full gig stage and archived playback,
+then publish via the existing genuine visual QA workflow. Neither a green CI
+result nor both admin switches being enabled proves publication or visual quality.
