@@ -29,7 +29,27 @@ export const DEFAULT_ANNOUNCEMENT: AnnouncementBannerConfig = {
   cta_url: "",
 };
 
-export const SITE_CONFIG_KEYS = ["server_status", "announcement_banner"] as const;
+/**
+ * An independent seasonal notice: it does not overwrite the normal public
+ * announcement_banner. Keep disabled until server-authoritative rewards ship.
+ */
+export interface HalloweenEventConfig {
+  enabled: boolean;
+  rewards_live: boolean;
+  starts_at: string;
+  ends_at: string;
+}
+
+export const DEFAULT_HALLOWEEN_EVENT: HalloweenEventConfig = {
+  enabled: false,
+  rewards_live: false,
+  // 00:00 Europe/London, 24 Oct 2026 (BST).
+  starts_at: "2026-10-23T23:00:00Z",
+  // 00:00 Europe/London, 2 Nov 2026 (GMT).
+  ends_at: "2026-11-02T00:00:00Z",
+};
+
+export const SITE_CONFIG_KEYS = ["server_status", "announcement_banner", "halloween_2026_event"] as const;
 
 export function useSiteConfig() {
   return useQuery({
@@ -49,7 +69,11 @@ export function useSiteConfig() {
         ...DEFAULT_ANNOUNCEMENT,
         ...(map.get("announcement_banner") || {}),
       };
-      return { server, announcement };
+      const halloween: HalloweenEventConfig = {
+        ...DEFAULT_HALLOWEEN_EVENT,
+        ...(map.get("halloween_2026_event") || {}),
+      };
+      return { server, announcement, halloween };
     },
     staleTime: 60_000,
     refetchOnWindowFocus: false,
