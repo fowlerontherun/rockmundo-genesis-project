@@ -32,7 +32,7 @@ describe("Halloween live-event launch protection", () => {
 
   it("does not mistake DB readiness for deployed function or stage playback sign-off", () => {
     expect(sql).toContain("It cannot certify an Edge Function deployment or a visual smoke test");
-    expect(ui).toContain("database checks alone");
+    expect(ui).toContain("Database checks do not verify deployed Edge Function versions");
     expect(sql).toContain("REVOKE ALL ON FUNCTION public.admin_halloween_2026_launch_preflight()");
     expect(sql).toContain("GRANT EXECUTE ON FUNCTION public.admin_halloween_2026_launch_preflight()");
     expect(sql).toContain("public.has_role((SELECT auth.uid()), 'admin'::public.app_role)");
