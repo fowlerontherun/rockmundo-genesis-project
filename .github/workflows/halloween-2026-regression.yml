@@ -51,6 +51,7 @@ jobs:
             src/components/gig/HalloweenGigRewardSummary.test.tsx \
             src/features/player-model/accessories.test.ts \
             src/features/clothing-preview/curatedGarmentAssets.test.ts \
+            src/features/clothing-preview/pumpkinHatV1Routing.test.ts \
             src/features/gig-experience/services/replayStageVisuals.test.ts \
             src/features/gig-experience/viewer/three/GigStage3D.test.tsx \
             supabase/functions/generate-gig-viewer-replay/gig-stage-visual-snapshot.integration.test.ts \
