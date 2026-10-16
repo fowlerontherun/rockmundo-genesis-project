@@ -7,6 +7,7 @@ import { assemblePlayerModel, disposeModel, type ModelLibrary } from './model';
 import { appearanceSchema, defaultAppearance, resolveAppearance, HAT_STYLES, GLASSES_STYLES, modelFile, STYLES, HAIR_STYLES } from './appearance';
 import { Musician } from '@/features/gig-demo-3d/performers';
 import type { ClothingItem } from '@/hooks/useSkinStore';
+import { mergeEquippedAvatarV1Accessories } from '@/features/clothing-preview/equippedClothing';
 
 const library: ModelLibrary = new Map();
 beforeAll(async () => {
@@ -109,6 +110,35 @@ it.each(['masculine', 'feminine'] as const)('shows the gifted Pumpkin Hat on %s 
   disposeModel(model);
   disposeModel(actor.root);
 });
+
+it.each(['masculine', 'feminine'] as const)(
+  'attaches a real Pumpkin Hat to the %s headbone from saved inventory even when stage query returned zero garments',
+  frame => {
+    const item = {
+      id: 'pumpkin-2026',
+      name: 'Haunted Pumpkin Hat 2026',
+      category: 'hat',
+      wearable_slot: 'headwear',
+      curated_asset_status: 'asset_ready',
+      curated_asset_key: 'clothing.halloween.2026.pumpkin-hat',
+      render_config: { renderFamily: 'avatar-v1-accessory', headwearStyle: 'pumpkin' },
+      color_variants: ['#ee781c'],
+      material_config: { primaryColor: '#ee781c' },
+    } as unknown as ClothingItem;
+    const clothes = mergeEquippedAvatarV1Accessories([], [{
+      item_id: item.id, item_type: 'clothing', is_equipped: true,
+      selected_variant_key: null, customization_config: {},
+    }], [item]);
+    expect(clothes).toHaveLength(1);
+    const appearance = defaultAppearance(); appearance.body.frame = frame;
+    const model = assemblePlayerModel(library, appearance, [], clothes);
+    const pumpkin = model.getObjectByName('avatar-owned-hat-pumpkin-2026');
+    expect(pumpkin).toBeTruthy();
+    expect(pumpkin!.getObjectByName('pumpkin-mouth')).toBeTruthy();
+    expect(pumpkin!.parent?.parent).toBe(model.getObjectByName('Head'));
+    disposeModel(model);
+  },
+);
 
 it('round-trips lens and independent earring controls and rejects malformed settings', () => {
   const a = defaultAppearance(); a.accessories = { ...a.accessories!, hat: 'cowboy', glasses: 'aviator', lensTint: 'clear', lensColor: '#338b8d', leftEarring: 'studs', rightEarring: 'drops' };
