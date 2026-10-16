@@ -32,6 +32,11 @@ BEGIN
     RAISE EXCEPTION 'Out-of-range roll earned a bonus';
   END IF;
 
+  IF coalesce((public.get_halloween_2026_gig_bonus(
+     '00000000-0000-4000-8000-000000000001'::uuid)->>'performance_pct')::numeric,-1)<>0 THEN
+    RAISE EXCEPTION 'Disabled event resolver produced performance boost';
+  END IF;
+
   -- The rules are active only behind both independently controlled gates.
   IF NOT EXISTS(SELECT 1 FROM public.system_settings
      WHERE key='halloween_2026_event'
@@ -76,6 +81,17 @@ BEGIN
   SELECT id INTO v_gig FROM public.gigs ORDER BY created_at LIMIT 1;
   SELECT id INTO v_profile FROM public.profiles WHERE user_id IS NOT NULL ORDER BY id LIMIT 1;
   IF v_gig IS NOT NULL AND v_profile IS NOT NULL THEN
+    -- Two workers racing for a character's first reward converge on a single
+    -- row; XP is only applied when the insert actually returns that row.
+    INSERT INTO public.halloween_2026_first_rewards(profile_id,gig_id)
+      VALUES (v_profile,v_gig) ON CONFLICT (profile_id) DO NOTHING;
+    INSERT INTO public.halloween_2026_first_rewards(profile_id,gig_id)
+      VALUES (v_profile,v_gig) ON CONFLICT (profile_id) DO NOTHING;
+    IF (SELECT count(*) FROM public.halloween_2026_first_rewards
+        WHERE profile_id=v_profile) <> 1 THEN
+      RAISE EXCEPTION 'Duplicate Halloween first-reward claim';
+    END IF;
+
     INSERT INTO public.halloween_2026_gig_outfits
       (gig_id,profile_id,was_equipped,performance_pct)
     VALUES(v_gig,v_profile,true,10)
