@@ -23,10 +23,19 @@ CREATE TABLE IF NOT EXISTS public.jam_session_challenges (
   created_at timestamptz DEFAULT now()
 );
 
--- Jam session participant roles
-ALTER TABLE public.jam_session_participants
-  ADD COLUMN IF NOT EXISTS session_role text DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS instrument text DEFAULT NULL;
+-- Jam session participant roles. This legacy table is optional in
+-- clean installs; the canonical participant owner creates it later.
+-- Keep the historical migration replayable without inventing a partial
+-- participant schema (or touching production installs that have the table).
+DO $participant_roles$
+BEGIN
+  IF to_regclass('public.jam_session_participants') IS NOT NULL THEN
+    ALTER TABLE public.jam_session_participants
+      ADD COLUMN IF NOT EXISTS session_role text DEFAULT NULL,
+      ADD COLUMN IF NOT EXISTS instrument text DEFAULT NULL;
+  END IF;
+END
+$participant_roles$;
 
 -- Seed some venue traits
 INSERT INTO public.jam_session_challenges (name, description, genre_requirement, difficulty, xp_bonus_pct, requirements) VALUES
