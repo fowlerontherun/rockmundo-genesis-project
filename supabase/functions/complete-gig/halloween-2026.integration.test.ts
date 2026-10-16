@@ -77,7 +77,7 @@ describe('Halloween 2026 cross-layer gig contract', () => {
     expect(lateSettlement).toContain('v_gig.status <> \'completed\'');
     expect(lateSettlement).toContain('public.halloween_2026_first_rewards(profile_id,gig_id)');
     expect(lateSettlement).toContain('ON CONFLICT (profile_id) DO NOTHING');
-    expect(lateSettlement).toContain("'haunted_stage_2026'");
+    expect(lateSettlement).toContain('"haunted_stage_2026":true');
     expect(lateSettlement).toContain("'halloween_2026_first_rewards'");
     expect(lateSettlement).toContain('AFTER INSERT OR UPDATE OF completed_at ON public.gig_outcomes');
     expect(lateSettlement).toContain('AFTER INSERT ON public.gig_song_performances');

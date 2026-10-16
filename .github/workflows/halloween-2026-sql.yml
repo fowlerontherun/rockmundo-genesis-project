@@ -54,6 +54,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261016111000_gig_immutable_stage_costume_snapshots.sql
       - name: Apply audit-preservation fix for gig completion retries
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261016114500_preserve_halloween_first_reward_audit_on_retry.sql
+      - name: Install deferred outcome and song result reconciliation
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261016130000_halloween_2026_deferred_outcome_reward_reconciliation.sql
       - name: Run weighted rewards and permissions regression
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/halloween_2026_rewards.sql
       - name: Run immutable snapshot permissions regression
@@ -74,7 +76,5 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261016123000_halloween_2026_readonly_gig_smoke_metrics.sql
       - name: Exercise real gig-start coverage and missing snapshot warning
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/halloween_2026_admin_gig_evidence.sql
-      - name: Install deferred outcome and song result reconciliation
-        run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261016130000_halloween_2026_deferred_outcome_reward_reconciliation.sql
       - name: Verify delayed gig records reconcile exactly once
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/halloween_2026_deferred_rewards.sql

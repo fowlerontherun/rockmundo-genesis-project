@@ -19,7 +19,7 @@ BEGIN
   VALUES ('40000000-0000-4000-8000-000000000012',v_gig_b,v_wearer_b,'selected'),
          ('40000000-0000-4000-8000-000000000013',v_gig_c,v_wearer_a,'selected');
   INSERT INTO public.player_owned_skins(profile_id,item_id,item_type,is_equipped)
-  VALUES(v_wearer_b,v_hat,'clothing',true);
+  VALUES(v_wearer_b,v_hat,'clothing',false);
 
   -- A gig started while disabled must NOT bank a later reward eligibility.
   UPDATE public.gigs
@@ -31,13 +31,30 @@ BEGIN
                          '{rewards_live}','true'::jsonb)
    WHERE key='halloween_2026_event';
 
+  -- Player B wears no hat when gig A starts, then equips before gig B:
+  -- the frozen state, rather than their current wardrobe, must decide rewards.
   UPDATE public.gigs
      SET status='in_progress',started_at='2026-10-25T12:00:00Z'
-   WHERE id IN (v_gig_a,v_gig_b);
+   WHERE id=v_gig_a;
+  UPDATE public.player_owned_skins SET is_equipped=true
+   WHERE profile_id=v_wearer_b AND item_id=v_hat AND item_type='clothing';
+  UPDATE public.gigs
+     SET status='in_progress',started_at='2026-10-25T12:00:00Z'
+   WHERE id=v_gig_b;
+  IF EXISTS (SELECT 1 FROM public.halloween_2026_gig_outfits
+    WHERE gig_id=v_gig_a AND profile_id=v_wearer_b AND was_equipped) THEN
+    RAISE EXCEPTION 'Equipping after gig start rewrote its frozen bonus eligibility';
+  END IF;
   IF (SELECT count(*) FROM public.halloween_2026_gig_outfits
       WHERE gig_id IN (v_gig_a,v_gig_b) AND was_equipped)=2
   THEN NULL;
-  ELSE RAISE EXCEPTION 'Frozen eligible snapshots were not captured'; END IF;
+  ELSE RAISE EXCEPTION 'Frozen eligible snapshots were not captured: %, config %, gigs %',
+    (SELECT coalesce(jsonb_agg(jsonb_build_object('gig',gig_id,'wearer',profile_id,
+      'worn',was_equipped)),'[]'::jsonb) FROM public.halloween_2026_gig_outfits),
+    (SELECT value FROM public.system_settings WHERE key='halloween_2026_event'),
+    (SELECT coalesce(jsonb_agg(jsonb_build_object('id',id,'status',status,
+      'started',started_at)),'[]'::jsonb) FROM public.gigs);
+  END IF;
 
   -- Completed gigs can precede performed song rows and outcome completion.
   UPDATE public.gigs
