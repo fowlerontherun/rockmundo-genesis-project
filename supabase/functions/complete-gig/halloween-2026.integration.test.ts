@@ -21,6 +21,11 @@ describe('Halloween 2026 cross-layer gig contract', () => {
     expect(rewards).toContain('pos.is_equipped IS TRUE');
     expect(rewards).toContain('public.gig_performers gp');
     expect(rewards).toContain('ON CONFLICT (gig_id, profile_id) DO NOTHING');
+    // No costume can be banked before the server turns on the event.
+    const capture = rewards.slice(rewards.indexOf('FUNCTION public.capture_halloween_2026_gig_outfits()'),
+      rewards.indexOf('DROP TRIGGER IF EXISTS trg_capture_halloween_2026_gig_outfits'));
+    expect(capture).toContain("coalesce(v_settings->>'enabled','false') <> 'true'");
+    expect(capture).toContain("coalesce(v_settings->>'rewards_live','false') <> 'true'");
     expect(rewards).not.toContain('random()');
     expect(rewards).not.toContain('current_setting(\'request.jwt.claim');
   });
@@ -39,6 +44,8 @@ describe('Halloween 2026 cross-layer gig contract', () => {
     expect(completeGig).toContain('Math.min(25, clothingPerformancePct + halloweenPerformancePct)');
     expect(completeGig).toContain('Math.min(25, ratingBeforeClothingBonus * (1 + combinedPerformancePct / 100))');
     expect(rewards).toContain("gp.lineup_status IN ('selected','performed')");
+    expect(rewards).toContain("NOT (NEW.xp_breakdown ? 'clothing_performance')");
+    expect(rewards).toContain('trg_apply_clothing_bonus_to_gig_outcome');
   });
 
   it('uses date-specific gates and checks actual start and completion dates', () => {

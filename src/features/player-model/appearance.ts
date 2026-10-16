@@ -172,13 +172,13 @@ export function resolveAppearance(value: unknown, seed = ''): PlayerAppearance {
     const defaults = defaultAppearance(seed);
     // Validate each persisted setting independently. One invalid/removed item or
     // future optional field must not discard the player's entire saved avatar.
-    const repair = (schema: any, incoming: unknown, fallback: unknown): unknown => {
-      const objectSchema = schema?.shape ? schema : schema?.unwrap?.();
-      if (objectSchema?.shape && incoming && typeof incoming === "object" && !Array.isArray(incoming)) {
+    const repair = (schema: z.ZodTypeAny, incoming: unknown, fallback: unknown): unknown => {
+      const objectSchema = "shape" in schema ? schema : "unwrap" in schema && typeof schema.unwrap === "function" ? schema.unwrap() : null;
+      if (objectSchema && "shape" in objectSchema && objectSchema.shape && incoming && typeof incoming === "object" && !Array.isArray(incoming)) {
         const source = incoming as Record<string, unknown>;
         const base = (fallback && typeof fallback === "object" ? fallback : {}) as Record<string, unknown>;
         const repaired: Record<string, unknown> = {};
-        for (const [field, fieldSchema] of Object.entries(objectSchema.shape as Record<string, unknown>)) {
+        for (const [field, fieldSchema] of Object.entries(objectSchema.shape as Record<string, z.ZodTypeAny>)) {
           repaired[field] = repair(fieldSchema, source[field] ?? base[field], base[field]);
         }
         const checked = schema.safeParse(repaired);
