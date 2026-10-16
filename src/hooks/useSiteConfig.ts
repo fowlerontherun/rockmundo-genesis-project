@@ -55,11 +55,26 @@ export function useSiteConfig() {
   return useQuery({
     queryKey: ["site-config"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("system_settings")
-        .select("key,value")
-        .in("key", SITE_CONFIG_KEYS as unknown as string[]);
+      // Publication is an independent, public catalogue fact. Do not infer
+      // launch readiness from editable system flags alone: a gifted but
+      // unpublished Pumpkin Hat is NOT a player-ready event item.
+      const [settings, pumpkinHat] = await Promise.all([
+        (supabase as any)
+          .from("system_settings")
+          .select("key,value")
+          .in("key", SITE_CONFIG_KEYS as unknown as string[]),
+        (supabase as any)
+          .from("avatar_clothing_items")
+          .select("curated_asset_status")
+          .eq("curated_asset_key", "clothing.halloween.2026.pumpkin-hat")
+          .maybeSingle(),
+      ]);
+      const { data, error } = settings;
       if (error) throw error;
+      // A catalogue error or missing item must fail closed for PUBLIC notices,
+      // without taking down unrelated status/normal announcement content.
+      const halloweenHatPublished =
+        !pumpkinHat.error && pumpkinHat.data?.curated_asset_status === "published";
       const map = new Map<string, any>((data || []).map((r: any) => [r.key, r.value]));
       const server: ServerStatusConfig = {
         ...DEFAULT_SERVER_STATUS,
@@ -73,7 +88,7 @@ export function useSiteConfig() {
         ...DEFAULT_HALLOWEEN_EVENT,
         ...(map.get("halloween_2026_event") || {}),
       };
-      return { server, announcement, halloween };
+      return { server, announcement, halloween, halloweenHatPublished };
     },
     staleTime: 60_000,
     refetchOnWindowFocus: false,
