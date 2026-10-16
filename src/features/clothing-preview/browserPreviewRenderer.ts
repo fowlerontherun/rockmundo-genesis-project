@@ -7,7 +7,7 @@ import { CLOTHING_PREVIEW_RENDERER_VERSION, CLOTHING_TURNTABLE_VIEWS, type Cloth
 import { STYLES, defaultAppearance, modelFile } from '@/features/player-model/appearance';
 import { assemblePlayerModel, disposeModel, loadModelLibrary, type ModelLibrary } from '@/features/player-model/model';
 import { curatedDonorSource } from './curatedDonorGarments';
-import { buildCuratedGarment, curatedGarmentFile, disposeCuratedGarment, isCuratedClothing, isCuratedClothingRenderable } from './curatedGarmentAssets';
+import { buildCuratedGarment, curatedGarmentFile, disposeCuratedGarment, isCuratedClothing, isCuratedClothingRenderable, isAvatarV1HeadAccessory } from './curatedGarmentAssets';
 
 export interface RenderedPreviewFrame {
   key: ClothingPreviewViewKey;
@@ -145,7 +145,7 @@ export async function renderClothingTurntable(item: ClothingItem, options: Brows
   const result: RenderedPreviewFrame[] = [];
   try {
     if (isCuratedClothing(item)) {
-      if (!isCuratedClothingRenderable(item)) throw new Error('Curated clothing must be validated before preview generation.');
+      if (!isAvatarV1HeadAccessory(item) && !isCuratedClothingRenderable(item)) throw new Error('Curated clothing must be validated before preview generation.');
       const frame = item.supported_frames?.includes('masculine') ? 'masculine' : 'feminine';
       const appearance = defaultAppearance(item.id);
       appearance.body.frame = frame;
@@ -157,14 +157,15 @@ export async function renderClothingTurntable(item: ClothingItem, options: Brows
       if (garmentFile) files.push(garmentFile);
       library = await loadModelLibrary(files);
       const donor = curatedDonorSource(item);
-      curatedAvatar = assemblePlayerModel(library, appearance, [], donor ? [{ item, variant }] : [], 'cinematic');
+      const ownedHeadAccessory = isAvatarV1HeadAccessory(item);
+      curatedAvatar = assemblePlayerModel(library, appearance, [], donor || ownedHeadAccessory ? [{ item, variant }] : [], 'cinematic');
       curatedAvatar.traverse(object => {
         if (!(object instanceof T.Mesh)) return;
         object.castShadow = true;
         object.receiveShadow = true;
       });
       scene.add(curatedAvatar);
-      if (!donor) {
+      if (!donor && !ownedHeadAccessory) {
         garment = buildCuratedGarment(library, curatedAvatar, item, frame);
         scene.add(garment);
       }
