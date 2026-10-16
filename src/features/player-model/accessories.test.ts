@@ -88,7 +88,7 @@ it.each(['masculine', 'feminine'] as const)('shows the gifted Pumpkin Hat on %s 
       curated_asset_key: 'clothing.halloween.2026.pumpkin-hat',
       render_config: { headwearStyle: 'pumpkin' },
       material_config: { primaryColor: '#ee781c' },
-    } as ClothingItem,
+    } as unknown as ClothingItem,
   }];
   const model = assemblePlayerModel(library, appearance, [], clothing);
   expect(model.getObjectByName('avatar-hat-beanie')).toBeUndefined();
@@ -176,7 +176,7 @@ it.each(['masculine', 'feminine'] as const)('preserves a %s Pumpkin Hat in an ar
       wearable_slot: 'headwear',
       curated_asset_key: 'clothing.halloween.2026.pumpkin-hat',
       render_config: { headwearStyle: 'pumpkin' },
-    } as ClothingItem,
+    } as unknown as ClothingItem,
   }];
 
   // Replay must use the frozen snapshot, not what the player currently owns.
