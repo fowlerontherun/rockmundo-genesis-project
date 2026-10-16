@@ -34,6 +34,7 @@ import { TodaysBriefing } from "@/components/dashboard/TodaysBriefing";
 import { ManagerRecommendationsPanel } from "@/components/dashboard/ManagerRecommendationsPanel";
 import { GettingStartedPanel } from "@/components/dashboard/GettingStartedPanel";
 import { ReferralWelcomeCard } from "@/components/dashboard/ReferralWelcomeCard";
+import { HalloweenDashboardBanner } from "@/features/seasonal/HalloweenEventNotice";
 import { WorldNewsList } from "@/components/world/WorldNewsList";
 
 import { Link } from "react-router-dom";
@@ -357,6 +358,7 @@ const Dashboard = () => {
         isSubmitting={isSurveySubmitting}
       />
 
+      <HalloweenDashboardBanner />
       <DebtWarningBanner />
       <GigLocationWarning />
 

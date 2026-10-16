@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Newspaper, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { HalloweenDashboardBanner } from "@/features/seasonal/HalloweenEventNotice";
 
 import { NewspaperMasthead } from "@/components/news/NewspaperMasthead";
 import { BreakingNewsTicker } from "@/components/news/BreakingNewsTicker";
@@ -97,6 +98,7 @@ export default function TodaysNewsPage() {
       icon={Newspaper}
       backTo="/hub/media"
     >
+      <HalloweenDashboardBanner />
       <div className="mx-auto max-w-[1400px] border-x border-y-2 border-foreground/70 bg-card/40 px-3 py-4 sm:px-6 sm:py-6">
         <NewspaperMasthead />
         <BreakingNewsTicker />

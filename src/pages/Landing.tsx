@@ -46,6 +46,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { releaseLabel } from "@/components/VersionHeader";
 import { usePlayerPresenceStats } from "@/hooks/usePlayerPresenceStats";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
+import { HalloweenPublicBanner } from "@/features/seasonal/HalloweenEventNotice";
 import { supabase } from "@/integrations/supabase/client";
 import heroImage from "@/assets/landing-hero.jpg";
 import logo from "@/assets/rockmundo-new-logo.png";
@@ -268,6 +269,7 @@ const Landing = () => {
         </div>
       )}
 
+      <HalloweenPublicBanner />
       {announcement?.enabled && (announcement.title || announcement.body) && (
         <div className="border-b border-primary/30 bg-primary/10">
           <div className="mx-auto flex max-w-6xl flex-col gap-2 px-3 py-2.5 font-oswald text-xs sm:flex-row sm:items-center sm:px-6 sm:text-sm">
