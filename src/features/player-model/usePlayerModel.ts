@@ -185,7 +185,14 @@ export function useEquippedRichClothing(profileId: string | null | undefined) {
     enabled: !!profileId,
     staleTime: 60_000,
     queryFn: async () => {
-      const { data, error } = await callStageRpc('get_equipped_stage_clothing', { p_profile_ids: [profileId!] });
+      // Read the active character's own wardrobe directly. The stage RPC is
+      // designed for gigs containing many performers; its temporary outage
+      // must not hide a hat the player has actually equipped in the editor.
+      const { data, error } = await supabase.from('player_owned_skins')
+        .select('profile_id,item_id,selected_variant_key,customization_config')
+        .eq('profile_id', profileId!)
+        .eq('item_type', 'clothing')
+        .eq('is_equipped', true);
       if (error) throw error;
       const map = await resolveRichClothingRows((data || []) as EquippedClothingRow[]);
       return map[profileId!] ?? [];
