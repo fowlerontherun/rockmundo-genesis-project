@@ -9,12 +9,12 @@
 - The wardrobe and stage share Avatar V1's `assemblePlayerModel` renderer; the `render_config.headwearStyle = "pumpkin"` item creates a head-bone-bound mesh which follows performer animations in the 3D gig viewer. Frozen gig appearances must continue to use their persisted equipped-clothing snapshots.
 - The item remains in inventory and remains wearable after the event ends.
 
-## Gameplay rules (future separate implementation; not included in the cosmetic patch)
+## Gameplay rules (implemented in rewards PR #4182; deploy only after testing)
 
 For an eligible **completed** gig during the event, inspect the **performer's server-authoritative equipped item at the relevant gig snapshot time**, not the client's current appearance, and require the pumpkin hat item key `clothing.halloween.2026.pumpkin-hat`.
 
 - Roll one performance bonus per eligible performer per gig: **+5%** (50% probability), **+10%** (35%), or **+15%** (15%).
-- Apply it to the authoritative performance scoring path before gig settlement, with an explicit bound on the combined effective clothing bonus; do not merely label a report as boosted.
+- Apply the band-wide average of qualifying performer rolls (non-wearers contribute zero) to the authoritative performance score **before commerce settlement**. Existing outfit plus Halloween bonus share a 25% total modifier ceiling; the final rating remains capped at 25/25.
 - On their first eligible *completed* Halloween gig, reward each character **500 XP once** and award permanent **Pumpkin Headliner 2026** achievement.
 - Subsequent eligible gigs receive a new performance roll, but no duplicate XP or achievement.
 - Store the chosen bonus and reward evidence under stable `gig_id + profile_id + event_id` unique keys; repeated worker runs must use saved outcomes, not reroll.
@@ -32,6 +32,29 @@ The `halloween_2026_event` setting is separate from the ordinary `announcement_b
 When both gates are on and the clock is inside the window, authenticated players get a **dismissible first-login dialog** with the hat, equip path, reward mechanics and explicit deadline. Dismissal uses a separate local key per account and active character, so it is not repeated every navigation; the **dashboard banner stays available** for reminder and review. Public landing and auth also show a concise notice without overriding other news banners. The time boundary removes all notices automatically.
 
 If the reward deployment is delayed, leave `rewards_live` disabled: do not advertise nonexistent +5–15% / 500 XP / achievement. Once verified, enable the rewards flag through the migration rollout and the announcement in System Status. No date- or button-only client change should ever grant gameplay rewards.
+
+## Canonical data path
+
+- `20261016103000_halloween_2026_gig_rewards.sql` adds a frozen `halloween_2026_gig_outfits` row for each selected/performed participant at the authoritative gig start, with a persisted weighted roll based on gig ID + profile ID. Equip changes after the snapshot do not affect the result.
+- The service-role-only `get_halloween_2026_gig_bonus` resolver averages the frozen values, counting non-wearers as 0. `complete-gig` uses that value alongside ordinary clothing before settlement and stores `xp_breakdown.halloween_2026`.
+- The completed-gig database trigger verifies the real event window, live completion, at least one performed song, and participation; the `halloween_2026_first_rewards` primary key guarantees 500 XP and the achievement at most once per character, even across gig retries or concurrent completions.
+- `GigOutcomeReport` renders the **persisted** bonus, and confirms first-time 500 XP only when the current profile appears in the authoritative claim list.
+- No backfill for gigs that started without an immutable equipment snapshot: missing evidence fails closed. The hat stays owned after expiry.
+
+## Full regression matrix and how to run
+
+| Area | Automated coverage | Additional release sign-off |
+|---|---|---|
+| Gifted wearable | `supabase/functions/complete-gig/halloween-2026.integration.test.ts` asserts free, unique, non-equipped grant; `supabase/tests/halloween_2026_rewards.sql` validates seeded item | Existing/new character accounts after applying original hat migration |
+| Avatar V1 / gig viewer | `src/features/player-model/accessories.test.ts` checks both frames, actual head-bone geometry, gig animation, archived snapshot after wardrobe edit | Visually verify different hair styles, singer/guitar/bass/drums, camera close-ups and replay |
+| Start/expiry dates | `src/features/seasonal/halloween2026.test.ts`, `HalloweenEventNotice.test.tsx` and SQL UK BST/GMT tests | Check midnight transition with server clock, not browser time |
+| Welcome popup / notices | `HalloweenEventNotice.test.tsx`: modal, dismissal, second character, public login link, dashboard card, reward text, gates | Verify on narrow phone, desktop, festival mode and Today's News |
+| Performed-gig bonus | `halloween-2026.integration.test.ts` tests settlement ordering, audit and combined cap; SQL checks 50/35/15 roll buckets and snapshot immutability | Synthetic completed gigs in an isolated Supabase environment, solo/band/festival/tour; ensure actual rating, profits and fans change |
+| XP and achievement | SQL test checks private claims, unique PK and required achievement; integration test guards completed-only ledger logic | Complete two gigs and run worker twice; assert 500 total XP and a single achievement |
+| Security | SQL privilege/RLS assertions; contract prohibits accepting client roll/equipment | Verify anon and other-user cannot read/write private snapshots or claim reward |
+| Result report | `HalloweenGigRewardSummary.test.tsx` confirms persisted bonus and character-specific reward, never invents results | Check reporting after refresh and late retry |
+
+A file being present is **not** proof its test has passed. Validate migration order on an **isolated test DB**, run `supabase/tests/halloween_2026_rewards.sql` within its rollback transaction, then run repo Vitest, typecheck, lint and build in CI. The current production database has not received these new migration files.
 
 ## QA gates
 
