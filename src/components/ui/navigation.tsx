@@ -15,7 +15,7 @@ import { ActivityStatusIndicator } from "@/components/ActivityStatusIndicator";
 import { VersionHeader } from "@/components/VersionHeader";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { PrisonStatusIndicator } from "@/components/prison/PrisonStatusIndicator";
-import { useUnreadInboxCount } from "@/hooks/useInbox";
+import { useUnifiedInboxUnreadCount } from "@/hooks/useUnifiedInbox";
 import { RMRadioButton } from "@/components/radio/RMRadioPlayer";
 import {
   Home, Users, Music, Settings, LogOut, Menu, Globe, Briefcase, User,
@@ -37,7 +37,7 @@ const Navigation = () => {
   const { toast } = useToast();
   const { t } = useTranslation();
   const { isAdmin } = useUserRole();
-  const { data: unreadInboxCount } = useUnreadInboxCount();
+  const unreadInboxCount = useUnifiedInboxUnreadCount();
 
   const hubLinks: HubLink[] = [
     { icon: Home, labelKey: "nav.home", path: "/home" },

@@ -3,12 +3,12 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useUnreadInboxCount } from "@/hooks/useInbox";
+import { useUnifiedInboxUnreadCount } from "@/hooks/useUnifiedInbox";
 
 export const FloatingAvatarWidget = () => {
   const { profile } = useGameData();
   const navigate = useNavigate();
-  const { data: unreadCount } = useUnreadInboxCount();
+  const unreadCount = useUnifiedInboxUnreadCount();
 
   if (!profile) return null;
 
