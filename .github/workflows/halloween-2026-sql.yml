@@ -6,6 +6,8 @@ on:
       - 'supabase/migrations/20261016*halloween*'
       - 'supabase/migrations/20261016103000_halloween_2026_gig_rewards.sql'
       - 'supabase/migrations/20261016114500_preserve_halloween_first_reward_audit_on_retry.sql'
+      - 'supabase/migrations/20261016120000_halloween_2026_admin_launch_preflight.sql'
+      - 'supabase/migrations/20261016121000_halloween_2026_preflight_service_role_console.sql'
       - 'supabase/migrations/20261016111000_gig_immutable_stage_costume_snapshots.sql'
       - 'supabase/tests/halloween_2026*.sql'
       - 'supabase/tests/gig_stage_visual_snapshots.sql'
@@ -60,3 +62,9 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/halloween_2026_positive_reward_claim.sql
       - name: Verify cancelled and unqualified gigs receive no rewards
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/halloween_2026_ineligible_gigs.sql
+      - name: Apply admin-only Halloween launch preflight
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261016120000_halloween_2026_admin_launch_preflight.sql
+      - name: Support service-role SQL console checks without a JWT
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261016121000_halloween_2026_preflight_service_role_console.sql
+      - name: Verify ready-state checklist and reject non-admin calls
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/halloween_2026_admin_preflight.sql

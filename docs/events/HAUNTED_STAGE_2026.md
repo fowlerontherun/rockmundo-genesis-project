@@ -64,3 +64,19 @@ A file being present is **not** proof its test has passed. Validate migration or
 4. The outfit is preserved in replay snapshots; no re-query of a currently edited wardrobe to rewrite historical costumes.
 5. Idempotency and event-date boundary tests are required before enabling performance/XP/achievement rewards.
 6. Do not enable `bonus_config` for this item as a stand-in for the per-gig random bonus.
+
+
+## Live release runbook — October 2026
+
+**Time window (Europe/London):** 00:00 Sat 24 October through 23:59 Sun 1 November 2026. Automatic hard stop is 00:00 Mon 2 November. October 24 starts in BST (2026-10-23T23:00:00Z); the closing date is in GMT (2026-11-02T00:00:00Z).
+
+1. **Prelaunch database:** All five Halloween-related schema stages are applied (gifted hat, notice defaults, gig rewards, immutable replay wardrobe, and retry-safe first-claim audit). The separate admin preflight SQL and service-role compatibility migration must also be applied. Never replay the original hat backfill to re-equip or duplicate ownership.
+2. **Prelaunch verification:** In Admin → System Status → Halloween, click **Recheck**. Every database check must pass, including gifting, permissions and trigger health. The preflight is a read-only database audit, **not** confirmation of frontend assets or Edge Function versions.
+3. **Release artifact verification:** Compare deployed `complete-gig` and `generate-gig-viewer-replay` Edge source to current merged main; do not rely on historical version numbers because unrelated deployments may supersede them. Verify the published website includes the seasonal dialog/dashboard banner and Stage V1 renderer.
+4. **Real gig snapshot QA before Halloween:** Have an opted-in test character equip the pumpkin, begin a normal gig and inspect `gig_stage_visual_snapshots` for a record; unequip after gig completion and confirm the historical 3D replay retains the hat. Check both avatar frames and mobile. **Do not alter a real player's completed gig or XP for testing.**
+5. **Stage the event only after QA:** An admin explicitly checks the live release confirmation, enables **Mark live gig rewards verified**, enables the separate public announcement switch, and saves. This sets both `rewards_live` and `enabled` while leaving the first day governed by the UTC start boundary. Verify that public notices remain hidden until 24 October.
+6. **First real Halloween performance after launch:** A qualifying performer must be wearing the hat **at gig start**, participate in a completed gig with performed songs, and receive exactly one permanent 500 XP award and Pumpkin Headliner achievement. Confirm the saved result uses a rolled +5/10/15% performance boost and displays any first reward from the durable claim. Repeat worker/report retrieval to verify no duplicate XP or erased audit.
+7. **Automatic closure:** On/after 2 November midnight UK time, verify the login popup, public strip and dashboard reminder have disappeared and new gigs get no Halloween boost or first-time claim. Players keep the hat and any earned achievement.
+8. **Incident rollback:** Use the admin panel to turn **off** the public event switch and reward readiness, then verify both `enabled=false` and `rewards_live=false` in settings. Do **not** delete outfit snapshots, rollback permanent player XP or delete hats. Keep #4179 and #4184 open until live validations are recorded.
+
+**Caution:** A brand-new qualifying Halloween XP transaction cannot be smoke-tested against the live calendar before October 24 without unacceptably manipulating live production clocks or gameplay. The isolated PostgreSQL regression suite tests this logic before launch; genuine award verification happens after the event begins.

@@ -6,11 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, ServerCog, Megaphone, Save, RefreshCw, PartyPopper, CalendarDays } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   useSiteConfig,
   DEFAULT_SERVER_STATUS,
@@ -25,6 +26,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+type HalloweenPreflight = {
+  database_ready: boolean;
+  checked_at: string;
+  characters: number;
+  characters_gifted: number;
+  checks: Record<string, boolean>;
+  event_enabled: boolean;
+  rewards_armed: boolean;
+};
+
+const HALLOWEEN_CHECK_LABELS: Record<string, string> = {
+  reward_schema: "Reward tables and bonus RPC",
+  pumpkin_hat_catalogue: "Free Avatar V1 Pumpkin Hat",
+  all_characters_gifted: "All playable characters gifted",
+  permanent_achievement: "Permanent Pumpkin Headliner achievement",
+  settlement_and_snapshot_triggers: "Settlement and gig-start snapshot triggers",
+  row_security: "Private table RLS",
+  private_permissions: "Reward security permissions",
+  uk_calendar_window: "24 October–1 November UK dates",
+};
 
 const STATUS_META: Record<ServerStatusLevel, { label: string; badge: string }> = {
   up: { label: "Online", badge: "bg-green-500/15 text-green-500 border-green-500/40" },
@@ -44,6 +66,28 @@ export default function SystemStatusAdmin() {
   const [annCtaLabel, setAnnCtaLabel] = useState("");
   const [annCtaUrl, setAnnCtaUrl] = useState("");
   const [halloweenEnabled, setHalloweenEnabled] = useState(false);
+  const [halloweenRewardsReady, setHalloweenRewardsReady] = useState(false);
+  const [confirmedLiveGig, setConfirmedLiveGig] = useState(false);
+
+  const {
+    data: halloweenPreflight,
+    isLoading: preflightLoading,
+    isFetching: preflightFetching,
+    error: preflightError,
+    refetch: refetchPreflight,
+  } = useQuery({
+    queryKey: ["admin-halloween-2026-launch-preflight"],
+    queryFn: async (): Promise<HalloweenPreflight> => {
+      const client = supabase as unknown as {
+        rpc: (name: string) => Promise<{ data: unknown; error: { message: string } | null }>;
+      };
+      const { data: result, error } = await client.rpc("admin_halloween_2026_launch_preflight");
+      if (error) throw error;
+      return result as HalloweenPreflight;
+    },
+    retry: false,
+    staleTime: 60_000,
+  });
 
   useEffect(() => {
     if (!data) return;
@@ -55,14 +99,21 @@ export default function SystemStatusAdmin() {
     setAnnCtaLabel(data.announcement.cta_label || "");
     setAnnCtaUrl(data.announcement.cta_url || "");
     setHalloweenEnabled(!!data.halloween.enabled);
+    setHalloweenRewardsReady(!!data.halloween.rewards_live);
+    setConfirmedLiveGig(false);
   }, [data]);
 
   const saveKey = async (key: string, value: any) => {
-    const { error } = await (supabase as any)
+    const { data: saved, error } = await (supabase as any)
       .from("system_settings")
       .update({ value, updated_at: new Date().toISOString() })
-      .eq("key", key);
+      .eq("key", key)
+      .select("key")
+      .maybeSingle();
     if (error) throw error;
+    if (!saved || saved.key !== key) {
+      throw new Error("System settings were not saved. Check your admin permissions and retry.");
+    }
   };
 
   const saveStatus = useMutation({
@@ -98,13 +149,22 @@ export default function SystemStatusAdmin() {
   const saveHalloween = useMutation({
     mutationFn: async () => {
       if (!data?.halloween) throw new Error("Halloween event settings are unavailable");
-      if (halloweenEnabled && !data.halloween.rewards_live) {
-        throw new Error("Halloween gig rewards are not live. Do not announce the event until the reward implementation has been deployed and certified.");
+      if (halloweenRewardsReady && !halloweenPreflight?.database_ready) {
+        throw new Error("Database readiness checks did not pass. Re-run preflight before arming rewards.");
       }
-      await saveKey("halloween_2026_event", { ...data.halloween, enabled: halloweenEnabled });
+      if (halloweenRewardsReady && !data.halloween.rewards_live && !confirmedLiveGig) {
+        throw new Error("Confirm deployed functions, isolated reward tests and a real gig-start/replay check before marking rewards live.");
+      }
+      if (halloweenEnabled && !halloweenRewardsReady) {
+        throw new Error("Cannot announce Halloween while server-side gig rewards are disabled.");
+      }
+      await saveKey("halloween_2026_event", {
+        ...data.halloween, enabled: halloweenEnabled, rewards_live: halloweenRewardsReady,
+      });
     },
     onSuccess: () => {
-      toast.success("Halloween event announcement updated");
+      toast.success("Halloween release settings updated");
+      setConfirmedLiveGig(false);
       qc.invalidateQueries({ queryKey: ["site-config"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -265,8 +325,56 @@ export default function SystemStatusAdmin() {
               <p className="flex items-center gap-2 font-medium"><CalendarDays className="h-4 w-4 text-orange-400" /> 24 October – 1 November 2026</p>
               <p className="mt-1 text-muted-foreground">Ends {data?.halloween ? halloweenEndLabel(data.halloween) : "1 November 2026 at 23:59"} (UK time). The event ends automatically even if the switch remains on.</p>
               <p className="mt-2">Server-side gig rewards: <strong>{data?.halloween.rewards_live ? "Marked ready for rollout" : "Not yet certified"}</strong></p>
-              {!data?.halloween.rewards_live && <p className="mt-1 text-orange-400">Activation is locked until PRs for the +5–15% boost, 500 XP and permanent achievement have been deployed and verified.</p>}
+              <p className="mt-1 text-muted-foreground">Database checks do not verify deployed Edge Function versions or an actual completed gig. These require separate human sign-off.</p>
             </div>
+            <div className="space-y-3 rounded-md border p-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-semibold text-sm">Halloween database preflight</p>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline">
+                    {preflightLoading ? "Checking…" : halloweenPreflight?.database_ready ? "Database checks passed" : "Not cleared"}
+                  </Badge>
+                  <Button size="sm" variant="outline" onClick={() => refetchPreflight()} disabled={preflightFetching}>
+                    <RefreshCw className={`h-3 w-3 mr-1 ${preflightFetching ? "animate-spin" : ""}`} />
+                    Recheck
+                  </Button>
+                </div>
+              </div>
+              {preflightError && (
+                <p role="alert" className="text-xs text-destructive">
+                  Preflight unavailable. An authorized admin login and the preflight database migration are required.
+                </p>
+              )}
+              {halloweenPreflight && (
+                <>
+                  <p className="text-xs text-muted-foreground">Gifted characters: {halloweenPreflight.characters_gifted} of {halloweenPreflight.characters}</p>
+                  <ul aria-label="Halloween readiness checks" className="grid gap-1 text-xs sm:grid-cols-2">
+                    {Object.entries(HALLOWEEN_CHECK_LABELS).map(([key, label]) => (
+                      <li key={key} className={halloweenPreflight.checks?.[key] ? "text-green-500" : "text-orange-400"}>
+                        {halloweenPreflight.checks?.[key] ? "✓" : "✕"} {label}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
+            <div className="flex items-center justify-between gap-3 rounded-md border p-3">
+              <div>
+                <p className="text-sm font-medium">Mark live gig rewards verified</p>
+                <p className="text-xs text-muted-foreground">
+                  Pre-launch sign-off: verify deployed Edge Functions, isolated XP/achievement tests and a real gig-start/replay. The first live Halloween reward can only be checked after launch. Disabling is always allowed.
+                </p>
+              </div>
+              <Switch aria-label="Mark Halloween gig rewards verified"
+                checked={halloweenRewardsReady} onCheckedChange={setHalloweenRewardsReady}
+                disabled={isLoading || (!halloweenPreflight?.database_ready && !halloweenRewardsReady)} />
+            </div>
+            {halloweenRewardsReady && !data?.halloween.rewards_live && (
+              <label className="flex items-start gap-2 text-sm">
+                <Checkbox checked={confirmedLiveGig} onCheckedChange={(checked) => setConfirmedLiveGig(checked === true)} />
+                I verified the deployed Edge Functions, automated XP/achievement tests and a genuine gig-start/replay smoke test. Live Halloween payouts require a separate post-launch check.
+              </label>
+            )}
             <div className="flex items-center justify-between gap-3 rounded-md border p-3">
               <div>
                 <p className="text-sm font-medium">Show Halloween login announcement</p>
@@ -276,13 +384,13 @@ export default function SystemStatusAdmin() {
                 aria-label="Enable Halloween event announcement"
                 checked={halloweenEnabled}
                 onCheckedChange={setHalloweenEnabled}
-                disabled={isLoading || (!data?.halloween.rewards_live && !halloweenEnabled)}
+                disabled={isLoading || (!halloweenRewardsReady && !halloweenEnabled)}
               />
             </div>
             <div className="flex justify-end">
               <Button
                 onClick={() => saveHalloween.mutate()}
-                disabled={saveHalloween.isPending || isLoading || (halloweenEnabled && !data?.halloween.rewards_live)}
+                disabled={saveHalloween.isPending || isLoading || (halloweenEnabled && !halloweenRewardsReady) || (halloweenRewardsReady && !halloweenPreflight?.database_ready) || (halloweenRewardsReady && !data?.halloween.rewards_live && !confirmedLiveGig)}
               >
                 {saveHalloween.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Save className="mr-1 h-4 w-4" />}
                 Save Halloween Event
