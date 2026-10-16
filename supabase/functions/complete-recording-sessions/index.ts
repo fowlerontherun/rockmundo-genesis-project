@@ -12,7 +12,7 @@ import { applyRecordingQualityBoost, selectRecordingQualityBoost } from '../_sha
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type, x-triggered-by',
+    'authorization, x-client-info, apikey, content-type, x-triggered-by, x-cron-secret',
 }
 
 Deno.serve(async (req) => {
@@ -48,8 +48,19 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Recording is not ready for completion' }), { status: 409, headers: corsHeaders })
     }
     manuallyRequestedSessionId = owned.id
-  } else if (!serviceKey || bearer !== serviceKey) {
-    return new Response(JSON.stringify({ error: 'Global recording processing requires service authentication' }), { status: 403, headers: corsHeaders })
+  } else {
+    // Automated work is authorized with the secret already stored in Vault;
+    // the service-role client checks it through the protected server-side RPC.
+    // Never accept an anonymous JWT as permission to process every session.
+    const cronSecret = req.headers.get('x-cron-secret')
+    let cronAuthorized = false
+    if (cronSecret && cronSecret.length >= 32) {
+      const { data, error } = await supabase.rpc('verify_internal_cron_secret', { p_secret: cronSecret })
+      cronAuthorized = !error && data === true
+    }
+    if (!serviceKey || (bearer !== serviceKey && !cronAuthorized)) {
+      return new Response(JSON.stringify({ error: 'Global recording processing requires service authentication' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
   }
 
   let runId: string | null = null
