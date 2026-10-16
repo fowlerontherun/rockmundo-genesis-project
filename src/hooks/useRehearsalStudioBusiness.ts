@@ -145,7 +145,7 @@ export function useHireRehearsalStaff() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (staff: Omit<RehearsalRoomStaff, 'id' | 'created_at' | 'updated_at' | 'hire_date' | 'performance_rating' | 'is_active'>) => {
+    mutationFn: async (staff: Omit<RehearsalRoomStaff, 'id' | 'created_at' | 'updated_at' | 'hire_date' | 'performance_rating' | 'is_active'> & { request_id: string }) => {
       const { data, error } = await (supabase as any).rpc("buy_subsidiary_asset_atomic", {
         p_kind: "rehearsal_staff", p_subsidiary_id: staff.room_id, p_fields: staff,
       });
