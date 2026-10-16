@@ -53,6 +53,7 @@ export function useHireVenueStaff() {
       role: string;
       skill_level?: number;
       salary_weekly?: number;
+      request_id: string;
     }) => {
       const { data, error } = await (supabase as any).rpc("buy_subsidiary_asset_atomic", {
         p_kind: "venue_staff", p_subsidiary_id: staff.venue_id, p_fields: staff,
