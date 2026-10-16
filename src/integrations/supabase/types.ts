@@ -1021,6 +1021,36 @@ export type Database = {
           },
         ]
       }
+      atomic_business_hire_requests: {
+        Row: {
+          actor_user_id: string
+          created_at: string
+          employee_id: string
+          employee_name: string
+          kind: string
+          parent_id: string
+          request_id: string
+        }
+        Insert: {
+          actor_user_id: string
+          created_at?: string
+          employee_id: string
+          employee_name: string
+          kind: string
+          parent_id: string
+          request_id: string
+        }
+        Update: {
+          actor_user_id?: string
+          created_at?: string
+          employee_id?: string
+          employee_name?: string
+          kind?: string
+          parent_id?: string
+          request_id?: string
+        }
+        Relationships: []
+      }
       audience_memory: {
         Row: {
           avg_experience_score: number | null
@@ -7030,6 +7060,73 @@ export type Database = {
           },
           {
             foreignKeyName: "chart_featured_songs_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chart_notification_cooldowns: {
+        Row: {
+          chart_type: string
+          id: string
+          last_notified_at: string
+          profile_id: string
+          song_id: string
+        }
+        Insert: {
+          chart_type: string
+          id?: string
+          last_notified_at?: string
+          profile_id: string
+          song_id: string
+        }
+        Update: {
+          chart_type?: string
+          id?: string
+          last_notified_at?: string
+          profile_id?: string
+          song_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chart_notification_cooldowns_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chart_notification_cooldowns_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chart_notification_cooldowns_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "chart_notification_cooldowns_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "chart_notification_cooldowns_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chart_notification_cooldowns_song_id_fkey"
             columns: ["song_id"]
             isOneToOne: false
             referencedRelation: "songs"
@@ -13873,6 +13970,55 @@ export type Database = {
             columns: ["discovery_venue_id"]
             isOneToOne: false
             referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      education_video_reward_claims: {
+        Row: {
+          claimed_at: string
+          id: string
+          profile_id: string
+          skill_slug: string | null
+          video_id: string
+          xp_awarded: number
+        }
+        Insert: {
+          claimed_at?: string
+          id?: string
+          profile_id: string
+          skill_slug?: string | null
+          video_id: string
+          xp_awarded?: number
+        }
+        Update: {
+          claimed_at?: string
+          id?: string
+          profile_id?: string
+          skill_slug?: string | null
+          video_id?: string
+          xp_awarded?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "education_video_reward_claims_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "education_video_reward_claims_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "education_video_reward_claims_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "education_youtube_resources"
             referencedColumns: ["id"]
           },
         ]
@@ -31733,6 +31879,49 @@ export type Database = {
           },
         ]
       }
+      gig_stage_visual_snapshots: {
+        Row: {
+          captured_at: string
+          gig_id: string
+          profile_id: string
+          visual_snapshot: Json
+        }
+        Insert: {
+          captured_at?: string
+          gig_id: string
+          profile_id: string
+          visual_snapshot: Json
+        }
+        Update: {
+          captured_at?: string
+          gig_id?: string
+          profile_id?: string
+          visual_snapshot?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gig_stage_visual_snapshots_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gig_stage_visual_snapshots_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gig_stage_visual_snapshots_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gig_support_slots: {
         Row: {
           completed_at: string | null
@@ -32348,6 +32537,95 @@ export type Database = {
           years_active?: number | null
         }
         Relationships: []
+      }
+      halloween_2026_first_rewards: {
+        Row: {
+          gig_id: string
+          granted_at: string
+          profile_id: string
+        }
+        Insert: {
+          gig_id: string
+          granted_at?: string
+          profile_id: string
+        }
+        Update: {
+          gig_id?: string
+          granted_at?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "halloween_2026_first_rewards_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "halloween_2026_first_rewards_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "halloween_2026_first_rewards_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      halloween_2026_gig_outfits: {
+        Row: {
+          first_reward_awarded: boolean
+          gig_id: string
+          performance_pct: number
+          profile_id: string
+          snapshotted_at: string
+          was_equipped: boolean
+        }
+        Insert: {
+          first_reward_awarded?: boolean
+          gig_id: string
+          performance_pct?: number
+          profile_id: string
+          snapshotted_at?: string
+          was_equipped: boolean
+        }
+        Update: {
+          first_reward_awarded?: boolean
+          gig_id?: string
+          performance_pct?: number
+          profile_id?: string
+          snapshotted_at?: string
+          was_equipped?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "halloween_2026_gig_outfits_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "halloween_2026_gig_outfits_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "halloween_2026_gig_outfits_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       honeymoons: {
         Row: {
@@ -34801,6 +35079,54 @@ export type Database = {
           },
         ]
       }
+      label_staff_hire_requests: {
+        Row: {
+          actor_user_id: string
+          created_at: string
+          employee_name: string
+          employee_role: string
+          label_id: string
+          request_id: string
+          specialty_genre: string | null
+          staff_id: string
+        }
+        Insert: {
+          actor_user_id: string
+          created_at?: string
+          employee_name: string
+          employee_role: string
+          label_id: string
+          request_id: string
+          specialty_genre?: string | null
+          staff_id: string
+        }
+        Update: {
+          actor_user_id?: string
+          created_at?: string
+          employee_name?: string
+          employee_role?: string
+          label_id?: string
+          request_id?: string
+          specialty_genre?: string | null
+          staff_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "label_staff_hire_requests_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "labels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "label_staff_hire_requests_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "label_staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       label_territories: {
         Row: {
           created_at: string | null
@@ -35993,6 +36319,58 @@ export type Database = {
             columns: ["logistics_company_id"]
             isOneToOne: false
             referencedRelation: "logistics_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      logistics_fleet_purchase_requests: {
+        Row: {
+          actor_user_id: string
+          catalog_id: string
+          created_at: string
+          logistics_company_id: string
+          request_id: string
+          vehicle_id: string
+          vehicle_name: string
+        }
+        Insert: {
+          actor_user_id: string
+          catalog_id: string
+          created_at?: string
+          logistics_company_id: string
+          request_id: string
+          vehicle_id: string
+          vehicle_name: string
+        }
+        Update: {
+          actor_user_id?: string
+          catalog_id?: string
+          created_at?: string
+          logistics_company_id?: string
+          request_id?: string
+          vehicle_id?: string
+          vehicle_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logistics_fleet_purchase_requests_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "logistics_fleet_purchase_requests_logistics_company_id_fkey"
+            columns: ["logistics_company_id"]
+            isOneToOne: false
+            referencedRelation: "logistics_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "logistics_fleet_purchase_requests_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "logistics_fleet_vehicles"
             referencedColumns: ["id"]
           },
         ]
@@ -41244,6 +41622,7 @@ export type Database = {
           is_active: boolean | null
           product_id: string
           profile_id: string | null
+          source_purchase_id: string | null
           started_at: string | null
           user_id: string
         }
@@ -41256,6 +41635,7 @@ export type Database = {
           is_active?: boolean | null
           product_id: string
           profile_id?: string | null
+          source_purchase_id?: string | null
           started_at?: string | null
           user_id: string
         }
@@ -41268,6 +41648,7 @@ export type Database = {
           is_active?: boolean | null
           product_id?: string
           profile_id?: string | null
+          source_purchase_id?: string | null
           started_at?: string | null
           user_id?: string
         }
@@ -41291,6 +41672,13 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_active_boosts_source_purchase_id_fkey"
+            columns: ["source_purchase_id"]
+            isOneToOne: false
+            referencedRelation: "underworld_purchases"
             referencedColumns: ["id"]
           },
         ]
@@ -45425,6 +45813,126 @@ export type Database = {
             columns: ["city_id"]
             isOneToOne: false
             referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_profiles: {
+        Row: {
+          available_for_collaboration: boolean
+          available_for_employment: boolean
+          available_for_gigs: boolean
+          available_for_session_work: boolean
+          available_for_social: boolean
+          available_for_teaching: boolean
+          biography: string | null
+          created_at: string
+          looking_for_band: boolean
+          looking_for_members: boolean
+          open_to_band_status: string | null
+          open_to_work_status: string | null
+          preferred_genres: string[]
+          preferred_roles: string[]
+          primary_instrument: string | null
+          profile_id: string
+          secondary_instruments: string[]
+          show_achievements: boolean
+          show_activity: boolean
+          show_career_history: boolean
+          show_city: boolean
+          show_employment: boolean
+          show_last_active: boolean
+          show_online_status: boolean
+          show_schedule_availability: boolean
+          show_skills: boolean
+          skill_visibility: Database["public"]["Enums"]["profile_skill_visibility"]
+          songwriting_specialisms: string[]
+          status_message: string | null
+          updated_at: string
+          visibility: Database["public"]["Enums"]["profile_visibility_scope"]
+          vocal_capability: string | null
+        }
+        Insert: {
+          available_for_collaboration?: boolean
+          available_for_employment?: boolean
+          available_for_gigs?: boolean
+          available_for_session_work?: boolean
+          available_for_social?: boolean
+          available_for_teaching?: boolean
+          biography?: string | null
+          created_at?: string
+          looking_for_band?: boolean
+          looking_for_members?: boolean
+          open_to_band_status?: string | null
+          open_to_work_status?: string | null
+          preferred_genres?: string[]
+          preferred_roles?: string[]
+          primary_instrument?: string | null
+          profile_id: string
+          secondary_instruments?: string[]
+          show_achievements?: boolean
+          show_activity?: boolean
+          show_career_history?: boolean
+          show_city?: boolean
+          show_employment?: boolean
+          show_last_active?: boolean
+          show_online_status?: boolean
+          show_schedule_availability?: boolean
+          show_skills?: boolean
+          skill_visibility?: Database["public"]["Enums"]["profile_skill_visibility"]
+          songwriting_specialisms?: string[]
+          status_message?: string | null
+          updated_at?: string
+          visibility?: Database["public"]["Enums"]["profile_visibility_scope"]
+          vocal_capability?: string | null
+        }
+        Update: {
+          available_for_collaboration?: boolean
+          available_for_employment?: boolean
+          available_for_gigs?: boolean
+          available_for_session_work?: boolean
+          available_for_social?: boolean
+          available_for_teaching?: boolean
+          biography?: string | null
+          created_at?: string
+          looking_for_band?: boolean
+          looking_for_members?: boolean
+          open_to_band_status?: string | null
+          open_to_work_status?: string | null
+          preferred_genres?: string[]
+          preferred_roles?: string[]
+          primary_instrument?: string | null
+          profile_id?: string
+          secondary_instruments?: string[]
+          show_achievements?: boolean
+          show_activity?: boolean
+          show_career_history?: boolean
+          show_city?: boolean
+          show_employment?: boolean
+          show_last_active?: boolean
+          show_online_status?: boolean
+          show_schedule_availability?: boolean
+          show_skills?: boolean
+          skill_visibility?: Database["public"]["Enums"]["profile_skill_visibility"]
+          songwriting_specialisms?: string[]
+          status_message?: string | null
+          updated_at?: string
+          visibility?: Database["public"]["Enums"]["profile_visibility_scope"]
+          vocal_capability?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_profiles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_profiles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -50264,6 +50772,8 @@ export type Database = {
           calculation_version: string | null
           city_id: string | null
           completed_at: string | null
+          completion_claim_expires_at: string | null
+          completion_claim_id: string | null
           created_at: string | null
           duration_hours: number
           final_master_quality: number | null
@@ -50297,6 +50807,8 @@ export type Database = {
           calculation_version?: string | null
           city_id?: string | null
           completed_at?: string | null
+          completion_claim_expires_at?: string | null
+          completion_claim_id?: string | null
           created_at?: string | null
           duration_hours?: number
           final_master_quality?: number | null
@@ -50330,6 +50842,8 @@ export type Database = {
           calculation_version?: string | null
           city_id?: string | null
           completed_at?: string | null
+          completion_claim_expires_at?: string | null
+          completion_claim_id?: string | null
           created_at?: string | null
           duration_hours?: number
           final_master_quality?: number | null
@@ -56926,6 +57440,7 @@ export type Database = {
           song_rating: number | null
           songwriting_breakdown: Json | null
           songwriting_project_id: string | null
+          source_recording_session_id: string | null
           status: string
           streams: number
           theme_id: string | null
@@ -56998,6 +57513,7 @@ export type Database = {
           song_rating?: number | null
           songwriting_breakdown?: Json | null
           songwriting_project_id?: string | null
+          source_recording_session_id?: string | null
           status?: string
           streams?: number
           theme_id?: string | null
@@ -57070,6 +57586,7 @@ export type Database = {
           song_rating?: number | null
           songwriting_breakdown?: Json | null
           songwriting_project_id?: string | null
+          source_recording_session_id?: string | null
           status?: string
           streams?: number
           theme_id?: string | null
@@ -57142,6 +57659,13 @@ export type Database = {
             columns: ["songwriting_project_id"]
             isOneToOne: false
             referencedRelation: "songwriting_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "songs_source_recording_session_id_fkey"
+            columns: ["source_recording_session_id"]
+            isOneToOne: false
+            referencedRelation: "recording_sessions"
             referencedColumns: ["id"]
           },
           {
@@ -58656,6 +59180,107 @@ export type Database = {
           event_id?: string
           stripe_subscription_id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      subsidiary_equipment_purchase_requests: {
+        Row: {
+          actor_user_id: string
+          catalog_id: string
+          created_at: string
+          kind: string
+          request_id: string
+          result: Json
+          subsidiary_id: string
+        }
+        Insert: {
+          actor_user_id: string
+          catalog_id: string
+          created_at?: string
+          kind: string
+          request_id: string
+          result: Json
+          subsidiary_id: string
+        }
+        Update: {
+          actor_user_id?: string
+          catalog_id?: string
+          created_at?: string
+          kind?: string
+          request_id?: string
+          result?: Json
+          subsidiary_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subsidiary_equipment_purchase_requests_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subsidiary_staff_hire_requests: {
+        Row: {
+          actor_user_id: string
+          created_at: string
+          kind: string
+          request_hash: string
+          request_id: string
+          result: Json
+          subsidiary_id: string
+        }
+        Insert: {
+          actor_user_id: string
+          created_at?: string
+          kind: string
+          request_hash: string
+          request_id: string
+          result: Json
+          subsidiary_id: string
+        }
+        Update: {
+          actor_user_id?: string
+          created_at?: string
+          kind?: string
+          request_hash?: string
+          request_id?: string
+          result?: Json
+          subsidiary_id?: string
+        }
+        Relationships: []
+      }
+      subsidiary_upgrade_purchase_requests: {
+        Row: {
+          actor_user_id: string
+          created_at: string
+          kind: string
+          request_id: string
+          result: Json
+          subsidiary_id: string
+          upgrade_level: number
+          upgrade_type: string
+        }
+        Insert: {
+          actor_user_id: string
+          created_at?: string
+          kind: string
+          request_id: string
+          result: Json
+          subsidiary_id: string
+          upgrade_level: number
+          upgrade_type: string
+        }
+        Update: {
+          actor_user_id?: string
+          created_at?: string
+          kind?: string
+          request_id?: string
+          result?: Json
+          subsidiary_id?: string
+          upgrade_level?: number
+          upgrade_type?: string
         }
         Relationships: []
       }
@@ -63618,14 +64243,17 @@ export type Database = {
         Row: {
           applied_at: string | null
           cash_amount: number | null
+          client_request_id: string | null
           created_at: string | null
           effects_applied: Json | null
           expires_at: string | null
+          gifted_from_purchase_id: string | null
           id: string
           is_used: boolean | null
           paid_with: string
           product_id: string
           profile_id: string | null
+          purchased_addiction_type: string | null
           quantity: number | null
           token_amount: number | null
           token_id: string | null
@@ -63634,14 +64262,17 @@ export type Database = {
         Insert: {
           applied_at?: string | null
           cash_amount?: number | null
+          client_request_id?: string | null
           created_at?: string | null
           effects_applied?: Json | null
           expires_at?: string | null
+          gifted_from_purchase_id?: string | null
           id?: string
           is_used?: boolean | null
           paid_with: string
           product_id: string
           profile_id?: string | null
+          purchased_addiction_type?: string | null
           quantity?: number | null
           token_amount?: number | null
           token_id?: string | null
@@ -63650,20 +64281,30 @@ export type Database = {
         Update: {
           applied_at?: string | null
           cash_amount?: number | null
+          client_request_id?: string | null
           created_at?: string | null
           effects_applied?: Json | null
           expires_at?: string | null
+          gifted_from_purchase_id?: string | null
           id?: string
           is_used?: boolean | null
           paid_with?: string
           product_id?: string
           profile_id?: string | null
+          purchased_addiction_type?: string | null
           quantity?: number | null
           token_amount?: number | null
           token_id?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "underworld_purchases_gifted_from_purchase_id_fkey"
+            columns: ["gifted_from_purchase_id"]
+            isOneToOne: false
+            referencedRelation: "underworld_purchases"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "underworld_purchases_product_id_fkey"
             columns: ["product_id"]
@@ -65717,6 +66358,10 @@ export type Database = {
         Args: { p_band_id: string; p_profile_id: string }
         Returns: boolean
       }
+      _buy_subsidiary_catalog_equipment_atomic: {
+        Args: { p_fields: Json; p_kind: string; p_subsidiary_id: string }
+        Returns: Json
+      }
       _caller_profile_id: { Args: never; Returns: string }
       _can_manage_label: { Args: { p_label_id: string }; Returns: boolean }
       _claim_player_banking_operation: {
@@ -66448,6 +67093,10 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: boolean
       }
+      _hire_subsidiary_staff_atomic: {
+        Args: { p_fields: Json; p_kind: string; p_subsidiary_id: string }
+        Returns: Json
+      }
       _jam_h1_finalize: { Args: { p_session_id: string }; Returns: undefined }
       _jam_h1_percent: {
         Args: { p_salt?: number; p_seed: number }
@@ -66991,6 +67640,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      admin_halloween_2026_launch_preflight: { Args: never; Returns: Json }
       admin_list_referral_campaigns: { Args: never; Returns: Json }
       admin_list_reset_archives: {
         Args: never
@@ -67904,6 +68554,19 @@ export type Database = {
         Args: { p_card: Json; p_profile_id: string; p_vehicle_id: string }
         Returns: undefined
       }
+      buy_subsidiary_asset_atomic: {
+        Args: { p_fields: Json; p_kind: string; p_subsidiary_id: string }
+        Returns: Json
+      }
+      buy_underworld_product_atomic: {
+        Args: {
+          p_payment_method: string
+          p_product_id: string
+          p_profile_id: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
       calculate_bail_amount: {
         Args: { p_imprisonment_id: string }
         Returns: number
@@ -68124,6 +68787,10 @@ export type Database = {
       can_manage_twaater_band: { Args: { _band_id: string }; Returns: boolean }
       can_negotiate_for_band: {
         Args: { p_band_id: string; p_profile_id?: string }
+        Returns: boolean
+      }
+      can_profile_receive_dm: {
+        Args: { recipient_profile_id: string; sender_profile_id: string }
         Returns: boolean
       }
       can_receive_band_invitation: {
@@ -68656,6 +69323,10 @@ export type Database = {
           requested_views: Json
         }[]
       }
+      claim_recording_completion: {
+        Args: { p_session_id: string }
+        Returns: string
+      }
       claim_referral_milestones: {
         Args: { p_profile_id: string }
         Returns: Json
@@ -68728,6 +69399,10 @@ export type Database = {
       clothing_slots_conflict: {
         Args: { p_first: string; p_second: string }
         Returns: boolean
+      }
+      collect_crafting_session_atomic: {
+        Args: { p_profile_id: string; p_session_id: string }
+        Returns: Json
       }
       complete_child_birth_authoritative: {
         Args: { p_name: string; p_request_id: string }
@@ -68882,6 +69557,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      complete_legacy_skill_book_atomic: {
+        Args: { p_book_id: string; p_profile_id: string }
+        Returns: Json
+      }
       complete_open_mic_atomic: {
         Args: { p_performance_id: string; p_user_id: string }
         Returns: Json
@@ -69007,6 +69686,10 @@ export type Database = {
           twaat_id: string
         }[]
       }
+      consume_underworld_item_atomic: {
+        Args: { p_profile_id: string; p_purchase_id: string }
+        Returns: Json
+      }
       contribute_my_personal_funds_to_band: {
         Args: {
           p_amount_minor: number
@@ -69027,6 +69710,10 @@ export type Database = {
           p_from_account: string
           p_goal_id: string
         }
+        Returns: undefined
+      }
+      convert_ap_to_sxp_atomic: {
+        Args: { p_amount: number; p_metadata?: Json; p_profile_id: string }
         Returns: undefined
       }
       convert_child_to_playable:
@@ -69241,6 +69928,10 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      create_chart_entry_notification: {
+        Args: { p_chart_entry_id: string; p_profile_id: string }
+        Returns: string
       }
       create_custom_luthiery_instrument: {
         Args: {
@@ -69829,6 +70520,10 @@ export type Database = {
         }
         Returns: number
       }
+      disband_band_atomic: {
+        Args: { p_band_id: string; p_leader_profile_id: string }
+        Returns: boolean
+      }
       discover_master: {
         Args: {
           p_mentor_id: string
@@ -69999,6 +70694,7 @@ export type Database = {
           suggestion_slug: string
         }[]
       }
+      expire_band_recruitment_records: { Args: never; Returns: number }
       expire_old_gig_offers: { Args: never; Returns: undefined }
       expire_stale_pr_offers: { Args: never; Returns: number }
       fail_clothing_preview_job: {
@@ -70517,6 +71213,10 @@ export type Database = {
         }[]
       }
       finalise_social_season: { Args: { p_season_id: string }; Returns: Json }
+      finalize_recording_completion: {
+        Args: { p_claim_id: string; p_session_id: string }
+        Returns: boolean
+      }
       finance_credit_owner:
         | {
             Args: {
@@ -71272,6 +71972,10 @@ export type Database = {
       }
       get_gig_preparation_setlist: { Args: { p_gig_id: string }; Returns: Json }
       get_gig_recovery_modifier: { Args: { p_gig_id: string }; Returns: Json }
+      get_halloween_2026_gig_bonus: {
+        Args: { p_gig_id: string }
+        Returns: Json
+      }
       get_jam_session_workspace: {
         Args: { p_session_id: string }
         Returns: Json
@@ -71284,6 +71988,10 @@ export type Database = {
       get_media_market_benchmarks: { Args: never; Returns: Json }
       get_moderation_report_queue: {
         Args: { p_limit?: number; p_status?: string }
+        Returns: Json
+      }
+      get_mutual_friend_counts: {
+        Args: { p_other_profile_ids: string[]; p_profile_id: string }
         Returns: Json
       }
       get_my_band_festival_appearances: { Args: never; Returns: Json }
@@ -71631,6 +72339,10 @@ export type Database = {
           units: number
         }[]
       }
+      get_safe_friend_suggestions: {
+        Args: { p_limit?: number; p_profile_id: string }
+        Returns: Json
+      }
       get_scene_story_opportunities: {
         Args: { p_profile_id: string; p_surface: string }
         Returns: Json
@@ -71897,6 +72609,10 @@ export type Database = {
         Args: { _profile_id: string }
         Returns: undefined
       }
+      halloween_2026_bonus_for_roll: {
+        Args: { p_roll: number }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -71958,6 +72674,84 @@ export type Database = {
           p_wage_cents: number
         }
         Returns: Json
+      }
+      hire_label_staff_atomic: {
+        Args: {
+          p_label_id: string
+          p_name: string
+          p_request_id: string
+          p_role: string
+          p_salary_monthly: number
+          p_skill_level: number
+          p_specialty_genre: string
+        }
+        Returns: {
+          created_at: string
+          hired_at: string
+          id: string
+          label_id: string | null
+          name: string
+          performance_rating: number | null
+          role: string
+          salary_monthly: number
+          skill_level: number
+          specialty_genre: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "label_staff"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      hire_logistics_driver_atomic: {
+        Args: { p_driver: Json; p_logistics_id: string }
+        Returns: {
+          accidents: number | null
+          created_at: string | null
+          experience_years: number | null
+          hired_at: string | null
+          id: string
+          is_npc: boolean | null
+          license_type: string | null
+          logistics_company_id: string
+          name: string
+          profile_id: string | null
+          reliability_rating: number | null
+          salary_per_day: number | null
+          skill_level: number | null
+          status: string | null
+          total_km_driven: number | null
+          total_trips_completed: number | null
+          updated_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "logistics_drivers"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      hire_merch_factory_worker_atomic: {
+        Args: { p_factory_id: string; p_worker: Json }
+        Returns: {
+          created_at: string
+          experience_months: number
+          factory_id: string | null
+          hired_at: string
+          id: string
+          morale: number
+          name: string
+          role: string
+          salary_weekly: number
+          skill_level: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "merch_factory_workers"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       hire_player: {
         Args: { p_job_id: string; p_profile_id: string }
@@ -72182,6 +72976,7 @@ export type Database = {
         }
         Returns: Json
       }
+      leave_band_atomic: { Args: { p_band_id: string }; Returns: boolean }
       leave_community_mentorship: {
         Args: { p_match_id: string }
         Returns: Json
@@ -72891,6 +73686,10 @@ export type Database = {
         Args: { p_submission_id: string }
         Returns: Json
       }
+      process_skill_quest_xp_claim: {
+        Args: { p_claim_id: string }
+        Returns: Json
+      }
       process_substance_aftereffects: {
         Args: { p_profile_id: string }
         Returns: Json
@@ -73078,6 +73877,14 @@ export type Database = {
         }
         Returns: Json
       }
+      purchase_crafting_material_atomic: {
+        Args: {
+          p_material_id: string
+          p_profile_id: string
+          p_quantity: number
+        }
+        Returns: Json
+      }
       purchase_equipment_atomic: {
         Args: {
           p_equipment_id: string
@@ -73162,6 +73969,54 @@ export type Database = {
         Args: { p_label_id: string; p_upgrade_type: string }
         Returns: Json
       }
+      purchase_logistics_fleet_vehicle_atomic: {
+        Args: { p_logistics_id: string; p_vehicle: Json }
+        Returns: {
+          assigned_driver_id: string | null
+          capacity_units: number | null
+          condition_percent: number | null
+          created_at: string | null
+          fuel_efficiency: number | null
+          id: string
+          last_maintenance_km: number | null
+          logistics_company_id: string
+          name: string
+          next_maintenance_due: string | null
+          purchase_cost: number | null
+          purchase_date: string | null
+          status: string | null
+          total_km_traveled: number | null
+          updated_at: string | null
+          vehicle_catalog_id: string | null
+          vehicle_type: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "logistics_fleet_vehicles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      purchase_logistics_upgrade_atomic: {
+        Args: { p_logistics_id: string; p_upgrade_type: string }
+        Returns: {
+          active: boolean | null
+          cost: number
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          logistics_company_id: string
+          purchased_at: string | null
+          upgrade_level: number | null
+          upgrade_type: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "logistics_upgrades"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       purchase_luthiery_shop_listing: {
         Args: { p_listing_id: string; p_profile_id: string }
         Returns: Json
@@ -73178,6 +74033,27 @@ export type Database = {
           p_vinyl_color?: string
         }
         Returns: string
+      }
+      purchase_security_firm_upgrade_atomic: {
+        Args: { p_firm_id: string; p_upgrade_type: string }
+        Returns: {
+          cost: number
+          created_at: string | null
+          effect_description: string | null
+          effect_value: number
+          id: string
+          installed_at: string | null
+          level: number
+          name: string
+          security_firm_id: string
+          upgrade_type: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "security_firm_upgrades"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       purchase_skill_book: {
         Args: { p_book_id: string; p_profile_id: string }
@@ -73264,6 +74140,10 @@ export type Database = {
         Returns: Json
       }
       reconcile_my_festival_attendance: { Args: never; Returns: Json }
+      reconcile_my_game_notifications: {
+        Args: { p_profile_id: string }
+        Returns: number
+      }
       reconcile_profile_achievements: {
         Args: { p_profile_id: string }
         Returns: number
@@ -73441,6 +74321,10 @@ export type Database = {
       release_merch_variant_stock: {
         Args: { p_quantity: number; p_variant_id: string }
         Returns: Json
+      }
+      release_recording_completion: {
+        Args: { p_claim_id: string; p_session_id: string }
+        Returns: undefined
       }
       remove_gig_member_luthiery_loadout: {
         Args: { p_gig_id: string }
@@ -74250,6 +75134,27 @@ export type Database = {
         Args: { p_election_id: string; p_party_id: string }
         Returns: undefined
       }
+      reward_education_video_atomic: {
+        Args: {
+          p_profile_id: string
+          p_skill_slug?: string
+          p_video_id: string
+          p_video_name: string
+        }
+        Returns: Json
+      }
+      rockmundo_authorized_social_viewer: {
+        Args: { p_viewer_profile_id?: string }
+        Returns: string
+      }
+      rockmundo_can_view_social_profile: {
+        Args: { p_target: string; p_viewer: string }
+        Returns: boolean
+      }
+      rockmundo_crafting_effective_skill_level: {
+        Args: { p_profile_id: string; p_skill_slug: string }
+        Returns: number
+      }
       rockmundo_game_date: {
         Args: { _real_date?: string }
         Returns: {
@@ -74267,6 +75172,19 @@ export type Database = {
         }[]
       }
       rockmundo_game_year: { Args: { p_at?: string }; Returns: number }
+      rockmundo_persist_music_event: {
+        Args: {
+          p_category: string
+          p_key: string
+          p_message: string
+          p_path: string
+          p_profile_id: string
+          p_title: string
+          p_type: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
       roll_social_seasons: { Args: never; Returns: Json }
       rotate_travelling_professors: {
         Args: { p_month?: string }
@@ -74286,6 +75204,10 @@ export type Database = {
           p_festival_edition_id: string
           p_idempotency_key: string
         }
+        Returns: Json
+      }
+      salvage_equipment_atomic: {
+        Args: { p_equipment_id: string; p_profile_id: string }
         Returns: Json
       }
       save_festival_artist_programme: {
@@ -75219,6 +76141,27 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "player_book_reading_sessions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      start_crafting_session_atomic: {
+        Args: { p_profile_id: string; p_recipe_id: string }
+        Returns: {
+          bonus_stats: Json | null
+          completes_at: string
+          created_at: string
+          id: string
+          profile_id: string
+          quality_roll: number | null
+          recipe_id: string
+          result_equipment_id: string | null
+          started_at: string
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "crafting_sessions"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -76852,6 +77795,14 @@ export type Database = {
         }
         Returns: number
       }
+      transfer_band_leadership_atomic: {
+        Args: {
+          p_band_id: string
+          p_current_leader_id: string
+          p_new_leader_id: string
+        }
+        Returns: undefined
+      }
       transfer_between_my_bank_accounts: {
         Args: {
           p_amount_minor: number
@@ -76962,6 +77913,10 @@ export type Database = {
             Args: { actor_profile_id?: string; target_profile_id: string }
             Returns: boolean
           }
+      underworld_safe_instant_effects: {
+        Args: { p_effects: Json }
+        Returns: boolean
+      }
       university_visiting_professor_bonus: {
         Args: { p_at?: string; p_skill_slug: string; p_university_id: string }
         Returns: number
@@ -77693,7 +78648,12 @@ export type Database = {
         | "none"
         | "friends_and_band"
         | "existing_conversations"
-      profile_visibility_scope: "public" | "friends" | "private"
+      profile_skill_visibility: "exact" | "broad" | "hidden"
+      profile_visibility_scope:
+        | "public"
+        | "friends"
+        | "private"
+        | "band_members"
       show_type_enum: "concert" | "festival" | "private" | "street"
       social_invite_kind:
         | "gig"
@@ -78131,7 +79091,13 @@ export const Constants = {
         "friends_and_band",
         "existing_conversations",
       ],
-      profile_visibility_scope: ["public", "friends", "private"],
+      profile_skill_visibility: ["exact", "broad", "hidden"],
+      profile_visibility_scope: [
+        "public",
+        "friends",
+        "private",
+        "band_members",
+      ],
       show_type_enum: ["concert", "festival", "private", "street"],
       social_invite_kind: [
         "gig",
