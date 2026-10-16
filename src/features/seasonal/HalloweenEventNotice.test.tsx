@@ -22,7 +22,7 @@ vi.mock("@/components/ui/dialog", () => ({
 }));
 const live = { ...DEFAULT_HALLOWEEN_EVENT, enabled: true, rewards_live: true };
 function setEvent(event: typeof live) {
-  vi.mocked(useSiteConfig).mockReturnValue({ data: { halloween: event } } as ReturnType<typeof useSiteConfig>);
+  vi.mocked(useSiteConfig).mockReturnValue({ data: { halloween: event, halloweenHatPublished: true } } as ReturnType<typeof useSiteConfig>);
 }
 const Location = () => <output data-testid="location">{useLocation().pathname}</output>;
 const wrap = (ui: ReactNode) => render(<MemoryRouter initialEntries={["/home"]}>{ui}<Location /></MemoryRouter>);
@@ -86,6 +86,21 @@ describe("Halloween login event", () => {
 });
 
 describe("event reminders", () => {
+  it("hides all public and logged-in promotions while the hat is unpublished, even with both feature flags armed", () => {
+    vi.mocked(useSiteConfig).mockReturnValue({
+      data: { halloween: live, halloweenHatPublished: false },
+    } as ReturnType<typeof useSiteConfig>);
+    wrap(<>
+      <HalloweenLoginAnnouncement userId="u1" profileId="c1" />
+      <HalloweenDashboardBanner />
+      <HalloweenPublicBanner />
+    </>);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.queryByRole("region", { name: "Active Halloween event" })).toBeNull();
+    expect(screen.queryByText(/Haunted Stage 2026 is live!/)).toBeNull();
+  });
+
+
   it("keeps an event card visible after dismissing the welcome and has a working details action", () => {
     localStorage.setItem(halloweenDismissalKey("u1","c1"), "seen");
     wrap(<><HalloweenLoginAnnouncement userId="u1" profileId="c1" /><HalloweenDashboardBanner /></>);
