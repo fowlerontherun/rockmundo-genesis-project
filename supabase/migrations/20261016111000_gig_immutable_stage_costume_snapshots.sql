@@ -31,7 +31,13 @@ BEGIN
     jsonb_build_object(
       'version', 1,
       'appearance', psa.appearance,
-      'legacy', to_jsonb(pac),
+      'legacy', CASE WHEN pac.profile_id IS NULL THEN NULL ELSE jsonb_build_object(
+        'profile_id', performers.profile_id,
+        'gender', pac.gender, 'skin_tone', pac.skin_tone,
+        'hair_color', pac.hair_color, 'height', pac.height,
+        'shirt_color', pac.shirt_color, 'pants_color', pac.pants_color,
+        'shoes_color', pac.shoes_color
+      ) END,
       'clothing', coalesce((
         SELECT jsonb_agg(
           jsonb_build_object(
