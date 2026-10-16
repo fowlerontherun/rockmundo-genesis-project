@@ -44,6 +44,8 @@ describe('Halloween 2026 cross-layer gig contract', () => {
     expect(completeGig).toContain('Math.min(25, clothingPerformancePct + halloweenPerformancePct)');
     expect(completeGig).toContain('Math.min(25, ratingBeforeClothingBonus * (1 + combinedPerformancePct / 100))');
     expect(rewards).toContain("gp.lineup_status IN ('selected','performed')");
+    expect(rewards).toContain("NOT (NEW.xp_breakdown ? 'clothing_performance')");
+    expect(rewards).toContain('trg_apply_clothing_bonus_to_gig_outcome');
   });
 
   it('uses date-specific gates and checks actual start and completion dates', () => {
