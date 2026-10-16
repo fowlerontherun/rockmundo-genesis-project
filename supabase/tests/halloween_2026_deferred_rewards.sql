@@ -37,7 +37,13 @@ BEGIN
   IF (SELECT count(*) FROM public.halloween_2026_gig_outfits
       WHERE gig_id IN (v_gig_a,v_gig_b) AND was_equipped)=2
   THEN NULL;
-  ELSE RAISE EXCEPTION 'Frozen eligible snapshots were not captured'; END IF;
+  ELSE RAISE EXCEPTION 'Frozen eligible snapshots were not captured: %, config %, gigs %',
+    (SELECT coalesce(jsonb_agg(jsonb_build_object('gig',gig_id,'wearer',profile_id,
+      'worn',was_equipped)),'[]'::jsonb) FROM public.halloween_2026_gig_outfits),
+    (SELECT value FROM public.system_settings WHERE key='halloween_2026_event'),
+    (SELECT coalesce(jsonb_agg(jsonb_build_object('id',id,'status',status,
+      'started',started_at)),'[]'::jsonb) FROM public.gigs);
+  END IF;
 
   -- Completed gigs can precede performed song rows and outcome completion.
   UPDATE public.gigs
