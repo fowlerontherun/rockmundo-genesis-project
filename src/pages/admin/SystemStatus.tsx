@@ -78,7 +78,10 @@ export default function SystemStatusAdmin() {
   } = useQuery({
     queryKey: ["admin-halloween-2026-launch-preflight"],
     queryFn: async (): Promise<HalloweenPreflight> => {
-      const { data: result, error } = await (supabase as any).rpc("admin_halloween_2026_launch_preflight");
+      const client = supabase as unknown as {
+        rpc: (name: string) => Promise<{ data: unknown; error: { message: string } | null }>;
+      };
+      const { data: result, error } = await client.rpc("admin_halloween_2026_launch_preflight");
       if (error) throw error;
       return result as HalloweenPreflight;
     },
