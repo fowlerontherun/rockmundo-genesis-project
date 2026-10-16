@@ -8,7 +8,7 @@ VALUES (
  'clothing',false
 );
 SET LOCAL ROLE service_role;
-DO $$
+DO $preflightcheck$preflightcheck$
 DECLARE
  r jsonb;
 BEGIN
@@ -20,9 +20,9 @@ BEGIN
   OR (r->>'rewards_armed')::boolean IS NOT FALSE
  THEN RAISE EXCEPTION 'Halloween server readiness unexpectedly failed: %',r; END IF;
 END;
-$$;
+$preflightcheck$;
 SET LOCAL ROLE authenticated;
-DO $$
+DO $preflightcheck$preflightcheck$
 DECLARE
  denied boolean := false;
 BEGIN
@@ -33,10 +33,10 @@ BEGIN
  END;
  IF NOT denied THEN RAISE EXCEPTION 'Non-admin could read private Halloween preflight'; END IF;
 END;
-$;
+$preflightcheck$;
 -- An authenticated caller must additionally have the DB-backed admin role.
 SET LOCAL test.admin_uid = '20000000-0000-4000-8000-000000000001';
-DO $
+DO $preflightcheck$
 DECLARE
  r jsonb;
 BEGIN
@@ -45,5 +45,5 @@ BEGIN
    RAISE EXCEPTION 'A real authenticated admin was incorrectly blocked';
  END IF;
 END;
-$;
+$preflightcheck$;
 ROLLBACK;
