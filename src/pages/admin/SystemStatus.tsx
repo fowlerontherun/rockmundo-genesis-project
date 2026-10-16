@@ -48,6 +48,7 @@ type HalloweenPreflight = {
 const HALLOWEEN_CHECK_LABELS: Record<string, string> = {
   reward_schema: "Reward tables and bonus RPC",
   pumpkin_hat_catalogue: "Free Avatar V1 Pumpkin Hat",
+  pumpkin_hat_published: "Pumpkin Hat published after visual QA",
   all_characters_gifted: "All playable characters gifted",
   permanent_achievement: "Permanent Pumpkin Headliner achievement",
   settlement_and_snapshot_triggers: "Settlement and gig-start snapshot triggers",

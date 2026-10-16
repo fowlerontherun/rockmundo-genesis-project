@@ -251,7 +251,16 @@ export const useSaveClothingCustomization = () => {
         p_equipped: equipped,
       } as any);
       if (error) throw error;
-      return Array.isArray(data) ? data[0] : data;
+      const persisted = Array.isArray(data) ? data[0] : data;
+      // An RPC that returns no updated ownership row is not an equip success.
+      // Do not show the player a false "equipped" notification or gig bonus.
+      if (!persisted || typeof persisted !== 'object' || !('ownership_id' in persisted)) {
+        throw new Error('The clothing change was not saved. Please retry.');
+      }
+      if (equipped !== null && persisted.is_equipped !== equipped) {
+        throw new Error('The clothing equipment state was not saved. Please retry.');
+      }
+      return persisted;
     },
     onSuccess: (_data, variables) => {
       const savedProfileId = variables.profileId ?? profileId;

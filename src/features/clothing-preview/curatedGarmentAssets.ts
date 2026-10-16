@@ -11,6 +11,15 @@ export type CuratedAssetStatus = NonNullable<ClothingItem['curated_asset_status'
 
 const LIVE_STATUSES = new Set<CuratedAssetStatus>(['validated', 'published']);
 
+/** Procedural Avatar V1 head-bone accessories have no garment GLB.
+ * They may be previewed by their real V1 mesh before curated garment
+ * publication QA, but they never pretend to be published GLB assets. */
+export function isAvatarV1HeadAccessory(item: ClothingItem): boolean {
+  const render = item.render_config as Record<string, unknown> | null | undefined;
+  const slot = String(item.wearable_slot || item.category || '').toLowerCase();
+  return render?.renderFamily === 'avatar-v1-accessory' && ['headwear', 'hat', 'eyewear', 'glasses'].includes(slot);
+}
+
 export function isCuratedClothing(item: ClothingItem) {
   return !!item.curated_asset_key && item.curated_asset_status !== 'legacy';
 }
@@ -20,7 +29,7 @@ export function isCuratedClothingRenderable(item: ClothingItem) {
 }
 
 export function curatedGarmentFile(item: ClothingItem, frame: PlayerAppearance['body']['frame']) {
-  if (curatedDonorSource(item)) return null;
+  if (isAvatarV1HeadAccessory(item) || curatedDonorSource(item)) return null;
   if (!item.curated_asset_key) return null;
   const safe = item.curated_asset_key.replace(/[^a-z0-9._-]/gi, '-');
   return `clothing/${frame}/${safe}.glb`;
@@ -31,7 +40,7 @@ export function requiredCuratedGarmentFiles(
   frame: PlayerAppearance['body']['frame'],
 ) {
   return [...new Set(rows
-    .filter(row => isCuratedClothingRenderable(row.item))
+    .filter(row => !isAvatarV1HeadAccessory(row.item) && isCuratedClothingRenderable(row.item))
     .map(row => curatedGarmentFile(row.item, frame))
     .filter((value): value is string => !!value))];
 }

@@ -26,10 +26,14 @@ function OwnedAccessoryRow({ profileId, item, ownership }: { profileId: string; 
   // Each accessory has its own mutation state, so saving a hat does not block glasses.
   const save = useSaveClothingCustomization();
   return <div className="player-model-accessories__owned">
-    <span>{item.name}</span>
+    <span>{item.name}{' '}
+      <strong className="player-model-editor__hint">
+        {ownership.is_equipped ? '— Wearing on your avatar' : '— Owned, not equipped'}
+      </strong>
+    </span>
     <button type="button" disabled={save.isPending} onClick={() => save.mutate({ profileId, itemId: item.id, variantKey: ownership.selected_variant_key, zoneColours: ownership.customization_config ?? {}, equipped: !ownership.is_equipped })}>
-      {ownership.is_equipped ? "Remove" : "Equip"} {item.name}
+      {save.isPending ? 'Saving…' : ownership.is_equipped ? 'Remove' : 'Equip'} {item.name}
     </button>
-    {save.isError && <p role="alert">The accessory could not be saved. Please retry.</p>}
+    {save.isError && <p role="alert">The accessory could not be saved: {save.error?.message || 'Please retry.'}</p>}
   </div>;
 }
