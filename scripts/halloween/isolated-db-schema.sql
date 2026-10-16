@@ -4,6 +4,18 @@
 CREATE ROLE anon NOLOGIN;
 CREATE ROLE authenticated NOLOGIN;
 CREATE ROLE service_role NOLOGIN;
+CREATE SCHEMA auth;
+CREATE TYPE public.app_role AS ENUM ('admin', 'user');
+CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $
+ SELECT NULL::uuid
+$;
+CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS $
+ SELECT pg_catalog.current_setting('role',true)
+$;
+CREATE FUNCTION public.has_role(_user_id uuid,_role public.app_role)
+RETURNS boolean LANGUAGE sql STABLE AS $
+ SELECT false
+$;
 
 CREATE TABLE public.profiles (
  id uuid PRIMARY KEY, user_id uuid, experience integer NOT NULL DEFAULT 0
