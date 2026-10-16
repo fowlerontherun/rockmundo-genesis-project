@@ -10,7 +10,7 @@ CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $authstub$
  SELECT NULL::uuid
 $authstub$;
 CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS $authstub$
- SELECT pg_catalog.current_setting('role',true)
+ SELECT NULL::text -- SQL-console sessions have no JWT role claim
 $authstub$;
 CREATE FUNCTION public.has_role(_user_id uuid,_role public.app_role)
 RETURNS boolean LANGUAGE sql STABLE AS $authstub$
