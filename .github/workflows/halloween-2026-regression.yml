@@ -7,6 +7,9 @@ on:
       - 'src/pages/admin/SystemStatus.tsx'
       - 'src/pages/admin/HalloweenLaunchPreflight.test.ts'
       - 'src/features/player-model/**'
+      - 'src/features/clothing-preview/**'
+      - 'src/features/gig-demo-3d/performers.ts'
+      - 'src/hooks/useSkinStore.ts'
       - 'src/features/gig-experience/services/**'
       - 'src/features/gig-experience/events/**'
       - 'src/features/gig-experience/viewer/three/**'
@@ -47,6 +50,7 @@ jobs:
             src/pages/admin/HalloweenLaunchPreflight.test.ts \
             src/components/gig/HalloweenGigRewardSummary.test.tsx \
             src/features/player-model/accessories.test.ts \
+            src/features/clothing-preview/curatedGarmentAssets.test.ts \
             src/features/gig-experience/services/replayStageVisuals.test.ts \
             src/features/gig-experience/viewer/three/GigStage3D.test.tsx \
             supabase/functions/generate-gig-viewer-replay/gig-stage-visual-snapshot.integration.test.ts \
@@ -54,4 +58,4 @@ jobs:
             supabase/functions/complete-gig/clothing-performance.integration.test.ts \
             --reporter=default
       - name: Check new Halloween UI lint
-        run: npx eslint src/features/seasonal/HalloweenEventNotice.test.tsx src/components/gig/HalloweenGigRewardSummary.tsx src/components/gig/HalloweenGigRewardSummary.test.tsx
+        run: npx eslint src/features/seasonal/HalloweenEventNotice.test.tsx src/components/gig/HalloweenGigRewardSummary.tsx src/components/gig/HalloweenGigRewardSummary.test.tsx src/features/clothing-preview/curatedGarmentAssets.ts src/features/clothing-preview/curatedGarmentAssets.test.ts src/features/clothing-preview/RichClothingPreview.tsx src/features/clothing-preview/browserPreviewRenderer.ts src/features/gig-demo-3d/performers.ts
