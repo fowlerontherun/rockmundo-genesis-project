@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
+import type { ReactNode } from "react";
 import { useSiteConfig, DEFAULT_HALLOWEEN_EVENT } from "@/hooks/useSiteConfig";
 import { halloweenDismissalKey } from "./halloween2026";
 import { HalloweenDashboardBanner, HalloweenLoginAnnouncement, HalloweenPublicBanner } from "./HalloweenEventNotice";
@@ -13,18 +14,18 @@ vi.mock("@/hooks/useSiteConfig", async (importOriginal) => {
 // Test the event's own open/close, accessibility and CTA behavior without
 // depending on Radix portal animations/focus-trap scheduling.
 vi.mock("@/components/ui/dialog", () => ({
-  Dialog: ({ open, children }: { open: boolean; children: React.ReactNode }) => open ? <div role="dialog">{children}</div> : null,
-  DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
-  DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+  Dialog: ({ open, children }: { open: boolean; children: ReactNode }) => open ? <div role="dialog">{children}</div> : null,
+  DialogContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  DialogHeader: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  DialogTitle: ({ children }: { children: ReactNode }) => <h2>{children}</h2>,
+  DialogDescription: ({ children }: { children: ReactNode }) => <p>{children}</p>,
 }));
 const live = { ...DEFAULT_HALLOWEEN_EVENT, enabled: true, rewards_live: true };
 function setEvent(event: typeof live) {
   vi.mocked(useSiteConfig).mockReturnValue({ data: { halloween: event } } as ReturnType<typeof useSiteConfig>);
 }
 const Location = () => <output data-testid="location">{useLocation().pathname}</output>;
-const wrap = (ui: React.ReactNode) => render(<MemoryRouter initialEntries={["/home"]}>{ui}<Location /></MemoryRouter>);
+const wrap = (ui: ReactNode) => render(<MemoryRouter initialEntries={["/home"]}>{ui}<Location /></MemoryRouter>);
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
