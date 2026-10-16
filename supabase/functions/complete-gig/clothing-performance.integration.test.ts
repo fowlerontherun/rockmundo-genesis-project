@@ -13,7 +13,8 @@ describe('complete-gig clothing performance integration', () => {
   });
 
   it('keeps the authoritative live rating capped at 25', () => {
-    expect(source).toContain("Math.min(25, avgRating * (1 + clothingPerformancePct / 100))");
+    expect(source).toContain("Math.min(25, clothingPerformancePct + halloweenPerformancePct)");
+    expect(source).toContain("Math.min(25, ratingBeforeClothingBonus * (1 + combinedPerformancePct / 100))");
   });
 
   it('persists clothing performance audit data on the gig outcome', () => {
