@@ -14,7 +14,7 @@ describe("Halloween live-event launch protection", () => {
     expect(ui).toContain('rpc("admin_halloween_2026_launch_preflight")');
     expect(ui).toContain("halloweenPreflight?.database_ready");
     expect(ui).toContain("confirmedLiveGig");
-    expect(ui).toContain("I personally verified the deployed Edge Functions and completed a genuine gig");
+    expect(ui).toContain("I verified the deployed Edge Functions, automated XP/achievement tests and a genuine gig-start/replay");
     expect(ui).toContain("setHalloweenRewardsReady");
     expect(ui).toContain('rewards_live: halloweenRewardsReady');
   });
