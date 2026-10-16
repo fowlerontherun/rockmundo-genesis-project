@@ -58,3 +58,5 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/halloween_2026_gig_start_snapshot.sql
       - name: Verify first-time Halloween XP and achievement survive worker retries
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/halloween_2026_positive_reward_claim.sql
+      - name: Verify cancelled and unqualified gigs receive no rewards
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/halloween_2026_ineligible_gigs.sql
