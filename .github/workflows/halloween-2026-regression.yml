@@ -5,6 +5,11 @@ on:
     paths:
       - 'src/features/seasonal/**'
       - 'src/features/player-model/**'
+      - 'src/features/gig-experience/services/**'
+      - 'src/features/gig-experience/events/**'
+      - 'src/features/gig-experience/viewer/three/**'
+      - 'supabase/functions/generate-gig-viewer-replay/**'
+      - 'supabase/migrations/20261016111000_gig_immutable_stage_costume_snapshots.sql'
       - 'src/components/gig/**'
       - 'supabase/functions/complete-gig/**'
       - 'supabase/migrations/20261016*halloween*'
@@ -39,6 +44,8 @@ jobs:
             src/features/seasonal/HalloweenEventNotice.test.tsx \
             src/components/gig/HalloweenGigRewardSummary.test.tsx \
             src/features/player-model/accessories.test.ts \
+            src/features/gig-experience/services/replayStageVisuals.test.ts \
+            src/features/gig-experience/viewer/three/GigStage3D.test.tsx \
             supabase/functions/complete-gig/halloween-2026.integration.test.ts \
             supabase/functions/complete-gig/clothing-performance.integration.test.ts \
             --reporter=default
