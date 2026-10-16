@@ -63,6 +63,7 @@ jobs:
             src/features/gig-experience/viewer/three/GigStage3D.test.tsx \
             supabase/functions/generate-gig-viewer-replay/gig-stage-visual-snapshot.integration.test.ts \
             supabase/functions/complete-gig/halloween-2026.integration.test.ts \
+            supabase/functions/complete-gig/halloween-2026-publication.integration.test.ts \
             supabase/functions/complete-gig/clothing-performance.integration.test.ts \
             --reporter=default
       - name: Check new Halloween UI lint
