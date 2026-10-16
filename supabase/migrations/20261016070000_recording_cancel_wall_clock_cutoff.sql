@@ -5,11 +5,16 @@
 -- Forward-only function replacement; no booking/payment/backfill writes.
 BEGIN;
 
--- Finance-sensitive override: abort if an unexpected live version changed.
+-- Finance-sensitive override: abort on unexpected live drift. Accept only the
+-- verified original function or this exact cutoff substitution, so running the
+-- migration again after a direct live repair is safe and does not undo it.
 DO $preflight$
 BEGIN
-  IF md5(pg_get_functiondef('public.cancel_recording_session_atomic(uuid,text,text)'::regprocedure))
-     <> 'b334e7008fb6f56851ed196d04cddf96' THEN
+  IF md5(replace(
+    pg_get_functiondef('public.cancel_recording_session_atomic(uuid,text,text)'::regprocedure),
+    'v_booking.scheduled_start <= clock_timestamp()',
+    'v_booking.scheduled_start <= now()'
+  )) <> 'b334e7008fb6f56851ed196d04cddf96' THEN
     RAISE EXCEPTION 'recording cancellation function drifted; review before applying #4098';
   END IF;
 END;
