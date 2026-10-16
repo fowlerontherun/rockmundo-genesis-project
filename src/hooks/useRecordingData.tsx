@@ -90,7 +90,7 @@ const recordingSessionSelect = `
   id, user_id, profile_id, band_id, studio_id, producer_id, song_id, recording_version, duration_hours, total_cost, quality_improvement, status, scheduled_start, scheduled_end, completed_at, session_data, created_at, updated_at,
   city_studios (name, quality_rating),
   recording_producers (name, tier),
-  songs (title, genre)
+  songs:songs!recording_sessions_song_id_fkey (title, genre)
 ` as string;
 
 const normalizeRecordingSession = (row: any): RecordingSession => ({
