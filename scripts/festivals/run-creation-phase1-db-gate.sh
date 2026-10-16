@@ -16,3 +16,6 @@ psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/festival_phase2a_scheduling_
 
 # Seasonal reward regressions run against the same freshly reset, local-only DB.
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/halloween_2026_rewards.sql
+
+# Archived stage costumes are tested only after local Supabase reset succeeds.
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/gig_stage_visual_snapshots.sql
