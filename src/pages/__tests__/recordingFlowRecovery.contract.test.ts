@@ -73,4 +73,33 @@ describe("recording payment, completion and scope safety", () => {
     expect(identity).toContain("recording:booking:profile:");
     expect(identity).toContain("rockmundo:recording:booking:");
   });
+
+  it("keeps recording-session song embeds explicit after the reverse songs FK was added", () => {
+    // songs.source_recording_session_id also points to recording_sessions.
+    // Unqualified songs(...) embeds now return HTTP 300/PGRST201 in production.
+    const recordingViews = [
+      "src/hooks/useRecordingData.tsx",
+      "src/pages/hubs/MusicOverview.tsx",
+      "src/hooks/useProducerCareer.ts",
+      "src/hooks/useScheduledActivities.ts",
+      "src/components/band/BandRepertoireTab.tsx",
+      "src/pages/BandRepertoire.tsx",
+      "src/mobile/hooks/useMobileDaySchedule.ts",
+    ];
+    for (const path of recordingViews) {
+      const contents = source(path);
+      expect(contents, path).toContain("songs:songs!recording_sessions_song_id_fkey");
+      expect(contents, path).not.toMatch(/songs:song_id\s*\(/);
+    }
+    // The mobile schedule has three independently scoped session queries.
+    expect(
+      source("src/mobile/hooks/useMobileDaySchedule.ts").match(
+        /songs:songs!recording_sessions_song_id_fkey\(title\)/g,
+      ),
+    ).toHaveLength(3);
+    // The band's recording-history query must use an existing column.
+    expect(source("src/pages/BandRepertoire.tsx")).toContain(
+      "quality_score:final_master_quality",
+    );
+  });
 });
