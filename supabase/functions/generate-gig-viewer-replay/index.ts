@@ -269,6 +269,25 @@ serve(async (req) => {
       );
     }
 
+    // Only server-captured gig-start visuals may enter an archived replay.
+    // Never rebuild historic hats from the performer's live wardrobe.
+    const { data: frozenStageRows, error: frozenStageError } = await supabase
+      .from("gig_stage_visual_snapshots")
+      .select("profile_id,visual_snapshot")
+      .eq("gig_id", gigId);
+    if (frozenStageError && !["42P01","PGRST205","PGRST116"].includes(frozenStageError.code || "")) {
+      throw frozenStageError;
+    }
+    const playerVisualsSnapshot = !frozenStageError && frozenStageRows?.length
+      ? {
+          version: 1,
+          performers: frozenStageRows.map((row) => ({
+            profile_id: row.profile_id,
+            visual_snapshot: row.visual_snapshot,
+          })),
+        }
+      : null;
+
     replay.crowdTuning = crowdTuning;
     replay.crowdTuningRevision = crowdTuningRevision;
     replay.commerce = settlement.commerce_snapshot;
@@ -285,6 +304,7 @@ serve(async (req) => {
         crowdTuningRevision: replay.crowdTuningRevision,
         commerce: replay.commerce,
         luthieryInstruments: replay.luthieryInstruments,
+        playerVisualsSnapshot,
       },
       event_count: replay.events.length,
       duration_ms: replay.durationMs,
