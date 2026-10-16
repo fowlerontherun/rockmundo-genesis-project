@@ -1,14 +1,14 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Bell, History, Calendar } from "lucide-react";
-import { useUnreadInboxCount } from "@/hooks/useInbox";
+import { useUnifiedInboxUnreadCount } from "@/hooks/useUnifiedInbox";
 import { useTranslation } from "@/hooks/useTranslation";
 import { translateFMLabel } from "@/i18n/fm";
 import { version } from "@/components/VersionHeader";
 
 export const BottomActionBar = () => {
   const navigate = useNavigate();
-  const { data: unread } = useUnreadInboxCount();
+  const unread = useUnifiedInboxUnreadCount();
   const { language } = useTranslation();
 
   return (
