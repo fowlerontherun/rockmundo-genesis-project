@@ -138,14 +138,14 @@ BEGIN
     RETURN jsonb_build_object('performance_pct',0,'qualifying_members',0,'members','[]'::jsonb);
   END IF;
 
-  SELECT coalesce(avg(o.performance_pct),0), count(*)::integer,
+  SELECT coalesce(avg(o.performance_pct),0), count(*) FILTER (WHERE o.was_equipped)::integer,
     coalesce(jsonb_agg(jsonb_build_object('profile_id',o.profile_id,'performance_pct',o.performance_pct)
-      ORDER BY o.profile_id),'[]'::jsonb)
+      ORDER BY o.profile_id) FILTER (WHERE o.was_equipped),'[]'::jsonb)
   INTO v_pct,v_count,v_members
   FROM public.halloween_2026_gig_outfits o
   JOIN public.gig_performers gp
    ON gp.gig_id=o.gig_id AND gp.profile_id=o.profile_id
-  WHERE o.gig_id=p_gig_id AND o.was_equipped
+  WHERE o.gig_id=p_gig_id
     AND gp.lineup_status IN ('selected','performed');
   RETURN jsonb_build_object('performance_pct',v_pct,
     'qualifying_members',v_count,'members',v_members);
