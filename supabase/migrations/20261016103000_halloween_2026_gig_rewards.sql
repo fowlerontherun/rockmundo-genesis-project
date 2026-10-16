@@ -255,4 +255,30 @@ CREATE TRIGGER trg_settle_halloween_2026_first_rewards
 AFTER UPDATE OF status ON public.gigs FOR EACH ROW
 EXECUTE FUNCTION public.settle_halloween_2026_first_rewards();
 
+-- Old local-reset databases may still have the legacy outfit-trigger installed.
+-- It must not apply a SECOND outfit multiplier after complete-gig has already
+-- persisted the canonical clothing+Halloween result. Preserve the trigger for
+-- legacy direct writes only, and do not create it on newer databases which
+-- already removed it.
+DO $halloween_clothing_trigger$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_trigger
+    WHERE tgrelid = 'public.gig_outcomes'::regclass
+      AND tgname = 'trg_apply_clothing_bonus_to_gig_outcome'
+      AND NOT tgisinternal
+  ) THEN
+    EXECUTE 'DROP TRIGGER trg_apply_clothing_bonus_to_gig_outcome ON public.gig_outcomes';
+    EXECUTE $ddl$
+      CREATE TRIGGER trg_apply_clothing_bonus_to_gig_outcome
+      BEFORE INSERT OR UPDATE OF overall_rating ON public.gig_outcomes
+      FOR EACH ROW
+      WHEN (NEW.xp_breakdown IS NULL
+        OR NOT (NEW.xp_breakdown ? 'clothing_performance'))
+      EXECUTE FUNCTION public.apply_clothing_bonus_to_gig_outcome()
+    $ddl$;
+  END IF;
+END;
+$halloween_clothing_trigger$;
+
 NOTIFY pgrst,'reload schema';
