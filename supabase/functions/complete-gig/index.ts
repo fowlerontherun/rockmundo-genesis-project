@@ -303,15 +303,57 @@ serve(async (req) => {
       clothingPerformancePct = Math.max(0, Math.min(20, Number((clothingRow as any)?.performance_pct ?? 0)));
       clothingPerformanceMemberCount = Math.max(0, Number((clothingRow as any)?.member_count ?? 0));
 
-      if (clothingPerformancePct > 0) {
-        avgRating = Math.max(0, Math.min(25, avgRating * (1 + clothingPerformancePct / 100)));
-        console.log(
-          `[complete-gig] Equipped clothing performance: +${clothingPerformancePct.toFixed(2)}% across ${clothingPerformanceMemberCount} active member(s), rating ${ratingBeforeClothingBonus.toFixed(2)} → ${avgRating.toFixed(2)}`,
-        );
-      }
+
     } catch (clothingPerformanceError) {
       console.warn('[complete-gig] Equipped clothing performance bonus unavailable; continuing without it:', clothingPerformanceError);
     }
+
+    // === HALLOWEEN 2026: IMMUTABLE START-OF-GIG OUTFITS ===
+    // Read only server-frozen performer clothing. Never use the current wardrobe
+    // or accept client-provided costume/bonus data. The feature is explicitly
+    // gated until the migration, XP settlement and achievement are deployed.
+    let halloweenPerformancePct = 0;
+    let halloweenMemberCount = 0;
+    let halloweenMembers: unknown[] = [];
+    const currentServerTime = Date.now();
+    const halloweenStart = Date.parse('2026-10-23T23:00:00Z');
+    const halloweenEnd = Date.parse('2026-11-02T00:00:00Z');
+    const gigStart = Date.parse(String(gig.started_at || ''));
+    if (currentServerTime >= halloweenStart && currentServerTime < halloweenEnd
+        && Number.isFinite(gigStart) && gigStart >= halloweenStart && gigStart < halloweenEnd) {
+      const { data: halloweenSettings, error: halloweenSettingsError } = await supabaseClient
+        .from('system_settings').select('value').eq('key', 'halloween_2026_event').maybeSingle();
+      if (halloweenSettingsError) throw halloweenSettingsError;
+      if ((halloweenSettings as any)?.value?.enabled === true
+          && (halloweenSettings as any)?.value?.rewards_live === true) {
+        const { data: halloweenBonus, error: halloweenError } = await supabaseClient.rpc(
+          'get_halloween_2026_gig_bonus', { p_gig_id: gigId },
+        );
+        // Once enabled, an unavailable resolver must not silently award an
+        // unboosted gig. The normal gig retry mechanism can reconcile it.
+        if (halloweenError) throw halloweenError;
+        halloweenPerformancePct = Math.max(0, Math.min(15, Number((halloweenBonus as any)?.performance_pct ?? 0)));
+        halloweenMemberCount = Math.max(0, Number((halloweenBonus as any)?.qualifying_members ?? 0));
+        halloweenMembers = Array.isArray((halloweenBonus as any)?.members) ? (halloweenBonus as any).members : [];
+      }
+    }
+
+    // Both outfit effects share a single 25% ceiling on the *base* rating.
+    // Multiplying sequential bonuses would bypass the ceiling.
+    const combinedPerformancePct = Math.min(25, clothingPerformancePct + halloweenPerformancePct);
+    if (combinedPerformancePct > 0) {
+      avgRating = Math.max(0, Math.min(25, ratingBeforeClothingBonus * (1 + combinedPerformancePct / 100)));
+    }
+    const halloweenPerformanceAudit = {
+      event_id: 'haunted-stage-2026',
+      applied: halloweenPerformancePct > 0,
+      performance_pct: halloweenPerformancePct,
+      qualifying_members: halloweenMemberCount,
+      members: halloweenMembers,
+      combined_performance_pct: combinedPerformancePct,
+      cap: 25,
+      source: 'server_frozen_gig_outfits',
+    };
 
     const clothingPerformanceAudit = {
       applied: clothingPerformancePct > 0,
@@ -514,6 +556,7 @@ serve(async (req) => {
         xp_breakdown: {
           ...(((outcome as any).xp_breakdown && typeof (outcome as any).xp_breakdown === 'object') ? (outcome as any).xp_breakdown : {}),
           clothing_performance: clothingPerformanceAudit,
+          halloween_2026: halloweenPerformanceAudit,
         },
         completed_at: new Date().toISOString()
       })

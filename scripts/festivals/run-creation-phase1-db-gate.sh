@@ -13,3 +13,6 @@ DB_URL="${SUPABASE_DB_URL:-postgresql://postgres:postgres@127.0.0.1:54322/postgr
 festival_assert_safe_test_database "$DB_URL"
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/festival_creation_phase1_harness.sql
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/festival_phase2a_scheduling_harness.sql
+
+# Seasonal reward regressions run against the same freshly reset, local-only DB.
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/halloween_2026_rewards.sql
