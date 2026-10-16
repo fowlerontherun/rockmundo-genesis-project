@@ -44,7 +44,7 @@ CREATE TABLE public.player_avatar_config (
 );
 CREATE TABLE public.avatar_clothing_items (
  id uuid PRIMARY KEY, name text NOT NULL,
- curated_asset_key text UNIQUE, category text,
+ curated_asset_key text UNIQUE, curated_asset_status text DEFAULT 'asset_ready', category text,
  wearable_slot text, price integer NOT NULL DEFAULT 0,
  render_config jsonb NOT NULL DEFAULT '{}'::jsonb
 );
@@ -94,9 +94,10 @@ INSERT INTO public.gig_performers(id,gig_id,profile_id,lineup_status) VALUES
 INSERT INTO public.player_stage_appearances(profile_id,appearance) VALUES
  ('10000000-0000-4000-8000-000000000001','{"body":{"frame":"masculine"}}'),
  ('10000000-0000-4000-8000-000000000002','{"body":{"frame":"feminine"}}');
-INSERT INTO public.avatar_clothing_items(id,name,category,wearable_slot,price,curated_asset_key,render_config)
+-- Representative test fixture is already published; production requires real visual QA.
+INSERT INTO public.avatar_clothing_items(id,name,category,wearable_slot,price,curated_asset_key,render_config,curated_asset_status)
  VALUES ('50000000-0000-4000-8000-000000000001','Haunted Pumpkin Hat 2026','hat','headwear',0,
- 'clothing.halloween.2026.pumpkin-hat','{"headwearStyle":"pumpkin"}');
+ 'clothing.halloween.2026.pumpkin-hat','{"headwearStyle":"pumpkin"}','published');
 INSERT INTO public.player_owned_skins(profile_id,item_id,item_type,is_equipped)
  VALUES ('10000000-0000-4000-8000-000000000001','50000000-0000-4000-8000-000000000001','clothing',true);
 INSERT INTO public.system_settings(key,value) VALUES
