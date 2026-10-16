@@ -164,3 +164,38 @@ it('prints the Rockmundo wordmark on the default tee and hides it under a rich t
   expect(covered.getObjectByName('avatar-rockmundo-logo')).toBeUndefined();
   disposeModel(covered);
 });
+
+it.each(['masculine', 'feminine'] as const)('preserves a %s Pumpkin Hat in an archived gig snapshot after the wardrobe is changed', frame => {
+  const appearance = defaultAppearance();
+  appearance.body.frame = frame;
+  const snapshotClothing = [{
+    item: {
+      id: 'event-pumpkin-hat',
+      name: 'Haunted Pumpkin Hat 2026',
+      category: 'hat',
+      wearable_slot: 'headwear',
+      curated_asset_key: 'clothing.halloween.2026.pumpkin-hat',
+      render_config: { headwearStyle: 'pumpkin' },
+    } as ClothingItem,
+  }];
+
+  // Replay must use the frozen snapshot, not what the player currently owns.
+  const historical = assemblePlayerModel(library, appearance, [], snapshotClothing);
+  const historicalActor = new Musician(historical, 'drums', [4, 0, -2], 0, undefined, appearance, undefined, undefined, snapshotClothing);
+  const stageHat = historicalActor.root.getObjectByName('avatar-owned-hat-pumpkin-2026')!;
+  expect(stageHat).toBeTruthy();
+  expect(stageHat.parent?.parent).toBe(historicalActor.bones.get('Head'));
+  historicalActor.update(0.2, .6, false);
+  const firstWorld = stageHat.getWorldPosition(new T.Vector3());
+  historicalActor.update(7.5, .6, false);
+  const secondWorld = stageHat.getWorldPosition(new T.Vector3());
+  expect(firstWorld.distanceTo(secondWorld)).toBeLessThan(1);
+
+  const nowUnequipped = assemblePlayerModel(library, appearance, [], []);
+  expect(nowUnequipped.getObjectByName('avatar-owned-hat-pumpkin-2026')).toBeUndefined();
+  expect(historicalActor.root.getObjectByName('avatar-owned-hat-pumpkin-2026')).toBeTruthy();
+
+  disposeModel(nowUnequipped);
+  disposeModel(historical);
+  disposeModel(historicalActor.root);
+});
