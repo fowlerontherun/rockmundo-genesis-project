@@ -192,7 +192,7 @@ export function useMobileDaySchedule(
 
       const profileRecordingsPromise = (supabase as any)
         .from("recording_sessions")
-        .select("id,user_id,profile_id,band_id,scheduled_start,scheduled_end,status,city_studios(name),songs:song_id(title)")
+        .select("id,user_id,profile_id,band_id,scheduled_start,scheduled_end,status,city_studios(name),songs:songs!recording_sessions_song_id_fkey(title)")
         .eq("profile_id", profileId)
         .lt("scheduled_start", dayEndIso)
         .gt("scheduled_end", dayStartIso)
@@ -200,7 +200,7 @@ export function useMobileDaySchedule(
 
       const legacyRecordingsPromise = (supabase as any)
         .from("recording_sessions")
-        .select("id,user_id,profile_id,band_id,scheduled_start,scheduled_end,status,city_studios(name),songs:song_id(title)")
+        .select("id,user_id,profile_id,band_id,scheduled_start,scheduled_end,status,city_studios(name),songs:songs!recording_sessions_song_id_fkey(title)")
         .eq("user_id", userId)
         .is("profile_id", null)
         .lt("scheduled_start", dayEndIso)
@@ -210,7 +210,7 @@ export function useMobileDaySchedule(
       const bandRecordingsPromise = bandIds.length
         ? (supabase as any)
             .from("recording_sessions")
-            .select("id,user_id,profile_id,band_id,scheduled_start,scheduled_end,status,city_studios(name),songs:song_id(title)")
+            .select("id,user_id,profile_id,band_id,scheduled_start,scheduled_end,status,city_studios(name),songs:songs!recording_sessions_song_id_fkey(title)")
             .in("band_id", bandIds)
             .lt("scheduled_start", dayEndIso)
             .gt("scheduled_end", dayStartIso)

@@ -265,7 +265,7 @@ export function BandRepertoireTab({ bandId, bandName }: BandRepertoireTabProps) 
           completed_at,
           quality_improvement,
           song_id,
-          songs(id, title)
+          songs:songs!recording_sessions_song_id_fkey(id, title)
         `)
         .eq("band_id", bandId)
         .order("scheduled_start", { ascending: false })
