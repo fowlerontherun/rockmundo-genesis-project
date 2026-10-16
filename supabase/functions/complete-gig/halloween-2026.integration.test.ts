@@ -21,6 +21,11 @@ describe('Halloween 2026 cross-layer gig contract', () => {
     expect(rewards).toContain('pos.is_equipped IS TRUE');
     expect(rewards).toContain('public.gig_performers gp');
     expect(rewards).toContain('ON CONFLICT (gig_id, profile_id) DO NOTHING');
+    // No costume can be banked before the server turns on the event.
+    const capture = rewards.slice(rewards.indexOf('FUNCTION public.capture_halloween_2026_gig_outfits()'),
+      rewards.indexOf('DROP TRIGGER IF EXISTS trg_capture_halloween_2026_gig_outfits'));
+    expect(capture).toContain("coalesce(v_settings->>'enabled','false') <> 'true'");
+    expect(capture).toContain("coalesce(v_settings->>'rewards_live','false') <> 'true'");
     expect(rewards).not.toContain('random()');
     expect(rewards).not.toContain('current_setting(\'request.jwt.claim');
   });
