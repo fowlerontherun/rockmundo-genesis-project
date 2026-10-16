@@ -1,0 +1,46 @@
+name: Halloween 2026 Regression Gate
+
+on:
+  pull_request:
+    paths:
+      - 'src/features/seasonal/**'
+      - 'src/features/player-model/**'
+      - 'src/components/gig/**'
+      - 'supabase/functions/complete-gig/**'
+      - 'supabase/migrations/20261016*halloween*'
+      - 'supabase/tests/halloween_2026_rewards.sql'
+      - '.github/workflows/halloween-2026-regression.yml'
+  workflow_dispatch:
+
+jobs:
+  halloween:
+    name: Halloween targeted unit and type tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Pin npm
+        run: npm install --global npm@10.9.2
+      - name: Install dependencies
+        run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Targeted Halloween unit and integration contracts
+        run: |
+          npx vitest run \
+            src/features/seasonal/halloween2026.test.ts \
+            src/features/seasonal/HalloweenEventNotice.test.tsx \
+            src/components/gig/HalloweenGigRewardSummary.test.tsx \
+            src/features/player-model/accessories.test.ts \
+            supabase/functions/complete-gig/halloween-2026.integration.test.ts \
+            supabase/functions/complete-gig/clothing-performance.integration.test.ts \
+            --reporter=default
+      - name: Check new Halloween UI lint
+        run: npx eslint src/features/seasonal/HalloweenEventNotice.test.tsx src/components/gig/HalloweenGigRewardSummary.tsx src/components/gig/HalloweenGigRewardSummary.test.tsx
