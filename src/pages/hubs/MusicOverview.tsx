@@ -44,7 +44,7 @@ const MusicOverview = () => {
       if (!userId) return [];
       const { data, error } = await (supabase as any)
         .from("recording_sessions")
-        .select("id,status,scheduled_start,scheduled_end,song_id,songs(title)")
+        .select("id,status,scheduled_start,scheduled_end,song_id,songs:songs!recording_sessions_song_id_fkey(title)")
         .eq("user_id", userId)
         .order("scheduled_start", { ascending: false })
         .limit(5);
