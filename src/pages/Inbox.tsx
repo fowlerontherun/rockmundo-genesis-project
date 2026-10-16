@@ -129,6 +129,12 @@ export default function InboxPage() {
             Retry
           </Button>
         </div>
+      ) : !hasMessages && partialError ? (
+        <div role="alert" className="rounded-lg border border-amber-500/40 p-6 text-center">
+          <p className="text-sm font-medium">Inbox updates could not all be loaded.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Your messages may still be waiting. Nothing has been cleared.</p>
+          <Button variant="outline" size="sm" className="mt-3" onClick={() => void refetch()}>Retry</Button>
+        </div>
       ) : !hasMessages ? (
         <InboxEmptyState filter={activeFilter} />
       ) : (
