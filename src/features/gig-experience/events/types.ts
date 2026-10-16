@@ -1,3 +1,4 @@
+import type { GigPlayerModelsData } from "@/features/player-model/usePlayerModel";
 import type { GIG_REPLAY_STATUSES, GIG_VIEWER_EVENT_TYPES, GIG_VIEWER_PHASES } from "./constants";
 
 export type GigViewerPhase = (typeof GIG_VIEWER_PHASES)[number];
@@ -122,6 +123,8 @@ export interface GigViewerReplay {
   commerce?: GigReplayCommerceSnapshot | null;
   /** Immutable player-crafted instrument visuals captured for this specific gig. */
   luthieryInstruments?: Record<string, GigReplayLuthieryInstrumentSnapshot> | null;
+  /** Frozen at gig start: never reconstructed from today's wardrobe. */
+  playerModelsSnapshot?: GigPlayerModelsData | null;
 }
 
 export type GigViewerReplayLoadState = "loading" | "ready" | "unavailable" | "generating" | "failed" | "unsupported_version";
