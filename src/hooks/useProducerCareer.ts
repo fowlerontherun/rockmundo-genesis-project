@@ -167,7 +167,7 @@ export const useProducerSessionHistory = () => {
 
       const { data, error } = await (supabase as any)
         .from('recording_sessions')
-        .select('*, songs(title, genre)')
+        .select('*, songs:songs!recording_sessions_song_id_fkey(title, genre)')
         .eq('player_producer_id', profile.id)
         .order('created_at', { ascending: false })
         .limit(50);
