@@ -496,7 +496,7 @@ const Auth = () => {
           </Button>
         </div>
 
-        <HalloweenPublicBanner />
+        <HalloweenPublicBanner showLoginLink={false} />
         {announcement?.enabled && (announcement.title || announcement.body) && (
           <Alert className="mb-4 border-primary/40 bg-primary/10 text-foreground">
             <AlertCircle className="h-4 w-4 text-primary" />
