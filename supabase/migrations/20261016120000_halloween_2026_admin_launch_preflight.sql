@@ -58,8 +58,9 @@ BEGIN
       'trg_immutable_gig_stage_visual_snapshots'
     );
 
-  SELECT count(*)=3 INTO v_rls
-  FROM pg_catalog.pg_class c
+  IF v_database THEN
+    SELECT count(*)=3 INTO v_rls
+    FROM pg_catalog.pg_class c
   WHERE c.oid IN (
     'public.halloween_2026_gig_outfits'::pg_catalog.regclass,
     'public.halloween_2026_first_rewards'::pg_catalog.regclass,
@@ -74,6 +75,8 @@ BEGIN
          'public.halloween_2026_first_rewards','INSERT')
     AND NOT pg_catalog.has_table_privilege('authenticated',
          'public.gig_stage_visual_snapshots','SELECT');
+
+  END IF;
 
   v_dates := coalesce((v_cfg->>'starts_at')::timestamptz =
      '2026-10-23T23:00:00Z'::timestamptz,false)
