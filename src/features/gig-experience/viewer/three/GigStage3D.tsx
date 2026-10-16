@@ -53,11 +53,12 @@ export default function GigStage3D({ replay, experience, playbackState, reducedM
   const canvas = useRef<HTMLCanvasElement>(null), renderer = useRef<ConcertScene | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading'), [message, setMessage] = useState(''), [attempt, setAttempt] = useState(0);
   const plan = useMemo(() => buildStagePlan(replay, experience), [replay, experience]);
-  const livePlayerModels = useGigPlayerModels(playerModelsSnapshot ? [] : plan.entities.flatMap(p => p.profileId ? [p.profileId] : []));
-  const resolvedPlayerModels = playerModelsSnapshot ?? livePlayerModels.data ?? null;
+  const frozenPlayerModels = playerModelsSnapshot ?? replay.playerModelsSnapshot ?? null;
+  const livePlayerModels = useGigPlayerModels(frozenPlayerModels ? [] : plan.entities.flatMap(p => p.profileId ? [p.profileId] : []));
+  const resolvedPlayerModels = frozenPlayerModels ?? livePlayerModels.data ?? null;
   const merchCrowdSignal = useQuery({
     queryKey: ['gig-merch-crowd-signal', experience?.gig.id],
-    enabled: !!experience?.gig.id && !playerModelsSnapshot && !merchCrowdSignalSnapshot,
+    enabled: !!experience?.gig.id && !frozenPlayerModels && !merchCrowdSignalSnapshot,
     queryFn: async () => {
       // This RPC is newer than the generated Supabase client types.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -124,7 +125,7 @@ export default function GigStage3D({ replay, experience, playbackState, reducedM
           : 'electric';
   const settings: DemoSettings = { ...DEFAULT_SETTINGS, playing: playbackState.isPlaying, camera: reducedMotion && presentationMode === 'totp' ? 'front' : resolvedCamera, televisionShotProgress: totpShotProgress, reducedMotion, quality: tier === 'high' ? 'high' : tier === 'low' ? 'low' : 'balanced', look: totpLook, energy: totpEnergy, crowd: frame.crowd, haze: tier !== 'low' };
   const latest = useRef({ settings, frame, pyrotechnics, pyroIntensity, tuning }); latest.current = { settings, frame, pyrotechnics, pyroIntensity, tuning };
-  const waiting = !playerModelsSnapshot && livePlayerModels.isFetching && !livePlayerModels.data && !livePlayerModels.isError;
+  const waiting = !frozenPlayerModels && livePlayerModels.isFetching && !livePlayerModels.data && !livePlayerModels.isError;
 
   useEffect(() => {
     if (!canvas.current || waiting) return;
@@ -160,7 +161,7 @@ export default function GigStage3D({ replay, experience, playbackState, reducedM
       <p className="max-w-md text-sm text-slate-300">{status === 'error' ? message : isTotp ? 'Loading the performers, outfits, tattoos, studio lights, cameras and audience…' : 'Loading the performers, outfits, tattoos, lighting and venue materials…'}</p>
       {status === 'error' && <button className="rounded-lg bg-cyan-300 px-5 py-2 font-semibold text-slate-950" onClick={() => setAttempt(n => n + 1)}>Retry 3D stage</button>}
     </div>}
-    {!playerModelsSnapshot && livePlayerModels.isError && <div role="status" className="absolute bottom-3 left-3 right-3 rounded bg-slate-950/90 p-2 text-xs text-slate-200">Saved character visuals could not load; starter models are shown. <button className="underline" onClick={() => void livePlayerModels.refetch()}>Reload character visuals</button></div>}
+    {!frozenPlayerModels && livePlayerModels.isError && <div role="status" className="absolute bottom-3 left-3 right-3 rounded bg-slate-950/90 p-2 text-xs text-slate-200">Saved character visuals could not load; starter models are shown. <button className="underline" onClick={() => void livePlayerModels.refetch()}>Reload character visuals</button></div>}
     {status === 'ready' && !livePlayerModels.isError && !isTotp && <Link to="/avatar-designer" className="absolute bottom-3 right-3 rounded bg-black/60 px-3 py-2 text-xs text-white hover:bg-black/80">Edit my stage model</Link>}
   </div>;
 }
