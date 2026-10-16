@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ export function VenueUpgradesManager({ venueId }: VenueUpgradesManagerProps) {
   
   const { data: upgrades, isLoading } = useVenueUpgrades(venueId);
   const installUpgrade = useInstallVenueUpgrade();
+  const pendingUpgradeIds = useRef(new Map<string, string>());
   
   const getUpgradeLevel = (upgradeType: string) => {
     const matching = upgrades?.filter(u => u.upgrade_type === upgradeType) || [];
@@ -31,14 +32,23 @@ export function VenueUpgradesManager({ venueId }: VenueUpgradesManagerProps) {
     const currentLevel = getUpgradeLevel(upgradeType);
     const nextLevel = currentLevel + 1;
     if (nextLevel > maxLevel) return;
+    const retryKey = `${venueId}:${upgradeType}:${nextLevel}`;
+    let requestId = pendingUpgradeIds.current.get(retryKey);
+    if (!requestId) {
+      requestId = crypto.randomUUID();
+      pendingUpgradeIds.current.set(retryKey, requestId);
+    }
+
     
     const cost = getUpgradeCost(baseCost, nextLevel);
     await installUpgrade.mutateAsync({
       venue_id: venueId,
       upgrade_type: upgradeType,
       upgrade_level: nextLevel,
+      request_id: requestId,
       cost: cost,
     });
+    pendingUpgradeIds.current.delete(retryKey);
     setDialogOpen(false);
   };
   
