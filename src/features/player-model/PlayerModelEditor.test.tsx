@@ -140,6 +140,30 @@ it('saves detailed face, eye, brow, hair and skin choices as one appearance', as
   }) }) })));
 });
 
+it('shows exactly when an equipped Pumpkin Hat reaches Avatar V1, and can refresh it', () => {
+  const hat = [{ item: { id: 'pumpkin', name: 'Haunted Pumpkin Hat', curated_asset_key: 'clothing.halloween.2026.pumpkin-hat', category: 'hat', wearable_slot: 'headwear' } }];
+  const refetch = vi.fn();
+  vi.mocked(useEquippedRichClothing).mockReturnValue({ ...clothing(hat), refetch } as ReturnType<typeof useEquippedRichClothing>);
+  render(<PlayerModelEditor />);
+  expect(screen.getByText(/Pumpkin Hat loaded for this character's Avatar V1 preview/)).toBeVisible();
+  expect(preview).toHaveBeenCalledWith(expect.objectContaining({ richClothing: hat }));
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh equipped look' }));
+  expect(refetch).toHaveBeenCalledTimes(1);
+});
+
+it('explains missing or failed Pumpkin Hat clothing fetches instead of hiding the error', () => {
+  const refetch = vi.fn();
+  vi.mocked(useEquippedRichClothing).mockReturnValue({ ...clothing(), refetch } as ReturnType<typeof useEquippedRichClothing>);
+  const view = render(<PlayerModelEditor />);
+  expect(screen.getByText(/No Pumpkin Hat returned as equipped for this character/)).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Check equipment again' }));
+  expect(refetch).toHaveBeenCalledTimes(1);
+  vi.mocked(useEquippedRichClothing).mockReturnValue({ ...clothing([], true), error: new Error('RPC timed out'), refetch } as ReturnType<typeof useEquippedRichClothing>);
+  view.rerender(<PlayerModelEditor />);
+  expect(screen.getByText(/could not load/)).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Retry equipped clothing' }));
+  expect(refetch).toHaveBeenCalledTimes(2);
+});
 it('passes currently equipped rich clothing into the shared animated preview', () => {
   const rich = [{ item: { id: 'jacket-1', name: 'Stage Jacket', category: 'jacket' }, variant: { id: 'red', label: 'Red', color: '#990000' } }];
   vi.mocked(useEquippedRichClothing).mockReturnValue(clothing(rich));
