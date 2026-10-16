@@ -80,3 +80,7 @@ A file being present is **not** proof its test has passed. Validate migration or
 8. **Incident rollback:** Use the admin panel to turn **off** the public event switch and reward readiness, then verify both `enabled=false` and `rewards_live=false` in settings. Do **not** delete outfit snapshots, rollback permanent player XP or delete hats. Keep #4179 and #4184 open until live validations are recorded.
 
 **Caution:** A brand-new qualifying Halloween XP transaction cannot be smoke-tested against the live calendar before October 24 without unacceptably manipulating live production clocks or gameplay. The isolated PostgreSQL regression suite tests this logic before launch; genuine award verification happens after the event begins.
+
+### Deferred outcome safety
+
+The initial 500 XP claim is settled on completion when a completed `gig_outcomes` record and performed song already exist. The late-outcome reconciliation migration additionally retries **only** the same idempotent Halloween settlement when an outcome becomes completed or a performed song is inserted **after** the gig has reached `completed`. These triggers never cycle gig status, replay other settlements or reroll outfit bonuses. A gig started while Halloween was disabled does not acquire a snapshot later and is never eligible. The permanent `halloween_2026_first_rewards` claim and `ON CONFLICT DO NOTHING` guarantee at-most-once XP, and the saved report audit is reconstructed from claim rows on retries. Post-launch verification must include a delayed result as well as a normal result.
