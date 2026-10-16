@@ -1,16 +1,14 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { Mic2, Plus, DollarSign, Wrench, Star } from "lucide-react";
 import { useRecordingStudioEquipment, useAddRecordingStudioEquipment } from "@/hooks/useRecordingStudioBusiness";
-import { STUDIO_EQUIPMENT_TYPES } from "@/types/recording-studio-business";
+import { useSubsidiaryEquipmentCatalog, subsidiaryEquipmentHourlyRate } from "@/hooks/useSubsidiaryEquipmentCatalog";
 
 interface RecordingStudioEquipmentManagerProps {
   studioId: string;
@@ -20,31 +18,27 @@ export function RecordingStudioEquipmentManager({ studioId }: RecordingStudioEqu
   const { data: equipment, isLoading } = useRecordingStudioEquipment(studioId);
   const addEquipment = useAddRecordingStudioEquipment();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [newEquipment, setNewEquipment] = useState({
-    equipment_name: '',
-    equipment_type: 'microphone' as const,
-    brand: '',
-    model: '',
-    value: 5000,
-    hourly_rental_rate: 25,
-    is_vintage: false,
-  });
+  const { data: catalog = [], isLoading: catalogLoading } = useSubsidiaryEquipmentCatalog("recording_equipment");
+  const [catalogId, setCatalogId] = useState("");
+  const pendingPurchaseIds = useRef(new Map<string, string>());
+  const selectedItem = catalog.find((item) => item.id === catalogId);
 
   const handleAdd = async () => {
+    if (!selectedItem) return;
+    const intentKey = `${studioId}:${selectedItem.id}`;
+    let requestId = pendingPurchaseIds.current.get(intentKey);
+    if (!requestId) {
+      requestId = crypto.randomUUID();
+      pendingPurchaseIds.current.set(intentKey, requestId);
+    }
     await addEquipment.mutateAsync({
       studio_id: studioId,
-      ...newEquipment,
+      catalog_id: selectedItem.id,
+      request_id: requestId,
     });
+    pendingPurchaseIds.current.delete(intentKey);
     setIsDialogOpen(false);
-    setNewEquipment({ 
-      equipment_name: '', 
-      equipment_type: 'microphone', 
-      brand: '', 
-      model: '', 
-      value: 5000, 
-      hourly_rental_rate: 25,
-      is_vintage: false 
-    });
+    setCatalogId("");
   };
 
   const getEquipmentIcon = (type: string) => {
@@ -81,91 +75,38 @@ export function RecordingStudioEquipmentManager({ studioId }: RecordingStudioEqu
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add Studio Equipment</DialogTitle>
+                <DialogTitle>Purchase Studio Equipment</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Equipment Name</Label>
-                  <Input
-                    value={newEquipment.equipment_name}
-                    onChange={(e) => setNewEquipment({ ...newEquipment, equipment_name: e.target.value })}
-                    placeholder="e.g., Neumann U87"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Brand</Label>
-                    <Input
-                      value={newEquipment.brand}
-                      onChange={(e) => setNewEquipment({ ...newEquipment, brand: e.target.value })}
-                      placeholder="e.g., Neumann"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Model</Label>
-                    <Input
-                      value={newEquipment.model}
-                      onChange={(e) => setNewEquipment({ ...newEquipment, model: e.target.value })}
-                      placeholder="e.g., U87"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Type</Label>
-                  <Select
-                    value={newEquipment.equipment_type}
-                    onValueChange={(v) => setNewEquipment({ ...newEquipment, equipment_type: v as any })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                  <Label>Equipment catalog</Label>
+                  <Select value={catalogId} onValueChange={setCatalogId}>
+                    <SelectTrigger><SelectValue placeholder="Select equipment" /></SelectTrigger>
                     <SelectContent>
-                      {STUDIO_EQUIPMENT_TYPES.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {getEquipmentIcon(type.value)} {type.label}
+                      {catalog.map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.name} · ${item.base_price.toLocaleString()}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {catalogLoading && <p className="text-xs text-muted-foreground">Loading available stock...</p>}
+                  {!catalogLoading && catalog.length === 0 && (
+                    <p className="text-xs text-muted-foreground">No supported equipment is currently in stock.</p>
+                  )}
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Value ($)</Label>
-                    <Input
-                      type="number"
-                      value={newEquipment.value}
-                      onChange={(e) => setNewEquipment({ ...newEquipment, value: parseInt(e.target.value) || 0 })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Hourly Rate ($)</Label>
-                    <Input
-                      type="number"
-                      value={newEquipment.hourly_rental_rate}
-                      onChange={(e) => setNewEquipment({ ...newEquipment, hourly_rental_rate: parseInt(e.target.value) || 0 })}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="vintage"
-                    checked={newEquipment.is_vintage}
-                    onCheckedChange={(checked) => setNewEquipment({ ...newEquipment, is_vintage: checked })}
-                  />
-                  <Label htmlFor="vintage">Vintage/Classic Piece</Label>
-                </div>
-
-                <Button 
-                  onClick={handleAdd} 
+                {selectedItem && (
+                  <p className="text-sm text-muted-foreground">
+                    Purchase cost: ${selectedItem.base_price.toLocaleString()} · Hourly rental rate: ${subsidiaryEquipmentHourlyRate(selectedItem.base_price).toLocaleString()} · Available: {selectedItem.stock_quantity}
+                  </p>
+                )}
+                <Button
+                  onClick={handleAdd}
                   className="w-full"
-                  disabled={!newEquipment.equipment_name || addEquipment.isPending}
+                  disabled={!selectedItem || addEquipment.isPending}
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Add to Inventory
+                  {addEquipment.isPending ? "Purchasing..." : "Purchase Equipment"}
                 </Button>
               </div>
             </DialogContent>

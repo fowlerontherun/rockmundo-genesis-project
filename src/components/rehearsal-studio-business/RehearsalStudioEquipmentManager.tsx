@@ -1,8 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -10,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Music, Plus, DollarSign, Wrench } from "lucide-react";
 import { useRehearsalRoomEquipment, useAddRehearsalEquipment } from "@/hooks/useRehearsalStudioBusiness";
 import { EQUIPMENT_TYPES } from "@/types/rehearsal-studio-business";
+import { useSubsidiaryEquipmentCatalog, subsidiaryEquipmentHourlyRate, subsidiaryEquipmentDailyRate } from "@/hooks/useSubsidiaryEquipmentCatalog";
 
 interface RehearsalStudioEquipmentManagerProps {
   roomId: string;
@@ -19,20 +19,27 @@ export function RehearsalStudioEquipmentManager({ roomId }: RehearsalStudioEquip
   const { data: equipment, isLoading } = useRehearsalRoomEquipment(roomId);
   const addEquipment = useAddRehearsalEquipment();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [newEquipment, setNewEquipment] = useState({
-    equipment_name: '',
-    equipment_type: 'amp' as const,
-    hourly_rate: 10,
-    daily_rate: 50,
-  });
+  const { data: catalog = [], isLoading: catalogLoading } = useSubsidiaryEquipmentCatalog("rehearsal_equipment");
+  const [catalogId, setCatalogId] = useState("");
+  const pendingPurchaseIds = useRef(new Map<string, string>());
+  const selectedItem = catalog.find((item) => item.id === catalogId);
 
   const handleAdd = async () => {
+    if (!selectedItem) return;
+    const intentKey = `${roomId}:${selectedItem.id}`;
+    let requestId = pendingPurchaseIds.current.get(intentKey);
+    if (!requestId) {
+      requestId = crypto.randomUUID();
+      pendingPurchaseIds.current.set(intentKey, requestId);
+    }
     await addEquipment.mutateAsync({
       room_id: roomId,
-      ...newEquipment,
+      catalog_id: selectedItem.id,
+      request_id: requestId,
     });
+    pendingPurchaseIds.current.delete(intentKey);
     setIsDialogOpen(false);
-    setNewEquipment({ equipment_name: '', equipment_type: 'amp', hourly_rate: 10, daily_rate: 50 });
+    setCatalogId("");
   };
 
   const getEquipmentIcon = (type: string) => {
@@ -71,63 +78,38 @@ export function RehearsalStudioEquipmentManager({ roomId }: RehearsalStudioEquip
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add Rental Equipment</DialogTitle>
+                <DialogTitle>Purchase Rental Equipment</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Equipment Name</Label>
-                  <Input
-                    value={newEquipment.equipment_name}
-                    onChange={(e) => setNewEquipment({ ...newEquipment, equipment_name: e.target.value })}
-                    placeholder="e.g., Marshall JCM800"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Type</Label>
-                  <Select
-                    value={newEquipment.equipment_type}
-                    onValueChange={(v) => setNewEquipment({ ...newEquipment, equipment_type: v as any })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                  <Label>Equipment catalog</Label>
+                  <Select value={catalogId} onValueChange={setCatalogId}>
+                    <SelectTrigger><SelectValue placeholder="Select equipment" /></SelectTrigger>
                     <SelectContent>
-                      {EQUIPMENT_TYPES.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {getEquipmentIcon(type.value)} {type.label}
+                      {catalog.map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.name} · ${item.base_price.toLocaleString()}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {catalogLoading && <p className="text-xs text-muted-foreground">Loading available stock...</p>}
+                  {!catalogLoading && catalog.length === 0 && (
+                    <p className="text-xs text-muted-foreground">No supported equipment is currently in stock.</p>
+                  )}
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Hourly Rate ($)</Label>
-                    <Input
-                      type="number"
-                      value={newEquipment.hourly_rate}
-                      onChange={(e) => setNewEquipment({ ...newEquipment, hourly_rate: parseInt(e.target.value) || 0 })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Daily Rate ($)</Label>
-                    <Input
-                      type="number"
-                      value={newEquipment.daily_rate}
-                      onChange={(e) => setNewEquipment({ ...newEquipment, daily_rate: parseInt(e.target.value) || 0 })}
-                    />
-                  </div>
-                </div>
-
-                <Button 
-                  onClick={handleAdd} 
+                {selectedItem && (
+                  <p className="text-sm text-muted-foreground">
+                    Purchase cost: ${selectedItem.base_price.toLocaleString()} · Rental: ${subsidiaryEquipmentHourlyRate(selectedItem.base_price).toLocaleString()}/hour, ${subsidiaryEquipmentDailyRate(selectedItem.base_price).toLocaleString()}/day · Available: {selectedItem.stock_quantity}
+                  </p>
+                )}
+                <Button
+                  onClick={handleAdd}
                   className="w-full"
-                  disabled={!newEquipment.equipment_name || addEquipment.isPending}
+                  disabled={!selectedItem || addEquipment.isPending}
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Add to Inventory
+                  {addEquipment.isPending ? "Purchasing..." : "Purchase Equipment"}
                 </Button>
               </div>
             </DialogContent>
