@@ -7,6 +7,23 @@ VALUES (
  '50000000-0000-4000-8000-000000000001',
  'clothing',false
 );
+-- Owning the hat must not report launch-ready until the curated asset
+-- is genuinely published. Restore the disposable fixture afterwards.
+UPDATE public.avatar_clothing_items
+ SET curated_asset_status='asset_ready'
+ WHERE curated_asset_key='clothing.halloween.2026.pumpkin-hat';
+SET LOCAL ROLE service_role;
+DO $published_check$
+BEGIN
+ IF (public.admin_halloween_2026_launch_preflight()->>'database_ready')::boolean
+  OR (public.admin_halloween_2026_launch_preflight()->'checks'->>'pumpkin_hat_published')::boolean
+ THEN RAISE EXCEPTION 'Unpublished Pumpkin Hat was incorrectly release-ready'; END IF;
+END;
+$published_check$;
+RESET ROLE;
+UPDATE public.avatar_clothing_items
+ SET curated_asset_status='published'
+ WHERE curated_asset_key='clothing.halloween.2026.pumpkin-hat';
 SET LOCAL ROLE service_role;
 DO $preflightcheck$
 DECLARE
