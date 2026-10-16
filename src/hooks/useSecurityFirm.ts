@@ -98,14 +98,16 @@ export const useHireGuard = () => {
       name,
       skillLevel,
       salaryPerEvent,
+      requestId,
     }: {
       firmId: string;
       name: string;
       skillLevel: number;
       salaryPerEvent: number;
+      requestId: string;
     }) => {
       const { data, error } = await (supabase as any).rpc("buy_subsidiary_asset_atomic", {
-        p_kind: "security_guard", p_subsidiary_id: firmId, p_fields: { name, skill_level: skillLevel, salary_per_event: salaryPerEvent },
+        p_kind: "security_guard", p_subsidiary_id: firmId, p_fields: { name, skill_level: skillLevel, salary_per_event: salaryPerEvent, request_id: requestId },
       });
       if (error) throw error;
             return data;
