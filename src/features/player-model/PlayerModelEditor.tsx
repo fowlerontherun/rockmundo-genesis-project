@@ -1,6 +1,7 @@
 import { STAGE_INSTRUMENTS, stageAssignment, type InstrumentId } from '@/features/gig-demo-3d/instrumentCatalog';
-import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
-import { useEffect, useRef, useState } from 'react';
+import { mergeEquippedAvatarV1Accessories, type ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
+import { useClothingItems, useOwnedSkins } from '@/hooks/useSkinStore';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { PlayerModelPreview } from './PlayerModelPreview';
 import { useEquippedRichClothing, useEquippedStageLuthieryInstruments, usePlayerModel, usePlayerStageTattoos } from './usePlayerModel';
 import { BODY_MUSCLE_LABELS, BODY_MUSCLE_TYPES, defaultAppearance, SLOTS, STYLES, STYLE_LABELS, type PlayerAppearance, type Style } from './appearance';
@@ -33,13 +34,18 @@ const BASIC_OUTFITS = [
 export default function PlayerModelEditor() {
   const model = usePlayerModel();
   const richClothing = useEquippedRichClothing(model.profileId);
+  const ownedSkins = useOwnedSkins(model.profileId);
+  const clothingCatalogue = useClothingItems();
+  const shownClothing = useMemo(() => mergeEquippedAvatarV1Accessories(
+    richClothing.data ?? [], ownedSkins.data, clothingCatalogue.data,
+  ), [richClothing.data, ownedSkins.data, clothingCatalogue.data]);
   const tattoos = usePlayerStageTattoos(model.profileId);
   const luthieryInstruments = useEquippedStageLuthieryInstruments(model.profileId);
   const merch = useAvatarMerchWearables(model.profileId);
   if (model.isLoading || (model.profileId && model.query.isPending)) return <p role="status" className="p-8">Loading your character’s stage model…</p>;
   if (model.error || model.query.isError) return <div role="alert" className="p-8"><p>Your saved model could not load.</p><button type="button" className="underline" onClick={() => void model.query.refetch()}>Try again</button></div>;
   if (!model.profileId || !model.query.data) return <p className="p-8">Select a character to create a stage model.</p>;
-  return <EditorSession key={model.profileId} profileId={model.profileId} initial={model.query.data} model={model} richClothing={richClothing.data ?? []} richClothingError={richClothing.isError} tattoos={tattoos.data ?? []} tattooError={tattoos.isError} luthieryInstruments={luthieryInstruments.data ?? []} luthieryStatus={{ error: luthieryInstruments.isError, fetching: luthieryInstruments.isFetching, message: luthieryInstruments.error instanceof Error ? luthieryInstruments.error.message : null, retry: () => { void luthieryInstruments.refetch(); } }} merchWearable={merch.query.data?.equipped ?? null} merchControl={{ pending: merch.equip.isPending, error: merch.equip.error, remove: () => merch.equip.mutate(null) }} />;
+  return <EditorSession key={model.profileId} profileId={model.profileId} initial={model.query.data} model={model} richClothing={shownClothing} richClothingError={richClothing.isError && shownClothing.length === 0} tattoos={tattoos.data ?? []} tattooError={tattoos.isError} luthieryInstruments={luthieryInstruments.data ?? []} luthieryStatus={{ error: luthieryInstruments.isError, fetching: luthieryInstruments.isFetching, message: luthieryInstruments.error instanceof Error ? luthieryInstruments.error.message : null, retry: () => { void luthieryInstruments.refetch(); } }} merchWearable={merch.query.data?.equipped ?? null} merchControl={{ pending: merch.equip.isPending, error: merch.equip.error, remove: () => merch.equip.mutate(null) }} />;
 }
 
 function EditorSession({ profileId, initial, model, richClothing, richClothingError, tattoos, tattooError, luthieryInstruments, luthieryStatus, merchWearable, merchControl }: { profileId: string; initial: { appearance: PlayerAppearance; revision: number | null }; model: ReturnType<typeof usePlayerModel>; richClothing: ResolvedEquippedClothing[]; richClothingError: boolean; tattoos: import('./tattoos').ResolvedTattooVisual[]; tattooError: boolean; luthieryInstruments: import('@/features/luthiery/luthieryInstrument').LuthieryInstrumentVisual[]; luthieryStatus: { error: boolean; fetching: boolean; message: string | null; retry: () => void }; merchWearable: import('./merchWearables').ResolvedMerchWearable | null; merchControl: { pending: boolean; error: Error | null; remove: () => void } }) {

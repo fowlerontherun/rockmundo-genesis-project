@@ -7,7 +7,9 @@ vi.mock('./useAvatarMerchWearables', () => ({ useAvatarMerchWearables: vi.fn() }
 const removeMerch = vi.fn();
 import { defaultAppearance, SLOTS, SLOT_LABELS, STARTER_ITEMS, starterItemsForWardrobe } from './appearance';
 import { useEquippedRichClothing, useEquippedStageLuthieryInstruments, usePlayerModel, usePlayerStageTattoos } from './usePlayerModel';
+import { useOwnedSkins, useClothingItems } from '@/hooks/useSkinStore';
 
+vi.mock('@/hooks/useSkinStore', () => ({ useOwnedSkins: vi.fn(), useClothingItems: vi.fn() }));
 vi.mock('./usePlayerModel', () => ({ usePlayerModel: vi.fn(), useEquippedRichClothing: vi.fn(), usePlayerStageTattoos: vi.fn(), useEquippedStageLuthieryInstruments: vi.fn() }));
 const preview = vi.fn();
 vi.mock('./PlayerModelPreview', () => ({ PlayerModelPreview: (props: unknown) => { preview(props); return <div>Model preview</div>; } }));
@@ -29,6 +31,8 @@ beforeEach(() => {
   vi.mocked(useAvatarMerchWearables).mockReturnValue({ band: { data: null, isPending: false }, query: { data: { designs: [], equipped: null }, isPending: false }, equip: { isPending: false, error: null, mutate: removeMerch } } as unknown as ReturnType<typeof useAvatarMerchWearables>);
   vi.mocked(usePlayerModel).mockReturnValue(model());
   vi.mocked(useEquippedRichClothing).mockReturnValue(clothing());
+  vi.mocked(useOwnedSkins).mockReturnValue({ data: undefined } as ReturnType<typeof useOwnedSkins>);
+  vi.mocked(useClothingItems).mockReturnValue({ data: undefined } as ReturnType<typeof useClothingItems>);
   vi.mocked(usePlayerStageTattoos).mockReturnValue(tattooQuery());
   vi.mocked(useEquippedStageLuthieryInstruments).mockReturnValue({ data: [], isError: false, isFetching: false, error: null, refetch: vi.fn() } as unknown as ReturnType<typeof useEquippedStageLuthieryInstruments>);
   save.mockImplementation(async args => ({ appearance: args.appearance, revision: 1 }));
@@ -138,6 +142,45 @@ it('saves detailed face, eye, brow, hair and skin choices as one appearance', as
     hair: '#426baa',
     facialHairColor: '#b75e32',
   }) }) })));
+});
+
+it('renders owned equipped Pumpkin Hat when generic stage wardrobe is empty', () => {
+  const pumpkin = {
+    id: 'pumpkin-2026', name: 'Haunted Pumpkin Hat 2026', category: 'hat',
+    wearable_slot: 'headwear', curated_asset_status: 'asset_ready',
+    curated_asset_key: 'clothing.halloween.2026.pumpkin-hat',
+    color_variants: ['#ee781c'],
+    render_config: { renderFamily: 'avatar-v1-accessory', headwearStyle: 'pumpkin' },
+  };
+  vi.mocked(useEquippedRichClothing).mockReturnValue(clothing([]));
+  vi.mocked(useOwnedSkins).mockReturnValue({ data: [
+    { item_id: pumpkin.id, item_type: 'clothing', is_equipped: true, customization_config: {} },
+  ] } as ReturnType<typeof useOwnedSkins>);
+  vi.mocked(useClothingItems).mockReturnValue({ data: [pumpkin] } as ReturnType<typeof useClothingItems>);
+  render(<PlayerModelEditor />);
+  expect(preview).toHaveBeenCalledWith(expect.objectContaining({
+    richClothing: [expect.objectContaining({ item: expect.objectContaining({
+      curated_asset_key: 'clothing.halloween.2026.pumpkin-hat',
+      render_config: expect.objectContaining({ headwearStyle: 'pumpkin' }),
+    }) })],
+  }));
+  expect(vi.mocked(useOwnedSkins)).toHaveBeenCalledWith('character-one');
+  expect(screen.getByText(/currently equipped Skin Store clothing/i)).toBeVisible();
+});
+
+it('removes Pumpkin Hat from preview when ownership says unequipped despite stale RPC', () => {
+  const pumpkin = {
+    id: 'pumpkin-2026', name: 'Haunted Pumpkin Hat 2026', category: 'hat',
+    wearable_slot: 'headwear', curated_asset_key: 'clothing.halloween.2026.pumpkin-hat',
+    render_config: { renderFamily: 'avatar-v1-accessory', headwearStyle: 'pumpkin' },
+  };
+  vi.mocked(useEquippedRichClothing).mockReturnValue(clothing([{ item: pumpkin }]));
+  vi.mocked(useOwnedSkins).mockReturnValue({ data: [
+    { item_id: pumpkin.id, item_type: 'clothing', is_equipped: false },
+  ] } as ReturnType<typeof useOwnedSkins>);
+  vi.mocked(useClothingItems).mockReturnValue({ data: [pumpkin] } as ReturnType<typeof useClothingItems>);
+  render(<PlayerModelEditor />);
+  expect(preview).toHaveBeenCalledWith(expect.objectContaining({ richClothing: [] }));
 });
 
 it('passes currently equipped rich clothing into the shared animated preview', () => {
