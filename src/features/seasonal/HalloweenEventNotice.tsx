@@ -132,14 +132,14 @@ export function HalloweenDashboardBanner() {
 }
 
 /** A compact, independent strip for the public landing and sign-in pages. */
-export function HalloweenPublicBanner() {
+export function HalloweenPublicBanner({ showLoginLink = true }: { showLoginLink?: boolean }) {
   const { event, isActive, remaining } = useActiveHalloween();
   if (!isActive || !event) return null;
   return (
     <div role="status" className="border border-orange-500/30 bg-orange-500/10 px-3 py-2.5 text-sm">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2">
         <p><strong className="text-orange-400">{HALLOWEEN_2026_NAME} is live!</strong> Wear the free Pumpkin Hat for gig boosts and a one-time 500 XP reward. {remaining} (UK).</p>
-        <Link to="/auth" className="font-semibold text-orange-400 underline underline-offset-2">Log in to participate</Link>
+        {showLoginLink && <Link to="/auth" className="font-semibold text-orange-400 underline underline-offset-2">Log in to participate</Link>}
       </div>
     </div>
   );
