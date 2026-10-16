@@ -6,9 +6,9 @@ import { useAvatarMerchWearables } from './useAvatarMerchWearables';
 vi.mock('./useAvatarMerchWearables', () => ({ useAvatarMerchWearables: vi.fn() }));
 const removeMerch = vi.fn();
 import { defaultAppearance, SLOTS, SLOT_LABELS, STARTER_ITEMS, starterItemsForWardrobe } from './appearance';
-import { useEquippedRichClothing, usePlayerModel, usePlayerStageTattoos } from './usePlayerModel';
+import { useEquippedRichClothing, useEquippedStageLuthieryInstruments, usePlayerModel, usePlayerStageTattoos } from './usePlayerModel';
 
-vi.mock('./usePlayerModel', () => ({ usePlayerModel: vi.fn(), useEquippedRichClothing: vi.fn(), usePlayerStageTattoos: vi.fn(), useEquippedStageLuthieryInstruments: () => ({ data: [] }) }));
+vi.mock('./usePlayerModel', () => ({ usePlayerModel: vi.fn(), useEquippedRichClothing: vi.fn(), usePlayerStageTattoos: vi.fn(), useEquippedStageLuthieryInstruments: vi.fn() }));
 const preview = vi.fn();
 vi.mock('./PlayerModelPreview', () => ({ PlayerModelPreview: (props: unknown) => { preview(props); return <div>Model preview</div>; } }));
 const save = vi.fn();
@@ -30,9 +30,37 @@ beforeEach(() => {
   vi.mocked(usePlayerModel).mockReturnValue(model());
   vi.mocked(useEquippedRichClothing).mockReturnValue(clothing());
   vi.mocked(usePlayerStageTattoos).mockReturnValue(tattooQuery());
+  vi.mocked(useEquippedStageLuthieryInstruments).mockReturnValue({ data: [], isError: false, isFetching: false, error: null, refetch: vi.fn() } as unknown as ReturnType<typeof useEquippedStageLuthieryInstruments>);
   save.mockImplementation(async args => ({ appearance: args.appearance, revision: 1 }));
 });
 afterEach(cleanup);
+it('allows Avatar V1 and Pumpkin Hat preview to remain usable when optional crafted-instrument RPC fails', async () => {
+  const retry = vi.fn().mockResolvedValue({ data: [] });
+  vi.mocked(useEquippedStageLuthieryInstruments).mockReturnValue({
+    data: [], isError: true, isFetching: false,
+    error: new Error('Failed to fetch: PostgREST timeout'), refetch: retry,
+  } as unknown as ReturnType<typeof useEquippedStageLuthieryInstruments>);
+  render(<PlayerModelEditor />);
+  expect(screen.getByText('Model preview')).toBeVisible();
+  expect(screen.getByText(/Your avatar, Pumpkin Hat and other accessories are unaffected/)).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Accessories' }));
+  expect(screen.getByText('Your collection')).toBeVisible();
+  expect(screen.getByText('Model preview')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Retry crafted instruments' }));
+  expect(retry).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByText('Technical error details'));
+  expect(screen.getByText(/PostgREST timeout/)).toBeVisible();
+});
+
+it('indicates when crafted-instrument retrieval is retrying without hiding the avatar', () => {
+  vi.mocked(useEquippedStageLuthieryInstruments).mockReturnValue({
+    data: [], isError: true, isFetching: true, error: new Error('Temporary connection error'), refetch: vi.fn(),
+  } as unknown as ReturnType<typeof useEquippedStageLuthieryInstruments>);
+  render(<PlayerModelEditor />);
+  expect(screen.getByRole('button', { name: 'Retrying crafted instruments…' })).toBeDisabled();
+  expect(screen.getByText('Model preview')).toBeVisible();
+});
+
 it('previews edits without saving, then persists the selected character and equipped pieces', async () => {
   render(<PlayerModelEditor />);
   fireEvent.click(screen.getByRole('button', { name: 'Feminine' }));
