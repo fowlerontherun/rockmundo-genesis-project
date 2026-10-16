@@ -50,7 +50,7 @@ import { HalloweenPublicBanner } from "@/features/seasonal/HalloweenEventNotice"
 import { supabase } from "@/integrations/supabase/client";
 import heroImage from "@/assets/landing-hero.jpg";
 import logo from "@/assets/rockmundo-new-logo.png";
-import heroLogo from "@/assets/rockmundo-landing-logo.svg";
+import heroLogo from "@/assets/rockmundo-halloween-logo.png";
 
 const FEATURES = [
   {
@@ -296,7 +296,7 @@ const Landing = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/85 to-background" />
         <div className="relative mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16 md:py-20">
           <div className="mb-8 text-center sm:mb-10">
-            <img src={heroLogo} alt="RockMundo — Live the Dream, with four walking band silhouettes" width={1021} height={1325} className="mx-auto mb-5 h-48 max-w-full w-auto object-contain sm:h-56 md:h-64" />
+            <img src={heroLogo} alt="RockMundo — Live the Dream: the R emblem over a full moon with bats, and four trick-or-treaters carrying pumpkin buckets" width={960} height={960} className="mx-auto mb-5 h-48 max-w-full w-auto object-contain sm:h-56 md:h-64" />
             <div className="mb-4 flex items-center justify-center gap-2 font-oswald text-[10px] text-primary sm:text-xs">
               <Activity className="h-3 w-3" /> Season 2026 · {releaseLabel}
             </div>
