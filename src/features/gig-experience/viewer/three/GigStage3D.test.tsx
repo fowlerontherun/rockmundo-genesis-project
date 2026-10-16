@@ -6,7 +6,9 @@ import { ConcertScene } from '@/features/gig-demo-3d/ConcertScene';
 import { useGigPlayerModels } from '@/features/player-model/usePlayerModel';
 import { derivePlaybackState } from '../engine/PlaybackController';
 import { DEFAULT_CROWD_TUNING } from '../engine/CrowdTuning';
-import { makeStageReplay } from './test-fixtures';
+import { makeStageReplay, performerId } from './test-fixtures';
+import { defaultAppearance } from '@/features/player-model/appearance';
+import type { ClothingItem } from '@/hooks/useSkinStore';
 
 vi.mock('@/features/gig-demo-3d/ConcertScene', () => ({ ConcertScene: vi.fn() }));
 vi.mock('@/features/player-model/usePlayerModel', () => ({ useGigPlayerModels: vi.fn(() => ({ data: undefined, isFetching: false, isError: false })) }));
@@ -34,7 +36,21 @@ it('provides recovery when WebGL cannot start', async () => {
 
 it('uses the immutable replay wardrobe instead of loading a changed live outfit', async () => {
   const replay = await makeStageReplay();
-  const frozen = { appearances: {}, richClothing: { 'ab000000-0000-4000-8000-000000000001': [] } };
+  const frozen = {
+    appearances: { [performerId(0)]: defaultAppearance() },
+    richClothing: {
+      [performerId(0)]: [{
+        item: {
+          id: 'ab000000-0000-4000-8000-000000000003',
+          name: 'Haunted Pumpkin Hat 2026',
+          category: 'hat',
+          wearable_slot: 'headwear',
+          curated_asset_key: 'clothing.halloween.2026.pumpkin-hat',
+          render_config: { headwearStyle: 'pumpkin' },
+        } as unknown as ClothingItem,
+      }],
+    },
+  };
   replay.playerModelsSnapshot = frozen;
   render(<MemoryRouter><GigStage3D replay={replay} experience={null}
     playbackState={derivePlaybackState(replay, 0)} reducedMotion
@@ -43,4 +59,7 @@ it('uses the immutable replay wardrobe instead of loading a changed live outfit'
   // No current-wardrobe query is allowed once replay evidence exists.
   expect(vi.mocked(useGigPlayerModels)).toHaveBeenCalledWith([]);
   expect(ConcertScene).toHaveBeenCalledOnce();
+  const stageOptions = vi.mocked(ConcertScene).mock.calls[0][4];
+  const singer = stageOptions?.performers.find(p => p.id === performerId(0));
+  expect(singer?.richClothing?.[0]?.item.curated_asset_key).toBe('clothing.halloween.2026.pumpkin-hat');
 });
