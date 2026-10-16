@@ -11,6 +11,7 @@ const completeGig = read('supabase/functions/complete-gig/index.ts');
 const rewards = read('supabase/migrations/20261016103000_halloween_2026_gig_rewards.sql');
 const hat = read('supabase/migrations/20261016080000_halloween_2026_pumpkin_hat.sql');
 const notice = read('supabase/migrations/20261016090000_halloween_2026_announcement_settings.sql');
+const lateSettlement = read('supabase/migrations/20261016130000_halloween_2026_deferred_outcome_reward_reconciliation.sql');
 
 describe('Halloween 2026 cross-layer gig contract', () => {
   it('only uses the authoritative gig and server-frozen hat snapshot', () => {
@@ -68,6 +69,22 @@ describe('Halloween 2026 cross-layer gig contract', () => {
     expect(rewards).toContain('first_reward_awarded=true');
     expect(rewards).toContain("'halloween_2026_first_rewards'");
     expect(rewards).toContain('public.gig_song_performances sp');
+  });
+
+
+  it('reconciles a completed gig after its outcome or performed songs arrive late, without re-running gig completion', () => {
+    expect(lateSettlement).toContain('public.reconcile_halloween_2026_first_rewards(p_gig_id uuid)');
+    expect(lateSettlement).toContain('v_gig.status <> \'completed\'');
+    expect(lateSettlement).toContain('public.halloween_2026_first_rewards(profile_id,gig_id)');
+    expect(lateSettlement).toContain('ON CONFLICT (profile_id) DO NOTHING');
+    expect(lateSettlement).toContain("'haunted_stage_2026'");
+    expect(lateSettlement).toContain("'halloween_2026_first_rewards'");
+    expect(lateSettlement).toContain('AFTER INSERT OR UPDATE OF completed_at ON public.gig_outcomes');
+    expect(lateSettlement).toContain('AFTER INSERT ON public.gig_song_performances');
+    expect(lateSettlement).toContain('v_gig.completed_at >= v_end');
+    expect(lateSettlement).toContain("coalesce(v_settings->>'enabled','false') <> 'true'");
+    expect(lateSettlement).not.toContain("UPDATE public.gigs SET status=");
+    expect(lateSettlement).not.toContain("settle_gig_commerce");
   });
 
   it('does not expose private reward manipulation to public callers', () => {
