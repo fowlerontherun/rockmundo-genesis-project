@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.778",
+    date: "2026-10-16",
+    changes: [
+      { type: "improvement", description: "The large logo in the middle of the home screen, seen before signing in, is now the Halloween RockMundo artwork: the orange R emblem over a full moon with bats and a guitar-headstock cut-out, the dripping ROCKMUNDO lettering, the LIVE THE DREAM banner and the four trick-or-treaters carrying pumpkin buckets, cut out of its black background so it sits cleanly on the dark page. The clipped strip of stray text under the ground line was removed, and the browser tab icon now shows the R emblem." },
+    ],
+  },
+  {
     version: "1.1.777",
     date: "2026-10-15",
     changes: [
