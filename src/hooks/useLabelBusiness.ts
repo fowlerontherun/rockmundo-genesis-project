@@ -84,6 +84,7 @@ export function useHireLabelStaff() {
       skill_level?: number;
       specialty_genre?: string;
       salary_monthly?: number;
+      request_id: string;
     }) => {
       const { data, error } = await (supabase as any).rpc("hire_label_staff_atomic", {
         p_label_id: staff.label_id,
@@ -92,6 +93,7 @@ export function useHireLabelStaff() {
         p_skill_level: staff.skill_level ?? 1,
         p_specialty_genre: staff.specialty_genre ?? null,
         p_salary_monthly: staff.salary_monthly ?? 3000,
+        p_request_id: staff.request_id,
       });
       if (error) throw error;
       return data;

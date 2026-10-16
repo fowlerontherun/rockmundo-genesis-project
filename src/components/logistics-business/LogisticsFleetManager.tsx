@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,14 +19,6 @@ interface LogisticsFleetManagerProps {
   fleetCapacity: number;
 }
 
-const VEHICLE_TYPES = [
-  { value: 'van', label: 'Cargo Van', capacity: 80, cost: 15000 },
-  { value: 'sprinter', label: 'Sprinter Van', capacity: 120, cost: 35000 },
-  { value: 'box_truck', label: 'Box Truck', capacity: 200, cost: 45000 },
-  { value: 'semi', label: 'Semi-Trailer', capacity: 500, cost: 120000 },
-  { value: 'flatbed', label: 'Flatbed Truck', capacity: 400, cost: 80000 },
-];
-
 const STATUS_COLORS: Record<string, string> = {
   available: 'bg-success/10 text-success',
   in_transit: 'bg-warning/10 text-warning',
@@ -35,35 +29,42 @@ const STATUS_COLORS: Record<string, string> = {
 export function LogisticsFleetManager({ logisticsCompanyId, fleetCapacity }: LogisticsFleetManagerProps) {
   const { data: fleet = [], isLoading } = useLogisticsFleet(logisticsCompanyId);
   const addVehicle = useAddFleetVehicle();
-
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [newVehicle, setNewVehicle] = useState({
-    name: '',
-    vehicle_type: 'van',
+  const { data: vehicleCatalog = [] } = useQuery({
+    queryKey: ["logistics-vehicle-catalog"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("vehicle_catalog")
+        .select("id, name, vehicle_type, capacity_units, purchase_cost")
+        .gt("purchase_cost", 0)
+        .order("purchase_cost");
+      if (error) throw error;
+      return data ?? [];
+    },
   });
 
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newVehicle, setNewVehicle] = useState({ name: "", vehicle_catalog_id: "" });
+  const [pendingPurchaseRequestId, setPendingPurchaseRequestId] = useState<string | null>(null);
+
   const handleAddVehicle = async () => {
-    if (!newVehicle.name) {
-      toast.error("Please enter a vehicle name");
+    if (!newVehicle.name.trim() || !newVehicle.vehicle_catalog_id) {
+      toast.error("Please enter a name and select a catalog vehicle");
       return;
     }
-
-    const vehicleConfig = VEHICLE_TYPES.find(v => v.value === newVehicle.vehicle_type);
+    const requestId = pendingPurchaseRequestId ?? crypto.randomUUID();
+    setPendingPurchaseRequestId(requestId);
 
     try {
       await addVehicle.mutateAsync({
         logistics_company_id: logisticsCompanyId,
-        name: newVehicle.name,
-        vehicle_type: newVehicle.vehicle_type,
-        capacity_units: vehicleConfig?.capacity || 100,
-        purchase_cost: vehicleConfig?.cost || 15000,
-        purchase_date: new Date().toISOString(),
-        condition_percent: 100,
-        status: 'available',
+        name: newVehicle.name.trim(),
+        vehicle_catalog_id: newVehicle.vehicle_catalog_id,
+        request_id: requestId,
       });
       toast.success("Vehicle added to fleet!");
       setIsAddDialogOpen(false);
-      setNewVehicle({ name: '', vehicle_type: 'van' });
+      setNewVehicle({ name: "", vehicle_catalog_id: "" });
+      setPendingPurchaseRequestId(null);
     } catch (error) {
       toast.error("Failed to add vehicle");
     }
@@ -114,27 +115,20 @@ export function LogisticsFleetManager({ logisticsCompanyId, fleetCapacity }: Log
                     id="name"
                     placeholder="e.g., Truck Alpha-1"
                     value={newVehicle.name}
-                    onChange={(e) => setNewVehicle({ ...newVehicle, name: e.target.value })}
+                    onChange={(e) => { setNewVehicle({ ...newVehicle, name: e.target.value }); setPendingPurchaseRequestId(null); }}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Vehicle Type</Label>
+                  <Label>Vehicle Catalog</Label>
                   <Select
-                    value={newVehicle.vehicle_type}
-                    onValueChange={(value) => setNewVehicle({ ...newVehicle, vehicle_type: value })}
+                    value={newVehicle.vehicle_catalog_id}
+                    onValueChange={(value) => { setNewVehicle({ ...newVehicle, vehicle_catalog_id: value }); setPendingPurchaseRequestId(null); }}
                   >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Choose a vehicle" /></SelectTrigger>
                     <SelectContent>
-                      {VEHICLE_TYPES.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          <div className="flex justify-between items-center w-full gap-4">
-                            <span>{type.label}</span>
-                            <span className="text-muted-foreground text-xs">
-                              {type.capacity} units • ${type.cost.toLocaleString()}
-                            </span>
-                          </div>
+                      {vehicleCatalog.map((vehicle) => (
+                        <SelectItem key={vehicle.id} value={vehicle.id}>
+                          {vehicle.name} — {vehicle.capacity_units} units · ${Number(vehicle.purchase_cost).toLocaleString()}
                         </SelectItem>
                       ))}
                     </SelectContent>

@@ -5,11 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { User, Plus, Star, Truck, AlertTriangle } from "lucide-react";
 import { useLogisticsDrivers, useHireDriver } from "@/hooks/useLogisticsBusiness";
-import { DRIVER_LICENSE_TYPES } from "@/types/logistics-business";
-import type { LogisticsDriver } from "@/types/logistics-business";
 import { toast } from "sonner";
 
 interface LogisticsDriversManagerProps {
@@ -28,12 +25,8 @@ export function LogisticsDriversManager({ logisticsCompanyId }: LogisticsDrivers
   const hireDriver = useHireDriver();
 
   const [isHireDialogOpen, setIsHireDialogOpen] = useState(false);
-  const [newDriver, setNewDriver] = useState({
-    name: '',
-    license_type: 'standard',
-    experience_years: 1,
-    salary_per_day: 150,
-  });
+  const [newDriver, setNewDriver] = useState({ name: "" });
+  const [pendingHireRequestId, setPendingHireRequestId] = useState<string | null>(null);
 
   const handleHireDriver = async () => {
     if (!newDriver.name) {
@@ -41,21 +34,18 @@ export function LogisticsDriversManager({ logisticsCompanyId }: LogisticsDrivers
       return;
     }
 
+    const requestId = pendingHireRequestId ?? crypto.randomUUID();
+    setPendingHireRequestId(requestId);
     try {
       await hireDriver.mutateAsync({
         logistics_company_id: logisticsCompanyId,
-        name: newDriver.name,
-        license_type: newDriver.license_type as LogisticsDriver['license_type'],
-        experience_years: newDriver.experience_years,
-        salary_per_day: newDriver.salary_per_day,
-        skill_level: Math.min(10, newDriver.experience_years + 2),
-        reliability_rating: 70 + Math.floor(Math.random() * 20),
-        is_npc: true,
-        status: 'active',
+        name: newDriver.name.trim(),
+        request_id: requestId,
       });
       toast.success("Driver hired successfully!");
       setIsHireDialogOpen(false);
-      setNewDriver({ name: '', license_type: 'standard', experience_years: 1, salary_per_day: 150 });
+      setNewDriver({ name: "" });
+      setPendingHireRequestId(null);
     } catch (error) {
       toast.error("Failed to hire driver");
     }
@@ -101,56 +91,13 @@ export function LogisticsDriversManager({ logisticsCompanyId }: LogisticsDrivers
                     id="driverName"
                     placeholder="e.g., John Smith"
                     value={newDriver.name}
-                    onChange={(e) => setNewDriver({ ...newDriver, name: e.target.value })}
+                    onChange={(e) => { setNewDriver({ name: e.target.value }); setPendingHireRequestId(null); }}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>License Type</Label>
-                  <Select
-                    value={newDriver.license_type}
-                    onValueChange={(value) => setNewDriver({ ...newDriver, license_type: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DRIVER_LICENSE_TYPES.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          <div>
-                            <span>{type.label}</span>
-                            <span className="text-xs text-muted-foreground ml-2">
-                              {type.description}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="experience">Experience (years)</Label>
-                    <Input
-                      id="experience"
-                      type="number"
-                      min={0}
-                      max={30}
-                      value={newDriver.experience_years}
-                      onChange={(e) => setNewDriver({ ...newDriver, experience_years: parseInt(e.target.value) || 0 })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="salary">Daily Salary ($)</Label>
-                    <Input
-                      id="salary"
-                      type="number"
-                      min={100}
-                      max={500}
-                      value={newDriver.salary_per_day}
-                      onChange={(e) => setNewDriver({ ...newDriver, salary_per_day: parseInt(e.target.value) || 150 })}
-                    />
-                  </div>
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  New NPC drivers start with a standard licence, skill 1 and a $150 daily salary.
+                  The initial hiring charge is $4,500.
+                </p>
                 <Button onClick={handleHireDriver} className="w-full" disabled={hireDriver.isPending}>
                   {hireDriver.isPending ? "Hiring..." : "Hire Driver"}
                 </Button>

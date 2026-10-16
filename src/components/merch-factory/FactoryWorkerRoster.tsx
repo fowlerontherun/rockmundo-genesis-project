@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -19,27 +18,29 @@ interface FactoryWorkerRosterProps {
 export function FactoryWorkerRoster({ factoryId }: FactoryWorkerRosterProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [workerName, setWorkerName] = useState("");
-  const [workerRole, setWorkerRole] = useState<string>("production");
+  const [pendingHireRequestId, setPendingHireRequestId] = useState<string | null>(null);
   
   const { data: workers, isLoading } = useFactoryWorkers(factoryId);
   const hireWorker = useHireWorker();
   
-  const selectedRole = WORKER_ROLES.find(r => r.value === workerRole);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    const requestId = pendingHireRequestId ?? crypto.randomUUID();
+    setPendingHireRequestId(requestId);
     await hireWorker.mutateAsync({
       factory_id: factoryId,
-      name: workerName,
-      role: workerRole as 'production' | 'quality_control' | 'supervisor' | 'maintenance',
-      skill_level: 1 + Math.random() * 0.5,
-      salary_weekly: selectedRole?.baseSalary || 400,
+      name: workerName.trim(),
+      role: 'production',
+      skill_level: 1,
+      salary_weekly: 500,
+      request_id: requestId,
     });
     
     setDialogOpen(false);
     setWorkerName("");
-    setWorkerRole("production");
+    setPendingHireRequestId(null);
   };
   
   const getRoleBadgeVariant = (role: string) => {
@@ -78,35 +79,18 @@ export function FactoryWorkerRoster({ factoryId }: FactoryWorkerRosterProps) {
                 <Label>Worker Name</Label>
                 <Input
                   value={workerName}
-                  onChange={(e) => setWorkerName(e.target.value)}
+                  onChange={(e) => { setWorkerName(e.target.value); setPendingHireRequestId(null); }}
                   placeholder="Enter worker name"
                   required
                 />
               </div>
               
-              <div className="space-y-2">
-                <Label>Role</Label>
-                <Select value={workerRole} onValueChange={setWorkerRole}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {WORKER_ROLES.map((role) => (
-                      <SelectItem key={role.value} value={role.value}>
-                        {role.label} (${role.baseSalary}/week)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
               <div className="bg-muted/50 p-3 rounded-lg text-sm">
-                <p className="font-medium">Weekly Salary: ${selectedRole?.baseSalary || 400}</p>
+                <p className="font-medium">Production worker · $500 per week</p>
                 <p className="text-muted-foreground text-xs mt-1">
-                  Workers start at skill level 1.0-1.5 and improve with experience
+                  New workers start at skill level 1, with an initial hiring charge of $2,000.
                 </p>
               </div>
-              
               <Button type="submit" className="w-full" disabled={hireWorker.isPending}>
                 {hireWorker.isPending ? "Hiring..." : "Hire Worker"}
               </Button>
