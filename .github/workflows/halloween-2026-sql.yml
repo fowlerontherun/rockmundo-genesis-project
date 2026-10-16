@@ -67,6 +67,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/halloween_2026_positive_reward_claim.sql
       - name: Verify cancelled and unqualified gigs receive no rewards
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/halloween_2026_ineligible_gigs.sql
+      - name: Exercise festival and tour multi-gig first-reward isolation
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/tests/halloween_2026_tour_festival_multigig.sql
       - name: Apply admin-only Halloween launch preflight
         run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261016120000_halloween_2026_admin_launch_preflight.sql
       - name: Support service-role SQL console checks without a JWT
