@@ -143,10 +143,12 @@ BEGIN
       ORDER BY o.profile_id) FILTER (WHERE o.was_equipped),'[]'::jsonb)
   INTO v_pct,v_count,v_members
   FROM public.halloween_2026_gig_outfits o
-  JOIN public.gig_performers gp
-   ON gp.gig_id=o.gig_id AND gp.profile_id=o.profile_id
   WHERE o.gig_id=p_gig_id
-    AND gp.lineup_status IN ('selected','performed');
+    AND EXISTS (
+      SELECT 1 FROM public.gig_performers gp
+      WHERE gp.gig_id=o.gig_id AND gp.profile_id=o.profile_id
+        AND gp.lineup_status IN ('selected','performed')
+    );
   RETURN jsonb_build_object('performance_pct',v_pct,
     'qualifying_members',v_count,'members',v_members);
 END;
