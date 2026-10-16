@@ -18,15 +18,17 @@ export function HalloweenGigRewardSummary({
   xpBreakdown,
   profileId,
 }: {
-  xpBreakdown?: HalloweenBreakdown | null;
+  xpBreakdown?: unknown;
   profileId?: string | null;
 }) {
-  const seasonal = xpBreakdown?.halloween_2026;
+  const saved = xpBreakdown && typeof xpBreakdown === 'object' && !Array.isArray(xpBreakdown)
+    ? xpBreakdown as HalloweenBreakdown : null;
+  const seasonal = saved?.halloween_2026;
   const effect = Number(seasonal?.performance_pct);
   if (seasonal?.event_id !== "haunted-stage-2026" || !seasonal.applied
       || !Number.isFinite(effect) || effect <= 0 || effect > 15) return null;
 
-  const firstReward = xpBreakdown?.halloween_2026_first_rewards;
+  const firstReward = saved?.halloween_2026_first_rewards;
   const firstTime = Boolean(profileId && firstReward?.awarded_profiles?.includes(profileId));
   return (
     <section aria-label="Halloween gig rewards" className="rounded-lg border border-orange-500/40 bg-orange-500/10 p-3">
