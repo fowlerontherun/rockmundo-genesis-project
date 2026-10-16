@@ -50,6 +50,8 @@ jobs:
             src/pages/admin/HalloweenLaunchPreflight.test.ts \
             src/components/gig/HalloweenGigRewardSummary.test.tsx \
             src/features/player-model/accessories.test.ts \
+            src/features/player-model/PlayerModelEditor.test.tsx \
+            src/features/player-model/luthieryLoadRecovery.test.ts \
             src/features/clothing-preview/curatedGarmentAssets.test.ts \
             src/features/clothing-preview/pumpkinHatV1Routing.test.ts \
             src/features/gig-experience/services/replayStageVisuals.test.ts \

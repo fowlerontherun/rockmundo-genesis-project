@@ -39,10 +39,10 @@ export default function PlayerModelEditor() {
   if (model.isLoading || (model.profileId && model.query.isPending)) return <p role="status" className="p-8">Loading your character’s stage model…</p>;
   if (model.error || model.query.isError) return <div role="alert" className="p-8"><p>Your saved model could not load.</p><button type="button" className="underline" onClick={() => void model.query.refetch()}>Try again</button></div>;
   if (!model.profileId || !model.query.data) return <p className="p-8">Select a character to create a stage model.</p>;
-  return <EditorSession key={model.profileId} profileId={model.profileId} initial={model.query.data} model={model} richClothing={richClothing.data ?? []} richClothingError={richClothing.isError} tattoos={tattoos.data ?? []} tattooError={tattoos.isError} luthieryInstruments={luthieryInstruments.data ?? []} luthieryError={luthieryInstruments.isError} merchWearable={merch.query.data?.equipped ?? null} merchControl={{ pending: merch.equip.isPending, error: merch.equip.error, remove: () => merch.equip.mutate(null) }} />;
+  return <EditorSession key={model.profileId} profileId={model.profileId} initial={model.query.data} model={model} richClothing={richClothing.data ?? []} richClothingError={richClothing.isError} tattoos={tattoos.data ?? []} tattooError={tattoos.isError} luthieryInstruments={luthieryInstruments.data ?? []} luthieryStatus={{ error: luthieryInstruments.isError, fetching: luthieryInstruments.isFetching, message: luthieryInstruments.error instanceof Error ? luthieryInstruments.error.message : null, retry: () => { void luthieryInstruments.refetch(); } }} merchWearable={merch.query.data?.equipped ?? null} merchControl={{ pending: merch.equip.isPending, error: merch.equip.error, remove: () => merch.equip.mutate(null) }} />;
 }
 
-function EditorSession({ profileId, initial, model, richClothing, richClothingError, tattoos, tattooError, luthieryInstruments, luthieryError, merchWearable, merchControl }: { profileId: string; initial: { appearance: PlayerAppearance; revision: number | null }; model: ReturnType<typeof usePlayerModel>; richClothing: ResolvedEquippedClothing[]; richClothingError: boolean; tattoos: import('./tattoos').ResolvedTattooVisual[]; tattooError: boolean; luthieryInstruments: import('@/features/luthiery/luthieryInstrument').LuthieryInstrumentVisual[]; luthieryError: boolean; merchWearable: import('./merchWearables').ResolvedMerchWearable | null; merchControl: { pending: boolean; error: Error | null; remove: () => void } }) {
+function EditorSession({ profileId, initial, model, richClothing, richClothingError, tattoos, tattooError, luthieryInstruments, luthieryStatus, merchWearable, merchControl }: { profileId: string; initial: { appearance: PlayerAppearance; revision: number | null }; model: ReturnType<typeof usePlayerModel>; richClothing: ResolvedEquippedClothing[]; richClothingError: boolean; tattoos: import('./tattoos').ResolvedTattooVisual[]; tattooError: boolean; luthieryInstruments: import('@/features/luthiery/luthieryInstrument').LuthieryInstrumentVisual[]; luthieryStatus: { error: boolean; fetching: boolean; message: string | null; retry: () => void }; merchWearable: import('./merchWearables').ResolvedMerchWearable | null; merchControl: { pending: boolean; error: Error | null; remove: () => void } }) {
 
   const [draft, setDraft] = useState(initial.appearance), [baseline, setBaseline] = useState(initial), [role, setRole] = useState('other'), [activeTab, setActiveTab] = useState<EditorTab>('body');
   const [feedback, setFeedback] = useState(''), [error, setError] = useState('');
@@ -86,7 +86,16 @@ function EditorSession({ profileId, initial, model, richClothing, richClothingEr
     else setError('Your saved model could not be reloaded. Your edits are still here.');
   }
   return <section className="player-model-editor" aria-label="Full-body avatar creator">
-    {luthieryError && <p role="alert" className="text-sm text-destructive">Your equipped crafted instruments could not load. Retry by reopening the designer.</p>}
+    {luthieryStatus.error && <div role="status" className="rounded-md border border-amber-500/40 p-3 text-sm">
+      <p>Crafted instrument visuals could not load. Your avatar, Pumpkin Hat and other accessories are unaffected.</p>
+      <button type="button" className="mt-2 underline" disabled={luthieryStatus.fetching} onClick={luthieryStatus.retry}>
+        {luthieryStatus.fetching ? 'Retrying crafted instruments…' : 'Retry crafted instruments'}
+      </button>
+      {luthieryStatus.message && <details className="mt-2 text-xs text-muted-foreground">
+        <summary>Technical error details</summary>
+        <p className="break-words">{luthieryStatus.message}</p>
+      </details>}
+    </div>
     {newerRevision && dirty && <p role="alert" className="text-sm text-destructive">A newer saved avatar is available. Reload it before saving to avoid overwriting newer changes.</p>}
     <div className="player-model-editor__intro"><div><span className="player-model-editor__eyebrow">YOUR LOOK. YOUR STAGE.</span><h2>Create your full-body avatar</h2><p>Shape your face and character, dress them head to toe, add accessories and tattoos, and take the same look on stage.</p></div><span className="player-model-editor__badge">LIVE AVATAR · VERSION 1</span></div>
     <div className="player-model-editor__layout">
