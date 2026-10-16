@@ -18,7 +18,7 @@ import type { ModelLibrary } from '@/features/player-model/model';
 import type { PlayerAppearance } from '@/features/player-model/appearance';
 import type { AvatarVisualQuality } from '@/features/player-model/avatarVisualQuality';
 import { buildProceduralGarment, type GarmentRigAnchor } from '@/features/clothing-preview/proceduralGarmentRenderer';
-import { buildCuratedGarment, isCuratedClothing, isCuratedClothingRenderable, loadOptionalCuratedGarments, requiredCuratedGarmentFiles } from '@/features/clothing-preview/curatedGarmentAssets';
+import { buildCuratedGarment, isCuratedClothing, isCuratedClothingRenderable, isAvatarV1HeadAccessory, loadOptionalCuratedGarments, requiredCuratedGarmentFiles } from '@/features/clothing-preview/curatedGarmentAssets';
 import { curatedDonorSource, requiredCuratedDonorModelFiles } from '@/features/clothing-preview/curatedDonorGarments';
 import type { ResolvedEquippedClothing } from '@/features/clothing-preview/equippedClothing';
 import type { ResolvedInstrumentSkinVisual } from '@/features/instrument-skins/instrumentSkin';
@@ -153,6 +153,9 @@ export class Musician {
         if (richClothing.length) {
             this.root.updateMatrixWorld(true);
             for (const resolved of richClothing) {
+                // Avatar V1 head accessories have already been attached by
+                // assemblePlayerModel to the animated head bone.
+                if (isAvatarV1HeadAccessory(resolved.item)) continue;
                 if (isCuratedClothing(resolved.item)) {
                     if (curatedDonorSource(resolved.item))
                         continue;
