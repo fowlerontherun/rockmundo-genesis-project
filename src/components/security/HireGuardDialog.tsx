@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -39,6 +39,7 @@ export const HireGuardDialog = ({
 }: HireGuardDialogProps) => {
   const [name, setName] = useState("");
   const [skillLevel, setSkillLevel] = useState(3);
+  const pendingHireIds = useRef(new Map<string,string>());
   const hireGuard = useHireGuard();
 
   const currentSkill = SKILL_LEVELS.find(s => s.level === skillLevel) || SKILL_LEVELS[2];
@@ -48,13 +49,21 @@ export const HireGuardDialog = ({
     e.preventDefault();
     if (!name.trim()) return;
 
+    const intentKey = JSON.stringify({ firmId, name: name.trim(), skillLevel });
+    let requestId = pendingHireIds.current.get(intentKey);
+    if (!requestId) {
+      requestId = crypto.randomUUID();
+      pendingHireIds.current.set(intentKey, requestId);
+    }
     await hireGuard.mutateAsync({
       firmId,
       name: name.trim(),
       skillLevel,
       salaryPerEvent: salary,
+      requestId,
     });
     
+    pendingHireIds.current.delete(intentKey);
     setName("");
     setSkillLevel(3);
     onOpenChange(false);
