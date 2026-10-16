@@ -167,8 +167,8 @@ const BandRepertoire = () => {
           status,
           scheduled_start,
           completed_at,
-          quality_score,
-          songs!inner(id, title, band_id)
+          quality_score:final_master_quality,
+          songs:songs!recording_sessions_song_id_fkey!inner(id, title, band_id)
         `)
         .eq("songs.band_id", bandId)
         .order("scheduled_start", { ascending: false })
