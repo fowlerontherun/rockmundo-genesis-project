@@ -7,7 +7,7 @@ import { assemblePlayerModel, disposeModel, loadModelLibrary, type ModelLibrary 
 import type { ClothingItem } from '@/hooks/useSkinStore';
 import type { ClothingPreviewVariant } from './clothingPreview';
 import { buildProceduralGarment, disposeProceduralGarment } from './proceduralGarmentRenderer';
-import { buildCuratedGarment, curatedGarmentFile, disposeCuratedGarment, isCuratedClothing, isCuratedClothingRenderable } from './curatedGarmentAssets';
+import { buildCuratedGarment, curatedGarmentFile, disposeCuratedGarment, isCuratedClothing, isCuratedClothingRenderable, isAvatarV1HeadAccessory } from './curatedGarmentAssets';
 import { curatedDonorSource } from './curatedDonorGarments';
 import { avatarQualityProfile, recommendedAvatarPreviewQuality } from '@/features/player-model/avatarVisualQuality';
 
@@ -132,10 +132,12 @@ export function RichClothingPreview({ appearance, item, variant, onStatusChange 
         library = loaded;
         const currentPreview = latestPreview.current;
         const donor = curatedDonorSource(currentPreview.item);
-        const previewClothing = donor ? [{ item: currentPreview.item, variant: currentPreview.variant }] : [];
+        const proceduralHead = isAvatarV1HeadAccessory(currentPreview.item);
+        const previewClothing = donor || proceduralHead ? [{ item: currentPreview.item, variant: currentPreview.variant }] : [];
         const base = assemblePlayerModel(library, appearance, [], previewClothing, visualQuality);
         scene.add(base);
-        if (donor) {
+        if (donor || proceduralHead) {
+          // The real head-bone mesh was already built by assemblePlayerModel.
           garment = null;
         } else if (isCuratedClothing(currentPreview.item)) {
           if (!isCuratedClothingRenderable(currentPreview.item)) {
@@ -200,8 +202,8 @@ export function RichClothingPreview({ appearance, item, variant, onStatusChange 
       if (isCuratedClothing(latestPreview.current.item)) disposeCuratedGarment(live.garment);
       else disposeProceduralGarment(live.garment);
     }
-    if (curatedDonorSource(item)) {
-      // Donor-backed curated skins are part of the avatar assembly itself. Rebuild
+    if (curatedDonorSource(item) || isAvatarV1HeadAccessory(item)) {
+      // Donor skins and Avatar V1 head-bone accessories are part of the model. Rebuild
       // the scene on the next effect pass rather than layering a second garment.
       live.garment = null;
       return;
@@ -243,7 +245,7 @@ export function RichClothingPreview({ appearance, item, variant, onStatusChange 
     />
     <div className="player-model-preview__label" aria-hidden="true">ROCKMUNDO <span>RICH GARMENT FITTING ROOM</span></div>
     {status !== 'ready' && <div className="player-model-preview__overlay">
-      <strong>{status === 'error' ? (isCuratedClothing(item) && !isCuratedClothingRenderable(item) ? 'Curated skin is awaiting validation' : 'Garment preview could not load') : 'Loading garment preview…'}</strong>
+      <strong>{status === 'error' ? (isCuratedClothing(item) && !isAvatarV1HeadAccessory(item) && !isCuratedClothingRenderable(item) ? 'Curated skin is awaiting validation' : 'Garment preview could not load') : 'Loading garment preview…'}</strong>
       {status === 'error' && <button type="button" onClick={() => setAttempt(value => value + 1)}>Retry</button>}
     </div>}
     <div className="player-model-preview__controls" aria-label="Model camera">
