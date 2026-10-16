@@ -14,7 +14,7 @@ import type { ClothingItem } from '@/hooks/useSkinStore';
 vi.mock('@/features/gig-demo-3d/ConcertScene', () => ({ ConcertScene: vi.fn() }));
 vi.mock('@/features/player-model/usePlayerModel', () => ({ useGigPlayerModels: vi.fn(() => ({ data: undefined, isFetching: false, isError: false })) }));
 const testQueryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-const engine = { setSettings: vi.fn(), setFrame: vi.fn(), setEffects: vi.fn(), setCrowdTuning: vi.fn(), destroy: vi.fn() };
+const engine = { setSettings: vi.fn(), setFrame: vi.fn(), setEffects: vi.fn(), setCrowdTuning: vi.fn(), setTelevisionMonitorContent: vi.fn(), destroy: vi.fn() };
 let onState: (state: 'loading' | 'ready' | 'error', message?: string) => void;
 beforeEach(() => { vi.clearAllMocks(); vi.mocked(ConcertScene).mockImplementation((_canvas, _settings, _stats, state) => { onState = state; state('ready'); return engine as unknown as ConcertScene; }); });
 afterEach(() => { cleanup(); testQueryClient.clear(); });
