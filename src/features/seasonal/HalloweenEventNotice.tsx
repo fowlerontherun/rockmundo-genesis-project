@@ -22,7 +22,7 @@ function useActiveHalloween() {
   const event = data?.halloween;
   return {
     event,
-    isActive: halloweenEventPhase(event, now) === "active",
+    isActive: data?.halloweenHatPublished === true && halloweenEventPhase(event, now) === "active",
     remaining: event ? halloweenRemainingLabel(event, now) : "",
   };
 }
