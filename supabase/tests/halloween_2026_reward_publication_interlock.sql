@@ -63,8 +63,15 @@ BEGIN
       WHERE gig_id=v_second AND profile_id=v_wearer AND was_equipped
         AND performance_pct IN (5,10,15))<>1
   THEN RAISE EXCEPTION 'Published hat did not freeze eligible performance'; END IF;
+  -- The actual bonus resolver deliberately refuses payout outside real-world
+  -- 24 Oct–1 Nov, even with a future-dated synthetic gig. Never fake DB time
+  -- or weaken this production gate for a pre-launch test.
   v_bonus := public.get_halloween_2026_gig_bonus(v_second);
-  IF (v_bonus->>'performance_pct')::numeric NOT IN (5,10,15) THEN
+  IF pg_catalog.now() < '2026-10-23T23:00:00Z'::timestamptz
+     OR pg_catalog.now() >= '2026-11-02T00:00:00Z'::timestamptz THEN
+    IF (v_bonus->>'performance_pct')::numeric <> 0 THEN
+      RAISE EXCEPTION 'Bonus resolver ignored the live calendar window'; END IF;
+  ELSIF (v_bonus->>'performance_pct')::numeric NOT IN (5,10,15) THEN
     RAISE EXCEPTION 'Published hat did not produce the frozen boost: %',v_bonus;
   END IF;
 
