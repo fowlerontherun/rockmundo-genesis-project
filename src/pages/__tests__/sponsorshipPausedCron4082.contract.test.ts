@@ -23,7 +23,7 @@ describe('#4082 existing paused sponsorship job staging', () => {
     expect(file).toContain("'x-cron-secret'");
     expect(file).toContain('{"dryRun":true}');
     expect(file).not.toContain('{"dryRun":false}');
-    expect(file).not.toMatch(/Bearer\\s+eyJ[A-Za-z0-9_-]{20,}/);
+    expect(file).not.toMatch(/Bearer\s+eyJ[A-Za-z0-9_-]{20,}/);
   });
 
   it('fails closed on credential-bearing, reactivated or changed jobs', () => {
