@@ -7,14 +7,15 @@ CREATE ROLE service_role NOLOGIN;
 CREATE SCHEMA auth;
 CREATE TYPE public.app_role AS ENUM ('admin', 'user');
 CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $authstub$
- SELECT NULL::uuid
+ SELECT NULLIF(pg_catalog.current_setting('test.admin_uid',true),'')::uuid
 $authstub$;
 CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS $authstub$
  SELECT NULL::text -- SQL-console sessions have no JWT role claim
 $authstub$;
 CREATE FUNCTION public.has_role(_user_id uuid,_role public.app_role)
 RETURNS boolean LANGUAGE sql STABLE AS $authstub$
- SELECT false
+ SELECT _user_id='20000000-0000-4000-8000-000000000001'::uuid
+   AND _role='admin'::public.app_role
 $authstub$;
 
 CREATE TABLE public.profiles (
