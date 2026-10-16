@@ -6,6 +6,7 @@ import type { GigReplayStatus, GigViewerReplay, GigViewerReplayLoadState } from 
 import { normalizeCrowdTuning } from "../viewer/engine/CrowdTuning";
 import logger from "@/lib/logger";
 import { normalizeReplayLuthieryInstrument } from "@/features/luthiery/luthieryInstrument";
+import { resolveStoredGigStageVisuals } from "./replayStageVisuals";
 import {
   createGigExperienceLoadError,
   isGigSchemaCompatibilityError,
@@ -18,6 +19,7 @@ type ReplayPayload = {
   crowdTuningRevision?: unknown;
   commerce?: unknown;
   luthieryInstruments?: unknown;
+  playerVisualsSnapshot?: unknown;
 };
 type RawReplayRow = Omit<ReplayRow, "viewer_version" | "event_schema_version"> & { viewer_version: unknown; event_schema_version: unknown };
 type ReplayRow = { id: string; gig_id: string; gig_outcome_id: string; viewer_version: number; event_schema_version: number; simulation_seed: string; duration_ms: number; event_payload: ReplayPayload | unknown[]; generated_at: string; generation_status: GigReplayStatus; checksum: string | null };
@@ -131,6 +133,7 @@ export async function getGigViewerReplay(gigId: string): Promise<GigViewerReplay
     crowdTuningRevision: Number.isFinite(revision) && revision > 0 ? revision : null,
     commerce,
     luthieryInstruments,
+    playerModelsSnapshot: resolveStoredGigStageVisuals(payload?.playerVisualsSnapshot),
   };
   const validation = validateGigViewerReplay(replay);
   if (!validation.valid) {
