@@ -193,7 +193,7 @@ export function useInstallRehearsalUpgrade() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (upgrade: Omit<RehearsalRoomUpgrade, 'id' | 'created_at' | 'installed_at'>) => {
+    mutationFn: async (upgrade: Omit<RehearsalRoomUpgrade, 'id' | 'created_at' | 'installed_at'> & { request_id: string }) => {
       const { data, error } = await (supabase as any).rpc("buy_subsidiary_asset_atomic", {
         p_kind: "rehearsal_upgrade", p_subsidiary_id: upgrade.room_id, p_fields: upgrade,
       });
