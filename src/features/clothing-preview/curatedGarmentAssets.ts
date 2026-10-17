@@ -6,6 +6,10 @@ import type { ClothingItem } from '@/hooks/useSkinStore';
 import type { ModelLibrary } from '@/features/player-model/model';
 import type { PlayerAppearance } from '@/features/player-model/appearance';
 import { curatedDonorSource } from './curatedDonorGarments';
+import { supabase } from '@/integrations/supabase/client';
+
+/** Prefix for garment files uploaded through the admin Garment Upload page (private storage). */
+export const UPLOADED_GARMENT_PREFIX = 'storage:';
 
 export type CuratedAssetStatus = NonNullable<ClothingItem['curated_asset_status']>;
 
@@ -30,6 +34,8 @@ export function isCuratedClothingRenderable(item: ClothingItem) {
 
 export function curatedGarmentFile(item: ClothingItem, frame: PlayerAppearance['body']['frame']) {
   if (isAvatarV1HeadAccessory(item) || curatedDonorSource(item)) return null;
+  const uploaded = (item.render_config as { uploadedAssets?: Record<string, unknown> } | null | undefined)?.uploadedAssets?.[frame];
+  if (typeof uploaded === 'string' && uploaded) return `${UPLOADED_GARMENT_PREFIX}${uploaded}`;
   if (!item.curated_asset_key) return null;
   const safe = item.curated_asset_key.replace(/[^a-z0-9._-]/gi, '-');
   return `clothing/${frame}/${safe}.glb`;
@@ -50,7 +56,14 @@ export async function loadOptionalCuratedGarments(library: ModelLibrary, files: 
   await Promise.all([...new Set(files)].map(async file => {
     if (library.has(file)) return;
     try {
-      const gltf = await loader.loadAsync(demoAssetUrl(file));
+      let url = demoAssetUrl(file);
+      let revoke: string | null = null;
+      if (file.startsWith(UPLOADED_GARMENT_PREFIX)) {
+        const { data, error } = await supabase.storage.from('curated-garments').download(file.slice(UPLOADED_GARMENT_PREFIX.length));
+        if (error || !data) throw error ?? new Error('download failed');
+        url = revoke = URL.createObjectURL(data);
+      }
+      const gltf = await loader.loadAsync(url).finally(() => { if (revoke) URL.revokeObjectURL(revoke); });
       library.set(file, gltf.scene);
     } catch (error) {
       // A bad cosmetic must never prevent the whole gig from loading.
