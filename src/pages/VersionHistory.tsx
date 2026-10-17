@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.781",
+    date: "2026-10-17",
+    changes: [
+      { type: "fix", description: "Weekly band pay is back: every Saturday at 10:00 UTC, active non-touring members get an equal share of the band's chosen pay percentage from its spendable money. Each band is paid once a week at most, and never into negative money." },
+      { type: "fix", description: "New band earnings no longer undo earlier studio and rehearsal payments; each earning now just adds or takes away its own amount." },
+    ],
+  },
+  {
     version: "1.1.780",
     date: "2026-10-17",
     changes: [
