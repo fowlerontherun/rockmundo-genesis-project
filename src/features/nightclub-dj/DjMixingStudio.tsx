@@ -6,11 +6,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getDjPlaybackUrl, type DjAudioTrack, useDjTrackLibrary } from "./library";
+import { filterDjTracks, getDjPlaybackUrl, type DjAudioTrack, useDjTrackLibrary } from "./library";
 import { clampDeckRate, equalPowerCrossfade, formatDjTime, syncDeckRate } from "./mixerMath";
 
 function AudioDeck({
@@ -155,6 +156,9 @@ export function DjMixingStudio() {
   const [rateB, setRateB] = useState(1);
   const [crossfade, setCrossfade] = useState(0);
   const [sharing, setSharing] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [sourceFilter, setSourceFilter] = useState<"all" | "game" | "admin">("all");
+  const matches = useMemo(() => filterDjTracks(tracks, search, sourceFilter), [tracks, sourceFilter, search]);
   const levels = useMemo(() => equalPowerCrossfade(crossfade), [crossfade]);
 
   useEffect(() => {
@@ -197,6 +201,39 @@ export function DjMixingStudio() {
         <p className="text-sm text-muted-foreground">Practice with real RockMundo audio. Start each deck separately and crossfade between them.</p>
         <Badge variant="outline">Practice · No rewards</Badge>
       </div>
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Music className="h-4 w-4" /> Track Library ({tracks.length})</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <Input type="search" aria-label="Search DJ tracks" placeholder="Search song, artist, genre, BPM or key..."
+            value={search} onChange={(event) => setSearch(event.target.value)} />
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Filter DJ track source">
+            {(["all", "game", "admin"] as const).map((source) => (
+              <Button key={source} type="button" size="sm" variant={sourceFilter === source ? "default" : "outline"}
+                aria-pressed={sourceFilter === source} onClick={() => setSourceFilter(source)}>
+                {source === "all" ? "All tracks" : source === "game" ? "RockMundo songs" : "Club library"}
+              </Button>
+            ))}
+          </div>
+          <div className="max-h-56 overflow-y-auto space-y-1.5" aria-live="polite">
+            {matches.length === 0 && <p className="text-sm text-muted-foreground py-3">No matching playable tracks.</p>}
+            {matches.slice(0, 40).map((track) => (
+              <div key={track.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium truncate">{track.title}</p>
+                  <p className="text-xs text-muted-foreground truncate">{track.artist} · {track.genre} · {track.bpm ? `${track.bpm} BPM` : "BPM unknown"}</p>
+                </div>
+                <div className="flex gap-1.5">
+                  <Button type="button" size="sm" variant="outline" onClick={() => setDeckA(track.id)}
+                    aria-label={`Load ${track.title} by ${track.artist} to deck A`}>Load A</Button>
+                  <Button type="button" size="sm" variant="outline" onClick={() => setDeckB(track.id)}
+                    aria-label={`Load ${track.title} by ${track.artist} to deck B`}>Load B</Button>
+                </div>
+              </div>
+            ))}
+          </div>
+          {matches.length > 40 && <p className="text-xs text-muted-foreground">Showing the first 40 matches. Refine your search to find more.</p>}
+        </CardContent>
+      </Card>
       <div className="grid gap-4 md:grid-cols-2">
         <AudioDeck deck="A" tracks={tracks} selectedId={deckA} onSelect={setDeckA} level={levels.a} rate={rateA} onRateChange={setRateA} />
         <AudioDeck deck="B" tracks={tracks} selectedId={deckB} onSelect={setDeckB} level={levels.b} rate={rateB} onRateChange={setRateB} />

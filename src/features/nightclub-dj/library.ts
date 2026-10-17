@@ -26,6 +26,8 @@ type GameSong = {
   extended_audio_url: string | null; profile_id: string | null;
   status: string | null; dj_use_allowed: boolean | null;
   archived: boolean | null;
+  band?: { name: string | null } | null;
+  artist_profile?: { display_name: string | null } | null;
 };
 
 export type AdminDjTrack = {
@@ -53,7 +55,7 @@ export function mapGameDjTrack(song: GameSong, myProfileId: string): DjAudioTrac
   return {
     id: `game:${song.id}`, source: "game", sourceId: song.id,
     title: song.title?.trim() || "Untitled",
-    artist: mine ? "My song" : "RockMundo artist",
+    artist: song.band?.name?.trim() || song.artist_profile?.display_name?.trim() || (mine ? "My song" : "RockMundo artist"),
     genre: song.genre || "Unknown", bpm: null, musicalKey: null,
     durationSeconds: song.duration_seconds ?? null,
     audioUrl: url, storagePath: null, mine,
@@ -69,6 +71,13 @@ export function mapAdminDjTrack(track: AdminDjTrack): DjAudioTrack {
     durationSeconds: track.duration_seconds, audioUrl: null,
     storagePath: track.storage_path, mine: false, sharedForDj: true,
   };
+}
+
+export function filterDjTracks(tracks: DjAudioTrack[], search: string, source: "all" | "game" | "admin"): DjAudioTrack[] {
+  const term = search.trim().toLocaleLowerCase();
+  return tracks.filter((track) => (source === "all" || track.source === source)
+    && (!term || [track.title, track.artist, track.genre, track.musicalKey ?? "", String(track.bpm ?? "")]
+      .some((value) => value.toLocaleLowerCase().includes(term))));
 }
 
 /** Only an admin-approved storage path gets a signed, short-lived URL from Storage RLS. */
@@ -88,14 +97,14 @@ export function useDjTrackLibrary(profileId: string | null) {
       if (!profileId) return [];
       const [mine, shared, admin] = await Promise.all([
         (supabase as any).from("songs")
-          .select("id,title,genre,duration_seconds,audio_url,extended_audio_url,profile_id,status,dj_use_allowed,archived")
+          .select("id,title,genre,duration_seconds,audio_url,extended_audio_url,profile_id,status,dj_use_allowed,archived,band:bands!songs_band_id_fkey(name),artist_profile:profiles!songs_profile_id_fkey(display_name)")
           .eq("profile_id", profileId)
           .in("status", ["recorded", "released", "completed", "mastered"])
           .eq("archived", false)
           .or("audio_url.not.is.null,extended_audio_url.not.is.null")
           .order("created_at", { ascending: false }).limit(100),
         (supabase as any).from("songs")
-          .select("id,title,genre,duration_seconds,audio_url,extended_audio_url,profile_id,status,dj_use_allowed,archived")
+          .select("id,title,genre,duration_seconds,audio_url,extended_audio_url,profile_id,status,dj_use_allowed,archived,band:bands!songs_band_id_fkey(name),artist_profile:profiles!songs_profile_id_fkey(display_name)")
           .in("status", ["recorded", "released"]).eq("dj_use_allowed", true)
           .eq("archived", false).or("audio_url.not.is.null,extended_audio_url.not.is.null")
           .order("created_at", { ascending: false }).limit(200),
