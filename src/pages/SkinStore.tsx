@@ -36,6 +36,7 @@ import {
 import { useVipStatus } from "@/hooks/useVipStatus";
 import { useTranslation } from "@/hooks/useTranslation";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
+import { useBuySkinCollectionSet, useConfirmSkinSetReturn, SKIN_SET_PRICE_LABEL } from "@/hooks/useSkinCollectionSet";
 
 const SkinStore = () => {
   const { t } = useTranslation();
@@ -54,6 +55,8 @@ const SkinStore = () => {
   const { data: vipStatus } = useVipStatus();
   const purchaseMutation = usePurchaseSkin();
   const instrumentPurchaseMutation = usePurchaseInstrumentSkin();
+  const buySet = useBuySkinCollectionSet();
+  useConfirmSkinSetReturn();
 
   const ownedItemIds = ownedSkins.filter((skin) => skin.item_type === 'clothing').map((skin) => skin.item_id);
   const ownedInstrumentIds = ownedSkins.filter((skin) => skin.item_type === 'instrument').map((skin) => skin.item_id);
@@ -67,6 +70,10 @@ const SkinStore = () => {
     : null;
 
   const handlePurchase = (item: ClothingItem, customization?: ClothingPurchaseCustomization) => {
+    if (item.collection_id) {
+      buySet.mutate(item.collection_id);
+      return;
+    }
     purchaseMutation.mutate({
       itemId: item.id,
       variantKey: customization?.variantKey || null,
@@ -83,6 +90,10 @@ const SkinStore = () => {
   };
 
   const handleInstrumentPurchase = (item: InstrumentSkinItem, customization: InstrumentSkinPurchaseCustomization) => {
+    if (item.collection_id) {
+      buySet.mutate(item.collection_id);
+      return;
+    }
     instrumentPurchaseMutation.mutate({
       itemId: item.id,
       variantKey: customization.variantKey,
@@ -264,6 +275,16 @@ const SkinStore = () => {
                   {selectedCollectionData.description && (
                     <p className="text-primary-foreground/80 mt-2">{selectedCollectionData.description}</p>
                   )}
+                  <div className="mt-4 flex items-center gap-3 flex-wrap">
+                    {collectionItems.length > 0 && collectionItems.every((item) => ownedItemIds.includes(item.id)) ? (
+                      <Badge variant="secondary">Set owned</Badge>
+                    ) : (
+                      <Button variant="secondary" disabled={buySet.isPending} onClick={() => buySet.mutate(selectedCollectionData.id)}>
+                        {buySet.isPending ? "Opening checkout..." : `Buy full set — ${SKIN_SET_PRICE_LABEL}`}
+                      </Button>
+                    )}
+                    <span className="text-xs text-primary-foreground/80">Real-money purchase. Unlocks every item in this collection for your current character.</span>
+                  </div>
                 </CardContent>
               </Card>
 
