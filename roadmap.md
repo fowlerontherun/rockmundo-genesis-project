@@ -1,6 +1,7 @@
 # Roadmap
 
 - [x] DB reconciliation phases 2–3: classify scripts vs live schema, freeze known date/duplicate issues, report in docs/db.
+- [x] Weekly band payroll rebuilt on band balance and switched on (1.1.781).
 - [ ] DB reconciliation phase 4–6: per-feature deploy/merge/retire decisions — waiting on user (staging copy? keep achievement engine, band proposals, balance versioning?).
 
 - [ ] Add TV-studio camera variety and replay-time camera movement without changing archived broadcast cues.
