@@ -45110,6 +45110,46 @@ export type Database = {
           },
         ]
       }
+      player_merch_wearables: {
+        Row: {
+          design_id: string
+          equipped_at: string
+          profile_id: string
+        }
+        Insert: {
+          design_id: string
+          equipped_at?: string
+          profile_id: string
+        }
+        Update: {
+          design_id?: string
+          equipped_at?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_merch_wearables_design_id_fkey"
+            columns: ["design_id"]
+            isOneToOne: false
+            referencedRelation: "tshirt_designs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_merch_wearables_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_merch_wearables_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_merchandise: {
         Row: {
           artwork_url: string | null
@@ -68469,6 +68509,21 @@ export type Database = {
         }
         Returns: Json
       }
+      book_gig_with_personal_funding: {
+        Args: {
+          p_band_id: string
+          p_local_date: string
+          p_request_id: string
+          p_rider_id?: string
+          p_setlist_id: string
+          p_slot: string
+          p_ticket_operator_id?: string
+          p_ticket_price: number
+          p_topup_minor: number
+          p_venue_id: string
+        }
+        Returns: Json
+      }
       book_jam_session_v2: {
         Args: {
           p_access_code: string
@@ -70275,6 +70330,14 @@ export type Database = {
         }
         Returns: Json
       }
+      create_recovery_character_atomic: {
+        Args: {
+          p_display_name?: string
+          p_parent_profile_id?: string
+          p_username?: string
+        }
+        Returns: string
+      }
       create_release_with_financing: {
         Args: { p_payload: Json }
         Returns: string
@@ -71213,6 +71276,16 @@ export type Database = {
         }[]
       }
       finalise_social_season: { Args: { p_season_id: string }; Returns: Json }
+      finalize_character_retirement: {
+        Args: {
+          p_attributes: Json
+          p_profile_id: string
+          p_skills: Json
+          p_stats: Json
+          p_type: string
+        }
+        Returns: Json
+      }
       finalize_recording_completion: {
         Args: { p_claim_id: string; p_session_id: string }
         Returns: boolean
@@ -71970,6 +72043,17 @@ export type Database = {
         Args: { profile_a: string; profile_b: string }
         Returns: string
       }
+      get_gig_merch_crowd_signal: {
+        Args: { p_gig_id: string }
+        Returns: {
+          band_id: string
+          design_id: string
+          fame_score: number
+          gig_id: string
+          merch_popularity_score: number
+          on_sale: boolean
+        }[]
+      }
       get_gig_preparation_setlist: { Args: { p_gig_id: string }; Returns: Json }
       get_gig_recovery_modifier: { Args: { p_gig_id: string }; Returns: Json }
       get_halloween_2026_gig_bonus: {
@@ -72506,6 +72590,19 @@ export type Database = {
           release_title: string
           release_type: string
           song_id: string
+        }[]
+      }
+      get_stage_merch_wearables: {
+        Args: { p_profile_ids: string[] }
+        Returns: {
+          artwork_url: string
+          band_id: string
+          design_data: Json
+          design_id: string
+          design_name: string
+          garment_color: string
+          product_type: string
+          profile_id: string
         }[]
       }
       get_stage_tattoo_visuals: {
@@ -76080,9 +76177,25 @@ export type Database = {
         Args: { p_profile_id: string; p_slug: string }
         Returns: number
       }
+      skill_tier_access_bulk: {
+        Args: { p_profile_id: string; p_slugs: string[] }
+        Returns: {
+          is_unlocked: boolean
+          skill_slug: string
+        }[]
+      }
       skill_tier_unlocked: {
         Args: { p_profile_id: string; p_slug: string }
         Returns: boolean
+      }
+      skip_and_complete_songwriting_project: {
+        Args: {
+          p_band_id?: string
+          p_catalog_status?: string
+          p_profile_id: string
+          p_project_id: string
+        }
+        Returns: Json
       }
       skip_and_complete_songwriting_project_with_instruments: {
         Args: {
