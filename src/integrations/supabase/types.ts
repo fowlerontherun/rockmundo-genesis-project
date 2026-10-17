@@ -73504,6 +73504,14 @@ export type Database = {
         Args: { p_band_id: string; p_country: string }
         Returns: number
       }
+      get_band_equipped_clothing_performance_bonus: {
+        Args: { p_band_id: string }
+        Returns: {
+          member_count: number
+          members_with_bonus: number
+          performance_pct: number
+        }[]
+      }
       get_band_music_collaboration_workspace: {
         Args: { p_band_id: string }
         Returns: Json
