@@ -66822,6 +66822,86 @@ export type Database = {
           },
         ]
       }
+      wellness_appointments: {
+        Row: {
+          client_profile_id: string
+          created_at: string
+          effects_applied: Json
+          ends_at: string
+          id: string
+          listing_id: string | null
+          outcome_applied_at: string | null
+          price_cents: number
+          provider_profile_id: string
+          role: string
+          service_slug: string
+          starts_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          client_profile_id: string
+          created_at?: string
+          effects_applied?: Json
+          ends_at: string
+          id?: string
+          listing_id?: string | null
+          outcome_applied_at?: string | null
+          price_cents: number
+          provider_profile_id: string
+          role: string
+          service_slug: string
+          starts_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          client_profile_id?: string
+          created_at?: string
+          effects_applied?: Json
+          ends_at?: string
+          id?: string
+          listing_id?: string | null
+          outcome_applied_at?: string | null
+          price_cents?: number
+          provider_profile_id?: string
+          role?: string
+          service_slug?: string
+          starts_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wellness_appointments_client_profile_id_fkey"
+            columns: ["client_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wellness_appointments_client_profile_id_fkey"
+            columns: ["client_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wellness_appointments_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "wellness_provider_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wellness_appointments_provider_profile_id_fkey"
+            columns: ["provider_profile_id"]
+            isOneToOne: false
+            referencedRelation: "wellness_provider_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wellness_blocks: {
         Row: {
           blocks_activity_types: string[]
@@ -66978,6 +67058,184 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      wellness_professional_reviews: {
+        Row: {
+          appointment_id: string
+          client_profile_id: string
+          comment: string | null
+          created_at: string
+          id: string
+          moderation_status: string
+          provider_profile_id: string
+          rating: number
+        }
+        Insert: {
+          appointment_id: string
+          client_profile_id: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          moderation_status?: string
+          provider_profile_id: string
+          rating: number
+        }
+        Update: {
+          appointment_id?: string
+          client_profile_id?: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          moderation_status?: string
+          provider_profile_id?: string
+          rating?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wellness_professional_reviews_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: true
+            referencedRelation: "wellness_appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wellness_professional_reviews_client_profile_id_fkey"
+            columns: ["client_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wellness_professional_reviews_client_profile_id_fkey"
+            columns: ["client_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wellness_professional_reviews_provider_profile_id_fkey"
+            columns: ["provider_profile_id"]
+            isOneToOne: false
+            referencedRelation: "wellness_provider_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wellness_provider_listings: {
+        Row: {
+          created_at: string
+          description: string | null
+          duration_minutes: number
+          effects: Json
+          id: string
+          paused: boolean
+          price_cents: number
+          provider_profile_id: string
+          remote_available: boolean
+          service_name: string
+          service_slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          effects?: Json
+          id?: string
+          paused?: boolean
+          price_cents: number
+          provider_profile_id: string
+          remote_available?: boolean
+          service_name: string
+          service_slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          effects?: Json
+          id?: string
+          paused?: boolean
+          price_cents?: number
+          provider_profile_id?: string
+          remote_available?: boolean
+          service_name?: string
+          service_slug?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wellness_provider_listings_provider_profile_id_fkey"
+            columns: ["provider_profile_id"]
+            isOneToOne: false
+            referencedRelation: "wellness_provider_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wellness_provider_profiles: {
+        Row: {
+          active: boolean
+          completed_appointments: number
+          created_at: string
+          display_name: string
+          id: string
+          professional_xp: number
+          profile_id: string | null
+          provider_kind: string
+          qualification_tier: string
+          reliability: number
+          reputation_score: number
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          completed_appointments?: number
+          created_at?: string
+          display_name: string
+          id?: string
+          professional_xp?: number
+          profile_id?: string | null
+          provider_kind: string
+          qualification_tier?: string
+          reliability?: number
+          reputation_score?: number
+          role: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          completed_appointments?: number
+          created_at?: string
+          display_name?: string
+          id?: string
+          professional_xp?: number
+          profile_id?: string | null
+          provider_kind?: string
+          qualification_tier?: string
+          reliability?: number
+          reputation_score?: number
+          role?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wellness_provider_profiles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wellness_provider_profiles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       wellness_recovery_events: {
         Row: {
@@ -69905,6 +70163,10 @@ export type Database = {
           p_idempotency_key: string
           p_profile_id: string
         }
+        Returns: Json
+      }
+      book_wellness_professional: {
+        Args: { p_listing_id: string; p_profile_id: string }
         Returns: Json
       }
       botb_check_eligibility: {
@@ -76582,6 +76844,15 @@ export type Database = {
       review_radio_submission: {
         Args: { p_submission_id: string }
         Returns: Json
+      }
+      review_wellness_appointment: {
+        Args: {
+          p_appointment_id: string
+          p_comment?: string
+          p_profile_id: string
+          p_rating: number
+        }
+        Returns: undefined
       }
       revive_character: { Args: { p_profile_id: string }; Returns: undefined }
       revoke_endorsement: {
