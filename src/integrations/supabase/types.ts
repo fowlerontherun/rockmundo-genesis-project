@@ -5001,6 +5001,41 @@ export type Database = {
           },
         ]
       }
+      band_weekly_payroll_settlements: {
+        Row: {
+          amount_each: number
+          amount_total: number
+          band_id: string
+          member_count: number
+          paid_at: string
+          week_start: string
+        }
+        Insert: {
+          amount_each: number
+          amount_total: number
+          band_id: string
+          member_count: number
+          paid_at?: string
+          week_start: string
+        }
+        Update: {
+          amount_each?: number
+          amount_total?: number
+          band_id?: string
+          member_count?: number
+          paid_at?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_weekly_payroll_settlements_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bands: {
         Row: {
           allow_applications: boolean | null
@@ -73796,6 +73831,7 @@ export type Database = {
         Args: { p_profile_id: string }
         Returns: Json
       }
+      process_weekly_band_payroll: { Args: never; Returns: Json }
       process_weekly_lottery_draw: { Args: never; Returns: Json }
       process_weekly_mayor_salaries: { Args: never; Returns: number }
       profile_belongs_to_current_user: {
