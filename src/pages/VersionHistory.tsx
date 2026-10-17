@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.780",
+    date: "2026-10-17",
+    changes: [
+      { type: "fix", description: "Switched on several recent features that never reached the live game because of small typos in their setup scripts: wearing your band's merch on stage, the crowd wearing merch in gig replays, faster skill-tier checks on education pages, 'skip polish and finish song', safe character recovery after death, safe retirement, and booking a gig topped up from your own wallet (automatically undone if the booking fails)." },
+    ],
+  },
+  {
     version: "1.1.779",
     date: "2026-10-17",
     changes: [
