@@ -27,7 +27,9 @@ export function mergeCharacterTravel(
     (!row.profile_id || row.profile_id === profileId) &&
     ["scheduled", "in_progress", "completed"].includes(row.status ?? "") &&
     Boolean(row.id));
-  const historyTourLegIds = new Set(validHistory.map((row) => row.tour_leg_id).filter(Boolean));
+  const historyTourLegIds = new Set(history
+    .filter((row) => (!row.profile_id || row.profile_id === profileId))
+    .map((row) => row.tour_leg_id).filter(Boolean));
 
   // Generic tour projections are not an extra journey when the character has
   // their own authoritative travel history for that leg.
