@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS public.dj_audio_tracks (
   uploaded_by uuid NOT NULL REFERENCES auth.users(id),
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT dj_audio_tracks_publish_rights CHECK (NOT is_active OR rights_confirmed)
+  CONSTRAINT dj_audio_tracks_publish_rights CHECK (NOT is_active OR (rights_confirmed AND length(btrim(coalesce(rights_notes, ''))) > 0))
 );
 
 ALTER TABLE public.dj_audio_tracks ENABLE ROW LEVEL SECURITY;
