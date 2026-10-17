@@ -68517,6 +68517,16 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_create_balance_version: {
+        Args: {
+          p_config: Json
+          p_description: string
+          p_name: string
+          p_parent_id?: string
+          p_version_key: string
+        }
+        Returns: string
+      }
       admin_create_festival_brand: {
         Args: {
           p_brand_type?: string
@@ -68890,6 +68900,14 @@ export type Database = {
           user_id: string
           username: string
         }[]
+      }
+      admin_set_balance_version_status: {
+        Args: {
+          p_note?: string
+          p_status: Database["public"]["Enums"]["balance_version_status"]
+          p_version_id: string
+        }
+        Returns: Database["public"]["Enums"]["balance_version_status"]
       }
       admin_set_gig_viewer_crowd_settings: {
         Args: { p_reason: string; p_settings: Json }
@@ -76237,6 +76255,16 @@ export type Database = {
         Returns: undefined
       }
       retry_pending_support_band_settlements: { Args: never; Returns: number }
+      review_band_finance_request: {
+        Args: {
+          p_decision: string
+          p_kind: string
+          p_note?: string
+          p_profile_id: string
+          p_request_id: string
+        }
+        Returns: string
+      }
       review_company_application: {
         Args: { p_action: string; p_application_id: string }
         Returns: undefined
@@ -77595,6 +77623,17 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      submit_band_finance_request: {
+        Args: {
+          p_amount_minor: number
+          p_band_id: string
+          p_category?: string
+          p_kind: string
+          p_profile_id: string
+          p_reason: string
+        }
+        Returns: string
       }
       submit_band_vacancy_application: {
         Args: { answers?: Json; cover?: string; target_vacancy_id: string }
@@ -79143,6 +79182,36 @@ export type Database = {
         Returns: number
       }
       unmute_profile: { Args: { target_profile_id: string }; Returns: boolean }
+      update_band_finance_policy: {
+        Args: { p_band_id: string; p_changes: Json; p_profile_id: string }
+        Returns: {
+          approval_threshold_minor: number
+          approvals_required_above_threshold: number
+          automatic_distribution_frequency: string
+          band_id: string
+          contribution_policy: Json
+          created_at: string
+          eligible_income_categories: string[]
+          emergency_spending_rules: Json
+          member_visibility_level: string
+          member_withdrawals_allowed: boolean
+          minimum_reserve_minor: number
+          participant_eligibility_mode: string
+          reimbursement_policy: Json
+          revenue_split_config: Json
+          revenue_split_method: Database["public"]["Enums"]["band_revenue_split_method"]
+          spending_approval_threshold_minor: number
+          updated_at: string
+          updated_by_profile_id: string | null
+          withdrawals_require_approval: boolean
+        }
+        SetofOptions: {
+          from: "*"
+          to: "band_finance_policies"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       update_band_member_performance_role: {
         Args: { p_instrument_role: string; p_member_id: string }
         Returns: {

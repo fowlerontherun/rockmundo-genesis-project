@@ -175,6 +175,7 @@ export const adminCategories: AdminCategory[] = [
       { path: "/admin/dashboard", label: "Admin Dashboard", description: "Overview & quick actions" },
       { path: "/admin/debug-panel", label: "Debug Panel", description: "Troubleshoot player issues" },
       { path: "/admin/finance-diagnostics", label: "Finance Diagnostics", description: "Finance RPC data sources" },
+      { path: "/admin/balance-versions", label: "Balance Versions", description: "Versioned game-balance settings" },
       { path: "/admin/stripe-audit", label: "Stripe Audit", description: "Live Stripe transactions and fees" },
       { path: "/admin/luthiery-workbench-demo", label: "Luthiery Workbench", description: "Instrument design workbench demo" },
       { path: "/admin/companies", label: "Company Admin", description: "VIP company management" },

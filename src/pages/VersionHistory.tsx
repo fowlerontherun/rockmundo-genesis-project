@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.784",
+    date: "2026-10-17",
+    changes: [
+      { type: "feature", description: "Band Finances tab: new 'Finance rules & requests' panel. Leaders set the reserve, income split and withdrawal rules; members send withdrawal or expense-refund requests; leaders approve or reject them." },
+      { type: "feature", description: "Admin: new Balance Versions page to save, check, approve, make live, roll back and retire game-balance settings, with a history log." },
+    ],
+  },
+  {
     version: "1.1.783",
     date: "2026-10-17",
     changes: [

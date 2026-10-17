@@ -44,6 +44,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { AddMoneyToBand } from "@/components/bands/AddMoneyToBand";
+import { BandFinanceRules } from "@/components/bands/BandFinanceRules";
 import { countActiveRegularBandMembers, monthlyBandRunway, RECENT_FINANCE_ENTRY_LIMIT, MAX_MONTHLY_EXPENSE_ROWS } from "./bandFinanceMetrics";
 import {
   DollarSign,
@@ -1190,6 +1191,7 @@ export function BandFinancesTab({ bandId }: BandFinancesTabProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <BandFinanceRules bandId={bandId} isLeader={isLeader} />
     </div>
   );
 }
