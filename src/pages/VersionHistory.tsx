@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.795",
+    date: "2026-10-17",
+    changes: [
+      { type: "feature", description: "New admin Garment Upload page: upload finished 3D clothing for both body frames, automatic rule checks (skeleton, body parts, triangle and material limits), then publish to the game." },
+      { type: "fix", description: "Britpop Bucket Hat is now white with a red, white and blue mod target on top." },
+      { type: "fix", description: "Baggy Stonewash Jeans now use full-length trousers; floating stripes removed from the Mod Stripe Tee until its proper model is uploaded." },
+    ],
+  },
+  {
     version: "1.1.794",
     date: "2026-10-17",
     changes: [
