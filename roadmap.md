@@ -1,5 +1,8 @@
 # Roadmap
 
+- [x] DB reconciliation phases 2–3: classify scripts vs live schema, freeze known date/duplicate issues, report in docs/db.
+- [ ] DB reconciliation phase 4–6: per-feature deploy/merge/retire decisions — waiting on user (staging copy? keep achievement engine, band proposals, balance versioning?).
+
 - [ ] Add TV-studio camera variety and replay-time camera movement without changing archived broadcast cues.
 - [ ] Add safe studio performer movement, verify stage/equipment constraints and visuals, and update version history.
 

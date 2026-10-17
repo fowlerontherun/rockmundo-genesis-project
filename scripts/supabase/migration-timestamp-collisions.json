@@ -1,4 +1,57 @@
 {
+  "20261009130000": [
+    "20261009130000_atomic_random_event_outcomes.sql",
+    "20261009130000_gig_skill_quest_ingestion.sql"
+  ],
+  "20261009140000": [
+    "20261009140000_correct_gig_quest_performers.sql",
+    "20261009140000_gig_skill_quest_confirmed_performers.sql"
+  ],
+  "20261009150000": [
+    "20261009150000_gig_quest_performer_confirmation.sql",
+    "20261009150000_secure_random_event_choices.sql"
+  ],
+  "20261009160000": [
+    "20261009160000_atomic_university_and_passive_reconcile.sql",
+    "20261009160000_skill_quest_reward_claims.sql"
+  ],
+  "20261009170000": [
+    "20261009170000_mayor_news_columns.sql",
+    "20261009170000_professor_atomic_attendance_bonus.sql",
+    "20261009170000_skill_quest_reward_definitions.sql"
+  ],
+  "20261009173000": [
+    "20261009173000_legacy_random_event_resolution_ledger.sql",
+    "20261009173000_professor_api_read_grants.sql"
+  ],
+  "20261009180000": [
+    "20261009180000_professor_write_permissions.sql",
+    "20261009180000_skill_quest_reward_claim_enqueue.sql"
+  ],
+  "20261009210000": [
+    "20261009210000_guard_skill_quest_experience_ledger.sql",
+    "20261009210000_verify_skill_quest_xp_ledger_evidence.sql"
+  ],
+  "20261012232000": [
+    "20261012232000_atomic_donation_rewards.sql",
+    "20261012232000_atomic_enchantment_application.sql"
+  ],
+  "20261012235500": [
+    "20261012235500_atomic_university_mentor_sessions.sql",
+    "20261012235500_song_generation_attempt_prediction_tracking.sql"
+  ],
+  "20261013140000": [
+    "20261013140000_admin_xp_grant_idempotency.sql",
+    "20261013140000_atomic_attribute_spend.sql"
+  ],
+  "20261013170000": [
+    "20261013170000_atomic_retirement_finalization.sql",
+    "20261013170000_underworld_purchase_arrest.sql"
+  ],
+  "20261016130000": [
+    "20261016130000_fix_ai_generation_service_role_jwt_guard.sql",
+    "20261016130000_halloween_2026_deferred_outcome_reward_reconciliation.sql"
+  ],
   "20291217220000": [
     "20291217220000_authoritative_festival_edition_scheduling.sql",
     "20291217220000_festival_financial_settlement.sql"
@@ -22,5 +75,9 @@
   "20291218254500": [
     "20291218254500_festival_attendee_checkin_leave.sql",
     "20291218254500_festival_memorabilia_launch_index.sql"
+  ],
+  "20300106200000": [
+    "20300106200000_atomic_personal_funded_gig_booking.sql",
+    "20300106200000_secure_atomic_weekly_band_payroll.sql"
   ]
 }
