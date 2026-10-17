@@ -15,7 +15,7 @@ crowd dance responses and server-side payouts are tracked in issues #4246-#4248.
 6. Drag the crossfader; both audio elements play simultaneously with bounded
    equal-power gain. Closing the studio stops the audio.
 7. Owners can opt their own playable songs into other players' DJ catalogues.
-   Opt-in is only discoverable to others when the song is released.
+   Opted-in recorded or released songs become discoverable to other DJs.
 
 **Audio note:** This MVP uses browser audio playback-rate changes; these change
 pitch as well as tempo and are *not* key-locked timestretch. The future minigame
@@ -41,7 +41,7 @@ delete/revoke the object too if immediate cessation is required.
 ## Game-song eligibility
 - The active character's own playable recorded/completed/mastered/released songs
   can always be mixed in their own practice studio.
-- Other artists' songs must be released and explicitly opted into DJ usage with
+- Other artists' songs must be recorded or released and explicitly opted into DJ usage with
   `songs.dj_use_allowed = true`.
 - An archived song, missing audio, or a URL with an unsafe scheme is never queued.
 - When both short and extended audio URLs exist, the extended audio is preferred.
@@ -59,7 +59,7 @@ delete/revoke the object too if immediate cessation is required.
 - Admin can upload and unpublish. Player sees approved tracks, selects A and B,
   and mixing audio stops on close. Verify desktop and mobile (including reload,
   muted system audio, missing asset, suspended tab and mixed file formats).
-- Check that shared songs are only visible when released and opted-in, and
+- Check that shared recorded/released songs are only visible when opted-in, and
   that no new cash/fame/XP operations occur from this studio.
 
 ## Deferred
