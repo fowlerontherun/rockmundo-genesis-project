@@ -55,6 +55,7 @@ export const adminCategories: AdminCategory[] = [
       { path: "/admin/radio-stations", label: "Radio Stations", description: "Radio network" },
       { path: "/admin/radio-content", label: "Radio Content", description: "Jingles & fake adverts" },
       { path: "/admin/practice-tracks", label: "Practice Tracks", description: "Stage practice audio" },
+      { path: "/admin/dj-audio-library", label: "DJ Audio Library", description: "Upload licensed nightclub DJ music" },
     ],
   },
   {

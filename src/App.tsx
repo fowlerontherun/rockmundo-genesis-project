@@ -180,6 +180,7 @@ const AdminStudios = lazyWithRetry(() => import("./pages/admin/Studios"));
 const AdminCityStudios = lazyWithRetry(() => import("./pages/admin/CityStudios"));
 const AdminProductionNotes = lazyWithRetry(() => import("./pages/admin/ProductionNotes"));
 const AdminNightClubs = lazyWithRetry(() => import("./pages/admin/NightClubs"));
+const AdminDjAudioLibrary = lazyWithRetry(() => import("./pages/admin/DjAudioLibraryAdmin"));
 const NightClubDetail = lazyWithRetry(() => import("./pages/NightClubDetail"));
 const NightclubHub = lazyWithRetry(() => import("./pages/NightclubHub"));
 const NightclubManagement = lazyWithRetry(() => import("./pages/NightclubManagement"));
@@ -1003,6 +1004,7 @@ function App() {
                     <Route path="admin/crowd-behavior" element={<CrowdBehaviorAdmin />} />
                     <Route path="admin/crowd-sounds" element={<CrowdSoundsAdmin />} />
                     <Route path="admin/practice-tracks" element={<PracticeTracksAdmin />} />
+                    <Route path="admin/dj-audio-library" element={<AdminDjAudioLibrary />} />
                     </Route>
                     {/* P2 admin route boundary end */}
                     <Route path="performance/gig/:gigId" element={<PerformGig />} />

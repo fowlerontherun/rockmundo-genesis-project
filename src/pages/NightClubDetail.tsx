@@ -27,6 +27,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ClubEventsSection } from "@/components/nightclub/ClubEventsSection";
 import { VipLoungeSection } from "@/components/nightclub/VipLoungeSection";
 import { useOwnedNightclubs } from "@/hooks/useNightclubOwnership";
+import { DjMixingStudio } from "@/features/nightclub-dj/DjMixingStudio";
 
 const QUALITY_LABELS: Record<number, string> = {
   1: "Underground",
@@ -65,6 +66,7 @@ const NightClubDetail = () => {
   const { performDjSetAsync, isPerforming } = useDjPerformance();
   const [djOutcome, setDjOutcome] = useState<DjPerformanceOutcome | null>(null);
   const [showOutcome, setShowOutcome] = useState(false);
+  const [showDjStudio, setShowDjStudio] = useState(false);
   const { data: reputation } = useClubReputation(clubId);
   const recordVisit = useRecordClubVisit();
 
@@ -287,6 +289,20 @@ const NightClubDetail = () => {
               </Button>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Two playable decks for practice, with no client-side rewards. */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg"><Disc3 className="h-5 w-5 text-primary" /> DJ Mixing Studio</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">Play your recorded songs and admin-curated club music on two DJ decks. Cue tracks, adjust tempo and crossfade your own live mix.</p>
+          <Button variant="outline" type="button" onClick={() => setShowDjStudio((value) => !value)}>
+            {showDjStudio ? "Close mixing studio" : "Open mixing studio"}
+          </Button>
+          {showDjStudio && <DjMixingStudio />}
         </CardContent>
       </Card>
 
