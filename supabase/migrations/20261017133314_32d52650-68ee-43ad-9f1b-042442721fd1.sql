@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.block_cash_purchase_of_collection_items() FROM PUBLIC, anon, authenticated;
