@@ -194,7 +194,17 @@ export function DjMixingStudio() {
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading playable DJ tracks...</p>;
   if (isError) return <p className="text-sm text-destructive" role="alert">Unable to load DJ tracks: {error instanceof Error ? error.message : "Unknown error"}. The catalogue migration may still need deploying.</p>;
-  if (!tracks.length) return <p className="text-sm text-muted-foreground">No playable tracks yet. Record a song with audio or ask an admin to publish a cleared club track.</p>;
+  if (!tracks.length) return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        No playable tracks yet. Record a song with audio or ask an admin to publish a cleared club track.
+        You can still review or delete previously saved DJ sets below.
+      </p>
+      <DjSetlistPlanner key={profileId ?? "none"} profileId={profileId} tracks={[]}
+        onRehearse={(first, second) => { setDeckA(first); setDeckB(second); }}
+        onLoadTrack={(id, deck) => { if (deck === "A") setDeckA(id); else setDeckB(id); }} />
+    </div>
+  );
 
   return (
     <div className="space-y-4" data-testid="dj-mixing-studio">
