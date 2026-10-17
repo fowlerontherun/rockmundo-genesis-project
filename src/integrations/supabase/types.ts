@@ -55266,6 +55266,36 @@ export type Database = {
           },
         ]
       }
+      seller_payout_accounts: {
+        Row: {
+          charges_enabled: boolean
+          created_at: string
+          details_submitted: boolean
+          payouts_enabled: boolean
+          stripe_account_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          charges_enabled?: boolean
+          created_at?: string
+          details_submitted?: boolean
+          payouts_enabled?: boolean
+          stripe_account_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          charges_enabled?: boolean
+          created_at?: string
+          details_submitted?: boolean
+          payouts_enabled?: boolean
+          stripe_account_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       series_episodes: {
         Row: {
           airdate: string | null
@@ -56566,6 +56596,144 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      skin_market_listings: {
+        Row: {
+          collection_id: string
+          created_at: string
+          currency: string
+          id: string
+          item_id: string | null
+          item_type: string | null
+          listing_kind: string
+          price_minor: number
+          reserved_by_profile_id: string | null
+          reserved_until: string | null
+          seller_profile_id: string
+          seller_user_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          collection_id: string
+          created_at?: string
+          currency?: string
+          id?: string
+          item_id?: string | null
+          item_type?: string | null
+          listing_kind: string
+          price_minor: number
+          reserved_by_profile_id?: string | null
+          reserved_until?: string | null
+          seller_profile_id: string
+          seller_user_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          collection_id?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          item_id?: string | null
+          item_type?: string | null
+          listing_kind?: string
+          price_minor?: number
+          reserved_by_profile_id?: string | null
+          reserved_until?: string | null
+          seller_profile_id?: string
+          seller_user_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skin_market_listings_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "skin_collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "skin_market_listings_seller_profile_id_fkey"
+            columns: ["seller_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "skin_market_listings_seller_profile_id_fkey"
+            columns: ["seller_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      skin_market_sales: {
+        Row: {
+          amount_minor: number
+          buyer_profile_id: string
+          buyer_user_id: string
+          completed_at: string | null
+          created_at: string
+          currency: string
+          fee_minor: number
+          id: string
+          items: Json
+          listing_id: string
+          payment_intent_id: string | null
+          seller_payout_minor: number
+          seller_profile_id: string
+          seller_user_id: string
+          status: string
+          stripe_session_id: string | null
+        }
+        Insert: {
+          amount_minor: number
+          buyer_profile_id: string
+          buyer_user_id: string
+          completed_at?: string | null
+          created_at?: string
+          currency?: string
+          fee_minor: number
+          id?: string
+          items?: Json
+          listing_id: string
+          payment_intent_id?: string | null
+          seller_payout_minor: number
+          seller_profile_id: string
+          seller_user_id: string
+          status?: string
+          stripe_session_id?: string | null
+        }
+        Update: {
+          amount_minor?: number
+          buyer_profile_id?: string
+          buyer_user_id?: string
+          completed_at?: string | null
+          created_at?: string
+          currency?: string
+          fee_minor?: number
+          id?: string
+          items?: Json
+          listing_id?: string
+          payment_intent_id?: string | null
+          seller_payout_minor?: number
+          seller_profile_id?: string
+          seller_user_id?: string
+          status?: string
+          stripe_session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skin_market_sales_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "skin_market_listings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       social_activities: {
         Row: {
@@ -69159,6 +69327,30 @@ export type Database = {
         Args: { p_festival_company_id: string; p_festival_edition_id: string }
         Returns: Json
       }
+      _skin_item_collection: {
+        Args: { p_id: string; p_type: string }
+        Returns: string
+      }
+      _skin_item_listed: {
+        Args: { p_item: string; p_profile: string; p_type: string }
+        Returns: boolean
+      }
+      _skin_item_tradeable: {
+        Args: { p_item: string; p_profile: string; p_type: string }
+        Returns: boolean
+      }
+      _skin_listing_items: {
+        Args: {
+          p_collection: string
+          p_item: string
+          p_kind: string
+          p_type: string
+        }
+        Returns: {
+          item_id: string
+          item_type: string
+        }[]
+      }
       _social_blocked: { Args: { p_a: string; p_b: string }; Returns: boolean }
       _sync_authoritative_conversation_members: {
         Args: { p_conversation_id: string }
@@ -71125,6 +71317,10 @@ export type Database = {
         }
         Returns: Json
       }
+      cancel_skin_listing: {
+        Args: { p_listing_id: string }
+        Returns: undefined
+      }
       cancel_social_contract: {
         Args: { p_contract_id: string; p_reason?: string }
         Returns: Json
@@ -71592,6 +71788,10 @@ export type Database = {
       }
       complete_skill_practice: {
         Args: { p_activity_id: string }
+        Returns: Json
+      }
+      complete_skin_market_sale: {
+        Args: { p_payment_intent: string; p_session_id: string }
         Returns: Json
       }
       complete_social_activity: {
@@ -72314,6 +72514,17 @@ export type Database = {
           p_name: string
           p_target_cents: number
           p_target_date?: string
+        }
+        Returns: string
+      }
+      create_skin_listing: {
+        Args: {
+          p_collection_id: string
+          p_item_id: string
+          p_item_type: string
+          p_kind: string
+          p_price_minor: number
+          p_profile_id: string
         }
         Returns: string
       }
@@ -76423,6 +76634,10 @@ export type Database = {
         Returns: number
       }
       refresh_venue_rider_capabilities: { Args: never; Returns: number }
+      refund_skin_market_sale: {
+        Args: { p_payment_intent: string }
+        Returns: Json
+      }
       register_twaater_share_publication_receipt: {
         Args: { p_cooldown_key: string; p_twaat_id: string }
         Returns: boolean
@@ -76645,6 +76860,14 @@ export type Database = {
           p_message?: string
           p_purpose?: string
           p_song_id: string
+        }
+        Returns: Json
+      }
+      reserve_skin_listing: {
+        Args: {
+          p_buyer_profile_id: string
+          p_buyer_user_id: string
+          p_listing_id: string
         }
         Returns: Json
       }
@@ -78215,6 +78438,7 @@ export type Database = {
         Args: { p_profile_id: string; p_slug: string }
         Returns: boolean
       }
+      skin_market_fee: { Args: { p_price: number }; Returns: number }
       skip_and_complete_songwriting_project: {
         Args: {
           p_band_id?: string
