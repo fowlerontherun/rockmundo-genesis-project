@@ -236,7 +236,8 @@ export function DjMixingStudio() {
         </CardContent>
       </Card>
       <DjSetlistPlanner key={profileId ?? "none"} profileId={profileId} tracks={tracks}
-        onRehearse={(first, second) => { setDeckA(first); setDeckB(second); }} />
+        onRehearse={(first, second) => { setDeckA(first); setDeckB(second); }}
+        onLoadTrack={(id, deck) => { if (deck === "A") setDeckA(id); else setDeckB(id); }} />
       <div className="grid gap-4 md:grid-cols-2">
         <AudioDeck deck="A" tracks={tracks} selectedId={deckA} onSelect={setDeckA} level={levels.a} rate={rateA} onRateChange={setRateA} />
         <AudioDeck deck="B" tracks={tracks} selectedId={deckB} onSelect={setDeckB} level={levels.b} rate={rateB} onRateChange={setRateB} />
