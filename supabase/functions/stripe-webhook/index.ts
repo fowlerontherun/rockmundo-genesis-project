@@ -107,6 +107,20 @@ serve(async (req) => {
           break;
         }
 
+        if (session.metadata?.purchase_type === "skin_market" && session.payment_status === "paid") {
+          const pi = typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id ?? "";
+          const { data: sale, error: saleError } = await supabaseClient.rpc("complete_skin_market_sale", {
+            p_session_id: session.id,
+            p_payment_intent: pi,
+          });
+          if (saleError) throw saleError;
+          if (sale?.status === "needs_refund" && pi) {
+            await stripe.refunds.create({ payment_intent: pi, reverse_transfer: true, refund_application_fee: true });
+          }
+          logStep("Skin market sale reconciled", { sessionId: session.id, status: sale?.status });
+          break;
+        }
+
         if (session.mode !== "subscription" || !session.subscription) {
           logStep("Checkout session does not require subscription handling", {
             sessionId: session.id,
