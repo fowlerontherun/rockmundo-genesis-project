@@ -11,7 +11,7 @@ import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getDjPlaybackUrl, type DjAudioTrack, useDjTrackLibrary } from "./library";
+import { filterDjTracks, getDjPlaybackUrl, type DjAudioTrack, useDjTrackLibrary } from "./library";
 import { clampDeckRate, equalPowerCrossfade, formatDjTime, syncDeckRate } from "./mixerMath";
 
 function AudioDeck({
@@ -158,12 +158,7 @@ export function DjMixingStudio() {
   const [sharing, setSharing] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [sourceFilter, setSourceFilter] = useState<"all" | "game" | "admin">("all");
-  const matches = useMemo(() => {
-    const term = search.trim().toLocaleLowerCase();
-    return tracks.filter((track) => (sourceFilter === "all" || track.source === sourceFilter)
-      && (!term || [track.title, track.artist, track.genre, track.musicalKey ?? "", String(track.bpm ?? "")]
-        .some((value) => value.toLocaleLowerCase().includes(term))));
-  }, [tracks, sourceFilter, search]);
+  const matches = useMemo(() => filterDjTracks(tracks, search, sourceFilter), [tracks, sourceFilter, search]);
   const levels = useMemo(() => equalPowerCrossfade(crossfade), [crossfade]);
 
   useEffect(() => {
