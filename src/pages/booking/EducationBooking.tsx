@@ -9,7 +9,7 @@ import { BookOpen, GraduationCap, Users, Video } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { createScheduledActivity } from "@/hooks/useActivityBooking";
 import { useScheduleConflictCheck } from "@/hooks/useScheduleConflictCheck";
@@ -22,6 +22,7 @@ export default function EducationBooking() {
   const location = useLocation();
   const { toast } = useToast();
   const { profileId } = useActiveProfile();
+  const queryClient = useQueryClient();
   const { checkConflicts, isChecking, result: conflictResult, clearResult } = useScheduleConflictCheck();
 
   const scheduledDate = location.state?.scheduledDate;
@@ -94,6 +95,11 @@ export default function EducationBooking() {
         title: getTitle(),
         metadata,
       });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] }),
+        queryClient.invalidateQueries({ queryKey: ["week-scheduled-activities"] }),
+        queryClient.invalidateQueries({ queryKey: ["mobile-day-schedule"] }),
+      ]);
       navigate("/schedule");
     } catch (error: any) {
       toast({ title: "Booking Failed", description: error.message, variant: "destructive" });
