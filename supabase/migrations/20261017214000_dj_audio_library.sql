@@ -4,7 +4,7 @@ ALTER TABLE public.songs
   ADD COLUMN IF NOT EXISTS dj_use_allowed boolean NOT NULL DEFAULT false;
 
 COMMENT ON COLUMN public.songs.dj_use_allowed IS
-  'Owner opt-in for other DJs to play this released song; own playable songs need no opt-in.';
+  'Owner opt-in for other DJs to play recorded or released music; own playable songs need no opt-in.';
 
 CREATE TABLE IF NOT EXISTS public.dj_audio_tracks (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
