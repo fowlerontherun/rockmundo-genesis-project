@@ -86,16 +86,11 @@ export function DjSetlistPlanner({ profileId, tracks, onRehearse, onLoadTrack }:
       if (authError || !auth.user) throw authError || new Error("Sign in to save a DJ set");
       const payload = { name: name.trim(), items };
       // Database RLS and the validation trigger enforce character and audio rights.
-      let operation;
-      if (activeId) {
-        operation = djSetsTable()
-          .update(payload).eq("id", activeId).eq("profile_id", profileId)
-          .eq("version", version).select("id,version").maybeSingle();
-      } else {
-        operation = djSetsTable()
-          .insert({ ...payload, user_id: auth.user.id, profile_id: profileId })
+      const operation = activeId
+        ? djSetsTable().update(payload).eq("id", activeId).eq("profile_id", profileId)
+          .eq("version", version).select("id,version").maybeSingle()
+        : djSetsTable().insert({ ...payload, user_id: auth.user.id, profile_id: profileId })
           .select("id,version").single();
-      }
       const { data, error } = await operation;
       if (error) throw error;
       if (!data) throw new Error("This set was changed in another session. Reload your saved set before retrying.");
