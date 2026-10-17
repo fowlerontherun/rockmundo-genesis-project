@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.789",
+    date: "2026-10-17",
+    changes: [
+      { type: "feature", description: "Pinned achievement badges now show on player profiles and the Character page, with a shortcut to change them." },
+    ],
+  },
+  {
     version: "1.1.788",
     date: "2026-10-17",
     changes: [

@@ -18,6 +18,7 @@ import { format } from "date-fns";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { getPublicProfileDetail } from "@/services/publicProfileDetail";
 import { PlayerProfileHeader, FutureProfileActions } from "@/components/player-profile/PlayerProfileHeader";
+import { PinnedBadgesPanel } from "@/components/achievements/PinnedBadgesPanel";
 import { ProfileInfoCard, BandProfileCard, EmploymentProfileCard, OpenStatusBadges } from "@/components/player-profile/ProfileCards";
 import { mergePresenceProfiles } from "@/services/presenceService";
 import { useEffect, useState } from "react";
@@ -302,6 +303,8 @@ export default function PlayerProfile() {
         )}
       />
 
+
+      <PinnedBadgesPanel profileId={profile.id} isOwn={isOwnProfile} />
       {profile.social_profile?.status_message && <Card><CardContent className="p-4 text-sm font-medium">{profile.social_profile.status_message}</CardContent></Card>}
 
       {profilePresenceError && <div role="alert" className="flex items-center gap-3 rounded border border-destructive/40 p-3 text-sm"><span>Player activity status could not be loaded.</span><Button size="sm" variant="outline" onClick={() => void retryProfilePresence()}>Retry</Button></div>}

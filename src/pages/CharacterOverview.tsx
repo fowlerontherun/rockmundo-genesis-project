@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/use-auth-context";
 import { useGameData } from "@/hooks/useGameData";
 import { useGameCalendar } from "@/hooks/useGameCalendar";
 import { calculateCharacterAgeFromAnchor, getMonthName } from "@/utils/gameCalendar";
+import { PinnedBadgesPanel } from "@/components/achievements/PinnedBadgesPanel";
 
 const formatMoney = (value: number | null | undefined) =>
   new Intl.NumberFormat("en", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value ?? 0);
@@ -144,6 +145,8 @@ export default function CharacterOverview() {
           </div>
         </div>
       </section>
+
+      {profile.id && <PinnedBadgesPanel profileId={profile.id} isOwn />}
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6" aria-label="Character status">
         <StatCard label="Age" value={characterAge} icon={Cake} />
