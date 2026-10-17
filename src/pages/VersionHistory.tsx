@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.782",
+    date: "2026-10-17",
+    changes: [
+      { type: "fix", description: "Luthiery shops: signed-in players can now browse other players' open shops and their active instruments for sale. Listings in closed shops stay hidden." },
+      { type: "fix", description: "Band recruitment: when a member who joined through an advert leaves, the advert's spot is freed and the advert reopens if the band is still recruiting and has room." },
+    ],
+  },
+  {
     version: "1.1.781",
     date: "2026-10-17",
     changes: [
