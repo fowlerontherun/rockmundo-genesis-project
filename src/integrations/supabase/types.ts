@@ -72613,6 +72613,7 @@ export type Database = {
         Args: { p_roll: number }
         Returns: number
       }
+      halloween_2026_hat_is_published: { Args: never; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -73690,6 +73691,10 @@ export type Database = {
         Args: { p_claim_id: string }
         Returns: Json
       }
+      process_sponsorship_installment_atomic: {
+        Args: { p_payment_id: string }
+        Returns: Json
+      }
       process_substance_aftereffects: {
         Args: { p_profile_id: string }
         Returns: Json
@@ -74138,6 +74143,10 @@ export type Database = {
       reconcile_festival_edition_settlement: {
         Args: { p_settlement_id: string }
         Returns: Json
+      }
+      reconcile_halloween_2026_first_rewards: {
+        Args: { p_gig_id: string }
+        Returns: undefined
       }
       reconcile_my_festival_attendance: { Args: never; Returns: Json }
       reconcile_my_game_notifications: {
