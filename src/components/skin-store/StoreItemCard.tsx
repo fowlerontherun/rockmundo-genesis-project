@@ -132,7 +132,9 @@ export const StoreItemCard = ({ item, isOwned, onPurchase, onPreview }: StoreIte
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1">
             {item.is_premium ? <Lock className="h-3.5 w-3.5 text-warning" /> : null}
-            <span className="font-bold text-foreground">${item.price?.toLocaleString() || "Free"}</span>
+            <span className="font-bold text-foreground">
+              {item.collection_id ? "Set £1.99" : `$${item.price?.toLocaleString() || "Free"}`}
+            </span>
           </div>
 
           {isOwned ? (
@@ -140,7 +142,7 @@ export const StoreItemCard = ({ item, isOwned, onPurchase, onPreview }: StoreIte
           ) : (
             <div className="flex gap-1">
               {onPreview && <Button variant="ghost" size="sm" onClick={() => onPreview(item)}>Try</Button>}
-              <Button variant="default" size="sm" onClick={() => onPurchase(item)}>Buy</Button>
+              <Button variant="default" size="sm" onClick={() => onPurchase(item)}>{item.collection_id ? "Buy set" : "Buy"}</Button>
             </div>
           )}
         </div>
