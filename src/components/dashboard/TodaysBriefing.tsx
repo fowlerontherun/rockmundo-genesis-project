@@ -10,6 +10,7 @@ import { PageEmptyState, PageErrorState, PageLoadingState } from "@/components/u
 import { supabase } from "@/integrations/supabase/client";
 import { getNotificationPreview } from "@/lib/notificationModels";
 import { fetchWorldNews } from "@/lib/api/worldNews";
+import { fetchUnreadCharacterNotifications } from "@/lib/unreadNotifications";
 
 interface TodaysBriefingProps {
   profile: any;
@@ -66,14 +67,9 @@ export function TodaysBriefing({ profile, userId }: TodaysBriefingProps) {
           .eq("user_id", userId)
           .eq("is_read", false)
           .eq("is_archived", false),
-        supabase
-          .from("notifications")
-          .select("id, user_id, profile_id, category, type, title, message, action_path, metadata, read_at, created_at", { count: "exact" })
-          .eq("user_id", userId)
-          .eq("profile_id", profileId)
-          .is("read_at", null)
-          .order("created_at", { ascending: false })
-          .limit(5),
+        fetchUnreadCharacterNotifications<any>(userId, profileId, "id, user_id, profile_id, category, type, title, message, action_path, metadata, read_at, created_at")
+          .then((data) => ({ data, error: null }))
+          .catch((error) => ({ data: [] as any[], error })),
         supabase
           .from("song_releases")
           .select("id, release_date, release_type, platform_name, total_streams, band_id, user_id")
@@ -111,8 +107,8 @@ export function TodaysBriefing({ profile, userId }: TodaysBriefingProps) {
         unreadInbox: (inboxResult.data ?? []).filter((row: any) =>
           row?.metadata?.profile_id === profileId || row?.metadata?.scope === "account"
         ).length,
-        unreadNotifications: notificationsResult.count ?? 0,
-        notificationPreviews: notificationsResult.data ?? [],
+        unreadNotifications: notificationsResult.data.length,
+        notificationPreviews: notificationsResult.data.slice(0, 5),
         releases: (releasesResult.data ?? []).filter((release: any) =>
           release.user_id === userId || (release.band_id && bandIds.includes(release.band_id))
         ),
