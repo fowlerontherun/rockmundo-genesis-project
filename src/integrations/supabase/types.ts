@@ -70638,6 +70638,16 @@ export type Database = {
         Args: { p_base_price: number; p_condition: number; p_rarity: string }
         Returns: number
       }
+      calculate_gig_market_demand: {
+        Args: {
+          p_band_id: string
+          p_scheduled_date: string
+          p_slot_multiplier?: number
+          p_ticket_price?: number
+          p_venue_id: string
+        }
+        Returns: number
+      }
       calculate_predicted_tickets: {
         Args: {
           p_band_id: string
@@ -74656,6 +74666,16 @@ export type Database = {
       }
       gig_ticket_prestige_tier: {
         Args: { p_prestige: number }
+        Returns: number
+      }
+      gig_ticket_sales_goal: {
+        Args: {
+          p_at: string
+          p_booked_at: string
+          p_capacity: number
+          p_market_demand: number
+          p_show_at: string
+        }
         Returns: number
       }
       grant_paid_skin_collection: {
