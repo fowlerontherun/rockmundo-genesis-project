@@ -2090,6 +2090,223 @@ export type Database = {
           },
         ]
       }
+      balance_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          balance_version_id: string | null
+          change_summary: string | null
+          created_at: string
+          id: string
+          metadata: Json
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          balance_version_id?: string | null
+          change_summary?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          balance_version_id?: string | null
+          change_summary?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "balance_audit_log_balance_version_id_fkey"
+            columns: ["balance_version_id"]
+            isOneToOne: false
+            referencedRelation: "balance_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      balance_rollouts: {
+        Row: {
+          activated_at: string | null
+          actor_id: string | null
+          balance_version_id: string
+          cancelled_at: string | null
+          created_at: string
+          id: string
+          metadata: Json
+          scheduled_for: string | null
+          status: string
+        }
+        Insert: {
+          activated_at?: string | null
+          actor_id?: string | null
+          balance_version_id: string
+          cancelled_at?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          scheduled_for?: string | null
+          status: string
+        }
+        Update: {
+          activated_at?: string | null
+          actor_id?: string | null
+          balance_version_id?: string
+          cancelled_at?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          scheduled_for?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "balance_rollouts_balance_version_id_fkey"
+            columns: ["balance_version_id"]
+            isOneToOne: false
+            referencedRelation: "balance_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      balance_simulation_results: {
+        Row: {
+          balance_version_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          report_path: string | null
+          scenario_set: string
+          status: string
+          summary: Json
+        }
+        Insert: {
+          balance_version_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          report_path?: string | null
+          scenario_set: string
+          status: string
+          summary?: Json
+        }
+        Update: {
+          balance_version_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          report_path?: string | null
+          scenario_set?: string
+          status?: string
+          summary?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "balance_simulation_results_balance_version_id_fkey"
+            columns: ["balance_version_id"]
+            isOneToOne: false
+            referencedRelation: "balance_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      balance_validation_results: {
+        Row: {
+          balance_version_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          issues: Json
+          status: string
+        }
+        Insert: {
+          balance_version_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          issues?: Json
+          status: string
+        }
+        Update: {
+          balance_version_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          issues?: Json
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "balance_validation_results_balance_version_id_fkey"
+            columns: ["balance_version_id"]
+            isOneToOne: false
+            referencedRelation: "balance_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      balance_versions: {
+        Row: {
+          activated_at: string | null
+          config: Json
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          metadata: Json
+          name: string
+          parent_version_id: string | null
+          retired_at: string | null
+          schema_version: number
+          status: Database["public"]["Enums"]["balance_version_status"]
+          validated_at: string | null
+          version_key: string
+        }
+        Insert: {
+          activated_at?: string | null
+          config: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          metadata?: Json
+          name: string
+          parent_version_id?: string | null
+          retired_at?: string | null
+          schema_version?: number
+          status?: Database["public"]["Enums"]["balance_version_status"]
+          validated_at?: string | null
+          version_key: string
+        }
+        Update: {
+          activated_at?: string | null
+          config?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          metadata?: Json
+          name?: string
+          parent_version_id?: string | null
+          retired_at?: string | null
+          schema_version?: number
+          status?: Database["public"]["Enums"]["balance_version_status"]
+          validated_at?: string | null
+          version_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "balance_versions_parent_version_id_fkey"
+            columns: ["parent_version_id"]
+            isOneToOne: false
+            referencedRelation: "balance_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       band_activity_lockouts: {
         Row: {
           activity_type: string
@@ -2751,6 +2968,127 @@ export type Database = {
           },
         ]
       }
+      band_distribution_allocations: {
+        Row: {
+          amount_minor: number
+          batch_id: string
+          created_at: string
+          id: string
+          percentage_basis_points: number | null
+          profile_id: string
+          transaction_id: string | null
+        }
+        Insert: {
+          amount_minor: number
+          batch_id: string
+          created_at?: string
+          id?: string
+          percentage_basis_points?: number | null
+          profile_id: string
+          transaction_id?: string | null
+        }
+        Update: {
+          amount_minor?: number
+          batch_id?: string
+          created_at?: string
+          id?: string
+          percentage_basis_points?: number | null
+          profile_id?: string
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_distribution_allocations_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "band_distribution_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_distribution_allocations_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_distribution_allocations_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_distribution_allocations_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      band_distribution_batches: {
+        Row: {
+          approved_at: string | null
+          band_id: string
+          created_at: string
+          deductions_minor: number
+          distributable_amount_minor: number
+          eligible_gross_income_minor: number
+          id: string
+          idempotency_key: string
+          linked_transaction_ids: string[]
+          paid_at: string | null
+          period_end: string
+          period_start: string
+          reserve_retained_minor: number
+          split_method: Database["public"]["Enums"]["band_revenue_split_method"]
+          status: Database["public"]["Enums"]["distribution_batch_status"]
+        }
+        Insert: {
+          approved_at?: string | null
+          band_id: string
+          created_at?: string
+          deductions_minor?: number
+          distributable_amount_minor?: number
+          eligible_gross_income_minor?: number
+          id?: string
+          idempotency_key: string
+          linked_transaction_ids?: string[]
+          paid_at?: string | null
+          period_end: string
+          period_start: string
+          reserve_retained_minor?: number
+          split_method: Database["public"]["Enums"]["band_revenue_split_method"]
+          status?: Database["public"]["Enums"]["distribution_batch_status"]
+        }
+        Update: {
+          approved_at?: string | null
+          band_id?: string
+          created_at?: string
+          deductions_minor?: number
+          distributable_amount_minor?: number
+          eligible_gross_income_minor?: number
+          id?: string
+          idempotency_key?: string
+          linked_transaction_ids?: string[]
+          paid_at?: string | null
+          period_end?: string
+          period_start?: string
+          reserve_retained_minor?: number
+          split_method?: Database["public"]["Enums"]["band_revenue_split_method"]
+          status?: Database["public"]["Enums"]["distribution_batch_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_distribution_batches_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       band_drama_events: {
         Row: {
           band_id: string
@@ -2979,6 +3317,140 @@ export type Database = {
             columns: ["city_id"]
             isOneToOne: false
             referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      band_finance_policies: {
+        Row: {
+          approval_threshold_minor: number
+          approvals_required_above_threshold: number
+          automatic_distribution_frequency: string
+          band_id: string
+          contribution_policy: Json
+          created_at: string
+          eligible_income_categories: string[]
+          emergency_spending_rules: Json
+          member_visibility_level: string
+          member_withdrawals_allowed: boolean
+          minimum_reserve_minor: number
+          participant_eligibility_mode: string
+          reimbursement_policy: Json
+          revenue_split_config: Json
+          revenue_split_method: Database["public"]["Enums"]["band_revenue_split_method"]
+          spending_approval_threshold_minor: number
+          updated_at: string
+          updated_by_profile_id: string | null
+          withdrawals_require_approval: boolean
+        }
+        Insert: {
+          approval_threshold_minor?: number
+          approvals_required_above_threshold?: number
+          automatic_distribution_frequency?: string
+          band_id: string
+          contribution_policy?: Json
+          created_at?: string
+          eligible_income_categories?: string[]
+          emergency_spending_rules?: Json
+          member_visibility_level?: string
+          member_withdrawals_allowed?: boolean
+          minimum_reserve_minor?: number
+          participant_eligibility_mode?: string
+          reimbursement_policy?: Json
+          revenue_split_config?: Json
+          revenue_split_method?: Database["public"]["Enums"]["band_revenue_split_method"]
+          spending_approval_threshold_minor?: number
+          updated_at?: string
+          updated_by_profile_id?: string | null
+          withdrawals_require_approval?: boolean
+        }
+        Update: {
+          approval_threshold_minor?: number
+          approvals_required_above_threshold?: number
+          automatic_distribution_frequency?: string
+          band_id?: string
+          contribution_policy?: Json
+          created_at?: string
+          eligible_income_categories?: string[]
+          emergency_spending_rules?: Json
+          member_visibility_level?: string
+          member_withdrawals_allowed?: boolean
+          minimum_reserve_minor?: number
+          participant_eligibility_mode?: string
+          reimbursement_policy?: Json
+          revenue_split_config?: Json
+          revenue_split_method?: Database["public"]["Enums"]["band_revenue_split_method"]
+          spending_approval_threshold_minor?: number
+          updated_at?: string
+          updated_by_profile_id?: string | null
+          withdrawals_require_approval?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_finance_policies_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: true
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_finance_policies_updated_by_profile_id_fkey"
+            columns: ["updated_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_finance_policies_updated_by_profile_id_fkey"
+            columns: ["updated_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      band_finance_role_permissions: {
+        Row: {
+          band_id: string
+          created_at: string
+          granted_by_profile_id: string | null
+          permission: Database["public"]["Enums"]["band_finance_permission"]
+          role_code: string
+        }
+        Insert: {
+          band_id: string
+          created_at?: string
+          granted_by_profile_id?: string | null
+          permission: Database["public"]["Enums"]["band_finance_permission"]
+          role_code: string
+        }
+        Update: {
+          band_id?: string
+          created_at?: string
+          granted_by_profile_id?: string | null
+          permission?: Database["public"]["Enums"]["band_finance_permission"]
+          role_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_finance_role_permissions_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_finance_role_permissions_granted_by_profile_id_fkey"
+            columns: ["granted_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_finance_role_permissions_granted_by_profile_id_fkey"
+            columns: ["granted_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -3331,6 +3803,71 @@ export type Database = {
             columns: ["posted_by_profile_id"]
             isOneToOne: false
             referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      band_member_contributions: {
+        Row: {
+          amount_minor: number
+          band_id: string
+          category: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          note: string | null
+          profile_id: string
+          transaction_id: string | null
+        }
+        Insert: {
+          amount_minor: number
+          band_id: string
+          category?: string
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          note?: string | null
+          profile_id: string
+          transaction_id?: string | null
+        }
+        Update: {
+          amount_minor?: number
+          band_id?: string
+          category?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          note?: string | null
+          profile_id?: string
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_member_contributions_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_member_contributions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_member_contributions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_member_contributions_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
             referencedColumns: ["id"]
           },
         ]
@@ -3914,6 +4451,106 @@ export type Database = {
             columns: ["setlist_id"]
             isOneToOne: false
             referencedRelation: "setlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      band_reimbursement_requests: {
+        Row: {
+          amount_minor: number
+          approver_profile_id: string | null
+          band_id: string
+          category: string
+          created_at: string
+          description: string
+          evidence_reference: string | null
+          id: string
+          idempotency_key: string | null
+          paid_at: string | null
+          profile_id: string
+          related_entity_id: string | null
+          related_entity_type: string | null
+          status: Database["public"]["Enums"]["reimbursement_status"]
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_minor: number
+          approver_profile_id?: string | null
+          band_id: string
+          category: string
+          created_at?: string
+          description: string
+          evidence_reference?: string | null
+          id?: string
+          idempotency_key?: string | null
+          paid_at?: string | null
+          profile_id: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          status?: Database["public"]["Enums"]["reimbursement_status"]
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_minor?: number
+          approver_profile_id?: string | null
+          band_id?: string
+          category?: string
+          created_at?: string
+          description?: string
+          evidence_reference?: string | null
+          id?: string
+          idempotency_key?: string | null
+          paid_at?: string | null
+          profile_id?: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          status?: Database["public"]["Enums"]["reimbursement_status"]
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_reimbursement_requests_approver_profile_id_fkey"
+            columns: ["approver_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_reimbursement_requests_approver_profile_id_fkey"
+            columns: ["approver_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_reimbursement_requests_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_reimbursement_requests_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_reimbursement_requests_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_reimbursement_requests_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
             referencedColumns: ["id"]
           },
         ]
@@ -5032,6 +5669,98 @@ export type Database = {
             columns: ["band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      band_withdrawal_requests: {
+        Row: {
+          amount_minor: number
+          approver_profile_ids: string[]
+          band_id: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          idempotency_key: string | null
+          paid_at: string | null
+          reason: string
+          rejection_reason: string | null
+          related_entity_id: string | null
+          related_entity_type: string | null
+          requesting_profile_id: string
+          required_approvals: number
+          reviewed_at: string | null
+          status: Database["public"]["Enums"]["band_withdrawal_status"]
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_minor: number
+          approver_profile_ids?: string[]
+          band_id: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          idempotency_key?: string | null
+          paid_at?: string | null
+          reason: string
+          rejection_reason?: string | null
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          requesting_profile_id: string
+          required_approvals?: number
+          reviewed_at?: string | null
+          status?: Database["public"]["Enums"]["band_withdrawal_status"]
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_minor?: number
+          approver_profile_ids?: string[]
+          band_id?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          idempotency_key?: string | null
+          paid_at?: string | null
+          reason?: string
+          rejection_reason?: string | null
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          requesting_profile_id?: string
+          required_approvals?: number
+          reviewed_at?: string | null
+          status?: Database["public"]["Enums"]["band_withdrawal_status"]
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_withdrawal_requests_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_withdrawal_requests_requesting_profile_id_fkey"
+            columns: ["requesting_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_withdrawal_requests_requesting_profile_id_fkey"
+            columns: ["requesting_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_withdrawal_requests_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
             referencedColumns: ["id"]
           },
         ]
@@ -28443,6 +29172,60 @@ export type Database = {
         }
         Relationships: []
       }
+      finance_audit_events: {
+        Row: {
+          action: string
+          actor_profile_id: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          metadata: Json
+          new_value: Json | null
+          previous_value: Json | null
+          reason: string | null
+        }
+        Insert: {
+          action: string
+          actor_profile_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          metadata?: Json
+          new_value?: Json | null
+          previous_value?: Json | null
+          reason?: string | null
+        }
+        Update: {
+          action?: string
+          actor_profile_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          metadata?: Json
+          new_value?: Json | null
+          previous_value?: Json | null
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_audit_events_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_audit_events_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_accounts: {
         Row: {
           account_name: string
@@ -31137,6 +31920,8 @@ export type Database = {
           actual_attendance: number
           attendance_percentage: number | null
           audience_memory_impact: number | null
+          balance_snapshot: Json | null
+          balance_version_key: string | null
           band_chemistry_level: number | null
           band_id: string | null
           band_synergy_modifier: number | null
@@ -31187,6 +31972,8 @@ export type Database = {
           actual_attendance: number
           attendance_percentage?: number | null
           audience_memory_impact?: number | null
+          balance_snapshot?: Json | null
+          balance_version_key?: string | null
           band_chemistry_level?: number | null
           band_id?: string | null
           band_synergy_modifier?: number | null
@@ -31237,6 +32024,8 @@ export type Database = {
           actual_attendance?: number
           attendance_percentage?: number | null
           audience_memory_impact?: number | null
+          balance_snapshot?: Json | null
+          balance_version_key?: string | null
           band_chemistry_level?: number | null
           band_id?: string | null
           band_synergy_modifier?: number | null
@@ -50843,6 +51632,8 @@ export type Database = {
       recording_sessions: {
         Row: {
           applied_variance: number | null
+          balance_snapshot: Json | null
+          balance_version_key: string | null
           band_id: string | null
           calculation_version: string | null
           city_id: string | null
@@ -50878,6 +51669,8 @@ export type Database = {
         }
         Insert: {
           applied_variance?: number | null
+          balance_snapshot?: Json | null
+          balance_version_key?: string | null
           band_id?: string | null
           calculation_version?: string | null
           city_id?: string | null
@@ -50913,6 +51706,8 @@ export type Database = {
         }
         Update: {
           applied_variance?: number | null
+          balance_snapshot?: Json | null
+          balance_version_key?: string | null
           band_id?: string | null
           calculation_version?: string | null
           city_id?: string | null
@@ -51347,6 +52142,149 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurring_financial_obligations: {
+        Row: {
+          amount_minor: number
+          auto_pay_enabled: boolean
+          cancellable_by_owner: boolean
+          created_at: string
+          currency_code: string
+          custom_interval_days: number | null
+          description: string
+          expense_category: Database["public"]["Enums"]["financial_transaction_category"]
+          failure_count: number
+          frequency: Database["public"]["Enums"]["recurring_obligation_frequency"]
+          grace_period_days: number
+          id: string
+          last_attempted_at: string | null
+          last_paid_at: string | null
+          metadata: Json
+          next_due_date: string
+          owner_account_id: string | null
+          owner_id: string
+          owner_type: Database["public"]["Enums"]["financial_owner_type"]
+          priority: number
+          related_entity_id: string | null
+          related_entity_type: string | null
+          status: Database["public"]["Enums"]["recurring_obligation_status"]
+          updated_at: string
+        }
+        Insert: {
+          amount_minor: number
+          auto_pay_enabled?: boolean
+          cancellable_by_owner?: boolean
+          created_at?: string
+          currency_code?: string
+          custom_interval_days?: number | null
+          description: string
+          expense_category: Database["public"]["Enums"]["financial_transaction_category"]
+          failure_count?: number
+          frequency: Database["public"]["Enums"]["recurring_obligation_frequency"]
+          grace_period_days?: number
+          id?: string
+          last_attempted_at?: string | null
+          last_paid_at?: string | null
+          metadata?: Json
+          next_due_date: string
+          owner_account_id?: string | null
+          owner_id: string
+          owner_type: Database["public"]["Enums"]["financial_owner_type"]
+          priority?: number
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          status?: Database["public"]["Enums"]["recurring_obligation_status"]
+          updated_at?: string
+        }
+        Update: {
+          amount_minor?: number
+          auto_pay_enabled?: boolean
+          cancellable_by_owner?: boolean
+          created_at?: string
+          currency_code?: string
+          custom_interval_days?: number | null
+          description?: string
+          expense_category?: Database["public"]["Enums"]["financial_transaction_category"]
+          failure_count?: number
+          frequency?: Database["public"]["Enums"]["recurring_obligation_frequency"]
+          grace_period_days?: number
+          id?: string
+          last_attempted_at?: string | null
+          last_paid_at?: string | null
+          metadata?: Json
+          next_due_date?: string
+          owner_account_id?: string | null
+          owner_id?: string
+          owner_type?: Database["public"]["Enums"]["financial_owner_type"]
+          priority?: number
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          status?: Database["public"]["Enums"]["recurring_obligation_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_financial_obligations_owner_account_id_fkey"
+            columns: ["owner_account_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurring_payment_attempts: {
+        Row: {
+          amount_minor: number
+          attempted_at: string
+          due_date: string
+          error_code: string | null
+          error_message: string | null
+          id: string
+          idempotency_key: string
+          obligation_id: string
+          status: string
+          transaction_id: string | null
+        }
+        Insert: {
+          amount_minor: number
+          attempted_at?: string
+          due_date: string
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          idempotency_key: string
+          obligation_id: string
+          status: string
+          transaction_id?: string | null
+        }
+        Update: {
+          amount_minor?: number
+          attempted_at?: string
+          due_date?: string
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string
+          obligation_id?: string
+          status?: string
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_payment_attempts_obligation_id_fkey"
+            columns: ["obligation_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_financial_obligations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_payment_attempts_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
             referencedColumns: ["id"]
           },
         ]
@@ -57466,6 +58404,8 @@ export type Database = {
           audio_prompt: string | null
           audio_url: string | null
           available_for_covers: boolean
+          balance_snapshot: Json | null
+          balance_version_key: string | null
           band_id: string | null
           catalog_status: string | null
           chart_position: number | null
@@ -57539,6 +58479,8 @@ export type Database = {
           audio_prompt?: string | null
           audio_url?: string | null
           available_for_covers?: boolean
+          balance_snapshot?: Json | null
+          balance_version_key?: string | null
           band_id?: string | null
           catalog_status?: string | null
           chart_position?: number | null
@@ -57612,6 +58554,8 @@ export type Database = {
           audio_prompt?: string | null
           audio_url?: string | null
           available_for_covers?: boolean
+          balance_snapshot?: Json | null
+          balance_version_key?: string | null
           band_id?: string | null
           catalog_status?: string | null
           chart_position?: number | null
@@ -59875,6 +60819,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tax_period_summaries: {
+        Row: {
+          created_at: string
+          deductible_expenses_minor: number
+          estimated_liability_minor: number | null
+          filing_status: Database["public"]["Enums"]["tax_filing_status"]
+          id: string
+          last_calculated_at: string | null
+          non_taxable_income_minor: number
+          owner_id: string
+          owner_type: Database["public"]["Enums"]["financial_owner_type"]
+          tax_jurisdiction: string | null
+          tax_paid_minor: number
+          tax_period: string
+          tax_withheld_minor: number
+          taxable_income_minor: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deductible_expenses_minor?: number
+          estimated_liability_minor?: number | null
+          filing_status?: Database["public"]["Enums"]["tax_filing_status"]
+          id?: string
+          last_calculated_at?: string | null
+          non_taxable_income_minor?: number
+          owner_id: string
+          owner_type: Database["public"]["Enums"]["financial_owner_type"]
+          tax_jurisdiction?: string | null
+          tax_paid_minor?: number
+          tax_period: string
+          tax_withheld_minor?: number
+          taxable_income_minor?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deductible_expenses_minor?: number
+          estimated_liability_minor?: number | null
+          filing_status?: Database["public"]["Enums"]["tax_filing_status"]
+          id?: string
+          last_calculated_at?: string | null
+          non_taxable_income_minor?: number
+          owner_id?: string
+          owner_type?: Database["public"]["Enums"]["financial_owner_type"]
+          tax_jurisdiction?: string | null
+          tax_paid_minor?: number
+          tax_period?: string
+          tax_withheld_minor?: number
+          taxable_income_minor?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       territories: {
         Row: {
@@ -65456,6 +66454,66 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      weekly_financial_snapshots: {
+        Row: {
+          closing_balance_minor: number
+          created_at: string
+          id: string
+          net_cash_flow_minor: number | null
+          opening_balance_minor: number
+          outstanding_obligations_minor: number
+          owner_id: string
+          owner_type: Database["public"]["Enums"]["financial_owner_type"]
+          period_end: string
+          period_start: string
+          reserved_funds_minor: number
+          tax_withheld_minor: number
+          taxable_income_minor: number
+          top_expense_category: string | null
+          top_income_category: string | null
+          total_expenses_minor: number
+          total_income_minor: number
+        }
+        Insert: {
+          closing_balance_minor?: number
+          created_at?: string
+          id?: string
+          net_cash_flow_minor?: number | null
+          opening_balance_minor?: number
+          outstanding_obligations_minor?: number
+          owner_id: string
+          owner_type: Database["public"]["Enums"]["financial_owner_type"]
+          period_end: string
+          period_start: string
+          reserved_funds_minor?: number
+          tax_withheld_minor?: number
+          taxable_income_minor?: number
+          top_expense_category?: string | null
+          top_income_category?: string | null
+          total_expenses_minor?: number
+          total_income_minor?: number
+        }
+        Update: {
+          closing_balance_minor?: number
+          created_at?: string
+          id?: string
+          net_cash_flow_minor?: number | null
+          opening_balance_minor?: number
+          outstanding_obligations_minor?: number
+          owner_id?: string
+          owner_type?: Database["public"]["Enums"]["financial_owner_type"]
+          period_end?: string
+          period_start?: string
+          reserved_funds_minor?: number
+          tax_withheld_minor?: number
+          taxable_income_minor?: number
+          top_expense_category?: string | null
+          top_income_category?: string | null
+          total_expenses_minor?: number
+          total_income_minor?: number
+        }
+        Relationships: []
       }
       wellness_activity_catalog: {
         Row: {
@@ -73025,6 +74083,7 @@ export type Database = {
         Args: { p_band_id: string }
         Returns: boolean
       }
+      is_band_finance_viewer: { Args: { p_band_id: string }; Returns: boolean }
       is_band_leader_or_manager: {
         Args: { actor_user_id?: string; target_band_id: string }
         Returns: boolean
@@ -78381,6 +79440,14 @@ export type Database = {
         Returns: Json
       }
       user_has_band_access: { Args: { _band_id: string }; Returns: boolean }
+      user_has_band_finance_permission: {
+        Args: {
+          p_band_id: string
+          p_permission: Database["public"]["Enums"]["band_finance_permission"]
+          p_profile_id: string
+        }
+        Returns: boolean
+      }
       validate_festival_application_transition: {
         Args: {
           p_from: Database["public"]["Enums"]["festival_application_status"]
@@ -78547,7 +79614,45 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      balance_version_status:
+        | "draft"
+        | "validating"
+        | "valid"
+        | "invalid"
+        | "approved"
+        | "scheduled"
+        | "active"
+        | "retired"
+        | "rolled_back"
+      band_finance_permission:
+        | "view_band_balance"
+        | "view_transaction_history"
+        | "view_detailed_income_expenses"
+        | "create_member_contribution_requests"
+        | "make_voluntary_contributions"
+        | "request_reimbursement"
+        | "approve_reimbursements"
+        | "schedule_payments"
+        | "pay_band_expenses"
+        | "change_revenue_split_rules"
+        | "withdraw_band_funds"
+        | "perform_emergency_payments"
+      band_revenue_split_method:
+        | "equal"
+        | "custom_percentage"
+        | "role_weighted"
+        | "retain_all"
+        | "reserve_then_distribute"
       band_status: "active" | "on_hiatus" | "disbanded"
+      band_withdrawal_status:
+        | "draft"
+        | "submitted"
+        | "awaiting_approval"
+        | "approved"
+        | "rejected"
+        | "paid"
+        | "cancelled"
+        | "expired"
       book_reading_status: "reading" | "completed" | "abandoned"
       candidate_status: "pending" | "approved" | "withdrawn" | "disqualified"
       chat_participant_status: "online" | "offline" | "typing" | "away"
@@ -78562,6 +79667,14 @@ export type Database = {
         | "asset_recovery"
         | "settled"
         | "written_off"
+      distribution_batch_status:
+        | "calculated"
+        | "awaiting_approval"
+        | "approved"
+        | "processing"
+        | "completed"
+        | "failed"
+        | "cancelled"
       drug_policy_status:
         | "prohibited"
         | "medical_only"
@@ -78812,6 +79925,25 @@ export type Database = {
         | "friends"
         | "private"
         | "band_members"
+      recurring_obligation_frequency:
+        | "daily"
+        | "weekly"
+        | "monthly"
+        | "custom_interval"
+      recurring_obligation_status:
+        | "active"
+        | "paused"
+        | "cancelled"
+        | "overdue"
+        | "failed"
+        | "completed"
+      reimbursement_status:
+        | "submitted"
+        | "awaiting_approval"
+        | "approved"
+        | "rejected"
+        | "paid"
+        | "cancelled"
       show_type_enum: "concert" | "festival" | "private" | "street"
       social_invite_kind:
         | "gig"
@@ -78826,6 +79958,13 @@ export type Database = {
         | "declined"
         | "expired"
         | "cancelled"
+      tax_filing_status:
+        | "open"
+        | "estimated"
+        | "filed"
+        | "paid"
+        | "overdue"
+        | "adjusted"
       twaater_linked_type: "single" | "album" | "gig" | "tour" | "busking"
       twaater_outcome_group:
         | "engagement"
@@ -78966,7 +80105,49 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      balance_version_status: [
+        "draft",
+        "validating",
+        "valid",
+        "invalid",
+        "approved",
+        "scheduled",
+        "active",
+        "retired",
+        "rolled_back",
+      ],
+      band_finance_permission: [
+        "view_band_balance",
+        "view_transaction_history",
+        "view_detailed_income_expenses",
+        "create_member_contribution_requests",
+        "make_voluntary_contributions",
+        "request_reimbursement",
+        "approve_reimbursements",
+        "schedule_payments",
+        "pay_band_expenses",
+        "change_revenue_split_rules",
+        "withdraw_band_funds",
+        "perform_emergency_payments",
+      ],
+      band_revenue_split_method: [
+        "equal",
+        "custom_percentage",
+        "role_weighted",
+        "retain_all",
+        "reserve_then_distribute",
+      ],
       band_status: ["active", "on_hiatus", "disbanded"],
+      band_withdrawal_status: [
+        "draft",
+        "submitted",
+        "awaiting_approval",
+        "approved",
+        "rejected",
+        "paid",
+        "cancelled",
+        "expired",
+      ],
       book_reading_status: ["reading", "completed", "abandoned"],
       candidate_status: ["pending", "approved", "withdrawn", "disqualified"],
       chat_participant_status: ["online", "offline", "typing", "away"],
@@ -78981,6 +80162,15 @@ export const Constants = {
         "asset_recovery",
         "settled",
         "written_off",
+      ],
+      distribution_batch_status: [
+        "calculated",
+        "awaiting_approval",
+        "approved",
+        "processing",
+        "completed",
+        "failed",
+        "cancelled",
       ],
       drug_policy_status: [
         "prohibited",
@@ -79256,6 +80446,28 @@ export const Constants = {
         "private",
         "band_members",
       ],
+      recurring_obligation_frequency: [
+        "daily",
+        "weekly",
+        "monthly",
+        "custom_interval",
+      ],
+      recurring_obligation_status: [
+        "active",
+        "paused",
+        "cancelled",
+        "overdue",
+        "failed",
+        "completed",
+      ],
+      reimbursement_status: [
+        "submitted",
+        "awaiting_approval",
+        "approved",
+        "rejected",
+        "paid",
+        "cancelled",
+      ],
       show_type_enum: ["concert", "festival", "private", "street"],
       social_invite_kind: [
         "gig",
@@ -79271,6 +80483,14 @@ export const Constants = {
         "declined",
         "expired",
         "cancelled",
+      ],
+      tax_filing_status: [
+        "open",
+        "estimated",
+        "filed",
+        "paid",
+        "overdue",
+        "adjusted",
       ],
       twaater_linked_type: ["single", "album", "gig", "tour", "busking"],
       twaater_outcome_group: [
