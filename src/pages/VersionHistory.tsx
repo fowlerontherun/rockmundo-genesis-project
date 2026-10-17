@@ -17,6 +17,15 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.787",
+    date: "2026-10-17",
+    changes: [
+      { type: "feature", description: "Live gigs page (/gigs/live): join the crowd at any gig happening now and vote in crowd polls (encore, crowd mood). When the gig ends, polls close and change its rating: more voters up to +6%, a strong encore vote up to +2%, a chilled crowd -3%." },
+      { type: "feature", description: "Bands see their gig's crowd polls and the final crowd effect on the gig page." },
+      { type: "feature", description: "Achievements: pin up to 3 unlocked achievements as badges on your character." },
+    ],
+  },
+  {
     version: "1.1.786",
     date: "2026-10-17",
     changes: [

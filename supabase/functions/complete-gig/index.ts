@@ -283,6 +283,20 @@ serve(async (req) => {
       console.log(`[complete-gig] Absence penalty applied: ${(absencePenalty * 100).toFixed(0)}% (${(gig as any).absent_member_count || 0} missing member(s))`);
     }
 
+    // === AUDIENCE POLLS — closes the gig's crowd polls; settled once, re-runs return the stored effect ===
+    try {
+      const { data: pollEffect, error: pollError } = await supabaseClient.rpc('settle_gig_audience_polls', { p_gig_id: gigId });
+      const pollMod = Math.max(-0.03, Math.min(0.08, Number(pollEffect) || 0));
+      if (pollError) console.warn('[complete-gig] audience poll settle failed:', pollError.message);
+      else if (pollMod !== 0) {
+        avgRating = Math.max(0, Math.min(25, avgRating * (1 + pollMod)));
+        console.log(`[complete-gig] Audience poll crowd effect: ${(pollMod * 100).toFixed(1)}%`);
+      }
+    } catch (e) {
+      console.warn('[complete-gig] audience poll settle threw:', e);
+    }
+
+
     // === EQUIPPED CLOTHING PERFORMANCE BONUS ===
     // Apply once after all technical/attendance penalties but before commerce and
     // every downstream reward. The database resolver averages active core members

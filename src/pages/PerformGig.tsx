@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Music, Calendar, Users, DollarSign, PlayCircle, Flag, CheckCircle2, AlertCircle, ChevronDown, ListMusic, UserRoundCheck, Tickets, type LucideIcon } from 'lucide-react';
 import { GigOutcomeReport } from '@/components/gig/GigOutcomeReport';
+import { GigAudiencePolls } from '@/components/gig/GigAudiencePolls';
 import { useFixStuckGigs } from '@/hooks/useFixStuckGigs';
 import { GigPreparationPanel } from '@/components/gig/GigPreparationPanel';
 import { TicketPriceAdjuster } from '@/components/gig/TicketPriceAdjuster';
@@ -531,6 +532,7 @@ export default function PerformGig() {
 
       {/* Legacy 3D viewer modal - kept for backward compatibility but now using inline viewers */}
 
+      {gigId ? <GigAudiencePolls gigId={gigId} gigStatus={gig?.status} canVote={false} /> : null}
       <GigOutcomeReport
         isOpen={!!outcome && showOutcome}
         onClose={() => setShowOutcome(false)}

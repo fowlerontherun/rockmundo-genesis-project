@@ -30984,6 +30984,118 @@ export type Database = {
           },
         ]
       }
+      gig_audience_poll_votes: {
+        Row: {
+          attendance_id: string
+          created_at: string
+          id: string
+          option_key: string
+          poll_id: string
+          profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          attendance_id: string
+          created_at?: string
+          id?: string
+          option_key: string
+          poll_id: string
+          profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          attendance_id?: string
+          created_at?: string
+          id?: string
+          option_key?: string
+          poll_id?: string
+          profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gig_audience_poll_votes_attendance_id_fkey"
+            columns: ["attendance_id"]
+            isOneToOne: false
+            referencedRelation: "gig_audience_attendance"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gig_audience_poll_votes_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "gig_audience_polls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gig_audience_poll_votes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gig_audience_poll_votes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gig_audience_polls: {
+        Row: {
+          closes_at: string | null
+          created_at: string
+          crowd_effect: number
+          gig_id: string
+          id: string
+          opens_at: string
+          options: Json
+          poll_type: string
+          question: string
+          status: string
+          vote_count: number
+          winning_option: string | null
+        }
+        Insert: {
+          closes_at?: string | null
+          created_at?: string
+          crowd_effect?: number
+          gig_id: string
+          id?: string
+          opens_at?: string
+          options: Json
+          poll_type: string
+          question: string
+          status?: string
+          vote_count?: number
+          winning_option?: string | null
+        }
+        Update: {
+          closes_at?: string | null
+          created_at?: string
+          crowd_effect?: number
+          gig_id?: string
+          id?: string
+          opens_at?: string
+          options?: Json
+          poll_type?: string
+          question?: string
+          status?: string
+          vote_count?: number
+          winning_option?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gig_audience_polls_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gig_audience_reactions: {
         Row: {
           attendance_id: string
@@ -50382,6 +50494,49 @@ export type Database = {
           {
             foreignKeyName: "profile_mutes_viewer_profile_id_fkey"
             columns: ["viewer_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profile_pinned_badges: {
+        Row: {
+          achievement_id: string
+          pinned_at: string
+          profile_id: string
+          slot: number
+        }
+        Insert: {
+          achievement_id: string
+          pinned_at?: string
+          profile_id: string
+          slot: number
+        }
+        Update: {
+          achievement_id?: string
+          pinned_at?: string
+          profile_id?: string
+          slot?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_pinned_badges_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_pinned_badges_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_pinned_badges_profile_id_fkey"
+            columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
@@ -70458,6 +70613,7 @@ export type Database = {
         Args: { p_band_id: string }
         Returns: boolean
       }
+      can_view_gig_polls: { Args: { p_gig_id: string }; Returns: boolean }
       can_view_social_contract: {
         Args: { p_contract_id: string; p_profile_id?: string }
         Returns: boolean
@@ -72319,6 +72475,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      ensure_gig_audience_polls: { Args: { p_gig_id: string }; Returns: number }
       ensure_gig_preparation_from_booked_setlist: {
         Args: { p_gig_id: string }
         Returns: string
@@ -75161,6 +75318,10 @@ export type Database = {
         Args: { _catalog_slug: string; _profile_id: string }
         Returns: Json
       }
+      pin_achievement_badge: {
+        Args: { p_achievement_id: string; p_profile_id: string; p_slot: number }
+        Returns: undefined
+      }
       place_song_bid: {
         Args: {
           p_bid_amount: number
@@ -77711,6 +77872,7 @@ export type Database = {
         }
         Returns: Json
       }
+      settle_gig_audience_polls: { Args: { p_gig_id: string }; Returns: number }
       settle_gig_commerce: {
         Args: {
           p_gig_id: string
@@ -78282,6 +78444,10 @@ export type Database = {
               isSetofReturn: false
             }
           }
+      submit_gig_audience_poll_vote: {
+        Args: { p_option_key: string; p_poll_id: string }
+        Returns: string
+      }
       submit_label_counteroffer_atomic: {
         Args: {
           p_contract_id: string

@@ -230,6 +230,7 @@ const AdminDebugPanel = lazyWithRetry(() => import("./pages/admin/DebugPanel"));
 const AdminFinanceDiagnostics = lazyWithRetry(() => import("./pages/admin/FinanceDiagnostics"));
 const AdminStripeAudit = lazyWithRetry(() => import("./pages/admin/StripeAudit"));
 const AdminBalanceVersions = lazyWithRetry(() => import("./pages/admin/BalanceVersions"));
+const LiveGigs = lazyWithRetry(() => import("./pages/LiveGigs"));
 const AdminReferralAudit = lazyWithRetry(() => import("./pages/admin/ReferralAudit"));
 const AdminDeathSystem = lazyWithRetry(() => import("./pages/admin/DeathSystemAdmin"));
 const AdminCharacterRecovery = lazyWithRetry(() => import("./pages/admin/CharacterRecoveryAdmin"));
@@ -604,6 +605,7 @@ function App() {
                     <Route path="gigs" element={<GigBooking />} />
                     <Route path="jams" element={<JamSessions />} />
                     <Route path="gigs/perform/:gigId" element={<PerformGig />} />
+                    <Route path="gigs/live" element={<LiveGigs />} />
                     <Route path="busking" element={<Busking />} />
                     
                     <Route path="song-manager" element={<SongManager />} />
