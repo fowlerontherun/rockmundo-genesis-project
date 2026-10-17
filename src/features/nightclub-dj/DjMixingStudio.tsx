@@ -177,12 +177,12 @@ export function DjMixingStudio() {
     if (!profileId || !track.mine) return;
     setSharing(track.id);
     try {
-      const { data, error } = await supabase.from("songs").update({ dj_use_allowed: enabled })
+      const { data, error } = await (supabase as any).from("songs").update({ dj_use_allowed: enabled })
         .eq("id", track.sourceId).eq("profile_id", profileId)
         .select("id").single();
       if (error || !data) throw error || new Error("Song permission could not be updated");
       await client.invalidateQueries({ queryKey: ["dj-track-library", profileId] });
-      toast.success(enabled ? "Your released song is available to other DJs." : "DJ sharing disabled.");
+      toast.success(enabled ? "Sharing enabled. Other DJs can play this track once it is released." : "DJ sharing disabled.");
     } catch (err) { toast.error(err instanceof Error ? err.message : "Unable to update DJ sharing"); }
     finally { setSharing(null); }
   };
