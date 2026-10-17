@@ -24,6 +24,8 @@ vi.mock("@/hooks/useActiveProfile", () => ({
   }),
 }));
 
+vi.mock("@/components/bands/BandFinanceRules", () => ({ BandFinanceRules: () => null }));
+
 vi.mock("@/hooks/use-toast", () => ({
   useToast: () => ({ toast: vi.fn() }),
 }));
