@@ -87,13 +87,13 @@ export function useDjTrackLibrary(profileId: string | null) {
     queryFn: async (): Promise<DjAudioTrack[]> => {
       if (!profileId) return [];
       const [mine, shared, admin] = await Promise.all([
-        supabase.from("songs")
+        (supabase as any).from("songs")
           .select("id,title,genre,duration_seconds,audio_url,extended_audio_url,profile_id,status,dj_use_allowed,archived")
           .eq("profile_id", profileId)
           .in("status", ["recorded", "released", "completed", "mastered"])
           .eq("archived", false)
           .order("created_at", { ascending: false }).limit(100),
-        supabase.from("songs")
+        (supabase as any).from("songs")
           .select("id,title,genre,duration_seconds,audio_url,extended_audio_url,profile_id,status,dj_use_allowed,archived")
           .eq("status", "released").eq("dj_use_allowed", true)
           .eq("archived", false).order("created_at", { ascending: false }).limit(200),
