@@ -339,6 +339,66 @@ function addCuratedFrontPrint(root: T.Object3D, bones: Map<string, T.Bone>, row:
   attachToBodySurface(root, chest, print, base.clone().add(new T.Vector3(0, .02, 0)), .003);
 }
 
+function stripeTexture(colors: string[], bands: number) {
+  if (typeof document === 'undefined') return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = 64; canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  const h = canvas.height / bands;
+  for (let i = 0; i < bands; i++) {
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.fillRect(0, i * h, canvas.width, Math.ceil(h));
+  }
+  const texture = new T.CanvasTexture(canvas);
+  texture.colorSpace = T.SRGBColorSpace;
+  return texture;
+}
+
+/** Horizontal mod stripes across the chest, sitting just behind the front print. */
+function addModStripes(root: T.Object3D, bones: Map<string, T.Bone>) {
+  const chest = findBone(bones, ['Spine2','Spine.002','Chest','UpperChest']) ?? findBone(bones, ['Spine1','Spine.001']);
+  if (!chest) return;
+  const texture = stripeTexture(['#f4f1e8', '#1f3c8f', '#f4f1e8', '#c8102e'], 8);
+  if (!texture) return;
+  const material = new T.MeshStandardMaterial({ map: texture, roughness: .9, metalness: 0, polygonOffset: true, polygonOffsetFactor: -1 });
+  const panel = new T.Mesh(curvedGraphicGeometry(.4, .24, .03), material);
+  panel.name = 'curated-mod-stripes';
+  panel.renderOrder = 1;
+  const base = chest.getWorldPosition(new T.Vector3());
+  attachToBodySurface(root, chest, panel, base.clone().add(new T.Vector3(0, -.03, 0)), .0015);
+}
+
+/** Parka details: front zip, fur-trimmed hood ring and two flap pockets. */
+function addParkaDetails(root: T.Object3D, bones: Map<string, T.Bone>) {
+  const chest = findBone(bones, ['Spine2','Spine.002','Chest','UpperChest']);
+  const waist = findBone(bones, ['Spine','Spine1','Spine.001']);
+  const neck = findBone(bones, ['Neck']);
+  const zipMat = new T.MeshStandardMaterial({ color: '#2b2a24', roughness: .5, metalness: .6 });
+  const pocketMat = new T.MeshStandardMaterial({ color: '#4a5232', roughness: .95 });
+  if (chest) {
+    const base = chest.getWorldPosition(new T.Vector3());
+    const zip = new T.Mesh(curvedGraphicGeometry(.018, .42, .01), zipMat);
+    zip.name = 'curated-parka-zip';
+    attachToBodySurface(root, chest, zip, base.clone().add(new T.Vector3(0, -.08, 0)), .004);
+  }
+  if (waist) {
+    const base = waist.getWorldPosition(new T.Vector3());
+    for (const x of [-.09, .09]) {
+      const pocket = new T.Mesh(curvedGraphicGeometry(.11, .08, .01), pocketMat);
+      pocket.name = 'curated-parka-pocket';
+      attachToBodySurface(root, waist, pocket, base.clone().add(new T.Vector3(x, -.02, 0)), .005);
+    }
+  }
+  if (neck) {
+    const hood = new T.Mesh(new T.TorusGeometry(.085, .022, 8, 20), new T.MeshStandardMaterial({ color: '#b9ab8e', roughness: 1 }));
+    hood.name = 'curated-parka-hood-trim';
+    hood.rotation.x = Math.PI / 2.4;
+    hood.position.set(0, -.02, -.02);
+    neck.add(hood);
+  }
+}
+
 export function addCuratedSkinDetails(
   root: T.Object3D,
   bones: Map<string, T.Bone>,
@@ -352,6 +412,8 @@ export function addCuratedSkinDetails(
   clothing
     .filter(row => richGarmentSlot(row.item) === 'top' && row.item.curated_asset_key && row.item.curated_asset_key !== 'clothing.starter.logo-tee' && row.item.render_config?.curatedSource)
     .forEach(row => addCuratedFrontPrint(root, bones, row));
+  if (keys.has('clothing.britpop.mod-stripe-tee')) addModStripes(root, bones);
+  if (keys.has('clothing.britpop.terrace-parka')) addParkaDetails(root, bones);
   if (keys.has('clothing.punk.safety-pin-tee')) addSafetyPins(root, bones, quality);
   if (keys.has('clothing.punk.patch-jacket')) addPatchJacketDetails(root, bones, quality);
   if (keys.has('clothing.punk.biker-jacket')) addBikerJacketHardware(root, bones, quality);

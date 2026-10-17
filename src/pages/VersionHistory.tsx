@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.793",
+    date: "2026-10-17",
+    changes: [
+      { type: "improvement", description: "Mod Stripe Tee now shows cream, blue and red chest stripes behind the mod target." },
+      { type: "improvement", description: "Terrace Parka now has a front zip, two flap pockets and a fur-trimmed hood ring so it reads as a parka." },
+    ],
+  },
+  {
     version: "1.1.792",
     date: "2026-10-17",
     changes: [
