@@ -229,6 +229,7 @@ const AdminWorldReset = lazyWithRetry(() => import("./pages/admin/WorldReset"));
 const AdminDebugPanel = lazyWithRetry(() => import("./pages/admin/DebugPanel"));
 const AdminFinanceDiagnostics = lazyWithRetry(() => import("./pages/admin/FinanceDiagnostics"));
 const AdminStripeAudit = lazyWithRetry(() => import("./pages/admin/StripeAudit"));
+const AdminBalanceVersions = lazyWithRetry(() => import("./pages/admin/BalanceVersions"));
 const AdminReferralAudit = lazyWithRetry(() => import("./pages/admin/ReferralAudit"));
 const AdminDeathSystem = lazyWithRetry(() => import("./pages/admin/DeathSystemAdmin"));
 const AdminCharacterRecovery = lazyWithRetry(() => import("./pages/admin/CharacterRecoveryAdmin"));
@@ -948,6 +949,7 @@ function App() {
                     <Route path="admin/debug-panel" element={<AdminDebugPanel />} />
                     <Route path="admin/finance-diagnostics" element={<AdminFinanceDiagnostics />} />
                     <Route path="admin/stripe-audit" element={<AdminStripeAudit />} />
+                    <Route path="admin/balance-versions" element={<AdminBalanceVersions />} />
                     <Route path="admin/referrals" element={<AdminReferralAudit />} />
                     <Route path="admin/death-system" element={<AdminDeathSystem />} />
                     <Route path="admin/character-recovery" element={<AdminCharacterRecovery />} />
