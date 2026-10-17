@@ -73,6 +73,13 @@ export function mapAdminDjTrack(track: AdminDjTrack): DjAudioTrack {
   };
 }
 
+export function filterDjTracks(tracks: DjAudioTrack[], search: string, source: "all" | "game" | "admin"): DjAudioTrack[] {
+  const term = search.trim().toLocaleLowerCase();
+  return tracks.filter((track) => (source === "all" || track.source === source)
+    && (!term || [track.title, track.artist, track.genre, track.musicalKey ?? "", String(track.bpm ?? "")]
+      .some((value) => value.toLocaleLowerCase().includes(term))));
+}
+
 /** Only an admin-approved storage path gets a signed, short-lived URL from Storage RLS. */
 export async function getDjPlaybackUrl(track: DjAudioTrack): Promise<string> {
   if (track.source === "game" && validDjAudioUrl(track.audioUrl)) return track.audioUrl;
