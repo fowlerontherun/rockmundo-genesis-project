@@ -30,7 +30,7 @@ BEGIN
 
   -- Four thousand genuine buyers cannot fill a twenty-thousand-seat arena.
   IF public.gig_ticket_sales_goal(4000,20000,v_booked,
-    v_booked + interval '20 days',v_show) <> 4000
+    v_booked + interval '25 days',v_show) <> 4000
   THEN RAISE EXCEPTION 'under-capacity demand target invalid'; END IF;
 
   -- Weak market demand never gets manufactured into a sellout.
