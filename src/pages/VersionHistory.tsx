@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.790",
+    date: "2026-10-17",
+    changes: [
+      { type: "feature", description: "New Cool Britannia '96 Britpop collection: Union Jack Guitar and Bass skins, Britpop Bucket Hat, Mod Stripe Tee, Terrace Parka, Baggy Stonewash Jeans and Terrace Trainers. Equipped pieces boost gig ratings and recording quality." },
+      { type: "fix", description: "Equipped outfit gig boosts now apply again, and outfit recording boosts now improve recorded songs." },
+    ],
+  },
+  {
     version: "1.1.789",
     date: "2026-10-17",
     changes: [

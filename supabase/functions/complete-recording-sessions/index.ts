@@ -414,7 +414,26 @@ Deno.serve(async (req) => {
             )
           }
         }
-        const newQuality = applyRecordingQualityBoost(outcome.finalMasterQuality, recordingBoost?.percent ?? 0)
+        // Equipped-outfit recording bonus (e.g. Cool Britannia '96): average of
+        // booked performers' equipped clothing recording_pct, capped at 10%.
+        let outfitRecordingPct = 0
+        try {
+          const performerIds = [...new Set(participants
+            .map((member: any) => member.profile_id)
+            .filter((id: unknown): id is string => typeof id === 'string' && id.length > 0))]
+          if (performerIds.length > 0) {
+            const pcts = await Promise.all(performerIds.map(async (pid) => {
+              const { data } = await supabase.rpc('get_equipped_clothing_bonuses', { p_profile_id: pid })
+              const row = Array.isArray(data) ? data[0] : data
+              return Math.max(0, Number((row as any)?.recording_pct ?? 0))
+            }))
+            outfitRecordingPct = Math.min(10, pcts.reduce((a, b) => a + b, 0) / performerIds.length)
+          }
+        } catch (outfitError) {
+          console.warn('[complete-recording-sessions] outfit recording bonus unavailable:', outfitError)
+        }
+        const combinedRecordingPct = Math.min(50, Math.round((recordingBoost?.percent ?? 0) + outfitRecordingPct))
+        const newQuality = applyRecordingQualityBoost(outcome.finalMasterQuality, combinedRecordingPct)
         const qualityImprovement = Math.round(newQuality - outcome.sourceSongQuality)
         const outcomeBreakdown = {
           ...outcome.breakdown,
