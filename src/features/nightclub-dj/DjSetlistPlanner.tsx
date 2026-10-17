@@ -19,6 +19,7 @@ type Props = {
   profileId: string | null;
   tracks: DjAudioTrack[];
   onRehearse: (first: string, second: string) => void;
+  onLoadTrack: (trackId: string, deck: "A" | "B") => void;
 };
 
 function djSetsTable() {
@@ -28,7 +29,7 @@ function djSetsTable() {
 }
 
 /** Rehearsal drafts only. The future nightclub booking service must check rights again. */
-export function DjSetlistPlanner({ profileId, tracks, onRehearse }: Props) {
+export function DjSetlistPlanner({ profileId, tracks, onRehearse, onLoadTrack }: Props) {
   const queryClient = useQueryClient();
   const [activeId, setActiveId] = useState("");
   const [name, setName] = useState("New DJ set");
@@ -210,6 +211,12 @@ export function DjSetlistPlanner({ profileId, tracks, onRehearse }: Props) {
                       : "Removed, unpublished or sharing withdrawn — replace before saving"}
                   </p>
                 </div>
+                <Button type="button" size="sm" variant="outline" disabled={!track}
+                  aria-label={`Load ${track?.title ?? "unavailable song"} into deck A`}
+                  onClick={() => onLoadTrack(djSetlistTrackKey(item), "A")}>A</Button>
+                <Button type="button" size="sm" variant="outline" disabled={!track}
+                  aria-label={`Load ${track?.title ?? "unavailable song"} into deck B`}
+                  onClick={() => onLoadTrack(djSetlistTrackKey(item), "B")}>B</Button>
                 <Button type="button" size="icon" variant="ghost" aria-label={`Move song ${index + 1} up`}
                   disabled={index === 0} onClick={() => { setItems(moveDjSetlistItem(items, index, index - 1)); setDirty(true); }}>
                   <ArrowUp className="h-4 w-4" />
