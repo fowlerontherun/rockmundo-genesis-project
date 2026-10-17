@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.794",
+    date: "2026-10-17",
+    changes: [
+      { type: "fix", description: "Dashboard unread counts no longer include notifications a character has already read, archived or deleted, so the count now matches the Inbox." },
+    ],
+  },
+  {
     version: "1.1.793",
     date: "2026-10-17",
     changes: [
