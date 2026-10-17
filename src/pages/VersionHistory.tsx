@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.783",
+    date: "2026-10-17",
+    changes: [
+      { type: "feature", description: "Band finance rules: every band now has finance settings (savings reserve, withdrawal approvals, revenue split) plus records for member contributions, withdrawal and expense-refund requests, payouts, recurring bills, weekly money snapshots and tax summaries. Band members can see their own band's records." },
+      { type: "feature", description: "Balance versioning (admin): game-balance settings can now be saved as versions with validation, simulation and rollout history. Live versions are locked from editing." },
+    ],
+  },
+  {
     version: "1.1.782",
     date: "2026-10-17",
     changes: [
