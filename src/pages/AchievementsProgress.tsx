@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { AvatarShareStudio } from "@/features/shareable-moments/CharacterShareStudio";
 import type { CharacterProfileShareMoment } from "@/features/shareable-moments/characterProfile";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
+import { BadgeShelf } from "@/components/achievements/BadgeShelf";
 
 type Achievement = {
   id: string;
@@ -234,6 +235,8 @@ export default function AchievementsProgress() {
           </p>
         </div>
       </div>
+
+      <BadgeShelf />
 
       <Card>
         <CardHeader className="pb-3">
