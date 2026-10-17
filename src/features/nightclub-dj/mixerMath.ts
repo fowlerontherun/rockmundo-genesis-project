@@ -2,7 +2,7 @@
 export function equalPowerCrossfade(position: number): { a: number; b: number } {
   const normalized = Math.max(0, Math.min(100, Number.isFinite(position) ? position : 0)) / 100;
   // Extra headroom for overlapping mastered songs.
-  return { a: Math.cos(normalized * Math.PI / 2) * 0.75, b: Math.sin(normalized * Math.PI / 2) * 0.75 };
+  return { a: Math.cos(normalized * Math.PI / 2) * 0.7, b: Math.sin(normalized * Math.PI / 2) * 0.7 };
 }
 
 export function clampDeckRate(rate: number): number {
