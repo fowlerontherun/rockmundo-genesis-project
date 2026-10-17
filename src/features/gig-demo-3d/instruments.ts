@@ -52,6 +52,19 @@ function applyElectricInstrumentSkin(root: T.Group, skin?: ResolvedInstrumentSki
     } else if (skin.designKey === 'checker') {
         const size = .072;
         for (let row = 0; row < 5; row++) for (let col = 0; col < 5; col++) if ((row + col) % 2 === 0) addPlate(size, size, -.145 + col * size, -.27 + row * size);
+    } else if (skin.designKey === 'union_jack') {
+        // Flag panel sized like the sunburst centre so it never overhangs the body.
+        const white = new T.MeshStandardMaterial({ color: skin.pickguardColor, roughness: .34, metalness: .04, side: T.DoubleSide });
+        const panel = new T.Group(); panel.name = 'instrument-skin-graphic'; panel.position.set(0, -.04, .151); root.add(panel);
+        const w = .44, h = .56;
+        const bar = (bw: number, bh: number, mat: T.Material, rot = 0, z = 0) => {
+            const m = new T.Mesh(new T.PlaneGeometry(bw, bh), mat); m.rotation.z = rot; m.position.z = z; m.name = 'instrument-skin-graphic'; panel.add(m);
+        };
+        const diag = Math.atan2(h, w), len = Math.hypot(w, h) * .92;
+        bar(len, .07, white, diag, 0); bar(len, .07, white, -diag, 0);
+        bar(len, .025, ink, diag, .0004); bar(len, .025, ink, -diag, .0004);
+        bar(w * .96, .1, white, 0, .0008); bar(.1, h * .96, white, 0, .0008);
+        bar(w * .96, .06, ink, 0, .0012); bar(.06, h * .96, ink, 0, .0012);
     } else if (skin.designKey === 'lightning') {
         const shape = new T.Shape();
         shape.moveTo(-.035, .27); shape.lineTo(.10, .08); shape.lineTo(.025, .08); shape.lineTo(.13, -.25); shape.lineTo(-.08, -.02); shape.lineTo(0, -.02); shape.closePath();

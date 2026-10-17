@@ -1,6 +1,6 @@
 import type { InstrumentId } from '@/features/gig-demo-3d/instrumentCatalog';
 
-export const INSTRUMENT_DESIGNS = ['solid', 'two_tone', 'sunburst', 'racing_stripes', 'checker', 'flames', 'lightning'] as const;
+export const INSTRUMENT_DESIGNS = ['solid', 'two_tone', 'sunburst', 'racing_stripes', 'checker', 'flames', 'lightning', 'union_jack'] as const;
 export type InstrumentDesignKey = typeof INSTRUMENT_DESIGNS[number];
 
 export interface InstrumentSkinZone {
