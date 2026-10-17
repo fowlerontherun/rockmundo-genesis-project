@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.785",
+    date: "2026-10-17",
+    changes: [
+      { type: "feature", description: "Wellness: new Touring recovery panel showing how comfortable each kind of tour transport is (van to private jet) for sleep and recovery, your tour workload, and your recent recovery from rest, travel and jet lag." },
+    ],
+  },
+  {
     version: "1.1.784",
     date: "2026-10-17",
     changes: [
