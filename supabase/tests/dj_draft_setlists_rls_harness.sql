@@ -93,4 +93,27 @@ BEGIN
     RAISE EXCEPTION 'Failed save unexpectedly incremented revision';
   END IF;
 END $setlist$;
+
+-- A second account cannot list, update or delete the first account's draft.
+SELECT set_config('dj_test.original_actor', (SELECT auth.uid()::text), true);
+SELECT set_config('request.jwt.claim.sub', (
+  SELECT p.user_id::text FROM public.profiles p
+  WHERE p.user_id <> current_setting('dj_test.original_actor')::uuid
+  LIMIT 1
+), true);
+DO $foreign_actor$
+DECLARE
+  v_rows integer;
+BEGIN
+  IF auth.uid() IS NULL OR auth.uid()::text = current_setting('dj_test.original_actor')
+  THEN RAISE EXCEPTION 'Missing second account test actor'; END IF;
+  SELECT count(*) INTO v_rows FROM public.dj_setlists WHERE name='DJ SQL fixture v2';
+  IF v_rows<>0 THEN RAISE EXCEPTION 'SECURITY FAILURE: another user saw a private DJ set'; END IF;
+  UPDATE public.dj_setlists SET name='UNAUTHORIZED' WHERE name='DJ SQL fixture v2';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  IF v_rows<>0 THEN RAISE EXCEPTION 'SECURITY FAILURE: another user updated a DJ set'; END IF;
+  DELETE FROM public.dj_setlists WHERE name='DJ SQL fixture v2';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  IF v_rows<>0 THEN RAISE EXCEPTION 'SECURITY FAILURE: another user deleted a DJ set'; END IF;
+END $foreign_actor$;
 ROLLBACK;
