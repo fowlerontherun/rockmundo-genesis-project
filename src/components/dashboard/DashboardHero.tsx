@@ -1,3 +1,4 @@
+import { fetchUnreadCharacterNotifications } from "@/lib/unreadNotifications";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -189,13 +190,7 @@ export const DashboardHero = ({ profile, userId }: DashboardHeroProps) => {
     queryKey: ["dashboard-unread", userId, profileId],
     enabled: !!userId && !!profileId,
     queryFn: async () => {
-      const { count } = await (supabase as any)
-        .from("notifications")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userId)
-        .eq("profile_id", profileId)
-        .is("read_at", null);
-      return count ?? 0;
+      return (await fetchUnreadCharacterNotifications(userId!, profileId!)).length;
     },
   });
 

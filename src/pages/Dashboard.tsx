@@ -1,3 +1,4 @@
+import { fetchUnreadCharacterNotifications } from "@/lib/unreadNotifications";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -243,19 +244,13 @@ const NotificationsPanel = ({ userId, profileId }: { userId?: string; profileId?
           .eq("user_id", userId!)
           .eq("is_read", false)
           .eq("is_archived", false),
-        supabase
-          .from("notifications")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", userId!)
-          .eq("profile_id", profileId!)
-          .is("read_at", null),
+        fetchUnreadCharacterNotifications(userId!, profileId!),
       ]);
       if (inboxResult.error) throw inboxResult.error;
-      if (notificationsResult.error) throw notificationsResult.error;
       const inboxCount = (inboxResult.data ?? []).filter((row: any) =>
         row?.metadata?.profile_id === profileId || row?.metadata?.scope === "account"
       ).length;
-      return { inbox: inboxCount, notifications: notificationsResult.count ?? 0 };
+      return { inbox: inboxCount, notifications: notificationsResult.length };
     },
   });
 
