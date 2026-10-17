@@ -89,10 +89,16 @@ function getDetailHref(activity: ScheduledActivity) {
   if (activity.linked_gig_id) return `/gigs/perform/${activity.linked_gig_id}`;
   if (activity.linked_rehearsal_id) return "/rehearsals";
   if (activity.linked_recording_id) return "/recording-studio";
-  if (activity.activity_type === "travel") return "/tour-manager";
+  if (activity.activity_type === "travel") {
+    return activity.metadata?.tour_leg_id || activity.metadata?.tour_travel_leg_id || activity.metadata?.tour_travel_leg
+      ? "/tour-manager" : "/travel";
+  }
   if (activity.activity_type === "work") return "/employment";
   if (activity.activity_type === "major_event") return "/major-events";
-  if (activity.activity_type === "university" || activity.activity_type === "teaching") return "/education";
+  if (activity.activity_type === "university" || activity.activity_type === "teaching" ||
+      activity.activity_type === "reading" || activity.activity_type === "mentorship" ||
+      activity.activity_type === "youtube_video") return "/education";
+  if (activity.activity_type === "skill_practice") return "/skills";
   return null;
 }
 

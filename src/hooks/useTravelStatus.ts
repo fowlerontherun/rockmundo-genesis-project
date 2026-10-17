@@ -125,6 +125,9 @@ export function useTravelStatus() {
         description: `You received a $${refundAmount} refund.`,
       });
       queryClient.invalidateQueries({ queryKey: ["travel-status"] });
+      queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });
+      queryClient.invalidateQueries({ queryKey: ["week-scheduled-activities"] });
+      queryClient.invalidateQueries({ queryKey: ["mobile-day-schedule"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
     },
     onError: (error) => {

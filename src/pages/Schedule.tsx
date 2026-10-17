@@ -27,13 +27,17 @@ function CurrentActivityPanel({ userId }: { userId?: string }) {
   const today = useMemo(() => new Date(), []);
   const { data: activities = [], isLoading, error, refetch } = useScheduledActivities(today, userId);
   const now = Date.now();
-  const current = activities.find((activity) => {
+  const currentCandidates = activities.filter((activity) => {
     // Festival dates without a confirmed stage time are calendar reminders.
     if (activity.activity_type === "festival_performance" && activity.metadata?.date_only) return false;
     const start = new Date(activity.scheduled_start).getTime();
     const end = new Date(activity.scheduled_end).getTime();
     return activity.status === "in_progress" || (activity.status === "scheduled" && start <= now && end > now);
   });
+  // A projected daily university class is a calendar reminder; an actual
+  // booking (especially a journey or practice) wins when they overlap.
+  const current = currentCandidates.find((activity) => !activity.metadata?.projected_enrollment)
+    ?? currentCandidates[0];
 
   if (isLoading) return <PageLoadingState title="Loading current activity" description="Checking what is active right now..." />;
   if (error) return <PageErrorState title="Current activity unavailable" description="Schedule data could not be loaded." onRetry={() => void refetch()} />;

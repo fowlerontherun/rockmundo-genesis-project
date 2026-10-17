@@ -243,6 +243,8 @@ const Travel = () => {
         queryClient.invalidateQueries({ queryKey: ["upcoming-travel"] }),
         queryClient.invalidateQueries({ queryKey: ["past-travel"] }),
         queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] }),
+        queryClient.invalidateQueries({ queryKey: ["week-scheduled-activities"] }),
+        queryClient.invalidateQueries({ queryKey: ["mobile-day-schedule"] }),
       ]);
 
       } catch (refreshError) {

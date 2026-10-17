@@ -7,6 +7,8 @@ import { assertWellnessAllows } from "@/hooks/useActivityBooking";
 import { getActiveProfile } from "@/services/profileService";
 import { getDurationMinutes, validateBookingWindow } from "@/utils/activityBookingTime";
 import { withoutDuplicateBandScheduleActivities } from "@/utils/bandActivityScheduling";
+import { mergeCharacterTravel, projectUniversityClasses } from "@/utils/scheduleVisibility";
+import { fetchCharacterTravelForDay, fetchEnrolledUniversityClasses } from "@/services/scheduleSources";
 import { appearanceOnLocalDay, fetchMyBandFestivalAppearances, festivalAppearanceAsActivity, localFestivalDate } from "@/features/festivals/appearances/bandFestivalAppearances";
 
 export type ActivityType = 
@@ -109,12 +111,13 @@ async function fetchScheduledActivitiesForDay(date: Date, userId?: string, profi
       // Get user's band IDs for filtering
       const { data: userBands, error: bandsError } = await supabase
         .from('band_members')
-        .select('band_id')
+        .select('band_id, travels_with_band')
         .eq('profile_id', activeProfile.id)
         .eq('member_status', 'active');
       
       if (bandsError) throw bandsError;
       const userBandIds = userBands?.map(b => b.band_id) || [];
+      const travelBandIds = userBands?.filter(b => b.travels_with_band !== false).map(b => b.band_id) || [];
 
       // The same confirmed booking belongs on every active member's calendar.
       let festivalActivities: ScheduledActivity[] = [];
@@ -225,22 +228,29 @@ async function fetchScheduledActivitiesForDay(date: Date, userId?: string, profi
 
       // Fetch tour travel legs for user's bands
       let travelLegs: any[] = [];
-      if (userBandIds.length > 0) {
+      if (travelBandIds.length > 0) {
         const { data: tourTravelLegs, error: travelError } = await (supabase as any)
           .from('tour_travel_legs')
           .select('*, from_city:from_city_id(name), to_city:to_city_id(name), tours!inner(band_id, name, status)')
           .lte('departure_date', dayEnd.toISOString())
           .gte('arrival_date', dayStart.toISOString())
-          .in('tours.band_id', userBandIds)
+          .in('tours.band_id', travelBandIds)
           .neq('status', 'cancelled');
         if (travelError) throw travelError;
         
         // Filter for user's bands and exclude cancelled tours
         travelLegs = (tourTravelLegs || []).filter((leg: any) => 
-          userBandIds.includes(leg.tours?.band_id) &&
+          travelBandIds.includes(leg.tours?.band_id) &&
           leg.tours?.status !== 'cancelled'
         );
       }
+
+      // History includes personal, VIP concierge, charter and auto-gig travel,
+      // even when their calendar mirror has not been created.
+      const [characterTravel, universityClasses] = await Promise.all([
+        fetchCharacterTravelForDay(activeProfile.id, dayStart, addDays(dayStart, 1)),
+        fetchEnrolledUniversityClasses(activeProfile.id),
+      ]);
 
       // Fetch releases in manufacturing status for user's bands
       let releaseActivities: ScheduledActivity[] = [];
@@ -307,7 +317,7 @@ async function fetchScheduledActivitiesForDay(date: Date, userId?: string, profi
           status: (t.status === 'completed' ? 'completed' : t.status === 'in_progress' || t.status === 'traveling' ? 'in_progress' : 'scheduled') as ActivityStatus,
           title: `Tour Travel: ${t.from_city?.name} → ${t.to_city?.name}`,
           location: t.travel_mode,
-          metadata: { tour_travel_leg: true, tour_name: t.tours?.name },
+          metadata: { tour_travel_leg: true, tour_travel_leg_id: t.id, tour_name: t.tours?.name },
         })),
         ...releaseActivities,
       ];
@@ -321,9 +331,21 @@ async function fetchScheduledActivitiesForDay(date: Date, userId?: string, profi
         (ws: any) => !existingWorkIds.has(ws.metadata?.shift_history_id)
       );
       
-      const allActivities = withoutDuplicateBandScheduleActivities([...activities, ...uniqueWorkShifts]);
-
-      return allActivities.sort((a, b) => new Date(a.scheduled_start).getTime() - new Date(b.scheduled_start).getTime());
+      const travelIncluded = mergeCharacterTravel(
+        [...activities, ...uniqueWorkShifts], characterTravel, userId, activeProfile.id,
+      );
+      const classIncluded = [
+        ...travelIncluded,
+        ...projectUniversityClasses(
+          date, universityClasses.enrollments, travelIncluded, userId, activeProfile.id,
+          universityClasses.campusTimeZones,
+        ),
+      ];
+      return withoutDuplicateBandScheduleActivities(classIncluded)
+        .filter((activity) =>
+          Date.parse(activity.scheduled_start) < addDays(dayStart, 1).getTime() &&
+          Date.parse(activity.scheduled_end) > dayStart.getTime())
+        .sort((a, b) => Date.parse(a.scheduled_start) - Date.parse(b.scheduled_start));
 }
 
 export function useScheduledActivities(date: Date, userId?: string) {
