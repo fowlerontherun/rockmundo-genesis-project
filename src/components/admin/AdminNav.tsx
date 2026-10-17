@@ -164,6 +164,7 @@ export const adminCategories: AdminCategory[] = [
     icon: Sparkles,
     items: [
       { path: "/admin/skin-collections", label: "Curated Skin Packs", description: "Manage clothing packs, asset readiness, validation and publishing" },
+      { path: "/admin/garment-upload", label: "Garment Upload", description: "Upload finished 3D clothing models, auto-check them and publish" },
     ],
   },
   {
