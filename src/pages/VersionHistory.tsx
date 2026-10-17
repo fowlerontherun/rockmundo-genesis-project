@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.792",
+    date: "2026-10-17",
+    changes: [
+      { type: "fix", description: "Special clothing now uses proper base shapes: T-shirts have short sleeves instead of looking like hoodies, and jeans/trousers are full length instead of shorts." },
+      { type: "feature", description: "Every special top now has a chest print area that shows logos, text or uploaded images. The Mod Stripe Tee now shows its red, white and blue mod target." },
+    ],
+  },
+  {
     version: "1.1.791",
     date: "2026-10-17",
     changes: [

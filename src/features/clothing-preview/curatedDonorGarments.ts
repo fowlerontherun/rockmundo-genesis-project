@@ -14,6 +14,31 @@ export interface CuratedDonorSource {
   secondaryColor?: string;
   fabric?: 'plain' | 'stripe' | 'plaid' | 'pinstripe' | 'denim' | 'canvas' | 'two-tone' | 'patent';
   finish?: 'cotton' | 'vintage-cotton' | 'denim' | 'tartan' | 'leather' | 'canvas' | 'polished-leather';
+  /** Base silhouette applied on top of the donor mesh so a tee reads as a tee, jeans as full-length trousers. */
+  shape?: CuratedGarmentShape;
+}
+
+export type CuratedGarmentShape = 'tee' | 'tank' | 'outerwear' | 'trousers' | 'shorts' | 'as-is';
+const SHAPES = new Set<CuratedGarmentShape>(['tee','tank','outerwear','trousers','shorts','as-is']);
+
+/** Explicit render_config.curatedSource.shape wins; otherwise infer from the item's category and name. */
+export function curatedGarmentShape(item: Pick<ClothingItem, 'category' | 'name'> & { render_config?: ClothingItem['render_config'] }, part: CuratedDonorPart): CuratedGarmentShape {
+  const explicit = String(item.render_config?.curatedSource?.shape || '').toLowerCase() as CuratedGarmentShape;
+  if (SHAPES.has(explicit)) return explicit;
+  const text = `${item.category || ''} ${item.name || ''}`.toLowerCase();
+  if (part === 'body') {
+    if (/jacket|parka|coat|hoodie|hoody|blazer|cardigan|jumper|sweater|anorak|vest|waistcoat/.test(text)) {
+      return /vest|waistcoat|sleeveless|tank/.test(text) ? 'tank' : 'outerwear';
+    }
+    if (/sleeveless|tank/.test(text)) return 'tank';
+    if (/t-?shirt|\btee\b|polo|shirt|top|jersey/.test(text)) return 'tee';
+    return 'as-is';
+  }
+  if (part === 'legs') {
+    if (/short/.test(text)) return 'shorts';
+    if (/jean|trouser|pant|chino|cargo|slacks|denim|flare/.test(text)) return 'trousers';
+  }
+  return 'as-is';
 }
 
 export function curatedDonorSource(item: ClothingItem): CuratedDonorSource | null {
@@ -33,6 +58,7 @@ export function curatedDonorSource(item: ClothingItem): CuratedDonorSource | nul
     secondaryColor: typeof raw.secondaryColor === 'string' ? raw.secondaryColor : undefined,
     fabric: typeof raw.fabric === 'string' ? raw.fabric as CuratedDonorSource['fabric'] : undefined,
     finish: allowedFinishes.has(finish) ? finish as CuratedDonorSource['finish'] : undefined,
+    shape: curatedGarmentShape(item, raw.part as CuratedDonorPart),
   };
 }
 
