@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { filterDjTracks, getDjPlaybackUrl, type DjAudioTrack, useDjTrackLibrary } from "./library";
 import { clampDeckRate, equalPowerCrossfade, formatDjTime, syncDeckRate } from "./mixerMath";
+import { DjSetlistPlanner } from "./DjSetlistPlanner";
 
 function AudioDeck({
   deck, tracks, selectedId, onSelect, level, rate, onRateChange,
@@ -193,7 +194,17 @@ export function DjMixingStudio() {
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading playable DJ tracks...</p>;
   if (isError) return <p className="text-sm text-destructive" role="alert">Unable to load DJ tracks: {error instanceof Error ? error.message : "Unknown error"}. The catalogue migration may still need deploying.</p>;
-  if (!tracks.length) return <p className="text-sm text-muted-foreground">No playable tracks yet. Record a song with audio or ask an admin to publish a cleared club track.</p>;
+  if (!tracks.length) return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        No playable tracks yet. Record a song with audio or ask an admin to publish a cleared club track.
+        You can still review or delete previously saved DJ sets below.
+      </p>
+      <DjSetlistPlanner key={profileId ?? "none"} profileId={profileId} tracks={[]}
+        onRehearse={(first, second) => { setDeckA(first); setDeckB(second); }}
+        onLoadTrack={(id, deck) => { if (deck === "A") setDeckA(id); else setDeckB(id); }} />
+    </div>
+  );
 
   return (
     <div className="space-y-4" data-testid="dj-mixing-studio">
@@ -234,6 +245,9 @@ export function DjMixingStudio() {
           {matches.length > 40 && <p className="text-xs text-muted-foreground">Showing the first 40 matches. Refine your search to find more.</p>}
         </CardContent>
       </Card>
+      <DjSetlistPlanner key={profileId ?? "none"} profileId={profileId} tracks={tracks}
+        onRehearse={(first, second) => { setDeckA(first); setDeckB(second); }}
+        onLoadTrack={(id, deck) => { if (deck === "A") setDeckA(id); else setDeckB(id); }} />
       <div className="grid gap-4 md:grid-cols-2">
         <AudioDeck deck="A" tracks={tracks} selectedId={deckA} onSelect={setDeckA} level={levels.a} rate={rateA} onRateChange={setRateA} />
         <AudioDeck deck="B" tracks={tracks} selectedId={deckB} onSelect={setDeckB} level={levels.b} rate={rateB} onRateChange={setRateB} />
