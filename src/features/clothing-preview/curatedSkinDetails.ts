@@ -1,6 +1,8 @@
 import * as T from 'three';
 import type { ResolvedEquippedClothing } from './equippedClothing';
 import { attachSurfaceGraphic, curvedGraphicGeometry, findFrontSurfaceAttachment } from '@/features/player-model/curatedSurfaceAttachment';
+import { buildCompositeGarmentSurfaceTexture } from './garmentSurfaceTextures';
+import { richGarmentSlot } from './richGarmentVisuals';
 import { avatarQualityProfile, type AvatarVisualQuality } from '@/features/player-model/avatarVisualQuality';
 
 const clean = (value: string) => value.replace(/[_.]/g, '').toLowerCase();
@@ -317,6 +319,26 @@ function addWristCuffs(root: T.Object3D, bones: Map<string, T.Bone>, quality: Av
   }
 }
 
+/**
+ * Base print slot for every curated top: any front "graphic", "text", "decal" or uploaded
+ * image layer in the item's detail_layers is drawn onto the chest, so admins can add logos
+ * or wording to a base garment without new 3D work.
+ */
+function addCuratedFrontPrint(root: T.Object3D, bones: Map<string, T.Bone>, row: ResolvedEquippedClothing) {
+  const layers = Array.isArray(row.item.detail_layers) ? row.item.detail_layers : [];
+  if (!layers.length) return;
+  const texture = buildCompositeGarmentSurfaceTexture(layers, 'front', 512);
+  if (!texture) return;
+  const chest = findBone(bones, ['Spine2','Spine.002','Chest','UpperChest']) ?? findBone(bones, ['Spine1','Spine.001']);
+  if (!chest) { texture.dispose(); return; }
+  const material = new T.MeshStandardMaterial({ map: texture, transparent: true, alphaTest: .04, roughness: .88, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+  const print = new T.Mesh(curvedGraphicGeometry(.3, .3, .02), material);
+  print.name = `curated-front-print-${row.item.id}`;
+  print.renderOrder = 2;
+  const base = chest.getWorldPosition(new T.Vector3());
+  attachToBodySurface(root, chest, print, base.clone().add(new T.Vector3(0, .02, 0)), .003);
+}
+
 export function addCuratedSkinDetails(
   root: T.Object3D,
   bones: Map<string, T.Bone>,
@@ -327,6 +349,9 @@ export function addCuratedSkinDetails(
     .filter(row => row.item.curated_asset_status === 'published')
     .map(row => row.item.curated_asset_key)
     .filter(Boolean));
+  clothing
+    .filter(row => richGarmentSlot(row.item) === 'top' && row.item.curated_asset_key && row.item.curated_asset_key !== 'clothing.starter.logo-tee' && row.item.render_config?.curatedSource)
+    .forEach(row => addCuratedFrontPrint(root, bones, row));
   if (keys.has('clothing.punk.safety-pin-tee')) addSafetyPins(root, bones, quality);
   if (keys.has('clothing.punk.patch-jacket')) addPatchJacketDetails(root, bones, quality);
   if (keys.has('clothing.punk.biker-jacket')) addBikerJacketHardware(root, bones, quality);

@@ -37,6 +37,7 @@ describe('curated donor garments', () => {
       color: '#151515',
       secondaryColor: undefined,
       fabric: 'plain',
+      shape: 'tee',
     });
   });
 

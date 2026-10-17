@@ -1655,6 +1655,16 @@ export function assemblePlayerModel(
   const curatedTop = presentation === 'tattoo' ? undefined : curatedDonorForSlot(richClothing, 'top');
   const curatedBottom = presentation === 'tattoo' ? undefined : curatedDonorForSlot(richClothing, 'bottom');
   const curatedFootwear = presentation === 'tattoo' ? undefined : curatedDonorForSlot(richClothing, 'footwear');
+  // Curated donor clothing borrows the same base silhouette as the matching starter garment,
+  // so a curated tee is trimmed to short sleeves and curated jeans keep full-length legs.
+  const CURATED_TOP_BASE: Record<string, string> = { tee: 'starter.top.casual', tank: 'starter.top.tank' };
+  const CURATED_BOTTOM_BASE: Record<string, string> = { trousers: 'starter.bottom.dark-slim-jeans', shorts: 'starter.bottom.denim-shorts' };
+  const shapedTopId = curatedTop
+    ? (curatedTop.source.style !== 'casual' ? '' : CURATED_TOP_BASE[curatedTop.source.shape ?? ''] ?? '')
+    : appearance.equipment.top.itemId;
+  const shapedBottomId = curatedBottom
+    ? (curatedBottom.source.style !== 'casual' ? '' : CURATED_BOTTOM_BASE[curatedBottom.source.shape ?? ''] ?? '')
+    : appearance.equipment.bottom.itemId;
   const topless = presentation === 'stage' && appearance.equipment.top.itemId === 'starter.top.topless' && !curatedTop;
   const proceduralStarterTop = USE_PROCEDURAL_STARTER_GARMENTS && presentation === 'stage' && !curatedTop
     ? starterTopVisualItem(appearance)
@@ -1745,13 +1755,12 @@ export function assemblePlayerModel(
         }
         if (
           choice.part === 'body' &&
-          !choice.assetKey &&
-          V1_SKINNED_TEE_ITEMS.has(appearance.equipment.top.itemId)
+          V1_SKINNED_TEE_ITEMS.has(shapedTopId)
         ) {
           fitInBodySpace(clonedNode, original.matrixWorld, () => polishV1CrewTeeGeometry(
             clonedNode,
             Array.isArray(original.material) ? original.material : [original.material],
-            appearance.equipment.top.itemId,
+            shapedTopId,
           ));
           trimV1TeeToShortSleeves(
             clonedNode,
@@ -1760,47 +1769,43 @@ export function assemblePlayerModel(
         }
         if (
           choice.part === 'body' &&
-          !choice.assetKey &&
-          V1_SKINNED_OUTERWEAR_ITEMS.has(appearance.equipment.top.itemId)
+          V1_SKINNED_OUTERWEAR_ITEMS.has(shapedTopId)
         ) {
           fitInBodySpace(clonedNode, original.matrixWorld, () => polishV1OuterwearGeometry(
             clonedNode,
             Array.isArray(original.material) ? original.material : [original.material],
-            appearance.equipment.top.itemId,
+            shapedTopId,
           ));
         }
         if (
           choice.part === 'body' &&
-          !choice.assetKey &&
-          (appearance.equipment.top.itemId === 'starter.top.tank' || isVest(appearance.equipment.top.itemId) || isDress(appearance.equipment.top.itemId))
+          (shapedTopId === 'starter.top.tank' || isVest(shapedTopId) || isDress(shapedTopId))
         ) {
           removeV1TankSleeveTriangles(
             clonedNode,
             Array.isArray(original.material) ? original.material : [original.material],
-            appearance.equipment.top.itemId === 'starter.top.tank' ? .42 : .25,
+            shapedTopId === 'starter.top.tank' ? .42 : .25,
           );
         }
         if (
           choice.part === 'legs' &&
-          !choice.assetKey &&
-          !skirt && V1_CROPPED_BOTTOM_ITEMS.has(appearance.equipment.bottom.itemId)
+          !skirt && V1_CROPPED_BOTTOM_ITEMS.has(shapedBottomId)
         ) {
           const exposed = fitInBodySpace(clonedNode, original.matrixWorld, () => cropV1BottomGarmentGeometry(
             clonedNode,
             Array.isArray(original.material) ? original.material : [original.material],
-            appearance.equipment.bottom.itemId,
+            shapedBottomId,
           ));
           if (exposed) exposedLegs.push({ mesh: clonedNode, geometry: exposed });
         }
         if (
           choice.part === 'legs' &&
-          !choice.assetKey &&
-          !skirt && V1_SHAPED_TROUSER_ITEMS.has(appearance.equipment.bottom.itemId)
+          !skirt && V1_SHAPED_TROUSER_ITEMS.has(shapedBottomId)
         ) {
           fitInBodySpace(clonedNode, original.matrixWorld, () => shapeV1TrouserGeometry(
             clonedNode,
             Array.isArray(original.material) ? original.material : [original.material],
-            appearance.equipment.bottom.itemId,
+            shapedBottomId,
           ));
         }
         if (choice.fabric !== 'plain' || choice.finish || choice.custom?.pattern) fabricUVs(clonedNode.geometry, choice.part === 'feet', original.matrixWorld);
@@ -1983,8 +1988,9 @@ export function assemblePlayerModel(
 
   const shortSleeveTop =
     presentation === 'stage' &&
-    !curatedTop &&
-    (merchItem === 'starter.top.casual' || V1_SKINNED_TEE_ITEMS.has(appearance.equipment.top.itemId));
+    (curatedTop
+      ? V1_SKINNED_TEE_ITEMS.has(shapedTopId)
+      : (merchItem === 'starter.top.casual' || V1_SKINNED_TEE_ITEMS.has(appearance.equipment.top.itemId)));
 
   if (topless || presentation === 'tattoo') {
     // The live avatar donor meshes are clothing-first, so this neutral skinned

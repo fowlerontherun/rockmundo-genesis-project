@@ -68,6 +68,18 @@ function drawGraphic(
     ctx.drawImage(image, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
     return;
   }
+  if (/roundel|target|bullseye|\bmod\b/.test(asset)) {
+    // Classic mod roundel: red centre, white ring, blue outer ring.
+    const r = Math.min(width, height) * .46;
+    const rings: Array<[number, string]> = [[1, String(detail.secondaryColor || "#1f3c8f")], [.66, "#ffffff"], [.33, String(detail.color || "#c8102e")]];
+    for (const [scale, fill] of rings) {
+      ctx.beginPath();
+      ctx.arc(0, 0, r * scale, 0, Math.PI * 2);
+      ctx.fillStyle = /^#[0-9a-fA-F]{6}$/.test(fill) ? fill : "#ffffff";
+      ctx.fill();
+    }
+    return;
+  }
   if (/rockmundo|rock mundo/.test(asset)) {
     drawRockMundoMark(ctx, width, height);
     return;
