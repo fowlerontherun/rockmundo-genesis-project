@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.791",
+    date: "2026-10-17",
+    changes: [
+      { type: "feature", description: "Skin collection sets are now sold for real money at £1.99 per set. Buying a set unlocks every item in it for your current character; collection items can no longer be bought with in-game cash." },
+    ],
+  },
+  {
     version: "1.1.790",
     date: "2026-10-17",
     changes: [
