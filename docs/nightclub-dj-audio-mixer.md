@@ -24,9 +24,14 @@ rights-cleared and accessible to the client's browser. No external audio is
 downloaded into server-side DJ recordings.
 
 ## Admin workflow
-1. Apply `supabase/migrations/20261017214000_dj_audio_library.sql`
-   through the reconciled migration rollout pipeline (verify deployed schema
-   first; do not assume source migration history mirrors production).
+1. The production Phase 0 DJ catalogue/security migration was applied on
+   17 October 2026 and tracked as
+   `20261017204839_dj_audio_library_phase0_secure_cutover_20261017.sql`.
+   The separate ownership/consent bypass guard is tracked as
+   `20261017205420_guard_direct_song_ownership_transfer_dj_phase0_20261017.sql`.
+   Before deploying elsewhere, reconcile the SQL migration history against the
+   target database; do not reapply these solely because an older, malformed
+   `20261017214000` filename appears in an earlier Git commit.
 2. Open `/admin/dj-audio-library`, under Admin → Music & Content.
 3. Upload MP3, M4A, OGG, WAV or WebM (maximum 50 MiB). Provide title, artist,
    genre, optional BPM/key, and a **rights source note**. Confirm usage rights.
@@ -71,3 +76,15 @@ delete/revoke the object too if immediate cessation is required.
   transcoding review.
 - BPM detection, waveform visualisation, hot cues, key lock, EQ filters,
   sync/beat-grid phase scoring and a DJ-recording workflow are later iterations.
+
+## October 17 production verification
+
+The deployed catalogue has four table policies, a private 50 MiB audio bucket,
+admin-only media policies and creator-consent/ownership guards. Old practice-track
+write permissions were restricted to admins without changing existing public
+read access. The rollback-only role regression harness lives at
+`supabase/tests/dj_audio_phase0_rls_harness.sql` and passed against production.
+
+**Not yet verified end-to-end:** a real browser admin file upload, Storage signed
+URL playback on multiple devices, and an actual mixed-audio session. There were
+no uploaded admin tracks at migration time. These checks remain a launch gate.
