@@ -182,7 +182,7 @@ export function DjMixingStudio() {
         .select("id").single();
       if (error || !data) throw error || new Error("Song permission could not be updated");
       await client.invalidateQueries({ queryKey: ["dj-track-library", profileId] });
-      toast.success(enabled ? "Sharing enabled. Other DJs can play this track once it is released." : "DJ sharing disabled.");
+      toast.success(enabled ? "Sharing enabled. Other DJs can now play this recording." : "DJ sharing disabled.");
     } catch (err) { toast.error(err instanceof Error ? err.message : "Unable to update DJ sharing"); }
     finally { setSharing(null); }
   };
@@ -217,7 +217,7 @@ export function DjMixingStudio() {
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Music className="h-4 w-4" /> Share my tracks with other DJs</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-xs text-muted-foreground">Only released songs you explicitly allow are listed for other players. Your own songs remain available in your deck either way.</p>
+            <p className="text-xs text-muted-foreground">Only recorded or released songs you explicitly allow are listed for other players. Your own songs remain available in your deck either way.</p>
             {tracks.filter((track) => track.mine).map((track) => (
               <div key={track.id} className="flex items-center justify-between gap-3">
                 <span className="text-sm truncate">{track.title}</span>
