@@ -9,6 +9,8 @@ export interface HeadAccessorySpec {
   color: string;
   lensColor?: string;
   lenses?: 'clear' | 'tinted';
+  /** Optional mod target printed on the hat crown top: [outer, middle, centre] colours. */
+  topRoundel?: [string, string, string];
 }
 
 export interface HeadAccessoryFit {
@@ -242,6 +244,16 @@ export function buildHeadAccessory(
       add(brim, 'hat-brim', c.x, bottom, c.z);
       const bandMaterial = material.clone(); bandMaterial.color.multiplyScalar(.45);
       ring('hat-band', rx * .965, bottom + h * .065, h * .025, bandMaterial);
+      if (bucket && spec.topRoundel) {
+        const topY = bottom + h * .30 + .0015;
+        const topR = rx * .85;
+        spec.topRoundel.forEach((colour, index) => {
+          const disc = new T.CircleGeometry(topR * [.82, .55, .28][index], Math.max(32, profile.accessorySegments * 2));
+          disc.rotateX(-Math.PI / 2); disc.scale(1, 1, rz / rx);
+          const discMaterial = material.clone(); discMaterial.color.set(colour);
+          add(disc, `hat-roundel-${index}`, c.x, topY + index * .0008, c.z, discMaterial);
+        });
+      }
     }
     group.userData.hairline = bottom;
   }

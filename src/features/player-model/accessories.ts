@@ -199,7 +199,10 @@ export function addAccessories(
     anchor.add(hat);
   }
   if (ownedHeadwearStyle) {
-    const hat = buildHeadAccessory({ slot: 'headwear', style: ownedHeadwearStyle, color: ownedHatColor }, bounds, quality);
+    const rawRoundel = ownedHeadwear?.item.render_config?.topRoundel;
+    const topRoundel = Array.isArray(rawRoundel) && rawRoundel.length === 3 && rawRoundel.every(v => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v))
+      ? rawRoundel as [string, string, string] : undefined;
+    const hat = buildHeadAccessory({ slot: 'headwear', style: ownedHeadwearStyle, color: ownedHatColor, topRoundel }, bounds, quality);
     hat.name = ownedHeadwearStyle === 'pumpkin' ? 'avatar-owned-hat-pumpkin-2026' : `avatar-owned-hat-${ownedHeadwearStyle}`;
     anchor.add(hat);
   }

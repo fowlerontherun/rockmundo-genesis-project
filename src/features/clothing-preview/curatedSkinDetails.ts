@@ -412,7 +412,7 @@ export function addCuratedSkinDetails(
   clothing
     .filter(row => richGarmentSlot(row.item) === 'top' && row.item.curated_asset_key && row.item.curated_asset_key !== 'clothing.starter.logo-tee' && row.item.render_config?.curatedSource)
     .forEach(row => addCuratedFrontPrint(root, bones, row));
-  if (keys.has('clothing.britpop.mod-stripe-tee')) addModStripes(root, bones);
+  // Mod stripes overlay removed: it floated off the donor body. Stripes return with the uploaded tee model.
   if (keys.has('clothing.britpop.terrace-parka')) addParkaDetails(root, bones);
   if (keys.has('clothing.punk.safety-pin-tee')) addSafetyPins(root, bones, quality);
   if (keys.has('clothing.punk.patch-jacket')) addPatchJacketDetails(root, bones, quality);
