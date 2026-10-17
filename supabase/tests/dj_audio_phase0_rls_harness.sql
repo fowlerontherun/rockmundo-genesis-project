@@ -117,4 +117,58 @@ BEGIN
  VALUES('practice-tracks','dj-phase0-admin.mp3');
 END $admin$;
 
+
+-- Use an existing song owned by an auth user to check genuine creator consent.
+RESET ROLE;
+SELECT set_config('request.jwt.claim.sub',
+ (SELECT s.user_id::text FROM public.songs s
+  WHERE s.audio_url IS NOT NULL AND s.user_id IS NOT NULL LIMIT 1), true);
+SET LOCAL ROLE authenticated;
+DO $owner$
+DECLARE target_song uuid;
+DECLARE changed integer;
+BEGIN
+ IF auth.uid() IS NOT NULL THEN
+  SELECT s.id INTO target_song FROM public.songs s
+  WHERE s.user_id=auth.uid() AND s.audio_url IS NOT NULL LIMIT 1;
+  IF target_song IS NOT NULL THEN
+   UPDATE public.songs SET dj_use_allowed=NOT dj_use_allowed WHERE id=target_song;
+   GET DIAGNOSTICS changed=ROW_COUNT;
+   IF changed<>1 THEN RAISE EXCEPTION 'Song owner should be able to change DJ consent'; END IF;
+  END IF;
+ END IF;
+END $owner$;
+
+-- Existing band-member RLS is intentionally broader than song-consent rights.
+-- A collaborator must not alter user_id then grant themselves DJ use.
+RESET ROLE;
+SELECT set_config('request.jwt.claim.sub',
+ (SELECT bm.user_id::text FROM public.songs s
+  JOIN public.band_members bm ON bm.band_id=s.band_id AND bm.user_id <> s.user_id
+  WHERE s.audio_url IS NOT NULL AND bm.member_status='active' LIMIT 1), true);
+SET LOCAL ROLE authenticated;
+DO $collaborator$
+DECLARE target_song uuid;
+DECLARE changed integer;
+BEGIN
+ IF auth.uid() IS NULL THEN RETURN; END IF;
+ SELECT s.id INTO target_song FROM public.songs s
+ JOIN public.band_members bm ON bm.band_id=s.band_id
+ WHERE bm.user_id=auth.uid() AND s.user_id<>auth.uid() AND s.audio_url IS NOT NULL
+ LIMIT 1;
+ IF target_song IS NULL THEN RETURN; END IF;
+ BEGIN
+  UPDATE public.songs SET user_id=auth.uid() WHERE id=target_song;
+  GET DIAGNOSTICS changed=ROW_COUNT;
+  IF changed>0 THEN RAISE EXCEPTION 'SECURITY FAILURE: collaborator stole song ownership'; END IF;
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
+ BEGIN
+  UPDATE public.songs SET dj_use_allowed=NOT dj_use_allowed WHERE id=target_song;
+  GET DIAGNOSTICS changed=ROW_COUNT;
+  IF changed>0 THEN RAISE EXCEPTION 'SECURITY FAILURE: collaborator changed DJ consent'; END IF;
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
+END $collaborator$;
+
 ROLLBACK;
