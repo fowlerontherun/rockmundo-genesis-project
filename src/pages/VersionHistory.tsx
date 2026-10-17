@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.788",
+    date: "2026-10-17",
+    changes: [
+      { type: "feature", description: "Time away on the Wellness page: book rest days, staycations, holidays, retreats, career breaks and sabbaticals. Cost is paid up front; each day away improves energy, stress, sleep and burnout." },
+      { type: "feature", description: "Breaks clashing with band gigs (and all band retreats) need band leader approval; unanswered requests are refunded when the start date arrives. Cancelling early gives a full refund, late gives half." },
+    ],
+  },
+  {
     version: "1.1.787",
     date: "2026-10-17",
     changes: [

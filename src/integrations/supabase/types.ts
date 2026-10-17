@@ -61119,6 +61119,142 @@ export type Database = {
         }
         Relationships: []
       }
+      time_away_bookings: {
+        Row: {
+          band_id: string | null
+          cancelled_at: string | null
+          conflict_gigs: number
+          cost: number
+          created_at: string
+          days_processed: number
+          decided_at: string | null
+          decided_by: string | null
+          end_date: string
+          id: string
+          last_processed_on: string | null
+          profile_id: string
+          refunded: number
+          start_date: string
+          status: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          band_id?: string | null
+          cancelled_at?: string | null
+          conflict_gigs?: number
+          cost?: number
+          created_at?: string
+          days_processed?: number
+          decided_at?: string | null
+          decided_by?: string | null
+          end_date: string
+          id?: string
+          last_processed_on?: string | null
+          profile_id: string
+          refunded?: number
+          start_date: string
+          status?: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          band_id?: string | null
+          cancelled_at?: string | null
+          conflict_gigs?: number
+          cost?: number
+          created_at?: string
+          days_processed?: number
+          decided_at?: string | null
+          decided_by?: string | null
+          end_date?: string
+          id?: string
+          last_processed_on?: string | null
+          profile_id?: string
+          refunded?: number
+          start_date?: string
+          status?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_away_bookings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_away_bookings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_away_bookings_type_fkey"
+            columns: ["type"]
+            isOneToOne: false
+            referencedRelation: "time_away_type_config"
+            referencedColumns: ["type"]
+          },
+        ]
+      }
+      time_away_type_config: {
+        Row: {
+          always_band_approval: boolean
+          base_cost: number
+          cooldown_days: number
+          created_at: string
+          daily_cost: number
+          daily_effects: Json
+          description: string
+          label: string
+          max_days: number
+          min_days: number
+          min_fame: number
+          notice_days: number
+          refund_until_days: number
+          sort_order: number
+          type: string
+        }
+        Insert: {
+          always_band_approval?: boolean
+          base_cost?: number
+          cooldown_days?: number
+          created_at?: string
+          daily_cost?: number
+          daily_effects?: Json
+          description?: string
+          label: string
+          max_days: number
+          min_days: number
+          min_fame?: number
+          notice_days?: number
+          refund_until_days?: number
+          sort_order?: number
+          type: string
+        }
+        Update: {
+          always_band_approval?: boolean
+          base_cost?: number
+          cooldown_days?: number
+          created_at?: string
+          daily_cost?: number
+          daily_effects?: Json
+          description?: string
+          label?: string
+          max_days?: number
+          min_days?: number
+          min_fame?: number
+          notice_days?: number
+          refund_until_days?: number
+          sort_order?: number
+          type?: string
+        }
+        Relationships: []
+      }
       token_transactions: {
         Row: {
           created_at: string | null
@@ -70296,6 +70432,15 @@ export type Database = {
         Args: { p_mentor_id: string; p_profile_id: string }
         Returns: Json
       }
+      book_time_away: {
+        Args: {
+          p_end: string
+          p_profile_id: string
+          p_start: string
+          p_type: string
+        }
+        Returns: Json
+      }
       book_tour: {
         Args: {
           p_band_id: string
@@ -70919,6 +71064,10 @@ export type Database = {
       }
       cancel_social_contract: {
         Args: { p_contract_id: string; p_reason?: string }
+        Returns: Json
+      }
+      cancel_time_away: {
+        Args: { p_booking_id: string; p_profile_id: string }
         Returns: Json
       }
       cancel_tour: { Args: { p_tour_id: string }; Returns: Json }
@@ -72236,6 +72385,10 @@ export type Database = {
       current_profile_id_safe: { Args: never; Returns: string }
       current_user_is_platform_admin: { Args: never; Returns: boolean }
       decay_unreleased_song_hype: { Args: never; Returns: undefined }
+      decide_time_away: {
+        Args: { p_approve: boolean; p_booking_id: string }
+        Returns: Json
+      }
       decline_festival_offer: {
         Args: {
           p_idempotency_key?: string
@@ -75556,6 +75709,7 @@ export type Database = {
         Args: { p_profile_id: string }
         Returns: Json
       }
+      process_time_away_daily: { Args: never; Returns: number }
       process_weekly_band_payroll: { Args: never; Returns: Json }
       process_weekly_lottery_draw: { Args: never; Returns: Json }
       process_weekly_mayor_salaries: { Args: never; Returns: number }
