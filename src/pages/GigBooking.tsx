@@ -605,9 +605,12 @@ const GigBooking = () => {
       icon={Ticket}
       headerActions={
         band ? (
-          <Badge variant="secondary" className="w-fit">
-            {t('band.title', 'Managing gigs for')} {band.name}
-          </Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button asChild variant="outline" size="sm"><Link to="/gigs/live">Live gigs</Link></Button>
+            <Badge variant="secondary" className="w-fit">
+              {t('band.title', 'Managing gigs for')} {band.name}
+            </Badge>
+          </div>
         ) : (
           <Button asChild variant="outline" size="sm">
             <Link to="/band">{t('band.createBand')}</Link>
