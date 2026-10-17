@@ -16,6 +16,9 @@ export function useTravelBooking() {
       // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       queryClient.invalidateQueries({ queryKey: ["travel-history"] });
+      queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });
+      queryClient.invalidateQueries({ queryKey: ["week-scheduled-activities"] });
+      queryClient.invalidateQueries({ queryKey: ["mobile-day-schedule"] });
       queryClient.invalidateQueries({ queryKey: ["current-location"] });
       queryClient.invalidateQueries({ queryKey: ["activity-feed"] });
     },
