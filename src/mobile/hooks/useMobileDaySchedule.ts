@@ -3,6 +3,8 @@ import { addDays, startOfDay } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import type { ScheduledActivity } from "@/hooks/useScheduledActivities";
 import { withoutDuplicateBandScheduleActivities } from "@/utils/bandActivityScheduling";
+import { mergeCharacterTravel, projectUniversityClasses, type CharacterTravelRow, type UniversityClassRow } from "@/utils/scheduleVisibility";
+import { fetchCharacterTravelForDay, fetchEnrolledUniversityClasses } from "@/services/scheduleSources";
 import { appearanceOnLocalDay, fetchMyBandFestivalAppearances, festivalAppearanceAsActivity } from "@/features/festivals/appearances/bandFestivalAppearances";
 
 export type MobileScheduleSource =
@@ -14,6 +16,8 @@ export type MobileScheduleSource =
   | "rehearsals"
   | "recordings"
   | "tour travel"
+  | "travel history"
+  | "university classes"
   | "releases";
 
 interface MobileDaySchedulePayload {
@@ -333,8 +337,36 @@ export function useMobileDaySchedule(
         }),
       ];
 
-      const allActivities = [...(canonical as ScheduledActivity[]), ...externalActivities]
-        .filter((activity) => activityOverlapsWindow(activity.scheduled_start, activity.scheduled_end, dayStart, dayEnd));
+      // Use the same supplementary sources as desktop, with independent
+      // warnings so one unavailable source never hides existing bookings.
+      let characterTravel: CharacterTravelRow[] = [];
+      let universityClasses: { enrollments: UniversityClassRow[]; campusTimeZones: Record<string, string> } =
+        { enrollments: [], campusTimeZones: {} };
+      try {
+        characterTravel = await fetchCharacterTravelForDay(profileId, dayStart, dayEnd);
+      } catch (error) {
+        console.warn("[RockMundo mobile day] travel history unavailable", error);
+        warnings.push("travel history");
+      }
+      try {
+        universityClasses = await fetchEnrolledUniversityClasses(profileId);
+      } catch (error) {
+        console.warn("[RockMundo mobile day] university classes unavailable", error);
+        warnings.push("university classes");
+      }
+
+      const travelIncluded = mergeCharacterTravel(
+        [...(canonical as ScheduledActivity[]), ...externalActivities],
+        characterTravel, userId, profileId,
+      );
+      const allActivities = [
+        ...travelIncluded,
+        ...projectUniversityClasses(
+          date, universityClasses.enrollments, travelIncluded, userId, profileId,
+          universityClasses.campusTimeZones,
+        ),
+      ].filter((activity) =>
+        activityOverlapsWindow(activity.scheduled_start, activity.scheduled_end, dayStart, dayEnd));
 
       const deduped = withoutDuplicateBandScheduleActivities(allActivities);
       const seen = new Set<string>();
