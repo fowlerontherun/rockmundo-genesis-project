@@ -46,7 +46,7 @@ export function validDjAudioUrl(input: string | null | undefined): input is stri
 
 export function mapGameDjTrack(song: GameSong, myProfileId: string): DjAudioTrack | null {
   const mine = song.profile_id === myProfileId;
-  const allowed = mine || (song.status === "released" && song.dj_use_allowed === true);
+  const allowed = mine || (["recorded", "released"].includes(song.status ?? "") && song.dj_use_allowed === true);
   const url = validDjAudioUrl(song.extended_audio_url) ? song.extended_audio_url
     : validDjAudioUrl(song.audio_url) ? song.audio_url : null;
   if (!allowed || song.archived || !url) return null;
@@ -95,7 +95,7 @@ export function useDjTrackLibrary(profileId: string | null) {
           .order("created_at", { ascending: false }).limit(100),
         (supabase as any).from("songs")
           .select("id,title,genre,duration_seconds,audio_url,extended_audio_url,profile_id,status,dj_use_allowed,archived")
-          .eq("status", "released").eq("dj_use_allowed", true)
+          .in("status", ["recorded", "released"]).eq("dj_use_allowed", true)
           .eq("archived", false).order("created_at", { ascending: false }).limit(200),
         (supabase as any).from("dj_audio_tracks")
           .select("id,title,artist,genre,bpm,musical_key,duration_seconds,storage_path,rights_confirmed,is_active")
