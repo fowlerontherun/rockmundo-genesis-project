@@ -56481,6 +56481,50 @@ export type Database = {
           },
         ]
       }
+      skin_collection_purchases: {
+        Row: {
+          amount_minor: number
+          collection_id: string
+          created_at: string
+          currency: string
+          id: string
+          items_granted: number
+          profile_id: string
+          stripe_session_id: string
+          user_id: string
+        }
+        Insert: {
+          amount_minor: number
+          collection_id: string
+          created_at?: string
+          currency: string
+          id?: string
+          items_granted?: number
+          profile_id: string
+          stripe_session_id: string
+          user_id: string
+        }
+        Update: {
+          amount_minor?: number
+          collection_id?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          items_granted?: number
+          profile_id?: string
+          stripe_session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skin_collection_purchases_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "skin_collections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       skin_collections: {
         Row: {
           banner_image_url: string | null
@@ -74613,6 +74657,17 @@ export type Database = {
       gig_ticket_prestige_tier: {
         Args: { p_prestige: number }
         Returns: number
+      }
+      grant_paid_skin_collection: {
+        Args: {
+          p_amount_minor: number
+          p_collection_id: string
+          p_currency: string
+          p_profile_id: string
+          p_session_id: string
+          p_user_id: string
+        }
+        Returns: Json
       }
       grant_random_event_skill_xp: {
         Args: { p_player_event_id: string }
