@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { filterDjTracks, getDjPlaybackUrl, type DjAudioTrack, useDjTrackLibrary } from "./library";
 import { clampDeckRate, equalPowerCrossfade, formatDjTime, syncDeckRate } from "./mixerMath";
+import { DjSetlistPlanner } from "./DjSetlistPlanner";
 
 function AudioDeck({
   deck, tracks, selectedId, onSelect, level, rate, onRateChange,
@@ -234,6 +235,8 @@ export function DjMixingStudio() {
           {matches.length > 40 && <p className="text-xs text-muted-foreground">Showing the first 40 matches. Refine your search to find more.</p>}
         </CardContent>
       </Card>
+      <DjSetlistPlanner key={profileId ?? "none"} profileId={profileId} tracks={tracks}
+        onRehearse={(first, second) => { setDeckA(first); setDeckB(second); }} />
       <div className="grid gap-4 md:grid-cols-2">
         <AudioDeck deck="A" tracks={tracks} selectedId={deckA} onSelect={setDeckA} level={levels.a} rate={rateA} onRateChange={setRateA} />
         <AudioDeck deck="B" tracks={tracks} selectedId={deckB} onSelect={setDeckB} level={levels.b} rate={rateB} onRateChange={setRateB} />
