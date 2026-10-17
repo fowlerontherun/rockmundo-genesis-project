@@ -69620,6 +69620,15 @@ export type Database = {
         Args: { p_game_event_id: string }
         Returns: Json
       }
+      admin_publish_uploaded_garment: {
+        Args: {
+          p_feminine_path: string
+          p_item_id: string
+          p_masculine_path: string
+          p_report: Json
+        }
+        Returns: undefined
+      }
       admin_reconcile_festival_attendance: {
         Args: {
           p_attendance_id: string
