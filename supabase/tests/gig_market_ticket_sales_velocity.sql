@@ -75,7 +75,7 @@ WHERE g.status IN ('scheduled','confirmed') AND g.scheduled_date>now();
 
 SELECT public.advance_gig_ticket_sales(now());
 
-DO $
+DO $$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM ticket_velocity_before b
@@ -85,5 +85,5 @@ BEGIN
   IF public.advance_gig_ticket_sales(now()) <> 0
   THEN RAISE EXCEPTION 'same-time ticket sales tick was not idempotent'; END IF;
 END
-$;
+$$;
 ROLLBACK;
