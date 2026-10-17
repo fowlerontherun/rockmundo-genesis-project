@@ -14,6 +14,7 @@ import AilmentsPanel from "@/components/wellness/AilmentsPanel";
 import LifestylePickerPanel from "@/components/wellness/LifestylePickerPanel";
 import HabitsPanel from "@/components/wellness/HabitsPanel";
 import TourRecoveryPanel from "@/components/wellness/TourRecoveryPanel";
+import WellnessProfessionalsPanel from "@/components/wellness/WellnessProfessionalsPanel";
 import { usePlayerLifestyle, useLifestyleCatalog } from "@/hooks/useWellnessLifestyle";
 
 import { useGameData } from "@/hooks/useGameData";
@@ -153,6 +154,8 @@ const WellnessPage = () => {
       )}
 
       <AilmentsPanel ailments={ailments} catalog={catalog} onTreat={handlePerform} />
+
+      <WellnessProfessionalsPanel />
 
       <TourRecoveryPanel />
 

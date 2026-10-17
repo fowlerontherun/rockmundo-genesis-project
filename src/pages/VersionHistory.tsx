@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.786",
+    date: "2026-10-17",
+    changes: [
+      { type: "feature", description: "Wellness: book wellness professionals (therapist, physio, sports massage, vocal coach, nutritionist, sleep coach). Sessions cost cash, give an instant health/energy boost, can be repeated every 3 days, and can be rated 1-5 stars afterwards." },
+    ],
+  },
+  {
     version: "1.1.785",
     date: "2026-10-17",
     changes: [
