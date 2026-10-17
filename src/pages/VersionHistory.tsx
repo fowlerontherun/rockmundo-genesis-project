@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.779",
+    date: "2026-10-17",
+    changes: [
+      { type: "improvement", description: "Behind-the-scenes database health check: every one of the game's 1,939 database update scripts was compared with the live game world and sorted into applied, partly applied, missing or needs-a-closer-look, with a report for deciding what to add or retire next. Today's known script-date problems were recorded so any new ones are caught automatically. No player data or game rules changed." },
+    ],
+  },
+  {
     version: "1.1.778",
     date: "2026-10-16",
     changes: [

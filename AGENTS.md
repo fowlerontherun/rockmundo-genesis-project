@@ -8,3 +8,4 @@
 - Luthiery shape and component variants must preserve existing selection IDs and use materials accepted by the authoritative crafting catalogue, so saved instruments and inventory remain compatible.
 - TV performance camera paths and restrained performer motion are pure replay-time presentation helpers bounded by shared studio geometry; this preserves seeking, export consistency and gameplay isolation.
 - Define luthiery body outlines once for both workshop SVG previews and stage geometry so the crafted silhouette cannot drift between views.
+- Judge migration status by live schema objects (scripts/supabase/classify-migrations-against-live.mjs), never by history versions or fake history rows; repo and live versions largely diverge. Catch-up work is new forward-only migrations.
