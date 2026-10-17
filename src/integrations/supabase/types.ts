@@ -14,6 +14,75 @@ export type Database = {
   }
   public: {
     Tables: {
+      accommodation_recovery_profiles: {
+        Row: {
+          accommodation_kind: string
+          cleanliness_rating: number
+          comfort_rating: number
+          condition_recovery_modifier: number
+          created_at: string
+          energy_recovery_modifier: number
+          facilities: Json
+          fatigue_recovery_modifier: number
+          id: string
+          noise_modifier: number
+          privacy_modifier: number
+          recovery_capacity: number
+          recovery_tier: string
+          safety_rating: number
+          sleep_quality_modifier: number
+          source_id: string | null
+          source_table: string
+          strain_recovery_modifier: number
+          stress_recovery_modifier: number
+          updated_at: string
+        }
+        Insert: {
+          accommodation_kind: string
+          cleanliness_rating?: number
+          comfort_rating?: number
+          condition_recovery_modifier?: number
+          created_at?: string
+          energy_recovery_modifier?: number
+          facilities?: Json
+          fatigue_recovery_modifier?: number
+          id?: string
+          noise_modifier?: number
+          privacy_modifier?: number
+          recovery_capacity?: number
+          recovery_tier: string
+          safety_rating?: number
+          sleep_quality_modifier?: number
+          source_id?: string | null
+          source_table: string
+          strain_recovery_modifier?: number
+          stress_recovery_modifier?: number
+          updated_at?: string
+        }
+        Update: {
+          accommodation_kind?: string
+          cleanliness_rating?: number
+          comfort_rating?: number
+          condition_recovery_modifier?: number
+          created_at?: string
+          energy_recovery_modifier?: number
+          facilities?: Json
+          fatigue_recovery_modifier?: number
+          id?: string
+          noise_modifier?: number
+          privacy_modifier?: number
+          recovery_capacity?: number
+          recovery_tier?: string
+          safety_rating?: number
+          sleep_quality_modifier?: number
+          source_id?: string | null
+          source_table?: string
+          strain_recovery_modifier?: number
+          stress_recovery_modifier?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       achievements: {
         Row: {
           category: string | null
@@ -62891,6 +62960,57 @@ export type Database = {
           },
         ]
       }
+      tour_load_summaries: {
+        Row: {
+          calculated_at: string
+          id: string
+          inputs: Json
+          load_score: number
+          load_state: string
+          profile_id: string | null
+          tour_id: string | null
+          window_end: string
+          window_start: string
+        }
+        Insert: {
+          calculated_at?: string
+          id?: string
+          inputs?: Json
+          load_score: number
+          load_state: string
+          profile_id?: string | null
+          tour_id?: string | null
+          window_end: string
+          window_start: string
+        }
+        Update: {
+          calculated_at?: string
+          id?: string
+          inputs?: Json
+          load_score?: number
+          load_state?: string
+          profile_id?: string | null
+          tour_id?: string | null
+          window_end?: string
+          window_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tour_load_summaries_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tour_load_summaries_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tour_logistics: {
         Row: {
           created_at: string | null
@@ -63654,6 +63774,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      transport_wellness_profiles: {
+        Row: {
+          climate_control: number
+          created_at: string
+          id: string
+          movement_during_travel: number
+          noise: number
+          onboard_facilities: Json
+          personal_space: number
+          privacy: number
+          recovery_efficiency: number
+          seating_quality: number
+          sleep_capability: number
+          travel_comfort: number
+          updated_at: string
+          vehicle_tier: string
+          vibration: number
+        }
+        Insert: {
+          climate_control?: number
+          created_at?: string
+          id?: string
+          movement_during_travel?: number
+          noise?: number
+          onboard_facilities?: Json
+          personal_space?: number
+          privacy?: number
+          recovery_efficiency?: number
+          seating_quality?: number
+          sleep_capability?: number
+          travel_comfort?: number
+          updated_at?: string
+          vehicle_tier: string
+          vibration?: number
+        }
+        Update: {
+          climate_control?: number
+          created_at?: string
+          id?: string
+          movement_during_travel?: number
+          noise?: number
+          onboard_facilities?: Json
+          personal_space?: number
+          privacy?: number
+          recovery_efficiency?: number
+          seating_quality?: number
+          sleep_capability?: number
+          travel_comfort?: number
+          updated_at?: string
+          vehicle_tier?: string
+          vibration?: number
+        }
+        Relationships: []
       }
       travel_disruption_events: {
         Row: {
@@ -66804,6 +66978,57 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      wellness_recovery_events: {
+        Row: {
+          created_at: string
+          effects: Json
+          event_key: string
+          id: string
+          notes: string | null
+          occurred_on: string
+          profile_id: string
+          source_id: string | null
+          source_type: string
+        }
+        Insert: {
+          created_at?: string
+          effects?: Json
+          event_key: string
+          id?: string
+          notes?: string | null
+          occurred_on?: string
+          profile_id: string
+          source_id?: string | null
+          source_type: string
+        }
+        Update: {
+          created_at?: string
+          effects?: Json
+          event_key?: string
+          id?: string
+          notes?: string | null
+          occurred_on?: string
+          profile_id?: string
+          source_id?: string | null
+          source_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wellness_recovery_events_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wellness_recovery_events_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       world_parliament_motions: {
         Row: {
