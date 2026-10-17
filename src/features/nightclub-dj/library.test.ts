@@ -19,9 +19,9 @@ describe("DJ audio catalogue eligibility", () => {
     expect(track?.mine).toBe(true);
   });
 
-  it("requires permission and a release for other artists", () => {
+  it("requires an explicit opt-in for recorded and released tracks from other artists", () => {
     expect(mapGameDjTrack(sample, "another")).toBeNull();
-    expect(mapGameDjTrack({ ...sample, dj_use_allowed: true, status: "recorded" }, "another")).toBeNull();
+    expect(mapGameDjTrack({ ...sample, dj_use_allowed: true, status: "recorded" }, "another")?.source).toBe("game");
     expect(mapGameDjTrack({ ...sample, dj_use_allowed: true }, "another")?.sharedForDj).toBe(true);
   });
 
