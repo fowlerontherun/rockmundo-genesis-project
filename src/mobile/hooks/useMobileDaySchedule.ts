@@ -147,12 +147,14 @@ export function useMobileDaySchedule(
         "band membership",
         (supabase as any)
           .from("band_members")
-          .select("band_id")
+          .select("band_id, travels_with_band")
           .eq("profile_id", profileId)
           .eq("member_status", "active"),
         [],
       );
       const bandIds = Array.from(new Set(membershipRows.map((row) => row.band_id).filter(Boolean))) as string[];
+      const travelBandIds = Array.from(new Set(membershipRows
+        .filter((row) => row.travels_with_band !== false).map((row) => row.band_id).filter(Boolean))) as string[];
 
       const gigStart = new Date(dayStart.getTime() - (6 * 60 * 60 * 1000));
       const gigsPromise = bandIds.length
@@ -175,7 +177,7 @@ export function useMobileDaySchedule(
             .in("status", ["scheduled", "in_progress", "completed"])
         : Promise.resolve({ data: [], error: null });
 
-      const tourTravelPromise = bandIds.length
+      const tourTravelPromise = travelBandIds.length
         ? (supabase as any)
             .from("tour_travel_legs")
             .select("*, from_city:from_city_id(name), to_city:to_city_id(name), tours!inner(band_id, name, status)")
@@ -307,7 +309,7 @@ export function useMobileDaySchedule(
           linked_recording_id: session.id,
         })),
         ...tourTravelRows
-          .filter((leg) => bandIds.includes(leg.tours?.band_id) && leg.tours?.status !== "cancelled")
+          .filter((leg) => travelBandIds.includes(leg.tours?.band_id) && leg.tours?.status !== "cancelled")
           .map((leg): ScheduledActivity => ({
             id: `tour_travel_${leg.id}`,
             user_id: userId,
