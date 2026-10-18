@@ -13,7 +13,9 @@ interface ScheduleActivityDialogProps {
   selectedHour?: number | null;
 }
 
-const ACTIVITY_ROUTES: Record<Exclude<ActivityType, 'dj_set'>, { path: string; icon: any; label: string; description: string }> = {
+type BookableActivityType = Exclude<ActivityType, 'dj_set'>;
+
+const ACTIVITY_ROUTES: Record<BookableActivityType, { path: string; icon: any; label: string; description: string }> = {
   songwriting: { path: '/songwriting', icon: Music, label: 'Songwriting', description: 'Write and compose new songs' },
   gig: { path: '/gigs', icon: Guitar, label: 'Gig Performance', description: 'Book and perform live gigs' },
   rehearsal: { path: '/rehearsals', icon: Users, label: 'Band Rehearsal', description: 'Practice with your band' },
@@ -43,7 +45,7 @@ const ACTIVITY_ROUTES: Record<Exclude<ActivityType, 'dj_set'>, { path: string; i
 export function ScheduleActivityDialog({ open, onOpenChange, date, selectedHour }: ScheduleActivityDialogProps) {
   const navigate = useNavigate();
 
-  const handleActivityClick = (activityType: Exclude<ActivityType, 'dj_set'>) => {
+  const handleActivityClick = (activityType: BookableActivityType) => {
     const route = ACTIVITY_ROUTES[activityType];
     onOpenChange(false);
     
@@ -68,7 +70,7 @@ export function ScheduleActivityDialog({ open, onOpenChange, date, selectedHour 
         </DialogHeader>
 
         <div className="grid grid-cols-2 gap-3 py-4">
-          {(Object.entries(ACTIVITY_ROUTES) as [Exclude<ActivityType, 'dj_set'>, typeof ACTIVITY_ROUTES[Exclude<ActivityType, 'dj_set'>]]][] ).map(([type, route]) => {
+          {(Object.entries(ACTIVITY_ROUTES) as Array<[BookableActivityType, (typeof ACTIVITY_ROUTES)[BookableActivityType]]>).map(([type, route]) => {
             const Icon = route.icon;
             
             return (
