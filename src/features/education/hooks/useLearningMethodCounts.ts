@@ -16,7 +16,7 @@ export const useLearningMethodCounts = (skill: string | null, allowed: boolean) 
         supabase.from("university_courses").select("id", { count: "exact", head: true })
           .eq("is_active", true).eq("skill_slug", skill),
         (supabase as any).from("education_youtube_resources").select("id", { count: "exact", head: true })
-          .eq("skill_slug", skill).eq("verified_video", true),
+          .eq("skill_slug", skill),
         supabase.from("education_mentors").select("id", { count: "exact", head: true })
           .eq("is_active", true).eq("focus_skill", skill),
       ]);
