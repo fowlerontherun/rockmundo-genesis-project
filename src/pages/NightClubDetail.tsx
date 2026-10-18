@@ -1,16 +1,14 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Disc3, Mic2, Users, Sparkles, Loader2, Star, Clock, DollarSign, Zap, Trophy, MessageCircle, Crown, History, TrendingUp, UserPlus, Building2 } from "lucide-react";
+import { Disc3, Mic2, Users, Sparkles, Loader2, Trophy, MessageCircle, Crown, History, UserPlus, Building2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeNightClubRecord, type CityNightClub, type NightClubDrink } from "@/utils/worldEnvironment";
 import { useNightlifeEvents } from "@/hooks/useNightlifeEvents";
-import { useDjPerformance, type DjPerformanceOutcome } from "@/hooks/useDjPerformance";
 import { useNightclubQuests } from "@/hooks/useNightclubQuests";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useClubReputation, useRecordClubVisit, getTierLabel, getTierColor, getTierPerks } from "@/hooks/useClubReputation";
@@ -64,9 +62,6 @@ const NightClubDetail = () => {
   const [buyingDrinkId, setBuyingDrinkId] = useState<string | null>(null);
 
   const { triggerNightlifeEvent, isProcessing, lastOutcomeDetail, lastAddictionWarning, dismissOutcome } = useNightlifeEvents();
-  const { performDjSetAsync, isPerforming } = useDjPerformance();
-  const [djOutcome, setDjOutcome] = useState<DjPerformanceOutcome | null>(null);
-  const [showOutcome, setShowOutcome] = useState(false);
   const [showDjStudio, setShowDjStudio] = useState(false);
   const [liveDjBookingId, setLiveDjBookingId] = useState<string | null>(null);
   const { data: reputation } = useClubReputation(clubId);
@@ -112,7 +107,7 @@ const NightClubDetail = () => {
   });
 
   const djStats = {
-    totalSets: djHistory.length,
+    recentSets: djHistory.length,
     avgScore: djHistory.length ? Math.round(djHistory.reduce((s, p: any) => s + (p.performance_score ?? 0), 0) / djHistory.length) : 0,
     totalEarnings: djHistory.reduce((s, p: any) => s + (p.cash_earned ?? 0), 0),
     totalFame: djHistory.reduce((s, p: any) => s + (p.fame_gained ?? 0), 0),
@@ -144,18 +139,6 @@ const NightClubDetail = () => {
 
     fetchClub();
   }, [clubId]);
-
-  const handleDjSlot = async () => {
-    if (!club || !clubId) return;
-    try {
-      const outcome = await performDjSetAsync(club);
-      setDjOutcome(outcome);
-      setShowOutcome(true);
-      recordVisit.mutate({ clubId, cashSpent: 0, isDjSet: true });
-    } catch {
-      // toast handled by hook
-    }
-  };
 
   const handleBuyDrink = async (drink: NightClubDrink) => {
     if (!profileId || !drink.price || !clubId) return;
@@ -198,7 +181,7 @@ const NightClubDetail = () => {
     enterClub.mutate(clubId);
   };
 
-  const busy = isProcessing || isPerforming;
+  const busy = isProcessing;
 
   if (loading) {
     return (
@@ -285,10 +268,16 @@ const NightClubDetail = () => {
                   ))}
                 </div>
               )}
-              <Button onClick={handleDjSlot} disabled={busy} className="w-full sm:w-auto">
-                {isPerforming ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mic2 className="mr-2 h-4 w-4" />}
-                Queue for DJ Slot
-              </Button>
+              {import.meta.env.VITE_DJ_SCHEDULED_BOOKINGS_ENABLED === "true" ? (
+                <Button type="button" className="w-full sm:w-auto"
+                  onClick={() => document.getElementById("dj-bookings")?.scrollIntoView({ behavior: "smooth" })}>
+                  <Mic2 className="mr-2 h-4 w-4" /> Book DJ Set
+                </Button>
+              ) : (
+                <p className="text-xs text-muted-foreground" role="status">
+                  Scheduled DJ gigs are being prepared. The mixing studio is available for reward-free practice.
+                </p>
+              )}
             </div>
           )}
         </CardContent>
@@ -308,14 +297,15 @@ const NightClubDetail = () => {
         </CardContent>
       </Card>
 
-      {/* Scheduled booking is hidden until BOTH the Edge server and client
-          release flags are enabled. Existing instant sets remain unchanged. */}
+      {/* DJ contracts and payouts go exclusively through the verified booking service. */}
       {profileId && clubId && (
-        <DjBookingPanel profileId={profileId} clubId={clubId}
-          onLiveBooking={(bookingId) => {
-            setLiveDjBookingId(bookingId);
-            if (bookingId) setShowDjStudio(true);
-          }} />
+        <section id="dj-bookings" aria-label="Scheduled DJ bookings">
+          <DjBookingPanel profileId={profileId} clubId={clubId}
+            onLiveBooking={(bookingId) => {
+              setLiveDjBookingId(bookingId);
+              if (bookingId) setShowDjStudio(true);
+            }} />
+        </section>
       )}
 
       {/* Club Events */}
@@ -346,27 +336,27 @@ const NightClubDetail = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <History className="h-5 w-5 text-primary" /> DJ Performance History
+              <History className="h-5 w-5 text-primary" /> DJ Performance History (last 10)
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Stats Summary */}
             <div className="grid grid-cols-4 gap-2">
               <div className="rounded-md border border-border p-2 text-center">
-                <div className="text-lg font-bold">{djStats.totalSets}</div>
-                <div className="text-[10px] text-muted-foreground">Sets</div>
+                <div className="text-lg font-bold">{djStats.recentSets}</div>
+                <div className="text-[10px] text-muted-foreground">Recent sets</div>
               </div>
               <div className="rounded-md border border-border p-2 text-center">
                 <div className={`text-lg font-bold ${getScoreColor(djStats.avgScore)}`}>{djStats.avgScore}</div>
-                <div className="text-[10px] text-muted-foreground">Avg Score</div>
+                <div className="text-[10px] text-muted-foreground">Recent avg score</div>
               </div>
               <div className="rounded-md border border-border p-2 text-center">
                 <div className="text-lg font-bold text-green-400">${djStats.totalEarnings}</div>
-                <div className="text-[10px] text-muted-foreground">Earned</div>
+                <div className="text-[10px] text-muted-foreground">Recent earnings</div>
               </div>
               <div className="rounded-md border border-border p-2 text-center">
                 <div className="text-lg font-bold text-yellow-400">+{djStats.totalFame}</div>
-                <div className="text-[10px] text-muted-foreground">Fame</div>
+                <div className="text-[10px] text-muted-foreground">Recent fame</div>
               </div>
             </div>
 
@@ -402,7 +392,7 @@ const NightClubDetail = () => {
         <CardContent>
           <NightlifeStanceSelector
             clubName={club.name}
-            isProcessing={isProcessing || isPerforming}
+            isProcessing={isProcessing}
             outcome={lastOutcomeDetail}
             onDismissOutcome={dismissOutcome}
             addictionWarning={lastAddictionWarning}
@@ -600,71 +590,6 @@ const NightClubDetail = () => {
         />
       )}
 
-      {/* DJ Performance Outcome */}
-      <Dialog open={showOutcome} onOpenChange={setShowOutcome}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Disc3 className="h-5 w-5 text-primary" /> DJ Set Results
-            </DialogTitle>
-            <DialogDescription>
-              {djOutcome?.clubName && `Your performance at ${djOutcome.clubName}`}
-            </DialogDescription>
-          </DialogHeader>
-          {djOutcome && (
-            <div className="space-y-4">
-              <div className="text-center space-y-2">
-                <div className={`text-4xl font-bold ${getScoreColor(djOutcome.performanceScore)}`}>
-                  {djOutcome.performanceScore}
-                </div>
-                <div className="text-sm text-muted-foreground">Performance Score</div>
-                <Progress value={djOutcome.performanceScore} className="h-2" />
-              </div>
-              <div className="rounded-lg bg-card border border-border p-3 text-center">
-                <div className="text-lg font-semibold">{djOutcome.outcomeLabel}</div>
-                <p className="text-sm text-muted-foreground mt-1">{djOutcome.outcomeDescription}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex items-center gap-2 rounded-md border border-border p-2">
-                  <DollarSign className="h-4 w-4 text-green-400" />
-                  <div>
-                    <div className="text-sm font-medium">+${djOutcome.cashEarned}</div>
-                    <div className="text-[11px] text-muted-foreground">Earnings</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 rounded-md border border-border p-2">
-                  <Star className="h-4 w-4 text-yellow-400" />
-                  <div>
-                    <div className="text-sm font-medium">+{djOutcome.fameGained}</div>
-                    <div className="text-[11px] text-muted-foreground">Fame</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 rounded-md border border-border p-2">
-                  <Users className="h-4 w-4 text-primary" />
-                  <div>
-                    <div className="text-sm font-medium">+{djOutcome.fansGained}</div>
-                    <div className="text-[11px] text-muted-foreground">Fans</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 rounded-md border border-border p-2">
-                  <Zap className="h-4 w-4 text-purple-400" />
-                  <div>
-                    <div className="text-sm font-medium">+{djOutcome.xpGained}</div>
-                    <div className="text-[11px] text-muted-foreground">DJ XP</div>
-                  </div>
-                </div>
-              </div>
-              {djOutcome.addictionTriggered && djOutcome.addictionType && (
-                <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-                  ⚠️ {djOutcome.addictionType.charAt(0).toUpperCase() + djOutcome.addictionType.slice(1)} addiction{" "}
-                  {djOutcome.addictionSeverityGain === 20 ? "triggered" : `worsened (+${djOutcome.addictionSeverityGain})`}!
-                </div>
-              )}
-              <Button className="w-full" onClick={() => setShowOutcome(false)}>Close</Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </FMPageScaffold>
   );
 };
