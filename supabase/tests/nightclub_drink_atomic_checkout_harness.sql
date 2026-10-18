@@ -82,8 +82,7 @@ BEGIN
  CROSS JOIN LATERAL jsonb_array_elements(c.drink_menu) WITH ORDINALITY m(item,ordinality)
  WHERE p.is_active IS TRUE AND p.user_id IS NOT NULL
    AND c.metadata->>'live_interactions_enabled'='true'
-   AND (m.item->>'price')~'^[0-9]{1,6}
-
+   AND (m.item->>'price')~'^[0-9]{1,6}$'
    AND p.cash>(m.item->>'price')::integer * 2
  LIMIT 1;
  IF v_profile IS NULL THEN RAISE EXCEPTION 'Missing stocked-drink test fixture'; END IF;
