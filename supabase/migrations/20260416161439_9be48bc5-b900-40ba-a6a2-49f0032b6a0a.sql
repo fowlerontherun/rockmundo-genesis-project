@@ -119,6 +119,20 @@ CREATE TABLE public.city_treasury_ledger (
 ALTER TABLE public.city_treasury_ledger ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Anyone can view treasury ledger" ON public.city_treasury_ledger FOR SELECT USING (true);
 
--- 6. Alter sponsorship_offers and sponsorship_contracts
-ALTER TABLE public.sponsorship_offers ADD COLUMN sponsorship_type_id UUID REFERENCES public.sponsorship_types(id);
-ALTER TABLE public.sponsorship_contracts ADD COLUMN sponsorship_type_id UUID REFERENCES public.sponsorship_types(id);
+-- 6. The sponsorship_offers and sponsorship_contracts tables are not
+-- created until later historical migrations (November/December 2026).
+-- Preserve this enrichment for older DBs where either table already exists,
+-- without blocking fresh database resets.
+DO $sponsorship_type_enrichment$
+BEGIN
+  IF to_regclass('public.sponsorship_offers') IS NOT NULL THEN
+    ALTER TABLE public.sponsorship_offers
+      ADD COLUMN IF NOT EXISTS sponsorship_type_id UUID
+      REFERENCES public.sponsorship_types(id);
+  END IF;
+  IF to_regclass('public.sponsorship_contracts') IS NOT NULL THEN
+    ALTER TABLE public.sponsorship_contracts
+      ADD COLUMN IF NOT EXISTS sponsorship_type_id UUID
+      REFERENCES public.sponsorship_types(id);
+  END IF;
+END $sponsorship_type_enrichment$;
