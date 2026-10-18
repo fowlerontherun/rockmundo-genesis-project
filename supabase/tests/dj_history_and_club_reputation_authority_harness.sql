@@ -29,7 +29,24 @@ BEGIN
    AND tablename IN ('player_dj_performances','player_club_reputation')
    AND cmd IN ('INSERT','UPDATE','DELETE'))
  THEN RAISE EXCEPTION 'Legacy DJ or club reputation writer RLS policy exists'; END IF;
-END; $$;
+ IF has_function_privilege('authenticated',
+      'public.credit_verified_dj_set_club_reputation()','EXECUTE')
+ THEN RAISE EXCEPTION 'DJ credit trigger is directly callable by a player'; END IF;
+
+ IF NOT EXISTS (
+   SELECT 1 FROM pg_trigger
+   WHERE tgrelid='public.dj_settlement_ledger'::regclass
+     AND tgname='credit_verified_dj_club_reputation'
+     AND NOT tgisinternal AND tgenabled='O'
+ ) THEN RAISE EXCEPTION 'DJ settlement does not credit authoritative club reputation'; END IF;
+
+ IF NOT EXISTS (
+   SELECT 1 FROM pg_trigger
+   WHERE tgrelid='public.dj_settlement_ledger'::regclass
+     AND tgname='require_dj_live_mix_before_settlement'
+     AND NOT tgisinternal AND tgenabled='O'
+ ) THEN RAISE EXCEPTION 'Mixer evidence guard was disabled'; END IF;
+END; $;
 
 -- A forged auth identity and a character not belonging to it must fail,
 -- before any row can be created or reputation counters incremented.
