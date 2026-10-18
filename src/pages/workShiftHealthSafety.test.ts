@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 
 const edgeFile = (name: string) =>
-  readFileSync(new URL(`../../../supabase/functions/${name}/index.ts`, import.meta.url), "utf8");
-const page = readFileSync(new URL("../Employment.tsx", import.meta.url), "utf8");
+  readFileSync(new URL(`../../supabase/functions/${name}/index.ts`, import.meta.url), "utf8");
+const page = readFileSync(new URL("./Employment.tsx", import.meta.url), "utf8");
 const migration = readFileSync(
-  new URL("../../../supabase/migrations/20261018184048_work_shift_authoritative_minimum_vitals_20261018.sql", import.meta.url),
+  new URL("../../supabase/migrations/20261018184048_work_shift_authoritative_minimum_vitals_20261018.sql", import.meta.url),
   "utf8",
 );
 
