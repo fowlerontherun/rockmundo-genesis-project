@@ -71,6 +71,18 @@ BEGIN
  END;
  PERFORM set_config('request.jwt.claim.sub',v_actor::text,true);
 
+ -- Source rights must be rechecked at start, not trusted from a
+ -- booking snapshot. Simulate a song no longer playable, then restore.
+ UPDATE public.songs SET archived=true WHERE id=v_song;
+ BEGIN
+   PERFORM private.dj_start_booking_at(v_book,v_start+interval '1 minute');
+   RAISE EXCEPTION 'SECURITY FAILURE: unavailable song played from stale set';
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
+ IF (SELECT energy FROM public.profiles WHERE id=v_profile)<>v_energy THEN
+    RAISE EXCEPTION 'Rejected start consumed energy'; END IF;
+ UPDATE public.songs SET archived=false WHERE id=v_song;
+
  v_session:=private.dj_start_booking_at(v_book,v_start+interval '1 minute');
  IF v_session IS NULL THEN RAISE EXCEPTION 'Start produced no session'; END IF;
  IF private.dj_start_booking_at(v_book,v_start+interval '2 minutes')<>v_session
