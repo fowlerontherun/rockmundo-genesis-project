@@ -109,4 +109,13 @@ describe("BankingLoanDetail repayment retries (#4254)", () => {
     expect(await screen.findByText(/Select an active character/)).toBeInTheDocument();
     expect(screen.queryByText("Bank")).not.toBeInTheDocument();
   });
+  it("recovers from an initial loan fetch failure using the explicit reload action", async () => {
+    mocks.details.mockRejectedValueOnce(new Error("Server unavailable"));
+    render(<BankingLoanDetail />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Server unavailable");
+    await userEvent.click(screen.getByRole("button", { name: "Retry loading loan" }));
+    expect(await screen.findByText("Bank")).toBeInTheDocument();
+    expect(mocks.details).toHaveBeenCalledTimes(2);
+  });
+
 });
