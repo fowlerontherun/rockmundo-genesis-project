@@ -281,6 +281,28 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
   </div>;
   if (!status) return <>{lyricsDialog}{replaceDialog}</>;
 
+  // The dispatcher cannot know if a timed-out provider POST incurred a
+  // charge. Keep the attempt reserved and require an operator to reconcile it.
+  if (queueState === "needs_review") {
+    return (
+      <>
+        {lyricsDialog}
+        {replaceDialog}
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            AI generation is awaiting a provider status check. Your request
+            might already have been accepted, so RockMundo will not submit or
+            charge for another attempt automatically. Please contact support.
+            {hasAudio && (
+              <span className="block text-xs mt-1">Your existing audio remains playable.</span>
+            )}
+          </AlertDescription>
+        </Alert>
+      </>
+    );
+  }
+
   // Already completed with audio - show success, admin can regenerate
   if (isCompleted && hasAudio && !replacementPending && queueState !== 'queued' && queueState !== 'dispatching') {
     return (
