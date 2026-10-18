@@ -29,6 +29,24 @@ BEGIN
    AND tablename IN ('player_dj_performances','player_club_reputation')
    AND cmd IN ('INSERT','UPDATE','DELETE'))
  THEN RAISE EXCEPTION 'Legacy DJ or club reputation writer RLS policy exists'; END IF;
+ IF EXISTS (
+   SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+   WHERE n.nspname='public'
+   AND p.proname IN (
+     '_dj_guard_band_join_conflicts',
+     '_dj_guard_city_timezone_update',
+     '_dj_guard_course_timetable_update',
+     '_dj_guard_university_city_update',
+     'guard_dj_reverse_activity_source',
+     'guard_dj_reverse_band_gig_write',
+     'guard_dj_reverse_university_enrolment',
+     'project_dj_booking_into_calendar'
+   )
+   AND (p.prorettype <> 'pg_catalog.trigger'::regtype
+     OR has_function_privilege('anon',p.oid,'EXECUTE')
+     OR has_function_privilege('authenticated',p.oid,'EXECUTE'))
+ ) THEN RAISE EXCEPTION 'A DJ SECURITY DEFINER trigger is exposed to clients'; END IF;
+
  IF has_function_privilege('authenticated',
       'public.credit_verified_dj_set_club_reputation()','EXECUTE')
  THEN RAISE EXCEPTION 'DJ credit trigger is directly callable by a player'; END IF;
