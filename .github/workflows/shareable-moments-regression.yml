@@ -10,6 +10,8 @@ on:
     paths:
       - "src/features/shareable-moments/**"
       - "src/pages/ShareStudio.tsx"
+      - "src/pages/AdvancedGigSystem.tsx"
+      - "src/pages/Schedule.tsx"
       - "src/pages/BandProfile.tsx"
       - "src/components/schedule/GigDetailsDialog.tsx"
       - "src/components/releases/MyReleasesTab.tsx"
@@ -24,6 +26,8 @@ on:
     paths:
       - "src/features/shareable-moments/**"
       - "src/pages/ShareStudio.tsx"
+      - "src/pages/AdvancedGigSystem.tsx"
+      - "src/pages/Schedule.tsx"
       - "src/pages/BandProfile.tsx"
       - "src/components/schedule/GigDetailsDialog.tsx"
       - "src/components/releases/MyReleasesTab.tsx"
