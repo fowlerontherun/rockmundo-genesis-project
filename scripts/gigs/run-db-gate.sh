@@ -18,3 +18,4 @@ psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/equipment_purchase_result
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/company_jobs_legacy_association.sql
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/mentor_discovery_pootube_integrity.sql
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/pootube_future_skill_autoseed.sql
+psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/weekly_experience_cron_signature.sql
