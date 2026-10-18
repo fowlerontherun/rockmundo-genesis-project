@@ -103,3 +103,42 @@ This guard does not replace an availability grid, per-weekday opening calendar,
 travel validation, mirror activity schedule or the atomic gig settlement
 pipeline. Do not expose a Book DJ Set button solely because basic hours
 validation is now in place.
+
+## October 18 continued: atomic player Schedule projection
+
+Applied in production via two versioned migrations:
+
+- `20261018063240_dj_booking_atomic_calendar_projection_20261018.sql`:
+  adds the FK/unique `player_scheduled_activities.linked_dj_booking_id`,
+  makes `dj_set` a first-class activity type, creates exactly one calendar
+  entry per DJ booking transaction, guards both client-authenticated edits
+  and overlapping newly scheduled activities, and adds a *service-role-only*
+  idempotent cancellation RPC that atomically marks the calendar cancelled.
+- `20261018063456_dj_booking_projection_generated_duration_fix_20261018.sql`:
+  fixes the first migration's projection function to respect that the
+  calendar `duration_minutes` column is **GENERATED ALWAYS**. The initial
+  insertion failed and rolled back in the first live test; the corrected
+  function was then deployed, and the full test passed.
+
+A booking appears as a distinct **DJ set** in the player's existing Schedule,
+with nightclub name/city, club deep link, scheduled time, duration and status.
+It is system-owned, so no player can self-mark a set completed, forge or
+delete the linked activity. Ordinary activities (including education/reading)
+cannot newly overlap a booked DJ slot. Slot creation and calendar creation
+are one database transaction: either both succeed or neither persists.
+
+The extended `dj_internal_booking_reservation_harness.sql` ran in a
+production transaction rolled back at the end. It passed booking/calendar
+one-to-one projection, idempotent retries, same-night conflict, future reading
+conflict, user-forged activity denials, owner direct update/delete denials,
+server-only cancel, repeat cancel, rebooking after cancel, and foreign-user
+isolation. Live post-test counts: zero bookings, zero linked DJ entries.
+Ordinary players remain unable to execute either reservation or cancellation
+RPC. DJ performance payout logic remains unchanged and must be replaced
+before player-facing scheduled bookings are enabled.
+
+**Remaining:** cross-source schedule conflict audit (travel/education generated
+outside `player_scheduled_activities`), venue owner approval and structured
+opening-day calendars, booking UI, and server-authoritative start/completion
+and atomic rewards #4234. A cancelled appointment is still retained in
+history; it is not hard-deleted.

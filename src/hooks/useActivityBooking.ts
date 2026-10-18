@@ -35,6 +35,7 @@ const WELLNESS_GATE_MAP: Record<ActivityType, string | null> = {
   release_promo: null,
   teaching: null,
   jam_session: "jam",
+  dj_set: null, // Server-created DJ slot; booking wellness gate runs in server eligibility.
   other: null,
 };
 

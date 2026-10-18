@@ -16,7 +16,7 @@ export type ActivityType =
   | 'travel' | 'work' | 'university' | 'reading' | 'mentorship' 
   | 'youtube_video' | 'health' | 'skill_practice' | 'open_mic' 
   | 'pr_appearance' | 'film_production' | 'festival_attendance' | 'festival_performance' 
-  | 'release_manufacturing' | 'release_promo' | 'teaching' | 'jam_session' | 'major_event' | 'other';
+  | 'release_manufacturing' | 'release_promo' | 'teaching' | 'jam_session' | 'major_event' | 'dj_set' | 'other';
 
 export type ActivityStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'missed';
 
@@ -35,6 +35,7 @@ export interface ScheduledActivity {
   description?: string | null;
   location?: string | null;
   linked_gig_id?: string | null;
+  linked_dj_booking_id?: string | null;
   linked_rehearsal_id?: string | null;
   linked_recording_id?: string | null;
   linked_job_shift_id?: string | null;
@@ -466,6 +467,9 @@ export function useStartActivity() {
         .single();
       if (loadError) throw loadError;
 
+      if (activity?.activity_type === 'dj_set' || activity?.linked_dj_booking_id) {
+        throw new Error('DJ sets must start through their scheduled nightclub performance, not the generic activity timer.');
+      }
       if (!activity || activity.status !== 'scheduled') throw new Error('Only scheduled activities can be started.');
       const now = Date.now();
       if (Date.parse(activity.scheduled_start) > now || Date.parse(activity.scheduled_end) <= now) throw new Error('This activity cannot be started outside its scheduled time window.');
@@ -525,6 +529,9 @@ export function useCompleteActivity() {
       const { data: existing, error: loadError } = await (supabase as any)
         .from('player_scheduled_activities').select('activity_type').eq('id', activityId).single();
       if (loadError) throw loadError;
+      if (existing?.activity_type === 'dj_set') {
+        throw new Error('DJ sets must be completed and awarded through the authoritative nightclub gig processor.');
+      }
       if (existing?.activity_type === 'songwriting') {
         throw new Error('Songwriting must be finished through its own session-completion workflow.');
       }
@@ -569,6 +576,9 @@ export function useDeleteScheduledActivity() {
         .from('player_scheduled_activities').select('*').eq('id', activityId).single();
       if (loadError) throw loadError;
       if (!activity) throw new Error("Activity not found");
+      if (activity.activity_type === 'dj_set' || activity.linked_dj_booking_id) {
+        throw new Error("Cancel the DJ set through its original nightclub booking; it cannot be deleted from Schedule.");
+      }
       if (activity.linked_gig_id || activity.linked_rehearsal_id || activity.linked_recording_id ||
           activity.linked_job_shift_id || activity.metadata?.tour_travel_leg ||
           activity.metadata?.festival_booking_id || activity.metadata?.linked_id ||
