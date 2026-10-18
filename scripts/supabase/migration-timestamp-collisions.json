@@ -75,9 +75,5 @@
   "20291218254500": [
     "20291218254500_festival_attendee_checkin_leave.sql",
     "20291218254500_festival_memorabilia_launch_index.sql"
-  ],
-  "20300106200000": [
-    "20300106200000_atomic_personal_funded_gig_booking.sql",
-    "20300106200000_secure_atomic_weekly_band_payroll.sql"
   ]
 }

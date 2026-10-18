@@ -131,22 +131,5 @@
   "20291220112100_festival_close_expired_ticket_sales.sql",
   "20291220112200_festival_player_ticket_sales_breakdown.sql",
   "20291221100000_festival_next_edition_dates_guard.sql",
-  "20300101010000_festival_offer_withdraw_and_expiry.sql",
-  "20300106090000_expand_mayor_university_city_upgrades.sql",
-  "20300106101500_university_upgrade_cooldowns.sql",
-  "20300106110000_allow_public_player_band_invitations.sql",
-  "20300106120000_fix_band_invitation_notification_route.sql",
-  "20300106130000_notify_band_invitation_responses.sql",
-  "20300106140000_live_band_invitation_updates.sql",
-  "20300106150000_share_moment_snapshots.sql",
-  "20300106160000_enforce_social_contact_consent_and_request_cooldowns.sql",
-  "20300106170000_repair_band_recruitment_capacity_applications_expiry.sql",
-  "20300106180000_correct_recruitment_approvals_and_departures.sql",
-  "20300106181000_character_scoped_notification_archive.sql",
-  "20300106182000_atomic_chart_entry_notifications.sql",
-  "20300106190000_harden_band_governance_profile_identity.sql",
-  "20300106200000_atomic_personal_funded_gig_booking.sql",
-  "20300106200000_secure_atomic_weekly_band_payroll.sql",
-  "20300106201000_controlled_random_event_backlog_reconciliation.sql",
-  "20300106210000_rehearsal_booking_full_intent_idempotency.sql"
+  "20300101010000_festival_offer_withdraw_and_expiry.sql"
 ]
