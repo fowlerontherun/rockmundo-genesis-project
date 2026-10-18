@@ -24,25 +24,48 @@ export function compactLyricsForShortAudio(rawLyrics: string | null, maxChars = 
   const firstVerse = verses[0]?.lines.length ? verses[0].lines : allLines.slice(0, 8);
   const chorus = choruses[0]?.lines.length ? choruses[0].lines : allLines.slice(8, 13).length ? allLines.slice(8, 13) : firstVerse.slice(0, 4);
   const secondVerse = verses[1]?.lines.length ? verses[1].lines : firstVerse.slice(-4);
+  const bridge = sections.find(s => s.kind === 'bridge' && s.lines.length)?.lines
+    || secondVerse.slice(-2);
+  const outro = sections.find(s => s.kind === 'outro' && s.lines.length)?.lines
+    || chorus.slice(-2);
+
+  // Music-1.5 has no length parameter. Add a bridge and closing chorus to
+  // encourage a complete performance; validated >90s results are clipped.
+  // This never changes the stored original song lyrics.
   const blocks: Array<{ label: string; lines: string[]; max: number; count: number }> = [
-    { label: '[Verse]', lines: firstVerse, max: 175, count: 6 },
-    { label: '[Chorus]', lines: chorus, max: 130, count: 4 },
-    { label: '[Verse]', lines: secondVerse, max: 105, count: 3 },
-    { label: '[Chorus]', lines: chorus, max: 100, count: 3 },
+    { label: '[Verse]', lines: firstVerse, max: 132, count: 5 },
+    { label: '[Chorus]', lines: chorus, max: 96, count: 4 },
+    { label: '[Verse]', lines: secondVerse, max: 86, count: 3 },
+    { label: '[Chorus]', lines: chorus, max: 72, count: 3 },
+    { label: '[Bridge]', lines: bridge, max: 52, count: 2 },
+    { label: '[Chorus]', lines: chorus, max: 70, count: 3 },
+    { label: '[Outro]', lines: outro, max: 26, count: 2 },
   ];
-  const output = blocks.map(({ label, lines, max, count }) => {
+  const parts: string[] = [];
+  let totalLength = 0;
+  for (const [index, block] of blocks.entries()) {
+    const separator = parts.length ? '\n\n' : '';
+    const laterBlocks = blocks.length - index - 1;
+    // Reserve some space for every remaining section instead of truncating
+    // the lyrics in the middle of the bridge or outro.
+    const budget = Math.min(block.max,
+      maxChars - totalLength - separator.length - block.label.length - 1 - laterBlocks * 19);
+    if (budget < 12) continue;
     const kept: string[] = [];
     let used = 0;
-    for (const line of lines) {
-      if (kept.length >= count) break;
-      const space = max - used - (kept.length ? 1 : 0);
-      if (space < 12) break;
-      const clipped = line.length <= space ? line : line.slice(0, space).replace(/\s+\S*$/, '').trim();
+    for (const line of block.lines) {
+      if (kept.length >= block.count) break;
+      const room = budget - used - (kept.length ? 1 : 0);
+      if (room < 8) break;
+      const clipped = line.length <= room ? line : line.slice(0, room).replace(/\s+\S*$/, '').trim();
       if (!clipped) continue;
       kept.push(clipped);
       used += clipped.length + (kept.length > 1 ? 1 : 0);
     }
-    return kept.length ? `${label}\n${kept.join('\n')}` : '';
-  }).filter(Boolean).join('\n\n');
-  return output.length > maxChars ? output.slice(0, maxChars).trimEnd() : output || text.slice(0, maxChars);
+    if (!kept.length) continue;
+    const part = block.label + '\n' + kept.join('\n');
+    parts.push(part);
+    totalLength += separator.length + part.length;
+  }
+  return parts.length ? parts.join('\n\n') : text.slice(0, maxChars);
 }
