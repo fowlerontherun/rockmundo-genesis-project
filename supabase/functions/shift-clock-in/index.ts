@@ -131,6 +131,14 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        // The service-role auto-clock-in must enforce the same minimums as
+        // manual clock-in. A genuine health/energy value of 0 is not missing.
+        if ((profile.health ?? 100) < 20 || (profile.energy ?? 100) < 10) {
+          skippedCount++;
+          await recordOutcome(row.id, 'unfit_for_work', 'Not enough health or energy to start work.');
+          continue;
+        }
+
         // Already clocked in / any active work_shift?
         const { data: activeShift } = await supabase
           .from('profile_activity_statuses')

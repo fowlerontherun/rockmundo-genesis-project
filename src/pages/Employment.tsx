@@ -475,7 +475,7 @@ export default function Employment() {
 
   const canClockIn = () => {
     if (!currentEmployment || activityStatus) return false;
-    if (!profile || (profile.health || 100) < 20 || (profile.energy || 100) < 10) return false;
+    if (!profile || (profile.health ?? 100) < 20 || (profile.energy ?? 100) < 10) return false;
     
     const job = currentEmployment.jobs;
     if (job?.city_id && job.city_id !== profile.current_city_id) return false;
@@ -502,6 +502,7 @@ export default function Employment() {
     clocked_in: { label: "Clocked in", tone: "success", variant: "default" },
     cooldown: { label: "Cooldown", tone: "muted", variant: "default" },
     not_scheduled: { label: "Not scheduled", tone: "muted", variant: "default" },
+    unfit_for_work: { label: "Not fit for shift", tone: "warning", variant: "destructive" },
     wrong_city: { label: "Wrong city", tone: "warning", variant: "destructive" },
     already_clocked_in: { label: "Already working", tone: "muted", variant: "default" },
     scheduling_conflict: { label: "Scheduling conflict", tone: "warning", variant: "destructive" },
@@ -857,7 +858,7 @@ export default function Employment() {
                     </span>
                   </div>
 
-                  {profile && (profile.health || 100) < 30 && (
+                  {profile && (profile.health ?? 100) < 30 && (
                     <Alert variant="destructive">
                       <Heart className="h-4 w-4" />
                       <AlertDescription>
@@ -894,8 +895,8 @@ export default function Employment() {
                     </Button>
                     {!canClockIn() && !activityStatus && (
                       <p className="text-sm text-muted-foreground">
-                        {profile && (profile.health || 100) < 20 ? "Not enough health to work" :
-                         profile && (profile.energy || 100) < 10 ? "Not enough energy to work" :
+                        {profile && (profile.health ?? 100) < 20 ? "Not enough health to work" :
+                         profile && (profile.energy ?? 100) < 10 ? "Not enough energy to work" :
                          currentJob.city_id && currentJob.city_id !== currentCityId ? "Not in job city" :
                          "Wait for your shift to start"}
                       </p>

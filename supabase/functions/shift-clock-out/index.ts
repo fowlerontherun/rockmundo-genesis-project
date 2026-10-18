@@ -232,7 +232,7 @@ Deno.serve(async (req) => {
         const updatedCash = (profile?.cash || 0) + netEarnings;
         const updatedHealth = Math.max(
           0,
-          Math.min(100, (profile?.health || 100) + (shift.health_impact || 0))
+          Math.min(100, (profile?.health ?? 100) + (shift.health_impact || 0))
         );
         const updatedFame = Math.max(0, (profile?.fame || 0) + dynamicFameImpact);
 
