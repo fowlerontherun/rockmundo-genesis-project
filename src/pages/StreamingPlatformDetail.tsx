@@ -20,7 +20,7 @@ const StreamingPlatformDetail = () => {
   const navigate = useNavigate();
   const { profile } = useGameData();
   const userId = profile?.user_id;
-  const { releases, releasesLoading, releasesError, releasesErrorDetail, refetchReleases } = useStreaming(userId || "");
+  const { releases, releasesLoading, hasActiveProfile, releasesError, releasesErrorDetail, refetchReleases } = useStreaming(userId || "");
 
   const { data: platform, isLoading } = useQuery<any>({
     queryKey: ["streaming-platform", platformId],
@@ -206,7 +206,7 @@ const StreamingPlatformDetail = () => {
                   <p className="text-sm text-destructive">Could not load your streaming releases: {releasesErrorDetail instanceof Error ? releasesErrorDetail.message : "Please try again."}</p>
                   <Button variant="outline" onClick={() => { void refetchReleases(); }}>Retry releases</Button>
                 </div>
-              ) : !userId ? (
+              ) : !hasActiveProfile ? (
                 <p className="py-8 text-sm text-center text-muted-foreground">Select an active character to see your releases.</p>
               ) : platformReleases.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
