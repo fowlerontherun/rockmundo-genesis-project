@@ -44,9 +44,6 @@ export const EducationRecommendations = ({ activeSkills }: { activeSkills?: stri
       current_xp: skill.current_xp,
       required_xp: skill.required_xp,
     })),
-    // Use the production RPC for actual tier eligibility. The optional canonical
-    // catalogue can be stale or fall back to static definitions on live deployments.
-    availability: [],
     roleLinks,
     access: access.data ?? new Map<string, boolean>(),
     goal,
