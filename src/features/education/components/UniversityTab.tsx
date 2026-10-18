@@ -194,7 +194,7 @@ export const UniversityTab = () => {
   });
 
   const { data: courses, isLoading: coursesLoading } = useQuery({
-    queryKey: ["all_courses_with_unis"],
+    queryKey: ["all_courses_with_unis", focusedSkill],
     queryFn: async () => {
       const batchSize = 1000;
       const allCourses: CourseWithUniversity[] = [];
@@ -202,7 +202,7 @@ export const UniversityTab = () => {
       let hasMore = true;
 
       while (hasMore) {
-        const { data, error } = await supabase
+        let request = supabase
           .from("university_courses")
           .select(`
             id,
@@ -223,8 +223,13 @@ export const UniversityTab = () => {
               course_cost_modifier
             )
           `)
-          .eq("is_active", true)
+          .eq("is_active", true);
+        // Skill-first discovery should not download tens of thousands of
+        // unrelated university courses before filtering them in the browser.
+        if (focusedSkill) request = request.eq("skill_slug", focusedSkill);
+        const { data, error } = await request
           .order("name")
+          .order("id")
           .range(offset, offset + batchSize - 1);
         if (error) throw error;
 
