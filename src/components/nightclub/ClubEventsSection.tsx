@@ -1,5 +1,8 @@
+import { useEffect, useMemo, useState } from "react";
 import { Calendar, Music, Star, Sparkles, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useGameCalendar } from "@/hooks/useGameCalendar";
+import { calculateInGameDate } from "@/utils/gameCalendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   useClubEvents,
@@ -15,10 +18,25 @@ interface ClubEventsSectionProps {
 
 export const ClubEventsSection = ({ clubId }: ClubEventsSectionProps) => {
   const { data: events = [], isLoading } = useClubEvents(clubId);
+  const { data: calendar } = useGameCalendar();
+  // One game day lasts about eight real hours at the default pace. Refresh
+  // the displayed event even if the player leaves this club page open.
+  const [clockTick, setClockTick] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => setClockTick((tick) => tick + 1), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+  const currentGameDate = useMemo(() => calendar
+    ? calculateInGameDate(
+        undefined,
+        calendar.config?.real_world_days_per_game_year ?? 120,
+        calendar.config?.real_world_days_per_game_month ?? 10,
+      )
+    : null, [calendar, clockTick]);
 
   if (isLoading || events.length === 0) return null;
 
-  const tonightsEvent = getTonightsEvent(events);
+  const tonightsEvent = getTonightsEvent(events, currentGameDate);
   const upcomingEvents = events.filter((e) => e !== tonightsEvent);
 
   return (
@@ -29,12 +47,16 @@ export const ClubEventsSection = ({ clubId }: ClubEventsSectionProps) => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Tonight's Event */}
+        <p className="text-xs text-muted-foreground">
+          Club nights follow the accelerated RockMundo calendar, not your device weekday.
+          Event bonuses shown here are informational; booked DJ rewards are verified by the server.
+        </p>
+        {/* Current game-day event */}
         {tonightsEvent && (
           <div className="rounded-lg border-2 border-primary/50 bg-primary/5 p-4 space-y-2">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary animate-pulse" />
-              <span className="text-xs font-bold text-primary">Tonight</span>
+              <span className="text-xs font-bold text-primary">Today in RockMundo</span>
             </div>
             <EventCard event={tonightsEvent} highlight />
           </div>
@@ -44,7 +66,7 @@ export const ClubEventsSection = ({ clubId }: ClubEventsSectionProps) => {
         {upcomingEvents.length > 0 && (
           <div className="space-y-2">
             <h4 className="text-sm font-semibold text-muted-foreground">
-              Weekly Schedule
+              Club Event Schedule
             </h4>
             {upcomingEvents.map((event) => (
               <EventCard key={event.id} event={event} />
