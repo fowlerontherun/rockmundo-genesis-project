@@ -23,23 +23,23 @@ DECLARE
     'business_acumen',
     'marketing_savvy'
   ];
-  column_name text;
+  v_column_name text;
 BEGIN
-  FOREACH column_name IN ARRAY attribute_columns LOOP
+  FOREACH v_column_name IN ARRAY attribute_columns LOOP
     IF EXISTS (
       SELECT 1
       FROM information_schema.columns AS cols
       WHERE cols.table_schema = 'public'
         AND cols.table_name = 'player_attributes'
-        AND cols.column_name = column_name
+        AND cols.column_name = v_column_name
     ) THEN
-      EXECUTE format('ALTER TABLE public.player_attributes ALTER COLUMN %I SET DEFAULT 5', column_name);
+      EXECUTE format('ALTER TABLE public.player_attributes ALTER COLUMN %I SET DEFAULT 5', v_column_name);
       EXECUTE format(
         $$UPDATE public.player_attributes
           SET %1$I = 5,
               updated_at = timezone(''utc'', now())
         WHERE %1$I IS NULL OR %1$I = 0$$,
-        column_name
+        v_column_name
       );
     END IF;
   END LOOP;
