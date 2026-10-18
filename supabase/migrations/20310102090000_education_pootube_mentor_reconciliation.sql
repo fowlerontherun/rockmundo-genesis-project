@@ -71,7 +71,7 @@ BEGIN
    SELECT 1 FROM public.profiles p
    WHERE p.id=p_profile_id AND p.current_city_id=v_mentor.city_id
  ) THEN RAISE EXCEPTION 'mentor_wrong_city'; END IF;
- IF p_method IS NULL OR p_method NOT IN ('exploration','venue_gig','studio_session','achievement','automatic')
+ IF p_method IS NULL OR p_method NOT IN ('exploration','npc_hint','achievement','friend_tip','admin_grant','venue_gig','studio_session','automatic')
  THEN RAISE EXCEPTION 'mentor_invalid_discovery_method'; END IF;
  INSERT INTO public.player_master_discoveries
   (profile_id,mentor_id,discovery_method,discovery_metadata)
@@ -81,6 +81,31 @@ BEGIN
 END $function$;
 REVOKE EXECUTE ON FUNCTION public.discover_master(uuid,uuid,text,jsonb) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.discover_master(uuid,uuid,text,jsonb) TO authenticated, service_role;
+
+-- Preserve all original discovery labels and explicitly allow newer venue/studio
+-- and automatic events. The old CHECK disallowed methods already used by clients.
+ALTER TABLE public.player_master_discoveries
+  DROP CONSTRAINT IF EXISTS player_master_discoveries_discovery_method_check;
+ALTER TABLE public.player_master_discoveries
+  ADD CONSTRAINT player_master_discoveries_discovery_method_check
+  CHECK (discovery_method IN (
+   'exploration','npc_hint','achievement','friend_tip','admin_grant',
+   'venue_gig','studio_session','automatic'
+  ));
+
+-- A successful historical mentor session proves the player has met that
+-- mentor. Restore only missing discoveries and preserve original first date.
+INSERT INTO public.player_master_discoveries
+ (profile_id,mentor_id,discovered_at,discovery_method,discovery_metadata)
+SELECT sessions.profile_id,sessions.mentor_id,min(sessions.session_date),
+       'admin_grant',jsonb_build_object(
+         'source','verified_prior_mentor_session','restored_on','2026-10-18'
+       )
+FROM public.player_mentor_sessions sessions
+JOIN public.profiles p ON p.id=sessions.profile_id
+JOIN public.education_mentors mentors ON mentors.id=sessions.mentor_id
+GROUP BY sessions.profile_id,sessions.mentor_id
+ON CONFLICT (profile_id,mentor_id) DO NOTHING;
 
 DO $verify$
 BEGIN
@@ -95,4 +120,7 @@ BEGIN
  THEN RAISE EXCEPTION 'External video gate still enabled'; END IF;
  IF has_function_privilege('anon','public.discover_master(uuid,uuid,text,jsonb)','EXECUTE')
  THEN RAISE EXCEPTION 'Anon mentor discovery is incorrectly permitted'; END IF;
+ IF EXISTS (SELECT 1 FROM public.player_mentor_sessions sess WHERE NOT EXISTS (
+   SELECT 1 FROM public.player_master_discoveries d WHERE d.profile_id=sess.profile_id AND d.mentor_id=sess.mentor_id
+ )) THEN RAISE EXCEPTION 'Existing trained mentors must count as discovered'; END IF;
 END $verify$;
