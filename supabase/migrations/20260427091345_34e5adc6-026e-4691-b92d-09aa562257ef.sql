@@ -16,6 +16,78 @@ CREATE TABLE IF NOT EXISTS public.notifications (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- The September 2025 migration already created notifications, but with
+-- legacy `read` / `timestamp` columns and a five-value `type` CHECK.
+-- CREATE TABLE IF NOT EXISTS does not reconcile that older shape. Backfill
+-- the unified fields before indexing them or using the mirror trigger.
+-- Keep the legacy columns so old consumers and historical migrations continue
+-- working until they are migrated explicitly.
+ALTER TABLE public.notifications
+  ADD COLUMN IF NOT EXISTS profile_id uuid,
+  ADD COLUMN IF NOT EXISTS category text,
+  ADD COLUMN IF NOT EXISTS title text,
+  ADD COLUMN IF NOT EXISTS action_path text,
+  ADD COLUMN IF NOT EXISTS metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  ADD COLUMN IF NOT EXISTS read_at timestamptz,
+  ADD COLUMN IF NOT EXISTS created_at timestamptz;
+
+DO $notification_legacy_compat$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='notifications'
+      AND column_name='timestamp'
+  ) THEN
+    UPDATE public.notifications
+      SET created_at = "timestamp"
+    WHERE created_at IS NULL;
+  END IF;
+
+  UPDATE public.notifications
+    SET created_at = now()
+  WHERE created_at IS NULL;
+
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='notifications'
+      AND column_name='read'
+  ) THEN
+    -- The old schema tracks only a read Boolean, not when it was read.
+    -- Use its original creation date as a conservative approximate read_at.
+    UPDATE public.notifications
+      SET read_at = created_at
+    WHERE "read" IS TRUE AND read_at IS NULL;
+  END IF;
+
+  UPDATE public.notifications
+    SET category = COALESCE(NULLIF(type,''), 'legacy')
+  WHERE category IS NULL;
+
+  UPDATE public.notifications
+    SET title = initcap(replace(COALESCE(NULLIF(type,''),'notification'), '_', ' '))
+  WHERE title IS NULL;
+
+  -- The unified mirror helper writes values such as info, offer and success.
+  -- The 2025 CHECK accepted only five legacy enum-like values; replace only
+  -- that known legacy CHECK, without removing any unknown constraints.
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid='public.notifications'::regclass
+      AND conname='notifications_type_check'
+      AND contype='c'
+      AND pg_get_constraintdef(oid) LIKE '%gig_invite%'
+  ) THEN
+    ALTER TABLE public.notifications DROP CONSTRAINT notifications_type_check;
+  END IF;
+END $notification_legacy_compat$;
+
+ALTER TABLE public.notifications
+  ALTER COLUMN created_at SET DEFAULT now(),
+  ALTER COLUMN created_at SET NOT NULL,
+  ALTER COLUMN category SET NOT NULL,
+  ALTER COLUMN title SET NOT NULL,
+  ALTER COLUMN type SET DEFAULT 'info';
+
 CREATE INDEX IF NOT EXISTS idx_notifications_user_created
   ON public.notifications(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_notifications_profile_created
@@ -25,17 +97,28 @@ CREATE INDEX IF NOT EXISTS idx_notifications_unread
 
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
+-- Replace both legacy and unified policy names idempotently. The old
+-- client INSERT policy is intentionally retired: notifications are now
+-- created by trusted server-side triggers/RPCs.
+DROP POLICY IF EXISTS "Users can view their notifications" ON public.notifications;
+DROP POLICY IF EXISTS "Users can insert their notifications" ON public.notifications;
+DROP POLICY IF EXISTS "Users can update their notifications" ON public.notifications;
+DROP POLICY IF EXISTS "Users view their notifications" ON public.notifications;
+DROP POLICY IF EXISTS "Users update their notifications" ON public.notifications;
+DROP POLICY IF EXISTS "Users delete their notifications" ON public.notifications;
+
 CREATE POLICY "Users view their notifications"
-  ON public.notifications FOR SELECT
-  USING (auth.uid() = user_id);
+  ON public.notifications FOR SELECT TO authenticated
+  USING ((SELECT auth.uid()) = user_id);
 
 CREATE POLICY "Users update their notifications"
-  ON public.notifications FOR UPDATE
-  USING (auth.uid() = user_id);
+  ON public.notifications FOR UPDATE TO authenticated
+  USING ((SELECT auth.uid()) = user_id)
+  WITH CHECK ((SELECT auth.uid()) = user_id);
 
 CREATE POLICY "Users delete their notifications"
-  ON public.notifications FOR DELETE
-  USING (auth.uid() = user_id);
+  ON public.notifications FOR DELETE TO authenticated
+  USING ((SELECT auth.uid()) = user_id);
 
 -- Service role / triggers can insert (no insert policy = blocked for clients; triggers run as definer)
 
