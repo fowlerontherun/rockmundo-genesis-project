@@ -19,3 +19,24 @@ export function formatDjTime(seconds: number): string {
   const total = Math.max(0, Math.floor(Number.isFinite(seconds) ? seconds : 0));
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
 }
+
+/**
+ * Fingerprint only the playable media identity, not mutable catalogue metadata
+ * (title, genre, BPM, sharing display state). A harmless catalogue refresh
+ * must not pause an actively playing deck.
+ */
+export function deckAudioSourceKey(track: {
+  id: string;
+  sourceId: string;
+  audioUrl: string | null;
+  storagePath: string | null;
+} | null): string {
+  return track
+    ? JSON.stringify([track.id, track.sourceId, track.audioUrl, track.storagePath])
+    : "unloaded";
+}
+
+/** The verified live-mix API takes tempo as a percentage, not a rate. */
+export function deckRatePercent(rate: number): number {
+  return Math.round(clampDeckRate(rate) * 100);
+}
