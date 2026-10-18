@@ -336,7 +336,7 @@ const NightClubDetail = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <History className="h-5 w-5 text-primary" /> DJ Performance History
+              <History className="h-5 w-5 text-primary" /> DJ Performance History (last 10)
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -344,19 +344,19 @@ const NightClubDetail = () => {
             <div className="grid grid-cols-4 gap-2">
               <div className="rounded-md border border-border p-2 text-center">
                 <div className="text-lg font-bold">{djStats.recentSets}</div>
-                <div className="text-[10px] text-muted-foreground">Sets</div>
+                <div className="text-[10px] text-muted-foreground">Recent sets</div>
               </div>
               <div className="rounded-md border border-border p-2 text-center">
                 <div className={`text-lg font-bold ${getScoreColor(djStats.avgScore)}`}>{djStats.avgScore}</div>
-                <div className="text-[10px] text-muted-foreground">Avg Score</div>
+                <div className="text-[10px] text-muted-foreground">Recent avg score</div>
               </div>
               <div className="rounded-md border border-border p-2 text-center">
                 <div className="text-lg font-bold text-green-400">${djStats.totalEarnings}</div>
-                <div className="text-[10px] text-muted-foreground">Earned</div>
+                <div className="text-[10px] text-muted-foreground">Recent earnings</div>
               </div>
               <div className="rounded-md border border-border p-2 text-center">
                 <div className="text-lg font-bold text-yellow-400">+{djStats.totalFame}</div>
-                <div className="text-[10px] text-muted-foreground">Fame</div>
+                <div className="text-[10px] text-muted-foreground">Recent fame</div>
               </div>
             </div>
 
