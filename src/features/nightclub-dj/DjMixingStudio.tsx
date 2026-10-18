@@ -28,6 +28,9 @@ function AudioDeck({
 }) {
   const track = tracks.find((entry) => entry.id === selectedId) ?? null;
   const audioSourceKey = deckAudioSourceKey(track);
+  // The effect depends on the source signature, not every catalogue metadata refresh.
+  const playableTrackRef = useRef(track);
+  playableTrackRef.current = track;
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -56,9 +59,10 @@ function AudioDeck({
     setCue(0);
     setError(null);
     setLoading(false);
-    if (!track) return;
+    const playableTrack = playableTrackRef.current;
+    if (!playableTrack) return;
     setLoading(true);
-    getDjPlaybackUrl(track).then((url) => {
+    getDjPlaybackUrl(playableTrack).then((url) => {
       if (cancelled) return;
       player.src = url;
       player.load();
