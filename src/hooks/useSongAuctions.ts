@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { cancelSongMarketplaceListing } from "@/lib/marketplace/cancelSongMarketplaceListing";
 
 export interface MarketplaceListing {
   id: string;
@@ -292,15 +293,7 @@ export const useSongAuctions = (userId?: string) => {
 
   // Cancel a listing
   const cancelListing = useMutation({
-    mutationFn: async (listingId: string) => {
-      const { error } = await supabase
-        .from("marketplace_listings")
-        .update({ listing_status: "cancelled", updated_at: new Date().toISOString() })
-        .eq("id", listingId)
-        .eq("seller_user_id", userId!);
-
-      if (error) throw error;
-    },
+    mutationFn: cancelSongMarketplaceListing,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["song-market-my-listings"] });
       queryClient.invalidateQueries({ queryKey: ["song-market-browse"] });

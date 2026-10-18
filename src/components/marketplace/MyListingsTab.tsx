@@ -62,8 +62,8 @@ export const MyListingsTab = ({ userId }: MyListingsTabProps) => {
                     {listing.song?.genre || "Unknown Genre"}
                   </p>
                 </div>
-                <Badge variant={listing.status === "active" ? "default" : "secondary"}>
-                  {listing.status}
+                <Badge variant={listing.listing_status === "active" ? "default" : "secondary"}>
+                  {listing.listing_status}
                 </Badge>
               </div>
             </CardHeader>
@@ -72,15 +72,15 @@ export const MyListingsTab = ({ userId }: MyListingsTabProps) => {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
                 <span>
                   {listing.listing_type === "fixed_price" 
-                    ? `$${listing.price?.toLocaleString()}` 
-                    : `Starting: $${listing.starting_bid?.toLocaleString()}`}
+                    ? `$${listing.asking_price?.toLocaleString()}` 
+                    : `Starting: $${listing.asking_price?.toLocaleString()}`}
                 </span>
               </div>
 
-              {listing.listing_type === "auction" && listing.auction_end_date && (
+              {listing.listing_type === "auction" && listing.expires_at && (
                 <div className="flex items-center gap-2 text-sm">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>{formatTimeRemaining(listing.auction_end_date)} remaining</span>
+                  <span>{formatTimeRemaining(listing.expires_at)} remaining</span>
                 </div>
               )}
 
@@ -91,7 +91,7 @@ export const MyListingsTab = ({ userId }: MyListingsTabProps) => {
                 </div>
               )}
 
-              {listing.status === "active" && (
+              {listing.listing_status === "active" && (
                 <Button
                   variant="destructive"
                   size="sm"
