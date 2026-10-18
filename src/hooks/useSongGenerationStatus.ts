@@ -62,7 +62,7 @@ export function useSongGenerationStatus(songId: string | null) {
 
   // Check for timeout on the client side
   useEffect(() => {
-    if (query.data?.audio_generation_status === 'generating' && queueState !== 'queued' && queueState !== 'dispatching' && queueState !== 'needs_review' && query.data?.audio_generation_started_at) {
+    if (query.data?.audio_generation_status === 'generating' && queueState !== 'queued' && queueState !== 'dispatching' && queueState !== 'needs_review' && queueState !== 'submitted' && query.data?.audio_generation_started_at) {
       const startedAt = new Date(queue.data?.submitted_at || query.data.audio_generation_started_at).getTime();
       const now = Date.now();
       const retryTimeout = 15 * 60 * 1000;
@@ -80,7 +80,7 @@ export function useSongGenerationStatus(songId: string | null) {
   const hasAudio = !!query.data?.audio_url;
 
   // Check if timed out
-  const isTimedOut = isGenerating && queueState !== "queued" && queueState !== "dispatching" && queueState !== "needs_review" &&
+  const isTimedOut = isGenerating && queueState !== "queued" && queueState !== "dispatching" && queueState !== "needs_review" && queueState !== "submitted" &&
     query.data?.audio_generation_started_at &&
     (Date.now() - new Date(queue.data?.submitted_at || query.data.audio_generation_started_at).getTime() > 15 * 60 * 1000);
 
