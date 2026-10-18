@@ -25,7 +25,7 @@ import {
   getUniversityQualityBand,
   normalizeUniversityRating,
 } from "@/lib/universityBalance";
-import { isHigherTierSkill, useSkillTierAccess } from "../hooks/useSkillTierAccess";
+import { isEducationSkillVisible, useSkillTierAccess } from "../hooks/useSkillTierAccess";
 
 interface University {
   id: string;
@@ -110,7 +110,6 @@ export const UniversityTab = () => {
   const [searchQuery, setSearchQuery] = useState(() => new URLSearchParams(window.location.search).get("skill") ?? "");
   const [selectedCity, setSelectedCity] = useState<string>("current");
   const [selectedCategory, setSelectedCategory] = useState<SkillCategory>("all");
-  const [hideLockedCourses, setHideLockedCourses] = useState(true);
   const [viewMode, setViewMode] = useState<"universities" | "courses">("universities");
 
   // Fetch profile with current city
@@ -328,9 +327,7 @@ export const UniversityTab = () => {
     let result = courses;
     if (selectedCity === "current" && !currentCityName) return [];
 
-    if (hideLockedCourses) {
-      result = result.filter(c => !isHigherTierSkill(c.skill_slug) || accessBySkill.get(c.skill_slug) === true);
-    }
+    result = result.filter(c => isEducationSkillVisible(c.skill_slug, accessBySkill));
 
     // Filter by city
     if (filterCity) {
@@ -360,7 +357,7 @@ export const UniversityTab = () => {
     }
     
     return result;
-  }, [courses, selectedCity, currentCityName, filterCity, searchQuery, selectedCategory, hideLockedCourses, accessBySkill]);
+  }, [courses, selectedCity, currentCityName, filterCity, searchQuery, selectedCategory, accessBySkill]);
 
   // Group filtered universities by city
   const groupedUniversities = useMemo(() => {
@@ -380,9 +377,7 @@ export const UniversityTab = () => {
     const counts: Record<string, number> = {};
     let cityFiltered = courses;
     if (selectedCity === "current" && !currentCityName) return {};
-    if (hideLockedCourses) {
-      cityFiltered = cityFiltered.filter(c => !isHigherTierSkill(c.skill_slug) || accessBySkill.get(c.skill_slug) === true);
-    }
+    cityFiltered = cityFiltered.filter(c => isEducationSkillVisible(c.skill_slug, accessBySkill));
     if (filterCity) {
       cityFiltered = cityFiltered.filter(c => c.universities?.city === filterCity);
     }
@@ -391,7 +386,7 @@ export const UniversityTab = () => {
       counts[cat] = (counts[cat] || 0) + 1;
     }
     return counts;
-  }, [courses, selectedCity, currentCityName, filterCity, hideLockedCourses, accessBySkill]);
+  }, [courses, selectedCity, currentCityName, filterCity, accessBySkill]);
 
   const hasActiveFilters = searchQuery.trim() || selectedCity !== "current" || selectedCategory !== "all";
 
@@ -466,12 +461,7 @@ export const UniversityTab = () => {
           </Select>
         </div>
 
-        {viewMode === "courses" && (
-          <Button variant={hideLockedCourses ? "secondary" : "outline"} size="sm" className="w-fit gap-2" onClick={() => setHideLockedCourses(v => !v)} aria-pressed={hideLockedCourses}>
-            <Lock className="h-4 w-4" />
-            {hideLockedCourses ? "Hide locked courses: On" : "Hide locked courses: Off"}
-          </Button>
-        )}
+        {/* Higher-tier courses are never offered before unlock. */}
 
         {/* Category filter chips — only show in courses view */}
         {viewMode === "courses" && (
@@ -664,13 +654,13 @@ export const UniversityTab = () => {
                 {filteredCourses
                   .slice()
                   .sort((a, b) => {
-                    const aLocked = isHigherTierSkill(a.skill_slug) && accessBySkill.get(a.skill_slug) !== true;
-                    const bLocked = isHigherTierSkill(b.skill_slug) && accessBySkill.get(b.skill_slug) !== true;
+                    const aLocked = !isEducationSkillVisible(a.skill_slug, accessBySkill);
+                    const bLocked = !isEducationSkillVisible(b.skill_slug, accessBySkill);
                     return Number(aLocked) - Number(bLocked) || a.name.localeCompare(b.name);
                   })
                   .slice(0, 50)
                   .map((course) => {
-                  const locked = isHigherTierSkill(course.skill_slug) && accessBySkill.get(course.skill_slug) !== true;
+                  const locked = !isEducationSkillVisible(course.skill_slug, accessBySkill);
                   const effectivePrice = calculateUniversityCoursePrice(
                     course.base_price,
                     course.universities?.course_cost_modifier,
