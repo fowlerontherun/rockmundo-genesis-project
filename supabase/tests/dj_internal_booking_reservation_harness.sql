@@ -47,6 +47,19 @@ BEGIN
         AND g.scheduled_date < v_start+interval '3 hours'
         AND COALESCE(g.scheduled_end,g.scheduled_date+interval '2 hours')>v_start
     )
+    AND EXISTS (SELECT 1 FROM public.player_travel_history t WHERE t.profile_id=p.id)
+    AND EXISTS (SELECT 1 FROM public.recording_sessions r WHERE r.profile_id=p.id)
+    AND EXISTS (SELECT 1 FROM public.profile_activity_statuses a WHERE a.profile_id=p.id)
+    AND EXISTS (
+      SELECT 1 FROM public.band_rehearsals r JOIN public.band_members bm ON bm.band_id=r.band_id
+      WHERE bm.profile_id=p.id AND bm.member_status='active'
+    )
+    AND EXISTS (
+      SELECT 1 FROM public.tour_travel_legs leg
+      JOIN public.tours tour ON tour.id=leg.tour_id
+      JOIN public.band_members bm ON bm.band_id=tour.band_id
+      WHERE bm.profile_id=p.id AND bm.member_status='active' AND coalesce(bm.travels_with_band,true)
+    )
   LIMIT 1;
 
   IF v_actor IS NULL THEN
@@ -82,6 +95,68 @@ BEGIN
 
   IF (SELECT count(*) FROM public.dj_bookings WHERE id=v_booking)<>1
   THEN RAISE EXCEPTION 'Missing unique reservation row'; END IF;
+
+
+  -- Source-of-truth systems also must reject bookings created *after*
+  -- a DJ reservation, even if they have no Schedule mirror.
+  BEGIN
+    INSERT INTO public.player_travel_history(
+      user_id,profile_id,to_city_id,transport_type,cost_paid,travel_duration_hours,
+      departure_time,scheduled_departure_time,arrival_time,status
+    ) VALUES (
+      v_actor,v_profile,(SELECT city_id FROM public.city_night_clubs WHERE id=v_club),
+      'train',0,1,v_start+interval '5 minutes',v_start+interval '5 minutes',
+      v_start+interval '50 minutes','scheduled'
+    );
+    RAISE EXCEPTION 'SECURITY FAILURE: personal travel was booked over DJ set';
+  EXCEPTION WHEN exclusion_violation THEN NULL;
+  END;
+
+  BEGIN
+    UPDATE public.recording_sessions SET
+      status='scheduled',scheduled_start=v_start+interval '5 minutes',
+      scheduled_end=v_start+interval '40 minutes'
+    WHERE id=(SELECT r.id FROM public.recording_sessions r
+      WHERE r.profile_id=v_profile LIMIT 1);
+    RAISE EXCEPTION 'SECURITY FAILURE: recording was booked over DJ set';
+  EXCEPTION WHEN exclusion_violation THEN NULL;
+  END;
+
+  BEGIN
+    UPDATE public.profile_activity_statuses SET
+      status='active',activity_type='work_shift',
+      started_at=v_start+interval '5 minutes',
+      ends_at=v_start+interval '45 minutes'
+    WHERE id=(SELECT a.id FROM public.profile_activity_statuses a
+      WHERE a.profile_id=v_profile LIMIT 1);
+    RAISE EXCEPTION 'SECURITY FAILURE: work shift was booked over DJ set';
+  EXCEPTION WHEN exclusion_violation THEN NULL;
+  END;
+
+  BEGIN
+    UPDATE public.band_rehearsals SET status='scheduled',
+      scheduled_start=v_start+interval '5 minutes',
+      scheduled_end=v_start+interval '40 minutes'
+    WHERE id=(SELECT r.id FROM public.band_rehearsals r
+      JOIN public.band_members bm ON bm.band_id=r.band_id
+      WHERE bm.profile_id=v_profile AND bm.member_status='active' LIMIT 1);
+    RAISE EXCEPTION 'SECURITY FAILURE: band rehearsal was booked over DJ set';
+  EXCEPTION WHEN exclusion_violation THEN NULL;
+  END;
+
+  BEGIN
+    UPDATE public.tour_travel_legs SET
+      status='scheduled',departure_date=v_start+interval '5 minutes',
+      arrival_date=v_start+interval '45 minutes'
+    WHERE id=(SELECT leg.id FROM public.tour_travel_legs leg
+      JOIN public.tours tour ON tour.id=leg.tour_id
+      JOIN public.band_members bm ON bm.band_id=tour.band_id
+      WHERE bm.profile_id=v_profile AND bm.member_status='active'
+        AND coalesce(bm.travels_with_band,true)
+      LIMIT 1);
+    RAISE EXCEPTION 'SECURITY FAILURE: band tour leg was booked over DJ set';
+  EXCEPTION WHEN exclusion_violation THEN NULL;
+  END;
 
   -- Booking insert must atomically create exactly one canonical DJ calendar row.
   IF (SELECT count(*) FROM public.player_scheduled_activities
