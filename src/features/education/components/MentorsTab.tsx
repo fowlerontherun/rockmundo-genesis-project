@@ -99,6 +99,7 @@ export const MentorsTab = () => {
 
       {!profile && <p role="status" className="text-sm text-muted-foreground">Select a character to discover mentors and train with them.</p>}
       {mentorsLoading && <p role="status" className="text-sm text-muted-foreground">Loading mentors...</p>}
+      {tierAccess.isLoading && !mentorsLoading && <p role="status" className="text-sm text-muted-foreground">Checking which mentor skills you can unlock...</p>}
       {mentorsError && <div role="alert" className="rounded border border-destructive p-3 text-sm">Could not load mentors: {mentorsLoadError instanceof Error ? mentorsLoadError.message : "Unknown error"}. <Button variant="outline" size="sm" onClick={() => void retryMentors()}>Retry</Button></div>}
       {discoveriesError && <div role="alert" className="rounded border border-destructive p-3 text-sm">Could not verify which mentors you have discovered. <Button variant="outline" size="sm" onClick={() => void retryDiscoveries()}>Retry</Button></div>}
       {tierAccess.isError && <p role="alert" className="text-sm text-destructive">Skill access could not be verified. Refresh to retry.</p>}
@@ -178,7 +179,7 @@ export const MentorsTab = () => {
                       <div className="flex items-center gap-2">
                         <Calendar className={`h-4 w-4 ${availableDay ? 'text-primary' : 'text-warning'}`} />
                         <span className={availableDay ? 'text-primary' : 'text-warning'}>
-                          {getDayName(mentor.available_day)}s
+                          {mentor.available_day == null ? "Any day" : `${getDayName(mentor.available_day)}s`}
                         </span>
                       </div>
                     </div>
