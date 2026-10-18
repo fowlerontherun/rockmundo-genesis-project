@@ -20,6 +20,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
+import { AvatarShareStudio } from "@/features/shareable-moments/CharacterShareStudio";
 import type { ShareMoment } from "@/features/shareable-moments/types";
 
 export default function BandProfile() {
@@ -469,7 +470,9 @@ export default function BandProfile() {
       )}
 
       <BandSongsSection bandId={band.id} bandName={band.name} />
-      <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(open) => { if (!open) setShareMoment(null); }} />
+      {shareMoment && profileId && band.band_members?.some(member => member.profile_id === profileId)
+        ? <AvatarShareStudio moment={shareMoment} open={true} onOpenChange={(open) => { if (!open) setShareMoment(null); }} />
+        : <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(open) => { if (!open) setShareMoment(null); }} />}
     </FMPageScaffold>
   );
 }
