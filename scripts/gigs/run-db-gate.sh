@@ -14,3 +14,4 @@ psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/sponsorship_type_migratio
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/behavior_settings_profile_uniqueness.sql
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/politics_university_canonical_seed.sql
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/unified_notifications_legacy_compat.sql
+psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/equipment_purchase_result_signature_compat.sql
