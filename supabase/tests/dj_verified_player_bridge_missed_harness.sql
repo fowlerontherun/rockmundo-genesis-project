@@ -51,6 +51,8 @@ BEGIN
   'public.dj_verified_player_action_service(uuid,text,uuid,uuid,uuid,timestamptz,uuid,uuid)','EXECUTE')
  OR has_function_privilege(current_user,
   'public.mark_dj_booking_missed_internal(uuid)','EXECUTE')
+ OR has_function_privilege(current_user,
+  'public.process_missed_dj_bookings_internal(integer)','EXECUTE')
  THEN RAISE EXCEPTION 'SECURITY FAILURE: normal user can invoke service-only DJ actions'; END IF;
 END $negative$;
 RESET ROLE;
@@ -112,9 +114,14 @@ BEGIN
  EXCEPTION WHEN invalid_parameter_value THEN NULL;
  END;
 
- IF private.dj_mark_missed_at(v_id,v_end+interval '11 minutes')<>v_id
- OR private.dj_mark_missed_at(v_id,v_end+interval '15 minutes')<>v_id
- THEN RAISE EXCEPTION 'Missed status not idempotent'; END IF;
+ -- Production pg_cron uses the same worker with the true server clock.
+ -- Test the owner-only effective-time worker with a simulated future end.
+ IF private.dj_process_missed_at(v_end+interval '11 minutes',50)<>1
+ THEN RAISE EXCEPTION 'Missed sweeper did not process overdue DJ booking'; END IF;
+ IF private.dj_process_missed_at(v_end+interval '11 minutes',50)<>0
+ THEN RAISE EXCEPTION 'Missed sweeper processed booking more than once'; END IF;
+ IF private.dj_mark_missed_at(v_id,v_end+interval '15 minutes')<>v_id
+ THEN RAISE EXCEPTION 'Missed direct retry was not idempotent'; END IF;
 
  IF (SELECT status FROM public.dj_bookings WHERE id=v_id)<>'missed'
  OR (SELECT status FROM public.player_scheduled_activities
