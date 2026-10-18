@@ -18,7 +18,7 @@ describe("fictional PooTube admin form", () => {
     const payload = mapResourceFormToPayload(form);
     expect(payload.title).toBe("Singing: Breath Control");
     expect(payload.skill_slug).toBe("basic_singing");
-    expect(payload.category).toBe("pooutube_originals");
+    expect(payload.category).toBe("pootube_originals");
     expect("video_url" in payload).toBe(false);
   });
 
