@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Disc3, Mic2, Users, Sparkles, Loader2, Trophy, MessageCircle, Crown, History, UserPlus, Building2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +21,7 @@ import { NightClubDrinkMenu } from "@/components/nightclub/NightClubDrinkMenu";
 import { NPCDialoguePanel } from "@/components/nightclub/NPCDialoguePanel";
 import { NightlifeStanceSelector } from "@/components/nightclub/NightlifeStanceSelector";
 import type { NightlifeStance } from "@/utils/nightlifeRiskLayer";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ClubEventsSection } from "@/components/nightclub/ClubEventsSection";
 import { VipLoungeSection } from "@/components/nightclub/VipLoungeSection";
 import { useOwnedNightclubs } from "@/hooks/useNightclubOwnership";
@@ -55,6 +55,10 @@ const NightClubDetail = () => {
   const navigate = useNavigate();
   const { profileId } = useActiveProfile();
   const gameData = useOptionalGameData();
+  const queryClient = useQueryClient();
+  // Retain each request key across ambiguous network failures so retries
+  // can never charge the same attempted drink twice.
+  const pendingDrinkRequests = useRef(new Map<string, string>());
   const profileUserId = gameData?.profile?.user_id ?? null;
   const [club, setClub] = useState<CityNightClub | null>(null);
   const [cityName, setCityName] = useState<string>("");
@@ -141,29 +145,58 @@ const NightClubDetail = () => {
   }, [clubId]);
 
   const handleBuyDrink = async (drink: NightClubDrink) => {
-    if (!profileId || !drink.price || !clubId) return;
+    if (!profileId || !clubId || buyingDrinkId) return;
+    const key = `${profileId}:${clubId}:${drink.id}`;
+    const requestId = pendingDrinkRequests.current.get(key) ?? crypto.randomUUID();
+    pendingDrinkRequests.current.set(key, requestId);
     setBuyingDrinkId(drink.id);
     try {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("cash, energy")
-        .eq("id", profileId)
-        .single();
-      if (!profile) throw new Error("Profile not found");
-      if ((profile.cash ?? 0) < drink.price) {
-        toast.error(`Need $${drink.price} for ${drink.name}`);
-        return;
+      // The server checks ownership, location, live menu price and optional
+      // stock, then debits cash, awards energy and journals atomically.
+      // This RPC is added by the production-applied nightclub checkout migration.
+      const { data, error } = await supabase.rpc("purchase_nightclub_drink" as never, {
+        p_profile_id: profileId,
+        p_club_id: clubId,
+        p_drink_id: drink.id,
+        p_request_id: requestId,
+      } as never);
+      if (error) throw error;
+      const result = data as {
+        purchase_id?: string;
+        drink_name?: string;
+        cash_spent?: number;
+        energy_gained?: number;
+      } | null;
+      if (!result || result.purchase_id !== requestId
+        || typeof result.cash_spent !== "number"
+        || typeof result.energy_gained !== "number") {
+        throw new Error("The drink purchase was not confirmed by the server");
       }
-      await supabase
-        .from("profiles")
-        .update({
-          cash: Math.max(0, (profile.cash ?? 0) - drink.price),
-          energy: Math.min(100, (profile.energy ?? 0) + 5),
-        })
-        .eq("id", profileId);
-      toast.success(`🍸 ${drink.name} — ${drink.effect || "+5 energy"}`);
-    } catch (err: any) {
-      toast.error(err.message);
+      pendingDrinkRequests.current.delete(key);
+      toast.success(`🍸 ${result.drink_name ?? drink.name} — $${result.cash_spent} spent, +${result.energy_gained} energy`);
+      // Refresh is best-effort after an authoritative committed purchase.
+      // A cache/network refresh failure must not show a false payment failure.
+      try {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["profile"] }),
+          queryClient.invalidateQueries({ queryKey: ["active-profile"] }),
+          queryClient.invalidateQueries({ queryKey: ["player-financial-accounts"] }),
+        ]);
+        await gameData?.refetch();
+        // Re-read the live menu so limited-stock drinks are correctly displayed.
+        const { data: refreshedClub } = await supabase
+          .from("city_night_clubs")
+          .select("*")
+          .eq("id", clubId)
+          .maybeSingle();
+        if (refreshedClub) setClub(normalizeNightClubRecord(refreshedClub as unknown as Record<string, unknown>));
+      } catch {
+        // The purchase receipt already confirms success; UI catches up on refocus.
+      }
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Nightclub purchase failed");
+      // Keep the request key: a payment may have committed before a lost reply.
+      // Retrying will return the same receipt instead of charging twice.
     } finally {
       setBuyingDrinkId(null);
     }
@@ -433,7 +466,7 @@ const NightClubDetail = () => {
             <NightClubDrinkMenu
               drinks={club.drinkMenu}
               onBuyDrink={handleBuyDrink}
-              disabled={busy}
+              disabled={busy || buyingDrinkId !== null}
               buyingId={buyingDrinkId}
             />
           </CardContent>
