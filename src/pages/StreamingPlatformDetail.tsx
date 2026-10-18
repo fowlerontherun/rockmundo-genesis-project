@@ -20,7 +20,7 @@ const StreamingPlatformDetail = () => {
   const navigate = useNavigate();
   const { profile } = useGameData();
   const userId = profile?.user_id;
-  const { releases } = useStreaming(userId || "");
+  const { releases, releasesLoading, releasesError, releasesErrorDetail, refetchReleases } = useStreaming(userId || "");
 
   const { data: platform, isLoading } = useQuery<any>({
     queryKey: ["streaming-platform", platformId],
@@ -199,7 +199,16 @@ const StreamingPlatformDetail = () => {
               <CardDescription>Your songs distributed to this platform</CardDescription>
             </CardHeader>
             <CardContent>
-              {platformReleases.length === 0 ? (
+              {releasesLoading ? (
+                <p className="py-8 text-sm text-center text-muted-foreground">Loading your releases...</p>
+              ) : releasesError ? (
+                <div role="alert" className="space-y-3 py-6 text-center">
+                  <p className="text-sm text-destructive">Could not load your streaming releases: {releasesErrorDetail instanceof Error ? releasesErrorDetail.message : "Please try again."}</p>
+                  <Button variant="outline" onClick={() => { void refetchReleases(); }}>Retry releases</Button>
+                </div>
+              ) : !userId ? (
+                <p className="py-8 text-sm text-center text-muted-foreground">Select an active character to see your releases.</p>
+              ) : platformReleases.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <Music className="h-12 w-12 text-muted-foreground/50 mb-4" />
                   <p className="text-lg font-medium">No Releases Yet</p>
