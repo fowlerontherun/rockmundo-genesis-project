@@ -406,7 +406,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
             </span>
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground">
-                {minutes}:{seconds.toString().padStart(2, '0')} / 15:00
+                {minutes}:{seconds.toString().padStart(2, '0')} / {queueState === "submitted" ? "30:00" : "15:00"}
               </span>
             </div>
           </AlertDescription>
