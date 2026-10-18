@@ -179,15 +179,16 @@ BEGIN
  IF NEW.profile_id IS NULL OR NEW.member_status::text <> 'active'
  THEN RETURN NEW; END IF;
 
- IF TG_OP='UPDATE'
-    AND OLD.profile_id IS NOT DISTINCT FROM NEW.profile_id
-    AND OLD.band_id IS NOT DISTINCT FROM NEW.band_id
-    AND OLD.member_status::text='active'
-    AND (
-      COALESCE(OLD.travels_with_band,true)
-      OR NOT COALESCE(NEW.travels_with_band,true)
-    )
- THEN RETURN NEW; END IF;
+ IF TG_OP='UPDATE' THEN
+   IF OLD.profile_id IS NOT DISTINCT FROM NEW.profile_id
+      AND OLD.band_id IS NOT DISTINCT FROM NEW.band_id
+      AND OLD.member_status::text='active'
+      AND (
+        COALESCE(OLD.travels_with_band,true)
+        OR NOT COALESCE(NEW.travels_with_band,true)
+      )
+   THEN RETURN NEW; END IF;
+ END IF;
 
  PERFORM pg_advisory_xact_lock(
    hashtext('dj:profile:'||NEW.profile_id::text)::bigint
