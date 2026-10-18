@@ -161,7 +161,6 @@ serve(async (req) => {
     // The original validated MP3 is retained in full, even above 90 seconds.
     // Bounded download still prevents oversized or malformed audio.
     const acceptedAudioBytes = audioBytes
-    const acceptedSeconds = actualSeconds
 
     const sanitizedTitle = (song?.title || 'song').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50)
     const timestamp = Date.now()
