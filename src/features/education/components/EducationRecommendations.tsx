@@ -7,7 +7,8 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
-import { useProfileSkillAvailability, useSkillCatalogue, useSkillCatalogueRelationships } from "@/hooks/useSkillCatalogue";
+import { useProfileSkillAvailability, useSkillCatalogueRelationships } from "@/hooks/useSkillCatalogue";
+import { useEducationSkillDefinitions } from "../hooks/useEducationSkillDefinitions";
 import { type LearningGoal, selectLearningRecommendations } from "../utils/educationRecommendations";
 import { formatEducationSkillName } from "../utils/educationUi";
 import { useSkillTierAccess } from "../hooks/useSkillTierAccess";
@@ -31,7 +32,7 @@ export const EducationRecommendations = ({ activeSkills }: { activeSkills?: stri
   const { profileId } = useActiveProfile();
   const { skillProgress } = useGameData();
   const [goal, setGoal] = useState<LearningGoal>("all");
-  const catalogue = useSkillCatalogue();
+  const catalogue = useEducationSkillDefinitions();
   const available = useProfileSkillAvailability(profileId);
   const { roleLinks } = useSkillCatalogueRelationships();
   const access = useSkillTierAccess(profileId, (catalogue.data ?? []).map((skill) => skill.slug));
