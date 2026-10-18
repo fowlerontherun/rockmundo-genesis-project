@@ -1,6 +1,8 @@
+import { useEffect, useMemo, useState } from "react";
 import { Calendar, Music, Star, Sparkles, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useGameCalendar } from "@/hooks/useGameCalendar";
+import { calculateInGameDate } from "@/utils/gameCalendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   useClubEvents,
@@ -17,10 +19,24 @@ interface ClubEventsSectionProps {
 export const ClubEventsSection = ({ clubId }: ClubEventsSectionProps) => {
   const { data: events = [], isLoading } = useClubEvents(clubId);
   const { data: calendar } = useGameCalendar();
+  // One game day lasts about eight real hours at the default pace. Refresh
+  // the displayed event even if the player leaves this club page open.
+  const [clockTick, setClockTick] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => setClockTick((tick) => tick + 1), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+  const currentGameDate = useMemo(() => calendar
+    ? calculateInGameDate(
+        undefined,
+        calendar.config?.real_world_days_per_game_year ?? 120,
+        calendar.config?.real_world_days_per_game_month ?? 10,
+      )
+    : null, [calendar, clockTick]);
 
   if (isLoading || events.length === 0) return null;
 
-  const tonightsEvent = getTonightsEvent(events, calendar);
+  const tonightsEvent = getTonightsEvent(events, currentGameDate);
   const upcomingEvents = events.filter((e) => e !== tonightsEvent);
 
   return (
