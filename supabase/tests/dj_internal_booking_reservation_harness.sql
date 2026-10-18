@@ -97,6 +97,28 @@ BEGIN
   EXCEPTION WHEN unique_violation THEN NULL;
   END;
 
+  -- Even a privileged booking writer may not insert/update outside
+  -- verified club-local hours. The trigger is a second defence beyond RPC.
+  IF public.dj_booking_inside_club_hours(
+     v_club,v_start + interval '12 hours',v_start + interval '13 hours')
+  THEN RAISE EXCEPTION 'Nightclub late-morning slot unexpectedly valid'; END IF;
+
+  BEGIN
+    PERFORM public.reserve_dj_booking_internal(
+      v_profile,v_club,v_set,v_start + interval '12 hours',gen_random_uuid());
+    RAISE EXCEPTION 'SECURITY FAILURE: after-hours reservation accepted';
+  EXCEPTION WHEN invalid_parameter_value THEN NULL;
+  END;
+
+  BEGIN
+    UPDATE public.dj_bookings SET
+      starts_at=v_start + interval '12 hours',
+      ends_at=v_start + interval '13 hours'
+    WHERE id=v_booking;
+    RAISE EXCEPTION 'SECURITY FAILURE: privileged after-hours update accepted';
+  EXCEPTION WHEN invalid_parameter_value THEN NULL;
+  END;
+
   PERFORM set_config('request.jwt.claim.sub',v_other::text,true);
   BEGIN
     PERFORM public.reserve_dj_booking_internal(
