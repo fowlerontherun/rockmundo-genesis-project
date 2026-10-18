@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { GigViewerReplay } from "../../events/types";
 import { derivePlaybackState, ReplayClock, sanitizedEvents, type PlaybackSpeed } from "../engine/PlaybackController";
-export function useGigReplayPlayback(replay: GigViewerReplay | null) { const clockRef = useRef<ReplayClock | null>(null); const [tickValue, setTick] = useState(0); const tick = useCallback(() => setTick((v) => v + 1), []); const [speed, setSpeedState] = useState<PlaybackSpeed>(1); const events = useMemo(() => sanitizedEvents(replay?.events), [replay]); if (replay && !clockRef.current) clockRef.current = new ReplayClock(replay.durationMs); useEffect(() => { if (!replay) return; clockRef.current = new ReplayClock(replay.durationMs); setTick((v) => v + 1); }, [replay?.id]); const state = useMemo(() => replay ? derivePlaybackState(replay, clockRef.current?.position() ?? 0, clockRef.current?.isPlaying() ?? false) : null, [replay, tickValue]); // The 3D canvas owns its animation loop. Keep React's timeline/UI updates
-// bounded so repeated seeks and playback don't saturate the browser main thread.
-export const UI_TICK_INTERVAL_MS = 50; // 20Hz; seek/play/restart still update immediately.
+// The 3D canvas owns its animation loop. React only needs a bounded
+// update cadence, keeping playback input responsive during rapid seeks.
+export const UI_TICK_INTERVAL_MS = 50;
 export const replayUiTickDue = (now: number, lastRenderAt: number) =>
   now - lastRenderAt >= UI_TICK_INTERVAL_MS;
-useEffect(() => {
+
+export function useGigReplayPlayback(replay: GigViewerReplay | null) { const clockRef = useRef<ReplayClock | null>(null); const [tickValue, setTick] = useState(0); const tick = useCallback(() => setTick((v) => v + 1), []); const [speed, setSpeedState] = useState<PlaybackSpeed>(1); const events = useMemo(() => sanitizedEvents(replay?.events), [replay]); if (replay && !clockRef.current) clockRef.current = new ReplayClock(replay.durationMs); useEffect(() => { if (!replay) return; clockRef.current = new ReplayClock(replay.durationMs); setTick((v) => v + 1); }, [replay?.id]); const state = useMemo(() => replay ? derivePlaybackState(replay, clockRef.current?.position() ?? 0, clockRef.current?.isPlaying() ?? false) : null, [replay, tickValue]); useEffect(() => {
   let raf = 0;
   let alive = true;
   let lastRenderAt = 0;
@@ -17,7 +18,7 @@ useEffect(() => {
       raf = 0;
       return;
     }
-    if (clockRef.current?.isPlaying() && now - lastRenderAt >= UI_TICK_INTERVAL_MS) {
+    if (clockRef.current?.isPlaying() && replayUiTickDue(now, lastRenderAt)) {
       lastRenderAt = now;
       setTick((v) => v + 1);
     }
