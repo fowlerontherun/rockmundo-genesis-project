@@ -265,8 +265,8 @@ serve(async (req) => {
     const hadOriginalLyrics = !!(originalSongLyrics?.trim() || originalProjectLyrics?.trim())
     const quality = song.quality_score || project?.quality_score || 50
     // In-game song duration is gameplay metadata, not the billable AI audio
-    // target. Produce a 60–90 second radio edit regardless of the song length.
-    const durationSeconds = 75
+    // target. Target a complete, longer source performance to avoid under-60s provider results; the webhook saves only 60–90 seconds.
+    const durationSeconds = 110
 
     // Extract from creative_brief if available
     const inspirationAnchor = creativeBrief?.inspirationAnchor || creativeBrief?.inspiration_anchor || null
@@ -412,7 +412,7 @@ serve(async (req) => {
     }
 
     // MiniMax uses comma-separated style description
-    const validatedStyle = normalizeMiniMaxStylePrompt([...styleParts, 'short radio edit, around 75 seconds'].join(', '), primaryGenre)
+    const validatedStyle = normalizeMiniMaxStylePrompt(['complete song around 110 seconds, recurring chorus, bridge and outro', ...styleParts].join(', '), primaryGenre)
     const stylePrompt = validatedStyle.prompt
     addLog(`MiniMax prompt: ${validatedStyle.finalLength} characters (required 10–300)`)
     if (validatedStyle.removedEmbeddedLyrics) addLog('Separated embedded Lyrics section from admin custom style prompt')
