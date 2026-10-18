@@ -29,6 +29,7 @@ import {
   normalizeUniversityRating,
 } from "@/lib/universityBalance";
 import { getEquivalentSkillLevel } from "@/lib/skillSlugAliases";
+import { isEducationSkillVisible, useSkillTierAccess } from "@/features/education/hooks/useSkillTierAccess";
 
 const formatClassWindowLabel = (startHour: number, endHour: number) => {
   const sanitizedStart = Math.min(Math.max(Math.floor(startHour), 0), 23);
@@ -98,7 +99,6 @@ export default function UniversityDetail() {
   const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [courseSearch, setCourseSearch] = useState("");
-  const [hideLockedCourses, setHideLockedCourses] = useState(true);
 
   const { data: university, isLoading: universityLoading, isError: universityError, refetch: retryUniversity } = useQuery({
     queryKey: ["university", id],
@@ -128,6 +128,9 @@ export default function UniversityDetail() {
     },
     enabled: !!id,
   });
+
+  const tierAccess = useSkillTierAccess(profileId, (courses ?? []).map((course) => course.skill_slug));
+  const accessBySkill = tierAccess.data ?? new Map<string, boolean>();
 
   const { data: courseEnrollmentCounts } = useQuery({
     queryKey: ["university_course_enrollment_counts", id],
@@ -709,16 +712,7 @@ export default function UniversityDetail() {
 
   const filteredCourses = (() => {
     if (!courses) return [];
-    let result = courses;
-    // Only hide courses when prerequisite data is ready; never mistake a loading state for a lock.
-    if (hideLockedCourses && !skillDefinitionsLoading && !skillParentLinksLoading &&
-        !skillDefinitionsError && !skillParentLinksError && skillDefinitions && skillParentLinks) {
-      result = result.filter(course => {
-        const prerequisite = getCoursePrerequisite(course);
-        return (!prerequisite || prerequisite.currentLevel >= prerequisite.requiredLevel) &&
-          getSkillLevel(course.skill_slug) >= course.required_skill_level;
-      });
-    }
+    let result = courses.filter((course) => isEducationSkillVisible(course.skill_slug, accessBySkill));
     if (courseSearch.trim()) {
       const q = courseSearch.toLowerCase();
       result = result.filter(c =>
@@ -740,10 +734,7 @@ export default function UniversityDetail() {
           className="pl-9"
         />
       </div>
-      <Button variant={hideLockedCourses ? "secondary" : "outline"} size="sm"
-        onClick={() => setHideLockedCourses(value => !value)} aria-pressed={hideLockedCourses}>
-        {hideLockedCourses ? "Hide locked courses: On" : "Hide locked courses: Off"}
-      </Button>
+      {tierAccess.isError && <p role="alert" className="text-sm text-destructive">Could not verify course eligibility. Refresh to retry.</p>}
       {courseSearch.trim() && (
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">
