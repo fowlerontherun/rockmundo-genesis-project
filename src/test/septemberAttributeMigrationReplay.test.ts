@@ -37,7 +37,7 @@ describe("September 2025 historical reset migration replay order", () => {
   it("creates the underlying table in the later September 18 migration", () => {
     const create = read("20250918075158_4a6d2968-3b91-4ba4-8192-a9a4ff3702ff.sql");
     expect(create).toContain("CREATE TABLE IF NOT EXISTS public.player_attributes");
-    expect("20250917154901").toBeLessThan("20250918075158");
+    expect(Number("20250917154901")).toBeLessThan(Number("20250918075158"));
   });
 
   it("retains subsequent deployed reset implementations after attributes exist", () => {
