@@ -15,6 +15,7 @@ import { useBookReading } from "@/hooks/useBookReading";
 import { useSkillTierAccess, isEducationSkillVisible } from "../hooks/useSkillTierAccess";
 import { formatEducationSkillName, percentComplete } from "../utils/educationUi";
 import { EducationRecommendations } from "./EducationRecommendations";
+import { visibleEducationActivities } from "../utils/educationActivityVisibility";
 
 export const EducationOverviewTab = () => {
   const { profileId } = useActiveProfile();
@@ -32,9 +33,9 @@ export const EducationOverviewTab = () => {
   ];
   const tierAccess = useSkillTierAccess(profileId, relevantSkillSlugs);
   const access = tierAccess.data ?? new Map<string, boolean>();
-  const visibleBooks = activeBooks.filter((book) => isEducationSkillVisible(book.skill_books?.skill_slug || "__unverified__", access));
-  const visibleEnrollments = activeEnrollments.filter((enrollment) => isEducationSkillVisible(enrollment.university_courses?.skill_slug || "__unverified__", access));
-  const visibleCompleted = completedEnrollments.filter((enrollment) => isEducationSkillVisible(enrollment.university_courses?.skill_slug || "__unverified__", access));
+  const visibleBooks = visibleEducationActivities(activeBooks, (book) => book.skill_books?.skill_slug, access);
+  const visibleEnrollments = visibleEducationActivities(activeEnrollments, (enrollment) => enrollment.university_courses?.skill_slug, access);
+  const visibleCompleted = visibleEducationActivities(completedEnrollments, (enrollment) => enrollment.university_courses?.skill_slug, access);
   const hiddenActiveCount = activeBooks.length + activeEnrollments.length - visibleBooks.length - visibleEnrollments.length;
 
   const skills = useMemo(() => {
