@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - 'src/features/education/**'
+      - 'src/mobile/**'
+      - 'src/App.tsx'
       - 'src/pages/Education.tsx'
       - 'src/pages/UniversityDetail.tsx'
       - 'src/pages/SkillsPage.tsx'
@@ -35,5 +37,7 @@ jobs:
         run: npm run typecheck
       - name: Education-focused unit tests
         run: npx vitest run src/features/education/utils/educationVisibility.test.ts src/features/education/utils/educationRecommendations.test.ts src/features/education/utils/educationSkillFocus.test.ts src/features/education/utils/educationSkillCaps.test.ts src/features/education/utils/educationDailyStatus.test.ts src/features/education/utils/educationMethodChoice.test.ts
+      - name: Mobile education and account navigation tests
+        run: npx vitest run src/mobile/routeBridge.test.ts src/mobile/routeRegistry.test.ts src/mobile/pages/MobileEducation.test.tsx src/mobile/shell/MobileShell.test.tsx src/mobile/shell/TopAppBar.test.tsx
       - name: Production bundle
         run: npm run build
