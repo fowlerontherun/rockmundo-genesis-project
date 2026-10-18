@@ -142,3 +142,38 @@ outside `player_scheduled_activities`), venue owner approval and structured
 opening-day calendars, booking UI, and server-authoritative start/completion
 and atomic rewards #4234. A cancelled appointment is still retained in
 history; it is not hard-deleted.
+
+## October 18: reject non-mirrored schedule conflicts
+
+Applied migration `20261018064510_dj_external_schedule_source_conflict_guard_20261018.sql`
+(ledger name `dj_external_schedule_source_conflict_guard_20261018`).
+
+Existing player Schedule assembles some entries directly from their source
+tables. A DJ booking that checked only `player_scheduled_activities`
+could therefore overlap real commitments. The new server-side
+`dj_external_schedule_conflict` function and DJ booking INSERT/UPDATE
+trigger also check:
+
+- Scheduled and active personal travel, plus band-tour travel legs.
+- Recording studio sessions and active band rehearsals.
+- Active shift/travel/recording/study activity-status rows.
+- Enrolled university courses with daily scheduled classes, using the
+  actual campus's IANA timezone and the student's enrolment date window.
+
+Missing/invalid active university-class timezones or class hours fail closed.
+The helper is not executable by `anon` or `authenticated`. This guard also
+checks direct privileged booking writes, not only the reservation RPC.
+
+**Verification:** `dj_external_schedule_conflicts_harness.sql`
+passed in a production transaction subsequently rolled back. It tests a
+future trip in `player_travel_history` and an active recurring university
+class in its campus timezone using real fixture records. The existing full
+reservation/calendar harness also passed after deploying this guard.
+
+**Remaining concurrency caveat:** this detects authoritative commitments
+present **when** a reservation is inserted or updated. Not all legacy
+travel/studio/university booking writers yet acquire the matching DJ
+advisory lock or check existing DJ reservations on their own writes.
+Before public enablement, update those writer paths or a shared booking
+service so future commitments cannot be made over an existing DJ slot.
+The private booking API stays locked to `service_role`.
