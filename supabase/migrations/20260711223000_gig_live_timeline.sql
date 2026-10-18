@@ -98,7 +98,8 @@ CREATE TABLE IF NOT EXISTS public.gig_live_decisions (
   incident_id uuid REFERENCES public.gig_live_incidents(id) ON DELETE SET NULL,
   decision_type text NOT NULL,
   selected_option text NOT NULL,
-  decided_by_player_id uuid REFERENCES public.profiles(user_id) ON DELETE SET NULL,
+  -- Records the signed-in account UUID (auth.uid()), not a character/profile id.
+  decided_by_player_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   decision_source text NOT NULL CHECK (decision_source IN ('player','delegated_staff','automatic_fallback','system')),
   requirements_snapshot jsonb NOT NULL DEFAULT '{}'::jsonb,
   outcome_snapshot jsonb NOT NULL DEFAULT '{}'::jsonb,
