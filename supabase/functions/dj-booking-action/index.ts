@@ -9,7 +9,7 @@ const headers = {
   "Cache-Control": "no-store",
 };
 
-type Action = "reserve" | "cancel" | "start" | "settle" | "missed";
+type Action = "reserve" | "cancel" | "start" | "settle" | "missed" | "mix_event";
 type Input = {
   action?: Action;
   profileId?: string;
@@ -18,6 +18,11 @@ type Input = {
   startsAt?: string;
   requestId?: string;
   bookingId?: string;
+  kind?: "deck_play" | "crossfade" | "tempo";
+  deck?: "A" | "B";
+  source?: "game" | "admin";
+  trackId?: string;
+  value?: number;
 };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const json = (body: Record<string, unknown>, status = 200) =>
@@ -55,7 +60,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const action = body?.action;
-  if (!action || !["reserve", "cancel", "start", "settle", "missed"].includes(action)) {
+  if (!action || !["reserve", "cancel", "start", "settle", "missed", "mix_event"].includes(action)) {
     return json({ error: "Unknown DJ booking action" }, 400);
   }
 
@@ -75,6 +80,45 @@ Deno.serve(async (req: Request) => {
     }
   } else if (!body.bookingId || !uuid.test(body.bookingId)) {
     return json({ error: "Valid DJ booking ID required" }, 400);
+  }
+
+  if (action === "mix_event") {
+    const kind = body.kind;
+    const valid =
+      (kind === "deck_play" && ["A", "B"].includes(body.deck ?? "") &&
+        ["game", "admin"].includes(body.source ?? "") &&
+        typeof body.trackId === "string" && uuid.test(body.trackId) &&
+        body.value === undefined) ||
+      (kind === "crossfade" && body.deck === undefined &&
+        body.source === undefined && body.trackId === undefined &&
+        typeof body.value === "number" && Number.isFinite(body.value) &&
+        body.value >= 0 && body.value <= 100) ||
+      (kind === "tempo" && ["A", "B"].includes(body.deck ?? "") &&
+        body.source === undefined && body.trackId === undefined &&
+        typeof body.value === "number" && Number.isFinite(body.value) &&
+        body.value >= 85 && body.value <= 115);
+    if (!valid) return json({ error: "Invalid live DJ mixer interaction" }, 400);
+    try {
+      const { data, error } = await admin.rpc("dj_verified_mix_event_service", {
+        p_actor_user_id: auth.user.id,
+        p_booking_id: body.bookingId,
+        p_kind: kind,
+        p_deck: body.deck ?? null,
+        p_source: body.source ?? null,
+        p_track_id: body.trackId ?? null,
+        p_value: body.value ?? null,
+      });
+      if (error) {
+        const expected = ["23P01", "22023", "42501"].includes(error.code || "");
+        return json({ error: expected ? error.message : "Unable to log DJ interaction" },
+          expected ? 409 : 500);
+      }
+      return typeof data === "string" && uuid.test(data)
+        ? json({ id: data, action })
+        : json({ error: "DJ mixer returned an invalid response" }, 500);
+    } catch {
+      return json({ error: "DJ mixer service failed" }, 500);
+    }
   }
 
   const params = {

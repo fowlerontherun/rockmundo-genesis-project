@@ -68,6 +68,7 @@ const NightClubDetail = () => {
   const [djOutcome, setDjOutcome] = useState<DjPerformanceOutcome | null>(null);
   const [showOutcome, setShowOutcome] = useState(false);
   const [showDjStudio, setShowDjStudio] = useState(false);
+  const [liveDjBookingId, setLiveDjBookingId] = useState<string | null>(null);
   const { data: reputation } = useClubReputation(clubId);
   const recordVisit = useRecordClubVisit();
 
@@ -303,14 +304,18 @@ const NightClubDetail = () => {
           <Button variant="outline" type="button" onClick={() => setShowDjStudio((value) => !value)}>
             {showDjStudio ? "Close mixing studio" : "Open mixing studio"}
           </Button>
-          {showDjStudio && <DjMixingStudio />}
+          {showDjStudio && <DjMixingStudio key={liveDjBookingId ?? "practice"} liveBookingId={liveDjBookingId ?? undefined} />}
         </CardContent>
       </Card>
 
       {/* Scheduled booking is hidden until BOTH the Edge server and client
           release flags are enabled. Existing instant sets remain unchanged. */}
       {profileId && clubId && (
-        <DjBookingPanel profileId={profileId} clubId={clubId} />
+        <DjBookingPanel profileId={profileId} clubId={clubId}
+          onLiveBooking={(bookingId) => {
+            setLiveDjBookingId(bookingId);
+            if (bookingId) setShowDjStudio(true);
+          }} />
       )}
 
       {/* Club Events */}

@@ -18,7 +18,12 @@ type BookedSlot = {
   setlist_id: string;
 };
 
-type Props = { profileId: string; clubId: string; venueTimezone?: string };
+type Props = {
+  profileId: string;
+  clubId: string;
+  venueTimezone?: string;
+  onLiveBooking?: (bookingId: string | null) => void;
+};
 const active = new Set(["booked", "ready", "live", "resolving"]);
 const isEnabled = import.meta.env.VITE_DJ_SCHEDULED_BOOKINGS_ENABLED === "true";
 
@@ -51,7 +56,7 @@ async function actionRequest(body: Record<string, unknown>) {
 }
 
 /** Deliberately hidden behind BOTH server and client release switches. */
-export function DjBookingPanel({ profileId, clubId, venueTimezone }: Props) {
+export function DjBookingPanel({ profileId, clubId, venueTimezone, onLiveBooking }: Props) {
   const queryClient = useQueryClient();
   const [setlistId, setSetlistId] = useState("");
   const [localStart, setLocalStart] = useState(localDefault);
@@ -114,6 +119,40 @@ export function DjBookingPanel({ profileId, clubId, venueTimezone }: Props) {
       toast.success(`DJ booking requested — ${id.slice(0, 8)}. Check your Schedule.`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to book DJ set");
+    } finally {
+      setPending(null);
+    }
+  };
+
+  const startSet = async (bookingId: string) => {
+    if (pending) return;
+    setPending(bookingId);
+    try {
+      await actionRequest({ action: "start", bookingId });
+      onLiveBooking?.(bookingId);
+      await refresh();
+      toast.success("Your booked DJ set is live. Mix with both decks to record performance activity.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to start DJ set");
+    } finally {
+      setPending(null);
+    }
+  };
+
+  const completeSet = async (bookingId: string) => {
+    if (pending) return;
+    setPending(bookingId);
+    try {
+      await actionRequest({ action: "settle", bookingId });
+      onLiveBooking?.(null);
+      await Promise.all([
+        refresh(),
+        queryClient.invalidateQueries({ queryKey: ["profile"] }),
+        queryClient.invalidateQueries({ queryKey: ["dj-performances"] }),
+      ]);
+      toast.success("DJ set completed and your results have been recorded.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "DJ set cannot be completed yet");
     } finally {
       setPending(null);
     }
@@ -193,13 +232,37 @@ export function DjBookingPanel({ profileId, clubId, venueTimezone }: Props) {
                 <p className="text-sm font-medium">{new Date(booking.starts_at).toLocaleString()}</p>
                 <p className="text-xs text-muted-foreground">Status: {booking.status}</p>
               </div>
-              {active.has(booking.status) && new Date(booking.starts_at).getTime() > Date.now() && (
-                <Button size="sm" variant="outline"
-                  disabled={pending !== null}
-                  onClick={() => cancel(booking.id)}>
-                  {pending === booking.id ? "Cancelling…" : "Cancel booking"}
-                </Button>
-              )}
+              <div className="flex flex-wrap gap-2">
+                {(booking.status === "booked" || booking.status === "ready") &&
+                  Date.now() >= new Date(booking.starts_at).getTime() - 5 * 60_000 &&
+                  Date.now() < new Date(booking.starts_at).getTime() + 10 * 60_000 && (
+                  <Button size="sm" disabled={pending !== null}
+                    onClick={() => void startSet(booking.id)}>
+                    Start DJ performance
+                  </Button>
+                )}
+                {booking.status === "live" && (
+                  <>
+                    <Button size="sm" variant="outline"
+                      onClick={() => onLiveBooking?.(booking.id)}>
+                      Open live mixing decks
+                    </Button>
+                    {Date.now() >= new Date(booking.ends_at).getTime() && (
+                      <Button size="sm" disabled={pending !== null}
+                        onClick={() => void completeSet(booking.id)}>
+                        {pending === booking.id ? "Verifying…" : "Finish and verify DJ set"}
+                      </Button>
+                    )}
+                  </>
+                )}
+                {["booked", "ready"].includes(booking.status) &&
+                  new Date(booking.starts_at).getTime() > Date.now() && (
+                  <Button size="sm" variant="outline" disabled={pending !== null}
+                    onClick={() => void cancel(booking.id)}>
+                    {pending === booking.id ? "Cancelling…" : "Cancel booking"}
+                  </Button>
+                )}
+              </div>
             </div>
           ))}
         </div>

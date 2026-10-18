@@ -106,6 +106,54 @@ BEGIN
  END;
  PERFORM set_config('request.jwt.claim.sub',v_actor::text,true);
 
+ -- No browser / practice-only mixer actions may settle a paid session.
+ -- The new settlement ledger trigger must undo all attempted credit/XP.
+ BEGIN
+   PERFORM private.dj_settle_booking_at(v_book,v_finish+interval '1 minute');
+   RAISE EXCEPTION 'SECURITY FAILURE: DJ session paid without mixing evidence';
+ EXCEPTION WHEN invalid_parameter_value THEN NULL;
+ END;
+ IF (SELECT cash FROM public.profiles WHERE id=v_profile)<>v_cash
+ OR (SELECT fame FROM public.profiles WHERE id=v_profile)<>v_fame
+ THEN RAISE EXCEPTION 'No-evidence denial failed to roll back rewards'; END IF;
+
+ -- Real-time server event proofs: both decks + tempo + crossfade and
+ -- time-separated interaction into the second half of the booked set.
+ -- The server rejects out-of-setlist songs, client-forged event times,
+ -- cross-account performers, and impossible controls before appending.
+ PERFORM set_config('request.jwt.claim.sub',v_other::text,true);
+ BEGIN
+   PERFORM private.dj_record_mix_event_at(v_book,'deck_play','A','game',v_song,NULL,v_start+interval '2 minutes');
+   RAISE EXCEPTION 'SECURITY FAILURE: foreign player logged mixer activity';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ PERFORM set_config('request.jwt.claim.sub',v_actor::text,true);
+ BEGIN
+   PERFORM private.dj_record_mix_event_at(v_book,'deck_play','A','game',gen_random_uuid(),NULL,v_start+interval '2 minutes');
+   RAISE EXCEPTION 'SECURITY FAILURE: unbooked track credited';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN
+   PERFORM private.dj_record_mix_event_at(v_book,'crossfade',NULL,NULL,NULL,400,v_start+interval '2 minutes');
+   RAISE EXCEPTION 'SECURITY FAILURE: invalid crossfader accepted';
+ EXCEPTION WHEN invalid_parameter_value THEN NULL; END;
+ BEGIN
+   PERFORM private.dj_record_mix_event_at(v_book,'tempo','A',NULL,NULL,102,v_finish+interval '10 minutes');
+   RAISE EXCEPTION 'SECURITY FAILURE: post-performance event accepted';
+ EXCEPTION WHEN invalid_parameter_value THEN NULL; END;
+
+ PERFORM private.dj_record_mix_event_at(v_book,'deck_play','A','game',v_song,NULL,v_start+interval '2 minutes');
+ BEGIN
+   PERFORM private.dj_record_mix_event_at(v_book,'tempo','A',NULL,NULL,101,v_start+interval '2 minutes 1 second');
+   RAISE EXCEPTION 'SECURITY FAILURE: events counted without elapsed time';
+ EXCEPTION WHEN invalid_parameter_value THEN NULL; END;
+ PERFORM private.dj_record_mix_event_at(v_book,'tempo','A',NULL,NULL,101,v_start+interval '3 minutes');
+ PERFORM private.dj_record_mix_event_at(v_book,'crossfade',NULL,NULL,NULL,35,v_start+interval '4 minutes');
+ PERFORM private.dj_record_mix_event_at(v_book,'deck_play','B','game',v_song,NULL,v_start+interval '5 minutes');
+ PERFORM private.dj_record_mix_event_at(v_book,'tempo','B',NULL,NULL,99,v_start+interval '25 minutes');
+ PERFORM private.dj_record_mix_event_at(v_book,'crossfade',NULL,NULL,NULL,78,v_start+interval '30 minutes');
+
+ IF (SELECT count(*) FROM public.dj_live_mix_events WHERE booking_id=v_book)<>6
+ THEN RAISE EXCEPTION 'Missing server-recorded mixer interactions'; END IF;
+ 
  -- Force a history uniqueness failure *after* the calculation and profile/XP
  -- writes. The settlement subtransaction MUST roll everything back.
  INSERT INTO public.player_dj_performances(
@@ -185,6 +233,15 @@ BEGIN
  IF (SELECT count(*) FROM public.dj_performance_sessions
    WHERE booking_id=v_book)<>1
  THEN RAISE EXCEPTION 'Booked owner cannot read their DJ session'; END IF;
+ IF (SELECT count(*) FROM public.dj_live_mix_events
+   WHERE booking_id=v_book)<>6
+ THEN RAISE EXCEPTION 'Owner cannot read six accepted live events'; END IF;
+ IF has_table_privilege(current_user,'public.dj_live_mix_events','INSERT')
+ OR has_function_privilege(current_user,
+  'public.record_dj_mix_event_internal(uuid,text,text,text,uuid,numeric)','EXECUTE')
+ OR has_function_privilege(current_user,
+  'public.dj_verified_mix_event_service(uuid,uuid,text,text,text,uuid,numeric)','EXECUTE')
+ THEN RAISE EXCEPTION 'SECURITY FAILURE: client can forge server mixer evidence'; END IF;
  BEGIN
    INSERT INTO public.player_dj_performances(
      user_id,profile_id,club_id,booking_id,
@@ -195,6 +252,15 @@ BEGIN
  EXCEPTION WHEN insufficient_privilege THEN NULL;
  END;
 END $owner_rls$;
+SELECT set_config('request.jwt.claim.sub',
+ (SELECT p.user_id::text FROM public.profiles p
+  WHERE p.user_id<>current_setting('dj_test.owner')::uuid LIMIT 1),true);
+DO $foreign_event_rls$
+BEGIN
+ IF (SELECT count(*) FROM public.dj_live_mix_events
+   WHERE booking_id=current_setting('dj_test.booking')::uuid)<>0
+ THEN RAISE EXCEPTION 'SECURITY FAILURE: another player can read DJ mixer events'; END IF;
+END $foreign_event_rls$;
 RESET ROLE;
 
 ROLLBACK;
