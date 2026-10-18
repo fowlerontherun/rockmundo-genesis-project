@@ -105,7 +105,7 @@ export const UniversityTab = () => {
   const [searchQuery, setSearchQuery] = useState(() => new URLSearchParams(window.location.search).get("skill") ?? "");
   const [selectedCity, setSelectedCity] = useState<string>("current");
   const [selectedCategory, setSelectedCategory] = useState<SkillCategory>("all");
-  const [viewMode, setViewMode] = useState<"universities" | "courses">("universities");
+  const [viewMode, setViewMode] = useState<"universities" | "courses">(() => new URLSearchParams(window.location.search).get("skill") ? "courses" : "universities");
 
   // Fetch profile with current city
   const { data: profile } = useQuery({
