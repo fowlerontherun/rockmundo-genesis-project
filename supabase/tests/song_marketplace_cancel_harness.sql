@@ -124,5 +124,24 @@ BEGIN
   END IF;
 END;
 $test$;
+
+-- Simulate the authenticated Data API role: even the owner may not issue
+-- a direct UPDATE to rewrite a listing's status.
+SET LOCAL ROLE authenticated;
+DO $test_role$
+DECLARE
+  v_changed integer;
+BEGIN
+  UPDATE public.marketplace_listings
+  SET listing_status = 'cancelled'
+  WHERE seller_user_id = '00000000-0000-4000-8000-000000000901'
+    AND listing_status = 'active';
+  GET DIAGNOSTICS v_changed = ROW_COUNT;
+  IF v_changed <> 0 THEN
+    RAISE EXCEPTION 'Authenticated seller bypassed the cancellation RPC';
+  END IF;
+END;
+$test_role$;
+RESET ROLE;
 ROLLBACK;
 SELECT 'song_marketplace_cancel_harness: PASSED (fixtures rolled back)' AS result;
