@@ -25,6 +25,15 @@ describe("September 2025 historical reset migration replay order", () => {
     expect(sql).toContain("$legacy_reset_guard$;");
   });
 
+  it.each([
+    "20250917154859_update_player_attribute_defaults.sql",
+    "20250917154900_enforce_player_skills_minimum.sql",
+  ])("%s keeps the information_schema column and PL/pgSQL iterator distinct", (name) => {
+    const sql = read(name);
+    expect(sql).toContain("cols.column_name = v_column_name");
+    expect(sql).not.toContain("cols.column_name = column_name");
+  });
+
   it("creates the underlying table in the later September 18 migration", () => {
     const create = read("20250918075158_4a6d2968-3b91-4ba4-8192-a9a4ff3702ff.sql");
     expect(create).toContain("CREATE TABLE IF NOT EXISTS public.player_attributes");
