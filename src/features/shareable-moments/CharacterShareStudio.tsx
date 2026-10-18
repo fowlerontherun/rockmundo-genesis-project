@@ -48,7 +48,12 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
     }
     // Wait for equipped appearance layers so the saved picture represents the
     // current avatar rather than a partially loaded default outfit.
-    if (clothing.isPending || tattoos.isPending || merch.query.isPending || luthiery.isPending) return;
+    // A disabled optional query (e.g. merch without a band) is perpetually
+    // isPending in React Query; only wait for requests actually in flight.
+    if ((clothing.isPending && clothing.isFetching)
+      || (tattoos.isPending && tattoos.isFetching)
+      || (merch.query.isPending && merch.query.isFetching)
+      || (luthiery.isPending && luthiery.isFetching)) return;
 
     void captureAvatarV1ForShare({
       appearance,
@@ -67,8 +72,8 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
 
     return () => { cancelled = true; };
   }, [open, storedAvatar, captureKey, profileId, appearance, model.query.isError,
-    clothing.isPending, clothing.data, tattoos.isPending, tattoos.data,
-    merch.query.isPending, merch.query.data, luthiery.isPending, craftedInstrument,
+    clothing.isPending, clothing.isFetching, clothing.data, tattoos.isPending, tattoos.isFetching, tattoos.data,
+    merch.query.isPending, merch.query.isFetching, merch.query.data, luthiery.isPending, luthiery.isFetching, craftedInstrument,
     role, instrument, retry]);
 
   const shareMoment = useMemo(() => ({ ...moment, avatar }), [moment, avatar]);
