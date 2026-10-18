@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { verifyReplicateAttempt } from "../_shared/replicateWebhookAuth.ts"
 import { getMp3DurationSeconds } from "../_shared/mp3Duration.ts"
+import { clipLongMp3ToSeconds } from "../_shared/mp3Clip.ts"
 import { assertSafeGeneratedAudioUrl, readBoundedGeneratedAudio } from "../_shared/boundedAudioDownload.ts"
 
 const corsHeaders = {
@@ -139,10 +140,23 @@ serve(async (req) => {
     const minSeconds = 60
     const maxSeconds = 90
     console.log(`[replicate-webhook] Measured audio: song=${songId} actual=${actualSeconds.toFixed(2)}s accepted=60–90s bytes=${audioBytes.length}`)
-    if (actualSeconds < minSeconds || actualSeconds > maxSeconds) {
+    // Preserve an otherwise valid paid prediction by taking a frame-aligned
+    // 90-second radio edit. Short audio cannot be safely extended: stop and
+    // require deliberate manual retry rather than another automatic charge.
+    if (actualSeconds < minSeconds) {
       throw new Error(
-        `Generated audio duration ${actualSeconds.toFixed(1)}s is outside the required 60–90s range. Existing audio preserved; manual retry only.`
+        `Generated audio duration ${actualSeconds.toFixed(1)}s is under the required 60s. Existing audio preserved; manual retry only.`
       )
+    }
+    const acceptedAudioBytes = actualSeconds > maxSeconds
+      ? clipLongMp3ToSeconds(audioBytes, maxSeconds)
+      : audioBytes
+    const acceptedSeconds = getMp3DurationSeconds(acceptedAudioBytes)
+    if (acceptedSeconds === null || acceptedSeconds < minSeconds || acceptedSeconds > maxSeconds) {
+      throw new Error('Generated MP3 failed final 60–90-second validation. Existing audio preserved; manual retry only.')
+    }
+    if (actualSeconds > maxSeconds) {
+      console.log(`[replicate-webhook] Preserved long paid output with a ${acceptedSeconds.toFixed(2)}s radio edit`)
     }
 
     const sanitizedTitle = (song?.title || 'song').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50)
@@ -155,7 +169,7 @@ serve(async (req) => {
     const { data: uploadData, error: uploadError } = await supabase
       .storage
       .from('music')
-      .upload(filename, audioBytes, {
+      .upload(filename, acceptedAudioBytes, {
         contentType: 'audio/mpeg',
         upsert: true
       })
