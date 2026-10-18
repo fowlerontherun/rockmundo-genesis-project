@@ -19,6 +19,26 @@ export function firstGitIntroduction(root, path) {
   return { commit, created_at, utc_timestamp: new Date(created_at).toISOString().replace(/\D/g, "").slice(0, 14) };
 }
 
+// One history walk handles the overwhelming majority of paths. Only Git-renamed
+// paths fall back to the more expensive per-file --follow scan.
+export function bulkGitIntroductions(root) {
+  const raw = git(root, ["log", "--find-renames", "--diff-filter=A",
+    "--format=%H%x09%cI", "--name-only", "--", "supabase/migrations"]);
+  const found = new Map();
+  let current = null;
+  for (const line of raw.split("\n")) {
+    const match = /^([0-9a-f]{40})\t(\d{4}-\d\d-\d\dT\S+)$/.exec(line);
+    if (match) {
+      current = { commit: match[1], created_at: match[2],
+        utc_timestamp: new Date(match[2]).toISOString().replace(/\D/g, "").slice(0, 14) };
+    } else if (current && line.startsWith("supabase/migrations/") && line.endsWith(".sql")) {
+      // History is reverse-chronological; the last addition is the earliest one.
+      found.set(line, current);
+    }
+  }
+  return found;
+}
+
 export function auditCreationDates(root) {
   if (git(root, ["rev-parse", "--is-shallow-repository"]) === "true")
     throw new Error("Full Git history required. In GitHub Actions, use actions/checkout with fetch-depth: 0.");
@@ -30,9 +50,11 @@ export function auditCreationDates(root) {
     const match = versioned.exec(name);
     if (match) used.set(match[1], (used.get(match[1]) || 0) + 1);
   }
+  const bulk = bulkGitIntroductions(root);
   const entries = filenames.map(name => {
     const match = versioned.exec(name);
-    const introduction = firstGitIntroduction(root, "supabase/migrations/" + name);
+    const introduction = bulk.get("supabase/migrations/" + name)
+      || firstGitIntroduction(root, "supabase/migrations/" + name);
     const existing = match?.[1] || null;
     const actual = introduction?.utc_timestamp || null;
     const matches = existing && actual ? existing.slice(0, 8) === actual.slice(0, 8) : null;
