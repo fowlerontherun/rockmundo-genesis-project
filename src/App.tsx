@@ -329,7 +329,7 @@ const Education = lazyWithRetry(() => import("./pages/Education"));
 const RecordingStudio = lazyWithRetry(() => import("./pages/RecordingStudio"));
 const ReleaseManager = lazyWithRetry(() => import("./pages/ReleaseManager"));
 const ReleaseDetail = lazyWithRetry(() => import("./pages/ReleaseDetail"));
-const MediaNetworks = lazyWithRetry(() => import("./pages/MediaNetworks"));
+// Media Networks remains a deferred prototype; never import its demo economy into production routes.
 // const CharityPage = lazyWithRetry(() => import("./pages/community/charity"));
 
 const Underworld = lazyWithRetry(() => import("./pages/UnderworldNew"));
