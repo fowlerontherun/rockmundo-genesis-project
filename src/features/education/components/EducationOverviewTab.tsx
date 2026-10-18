@@ -81,13 +81,13 @@ export const EducationOverviewTab = () => {
       <section className="space-y-3" aria-label="Current learning">
         <div className="flex items-center justify-between gap-3">
           <h2 className="font-semibold text-lg">Continue learning</h2>
-          <Button asChild size="sm" variant="outline"><Link to={`${educationBase}?tab=find`>Find learning <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link></Button>
+          <Button asChild size="sm" variant="outline"><Link to={`${educationBase}?tab=find`}>Find learning <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link></Button>
         </div>
         {visibleBooks.length === 0 && visibleEnrollments.length === 0 && (
           <Card className="border-dashed"><CardContent className="py-6">
             <p className="font-medium">No learning activities underway</p>
             <p className="mt-1 text-sm text-muted-foreground">Choose a skill to find a book, university course, video or mentor.</p>
-            <Button asChild className="mt-3" size="sm"><Link to={`${educationBase}?tab=skills`>Choose a skill</Link></Button>
+            <Button asChild className="mt-3" size="sm"><Link to={`${educationBase}?tab=skills`}>Choose a skill</Link></Button>
           </CardContent></Card>
         )}
         {visibleBooks.map((book) => {
@@ -115,7 +115,7 @@ export const EducationOverviewTab = () => {
                       {recordingReading ? "Recording..." : recordedToday ? "Done today" : "Record today"}
                     </Button>
                   )}
-                  <Button size="sm" variant="outline" asChild><Link to={`${educationBase}?tab=find&method=books`>Manage book</Link></Button>
+                  <Button size="sm" variant="outline" asChild><Link to={`${educationBase}?tab=find&method=books`}>Manage book</Link></Button>
                 </div>
               </div>
             </CardContent></Card>
@@ -154,7 +154,7 @@ export const EducationOverviewTab = () => {
       <section className="space-y-3" aria-label="Skill progress">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-lg">My skills</h2>
-          <Button variant="link" size="sm" asChild><Link to={`${educationBase}?tab=skills`>View all skills</Link></Button>
+          <Button variant="link" size="sm" asChild><Link to={`${educationBase}?tab=skills`}>View all skills</Link></Button>
         </div>
         <Card><CardContent className="p-4 space-y-4">
           {closest.length === 0 ? <p className="text-sm text-muted-foreground">Learn a skill to start tracking progress towards the next level.</p> : closest.map((skill) => (
