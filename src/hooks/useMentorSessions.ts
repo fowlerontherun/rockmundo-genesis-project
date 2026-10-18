@@ -17,7 +17,7 @@ export function useMentorSessions() {
     current_city_id: activeProfile.current_city_id,
   } : null;
 
-  const { data: mentors } = useQuery({
+  const { data: mentors, isLoading: mentorsLoading, isError: mentorsError, error: mentorsLoadError, refetch: retryMentors } = useQuery({
     queryKey: ["education_mentors"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -33,7 +33,7 @@ export function useMentorSessions() {
     },
   });
 
-  const { data: discoveries } = useQuery({
+  const { data: discoveries, isLoading: discoveriesLoading, isError: discoveriesError, refetch: retryDiscoveries } = useQuery({
     queryKey: ["master_discoveries", profile?.id],
     queryFn: async () => {
       if (!profile?.id) return [];
@@ -47,7 +47,7 @@ export function useMentorSessions() {
     enabled: !!profile?.id,
   });
 
-  const { data: recentSessions } = useQuery({
+  const { data: recentSessions, isLoading: sessionsLoading, isError: sessionsError } = useQuery({
     queryKey: ["mentor_sessions", profile?.id],
     queryFn: async () => {
       if (!profile?.id) return [];
@@ -105,6 +105,9 @@ export function useMentorSessions() {
   const discoverMutation = useMutation({
     mutationFn: async ({ mentorId, method = 'exploration' }: { mentorId: string; method?: string }) => {
       if (!profile) throw new Error("Profile not found");
+      const mentor = mentors?.find((entry) => entry.id === mentorId);
+      if (!mentor || mentor.is_discoverable === false) throw new Error("This mentor cannot currently be discovered.");
+      if (mentor.city_id && !isInMentorCity(mentor.city_id)) throw new Error("Visit the mentor\'s city to discover them.");
       const { error } = await supabase.rpc('discover_master', {
         p_profile_id: profile.id,
         p_mentor_id: mentorId,
@@ -116,6 +119,7 @@ export function useMentorSessions() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["master_discoveries"] });
+      queryClient.invalidateQueries({ queryKey: ["education-summary-today"] });
       toast({
         title: "Master Discovered!",
         description: "You've found a legendary master. They can now be visited for training.",
@@ -129,6 +133,8 @@ export function useMentorSessions() {
   const bookSessionMutation = useMutation({
     mutationFn: async (mentorId: string) => {
       if (!profile) throw new Error("Profile not found");
+      if (discoveriesLoading || discoveriesError) throw new Error("Mentor discovery status could not be verified.");
+      if (!isMentorDiscovered(mentorId)) throw new Error("Discover this mentor before booking.");
 
       const mentor = mentors?.find((m) => m.id === mentorId);
       if (!mentor) throw new Error("Master not found");
@@ -169,6 +175,8 @@ export function useMentorSessions() {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       queryClient.invalidateQueries({ queryKey: ["mentor_sessions"] });
       queryClient.invalidateQueries({ queryKey: ["skill_progress"] });
+      queryClient.invalidateQueries({ queryKey: ["education-summary-today"] });
+      queryClient.invalidateQueries({ queryKey: ["education-summary-skills"] });
       toast({
         title: "Session Completed!",
         description: `Gained ${data.xpEarned} XP and ${data.skillValueGained} skill points with ${data.mentor.name}`,
@@ -182,6 +190,11 @@ export function useMentorSessions() {
   const canBookSession = (mentorId: string) => {
     const mentor = mentors?.find((m) => m.id === mentorId);
     if (!mentor) return { canBook: false, reason: "Master not found" };
+    if (!profile) return { canBook: false, reason: "Select a character first" };
+    if (discoveriesLoading) return { canBook: false, reason: "Checking discovery..." };
+    if (discoveriesError) return { canBook: false, reason: "Discovery check failed" };
+    if (!isMentorDiscovered(mentorId)) return { canBook: false, reason: "Discover first" };
+    if (sessionsLoading || sessionsError) return { canBook: false, reason: "Checking cooldown..." };
 
     if (mentor.city_id && !isInMentorCity(mentor.city_id)) {
       const cityName = mentor.city?.name || 'their city';
@@ -231,5 +244,12 @@ export function useMentorSessions() {
     isDiscovering: discoverMutation.isPending,
     discoveredCount,
     totalMentors,
+    mentorsLoading,
+    mentorsError,
+    mentorsLoadError,
+    retryMentors,
+    discoveriesLoading,
+    discoveriesError,
+    retryDiscoveries,
   };
 }
