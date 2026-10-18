@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
-import { useProfileSkillAvailability, useSkillCatalogueRelationships } from "@/hooks/useSkillCatalogue";
+import { useSkillCatalogueRelationships } from "@/hooks/useSkillCatalogue";
 import { useEducationSkillDefinitions } from "../hooks/useEducationSkillDefinitions";
 import { type LearningGoal, selectLearningRecommendations } from "../utils/educationRecommendations";
 import { formatEducationSkillName } from "../utils/educationUi";
@@ -33,7 +33,6 @@ export const EducationRecommendations = ({ activeSkills }: { activeSkills?: stri
   const { skillProgress } = useGameData();
   const [goal, setGoal] = useState<LearningGoal>("all");
   const catalogue = useEducationSkillDefinitions();
-  const available = useProfileSkillAvailability(profileId);
   const { roleLinks } = useSkillCatalogueRelationships();
   const access = useSkillTierAccess(profileId, (catalogue.data ?? []).map((skill) => skill.slug));
 
@@ -45,16 +44,15 @@ export const EducationRecommendations = ({ activeSkills }: { activeSkills?: stri
       current_xp: skill.current_xp,
       required_xp: skill.required_xp,
     })),
-    availability: available.data ?? [],
     roleLinks,
     access: access.data ?? new Map<string, boolean>(),
     goal,
     activeSkillSlugs: new Set(activeSkills ?? []),
     limit: 4,
-  }), [catalogue.data, skillProgress, available.data, roleLinks, access.data, goal, activeSkills]);
+  }), [catalogue.data, skillProgress, roleLinks, access.data, goal, activeSkills]);
 
-  const isLoading = catalogue.isLoading || available.isLoading || access.isLoading;
-  const hasError = catalogue.isError || available.isError || access.isError;
+  const isLoading = catalogue.isLoading || access.isLoading;
+  const hasError = catalogue.isError || access.isError;
 
   return (
     <section className="space-y-3" aria-label="Recommended learning">
