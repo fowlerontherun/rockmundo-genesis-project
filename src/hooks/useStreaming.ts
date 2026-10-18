@@ -136,6 +136,7 @@ export const useStreaming = (userId: string) => {
     platforms,
     analytics,
     releasesLoading,
+    hasActiveProfile: canLoad,
     releasesError,
     releasesErrorDetail,
     refetchReleases,
