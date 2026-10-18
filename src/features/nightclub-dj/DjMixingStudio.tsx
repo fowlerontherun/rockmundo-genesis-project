@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { filterDjTracks, getDjPlaybackUrl, type DjAudioTrack, useDjTrackLibrary } from "./library";
-import { clampDeckRate, equalPowerCrossfade, formatDjTime, syncDeckRate } from "./mixerMath";
+import { clampDeckRate, deckAudioSourceKey, changedDjTempoPercent, equalPowerCrossfade, formatDjTime, syncDeckRate } from "./mixerMath";
 import { DjSetlistPlanner } from "./DjSetlistPlanner";
 import { djReadinessSteps, useDjMixReadiness } from "./djReadiness";
 import { bindDjDeckLifecycle } from "./deckAudioLifecycle";
@@ -27,6 +27,10 @@ function AudioDeck({
   onRateCommit?: (deck: "A" | "B", speed: number) => void;
 }) {
   const track = tracks.find((entry) => entry.id === selectedId) ?? null;
+  const audioSourceKey = deckAudioSourceKey(track);
+  // The effect depends on the source signature, not every catalogue metadata refresh.
+  const playableTrackRef = useRef(track);
+  playableTrackRef.current = track;
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -55,9 +59,10 @@ function AudioDeck({
     setCue(0);
     setError(null);
     setLoading(false);
-    if (!track) return;
+    const playableTrack = playableTrackRef.current;
+    if (!playableTrack) return;
     setLoading(true);
-    getDjPlaybackUrl(track).then((url) => {
+    getDjPlaybackUrl(playableTrack).then((url) => {
       if (cancelled) return;
       player.src = url;
       player.load();
@@ -70,9 +75,9 @@ function AudioDeck({
       player.removeAttribute("src");
       player.load();
     };
-  // A catalogue refresh can replace or withdraw a track without changing its ID.
-  // Restart with the new source; never keep a stale, rights-revoked URL playing.
-  }, [track, retryNonce]);
+  // Restart for a new/withdrawn media source or explicit retry, NOT an
+  // unchanged source returned as a fresh object on a catalogue refresh.
+  }, [audioSourceKey, retryNonce]);
 
   useEffect(() => {
     if (!audioRef.current) return;
@@ -296,7 +301,13 @@ export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
     const target = a?.bpm ? a.bpm * rateA : null;
     const rate = syncDeckRate(b?.bpm ?? null, target);
     if (rate === null) { toast.info("BPM metadata is missing or the tempo difference is too large. Adjust by ear."); return; }
+    const changedPercent = changedDjTempoPercent(rateB, rate);
     setRateB(rate);
+    // A one-tap BPM match is a real tempo adjustment, just like the manual
+    // slider. Do not claim evidence when nothing changed or in practice.
+    if (changedPercent !== null) {
+      sendLiveEvent({ kind: "tempo", deck: "B", value: changedPercent });
+    }
     toast.success("Deck B tempo matched. Fine-tune the beat phase by ear.");
   };
 
