@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 
 const shiftWorker = readFileSync(
-  new URL("../../../supabase/functions/shift-clock-out/index.ts", import.meta.url), "utf8",
+  new URL("../../supabase/functions/shift-clock-out/index.ts", import.meta.url), "utf8",
 );
 const backfill = readFileSync(
-  new URL("../../../supabase/migrations/20261018194340_work_shift_xp_ledger_account_identity_backfill_20261018.sql", import.meta.url), "utf8",
+  new URL("../../supabase/migrations/20261018194340_work_shift_xp_ledger_account_identity_backfill_20261018.sql", import.meta.url), "utf8",
 );
 
 describe("work shift XP account identity (#4217)", () => {
