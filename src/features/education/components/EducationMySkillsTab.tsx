@@ -4,7 +4,7 @@ import { Search, ArrowRight, CheckCircle2 } from "lucide-react";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
 import { getSkillDisplayProgress } from "@/utils/skillProgressDisplay";
-import { useSkillCatalogue } from "@/hooks/useSkillCatalogue";
+import { useEducationSkillDefinitions } from "../hooks/useEducationSkillDefinitions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ export const EducationMySkillsTab = () => {
   const [filter, setFilter] = useState<"all" | "mine" | "available">("all");
   const [limit, setLimit] = useState(40);
 
-  const catalogue = useSkillCatalogue();
+  const catalogue = useEducationSkillDefinitions();
   const definitions = catalogue.data ?? [];
   const tierAccess = useSkillTierAccess(profileId, definitions.filter((definition) => definition.is_active && !definition.is_hidden).map((definition) => definition.slug));
   const accessBySkill = tierAccess.data ?? new Map<string, boolean>();
