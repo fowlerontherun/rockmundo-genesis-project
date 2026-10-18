@@ -111,6 +111,7 @@ export const useWatchVideo = () => {
         title: "Lesson completed!",
         description,
       });
+      queryClient.invalidateQueries({ queryKey: ["education", "video-claims", profileId] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       queryClient.invalidateQueries({ queryKey: ["skill-progress"] });
       queryClient.invalidateQueries({ queryKey: ["skill_progress", profileId] });

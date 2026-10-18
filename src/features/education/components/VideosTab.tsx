@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { calculateEducationVideoCooldown } from "../utils/educationVideoCooldown";
 import {
   Bell,
   BellOff,
@@ -72,7 +75,28 @@ export const VideosTab = () => {
   const toggleSubscription = useToggleEducationVideoSubscription(profileId);
   const watchVideo = useWatchVideo();
 
-  const [cooldownStatus, setCooldownStatus] = useState(() => getCooldownStatus(profileId));
+  const [cooldownTick, setCooldownTick] = useState(() => Date.now());
+  const serverClaims = useQuery({
+    queryKey: ["education", "video-claims", profileId],
+    queryFn: async (): Promise<string[]> => {
+      if (!profileId) return [];
+      const { data, error: claimsError } = await (supabase as any)
+        .from("education_video_reward_claims")
+        .select("claimed_at")
+        .eq("profile_id", profileId)
+        .gt("claimed_at", new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString())
+        .order("claimed_at", { ascending: true })
+        .limit(2);
+      if (claimsError) throw claimsError;
+      return ((data ?? []) as Array<{ claimed_at: string }>).map((row) => row.claimed_at);
+    },
+    enabled: Boolean(profileId),
+    staleTime: 10_000,
+    refetchInterval: 30_000,
+  });
+  const cooldownStatus = serverClaims.data
+    ? calculateEducationVideoCooldown(serverClaims.data, cooldownTick)
+    : getCooldownStatus(profileId);
   const [search, setSearch] = useState("");
   const focusedSkill = new URLSearchParams(window.location.search).get("skill");
   const [selectedSkill, setSelectedSkill] = useState("all");
@@ -86,15 +110,15 @@ export const VideosTab = () => {
   const [lessonStep, setLessonStep] = useState<0 | 1>(0);
 
   useEffect(() => {
-    setCooldownStatus(getCooldownStatus(profileId));
+    setCooldownTick(Date.now());
     const interval = window.setInterval(() => {
-      setCooldownStatus(getCooldownStatus(profileId));
+      setCooldownTick(Date.now());
     }, 30000);
     return () => window.clearInterval(interval);
   }, [profileId]);
 
   useEffect(() => {
-    if (watchVideo.isSuccess) setCooldownStatus(getCooldownStatus(profileId));
+    if (watchVideo.isSuccess) setCooldownTick(Date.now());
   }, [profileId, watchVideo.isSuccess]);
 
   const playlists = data ?? [];
@@ -293,6 +317,15 @@ export const VideosTab = () => {
         </CardContent>
       </Card>
 
+      {serverClaims.isError && (
+        <Alert variant="destructive" role="alert">
+          <AlertTitle>Could not sync learning slots</AlertTitle>
+          <AlertDescription>
+            Showing this browser's history temporarily. The server still checks reward limits.
+            <Button size="sm" variant="outline" className="ml-2" onClick={() => void serverClaims.refetch()}>Retry</Button>
+          </AlertDescription>
+        </Alert>
+      )}
       {!cooldownStatus.canWatch && (
         <Alert className="border-warning/50 bg-warning/10">
           <Leaf className="h-4 w-4 text-warning" />

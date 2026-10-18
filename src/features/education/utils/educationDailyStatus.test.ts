@@ -39,3 +39,20 @@ describe("active learning tier visibility", () => {
     expect(visibleEducationActivities(activities, getSlug, new Map())).toEqual([]);
   });
 });
+
+import { calculateEducationVideoCooldown } from "./educationVideoCooldown";
+
+describe("PooTube persisted claim cooldown", () => {
+  const now = Date.parse("2026-10-18T20:00:00Z");
+  it("shows the two claims stored on the server, even after switching devices", () => {
+    const status = calculateEducationVideoCooldown(["2026-10-18T19:30:00Z", "2026-10-18T19:40:00Z"], now);
+    expect(status.videosWatched).toBe(2);
+    expect(status.canWatch).toBe(false);
+    expect(status.cooldownEndsAt?.toISOString()).toBe("2026-10-18T21:30:00.000Z");
+  });
+  it("reopens a slot precisely at the two-hour rolling boundary", () => {
+    const status = calculateEducationVideoCooldown(["2026-10-18T18:00:00Z", "2026-10-18T19:20:00Z"], now);
+    expect(status.videosWatched).toBe(1);
+    expect(status.canWatch).toBe(true);
+  });
+});
