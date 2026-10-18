@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { filterDjTracks, getDjPlaybackUrl, type DjAudioTrack, useDjTrackLibrary } from "./library";
-import { clampDeckRate, deckAudioSourceKey, deckRatePercent, equalPowerCrossfade, formatDjTime, syncDeckRate } from "./mixerMath";
+import { clampDeckRate, deckAudioSourceKey, changedDjTempoPercent, equalPowerCrossfade, formatDjTime, syncDeckRate } from "./mixerMath";
 import { DjSetlistPlanner } from "./DjSetlistPlanner";
 import { djReadinessSteps, useDjMixReadiness } from "./djReadiness";
 import { bindDjDeckLifecycle } from "./deckAudioLifecycle";
@@ -297,13 +297,12 @@ export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
     const target = a?.bpm ? a.bpm * rateA : null;
     const rate = syncDeckRate(b?.bpm ?? null, target);
     if (rate === null) { toast.info("BPM metadata is missing or the tempo difference is too large. Adjust by ear."); return; }
-    const previousPercent = deckRatePercent(rateB);
-    const nextPercent = deckRatePercent(rate);
+    const changedPercent = changedDjTempoPercent(rateB, rate);
     setRateB(rate);
     // A one-tap BPM match is a real tempo adjustment, just like the manual
     // slider. Do not claim evidence when nothing changed or in practice.
-    if (nextPercent !== previousPercent) {
-      sendLiveEvent({ kind: "tempo", deck: "B", value: nextPercent });
+    if (changedPercent !== null) {
+      sendLiveEvent({ kind: "tempo", deck: "B", value: changedPercent });
     }
     toast.success("Deck B tempo matched. Fine-tune the beat phase by ear.");
   };
