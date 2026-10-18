@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Globe2, MapPin, Users, TrendingUp, DollarSign, Music } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { AuthContext } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
@@ -24,57 +24,38 @@ interface City {
 
 export default function WorldEnvironment() {
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
+  const { profile, profileId, userId, isLoading: profileLoading, error: profileError } = useActiveProfile();
   const [cities, setCities] = useState<City[]>([]);
-  const [currentCityId, setCurrentCityId] = useState<string | null>(null);
+  // Use only the selected character. Never infer a location from an account-wide profile query.
+  const currentCityId = profile?.current_city_id ?? null;
+  const canBookTravel = !!userId && !!profileId && !!currentCityId && !profileError;
   const [loading, setLoading] = useState(true);
+  const [cityError, setCityError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [countryFilter, setCountryFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"name" | "music_scene" | "population">("music_scene");
 
   useEffect(() => {
-    loadData();
-  }, [user]);
-
-  const loadData = async () => {
-    try {
-      const { data: citiesData } = await supabase
-        .from("cities")
-        .select("*")
-        .order("music_scene", { ascending: false });
-
-      if (citiesData) {
-        setCities(citiesData);
+    let mounted = true;
+    const loadCities = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("cities")
+          .select("*")
+          .order("music_scene", { ascending: false });
+        if (error) throw error;
+        if (mounted) setCities(data ?? []);
+      } catch (error) {
+        if (mounted) {
+          setCityError(error instanceof Error ? error.message : "City list could not be loaded");
+        }
+      } finally {
+        if (mounted) setLoading(false);
       }
-
-      if (user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("current_city_id")
-          .eq("user_id", user.id)
-          .single();
-
-        setCurrentCityId(profile?.current_city_id || null);
-      }
-    } catch (error) {
-      console.error("Error loading cities:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSetHome = async (cityId: string) => {
-    if (!user) return;
-
-    const { error } = await supabase
-      .from("profiles")
-      .update({ current_city_id: cityId })
-      .eq("user_id", user.id);
-
-    if (!error) {
-      setCurrentCityId(cityId);
-    }
-  };
+    };
+    void loadCities();
+    return () => { mounted = false; };
+  }, []);
 
   const countries = Array.from(new Set(cities.map(c => c.country))).sort();
 
@@ -91,7 +72,7 @@ export default function WorldEnvironment() {
       return (b.music_scene || 0) - (a.music_scene || 0);
     });
 
-  if (loading) {
+  if (loading || profileLoading) {
     return (
       <FMPageScaffold title="Global Cities" subtitle="Explore music hubs around the world" icon={Globe2} backTo="/hub/world-social">
         <Skeleton className="h-12 w-64" />
@@ -111,6 +92,36 @@ export default function WorldEnvironment() {
       icon={Globe2}
       backTo="/hub/world-social"
     >
+      {cityError && (
+        <Card role="alert" className="border-destructive/50">
+          <CardContent className="py-4 text-sm">
+            Unable to load cities: {cityError}. Refresh the page to try again.
+          </CardContent>
+        </Card>
+      )}
+
+      {profileError && (
+        <Card role="alert" className="border-destructive/50">
+          <CardContent className="py-4 text-sm">
+            Your active character could not be verified. Travel booking is unavailable until this is resolved.
+          </CardContent>
+        </Card>
+      )}
+      {!profileError && !canBookTravel && userId && (
+        <Card role="status">
+          <CardContent className="py-4 text-sm text-muted-foreground">
+            This character has no verified current city. You can explore cities, but travel booking requires a confirmed location.
+          </CardContent>
+        </Card>
+      )}
+      {!userId && (
+        <Card role="status">
+          <CardContent className="py-4 text-sm text-muted-foreground">
+            Sign in and select a character to book travel.
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-3 md:grid-cols-4">
         <Input
           placeholder="Search cities..."
@@ -144,7 +155,7 @@ export default function WorldEnvironment() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filteredCities.map((city) => {
-          const isCurrentCity = city.id === currentCityId;
+          const isCurrentCity = canBookTravel && city.id === currentCityId;
           
           return (
             <Card 
@@ -203,23 +214,15 @@ export default function WorldEnvironment() {
                   >
                     Explore
                   </Button>
-                  {!isCurrentCity && user && !currentCityId && (
-                    <Button
-                      size="sm"
-                      onClick={() => handleSetHome(city.id)}
-                      className="flex-1"
-                    >
-                      Set as Home
-                    </Button>
-                  )}
-                  {!isCurrentCity && currentCityId && (
+                  {!isCurrentCity && canBookTravel && (
                     <Button
                       size="sm"
                       variant="secondary"
-                      onClick={() => navigate(`/travel?destination=${city.id}`)}
+                      onClick={() => navigate(`/travel?destination=${encodeURIComponent(city.id)}`)}
                       className="flex-1"
+                      disabled={profile?.is_traveling === true}
                     >
-                      Travel
+                      {profile?.is_traveling ? "In Transit" : "Book Travel"}
                     </Button>
                   )}
                 </div>
@@ -229,7 +232,7 @@ export default function WorldEnvironment() {
         })}
       </div>
 
-      {filteredCities.length === 0 && (
+      {!cityError && filteredCities.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
             <Globe2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
