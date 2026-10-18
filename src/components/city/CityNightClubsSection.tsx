@@ -1,15 +1,11 @@
 
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Disc3, GlassWater, Mic2, Sparkles, Users, Loader2, Trophy, Clock, DollarSign, Star, Zap, ArrowRight } from "lucide-react";
+import { Disc3, GlassWater, Mic2, Sparkles, Users, Loader2, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Progress } from "@/components/ui/progress";
 import type { CityNightClub } from "@/utils/worldEnvironment";
 import { useNightlifeEvents } from "@/hooks/useNightlifeEvents";
-import { useDjPerformance, type DjPerformanceOutcome } from "@/hooks/useDjPerformance";
 
 interface CityNightClubsSectionProps {
   nightClubs: CityNightClub[];
@@ -46,29 +42,9 @@ const formatSetLength = (value: number | null | undefined): string | null => {
 
 const getQualityLabel = (qualityLevel: number) => QUALITY_LABELS[qualityLevel] ?? `Tier ${qualityLevel}`;
 
-const getScoreColor = (score: number) => {
-  if (score >= 85) return "text-green-400";
-  if (score >= 65) return "text-primary";
-  if (score >= 40) return "text-yellow-500";
-  return "text-destructive";
-};
-
 export const CityNightClubsSection = ({ nightClubs }: CityNightClubsSectionProps) => {
   const navigate = useNavigate();
   const { triggerNightlifeEvent, isProcessing } = useNightlifeEvents();
-  const { performDjSetAsync, isPerforming } = useDjPerformance();
-  const [djOutcome, setDjOutcome] = useState<DjPerformanceOutcome | null>(null);
-  const [showOutcome, setShowOutcome] = useState(false);
-
-  const handleDjSlot = async (club: CityNightClub) => {
-    try {
-      const outcome = await performDjSetAsync(club);
-      setDjOutcome(outcome);
-      setShowOutcome(true);
-    } catch {
-      // Error handled by hook toast
-    }
-  };
 
   if (!nightClubs.length) {
     return (
@@ -88,7 +64,7 @@ export const CityNightClubsSection = ({ nightClubs }: CityNightClubsSectionProps
     );
   }
 
-  const busy = isProcessing || isPerforming;
+  const busy = isProcessing;
 
   return (
     <>
@@ -157,9 +133,9 @@ export const CityNightClubsSection = ({ nightClubs }: CityNightClubsSectionProps
                       className="w-full md:w-auto"
                       variant="secondary"
                       disabled={busy}
-                      onClick={() => handleDjSlot(club)}
+                      onClick={() => navigate(`/nightclub/${club.id}`)}
                     >
-                      {isPerforming ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mic2 className="mr-2 h-4 w-4" />} Queue for DJ Slot
+                      <Mic2 className="mr-2 h-4 w-4" /> DJ Sets & Mixer
                     </Button>
                     <Button
                       size="sm"
@@ -256,82 +232,6 @@ export const CityNightClubsSection = ({ nightClubs }: CityNightClubsSectionProps
         </CardContent>
       </Card>
 
-      {/* DJ Performance Outcome Dialog */}
-      <Dialog open={showOutcome} onOpenChange={setShowOutcome}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Disc3 className="h-5 w-5 text-primary" />
-              DJ Set Results
-            </DialogTitle>
-            <DialogDescription>
-              {djOutcome?.clubName && `Your performance at ${djOutcome.clubName}`}
-            </DialogDescription>
-          </DialogHeader>
-          {djOutcome && (
-            <div className="space-y-4">
-              {/* Score */}
-              <div className="text-center space-y-2">
-                <div className={`text-4xl font-bold ${getScoreColor(djOutcome.performanceScore)}`}>
-                  {djOutcome.performanceScore}
-                </div>
-                <div className="text-sm text-muted-foreground">Performance Score</div>
-                <Progress value={djOutcome.performanceScore} className="h-2" />
-              </div>
-
-              {/* Outcome Label */}
-              <div className="rounded-lg bg-card border border-border p-3 text-center">
-                <div className="text-lg font-semibold">{djOutcome.outcomeLabel}</div>
-                <p className="text-sm text-muted-foreground mt-1">{djOutcome.outcomeDescription}</p>
-              </div>
-
-              {/* Rewards Grid */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex items-center gap-2 rounded-md border border-border p-2">
-                  <DollarSign className="h-4 w-4 text-green-400" />
-                  <div>
-                    <div className="text-sm font-medium">+${djOutcome.cashEarned}</div>
-                    <div className="text-[11px] text-muted-foreground">Earnings</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 rounded-md border border-border p-2">
-                  <Star className="h-4 w-4 text-yellow-400" />
-                  <div>
-                    <div className="text-sm font-medium">+{djOutcome.fameGained}</div>
-                    <div className="text-[11px] text-muted-foreground">Fame</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 rounded-md border border-border p-2">
-                  <Users className="h-4 w-4 text-primary" />
-                  <div>
-                    <div className="text-sm font-medium">+{djOutcome.fansGained}</div>
-                    <div className="text-[11px] text-muted-foreground">Fans</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 rounded-md border border-border p-2">
-                  <Zap className="h-4 w-4 text-purple-400" />
-                  <div>
-                    <div className="text-sm font-medium">+{djOutcome.xpGained}</div>
-                    <div className="text-[11px] text-muted-foreground">DJ XP</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Addiction Warning */}
-              {djOutcome.addictionTriggered && djOutcome.addictionType && (
-                <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-                  ⚠️ {djOutcome.addictionType.charAt(0).toUpperCase() + djOutcome.addictionType.slice(1)} addiction{" "}
-                  {djOutcome.addictionSeverityGain === 20 ? "triggered" : `worsened (+${djOutcome.addictionSeverityGain})`}!
-                </div>
-              )}
-
-              <Button className="w-full" onClick={() => setShowOutcome(false)}>
-                Close
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </>
   );
 };
