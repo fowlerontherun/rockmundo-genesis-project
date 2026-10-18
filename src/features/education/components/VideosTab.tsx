@@ -317,6 +317,15 @@ export const VideosTab = () => {
         </CardContent>
       </Card>
 
+      {serverClaims.isError && (
+        <Alert variant="destructive" role="alert">
+          <AlertTitle>Could not sync learning slots</AlertTitle>
+          <AlertDescription>
+            Showing this browser's history temporarily. The server still checks reward limits.
+            <Button size="sm" variant="outline" className="ml-2" onClick={() => void serverClaims.refetch()}>Retry</Button>
+          </AlertDescription>
+        </Alert>
+      )}
       {!cooldownStatus.canWatch && (
         <Alert className="border-warning/50 bg-warning/10">
           <Leaf className="h-4 w-4 text-warning" />
