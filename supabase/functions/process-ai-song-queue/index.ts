@@ -27,6 +27,13 @@ Deno.serve(async (req) => {
   const {data:expired,error:recoveryError} = await db.rpc("reconcile_expired_ai_song_dispatches")
   if (recoveryError) return json({error:"Queue lease reconciliation failed"},503)
   if (expired > 0) console.warn("[ai-song-queue] Quarantined or reconciled expired dispatch leases",{count:expired})
+  // A lost provider webhook must never block the two global slots indefinitely.
+  // Keep the original prediction ID and await manual reconciliation or a late signed callback.
+  const {data:staleSubmitted,error:staleError}=await db.rpc("flag_stale_ai_song_predictions")
+  if (staleError) return json({error:"Provider callback watchdog failed"},503)
+  if (staleSubmitted > 0) console.warn("[ai-song-queue] ACTION REQUIRED: predictions missing completion callbacks",{
+    count:staleSubmitted,
+  })
   if (!providerToken) return json({error:"Provider unavailable; dispatch paused"},503)
 
   const { data:job, error:claimError } = await db.rpc("claim_ai_song_generation")
