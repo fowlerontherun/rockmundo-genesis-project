@@ -8,6 +8,7 @@ import { Clock, DollarSign, TrendingUp, Award, MapPin, Calendar, Plane, Sparkles
 import { useMentorSessions } from "@/hooks/useMentorSessions";
 import { formatFocusSkill } from "@/pages/admin/mentors.helpers";
 import { isEducationSkillVisible, useSkillTierAccess } from "../hooks/useSkillTierAccess";
+import { matchesEducationSkillFocus } from "../utils/educationSkillFocus";
 
 export const MentorsTab = () => {
   const { 
@@ -46,7 +47,7 @@ export const MentorsTab = () => {
     const locked = !isEducationSkillVisible(mentor.focus_skill, accessBySkill);
 
     if (locked) return false;
-    if (requestedSkill && mentor.focus_skill !== requestedSkill) return false;
+    if (!matchesEducationSkillFocus(mentor.focus_skill, requestedSkill)) return false;
     if (filter === 'available') return inCity && availableDay;
     return true;
   });
