@@ -21,14 +21,17 @@ DECLARE
   v_cash_after numeric;
   v_fame_after numeric;
 BEGIN
-  SELECT p.user_id,p.id,s.id,c.id,p.cash,p.fame
-    INTO v_actor,v_profile,v_song,v_club,v_cash,v_fame
+  SELECT p.user_id,p.id,s.id,c.id,p.cash,p.fame,
+    ((date_trunc('day', now() AT TIME ZONE city.timezone) + interval '8 days 22 hours') AT TIME ZONE city.timezone)
+    INTO v_actor,v_profile,v_song,v_club,v_cash,v_fame,v_start
   FROM public.profiles p
   JOIN public.songs s ON s.profile_id=p.id AND s.user_id=p.user_id
     AND s.status='recorded' AND s.audio_url IS NOT NULL AND COALESCE(s.archived,false)=false
   JOIN public.city_night_clubs c ON c.city_id=p.current_city_id
+  JOIN public.cities city ON city.id=c.city_id
   JOIN public.user_roles ur ON ur.user_id=p.user_id AND ur.role='user'::public.app_role
-  WHERE COALESCE(p.fame,0)>=COALESCE((c.dj_slot_config->>'minimum_fame')::integer,0)
+  WHERE c.dj_slot_config->>'schedule'='10pm-4am'
+    AND COALESCE(p.fame,0)>=COALESCE((c.dj_slot_config->>'minimum_fame')::integer,0)
     AND COALESCE((c.dj_slot_config->>'set_length_minutes')::integer,45) BETWEEN 15 AND 180
     AND NOT EXISTS (
       SELECT 1 FROM public.player_scheduled_activities a
