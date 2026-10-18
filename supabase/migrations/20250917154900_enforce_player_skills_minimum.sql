@@ -16,7 +16,7 @@ DECLARE
   ];
   present_skill_columns text[] := ARRAY[]::text[];
   check_fragments text[] := ARRAY[]::text[];
-  column_name text;
+  v_column_name text;
   max_value integer;
 BEGIN
   SELECT MAX((match)[1]::integer)
@@ -36,27 +36,27 @@ BEGIN
     max_value := 100;
   END IF;
 
-  FOREACH column_name IN ARRAY skill_columns LOOP
+  FOREACH v_column_name IN ARRAY skill_columns LOOP
     IF EXISTS (
       SELECT 1
       FROM information_schema.columns AS cols
       WHERE cols.table_schema = 'public'
         AND cols.table_name = 'player_skills'
-        AND cols.column_name = column_name
+        AND cols.column_name = v_column_name
     ) THEN
       EXECUTE format(
         'UPDATE public.player_skills
             SET %1$I = 5,
                 updated_at = timezone(''utc'', now())
           WHERE %1$I IS NULL OR %1$I < 5',
-        column_name
+        v_column_name
       );
 
-      EXECUTE format('ALTER TABLE public.player_skills ALTER COLUMN %I SET DEFAULT 5', column_name);
-      EXECUTE format('ALTER TABLE public.player_skills ALTER COLUMN %I SET NOT NULL', column_name);
+      EXECUTE format('ALTER TABLE public.player_skills ALTER COLUMN %I SET DEFAULT 5', v_column_name);
+      EXECUTE format('ALTER TABLE public.player_skills ALTER COLUMN %I SET NOT NULL', v_column_name);
 
-      present_skill_columns := array_append(present_skill_columns, column_name);
-      check_fragments := array_append(check_fragments, format('%I BETWEEN 5 AND %s', column_name, max_value::text));
+      present_skill_columns := array_append(present_skill_columns, v_column_name);
+      check_fragments := array_append(check_fragments, format('%I BETWEEN 5 AND %s', v_column_name, max_value::text));
     END IF;
   END LOOP;
 
@@ -225,6 +225,15 @@ END;
 $function$;
 
 -- Ensure resets also restore the 5-point skill baseline
+-- Fresh-replay guard: player_attributes is not created until 20250918.
+-- Preserve this historical reset definition for databases with the table,
+-- but never reference a nonexistent composite return type while bootstrapping.
+-- Subsequent September migrations install the live reset implementation
+-- after the attributes schema is available.
+DO $legacy_reset_guard$
+BEGIN
+  IF to_regclass('public.player_attributes') IS NOT NULL THEN
+    EXECUTE $legacy_reset_source$
 CREATE OR REPLACE FUNCTION public.reset_player_character()
 RETURNS TABLE (
   profile public.profiles,
@@ -418,5 +427,8 @@ BEGIN
   RETURN QUERY SELECT new_profile, new_skills, new_attributes;
 END;
 $$;
-
-GRANT EXECUTE ON FUNCTION public.reset_player_character() TO authenticated;
+$legacy_reset_source$;
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.reset_player_character() TO authenticated';
+  END IF;
+END;
+$legacy_reset_guard$;

@@ -23,23 +23,23 @@ DECLARE
     'business_acumen',
     'marketing_savvy'
   ];
-  column_name text;
+  v_column_name text;
 BEGIN
-  FOREACH column_name IN ARRAY attribute_columns LOOP
+  FOREACH v_column_name IN ARRAY attribute_columns LOOP
     IF EXISTS (
       SELECT 1
       FROM information_schema.columns AS cols
       WHERE cols.table_schema = 'public'
         AND cols.table_name = 'player_attributes'
-        AND cols.column_name = column_name
+        AND cols.column_name = v_column_name
     ) THEN
-      EXECUTE format('ALTER TABLE public.player_attributes ALTER COLUMN %I SET DEFAULT 5', column_name);
+      EXECUTE format('ALTER TABLE public.player_attributes ALTER COLUMN %I SET DEFAULT 5', v_column_name);
       EXECUTE format(
         $$UPDATE public.player_attributes
           SET %1$I = 5,
               updated_at = timezone(''utc'', now())
         WHERE %1$I IS NULL OR %1$I = 0$$,
-        column_name
+        v_column_name
       );
     END IF;
   END LOOP;
@@ -193,6 +193,15 @@ BEGIN
 END;
 $function$;
 
+-- Fresh-replay guard: player_attributes is not created until 20250918.
+-- Preserve this historical reset definition for databases with the table,
+-- but never reference a nonexistent composite return type while bootstrapping.
+-- Subsequent September migrations install the live reset implementation
+-- after the attributes schema is available.
+DO $legacy_reset_guard$
+BEGIN
+  IF to_regclass('public.player_attributes') IS NOT NULL THEN
+    EXECUTE $legacy_reset_source$
 CREATE OR REPLACE FUNCTION public.reset_player_character()
 RETURNS TABLE (
   profile public.profiles,
@@ -378,5 +387,8 @@ BEGIN
   RETURN QUERY SELECT new_profile, new_skills, new_attributes;
 END;
 $$;
-
-GRANT EXECUTE ON FUNCTION public.reset_player_character() TO authenticated;
+$legacy_reset_source$;
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.reset_player_character() TO authenticated';
+  END IF;
+END;
+$legacy_reset_guard$;
