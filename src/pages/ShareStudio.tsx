@@ -137,7 +137,7 @@ export default function ShareStudio() {
         </CardContent>
       </Card>
       {characterPromo && <AvatarShareStudio moment={characterPromo} open={true} onOpenChange={(open) => { if (!open) setCharacterPromo(null); }} />}
-      {selected && !selected.avatar && ["character_profile", "band_profile", "gig_result", "achievement", "tour"].includes(selected.type)
+      {selected && ["character_profile", "band_profile", "gig_result", "achievement", "tour", "release"].includes(selected.type)
         ? <AvatarShareStudio moment={selected} open={true} onOpenChange={(open) => { if (!open) setSelected(null); }} />
         : <ShareMomentSheet moment={selected} open={!!selected} onOpenChange={(open) => { if (!open) setSelected(null); }} />}
     </FMPageScaffold>

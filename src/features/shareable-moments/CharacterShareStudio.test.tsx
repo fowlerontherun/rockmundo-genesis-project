@@ -92,6 +92,20 @@ describe('AvatarShareStudio image capture', () => {
     warn.mockRestore();
   });
 
+  it('regenerates a corrupt historical avatar rather than retrying its broken image', async () => {
+    const saved = { ...moment, avatar: { dataUrl: 'data:image/png;base64,invalid', width: 400, height: 600 } };
+    render(<AvatarShareStudio open moment={saved} onOpenChange={vi.fn()} />);
+
+    expect(screen.getByTestId('avatar-url')).toHaveTextContent('data:image/png;base64,invalid');
+    expect(mocks.renderAvatar).not.toHaveBeenCalled();
+
+    // ShareMomentSheet calls this when the saved data URL cannot be decoded.
+    fireEvent.click(screen.getByRole('button', { name: 'Retry avatar' }));
+    await waitFor(() => expect(screen.getByTestId('avatar-status')).toHaveTextContent('ready'));
+    expect(screen.getByTestId('avatar-url')).toHaveTextContent('data:image/png;base64,avatar');
+    expect(mocks.renderAvatar).toHaveBeenCalledTimes(1);
+  });
+
   it('preserves a historical snapshot instead of rendering the current avatar', () => {
     render(<AvatarShareStudio open moment={{ ...moment, avatar: { dataUrl: 'data:image/png;base64,older', width: 400, height: 600 } }} onOpenChange={vi.fn()} />);
     expect(screen.getByTestId('avatar-url')).toHaveTextContent('data:image/png;base64,older');

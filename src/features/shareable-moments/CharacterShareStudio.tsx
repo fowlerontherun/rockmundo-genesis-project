@@ -30,10 +30,14 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
   const craftedInstrument = luthiery.data?.[0] ?? null;
   const instrument = craftedInstrument?.instrumentKind === 'electric_bass' ? 'bass_guitar' : craftedInstrument?.instrumentKind === 'electric_guitar' ? 'electric_guitar' : undefined;
   const role = instrument === 'bass_guitar' ? 'bass' : instrument === 'electric_guitar' ? 'guitar' : 'other';
-  const storedAvatar = moment.avatar ?? null;
   const captureKey = `${model.profileId ?? 'none'}:${moment.type}:${moment.id ?? moment.createdAt}`;
   const [capture, setCapture] = useState<{ key: string; avatar: AvatarCapture | null; status: CaptureStatus } | null>(null);
-  const [retry, setRetry] = useState(0);
+  // A previously stored image can be corrupted. Retrying must switch to a
+  // fresh model capture instead of repeatedly decoding the invalid data URL.
+  // Scope retry state to the specific moment so other saved portraits survive.
+  const [recapture, setRecapture] = useState<{ key: string; attempt: number } | null>(null);
+  const retry = recapture?.key === captureKey ? recapture.attempt : 0;
+  const storedAvatar = retry > 0 ? null : moment.avatar ?? null;
   const avatar = storedAvatar ?? (capture?.key === captureKey ? capture.avatar : null);
   const captureStatus: CaptureStatus = storedAvatar ? 'ready' : capture?.key === captureKey ? capture.status : 'loading';
 
@@ -83,7 +87,10 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
     onOpenChange={onOpenChange}
     moment={shareMoment}
     avatarStatus={captureStatus}
-    onAvatarRetry={() => setRetry(value => value + 1)}
+    onAvatarRetry={() => setRecapture(previous => ({
+      key: captureKey,
+      attempt: previous?.key === captureKey ? previous.attempt + 1 : 1,
+    }))}
   />;
 }
 
