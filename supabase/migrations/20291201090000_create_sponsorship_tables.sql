@@ -69,6 +69,12 @@ create table if not exists public.sponsorship_contracts (
   check (end_date is null or end_date >= start_date)
 );
 
+-- Carry forward sponsorship-type enrichment when contracts are created
+-- later than the original April 2026 reference to them.
+alter table public.sponsorship_contracts
+  add column if not exists sponsorship_type_id uuid
+  references public.sponsorship_types(id);
+
 create table if not exists public.sponsorship_history (
   id uuid primary key default gen_random_uuid(),
   contract_id uuid not null references public.sponsorship_contracts(id) on delete cascade,
