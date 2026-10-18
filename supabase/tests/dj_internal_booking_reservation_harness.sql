@@ -83,6 +83,23 @@ BEGIN
   IF (SELECT count(*) FROM public.dj_bookings WHERE id=v_booking)<>1
   THEN RAISE EXCEPTION 'Missing unique reservation row'; END IF;
 
+  -- Booking insert must atomically create exactly one canonical DJ calendar row.
+  IF (SELECT count(*) FROM public.player_scheduled_activities
+      WHERE linked_dj_booking_id=v_booking AND activity_type='dj_set'
+        AND status='scheduled' AND user_id=v_actor AND profile_id=v_profile
+        AND scheduled_start=v_start)<>1
+  THEN RAISE EXCEPTION 'DJ booking failed to project its canonical schedule'; END IF;
+
+  BEGIN
+    INSERT INTO public.player_scheduled_activities(
+      user_id,profile_id,activity_type,scheduled_start,scheduled_end,status,title)
+    VALUES(v_actor,v_profile,'reading',v_start+interval '5 minutes',
+      v_start+interval '35 minutes','scheduled','Test overlapping reading');
+    RAISE EXCEPTION 'SECURITY FAILURE: future overlapping education event allowed';
+  EXCEPTION WHEN exclusion_violation THEN NULL;
+  END;
+
+
   BEGIN
     PERFORM public.reserve_dj_booking_internal(
       v_profile,v_club,v_set,v_start+interval '1 minute',gen_random_uuid());
@@ -119,6 +136,8 @@ BEGIN
   EXCEPTION WHEN invalid_parameter_value THEN NULL;
   END;
 
+  PERFORM set_config('dj_test.actor',v_actor::text,true);
+  PERFORM set_config('dj_test.booking_id',v_booking::text,true);
   PERFORM set_config('request.jwt.claim.sub',v_other::text,true);
   BEGIN
     PERFORM public.reserve_dj_booking_internal(
@@ -128,7 +147,68 @@ BEGIN
   END;
 END $test$;
 
+-- The actual owner can READ the calendar but cannot forge, edit or delete
+-- its system-managed booking row using their authenticated DB role.
 SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub',current_setting('dj_test.actor'),true);
+DO $owner_schedule$
+DECLARE v_booking uuid := current_setting('dj_test.booking_id')::uuid; v_n integer;
+BEGIN
+ SELECT count(*) INTO v_n FROM public.player_scheduled_activities
+ WHERE linked_dj_booking_id=v_booking AND status='scheduled';
+ IF v_n<>1 THEN RAISE EXCEPTION 'Booking owner cannot view DJ calendar entry'; END IF;
+
+ BEGIN
+   UPDATE public.player_scheduled_activities SET status='completed'
+   WHERE linked_dj_booking_id=v_booking;
+   RAISE EXCEPTION 'SECURITY FAILURE: owner self-completed a DJ booking';
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
+ BEGIN
+   DELETE FROM public.player_scheduled_activities
+   WHERE linked_dj_booking_id=v_booking;
+   RAISE EXCEPTION 'SECURITY FAILURE: owner deleted protected DJ schedule';
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
+ BEGIN
+   INSERT INTO public.player_scheduled_activities(
+     user_id,profile_id,activity_type,scheduled_start,scheduled_end,title)
+   SELECT user_id,profile_id,'dj_set',scheduled_start,scheduled_end,'Forged DJ'
+   FROM public.player_scheduled_activities WHERE linked_dj_booking_id=v_booking;
+   RAISE EXCEPTION 'SECURITY FAILURE: owner inserted a fake DJ gig';
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
+END $owner_schedule$;
+
+RESET ROLE;
+SELECT set_config('request.jwt.claim.sub',current_setting('dj_test.actor'),true);
+DO $cancel$
+DECLARE v_booking uuid := current_setting('dj_test.booking_id')::uuid;
+DECLARE v_actor uuid := auth.uid();
+DECLARE v_profile uuid; v_club uuid; v_set uuid; v_start timestamptz;
+DECLARE v_next uuid; v_cancelled uuid;
+BEGIN
+ SELECT profile_id,club_id,setlist_id,starts_at INTO v_profile,v_club,v_set,v_start
+ FROM public.dj_bookings WHERE id=v_booking;
+ v_cancelled:=public.cancel_dj_booking_internal(v_booking);
+ IF v_cancelled<>v_booking THEN RAISE EXCEPTION 'Cancellation returned wrong booking'; END IF;
+ IF (SELECT status FROM public.player_scheduled_activities WHERE linked_dj_booking_id=v_booking)<>'cancelled'
+ THEN RAISE EXCEPTION 'Cancellation did not update the calendar'; END IF;
+ IF public.cancel_dj_booking_internal(v_booking)<>v_booking
+ THEN RAISE EXCEPTION 'Cancellation retry was not idempotent'; END IF;
+ -- A cancelled slot is rebookable without collision with a cancelled calendar.
+ v_next:=public.reserve_dj_booking_internal(v_profile,v_club,v_set,v_start,gen_random_uuid());
+ IF v_next=v_booking THEN RAISE EXCEPTION 'Rebooking after cancellation reused an ID'; END IF;
+ IF (SELECT count(*) FROM public.player_scheduled_activities
+     WHERE linked_dj_booking_id IN (v_booking,v_next))<>2
+ THEN RAISE EXCEPTION 'Rebook failed to preserve cancellation history'; END IF;
+ PERFORM public.cancel_dj_booking_internal(v_next);
+END $cancel$;
+
+SELECT set_config('request.jwt.claim.sub', (
+  SELECT p.user_id::text FROM public.profiles p
+  WHERE p.user_id<>current_setting('dj_test.actor')::uuid LIMIT 1
+),true);
 DO $non_admin$
 BEGIN
   IF has_function_privilege(current_user,
