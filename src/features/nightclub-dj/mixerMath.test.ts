@@ -36,7 +36,10 @@ describe("DJ mixer mechanics", () => {
       audioUrl: "https://audio.example/song1.mp3", storagePath: null,
       title: "Original title", bpm: 120,
     };
-    expect(deckAudioSourceKey({ ...original, title: "Renamed", bpm: 130 }))
+    // Assign first: the full catalogue model carries extra metadata, but the
+    // source-key helper only inspects the four stable playable-media fields.
+    const metadataRefresh = { ...original, title: "Renamed", bpm: 130 };
+    expect(deckAudioSourceKey(metadataRefresh))
       .toBe(deckAudioSourceKey(original));
     expect(deckAudioSourceKey({ ...original, audioUrl: "https://audio.example/new.mp3" }))
       .not.toBe(deckAudioSourceKey(original));
