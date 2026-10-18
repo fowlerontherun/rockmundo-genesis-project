@@ -74,6 +74,20 @@ describe("Shareable Moments migrated entrypoint contracts", () => {
     expect(source).toContain("<ShareMomentSheet");
   });
 
+  it("routes Share Studio gig creation to the mounted gig picker and avatar-aware export", () => {
+    const studio = read("src/pages/ShareStudio.tsx");
+    const advanced = read("src/pages/AdvancedGigSystem.tsx");
+    const schedule = read("src/pages/Schedule.tsx");
+    const app = read("src/App.tsx");
+    expect(app).toContain('<Route path="gigs/advanced/:gigId" element={<AdvancedGigSystem />} />');
+    expect(studio).toContain('path: "/gigs/advanced/upcoming?shareCreate=gig"');
+    expect(advanced).toContain('<Tabs defaultValue={gigId === "upcoming" ? "upcoming" : "offers"}');
+    expect(advanced).toContain('shareMoment?.type === "gig_result"');
+    expect(advanced).toContain('<AvatarShareStudio moment={shareMoment}');
+    expect(advanced).toContain('<ShareMomentSheet moment={shareMoment}');
+    expect(schedule).toContain('to="/gigs/advanced/upcoming?shareCreate=gig"');
+  });
+
   it("includes the active player avatar in source-page gig, band and release posters", () => {
     const gig = read("src/components/schedule/GigDetailsDialog.tsx");
     const band = read("src/pages/BandProfile.tsx");
