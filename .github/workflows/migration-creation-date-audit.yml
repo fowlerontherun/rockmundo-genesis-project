@@ -1,0 +1,35 @@
+name: Read-only migration creation date audit
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'scripts/supabase/audit-migration-creation-dates.mjs'
+      - 'scripts/supabase/inherited-future-migrations.json'
+      - 'tests/migrationCreationAudit.test.mjs'
+      - '.github/workflows/migration-creation-date-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Test audit engine
+        run: node --test tests/migrationCreationAudit.test.mjs
+      - name: Inventory creation date mismatches (no database connection)
+        run: node scripts/supabase/audit-migration-creation-dates.mjs --output migration-creation-audit.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: migration-creation-audit
+          path: migration-creation-audit.json
+          retention-days: 14
