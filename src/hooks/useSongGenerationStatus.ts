@@ -56,7 +56,7 @@ export function useSongGenerationStatus(songId: string | null) {
       if (error) throw error;
       return data as {state:string;created_at:string;submitted_at:string|null;available_at:string}|null;
     },
-    refetchInterval: query.state.data?.audio_generation_status === "generating" ? 10000 : false,
+    refetchInterval: query.data?.audio_generation_status === "generating" ? 10000 : false,
   });
   const queueState = queue.data?.state ?? null;
 
