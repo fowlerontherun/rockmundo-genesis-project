@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CanonicalSkill, SkillAvailability, SkillRoleLink } from "@/utils/skillCatalogue";
+import type { CanonicalSkill, SkillRoleLink } from "@/utils/skillCatalogue";
 import { selectLearningRecommendations } from "./educationRecommendations";
 
 const skill = (slug: string, maxLevel = 20): CanonicalSkill => ({
@@ -29,18 +29,12 @@ const catalogue = [
   skill("instruments_basic_bass"),
 ];
 
-const availability: SkillAvailability[] = catalogue.map((entry) => ({
-  slug: entry.slug,
-  status: "available_to_unlock",
-}));
-
 const noRoleLinks: SkillRoleLink[] = [];
 
 const recommend = (options: Partial<Parameters<typeof selectLearningRecommendations>[0]> = {}) =>
   selectLearningRecommendations({
     catalogue,
     progress: [],
-    availability,
     roleLinks: noRoleLinks,
     access: new Map(catalogue.map((entry) => [entry.slug, entry.tier === "basic"])),
     goal: "all",
@@ -72,8 +66,7 @@ describe("education next-learning recommendations", () => {
   it("excludes maxed skills and undiscoverable prerequisites", () => {
     const ranked = recommend({
       progress: [{ skill_slug: "instruments_basic_guitar", current_level: 20 }],
-      availability: availability.map((entry) => entry.slug === "instruments_basic_drums"
-        ? { ...entry, status: "prerequisites_missing" as const } : entry),
+      access: new Map(catalogue.map((entry) => [entry.slug, entry.slug === "instruments_basic_drums" ? false : entry.tier === "basic"])),
     });
     expect(ranked.map((entry) => entry.slug)).not.toContain("instruments_basic_guitar");
     expect(ranked.map((entry) => entry.slug)).not.toContain("instruments_basic_drums");
@@ -88,11 +81,11 @@ describe("education next-learning recommendations", () => {
     });
   });
 
-  it("uses verified tier eligibility when optional availability metadata is missing", () => {
-    const slugs = recommend({ availability: [] }).map((entry) => entry.slug);
+  it("uses only authoritative tier eligibility without optional canonical metadata", () => {
+    const slugs = recommend().map((entry) => entry.slug);
     expect(slugs).toContain("instruments_basic_guitar");
     expect(slugs).not.toContain("instruments_professional_guitar");
-    expect(recommend({ availability: [], access: new Map() })).toEqual([]);
+    expect(recommend({ access: new Map() })).toEqual([]);
   });
 
   it("conceals inactive and hidden skill definitions even with unlocked tier", () => {
