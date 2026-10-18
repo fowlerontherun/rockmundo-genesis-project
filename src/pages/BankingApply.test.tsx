@@ -146,4 +146,29 @@ describe("BankingApply request correctness (#4254)", () => {
     expect(mocks.create).not.toHaveBeenCalled();
     expect(mocks.listAccounts).not.toHaveBeenCalled();
   });
+  it("lets the player retry loading bank products and accounts after a network failure", async () => {
+    mocks.listProducts.mockRejectedValueOnce(new Error("Banking offline"));
+    page();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Banking offline");
+    expect(submit()).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: "Retry loading banking accounts" }));
+    await waitFor(() => expect(submit()).toBeEnabled());
+    expect(mocks.listProducts).toHaveBeenCalledTimes(2);
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
+
+  it("never displays an old character's application after switching characters during its request", async () => {
+    let finish: (value: string) => void = () => {};
+    mocks.create.mockImplementation(() => new Promise<string>((resolve) => { finish = resolve; }));
+    const view = page();
+    await waitFor(() => expect(submit()).toBeEnabled());
+    await userEvent.click(submit());
+    mocks.profileId = "profile-2";
+    view.rerender(<MemoryRouter><BankingApply /></MemoryRouter>);
+    finish("application-old");
+    await waitFor(() => expect(submit()).toBeEnabled());
+    expect(screen.queryByText(/Application received/)).not.toBeInTheDocument();
+    expect(mocks.result).not.toHaveBeenCalledWith("application-old");
+  });
+
 });
