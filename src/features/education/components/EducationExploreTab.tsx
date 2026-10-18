@@ -12,6 +12,7 @@ import { formatEducationSkillName } from "../utils/educationUi";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useSkillTierAccess } from "../hooks/useSkillTierAccess";
 import { useLearningMethodCounts } from "../hooks/useLearningMethodCounts";
+import { chooseEducationMethod, hasNoListedEducationResources, type EducationMethod } from "../utils/educationMethodChoice";
 
 const methods = [
   { value: "books", label: "Books", icon: BookOpen },
@@ -21,18 +22,17 @@ const methods = [
   { value: "players", label: "Players", icon: UserRoundSearch },
 ] as const;
 
-type LearningMethod = (typeof methods)[number]["value"];
 
 export const EducationExploreTab = () => {
   const [params, setParams] = useSearchParams();
   const requested = params.get("method") ?? params.get("tab");
-  const method: LearningMethod = methods.some((item) => item.value === requested)
-    ? requested as LearningMethod : "books";
+
   const skill = params.get("skill");
   const { profileId } = useActiveProfile();
   const access = useSkillTierAccess(profileId, skill ? [skill] : []);
   const skillVisible = Boolean(skill && access.data?.get(skill) === true);
   const counts = useLearningMethodCounts(skill, skillVisible);
+  const method = chooseEducationMethod(requested, skillVisible, counts.data);
 
   // A manually constructed URL must never reveal higher-tier discovery details.
   useEffect(() => {
@@ -42,7 +42,7 @@ export const EducationExploreTab = () => {
     setParams(next, { replace: true });
   }, [skill, skillVisible, access.isSuccess, params, setParams]);
 
-  const selectMethod = (nextMethod: LearningMethod) => {
+  const selectMethod = (nextMethod: EducationMethod) => {
     const next = new URLSearchParams(params);
     next.set("tab", "find");
     next.set("method", nextMethod);
@@ -74,6 +74,9 @@ export const EducationExploreTab = () => {
           {counts.isLoading ? "Checking learning resources..." : "Resource counts show catalogue entries, not guaranteed class places or mentor bookings."}
         </p>
       )}
+      {skillVisible && !counts.isLoading && hasNoListedEducationResources(counts.data) && (
+        <p className="text-sm text-muted-foreground" role="status">No listed books, courses, videos or mentors for this skill yet. You can explore player learning or choose another skill.</p>
+      )}
       <nav className="flex gap-2 overflow-x-auto pb-2" aria-label="Learning methods">
         {methods.map((item) => {
           const Icon = item.icon;
@@ -92,7 +95,8 @@ export const EducationExploreTab = () => {
           );
         })}
       </nav>
-      {(!skill || skillVisible) && (
+      {skillVisible && counts.isLoading && <p role="status" className="py-4 text-sm text-muted-foreground">Finding available learning methods...</p>}
+      {(!skill || (skillVisible && !counts.isLoading)) && (
         <>
           {method === "books" && <BooksTab key={skill ?? "all"} />}
           {method === "university" && <UniversityTab key={skill ?? "all"} />}
