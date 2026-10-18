@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import WorldEnvironment from "./WorldEnvironment";
@@ -68,7 +68,8 @@ describe("Global Cities selected-character travel safety (#4231)", () => {
     expect(travel).toHaveLength(2);
     await userEvent.click(travel[0]);
     expect(mocks.navigate).toHaveBeenCalledWith(expect.stringMatching(/^\/travel\?destination=/));
-    expect(mocks.from).toHaveBeenCalledExactlyOnceWith("cities");
+    expect(mocks.from).toHaveBeenCalledOnce();
+    expect(mocks.from).toHaveBeenCalledWith("cities");
     expect(mocks.from).not.toHaveBeenCalledWith("profiles");
     expect(screen.queryByRole("button", { name: "Set as Home" })).not.toBeInTheDocument();
   });
@@ -125,7 +126,8 @@ describe("Global Cities selected-character travel safety (#4231)", () => {
       expect(screen.getByRole("alert")).toHaveTextContent("Network timeout");
     });
     expect(screen.queryByText("No cities found")).not.toBeInTheDocument();
-    expect(mocks.from).toHaveBeenCalledExactlyOnceWith("cities");
+    expect(mocks.from).toHaveBeenCalledOnce();
+    expect(mocks.from).toHaveBeenCalledWith("cities");
   });
 
   it("allows city browsing but never travel mutations when logged out", async () => {
