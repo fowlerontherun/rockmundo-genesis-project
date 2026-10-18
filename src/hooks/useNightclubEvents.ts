@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { currentNightclubEvent, type NightclubGameDate } from "@/utils/nightclubGameEvents";
 
 export interface NightclubEvent {
   id: string;
@@ -51,15 +52,9 @@ export function useClubEvents(clubId: string | undefined) {
   });
 }
 
-export function getTonightsEvent(events: NightclubEvent[]): NightclubEvent | null {
-  const today = new Date().getDay();
-  const todayStr = new Date().toISOString().split("T")[0];
-
-  // Check one-off events first
-  const oneOff = events.find((e) => !e.is_recurring && e.scheduled_date === todayStr);
-  if (oneOff) return oneOff;
-
-  // Check recurring events
-  const recurring = events.find((e) => e.is_recurring && e.day_of_week === today);
-  return recurring ?? null;
+export function getTonightsEvent(
+  events: NightclubEvent[],
+  gameDate: NightclubGameDate | null | undefined,
+): NightclubEvent | null {
+  return currentNightclubEvent(events, gameDate);
 }
