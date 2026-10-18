@@ -1,10 +1,10 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import { AlertCircle, BookOpen, GraduationCap, TrendingUp, BookMarked, ArrowRight, CheckCircle2 } from "lucide-react";
+import { AlertCircle, BookOpen, GraduationCap, BookMarked, ArrowRight, CheckCircle2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useGameData } from "@/hooks/useGameData";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -12,6 +12,7 @@ import { getSkillDisplayProgress } from "@/utils/skillProgressDisplay";
 import { useEducationSummary } from "../hooks/useEducationSummary";
 import { useSkillTierAccess, isEducationSkillVisible } from "../hooks/useSkillTierAccess";
 import { formatEducationSkillName, percentComplete } from "../utils/educationUi";
+import { EducationRecommendations } from "./EducationRecommendations";
 
 export const EducationOverviewTab = () => {
   const { profileId } = useActiveProfile();
@@ -29,7 +30,6 @@ export const EducationOverviewTab = () => {
     .sort((a, b) => b.progress_percent - a.progress_percent)
     .slice(0, 5), [skills]);
 
-  const suggestedSkill = closest[0] ?? null;
   const loading = isLoading || skillsLoading || tierAccess.isLoading;
   if (loading) return <p className="py-12 text-center text-sm text-muted-foreground">Loading your learning dashboard...</p>;
 
@@ -126,15 +126,10 @@ export const EducationOverviewTab = () => {
         </CardContent></Card>
       </section>
 
-      {suggestedSkill && (
-        <Card className="border-primary/30">
-          <CardHeader className="pb-2"><CardTitle className="flex gap-2 items-center text-base"><TrendingUp className="h-4 w-4" /> Recommended next</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm">Improve <strong>{formatEducationSkillName(suggestedSkill.slug)}</strong>. You are {Math.round(suggestedSkill.progress_percent)}% of the way to level {suggestedSkill.next_level}. It is one of your closest achievable level-ups.</p>
-            <Button asChild size="sm"><Link to={"/education?tab=find&skill=" + encodeURIComponent(suggestedSkill.slug)}>Find ways to learn <ArrowRight className="ml-1 h-4 w-4" /></Link></Button>
-          </CardContent>
-        </Card>
-      )}
+      <EducationRecommendations activeSkills={[
+        ...activeBooks.map((book) => book.skill_books?.skill_slug).filter((slug): slug is string => Boolean(slug)),
+        ...activeEnrollments.map((course) => course.university_courses?.skill_slug).filter((slug): slug is string => Boolean(slug)),
+      ]} />
 
       {completedEnrollments.length > 0 && (
         <section className="space-y-2" aria-label="Recent achievements">
