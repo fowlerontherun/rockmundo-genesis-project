@@ -295,6 +295,9 @@ export default function UniversityDetail() {
 
       const course = courses?.find((c) => c.id === courseId);
       if (!course) throw new Error("Course not found");
+      if (tierAccess.isLoading || tierAccess.isError || !isEducationSkillVisible(course.skill_slug, accessBySkill)) {
+        throw new Error("This skill tier is not unlocked for your character.");
+      }
 
       if (skillDefinitionsLoading || skillParentLinksLoading) {
         throw new Error("Course requirements are still loading. Please try again in a moment.");
@@ -510,6 +513,7 @@ export default function UniversityDetail() {
   };
 
   const canEnroll = (course: Course) => {
+    if (tierAccess.isLoading || tierAccess.isError || !isEducationSkillVisible(course.skill_slug, accessBySkill)) return false;
     if (
       skillDefinitionsLoading ||
       skillParentLinksLoading ||
@@ -535,6 +539,8 @@ export default function UniversityDetail() {
   };
 
   const getEnrollmentMessage = (course: Course) => {
+    if (tierAccess.isLoading) return "Checking skill tier access...";
+    if (tierAccess.isError || !isEducationSkillVisible(course.skill_slug, accessBySkill)) return "This skill tier has not been unlocked yet.";
     if (skillDefinitionsLoading || skillParentLinksLoading) {
       return "Checking course requirements...";
     }
