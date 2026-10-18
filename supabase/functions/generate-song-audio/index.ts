@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import { signReplicateAttempt } from "../_shared/replicateWebhookAuth.ts"
 import { normalizeMiniMaxStylePrompt } from "../_shared/musicStylePrompt.ts"
 import { compactLyricsForShortAudio } from "../_shared/shortSongLyrics.ts"
 import { getGenerationBlock } from "../_shared/songRegenerationPolicy.ts"
@@ -486,59 +485,18 @@ serve(async (req) => {
         .eq('id', attempt.id)
     }
 
-    console.log(`[generate-song-audio] Creating async MiniMax Music prediction...`)
-
-    // Build webhook URL with songId
-    const callbackSignature = await signReplicateAttempt(attempt.id, songId, supabaseServiceKey)
-    const webhookUrl = `${supabaseUrl}/functions/v1/replicate-webhook?songId=${encodeURIComponent(songId)}&attemptId=${encodeURIComponent(attempt.id)}&signature=${callbackSignature}`
-
-    // Create async prediction with webhook using MiniMax Music-1.5
-    // Use the models endpoint so we can pass model name instead of version
-    const predictionResponse = await fetch(`https://api.replicate.com/v1/models/minimax/${generationModel}/predictions`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${REPLICATE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        input: {
-          prompt: stylePrompt,
-          lyrics: formattedLyrics,
-          bitrate: 128000,
-          audio_format: 'mp3',
-          ...(generationModel === 'music-2.6' ? {
-            is_instrumental: false,
-            lyrics_optimizer: false,
-          } : {}),
-        },
-        webhook: webhookUrl,
-        webhook_events_filter: ['completed', 'output'],
-      })
+    // Durable globally serialized queue: no paid provider POST in a player request.
+    // The dispatch worker performs one paid submission at a time.
+    const {data:queued,error:queueError} = await supabase.rpc("enqueue_ai_song_generation", {
+      p_attempt_id:attempt.id,p_song_id:songId,p_user_id:userId,
+      p_model:generationModel,p_style:stylePrompt,p_lyrics:formattedLyrics,
     })
-
-    const prediction = await predictionResponse.json()
-
-    if (!predictionResponse.ok) {
-      console.error(`[generate-song-audio] Replicate API error:`, prediction)
-      throw new Error(`Replicate API error: ${prediction.detail || prediction.error || predictionResponse.status}`)
-    }
-
-    if (!prediction.id) throw new Error("Replicate returned no prediction ID")
-    const { error: predictionTrackingError } = await supabase.from("song_generation_attempts")
-      .update({ prediction_id: prediction.id, provider_prediction_id: prediction.id }).eq("id", attempt.id).eq("status", "generating")
-    if (predictionTrackingError) throw predictionTrackingError
-    console.log(`[generate-song-audio] Async prediction created: ${prediction.id} for song ${songId}`)
-    console.log(`[generate-song-audio] Prediction web URL: ${prediction.urls?.web}`)
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        predictionId: prediction.id,
-        attemptId: attempt.id,
-        message: `Audio generation started for "${songTitle}". It will be ready in 2-5 minutes.`
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    if(queueError || !queued?.ok) throw new Error("Could not enqueue AI generation: "+(queueError?.message||"unknown"))
+    console.log(`[generate-song-audio] Queued AI song ${songId}, attempt ${attempt.id}`)
+    return new Response(JSON.stringify({
+      success:true, queued:true, state:"queued", attemptId:attempt.id,
+      message:"Song added to AI generation queue; it will start when a provider slot is free.",
+    }),{headers:{...corsHeaders,"Content-Type":"application/json"}})
 
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)

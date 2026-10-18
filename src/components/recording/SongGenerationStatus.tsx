@@ -32,7 +32,9 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
     data: status,
     isError: statusError,
     refetch: retryStatus,
-    isGenerating, 
+    isGenerating,
+    queueState,
+    queueAvailableAt,
     isCompleted, 
     isFailed, 
     isTimedOut,
@@ -150,8 +152,8 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
         toast.error(data?.error || "Failed to regenerate");
       } else if (data?.success) {
         if (data.attemptId) setTrackedAttemptId(data.attemptId);
-        toast.success("Regeneration started!", {
-          description: "Song is being regenerated with MiniMax Music."
+        toast.success(data?.queued ? "Song queued" : "Regeneration started!", {
+          description: data?.queued ? "Waiting for the next provider slot." : "Song is being regenerated with MiniMax Music."
         });
         queryClient.invalidateQueries({ queryKey: ["song-generation-status", songId] });
         queryClient.invalidateQueries({ queryKey: ["song-generation-limits"] });
@@ -198,8 +200,8 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
         toast.error(message);
       } else if (data?.success) {
         if (data.attemptId) setTrackedAttemptId(data.attemptId);
-        toast.success("Generation started!", {
-          description: "Your song is being generated."
+        toast.success(data?.queued ? "Song queued" : "Generation started!", {
+          description: data?.queued ? "It will start automatically when a provider slot opens." : "Your song is being generated."
         });
         queryClient.invalidateQueries({ queryKey: ["song-generation-status", songId] });
         queryClient.invalidateQueries({ queryKey: ["song-generation-limits"] });
@@ -280,7 +282,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
   if (!status) return <>{lyricsDialog}{replaceDialog}</>;
 
   // Already completed with audio - show success, admin can regenerate
-  if (isCompleted && hasAudio && !replacementPending) {
+  if (isCompleted && hasAudio && !replacementPending && queueState !== 'queued' && queueState !== 'dispatching') {
     return (
       <>
         {lyricsDialog}
@@ -332,6 +334,29 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
                 Regenerate
               </Button>
             ) : null}
+          </AlertDescription>
+        </Alert>
+      </>
+    );
+  }
+
+  // Queued requests are not yet provider predictions. A long queue should
+  // never appear timed out, and the original recording remains available.
+  if (queueState === "queued" || queueState === "dispatching") {
+    return (
+      <>
+        {lyricsDialog}
+        {replaceDialog}
+        <Alert className="bg-muted/50 border-muted">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <AlertDescription>
+            {queueState === "queued" ? "Queued for AI song generation" : "Sending song to audio provider"}
+            {queueAvailableAt && new Date(queueAvailableAt).getTime() > Date.now() && (
+              <span className="block text-xs text-muted-foreground">
+                Waiting for the provider rate-limit cooldown.
+              </span>
+            )}
+            {hasAudio && <span className="block text-xs">Your existing audio remains playable.</span>}
           </AlertDescription>
         </Alert>
       </>
