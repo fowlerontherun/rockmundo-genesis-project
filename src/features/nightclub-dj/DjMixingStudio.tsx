@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Disc3, Headphones, Music, Pause, Play, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,11 +16,13 @@ import { clampDeckRate, equalPowerCrossfade, formatDjTime, syncDeckRate } from "
 import { DjSetlistPlanner } from "./DjSetlistPlanner";
 
 function AudioDeck({
-  deck, tracks, selectedId, onSelect, level, rate, onRateChange,
+  deck, tracks, selectedId, onSelect, level, rate, onRateChange, onDeckPlay, onRateCommit,
 }: {
   deck: "A" | "B"; tracks: DjAudioTrack[];
   selectedId: string; onSelect: (id: string) => void;
   level: number; rate: number; onRateChange: (rate: number) => void;
+  onDeckPlay?: (deck: "A" | "B", track: DjAudioTrack) => void;
+  onRateCommit?: (deck: "A" | "B", speed: number) => void;
 }) {
   const track = tracks.find((entry) => entry.id === selectedId) ?? null;
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -103,7 +105,10 @@ function AudioDeck({
         <audio
           ref={audioRef}
           preload="metadata"
-          onPlay={() => setPlaying(true)}
+          onPlay={() => {
+            setPlaying(true);
+            if (track) onDeckPlay?.(deck, track);
+          }}
           onPause={() => setPlaying(false)}
           onEnded={() => setPlaying(false)}
           onTimeUpdate={(event) => setElapsed(event.currentTarget.currentTime)}
@@ -137,7 +142,9 @@ function AudioDeck({
             <span>Tempo (playback speed)</span><span>{(rate * 100).toFixed(0)}%</span>
           </div>
           <Slider aria-label={`Deck ${deck} playback speed`} min={85} max={115} step={1}
-            value={[Math.round(rate * 100)]} onValueChange={([value]) => onRateChange(clampDeckRate(value / 100))} />
+            value={[Math.round(rate * 100)]}
+            onValueChange={([value]) => onRateChange(clampDeckRate(value / 100))}
+            onValueCommit={([value]) => onRateCommit?.(deck, value)} />
         </div>
         {error && <p className="text-xs text-destructive" role="alert">{error}</p>}
         {loading && <p className="text-xs text-muted-foreground">Preparing playable audio...</p>}
@@ -146,11 +153,46 @@ function AudioDeck({
   );
 }
 
-/** Free mixing practice: real audio, no scoring, revenue or XP effects. */
-export function DjMixingStudio() {
+/** Practice is reward-free. Booked sessions require server-recorded interactions. */
+export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
   const { profileId } = useActiveProfile();
   const client = useQueryClient();
-  const { data: tracks = [], isLoading, isError, error } = useDjTrackLibrary(profileId);
+  const { data: libraryTracks = [], isLoading, isError, error } = useDjTrackLibrary(profileId);
+  const { data: liveBooking, isLoading: liveLoading } = useQuery({
+    queryKey: ["dj-live-booking", profileId, liveBookingId],
+    enabled: Boolean(liveBookingId && profileId),
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any).from("dj_bookings")
+        .select("id,status,setlist_snapshot").eq("id", liveBookingId)
+        .eq("profile_id", profileId).single();
+      if (error) throw error;
+      return data as { id: string; status: string;
+        setlist_snapshot: Array<{ source: "game" | "admin"; id: string }> };
+    },
+  });
+  const tracks = useMemo(() => {
+    if (!liveBookingId) return libraryTracks;
+    if (!liveBooking || liveBooking.status !== "live") return [];
+    const allowed = new Set((liveBooking.setlist_snapshot || [])
+      .map((item) => item.source + ":" + item.id));
+    return libraryTracks.filter((track) => allowed.has(track.source + ":" + track.sourceId));
+  }, [libraryTracks, liveBookingId, liveBooking]);
+  const [acceptedEvents, setAcceptedEvents] = useState(0);
+  const sendLiveEvent = async (body: Record<string, unknown>) => {
+    if (!liveBookingId) return;
+    try {
+      const { data, error } = await supabase.functions.invoke("dj-booking-action", {
+        body: { action: "mix_event", bookingId: liveBookingId, ...body },
+      });
+      if (error || data?.error) {
+        throw new Error(data?.error || error?.message || "Interaction rejected");
+      }
+      setAcceptedEvents((count) => count + 1);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Unable to record live DJ interaction");
+    }
+  };
   const [deckA, setDeckA] = useState("");
   const [deckB, setDeckB] = useState("");
   const [rateA, setRateA] = useState(1);
@@ -192,7 +234,12 @@ export function DjMixingStudio() {
     finally { setSharing(null); }
   };
 
-  if (isLoading) return <p className="text-sm text-muted-foreground">Loading playable DJ tracks...</p>;
+  if (isLoading || (liveBookingId && liveLoading)) return <p className="text-sm text-muted-foreground">Loading playable DJ tracks...</p>;
+  if (liveBookingId && (!liveBooking || liveBooking.status !== "live")) return (
+    <p className="text-sm text-destructive" role="alert">
+      Live DJ session unavailable. Start the booked set before mixing for credit.
+    </p>
+  );
   if (isError) return <p className="text-sm text-destructive" role="alert">Unable to load DJ tracks: {error instanceof Error ? error.message : "Unknown error"}. The catalogue migration may still need deploying.</p>;
   if (!tracks.length) return (
     <div className="space-y-3">
@@ -209,8 +256,14 @@ export function DjMixingStudio() {
   return (
     <div className="space-y-4" data-testid="dj-mixing-studio">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-muted-foreground">Practice with real RockMundo audio. Start each deck separately and crossfade between them.</p>
-        <Badge variant="outline">Practice · No rewards</Badge>
+        <p className="text-sm text-muted-foreground">
+          {liveBookingId
+            ? "Live booked performance: only songs in the booked set are playable. Use both decks, adjust tempo and crossfade during the set. The server checks timestamps and interactions before settlement."
+            : "Practice with real RockMundo audio. Start each deck separately and crossfade between them."}
+        </p>
+        <Badge variant="outline">
+          {liveBookingId ? "Scheduled live set · " + acceptedEvents + " events accepted" : "Practice · No rewards"}
+        </Badge>
       </div>
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Music className="h-4 w-4" /> Track Library ({tracks.length})</CardTitle></CardHeader>
@@ -249,8 +302,14 @@ export function DjMixingStudio() {
         onRehearse={(first, second) => { setDeckA(first); setDeckB(second); }}
         onLoadTrack={(id, deck) => { if (deck === "A") setDeckA(id); else setDeckB(id); }} />
       <div className="grid gap-4 md:grid-cols-2">
-        <AudioDeck deck="A" tracks={tracks} selectedId={deckA} onSelect={setDeckA} level={levels.a} rate={rateA} onRateChange={setRateA} />
-        <AudioDeck deck="B" tracks={tracks} selectedId={deckB} onSelect={setDeckB} level={levels.b} rate={rateB} onRateChange={setRateB} />
+        <AudioDeck deck="A" tracks={tracks} selectedId={deckA} onSelect={setDeckA} level={levels.a}
+          rate={rateA} onRateChange={setRateA}
+          onDeckPlay={(deck, track) => { void sendLiveEvent({ kind: "deck_play", deck, source: track.source, trackId: track.sourceId }); }}
+          onRateCommit={(deck, value) => { void sendLiveEvent({ kind: "tempo", deck, value }); }} />
+        <AudioDeck deck="B" tracks={tracks} selectedId={deckB} onSelect={setDeckB} level={levels.b}
+          rate={rateB} onRateChange={setRateB}
+          onDeckPlay={(deck, track) => { void sendLiveEvent({ kind: "deck_play", deck, source: track.source, trackId: track.sourceId }); }}
+          onRateCommit={(deck, value) => { void sendLiveEvent({ kind: "tempo", deck, value }); }} />
       </div>
       <Card>
         <CardHeader className="pb-2">
@@ -258,7 +317,9 @@ export function DjMixingStudio() {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between text-sm"><span>Crossfader</span><span>A {100 - crossfade}% / B {crossfade}%</span></div>
-          <Slider aria-label="DJ crossfader from deck A to B" value={[crossfade]} min={0} max={100} step={1} onValueChange={([value]) => setCrossfade(value)} />
+          <Slider aria-label="DJ crossfader from deck A to B" value={[crossfade]} min={0} max={100} step={1}
+            onValueChange={([value]) => setCrossfade(value)}
+            onValueCommit={([value]) => { void sendLiveEvent({ kind: "crossfade", value }); }} />
           <div className="flex items-center justify-between text-xs text-muted-foreground"><span>Deck A</span><span>Deck B</span></div>
           <Button type="button" variant="secondary" onClick={syncB}>Match Deck B tempo to A</Button>
           <p className="text-xs text-muted-foreground">Tempo adjustment changes playback speed and pitch. True key-locked beatmatching and timed drops will follow in the DJ minigame.</p>
