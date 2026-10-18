@@ -68,4 +68,46 @@ BEGIN
  THEN RAISE EXCEPTION 'Insufficient funds changed balance'; END IF;
 END;
 $test$;
+
+-- Stock-limited menu entries must decrement once, fail closed at zero, and
+-- continue returning the same first receipt for identical request IDs.
+DO $stock$
+DECLARE
+ v_user uuid;v_profile uuid;v_club uuid;v_drink text;v_index integer;
+ v_key uuid:=gen_random_uuid();v_cash bigint;v_after bigint;v_stock integer;
+BEGIN
+ SELECT p.user_id,p.id,c.id,m.item->>'id',(m.ordinality-1)::integer,p.cash
+ INTO v_user,v_profile,v_club,v_drink,v_index,v_cash
+ FROM public.profiles p JOIN public.city_night_clubs c ON p.current_city_id=c.city_id
+ CROSS JOIN LATERAL jsonb_array_elements(c.drink_menu) WITH ORDINALITY m(item,ordinality)
+ WHERE p.is_active IS TRUE AND p.user_id IS NOT NULL
+   AND c.metadata->>'live_interactions_enabled'='true'
+   AND (m.item->>'price')~'^[0-9]{1,6}
+
+   AND p.cash>(m.item->>'price')::integer * 2
+ LIMIT 1;
+ IF v_profile IS NULL THEN RAISE EXCEPTION 'Missing stocked-drink test fixture'; END IF;
+ UPDATE public.city_night_clubs SET
+   drink_menu=jsonb_set(drink_menu,ARRAY[v_index::text,'stock'],'1'::jsonb,true)
+ WHERE id=v_club;
+ PERFORM set_config('request.jwt.claim.sub',v_user::text,true);
+ PERFORM public.purchase_nightclub_drink(v_profile,v_club,v_drink,v_key);
+ SELECT cash INTO v_after FROM public.profiles WHERE id=v_profile;
+ SELECT (drink_menu->v_index->>'stock')::integer INTO v_stock
+ FROM public.city_night_clubs WHERE id=v_club;
+ IF v_stock<>0 OR v_after>=v_cash
+ THEN RAISE EXCEPTION 'Drink inventory was not decremented exactly once'; END IF;
+ IF coalesce((public.purchase_nightclub_drink(v_profile,v_club,v_drink,v_key)
+   ->>'replayed')::boolean,false) IS FALSE
+ THEN RAISE EXCEPTION 'Existing receipt cannot replay after sellout'; END IF;
+ BEGIN
+  PERFORM public.purchase_nightclub_drink(v_profile,v_club,v_drink,gen_random_uuid());
+  RAISE EXCEPTION 'Sold-out drink purchase was accepted';
+ EXCEPTION WHEN invalid_parameter_value THEN NULL;
+ END;
+ IF (SELECT cash FROM public.profiles WHERE id=v_profile)<>v_after
+ THEN RAISE EXCEPTION 'Sold-out drink spent cash'; END IF;
+END;
+$stock$;
+
 ROLLBACK;
