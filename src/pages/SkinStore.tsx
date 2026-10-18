@@ -37,10 +37,14 @@ import { useVipStatus } from "@/hooks/useVipStatus";
 import { useTranslation } from "@/hooks/useTranslation";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { useBuySkinCollectionSet, useConfirmSkinSetReturn, SKIN_SET_PRICE_LABEL } from "@/hooks/useSkinCollectionSet";
+import { SkinMarketTab } from "@/components/skin-store/SkinMarketTab";
+import { Store } from "lucide-react";
 
 const SkinStore = () => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState("featured");
+  const [activeTab, setActiveTab] = useState(() =>
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "market" ? "market" : "featured",
+  );
   const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
   const [previewItem, setPreviewItem] = useState<ClothingItem | null>(null);
   const [previewInstrument, setPreviewInstrument] = useState<InstrumentSkinItem | null>(null);
@@ -145,7 +149,11 @@ const SkinStore = () => {
       }
     >
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-4 sm:grid-cols-7 lg:w-auto lg:inline-grid">
+          <TabsTrigger value="market" className="gap-1.5">
+            <Store className="h-4 w-4 hidden sm:inline" />
+            <span>Market</span>
+          </TabsTrigger>
           <TabsTrigger value="featured" className="gap-1.5">
             <Star className="h-4 w-4 hidden sm:inline" />
             <span>Featured</span>
@@ -379,6 +387,10 @@ const SkinStore = () => {
             </div>
           )}
           {ownedClothingItems.length === 0 && ownedInstrumentItems.length === 0 && <Button variant="default" onClick={() => setActiveTab("featured")}>Browse Store</Button>}
+        </TabsContent>
+
+        <TabsContent value="market" className="space-y-6">
+          <SkinMarketTab />
         </TabsContent>
       </Tabs>
 
