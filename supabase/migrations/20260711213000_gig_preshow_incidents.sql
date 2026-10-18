@@ -55,7 +55,8 @@ CREATE TABLE IF NOT EXISTS public.gig_preshow_decisions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   incident_id uuid NOT NULL REFERENCES public.gig_preshow_incidents(id) ON DELETE CASCADE,
   selected_option_key text NOT NULL,
-  decided_by_player_id uuid REFERENCES public.profiles(user_id) ON DELETE SET NULL,
+  -- Records the signed-in account UUID (auth.uid()), not a character/profile id.
+  decided_by_player_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   decision_source text NOT NULL CHECK (decision_source IN ('player','delegated_staff','automatic_fallback','system')),
   decision_status text NOT NULL DEFAULT 'committed' CHECK (decision_status IN ('committed','automatic','rejected','superseded')),
   skill_check_snapshot jsonb NOT NULL DEFAULT '{}'::jsonb,
