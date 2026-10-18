@@ -115,22 +115,17 @@ export const useEducationVideoPlaylists = (): UseQueryResult<VideoPlaylist[]> =>
       }
 
       const rows = allResources;
-      const skillSlugs = Array.from(
-        new Set(rows.map((row) => row.skill_slug).filter((slug): slug is string => Boolean(slug))),
-      );
-
+      // Read skill labels once rather than building an oversized GET query
+      // with hundreds of slugs as PooTube grows to cover the entire skill tree.
       const skillLabels = new Map<string, string>();
-      if (skillSlugs.length > 0) {
-        const { data: skillRows, error: skillError } = await supabase
-          .from("skill_definitions")
-          .select("slug, display_name")
-          .in("slug", skillSlugs);
-
-        if (skillError) throw skillError;
-
-        for (const skill of (skillRows ?? []) as SkillDefinitionRow[]) {
-          skillLabels.set(skill.slug, skill.display_name);
-        }
+      const { data: skillRows, error: skillError } = await supabase
+        .from("skill_definitions")
+        .select("slug, display_name")
+        .order("slug")
+        .limit(1000);
+      if (skillError) throw skillError;
+      for (const skill of (skillRows ?? []) as SkillDefinitionRow[]) {
+        skillLabels.set(skill.slug, skill.display_name);
       }
 
       return buildPlaylists(rows, skillLabels);
