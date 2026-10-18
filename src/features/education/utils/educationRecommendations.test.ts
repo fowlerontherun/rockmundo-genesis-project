@@ -88,8 +88,11 @@ describe("education next-learning recommendations", () => {
     });
   });
 
-  it("does not suggest nonexistent learning when availability has not loaded", () => {
-    expect(recommend({ availability: [] })).toEqual([]);
+  it("uses verified tier eligibility when optional availability metadata is missing", () => {
+    const slugs = recommend({ availability: [] }).map((entry) => entry.slug);
+    expect(slugs).toContain("instruments_basic_guitar");
+    expect(slugs).not.toContain("instruments_professional_guitar");
+    expect(recommend({ availability: [], access: new Map() })).toEqual([]);
   });
 
   it("conceals inactive and hidden skill definitions even with unlocked tier", () => {
