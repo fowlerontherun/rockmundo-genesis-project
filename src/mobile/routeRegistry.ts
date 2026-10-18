@@ -35,7 +35,7 @@ export function resolveNotificationActionPath(path?: string | null): string | nu
   const companion = resolveCompanionPath(path);
   const clean = path.split("?")[0].split("#")[0];
   // Existing mobile destinations remain on the lightweight companion routes.
-  if (clean === "/education" || clean === "/booking/education" || clean.startsWith("/university/")) {
+  if (clean === "/education" || clean === "/mobile/education" || clean === "/booking/education" || clean.startsWith("/university/") || clean.startsWith("/mobile/university/")) {
     return `${companion}${path.includes("?") ? path.slice(path.indexOf("?")) : ""}`;
   }
   if (clean === "/inbox" || clean === "/social/chat" || clean === "/chat" ||
