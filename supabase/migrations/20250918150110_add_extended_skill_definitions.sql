@@ -2,14 +2,15 @@
 WITH default_caps AS (
   SELECT '{"tiers":[{"tier":1,"cap":200},{"tier":2,"cap":400},{"tier":3,"cap":600},{"tier":4,"cap":800},{"tier":5,"cap":1000}]}'::jsonb AS caps
 )
-INSERT INTO public.skill_definitions (slug, display_name, description, tier_caps, default_unlock_level, created_by_profile_id)
+-- The 18 Sep 2025 table has only slug, display_name, description and
+-- tier_caps. All entries below explicitly seed unlock_level=0 and creator=NULL;
+-- omit those as-yet nonexistent columns until later progression migrations.
+INSERT INTO public.skill_definitions (slug, display_name, description, tier_caps)
 SELECT
   data.slug,
   data.display_name,
   data.description,
-  default_caps.caps,
-  data.default_unlock_level,
-  NULL
+  default_caps.caps
 FROM (
   VALUES
     ('songwriting_and_production', 'Songwriting & Production', 'Blending songwriting craft with studio production workflows.', 0),
@@ -89,5 +90,4 @@ DO UPDATE
 SET
   display_name = EXCLUDED.display_name,
   description = EXCLUDED.description,
-  tier_caps = EXCLUDED.tier_caps,
-  default_unlock_level = EXCLUDED.default_unlock_level;
+  tier_caps = EXCLUDED.tier_caps;
