@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { startOfDay, subDays, format } from "date-fns";
+import { educationLocalDay } from "../utils/educationLocalDay";
 
 export interface ActiveBookReading {
   id: string;
@@ -93,7 +94,7 @@ export const useEducationSummary = () => {
       if (!profileId) return null;
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, current_city_id, cities:current_city_id(id, name)")
+        .select("id, current_city_id, cities:current_city_id(id, name, timezone)")
         .eq("id", profileId)
         .single();
       if (error) throw error;
@@ -170,6 +171,44 @@ export const useEducationSummary = () => {
       return data as ActiveEnrollment[];
     },
     enabled: !!profile?.id,
+  });
+
+  // Today's confirmed learning attendance, scoped to active sessions and character-local day.
+  // Book and university progress are recorded in separate attendance tables.
+  const [currentTick, setCurrentTick] = useState(() => Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setCurrentTick(Date.now()), 60_000);
+    return () => clearInterval(interval);
+  }, []);
+  const cityTimezone = (profile?.cities as { timezone?: string | null } | null)?.timezone;
+  const characterToday = educationLocalDay(new Date(currentTick), cityTimezone);
+  const activeBookIds = (activeBooks ?? []).map((session) => session.id);
+  const activeEnrollmentIds = (activeEnrollments ?? []).map((enrollment) => enrollment.id);
+  const { data: todayAttendance, isLoading: todayLoading, isError: todayError } = useQuery({
+    queryKey: ["education-summary-today", profile?.id, characterToday, activeBookIds, activeEnrollmentIds],
+    enabled: !!profile?.id && !booksLoading && !enrollmentsLoading && !booksError && !enrollmentsError,
+    queryFn: async () => {
+      const [bookResult, universityResult] = await Promise.all([
+        activeBookIds.length
+          ? supabase.from("player_book_reading_attendance")
+            .select("reading_session_id")
+            .eq("reading_date", characterToday)
+            .in("reading_session_id", activeBookIds)
+          : Promise.resolve({ data: [], error: null }),
+        activeEnrollmentIds.length
+          ? supabase.from("player_university_attendance")
+            .select("enrollment_id")
+            .eq("attendance_date", characterToday)
+            .in("enrollment_id", activeEnrollmentIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+      if (bookResult.error) throw bookResult.error;
+      if (universityResult.error) throw universityResult.error;
+      return {
+        bookSessionIds: (bookResult.data ?? []).map((row) => row.reading_session_id),
+        universityEnrollmentIds: (universityResult.data ?? []).map((row) => row.enrollment_id),
+      };
+    },
   });
 
   // Completed university enrollments (last 10)
@@ -329,10 +368,12 @@ export const useEducationSummary = () => {
     currentCityName,
     activeBooks: activeBooks || [],
     activeEnrollments: activeEnrollments || [],
+    todayAttendance: todayAttendance || { bookSessionIds: [], universityEnrollmentIds: [] },
+    todayAttendanceVerified: !todayLoading && !todayError && !!todayAttendance,
     completedEnrollments: completedEnrollments || [],
     yesterdayProgress: yesterdayProgress || { universityAttendance: [], bookReading: [], totalXp: 0 },
     skillProgress: skillProgress || {},
-    isLoading: booksLoading || enrollmentsLoading || completedLoading || progressLoading,
-    hasError: booksError || enrollmentsError || completedError || progressError,
+    isLoading: booksLoading || enrollmentsLoading || completedLoading || progressLoading || todayLoading,
+    hasError: booksError || enrollmentsError || completedError || progressError || todayError,
   };
 };
