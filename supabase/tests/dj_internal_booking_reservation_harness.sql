@@ -22,7 +22,8 @@ DECLARE
   v_fame_after numeric;
 BEGIN
   SELECT p.user_id,p.id,s.id,c.id,p.cash,p.fame,
-    ((date_trunc('day', now() AT TIME ZONE city.timezone) + interval '8 days 22 hours') AT TIME ZONE city.timezone)
+    ((date_trunc('day', now() AT TIME ZONE city.timezone) + interval '8 days'
+      + CASE WHEN c.dj_slot_config->>'schedule' LIKE '11pm%' THEN interval '23 hours' ELSE interval '22 hours' END) AT TIME ZONE city.timezone)
     INTO v_actor,v_profile,v_song,v_club,v_cash,v_fame,v_start
   FROM public.profiles p
   JOIN public.songs s ON s.profile_id=p.id AND s.user_id=p.user_id
@@ -30,7 +31,7 @@ BEGIN
   JOIN public.city_night_clubs c ON c.city_id=p.current_city_id
   JOIN public.cities city ON city.id=c.city_id
   JOIN public.user_roles ur ON ur.user_id=p.user_id AND ur.role='user'::public.app_role
-  WHERE c.dj_slot_config->>'schedule'='10pm-4am'
+  WHERE c.dj_slot_config->>'schedule' IN ('11pm-3am','10pm-2am','11pm-4am')
     AND COALESCE(p.fame,0)>=COALESCE((c.dj_slot_config->>'minimum_fame')::integer,0)
     AND COALESCE((c.dj_slot_config->>'set_length_minutes')::integer,45) BETWEEN 15 AND 180
     AND NOT EXISTS (
