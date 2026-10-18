@@ -22,7 +22,7 @@ vi.mock("./canvas", () => ({
 }));
 
 vi.mock("./avatarCapture", () => ({
-  loadCaptureImage: vi.fn(),
+  loadCaptureImage: vi.fn(() => Promise.resolve(new Image())),
 }));
 
 vi.mock("./gallery", () => ({
@@ -105,5 +105,48 @@ describe("ShareMomentSheet contextual prompt gate", () => {
     expect(screen.getByText("Share your RockMundo moment")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Share now" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Post to Twaater" })).toBeInTheDocument();
+  });
+});
+
+describe("ShareMomentSheet avatar exports", () => {
+  it("does not allow exporting an incomplete avatar image", () => {
+    render(
+      <MemoryRouter>
+        <ShareMomentSheet moment={{ ...moment, promptOnly: false }} open onOpenChange={vi.fn()} avatarStatus="loading" />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("Rendering your player avatar for the image…")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Share now" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Download PNG" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Post to Twaater" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Copy image" })).toBeDisabled();
+  });
+
+  it("preserves the player's edits when the avatar snapshot arrives late", () => {
+    const initial = { ...moment, promptOnly: false };
+    const view = render(
+      <MemoryRouter>
+        <ShareMomentSheet moment={initial} open onOpenChange={vi.fn()} avatarStatus="loading" />
+      </MemoryRouter>,
+    );
+    fireEvent.change(screen.getByRole("textbox", { name: "Share headline" }), { target: { value: "My edited headline" } });
+    view.rerender(
+      <MemoryRouter>
+        <ShareMomentSheet moment={{ ...initial, avatar: { dataUrl: "data:image/png;base64,abc", width: 720, height: 1080 } }} open onOpenChange={vi.fn()} avatarStatus="ready" />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("textbox", { name: "Share headline" })).toHaveValue("My edited headline");
+  });
+
+  it("shows a retry when an avatar could not be rendered", () => {
+    const retry = vi.fn();
+    render(
+      <MemoryRouter>
+        <ShareMomentSheet moment={{ ...moment, promptOnly: false }} open onOpenChange={vi.fn()} avatarStatus="unavailable" onAvatarRetry={retry} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText(/Your avatar could not be rendered/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Retry avatar" }));
+    expect(retry).toHaveBeenCalledOnce();
   });
 });
