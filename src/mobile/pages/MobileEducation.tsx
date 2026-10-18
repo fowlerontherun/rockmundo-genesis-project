@@ -1,5 +1,5 @@
 import { useSearchParams } from "react-router-dom";
-import { GraduationCap, LayoutDashboard, ListChecks, Search } from "lucide-react";
+import { LayoutDashboard, ListChecks, Search } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { EducationOverviewTab } from "@/features/education/components/EducationOverviewTab";
