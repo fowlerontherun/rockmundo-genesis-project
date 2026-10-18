@@ -272,6 +272,8 @@ BEGIN
   'public.record_dj_mix_event_internal(uuid,text,text,text,uuid,numeric)','EXECUTE')
  OR has_function_privilege(current_user,
   'public.dj_verified_mix_event_service(uuid,uuid,text,text,text,uuid,numeric)','EXECUTE')
+ OR has_function_privilege(current_user,
+  'public.dj_verified_mix_event_once_service(uuid,uuid,text,text,text,uuid,numeric,uuid)','EXECUTE')
  THEN RAISE EXCEPTION 'SECURITY FAILURE: client can forge server mixer evidence'; END IF;
  BEGIN
    INSERT INTO public.player_dj_performances(
