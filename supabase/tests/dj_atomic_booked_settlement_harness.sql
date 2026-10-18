@@ -106,6 +106,29 @@ BEGIN
  END;
  PERFORM set_config('request.jwt.claim.sub',v_actor::text,true);
 
+ -- No browser / practice-only mixer actions may settle a paid session.
+ -- The new settlement ledger trigger must undo all attempted credit/XP.
+ BEGIN
+   PERFORM private.dj_settle_booking_at(v_book,v_finish+interval '1 minute');
+   RAISE EXCEPTION 'SECURITY FAILURE: DJ session paid without mixing evidence';
+ EXCEPTION WHEN invalid_parameter_value THEN NULL;
+ END;
+ IF (SELECT cash FROM public.profiles WHERE id=v_profile)<>v_cash
+ OR (SELECT fame FROM public.profiles WHERE id=v_profile)<>v_fame
+ THEN RAISE EXCEPTION 'No-evidence denial failed to roll back rewards'; END IF;
+
+ -- Real-time server event proofs: both decks + tempo + crossfade and
+ -- time-separated interaction into the second half of the booked set.
+ PERFORM private.dj_record_mix_event_at(v_book,'deck_play','A','game',v_song,NULL,v_start+interval '2 minutes');
+ PERFORM private.dj_record_mix_event_at(v_book,'tempo','A',NULL,NULL,101,v_start+interval '3 minutes');
+ PERFORM private.dj_record_mix_event_at(v_book,'crossfade',NULL,NULL,NULL,35,v_start+interval '4 minutes');
+ PERFORM private.dj_record_mix_event_at(v_book,'deck_play','B','game',v_song,NULL,v_start+interval '5 minutes');
+ PERFORM private.dj_record_mix_event_at(v_book,'tempo','B',NULL,NULL,99,v_start+interval '25 minutes');
+ PERFORM private.dj_record_mix_event_at(v_book,'crossfade',NULL,NULL,NULL,78,v_start+interval '30 minutes');
+
+ IF (SELECT count(*) FROM public.dj_live_mix_events WHERE booking_id=v_book)<>6
+ THEN RAISE EXCEPTION 'Missing server-recorded mixer interactions'; END IF;
+ 
  -- Force a history uniqueness failure *after* the calculation and profile/XP
  -- writes. The settlement subtransaction MUST roll everything back.
  INSERT INTO public.player_dj_performances(
