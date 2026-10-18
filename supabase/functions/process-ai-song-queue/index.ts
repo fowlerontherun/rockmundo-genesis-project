@@ -20,6 +20,20 @@ Deno.serve(async (req) => {
   const db = createClient(url,key)
   const {data:valid,error:authError} = await db.rpc("verify_internal_cron_secret",{p_secret:secret})
   if (authError || valid !== true) return json({error:"Unauthorized"},403)
+
+  // This must run even if Replicate has no credit or its API key is missing.
+  // It frees global capacity after a worker crash, without retrying a
+  // potentially billable request. Manual-review attempts remain reserved.
+  const {data:expired,error:recoveryError} = await db.rpc("reconcile_expired_ai_song_dispatches")
+  if (recoveryError) return json({error:"Queue lease reconciliation failed"},503)
+  if (expired > 0) console.warn("[ai-song-queue] Quarantined or reconciled expired dispatch leases",{count:expired})
+  // A lost provider webhook must never block the two global slots indefinitely.
+  // Keep the original prediction ID and await manual reconciliation or a late signed callback.
+  const {data:staleSubmitted,error:staleError}=await db.rpc("flag_stale_ai_song_predictions")
+  if (staleError) return json({error:"Provider callback watchdog failed"},503)
+  if (staleSubmitted > 0) console.warn("[ai-song-queue] ACTION REQUIRED: predictions missing completion callbacks",{
+    count:staleSubmitted,
+  })
   if (!providerToken) return json({error:"Provider unavailable; dispatch paused"},503)
 
   const { data:job, error:claimError } = await db.rpc("claim_ai_song_generation")
@@ -28,6 +42,18 @@ Deno.serve(async (req) => {
   const attemptId = String(job.attempt_id)
   const songId = String(job.song_id)
 
+  const holdForReview = async (reason:string) => {
+    // No safe assumption can be made after an HTTP POST timeout or a 5xx:
+    // Replicate may already have charged and generated a prediction.
+    const {data:flagged,error} = await db.rpc("flag_ai_song_dispatch_uncertain",{
+      p_attempt:attemptId,p_reason:reason.slice(0,650),
+    })
+    if (error) console.error("[ai-song-queue] Cannot flag uncertain paid request",error.message)
+    if (flagged===true) console.warn("[ai-song-queue] ACTION REQUIRED: provider submission uncertain; review original attempt before any paid retry",{
+      attemptId,songId,
+    })
+    return json({status:"needs_review",attemptId,flagged:flagged===true})
+  }
   const fail = async (reason:string) => {
     // An ambiguous network error must NEVER be retried automatically.
     const {error} = await db.rpc("finish_song_generation_atomic", {
@@ -75,14 +101,17 @@ Deno.serve(async (req) => {
       return await fail("Provider throttle exceeded bounded retries")
     }
     if (!response.ok) {
-      // A 5xx or interrupted POST may have been accepted. Fail closed, never
-      // blindly re-submit and incur a second paid prediction.
       const detail=await response.text().catch(()=>"No provider response")
-      return await fail("Provider HTTP "+response.status+": "+detail.slice(0,140))
+      // Explicit 400/401/403/404 rejects cannot have created a prediction.
+      // A 408/5xx may have: keep the attempt alive for manual reconciliation.
+      if (response.status===400 || response.status===401 ||
+          response.status===403 || response.status===404 || response.status===422)
+        return await fail("Provider rejected request with HTTP "+response.status)
+      return await holdForReview("Provider HTTP "+response.status+": "+detail.slice(0,140))
     }
     const prediction=await response.json().catch(()=>null)
     if (!prediction?.id || typeof prediction.id!=="string") {
-      return await fail("Provider responded without a prediction ID (manual reconciliation needed)")
+      return await holdForReview("Provider responded without a prediction ID; no automatic retry")
     }
     const {data:marked,error:markError}=await db.rpc("mark_ai_song_submitted",{
       p_attempt:attemptId,p_prediction:prediction.id,
@@ -91,7 +120,7 @@ Deno.serve(async (req) => {
       console.error("[ai-song-queue] Prediction tracking failed; no resubmission",{
         attemptId,error:markError.message,
       })
-      return json({status:"reconciliation_required",attemptId},503)
+      return await holdForReview("Provider prediction created but database tracking was not confirmed")
     }
     if (!marked) {
       // Signed callback can beat prediction-ID persistence.
@@ -103,6 +132,6 @@ Deno.serve(async (req) => {
     console.error("[ai-song-queue] Ambiguous provider request outcome",{
       attemptId,reason:error instanceof Error?error.message:"unknown",
     })
-    return await fail("Ambiguous provider response; never automatically resubmit")
+    return await holdForReview("Ambiguous provider response; never automatically resubmit")
   }
 })
