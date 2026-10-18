@@ -129,6 +129,21 @@ serve(async (req) => {
       console.log(`[generate-song-audio] Explicit replacement for ${songId}; old audio stays until new audio passes validation`)
     }
 
+    // Service-role recording workers may automatically create only the first
+    // generation attempt. Never automatically retry a failed/short/throttled
+    // prediction: the provider may have already billed for it.
+    if (serviceInvocation && !replaceExisting) {
+      const { data: existingAttempts, error: attemptLookupError } = await supabase
+        .from('song_generation_attempts').select('id').eq('song_id', songId).limit(1)
+      if (attemptLookupError) throw new Error(`Generation attempt lookup failed: ${attemptLookupError.message}`)
+      if (existingAttempts?.length) {
+        return new Response(JSON.stringify({
+          error: "Automatic retry blocked: prior generation attempt exists. Manual retry is required.",
+          code: "AUTOMATIC_RETRY_BLOCKED",
+        }), { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } })
+      }
+    }
+
     // Check weekly generation limit
     const { data: limitData, error: limitError } = await supabase
       .rpc('check_song_generation_limit', { p_user_id: userId })
