@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { MAX_SKILL_LEVEL } from "@/data/skillConstants";
+import { getEducationSkillCap } from "../utils/educationSkillCaps";
 import { resolveSkillTier } from "@/utils/skillFamilies";
 import type { EducationLearningSkill } from "../utils/educationRecommendations";
 
@@ -26,8 +26,7 @@ export const useEducationSkillDefinitions = () =>
       }
       return definitions.map((definition) => {
         const caps = definition.tier_caps ?? {};
-        const capValue = Number(caps.max_level);
-        const maxLevel = Number.isFinite(capValue) && capValue > 0 ? Math.floor(capValue) : MAX_SKILL_LEVEL;
+        const maxLevel = getEducationSkillCap(definition.slug, caps);
         const declaredTier = typeof caps.tier === "string" ? caps.tier : null;
         const tier = resolveSkillTier(definition.slug, declaredTier);
         return {
