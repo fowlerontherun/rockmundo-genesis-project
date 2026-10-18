@@ -4,6 +4,7 @@ describe("mobile route bridge", () => {
   it("bridges supported desktop functions to focused mobile screens", () => {
     expect(getMobileBridgeTarget("/schedule")).toBe("/mobile");
     expect(getMobileBridgeTarget("/booking/work")).toBe("/mobile?view=book");
+    expect(getMobileBridgeTarget("/booking/education")).toBe("/mobile/education");
     expect(getMobileBridgeTarget("/inbox")).toBe("/mobile/inbox");
     expect(getMobileBridgeTarget("/social/chat")).toBe("/mobile/chat");
     expect(getMobileBridgeTarget("/skills")).toBe("/mobile/progression");
