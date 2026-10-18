@@ -34,7 +34,7 @@ VALUES('dj-phase0-rls-fixture','PHASE0 Fixture','House','https://example.invalid
 -- an ordinary player must not be able to replace or remove either object.
 INSERT INTO storage.objects(bucket_id,name)
 VALUES ('practice-tracks','dj-phase0-protected-practice.mp3'),
-       ('dj-tracks','catalog/11111111-1111-1111-1111-111111111118/track.mp3');
+       ('dj-tracks','catalog/11111111-1111-1111-1111-111111111114/track.mp3');
 
 SELECT set_config('request.jwt.claim.sub',
  (SELECT user_id::text FROM public.user_roles WHERE role='user'::public.app_role LIMIT 1), true);
@@ -113,15 +113,15 @@ BEGIN
  EXCEPTION WHEN insufficient_privilege THEN NULL;
  END;
  BEGIN
-  UPDATE storage.objects SET name='catalog/11111111-1111-1111-1111-111111111118/replaced.mp3'
-  WHERE bucket_id='dj-tracks' AND name='catalog/11111111-1111-1111-1111-111111111118/track.mp3';
+  UPDATE storage.objects SET name='catalog/11111111-1111-1111-1111-111111111114/replaced.mp3'
+  WHERE bucket_id='dj-tracks' AND name='catalog/11111111-1111-1111-1111-111111111114/track.mp3';
   GET DIAGNOSTICS n = ROW_COUNT;
   IF n <> 0 THEN RAISE EXCEPTION 'SECURITY FAILURE: player can replace DJ club audio'; END IF;
  EXCEPTION WHEN insufficient_privilege THEN NULL;
  END;
  BEGIN
   DELETE FROM storage.objects
-  WHERE bucket_id='dj-tracks' AND name='catalog/11111111-1111-1111-1111-111111111118/track.mp3';
+  WHERE bucket_id='dj-tracks' AND name='catalog/11111111-1111-1111-1111-111111111114/track.mp3';
   GET DIAGNOSTICS n = ROW_COUNT;
   IF n <> 0 THEN RAISE EXCEPTION 'SECURITY FAILURE: player can remove DJ club audio'; END IF;
  EXCEPTION WHEN insufficient_privilege THEN NULL;
