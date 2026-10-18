@@ -233,6 +233,15 @@ BEGIN
  IF (SELECT count(*) FROM public.dj_performance_sessions
    WHERE booking_id=v_book)<>1
  THEN RAISE EXCEPTION 'Booked owner cannot read their DJ session'; END IF;
+ IF (SELECT count(*) FROM public.dj_live_mix_events
+   WHERE booking_id=v_book)<>6
+ THEN RAISE EXCEPTION 'Owner cannot read six accepted live events'; END IF;
+ IF has_table_privilege(current_user,'public.dj_live_mix_events','INSERT')
+ OR has_function_privilege(current_user,
+  'public.record_dj_mix_event_internal(uuid,text,text,text,uuid,numeric)','EXECUTE')
+ OR has_function_privilege(current_user,
+  'public.dj_verified_mix_event_service(uuid,uuid,text,text,text,uuid,numeric)','EXECUTE')
+ THEN RAISE EXCEPTION 'SECURITY FAILURE: client can forge server mixer evidence'; END IF;
  BEGIN
    INSERT INTO public.player_dj_performances(
      user_id,profile_id,club_id,booking_id,
@@ -243,6 +252,15 @@ BEGIN
  EXCEPTION WHEN insufficient_privilege THEN NULL;
  END;
 END $owner_rls$;
+SELECT set_config('request.jwt.claim.sub',
+ (SELECT p.user_id::text FROM public.profiles p
+  WHERE p.user_id<>current_setting('dj_test.owner')::uuid LIMIT 1),true);
+DO $foreign_event_rls$
+BEGIN
+ IF (SELECT count(*) FROM public.dj_live_mix_events
+   WHERE booking_id=current_setting('dj_test.booking')::uuid)<>0
+ THEN RAISE EXCEPTION 'SECURITY FAILURE: another player can read DJ mixer events'; END IF;
+END $foreign_event_rls$;
 RESET ROLE;
 
 ROLLBACK;
