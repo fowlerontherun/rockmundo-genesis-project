@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { signReplicateAttempt } from "../_shared/replicateWebhookAuth.ts"
 import { normalizeMiniMaxStylePrompt } from "../_shared/musicStylePrompt.ts"
+import { compactLyricsForShortAudio } from "../_shared/shortSongLyrics.ts"
 
 
 const corsHeaders = {
@@ -263,11 +264,9 @@ serve(async (req) => {
     }
     const hadOriginalLyrics = !!(originalSongLyrics?.trim() || originalProjectLyrics?.trim())
     const quality = song.quality_score || project?.quality_score || 50
-    const durationSeconds = song.duration_seconds || 180
-    const maxModelDurationSeconds = generationModel === 'music-2.6' ? 360 : 240
-    if (durationSeconds * 0.8 > maxModelDurationSeconds) {
-      throw new Error(`Song requires at least ${Math.ceil(durationSeconds * 0.8)} seconds, but ${generationModel} supports at most ${maxModelDurationSeconds} seconds. Select Music 2.6 or shorten the expected duration before paying for generation.`)
-    }
+    // In-game song duration is gameplay metadata, not the billable AI audio
+    // target. Produce a 60–90 second radio edit regardless of the song length.
+    const durationSeconds = 75
 
     // Extract from creative_brief if available
     const inspirationAnchor = creativeBrief?.inspirationAnchor || creativeBrief?.inspiration_anchor || null
@@ -413,7 +412,7 @@ serve(async (req) => {
     }
 
     // MiniMax uses comma-separated style description
-    const validatedStyle = normalizeMiniMaxStylePrompt(styleParts.join(', '), primaryGenre)
+    const validatedStyle = normalizeMiniMaxStylePrompt([...styleParts, 'short radio edit, around 75 seconds'].join(', '), primaryGenre)
     const stylePrompt = validatedStyle.prompt
     addLog(`MiniMax prompt: ${validatedStyle.finalLength} characters (required 10–300)`)
     if (validatedStyle.removedEmbeddedLyrics) addLog('Separated embedded Lyrics section from admin custom style prompt')
@@ -422,7 +421,7 @@ serve(async (req) => {
 
     // Format lyrics for MiniMax Music - standard section markers
     addLog('Formatting lyrics for MiniMax Music (standard format)...')
-    const formattedLyrics = formatLyricsForMiniMax(rawLyrics, cleanedSongTitle, primaryGenre, generationModel === 'music-2.6' ? 3500 : 600)
+    const formattedLyrics = formatLyricsForMiniMax(compactLyricsForShortAudio(rawLyrics), cleanedSongTitle, primaryGenre, 600)
     addLog(`Formatted lyrics (${formattedLyrics.length} chars)`)
 
     // Combine for full prompt reference

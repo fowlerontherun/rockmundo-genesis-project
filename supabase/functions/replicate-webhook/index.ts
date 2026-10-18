@@ -123,7 +123,7 @@ serve(async (req) => {
     // Measure the actual audio frames and fail closed on invalid/truncated MP3s.
     const { data: song, error: songLookupError } = await supabase
       .from('songs')
-      .select('title, duration_seconds')
+      .select('title')
       .eq('id', songId)
       .single()
     if (songLookupError || !song) {
@@ -133,14 +133,15 @@ serve(async (req) => {
     if (actualSeconds === null) {
       throw new Error('Generated audio is not a valid complete MP3 file; keeping any existing audio')
     }
-    const targetSeconds = Number(song.duration_seconds)
-    const minimumAcceptedSeconds = Number.isFinite(targetSeconds) && targetSeconds > 0
-      ? Math.max(30, targetSeconds * 0.8)
-      : 30
-    console.log(`[replicate-webhook] Measured audio: song=${songId} expected=${targetSeconds}s actual=${actualSeconds.toFixed(2)}s minimum=${minimumAcceptedSeconds.toFixed(1)}s bytes=${audioBytes.length}`)
-    if (actualSeconds < minimumAcceptedSeconds) {
+    // The game's song.duration_seconds is NOT the paid audio-clip length.
+    // A short radio edit should be 60–90 seconds, irrespective of its
+    // songwriting/recording duration. Never trigger a retry from the webhook.
+    const minSeconds = 60
+    const maxSeconds = 90
+    console.log(`[replicate-webhook] Measured audio: song=${songId} actual=${actualSeconds.toFixed(2)}s accepted=60–90s bytes=${audioBytes.length}`)
+    if (actualSeconds < minSeconds || actualSeconds > maxSeconds) {
       throw new Error(
-        `Generated audio is too short: ${actualSeconds.toFixed(1)}s vs expected ${targetSeconds}s (minimum ${minimumAcceptedSeconds.toFixed(1)}s). Existing audio preserved; retry with a longer generation.`
+        `Generated audio duration ${actualSeconds.toFixed(1)}s is outside the required 60–90s range. Existing audio preserved; manual retry only.`
       )
     }
 

@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { signReplicateAttempt } from "../_shared/replicateWebhookAuth.ts"
 import { normalizeMiniMaxStylePrompt } from "../_shared/musicStylePrompt.ts"
+import { compactLyricsForShortAudio } from "../_shared/shortSongLyrics.ts"
 import { getGenerationBlock } from "../_shared/songRegenerationPolicy.ts"
 
 
@@ -127,6 +128,21 @@ serve(async (req) => {
     }
     if (replaceExisting && existingSong?.audio_url) {
       console.log(`[generate-song-audio] Explicit replacement for ${songId}; old audio stays until new audio passes validation`)
+    }
+
+    // Service-role recording workers may automatically create only the first
+    // generation attempt. Never automatically retry a failed/short/throttled
+    // prediction: the provider may have already billed for it.
+    if (serviceInvocation && !replaceExisting) {
+      const { data: existingAttempts, error: attemptLookupError } = await supabase
+        .from('song_generation_attempts').select('id').eq('song_id', songId).limit(1)
+      if (attemptLookupError) throw new Error(`Generation attempt lookup failed: ${attemptLookupError.message}`)
+      if (existingAttempts?.length) {
+        return new Response(JSON.stringify({
+          error: "Automatic retry blocked: prior generation attempt exists. Manual retry is required.",
+          code: "AUTOMATIC_RETRY_BLOCKED",
+        }), { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } })
+      }
     }
 
     // Check weekly generation limit
@@ -300,11 +316,9 @@ serve(async (req) => {
     }
     const hadOriginalLyrics = !!(originalSongLyrics?.trim() || originalProjectLyrics?.trim())
     const quality = song.quality_score || project?.quality_score || 50
-    const durationSeconds = song.duration_seconds || 180
-    const maxModelDurationSeconds = generationModel === 'music-2.6' ? 360 : 240
-    if (durationSeconds * 0.8 > maxModelDurationSeconds) {
-      throw new Error(`Song requires at least ${Math.ceil(durationSeconds * 0.8)} seconds, but ${generationModel} supports at most ${maxModelDurationSeconds} seconds. Select Music 2.6 or shorten the expected duration before paying for generation.`)
-    }
+    // In-game song duration is gameplay metadata, not the billable AI audio
+    // target. Produce a 60–90 second radio edit regardless of the song length.
+    const durationSeconds = 75
 
     // Extract from creative_brief if available
     const inspirationAnchor = creativeBrief?.inspirationAnchor || creativeBrief?.inspiration_anchor || null
@@ -446,13 +460,13 @@ serve(async (req) => {
     }
 
     // MiniMax uses comma-separated style description
-    const styleDetails = normalizeMiniMaxStylePrompt(styleParts.join(', '), primaryGenre)
+    const styleDetails = normalizeMiniMaxStylePrompt([...styleParts, 'short radio edit, around 75 seconds'].join(', '), primaryGenre)
     const stylePrompt = styleDetails.prompt
     console.log(`[generate-song-audio] MiniMax style length ${styleDetails.finalLength}/300; truncated=${styleDetails.wasTruncated}; embeddedLyricsRemoved=${styleDetails.removedEmbeddedLyrics}`)
     console.log(`[generate-song-audio] Validated style: "${stylePrompt}"`)
 
     // Format lyrics for MiniMax Music - standard section markers work fine
-    const formattedLyrics = formatLyricsForMiniMax(rawLyrics, cleanedSongTitle, primaryGenre, generationModel === 'music-2.6' ? 3500 : 600)
+    const formattedLyrics = formatLyricsForMiniMax(compactLyricsForShortAudio(rawLyrics), cleanedSongTitle, primaryGenre, 600)
     console.log(`[generate-song-audio] Formatted lyrics (${formattedLyrics.length} chars)`)
 
     // Combine for full prompt reference

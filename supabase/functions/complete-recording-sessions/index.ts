@@ -15,6 +15,23 @@ const corsHeaders = {
     'authorization, x-client-info, apikey, content-type, x-triggered-by, x-cron-secret',
 }
 
+// Automatic recording audio is strictly a first-attempt convenience, never a
+// retry policy. Failed provider predictions may incur charges, even when our
+// webhook rejects their duration or Replicate throttles later requests.
+async function requestInitialSongAudio(supabase: ReturnType<typeof createClient>, songId: string, userId: string) {
+  const { data: previousAttempts, error: historyError } = await supabase
+    .from('song_generation_attempts').select('id').eq('song_id', songId).limit(1)
+  if (historyError) throw new Error(`Audio attempt history unavailable: ${historyError.message}`)
+  if (previousAttempts?.length) {
+    console.log(`[complete-recording-sessions] Skipped automatic re-generation for ${songId}: prior attempt exists`)
+    return
+  }
+  const { error } = await supabase.functions.invoke('generate-song-audio', {
+    body: { songId, userId },
+  })
+  if (error) throw error
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
 
@@ -521,7 +538,7 @@ Deno.serve(async (req) => {
                 const { data: versionSongData } = await supabase
                   .from('songs').select('user_id, audio_url, audio_generation_status').eq('id', targetSongId).single()
                 if (versionSongData?.user_id && !versionSongData.audio_url && !['generating','completed'].includes(versionSongData.audio_generation_status)) {
-                  await supabase.functions.invoke('generate-song-audio', { body: { songId: targetSongId, userId: versionSongData.user_id } })
+                  await requestInitialSongAudio(supabase, targetSongId, versionSongData.user_id)
                 }
               } catch (e) { console.error('Version audio generation error:', e) }
             }
@@ -534,7 +551,7 @@ Deno.serve(async (req) => {
               try {
                 const { data: songData } = await supabase.from('songs').select('audio_url, audio_generation_status').eq('id', session.song_id).single()
                 if (originalSong.user_id && !songData?.audio_url && !['generating','completed'].includes(songData?.audio_generation_status)) {
-                  await supabase.functions.invoke('generate-song-audio', { body: { songId: session.song_id, userId: originalSong.user_id } })
+                  await requestInitialSongAudio(supabase, session.song_id, originalSong.user_id)
                 }
               } catch (e) { console.error('Audio generation trigger error:', e) }
             }
@@ -580,18 +597,9 @@ Deno.serve(async (req) => {
 
     if (completedCount > 0) averageFinalQuality = Math.round((averageFinalQuality / completedCount) * 10) / 10
 
-    try {
-      const { data: strandedSongs } = await supabase
-        .from('songs')
-        .select('id, user_id, audio_generation_status, audio_generation_started_at')
-        .eq('status', 'recorded').is('audio_url', null).not('user_id', 'is', null).limit(25)
-      if (strandedSongs?.length) {
-        const tenMinAgo = Date.now() - 10 * 60 * 1000
-        for (const song of strandedSongs.filter((s: any) => s.audio_generation_status !== 'completed' && (s.audio_generation_status !== 'generating' || new Date(s.audio_generation_started_at || 0).getTime() < tenMinAgo))) {
-          try { await supabase.functions.invoke('generate-song-audio', { body: { songId: song.id, userId: song.user_id } }) } catch (_) {}
-        }
-      }
-    } catch (_) {}
+    // Never sweep recorded songs for missing audio here: it caused repeated
+    // provider calls every five minutes after earlier generations had failed.
+    // Recovery is an explicit player/admin operation, not a background retry.
 
     await completeJobRun({
       jobName: 'complete-recording-sessions', runId, supabaseClient: supabase,
