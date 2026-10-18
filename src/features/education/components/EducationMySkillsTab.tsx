@@ -32,7 +32,9 @@ export const EducationMySkillsTab = () => {
       .filter((definition) => definition.is_active && !definition.is_hidden && isEducationSkillVisible(definition.slug, accessBySkill))
       .map((definition) => {
         const progressRecord = progressBySlug.get(definition.slug);
-        const progress = getSkillDisplayProgress((progressRecord ?? { current_level: 0, current_xp: 0, required_xp: 100 }) as any);
+        const raw = getSkillDisplayProgress((progressRecord ?? { current_level: 0, current_xp: 0, required_xp: 100 }) as any);
+        const maxed = raw.current_level >= definition.max_level;
+        const progress = maxed ? { ...raw, is_max_level: true, next_level: null, progress_percent: 100 } : raw;
         return {
           slug: definition.slug,
           name: definition.name || formatEducationSkillName(definition.slug),
