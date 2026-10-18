@@ -126,9 +126,12 @@ function AudioDeck({
           onTimeUpdate={(event) => setElapsed(event.currentTarget.currentTime)}
           onLoadedMetadata={(event) => setDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0)}
           onError={(event) => {
-            if (track && !loading) {
+            // Media can fail while loading metadata. Ignore src-less cleanup
+            // events, but never hide a real failed URL behind the loading flag.
+            if (track && event.currentTarget.getAttribute("src")) {
               event.currentTarget.pause();
               setPlaying(false);
+              setLoading(false);
               setError("Could not load this audio file");
             }
           }}
