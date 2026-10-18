@@ -110,15 +110,15 @@ export const VideosTab = () => {
   const [lessonStep, setLessonStep] = useState<0 | 1>(0);
 
   useEffect(() => {
-    setCooldownStatus(getCooldownStatus(profileId));
+    setCooldownTick(Date.now());
     const interval = window.setInterval(() => {
-      setCooldownStatus(getCooldownStatus(profileId));
+      setCooldownTick(Date.now());
     }, 30000);
     return () => window.clearInterval(interval);
   }, [profileId]);
 
   useEffect(() => {
-    if (watchVideo.isSuccess) setCooldownStatus(getCooldownStatus(profileId));
+    if (watchVideo.isSuccess) setCooldownTick(Date.now());
   }, [profileId, watchVideo.isSuccess]);
 
   const playlists = data ?? [];
