@@ -25,7 +25,7 @@ import {
   getUniversityQualityBand,
   normalizeUniversityRating,
 } from "@/lib/universityBalance";
-import { isHigherTierSkill, useSkillTierAccess } from "../hooks/useSkillTierAccess";
+import { isEducationSkillVisible, useSkillTierAccess } from "../hooks/useSkillTierAccess";
 
 interface University {
   id: string;
@@ -35,11 +35,6 @@ interface University {
   quality_of_learning: number | null;
   course_cost_modifier: number | null;
   description: string | null;
-}
-
-interface CourseCount {
-  university_id: string;
-  count: number;
 }
 
 interface CourseWithUniversity {
@@ -110,8 +105,7 @@ export const UniversityTab = () => {
   const [searchQuery, setSearchQuery] = useState(() => new URLSearchParams(window.location.search).get("skill") ?? "");
   const [selectedCity, setSelectedCity] = useState<string>("current");
   const [selectedCategory, setSelectedCategory] = useState<SkillCategory>("all");
-  const [hideLockedCourses, setHideLockedCourses] = useState(true);
-  const [viewMode, setViewMode] = useState<"universities" | "courses">("universities");
+  const [viewMode, setViewMode] = useState<"universities" | "courses">(() => new URLSearchParams(window.location.search).get("skill") ? "courses" : "universities");
 
   // Fetch profile with current city
   const { data: profile } = useQuery({
@@ -247,42 +241,15 @@ export const UniversityTab = () => {
   const tierAccess = useSkillTierAccess(profileId, (courses ?? []).map((course) => course.skill_slug));
   const accessBySkill = tierAccess.data ?? new Map<string, boolean>();
 
-  const { data: courseCounts } = useQuery({
-    queryKey: ["university_course_counts"],
-    queryFn: async () => {
-      const batchSize = 1000;
-      const allRows: { university_id: string }[] = [];
-      let offset = 0;
-      let hasMore = true;
-
-      while (hasMore) {
-        const { data, error } = await supabase
-          .from("university_courses")
-          .select("university_id")
-          .eq("is_active", true)
-          .range(offset, offset + batchSize - 1);
-        if (error) throw error;
-
-        if (data && data.length > 0) {
-          allRows.push(...data);
-          offset += batchSize;
-          hasMore = data.length === batchSize;
-        } else {
-          hasMore = false;
-        }
-      }
-
-      const counts = allRows.reduce((acc, course) => {
-        acc[course.university_id] = (acc[course.university_id] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-
-      return Object.entries(counts).map(([university_id, count]) => ({
-        university_id,
-        count,
-      })) as CourseCount[];
-    },
-  });
+  // Counts must reflect only courses this character is eligible to discover.
+  const visibleCourseCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const course of courses ?? []) {
+      if (!isEducationSkillVisible(course.skill_slug, accessBySkill)) continue;
+      counts.set(course.university_id, (counts.get(course.university_id) ?? 0) + 1);
+    }
+    return counts;
+  }, [courses, accessBySkill]);
 
   // Get unique cities from universities
   const availableCities = useMemo(() => {
@@ -328,9 +295,7 @@ export const UniversityTab = () => {
     let result = courses;
     if (selectedCity === "current" && !currentCityName) return [];
 
-    if (hideLockedCourses) {
-      result = result.filter(c => !isHigherTierSkill(c.skill_slug) || accessBySkill.get(c.skill_slug) === true);
-    }
+    result = result.filter(c => isEducationSkillVisible(c.skill_slug, accessBySkill));
 
     // Filter by city
     if (filterCity) {
@@ -360,7 +325,7 @@ export const UniversityTab = () => {
     }
     
     return result;
-  }, [courses, selectedCity, currentCityName, filterCity, searchQuery, selectedCategory, hideLockedCourses, accessBySkill]);
+  }, [courses, selectedCity, currentCityName, filterCity, searchQuery, selectedCategory, accessBySkill]);
 
   // Group filtered universities by city
   const groupedUniversities = useMemo(() => {
@@ -380,9 +345,7 @@ export const UniversityTab = () => {
     const counts: Record<string, number> = {};
     let cityFiltered = courses;
     if (selectedCity === "current" && !currentCityName) return {};
-    if (hideLockedCourses) {
-      cityFiltered = cityFiltered.filter(c => !isHigherTierSkill(c.skill_slug) || accessBySkill.get(c.skill_slug) === true);
-    }
+    cityFiltered = cityFiltered.filter(c => isEducationSkillVisible(c.skill_slug, accessBySkill));
     if (filterCity) {
       cityFiltered = cityFiltered.filter(c => c.universities?.city === filterCity);
     }
@@ -391,7 +354,7 @@ export const UniversityTab = () => {
       counts[cat] = (counts[cat] || 0) + 1;
     }
     return counts;
-  }, [courses, selectedCity, currentCityName, filterCity, hideLockedCourses, accessBySkill]);
+  }, [courses, selectedCity, currentCityName, filterCity, accessBySkill]);
 
   const hasActiveFilters = searchQuery.trim() || selectedCity !== "current" || selectedCategory !== "all";
 
@@ -399,7 +362,6 @@ export const UniversityTab = () => {
     setSearchQuery("");
     setSelectedCity("current");
     setSelectedCategory("all");
-    setHideLockedCourses(true);
   };
 
   return (
@@ -411,6 +373,7 @@ export const UniversityTab = () => {
         </p>
       </div>
 
+      {tierAccess.isError && <Alert role="alert"><AlertDescription>Could not verify skill unlocks. Higher-tier courses are hidden until verification succeeds.</AlertDescription></Alert>}
       {currentEnrollments.length > 1 && <Alert role="alert"><AlertDescription>You have {currentEnrollments.length} active university enrollments. Review every course before enrolling again.</AlertDescription></Alert>}
       {currentEnrollment && (
         <Alert className="border-primary/50 bg-primary/10">
@@ -466,12 +429,7 @@ export const UniversityTab = () => {
           </Select>
         </div>
 
-        {viewMode === "courses" && (
-          <Button variant={hideLockedCourses ? "secondary" : "outline"} size="sm" className="w-fit gap-2" onClick={() => setHideLockedCourses(v => !v)} aria-pressed={hideLockedCourses}>
-            <Lock className="h-4 w-4" />
-            {hideLockedCourses ? "Hide locked courses: On" : "Hide locked courses: Off"}
-          </Button>
-        )}
+        {/* Higher-tier courses are never offered before unlock. */}
 
         {/* Category filter chips — only show in courses view */}
         {viewMode === "courses" && (
@@ -579,7 +537,7 @@ export const UniversityTab = () => {
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {cityUniversities.map((uni) => {
-                    const courseCount = courseCounts?.find((cc) => cc.university_id === uni.id)?.count ?? 0;
+                    const courseCount = visibleCourseCounts.get(uni.id) ?? 0;
                     const prestigeRating = normalizeUniversityRating(uni.prestige);
                     const qualityRating = normalizeUniversityRating(uni.quality_of_learning);
                     const prestigeBand = getUniversityPrestigeBand(prestigeRating);
@@ -664,13 +622,13 @@ export const UniversityTab = () => {
                 {filteredCourses
                   .slice()
                   .sort((a, b) => {
-                    const aLocked = isHigherTierSkill(a.skill_slug) && accessBySkill.get(a.skill_slug) !== true;
-                    const bLocked = isHigherTierSkill(b.skill_slug) && accessBySkill.get(b.skill_slug) !== true;
+                    const aLocked = !isEducationSkillVisible(a.skill_slug, accessBySkill);
+                    const bLocked = !isEducationSkillVisible(b.skill_slug, accessBySkill);
                     return Number(aLocked) - Number(bLocked) || a.name.localeCompare(b.name);
                   })
                   .slice(0, 50)
                   .map((course) => {
-                  const locked = isHigherTierSkill(course.skill_slug) && accessBySkill.get(course.skill_slug) !== true;
+                  const locked = !isEducationSkillVisible(course.skill_slug, accessBySkill);
                   const effectivePrice = calculateUniversityCoursePrice(
                     course.base_price,
                     course.universities?.course_cost_modifier,

@@ -34,7 +34,7 @@ import {
 } from "../hooks/useEducationVideoSubscriptions";
 import { useEducationVideoPlaylists } from "../hooks/useEducationVideoPlaylists";
 import { getCooldownStatus, useWatchVideo } from "../hooks/useWatchVideo";
-import { isHigherTierSkill, useSkillTierAccess } from "../hooks/useSkillTierAccess";
+import { isEducationSkillVisible, useSkillTierAccess } from "../hooks/useSkillTierAccess";
 import type { VideoResource } from "../types";
 
 type DifficultyFilter = "all" | "1" | "2" | "3";
@@ -102,20 +102,21 @@ export const VideosTab = () => {
 
   const tierAccess = useSkillTierAccess(profileId, allVideos.map((video) => video.skillSlug));
   const accessBySkill = tierAccess.data ?? new Map<string, boolean>();
+  const visibleVideos = useMemo(() => allVideos.filter((video) => isEducationSkillVisible(video.skillSlug, accessBySkill)), [allVideos, accessBySkill]);
 
   const skillOptions = useMemo(() => {
     const labels = new Map<string, string>();
-    for (const video of allVideos) {
+    for (const video of visibleVideos) {
       if (video.skillSlug) labels.set(video.skillSlug, video.skillName || formatSkillName(video.skillSlug));
     }
     return Array.from(labels.entries())
       .map(([slug, name]) => ({ slug, name }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [allVideos]);
+  }, [visibleVideos]);
 
   const tagOptions = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const video of allVideos) {
+    for (const video of visibleVideos) {
       for (const tag of video.tags) {
         const normalized = tag.trim();
         if (!normalized) continue;
@@ -126,14 +127,14 @@ export const VideosTab = () => {
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
       .slice(0, 40)
       .map(([tag]) => tag);
-  }, [allVideos]);
+  }, [visibleVideos]);
 
   const subscribedSkills = subscriptions.data ?? new Set<string>();
   const subscribedSkillOptions = skillOptions.filter((skill) => subscribedSkills.has(skill.slug));
 
   const filteredVideos = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
-    const result = allVideos.filter((video) => {
+    const result = visibleVideos.filter((video) => {
       if (selectedSkill !== "all" && video.skillSlug !== selectedSkill) return false;
       if (difficulty !== "all" && video.difficulty !== Number(difficulty)) return false;
       if (!matchesDuration(video, duration)) return false;
@@ -171,7 +172,7 @@ export const VideosTab = () => {
       return a.difficulty - b.difficulty || a.name.localeCompare(b.name);
     });
   }, [
-    allVideos,
+    visibleVideos,
     difficulty,
     duration,
     followingOnly,
@@ -252,7 +253,7 @@ export const VideosTab = () => {
         </div>
         {!isLoading && !isError && (
           <div className="flex gap-2 text-xs text-muted-foreground">
-            <Badge variant="secondary">{allVideos.length} lessons</Badge>
+            <Badge variant="secondary">{visibleVideos.length} lessons</Badge>
             <Badge variant="outline">{skillOptions.length} skills</Badge>
           </div>
         )}
@@ -413,8 +414,9 @@ export const VideosTab = () => {
         </CardContent>
       </Card>
 
+      {tierAccess.isError && <Alert variant="destructive" role="alert"><AlertTitle>Skill access unavailable</AlertTitle><AlertDescription>Could not verify unlocked lessons. Refresh to retry.</AlertDescription></Alert>}
       {subscriptions.isError && <Alert variant="destructive" role="alert"><AlertTitle>Followed skills unavailable</AlertTitle><AlertDescription>Your subscriptions could not be loaded. <Button variant="outline" size="sm" onClick={() => void subscriptions.refetch()}>Retry subscriptions</Button></AlertDescription></Alert>}
-      {isLoading ? (
+      {(isLoading || tierAccess.isLoading) ? (
         <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           Loading lessons...
@@ -435,11 +437,7 @@ export const VideosTab = () => {
           {filteredVideos.slice(0, visibleCount).map((video) => {
             const subscribed = video.skillSlug ? subscribedSkills.has(video.skillSlug) : false;
             const watchingThis = watchVideo.isPending && watchVideo.variables?.videoId === video.id;
-            const locked = Boolean(
-              video.skillSlug &&
-                isHigherTierSkill(video.skillSlug) &&
-                (tierAccess.isLoading || tierAccess.isError || accessBySkill.get(video.skillSlug) !== true),
-            );
+            const locked = !isEducationSkillVisible(video.skillSlug, accessBySkill);
             return (
               <Card key={video.id} className="flex h-full flex-col transition-all hover:border-primary/50 hover:shadow-md">
                 <CardHeader className="space-y-3 pb-3">

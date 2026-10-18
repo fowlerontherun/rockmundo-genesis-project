@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { groupSkillFamilies, resolveSkillTier, skillFamilyKey } from "@/utils/skillFamilies";
+import { isEducationSkillVisible, useSkillTierAccess } from "@/features/education/hooks/useSkillTierAccess";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/lib/supabase-types";
@@ -203,6 +204,8 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
   const availabilityQuery = useProfileSkillAvailability(profile?.id);
   const [skills, setSkills] = useState<SkillDefinition[]>([]);
   const [progress, setProgress] = useState<SkillProgress[]>([]);
+  const tierAccess = useSkillTierAccess(profile?.id, skills.filter((skill) => resolveSkillTier(skill.slug, (skill.tier_caps as any)?.tier) !== "basic").map((skill) => skill.slug));
+  const visibleSkills = useMemo(() => skills.filter((skill) => resolveSkillTier(skill.slug, (skill.tier_caps as any)?.tier) === "basic" || isEducationSkillVisible(skill.slug, tierAccess.data ?? new Map<string, boolean>())), [skills, tierAccess.data]);
   const [educationSources, setEducationSources] = useState<
     Record<string, EducationSource[]>
   >({});
@@ -291,6 +294,7 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
   const handleSkillTrained = () => {
     setRefreshKey((prev) => prev + 1);
     void availabilityQuery.refetch();
+    void tierAccess.refetch();
     onXpSpent?.();
   };
 
@@ -312,12 +316,12 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
 
   // Filter and categorize skills
   const filteredSkills = useMemo(() => {
-    let filtered = [...skills];
+    let filtered = [...visibleSkills];
 
     // Also include skills from progress that might not be in definitions
     const progressSlugs = progress.map((p) => p.skill_slug);
     const missingFromDefs = progressSlugs.filter(
-      (slug) => !skills.some((s) => s.slug === slug),
+      (slug) => !skills.some((s) => s.slug === slug) && (resolveSkillTier(slug) === "basic" || isEducationSkillVisible(slug, tierAccess.data ?? new Map<string, boolean>())),
     );
 
     // Add placeholder definitions for missing skills
@@ -400,6 +404,8 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
     return filtered;
   }, [
     skills,
+    visibleSkills,
+    tierAccess.data,
     progress,
     selectedCategory,
     filterMode,
@@ -412,22 +418,23 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
 
   // Count skills per category
   const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: learnedSlugs.size };
+    const eligibleLearned = [...learnedSlugs].filter((slug) => visibleSkills.some((skill) => skill.slug === slug));
+    const counts: Record<string, number> = { all: eligibleLearned.length };
     SKILL_CATEGORIES.forEach((cat) => {
-      counts[cat.key] = [...learnedSlugs].filter((slug) =>
+      counts[cat.key] = eligibleLearned.filter((slug) =>
         matchesCategory(slug, cat),
       ).length;
     });
     return counts;
-  }, [learnedSlugs]);
+  }, [learnedSlugs, visibleSkills]);
 
-  const skillFamilies = useMemo(() => groupSkillFamilies(skills.map((skill) => ({
+  const skillFamilies = useMemo(() => groupSkillFamilies(visibleSkills.map((skill) => ({
     slug: skill.slug,
     name: skill.display_name,
     tier: resolveSkillTier(skill.slug, (skill.tier_caps as any)?.tier),
     maxLevel: Number((skill.tier_caps as any)?.max_level) || 100,
     level: progress.find((item) => item.skill_slug === skill.slug)?.current_level ?? 0,
-  }))), [skills, progress]);
+  }))), [visibleSkills, progress]);
 
   const maxedCount = useMemo(() => skills.filter((skill) => {
     const level = progress.find((p) => p.skill_slug === skill.slug)?.current_level ?? 0;
@@ -435,7 +442,7 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
     return cap > 0 && level >= cap;
   }).length, [skills, progress]);
 
-  const nextSteps = useMemo(() => skills.filter((skill) => {
+  const nextSteps = useMemo(() => visibleSkills.filter((skill) => {
     if (learnedSlugs.has(skill.slug)) return false;
     const prerequisites = getSkillPrerequisites(skill.slug).filter((req) => req.prerequisite_type === "required");
     return prerequisites.every((req) =>
@@ -449,7 +456,7 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
         roleScore(skill.slug) * 10 +
         (getSkillPrerequisites(skill.slug).some((req) => req.prerequisite_type === "required") ? 5 : 0);
       return score(b) - score(a) || a.display_name.localeCompare(b.display_name);
-    }).slice(0, 5), [skills, progress, learnedSlugs, availabilityQuery.data, skillFamilies]);
+    }).slice(0, 5), [visibleSkills, progress, learnedSlugs, availabilityQuery.data, skillFamilies]);
 
   const availabilityBySlug = useMemo(
     () =>

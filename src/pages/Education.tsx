@@ -1,100 +1,73 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSearchParams } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { useTranslation } from "@/hooks/useTranslation";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
-import { GraduationCap, Users } from "lucide-react";
+import { GraduationCap, LayoutDashboard, ListChecks, Search } from "lucide-react";
+import { EducationOverviewTab } from "@/features/education/components/EducationOverviewTab";
+import { EducationMySkillsTab } from "@/features/education/components/EducationMySkillsTab";
+import { EducationExploreTab } from "@/features/education/components/EducationExploreTab";
 
-import { SummaryTab } from "@/features/education/components/SummaryTab";
-import { BooksTab } from "@/features/education/components/BooksTab";
-import { UniversityTab } from "@/features/education/components/UniversityTab";
-import { VideosTab } from "@/features/education/components/VideosTab";
-import { MentorsTab } from "@/features/education/components/MentorsTab";
-import { PlayerLearningNetwork } from "@/features/education/components/PlayerLearningNetwork";
-import { useEducationTabs } from "@/features/education/hooks/useEducationTabs";
+type EducationMainTab = "overview" | "skills" | "find";
+
+/** Preserve old deep links so existing schedules, hubs and bookmarks still work. */
+const resolveTab = (requested: string | null): EducationMainTab => {
+  if (requested === "skills") return "skills";
+  if (["find", "books", "university", "videos", "mentors", "players"].includes(requested ?? "")) return "find";
+  return "overview";
+};
 
 const Education = () => {
-  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const baseTabs = useEducationTabs();
-  const tabs = [...baseTabs, { value: "players", label: "Player Learning", icon: Users }];
   const requestedTab = searchParams.get("tab");
-  const defaultValue = tabs.some((tab) => tab.value === requestedTab) ? requestedTab! : (tabs[0]?.value ?? "summary");
+  const activeTab = resolveTab(requestedTab);
   const luthieryFocus = searchParams.get("skill") === "luthiery";
 
-  const tabContentMap: Record<string, JSX.Element> = {
-    summary: <SummaryTab />,
-    books: <BooksTab />,
-    university: <UniversityTab />,
-    videos: <VideosTab />,
-    mentors: <MentorsTab />,
-    players: <PlayerLearningNetwork />,
+  const switchTab = (value: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", value);
+    if (value === "find" && !next.get("method") && ["books", "university", "videos", "mentors", "players"].includes(requestedTab ?? "")) {
+      next.set("method", requestedTab!);
+    }
+    setSearchParams(next, { replace: true });
   };
 
   return (
     <FMPageScaffold
-      title={t('education.title', 'Build your creative intelligence')}
-      subtitle={t('education.subtitle', 'Dive into curated resources, mentor networks, and collaborative learning experiences that keep your artistry growing with every session.')}
+      title="Education"
+      subtitle="See what you know, track your progress and discover what to learn next."
       icon={GraduationCap}
       backTo="/hub/character"
       backLabel="Back to Character Hub"
     >
-
       {luthieryFocus && (
         <Alert className="mt-6 border-primary/30 bg-primary/5">
           <AlertTitle>Learning Luthiery</AlertTitle>
-          <AlertDescription>Look for Luthiery Basics first. Professional Luthiery unlocks after Basic reaches level 20, followed by Master Luthier after Professional reaches level 20. Books, University, Videos and Mentors each contain a route for every available tier.</AlertDescription>
+          <AlertDescription>Start with Luthiery Basics. Professional and Mastery study become visible when the preceding tier reaches its configured maximum level.</AlertDescription>
         </Alert>
       )}
 
-      <Tabs value={defaultValue} onValueChange={(value) => { const next = new URLSearchParams(searchParams); next.set("tab", value); setSearchParams(next, { replace: true }); }} className="mt-6 sm:mt-8 space-y-6">
-        <div className="lg:hidden overflow-x-auto">
-          <ScrollArea className="w-full whitespace-nowrap pb-2">
-            <TabsList className="inline-flex h-auto w-max gap-1 bg-transparent p-0">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
+      <Tabs value={activeTab} onValueChange={switchTab} className="mt-6 space-y-5">
+        <TabsList className="grid grid-cols-3 w-full h-auto gap-1 p-1">
+          <TabsTrigger value="overview" className="flex items-center justify-center gap-1.5 py-3 text-xs sm:text-sm">
+            <LayoutDashboard className="h-4 w-4" /> Overview
+          </TabsTrigger>
+          <TabsTrigger value="skills" className="flex items-center justify-center gap-1.5 py-3 text-xs sm:text-sm">
+            <ListChecks className="h-4 w-4" /> My Skills
+          </TabsTrigger>
+          <TabsTrigger value="find" className="flex items-center justify-center gap-1.5 py-3 text-xs sm:text-sm">
+            <Search className="h-4 w-4" /> Find Learning
+          </TabsTrigger>
+        </TabsList>
 
-                return (
-                  <TabsTrigger
-                    key={tab.value}
-                    value={tab.value}
-                    className="flex flex-col items-center gap-1 rounded-lg border border-border bg-background px-3 py-2 data-[state=active]:border-primary data-[state=active]:bg-primary/5 min-w-[68px]"
-                  >
-                    <Icon className="h-4 w-4" aria-hidden="true" />
-                    <span className="text-[10px] font-medium whitespace-nowrap">{tab.label}</span>
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
-        </div>
-
-        <div className="hidden lg:block">
-          <TabsList className="grid w-full grid-cols-6 gap-2 bg-muted/50 p-1">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-
-              return (
-                <TabsTrigger
-                  key={tab.value}
-                  value={tab.value}
-                  className="flex items-center justify-center gap-2 py-2.5"
-                >
-                  <Icon className="h-4 w-4" aria-hidden="true" />
-                  <span className="text-sm font-medium">{tab.label}</span>
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
-        </div>
-
-        {tabs.map((tab) => (
-          <TabsContent key={tab.value} value={tab.value} className="space-y-6 focus-visible:outline-none">
-            <div className="space-y-6">{tabContentMap[tab.value] ?? null}</div>
-          </TabsContent>
-        ))}
+        <TabsContent value="overview" className="space-y-6 focus-visible:outline-none">
+          <EducationOverviewTab />
+        </TabsContent>
+        <TabsContent value="skills" className="space-y-6 focus-visible:outline-none">
+          <EducationMySkillsTab />
+        </TabsContent>
+        <TabsContent value="find" className="space-y-6 focus-visible:outline-none">
+          <EducationExploreTab />
+        </TabsContent>
       </Tabs>
     </FMPageScaffold>
   );

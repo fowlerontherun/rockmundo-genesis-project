@@ -29,6 +29,7 @@ import { useSkillQuestEvents } from "@/hooks/useSkillQuestEvents";
 import { useSkillQuestRewardClaims } from "@/hooks/useSkillQuestRewardClaims";
 import { buildRecommendations, buildSkillDashboardRows, filterAndSortSkillRows, selectSkillLevelGoals, summarizeRoleReadiness, type LockFilter, type SkillSortKey } from "@/utils/skillsProgressionDashboard";
 import { calculateCurrentSharpness, getMaintenanceStatus, getSharpnessModifier } from "@/utils/skillMaintenance";
+import { isEducationSkillVisible, useSkillTierAccess } from "@/features/education/hooks/useSkillTierAccess";
 
 const formatReset = (value?: string | null) => value ? new Date(value).toLocaleString() : "the next daily reset";
 const roleLabel = (role: string) => role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()).replace("Dj", "DJ");
@@ -84,7 +85,10 @@ const SkillsPage = () => {
   }, [activeTab, selectedRole, search, category, subcategory, system, lock, sort, detailsSlug, setParams]);
   useEffect(() => { sessionStorage.setItem(`skill-favourites:${profileId ?? "anon"}`, JSON.stringify(favourites)); }, [favourites, profileId]);
 
-  const rows = useMemo(() => buildSkillDashboardRows({ catalogue: catalogueQuery.data ?? [], progress: (skillProgress ?? []) as any[], availability: availabilityQuery.data ?? [], ...relationships, favourites, selectedRole }), [catalogueQuery.data, skillProgress, availabilityQuery.data, relationships, favourites, selectedRole]);
+  const tierAccess = useSkillTierAccess(profileId, (catalogueQuery.data ?? []).filter((skill) => skill.tier !== "basic").map((skill) => skill.slug));
+  const rows = useMemo(() => buildSkillDashboardRows({ catalogue: catalogueQuery.data ?? [], progress: (skillProgress ?? []) as any[], availability: availabilityQuery.data ?? [], ...relationships, favourites, selectedRole })
+    .filter((row) => row.catalogue.tier === "basic" || isEducationSkillVisible(row.catalogue.slug, tierAccess.data ?? new Map<string, boolean>())),
+    [catalogueQuery.data, skillProgress, availabilityQuery.data, relationships, favourites, selectedRole, tierAccess.data]);
   const filteredRows = useMemo(() => filterAndSortSkillRows(rows, { search, category, subcategory, role: selectedRole, system, lock, sort }), [rows, search, category, subcategory, selectedRole, system, lock, sort]);
   const readiness = useMemo(() => selectedRole === "all" ? null : summarizeRoleReadiness(selectedRole, rows), [selectedRole, rows]);
   const recommendations = useMemo(() => buildRecommendations(rows, selectedRole), [rows, selectedRole]);

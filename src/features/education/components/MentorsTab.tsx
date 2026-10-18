@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Clock, DollarSign, TrendingUp, Award, MapPin, Calendar, Plane, Sparkles } from "lucide-react";
 import { useMentorSessions } from "@/hooks/useMentorSessions";
 import { formatFocusSkill } from "@/pages/admin/mentors.helpers";
-import { isHigherTierSkill, useSkillTierAccess } from "../hooks/useSkillTierAccess";
+import { isEducationSkillVisible, useSkillTierAccess } from "../hooks/useSkillTierAccess";
 
 export const MentorsTab = () => {
   const { 
@@ -43,7 +43,7 @@ export const MentorsTab = () => {
   const filteredMentors = mentors?.filter(mentor => {
     const inCity = isInMentorCity(mentor.city_id);
     const availableDay = isAvailableToday(mentor.available_day);
-    const locked = isHigherTierSkill(mentor.focus_skill) && accessBySkill.get(mentor.focus_skill) === false;
+    const locked = !isEducationSkillVisible(mentor.focus_skill, accessBySkill);
 
     if (locked) return false;
     if (requestedSkill && mentor.focus_skill !== requestedSkill) return false;

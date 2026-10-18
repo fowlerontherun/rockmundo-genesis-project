@@ -14,7 +14,7 @@ import { useBookReading } from "@/hooks/useBookReading";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/lib/supabase-types";
-import { isHigherTierSkill, useSkillTierAccess } from "../hooks/useSkillTierAccess";
+import { isEducationSkillVisible, useSkillTierAccess } from "../hooks/useSkillTierAccess";
 
 type SkillBook = Tables<"skill_books">;
 type EnrichedSkillBook = SkillBook & { skill_display_name?: string };
@@ -33,13 +33,13 @@ export const BooksTab = () => {
   const bookActionLock = useRef(false);
   const tierAccess = useSkillTierAccess(profileId, (typedBooks ?? []).map((book) => book.skill_slug));
   const accessBySkill = tierAccess.data ?? new Map<string, boolean>();
+  const visibleBooks = useMemo(() => (typedBooks ?? []).filter((book) => isEducationSkillVisible(book.skill_slug, accessBySkill)), [typedBooks, accessBySkill]);
   const isBookLocked = (book: EnrichedSkillBook) =>
-    Boolean(book.skill_slug && isHigherTierSkill(book.skill_slug) && (tierAccess.isLoading || tierAccess.isError || accessBySkill.get(book.skill_slug) !== true));
+    !isEducationSkillVisible(book.skill_slug, accessBySkill);
 
   const activeBookSkill = activeSession?.skill_books?.skill_slug;
   const activeBookLocked = Boolean(
-    activeBookSkill && isHigherTierSkill(activeBookSkill) &&
-    (tierAccess.isLoading || tierAccess.isError || accessBySkill.get(activeBookSkill) !== true)
+    activeBookSkill && !isEducationSkillVisible(activeBookSkill, accessBySkill)
   );
 
   const isPurchased = (bookId: string) => 
@@ -123,11 +123,11 @@ export const BooksTab = () => {
   const skillCategories = useMemo(() => {
     if (!typedBooks) return [];
     const cats = new Set<string>();
-    for (const book of typedBooks) {
+    for (const book of visibleBooks) {
       cats.add(book.skill_display_name || book.skill_slug || "Other");
     }
     return Array.from(cats).sort();
-  }, [typedBooks]);
+  }, [typedBooks, visibleBooks]);
 
   const [searchQuery, setSearchQuery] = useState(() => new URLSearchParams(window.location.search).get("skill") ?? "");
   const [selectedSkill, setSelectedSkill] = useState<string>("all");
@@ -135,7 +135,7 @@ export const BooksTab = () => {
   const groupedBooks = useMemo(() => {
     if (!typedBooks) return null;
     
-    let filtered = typedBooks;
+    let filtered = visibleBooks;
 
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
@@ -159,7 +159,7 @@ export const BooksTab = () => {
     }
     
     return Object.fromEntries(groups.entries());
-  }, [typedBooks, searchQuery, selectedSkill]);
+  }, [typedBooks, visibleBooks, searchQuery, selectedSkill]);
 
   const hasActiveFilters = searchQuery.trim() || selectedSkill !== "all";
 
@@ -222,7 +222,7 @@ export const BooksTab = () => {
         )}
       </div>
 
-      {isLoading && (
+      {(isLoading || tierAccess.isLoading) && (
         <div className="flex items-center justify-center py-12 text-muted-foreground">
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           Loading your library...
@@ -282,7 +282,8 @@ export const BooksTab = () => {
         </Card>
       )}
 
-      {!isLoading && groupedBooks &&
+      {!isLoading && !tierAccess.isLoading && tierAccess.isError && <p role="alert" className="text-sm text-destructive">Cannot verify skill unlocks. Refresh the page to retry.</p>}
+      {!isLoading && !tierAccess.isLoading && !tierAccess.isError && groupedBooks &&
         Object.entries(groupedBooks).map(([groupKey, booksInSkill]) => {
         return (
           <div key={groupKey} className="space-y-4">

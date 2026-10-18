@@ -36,3 +36,5 @@ export const isHigherTierSkill = (slug?: string | null) =>
       (slug.includes("professional") ||
         slug.includes("mastery")),
   );
+
+export { isEducationSkillVisible } from "../utils/educationVisibility";
