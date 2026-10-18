@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 
 const load = (path: string) => readFileSync(resolve(process.cwd(),path),"utf8");
 const sql = load("supabase/migrations/20261018103200_ai_queue_uncertain_dispatch_recovery.sql");
+const submittedSql = load("supabase/migrations/20261018105000_ai_queue_missing_callback_watchdog.sql");
 const worker = load("supabase/functions/process-ai-song-queue/index.ts");
 const ui = load("src/components/recording/SongGenerationStatus.tsx");
 const status = load("src/hooks/useSongGenerationStatus.ts");
@@ -41,6 +42,18 @@ describe("ambiguous paid AI song submissions (#4314)", () => {
     expect(worker).toContain("Ambiguous provider response; never automatically resubmit");
     expect(worker).toContain("Provider prediction created but database tracking was not confirmed");
     expect(worker).not.toContain('return await fail("Ambiguous provider response');
+  });
+
+  it("quarantines stale accepted predictions, retaining their original provider IDs", () => {
+    expect(submittedSql).toContain("public.flag_stale_ai_song_predictions()");
+    expect(submittedSql).toContain("q.state='submitted'");
+    expect(submittedSql).toContain("25 minutes");
+    expect(submittedSql).toContain("a.status='generating'");
+    expect(submittedSql).toContain("state='needs_review'");
+    expect(submittedSql).toContain("timeout_at='infinity'::timestamptz");
+    expect(submittedSql).not.toContain("prediction_id=null");
+    expect(worker).toContain('db.rpc("flag_stale_ai_song_predictions")');
+    expect(worker).toContain("predictions missing completion callbacks");
   });
 
   it("tells the player that further paid requests are blocked", () => {
