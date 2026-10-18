@@ -177,7 +177,7 @@ const NightClubDetail = () => {
       stance,
       venueQuality: club.qualityLevel,
     });
-    recordVisit.mutate({ clubId, cashSpent: 0 });
+    recordVisit.mutate({ clubId });
     enterClub.mutate(clubId);
   };
 
