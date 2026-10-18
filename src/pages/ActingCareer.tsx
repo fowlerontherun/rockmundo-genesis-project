@@ -7,7 +7,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Film, Tv, Handshake, Users, TrendingUp, Calendar } from "lucide-react";
 import { NegotiateOfferDialog } from "@/components/acting/NegotiateOfferDialog";
 import { RenewalOfferCard } from "@/components/acting/RenewalOfferCard";
