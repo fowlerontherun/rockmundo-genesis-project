@@ -9,33 +9,33 @@ All 48 SQL files previously named `2027...` were first committed in 2025 or 2026
 | `20270402090000_create_public_universities_table.sql` | `20250919100102_create_public_universities_table.sql` |
 | `20270415100000_add_city_of_birth_to_profiles.sql` | `20250919120754_add_city_of_birth_to_profiles.sql` |
 | `20270415110000_refresh_profiles_gender_column.sql` | `20250919124259_refresh_profiles_gender_column.sql` |
-| `20270415120000_update_player_attribute_defaults.sql` | `20250919130740_update_player_attribute_defaults.sql` |
+| `20270415120000_update_player_attribute_defaults.sql` | `20250917154859_update_player_attribute_defaults.sql` |
 | `20270418100000_add_venue_support_structures.sql` | `20250919133739_add_venue_support_structures.sql` |
 | `20270420120000_create_festival_tables.sql` | `20250919174355_create_festival_tables.sql` |
 | `20270425130000_add_universities_and_skill_books_updates.sql` | `20250920140906_add_universities_and_skill_books_updates.sql` |
 | `20270425140000_refresh_profile_gender_and_notify.sql` | `20250920142710_refresh_profile_gender_and_notify.sql` |
 | `20270426100000_extend_profiles_demographics.sql` | `20250920142451_extend_profiles_demographics.sql` |
-| `20270426150000_refresh_profiles_columns_and_schema_cache.sql` | `20250920145155_refresh_profiles_columns_and_schema_cache.sql` |
+| `20270426150000_refresh_profiles_columns_and_schema_cache.sql` | `20250919124300_refresh_profiles_columns_and_schema_cache.sql` |
 | `20270430100000_add_profile_city_gender_age.sql` | `20250920155525_add_profile_city_gender_age.sql` |
 | `20270430110000_add_current_city_id_to_profiles.sql` | `20250920184927_add_current_city_id_to_profiles.sql` |
 | `20270430120000_ensure_current_city_columns.sql` | `20250920194935_ensure_current_city_columns.sql` |
-| `20270431140000_refresh_profiles_age_schema_cache.sql` | `20250920190442_refresh_profiles_age_schema_cache.sql` |
+| `20270431140000_refresh_profiles_age_schema_cache.sql` | `20250918093028_refresh_profiles_age_schema_cache.sql` |
 | `20270431150000_reset_profile_data.sql` | `20250920191743_reset_profile_data.sql` |
-| `20270431160000_enforce_player_skills_minimum.sql` | `20250920202432_enforce_player_skills_minimum.sql` |
+| `20270431160000_enforce_player_skills_minimum.sql` | `20250917154900_enforce_player_skills_minimum.sql` |
 | `20270431163000_daily_login_attribute_bonus.sql` | `20250920204838_daily_login_attribute_bonus.sql` |
 | `20270601120000_add_daily_xp_allocation.sql` | `20250921111329_add_daily_xp_allocation.sql` |
 | `20270602100000_create_education_band_sessions.sql` | `20250921113739_create_education_band_sessions.sql` |
-| `20270602100001_create_education_youtube_tables.sql` | `20261008223139_create_education_youtube_tables.sql` |
+| `20270602100001_create_education_youtube_tables.sql` | `20250921115854_create_education_youtube_tables.sql` |
 | `20270602120000_add_city_profile_fields.sql` | `20250921112632_add_city_profile_fields.sql` |
 | `20270602130000_create_education_mentors_table.sql` | `20250921113440_create_education_mentors_table.sql` |
 | `20270606100000_add_profile_activity_statuses.sql` | `20250923210318_add_profile_activity_statuses.sql` |
 | `20270607100000_create_songwriting_tables.sql` | `20250923223323_create_songwriting_tables.sql` |
 | `20270607120000_expand_song_quality_scale.sql` | `20250923224216_expand_song_quality_scale.sql` |
 | `20270610120000_align_songwriting_schema.sql` | `20250929091549_align_songwriting_schema.sql` |
-| `20270612120000_handle_new_user_city_fallback.sql` | `20250925203059_handle_new_user_city_fallback.sql` |
+| `20270612120000_handle_new_user_city_fallback.sql` | `20250917154901_handle_new_user_city_fallback.sql` |
 | `20270612150000_update_ensure_player_attributes.sql` | `20250925205416_update_ensure_player_attributes.sql` |
 | `20270615120000_expand_youtube_skills.sql` | `20251007143152_expand_youtube_skills.sql` |
-| `20270615120001_handle_new_user_username_retry.sql` | `20261008223144_handle_new_user_username_retry.sql` |
+| `20270615120001_handle_new_user_username_retry.sql` | `20250925211737_handle_new_user_username_retry.sql` |
 | `20270617103000_create_world_environment_tables.sql` | `20250925211726_create_world_environment_tables.sql` |
 | `20270620120000_grant_songwriting_privileges.sql` | `20250925220021_grant_songwriting_privileges.sql` |
 | `20270620130000_grant_public_profiles_select_to_anon.sql` | `20250925220758_grant_public_profiles_select_to_anon.sql` |
@@ -54,3 +54,5 @@ All 48 SQL files previously named `2027...` were first committed in 2025 or 2026
 | `20271115090000_create_songwriting_draft_tables.sql` | `20251114212855_create_songwriting_draft_tables.sql` |
 
 **Release hold:** The production ledger diverges substantially from Git. Do not replay these files or merge before proving their actual live schema effects and validating a fresh staging reset; some of the old dates were intentionally sorted after other migrations and changing the timestamp also changes deployment order. Zero live database writes in this PR.
+
+> Original Git history can reveal prior filenames/re-additions; these nine refinements use the earliest first-add commit found with `git log --follow`. When multiple files share an introduction second, distinct seconds on that same UTC day preserve unique version IDs.
