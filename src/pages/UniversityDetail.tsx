@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -95,6 +95,7 @@ interface CoursePrerequisite {
 export default function UniversityDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const educationReturnPath = useLocation().pathname.startsWith("/mobile/") ? "/mobile/education" : "/education";
   const { toast } = useToast();
   const { profileId, userId } = useActiveProfile();
   const queryClient = useQueryClient();
@@ -756,7 +757,7 @@ export default function UniversityDetail() {
 
   if (!university) {
     return (
-      <FMPageScaffold title="University" icon={GraduationCap} backTo="/education">
+      <FMPageScaffold title="University" icon={GraduationCap} backTo={educationReturnPath}>
         {universityLoading ? <FMPageSkeleton kpiCount={3} actionCount={1} bodyBlocks={2} showTabs /> :
           <div role="alert" className="space-y-3 p-6"><p>{universityError ? "University details could not be loaded." : "University not found."}</p><Button onClick={() => void retryUniversity()}>Retry</Button></div>}
       </FMPageScaffold>
@@ -773,7 +774,7 @@ export default function UniversityDetail() {
       title={university.name}
       subtitle={university.city || undefined}
       icon={GraduationCap}
-      backTo="/education"
+      backTo={educationReturnPath}
     >
       <div className="space-y-6">
         <VisitingProfessors universityId={university.id} />

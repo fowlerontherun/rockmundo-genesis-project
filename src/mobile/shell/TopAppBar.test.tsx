@@ -7,6 +7,11 @@ import { useLanguageStore } from '@/hooks/useTranslation';
 
 const mobileAuth = vi.hoisted(() => ({ signOut: vi.fn(async () => {}) }));
 vi.mock('@/hooks/use-auth-context', () => ({ useAuth: () => ({ signOut: mobileAuth.signOut }) }));
+// The header only uses the resurrection mutation when switching a comatose character.
+ // Keep the header test independent of the unrelated character-death query client.
+vi.mock('@/hooks/useCharacterDeath', () => ({
+  useCharacterDeath: () => ({ resurrectCharacter: { mutateAsync: vi.fn() } }),
+}));
 vi.mock('@/hooks/useUnifiedInbox', () => ({ useUnifiedInboxUnreadCount: () => 2 }));
 vi.mock('@/hooks/useGameData', () => ({ useGameData: () => ({ refetch: vi.fn() }) }));
 vi.mock('@/hooks/useCharacterSlots', () => ({ useCharacterSlots: () => ({

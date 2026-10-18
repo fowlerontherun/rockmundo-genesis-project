@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Target, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ const GOAL_OPTIONS: Array<{ value: LearningGoal; label: string }> = [
 ];
 
 export const EducationRecommendations = ({ activeSkills }: { activeSkills?: string[] }) => {
+  const educationBase = useLocation().pathname.startsWith("/mobile") ? "/mobile/education" : "/education";
   const { profileId } = useActiveProfile();
   const { skillProgress } = useGameData();
   const [goal, setGoal] = useState<LearningGoal>("all");
@@ -86,7 +87,7 @@ export const EducationRecommendations = ({ activeSkills }: { activeSkills?: stri
                 {!skill.isNew && <Progress value={skill.progressPercent} aria-label={skill.title + " progress " + skill.progressPercent + "%"} />}
                 <p className="text-sm text-muted-foreground">{skill.reason}</p>
                 <Button asChild variant="outline" size="sm" className="w-full">
-                  <Link to={"/education?tab=find&skill=" + encodeURIComponent(skill.slug)}>
+                  <Link to={educationBase + "?tab=find&skill=" + encodeURIComponent(skill.slug)}>
                     {skill.isNew ? "Find a first lesson" : "Find ways to improve"} <ArrowRight className="ml-1.5 h-4 w-4" />
                   </Link>
                 </Button>

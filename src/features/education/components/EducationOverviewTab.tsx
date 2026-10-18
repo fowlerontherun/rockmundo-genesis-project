@@ -72,14 +72,14 @@ export const EducationOverviewTab = () => {
       {hiddenActiveCount > 0 && !tierAccess.isLoading && !tierAccess.isError && (
         <Alert role="status"><AlertDescription>Some legacy learning activities need additional skill prerequisites before they can continue. You can manage existing reading or courses from Find Learning.</AlertDescription></Alert>
       )}
-      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4">
         <Card><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-bold">{skills.length}</p><p className="text-xs text-muted-foreground">Skills learned</p></CardContent></Card>
         <Card><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-bold">{visibleBooks.length + visibleEnrollments.length}</p><p className="text-xs text-muted-foreground">In progress</p></CardContent></Card>
-        <Card><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-bold">+{yesterdayProgress.totalXp.toLocaleString()}</p><p className="text-xs text-muted-foreground">XP yesterday</p></CardContent></Card>
+        <Card className="col-span-2 sm:col-span-1"><CardContent className="p-3 sm:p-4 text-center"><p className="break-words text-xl sm:text-2xl font-bold">+{yesterdayProgress.totalXp.toLocaleString()}</p><p className="text-xs text-muted-foreground">XP yesterday</p></CardContent></Card>
       </div>
 
       <section className="space-y-3" aria-label="Current learning">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-semibold text-lg">Continue learning</h2>
           <Button asChild size="sm" variant="outline"><Link to={`${educationBase}?tab=find`}>Find learning <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link></Button>
         </div>
