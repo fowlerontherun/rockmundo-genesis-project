@@ -71,3 +71,35 @@ If a later integration is blocked, keep the table inactive and the execute
 grant restricted; avoid dropping historical reservations once players have
 booked. Any future removal needs an explicit ledger reconciliation and
 data/export plan.
+
+## October 18 follow-up: local-hours guard (applied)
+
+Migration `20261018061512_dj_reservations_local_club_hours_20261018.sql`
+(ledger name `dj_reservations_local_club_hours_20261018`) adds
+`dj_clock_minutes`, `dj_booking_inside_club_hours` and a table INSERT/
+start/end/club UPDATE trigger. The trigger **rejects** any reservation that
+falls outside the verified club window in its city's IANA timezone; the full
+set, including its end, must fit. Overnight windows such as 10pm–4am
+correctly include 1am on the following local day. This uses the existing
+`cities.timezone` field, not the player's device locale.
+
+Live data audit: 72 clubs and 24 distinct schedule strings. Standard ranges,
+including midnight/noon and legitimate up-to-12-hour overnight ranges,
+parse. Three configurations deliberately fail closed pending explicit owner
+correction: **The Black Sheep** (`10pm-12pm`, 14-hour ambiguity), **Berghain**
+(`midnight-Monday`, a weekday not an endpoint), and **The Haccienda**
+(missing hours). Other ranges over 12 hours will also fail closed until a
+structured schedule exception/override is approved.
+
+Both SQL test harnesses passed against the live DB after this change:
+`dj_booking_club_hours_harness.sql` tests timezone-local overnight hours,
+midnight after closing, incomplete ranges and invalid inputs;
+`dj_internal_booking_reservation_harness.sql` now uses a genuine eligible
+club's local 10pm/11pm opening time and passes idempotency, double-booking,
+foreign-account and zero-payout checks. All test inserts rolled back.
+
+**Still not enabled:** the reservation RPC remains service-role only.
+This guard does not replace an availability grid, per-weekday opening calendar,
+travel validation, mirror activity schedule or the atomic gig settlement
+pipeline. Do not expose a Book DJ Set button solely because basic hours
+validation is now in place.
