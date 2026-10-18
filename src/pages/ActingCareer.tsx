@@ -1,13 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth-context";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Film, Tv, Handshake, Star, DollarSign, Users, Trophy, TrendingUp, Calendar } from "lucide-react";
+import { Film, Tv, Handshake, Users, TrendingUp, Calendar } from "lucide-react";
 import { NegotiateOfferDialog } from "@/components/acting/NegotiateOfferDialog";
 import { RenewalOfferCard } from "@/components/acting/RenewalOfferCard";
 import { FilmBreakdownCard } from "@/components/acting/FilmBreakdownCard";
@@ -15,54 +15,108 @@ import { SeriesBreakdownCard } from "@/components/acting/SeriesBreakdownCard";
 import { format, parseISO } from "date-fns";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
+type QueryNoticeProps = {
+  label: string;
+  isLoading: boolean;
+  isError: boolean;
+  error: unknown;
+  retry: () => void;
+};
+
+function QueryNotice({ label, isLoading, isError, error, retry }: QueryNoticeProps) {
+  if (isError) {
+    return (
+      <Card role="alert" className="border-destructive/50">
+        <CardContent className="p-4 space-y-2">
+          <p className="font-medium">Couldn't load {label}.</p>
+          <p className="text-sm text-muted-foreground">
+            {error instanceof Error ? error.message : "The server did not return a valid response."}
+          </p>
+          <Button variant="outline" size="sm" onClick={retry}>Retry {label}</Button>
+        </CardContent>
+      </Card>
+    );
+  }
+  if (isLoading) {
+    return (
+      <Card aria-busy="true">
+        <CardContent className="p-5 text-sm text-muted-foreground">Loading {label}...</CardContent>
+      </Card>
+    );
+  }
+  return null;
+}
+
 export default function ActingCareer() {
   const { user } = useAuth();
   const userId = user?.id;
-  const [neg, setNeg] = useState<{ offerId: string; baseCents: number; perEpisode: boolean; episodeCount: number; title: string } | null>(null);
+  const { profileId, isLoading: profileLoading } = useActiveProfile();
+  const canLoad = !!userId && !!profileId;
+  const [neg, setNeg] = useState<{ offerId: string; baseCents: number; perEpisode: boolean; episodeCount: number; title: string; characterId: string } | null>(null);
 
-  const { data: offers = [] } = useQuery({
-    queryKey: ["acting-offers", userId],
+  // Never keep an open negotiation dialog across a character/account change.
+  useEffect(() => setNeg(null), [userId, profileId]);
+
+  const offersQuery = useQuery({
+    queryKey: ["acting-offers", userId, profileId],
     queryFn: async () => {
-      const { data } = await supabase.from("pr_media_offers")
+      const { data, error } = await supabase.from("pr_media_offers")
         .select("*").eq("user_id", userId)
         .in("media_type", ["film", "series"])
         .eq("status", "pending").order("created_at", { ascending: false });
+      if (error) throw error;
       return data ?? [];
     },
-    enabled: !!userId,
+    enabled: canLoad,
   });
 
-  const { data: filmContracts = [] } = useQuery({
-    queryKey: ["acting-contracts-films", userId],
+  const filmContractsQuery = useQuery({
+    queryKey: ["acting-contracts-films", userId, profileId],
     queryFn: async () => {
-      const { data } = await supabase.from("player_film_contracts")
+      const { data, error } = await supabase.from("player_film_contracts")
         .select("*").eq("user_id", userId).order("created_at", { ascending: false });
+      if (error) throw error;
       return data ?? [];
     },
-    enabled: !!userId,
+    enabled: canLoad,
   });
 
-  const { data: seriesContracts = [] } = useQuery({
-    queryKey: ["acting-contracts-series", userId],
+  const seriesContractsQuery = useQuery({
+    queryKey: ["acting-contracts-series", userId, profileId],
     queryFn: async () => {
-      const { data } = await supabase.from("player_series_contracts")
+      const { data, error } = await supabase.from("player_series_contracts")
         .select("*, scripted_series(title, network_id), series_seasons(season_number, status, episodes_aired, episode_count, avg_viewers, critic_score, audience_score)")
         .eq("user_id", userId).order("joined_at", { ascending: false });
+      if (error) throw error;
       return data ?? [];
     },
-    enabled: !!userId,
+    enabled: canLoad,
   });
 
-  const { data: renewals = [] } = useQuery({
-    queryKey: ["acting-renewals", userId],
+  const renewalsQuery = useQuery({
+    queryKey: ["acting-renewals", userId, profileId],
     queryFn: async () => {
-      const { data } = await supabase.from("series_renewal_offers")
+      const { data, error } = await supabase.from("series_renewal_offers")
         .select("*, scripted_series(title)")
         .eq("user_id", userId).eq("status", "pending");
+      if (error) throw error;
       return data ?? [];
     },
-    enabled: !!userId,
+    enabled: canLoad,
   });
+
+  const offers = offersQuery.isSuccess ? (offersQuery.data ?? []) : [];
+  const filmContracts = filmContractsQuery.isSuccess ? (filmContractsQuery.data ?? []) : [];
+  const seriesContracts = seriesContractsQuery.isSuccess ? (seriesContractsQuery.data ?? []) : [];
+  const renewals = renewalsQuery.isSuccess ? (renewalsQuery.data ?? []) : [];
+
+  if (!userId || (!profileLoading && !profileId)) {
+    return (
+      <FMPageScaffold title="Acting Career" subtitle="Film and TV opportunities" icon={Film} backTo="/hub/career-business">
+        <p className="text-sm text-muted-foreground">Select an active character to see acting opportunities.</p>
+      </FMPageScaffold>
+    );
+  }
 
   return (
     <FMPageScaffold
@@ -87,10 +141,14 @@ export default function ActingCareer() {
 
         {/* ------- OFFERS TAB ------- */}
         <TabsContent value="offers" className="space-y-3">
+          <QueryNotice label="acting offers" isLoading={offersQuery.isLoading || !canLoad} isError={offersQuery.isError}
+            error={offersQuery.error} retry={() => { void offersQuery.refetch(); }} />
+          <QueryNotice label="renewal offers" isLoading={renewalsQuery.isLoading || !canLoad} isError={renewalsQuery.isError}
+            error={renewalsQuery.error} retry={() => { void renewalsQuery.refetch(); }} />
           {renewals.map((r: any) => (
             <RenewalOfferCard key={r.id} renewal={r} />
           ))}
-          {offers.length === 0 && renewals.length === 0 ? (
+          {offersQuery.isSuccess && renewalsQuery.isSuccess && offers.length === 0 && renewals.length === 0 ? (
             <Card><CardContent className="p-8 text-center text-muted-foreground">
               No active acting offers. Build fame to attract more roles.
             </CardContent></Card>
@@ -142,8 +200,8 @@ export default function ActingCareer() {
                       </Badge>
                     ) : null}
                   </div>
-                  <Button onClick={() => setNeg({
-                    offerId: o.id, baseCents, perEpisode: isSeries, episodeCount: episodes, title,
+                  <Button disabled={!offersQuery.isSuccess || !renewalsQuery.isSuccess || !profileId} onClick={() => setNeg({
+                    offerId: o.id, baseCents, perEpisode: isSeries, episodeCount: episodes, title, characterId: profileId!,
                   })}>
                     <Handshake className="h-4 w-4 mr-1" /> Negotiate / Accept
                   </Button>
@@ -155,20 +213,24 @@ export default function ActingCareer() {
 
         {/* ------- FILMS TAB ------- */}
         <TabsContent value="films" className="space-y-3">
-          {filmContracts.length === 0 ? (
+          <QueryNotice label="film contracts" isLoading={filmContractsQuery.isLoading || !canLoad} isError={filmContractsQuery.isError}
+            error={filmContractsQuery.error} retry={() => { void filmContractsQuery.refetch(); }} />
+          {filmContractsQuery.isSuccess && filmContracts.length === 0 ? (
             <Card><CardContent className="p-8 text-center text-muted-foreground">No films yet.</CardContent></Card>
-          ) : filmContracts.map((c: any) => <FilmBreakdownCard key={c.id} contract={c} />)}
+          ) : filmContractsQuery.isSuccess && filmContracts.map((c: any) => <FilmBreakdownCard key={c.id} contract={c} />)}
         </TabsContent>
 
         {/* ------- SERIES TAB ------- */}
         <TabsContent value="series" className="space-y-3">
-          {seriesContracts.length === 0 ? (
+          <QueryNotice label="series contracts" isLoading={seriesContractsQuery.isLoading || !canLoad} isError={seriesContractsQuery.isError}
+            error={seriesContractsQuery.error} retry={() => { void seriesContractsQuery.refetch(); }} />
+          {seriesContractsQuery.isSuccess && seriesContracts.length === 0 ? (
             <Card><CardContent className="p-8 text-center text-muted-foreground">No series contracts yet.</CardContent></Card>
-          ) : seriesContracts.map((c: any) => <SeriesBreakdownCard key={c.id} contract={c} />)}
+          ) : seriesContractsQuery.isSuccess && seriesContracts.map((c: any) => <SeriesBreakdownCard key={c.id} contract={c} />)}
         </TabsContent>
       </Tabs>
 
-      {neg && (
+      {neg && profileId && neg.characterId === profileId && offersQuery.isSuccess && renewalsQuery.isSuccess && (
         <NegotiateOfferDialog
           open={!!neg} onOpenChange={(o) => !o && setNeg(null)}
           offerId={neg.offerId} baseCents={neg.baseCents}
