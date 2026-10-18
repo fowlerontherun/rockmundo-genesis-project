@@ -21,7 +21,7 @@ type LearningMethod = (typeof methods)[number]["value"];
 
 export const EducationExploreTab = () => {
   const [params, setParams] = useSearchParams();
-  const requested = params.get("method");
+  const requested = params.get("method") ?? params.get("tab");
   const method: LearningMethod = methods.some((item) => item.value === requested)
     ? requested as LearningMethod : "books";
   const skill = params.get("skill");
