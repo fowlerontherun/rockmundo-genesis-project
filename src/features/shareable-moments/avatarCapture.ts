@@ -45,6 +45,22 @@ export async function captureAvatarV1ForShare(visual:AvatarShareVisual):Promise<
   const clothing=visual.richClothing??[];const tattoos=visibleTattoosForPresentation(visual.tattoos??[],{appearance:visual.appearance,clothing,presentation:"stage"});
   const assembled=assemblePlayerModel(library,visual.appearance,tattoos,clothing,"high","stage",visual.merchWearable??null);
   actor=new Musician(assembled,visual.role??"other",[0,0,0],0,undefined,visual.appearance,visual.instrument,undefined,clothing,undefined,undefined,visual.luthieryInstrument??null);disposeModel(assembled);scene.add(actor.root);equipment=actor.equipment;if(equipment)scene.add(equipment);
-  actor.update(0,.55,true);renderer.render(scene,camera);return canvas;
+  actor.update(0,.55,true);
+  renderer.render(scene,camera);
+  // Copy the complete WebGL frame to a 2D canvas while the context is still
+  // alive. An off-screen/cleared WebGL buffer must never be exported as an avatar.
+  const captured = document.createElement("canvas");
+  captured.width = canvas.width;
+  captured.height = canvas.height;
+  const context = captured.getContext("2d");
+  if (!context) throw new Error("Unable to create avatar share snapshot");
+  context.drawImage(canvas, 0, 0);
+  const pixels = context.getImageData(0, 0, captured.width, captured.height).data;
+  let visibleSamples = 0;
+  for (let i = 3; i < pixels.length; i += 64) {
+    if (pixels[i] > 8 && ++visibleSamples > 64) break;
+  }
+  if (visibleSamples <= 64) throw new Error("Avatar share render was blank");
+  return captured;
  } finally {if(actor)disposeModel(actor.root);if(equipment)disposeModel(equipment);library?.forEach(disposeModel);renderer.dispose();}
 }
