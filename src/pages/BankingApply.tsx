@@ -30,8 +30,8 @@ export default function BankingApply() {
   const [applicationPending, setApplicationPending] = useState(false);
   const [acceptancePending, setAcceptancePending] = useState(false);
   const [acceptedContractId, setAcceptedContractId] = useState<string | null>(null);
-  const applicationInFlight = useRef(false);
-  const acceptanceInFlight = useRef(false);
+  const applicationInFlight = useRef<string | null>(null);
+  const acceptanceInFlight = useRef<string | null>(null);
   const applicationAttempt = useRef<{ signature: string; key: string; applicationId?: string } | null>(null);
   const acceptanceAttempt = useRef<{ signature: string; key: string; contractId?: string } | null>(null);
 
@@ -58,6 +58,8 @@ export default function BankingApply() {
     setMessage(undefined);
     setApplicationError(undefined);
     setAcceptanceError(undefined);
+    setApplicationPending(false);
+    setAcceptancePending(false);
     setProducts([]);
     setAccounts([]);
     setProductId("");
@@ -99,14 +101,14 @@ export default function BankingApply() {
     && !!purpose && !!product?.allowedPurposes.includes(purpose);
 
   async function submitApplication() {
-    if (applicationInFlight.current || acceptanceInFlight.current || !validApplication || !product || !activeProfileId || !userId || applicationResult) return;
+    if (applicationInFlight.current === scope || acceptanceInFlight.current === scope || !validApplication || !product || !activeProfileId || !userId || applicationResult) return;
     const startingScope = scope;
     const signature = JSON.stringify([startingScope, product.id, amount, term, purpose]);
     if (applicationAttempt.current?.signature !== signature) {
       applicationAttempt.current = { signature, key: `ui-${crypto.randomUUID()}` };
     }
     const attempt = applicationAttempt.current;
-    applicationInFlight.current = true;
+    applicationInFlight.current = startingScope;
     setApplicationPending(true);
     setApplicationError(undefined);
     setMessage(undefined);
@@ -126,13 +128,13 @@ export default function BankingApply() {
     } catch (error) {
       if (activeScopeRef.current === startingScope) setApplicationError(errorMessage(error));
     } finally {
-      applicationInFlight.current = false;
+      if (applicationInFlight.current === startingScope) applicationInFlight.current = null;
       if (activeScopeRef.current === startingScope) setApplicationPending(false);
     }
   }
 
   async function acceptOffer() {
-    if (acceptanceInFlight.current || applicationInFlight.current || !activeProfileId || !userId || !offer?.id ||
+    if (acceptanceInFlight.current === scope || applicationInFlight.current === scope || !activeProfileId || !userId || !offer?.id ||
         !selectedAccountId || !accounts.some((account) => account.id === selectedAccountId && account.status === "active") ||
         acceptedContractId) return;
     const startingScope = scope;
@@ -141,7 +143,7 @@ export default function BankingApply() {
       acceptanceAttempt.current = { signature, key: `ui-accept-${crypto.randomUUID()}` };
     }
     const attempt = acceptanceAttempt.current;
-    acceptanceInFlight.current = true;
+    acceptanceInFlight.current = startingScope;
     setAcceptancePending(true);
     setAcceptanceError(undefined);
     setMessage(undefined);
@@ -164,7 +166,7 @@ export default function BankingApply() {
     } catch (error) {
       if (activeScopeRef.current === startingScope) setAcceptanceError(errorMessage(error));
     } finally {
-      acceptanceInFlight.current = false;
+      if (acceptanceInFlight.current === startingScope) acceptanceInFlight.current = null;
       if (activeScopeRef.current === startingScope) setAcceptancePending(false);
     }
   }
