@@ -1,5 +1,9 @@
 
-INSERT INTO public.nightclub_quests (club_id, npc_id, title, description, quest_type, energy_cost, rewards, dialogue, chain_id, chain_position) VALUES
+-- The original hard-coded club_id UUIDs were never seeded into city_night_clubs.
+-- Resolve by existing seeded club names instead (25 exact matches verified on live DB).
+-- Idempotent on replays; never overwrite existing quest progress.
+WITH seed_rows (legacy_club_id, npc_id, title, description, quest_type, energy_cost, rewards, dialogue, chain_id, chain_position) AS (
+VALUES
 ('f9ef6b4f-c2aa-417e-a43f-c4b20b5d5bca', 'berghain_bouncer_sven', 'The Door Test', 'Sven the legendary bouncer evaluates whether you belong inside.', 'one_time', 15, '{"cash": 0, "fame": 120, "xp": 40}', '[{"id":"d1","speaker":"Sven","text":"You stand in line for hours. Finally you reach the front. Sven looks you up and down without expression.","choices":[{"id":"c1a","text":"Stay calm, make eye contact, say nothing.","next_node_id":"d2","effects":{"respect":5}},{"id":"c1b","text":"Tell him you are a DJ playing later tonight.","next_node_id":"d2","effects":{"affinity":3}}]},{"id":"d2","speaker":"Sven","text":"...Go in. Do not take photos.","choices":[{"id":"c2","text":"Nod and enter silently.","next_node_id":null}]}]', NULL, NULL),
 ('86597b75-b91a-4bd3-aced-39e18bed3949', 'tresor_dj_resident', 'Vault Sessions', 'The Tresor resident DJ challenges you to a back-to-back set in the basement vault.', 'one_time', 20, '{"cash": 350, "fame": 100, "xp": 35}', '[{"id":"d1","speaker":"Resident DJ","text":"The vault is where techno was born in Berlin. Raw concrete, pure sound. Can you handle it?","choices":[{"id":"c1a","text":"I live for dark, industrial techno.","next_node_id":"d2","effects":{"affinity":5}},{"id":"c1b","text":"I will bring my own flavor to the vault.","next_node_id":"d2","effects":{"respect":4}}]},{"id":"d2","speaker":"Resident DJ","text":"Good. B2B, two hours, no requests. Just us and the machines.","choices":[{"id":"c2","text":"Lets go.","next_node_id":null}]}]', NULL, NULL),
 ('69587acf-9d75-4727-b43e-a82d6fdc6cd9', 'marquee_promoter_vince', 'Celebrity Guest List', 'Vince the promoter needs you to work the VIP section for a celebrity after-party.', 'one_time', 20, '{"cash": 800, "fame": 200, "xp": 45}', '[{"id":"d1","speaker":"Vince Romano","text":"A-listers are coming tonight. I need a DJ who can read the room AND keep the paparazzi happy. You in?","choices":[{"id":"c1a","text":"I can play the hits and keep the energy VIP-level.","next_node_id":"d2","effects":{"affinity":5}},{"id":"c1b","text":"I play what moves people, celebrities or not.","next_node_id":"d2","effects":{"respect":5}}]},{"id":"d2","speaker":"Vince Romano","text":"Perfect. Bottle service starts at midnight. Do not blow this.","choices":[{"id":"c2","text":"Consider it handled.","next_node_id":null}]}]', NULL, NULL),
@@ -24,4 +28,46 @@ INSERT INTO public.nightclub_quests (club_id, npc_id, title, description, quest_
 ('eb3c6a22-5ee6-4d17-af61-e7e646247fa7', 'stealth_owner_kim', 'Bass Capital', 'Kim runs Stealth, Nottingham bass music headquarters.', 'one_time', 15, '{"cash": 280, "fame": 70, "xp": 28}', '[{"id":"d1","speaker":"Kim","text":"Stealth is bass music territory. DnB, dubstep, grime — if it does not rattle your chest, it does not belong here.","choices":[{"id":"c1a","text":"Bass is life. I will shake the foundations.","next_node_id":"d2","effects":{"affinity":5}},{"id":"c1b","text":"I bring bass music from a different angle. Let me surprise you.","next_node_id":"d2","effects":{"respect":5}}]},{"id":"d2","speaker":"Kim","text":"Friday, Room 2. Show Notts what you are made of.","choices":[{"id":"c2","text":"Bring the bass bins.","next_node_id":null}]}]', NULL, NULL),
 ('71df19be-b90c-4baa-9267-3d9bd6e9d0c6', 'limelight_vicar_pete', 'The Church Party', 'Pete manages Limelight, a converted Victorian church turned superclub.', 'one_time', 18, '{"cash": 400, "fame": 100, "xp": 32}', '[{"id":"d1","speaker":"Pete","text":"Limelight is literally a church. Stained glass windows, gothic arches, and 1500 people losing their minds. It is spiritual.","choices":[{"id":"c1a","text":"I will preach the gospel of house music.","next_node_id":"d2","effects":{"affinity":5}},{"id":"c1b","text":"The acoustics must be incredible in here.","next_node_id":"d2","effects":{"respect":4}}]},{"id":"d2","speaker":"Pete","text":"Saturday main chapel. The congregation is waiting.","choices":[{"id":"c2","text":"Let us have church.","next_node_id":null}]}]', NULL, NULL),
 ('fde3def8-0438-4258-a210-2be5b746d0a3', 'colo_owner_marcus', 'Three Floor Challenge', 'Marcus Webb challenges you to play all three floors of The Colosseum in one night.', 'one_time', 25, '{"cash": 700, "fame": 180, "xp": 45}', '[{"id":"d1","speaker":"Marcus Webb","text":"The Colosseum has three floors, three vibes. Main room is big-room house, second is R and B, third is drum and bass. I need someone who can do all three.","choices":[{"id":"c1a","text":"Versatility is my superpower. I will crush all three.","next_node_id":"d2","effects":{"affinity":6}},{"id":"c1b","text":"That is a marathon. But I love a challenge.","next_node_id":"d2","effects":{"respect":5}}]},{"id":"d2","speaker":"Marcus Webb","text":"45 minutes per floor, no breaks. Start on the main floor. Go.","choices":[{"id":"c2","text":"Game on, Marcus.","next_node_id":null}]}]', NULL, NULL),
-('09b3a66d-ebc8-41ce-8a56-bd0aeb2dc9e1', 'sound_curator_adam', 'LA Underground', 'Adam curates Sound underground program and wants fresh West Coast talent.', 'one_time', 18, '{"cash": 500, "fame": 130, "xp": 38}', '[{"id":"d1","speaker":"Adam","text":"Sound is where LA real underground lives. We do not do bottle service or VIP tables. Just pure sound, Funktion-One, and dancers who actually care about music.","choices":[{"id":"c1a","text":"That is exactly my vibe. Music first, always.","next_node_id":"d2","effects":{"affinity":5}},{"id":"c1b","text":"LA needs more spaces like this. I want to be part of it.","next_node_id":"d2","effects":{"respect":5}}]},{"id":"d2","speaker":"Adam","text":"Opening set, Friday. Build the night right.","choices":[{"id":"c2","text":"From the ground up.","next_node_id":null}]}]', NULL, NULL);
+('09b3a66d-ebc8-41ce-8a56-bd0aeb2dc9e1', 'sound_curator_adam', 'LA Underground', 'Adam curates Sound underground program and wants fresh West Coast talent.', 'one_time', 18, '{"cash": 500, "fame": 130, "xp": 38}', '[{"id":"d1","speaker":"Adam","text":"Sound is where LA real underground lives. We do not do bottle service or VIP tables. Just pure sound, Funktion-One, and dancers who actually care about music.","choices":[{"id":"c1a","text":"That is exactly my vibe. Music first, always.","next_node_id":"d2","effects":{"affinity":5}},{"id":"c1b","text":"LA needs more spaces like this. I want to be part of it.","next_node_id":"d2","effects":{"respect":5}}]},{"id":"d2","speaker":"Adam","text":"Opening set, Friday. Build the night right.","choices":[{"id":"c2","text":"From the ground up.","next_node_id":null}]}]', NULL, NULL)
+),
+club_map(npc_id, club_name) AS (VALUES
+('berghain_bouncer_sven', 'Berghain'),
+('tresor_dj_resident', 'Tresor'),
+('marquee_promoter_vince', 'Marquee New York'),
+('output_sound_eng', 'Output'),
+('amnesia_owner_martin', 'Amnesia'),
+('ushuaia_booker_sofia', 'Ushuaïa'),
+('subclub_dj_harri', 'Sub Club'),
+('motion_promoter_jay', 'Motion'),
+('circus_owner_yousef', 'Circus'),
+('smartbar_resident_derrick', 'Smart Bar'),
+('space_terrace_dj', 'Club Space'),
+('liv_manager_david', 'LIV'),
+('xs_booker_jesse', 'XS Nightclub'),
+('blacksheep_owner_maz', 'The Black Sheep'),
+('wire_owner_tom', 'Wire'),
+('paradiso_curator_eva', 'Paradiso'),
+('caves_dj_angus', 'The Caves'),
+('hopeworks_promoter_lee', 'Hope Works'),
+('digital_booker_sarah', 'Digital'),
+('clwb_manager_rhys', 'Clwb Ifor Bach'),
+('patterns_curator_nina', 'Patterns'),
+('stealth_owner_kim', 'Stealth'),
+('limelight_vicar_pete', 'Limelight'),
+('colo_owner_marcus', 'The Colosseum'),
+('sound_curator_adam', 'Sound Nightclub')
+)
+INSERT INTO public.nightclub_quests (club_id, npc_id, title, description, quest_type, energy_cost, rewards, dialogue, chain_id, chain_position)
+SELECT c.id, s.npc_id, s.title, s.description, s.quest_type, s.energy_cost, s.rewards::jsonb, s.dialogue::jsonb, s.chain_id, s.chain_position::integer
+FROM seed_rows s
+JOIN club_map map ON map.npc_id=s.npc_id
+JOIN public.city_night_clubs c ON lower(c.name)=lower(map.club_name)
+WHERE NOT EXISTS (SELECT 1 FROM public.nightclub_quests existing WHERE existing.club_id=c.id AND existing.npc_id=s.npc_id AND existing.title=s.title);
+
+-- Fail loudly if a future upstream club seed stops providing these clubs.
+DO $verify$
+BEGIN
+ IF (SELECT count(*) FROM public.nightclub_quests WHERE npc_id IN ('berghain_bouncer_sven','tresor_dj_resident','marquee_promoter_vince','output_sound_eng','amnesia_owner_martin','ushuaia_booker_sofia','subclub_dj_harri','motion_promoter_jay','circus_owner_yousef','smartbar_resident_derrick','space_terrace_dj','liv_manager_david','xs_booker_jesse','blacksheep_owner_maz','wire_owner_tom','paradiso_curator_eva','caves_dj_angus','hopeworks_promoter_lee','digital_booker_sarah','clwb_manager_rhys','patterns_curator_nina','stealth_owner_kim','limelight_vicar_pete','colo_owner_marcus','sound_curator_adam')) <> 25 THEN
+   RAISE EXCEPTION 'Nightclub quest seed requires exactly 25 registered club NPC quests';
+ END IF;
+END $verify$;
