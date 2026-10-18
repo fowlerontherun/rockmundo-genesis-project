@@ -180,6 +180,7 @@ export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
   }, [libraryTracks, liveBookingId, liveBooking]);
   const { data: recordedEvents = [] } = useQuery({
     queryKey: ["dj-live-events", profileId, liveBookingId],
+    refetchInterval: 15000,
     enabled: Boolean(liveBookingId && profileId),
     queryFn: async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -203,19 +204,69 @@ export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
     crossfade: recordedEvents.some((entry) => entry.kind === "crossfade"),
     count: recordedEvents.length,
   };
-  const sendLiveEvent = async (body: Record<string, unknown>) => {
+  const [pendingEvents, setPendingEvents] = useState(0);
+  const lastAttempt = useRef(0);
+  const queue = useRef<Promise<void>>(Promise.resolve());
+  const activeBooking = useRef(liveBookingId);
+  activeBooking.current = liveBookingId;
+
+  // Queue sends in user-action order, while preserving the same idempotency
+  // key across network retries. No browser-supplied timestamp is trusted.
+  const sendLiveEvent = (event: Record<string, unknown>) => {
     if (!liveBookingId) return;
-    try {
-      const { data, error } = await supabase.functions.invoke("dj-booking-action", {
-        body: { action: "mix_event", bookingId: liveBookingId, ...body },
-      });
-      if (error || data?.error) {
-        throw new Error(data?.error || error?.message || "Interaction rejected");
+    const bookingId = liveBookingId;
+    const eventId = crypto.randomUUID();
+    setPendingEvents((count) => count + 1);
+    queue.current = queue.current.catch(() => undefined).then(async () => {
+      try {
+        if (activeBooking.current !== bookingId) return;
+        const remaining = 2200 - (Date.now() - lastAttempt.current);
+        if (remaining > 0) {
+          await new Promise<void>((resolve) => setTimeout(resolve, remaining));
+        }
+        if (activeBooking.current !== bookingId) return;
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          lastAttempt.current = Date.now();
+          try {
+            const { data, error } = await supabase.functions.invoke("dj-booking-action", {
+              body: { action: "mix_event", bookingId, eventId, ...event },
+            });
+            if (error) {
+              const context = (error as { context?: Response }).context;
+              const status = context?.status ?? 0;
+              if (status >= 400 && status < 500) {
+                let message = error.message;
+                try {
+                  const payload = await context?.clone().json() as { error?: string } | undefined;
+                  message = payload?.error || message;
+                } catch { /* Preserve SDK validation message. */ }
+                throw new Error(message);
+              }
+              if (attempt < 2) {
+                await new Promise<void>((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+                continue;
+              }
+              throw error;
+            }
+            if (data?.error || typeof data?.id !== "string") {
+              throw new Error(data?.error || "DJ mixer event was not acknowledged");
+            }
+            await client.invalidateQueries({ queryKey: ["dj-live-events", profileId, bookingId] });
+            return;
+          } catch (error) {
+            if (attempt >= 2 || !(error instanceof Error) ||
+                !/network|fetch|timeout/i.test(error.message)) {
+              throw error;
+            }
+            await new Promise<void>((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+          }
+        }
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Mixer interaction could not be recorded");
+      } finally {
+        setPendingEvents((count) => Math.max(0, count - 1));
       }
-      await client.invalidateQueries({ queryKey: ["dj-live-events", profileId, liveBookingId] });
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Unable to record live DJ interaction");
-    }
+    });
   };
   const [deckA, setDeckA] = useState("");
   const [deckB, setDeckB] = useState("");
@@ -286,7 +337,7 @@ export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
             : "Practice with real RockMundo audio. Start each deck separately and crossfade between them."}
         </p>
         <Badge variant="outline">
-          {liveBookingId ? "Scheduled live set · " + mixProgress.count + " events accepted" : "Practice · No rewards"}
+          {liveBookingId ? "Scheduled live set · " + mixProgress.count + " confirmed" + (pendingEvents ? " · " + pendingEvents + " syncing" : "") : "Practice · No rewards"}
         </Badge>
       </div>
       {liveBookingId && (

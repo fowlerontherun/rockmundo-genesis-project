@@ -23,6 +23,7 @@ type Input = {
   source?: "game" | "admin";
   trackId?: string;
   value?: number;
+  eventId?: string;
 };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const json = (body: Record<string, unknown>, status = 200) =>
@@ -97,9 +98,11 @@ Deno.serve(async (req: Request) => {
         body.source === undefined && body.trackId === undefined &&
         typeof body.value === "number" && Number.isFinite(body.value) &&
         body.value >= 85 && body.value <= 115);
-    if (!valid) return json({ error: "Invalid live DJ mixer interaction" }, 400);
+    if (!valid || typeof body.eventId !== "string" || !uuid.test(body.eventId)) {
+      return json({ error: "Invalid live DJ interaction or event ID" }, 400);
+    }
     try {
-      const { data, error } = await admin.rpc("dj_verified_mix_event_service", {
+      const { data, error } = await admin.rpc("dj_verified_mix_event_once_service", {
         p_actor_user_id: auth.user.id,
         p_booking_id: body.bookingId,
         p_kind: kind,
@@ -107,6 +110,7 @@ Deno.serve(async (req: Request) => {
         p_source: body.source ?? null,
         p_track_id: body.trackId ?? null,
         p_value: body.value ?? null,
+        p_event_id: body.eventId,
       });
       if (error) {
         const expected = ["23P01", "22023", "42501"].includes(error.code || "");

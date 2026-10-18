@@ -13,6 +13,8 @@ DECLARE
  v_fake_history uuid;
  v_wallet_cash_before bigint; v_wallet_cash_after bigint;
  v_skill_before int; v_skill_after int;
+ v_once_key uuid:=gen_random_uuid();
+ v_once_result uuid;
 BEGIN
  SELECT p.user_id,p.id,s.id,c.id,p.cash,p.fame,p.energy,
   ((date_trunc('day', now() AT TIME ZONE city.timezone) + interval '8 days'
@@ -140,7 +142,25 @@ BEGIN
    RAISE EXCEPTION 'SECURITY FAILURE: post-performance event accepted';
  EXCEPTION WHEN invalid_parameter_value THEN NULL; END;
 
- PERFORM private.dj_record_mix_event_at(v_book,'deck_play','A','game',v_song,NULL,v_start+interval '2 minutes');
+ v_once_result:=private.dj_record_mix_event_once_at(
+   v_book,'deck_play','A','game',v_song,NULL,v_once_key,v_start+interval '2 minutes');
+ IF private.dj_record_mix_event_once_at(
+   v_book,'deck_play','A','game',v_song,NULL,v_once_key,v_start+interval '2 minutes 1 second')
+   <>v_once_result THEN RAISE EXCEPTION 'Mixer retry did not return original event'; END IF;
+ IF (SELECT count(*) FROM public.dj_live_mix_events WHERE booking_id=v_book)<>1
+ THEN RAISE EXCEPTION 'Mixer retry added duplicate event'; END IF;
+ BEGIN
+   PERFORM private.dj_record_mix_event_once_at(
+     v_book,'tempo','A',NULL,NULL,105,v_once_key,v_start+interval '3 minutes');
+   RAISE EXCEPTION 'SECURITY FAILURE: event key reused with altered payload';
+ EXCEPTION WHEN invalid_parameter_value THEN NULL; END;
+ PERFORM set_config('request.jwt.claim.sub',v_other::text,true);
+ BEGIN
+   PERFORM private.dj_record_mix_event_once_at(
+     v_book,'deck_play','A','game',v_song,NULL,v_once_key,v_start+interval '2 minutes');
+   RAISE EXCEPTION 'SECURITY FAILURE: foreign player replayed mixer event';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ PERFORM set_config('request.jwt.claim.sub',v_actor::text,true);
  BEGIN
    PERFORM private.dj_record_mix_event_at(v_book,'tempo','A',NULL,NULL,101,v_start+interval '2 minutes 1 second');
    RAISE EXCEPTION 'SECURITY FAILURE: events counted without elapsed time';
@@ -199,6 +219,17 @@ BEGIN
  IF (SELECT status FROM public.player_scheduled_activities
        WHERE linked_dj_booking_id=v_book)<>'completed'
  THEN RAISE EXCEPTION 'Completed DJ set not shown as completed on Schedule'; END IF;
+ -- Delayed mobile retry after completion must return the same accepted
+ -- event ID, but a genuinely new event can no longer be submitted.
+ IF private.dj_record_mix_event_once_at(
+   v_book,'deck_play','A','game',v_song,NULL,v_once_key,v_finish+interval '5 minutes')
+  <>v_once_result THEN RAISE EXCEPTION 'Post-settlement event replay failed'; END IF;
+ BEGIN
+   PERFORM private.dj_record_mix_event_once_at(
+     v_book,'tempo','A',NULL,NULL,104,gen_random_uuid(),v_finish+interval '6 minutes');
+   RAISE EXCEPTION 'SECURITY FAILURE: new events after completion accepted';
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
  v_result_again:=private.dj_settle_booking_at(v_book,v_finish+interval '10 minutes');
  IF v_result_again<>v_result
  OR (SELECT cash FROM public.profiles WHERE id=v_profile)<>v_cash_after
@@ -241,6 +272,8 @@ BEGIN
   'public.record_dj_mix_event_internal(uuid,text,text,text,uuid,numeric)','EXECUTE')
  OR has_function_privilege(current_user,
   'public.dj_verified_mix_event_service(uuid,uuid,text,text,text,uuid,numeric)','EXECUTE')
+ OR has_function_privilege(current_user,
+  'public.dj_verified_mix_event_once_service(uuid,uuid,text,text,text,uuid,numeric,uuid)','EXECUTE')
  THEN RAISE EXCEPTION 'SECURITY FAILURE: client can forge server mixer evidence'; END IF;
  BEGIN
    INSERT INTO public.player_dj_performances(
