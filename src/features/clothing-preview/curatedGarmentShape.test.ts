@@ -3,7 +3,7 @@ import { curatedGarmentShape } from './curatedDonorGarments';
 
 const item = (category: string, name: string, shape?: string) => ({
   category, name, render_config: { curatedSource: { kind: 'avatar-part', shape } },
-}) as any;
+});
 
 describe('curated garment base shapes', () => {
   it('a t-shirt gets the short-sleeve tee shape', () => {
