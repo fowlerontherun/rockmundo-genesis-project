@@ -43,6 +43,13 @@ const currencyFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
 });
 
+const getScoreColor = (score: number) => {
+  if (score >= 85) return "text-green-400";
+  if (score >= 65) return "text-primary";
+  if (score >= 40) return "text-yellow-500";
+  return "text-destructive";
+};
+
 const NightClubDetail = () => {
   const { clubId } = useParams<{ clubId: string }>();
   const navigate = useNavigate();
@@ -100,7 +107,7 @@ const NightClubDetail = () => {
   });
 
   const djStats = {
-    totalSets: djHistory.length,
+    recentSets: djHistory.length,
     avgScore: djHistory.length ? Math.round(djHistory.reduce((s, p: any) => s + (p.performance_score ?? 0), 0) / djHistory.length) : 0,
     totalEarnings: djHistory.reduce((s, p: any) => s + (p.cash_earned ?? 0), 0),
     totalFame: djHistory.reduce((s, p: any) => s + (p.fame_gained ?? 0), 0),
@@ -174,7 +181,7 @@ const NightClubDetail = () => {
     enterClub.mutate(clubId);
   };
 
-  const busy = isProcessing || isPerforming;
+  const busy = isProcessing;
 
   if (loading) {
     return (
@@ -336,7 +343,7 @@ const NightClubDetail = () => {
             {/* Stats Summary */}
             <div className="grid grid-cols-4 gap-2">
               <div className="rounded-md border border-border p-2 text-center">
-                <div className="text-lg font-bold">{djStats.totalSets}</div>
+                <div className="text-lg font-bold">{djStats.recentSets}</div>
                 <div className="text-[10px] text-muted-foreground">Sets</div>
               </div>
               <div className="rounded-md border border-border p-2 text-center">
@@ -385,7 +392,7 @@ const NightClubDetail = () => {
         <CardContent>
           <NightlifeStanceSelector
             clubName={club.name}
-            isProcessing={isProcessing || isPerforming}
+            isProcessing={isProcessing}
             outcome={lastOutcomeDetail}
             onDismissOutcome={dismissOutcome}
             addictionWarning={lastAddictionWarning}
