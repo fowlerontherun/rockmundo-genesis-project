@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Search, ArrowRight, CheckCircle2 } from "lucide-react";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
@@ -15,6 +15,7 @@ import { isEducationSkillVisible, useSkillTierAccess } from "../hooks/useSkillTi
 import { formatEducationSkillName } from "../utils/educationUi";
 
 export const EducationMySkillsTab = () => {
+  const educationBase = useLocation().pathname.startsWith("/mobile") ? "/mobile/education" : "/education";
   const { profileId } = useActiveProfile();
   const { skillProgress, loading: progressLoading } = useGameData();
   const [search, setSearch] = useState("");
@@ -108,7 +109,7 @@ export const EducationMySkillsTab = () => {
               </div>
             )}
             <Button asChild variant="outline" size="sm" className="w-full">
-              <Link to={"/education?tab=find&skill=" + encodeURIComponent(skill.slug)}>
+              <Link to={educationBase + "?tab=find&skill=" + encodeURIComponent(skill.slug)}>
                 {skill.progress.is_unlocked ? "Improve skill" : "Learn this skill"} <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
             </Button>
