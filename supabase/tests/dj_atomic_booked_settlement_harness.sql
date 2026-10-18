@@ -125,29 +125,7 @@ BEGIN
  -- cross-account performers, and impossible controls before appending.
  PERFORM set_config('request.jwt.claim.sub',v_other::text,true);
  BEGIN
-   v_once_result:=private.dj_record_mix_event_once_at(
-   v_book,'deck_play','A','game',v_song,NULL,v_once_key,v_start+interval '2 minutes');
- IF private.dj_record_mix_event_once_at(
-   v_book,'deck_play','A','game',v_song,NULL,v_once_key,v_start+interval '2 minutes 1 second')
-   <>v_once_result THEN
-   RAISE EXCEPTION 'Retry generated a different mixer event';
- END IF;
- IF (SELECT count(*) FROM public.dj_live_mix_events WHERE booking_id=v_book)<>1
- THEN RAISE EXCEPTION 'Retry inserted an additional mixer event'; END IF;
- BEGIN
-   PERFORM private.dj_record_mix_event_once_at(
-     v_book,'tempo','A',NULL,NULL,105,v_once_key,v_start+interval '3 minutes');
-   RAISE EXCEPTION 'SECURITY FAILURE: reused event key accepted altered payload';
- EXCEPTION WHEN invalid_parameter_value THEN NULL;
- END;
- PERFORM set_config('request.jwt.claim.sub',v_other::text,true);
- BEGIN
-   PERFORM private.dj_record_mix_event_once_at(
-     v_book,'deck_play','A','game',v_song,NULL,v_once_key,v_start+interval '2 minutes');
-   RAISE EXCEPTION 'SECURITY FAILURE: foreign account replayed event';
- EXCEPTION WHEN insufficient_privilege THEN NULL;
- END;
- PERFORM set_config('request.jwt.claim.sub',v_actor::text,true);
+   PERFORM private.dj_record_mix_event_at(v_book,'deck_play','A','game',v_song,NULL,v_start+interval '2 minutes');
    RAISE EXCEPTION 'SECURITY FAILURE: foreign player logged mixer activity';
  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
  PERFORM set_config('request.jwt.claim.sub',v_actor::text,true);
@@ -164,7 +142,25 @@ BEGIN
    RAISE EXCEPTION 'SECURITY FAILURE: post-performance event accepted';
  EXCEPTION WHEN invalid_parameter_value THEN NULL; END;
 
- PERFORM private.dj_record_mix_event_at(v_book,'deck_play','A','game',v_song,NULL,v_start+interval '2 minutes');
+ v_once_result:=private.dj_record_mix_event_once_at(
+   v_book,'deck_play','A','game',v_song,NULL,v_once_key,v_start+interval '2 minutes');
+ IF private.dj_record_mix_event_once_at(
+   v_book,'deck_play','A','game',v_song,NULL,v_once_key,v_start+interval '2 minutes 1 second')
+   <>v_once_result THEN RAISE EXCEPTION 'Mixer retry did not return original event'; END IF;
+ IF (SELECT count(*) FROM public.dj_live_mix_events WHERE booking_id=v_book)<>1
+ THEN RAISE EXCEPTION 'Mixer retry added duplicate event'; END IF;
+ BEGIN
+   PERFORM private.dj_record_mix_event_once_at(
+     v_book,'tempo','A',NULL,NULL,105,v_once_key,v_start+interval '3 minutes');
+   RAISE EXCEPTION 'SECURITY FAILURE: event key reused with altered payload';
+ EXCEPTION WHEN invalid_parameter_value THEN NULL; END;
+ PERFORM set_config('request.jwt.claim.sub',v_other::text,true);
+ BEGIN
+   PERFORM private.dj_record_mix_event_once_at(
+     v_book,'deck_play','A','game',v_song,NULL,v_once_key,v_start+interval '2 minutes');
+   RAISE EXCEPTION 'SECURITY FAILURE: foreign player replayed mixer event';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ PERFORM set_config('request.jwt.claim.sub',v_actor::text,true);
  BEGIN
    PERFORM private.dj_record_mix_event_at(v_book,'tempo','A',NULL,NULL,101,v_start+interval '2 minutes 1 second');
    RAISE EXCEPTION 'SECURITY FAILURE: events counted without elapsed time';
