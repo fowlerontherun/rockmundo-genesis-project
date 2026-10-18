@@ -73,7 +73,7 @@ export function SkinMarketTab() {
         db.from("skin_collection_purchases").select("collection_id").eq("profile_id", profileId),
         db.from("skin_market_sales").select("items").eq("buyer_profile_id", profileId).eq("status", "completed"),
       ]);
-      const paidCollections = new Set((purchases ?? []).map((p: { collection_id: string }) => p.collection_id));
+      const paidCollections = new Set<string>((purchases ?? []).map((p: { collection_id: string }) => p.collection_id));
       const marketKeys = new Set<string>();
       for (const s of bought ?? []) for (const it of s.items ?? []) marketKeys.add(`${it.item_type}:${it.item_id}`);
       return { owned: (owned ?? []) as { item_type: string; item_id: string }[], paidCollections, marketKeys };
