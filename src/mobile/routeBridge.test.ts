@@ -7,6 +7,8 @@ describe("mobile route bridge", () => {
     expect(getMobileBridgeTarget("/inbox")).toBe("/mobile/inbox");
     expect(getMobileBridgeTarget("/social/chat")).toBe("/mobile/chat");
     expect(getMobileBridgeTarget("/skills")).toBe("/mobile/progression");
+    expect(getMobileBridgeTarget("/education")).toBe("/mobile/education");
+    expect(getMobileBridgeTarget("/university/uni-123")).toBe("/mobile/university/uni-123");
   });
   it("contains everything else at the schedule screen", () => {
     expect(getMobileBridgeTarget("/travel")).toBe("/mobile");
