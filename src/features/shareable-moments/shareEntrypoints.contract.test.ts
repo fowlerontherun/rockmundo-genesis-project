@@ -44,6 +44,12 @@ describe("Shareable Moments migrated entrypoint contracts", () => {
     expect(socialHub).toContain('label: "Share Studio", path: "/social/share-studio"');
   });
 
+  it("reopens avatar-capable gallery cards through the retry-capable renderer", () => {
+    const source = read("src/pages/ShareStudio.tsx");
+    expect(source).toContain('{selected && ["character_profile", "band_profile", "gig_result", "achievement", "tour", "release"].includes(selected.type)');
+    expect(source).not.toContain("selected && !selected.avatar");
+  });
+
   it("does not mount AvatarShareStudio without a character promo", () => {
     const source = read("src/pages/ShareStudio.tsx");
     expect(source).toContain("{characterPromo && <AvatarShareStudio");
