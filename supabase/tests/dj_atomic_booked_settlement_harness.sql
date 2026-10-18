@@ -119,7 +119,32 @@ BEGIN
 
  -- Real-time server event proofs: both decks + tempo + crossfade and
  -- time-separated interaction into the second half of the booked set.
+ -- The server rejects out-of-setlist songs, client-forged event times,
+ -- cross-account performers, and impossible controls before appending.
+ PERFORM set_config('request.jwt.claim.sub',v_other::text,true);
+ BEGIN
+   PERFORM private.dj_record_mix_event_at(v_book,'deck_play','A','game',v_song,NULL,v_start+interval '2 minutes');
+   RAISE EXCEPTION 'SECURITY FAILURE: foreign player logged mixer activity';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ PERFORM set_config('request.jwt.claim.sub',v_actor::text,true);
+ BEGIN
+   PERFORM private.dj_record_mix_event_at(v_book,'deck_play','A','game',gen_random_uuid(),NULL,v_start+interval '2 minutes');
+   RAISE EXCEPTION 'SECURITY FAILURE: unbooked track credited';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN
+   PERFORM private.dj_record_mix_event_at(v_book,'crossfade',NULL,NULL,NULL,400,v_start+interval '2 minutes');
+   RAISE EXCEPTION 'SECURITY FAILURE: invalid crossfader accepted';
+ EXCEPTION WHEN invalid_parameter_value THEN NULL; END;
+ BEGIN
+   PERFORM private.dj_record_mix_event_at(v_book,'tempo','A',NULL,NULL,102,v_finish+interval '10 minutes');
+   RAISE EXCEPTION 'SECURITY FAILURE: post-performance event accepted';
+ EXCEPTION WHEN invalid_parameter_value THEN NULL; END;
+
  PERFORM private.dj_record_mix_event_at(v_book,'deck_play','A','game',v_song,NULL,v_start+interval '2 minutes');
+ BEGIN
+   PERFORM private.dj_record_mix_event_at(v_book,'tempo','A',NULL,NULL,101,v_start+interval '2 minutes 1 second');
+   RAISE EXCEPTION 'SECURITY FAILURE: events counted without elapsed time';
+ EXCEPTION WHEN invalid_parameter_value THEN NULL; END;
  PERFORM private.dj_record_mix_event_at(v_book,'tempo','A',NULL,NULL,101,v_start+interval '3 minutes');
  PERFORM private.dj_record_mix_event_at(v_book,'crossfade',NULL,NULL,NULL,35,v_start+interval '4 minutes');
  PERFORM private.dj_record_mix_event_at(v_book,'deck_play','B','game',v_song,NULL,v_start+interval '5 minutes');
