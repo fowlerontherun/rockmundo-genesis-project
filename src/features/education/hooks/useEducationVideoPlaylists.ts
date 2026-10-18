@@ -9,6 +9,7 @@ type YoutubeResourceRow = Tables<"education_youtube_resources"> & {
   skill_slug?: string | null;
   channel_name?: string | null;
   is_featured?: boolean | null;
+  verified_video?: boolean | null;
 };
 
 type SkillDefinitionRow = Pick<Tables<"skill_definitions">, "slug" | "display_name">;
