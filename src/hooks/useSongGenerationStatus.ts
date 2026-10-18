@@ -41,10 +41,29 @@ export function useSongGenerationStatus(songId: string | null) {
     },
   });
 
+  // Queue rows are owner-readable only. Generated DB types are updated
+  // separately, so the query is narrowed here without changing runtime RLS.
+  const queue = useQuery({
+    queryKey: ["ai-song-queue", songId],
+    enabled: !!songId,
+    queryFn: async () => {
+      const {data,error} = await (supabase as any)
+        .from("ai_song_generation_queue")
+        .select("state,created_at,submitted_at,available_at")
+        .eq("song_id",songId!)
+        .order("created_at",{ascending:false})
+        .limit(1).maybeSingle();
+      if (error) throw error;
+      return data as {state:string;created_at:string;submitted_at:string|null;available_at:string}|null;
+    },
+    refetchInterval: query.state.data?.audio_generation_status === "generating" ? 10000 : false,
+  });
+  const queueState = queue.data?.state ?? null;
+
   // Check for timeout on the client side
   useEffect(() => {
-    if (query.data?.audio_generation_status === 'generating' && query.data?.audio_generation_started_at) {
-      const startedAt = new Date(query.data.audio_generation_started_at).getTime();
+    if (query.data?.audio_generation_status === 'generating' && queueState !== 'queued' && queueState !== 'dispatching' && query.data?.audio_generation_started_at) {
+      const startedAt = new Date(queue.data?.submitted_at || query.data.audio_generation_started_at).getTime();
       const now = Date.now();
       const retryTimeout = 15 * 60 * 1000;
 
@@ -53,7 +72,7 @@ export function useSongGenerationStatus(songId: string | null) {
         queryClient.invalidateQueries({ queryKey: ["song-generation-status", songId] });
       }
     }
-  }, [query.data, songId, queryClient]);
+  }, [query.data, queue.data?.submitted_at, queueState, songId, queryClient]);
 
   const isGenerating = query.data?.audio_generation_status === 'generating';
   const isCompleted = query.data?.audio_generation_status === 'completed';
@@ -61,12 +80,15 @@ export function useSongGenerationStatus(songId: string | null) {
   const hasAudio = !!query.data?.audio_url;
 
   // Check if timed out
-  const isTimedOut = isGenerating && query.data?.audio_generation_started_at && 
-    (Date.now() - new Date(query.data.audio_generation_started_at).getTime() > 15 * 60 * 1000);
+  const isTimedOut = isGenerating && queueState !== "queued" && queueState !== "dispatching" &&
+    query.data?.audio_generation_started_at &&
+    (Date.now() - new Date(queue.data?.submitted_at || query.data.audio_generation_started_at).getTime() > 15 * 60 * 1000);
 
   return {
     ...query,
     isGenerating,
+    queueState,
+    queueAvailableAt: queue.data?.available_at ?? null,
     isCompleted,
     isFailed: isFailed || isTimedOut,
     isTimedOut,
