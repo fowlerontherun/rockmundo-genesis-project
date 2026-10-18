@@ -94,7 +94,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
   const failureHint = /throttled|rate.?limit|429/i.test(failureReason)
     ? "The audio provider rate-limited the last request. Avoid repeatedly retrying while provider credit is low."
     : /too short|duration.*outside|duration.*under|60.?90/i.test(failureReason)
-    ? "The provider returned an unsuitable length. RockMundo now targets 60–90 seconds; review your lyrics before retrying."
+    ? "The provider returned an unsuitable length. RockMundo requires at least 60 seconds; review your lyrics before retrying."
     : /SERVICE_ROLE_REQUIRED|permission/i.test(failureReason)
     ? "A server permission error interrupted generation. Contact an administrator before spending credit on another attempt."
     : "A previous attempt failed. Starting another will make a new provider request.";
@@ -224,8 +224,8 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
           <DialogTitle>{hasAudio ? "Regenerate AI song audio?" : "Retry failed AI song generation?"}</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
-          This starts one new paid-provider generation attempt targeting 60–90
-          seconds. It may use provider credit even if the result is rejected.
+          This starts one new paid-provider generation attempt producing a full
+          song of at least 60 seconds. It may use provider credit even if the result is rejected.
           No automatic retries will run after a failure.
           {hasAudio && " Your current song remains playable until a valid replacement is ready."}
         </p>
@@ -406,7 +406,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
             <AlertDescription className="space-y-2">
               <span className="block text-sm">
                 A short recording was recovered from the paid AI generation.
-                It is a preview only; the song still needs 60–90 seconds of audio.
+                It is a preview only; the song still needs at least 60 seconds of audio.
               </span>
               <audio controls preload="none" src={shortPreviewUrl}
                 aria-label={`Short AI audio preview for ${songTitle}`}

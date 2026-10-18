@@ -30,7 +30,7 @@ describe("generation attempt security and explicit retry (#4282)", () => {
 
   it("provides safe hints for previous length and rate-limit errors", () => {
     expect(ui).toContain("failureHint");
-    expect(ui).toContain("RockMundo now targets 60–90 seconds");
+    expect(ui).toContain("RockMundo requires at least 60 seconds");
     expect(ui).toContain("Avoid repeatedly retrying while provider credit is low");
   });
 });

@@ -2,7 +2,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { verifyReplicateAttempt } from "../_shared/replicateWebhookAuth.ts"
 import { getMp3DurationSeconds } from "../_shared/mp3Duration.ts"
-import { clipLongMp3ToSeconds } from "../_shared/mp3Clip.ts"
 import { assertSafeGeneratedAudioUrl, readBoundedGeneratedAudio } from "../_shared/boundedAudioDownload.ts"
 
 const corsHeaders = {
@@ -134,15 +133,11 @@ serve(async (req) => {
     if (actualSeconds === null) {
       throw new Error('Generated audio is not a valid complete MP3 file; keeping any existing audio')
     }
-    // The game's song.duration_seconds is NOT the paid audio-clip length.
-    // A short radio edit should be 60–90 seconds, irrespective of its
-    // songwriting/recording duration. Never trigger a retry from the webhook.
+    // The game's song.duration_seconds is NOT the billable audio clip length.
+    // A complete, verified MP3 of any duration >= 60 seconds is acceptable;
+    // do not truncate or reject long songs. Never automatically retry failures.
     const minSeconds = 60
-    const maxSeconds = 90
-    console.log(`[replicate-webhook] Measured audio: song=${songId} actual=${actualSeconds.toFixed(2)}s accepted=60–90s bytes=${audioBytes.length}`)
-    // Preserve an otherwise valid paid prediction by taking a frame-aligned
-    // 90-second radio edit. Short audio cannot be safely extended: stop and
-    // require deliberate manual retry rather than another automatic charge.
+    console.log(`[replicate-webhook] Measured audio: song=${songId} actual=${actualSeconds.toFixed(2)}s minimum=60s bytes=${audioBytes.length}`)
     if (actualSeconds < minSeconds) {
       // A provider-successful prediction may have already cost credit. Keep
       // valid short MP3s as previews rather than discarding paid output.
@@ -163,16 +158,9 @@ serve(async (req) => {
         `Generated audio duration ${actualSeconds.toFixed(1)}s is under the required 60s. Existing audio preserved; manual retry only.${savedPreview}`
       )
     }
-    const acceptedAudioBytes = actualSeconds > maxSeconds
-      ? clipLongMp3ToSeconds(audioBytes, maxSeconds)
-      : audioBytes
-    const acceptedSeconds = getMp3DurationSeconds(acceptedAudioBytes)
-    if (acceptedSeconds === null || acceptedSeconds < minSeconds || acceptedSeconds > maxSeconds) {
-      throw new Error('Generated MP3 failed final 60–90-second validation. Existing audio preserved; manual retry only.')
-    }
-    if (actualSeconds > maxSeconds) {
-      console.log(`[replicate-webhook] Preserved long paid output with a ${acceptedSeconds.toFixed(2)}s radio edit`)
-    }
+    // The original validated MP3 is retained in full, even above 90 seconds.
+    // Bounded download still prevents oversized or malformed audio.
+    const acceptedAudioBytes = audioBytes
 
     const sanitizedTitle = (song?.title || 'song').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50)
     const timestamp = Date.now()

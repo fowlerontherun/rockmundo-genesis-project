@@ -317,7 +317,7 @@ serve(async (req) => {
     const hadOriginalLyrics = !!(originalSongLyrics?.trim() || originalProjectLyrics?.trim())
     const quality = song.quality_score || project?.quality_score || 50
     // In-game song duration is gameplay metadata, not the billable AI audio
-    // target. Target a complete, longer source performance to avoid under-60s provider results; the webhook saves only 60–90 seconds.
+    // target. Target a complete, longer source performance to avoid under-60s provider results; the webhook accepts any valid full recording of at least 60 seconds.
     const durationSeconds = 110
 
     // Extract from creative_brief if available
