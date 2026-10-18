@@ -11,12 +11,12 @@ BEGIN
       AND table_name = 'venues'
       AND column_name = 'city_id'
   ) THEN
-    EXECUTE $$
+    EXECUTE $venue_city_backfill$
       UPDATE public.venues
       SET city = city_id
       WHERE city IS NULL
         AND city_id IS NOT NULL;
-    $$;
+    $venue_city_backfill$;
   END IF;
 END $$;
 
