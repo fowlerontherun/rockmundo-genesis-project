@@ -30,6 +30,12 @@ FROM public.user_roles WHERE role='admin'::public.app_role LIMIT 1;
 INSERT INTO public.practice_track_audio(track_id,track_title,genre,audio_url)
 VALUES('dj-phase0-rls-fixture','PHASE0 Fixture','House','https://example.invalid/fixture.mp3');
 
+-- Storage test objects are created by the privileged harness transaction;
+-- an ordinary player must not be able to replace or remove either object.
+INSERT INTO storage.objects(bucket_id,name)
+VALUES ('practice-tracks','dj-phase0-protected-practice.mp3'),
+       ('dj-tracks','catalog/11111111-1111-1111-1111-111111111114/track.mp3');
+
 SELECT set_config('request.jwt.claim.sub',
  (SELECT user_id::text FROM public.user_roles WHERE role='user'::public.app_role LIMIT 1), true);
 SET LOCAL ROLE authenticated;
@@ -89,6 +95,37 @@ BEGIN
   RAISE EXCEPTION 'SECURITY FAILURE: player can insert practice audio';
  EXCEPTION WHEN insufficient_privilege THEN NULL;
  END;
+
+ -- Storage upserts require UPDATE; absence of this test allowed the initial
+ -- public practice bucket to remain writable even after UI route hardening.
+ BEGIN
+  UPDATE storage.objects SET name='dj-phase0-unauthorized-replace.mp3'
+  WHERE bucket_id='practice-tracks' AND name='dj-phase0-protected-practice.mp3';
+  GET DIAGNOSTICS n = ROW_COUNT;
+  IF n <> 0 THEN RAISE EXCEPTION 'SECURITY FAILURE: player can replace practice audio'; END IF;
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
+ BEGIN
+  DELETE FROM storage.objects
+  WHERE bucket_id='practice-tracks' AND name='dj-phase0-protected-practice.mp3';
+  GET DIAGNOSTICS n = ROW_COUNT;
+  IF n <> 0 THEN RAISE EXCEPTION 'SECURITY FAILURE: player can remove practice audio'; END IF;
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
+ BEGIN
+  UPDATE storage.objects SET name='catalog/11111111-1111-1111-1111-111111111114/replaced.mp3'
+  WHERE bucket_id='dj-tracks' AND name='catalog/11111111-1111-1111-1111-111111111114/track.mp3';
+  GET DIAGNOSTICS n = ROW_COUNT;
+  IF n <> 0 THEN RAISE EXCEPTION 'SECURITY FAILURE: player can replace DJ club audio'; END IF;
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
+ BEGIN
+  DELETE FROM storage.objects
+  WHERE bucket_id='dj-tracks' AND name='catalog/11111111-1111-1111-1111-111111111114/track.mp3';
+  GET DIAGNOSTICS n = ROW_COUNT;
+  IF n <> 0 THEN RAISE EXCEPTION 'SECURITY FAILURE: player can remove DJ club audio'; END IF;
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
 END $user$;
 
 RESET ROLE;
@@ -115,6 +152,13 @@ BEGIN
  VALUES('dj-tracks','catalog/11111111-1111-1111-1111-111111111117/track.mp3');
  INSERT INTO storage.objects(bucket_id,name)
  VALUES('practice-tracks','dj-phase0-admin.mp3');
+ UPDATE public.practice_track_audio SET track_title='PHASE0 ADMIN UPDATED'
+ WHERE track_id='dj-phase0-rls-fixture';
+ GET DIAGNOSTICS n = ROW_COUNT;
+ IF n <> 1 THEN RAISE EXCEPTION 'Admin must be able to update practice metadata'; END IF;
+ DELETE FROM public.practice_track_audio WHERE track_id='dj-phase0-rls-fixture';
+ GET DIAGNOSTICS n = ROW_COUNT;
+ IF n <> 1 THEN RAISE EXCEPTION 'Admin must be able to remove practice metadata'; END IF;
 END $admin$;
 
 

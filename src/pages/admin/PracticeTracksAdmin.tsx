@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Music, Upload, Trash2, CheckCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { DEFAULT_PRACTICE_SONGS } from '@/lib/minigames/stagePracticeTypes';
+import { practiceTrackStorageKey, validatePracticeAudioFile } from '@/features/nightclub-dj/practiceTrackAudio';
 
 interface TrackAudioRow {
   id: string;
@@ -38,13 +39,14 @@ export default function PracticeTracksAdmin() {
 
   const uploadMutation = useMutation({
     mutationFn: async ({ trackId, file, song }: { trackId: string; file: File; song: typeof DEFAULT_PRACTICE_SONGS[0] }) => {
-      const ext = file.name.split('.').pop() || 'mp3';
+      const { ext, contentType } = validatePracticeAudioFile(file);
       const path = `${trackId}.${ext}`;
+      const previousKey = practiceTrackStorageKey(trackId, audioMap.get(trackId)?.audio_url);
 
       // Upload to storage
       const { error: uploadError } = await supabase.storage
         .from('practice-tracks')
-        .upload(path, file, { upsert: true });
+        .upload(path, file, { upsert: true, contentType });
       if (uploadError) throw uploadError;
 
       // Get public URL
@@ -55,7 +57,7 @@ export default function PracticeTracksAdmin() {
       const audioUrl = urlData.publicUrl;
 
       // Upsert into practice_track_audio table
-      const { error: dbError } = await supabase
+      const { data: saved, error: dbError } = await supabase
         .from('practice_track_audio')
         .upsert({
           track_id: trackId,
@@ -63,20 +65,31 @@ export default function PracticeTracksAdmin() {
           genre: song.genre,
           audio_url: audioUrl,
           updated_at: new Date().toISOString(),
-        }, { onConflict: 'track_id' });
-      if (dbError) throw dbError;
+        }, { onConflict: 'track_id' })
+        .select('id')
+        .single();
+      if (dbError || !saved) throw dbError || new Error('Practice track metadata was not saved');
 
-      return audioUrl;
+      // A format change creates a new key. Remove the old file after the
+      // record points at the new one; never let cleanup hide a successful save.
+      let cleanupFailed = false;
+      if (previousKey && previousKey !== path) {
+        const { error: cleanupError } = await supabase.storage
+          .from('practice-tracks').remove([previousKey]);
+        cleanupFailed = !!cleanupError;
+      }
+      return { audioUrl, cleanupFailed };
     },
     onMutate: (variables) => {
       setUploadingTrackId(variables.trackId);
       const toastId = toast.loading(`Uploading ${variables.song.title}...`);
       return { toastId, trackTitle: variables.song.title };
     },
-    onSuccess: (_data, _variables, context) => {
+    onSuccess: (result, _variables, context) => {
       if (context?.toastId) toast.dismiss(context.toastId);
       queryClient.invalidateQueries({ queryKey: ['practice-track-audio'] });
       toast.success(`${context?.trackTitle ?? 'Audio'} uploaded successfully!`);
+      if (result.cleanupFailed) toast.warning('Previous audio file could not be removed. Check Storage for an orphaned file.');
       setUploadingTrackId(null);
     },
     onError: (err, _variables, context) => {
@@ -89,20 +102,24 @@ export default function PracticeTracksAdmin() {
   const deleteMutation = useMutation({
     mutationFn: async (trackId: string) => {
       const existing = audioMap.get(trackId);
-      if (!existing?.audio_url) return;
+      if (!existing) throw new Error('Practice track record not found');
 
-      // Delete from storage
-      const urlParts = existing.audio_url.split('/practice-tracks/');
-      if (urlParts[1]) {
-        await supabase.storage.from('practice-tracks').remove([urlParts[1]]);
+      // The URL may be an external/legacy value: never delete arbitrary paths.
+      const storageKey = practiceTrackStorageKey(trackId, existing.audio_url);
+      if (storageKey) {
+        const { error: removalError } = await supabase.storage
+          .from('practice-tracks').remove([storageKey]);
+        if (removalError) throw removalError;
       }
 
-      // Delete from table
-      const { error } = await supabase
+      // An RLS-blocked or missing row must not show a successful deletion.
+      const { data: removed, error } = await supabase
         .from('practice_track_audio')
         .delete()
-        .eq('track_id', trackId);
-      if (error) throw error;
+        .eq('track_id', trackId)
+        .select('id')
+        .single();
+      if (error || !removed) throw error || new Error('Practice track record was not removed');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['practice-track-audio'] });
@@ -166,7 +183,7 @@ export default function PracticeTracksAdmin() {
                             size="icon"
                             className="h-8 w-8 text-destructive"
                             onClick={() => deleteMutation.mutate(song.id)}
-                            disabled={deleteMutation.isPending}
+                            disabled={deleteMutation.isPending || uploadMutation.isPending}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -189,13 +206,14 @@ export default function PracticeTracksAdmin() {
                             size="sm"
                             type="button"
                             onClick={() => fileInputRefs.current[song.id]?.click()}
+                            disabled={uploadMutation.isPending || deleteMutation.isPending}
                           >
                             <Upload className="h-4 w-4 mr-1" />
                             {hasAudio ? 'Replace' : 'Upload'}
                           </Button>
                           <Input
                             type="file"
-                            accept="audio/*"
+                            accept=".mp3,.m4a,.ogg,.wav,.webm"
                             className="hidden"
                             ref={(el) => {
                               fileInputRefs.current[song.id] = el;

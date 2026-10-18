@@ -17,12 +17,16 @@ export function bindDjDeckLifecycle(
 
   page.addEventListener("visibilitychange", visibilityChanged);
   viewport.addEventListener("pagehide", pause);
+  // Chromium may freeze a backgrounded Android tab before any later pagehide.
+  // Do not retain audible media in a frozen/restored webview.
+  page.addEventListener("freeze", pause);
   // Covers mounting a deck while the document is already backgrounded.
   visibilityChanged();
 
   return () => {
     page.removeEventListener("visibilitychange", visibilityChanged);
     viewport.removeEventListener("pagehide", pause);
+    page.removeEventListener("freeze", pause);
     pause();
   };
 }

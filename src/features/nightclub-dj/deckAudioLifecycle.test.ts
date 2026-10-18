@@ -37,6 +37,18 @@ describe("DJ deck audio lifecycle on mobile and desktop", () => {
     ctx.unbind();
   });
 
+  it("pauses on Android page freeze, but never auto-resumes on thaw", () => {
+    const ctx = setup();
+    ctx.page.dispatchEvent(new Event("freeze"));
+    expect(ctx.player.pause).toHaveBeenCalledTimes(1);
+    ctx.setVisibility("visible");
+    ctx.page.dispatchEvent(new Event("resume"));
+    expect(ctx.player.pause).toHaveBeenCalledTimes(1);
+    ctx.unbind();
+    ctx.page.dispatchEvent(new Event("freeze"));
+    expect(ctx.player.pause).toHaveBeenCalledTimes(2);
+  });
+
   it("pauses on pagehide and removes listeners and stops playback on cleanup", () => {
     const ctx = setup();
     ctx.viewport.dispatchEvent(new Event("pagehide"));
