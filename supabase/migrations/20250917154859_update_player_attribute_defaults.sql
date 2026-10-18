@@ -35,10 +35,10 @@ BEGIN
     ) THEN
       EXECUTE format('ALTER TABLE public.player_attributes ALTER COLUMN %I SET DEFAULT 5', v_column_name);
       EXECUTE format(
-        $$UPDATE public.player_attributes
+        $attribute_backfill$UPDATE public.player_attributes
           SET %1$I = 5,
-              updated_at = timezone(''utc'', now())
-        WHERE %1$I IS NULL OR %1$I = 0$$,
+              updated_at = timezone('utc', now())
+        WHERE %1$I IS NULL OR %1$I = 0$attribute_backfill$,
         v_column_name
       );
     END IF;
