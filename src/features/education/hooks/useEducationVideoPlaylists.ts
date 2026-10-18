@@ -9,7 +9,6 @@ type YoutubeResourceRow = Tables<"education_youtube_resources"> & {
   skill_slug?: string | null;
   channel_name?: string | null;
   is_featured?: boolean | null;
-  verified_video?: boolean | null;
 };
 
 type SkillDefinitionRow = Pick<Tables<"skill_definitions">, "slug" | "display_name">;
@@ -49,7 +48,6 @@ const mapResourceRow = (
     skillName,
     channelName: row.channel_name ?? null,
     featured: row.is_featured ?? false,
-    verifiedVideo: row.verified_video === true,
   };
 };
 
