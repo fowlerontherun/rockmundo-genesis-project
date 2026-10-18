@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ExternalLink, Plus, Star, Trash2, Youtube } from "lucide-react";
+import { Eye, Plus, Star, Trash2, Youtube } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +43,7 @@ interface SkillOption {
 const YoutubeVideos = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingResource, setEditingResource] = useState<YoutubeResourceRow | null>(null);
+  const [previewResource, setPreviewResource] = useState<YoutubeResourceRow | null>(null);
   const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
 
@@ -60,14 +61,20 @@ const YoutubeVideos = () => {
   const { data: resources = [], isLoading } = useQuery({
     queryKey: ["youtube-resources", "admin"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("education_youtube_resources")
-        .select("*")
-        .order("is_featured", { ascending: false })
-        .order("updated_at", { ascending: false });
-
-      if (error) throw error;
-      return (data ?? []) as YoutubeResourceRow[];
+      const all: YoutubeResourceRow[] = [];
+      for (let offset = 0; ; offset += 500) {
+        const { data, error } = await (supabase as any)
+          .from("education_youtube_resources")
+          .select("*")
+          .order("is_featured", { ascending: false })
+          .order("updated_at", { ascending: false })
+          .order("id", { ascending: true })
+          .range(offset, offset + 499);
+        if (error) throw error;
+        all.push(...((data ?? []) as YoutubeResourceRow[]));
+        if ((data?.length ?? 0) < 500) break;
+      }
+      return all;
     },
   });
 
@@ -116,7 +123,7 @@ const YoutubeVideos = () => {
       } else {
         const { error } = await (supabase as any)
           .from("education_youtube_resources")
-          .insert(payload);
+          .insert({ ...payload, video_url: `pooutube://lesson/admin/${crypto.randomUUID()}` });
         if (error) throw error;
       }
     },
@@ -213,11 +220,9 @@ const YoutubeVideos = () => {
               {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="videoUrl">YouTube URL</Label>
-              <Input id="videoUrl" placeholder="https://www.youtube.com/watch?v=..." {...register("videoUrl")} />
-              {errors.videoUrl && <p className="text-sm text-destructive">{errors.videoUrl.message}</p>}
-            </div>
+            <p className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
+              PooTube lessons are fictional and run entirely inside Rockmundo. No YouTube link or recording is needed.
+            </p>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
@@ -308,6 +313,20 @@ const YoutubeVideos = () => {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={Boolean(previewResource)} onOpenChange={(open) => { if (!open) setPreviewResource(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{previewResource?.title ?? "PooTube lesson"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Badge variant="secondary">Fictional in-game lesson</Badge>
+            <p className="text-sm text-muted-foreground">{previewResource?.description || "Explore the skills and concepts in this topic."}</p>
+            <p className="text-sm">Practice: identify one technique to try, apply it to your next in-game activity and review your progress.</p>
+            <p className="text-xs text-muted-foreground">Players complete two study chapters to earn 15 XP, subject to the server learning cooldown.</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {isLoading ? (
         <Card>
           <CardContent className="p-12 text-center text-muted-foreground">Loading lessons...</CardContent>
@@ -344,8 +363,8 @@ const YoutubeVideos = () => {
                   ))}
                 </div>
                 <div className="mt-auto flex flex-wrap gap-2 pt-2">
-                  <Button size="sm" variant="outline" onClick={() => window.open(resource.video_url, "_blank", "noopener,noreferrer")}>
-                    <ExternalLink className="mr-1 h-4 w-4" /> View
+                  <Button size="sm" variant="outline" onClick={() => setPreviewResource(resource)}>
+                    <Eye className="mr-1 h-4 w-4" /> Preview
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => handleEdit(resource)}>Edit</Button>
                   <Button

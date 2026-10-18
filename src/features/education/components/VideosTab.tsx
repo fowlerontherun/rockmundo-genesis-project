@@ -19,6 +19,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -80,6 +82,8 @@ export const VideosTab = () => {
   const [followingOnly, setFollowingOnly] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>("recommended");
   const [visibleCount, setVisibleCount] = useState(24);
+  const [activeLesson, setActiveLesson] = useState<VideoResource | null>(null);
+  const [lessonStep, setLessonStep] = useState<0 | 1>(0);
 
   useEffect(() => {
     setCooldownStatus(getCooldownStatus(profileId));
@@ -231,12 +235,19 @@ export const VideosTab = () => {
     }
   };
 
-  const handleWatch = (video: VideoResource) => {
+  const openLesson = (video: VideoResource) => {
+    watchVideo.reset();
+    setLessonStep(0);
+    setActiveLesson(video);
+  };
+
+  const finishLesson = () => {
+    if (!activeLesson || lessonStep !== 1 || watchVideo.isPending) return;
     watchVideo.mutate({
-      videoId: video.id,
-      videoName: video.name,
-      skillSlug: video.skillSlug,
-    });
+      videoId: activeLesson.id,
+      videoName: activeLesson.name,
+      skillSlug: activeLesson.skillSlug,
+    }, { onSuccess: () => setActiveLesson(null) });
   };
 
   const errorMessage =
@@ -252,7 +263,7 @@ export const VideosTab = () => {
         <div>
           <h2 className="text-xl font-semibold">PooTube Learning Library</h2>
           <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-            Search lessons by skill, difficulty, length or topic. Subscribe to skills you are learning so their lessons rise to the top.
+            Browse fictional PooTube episodes and complete short in-game study sessions to earn XP. No external videos or websites are required.
           </p>
         </div>
         {!isLoading && !isError && (
@@ -507,14 +518,14 @@ export const VideosTab = () => {
                     <Button
                       size="sm"
                       disabled={!cooldownStatus.canWatch || watchVideo.isPending || locked}
-                      onClick={() => handleWatch(video)}
+                      onClick={() => openLesson(video)}
                     >
                       {watchingThis ? (
                         <Loader2 className="mr-1 h-4 w-4 animate-spin" />
                       ) : (
                         <Play className="mr-1 h-4 w-4" />
                       )}
-                      Learn & earn
+                      Open lesson
                     </Button>
                   </div>
                 </CardContent>
@@ -531,6 +542,51 @@ export const VideosTab = () => {
           </Button>
         </div>
       )}
+      <Dialog open={Boolean(activeLesson)} onOpenChange={(open) => { if (!open && !watchVideo.isPending) setActiveLesson(null); }}>
+        <DialogContent className="max-w-lg">
+          {activeLesson && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Play className="h-5 w-5 text-primary" />
+                  {activeLesson.name}
+                </DialogTitle>
+                <DialogDescription>
+                  PooTube Originals · {activeLesson.skillName} · Fictional in-game lesson
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4" aria-live="polite">
+                <div className="rounded-lg border bg-muted/40 p-4 space-y-3">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Chapter {lessonStep + 1} of 2
+                  </p>
+                  <h3 className="font-semibold">{lessonStep === 0 ? "Learn the technique" : "Put it into practice"}</h3>
+                  <p className="text-sm leading-relaxed">
+                    {lessonStep === 0
+                      ? activeLesson.summary || `Explore the basics of ${activeLesson.skillName}, including techniques and useful concepts.`
+                      : `Think of a way to apply ${activeLesson.skillName} in your next rehearsal, performance or project. Identify one technique and the result you want to achieve.`}
+                  </p>
+                </div>
+                <Progress value={lessonStep === 0 ? 50 : 100} aria-label="Lesson progress" />
+                <p className="text-xs text-muted-foreground">
+                  Complete both chapters to claim 15 education XP, subject to your learning cooldown and skill access.
+                </p>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setActiveLesson(null)} disabled={watchVideo.isPending}>Close</Button>
+                {lessonStep === 0 ? (
+                  <Button onClick={() => setLessonStep(1)}>Continue to practice</Button>
+                ) : (
+                  <Button onClick={finishLesson} disabled={watchVideo.isPending || !cooldownStatus.canWatch}>
+                    {watchVideo.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Complete lesson & earn
+                  </Button>
+                )}
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

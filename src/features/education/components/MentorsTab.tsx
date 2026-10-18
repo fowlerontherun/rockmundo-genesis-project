@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, DollarSign, TrendingUp, Award, MapPin, Calendar, Plane, Sparkles } from "lucide-react";
+import { Clock, DollarSign, TrendingUp, Award, MapPin, Calendar, Plane, Sparkles, Compass } from "lucide-react";
 import { useMentorSessions } from "@/hooks/useMentorSessions";
 import { formatFocusSkill } from "@/pages/admin/mentors.helpers";
 import { isEducationSkillVisible, useSkillTierAccess } from "../hooks/useSkillTierAccess";
@@ -22,6 +22,9 @@ export const MentorsTab = () => {
     isInMentorCity,
     getDayName,
     totalMentors,
+    mentorsLoading, mentorsError, mentorsLoadError, retryMentors,
+    discoveriesLoading, discoveriesError, retryDiscoveries,
+    isMentorDiscovered, discoverMaster, isDiscovering,
   } = useMentorSessions();
 
   const [filter, setFilter] = useState<'all' | 'available'>('all');
@@ -43,7 +46,7 @@ export const MentorsTab = () => {
 
   const filteredMentors = mentors?.filter(mentor => {
     const inCity = isInMentorCity(mentor.city_id);
-    const availableDay = isAvailableToday(mentor.available_day);
+    const availableDay = isAvailableToday(mentor.available_day, mentor.city?.timezone);
     const locked = !isEducationSkillVisible(mentor.focus_skill, accessBySkill);
 
     if (locked) return false;
@@ -94,6 +97,12 @@ export const MentorsTab = () => {
         </Card>
       )}
 
+      {!profile && <p role="status" className="text-sm text-muted-foreground">Select a character to discover mentors and train with them.</p>}
+      {mentorsLoading && <p role="status" className="text-sm text-muted-foreground">Loading mentors...</p>}
+      {mentorsError && <div role="alert" className="rounded border border-destructive p-3 text-sm">Could not load mentors: {mentorsLoadError instanceof Error ? mentorsLoadError.message : "Unknown error"}. <Button variant="outline" size="sm" onClick={() => void retryMentors()}>Retry</Button></div>}
+      {discoveriesError && <div role="alert" className="rounded border border-destructive p-3 text-sm">Could not verify which mentors you have discovered. <Button variant="outline" size="sm" onClick={() => void retryDiscoveries()}>Retry</Button></div>}
+      {tierAccess.isError && <p role="alert" className="text-sm text-destructive">Skill access could not be verified. Refresh to retry.</p>}
+
       {/* Filter Tabs */}
       <Tabs value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
         <TabsList>
@@ -110,10 +119,11 @@ export const MentorsTab = () => {
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {filteredMentors?.map((mentor) => {
               const { canBook, reason } = canBookSession(mentor.id);
+              const discovered = isMentorDiscovered(mentor.id);
               const skillLevel = getSkillLevel(mentor.focus_skill);
               const skillProgressPercent = getSkillProgress(mentor.focus_skill);
               const inCity = isInMentorCity(mentor.city_id);
-              const availableDay = isAvailableToday(mentor.available_day);
+              const availableDay = isAvailableToday(mentor.available_day, mentor.city?.timezone);
 
               return (
                 <Card key={mentor.id} className="flex flex-col">
@@ -183,6 +193,16 @@ export const MentorsTab = () => {
                       </div>
                     )}
 
+                    {!discovered && mentor.is_discoverable !== false && (
+                      <Button variant="secondary" className="w-full" disabled={!profile || isDiscovering || discoveriesLoading || discoveriesError || !inCity || tierAccess.isError}
+                        onClick={() => discoverMaster({ mentorId: mentor.id, method: "exploration" })}>
+                        <Compass className="h-4 w-4 mr-2" />
+                        {isDiscovering ? "Discovering..." : inCity ? "Discover mentor" : "Travel to discover"}
+                      </Button>
+                    )}
+                    {!discovered && mentor.is_discoverable === false && (
+                      <p className="text-xs text-muted-foreground">This mentor cannot currently be discovered.</p>
+                    )}
                     {/* Action button based on state */}
                     {!inCity && mentor.city_id ? (
                       <Button className="w-full" variant="outline" disabled>
@@ -209,7 +229,7 @@ export const MentorsTab = () => {
             })}
           </div>
 
-          {(!filteredMentors || filteredMentors.length === 0) && (
+          {!mentorsLoading && !mentorsError && !tierAccess.isLoading && !tierAccess.isError && (!filteredMentors || filteredMentors.length === 0) && (
             <Card>
               <CardContent className="py-12 text-center">
                 {filter === 'available' ? (
@@ -221,7 +241,7 @@ export const MentorsTab = () => {
                     </p>
                   </>
                 ) : (
-                  <p className="text-muted-foreground">No mentors are available at the moment.</p>
+                  <p className="text-muted-foreground">{requestedSkill ? "No mentors teach this skill yet. Choose another skill or learning method." : "No unlocked mentors are available. Select a basic skill or try another learning method."}</p>
                 )}
               </CardContent>
             </Card>
