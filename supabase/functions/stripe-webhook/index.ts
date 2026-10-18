@@ -220,6 +220,16 @@ serve(async (req) => {
         break;
       }
 
+      case "charge.refunded": {
+        const charge = event.data.object as Stripe.Charge;
+        const pi = typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
+        if (pi) {
+          const { data: refunded } = await supabaseClient.rpc("refund_skin_market_sale", { p_payment_intent: pi });
+          logStep("Skin market refund checked", { pi, status: refunded?.status });
+        }
+        break;
+      }
+
       case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice;
         logStep("Payment failed", { invoiceId: invoice.id, customerId: invoice.customer });
