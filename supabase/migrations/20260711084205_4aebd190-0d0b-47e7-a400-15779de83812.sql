@@ -1,5 +1,5 @@
 
-CREATE TABLE public.company_vacancies (
+CREATE TABLE IF NOT EXISTS public.company_vacancies (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
   job_title TEXT NOT NULL,
@@ -20,7 +20,7 @@ CREATE TABLE public.company_vacancies (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.company_vacancies TO authenticated;
+GRANT SELECT ON public.company_vacancies TO authenticated;
 GRANT SELECT ON public.company_vacancies TO anon;
 GRANT ALL ON public.company_vacancies TO service_role;
 ALTER TABLE public.company_vacancies ENABLE ROW LEVEL SECURITY;
@@ -28,16 +28,11 @@ CREATE POLICY "Anyone can view open vacancies" ON public.company_vacancies
   FOR SELECT USING (status = 'open' OR EXISTS (
     SELECT 1 FROM public.companies c WHERE c.id = company_vacancies.company_id AND c.owner_id = auth.uid()
   ));
-CREATE POLICY "Company owners manage vacancies" ON public.company_vacancies
-  FOR ALL USING (EXISTS (
-    SELECT 1 FROM public.companies c WHERE c.id = company_vacancies.company_id AND c.owner_id = auth.uid()
-  )) WITH CHECK (EXISTS (
-    SELECT 1 FROM public.companies c WHERE c.id = company_vacancies.company_id AND c.owner_id = auth.uid()
-  ));
+-- RPC-managed company vacancies: do not reopen browser writes here.
 CREATE INDEX idx_company_vacancies_company ON public.company_vacancies(company_id);
 CREATE INDEX idx_company_vacancies_status ON public.company_vacancies(status);
 
-CREATE TABLE public.company_weekly_finance_records (
+CREATE TABLE IF NOT EXISTS public.company_weekly_finance_records (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
   week_start DATE NOT NULL,
@@ -54,7 +49,7 @@ CREATE TABLE public.company_weekly_finance_records (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (company_id, week_start)
 );
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.company_weekly_finance_records TO authenticated;
+GRANT SELECT ON public.company_weekly_finance_records TO authenticated;
 GRANT ALL ON public.company_weekly_finance_records TO service_role;
 ALTER TABLE public.company_weekly_finance_records ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Company owners can view weekly finance records" ON public.company_weekly_finance_records
@@ -63,7 +58,7 @@ CREATE POLICY "Company owners can view weekly finance records" ON public.company
   ));
 CREATE POLICY "Service role manages weekly finance records" ON public.company_weekly_finance_records
   FOR ALL USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
-CREATE INDEX idx_company_weekly_finance_company_week ON public.company_weekly_finance_records(company_id, week_start DESC);
+CREATE INDEX IF NOT EXISTS idx_company_weekly_finance_company_week ON public.company_weekly_finance_records(company_id, week_start DESC);
 
 CREATE OR REPLACE FUNCTION public.update_updated_at_column()
 RETURNS TRIGGER AS $$ BEGIN NEW.updated_at = now(); RETURN NEW; END; $$ LANGUAGE plpgsql SET search_path = public;
