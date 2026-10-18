@@ -1,4 +1,4 @@
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 import {
   completeJobRun,
   failJobRun,
@@ -12,78 +12,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers':
     'authorization, x-client-info, apikey, content-type, x-triggered-by',
 };
-
-/**
- * Calculate dynamic fame impact based on band popularity and job prestige tier
- * Famous artists working low-prestige jobs lose more fame
- */
-async function calculateDynamicFameImpact(
-  profileId: string,
-  baseFameImpact: number,
-  famePenaltyTier: string | null,
-  supabaseClient: SupabaseClient
-): Promise<{ fameImpact: number; bandName: string | null }> {
-  // If no penalty tier or positive fame impact, return base value
-  if (!famePenaltyTier || famePenaltyTier === 'none' || baseFameImpact >= 0) {
-    return { fameImpact: baseFameImpact, bandName: null };
-  }
-
-  // Get player's band info
-  const { data: bandMember } = await supabaseClient
-    .from('band_members')
-    .select('band_id, role, bands(name, popularity, weekly_fans, fame)')
-    .eq('profile_id', profileId)
-    .eq('member_status', 'active')
-    .limit(1)
-    .single();
-
-  if (!bandMember?.bands) {
-    return { fameImpact: baseFameImpact, bandName: null };
-  }
-
-  const band = bandMember.bands as { name: string; popularity: number; weekly_fans: number; fame: number };
-  const bandPopularity = band.popularity || band.fame || 0;
-  const isLeader = bandMember.role === 'leader';
-
-  // Fame penalty multiplier based on popularity tiers
-  let multiplier = 1;
-  if (bandPopularity >= 100000) {
-    multiplier = 5; // Major star - maximum shame
-  } else if (bandPopularity >= 50000) {
-    multiplier = 4; // Famous - very embarrassing
-  } else if (bandPopularity >= 10000) {
-    multiplier = 3; // Well-known - quite embarrassing
-  } else if (bandPopularity >= 1000) {
-    multiplier = 2; // Known locally - somewhat embarrassing
-  } else {
-    multiplier = 1; // Unknown - no shame multiplier
-  }
-
-  // Extra penalty based on tier
-  let tierMultiplier = 1;
-  switch (famePenaltyTier) {
-    case 'severe':
-      tierMultiplier = 1.5;
-      break;
-    case 'moderate':
-      tierMultiplier = 1.25;
-      break;
-    case 'minor':
-      tierMultiplier = 1.0;
-      break;
-    default:
-      tierMultiplier = 1.0;
-  }
-
-  // Extra penalty for band leaders doing menial jobs
-  const leaderPenalty = isLeader ? 1.5 : 1;
-
-  const finalFameImpact = Math.floor(baseFameImpact * multiplier * tierMultiplier * leaderPenalty);
-
-  console.log(`[shift-clock-out] Dynamic fame calculation: base=${baseFameImpact}, popularity=${bandPopularity}, tier=${famePenaltyTier}, isLeader=${isLeader}, final=${finalFameImpact}`);
-
-  return { fameImpact: finalFameImpact, bandName: band.name };
-}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -136,213 +64,24 @@ Deno.serve(async (req) => {
       if (!shiftId) continue;
 
       try {
-        // Fetch shift with job details including new columns
-        const { data: shift, error: shiftFetchError } = await supabaseClient
-          .from('shift_history')
-          .select('*, player_employment(*)')
-          .eq('id', shiftId)
-          .single();
-
-        if (shiftFetchError || !shift) {
-          throw shiftFetchError ?? new Error('Shift not found');
-        }
-
-        // A character id and an auth account id are distinct. Resolve ownership
-        // BEFORE any payable/tax side effects so a missing owner cannot leave
-        // a partially settled shift or misattribute the XP recipient.
-        const { data: shiftOwner, error: ownerError } = await supabaseClient
-          .from('profiles')
-          .select('user_id')
-          .eq('id', shift.profile_id)
-          .single();
-        if (ownerError || !shiftOwner?.user_id || shift.profile_id !== activity.profile_id) {
-          throw ownerError ?? new Error('Shift profile ownership mismatch');
-        }
-
-        // Fetch job details for fame penalty tier + city for income tax routing
-        const { data: job } = await supabaseClient
-          .from('jobs')
-          .select('title, category, fame_penalty_tier, base_fame_impact, city_id')
-          .eq('id', shift.job_id)
-          .single();
-
-        // Compute city income tax withholding on shift earnings
-        let cityIncomeTax = 0;
-        const grossEarnings = shift.earnings || 0;
-        let netEarnings = grossEarnings;
-        try {
-          if (job?.city_id && grossEarnings > 0) {
-            const { data: laws } = await supabaseClient
-              .from('city_laws')
-              .select('income_tax_rate')
-              .eq('city_id', job.city_id)
-              .is('effective_until', null)
-              .maybeSingle();
-            const taxRate = Math.max(0, Math.min(50, Number(laws?.income_tax_rate ?? 0))) / 100;
-            if (taxRate > 0) {
-              cityIncomeTax = Math.round(grossEarnings * taxRate);
-              netEarnings = grossEarnings - cityIncomeTax;
-              if (cityIncomeTax > 0) {
-                await supabaseClient.rpc('credit_city_treasury', {
-                  p_city_id: job.city_id,
-                  p_amount: cityIncomeTax,
-                  p_type: 'employment_income_tax',
-                  p_description: `Wage withholding (${(taxRate * 100).toFixed(1)}%) — ${job?.title ?? 'shift'}`,
-                  p_reference_id: shiftId,
-                });
-              }
-            }
-          }
-        } catch (e) {
-          console.log('[shift-clock-out] Error applying city income tax:', e);
-        }
-
-        // Calculate dynamic fame impact
-        const { fameImpact: dynamicFameImpact, bandName } = await calculateDynamicFameImpact(
-          activity.profile_id,
-          job?.base_fame_impact ?? shift.fame_impact ?? 0,
-          job?.fame_penalty_tier ?? null,
-          supabaseClient
+        // The database owns the entire once-only transaction: row locking,
+        // ownership, tax, wage, fame, XP, band morale and schedule completion.
+        // No independent money/reward writes are permitted in this worker.
+        const { data: receipt, error: settlementError } = await supabaseClient.rpc(
+          'settle_work_shift_atomic',
+          { p_activity_id: activity.id, p_shift_id: shiftId },
         );
-
-        const { error: updateShiftError } = await supabaseClient
-          .from('shift_history')
-          .update({
-            clock_out_time: nowIso,
-            status: 'completed',
-            fame_impact: dynamicFameImpact, // Store actual fame impact
-          })
-          .eq('id', shiftId);
-
-        if (updateShiftError) {
-          throw updateShiftError;
+        if (settlementError) throw settlementError;
+        if (!receipt?.settled) {
+          console.log(`Skipped previously completed shift ${shiftId}`);
+          continue;
         }
-
-        const { error: employmentError } = await supabaseClient
-          .from('player_employment')
-          .update({
-            shifts_completed: (shift.player_employment.shifts_completed || 0) + 1,
-            total_earnings: (shift.player_employment.total_earnings || 0) + netEarnings,
-            last_shift_at: nowIso,
-          })
-          .eq('id', shift.employment_id);
-
-        if (employmentError) {
-          throw employmentError;
-        }
-
-        const { data: profile, error: profileFetchError } = await supabaseClient
-          .from('profiles')
-          .select('cash, health, fame')
-          .eq('id', shift.profile_id)
-          .single();
-
-        if (profileFetchError) {
-          throw profileFetchError;
-        }
-
-        const updatedCash = (profile?.cash || 0) + netEarnings;
-        const updatedHealth = Math.max(
-          0,
-          Math.min(100, (profile?.health ?? 100) + (shift.health_impact || 0))
-        );
-        const updatedFame = Math.max(0, (profile?.fame || 0) + dynamicFameImpact);
-
-        const { error: profileUpdateError } = await supabaseClient
-          .from('profiles')
-          .update({
-            cash: updatedCash,
-            health: updatedHealth,
-            fame: updatedFame,
-          })
-          .eq('id', shift.profile_id);
-
-        if (profileUpdateError) {
-          throw profileUpdateError;
-        }
-
-        const { error: ledgerError } = await supabaseClient
-          .from('experience_ledger')
-          .insert({
-            user_id: shiftOwner.user_id,
-            profile_id: shift.profile_id,
-            activity_type: 'work_shift',
-            xp_amount: shift.xp_earned,
-            metadata: { 
-              job_id: shift.job_id, 
-              shift_id: shiftId,
-              fame_change: dynamicFameImpact,
-              job_title: job?.title,
-              band_name: bandName,
-              gross_earnings: grossEarnings,
-              net_earnings: netEarnings,
-              city_income_tax: cityIncomeTax,
-              city_id: job?.city_id ?? null,
-            },
-          });
-
-        if (ledgerError) {
-          throw ledgerError;
-        }
-
-        // Update scheduled activity to completed (if exists)
-        const { error: scheduleUpdateError } = await supabaseClient
-          .from('player_scheduled_activities')
-          .update({
-            status: 'completed',
-            completed_at: nowIso,
-          })
-          .eq('linked_job_shift_id', shiftId);
-
-        if (scheduleUpdateError) {
-          console.warn(`Warning updating scheduled activity: ${scheduleUpdateError.message}`);
-        }
-
-        const { error: activityDeleteError } = await supabaseClient
-          .from('profile_activity_statuses')
-          .delete()
-          .eq('id', activity.id);
-
-        if (activityDeleteError) {
-          throw activityDeleteError;
-        }
-
-        // === WORK SHIFT → BAND MORALE (v1.0.976) ===
-        // Working degrading jobs (fame penalty) hurts band morale; earning decent money gives a small boost
-        try {
-          const { data: bm } = await supabaseClient.from('band_members').select('band_id').eq('user_id', shiftOwner.user_id).eq('profile_id', shift.profile_id).eq('is_touring_member', false).limit(1).maybeSingle();
-          if (bm?.band_id) {
-            const { data: bd } = await supabaseClient.from('bands').select('morale').eq('id', bm.band_id).single();
-            if (bd) {
-              const curMorale = (bd as any).morale ?? 50;
-              let moraleShift = 0;
-              if (dynamicFameImpact < -5) moraleShift = -3;
-              else if (dynamicFameImpact < 0) moraleShift = -1;
-              else if ((shift.earnings || 0) >= 500) moraleShift = 2;
-              else if ((shift.earnings || 0) >= 100) moraleShift = 1;
-              if (moraleShift !== 0) {
-                const newMorale = Math.max(0, Math.min(100, curMorale + moraleShift));
-                await supabaseClient.from('bands').update({ morale: newMorale } as any).eq('id', bm.band_id);
-                console.log(`Work shift morale: fame impact ${dynamicFameImpact}, earnings $${shift.earnings} → morale ${moraleShift > 0 ? '+' : ''}${moraleShift}`);
-                // === HEALTH EVENT LOG (v1.0.996) ===
-                try {
-                  const desc = moraleShift < 0 ? `Humiliating work shift (fame ${dynamicFameImpact})` : `Work shift earned $${shift.earnings || 0}`;
-                  await supabaseClient.from('band_health_events').insert({
-                    band_id: bm.band_id, event_type: 'morale', delta: moraleShift, new_value: newMorale, source: 'work_shift', description: desc,
-                  });
-                } catch (_logErr) { /* non-critical */ }
-              }
-            }
-          }
-        } catch (_e) { /* non-critical */ }
-
         processedCount += 1;
-        totalEarnings += netEarnings;
-        totalXpAwarded += shift.xp_earned || 0;
-        totalFameChange += dynamicFameImpact;
-
+        totalEarnings += Number(receipt.net ?? 0);
+        totalXpAwarded += Number(receipt.xp ?? 0);
+        totalFameChange += Number(receipt.fame ?? 0);
         console.log(
-          `Clocked out shift ${shiftId}: gross $${grossEarnings}, tax $${cityIncomeTax}, net $${netEarnings}, ${shift.xp_earned} XP, fame ${dynamicFameImpact}`
+          `Settled work shift ${shiftId}: gross $${receipt.gross}, tax $${receipt.city_tax}, net $${receipt.net}, XP ${receipt.xp}, fame ${receipt.fame}`,
         );
       } catch (shiftError) {
         errorCount += 1;
