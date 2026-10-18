@@ -16,7 +16,7 @@ DECLARE
   ];
   present_skill_columns text[] := ARRAY[]::text[];
   check_fragments text[] := ARRAY[]::text[];
-  column_name text;
+  v_column_name text;
   max_value integer;
 BEGIN
   SELECT MAX((match)[1]::integer)
@@ -36,27 +36,27 @@ BEGIN
     max_value := 100;
   END IF;
 
-  FOREACH column_name IN ARRAY skill_columns LOOP
+  FOREACH v_column_name IN ARRAY skill_columns LOOP
     IF EXISTS (
       SELECT 1
       FROM information_schema.columns AS cols
       WHERE cols.table_schema = 'public'
         AND cols.table_name = 'player_skills'
-        AND cols.column_name = column_name
+        AND cols.column_name = v_column_name
     ) THEN
       EXECUTE format(
         'UPDATE public.player_skills
             SET %1$I = 5,
                 updated_at = timezone(''utc'', now())
           WHERE %1$I IS NULL OR %1$I < 5',
-        column_name
+        v_column_name
       );
 
-      EXECUTE format('ALTER TABLE public.player_skills ALTER COLUMN %I SET DEFAULT 5', column_name);
-      EXECUTE format('ALTER TABLE public.player_skills ALTER COLUMN %I SET NOT NULL', column_name);
+      EXECUTE format('ALTER TABLE public.player_skills ALTER COLUMN %I SET DEFAULT 5', v_column_name);
+      EXECUTE format('ALTER TABLE public.player_skills ALTER COLUMN %I SET NOT NULL', v_column_name);
 
-      present_skill_columns := array_append(present_skill_columns, column_name);
-      check_fragments := array_append(check_fragments, format('%I BETWEEN 5 AND %s', column_name, max_value::text));
+      present_skill_columns := array_append(present_skill_columns, v_column_name);
+      check_fragments := array_append(check_fragments, format('%I BETWEEN 5 AND %s', v_column_name, max_value::text));
     END IF;
   END LOOP;
 
