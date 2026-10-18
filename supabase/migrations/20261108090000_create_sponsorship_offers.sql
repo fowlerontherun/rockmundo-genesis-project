@@ -46,6 +46,12 @@ CREATE TABLE IF NOT EXISTS public.sponsorship_offers (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- The earlier sponsorship-types migration predates canonical offer creation
+-- on clean installs. Restore its deferred FK enrichment here as well.
+ALTER TABLE public.sponsorship_offers
+  ADD COLUMN IF NOT EXISTS sponsorship_type_id uuid
+  REFERENCES public.sponsorship_types(id);
+
 -- Notifications for sponsorship lifecycle
 CREATE TABLE IF NOT EXISTS public.sponsorship_notifications (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
