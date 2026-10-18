@@ -123,6 +123,7 @@ export default function BankingApply() {
           expectedUse: "Player starter loan", idempotencyKey: attempt.key,
         });
       }
+      if (activeScopeRef.current !== startingScope) return;
       const result = await getLoanApplicationResult(attempt.applicationId);
       if (!result) throw new Error("Application status could not be confirmed. Retry to check it.");
       if (activeScopeRef.current !== startingScope) return;
@@ -159,6 +160,7 @@ export default function BankingApply() {
       }
       // The acceptance RPC may succeed even if the first response is lost. Confirm
       // the persisted contract before showing a success or enabling further actions.
+      if (activeScopeRef.current !== startingScope) return;
       const verified = await getLoanDetails(attempt.contractId);
       if (!verified || verified.id !== attempt.contractId) {
         throw new Error("Loan acceptance could not be verified. Retry to check its status.");
