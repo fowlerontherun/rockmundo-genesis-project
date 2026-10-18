@@ -56,6 +56,27 @@ ALTER TABLE public.equipment_items
 ALTER TABLE public.equipment_items
   ALTER COLUMN price_fame SET NOT NULL;
 
+-- The February equipment migration created this one-argument function
+-- with three OUT fields; PostgreSQL cannot CREATE OR REPLACE it with a
+-- different RETURNS TABLE result shape. Drop only that known legacy version,
+-- without CASCADE, before installing the four-field cash+fame result below.
+-- A current four-field version is kept intact (idempotent replay).
+DO $equipment_purchase_return_contract$
+DECLARE
+  current_result text;
+BEGIN
+  IF to_regprocedure('public.purchase_equipment_item(uuid)') IS NOT NULL THEN
+    SELECT pg_get_function_result('public.purchase_equipment_item(uuid)'::regprocedure)
+    INTO current_result;
+
+    IF current_result = 'TABLE(player_equipment_id uuid, remaining_stock integer, new_cash integer)' THEN
+      DROP FUNCTION public.purchase_equipment_item(uuid);
+    ELSIF current_result <> 'TABLE(player_equipment_id uuid, remaining_stock integer, new_cash integer, new_fame integer)' THEN
+      RAISE EXCEPTION 'Unexpected purchase_equipment_item(uuid) return signature: %', current_result;
+    END IF;
+  END IF;
+END $equipment_purchase_return_contract$;
+
 -- Refresh purchase function to handle multi-currency costs and stock policy flags
 CREATE OR REPLACE FUNCTION public.purchase_equipment_item(p_equipment_id uuid)
 RETURNS TABLE (
