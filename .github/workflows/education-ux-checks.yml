@@ -9,6 +9,9 @@ on:
       - 'src/pages/Education.tsx'
       - 'src/pages/UniversityDetail.tsx'
       - 'src/pages/SkillsPage.tsx'
+      - 'src/pages/admin/YoutubeVideos.tsx'
+      - 'src/pages/admin/youtubeVideos.helpers.ts'
+      - 'src/pages/admin/youtubeVideos.helpers.test.ts'
       - 'src/components/SkillTree.tsx'
       - '.github/workflows/education-ux-checks.yml'
   workflow_dispatch:
