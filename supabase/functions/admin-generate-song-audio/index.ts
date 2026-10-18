@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import { signReplicateAttempt } from "../_shared/replicateWebhookAuth.ts"
 import { normalizeMiniMaxStylePrompt } from "../_shared/musicStylePrompt.ts"
 import { compactLyricsForShortAudio } from "../_shared/shortSongLyrics.ts"
 
@@ -437,66 +436,18 @@ serve(async (req) => {
     const { error: promptTrackingError } = await supabase.from("song_generation_attempts")
       .update({ prompt_used: `Model: ${generationModel}\n${fullPrompt}` }).eq("id", attempt.id)
     if (promptTrackingError) throw promptTrackingError
-    const signature = await signReplicateAttempt(attempt.id, songId, supabaseServiceKey)
-    const webhookUrl = `${supabaseUrl}/functions/v1/replicate-webhook?songId=${encodeURIComponent(songId)}&attemptId=${encodeURIComponent(attempt.id)}&signature=${signature}`
-    addLog("Webhook configured; signed callback URL excluded from logs")
-
-    // Create async prediction with webhook using MiniMax Music-1.5
-    addLog('Creating async MiniMax Music prediction...')
-    
-    const predictionResponse = await fetch(`https://api.replicate.com/v1/models/minimax/${generationModel}/predictions`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${REPLICATE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        input: {
-          prompt: stylePrompt,
-          lyrics: formattedLyrics,
-          bitrate: 128000,
-          audio_format: 'mp3',
-          ...(generationModel === 'music-2.6' ? {
-            is_instrumental: false,
-            lyrics_optimizer: false,
-          } : {}),
-        },
-        webhook: webhookUrl,
-        webhook_events_filter: ['completed', 'output'],
-      })
+    const {data:queued,error:queueError} = await supabase.rpc("enqueue_ai_song_generation", {
+      p_attempt_id:attempt.id,p_song_id:songId,
+      p_user_id:song.user_id||user.id,
+      p_model:generationModel,p_style:stylePrompt,p_lyrics:formattedLyrics,
     })
-
-    const prediction = await predictionResponse.json()
-
-    if (!predictionResponse.ok) {
-      addLog(`ERROR: Failed to create prediction - ${prediction.detail || prediction.error || 'Unknown error'}`)
-      throw new Error(`Replicate API error: ${prediction.detail || prediction.error || predictionResponse.status}`)
-    }
-
-    if (!prediction.id) throw new Error("Replicate returned no prediction ID")
-    const { error: trackingError } = await supabase.from("song_generation_attempts")
-      .update({ prediction_id: prediction.id, provider_prediction_id: prediction.id }).eq("id", attempt.id).eq("status", "generating")
-    if (trackingError) throw trackingError
-    addLog(`Prediction created: ${prediction.id}`)
-    addLog(`Status: ${prediction.status}`)
-    addLog(`Web URL: ${prediction.urls?.web || 'N/A'}`)
-    addLog('Audio generation started! The webhook will handle completion.')
-    addLog('This may take 2-5 minutes. Check song status for updates.')
-
-    console.log(`[admin-generate-song-audio] Async prediction created: ${prediction.id} for song ${songId}`)
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        predictionId: prediction.id,
-        prompt: fullPrompt,
-        attemptId: attempt.id,
-        songTitle: song.title,
-        logs,
-        message: 'Generation started asynchronously. Audio will be available in 2-5 minutes.'
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    if(queueError || !queued?.ok) throw new Error("Could not enqueue AI generation: "+(queueError?.message||"unknown"))
+    addLog("AI song queued; worker will submit to Replicate when a slot opens.")
+    return new Response(JSON.stringify({
+      success:true,queued:true,state:"queued",attemptId:attempt.id,
+      songTitle:song.title,logs,
+      message:"Song queued for generation.",
+    }),{headers:{...corsHeaders,"Content-Type":"application/json"}})
 
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
