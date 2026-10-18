@@ -84,7 +84,10 @@ FROM public.profile_privacy_settings;
 
 GRANT SELECT ON public.public_profile_privacy_settings TO anon, authenticated;
 
-CREATE OR REPLACE FUNCTION public.profile_belongs_to_current_user(target_profile_id uuid)
+-- May 2026 originally created this function with argument name _profile_id.
+-- PostgreSQL CREATE OR REPLACE cannot rename input parameters even when types
+-- and return signatures agree; preserve the original name on fresh replay.
+CREATE OR REPLACE FUNCTION public.profile_belongs_to_current_user(_profile_id uuid)
 RETURNS boolean
 LANGUAGE sql
 STABLE
@@ -94,7 +97,7 @@ AS $$
   SELECT EXISTS (
     SELECT 1
     FROM public.profiles p
-    WHERE p.id = target_profile_id
+    WHERE p.id = _profile_id
       AND p.user_id = auth.uid()
   );
 $$;
