@@ -64,7 +64,7 @@ BEGIN
      AND tgname='require_dj_live_mix_before_settlement'
      AND NOT tgisinternal AND tgenabled='O'
  ) THEN RAISE EXCEPTION 'Mixer evidence guard was disabled'; END IF;
-END; $;
+END; $$;
 
 -- A forged auth identity and a character not belonging to it must fail,
 -- before any row can be created or reputation counters incremented.
