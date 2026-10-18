@@ -517,7 +517,7 @@ export const VideosTab = () => {
                     </div>
                     <Button
                       size="sm"
-                      disabled={!cooldownStatus.canWatch || watchVideo.isPending || locked}
+                      disabled={watchVideo.isPending || locked}
                       onClick={() => openLesson(video)}
                     >
                       {watchingThis ? (
