@@ -86,6 +86,11 @@ BEGIN
    RAISE EXCEPTION 'SECURITY FAILURE: course retimed over DJ reservation';
  EXCEPTION WHEN exclusion_violation THEN NULL;
  END;
+ -- Non-overlapping updates must continue to work.
+ UPDATE public.university_courses SET
+   class_start_hour=9,class_end_hour=12 WHERE id=v_course;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Non-conflicting course retiming failed'; END IF;
+
  -- Rejoining a band after a rehearsal has been booked must be checked too.
  UPDATE public.band_members SET member_status='inactive' WHERE id=v_bm;
  UPDATE public.band_rehearsals SET
@@ -98,6 +103,13 @@ BEGIN
    RAISE EXCEPTION 'SECURITY FAILURE: band membership bypassed reserved DJ set';
  EXCEPTION WHEN exclusion_violation THEN NULL;
  END;
+ -- A later non-overlapping rehearsal allows the member to rejoin.
+ UPDATE public.band_rehearsals SET
+   scheduled_start=v_start + interval '2 days',
+   scheduled_end=v_start + interval '2 days 40 minutes'
+ WHERE id=v_rehearsal;
+ UPDATE public.band_members SET member_status='active' WHERE id=v_bm;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Non-conflicting band rejoin failed'; END IF;
 
  IF (SELECT cash FROM public.profiles WHERE id=v_profile) IS DISTINCT FROM v_cash
     OR (SELECT fame FROM public.profiles WHERE id=v_profile) IS DISTINCT FROM v_fame
