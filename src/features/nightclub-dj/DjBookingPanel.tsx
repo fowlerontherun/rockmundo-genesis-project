@@ -61,6 +61,8 @@ export function DjBookingPanel({ profileId, clubId, venueTimezone }: Props) {
     queryKey: ["dj-saved-setlists", profileId],
     enabled: isEnabled && Boolean(profileId),
     queryFn: async () => {
+      // New migration-backed table is not yet part of generated TS types.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase as any).from("dj_setlists")
         .select("id,name,items")
         .eq("profile_id", profileId)
@@ -74,6 +76,8 @@ export function DjBookingPanel({ profileId, clubId, venueTimezone }: Props) {
     queryKey: ["dj-bookings", profileId, clubId],
     enabled: isEnabled && Boolean(profileId) && Boolean(clubId),
     queryFn: async () => {
+      // Newly applied DJ bookings are not yet part of generated TS types.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase as any).from("dj_bookings")
         .select("id,starts_at,ends_at,status,setlist_id")
         .eq("profile_id", profileId)
