@@ -27,6 +27,6 @@ These mappings use the **first Git commit adding the file** (UTC), not the lates
 
 - **No production SQL has been applied and no migration history altered.** Do not run automatic bulk `db push` against production or replay historical migrations as a side effect of this PR.
 - The established 2029 Festival sequence is a deliberately frozen logical namespace, NOT chronological file creation dates. Preserve those identities even if their Git introduction was in 2025/2026. The additional `20300101010000_festival_offer_withdraw_and_expiry.sql` is also held back pending deployment evidence.
-- Other 2027/2029 historical anomalies are intentionally deferred for live-schema and dependency review; date mismatch alone does not establish that renaming is safe (`AGENTS.md`, migration timestamp policy).
+- The separate historical 2027 batch corrects 48 further names; see `2026-10-18-legacy-2027-migration-creation-date-corrections.md`. The 2029 Festival namespace and `20300101010000_festival_offer_withdraw_and_expiry.sql` remain deferred for live-schema and deployment-history review. Date mismatch alone does not establish that renaming is safe (`AGENTS.md`, migration timestamp policy).
 - The historical collision exception for `20300106200000` has been removed because these two SQL blobs have distinct new timestamps.
 - Before merge, verify staging migration order and exact source Git blob hashes. Do not mistake Git date for production deployment date.
