@@ -11,7 +11,6 @@ export type YoutubeResourceRow = Tables<"education_youtube_resources"> & {
 export const youtubeResourceSchema = z.object({
   title: z.string().trim().min(1, "Title is required").max(160),
   description: z.string().trim().max(800).default(""),
-  videoUrl: z.string().url("Enter a valid YouTube URL"),
   skillSlug: z.string().trim().min(1, "Skill is required"),
   category: z.string().trim().min(1, "Category is required").max(80),
   channelName: z.string().trim().max(120).default(""),
@@ -26,7 +25,6 @@ export type YoutubeResourceFormValues = z.infer<typeof youtubeResourceSchema>;
 export const defaultResourceFormValues: YoutubeResourceFormValues = {
   title: "",
   description: "",
-  videoUrl: "",
   skillSlug: "",
   category: "",
   channelName: "",
@@ -41,7 +39,6 @@ export const mapResourceRowToFormValues = (
 ): YoutubeResourceFormValues => ({
   title: row.title,
   description: row.description ?? "",
-  videoUrl: row.video_url,
   skillSlug: row.skill_slug ?? "",
   category: row.category ?? "general",
   channelName: row.channel_name ?? "",
@@ -56,7 +53,6 @@ export const mapResourceFormToPayload = (
 ) => ({
   title: values.title.trim(),
   description: values.description.trim() || null,
-  video_url: values.videoUrl.trim(),
   skill_slug: values.skillSlug.trim(),
   category: values.category.trim().toLowerCase().replace(/\s+/g, "_"),
   channel_name: values.channelName.trim() || null,
