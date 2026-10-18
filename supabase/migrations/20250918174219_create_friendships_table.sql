@@ -1,7 +1,17 @@
 BEGIN;
 
 -- Create enum type for friendship status values
-CREATE TYPE IF NOT EXISTS public.friendship_status AS ENUM ('pending', 'accepted', 'declined', 'blocked');
+DO $friendship_enum$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_type t
+    JOIN pg_namespace n ON n.oid=t.typnamespace
+    WHERE n.nspname='public' AND t.typname='friendship_status'
+  ) THEN
+    CREATE TYPE public.friendship_status AS ENUM ('pending', 'accepted', 'declined', 'blocked');
+  END IF;
+END;
+$friendship_enum$;
 
 -- Table to manage friend relationships and requests between profiles
 CREATE TABLE public.friendships (
@@ -125,12 +135,12 @@ CREATE POLICY "Participants can delete friendships"
   );
 
 -- Convenience views for common friendship states
-CREATE OR REPLACE VIEW public.pending_friendships AS
+CREATE OR REPLACE VIEW public.pending_friendships WITH (security_invoker=true) AS
 SELECT *
 FROM public.friendships
 WHERE status = 'pending'::public.friendship_status;
 
-CREATE OR REPLACE VIEW public.accepted_friendships AS
+CREATE OR REPLACE VIEW public.accepted_friendships WITH (security_invoker=true) AS
 SELECT *
 FROM public.friendships
 WHERE status = 'accepted'::public.friendship_status;
