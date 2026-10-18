@@ -7,7 +7,7 @@ BEGIN
   PERFORM cron.schedule(
     'weekly_experience_bonus_parser_fixture',
     '15 5 * * 1',
-    $weekly_bonus_command$SELECT public.process_weekly_experience_bonus();$weekly_bonus_command$
+    $cron_command$SELECT public.process_weekly_experience_bonus();$cron_command$
   );
  END IF;
 END $parse$;
