@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 const load = (path: string) => readFileSync(resolve(process.cwd(),path),"utf8");
 const sql = load("supabase/migrations/20261018103200_ai_queue_uncertain_dispatch_recovery.sql");
 const submittedSql = load("supabase/migrations/20261018105000_ai_queue_missing_callback_watchdog.sql");
+const timingSql = load("supabase/migrations/20261018110000_ai_queue_timeout_watchdog_alignment.sql");
 const worker = load("supabase/functions/process-ai-song-queue/index.ts");
 const ui = load("src/components/recording/SongGenerationStatus.tsx");
 const status = load("src/hooks/useSongGenerationStatus.ts");
@@ -54,6 +55,14 @@ describe("ambiguous paid AI song submissions (#4314)", () => {
     expect(submittedSql).not.toContain("prediction_id=null");
     expect(worker).toContain('db.rpc("flag_stale_ai_song_predictions")');
     expect(worker).toContain("predictions missing completion callbacks");
+  });
+
+  it("lets the callback watchdog quarantine slow predictions before generic timeout", () => {
+    expect(timingSql).toContain("timeout_at=now()+interval ''30 minutes''");
+    expect(submittedSql).toContain("25 minutes");
+    expect(status).toContain('queueState !== "submitted"');
+    expect(status).toContain("queueState !== 'submitted'");
+    expect(ui).toContain('queueState === "submitted" ? "30:00" : "15:00"');
   });
 
   it("tells the player that further paid requests are blocked", () => {
