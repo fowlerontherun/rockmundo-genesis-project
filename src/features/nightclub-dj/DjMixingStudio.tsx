@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { filterDjTracks, getDjPlaybackUrl, type DjAudioTrack, useDjTrackLibrary } from "./library";
 import { clampDeckRate, equalPowerCrossfade, formatDjTime, syncDeckRate } from "./mixerMath";
 import { DjSetlistPlanner } from "./DjSetlistPlanner";
+import { djReadinessSteps, useDjMixReadiness } from "./djReadiness";
 
 function AudioDeck({
   deck, tracks, selectedId, onSelect, level, rate, onRateChange, onDeckPlay, onRateCommit,
@@ -178,32 +179,8 @@ export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
       .map((item) => item.source + ":" + item.id));
     return libraryTracks.filter((track) => allowed.has(track.source + ":" + track.sourceId));
   }, [libraryTracks, liveBookingId, liveBooking]);
-  const { data: recordedEvents = [] } = useQuery({
-    queryKey: ["dj-live-events", profileId, liveBookingId],
-    refetchInterval: 15000,
-    enabled: Boolean(liveBookingId && profileId),
-    queryFn: async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any).from("dj_live_mix_events")
-        .select("kind,deck,recorded_at")
-        .eq("booking_id", liveBookingId)
-        .eq("profile_id", profileId)
-        .order("event_no", { ascending: true }).limit(120);
-      if (error) throw error;
-      return (data ?? []) as Array<{
-        kind: "deck_play" | "tempo" | "crossfade";
-        deck: "A" | "B" | null;
-        recorded_at: string;
-      }>;
-    },
-  });
-  const mixProgress = {
-    deckA: recordedEvents.some((entry) => entry.kind === "deck_play" && entry.deck === "A"),
-    deckB: recordedEvents.some((entry) => entry.kind === "deck_play" && entry.deck === "B"),
-    tempo: recordedEvents.some((entry) => entry.kind === "tempo"),
-    crossfade: recordedEvents.some((entry) => entry.kind === "crossfade"),
-    count: recordedEvents.length,
-  };
+  const { data: readiness, isError: readinessError } =
+    useDjMixReadiness(liveBookingId, profileId);
   const [pendingEvents, setPendingEvents] = useState(0);
   const lastAttempt = useRef(0);
   const queue = useRef<Promise<void>>(Promise.resolve());
@@ -251,7 +228,7 @@ export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
             if (data?.error || typeof data?.id !== "string") {
               throw new Error(data?.error || "DJ mixer event was not acknowledged");
             }
-            await client.invalidateQueries({ queryKey: ["dj-live-events", profileId, bookingId] });
+            await client.invalidateQueries({ queryKey: ["dj-live-readiness", profileId, bookingId] });
             return;
           } catch (error) {
             if (attempt >= 2 || !(error instanceof Error) ||
@@ -337,23 +314,42 @@ export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
             : "Practice with real RockMundo audio. Start each deck separately and crossfade between them."}
         </p>
         <Badge variant="outline">
-          {liveBookingId ? "Scheduled live set · " + mixProgress.count + " confirmed" + (pendingEvents ? " · " + pendingEvents + " syncing" : "") : "Practice · No rewards"}
+          {liveBookingId
+            ? `Scheduled live set · ${readiness?.count ?? 0} confirmed${pendingEvents ? ` · ${pendingEvents} syncing` : ""}`
+            : "Practice · No rewards"}
         </Badge>
       </div>
       {liveBookingId && (
-        <div className="rounded-md border p-3 text-sm space-y-1" aria-live="polite">
-          <p className="font-semibold">Server-verified set progress</p>
-          <p className="text-xs text-muted-foreground">
-            At least 6 accepted events, actions on both decks, one tempo and one crossfade change,
-            at least 60 seconds between first and last, and one event after the booking midpoint.
-            Adjust controls throughout your set; quick repeated actions are ignored.
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Deck A: {mixProgress.deckA ? "recorded" : "not yet"} ·
-            Deck B: {mixProgress.deckB ? "recorded" : "not yet"} ·
-            Tempo: {mixProgress.tempo ? "recorded" : "not yet"} ·
-            Crossfade: {mixProgress.crossfade ? "recorded" : "not yet"}
-          </p>
+        <div className="rounded-md border p-3 text-sm space-y-2" aria-live="polite">
+          <p className="font-semibold">Server-verified set readiness</p>
+          {readinessError && (
+            <p className="text-xs text-destructive" role="alert">
+              Unable to load the live DJ checklist. Completion remains server-controlled.
+            </p>
+          )}
+          {!readiness && !readinessError && (
+            <p className="text-xs text-muted-foreground">Checking your live performance…</p>
+          )}
+          {readiness && (
+            <>
+              <ul className="space-y-1 text-xs">
+                {djReadinessSteps(readiness).map((step) => (
+                  <li key={step.id}>
+                    <span className={step.complete ? "text-green-500" : "text-muted-foreground"}>
+                      {step.complete ? "✓" : "○"} {step.label}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs font-medium">
+                {readiness.can_settle
+                  ? "Ready — return to your booked set and finish to receive results."
+                  : readiness.evidence_ready
+                    ? "Mixer activity complete. Finish after your scheduled set ends."
+                    : "Keep mixing until each requirement is checked. Practice mode never grants rewards."}
+              </p>
+            </>
+          )}
         </div>
       )}
       <Card>

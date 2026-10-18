@@ -119,6 +119,11 @@ BEGIN
  OR (SELECT fame FROM public.profiles WHERE id=v_profile)<>v_fame
  THEN RAISE EXCEPTION 'No-evidence denial failed to roll back rewards'; END IF;
 
+ -- The owner-only server readiness RPC mirrors the payout gate.
+ IF (public.dj_live_mix_readiness(v_book)->>'count')::int<>0
+ OR (public.dj_live_mix_readiness(v_book)->>'evidence_ready')::boolean THEN
+   RAISE EXCEPTION 'Empty DJ session readiness was incorrectly sufficient'; END IF;
+
  -- Real-time server event proofs: both decks + tempo + crossfade and
  -- time-separated interaction into the second half of the booked set.
  -- The server rejects out-of-setlist songs, client-forged event times,
@@ -170,6 +175,12 @@ BEGIN
  PERFORM private.dj_record_mix_event_at(v_book,'deck_play','B','game',v_song,NULL,v_start+interval '5 minutes');
  PERFORM private.dj_record_mix_event_at(v_book,'tempo','B',NULL,NULL,99,v_start+interval '25 minutes');
  PERFORM private.dj_record_mix_event_at(v_book,'crossfade',NULL,NULL,NULL,78,v_start+interval '30 minutes');
+
+ IF (public.dj_live_mix_readiness(v_book)->>'evidence_ready')::boolean IS DISTINCT FROM TRUE
+ OR (public.dj_live_mix_readiness(v_book)->>'count')::int<>6
+ OR (public.dj_live_mix_readiness(v_book)->>'after_midpoint')::boolean IS DISTINCT FROM TRUE
+ OR (public.dj_live_mix_readiness(v_book)->>'time_span')::boolean IS DISTINCT FROM TRUE
+ THEN RAISE EXCEPTION 'Server checklist disagrees with valid mixer evidence'; END IF;
 
  IF (SELECT count(*) FROM public.dj_live_mix_events WHERE booking_id=v_book)<>6
  THEN RAISE EXCEPTION 'Missing server-recorded mixer interactions'; END IF;
@@ -264,6 +275,10 @@ BEGIN
  IF (SELECT count(*) FROM public.dj_performance_sessions
    WHERE booking_id=v_book)<>1
  THEN RAISE EXCEPTION 'Booked owner cannot read their DJ session'; END IF;
+ IF (public.dj_live_mix_readiness(v_book)->>'evidence_ready')::boolean IS DISTINCT FROM TRUE
+ OR (public.dj_live_mix_readiness(v_book)->>'status') IS DISTINCT FROM 'completed'
+ OR (public.dj_live_mix_readiness(v_book)->>'can_settle')::boolean IS DISTINCT FROM FALSE
+ THEN RAISE EXCEPTION 'Owner readiness must show completed set without re-enabling payout'; END IF;
  IF (SELECT count(*) FROM public.dj_live_mix_events
    WHERE booking_id=v_book)<>6
  THEN RAISE EXCEPTION 'Owner cannot read six accepted live events'; END IF;
@@ -290,6 +305,8 @@ SELECT set_config('request.jwt.claim.sub',
   WHERE p.user_id<>current_setting('dj_test.owner')::uuid LIMIT 1),true);
 DO $foreign_event_rls$
 BEGIN
+ IF public.dj_live_mix_readiness(current_setting('dj_test.booking')::uuid) IS NOT NULL
+ THEN RAISE EXCEPTION 'SECURITY FAILURE: foreign account viewed DJ readiness'; END IF;
  IF (SELECT count(*) FROM public.dj_live_mix_events
    WHERE booking_id=current_setting('dj_test.booking')::uuid)<>0
  THEN RAISE EXCEPTION 'SECURITY FAILURE: another player can read DJ mixer events'; END IF;

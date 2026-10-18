@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useDjMixReadiness } from "./djReadiness";
 
 type SavedSet = { id: string; name: string; items: unknown[] };
 type BookedSlot = {
@@ -53,6 +54,37 @@ async function actionRequest(body: Record<string, unknown>) {
   if (data?.error) throw new Error(data.error as string);
   if (typeof data?.id !== "string") throw new Error("DJ booking did not return a valid ID");
   return data.id as string;
+}
+
+function DjLiveFinishAction({
+  bookingId, profileId, pending, onFinish,
+}: {
+  bookingId: string;
+  profileId: string;
+  pending: boolean;
+  onFinish: () => void;
+}) {
+  const { data: readiness, isLoading, isError } =
+    useDjMixReadiness(bookingId, profileId);
+  return (
+    <div className="flex flex-col gap-1">
+      <Button size="sm" disabled={pending || !readiness?.can_settle}
+        onClick={onFinish}>
+        {pending ? "Verifying…" : "Finish and verify DJ set"}
+      </Button>
+      <p className="max-w-64 text-xs text-muted-foreground">
+        {isError
+          ? "Readiness unavailable. Rewards cannot be settled from this screen."
+          : isLoading || !readiness
+            ? "Checking server requirements…"
+            : readiness.can_settle
+              ? "All mixer requirements passed and your slot has ended."
+              : readiness.evidence_ready
+                ? "Mixer requirements complete. Wait until the booked slot ends."
+                : `${readiness.count}/6 actions. Complete both decks, tempo, crossfade and timing checks in the live studio.`}
+      </p>
+    </div>
+  );
 }
 
 /** Deliberately hidden behind BOTH server and client release switches. */
@@ -247,12 +279,12 @@ export function DjBookingPanel({ profileId, clubId, venueTimezone, onLiveBooking
                       onClick={() => onLiveBooking?.(booking.id)}>
                       Open live mixing decks
                     </Button>
-                    {Date.now() >= new Date(booking.ends_at).getTime() && (
-                      <Button size="sm" disabled={pending !== null}
-                        onClick={() => void completeSet(booking.id)}>
-                        {pending === booking.id ? "Verifying…" : "Finish and verify DJ set"}
-                      </Button>
-                    )}
+                    <DjLiveFinishAction
+                      bookingId={booking.id}
+                      profileId={profileId}
+                      pending={pending !== null}
+                      onFinish={() => void completeSet(booking.id)}
+                    />
                   </>
                 )}
                 {["booked", "ready"].includes(booking.status) &&
