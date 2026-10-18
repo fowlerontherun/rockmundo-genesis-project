@@ -59,7 +59,7 @@ export const EducationExploreTab = () => {
       {skill && skillVisible ? (
         <div className="rounded-lg border bg-primary/5 p-3 flex flex-wrap items-center justify-between gap-2">
           <span className="text-sm">Focused skill: <strong>{formatEducationSkillName(skill)}</strong></span>
-          <Button asChild size="sm" variant="outline"><Link to={`${educationBase}?tab=skills`>Change skill</Link></Button>
+          <Button asChild size="sm" variant="outline"><Link to={`${educationBase}?tab=skills`}>Change skill</Link></Button>
         </div>
       ) : (
         <Card className="border-dashed"><CardContent className="p-4 flex flex-wrap items-center justify-between gap-3">
@@ -67,7 +67,7 @@ export const EducationExploreTab = () => {
             <p className="font-medium">{skill ? "Checking skill access..." : "Not sure what to learn?"}</p>
             <p className="text-muted-foreground">{skill ? "Only previously unlocked skills can be selected here." : "Start with a skill and the available learning options will follow."}</p>
           </div>
-          <Button asChild size="sm" variant="outline"><Link to={`${educationBase}?tab=skills`><Search className="mr-2 h-4 w-4" /> Choose skill</Link></Button>
+          <Button asChild size="sm" variant="outline"><Link to={`${educationBase}?tab=skills`}><Search className="mr-2 h-4 w-4" /> Choose skill</Link></Button>
         </CardContent></Card>
       )}
       {skillVisible && (
