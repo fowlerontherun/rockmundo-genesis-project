@@ -105,7 +105,7 @@ export const VideosTab = () => {
   }, [playlists]);
 
   const tierAccess = useSkillTierAccess(profileId, allVideos.map((video) => video.skillSlug));
-  const directLessons = allVideos.filter((video) => isDirectYouTubeLesson(video.url));
+  const directLessons = allVideos.filter((video) => video.verifiedVideo && isDirectYouTubeLesson(video.url));
   const accessBySkill = tierAccess.data ?? new Map<string, boolean>();
   const visibleVideos = useMemo(() => allVideos.filter((video) => isEducationSkillVisible(video.skillSlug, accessBySkill)), [allVideos, accessBySkill]);
 
@@ -452,7 +452,7 @@ export const VideosTab = () => {
           {filteredVideos.slice(0, visibleCount).map((video) => {
             const subscribed = video.skillSlug ? subscribedSkills.has(video.skillSlug) : false;
             const watchingThis = watchVideo.isPending && watchVideo.variables?.videoId === video.id;
-            const directLesson = isDirectYouTubeLesson(video.url);
+            const directLesson = video.verifiedVideo && isDirectYouTubeLesson(video.url);
             const lessonLink = directLesson || video.url.includes("/results?") ? video.url : videoTutorialSearchUrl(video.skillSlug ?? video.name, video.name);
             const locked = !isEducationSkillVisible(video.skillSlug, accessBySkill);
             return (
