@@ -1,10 +1,12 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TopAppBar } from './TopAppBar';
 import { useLanguageStore } from '@/hooks/useTranslation';
 
+const mobileAuth = vi.hoisted(() => ({ signOut: vi.fn(async () => {}) }));
+vi.mock('@/hooks/use-auth-context', () => ({ useAuth: () => ({ signOut: mobileAuth.signOut }) }));
 vi.mock('@/hooks/useUnifiedInbox', () => ({ useUnifiedInboxUnreadCount: () => 2 }));
 vi.mock('@/hooks/useGameData', () => ({ useGameData: () => ({ refetch: vi.fn() }) }));
 vi.mock('@/hooks/useCharacterSlots', () => ({ useCharacterSlots: () => ({
@@ -13,7 +15,18 @@ vi.mock('@/hooks/useCharacterSlots', () => ({ useCharacterSlots: () => ({
   switchCharacter: { mutateAsync: vi.fn() },
 }) }));
 beforeEach(() => useLanguageStore.getState().setLanguage('en'));
+const LocationView = () => <span data-testid="mobile-path">{useLocation().pathname}</span>;
 describe('mobile top bar', () => {
+  it('provides a visible mobile sign-out action and returns to auth', async () => {
+    const user = userEvent.setup();
+    mobileAuth.signOut.mockClear();
+    render(<MemoryRouter initialEntries={['/mobile/education']}><TopAppBar /><LocationView /></MemoryRouter>);
+    expect(screen.getByText('Education')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Account menu' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Sign out' }));
+    expect(mobileAuth.signOut).toHaveBeenCalledTimes(1);
+    expect(await screen.findByTestId('mobile-path')).toHaveTextContent('/auth');
+  });
   it('provides a character menu even for a single character', async () => {
     const user = userEvent.setup();
     render(<MemoryRouter initialEntries={['/mobile']}><TopAppBar /></MemoryRouter>);
