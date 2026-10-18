@@ -3,7 +3,9 @@ import type { GigViewerReplay } from "../../events/types";
 import { derivePlaybackState, ReplayClock, sanitizedEvents, type PlaybackSpeed } from "../engine/PlaybackController";
 export function useGigReplayPlayback(replay: GigViewerReplay | null) { const clockRef = useRef<ReplayClock | null>(null); const [tickValue, setTick] = useState(0); const tick = useCallback(() => setTick((v) => v + 1), []); const [speed, setSpeedState] = useState<PlaybackSpeed>(1); const events = useMemo(() => sanitizedEvents(replay?.events), [replay]); if (replay && !clockRef.current) clockRef.current = new ReplayClock(replay.durationMs); useEffect(() => { if (!replay) return; clockRef.current = new ReplayClock(replay.durationMs); setTick((v) => v + 1); }, [replay?.id]); const state = useMemo(() => replay ? derivePlaybackState(replay, clockRef.current?.position() ?? 0, clockRef.current?.isPlaying() ?? false) : null, [replay, tickValue]); // The 3D canvas owns its animation loop. Keep React's timeline/UI updates
 // bounded so repeated seeks and playback don't saturate the browser main thread.
-const UI_TICK_INTERVAL_MS = 50; // 20Hz; seek/play/restart still update immediately.
+export const UI_TICK_INTERVAL_MS = 50; // 20Hz; seek/play/restart still update immediately.
+export const replayUiTickDue = (now: number, lastRenderAt: number) =>
+  now - lastRenderAt >= UI_TICK_INTERVAL_MS;
 useEffect(() => {
   let raf = 0;
   let alive = true;
