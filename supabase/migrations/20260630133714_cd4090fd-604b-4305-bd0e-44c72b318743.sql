@@ -1,4 +1,26 @@
 
+-- The October 2025 jobs table contains general player employment
+-- listings, with no company_id. This June company-advertising expansion must
+-- introduce its optional company association *before* indexing or referencing
+-- it; do not reassign old generic listings to guessed player-owned companies.
+ALTER TABLE public.jobs
+  ADD COLUMN IF NOT EXISTS company_id uuid;
+
+DO $company_job_association_fk$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.jobs'::regclass
+      AND conname = 'jobs_company_id_fkey'
+      AND contype = 'f'
+  ) THEN
+    ALTER TABLE public.jobs
+      ADD CONSTRAINT jobs_company_id_fkey
+      FOREIGN KEY (company_id) REFERENCES public.companies(id)
+      ON DELETE CASCADE;
+  END IF;
+END $company_job_association_fk$;
+
 -- Advertising columns on jobs
 ALTER TABLE public.jobs
   ADD COLUMN IF NOT EXISTS advertised_until timestamptz,
