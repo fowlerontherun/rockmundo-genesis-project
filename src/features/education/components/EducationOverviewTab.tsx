@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { useGameData } from "@/hooks/useGameData";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { getSkillDisplayProgress } from "@/utils/skillProgressDisplay";
+import { useEducationSkillDefinitions } from "../hooks/useEducationSkillDefinitions";
 import { useEducationSummary } from "../hooks/useEducationSummary";
 import { useSkillTierAccess, isEducationSkillVisible } from "../hooks/useSkillTierAccess";
 import { formatEducationSkillName, percentComplete } from "../utils/educationUi";
@@ -17,25 +18,33 @@ import { EducationRecommendations } from "./EducationRecommendations";
 export const EducationOverviewTab = () => {
   const { profileId } = useActiveProfile();
   const { skillProgress: rawSkills, loading: skillsLoading } = useGameData();
+  const definitions = useEducationSkillDefinitions();
   const { activeBooks, activeEnrollments, completedEnrollments, yesterdayProgress, isLoading, hasError } = useEducationSummary();
   const tierAccess = useSkillTierAccess(profileId, (rawSkills ?? []).map((skill) => skill.skill_slug));
   const access = tierAccess.data ?? new Map<string, boolean>();
 
-  const skills = useMemo(() => (rawSkills ?? [])
-    .filter((skill) => Number(skill.current_level) > 0 && isEducationSkillVisible(skill.skill_slug, access))
-    .map((skill) => ({ slug: skill.skill_slug, ...getSkillDisplayProgress(skill as any) })), [rawSkills, access]);
+  const skills = useMemo(() => {
+    const maxBySlug = new Map((definitions.data ?? []).map((definition) => [definition.slug, definition.max_level]));
+    return (rawSkills ?? [])
+      .filter((skill) => Number(skill.current_level) > 0 && isEducationSkillVisible(skill.skill_slug, access))
+      .map((skill) => {
+        const progress = getSkillDisplayProgress(skill as any);
+        const maxed = progress.current_level >= (maxBySlug.get(skill.skill_slug) ?? Number.POSITIVE_INFINITY);
+        return { slug: skill.skill_slug, ...progress, ...(maxed ? { is_max_level: true, next_level: null, progress_percent: 100 } : {}) };
+      });
+  }, [rawSkills, access, definitions.data]);
 
   const closest = useMemo(() => skills
     .filter((skill) => !skill.is_max_level && skill.xp_required_for_next_level !== null)
     .sort((a, b) => b.progress_percent - a.progress_percent)
     .slice(0, 5), [skills]);
 
-  const loading = isLoading || skillsLoading || tierAccess.isLoading;
+  const loading = isLoading || skillsLoading || tierAccess.isLoading || definitions.isLoading;
   if (loading) return <p className="py-12 text-center text-sm text-muted-foreground">Loading your learning dashboard...</p>;
 
   return (
     <div className="space-y-6">
-      {(hasError || tierAccess.isError) && (
+      {(hasError || tierAccess.isError || definitions.isError) && (
         <Alert variant="destructive" role="alert">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>Some education or skill eligibility records could not be verified. Refresh to see an accurate learning overview.</AlertDescription>
