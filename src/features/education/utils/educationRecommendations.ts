@@ -67,7 +67,8 @@ export function selectLearningRecommendations(args: {
       const level = Math.max(0, Number(record?.current_level) || 0);
       const status = statuses.get(skill.slug);
       if (status === "hidden" || status === "inactive" || status === "prerequisites_missing") return [];
-      if (level === 0 && status !== "available_to_unlock" && status !== "unlocked") return [];
+      // The deployed catalogue view is optional. A positive bulk tier-access result
+      // can establish eligibility even where role-availability metadata is absent.
       if (level >= skill.max_level) return [];
 
       const currentXp = Math.max(0, Number(record?.current_xp) || 0);
