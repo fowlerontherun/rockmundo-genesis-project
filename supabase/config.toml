@@ -234,3 +234,7 @@ verify_jwt = true
 # service-role-only Vault RPC gate in the handler. Never make it public.
 [functions.process-sponsorship-payments]
 verify_jwt = false
+
+# Default-off, JWT-verified scheduled DJ booking bridge.
+[functions.dj-booking-action]
+verify_jwt = true
