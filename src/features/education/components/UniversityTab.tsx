@@ -37,11 +37,6 @@ interface University {
   description: string | null;
 }
 
-interface CourseCount {
-  university_id: string;
-  count: number;
-}
-
 interface CourseWithUniversity {
   id: string;
   name: string;
@@ -246,42 +241,15 @@ export const UniversityTab = () => {
   const tierAccess = useSkillTierAccess(profileId, (courses ?? []).map((course) => course.skill_slug));
   const accessBySkill = tierAccess.data ?? new Map<string, boolean>();
 
-  const { data: courseCounts } = useQuery({
-    queryKey: ["university_course_counts"],
-    queryFn: async () => {
-      const batchSize = 1000;
-      const allRows: { university_id: string }[] = [];
-      let offset = 0;
-      let hasMore = true;
-
-      while (hasMore) {
-        const { data, error } = await supabase
-          .from("university_courses")
-          .select("university_id")
-          .eq("is_active", true)
-          .range(offset, offset + batchSize - 1);
-        if (error) throw error;
-
-        if (data && data.length > 0) {
-          allRows.push(...data);
-          offset += batchSize;
-          hasMore = data.length === batchSize;
-        } else {
-          hasMore = false;
-        }
-      }
-
-      const counts = allRows.reduce((acc, course) => {
-        acc[course.university_id] = (acc[course.university_id] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-
-      return Object.entries(counts).map(([university_id, count]) => ({
-        university_id,
-        count,
-      })) as CourseCount[];
-    },
-  });
+  // Counts must reflect only courses this character is eligible to discover.
+  const visibleCourseCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const course of courses ?? []) {
+      if (!isEducationSkillVisible(course.skill_slug, accessBySkill)) continue;
+      counts.set(course.university_id, (counts.get(course.university_id) ?? 0) + 1);
+    }
+    return counts;
+  }, [courses, accessBySkill]);
 
   // Get unique cities from universities
   const availableCities = useMemo(() => {
@@ -394,7 +362,6 @@ export const UniversityTab = () => {
     setSearchQuery("");
     setSelectedCity("current");
     setSelectedCategory("all");
-    setHideLockedCourses(true);
   };
 
   return (
@@ -406,6 +373,7 @@ export const UniversityTab = () => {
         </p>
       </div>
 
+      {tierAccess.isError && <Alert role="alert"><AlertDescription>Could not verify skill unlocks. Higher-tier courses are hidden until verification succeeds.</AlertDescription></Alert>}
       {currentEnrollments.length > 1 && <Alert role="alert"><AlertDescription>You have {currentEnrollments.length} active university enrollments. Review every course before enrolling again.</AlertDescription></Alert>}
       {currentEnrollment && (
         <Alert className="border-primary/50 bg-primary/10">
@@ -569,7 +537,7 @@ export const UniversityTab = () => {
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {cityUniversities.map((uni) => {
-                    const courseCount = courseCounts?.find((cc) => cc.university_id === uni.id)?.count ?? 0;
+                    const courseCount = visibleCourseCounts.get(uni.id) ?? 0;
                     const prestigeRating = normalizeUniversityRating(uni.prestige);
                     const qualityRating = normalizeUniversityRating(uni.quality_of_learning);
                     const prestigeBand = getUniversityPrestigeBand(prestigeRating);
