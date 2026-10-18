@@ -20,6 +20,7 @@ export default function BankingLoanDetail() {
   activeScopeRef.current = scope;
   const pendingRequest = useRef<string | null>(null);
   const keysByLine = useRef<Map<string, PaymentAttempt>>(new Map());
+  const keysScopeRef = useRef(scope);
   const [detail, setDetail] = useState<LoanDetail | null>(null);
   const [schedule, setSchedule] = useState<LoanScheduleLine[]>([]);
   const [attempts, setAttempts] = useState<any[]>([]);
@@ -32,7 +33,12 @@ export default function BankingLoanDetail() {
 
   useEffect(() => {
     let cancelled = false;
-    keysByLine.current.clear();
+    // A data reload must retain unknown-outcome payment keys; only a different
+    // account, character or loan may reset them.
+    if (keysScopeRef.current !== scope) {
+      keysByLine.current.clear();
+      keysScopeRef.current = scope;
+    }
     pendingRequest.current = null;
     setDetail(null);
     setSchedule([]);
