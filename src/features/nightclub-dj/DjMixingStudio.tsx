@@ -178,7 +178,31 @@ export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
       .map((item) => item.source + ":" + item.id));
     return libraryTracks.filter((track) => allowed.has(track.source + ":" + track.sourceId));
   }, [libraryTracks, liveBookingId, liveBooking]);
-  const [acceptedEvents, setAcceptedEvents] = useState(0);
+  const { data: recordedEvents = [] } = useQuery({
+    queryKey: ["dj-live-events", profileId, liveBookingId],
+    enabled: Boolean(liveBookingId && profileId),
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any).from("dj_live_mix_events")
+        .select("kind,deck,recorded_at")
+        .eq("booking_id", liveBookingId)
+        .eq("profile_id", profileId)
+        .order("event_no", { ascending: true }).limit(120);
+      if (error) throw error;
+      return (data ?? []) as Array<{
+        kind: "deck_play" | "tempo" | "crossfade";
+        deck: "A" | "B" | null;
+        recorded_at: string;
+      }>;
+    },
+  });
+  const mixProgress = {
+    deckA: recordedEvents.some((entry) => entry.kind === "deck_play" && entry.deck === "A"),
+    deckB: recordedEvents.some((entry) => entry.kind === "deck_play" && entry.deck === "B"),
+    tempo: recordedEvents.some((entry) => entry.kind === "tempo"),
+    crossfade: recordedEvents.some((entry) => entry.kind === "crossfade"),
+    count: recordedEvents.length,
+  };
   const sendLiveEvent = async (body: Record<string, unknown>) => {
     if (!liveBookingId) return;
     try {
@@ -188,7 +212,7 @@ export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
       if (error || data?.error) {
         throw new Error(data?.error || error?.message || "Interaction rejected");
       }
-      setAcceptedEvents((count) => count + 1);
+      await client.invalidateQueries({ queryKey: ["dj-live-events", profileId, liveBookingId] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Unable to record live DJ interaction");
     }
@@ -262,9 +286,25 @@ export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
             : "Practice with real RockMundo audio. Start each deck separately and crossfade between them."}
         </p>
         <Badge variant="outline">
-          {liveBookingId ? "Scheduled live set · " + acceptedEvents + " events accepted" : "Practice · No rewards"}
+          {liveBookingId ? "Scheduled live set · " + mixProgress.count + " events accepted" : "Practice · No rewards"}
         </Badge>
       </div>
+      {liveBookingId && (
+        <div className="rounded-md border p-3 text-sm space-y-1" aria-live="polite">
+          <p className="font-semibold">Server-verified set progress</p>
+          <p className="text-xs text-muted-foreground">
+            At least 6 accepted events, actions on both decks, one tempo and one crossfade change,
+            at least 60 seconds between first and last, and one event after the booking midpoint.
+            Adjust controls throughout your set; quick repeated actions are ignored.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Deck A: {mixProgress.deckA ? "recorded" : "not yet"} ·
+            Deck B: {mixProgress.deckB ? "recorded" : "not yet"} ·
+            Tempo: {mixProgress.tempo ? "recorded" : "not yet"} ·
+            Crossfade: {mixProgress.crossfade ? "recorded" : "not yet"}
+          </p>
+        </div>
+      )}
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Music className="h-4 w-4" /> Track Library ({tracks.length})</CardTitle></CardHeader>
         <CardContent className="space-y-3">
