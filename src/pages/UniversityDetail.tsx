@@ -621,7 +621,7 @@ export default function UniversityDetail() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 sm:gap-4">
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-muted-foreground" />
               <span>{duration} days</span>
@@ -828,10 +828,10 @@ export default function UniversityDetail() {
 
         <Card>
           <CardHeader>
-            <div className="flex justify-between items-start">
+            <div className="flex min-w-0 items-start justify-between gap-2">
               <div>
-                <CardTitle className="text-3xl">{university.name}</CardTitle>
-                <CardDescription className="text-lg mt-2">
+                <CardTitle className="break-words text-xl sm:text-3xl">{university.name}</CardTitle>
+                <CardDescription className="mt-2 text-sm sm:text-lg">
                   {university.city && `${university.city} • `}
                   <Badge variant="secondary">
                     Prestige: {prestigeRating}/100 · {prestigeBand.label}
@@ -842,7 +842,7 @@ export default function UniversityDetail() {
                   </Badge>
                 </CardDescription>
               </div>
-              <GraduationCap className="h-12 w-12 text-muted-foreground" />
+              <GraduationCap className="h-8 w-8 shrink-0 text-muted-foreground sm:h-12 sm:w-12" />
             </div>
           </CardHeader>
           <CardContent>
