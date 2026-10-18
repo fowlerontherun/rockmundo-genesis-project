@@ -108,6 +108,7 @@ export const useEducationVideoPlaylists = (): UseQueryResult<VideoPlaylist[]> =>
         .order("is_featured", { ascending: false })
         .order("difficulty_level", { ascending: true })
         .order("title", { ascending: true })
+        .order("id", { ascending: true })
         .range(offset, offset + 499);
         if (error) throw error;
         allResources.push(...((data ?? []) as YoutubeResourceRow[]));
