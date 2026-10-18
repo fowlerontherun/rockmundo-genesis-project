@@ -11,17 +11,32 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { getSkillDisplayProgress } from "@/utils/skillProgressDisplay";
 import { useEducationSkillDefinitions } from "../hooks/useEducationSkillDefinitions";
 import { useEducationSummary } from "../hooks/useEducationSummary";
+import { useBookReading } from "@/hooks/useBookReading";
 import { useSkillTierAccess, isEducationSkillVisible } from "../hooks/useSkillTierAccess";
 import { formatEducationSkillName, percentComplete } from "../utils/educationUi";
 import { EducationRecommendations } from "./EducationRecommendations";
+import { visibleEducationActivities } from "../utils/educationActivityVisibility";
 
 export const EducationOverviewTab = () => {
   const { profileId } = useActiveProfile();
   const { skillProgress: rawSkills, loading: skillsLoading } = useGameData();
   const definitions = useEducationSkillDefinitions();
-  const { activeBooks, activeEnrollments, completedEnrollments, yesterdayProgress, isLoading, hasError } = useEducationSummary();
-  const tierAccess = useSkillTierAccess(profileId, (rawSkills ?? []).map((skill) => skill.skill_slug));
+  const { activeBooks, activeEnrollments, completedEnrollments, yesterdayProgress, todayAttendance, todayAttendanceVerified, isLoading, hasError } = useEducationSummary();
+  const { processAttendance: recordReading, isProcessing: recordingReading } = useBookReading();
+  // Progress rows alone do not include unstarted course/book skills. Query every
+  // referenced skill before displaying any catalogue or legacy learning activity.
+  const relevantSkillSlugs = [
+    ...(rawSkills ?? []).map((skill) => skill.skill_slug),
+    ...activeBooks.map((book) => book.skill_books?.skill_slug),
+    ...activeEnrollments.map((enrollment) => enrollment.university_courses?.skill_slug),
+    ...completedEnrollments.map((enrollment) => enrollment.university_courses?.skill_slug),
+  ];
+  const tierAccess = useSkillTierAccess(profileId, relevantSkillSlugs);
   const access = tierAccess.data ?? new Map<string, boolean>();
+  const visibleBooks = visibleEducationActivities(activeBooks, (book) => book.skill_books?.skill_slug, access);
+  const visibleEnrollments = visibleEducationActivities(activeEnrollments, (enrollment) => enrollment.university_courses?.skill_slug, access);
+  const visibleCompleted = visibleEducationActivities(completedEnrollments, (enrollment) => enrollment.university_courses?.skill_slug, access);
+  const hiddenActiveCount = activeBooks.length + activeEnrollments.length - visibleBooks.length - visibleEnrollments.length;
 
   const skills = useMemo(() => {
     const maxBySlug = new Map((definitions.data ?? []).map((definition) => [definition.slug, definition.max_level]));
@@ -51,9 +66,12 @@ export const EducationOverviewTab = () => {
         </Alert>
       )}
 
+      {hiddenActiveCount > 0 && !tierAccess.isLoading && !tierAccess.isError && (
+        <Alert role="status"><AlertDescription>Some legacy learning activities need additional skill prerequisites before they can continue. You can manage existing reading or courses from Find Learning.</AlertDescription></Alert>
+      )}
       <div className="grid grid-cols-3 gap-2 sm:gap-4">
         <Card><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-bold">{skills.length}</p><p className="text-xs text-muted-foreground">Skills learned</p></CardContent></Card>
-        <Card><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-bold">{activeBooks.length + activeEnrollments.length}</p><p className="text-xs text-muted-foreground">In progress</p></CardContent></Card>
+        <Card><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-bold">{visibleBooks.length + visibleEnrollments.length}</p><p className="text-xs text-muted-foreground">In progress</p></CardContent></Card>
         <Card><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-bold">+{yesterdayProgress.totalXp.toLocaleString()}</p><p className="text-xs text-muted-foreground">XP yesterday</p></CardContent></Card>
       </div>
 
@@ -62,14 +80,15 @@ export const EducationOverviewTab = () => {
           <h2 className="font-semibold text-lg">Continue learning</h2>
           <Button asChild size="sm" variant="outline"><Link to="/education?tab=find">Find learning <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link></Button>
         </div>
-        {activeBooks.length === 0 && activeEnrollments.length === 0 && (
+        {visibleBooks.length === 0 && visibleEnrollments.length === 0 && (
           <Card className="border-dashed"><CardContent className="py-6">
             <p className="font-medium">No learning activities underway</p>
             <p className="mt-1 text-sm text-muted-foreground">Choose a skill to find a book, university course, video or mentor.</p>
             <Button asChild className="mt-3" size="sm"><Link to="/education?tab=skills">Choose a skill</Link></Button>
           </CardContent></Card>
         )}
-        {activeBooks.map((book) => {
+        {visibleBooks.map((book) => {
+          const recordedToday = todayAttendance.bookSessionIds.includes(book.id);
           const targetDays = Math.max(1, book.skill_books?.base_reading_days ?? 1);
           const progress = percentComplete(book.days_read, targetDays);
           return (
@@ -80,17 +99,27 @@ export const EducationOverviewTab = () => {
                   <p className="font-medium">{book.skill_books?.title ?? "Current book"}</p>
                   <p className="text-xs text-muted-foreground">Book · {formatEducationSkillName(book.skill_books?.skill_slug)} · Day {book.days_read} of {targetDays}</p>
                 </div>
-                <Badge variant="secondary">{book.auto_read ? "Auto-reading" : "Manual reading"}</Badge>
+                <Badge variant={recordedToday ? "default" : "secondary"}>
+                  {!todayAttendanceVerified ? "Checking today" : recordedToday ? "Recorded today" : book.auto_read ? "Auto-reading scheduled" : "Ready to read"}
+                </Badge>
               </div>
               <Progress value={progress} aria-label={"Book reading " + progress + "% complete"} />
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>+{book.total_skill_xp_earned} skill XP earned</span>
-                <Button size="sm" asChild><Link to="/education?tab=find&method=books">{book.auto_read ? "Manage reading" : "Record reading"}</Link></Button>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  {!book.auto_read && (
+                    <Button size="sm" onClick={() => recordReading()} disabled={!todayAttendanceVerified || recordedToday || recordingReading} aria-label={"Record today's reading: " + (book.skill_books?.title ?? "Book")}>
+                      {recordingReading ? "Recording..." : recordedToday ? "Done today" : "Record today"}
+                    </Button>
+                  )}
+                  <Button size="sm" variant="outline" asChild><Link to="/education?tab=find&method=books">Manage book</Link></Button>
+                </div>
               </div>
             </CardContent></Card>
           );
         })}
-        {activeEnrollments.map((enrollment) => {
+        {visibleEnrollments.map((enrollment) => {
+          const attendedToday = todayAttendance.universityEnrollmentIds.includes(enrollment.id);
           const start = Date.parse(enrollment.enrolled_at);
           const end = enrollment.scheduled_end_date ? Date.parse(enrollment.scheduled_end_date) : NaN;
           const scheduledDays = Number.isFinite(start) && Number.isFinite(end) && end > start
@@ -105,7 +134,9 @@ export const EducationOverviewTab = () => {
                   <p className="font-medium">{enrollment.university_courses?.name ?? "Current course"}</p>
                   <p className="text-xs text-muted-foreground">{enrollment.universities?.name ?? "University"} · Day {enrollment.days_attended} of {scheduledDays}</p>
                 </div>
-                <Badge variant="secondary">{enrollment.auto_attend ? "Auto-attend" : "Manual attendance"}</Badge>
+                <Badge variant={attendedToday ? "default" : "secondary"}>
+                  {!todayAttendanceVerified ? "Checking today" : attendedToday ? "Attended today" : enrollment.auto_attend ? "Auto-attend scheduled" : "Class not yet attended"}
+                </Badge>
               </div>
               <Progress value={progress} aria-label={"University course " + progress + "% complete"} />
               <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -140,10 +171,10 @@ export const EducationOverviewTab = () => {
         ...activeEnrollments.map((course) => course.university_courses?.skill_slug).filter((slug): slug is string => Boolean(slug)),
       ]} />
 
-      {completedEnrollments.length > 0 && (
+      {visibleCompleted.length > 0 && (
         <section className="space-y-2" aria-label="Recent achievements">
           <h2 className="font-semibold text-lg">Recent achievements</h2>
-          {completedEnrollments.slice(0, 3).map((enrollment) => (
+          {visibleCompleted.slice(0, 3).map((enrollment) => (
             <div key={enrollment.id} className="flex items-center gap-2 rounded-md border p-3 text-sm">
               <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
               <span className="flex-1">{enrollment.university_courses?.name ?? "Completed course"}</span>
