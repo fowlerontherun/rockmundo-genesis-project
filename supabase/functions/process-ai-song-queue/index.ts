@@ -42,6 +42,9 @@ Deno.serve(async (req) => {
       p_attempt:attemptId,p_reason:reason.slice(0,650),
     })
     if (error) console.error("[ai-song-queue] Cannot flag uncertain paid request",error.message)
+    if (flagged===true) console.warn("[ai-song-queue] ACTION REQUIRED: provider submission uncertain; review original attempt before any paid retry",{
+      attemptId,songId,
+    })
     return json({status:"needs_review",attemptId,flagged:flagged===true})
   }
   const fail = async (reason:string) => {
