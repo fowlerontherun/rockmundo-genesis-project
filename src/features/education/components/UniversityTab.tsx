@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Loader2, GraduationCap, Search, MapPin, Globe, Filter, Music, Mic, Headphones, Radio, Zap, PenTool, Cpu, X, Clock, DollarSign, TrendingUp, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -102,6 +102,7 @@ function formatSkillSlug(slug: string): string {
 }
 
 export const UniversityTab = () => {
+  const universityBase = useLocation().pathname.startsWith("/mobile") ? "/mobile/university/" : "/university/";
   const { profileId } = useActiveProfile();
   const focusedSkill = new URLSearchParams(window.location.search).get("skill");
   const [searchQuery, setSearchQuery] = useState("");
@@ -389,7 +390,7 @@ export const UniversityTab = () => {
           <AlertDescription>
             You are currently enrolled in <strong>{currentEnrollment.university_courses?.name}</strong> at{" "}
             <strong>{currentEnrollment.universities?.name}</strong>.{" "}
-            <Link to={`/university/${currentEnrollment.university_id}`} className="underline hover:text-primary">
+            <Link to={`${universityBase}${currentEnrollment.university_id}`} className="underline hover:text-primary">
               View enrollment details
             </Link>
           </AlertDescription>
@@ -584,7 +585,7 @@ export const UniversityTab = () => {
                             </div>
                           </div>
                           <Button asChild variant="secondary" size="sm" className="w-full">
-                            <Link to={`/university/${uni.id}`}>Browse Courses</Link>
+                            <Link to={`${universityBase}${uni.id}`}>Browse Courses</Link>
                           </Button>
                         </CardContent>
                       </Card>
@@ -704,7 +705,7 @@ export const UniversityTab = () => {
                             </div>
                           ) : (
                             <Button asChild variant="ghost" size="sm" className="mt-2 w-full">
-                              <Link to={`/university/${course.university_id}`}>View University</Link>
+                              <Link to={`${universityBase}${course.university_id}`}>View University</Link>
                             </Button>
                           )}
                         </div>

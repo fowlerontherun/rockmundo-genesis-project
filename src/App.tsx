@@ -58,6 +58,7 @@ const MobileLayout = lazyWithRetry(() => import("./mobile/shell/MobileLayout"));
 const MobileHome = lazyWithRetry(() => import("./mobile/pages/MobileHome"));
 const MobileSocial = lazyWithRetry(() => import("./mobile/pages/MobileSocial"));
 const MobileProgression = lazyWithRetry(() => import("./mobile/pages/MobileProgression"));
+const MobileEducation = lazyWithRetry(() => import("./mobile/pages/MobileEducation"));
 const Index = lazyWithRetry(() => import("./pages/Index"));
 const Landing = lazyWithRetry(() => import("./pages/Landing"));
 const Inbox = lazyWithRetry(() => import("./pages/Inbox"));
@@ -530,6 +531,8 @@ function App() {
                     <Route path="inbox" element={<MobileSocial />} />
                     <Route path="chat" element={<MobileSocial />} />
                     <Route path="progression" element={<MobileProgression />} />
+                    <Route path="education" element={<MobileEducation />} />
+                    <Route path="university/:id" element={<UniversityDetail />} />
                     <Route path="*" element={<Navigate to="/mobile" replace />} />
                   </Route>
                   <Route element={<Layout />}>
