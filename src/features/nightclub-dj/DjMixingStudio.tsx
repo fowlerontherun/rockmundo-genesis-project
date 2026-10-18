@@ -15,6 +15,7 @@ import { filterDjTracks, getDjPlaybackUrl, type DjAudioTrack, useDjTrackLibrary 
 import { clampDeckRate, equalPowerCrossfade, formatDjTime, syncDeckRate } from "./mixerMath";
 import { DjSetlistPlanner } from "./DjSetlistPlanner";
 import { djReadinessSteps, useDjMixReadiness } from "./djReadiness";
+import { bindDjDeckLifecycle } from "./deckAudioLifecycle";
 
 function AudioDeck({
   deck, tracks, selectedId, onSelect, level, rate, onRateChange, onDeckPlay, onRateCommit,
@@ -33,6 +34,13 @@ function AudioDeck({
   const [elapsed, setElapsed] = useState(0);
   const [duration, setDuration] = useState(0);
   const [cue, setCue] = useState(0);
+  const [retryNonce, setRetryNonce] = useState(0);
+
+  useEffect(() => {
+    const player = audioRef.current;
+    if (!player) return;
+    return bindDjDeckLifecycle(player, document, window);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -46,6 +54,7 @@ function AudioDeck({
     setDuration(0);
     setCue(0);
     setError(null);
+    setLoading(false);
     if (!track) return;
     setLoading(true);
     getDjPlaybackUrl(track).then((url) => {
@@ -61,7 +70,9 @@ function AudioDeck({
       player.removeAttribute("src");
       player.load();
     };
-  }, [selectedId]);
+  // A catalogue refresh can replace or withdraw a track without changing its ID.
+  // Restart with the new source; never keep a stale, rights-revoked URL playing.
+  }, [track, retryNonce]);
 
   useEffect(() => {
     if (!audioRef.current) return;
@@ -114,7 +125,13 @@ function AudioDeck({
           onEnded={() => setPlaying(false)}
           onTimeUpdate={(event) => setElapsed(event.currentTarget.currentTime)}
           onLoadedMetadata={(event) => setDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0)}
-          onError={() => { if (track && !loading) setError("Could not load this audio file"); }}
+          onError={(event) => {
+            if (track && !loading) {
+              event.currentTarget.pause();
+              setPlaying(false);
+              setError("Could not load this audio file");
+            }
+          }}
         />
         <div className="space-y-1">
           <Slider aria-label={`Deck ${deck} seek position`} value={[Math.min(elapsed, duration || 1)]}
@@ -147,7 +164,15 @@ function AudioDeck({
             onValueChange={([value]) => onRateChange(clampDeckRate(value / 100))}
             onValueCommit={([value]) => onRateCommit?.(deck, value)} />
         </div>
-        {error && <p className="text-xs text-destructive" role="alert">{error}</p>}
+        {error && (
+          <div className="flex flex-wrap items-center gap-2" role="alert">
+            <p className="text-xs text-destructive">{error}</p>
+            <Button type="button" size="sm" variant="outline" disabled={!track || loading}
+              onClick={() => setRetryNonce((value) => value + 1)}>
+              <RotateCcw className="mr-1 h-3 w-3" /> Retry audio
+            </Button>
+          </div>
+        )}
         {loading && <p className="text-xs text-muted-foreground">Preparing playable audio...</p>}
       </CardContent>
     </Card>
