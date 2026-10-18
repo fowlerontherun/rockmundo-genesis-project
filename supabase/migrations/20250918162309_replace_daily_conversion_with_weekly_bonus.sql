@@ -227,7 +227,7 @@ BEGIN
   PERFORM cron.schedule(
     'weekly_experience_bonus',
     '15 5 * * 1',
-    $$SELECT public.process_weekly_experience_bonus();$$
+    $weekly_bonus_command$SELECT public.process_weekly_experience_bonus();$weekly_bonus_command$
   );
 END;
 $$;
