@@ -26,6 +26,8 @@ export default function BankingLoanDetail() {
   const [message, setMessage] = useState<string>();
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadNonce, setReloadNonce] = useState(0);
   const [retryingLineId, setRetryingLineId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -37,6 +39,7 @@ export default function BankingLoanDetail() {
     setAttempts([]);
     setError(undefined);
     setMessage(undefined);
+    setLoadFailed(false);
     setRetryingLineId(null);
     setLoading(true);
     if (!loanId || !profileId || !userId) {
@@ -51,10 +54,12 @@ export default function BankingLoanDetail() {
         setSchedule(lines);
         setAttempts(paymentAttempts);
       })
-      .catch((err) => { if (!cancelled) setError(err instanceof Error ? err.message : "Loan data could not be loaded."); })
+      .catch((err) => {
+        if (!cancelled) { setLoadFailed(true); setError(err instanceof Error ? err.message : "Loan data could not be loaded."); }
+      })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [loanId, profileId, userId]);
+  }, [loanId, profileId, userId, reloadNonce]);
 
   async function retry(lineId: string) {
     if (!loanId || !profileId || !userId || loading || !detail || pendingRequest.current) return;
@@ -71,7 +76,7 @@ export default function BankingLoanDetail() {
     try {
       // Retries after timeouts use the original key; never issue two independent
       // payment attempts from a double click.
-      await retryLoanPayment({
+      const settlement = await retryLoanPayment({
         loanContractId: attempt.contractId, scheduleLineId: attempt.lineId,
         idempotencyKey: attempt.key,
       });
@@ -90,7 +95,9 @@ export default function BankingLoanDetail() {
       setMessage(verifiedLine.status === "paid"
         ? "Payment confirmed by the bank."
         : `Payment request processed; instalment is ${verifiedLine.status}. Check the schedule before trying again.`);
-      if (verifiedLine.status === "paid") keysByLine.current.delete(lineId);
+      if (verifiedLine.status === "paid" || (settlement?.status === "failed" && verifiedLine.status === "failed")) {
+        keysByLine.current.delete(lineId);
+      }
     } catch (err) {
       if (activeScopeRef.current === startingScope) {
         setError(err instanceof Error ? err.message : "Payment status is unknown. Retry to verify using the same request.");
@@ -108,6 +115,7 @@ export default function BankingLoanDetail() {
         <CardContent className="space-y-4 text-sm">
           {loading && <p role="status">Loading loan details...</p>}
           {error && <p role="alert" className="text-destructive">{error}</p>}
+          {loadFailed && <Button variant="outline" size="sm" onClick={() => setReloadNonce((count) => count + 1)}>Retry loading loan</Button>}
           {!loading && !profileId && <p role="status">Select an active character to view a loan.</p>}
           {detail && <div className="grid gap-2 md:grid-cols-3"><p>Status: {detail.status}</p><p>Principal: {formatCurrencyMinor(detail.principalMinor, detail.currencyCode)}</p><p>Outstanding: {formatCurrencyMinor(detail.outstandingPrincipalMinor, detail.currencyCode)}</p><p>Rate: {detail.interestRateBps / 100}%</p><p>Fee: {formatCurrencyMinor(detail.originationFeeMinor, detail.currencyCode)}</p><p>Next exact payment: {formatCurrencyMinor(detail.nextPaymentMinor, detail.currencyCode)} on {detail.nextPaymentDate ?? "—"}</p></div>}
           <div><h3 className="font-semibold">Schedule</h3>{schedule.map((line) => (
