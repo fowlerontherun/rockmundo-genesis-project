@@ -6,6 +6,9 @@
 
 - `20261018082915_dj_server_timed_mixer_evidence_settlement_gate_20261018.sql`
 - `20261018083044_dj_verified_live_mix_event_service_dispatch_20261018.sql`
+- `20261018083940_dj_live_mixer_trigger_permission_hardening_20261018.sql`
+  (post-deploy security-advisor fix revoking explicit anon/authenticated
+  EXECUTE grants on the internal trigger functions).
 
 The new `public.dj_live_mix_events` table is an immutable, owner-readable,
 **server-written** event ledger. All ordinary authenticated/anonymous accounts
@@ -55,6 +58,11 @@ authenticated `dj-booking-action` Edge endpoint with event metadata.
 The Edge server verifies the JWT, validates controls, and binds the verified
 account ID to the service-role event RPC.
 
+A persisted, owner-read DJ event query restores the accepted event count
+and deck/tempo/crossfade checklist after the user reloads or reopens the
+live studio. The UI counter reports only server-accepted rows, not
+unverified client attempts.
+
 The booked-set panel also includes **Start DJ performance**, **Open live
 mixing decks**, and **Finish and verify** actions. The server, rather than the
 buttons, enforces actual due times, matching club city, energy, rights, paid
@@ -82,6 +90,10 @@ the updated `dj_atomic_booked_settlement_harness.sql` proving:
   authenticated accounts cannot forge event records.
 - Normal booking, missed-set cron, club hours, calendar and education/band
   conflict regression suites remain passing.
+
+After the security follow-up, the Supabase advisor stopped flagging the
+new SECURITY DEFINER settlement trigger. Direct permission checks confirm
+anon and authenticated accounts cannot execute either internal trigger.
 
 After tests: 0 booked DJ sets, 0 session rows, 0 settlements, 0 mix events,
 0 linked DJ calendar rows. Verified a live settlement gate trigger and denied
