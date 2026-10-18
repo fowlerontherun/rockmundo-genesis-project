@@ -292,3 +292,35 @@ INSERT INTO public.nightclub_quests (club_id, npc_id, title, description, quest_
 ((SELECT id FROM public.city_night_clubs WHERE lower(name) = lower('The Velvet Room') ORDER BY created_at LIMIT 1), 'vincent_noir', 'The Velvet Residency', 'Secure a recurring DJ residency at The Velvet Room.', 'chain', 3, 'velvet_room_vincent', '{"min_fame":2500}', '[{"speaker":"npc","text":"You''ve entertained my guests. You''ve networked with the elite. Now... one final proposition."},{"speaker":"player_choice","options":[{"label":"A residency?","next":2,"affinity_change":5},{"label":"Name your price","next":3,"affinity_change":3}]},{"speaker":"npc","text":"A weekly residency at The Velvet Room. Guaranteed slot, pay, and prestige."},{"speaker":"npc","text":"It''s not about price. It''s about prestige. Are you in?"},{"speaker":"npc","text":"Welcome to the family. Your residency starts next week.","quest_complete":true}]', '{"cash":5000,"fame":300,"fans":200,"xp":200,"skill_boost":{"skill":"performance","amount":2},"equipment_reward":true,"npc_relationship":{"affinity":20,"trust":20,"respect":20}}', 25, 0),
 ((SELECT id FROM public.city_night_clubs WHERE lower(name) = lower('The Haccienda') ORDER BY created_at LIMIT 1), 'hacc_dj', 'Madchester Memories', 'Recreate the spirit of the original Madchester movement at The Haccienda.', 'one_time', null, null, '{"min_fame":3000}', '[{"speaker":"npc","text":"This building has history, mate. The Smiths, Joy Division, Happy Mondays — they all came through here."},{"speaker":"player_choice","options":[{"label":"I''m here to make new history","next":2,"affinity_change":10},{"label":"Tell me about the old days","next":3,"affinity_change":5}]},{"speaker":"npc","text":"That''s what I want to hear! Play a set that honours the past but pushes forward."},{"speaker":"npc","text":"Where do I begin? It was magic. But prove the magic isn''t dead."},{"speaker":"npc","text":"That was something special. The Haccienda lives on through people like you.","quest_complete":true}]', '{"cash":3000,"fame":200,"xp":150,"fans":150,"skill_boost":{"skill":"performance","amount":2},"npc_relationship":{"affinity":20,"trust":15,"respect":20}}', 20, 0),
 ((SELECT id FROM public.city_night_clubs WHERE lower(name) = lower('The Electric Basement') ORDER BY created_at LIMIT 1), 'rebel_dj', 'Open Deck Night', 'DJ Rebel is hosting an open deck night. Step up for one track.', 'repeatable', null, null, '{"min_fame":0}', '[{"speaker":"npc","text":"Open deck night! Step up, play one track, show us what you''ve got."},{"speaker":"player_choice","options":[{"label":"Let me on those decks!","next":2,"affinity_change":2},{"label":"Maybe next time","next":3,"affinity_change":0}]},{"speaker":"npc","text":"Get up there! One track, make it count."},{"speaker":"npc","text":"No worries, next time."},{"speaker":"npc","text":"Solid track choice. Getting better every time.","quest_complete":true}]', '{"cash":50,"xp":25,"fame":10,"npc_relationship":{"affinity":3}}', 5, 24);
+
+-- Required by the April nightclub quest catalogue. This original venue was
+-- previously created only on the live instance, not by the historical seed.
+-- Never duplicate an existing club on migration replay.
+DO $seed_black_sheep$
+DECLARE
+  london uuid;
+BEGIN
+  SELECT id INTO london FROM public.cities
+  WHERE name = 'London' AND country = 'United Kingdom'
+  ORDER BY id LIMIT 1;
+  IF london IS NULL THEN
+    RAISE EXCEPTION 'Cannot seed The Black Sheep: London city is missing';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.city_night_clubs
+    WHERE city_id = london AND name = 'The Black Sheep'
+  ) THEN
+    INSERT INTO public.city_night_clubs (
+      city_id, name, description, quality_level, capacity, cover_charge,
+      npc_profiles, dj_slot_config, metadata
+    ) VALUES (
+      london,
+      'The Black Sheep',
+      'Dirty, dark and dingy, but an alternative music fan favourite.',
+      1, 200, 10,
+      '[{"id":"blacksheep_owner_maz","name":"Maz","role":"Club Owner"}]'::jsonb,
+      '{}'::jsonb,
+      '{"live_interactions_enabled":true,"dj_schedule_needs_configuration":true}'::jsonb
+    );
+  END IF;
+END $seed_black_sheep$;
