@@ -253,6 +253,13 @@ export default function StreamingRevenueDashboard() {
         </Button>
       }
     >
+      {!profileId && (
+        <Card role="status">
+          <CardContent className="p-4 text-sm text-muted-foreground">
+            Select an active character to load streaming revenue for your current bands.
+          </CardContent>
+        </Card>
+      )}
       {isError && (
         <Card role="alert" className="border-destructive/50">
           <CardContent className="p-4 flex flex-wrap items-center justify-between gap-2">
