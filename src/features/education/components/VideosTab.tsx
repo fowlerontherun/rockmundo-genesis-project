@@ -35,6 +35,7 @@ import {
 import { useEducationVideoPlaylists } from "../hooks/useEducationVideoPlaylists";
 import { getCooldownStatus, useWatchVideo } from "../hooks/useWatchVideo";
 import { isEducationSkillVisible, useSkillTierAccess } from "../hooks/useSkillTierAccess";
+import { matchesEducationSkillFocus } from "../utils/educationSkillFocus";
 import type { VideoResource } from "../types";
 
 type DifficultyFilter = "all" | "1" | "2" | "3";
@@ -71,7 +72,8 @@ export const VideosTab = () => {
 
   const [cooldownStatus, setCooldownStatus] = useState(() => getCooldownStatus(profileId));
   const [search, setSearch] = useState("");
-  const [selectedSkill, setSelectedSkill] = useState(() => new URLSearchParams(window.location.search).get("skill") ?? "all");
+  const focusedSkill = new URLSearchParams(window.location.search).get("skill");
+  const [selectedSkill, setSelectedSkill] = useState("all");
   const [difficulty, setDifficulty] = useState<DifficultyFilter>("all");
   const [duration, setDuration] = useState<DurationFilter>("all");
   const [selectedTag, setSelectedTag] = useState("all");
@@ -135,6 +137,7 @@ export const VideosTab = () => {
   const filteredVideos = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
     const result = visibleVideos.filter((video) => {
+      if (!matchesEducationSkillFocus(video.skillSlug, focusedSkill)) return false;
       if (selectedSkill !== "all" && video.skillSlug !== selectedSkill) return false;
       if (difficulty !== "all" && video.difficulty !== Number(difficulty)) return false;
       if (!matchesDuration(video, duration)) return false;
@@ -173,6 +176,7 @@ export const VideosTab = () => {
     });
   }, [
     visibleVideos,
+    focusedSkill,
     difficulty,
     duration,
     followingOnly,
@@ -329,7 +333,7 @@ export const VideosTab = () => {
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <Select value={selectedSkill} onValueChange={setSelectedSkill}>
+            <Select value={selectedSkill} onValueChange={setSelectedSkill} disabled={Boolean(focusedSkill)}>
               <SelectTrigger>
                 <SelectValue placeholder="Skill" />
               </SelectTrigger>
