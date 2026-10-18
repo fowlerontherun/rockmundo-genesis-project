@@ -17,6 +17,14 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.796",
+    date: "2026-10-17",
+    changes: [
+      { type: "feature", description: "New Skin Market tab: players sell real-money skins (single items or full sets) to each other for £0.99–£49.99, paid by card with Stripe payouts to sellers and a 15% market fee." },
+      { type: "feature", description: "Listed items can't be worn; checkout holds a listing for 30 minutes; refunds return the item to the seller." },
+    ],
+  },
+  {
     version: "1.1.795",
     date: "2026-10-17",
     changes: [

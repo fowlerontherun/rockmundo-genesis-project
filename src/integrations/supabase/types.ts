@@ -14661,6 +14661,105 @@ export type Database = {
           },
         ]
       }
+      dj_audio_tracks: {
+        Row: {
+          artist: string
+          bpm: number | null
+          created_at: string
+          duration_seconds: number | null
+          genre: string
+          id: string
+          is_active: boolean
+          musical_key: string | null
+          rights_confirmed: boolean
+          rights_notes: string | null
+          storage_path: string
+          title: string
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          artist: string
+          bpm?: number | null
+          created_at?: string
+          duration_seconds?: number | null
+          genre?: string
+          id?: string
+          is_active?: boolean
+          musical_key?: string | null
+          rights_confirmed?: boolean
+          rights_notes?: string | null
+          storage_path: string
+          title: string
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          artist?: string
+          bpm?: number | null
+          created_at?: string
+          duration_seconds?: number | null
+          genre?: string
+          id?: string
+          is_active?: boolean
+          musical_key?: string | null
+          rights_confirmed?: boolean
+          rights_notes?: string | null
+          storage_path?: string
+          title?: string
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: []
+      }
+      dj_setlists: {
+        Row: {
+          created_at: string
+          id: string
+          items: Json
+          name: string
+          profile_id: string
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          items?: Json
+          name: string
+          profile_id: string
+          updated_at?: string
+          user_id: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          items?: Json
+          name?: string
+          profile_id?: string
+          updated_at?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dj_setlists_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dj_setlists_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       donation_reward_redemptions: {
         Row: {
           profile_id: string
@@ -58851,6 +58950,7 @@ export type Database = {
           cover_flat_fee: number
           cover_royalty_percentage: number
           created_at: string
+          dj_use_allowed: boolean
           duration_display: string | null
           duration_seconds: number | null
           extended_audio_generated_at: string | null
@@ -58926,6 +59026,7 @@ export type Database = {
           cover_flat_fee?: number
           cover_royalty_percentage?: number
           created_at?: string
+          dj_use_allowed?: boolean
           duration_display?: string | null
           duration_seconds?: number | null
           extended_audio_generated_at?: string | null
@@ -59001,6 +59102,7 @@ export type Database = {
           cover_flat_fee?: number
           cover_royalty_percentage?: number
           created_at?: string
+          dj_use_allowed?: boolean
           duration_display?: string | null
           duration_seconds?: number | null
           extended_audio_generated_at?: string | null
