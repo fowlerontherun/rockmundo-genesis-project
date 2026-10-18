@@ -94,10 +94,10 @@ export const EducationExploreTab = () => {
       </nav>
       {(!skill || skillVisible) && (
         <>
-          {method === "books" && <BooksTab />}
-          {method === "university" && <UniversityTab />}
-          {method === "videos" && <VideosTab />}
-          {method === "mentors" && <MentorsTab />}
+          {method === "books" && <BooksTab key={skill ?? "all"} />}
+          {method === "university" && <UniversityTab key={skill ?? "all"} />}
+          {method === "videos" && <VideosTab key={skill ?? "all"} />}
+          {method === "mentors" && <MentorsTab key={skill ?? "all"} />}
           {method === "players" && <PlayerLearningNetwork />}
         </>
       )}
