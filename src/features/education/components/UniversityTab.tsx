@@ -26,6 +26,7 @@ import {
   normalizeUniversityRating,
 } from "@/lib/universityBalance";
 import { isEducationSkillVisible, useSkillTierAccess } from "../hooks/useSkillTierAccess";
+import { matchesEducationSkillFocus } from "../utils/educationSkillFocus";
 
 interface University {
   id: string;
@@ -102,7 +103,8 @@ function formatSkillSlug(slug: string): string {
 
 export const UniversityTab = () => {
   const { profileId } = useActiveProfile();
-  const [searchQuery, setSearchQuery] = useState(() => new URLSearchParams(window.location.search).get("skill") ?? "");
+  const focusedSkill = new URLSearchParams(window.location.search).get("skill");
+  const [searchQuery, setSearchQuery] = useState("");
   // Skill-first links should compare the full catalogue, not silently restrict to a city.
   const [selectedCity, setSelectedCity] = useState<string>(() => new URLSearchParams(window.location.search).get("skill") ? "all" : "current");
   const [selectedCategory, setSelectedCategory] = useState<SkillCategory>("all");
@@ -296,7 +298,7 @@ export const UniversityTab = () => {
     let result = courses;
     if (selectedCity === "current" && !currentCityName) return [];
 
-    result = result.filter(c => isEducationSkillVisible(c.skill_slug, accessBySkill));
+    result = result.filter(c => isEducationSkillVisible(c.skill_slug, accessBySkill) && matchesEducationSkillFocus(c.skill_slug, focusedSkill));
 
     // Filter by city
     if (filterCity) {
@@ -326,7 +328,7 @@ export const UniversityTab = () => {
     }
     
     return result;
-  }, [courses, selectedCity, currentCityName, filterCity, searchQuery, selectedCategory, accessBySkill]);
+  }, [courses, selectedCity, currentCityName, filterCity, searchQuery, selectedCategory, accessBySkill, focusedSkill]);
 
   // Group filtered universities by city
   const groupedUniversities = useMemo(() => {
@@ -346,7 +348,7 @@ export const UniversityTab = () => {
     const counts: Record<string, number> = {};
     let cityFiltered = courses;
     if (selectedCity === "current" && !currentCityName) return {};
-    cityFiltered = cityFiltered.filter(c => isEducationSkillVisible(c.skill_slug, accessBySkill));
+    cityFiltered = cityFiltered.filter(c => isEducationSkillVisible(c.skill_slug, accessBySkill) && matchesEducationSkillFocus(c.skill_slug, focusedSkill));
     if (filterCity) {
       cityFiltered = cityFiltered.filter(c => c.universities?.city === filterCity);
     }
@@ -355,13 +357,13 @@ export const UniversityTab = () => {
       counts[cat] = (counts[cat] || 0) + 1;
     }
     return counts;
-  }, [courses, selectedCity, currentCityName, filterCity, accessBySkill]);
+  }, [courses, selectedCity, currentCityName, filterCity, accessBySkill, focusedSkill]);
 
   const hasActiveFilters = searchQuery.trim() || selectedCity !== "current" || selectedCategory !== "all";
 
   const clearAllFilters = () => {
     setSearchQuery("");
-    setSelectedCity("current");
+    setSelectedCity(focusedSkill ? "all" : "current");
     setSelectedCategory("all");
   };
 

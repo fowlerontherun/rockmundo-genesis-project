@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/lib/supabase-types";
 import { isEducationSkillVisible, useSkillTierAccess } from "../hooks/useSkillTierAccess";
+import { matchesEducationSkillFocus } from "../utils/educationSkillFocus";
 
 type SkillBook = Tables<"skill_books">;
 type EnrichedSkillBook = SkillBook & { skill_display_name?: string };
@@ -129,13 +130,14 @@ export const BooksTab = () => {
     return Array.from(cats).sort();
   }, [typedBooks, visibleBooks]);
 
-  const [searchQuery, setSearchQuery] = useState(() => new URLSearchParams(window.location.search).get("skill") ?? "");
+  const focusedSkill = new URLSearchParams(window.location.search).get("skill");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedSkill, setSelectedSkill] = useState<string>("all");
 
   const groupedBooks = useMemo(() => {
     if (!typedBooks) return null;
     
-    let filtered = visibleBooks;
+    let filtered = visibleBooks.filter((book) => matchesEducationSkillFocus(book.skill_slug, focusedSkill));
 
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
@@ -159,7 +161,7 @@ export const BooksTab = () => {
     }
     
     return Object.fromEntries(groups.entries());
-  }, [typedBooks, visibleBooks, searchQuery, selectedSkill]);
+  }, [typedBooks, visibleBooks, searchQuery, selectedSkill, focusedSkill]);
 
   const hasActiveFilters = searchQuery.trim() || selectedSkill !== "all";
 
@@ -187,7 +189,7 @@ export const BooksTab = () => {
             className="pl-9"
           />
         </div>
-        <Select value={selectedSkill} onValueChange={setSelectedSkill}>
+        <Select value={selectedSkill} onValueChange={setSelectedSkill} disabled={Boolean(focusedSkill)}>
           <SelectTrigger className="w-full sm:w-[260px]">
             <SelectValue placeholder="Filter by skill" />
           </SelectTrigger>
