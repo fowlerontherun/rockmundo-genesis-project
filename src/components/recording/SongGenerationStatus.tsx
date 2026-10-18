@@ -82,9 +82,18 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
     staleTime: 10_000,
   });
   const failureReason = latestAttempt?.error_message || "";
+  // A short, provider-successful MP3 is kept as a listen-only preview.
+  // Only expose a path scoped to this song; it is NOT a valid generated master.
+  const previewMatch = failureReason.match(
+    /Preview stored: (short-previews\/[a-f0-9-]+\/[a-f0-9-]+\.mp3|repair-previews\/20261018\/[a-f0-9-]+\/[a-f0-9-]+\.mp3)/i
+  );
+  const shortPreviewPath = previewMatch?.[1]?.includes("/" + songId + "/") ? previewMatch[1] : null;
+  const shortPreviewUrl = shortPreviewPath
+    ? supabase.storage.from("music").getPublicUrl(shortPreviewPath).data.publicUrl
+    : null;
   const failureHint = /throttled|rate.?limit|429/i.test(failureReason)
     ? "The audio provider rate-limited the last request. Avoid repeatedly retrying while provider credit is low."
-    : /too short|duration.*outside|60.?90/i.test(failureReason)
+    : /too short|duration.*outside|duration.*under|60.?90/i.test(failureReason)
     ? "The provider returned an unsuitable length. RockMundo now targets 60–90 seconds; review your lyrics before retrying."
     : /SERVICE_ROLE_REQUIRED|permission/i.test(failureReason)
     ? "A server permission error interrupted generation. Contact an administrator before spending credit on another attempt."
@@ -391,6 +400,20 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
             )}
           </AlertDescription>
         </Alert>
+        {shortPreviewUrl && (
+          <Alert className="mt-2">
+            <Music className="h-4 w-4" />
+            <AlertDescription className="space-y-2">
+              <span className="block text-sm">
+                A short recording was recovered from the paid AI generation.
+                It is a preview only; the song still needs 60–90 seconds of audio.
+              </span>
+              <audio controls preload="none" src={shortPreviewUrl}
+                aria-label={`Short AI audio preview for ${songTitle}`}
+                className="w-full" />
+            </AlertDescription>
+          </Alert>
+        )}
       </>
     );
   }
