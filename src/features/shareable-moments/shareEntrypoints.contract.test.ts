@@ -68,6 +68,17 @@ describe("Shareable Moments migrated entrypoint contracts", () => {
     expect(source).toContain("<ShareMomentSheet");
   });
 
+  it("includes the active player avatar in source-page gig, band and release posters", () => {
+    const gig = read("src/components/schedule/GigDetailsDialog.tsx");
+    const band = read("src/pages/BandProfile.tsx");
+    const releases = read("src/components/releases/MyReleasesTab.tsx");
+    expect(gig).toContain("{shareMoment && <AvatarShareStudio");
+    expect(band).toContain("band.band_members?.some(member => member.profile_id === profileId)");
+    expect(band).toContain("<AvatarShareStudio moment={shareMoment}");
+    expect(releases).toContain("{promoMoment && <AvatarShareStudio");
+    expect(releases).toContain("{shareMoment && <AvatarShareStudio");
+  });
+
   it("keeps release manual and milestone sharing on the shared sheet", () => {
     const source = read("src/components/releases/MyReleasesTab.tsx");
     expect(source).toContain('from "@/features/shareable-moments/ShareMomentSheet"');

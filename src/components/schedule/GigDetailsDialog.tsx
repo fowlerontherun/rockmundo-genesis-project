@@ -9,7 +9,7 @@ import { TicketSalesDisplay } from "@/components/gig/TicketSalesDisplay";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
+import { AvatarShareStudio } from "@/features/shareable-moments/CharacterShareStudio";
 import type { ShareMoment } from "@/features/shareable-moments/types";
 
 interface GigDetailsDialogProps {
@@ -170,7 +170,7 @@ export function GigDetailsDialog({ open, onOpenChange, gigId }: GigDetailsDialog
         )}
       </DialogContent>
     </Dialog>
-      <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(next) => { if (!next) setShareMoment(null); }} />
+      {shareMoment && <AvatarShareStudio moment={shareMoment} open={true} onOpenChange={(next) => { if (!next) setShareMoment(null); }} />}
     </>
   );
 }
