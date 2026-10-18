@@ -8,6 +8,7 @@ import {
   Lock,
   Play,
   Search,
+  ExternalLink,
   SlidersHorizontal,
   Star,
   X,
@@ -37,6 +38,7 @@ import { getCooldownStatus, useWatchVideo } from "../hooks/useWatchVideo";
 import { isEducationSkillVisible, useSkillTierAccess } from "../hooks/useSkillTierAccess";
 import { matchesEducationSkillFocus } from "../utils/educationSkillFocus";
 import type { VideoResource } from "../types";
+import { isDirectYouTubeLesson, videoTutorialSearchUrl } from "../utils/educationVideoLinks";
 
 type DifficultyFilter = "all" | "1" | "2" | "3";
 type DurationFilter = "all" | "short" | "medium" | "long";
@@ -103,6 +105,7 @@ export const VideosTab = () => {
   }, [playlists]);
 
   const tierAccess = useSkillTierAccess(profileId, allVideos.map((video) => video.skillSlug));
+  const directLessons = allVideos.filter((video) => isDirectYouTubeLesson(video.url));
   const accessBySkill = tierAccess.data ?? new Map<string, boolean>();
   const visibleVideos = useMemo(() => allVideos.filter((video) => isEducationSkillVisible(video.skillSlug, accessBySkill)), [allVideos, accessBySkill]);
 
@@ -252,13 +255,13 @@ export const VideosTab = () => {
         <div>
           <h2 className="text-xl font-semibold">PooTube Learning Library</h2>
           <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-            Search lessons by skill, difficulty, length or topic. Subscribe to skills you are learning so their lessons rise to the top.
+            Find lessons by skill, difficulty, length or topic. YouTube search links are discovery aids, not completed lessons or guaranteed video recordings.
           </p>
         </div>
         {!isLoading && !isError && (
           <div className="flex gap-2 text-xs text-muted-foreground">
-            <Badge variant="secondary">{visibleVideos.length} lessons</Badge>
-            <Badge variant="outline">{skillOptions.length} skills</Badge>
+            <Badge variant="secondary">{directLessons.length} direct lessons</Badge>
+            <Badge variant="outline">{allVideos.length - directLessons.length} discovery links to review</Badge>
           </div>
         )}
       </div>
@@ -432,15 +435,25 @@ export const VideosTab = () => {
         </Alert>
       ) : filteredVideos.length === 0 ? (
         <div className="rounded-lg border border-dashed bg-muted/40 p-8 text-center">
-          <p className="font-medium">No lessons match those filters.</p>
-          <p className="mt-1 text-sm text-muted-foreground">Try another skill or clear some filters.</p>
-          <Button className="mt-4" variant="outline" onClick={clearFilters}>Clear filters</Button>
+          <p className="font-medium">{focusedSkill ? "No curated videos for this skill yet." : "No lessons match those filters."}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{focusedSkill
+            ? "You can look for a tutorial now, but only verified direct videos count for in-game lesson XP."
+            : "Try another skill or clear some filters."}</p>
+          {focusedSkill ? (
+            <Button className="mt-4" variant="outline" asChild>
+              <a href={videoTutorialSearchUrl(focusedSkill)} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="mr-2 h-4 w-4" /> Find {formatSkillName(focusedSkill)} tutorials on YouTube
+              </a>
+            </Button>
+          ) : <Button className="mt-4" variant="outline" onClick={clearFilters}>Clear filters</Button>}
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filteredVideos.slice(0, visibleCount).map((video) => {
             const subscribed = video.skillSlug ? subscribedSkills.has(video.skillSlug) : false;
             const watchingThis = watchVideo.isPending && watchVideo.variables?.videoId === video.id;
+            const directLesson = isDirectYouTubeLesson(video.url);
+            const lessonLink = directLesson || video.url.includes("/results?") ? video.url : videoTutorialSearchUrl(video.skillSlug ?? video.name, video.name);
             const locked = !isEducationSkillVisible(video.skillSlug, accessBySkill);
             return (
               <Card key={video.id} className="flex h-full flex-col transition-all hover:border-primary/50 hover:shadow-md">
@@ -448,7 +461,8 @@ export const VideosTab = () => {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex flex-wrap gap-2">
                       <Badge variant="secondary">{video.skillName}</Badge>
-                      {video.featured && (
+                      {!directLesson && <Badge variant="outline">Tutorial search · no XP</Badge>}
+                      {video.featured && directLesson && (
                         <Badge variant="default">
                           <Star className="mr-1 h-3 w-3" /> Featured
                         </Badge>
@@ -497,25 +511,30 @@ export const VideosTab = () => {
                   )}
                   <div className="mt-auto flex items-center justify-between gap-3 border-t pt-3">
                     <div>
-                      <p className="text-xs font-medium text-primary">+15 education XP</p>
+                      <p className="text-xs font-medium text-primary">{directLesson ? "+15 education XP after watching" : "External tutorial discovery · no XP"}</p>
                       {video.skillSlug && (
                         <p className="text-[10px] text-muted-foreground">
                           {locked ? "Max the previous skill tier to unlock this lesson" : "+ skill XP when eligible"}
                         </p>
                       )}
                     </div>
-                    <Button
-                      size="sm"
-                      disabled={!cooldownStatus.canWatch || watchVideo.isPending || locked}
-                      onClick={() => handleWatch(video)}
-                    >
-                      {watchingThis ? (
-                        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Play className="mr-1 h-4 w-4" />
+                    <div className="flex flex-col gap-2 items-end">
+                      <Button size="sm" variant="outline" asChild>
+                        <a href={lessonLink} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="mr-1 h-4 w-4" />{directLesson ? "Watch on YouTube" : "Find tutorial"}
+                        </a>
+                      </Button>
+                      {directLesson && (
+                        <Button
+                          size="sm"
+                          disabled={!cooldownStatus.canWatch || watchVideo.isPending || locked}
+                          onClick={() => handleWatch(video)}
+                        >
+                          {watchingThis ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Play className="mr-1 h-4 w-4" />}
+                          Mark watched & earn
+                        </Button>
                       )}
-                      Learn & earn
-                    </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
