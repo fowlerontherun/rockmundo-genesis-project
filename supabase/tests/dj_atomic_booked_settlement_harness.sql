@@ -176,8 +176,7 @@ BEGIN
    'public.start_dj_booking_internal(uuid)','EXECUTE')
  OR has_function_privilege(current_user,
    'public.settle_dj_booking_internal(uuid)','EXECUTE')
- OR has_function_privilege(current_user,
-   'private.dj_start_booking_at(uuid,timestamptz)','EXECUTE')
+ OR has_schema_privilege(current_user,'private','USAGE')
  THEN RAISE EXCEPTION 'SECURITY FAILURE: player can call server-only DJ lifecycle';
  END IF;
  IF (SELECT count(*) FROM public.dj_settlement_ledger
