@@ -350,7 +350,10 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION public.purchase_equipment_item IS 'Handles purchasing equipment with stock tracking, gear pool enforcement, currency adjustments, and history logging.';
+-- The June migration keeps purchase_equipment_item(uuid) for legacy callers.
+-- Explicitly target July's four-argument overload; an unqualified COMMENT is
+-- ambiguous during a clean migration replay and aborts fresh DB resets.
+COMMENT ON FUNCTION public.purchase_equipment_item(uuid, text, integer, integer) IS 'Handles purchasing equipment with stock tracking, gear pool enforcement, currency adjustments, and history logging.';
 
 DO $$
 DECLARE
