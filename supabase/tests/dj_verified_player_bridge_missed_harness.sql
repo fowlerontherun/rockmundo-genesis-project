@@ -17,6 +17,7 @@ BEGIN
  JOIN public.cities city ON city.id=c.city_id
  JOIN public.user_roles role ON role.user_id=p.user_id AND role.role='user'::public.app_role
  WHERE s.status='recorded' AND s.audio_url IS NOT NULL AND NOT coalesce(s.archived,false)
+ AND COALESCE(p.energy,0)>=25
  AND c.dj_slot_config->>'schedule' IN ('11pm-3am','10pm-2am','11pm-4am')
  AND COALESCE(p.fame,0)>=COALESCE((c.dj_slot_config->>'minimum_fame')::integer,0)
  AND public.dj_external_schedule_conflict(p.id,
@@ -95,6 +96,9 @@ DECLARE
  v_end timestamptz;
  v_energy_before int;v_cash_before bigint;v_fame_before int;
  v_profile uuid:=current_setting('dj_fixture.profile')::uuid;
+ v_new_booking uuid;
+ v_new_session uuid;
+ v_new_end timestamptz;
 BEGIN
  SELECT ends_at INTO v_end FROM public.dj_bookings WHERE id=v_id;
  SELECT energy,cash,fame INTO v_energy_before,v_cash_before,v_fame_before
@@ -133,6 +137,31 @@ BEGIN
  THEN RAISE EXCEPTION 'Unstarted DJ miss charged or rewarded player'; END IF;
  IF EXISTS(SELECT 1 FROM public.dj_settlement_ledger WHERE booking_id=v_id)
  THEN RAISE EXCEPTION 'Unstarted DJ set settled despite missing performance'; END IF;
+ -- Reuse the same fully-owned fixture for a second, nonoverlapping set.
+ v_new_booking:=public.reserve_dj_booking_internal(
+   v_profile,current_setting('dj_fixture.club')::uuid,
+   current_setting('dj_fixture.set')::uuid,
+   current_setting('dj_fixture.time')::timestamptz+interval '2 days',
+   gen_random_uuid());
+ SELECT ends_at INTO v_new_end FROM public.dj_bookings WHERE id=v_new_booking;
+ v_new_session:=private.dj_start_booking_at(v_new_booking,
+   current_setting('dj_fixture.time')::timestamptz+interval '2 days 1 minute');
+ IF private.dj_process_missed_at(v_new_end+interval '59 minutes',50)<>0
+ OR private.dj_process_missed_at(v_new_end+interval '61 minutes',50)<>1
+ OR private.dj_process_missed_at(v_new_end+interval '62 minutes',50)<>0
+ THEN RAISE EXCEPTION 'Started DJ set abandonment window failed'; END IF;
+ IF (SELECT status FROM public.dj_bookings WHERE id=v_new_booking)<>'missed'
+ OR (SELECT status FROM public.dj_performance_sessions
+       WHERE id=v_new_session)<>'abandoned'
+ OR (SELECT status FROM public.player_scheduled_activities
+       WHERE linked_dj_booking_id=v_new_booking)<>'missed'
+ THEN RAISE EXCEPTION 'Expired live set not closed in Schedule'; END IF;
+ IF (SELECT energy FROM public.profiles WHERE id=v_profile)<>v_energy_before-25
+ OR (SELECT cash FROM public.profiles WHERE id=v_profile)<>v_cash_before
+ OR (SELECT fame FROM public.profiles WHERE id=v_profile)<>v_fame_before
+ OR EXISTS(SELECT 1 FROM public.dj_settlement_ledger
+   WHERE booking_id=v_new_booking)
+ THEN RAISE EXCEPTION 'Unfinished DJ set paid or used excess energy'; END IF;
 END $missed$;
 
 ROLLBACK;
