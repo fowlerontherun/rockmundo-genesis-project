@@ -91,7 +91,7 @@ export function SkinMarketTab() {
       const items = new Map<string, { name: string; collection_id: string; type: "clothing" | "instrument" }>();
       for (const r of c ?? []) items.set(r.id, { name: r.name, collection_id: r.collection_id, type: "clothing" });
       for (const r of i ?? []) items.set(r.id, { name: r.name, collection_id: r.collection_id, type: "instrument" });
-      const collections = new Map<string, string>((col ?? []).map((r: { id: string; name: string }) => [r.id, r.name]));
+      const collections = new Map<string, string>((col ?? []).map((r: { id: string; name: string }) => [r.id, r.name] as [string, string]));
       return { items, collections };
     },
   });
@@ -151,7 +151,7 @@ export function SkinMarketTab() {
     const { owned, paidCollections, marketKeys } = sellable.data;
     const ownedKeys = new Set(owned.map((o) => `${o.item_type}:${o.item_id}`));
     const opts: { value: string; label: string }[] = [];
-    for (const colId of paidCollections) {
+    for (const colId of paidCollections as Set<string>) {
       const setItems = [...names.data.items.entries()].filter(([, v]) => v.collection_id === colId);
       if (setItems.length && setItems.every(([id, v]) => ownedKeys.has(`${v.type}:${id}`))) {
         opts.push({ value: `set:${colId}`, label: `${names.data.collections.get(colId) ?? "Set"} — full set` });
