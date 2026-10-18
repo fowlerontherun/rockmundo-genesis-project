@@ -21,6 +21,7 @@ interface DayScheduleProps {
 const ACTIVITY_ICONS: Record<ActivityType, typeof Music> = {
   songwriting: Music,
   gig: Guitar,
+  dj_set: Headphones,
   rehearsal: Users,
   busking: Music,
   recording: Headphones,
@@ -48,6 +49,7 @@ const ACTIVITY_ICONS: Record<ActivityType, typeof Music> = {
 const ACTIVITY_COLORS: Record<ActivityType, string> = {
   songwriting: "bg-purple-500/10 border-purple-500/30 text-purple-700 dark:text-purple-300",
   gig: "bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-300",
+  dj_set: "bg-fuchsia-500/10 border-fuchsia-500/30 text-fuchsia-700 dark:text-fuchsia-300",
   rehearsal: "bg-blue-500/10 border-blue-500/30 text-blue-700 dark:text-blue-300",
   busking: "bg-orange-500/10 border-orange-500/30 text-orange-700 dark:text-orange-300",
   recording: "bg-pink-500/10 border-pink-500/30 text-pink-700 dark:text-pink-300",
@@ -73,7 +75,7 @@ const ACTIVITY_COLORS: Record<ActivityType, string> = {
 };
 
 const TYPE_LABELS: Record<ActivityType, string> = {
-  songwriting: "Songwriting", gig: "Gig", rehearsal: "Rehearsal", busking: "Busking", recording: "Recording",
+  songwriting: "Songwriting", gig: "Gig", dj_set: "DJ set", rehearsal: "Rehearsal", busking: "Busking", recording: "Recording",
   travel: "Travel", work: "Work", university: "Education", reading: "Reading", mentorship: "Mentorship",
   youtube_video: "Video", health: "Health", skill_practice: "Practice", open_mic: "Open mic",
   pr_appearance: "PR", film_production: "Film", festival_attendance: "Festival", festival_performance: "Festival gig",
@@ -81,6 +83,11 @@ const TYPE_LABELS: Record<ActivityType, string> = {
 };
 
 function getDetailHref(activity: ScheduledActivity) {
+  if (activity.activity_type === "dj_set") {
+    const clubId = activity.metadata?.dj_club_id;
+    return typeof clubId === "string" && /^[a-f0-9-]{36}$/i.test(clubId)
+      ? `/nightclub/${clubId}` : null;
+  }
   if (activity.activity_type === "festival_performance") {
     const target = activity.metadata?.detail_href;
     return typeof target === "string" && target.startsWith("/world/festivals/")
