@@ -54,6 +54,7 @@ export interface VideoResource {
   skillName: string;
   channelName: string | null;
   featured: boolean;
+  verifiedVideo: boolean;
 }
 
 export interface VideoPlaylist {
