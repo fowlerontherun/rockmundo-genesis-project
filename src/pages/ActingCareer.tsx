@@ -53,7 +53,7 @@ export default function ActingCareer() {
   const userId = user?.id;
   const { profileId, isLoading: profileLoading } = useActiveProfile();
   const canLoad = !!userId && !!profileId;
-  const [neg, setNeg] = useState<{ offerId: string; baseCents: number; perEpisode: boolean; episodeCount: number; title: string } | null>(null);
+  const [neg, setNeg] = useState<{ offerId: string; baseCents: number; perEpisode: boolean; episodeCount: number; title: string; characterId: string } | null>(null);
 
   // Never keep an open negotiation dialog across a character/account change.
   useEffect(() => setNeg(null), [userId, profileId]);
@@ -106,10 +106,10 @@ export default function ActingCareer() {
     enabled: canLoad,
   });
 
-  const offers = offersQuery.data ?? [];
-  const filmContracts = filmContractsQuery.data ?? [];
-  const seriesContracts = seriesContractsQuery.data ?? [];
-  const renewals = renewalsQuery.data ?? [];
+  const offers = offersQuery.isSuccess ? (offersQuery.data ?? []) : [];
+  const filmContracts = filmContractsQuery.isSuccess ? (filmContractsQuery.data ?? []) : [];
+  const seriesContracts = seriesContractsQuery.isSuccess ? (seriesContractsQuery.data ?? []) : [];
+  const renewals = renewalsQuery.isSuccess ? (renewalsQuery.data ?? []) : [];
 
   if (!userId || (!profileLoading && !profileId)) {
     return (
@@ -202,7 +202,7 @@ export default function ActingCareer() {
                     ) : null}
                   </div>
                   <Button disabled={!offersQuery.isSuccess || !renewalsQuery.isSuccess || !profileId} onClick={() => setNeg({
-                    offerId: o.id, baseCents, perEpisode: isSeries, episodeCount: episodes, title,
+                    offerId: o.id, baseCents, perEpisode: isSeries, episodeCount: episodes, title, characterId: profileId!,
                   })}>
                     <Handshake className="h-4 w-4 mr-1" /> Negotiate / Accept
                   </Button>
@@ -231,7 +231,7 @@ export default function ActingCareer() {
         </TabsContent>
       </Tabs>
 
-      {neg && profileId && offersQuery.isSuccess && renewalsQuery.isSuccess && (
+      {neg && profileId && neg.characterId === profileId && offersQuery.isSuccess && renewalsQuery.isSuccess && (
         <NegotiateOfferDialog
           open={!!neg} onOpenChange={(o) => !o && setNeg(null)}
           offerId={neg.offerId} baseCents={neg.baseCents}
