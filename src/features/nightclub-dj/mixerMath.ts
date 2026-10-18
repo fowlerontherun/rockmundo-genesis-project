@@ -40,3 +40,10 @@ export function deckAudioSourceKey(track: {
 export function deckRatePercent(rate: number): number {
   return Math.round(clampDeckRate(rate) * 100);
 }
+
+/** Record auto-sync as a tempo interaction only when it changed the deck. */
+export function changedDjTempoPercent(previousRate: number, nextRate: number): number | null {
+  const previous = deckRatePercent(previousRate);
+  const next = deckRatePercent(nextRate);
+  return previous === next ? null : next;
+}
