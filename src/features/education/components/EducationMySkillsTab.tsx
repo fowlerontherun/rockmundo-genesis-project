@@ -1,12 +1,10 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { Search, ArrowRight, CheckCircle2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
 import { getSkillDisplayProgress } from "@/utils/skillProgressDisplay";
-import { resolveSkillTier } from "@/utils/skillFamilies";
+import { useEducationSkillDefinitions } from "../hooks/useEducationSkillDefinitions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,12 +14,6 @@ import { Progress } from "@/components/ui/progress";
 import { isEducationSkillVisible, useSkillTierAccess } from "../hooks/useSkillTierAccess";
 import { formatEducationSkillName } from "../utils/educationUi";
 
-type EducationSkillDefinition = {
-  slug: string;
-  display_name: string | null;
-  tier_caps: Record<string, unknown> | null;
-};
-
 export const EducationMySkillsTab = () => {
   const { profileId } = useActiveProfile();
   const { skillProgress, loading: progressLoading } = useGameData();
@@ -29,38 +21,22 @@ export const EducationMySkillsTab = () => {
   const [filter, setFilter] = useState<"all" | "mine" | "available">("all");
   const [limit, setLimit] = useState(40);
 
-  const { data: definitions = [], isLoading, isError, refetch } = useQuery({
-    queryKey: ["education", "skill-definitions"],
-    queryFn: async () => {
-      const all: EducationSkillDefinition[] = [];
-      for (let offset = 0; ; offset += 500) {
-        const { data, error } = await supabase.from("skill_definitions")
-          .select("slug, display_name, tier_caps")
-          .order("slug").range(offset, offset + 499);
-        if (error) throw error;
-        all.push(...(data ?? []) as EducationSkillDefinition[]);
-        if (!data || data.length < 500) break;
-      }
-      return all;
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-  const tierAccess = useSkillTierAccess(profileId, definitions.map((definition) => definition.slug));
+  const catalogue = useEducationSkillDefinitions();
+  const definitions = catalogue.data ?? [];
+  const tierAccess = useSkillTierAccess(profileId, definitions.filter((definition) => definition.is_active && !definition.is_hidden).map((definition) => definition.slug));
   const accessBySkill = tierAccess.data ?? new Map<string, boolean>();
 
   const rows = useMemo(() => {
     const progressBySlug = new Map((skillProgress ?? []).map((skill) => [skill.skill_slug, skill]));
     return definitions
-      .filter((definition) => isEducationSkillVisible(definition.slug, accessBySkill))
+      .filter((definition) => definition.is_active && !definition.is_hidden && isEducationSkillVisible(definition.slug, accessBySkill))
       .map((definition) => {
         const progressRecord = progressBySlug.get(definition.slug);
         const progress = getSkillDisplayProgress((progressRecord ?? { current_level: 0, current_xp: 0, required_xp: 100 }) as any);
-        const tierField = definition.tier_caps?.tier;
-        const tier = resolveSkillTier(definition.slug, typeof tierField === "string" ? tierField : null);
         return {
           slug: definition.slug,
-          name: definition.display_name || formatEducationSkillName(definition.slug),
-          tier,
+          name: definition.name || formatEducationSkillName(definition.slug),
+          tier: definition.tier,
           progress,
         };
       })
@@ -75,11 +51,11 @@ export const EducationMySkillsTab = () => {
     return true;
   }), [rows, filter, search]);
 
-  if (isLoading || progressLoading || tierAccess.isLoading) return <p className="py-12 text-center text-muted-foreground">Loading your skills...</p>;
-  if (isError || tierAccess.isError) {
+  if (catalogue.isLoading || progressLoading || tierAccess.isLoading) return <p className="py-12 text-center text-muted-foreground">Loading your skills...</p>;
+  if (catalogue.isError || tierAccess.isError) {
     return <Alert variant="destructive" role="alert"><AlertDescription>
       Skill availability could not be verified. Locked skills remain hidden.
-      <Button size="sm" variant="outline" onClick={() => { void refetch(); void tierAccess.refetch(); }} className="ml-2">Retry</Button>
+      <Button size="sm" variant="outline" onClick={() => { void catalogue.refetch(); void tierAccess.refetch(); }} className="ml-2">Retry</Button>
     </AlertDescription></Alert>;
   }
 
