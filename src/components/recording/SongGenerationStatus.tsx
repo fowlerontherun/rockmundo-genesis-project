@@ -68,7 +68,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
   // by the song_generation_attempts RLS policy.
   const { data: latestAttempt } = useQuery({
     queryKey: ["song-generation-latest-attempt", songId],
-    enabled: !!songId && (isFailed || isTimedOut),
+    enabled: !!songId && Boolean(isFailed || isTimedOut),
     queryFn: async () => {
       const { data, error } = await supabase.from("song_generation_attempts")
         .select("status,error_message,started_at")
