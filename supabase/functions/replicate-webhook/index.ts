@@ -144,8 +144,23 @@ serve(async (req) => {
     // 90-second radio edit. Short audio cannot be safely extended: stop and
     // require deliberate manual retry rather than another automatic charge.
     if (actualSeconds < minSeconds) {
+      // A provider-successful prediction may have already cost credit. Keep
+      // valid short MP3s as previews rather than discarding paid output.
+      // They MUST NOT become the song's master audio or count as completed.
+      let savedPreview = ""
+      if (actualSeconds >= 20 && verifiedAttemptId) {
+        const previewPath = "short-previews/" + songId + "/" + verifiedAttemptId + ".mp3"
+        const { error: previewError } = await supabase.storage.from("music")
+          .upload(previewPath, audioBytes, { contentType: "audio/mpeg", upsert: false })
+        if (!previewError) {
+          savedPreview = " Preview stored: " + previewPath
+          console.log("[replicate-webhook] Archived short paid output", { songId, attemptId })
+        } else {
+          console.warn("[replicate-webhook] Could not preserve underlength audio", previewError.message)
+        }
+      }
       throw new Error(
-        `Generated audio duration ${actualSeconds.toFixed(1)}s is under the required 60s. Existing audio preserved; manual retry only.`
+        `Generated audio duration ${actualSeconds.toFixed(1)}s is under the required 60s. Existing audio preserved; manual retry only.${savedPreview}`
       )
     }
     const acceptedAudioBytes = actualSeconds > maxSeconds
