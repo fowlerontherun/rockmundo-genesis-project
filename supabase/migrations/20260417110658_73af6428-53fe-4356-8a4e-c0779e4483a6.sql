@@ -1,3 +1,55 @@
+-- The original university catalogue in the clean April 2026 migration
+-- history does not yet seed these two universities (they previously existed
+-- only on production). Politics courses below must never reference NULL IDs.
+-- Resolve real cities, preserve existing schools, and handle both the older
+-- universities schema and the later city_id NOT NULL schema without changing
+-- any existing university prices, IDs, or learning records.
+DO $seed_politics_universities$
+DECLARE
+  item record;
+  v_city_id uuid;
+  v_has_city_id boolean;
+BEGIN
+  SELECT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'universities'
+      AND column_name = 'city_id'
+  ) INTO v_has_city_id;
+
+  FOR item IN
+    SELECT * FROM (VALUES
+      ('Cambridge University', 'London', 'United Kingdom', 99, 98, 1.65::numeric),
+      ('Manchester University', 'Manchester', 'United Kingdom', 92, 94, 1.47::numeric)
+    ) AS seed(name,city,country,prestige,quality,cost_modifier)
+  LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM public.universities u WHERE lower(u.name)=lower(item.name)
+    ) THEN
+      SELECT c.id INTO v_city_id FROM public.cities c
+      WHERE lower(c.name)=lower(item.city)
+        AND lower(c.country)=lower(item.country)
+      ORDER BY c.id LIMIT 1;
+      IF v_city_id IS NULL THEN
+        RAISE EXCEPTION 'Cannot seed politics university %, missing canonical city %', item.name, item.city;
+      END IF;
+
+      IF v_has_city_id THEN
+        INSERT INTO public.universities
+          (name, city, city_id, prestige, quality_of_learning, course_cost_modifier)
+        VALUES
+          (item.name, item.city, v_city_id, item.prestige, item.quality, item.cost_modifier)
+        ON CONFLICT (name, city) DO NOTHING;
+      ELSE
+        INSERT INTO public.universities
+          (name, city, prestige, quality_of_learning, course_cost_modifier)
+        VALUES
+          (item.name, item.city, item.prestige, item.quality, item.cost_modifier)
+        ON CONFLICT (name, city) DO NOTHING;
+      END IF;
+    END IF;
+  END LOOP;
+END $seed_politics_universities$;
+
 -- Historical education seeds must resolve canonical rows by name rather than
 -- environment-specific production UUIDs.
 DO $politics_education_dependencies$
