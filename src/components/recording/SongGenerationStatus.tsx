@@ -8,7 +8,7 @@ import { useSongGenerationLimits } from "@/hooks/useSongGenerationLimits";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface SongGenerationStatusProps {
@@ -21,6 +21,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
   const [retrying, setRetrying] = useState(false);
+  const retryInFlight = useRef(false);
   const [showReplaceDialog, setShowReplaceDialog] = useState(false);
   const [trackedAttemptId, setTrackedAttemptId] = useState<string | null>(null);
   const [showLyricsDialog, setShowLyricsDialog] = useState(false);
@@ -61,6 +62,33 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
   });
   const replacementPending = replacementAttempt?.status === "generating" ||
     (!!trackedAttemptId && !replacementAttempt);
+
+  // Display a useful reason for historical failures without displaying raw
+  // provider/internal errors. This remains read-only and scoped to the owner
+  // by the song_generation_attempts RLS policy.
+  const { data: latestAttempt } = useQuery({
+    queryKey: ["song-generation-latest-attempt", songId],
+    enabled: !!songId && (isFailed || isTimedOut),
+    queryFn: async () => {
+      const { data, error } = await supabase.from("song_generation_attempts")
+        .select("status,error_message,started_at")
+        .eq("song_id", songId)
+        .order("started_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 10_000,
+  });
+  const failureReason = latestAttempt?.error_message || "";
+  const failureHint = /throttled|rate.?limit|429/i.test(failureReason)
+    ? "The audio provider rate-limited the last request. Avoid repeatedly retrying while provider credit is low."
+    : /too short|duration.*outside|60.?90/i.test(failureReason)
+    ? "The provider returned an unsuitable length. RockMundo now targets 60–90 seconds; review your lyrics before retrying."
+    : /SERVICE_ROLE_REQUIRED|permission/i.test(failureReason)
+    ? "A server permission error interrupted generation. Contact an administrator before spending credit on another attempt."
+    : "A previous attempt failed. Starting another will make a new provider request.";
 
 
   const handleOpenLyricsDialog = async () => {
@@ -128,7 +156,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
   };
 
   const handleRetry = async (replaceExisting = false) => {
-    if (!profileId || !canRegenerate) return;
+    if (!profileId || !canRegenerate || retryInFlight.current) return;
     setShowReplaceDialog(false);
 
     // Check limits before retrying
@@ -139,6 +167,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
       return;
     }
 
+    retryInFlight.current = true;
     setRetrying(true);
     setTrackedAttemptId(null);
     try {
@@ -174,6 +203,7 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
       console.error('Retry failed:', err);
       toast.error("Failed to retry generation");
     } finally {
+      retryInFlight.current = false;
       setRetrying(false);
     }
   };
@@ -182,18 +212,19 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
     <Dialog open={showReplaceDialog} onOpenChange={setShowReplaceDialog}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Regenerate AI song audio?</DialogTitle>
+          <DialogTitle>{hasAudio ? "Regenerate AI song audio?" : "Retry failed AI song generation?"}</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
-          A new AI generation counts towards your weekly allowance and may
-          produce a different recording. Your current song remains playable
-          until a replacement passes quality and duration validation.
+          This starts one new paid-provider generation attempt targeting 60–90
+          seconds. It may use provider credit even if the result is rejected.
+          No automatic retries will run after a failure.
+          {hasAudio && " Your current song remains playable until a valid replacement is ready."}
         </p>
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={() => setShowReplaceDialog(false)}>Cancel</Button>
-          <Button onClick={() => void handleRetry(true)} disabled={retrying || !canRegenerate}>
+          <Button onClick={() => void handleRetry(hasAudio)} disabled={retrying || !canRegenerate}>
             {retrying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Regenerate song
+            {hasAudio ? "Regenerate once" : "Retry once"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -338,15 +369,16 @@ export function SongGenerationStatus({ songId, songTitle, showRetry = true }: So
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="flex items-center justify-between">
             <span>
-              {isTimedOut 
-                ? "Generation timed out after 15 minutes" 
-                : "Audio generation failed"}
+              <span className="block">{isTimedOut
+                ? "Generation timed out after 15 minutes"
+                : "Audio generation failed"}</span>
+              <span className="block text-xs mt-1">{failureHint}</span>
             </span>
             {showRetry && canRegenerate && (
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => void handleRetry(hasAudio)}
+                onClick={() => setShowReplaceDialog(true)}
                 disabled={retrying || (limits && !limits.can_generate && !limits.is_admin)}
               >
                 {retrying ? (
