@@ -1,4 +1,15 @@
-import type { CanonicalSkill, SkillAvailability, SkillRoleKey, SkillRoleLink } from "@/utils/skillCatalogue";
+import type { SkillAvailability, SkillRoleKey, SkillRoleLink } from "@/utils/skillCatalogue";
+import type { SkillTier } from "@/utils/skillFamilies";
+
+export interface EducationLearningSkill {
+  slug: string;
+  name: string;
+  tier: SkillTier;
+  max_level: number;
+  is_active: boolean;
+  is_hidden: boolean;
+  is_foundational: boolean;
+}
 import { isEducationSkillVisible } from "./educationVisibility";
 
 export type LearningGoal = SkillRoleKey | "all";
@@ -23,7 +34,7 @@ export interface LearningRecommendation {
 
 /** Advisory rankings only. Eligibility and XP award rules remain server-authoritative. */
 export function selectLearningRecommendations(args: {
-  catalogue: CanonicalSkill[];
+  catalogue: EducationLearningSkill[];
   progress: EducationProgressRecord[];
   availability: SkillAvailability[];
   access: ReadonlyMap<string, boolean>;
