@@ -103,7 +103,8 @@ function formatSkillSlug(slug: string): string {
 export const UniversityTab = () => {
   const { profileId } = useActiveProfile();
   const [searchQuery, setSearchQuery] = useState(() => new URLSearchParams(window.location.search).get("skill") ?? "");
-  const [selectedCity, setSelectedCity] = useState<string>("current");
+  // Skill-first links should compare the full catalogue, not silently restrict to a city.
+  const [selectedCity, setSelectedCity] = useState<string>(() => new URLSearchParams(window.location.search).get("skill") ? "all" : "current");
   const [selectedCategory, setSelectedCategory] = useState<SkillCategory>("all");
   const [viewMode, setViewMode] = useState<"universities" | "courses">(() => new URLSearchParams(window.location.search).get("skill") ? "courses" : "universities");
 
