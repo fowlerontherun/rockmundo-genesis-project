@@ -16,7 +16,7 @@ export type ActivityType =
   | 'travel' | 'work' | 'university' | 'reading' | 'mentorship' 
   | 'youtube_video' | 'health' | 'skill_practice' | 'open_mic' 
   | 'pr_appearance' | 'film_production' | 'festival_attendance' | 'festival_performance' 
-  | 'release_manufacturing' | 'release_promo' | 'teaching' | 'jam_session' | 'major_event' | 'other';
+  | 'release_manufacturing' | 'release_promo' | 'teaching' | 'jam_session' | 'major_event' | 'dj_set' | 'other';
 
 export type ActivityStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'missed';
 
@@ -35,6 +35,7 @@ export interface ScheduledActivity {
   description?: string | null;
   location?: string | null;
   linked_gig_id?: string | null;
+  linked_dj_booking_id?: string | null;
   linked_rehearsal_id?: string | null;
   linked_recording_id?: string | null;
   linked_job_shift_id?: string | null;
