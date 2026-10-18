@@ -174,19 +174,25 @@ const NightClubDetail = () => {
       }
       pendingDrinkRequests.current.delete(key);
       toast.success(`🍸 ${result.drink_name ?? drink.name} — $${result.cash_spent} spent, +${result.energy_gained} energy`);
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["profile"] }),
-        queryClient.invalidateQueries({ queryKey: ["active-profile"] }),
-        queryClient.invalidateQueries({ queryKey: ["player-financial-accounts"] }),
-      ]);
-      await gameData?.refetch();
-      // Re-read the live menu so limited-stock drinks are correctly displayed.
-      const { data: refreshedClub } = await supabase
-        .from("city_night_clubs")
-        .select("*")
-        .eq("id", clubId)
-        .maybeSingle();
-      if (refreshedClub) setClub(normalizeNightClubRecord(refreshedClub as unknown as Record<string, unknown>));
+      // Refresh is best-effort after an authoritative committed purchase.
+      // A cache/network refresh failure must not show a false payment failure.
+      try {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["profile"] }),
+          queryClient.invalidateQueries({ queryKey: ["active-profile"] }),
+          queryClient.invalidateQueries({ queryKey: ["player-financial-accounts"] }),
+        ]);
+        await gameData?.refetch();
+        // Re-read the live menu so limited-stock drinks are correctly displayed.
+        const { data: refreshedClub } = await supabase
+          .from("city_night_clubs")
+          .select("*")
+          .eq("id", clubId)
+          .maybeSingle();
+        if (refreshedClub) setClub(normalizeNightClubRecord(refreshedClub as unknown as Record<string, unknown>));
+      } catch {
+        // The purchase receipt already confirms success; UI catches up on refocus.
+      }
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Nightclub purchase failed");
       // Keep the request key: a payment may have committed before a lost reply.
