@@ -34,6 +34,6 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
       - name: Education-focused unit tests
-        run: npx vitest run src/features/education/utils/educationVisibility.test.ts src/features/education/utils/educationRecommendations.test.ts src/features/education/utils/educationSkillFocus.test.ts src/features/education/utils/educationSkillCaps.test.ts
+        run: npx vitest run src/features/education/utils/educationVisibility.test.ts src/features/education/utils/educationRecommendations.test.ts src/features/education/utils/educationSkillFocus.test.ts src/features/education/utils/educationSkillCaps.test.ts src/features/education/utils/educationDailyStatus.test.ts
       - name: Production bundle
         run: npm run build
