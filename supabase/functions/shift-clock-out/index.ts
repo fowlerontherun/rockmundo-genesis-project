@@ -147,6 +147,18 @@ Deno.serve(async (req) => {
           throw shiftFetchError ?? new Error('Shift not found');
         }
 
+        // A character id and an auth account id are distinct. Resolve ownership
+        // BEFORE any payable/tax side effects so a missing owner cannot leave
+        // a partially settled shift or misattribute the XP recipient.
+        const { data: shiftOwner, error: ownerError } = await supabaseClient
+          .from('profiles')
+          .select('user_id')
+          .eq('id', shift.profile_id)
+          .single();
+        if (ownerError || !shiftOwner?.user_id || shift.profile_id !== activity.profile_id) {
+          throw ownerError ?? new Error('Shift profile ownership mismatch');
+        }
+
         // Fetch job details for fame penalty tier + city for income tax routing
         const { data: job } = await supabaseClient
           .from('jobs')
@@ -252,7 +264,7 @@ Deno.serve(async (req) => {
         const { error: ledgerError } = await supabaseClient
           .from('experience_ledger')
           .insert({
-            user_id: activity.profile_id,
+            user_id: shiftOwner.user_id,
             profile_id: shift.profile_id,
             activity_type: 'work_shift',
             xp_amount: shift.xp_earned,
@@ -298,7 +310,7 @@ Deno.serve(async (req) => {
         // === WORK SHIFT → BAND MORALE (v1.0.976) ===
         // Working degrading jobs (fame penalty) hurts band morale; earning decent money gives a small boost
         try {
-          const { data: bm } = await supabaseClient.from('band_members').select('band_id').eq('user_id', activity.profile_id).eq('is_touring_member', false).limit(1).maybeSingle();
+          const { data: bm } = await supabaseClient.from('band_members').select('band_id').eq('user_id', shiftOwner.user_id).eq('profile_id', shift.profile_id).eq('is_touring_member', false).limit(1).maybeSingle();
           if (bm?.band_id) {
             const { data: bd } = await supabaseClient.from('bands').select('morale').eq('id', bm.band_id).single();
             if (bd) {
