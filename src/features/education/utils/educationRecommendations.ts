@@ -1,4 +1,4 @@
-import type { SkillAvailability, SkillRoleKey, SkillRoleLink } from "@/utils/skillCatalogue";
+import type { SkillRoleKey, SkillRoleLink } from "@/utils/skillCatalogue";
 import type { SkillTier } from "@/utils/skillFamilies";
 
 export interface EducationLearningSkill {
@@ -36,7 +36,6 @@ export interface LearningRecommendation {
 export function selectLearningRecommendations(args: {
   catalogue: EducationLearningSkill[];
   progress: EducationProgressRecord[];
-  availability: SkillAvailability[];
   access: ReadonlyMap<string, boolean>;
   roleLinks: SkillRoleLink[];
   goal: LearningGoal;
@@ -44,7 +43,6 @@ export function selectLearningRecommendations(args: {
   limit?: number;
 }): LearningRecommendation[] {
   const records = new Map(args.progress.map((record) => [record.skill_slug, record]));
-  const statuses = new Map(args.availability.map((entry) => [entry.slug, entry.status]));
   const active = args.activeSkillSlugs ?? new Set<string>();
 
   const goals: Partial<Record<SkillRoleKey, RegExp>> = {
@@ -65,10 +63,8 @@ export function selectLearningRecommendations(args: {
     .flatMap((skill) => {
       const record = records.get(skill.slug);
       const level = Math.max(0, Number(record?.current_level) || 0);
-      const status = statuses.get(skill.slug);
-      if (status === "hidden" || status === "inactive" || status === "prerequisites_missing") return [];
-      // The deployed catalogue view is optional. A positive bulk tier-access result
-      // can establish eligibility even where role-availability metadata is absent.
+      // A positive authoritative tier check is the only unlock policy here.
+      // The canonical view may not exist in production, or its fallback may be stale.
       if (level >= skill.max_level) return [];
 
       const currentXp = Math.max(0, Number(record?.current_xp) || 0);
