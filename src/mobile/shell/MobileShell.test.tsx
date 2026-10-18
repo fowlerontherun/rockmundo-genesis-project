@@ -18,20 +18,20 @@ vi.mock("@/mobile/hooks/useMobileDaySchedule", () => ({ useMobileDaySchedule: ()
 vi.mock("@/hooks/useNotificationsFeed", () => ({ useNotificationsFeed: () => ({ unreadCount: 0, notifications: [], markRead: vi.fn(), isLoading: false }) }));
 
 describe("mobile shell navigation", () => {
-  it("renders the four companion navigation destinations without desktop navigation", () => {
+  it("renders the companion navigation destinations without desktop navigation", () => {
     useLanguageStore.getState().setLanguage('en');
     render(<MemoryRouter initialEntries={["/career/songs"]}><BottomNav /></MemoryRouter>);
     expect(screen.getByRole("navigation", { name: /primary/i })).toBeInTheDocument();
-    for (const label of ["Schedule", "Inbox", "Chat", "XP / AP"]) expect(screen.getByText(label)).toBeInTheDocument();
+    for (const label of ["Schedule", "Inbox", "Chat", "XP / AP", "Learn"]) expect(screen.getByText(label)).toBeInTheDocument();
     expect(screen.queryByText("ModuleTabs")).not.toBeInTheDocument();
   });
 
-  it("shows scheduling, inbox, chat and progression quick actions", async () => {
+  it("shows scheduling, inbox, chat, education and progression quick actions", async () => {
     const user = userEvent.setup();
     render(<MemoryRouter initialEntries={["/mobile/social"]}><FabMenu /></MemoryRouter>);
     await user.click(screen.getByRole("button", { name: /open quick actions/i }));
     const buttons = screen.getAllByRole("button").map((b) => b.textContent);
-    expect(buttons.join(" ")).toMatch(/My Schedule.*Book Activity.*Inbox.*Game Chat.*Spend XP and AP/);
+    expect(buttons.join(" ")).toMatch(/My Schedule.*Book Activity.*Inbox.*Game Chat.*Spend XP and AP.*Education/);
   });
 
   it("shows current activity bar only for active timed activities", () => {
