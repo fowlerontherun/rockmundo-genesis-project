@@ -13,7 +13,7 @@ export const STREAMING_QUERY_PAGE_SIZE = 500;
 export const STREAMING_ANALYTICS_ID_BATCH = 100;
 
 const isUuid = (value: string) =>
-  /^[a-f\d]{8}-[a-f\d]{4}-[1-8][a-f\d]{3}-[89ab][a-f\d]{3}-[a-f\d]{12}$/i.test(value);
+  /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(value);
 
 export async function getStreamingBandIds(userId: string, profileId: string): Promise<string[]> {
   if (!userId || !profileId) return [];
@@ -62,8 +62,9 @@ export async function getOwnedStreamingReleases(
 
     const { data, error } = await query;
     if (error) throw error;
-    rows.push(...(data ?? []));
-    if (!data || data.length < STREAMING_QUERY_PAGE_SIZE) break;
+    const pageRows = (data ?? []) as any[];
+    rows.push(...pageRows);
+    if (pageRows.length < STREAMING_QUERY_PAGE_SIZE) break;
   }
 
   return rows;
@@ -89,8 +90,9 @@ export async function getStreamingAnalyticsForReleases(
         .order("id", { ascending: true })
         .range(offset, offset + STREAMING_QUERY_PAGE_SIZE - 1);
       if (error) throw error;
-      batchRows.push(...(data ?? []));
-      if (!data || data.length < STREAMING_QUERY_PAGE_SIZE || (perBatchLimit && batchRows.length >= perBatchLimit)) break;
+      const pageRows = (data ?? []) as any[];
+      batchRows.push(...pageRows);
+      if (pageRows.length < STREAMING_QUERY_PAGE_SIZE || (perBatchLimit && batchRows.length >= perBatchLimit)) break;
     }
     all.push(...(perBatchLimit ? batchRows.slice(0, perBatchLimit) : batchRows));
   }
