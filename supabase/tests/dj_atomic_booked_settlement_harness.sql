@@ -157,5 +157,45 @@ BEGIN
  OR (SELECT fame FROM public.profiles WHERE id=v_profile)<>v_fame_after
  OR (SELECT energy FROM public.profiles WHERE id=v_profile)<>v_energy_after
  THEN RAISE EXCEPTION 'Replay awarded a second payout'; END IF;
+ PERFORM set_config('dj_test.owner',v_actor::text,true);
+ PERFORM set_config('dj_test.booking',v_book::text,true);
+ PERFORM set_config('dj_test.profile',v_profile::text,true);
+ PERFORM set_config('dj_test.club',v_club::text,true);
 END $test$;
+
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub',current_setting('dj_test.owner'),true);
+DO $owner_rls$
+DECLARE
+ v_book uuid:=current_setting('dj_test.booking')::uuid;
+ v_actor uuid:=current_setting('dj_test.owner')::uuid;
+ v_profile uuid:=current_setting('dj_test.profile')::uuid;
+ v_club uuid:=current_setting('dj_test.club')::uuid;
+BEGIN
+ IF has_function_privilege(current_user,
+   'public.start_dj_booking_internal(uuid)','EXECUTE')
+ OR has_function_privilege(current_user,
+   'public.settle_dj_booking_internal(uuid)','EXECUTE')
+ OR has_function_privilege(current_user,
+   'private.dj_start_booking_at(uuid,timestamptz)','EXECUTE')
+ THEN RAISE EXCEPTION 'SECURITY FAILURE: player can call server-only DJ lifecycle';
+ END IF;
+ IF (SELECT count(*) FROM public.dj_settlement_ledger
+   WHERE booking_id=v_book)<>1
+ THEN RAISE EXCEPTION 'Booked owner cannot read their settlement'; END IF;
+ IF (SELECT count(*) FROM public.dj_performance_sessions
+   WHERE booking_id=v_book)<>1
+ THEN RAISE EXCEPTION 'Booked owner cannot read their DJ session'; END IF;
+ BEGIN
+   INSERT INTO public.player_dj_performances(
+     user_id,profile_id,club_id,booking_id,
+     performance_score,set_length_minutes,cash_earned,fame_gained,
+     fans_gained,xp_gained
+   ) VALUES(v_actor,v_profile,v_club,v_book,40,45,100,0,0,0);
+   RAISE EXCEPTION 'SECURITY FAILURE: client impersonated settled booking';
+ EXCEPTION WHEN insufficient_privilege THEN NULL;
+ END;
+END $owner_rls$;
+RESET ROLE;
+
 ROLLBACK;
