@@ -14,10 +14,10 @@ describe("cancelSongMarketplaceListing", () => {
   it("submits only the listing ID to the authenticated server RPC", async () => {
     rpcMock.mockResolvedValue({ data: { success: true }, error: null });
     await expect(cancelSongMarketplaceListing("listing-1")).resolves.toBeUndefined();
-    expect(rpcMock).toHaveBeenCalledExactlyOnceWith(
-      "cancel_song_marketplace_listing",
-      { p_listing_id: "listing-1" },
-    );
+    expect(rpcMock).toHaveBeenCalledOnce();
+    expect(rpcMock).toHaveBeenCalledWith("cancel_song_marketplace_listing", {
+      p_listing_id: "listing-1",
+    });
   });
 
   it.each([
