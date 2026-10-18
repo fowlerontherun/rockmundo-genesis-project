@@ -21,14 +21,18 @@ DECLARE
   v_cash_after numeric;
   v_fame_after numeric;
 BEGIN
-  SELECT p.user_id,p.id,s.id,c.id,p.cash,p.fame
-    INTO v_actor,v_profile,v_song,v_club,v_cash,v_fame
+  SELECT p.user_id,p.id,s.id,c.id,p.cash,p.fame,
+    ((date_trunc('day', now() AT TIME ZONE city.timezone) + interval '8 days'
+      + CASE WHEN c.dj_slot_config->>'schedule' LIKE '11pm%' THEN interval '23 hours' ELSE interval '22 hours' END) AT TIME ZONE city.timezone)
+    INTO v_actor,v_profile,v_song,v_club,v_cash,v_fame,v_start
   FROM public.profiles p
   JOIN public.songs s ON s.profile_id=p.id AND s.user_id=p.user_id
     AND s.status='recorded' AND s.audio_url IS NOT NULL AND COALESCE(s.archived,false)=false
   JOIN public.city_night_clubs c ON c.city_id=p.current_city_id
+  JOIN public.cities city ON city.id=c.city_id
   JOIN public.user_roles ur ON ur.user_id=p.user_id AND ur.role='user'::public.app_role
-  WHERE COALESCE(p.fame,0)>=COALESCE((c.dj_slot_config->>'minimum_fame')::integer,0)
+  WHERE c.dj_slot_config->>'schedule' IN ('11pm-3am','10pm-2am','11pm-4am')
+    AND COALESCE(p.fame,0)>=COALESCE((c.dj_slot_config->>'minimum_fame')::integer,0)
     AND COALESCE((c.dj_slot_config->>'set_length_minutes')::integer,45) BETWEEN 15 AND 180
     AND NOT EXISTS (
       SELECT 1 FROM public.player_scheduled_activities a
@@ -91,6 +95,28 @@ BEGIN
       v_profile,v_club,v_set,v_start+interval '1 minute',v_request);
     RAISE EXCEPTION 'SECURITY FAILURE: idempotency key accepted other booking';
   EXCEPTION WHEN unique_violation THEN NULL;
+  END;
+
+  -- Even a privileged booking writer may not insert/update outside
+  -- verified club-local hours. The trigger is a second defence beyond RPC.
+  IF public.dj_booking_inside_club_hours(
+     v_club,v_start + interval '12 hours',v_start + interval '13 hours')
+  THEN RAISE EXCEPTION 'Nightclub late-morning slot unexpectedly valid'; END IF;
+
+  BEGIN
+    PERFORM public.reserve_dj_booking_internal(
+      v_profile,v_club,v_set,v_start + interval '12 hours',gen_random_uuid());
+    RAISE EXCEPTION 'SECURITY FAILURE: after-hours reservation accepted';
+  EXCEPTION WHEN invalid_parameter_value THEN NULL;
+  END;
+
+  BEGIN
+    UPDATE public.dj_bookings SET
+      starts_at=v_start + interval '12 hours',
+      ends_at=v_start + interval '13 hours'
+    WHERE id=v_booking;
+    RAISE EXCEPTION 'SECURITY FAILURE: privileged after-hours update accepted';
+  EXCEPTION WHEN invalid_parameter_value THEN NULL;
   END;
 
   PERFORM set_config('request.jwt.claim.sub',v_other::text,true);
