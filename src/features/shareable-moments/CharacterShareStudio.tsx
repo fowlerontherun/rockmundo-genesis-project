@@ -1,60 +1,90 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { PlayerModelPreview } from '@/features/player-model/PlayerModelPreview';
+import { useEffect, useMemo, useState } from 'react';
 import { useEquippedRichClothing, useEquippedStageLuthieryInstruments, usePlayerModel, usePlayerStageTattoos } from '@/features/player-model/usePlayerModel';
 import { useAvatarMerchWearables } from '@/features/player-model/useAvatarMerchWearables';
-import { captureAvatarCanvas, type AvatarCapture } from './avatarCapture';
+import { captureAvatarCanvas, captureAvatarV1ForShare, type AvatarCapture } from './avatarCapture';
 import { ShareMomentSheet } from './ShareMomentSheet';
-import type { CharacterProfileShareMoment } from './characterProfile';
+import type { ShareMoment } from './types';
+
+type AvatarShareMoment = ShareMoment & { avatar?: AvatarCapture | null };
+type CaptureStatus = 'loading' | 'ready' | 'unavailable';
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  moment: CharacterProfileShareMoment;
+  moment: AvatarShareMoment;
 }
 
 /**
- * Avatar-aware sharing owns player-model lookup and WebGL capture here so the
- * generic ShareMomentSheet stays reusable outside AuthProvider/player context.
+ * Capture the same player model, outfit, tattoos and equipment used on stage.
+ * A dedicated WebGL render avoids depending on an off-screen animated preview,
+ * which browsers can skip or clear before its first populated frame.
  */
 export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
   const model = usePlayerModel();
-  const clothing = useEquippedRichClothing(open ? model.profileId : null);
-  const tattoos = usePlayerStageTattoos(open ? model.profileId : null);
-  const merch = useAvatarMerchWearables(open ? model.profileId : null);
-  const luthiery = useEquippedStageLuthieryInstruments(open ? model.profileId : null);
+  const profileId = open ? model.profileId : null;
+  const clothing = useEquippedRichClothing(profileId);
+  const tattoos = usePlayerStageTattoos(profileId);
+  const merch = useAvatarMerchWearables(profileId);
+  const luthiery = useEquippedStageLuthieryInstruments(profileId);
+  const appearance = model.query.data?.appearance;
   const craftedInstrument = luthiery.data?.[0] ?? null;
   const instrument = craftedInstrument?.instrumentKind === 'electric_bass' ? 'bass_guitar' : craftedInstrument?.instrumentKind === 'electric_guitar' ? 'electric_guitar' : undefined;
   const role = instrument === 'bass_guitar' ? 'bass' : instrument === 'electric_guitar' ? 'guitar' : 'other';
-  const [avatar, setAvatar] = useState<AvatarCapture | null>(null);
+  const storedAvatar = moment.avatar ?? null;
+  const captureKey = `${model.profileId ?? 'none'}:${moment.type}:${moment.id ?? moment.createdAt}`;
+  const [capture, setCapture] = useState<{ key: string; avatar: AvatarCapture | null; status: CaptureStatus } | null>(null);
+  const [retry, setRetry] = useState(0);
+  const avatar = storedAvatar ?? (capture?.key === captureKey ? capture.avatar : null);
+  const captureStatus: CaptureStatus = storedAvatar ? 'ready' : capture?.key === captureKey ? capture.status : 'loading';
 
-  useEffect(() => { if (!open) setAvatar(null); }, [open]);
-  useEffect(() => { setAvatar(null); }, [moment.id]);
+  useEffect(() => {
+    if (!open || storedAvatar) return;
+    let cancelled = false;
+    setCapture({ key: captureKey, avatar: null, status: 'loading' });
 
-  const capture = useCallback((canvas: HTMLCanvasElement) => {
-    try { setAvatar(captureAvatarCanvas(canvas)); } catch { setAvatar(null); }
-  }, []);
+    if (!profileId || !appearance) {
+      if (model.query.isError) setCapture({ key: captureKey, avatar: null, status: 'unavailable' });
+      return;
+    }
+    // Wait for equipped appearance layers so the saved picture represents the
+    // current avatar rather than a partially loaded default outfit.
+    // A disabled optional query (e.g. merch without a band) is perpetually
+    // isPending in React Query; only wait for requests actually in flight.
+    if ((clothing.isPending && clothing.isFetching)
+      || (tattoos.isPending && tattoos.isFetching)
+      || (merch.query.isPending && merch.query.isFetching)
+      || (luthiery.isPending && luthiery.isFetching)) return;
+
+    void captureAvatarV1ForShare({
+      appearance,
+      role,
+      instrument,
+      richClothing: clothing.data ?? [],
+      tattoos: tattoos.data ?? [],
+      merchWearable: merch.query.data?.equipped ?? null,
+      luthieryInstrument: craftedInstrument,
+    }).then(captureAvatarCanvas).then(snapshot => {
+      if (!cancelled) setCapture({ key: captureKey, avatar: snapshot, status: 'ready' });
+    }).catch(error => {
+      console.warn('[share-studio] avatar capture failed', error);
+      if (!cancelled) setCapture({ key: captureKey, avatar: null, status: 'unavailable' });
+    });
+
+    return () => { cancelled = true; };
+  }, [open, storedAvatar, captureKey, profileId, appearance, model.query.isError,
+    clothing.isPending, clothing.isFetching, clothing.data, tattoos.isPending, tattoos.isFetching, tattoos.data,
+    merch.query.isPending, merch.query.isFetching, merch.query.data, luthiery.isPending, luthiery.isFetching, craftedInstrument,
+    role, instrument, retry]);
 
   const shareMoment = useMemo(() => ({ ...moment, avatar }), [moment, avatar]);
 
-  return <>
-    {open && model.query.data?.appearance && (
-      <div className="fixed -left-[10000px] top-0 h-[1000px] w-[800px] pointer-events-none" aria-hidden="true">
-        <PlayerModelPreview
-          appearance={model.query.data.appearance}
-          role={role}
-          instrument={instrument}
-          richClothing={clothing.data ?? []}
-          tattoos={tattoos.data ?? []}
-          merchWearable={merch.query.data?.equipped ?? null}
-          luthieryInstrument={craftedInstrument}
-          presentation="stage"
-          transparentCapture
-          onCanvasReady={capture}
-        />
-      </div>
-    )}
-    <ShareMomentSheet open={open} onOpenChange={onOpenChange} moment={shareMoment} />
-  </>;
+  return <ShareMomentSheet
+    open={open}
+    onOpenChange={onOpenChange}
+    moment={shareMoment}
+    avatarStatus={captureStatus}
+    onAvatarRetry={() => setRetry(value => value + 1)}
+  />;
 }
 
 /** Backwards-compatible semantic alias for the profile entry point. */
