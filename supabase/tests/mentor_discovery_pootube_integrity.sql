@@ -12,6 +12,17 @@ BEGIN
  IF NOT has_function_privilege('authenticated','public.discover_master(uuid,uuid,text,jsonb)','EXECUTE')
     OR has_function_privilege('anon','public.discover_master(uuid,uuid,text,jsonb)','EXECUTE')
  THEN RAISE EXCEPTION 'Mentor discovery access regression'; END IF;
+ IF EXISTS (SELECT 1 FROM public.player_mentor_sessions sess WHERE NOT EXISTS (
+    SELECT 1 FROM public.player_master_discoveries d
+    WHERE d.profile_id=sess.profile_id AND d.mentor_id=sess.mentor_id
+ )) THEN RAISE EXCEPTION 'Previously trained mentors are not discovered'; END IF;
+ IF NOT EXISTS (
+   SELECT 1 FROM pg_constraint c
+   WHERE c.conrelid='public.player_master_discoveries'::regclass
+     AND c.conname='player_master_discoveries_discovery_method_check'
+     AND pg_get_constraintdef(c.oid) LIKE '%venue_gig%'
+     AND pg_get_constraintdef(c.oid) LIKE '%studio_session%'
+ ) THEN RAISE EXCEPTION 'Venue and studio discovery sources are not permitted'; END IF;
 END $catalogue$;
 
 -- Roll back the entire XP/ledger claim from a test-owned profile.
