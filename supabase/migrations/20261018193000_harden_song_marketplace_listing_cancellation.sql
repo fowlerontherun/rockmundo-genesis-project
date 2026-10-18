@@ -119,5 +119,5 @@ BEGIN
 END;
 $cancel$;
 
-REVOKE ALL ON FUNCTION public.cancel_song_marketplace_listing(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.cancel_song_marketplace_listing(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.cancel_song_marketplace_listing(uuid) TO authenticated;
