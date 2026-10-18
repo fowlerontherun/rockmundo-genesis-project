@@ -153,6 +153,8 @@ BEGIN
  IF (SELECT status FROM public.dj_bookings WHERE id=v_new_booking)<>'missed'
  OR (SELECT status FROM public.dj_performance_sessions
        WHERE id=v_new_session)<>'abandoned'
+ OR (SELECT abandoned_at FROM public.dj_performance_sessions
+       WHERE id=v_new_session) IS NULL
  OR (SELECT status FROM public.player_scheduled_activities
        WHERE linked_dj_booking_id=v_new_booking)<>'missed'
  THEN RAISE EXCEPTION 'Expired live set not closed in Schedule'; END IF;
@@ -162,6 +164,15 @@ BEGIN
  OR EXISTS(SELECT 1 FROM public.dj_settlement_ledger
    WHERE booking_id=v_new_booking)
  THEN RAISE EXCEPTION 'Unfinished DJ set paid or used excess energy'; END IF;
+ IF private.dj_abandon_live_booking_at(v_new_booking,v_new_end+interval '65 minutes')<>v_new_booking
+ THEN RAISE EXCEPTION 'Abandoned session retry was not idempotent'; END IF;
+ BEGIN
+  PERFORM private.dj_settle_booking_at(v_new_booking,v_new_end+interval '70 minutes');
+  RAISE EXCEPTION 'SECURITY FAILURE: abandoned DJ set earned payout';
+ EXCEPTION WHEN invalid_parameter_value THEN NULL; END;
+ IF EXISTS(SELECT 1 FROM public.experience_ledger
+   WHERE metadata->>'dj_booking_id'=v_new_booking::text)
+ THEN RAISE EXCEPTION 'Abandoned DJ set earned experience'; END IF;
 END $missed$;
 
 ROLLBACK;
