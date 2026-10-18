@@ -49,6 +49,7 @@ const mapResourceRow = (
     skillName,
     channelName: row.channel_name ?? null,
     featured: row.is_featured ?? false,
+    verifiedVideo: row.verified_video === true,
   };
 };
 
