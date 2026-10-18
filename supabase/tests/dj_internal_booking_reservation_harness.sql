@@ -209,12 +209,13 @@ SELECT set_config('request.jwt.claim.sub', (
   SELECT p.user_id::text FROM public.profiles p
   WHERE p.user_id<>current_setting('dj_test.actor')::uuid LIMIT 1
 ),true);
+SET LOCAL ROLE authenticated;
 DO $non_admin$
 BEGIN
   IF has_function_privilege(current_user,
        'public.reserve_dj_booking_internal(uuid,uuid,uuid,timestamptz,uuid)', 'EXECUTE')
   THEN RAISE EXCEPTION 'SECURITY FAILURE: public booking RPC activated early'; END IF;
-  IF (SELECT count(*) FROM public.dj_bookings WHERE status='booked')<>0
+  IF (SELECT count(*) FROM public.dj_bookings)<>0
   THEN RAISE EXCEPTION 'SECURITY FAILURE: other account saw private DJ booking'; END IF;
 END $non_admin$;
 
