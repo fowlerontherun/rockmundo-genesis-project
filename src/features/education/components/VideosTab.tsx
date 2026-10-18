@@ -75,7 +75,28 @@ export const VideosTab = () => {
   const toggleSubscription = useToggleEducationVideoSubscription(profileId);
   const watchVideo = useWatchVideo();
 
-  const [cooldownStatus, setCooldownStatus] = useState(() => getCooldownStatus(profileId));
+  const [cooldownTick, setCooldownTick] = useState(() => Date.now());
+  const serverClaims = useQuery({
+    queryKey: ["education", "video-claims", profileId],
+    queryFn: async (): Promise<string[]> => {
+      if (!profileId) return [];
+      const { data, error: claimsError } = await (supabase as any)
+        .from("education_video_reward_claims")
+        .select("claimed_at")
+        .eq("profile_id", profileId)
+        .gt("claimed_at", new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString())
+        .order("claimed_at", { ascending: true })
+        .limit(2);
+      if (claimsError) throw claimsError;
+      return ((data ?? []) as Array<{ claimed_at: string }>).map((row) => row.claimed_at);
+    },
+    enabled: Boolean(profileId),
+    staleTime: 10_000,
+    refetchInterval: 30_000,
+  });
+  const cooldownStatus = serverClaims.data
+    ? calculateEducationVideoCooldown(serverClaims.data, cooldownTick)
+    : getCooldownStatus(profileId);
   const [search, setSearch] = useState("");
   const focusedSkill = new URLSearchParams(window.location.search).get("skill");
   const [selectedSkill, setSelectedSkill] = useState("all");
