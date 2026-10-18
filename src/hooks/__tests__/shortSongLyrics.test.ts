@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { compactLyricsForShortAudio } from "../../../supabase/functions/_shared/shortSongLyrics";
 
 describe("compact radio edit lyrics", () => {
@@ -36,8 +38,6 @@ describe("compact radio edit lyrics", () => {
     expect(input).toContain("[Intro]");
   });
   it("requests longer complete source performances for both generation flows", () => {
-    const { readFileSync } = require("node:fs");
-    const { resolve } = require("node:path");
     for (const path of ["supabase/functions/generate-song-audio/index.ts", "supabase/functions/admin-generate-song-audio/index.ts"]) {
       const file = readFileSync(resolve(process.cwd(), path), "utf8");
       expect(file).toContain("complete song around 110 seconds");
