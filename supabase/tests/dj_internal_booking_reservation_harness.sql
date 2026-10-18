@@ -20,6 +20,11 @@ DECLARE
   v_fame numeric;
   v_cash_after numeric;
   v_fame_after numeric;
+  v_morning_club uuid;
+  v_morning_start timestamptz;
+  v_morning_set uuid;
+  v_basic_course uuid;
+  v_basic_uni uuid;
 BEGIN
   SELECT p.user_id,p.id,s.id,c.id,p.cash,p.fame,
     ((date_trunc('day', now() AT TIME ZONE city.timezone) + interval '8 days'
@@ -155,6 +160,53 @@ BEGIN
         AND coalesce(bm.travels_with_band,true)
       LIMIT 1);
     RAISE EXCEPTION 'SECURITY FAILURE: band tour leg was booked over DJ set';
+  EXCEPTION WHEN exclusion_violation THEN NULL;
+  END;
+
+
+  -- Recurring university classes must also reject new enrolments when the
+  -- player's DJ slot is already reserved (classes often have no mirror row).
+  SELECT club.id,
+    ((date_trunc('day',now() AT TIME ZONE city.timezone)
+      + interval '10 days 10 hours') AT TIME ZONE city.timezone)
+  INTO v_morning_club,v_morning_start
+  FROM public.city_night_clubs club JOIN public.cities city ON city.id=club.city_id
+  WHERE club.dj_slot_config->>'schedule'='midnight-noon'
+    AND city.timezone='Europe/Berlin'
+  LIMIT 1;
+
+  SELECT c.id,u.id INTO v_basic_course,v_basic_uni
+  FROM public.university_courses c
+  JOIN public.universities u ON u.id=c.university_id
+  JOIN public.cities city ON city.id=u.city_id
+  WHERE city.timezone='Europe/Berlin' AND c.class_start_hour=10
+    AND c.class_end_hour>10 AND c.skill_slug LIKE 'basic_%'
+    AND public.skill_tier_unlocked(v_profile,c.skill_slug)
+  LIMIT 1;
+
+  IF v_morning_club IS NULL OR v_basic_course IS NULL THEN
+    RAISE EXCEPTION 'No morning club and eligible course fixture for university reverse gate';
+  END IF;
+
+  INSERT INTO public.dj_bookings(
+    user_id,profile_id,club_id,setlist_id,setlist_version,setlist_snapshot,
+    request_id,starts_at,ends_at,status
+  )
+  SELECT v_actor,v_profile,v_morning_club,v_set,version,items,
+    gen_random_uuid(),v_morning_start,v_morning_start+interval '45 minutes','booked'
+  FROM public.dj_setlists WHERE id=v_set
+  RETURNING id INTO v_morning_set;
+
+  BEGIN
+    INSERT INTO public.player_university_enrollments(
+      user_id,profile_id,university_id,course_id,enrolled_at,
+      scheduled_end_date,status,payment_amount
+    ) VALUES(
+      v_actor,v_profile,v_basic_uni,v_basic_course,
+      now()-interval '1 day',now()+interval '30 days',
+      'enrolled',0
+    );
+    RAISE EXCEPTION 'SECURITY FAILURE: university enrolment overlapped reserved DJ set';
   EXCEPTION WHEN exclusion_violation THEN NULL;
   END;
 
