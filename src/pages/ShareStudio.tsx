@@ -123,7 +123,7 @@ export default function ShareStudio() {
         ))}
       </div>
       <Card>
-        <CardHeader><CardTitle className="text-base">Share Gallery</CardTitle><CardDescription>Your successfully shared career moments are frozen here so they can be reopened later without changing with live game data.</CardDescription></CardHeader>
+        <CardHeader><CardTitle className="text-base">Share Gallery</CardTitle><CardDescription>Your saved moments retain their original details and captured avatar. Older cards without an avatar use your current character look when reopened.</CardDescription></CardHeader>
         <CardContent>
           {galleryError && <div role="alert" className="mb-3 text-sm text-destructive">{galleryError} <Button size="sm" variant="outline" onClick={() => void reloadGallery()}>Retry</Button></div>}
           {galleryLoading ? <p className="text-sm text-muted-foreground">Loading saved shares…</p> : galleryError && gallery.length === 0 ? null : gallery.length === 0 ? <p className="text-sm text-muted-foreground">Share a RockMundo card and it will appear here.</p> : (
@@ -137,7 +137,7 @@ export default function ShareStudio() {
         </CardContent>
       </Card>
       {characterPromo && <AvatarShareStudio moment={characterPromo} open={true} onOpenChange={(open) => { if (!open) setCharacterPromo(null); }} />}
-      {selected?.type === "band_profile" && selected.id?.startsWith("promo:")
+      {selected && !selected.avatar && ["character_profile", "band_profile", "gig_result", "achievement", "tour"].includes(selected.type)
         ? <AvatarShareStudio moment={selected} open={true} onOpenChange={(open) => { if (!open) setSelected(null); }} />
         : <ShareMomentSheet moment={selected} open={!!selected} onOpenChange={(open) => { if (!open) setSelected(null); }} />}
     </FMPageScaffold>

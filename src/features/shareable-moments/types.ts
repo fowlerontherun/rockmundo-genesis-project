@@ -1,3 +1,5 @@
+import type { AvatarCapture } from './avatarCapture';
+
 export const SHARE_FORMATS = {
   square: { width: 1080, height: 1080 },
   story: { width: 1080, height: 1920 },
@@ -38,6 +40,8 @@ export interface ShareMoment {
   /** Persisted ticket demand ratio (0..1+) for promotional gig treatments. */
   ticketSalesRatio?: number | null;
   artworkUrl?: string | null;
+  /** Frozen transparent player avatar rendered into exported posters. */
+  avatar?: AvatarCapture | null;
   variant?: 'standard' | 'headline';
   visualTheme?: ShareVisualTheme;
   visualLayout?: ShareVisualLayout;
