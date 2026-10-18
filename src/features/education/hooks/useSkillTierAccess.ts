@@ -37,12 +37,4 @@ export const isHigherTierSkill = (slug?: string | null) =>
         slug.includes("mastery")),
   );
 
-/** Shared education visibility rule. Only authoritative server-approved skills
- * may appear in learning catalogues, filters and recommendations.
- * Missing eligibility (including a failed request) is intentionally hidden.
- * A null skill denotes a general, non-skill-specific resource.
- */
-export const isEducationSkillVisible = (
-  slug: string | null | undefined,
-  accessBySkill: ReadonlyMap<string, boolean>,
-): boolean => !slug || accessBySkill.get(slug) === true;
+export { isEducationSkillVisible } from "../utils/educationVisibility";
