@@ -2,29 +2,23 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "./use-toast";
 import { logGameActivity } from "./useGameActivityLog";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { getOwnedStreamingReleases, getStreamingAnalyticsForReleases } from "@/lib/streaming/ownedStreaming";
 
 export const useStreaming = (userId: string) => {
   const { toast } = useToast();
+  const { profileId, userId: activeUserId } = useActiveProfile();
+  const canLoad = !!profileId && !!userId && activeUserId === userId;
   const queryClient = useQueryClient();
 
-  const { data: releases, isLoading: releasesLoading } = useQuery({
-    queryKey: ["streaming-releases", userId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("song_releases")
-        .select(`
-          *,
-          song:songs(*),
-          platform:streaming_platforms(*)
-        `)
-        .or(`user_id.eq.${userId},band_id.in.(select band_id from band_members where user_id='${userId}')`)
-        .eq("release_type", "streaming")
-        .order("release_date", { ascending: false });
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!userId,
+  const { data: releases, isLoading: releasesLoading, isError: releasesError, error: releasesErrorDetail, refetch: refetchReleases } = useQuery({
+    queryKey: ["streaming-releases", userId, profileId],
+    queryFn: async () => getOwnedStreamingReleases(userId, profileId!, `
+      *,
+      song:songs(*),
+      platform:streaming_platforms(*)
+    `),
+    enabled: canLoad,
   });
 
   const { data: platforms } = useQuery({
@@ -42,24 +36,21 @@ export const useStreaming = (userId: string) => {
   });
 
   const { data: analytics } = useQuery({
-    queryKey: ["streaming-analytics", userId],
+    queryKey: ["streaming-analytics", userId, profileId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("streaming_analytics_daily")
-        .select(`
-          *,
-          release:song_releases(
-            *,
-            song:songs(*)
-          )
-        `)
-        .order("analytics_date", { ascending: false })
-        .limit(100);
-
-      if (error) throw error;
-      return data;
+      const ownedReleases = await getOwnedStreamingReleases(userId, profileId!, "id");
+      const ids = ownedReleases.map((r) => r.id as string);
+      if (!ids.length) return [];
+      const ownedAnalytics = await getStreamingAnalyticsForReleases(
+        ids,
+        `*, release:song_releases(*, song:songs(*))`,
+        100,
+      );
+      return ownedAnalytics
+        .sort((a, b) => (b.analytics_date as string).localeCompare(a.analytics_date as string))
+        .slice(0, 100);
     },
-    enabled: !!userId,
+    enabled: canLoad,
   });
 
   const releaseToStreaming = useMutation({
@@ -145,6 +136,10 @@ export const useStreaming = (userId: string) => {
     platforms,
     analytics,
     releasesLoading,
+    hasActiveProfile: canLoad,
+    releasesError,
+    releasesErrorDetail,
+    refetchReleases,
     releaseToStreaming,
     takeDown,
   };

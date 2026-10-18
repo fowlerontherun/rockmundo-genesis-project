@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { getOwnedStreamingReleases, getStreamingAnalyticsForReleases } from "@/lib/streaming/ownedStreaming";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,7 +69,7 @@ const isoDaysAgo = (n: number) => {
 };
 
 export default function StreamingRevenueDashboard() {
-  const { userId } = useActiveProfile();
+  const { userId, profileId } = useActiveProfile();
 
   const [bandFilter, setBandFilter] = useState<string>("all");
   const [platformFilter, setPlatformFilter] = useState<string>("all");
@@ -79,44 +80,35 @@ export default function StreamingRevenueDashboard() {
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 25;
 
-  const { data: rows = [], isLoading } = useQuery({
-    queryKey: ["streaming-dashboard", userId],
-    enabled: !!userId,
+  const { data: rows = [], isLoading, isError, error, refetch } = useQuery<Row[]>({
+    queryKey: ["streaming-dashboard", userId, profileId],
+    enabled: !!userId && !!profileId,
     queryFn: async () => {
-      // Fetch user's song releases (own + their bands)
-      const { data: releases, error: relErr } = await supabase
-        .from("song_releases")
-        .select(`
-          id, band_id, user_id, platform_id, platform_name, country,
-          song:songs(title),
-          band:bands(id, name),
-          platform:streaming_platforms(id, platform_name)
-        `)
-        .or(`user_id.eq.${userId},band_id.in.(select band_id from band_members where user_id='${userId}')`);
-      if (relErr) throw relErr;
+      // An authenticated account may own solo songs; membership for band
+      // releases must belong to this selected character.
+      const releases = await getOwnedStreamingReleases(userId!, profileId!, `
+        id, band_id, user_id, platform_id, platform_name, country,
+        song:songs(title),
+        band:bands(id, name),
+        platform:streaming_platforms(id, platform_name)
+      `);
 
-      const releaseIds = (releases ?? []).map((r: any) => r.id);
-      if (releaseIds.length === 0) return [] as Row[];
-      const releaseMap = new Map((releases ?? []).map((r: any) => [r.id, r]));
+      const releaseIds: string[] = releases.map((release: any) => release.id);
+      if (!releaseIds.length) return [];
+      const releaseMap = new Map<string, Row["release"]>(
+        releases.map((release: any) => [release.id, release as Row["release"]]),
+      );
 
-      // Fetch analytics in chunks of 200 ids
-      const all: Row[] = [];
-      for (let i = 0; i < releaseIds.length; i += 200) {
-        const chunk = releaseIds.slice(i, i + 200);
-        const { data, error } = await supabase
-          .from("streaming_analytics_daily")
-          .select(
-            "id, song_release_id, analytics_date, daily_streams, daily_revenue, unique_listeners, platform_id, platform_name, listener_region",
-          )
-          .in("song_release_id", chunk)
-          .order("analytics_date", { ascending: false })
-          .range(0, 4999);
-        if (error) throw error;
-        for (const a of data ?? []) {
-          all.push({ ...(a as any), release: releaseMap.get((a as any).song_release_id) ?? null });
-        }
-      }
-      return all;
+      // Read *all* historical analytics, not merely the first 5,000 per
+      // batch. RLS still applies to each analytics and release request.
+      const analytics = await getStreamingAnalyticsForReleases(
+        releaseIds,
+        "id, song_release_id, analytics_date, daily_streams, daily_revenue, unique_listeners, platform_id, platform_name, listener_region",
+      );
+      return analytics.map((row: any) => ({
+        ...row,
+        release: releaseMap.get(row.song_release_id) ?? null,
+      })) as Row[];
     },
   });
 
@@ -256,11 +248,26 @@ export default function StreamingRevenueDashboard() {
       backTo="/streaming-platforms"
       backLabel="Back"
       headerActions={
-        <Button size="sm" variant="outline" onClick={exportCsv} disabled={tableRows.length === 0}>
+        <Button size="sm" variant="outline" onClick={exportCsv} disabled={isLoading || isError || tableRows.length === 0}>
           <Download className="h-4 w-4 mr-1" /> Export CSV
         </Button>
       }
     >
+      {!profileId && (
+        <Card role="status">
+          <CardContent className="p-4 text-sm text-muted-foreground">
+            Select an active character to load streaming revenue for your current bands.
+          </CardContent>
+        </Card>
+      )}
+      {isError && (
+        <Card role="alert" className="border-destructive/50">
+          <CardContent className="p-4 flex flex-wrap items-center justify-between gap-2">
+            <span>Streaming revenue could not be loaded: {error instanceof Error ? error.message : "Please try again."}</span>
+            <Button size="sm" variant="outline" onClick={() => { void refetch(); }}>Retry revenue data</Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filters */}
       <Card>
@@ -489,6 +496,8 @@ export default function StreamingRevenueDashboard() {
         <CardContent>
           {isLoading ? (
             <p className="text-sm text-muted-foreground py-6 text-center">Loading…</p>
+          ) : isError ? (
+            <p className="text-sm text-destructive py-6 text-center">Unable to show revenue until the data is loaded.</p>
           ) : tableRows.length === 0 ? (
             <p className="text-sm text-muted-foreground py-6 text-center">No streaming activity for the selected filters.</p>
           ) : (
