@@ -2,6 +2,7 @@ import { matchPath } from "react-router-dom";
 
 export const mobileRouteBridge: Array<[pattern: string, target: string]> = [
   ["/home", "/mobile"], ["/dashboard", "/mobile"], ["/schedule", "/mobile"], ["/schedule/*", "/mobile"],
+  ["/booking/education", "/mobile/education"],
   ["/booking/*", "/mobile?view=book"],
   ["/inbox", "/mobile/inbox"],
   ["/social/chat", "/mobile/chat"], ["/chat", "/mobile/chat"],
