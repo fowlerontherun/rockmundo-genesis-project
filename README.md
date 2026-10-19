@@ -61,8 +61,7 @@ bun run scripts/seedSkillsTable.ts
 supabase db reset
 ```
 
-The migration pulls in the generated `supabase/seed/skills_seed.sql` file, so running the script keeps migrations and runtime data
-in sync.
+The historical `20250919064642_create_skills_table.sql` migration contains a frozen, parent-safe snapshot of 168 skill rows. It no longer uses a `psql` `\\i` include, which the Supabase migration runner cannot execute. Regenerating `supabase/seed/skills_seed.sql` does **not** retroactively change that immutable migration; future skill additions require an explicit forward migration. Run `node --test scripts/supabase/skills-seed-migration.contract.test.mjs` to check the replay contract.
 
 ## Profile data reset for the new flow
 
