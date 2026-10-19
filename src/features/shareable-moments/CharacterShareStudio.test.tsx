@@ -120,6 +120,30 @@ describe('AvatarShareStudio image capture', () => {
     expect(mocks.renderAvatar).toHaveBeenCalledWith(expect.objectContaining({ merchWearable: null }));
   });
 
+  it('blocks incomplete avatar shares when equipped crafted instruments fail to load', async () => {
+    const refetch = vi.fn().mockResolvedValue(undefined);
+    mocks.luthiery.mockReturnValue({
+      data: undefined, isPending: false, isFetching: false, isError: true, refetch,
+    });
+    render(<AvatarShareStudio open moment={moment} onOpenChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByTestId('avatar-status')).toHaveTextContent('unavailable'));
+    expect(mocks.renderAvatar).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry avatar' }));
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(mocks.renderAvatar).not.toHaveBeenCalled();
+  });
+
+  it('captures normally when no crafted instrument is equipped', async () => {
+    mocks.luthiery.mockReturnValue({ data: [], isPending: false, isFetching: false, isError: false });
+    render(<AvatarShareStudio open moment={moment} onOpenChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByTestId('avatar-status')).toHaveTextContent('ready'));
+    expect(mocks.renderAvatar).toHaveBeenCalledWith(expect.objectContaining({
+      instrument: undefined,
+      luthieryInstrument: null,
+    }));
+  });
+
   it('does not silently omit tattoos after their request fails', async () => {
     const refetch = vi.fn().mockResolvedValue(undefined);
     mocks.tattoos.mockReturnValue({ data: undefined, isPending: false, isFetching: false, isError: true, refetch });
