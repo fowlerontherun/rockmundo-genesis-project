@@ -127,6 +127,13 @@ BEGIN
   v_fee:=round(v_price*0.10);
   v_payout:=v_price-v_fee;
 
+  -- The prior cancellation-guard trigger forbids modifying a listing once
+  -- a completed transaction exists. Move active -> sold BEFORE writing that
+  -- transaction; both changes still roll back together on any failure.
+  UPDATE public.marketplace_listings SET listing_status='sold',updated_at=now()
+  WHERE id=v_listing.id AND listing_status='active';
+  IF NOT FOUND THEN RAISE EXCEPTION 'MARKETPLACE_LISTING_CHANGED'; END IF;
+
   -- Unique completed transaction claim and all economy writes commit
   -- together, or the entire SQL call rolls back on any error.
   INSERT INTO public.marketplace_transactions(
@@ -153,10 +160,6 @@ BEGIN
   WHERE id=v_song.id AND user_id=v_listing.seller_user_id
     AND is_purchased=false;
   IF NOT FOUND THEN RAISE EXCEPTION 'MARKETPLACE_SONG_CHANGED'; END IF;
-
-  UPDATE public.marketplace_listings SET listing_status='sold',updated_at=now()
-  WHERE id=v_listing.id AND listing_status='active';
-  IF NOT FOUND THEN RAISE EXCEPTION 'MARKETPLACE_LISTING_CHANGED'; END IF;
 
   UPDATE public.marketplace_bids SET bid_status='lost'
   WHERE listing_id=v_listing.id AND bidder_user_id<>v_actor;
