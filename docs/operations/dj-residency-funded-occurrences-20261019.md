@@ -28,3 +28,7 @@ This is the next milestone for [#4436](https://github.com/fowlerontherun/rockmun
 `supabase/tests/dj_residency_occurrence_authenticated_role.sql`: actual `authenticated` role prepares individual occurrences, checks owner/DJ scoped row visibility, denies browser INSERT and a foreign actor's preparation, rejects altered contractual fee, and charges the verified owner $100 per date through the normal escrow RPC. Passed live inside rollback.
 
 Both tests are wired into `scripts/gigs/run-db-gate.sh` with `-v ON_ERROR_STOP=1`. No production fixture data remains. Scheduled and funded DJ release flags remain OFF pending #4265 full certification.
+
+## Ending a residency: automatic refund of unbooked holds
+
+Production follow-up migration **`20261019122803_dj_residency_ended_unbooked_escrow_refunds_20261019`** updates the existing private `expire_nightclub_dj_offer_escrows_internal` worker, preserving its every-15-minutes cron, `FOR UPDATE SKIP LOCKED` and unique `(offer_id,kind)` refund receipts. For a signed residency with status `ended`, offered/accepted **unbooked** escrow is now refunded and the offer status set to `cancelled`. Canonical booked shows are *not* selected. Live rollback test `dj_residency_ended_escrow_refund_contract.sql` passed: two independent $100 fee holds, end contract, first cron sweep refunded both (2), next sweep refunded none (0), owner cash fully restored, zero booked gigs. It is wired into the Phase 5 DB gate.
