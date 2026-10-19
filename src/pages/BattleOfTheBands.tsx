@@ -344,6 +344,7 @@ export default function BattleOfTheBands() {
         bandId={bandId}
         profileId={profileId}
         onConfirm={handleSongSelection}
+        performanceType="battle"
       />
     </FMPageScaffold>
   );
