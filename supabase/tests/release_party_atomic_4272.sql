@@ -106,6 +106,7 @@ BEGIN
     RAISE EXCEPTION 'Role grants invalid';
   END IF;
   RAISE NOTICE 'release_party_atomic_4272: PASS; fixtures rollback';
-END $test$;
+END;
+$test$;
 SELECT 'release_party_atomic_4272: PASS (changes rolled back)' AS result;
 ROLLBACK;
