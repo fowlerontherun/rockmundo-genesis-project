@@ -92,6 +92,28 @@ begin
    if sqlerrm<>'song_sale_listing_unavailable' then raise; end if;
  end;
 
+ -- Draft-only eligibility cannot be bypassed via a valid listing.
+ update public.songs set archived=true where id=song_two;
+ perform set_config('request.jwt.claim.sub',buyer_uid::text,true);
+ begin
+   perform public.place_song_bid_authorized(listing_two,buyer_profile,120);
+   raise exception 'archived_song_bid_accepted';
+ exception when others then
+   if sqlerrm<>'song_bid_owner_mismatch' then raise; end if;
+ end;
+ update public.songs set archived=false where id=song_two;
+ -- A listed band song must not be bought as one songwriter's property.
+ update public.songs set band_id=(select id from public.bands limit 1) where id=song_two;
+ if (select band_id from public.songs where id=song_two) is not null then
+   begin
+     perform public.place_song_bid_authorized(listing_two,buyer_profile,120);
+     raise exception 'band_owned_song_bid_accepted';
+   exception when others then
+     if sqlerrm<>'song_bid_owner_mismatch' then raise; end if;
+   end;
+ end if;
+ update public.songs set band_id=null where id=song_two;
+
  -- An auction cannot be accepted before a real authorised bid exists.
  perform set_config('request.jwt.claim.sub',seller_uid::text,true);
  begin
