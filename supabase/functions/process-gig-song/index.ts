@@ -557,10 +557,22 @@ async function fetchLiveMemberSkillAverage(
     }
 
     const role = member.instrument_role || 'Vocals';
-    const relevantSlugs = ROLE_SKILL_MAP[role] ||
-      ROLE_SKILL_MAP[Object.keys(ROLE_SKILL_MAP).find(k =>
-        role.toLowerCase().includes(k.toLowerCase()) || k.toLowerCase().includes(role.toLowerCase())
-      ) || ''] || [];
+    const normalizedSkillRole = role.trim().toLowerCase();
+    const specialistSkillId = SPECIALIST_INSTRUMENT_ROLE_TYPES[normalizedSkillRole]
+      ?? (normalizedSkillRole === 'dj scratching' ? 'turntablism' : ({
+        'vocal & performance skills': 'vocal_performance',
+        'rapping': 'rapping',
+        'freestyle': 'freestyle_rap',
+        'battle rap': 'battle_rap',
+        'flow & cadence': 'flow_and_cadence',
+        'rap songwriting': 'rap_songwriting',
+        'ad-libs & vocal fx': 'ad_libs_and_vocal_fx',
+      } as Record<string, string>)[normalizedSkillRole]);
+    const relevantSlugs = specialistSkillId
+      ? ['basic', 'professional', 'mastery'].map(tier => `instruments_${tier}_${specialistSkillId}`)
+      : ROLE_SKILL_MAP[role] || ROLE_SKILL_MAP[Object.keys(ROLE_SKILL_MAP).find(k =>
+          normalizedSkillRole.includes(k.toLowerCase()) || k.toLowerCase().includes(normalizedSkillRole)
+        ) || ''] || [];
 
     console.log(`[process-gig-song] Member ${member.user_id} role=${role}, slugs=${relevantSlugs.length}`);
 
