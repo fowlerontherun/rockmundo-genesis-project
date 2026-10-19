@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { OwnedNightclub } from "@/hooks/useNightclubOwnership";
+import { DjResidencyOccurrenceProgress } from "./DjResidencyOccurrenceProgress";
 
 type Residency = {
   id: string;
@@ -47,12 +48,14 @@ function useResidencyRequests() {
 }
 
 function ResidencyRow({
-  agreement, actions, onAction, busy,
+  agreement, actions, onAction, busy, role, ownedClubId,
 }: {
   agreement: Residency;
   actions: { value: Action; label: string }[];
   onAction: (action: Action, residencyId: string) => void;
   busy: boolean;
+  role: "owner" | "dj";
+  ownedClubId?: string;
 }) {
   const expired = agreement.status === "proposed" && Date.parse(agreement.expires_at) <= Date.now();
   const status = expired ? "expired" : agreement.status;
@@ -75,6 +78,7 @@ function ResidencyRow({
     {status === "proposed" && <p className="text-xs text-muted-foreground">
       Offer closes {new Date(agreement.expires_at).toLocaleString()}
     </p>}
+    <DjResidencyOccurrenceProgress plan={agreement} role={role} ownedClubId={ownedClubId} />
     {actions.length > 0 && <div className="flex flex-wrap gap-2">
       {actions.map(action => <Button key={action.value} size="sm" variant={action.value === "accept" ? "default" : "outline"}
         disabled={busy || expired} onClick={() => onAction(action.value, agreement.id)}>
@@ -213,7 +217,7 @@ export function OwnedClubDjResidencies({ club }: { club: OwnedNightclub }) {
             {proposed.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Offer residency
           </Button>
         </div>}
-        {residencies.map(r => <ResidencyRow key={r.id} agreement={r} busy={decision.isPending}
+        {residencies.map(r => <ResidencyRow key={r.id} agreement={r} role="owner" ownedClubId={club.id} busy={decision.isPending}
           actions={r.status === "proposed" ? [{ value: "withdraw", label: "Withdraw proposal" }] :
             r.status === "agreed" ? [{ value: "end", label: "End residency plan" }] : []}
           onAction={(action, id) => decision.mutate({ id, action })} />)}
@@ -251,7 +255,7 @@ export function DjResidencyInvitations({ clubId, profileId }: { clubId: string; 
         Ending a residency does not cancel already booked shows.
       </p>
       {isError && <p role="alert" className="text-sm text-destructive">Residency details unavailable.</p>}
-      {residencies.map(r => <ResidencyRow key={r.id} agreement={r} busy={decision.isPending}
+      {residencies.map(r => <ResidencyRow key={r.id} agreement={r} role="dj" busy={decision.isPending}
         actions={r.status === "proposed" ? [
           { value: "accept", label: "Agree to terms" },
           { value: "decline", label: "Decline" },
