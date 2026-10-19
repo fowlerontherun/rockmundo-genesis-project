@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { verifyReplicateWebhookSignature } from "../_shared/replicate-signature.ts";
 
 interface ReplicateWebhookPayload {
   id?: string;
@@ -11,7 +12,6 @@ interface ReplicateWebhookPayload {
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), {
   status, headers: { "Content-Type": "application/json" },
 });
-const encoder = new TextEncoder();
 let cachedSigningSecret: string | undefined;
 
 async function getReplicateSigningSecret(): Promise<string> {
@@ -36,33 +36,13 @@ async function getReplicateSigningSecret(): Promise<string> {
 }
 
 async function signedByReplicate(req: Request, rawBody: string): Promise<boolean> {
-  const id = req.headers.get("webhook-id");
-  const timestamp = req.headers.get("webhook-timestamp");
-  const signature = req.headers.get("webhook-signature");
-  if (!id || !timestamp || !signature || !/^\d{10}$/.test(timestamp)) return false;
-  if (Math.abs(Math.floor(Date.now() / 1000) - Number(timestamp)) > 300) return false;
-
-  const secret = await getReplicateSigningSecret();
-  const keyBytes = Uint8Array.from(atob(secret.slice(6)), c => c.charCodeAt(0));
-  const key = await crypto.subtle.importKey(
-    "raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
-  );
-  const expected = new Uint8Array(await crypto.subtle.sign(
-    "HMAC", key, encoder.encode(`${id}.${timestamp}.${rawBody}`),
-  ));
-  // Each provider signature is a versioned, base64-encoded MAC.
-  // Compare all bytes without early returns to limit timing leakage.
-  for (const entry of signature.split(" ")) {
-    if (!entry.startsWith("v1,")) continue;
-    let candidate: Uint8Array;
-    try { candidate = Uint8Array.from(atob(entry.slice(3)), c => c.charCodeAt(0)); }
-    catch { continue; }
-    if (candidate.length !== expected.length) continue;
-    let mismatch = 0;
-    for (let i = 0; i < expected.length; i++) mismatch |= expected[i] ^ candidate[i];
-    if (mismatch === 0) return true;
-  }
-  return false;
+  return verifyReplicateWebhookSignature({
+    webhookId: req.headers.get("webhook-id"),
+    timestamp: req.headers.get("webhook-timestamp"),
+    signature: req.headers.get("webhook-signature"),
+    rawBody,
+    secret: await getReplicateSigningSecret(),
+  });
 }
 
 function providerUrl(output: ReplicateWebhookPayload["output"]): string | null {
