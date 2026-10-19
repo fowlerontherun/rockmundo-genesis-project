@@ -6,6 +6,16 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const versioned = /^(\d{14})_(.+)\.sql$/;
+// A timestamp is a migration identity. Validate its actual UTC calendar time.
+export function isValidTimestamp(value) {
+  if (!/^\d{14}$/.test(value)) return false;
+  const iso = value.slice(0,4) + "-" + value.slice(4,6) + "-" +
+    value.slice(6,8) + "T" + value.slice(8,10) + ":" +
+    value.slice(10,12) + ":" + value.slice(12,14) + "Z";
+  const date = new Date(iso);
+  return !Number.isNaN(date.getTime()) &&
+    date.toISOString().replace(/\D/g, "").slice(0,14) === value;
+}
 const git = (root, args) => execFileSync("git", args, {
   cwd: root, encoding: "utf8", maxBuffer: 8 * 1024 * 1024,
 }).trim();
@@ -39,7 +49,8 @@ export function bulkGitIntroductions(root) {
   return found;
 }
 
-export function auditCreationDates(root) {
+export function auditCreationDates(root, historyVersions = []) {
+  const historical = new Set(historyVersions.map(String));
   if (git(root, ["rev-parse", "--is-shallow-repository"]) === "true")
     throw new Error("Full Git history required. In GitHub Actions, use actions/checkout with fetch-depth: 0.");
   const filenames = readdirSync(join(root, "supabase", "migrations"))
@@ -58,17 +69,44 @@ export function auditCreationDates(root) {
     const existing = match?.[1] || null;
     const actual = introduction?.utc_timestamp || null;
     const matches = existing && actual ? existing.slice(0, 8) === actual.slice(0, 8) : null;
-    // The Dec 17–20 2029 Festival namespace and inherited exceptions are protected.
-    const protected_identity = Boolean(existing && existing >= "20291217000000" && existing < "20291221000000") || inherited.has(name);
+    // The Dec 17–20 2029 Festival namespace, inherited exceptions and
+    // additional known Festival continuation are preserved as version identities.
+    const protected_identity = Boolean(existing && (
+      (existing >= "20291217000000" && existing < "20291221000000") ||
+      existing.startsWith("20300101")
+    )) || inherited.has(name);
+    const timestamp_valid = existing ? isValidTimestamp(existing) : null;
+    const proposed_filename = !matches && actual && match
+      ? actual + "_" + match[2] + ".sql" : null;
     const classification = !existing ? "legacy_format_manual_review"
       : !introduction ? "git_introduction_unavailable"
+      : !timestamp_valid ? (protected_identity ? "invalid_timestamp_protected_identity" : "invalid_timestamp_manual_review")
       : matches ? "matching_calendar_date"
+      : historical.has(existing) ? "mismatch_deployed_version"
       : protected_identity ? "mismatch_protected_identity"
       : "mismatch_requires_live_history_and_schema_review";
     return { path: "supabase/migrations/" + name, filename_timestamp: existing,
-      first_git_introduction: introduction, protected_identity,
-      duplicate_version: existing ? used.get(existing) > 1 : false, classification };
+      first_git_introduction: introduction, protected_identity, timestamp_valid,
+      history_version_match: Boolean(existing && historical.has(existing)),
+      proposed_filename, duplicate_version: existing ? used.get(existing) > 1 : false,
+      proposed_timestamp_collision: false, classification };
   });
+  // A proposed target can conflict with an existing version OR with another
+  // proposal. Supabase keys by version, not the rest of the filename.
+  const proposals = new Map();
+  for (const entry of entries) {
+    if (!entry.proposed_filename) continue;
+    const key = entry.proposed_filename.slice(0,14);
+    proposals.set(key, (proposals.get(key) || 0) + 1);
+  }
+  for (const entry of entries) {
+    if (!entry.proposed_filename) continue;
+    const key = entry.proposed_filename.slice(0,14);
+    entry.proposed_timestamp_collision = used.has(key) || historical.has(key) || proposals.get(key) > 1;
+    if (entry.proposed_timestamp_collision &&
+        entry.classification === "mismatch_requires_live_history_and_schema_review")
+      entry.classification = "mismatch_proposed_version_collision";
+  }
   const counts = {};
   for (const entry of entries) counts[entry.classification] = (counts[entry.classification] || 0) + 1;
   return { format_version: 1, source: "full_git_history", read_only: true,
@@ -82,11 +120,24 @@ export function auditCreationDates(root) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     const args = process.argv.slice(2);
-    if (args.length && (args.length !== 2 || args[0] !== "--output"))
-      throw new Error("Usage: node scripts/supabase/audit-migration-creation-dates.mjs [--output PATH]");
-    const report = auditCreationDates(process.cwd());
+    let output = null, historyInput = null;
+    for (let i = 0; i < args.length; i++) {
+      if (args[i] === "--output") output = args[++i];
+      else if (args[i] === "--history-json") historyInput = args[++i];
+      else throw new Error("Usage: node scripts/supabase/audit-migration-creation-dates.mjs [--output PATH] [--history-json SANITIZED_FILE]");
+    }
+    if ((args.length && !output && !historyInput) ||
+        (args.includes("--output") && !output) ||
+        (args.includes("--history-json") && !historyInput))
+      throw new Error("Missing audit output or sanitized history path");
+    const versions = historyInput ? JSON.parse(readFileSync(historyInput, "utf8")) : [];
+    if (!Array.isArray(versions)) throw new Error("History must be an array");
+    const clean = versions.map(item => typeof item === "object" && item !== null ? item.version : item);
+    if (clean.some(version => !/^\d{14}$/.test(String(version))))
+      throw new Error("Invalid sanitized history version");
+    const report = auditCreationDates(process.cwd(), clean);
     const json = JSON.stringify(report, null, 2) + "\n";
-    if (args.length) writeFileSync(args[1], json);
+    if (output) writeFileSync(output, json);
     else process.stdout.write(json);
     console.error("Audited " + report.file_count + " migrations: " + JSON.stringify(report.counts));
   } catch (e) {
