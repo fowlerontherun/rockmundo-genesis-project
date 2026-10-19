@@ -136,6 +136,8 @@ export const useSongAuctions = (userId?: string) => {
         .select("id, title, genre, quality_score, duration_display, status, market_listing_id, ownership_type, acquisition_source")
         .or(`profile_id.eq.${profileId ?? "00000000-0000-0000-0000-000000000000"},user_id.eq.${userId ?? "00000000-0000-0000-0000-000000000000"}`)
         .neq("ownership_type", "purchased")
+        // The authoritative sale RPC refuses songs assigned to a band.
+        .is("band_id", null)
         .eq("status", "draft")
         .neq("archived", true)
         .order("title");
@@ -197,7 +199,7 @@ export const useSongAuctions = (userId?: string) => {
       description?: string;
       bandId?: string | null;
     }) => {
-      if (!userId) throw new Error("Not authenticated");
+      if (!userId || !profileId) throw new Error("Select a character before listing a song");
 
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + params.durationDays);
@@ -207,6 +209,7 @@ export const useSongAuctions = (userId?: string) => {
         .insert({
           song_id: params.songId,
           seller_user_id: userId,
+          profile_id: profileId,
           seller_band_id: params.bandId || null,
           listing_type: params.listingType,
           asking_price: params.askingPrice,
@@ -239,6 +242,8 @@ export const useSongAuctions = (userId?: string) => {
     mutationFn: async ({ listingId, bidAmount }: { listingId: string; bidAmount: number }) => {
       if (!userId || !profileId) throw new Error("Choose an active character before bidding");
 
+      // The secured RPC verifies the JWT, active character ownership,
+      // listing/song eligibility, available cash and canonical bid minimum.
       const { data, error } = await supabase.rpc("place_song_bid_authorized", {
         p_listing_id: listingId,
         p_bidder_profile_id: profileId,
@@ -262,15 +267,13 @@ export const useSongAuctions = (userId?: string) => {
 
   // Buy now (fixed price) or accept winning bid
   const completeSale = useMutation({
-    mutationFn: async ({ listingId }: { listingId: string; salePrice: number }) => {
-      if (!userId || !profileId) throw new Error("Choose an active character before buying");
+    mutationFn: async ({ listingId, salePrice }: { listingId: string; salePrice: number }) => {
+      if (!userId) throw new Error("Not authenticated");
 
-      // The SQL transaction derives the price from the locked listing
-      // (asking price or auction buyout), never from the browser.
-      const { data, error } = await supabase.rpc("settle_song_marketplace_sale_atomic", {
+      const { data, error } = await supabase.rpc("complete_song_sale", {
         p_listing_id: listingId,
-        p_actor_profile_id: profileId,
-        p_action: "buy",
+        p_buyer_user_id: userId,
+        p_sale_price: salePrice,
       });
 
       if (error) throw error;
@@ -307,37 +310,6 @@ export const useSongAuctions = (userId?: string) => {
     },
   });
 
-  // Accept highest bid (seller completes auction manually)
-  const acceptBid = useMutation({
-    mutationFn: async ({ listingId }: { listingId: string }) => {
-      if (!userId || !profileId) throw new Error("Choose an active character to accept bids");
-
-      // Seller-only action: SQL locks the listing, verifies the active
-      // winning bid and recorded bidding character, then settles once.
-      const { data, error } = await supabase.rpc("settle_song_marketplace_sale_atomic", {
-        p_listing_id: listingId,
-        p_actor_profile_id: profileId,
-        p_action: "accept_bid",
-      });
-
-      if (error) throw error;
-      const result = data as any;
-      if (!result.success) throw new Error(result.error);
-      return result;
-    },
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["song-market-my-listings"] });
-      queryClient.invalidateQueries({ queryKey: ["song-market-browse"] });
-      queryClient.invalidateQueries({ queryKey: ["song-market-sellable"] });
-      toast({
-        title: "Sale Completed!",
-        description: `Sold for $${result.sale_price?.toLocaleString()}. You earned $${result.seller_payout?.toLocaleString()}.`,
-      });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Sale Failed", description: error.message, variant: "destructive" });
-    },
-  });
 
   return {
     activeListings,
@@ -353,6 +325,5 @@ export const useSongAuctions = (userId?: string) => {
     placeBid,
     completeSale,
     cancelListing,
-    acceptBid,
   };
 };
