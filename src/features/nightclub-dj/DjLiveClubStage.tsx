@@ -71,7 +71,7 @@ export function DjLiveClubStage({
       // Exactly the accepted, server-timed owner-only evidence; no browser taps.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase as any).from("dj_live_mix_events")
-        .select("event_no,kind,recorded_at").eq("booking_id", bookingId)
+        .select("event_no,kind,deck,recorded_at").eq("booking_id", bookingId)
         .eq("profile_id", profileId)
         .order("event_no", { ascending: mode === "replay" }).limit(mode === "replay" ? 120 : 24);
       if (error) throw error;
@@ -196,9 +196,19 @@ export function DjLiveClubStage({
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
         <strong className="flex items-center gap-2"><Camera className="h-4 w-4" /> {isReplay ? "Verified DJ set replay" : "Live nightclub stage"}</strong>
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" type="button" variant="outline" onClick={() => setCamera(camera === "front" ? "lead_close" : "front")}>
-            {camera === "front" ? "DJ close-up" : "Wide view"}
-          </Button>
+          {([
+            ["front", "Wide"],
+            ["dj_booth", "DJ booth"],
+            ["dj_overhead", "Overhead"],
+            ["dj_dancefloor", "Dancefloor"],
+            ["dj_reverse", "Behind decks"],
+          ] as const satisfies readonly (readonly [CameraShot, string])[]).map(([shot, label]) => (
+            <Button key={shot} size="sm" type="button" variant="outline"
+              aria-label={`Show ${label.toLowerCase()} camera`}
+              aria-pressed={camera === shot} onClick={() => setCamera(shot)}>
+              {label}
+            </Button>
+          ))
           <Button size="sm" type="button" variant="outline" aria-pressed={lowGraphics} onClick={() => setLowGraphics(x => !x)}>
             {lowGraphics ? "Standard graphics" : "Low graphics"}
           </Button>
