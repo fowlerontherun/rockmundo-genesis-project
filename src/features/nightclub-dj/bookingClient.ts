@@ -54,6 +54,13 @@ export function canCancelDjBooking(status: string, startsAt: string, nowMs: numb
     Number.isFinite(startMs) && Number.isFinite(nowMs) && startMs > nowMs;
 }
 
+/** A live set can outlast its booking window; never restore a missed or settled one. */
+export function findUnrestoredLiveDjBooking<T extends { id: string; status: string }>(
+  bookings: readonly T[],
+  restoredIds: ReadonlySet<string>,
+): T | null {
+  return bookings.find((booking) => booking.status === "live" && !restoredIds.has(booking.id)) ?? null;
+}
 
 /**
  * A verified server acknowledgement must not be turned into a false failure by a
