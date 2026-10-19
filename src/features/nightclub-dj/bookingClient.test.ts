@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   canCancelDjBooking, canStartDjBooking, djReservationFingerprint,
-  parseDjReservationAttempt, resolveDjReservationAttempt, runConfirmedDjAction,
+  parseDjReservationAttempt, resolveDjReservationAttempt, findUnrestoredLiveDjBooking, runConfirmedDjAction,
 } from "./bookingClient";
 
 const firstId = "77777777-7777-4777-8777-777777777777";
@@ -95,5 +95,26 @@ describe("confirmed DJ server action acknowledgement", () => {
     );
     expect(completed.id).toBe("booking-id");
     expect(followUpCount).toBe(1);
+  });
+});
+
+describe("DJ live session recovery", () => {
+  const bookings = [
+    { id: "settled", status: "completed" },
+    { id: "missed", status: "missed" },
+    { id: "live-first", status: "live" },
+    { id: "live-second", status: "live" },
+    { id: "future", status: "booked" },
+  ];
+  it("restores an existing live booking, never practice or a terminal booking", () => {
+    expect(findUnrestoredLiveDjBooking(bookings, new Set())?.id).toBe("live-first");
+    expect(findUnrestoredLiveDjBooking(bookings, new Set(["live-first"]))?.id).toBe("live-second");
+    expect(findUnrestoredLiveDjBooking(bookings, new Set(["live-first", "live-second"]))).toBeNull();
+    expect(findUnrestoredLiveDjBooking(bookings.filter((b) => b.status !== "live"), new Set())).toBeNull();
+  });
+  it("preserves caller booking objects without mutating polling results", () => {
+    const frozen = Object.freeze([{ id: "live", status: "live" }]);
+    expect(findUnrestoredLiveDjBooking(frozen, new Set(["live"]))).toBeNull();
+    expect(frozen).toHaveLength(1);
   });
 });
