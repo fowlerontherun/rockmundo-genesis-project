@@ -22,3 +22,5 @@ psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/mentor_rpc_only_write_acc
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/pootube_future_skill_autoseed.sql
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/weekly_experience_cron_signature.sql
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/nightclub_atomic_purchase_authority_harness.sql
+psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/nightclub_staff_atomic_hire_fire_contract.sql
+psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/nightclub_staff_real_role_contract.sql
