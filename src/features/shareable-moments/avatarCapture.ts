@@ -5,8 +5,8 @@ import type { StageRole } from "@/features/gig-demo-3d/liveTypes";
 import type { ResolvedEquippedClothing } from "@/features/clothing-preview/equippedClothing";
 import { loadOptionalCuratedGarments, requiredCuratedGarmentFiles } from "@/features/clothing-preview/curatedGarmentAssets";
 import { requiredCuratedDonorModelFiles } from "@/features/clothing-preview/curatedDonorGarments";
-import { STYLES, modelFile, type PlayerAppearance } from "@/features/player-model/appearance";
-import { assemblePlayerModel, disposeModel, loadModelLibrary } from "@/features/player-model/model";
+import type { PlayerAppearance } from "@/features/player-model/appearance";
+import { assemblePlayerModel, disposeModel, loadModelLibrary, requiredModelFiles } from "@/features/player-model/model";
 import { visibleTattoosForPresentation, type ResolvedTattooVisual } from "@/features/player-model/tattoos";
 import type { ResolvedMerchWearable } from "@/features/player-model/merchWearables";
 import type { LuthieryInstrumentVisual } from "@/features/luthiery/luthieryInstrument";
@@ -50,7 +50,10 @@ export async function captureAvatarV1ForShare(visual:AvatarShareVisual):Promise<
   // from saved share images even though they appear correctly at gigs.
   const donorFiles=requiredCuratedDonorModelFiles(clothing,frame);
   const curatedFiles=requiredCuratedGarmentFiles(clothing,frame);
-  const files=[...(["masculine","feminine"] as const).flatMap(f=>STYLES.map(style=>modelFile(f,style))),...donorFiles];
+  // A single portrait needs only the current character's head/body/clothing
+  // styles plus curated donor sources. Loading every style and the opposite
+  // frame adds unnecessary GLB downloads and can fail on an unused asset.
+  const files=[...requiredModelFiles([visual.appearance]),...donorFiles];
   library=await loadModelLibrary([...new Set(files)]);
   await loadOptionalCuratedGarments(library,curatedFiles);
   // Gigs can continue without an optional garment, but a personal portrait
