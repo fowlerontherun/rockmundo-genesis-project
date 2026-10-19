@@ -104,7 +104,7 @@ export const NumberPicker = ({ onSubmit, disabled, isLoading }: NumberPickerProp
                 <button
                   key={n}
                   onClick={() => setSelectedBonus(n)}
-                  disabled={disabled}
+                  disabled={disabled || isLoading || isSubmitting}
                   className={`h-10 w-full rounded-md text-sm font-bold transition-all
                     ${isSelected
                       ? "bg-warning text-warning-foreground shadow-md scale-105"
