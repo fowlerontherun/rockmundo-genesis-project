@@ -1,3 +1,7 @@
+import {
+  LOTTERY_BONUS_MAX, LOTTERY_MAX_NUMBER, LOTTERY_NUMBERS_TO_PICK,
+  LOTTERY_TICKET_COST, lotterySelectionError, quickPickLotteryNumbers,
+} from "@/lib/lottery/rules";
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Shuffle } from "lucide-react";
 
 interface NumberPickerProps {
-  onSubmit: (numbers: number[], bonus: number) => void;
+  onSubmit: (numbers: number[], bonus: number) => Promise<unknown> | void;
   disabled?: boolean;
   isLoading?: boolean;
 }
@@ -17,44 +21,48 @@ export const NumberPicker = ({ onSubmit, disabled, isLoading }: NumberPickerProp
   const toggleNumber = useCallback((n: number) => {
     setSelectedNumbers((prev) => {
       if (prev.includes(n)) return prev.filter((x) => x !== n);
-      if (prev.length >= 7) return prev;
+      if (prev.length >= LOTTERY_NUMBERS_TO_PICK) return prev;
       return [...prev, n];
     });
   }, []);
 
   const quickPick = useCallback(() => {
-    const nums: number[] = [];
-    while (nums.length < 7) {
-      const r = Math.floor(Math.random() * 49) + 1;
-      if (!nums.includes(r)) nums.push(r);
-    }
-    nums.sort((a, b) => a - b);
-    setSelectedNumbers(nums);
-    setSelectedBonus(Math.floor(Math.random() * 10) + 1);
+    const selection = quickPickLotteryNumbers();
+    setSelectedNumbers(selection.numbers);
+    setSelectedBonus(selection.bonus);
   }, []);
 
-  const handleSubmit = () => {
-    if (selectedNumbers.length === 7 && selectedBonus !== null) {
-      onSubmit([...selectedNumbers].sort((a, b) => a - b), selectedBonus);
-      // Reset for next ticket
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const handleSubmit = async () => {
+    if (!canSubmit || selectedBonus === null) return;
+    setIsSubmitting(true);
+    try {
+      await onSubmit([...selectedNumbers].sort((a, b) => a - b), selectedBonus);
+      // Keep selection when the server rejects the purchase.
       setSelectedNumbers([]);
       setSelectedBonus(null);
+    } catch {
+      // useBuyTicket supplies the error toast.
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const canSubmit = selectedNumbers.length === 7 && selectedBonus !== null && !disabled && !isLoading;
+  const canSubmit = selectedBonus !== null &&
+    !lotterySelectionError(selectedNumbers, selectedBonus) &&
+    !disabled && !isLoading && !isSubmitting;
 
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Pick 7 Numbers (1-49)</CardTitle>
+            <CardTitle className="text-base">Pick {LOTTERY_NUMBERS_TO_PICK} Numbers (1-{LOTTERY_MAX_NUMBER})</CardTitle>
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="text-xs">
-                {selectedNumbers.length}/7
+                {selectedNumbers.length}/{LOTTERY_NUMBERS_TO_PICK}
               </Badge>
-              <Button variant="outline" size="sm" onClick={quickPick} disabled={disabled}>
+              <Button variant="outline" size="sm" onClick={quickPick} disabled={disabled || isLoading || isSubmitting}>
                 <Shuffle className="h-3 w-3 mr-1" /> Quick Pick
               </Button>
             </div>
@@ -62,13 +70,13 @@ export const NumberPicker = ({ onSubmit, disabled, isLoading }: NumberPickerProp
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-7 sm:grid-cols-10 gap-1.5">
-            {Array.from({ length: 49 }, (_, i) => i + 1).map((n) => {
+            {Array.from({ length: LOTTERY_MAX_NUMBER }, (_, i) => i + 1).map((n) => {
               const isSelected = selectedNumbers.includes(n);
               return (
                 <button
                   key={n}
                   onClick={() => toggleNumber(n)}
-                  disabled={disabled || (!isSelected && selectedNumbers.length >= 7)}
+                  disabled={disabled || isLoading || isSubmitting || (!isSelected && selectedNumbers.length >= LOTTERY_NUMBERS_TO_PICK)}
                   className={`h-9 w-full rounded-md text-sm font-medium transition-all
                     ${isSelected
                       ? "bg-primary text-primary-foreground shadow-md scale-105"
@@ -86,11 +94,11 @@ export const NumberPicker = ({ onSubmit, disabled, isLoading }: NumberPickerProp
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Pick Bonus Number (1-10)</CardTitle>
+          <CardTitle className="text-base">Pick Bonus Number (1-{LOTTERY_BONUS_MAX})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
-            {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => {
+            {Array.from({ length: LOTTERY_BONUS_MAX }, (_, i) => i + 1).map((n) => {
               const isSelected = selectedBonus === n;
               return (
                 <button
@@ -114,18 +122,18 @@ export const NumberPicker = ({ onSubmit, disabled, isLoading }: NumberPickerProp
 
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
-          {selectedNumbers.length === 7 && selectedBonus !== null ? (
+          {selectedNumbers.length === LOTTERY_NUMBERS_TO_PICK && selectedBonus !== null ? (
             <span>
               Selected: <span className="font-mono text-foreground">{[...selectedNumbers].sort((a, b) => a - b).join(", ")}</span>
               {" + "}
               <span className="font-mono text-warning">B{selectedBonus}</span>
             </span>
           ) : (
-            "Pick 7 numbers and 1 bonus number"
+            `Pick ${LOTTERY_NUMBERS_TO_PICK} numbers and 1 bonus number`
           )}
         </div>
         <Button onClick={handleSubmit} disabled={!canSubmit}>
-          {isLoading ? "Buying..." : "Buy Ticket ($500)"}
+          {isLoading || isSubmitting ? "Buying..." : `Buy Ticket (${LOTTERY_TICKET_COST})`}
         </Button>
       </div>
     </div>
