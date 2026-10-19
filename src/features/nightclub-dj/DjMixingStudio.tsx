@@ -224,6 +224,10 @@ export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
   const queue = useRef<Promise<void>>(Promise.resolve());
   const activeBooking = useRef<string | undefined>(liveBookingId);
   activeBooking.current = liveBookingId;
+  // A remote close or failed status refresh revokes queued UI permission
+  // immediately. The backend still performs the final authorization check.
+  const liveBookingActive = useRef(false);
+  liveBookingActive.current = !liveError && liveBooking?.status === "live";
   const mounted = useRef(true);
 
   // Drop actions still queued behind the spacing/backoff timer when the
@@ -240,19 +244,19 @@ export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
   // A single event UUID is generated per actual player action. Retries only
   // repeat that UUID, never mint new performance evidence or rewards.
   const sendLiveEvent = (event: Record<string, unknown>) => {
-    if (!liveBookingId || !mounted.current || liveBooking?.status !== "live") return;
+    if (!liveBookingId || !mounted.current || !liveBookingActive.current) return;
     const bookingId = liveBookingId;
     const eventId = crypto.randomUUID();
     setPendingEvents((count) => count + 1);
     queue.current = queue.current.catch(() => undefined).then(async () => {
       try {
-        if (!mounted.current || activeBooking.current !== bookingId) return;
+        if (!mounted.current || activeBooking.current !== bookingId || !liveBookingActive.current) return;
         const remaining = 2200 - (Date.now() - lastAttempt.current);
         if (remaining > 0) {
           await new Promise<void>((resolve) => setTimeout(resolve, remaining));
         }
         await deliverDjMixEvent({
-          isActive: () => mounted.current && activeBooking.current === bookingId,
+          isActive: () => mounted.current && activeBooking.current === bookingId && liveBookingActive.current,
           invoke: async () => {
             lastAttempt.current = Date.now();
             return supabase.functions.invoke("dj-booking-action", {
@@ -265,7 +269,7 @@ export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
           delay: (ms) => new Promise<void>((resolve) => setTimeout(resolve, ms)),
         });
       } catch (error) {
-        if (mounted.current && activeBooking.current === bookingId) {
+        if (mounted.current && activeBooking.current === bookingId && liveBookingActive.current) {
           toast.error(error instanceof Error ? error.message : "Mixer interaction could not be recorded");
         }
       } finally {
