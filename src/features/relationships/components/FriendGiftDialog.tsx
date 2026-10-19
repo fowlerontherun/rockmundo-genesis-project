@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -19,6 +19,10 @@ export function FriendGiftDialog({ open, onOpenChange, senderProfileId, recipien
   const [giftType, setGiftType] = useState<string>(GIFT_CATALOG[0].value);
   const [message, setMessage] = useState("");
   const send = useSendFriendGift();
+  // Reuse this ID after an uncertain network failure; the RPC returns the
+  // original committed gift without a second debit or affection reward.
+  const requestIdRef = useRef<string | null>(null);
+  useEffect(() => { requestIdRef.current = null; }, [senderProfileId, recipientProfileId]);
   const cfg = GIFT_CATALOG.find((g) => g.value === giftType)!;
 
   return (
@@ -31,7 +35,7 @@ export function FriendGiftDialog({ open, onOpenChange, senderProfileId, recipien
         <div className="space-y-3">
           <div>
             <Label>Gift</Label>
-            <Select value={giftType} onValueChange={setGiftType}>
+            <Select value={giftType} onValueChange={(value) => { requestIdRef.current = null; setGiftType(value); }}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {GIFT_CATALOG.map((g) => (
@@ -44,7 +48,7 @@ export function FriendGiftDialog({ open, onOpenChange, senderProfileId, recipien
           </div>
           <div>
             <Label>Message (optional)</Label>
-            <Textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="A short note…" maxLength={140} />
+            <Textarea value={message} onChange={(e) => { requestIdRef.current = null; setMessage(e.target.value); }} placeholder="A short note…" maxLength={140} />
           </div>
           <div className="text-xs text-muted-foreground">
             Cost ${(cfg.costCents / 100).toLocaleString()} · +{cfg.affection} affection
@@ -54,10 +58,14 @@ export function FriendGiftDialog({ open, onOpenChange, senderProfileId, recipien
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button
             disabled={send.isPending}
-            onClick={() => send.mutate(
-              { senderProfileId, recipientProfileId, giftType, message },
-              { onSuccess: () => onOpenChange(false) }
-            )}
+            onClick={() => {
+              const requestId = requestIdRef.current ?? crypto.randomUUID();
+              requestIdRef.current = requestId;
+              send.mutate(
+                { senderProfileId, recipientProfileId, giftType, message, requestId },
+                { onSuccess: () => { requestIdRef.current = null; onOpenChange(false); } },
+              );
+            }}
           >Send gift</Button>
         </DialogFooter>
       </DialogContent>
