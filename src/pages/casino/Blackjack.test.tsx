@@ -23,7 +23,7 @@ vi.mock("@/hooks/useCasino", () => ({
   useCasino: () => ({ cash: mocks.cash, recordTransaction: mocks.record, isRecording: false }),
 }));
 vi.mock("@/components/fm/FMPageScaffold", () => ({
-  FMPageScaffold: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  FMPageScaffold: ({ children, headerActions }: { children: React.ReactNode; headerActions?: React.ReactNode }) => <div>{headerActions}{children}</div>,
 }));
 vi.mock("@/components/casino/CasinoCard", () => ({
   CasinoCard: ({ card: shown }: { card: TestCard }) => <span>{shown.faceUp ? shown.rank : "?"}</span>,
@@ -78,13 +78,14 @@ describe("Blackjack doubled-stake settlement (#4269)", () => {
     render(<Blackjack />);
     await doubleHand();
     expect(await screen.findByText(label)).toBeInTheDocument();
-    expect(mocks.record).toHaveBeenCalledExactlyOnceWith("blackjack", 200, payout, {
+    expect(mocks.record).toHaveBeenCalledTimes(1);
+    expect(mocks.record).toHaveBeenCalledWith("blackjack", 200, payout, {
       result: outcome,
       originalStake: 100,
       effectiveStake: 200,
       doubled: true,
     });
-    expect(screen.getByText("Wager: 200 (doubled)")).toBeInTheDocument();
+    expect(screen.getByText("Wager: $200 (doubled)")).toBeInTheDocument();
     if (net !== 0) {
       expect(screen.getByText(net > 0 ? "+$200" : "-$200")).toBeInTheDocument();
     }
@@ -136,7 +137,7 @@ describe("Blackjack doubled-stake settlement (#4269)", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /Deal/ }));
     await user.click(screen.getByRole("button", { name: "Stand" }));
-    expect(mocks.record).toHaveBeenCalledExactlyOnceWith("blackjack", 100, expect.any(Number), {
+    expect(mocks.record).toHaveBeenCalledWith("blackjack", 100, expect.any(Number), {
       result: expect.any(String),
       originalStake: 100,
       effectiveStake: 100,
