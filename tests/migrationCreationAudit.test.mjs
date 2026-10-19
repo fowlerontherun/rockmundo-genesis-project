@@ -43,6 +43,11 @@ test("audits true Git creation day, protects historical identities and detects c
     assert.equal(entry("20260702120000_correct.sql").classification, "matching_calendar_date");
     assert.equal(entry("20260702123000_renamed.sql").first_git_introduction.utc_timestamp, "20260702120000");
     assert.equal(entry("20260702123000_renamed.sql").classification, "matching_calendar_date");
+    const ledgerReviewed = auditCreationDates(root, ["20290702120000"]);
+    const existingDeployed = ledgerReviewed.entries.find(x => x.path.endsWith("/20290702120000_wrong.sql"));
+    assert.equal(existingDeployed.classification, "mismatch_deployed_version");
+    assert.equal(existingDeployed.history_version_match, true);
+
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
