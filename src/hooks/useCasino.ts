@@ -64,10 +64,12 @@ export function useCasino() {
       }
       if (
         typeof data?.roundId !== "string" ||
-        !Number.isFinite(Number(data?.netResult)) ||
-        !Number.isFinite(Number(data?.newCash)) ||
-        !Number.isFinite(Number(data?.payout)) ||
-        !data?.outcome || typeof data.outcome !== "object"
+        data?.netResult == null || data?.newCash == null || data?.payout == null ||
+        !Number.isFinite(Number(data.netResult)) ||
+        !Number.isFinite(Number(data.newCash)) ||
+        !Number.isFinite(Number(data.payout)) ||
+        !data?.outcome || typeof data.outcome !== "object" ||
+        Array.isArray(data.outcome)
       ) {
         throw new Error("Casino settlement receipt missing or invalid. Retry with the same request ID.");
       }
