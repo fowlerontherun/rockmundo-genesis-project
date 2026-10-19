@@ -62,6 +62,20 @@ begin
    if sqlerrm<>'song_sale_only_seller_accepts_bid' then raise; end if;
  end;
 
+ -- Another October migration independently hardened the legacy sale RPC
+ -- and may leave authenticated EXECUTE enabled. When enabled, its legacy
+ -- caller ID and price must nevertheless be checked against this JWT and
+ -- the locked canonical listing price.
+ if has_function_privilege('authenticated',
+   'public.complete_song_sale(uuid,uuid,numeric)','execute') then
+   result:=public.complete_song_sale(listing_one,seller_uid,200)::jsonb;
+   if result->>'success'<>'false' then
+     raise exception 'legacy_sale_accepted_spoofed_buyer'; end if;
+   result:=public.complete_song_sale(listing_one,buyer_uid,1)::jsonb;
+   if result->>'success'<>'false' then
+     raise exception 'legacy_sale_accepted_tampered_price'; end if;
+ end if;
+
  result:=public.settle_song_marketplace_sale_atomic(listing_one,buyer_profile,'buy');
  if result->>'success'<>'true' or (result->>'sale_price')::int<>200
    or (select cash from public.profiles where id=buyer_profile)<>800
@@ -113,7 +127,6 @@ begin
  then raise exception 'accepted_bid_settlement_incorrect'; end if;
 
  if has_function_privilege('anon','public.complete_song_sale(uuid,uuid,numeric)','execute')
-    or has_function_privilege('authenticated','public.complete_song_sale(uuid,uuid,numeric)','execute')
     or has_function_privilege('authenticated','public.place_song_bid(uuid,uuid,numeric)','execute')
     or has_table_privilege('authenticated','public.marketplace_bids','insert')
     or has_table_privilege('authenticated','public.marketplace_transactions','insert')
