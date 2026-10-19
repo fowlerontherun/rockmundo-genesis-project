@@ -1,144 +1,26 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
+// Retired: the only supported weekly lottery authority is the database's
+// service-role-only process_weekly_lottery_draw(), scheduled via pg_cron.
+// Issue #4224: never reintroduce service-role RPCs to this public endpoint.
+// Anonymous requests are rejected by the JWT gateway; authenticated requests
+// receive 410 Gone, including requests made before the draw cutoff.
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface PrizeTier {
-  matches: number;
-  bonus: boolean;
-  cash: number;
-  xp: number;
-  fame: number;
-}
-
-const PRIZE_TIERS: PrizeTier[] = [
-  { matches: 7, bonus: true, cash: 1000000, xp: 10000, fame: 5000 },
-  { matches: 7, bonus: false, cash: 250000, xp: 5000, fame: 0 },
-  { matches: 6, bonus: true, cash: 50000, xp: 2000, fame: 0 },
-  { matches: 6, bonus: false, cash: 10000, xp: 1000, fame: 0 },
-  { matches: 5, bonus: true, cash: 5000, xp: 500, fame: 0 },
-  { matches: 5, bonus: false, cash: 1000, xp: 200, fame: 0 },
-  { matches: 4, bonus: false, cash: 500, xp: 100, fame: 0 },
-  { matches: 3, bonus: false, cash: 2, xp: 0, fame: 0 }, // return $2 ticket stake
-];
-
-function getPrize(matchCount: number, bonusMatched: boolean): { cash: number; xp: number; fame: number } {
-  for (const tier of PRIZE_TIERS) {
-    if (tier.matches === matchCount && (tier.bonus === false || bonusMatched)) {
-      return { cash: tier.cash, xp: tier.xp, fame: tier.fame };
-    }
-  }
-  return { cash: 0, xp: 0, fame: 0 };
-}
-
-function generateUniqueNumbers(count: number, max: number): number[] {
-  const nums: number[] = [];
-  while (nums.length < count) {
-    const r = Math.floor(Math.random() * max) + 1;
-    if (!nums.includes(r)) nums.push(r);
-  }
-  return nums.sort((a, b) => a - b);
-}
-
-Deno.serve(async (req) => {
+Deno.serve((req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, serviceKey);
-
-    // Find current pending draw
-    const { data: pendingDraws, error: drawError } = await supabase
-      .from("lottery_draws")
-      .select("*")
-      .in("status", ["pending", "drawn"])
-      .order("week_start", { ascending: false })
-      .limit(1);
-
-    if (drawError) throw drawError;
-    if (!pendingDraws || pendingDraws.length === 0) {
-      return new Response(JSON.stringify({ message: "No pending draws" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const draw = pendingDraws[0];
-
-    // Generate winning numbers
-    const winningNumbers: number[] = draw.winning_numbers?.length === 7 ? draw.winning_numbers : generateUniqueNumbers(7, 49);
-    const bonusNumber = draw.bonus_number ?? (Math.floor(Math.random() * 10) + 1);
-
-    // Update draw with winning numbers
-    const { error: updateDrawError } = await supabase
-      .from("lottery_draws")
-      .update({
-        winning_numbers: winningNumbers,
-        bonus_number: bonusNumber,
-        draw_date: new Date().toISOString(),
-        status: "drawn",
-      })
-      .eq("id", draw.id);
-
-    if (updateDrawError) throw updateDrawError;
-
-    // Get all tickets for this draw
-    const { data: tickets, error: ticketsError } = await supabase
-      .from("lottery_tickets")
-      .select("*")
-      .eq("draw_id", draw.id);
-
-    if (ticketsError) throw ticketsError;
-
-    let totalPrizesPaid = 0;
-
-    // Process each ticket
-    for (const ticket of tickets || []) {
-      const selectedNumbers: number[] = ticket.selected_numbers || [];
-      const matchCount = selectedNumbers.filter((n: number) => winningNumbers.includes(n)).length;
-      const bonusMatched = ticket.bonus_number === bonusNumber;
-
-      const prize = getPrize(matchCount, bonusMatched);
-      if (matchCount === 7 && bonusMatched) prize.cash = draw.jackpot_amount ?? 1_000_000;
-
-      const { data: settled, error: settleError } = await supabase.rpc("settle_lottery_ticket_atomic", {
-        p_ticket_id: ticket.id,
-        p_matches: matchCount,
-        p_bonus_matched: bonusMatched,
-        p_prize_cash: prize.cash,
-        p_prize_xp: prize.xp,
-        p_prize_fame: prize.fame,
-      });
-      if (settleError) throw settleError;
-      if (settled) totalPrizesPaid += prize.cash;
-    }
-
-    // Mark draw as paid out
-    await supabase
-      .from("lottery_draws")
-      .update({ status: "paid_out" })
-      .eq("id", draw.id);
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        draw_id: draw.id,
-        winning_numbers: winningNumbers,
-        bonus_number: bonusNumber,
-        tickets_processed: (tickets || []).length,
-        total_prizes_paid: totalPrizesPaid,
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (error) {
-    console.error("Lottery draw error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
+  return new Response(
+    JSON.stringify({
+      error: "lottery_draw_scheduler_only",
+      message: "Weekly lottery draws are processed by the internal database scheduler.",
+    }),
+    {
+      status: 410,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+    },
+  );
 });
