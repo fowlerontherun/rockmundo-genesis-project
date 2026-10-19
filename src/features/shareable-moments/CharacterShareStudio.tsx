@@ -58,12 +58,11 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
       }
       return;
     }
-    // Never publish a character portrait with missing equipped clothing,
-    // tattoos, band merch or player-crafted instruments after a query error.
-    // Their fetch failures may otherwise appear as a successful default look.
-    // A failed, enabled merch query may hide an equipped custom band top.
+    // React Query can keep stale appearance data when a refresh fails.
+    // Never publish a stale model or omit equipment after an errored request:
+    // all required appearance layers must have healthy query results.
     // Disabled merch queries (players without a band) are not errors.
-    if (clothing.isError || tattoos.isError || merch.query.isError || luthiery.isError) {
+    if (model.query.isError || clothing.isError || tattoos.isError || merch.query.isError || luthiery.isError) {
       setCapture({ key: captureKey, avatar: null, status: 'unavailable' });
       return;
     }
