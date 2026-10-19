@@ -9,6 +9,7 @@ DECLARE
  first_slot timestamptz;second_slot timestamptz;first_local timestamp;
  proposed public.nightclub_dj_residencies%ROWTYPE;
  before_cash bigint;v_result jsonb;
+ sweep_first integer;sweep_second integer;sweep_status text;
 BEGIN
  IF has_table_privilege('authenticated','public.nightclub_dj_residencies','INSERT')
  OR has_table_privilege('authenticated','public.nightclub_dj_residencies','UPDATE')
@@ -88,6 +89,15 @@ BEGIN
  v_result:=public.respond_nightclub_dj_residency(residency,'accept',agreement_key);
  IF (v_result->>'replayed')::boolean IS DISTINCT FROM true OR
   (v_result->>'status')<>'ended' THEN RAISE EXCEPTION 'Agreement retry lost original result';END IF;
+ UPDATE public.nightclub_dj_residencies SET status='proposed',
+  agreed_at=NULL,ended_at=NULL,created_at=clock_timestamp()-interval '72 hours',
+  expires_at=clock_timestamp()-interval '1 minute' WHERE id=residency;
+ sweep_first:=private.close_stale_nightclub_dj_residencies_internal(100);
+ SELECT status INTO sweep_status FROM public.nightclub_dj_residencies WHERE id=residency;
+ sweep_second:=private.close_stale_nightclub_dj_residencies_internal(100);
+ IF sweep_first<>1 OR sweep_second<>0 OR sweep_status<>'expired' THEN
+  RAISE EXCEPTION 'Residency expiry sweep first %, second %, status %',sweep_first,sweep_second,sweep_status;
+ END IF;
  IF (SELECT count(*) FROM public.dj_bookings)>0
  OR (SELECT count(*) FROM public.nightclub_dj_funded_offers)>0
  OR (SELECT cash FROM public.profiles WHERE id=owner_player)<>before_cash THEN
