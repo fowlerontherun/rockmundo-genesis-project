@@ -46,7 +46,7 @@ describe("Shareable Moments migrated entrypoint contracts", () => {
 
   it("reopens avatar-capable gallery cards through the retry-capable renderer", () => {
     const source = read("src/pages/ShareStudio.tsx");
-    expect(source).toContain('{selected && ["character_profile", "band_profile", "gig_result", "achievement", "tour", "release"].includes(selected.type)');
+    expect(source).toContain('{selected && ["character_profile", "band_profile", "gig_result", "achievement", "tour", "release", "festival", "chart"].includes(selected.type)');
     expect(source).not.toContain("selected && !selected.avatar");
   });
 
@@ -64,14 +64,14 @@ describe("Shareable Moments migrated entrypoint contracts", () => {
     expect(source).toContain("<AvatarShareStudio");
   });
 
-  it("keeps chart sharing on the shared sheet with a button-first #1 prompt", () => {
+  it("keeps chart sharing avatar-aware with a button-first #1 prompt", () => {
     const source = read("src/components/charts/MyChartPositions.tsx");
-    expect(source).toContain('from "@/features/shareable-moments/ShareMomentSheet"');
+    expect(source).toContain('from "@/features/shareable-moments/CharacterShareStudio"');
     expect(source).toContain('promptOnly: true');
     expect(source).toContain('promptKind: "chart-number-one"');
     expect(source).toContain('promptLabel: "Share #1 milestone"');
     expect(source).toContain("Share chart result");
-    expect(source).toContain("<ShareMomentSheet");
+    expect(source).toContain("<AvatarShareStudio");
   });
 
   it("routes Share Studio gig creation to the mounted gig picker and avatar-aware export", () => {
@@ -82,9 +82,8 @@ describe("Shareable Moments migrated entrypoint contracts", () => {
     expect(app).toContain('<Route path="gigs/advanced/:gigId" element={<AdvancedGigSystem />} />');
     expect(studio).toContain('path: "/gigs/advanced/upcoming?shareCreate=gig"');
     expect(advanced).toContain('<Tabs defaultValue={gigId === "upcoming" ? "upcoming" : "offers"}');
-    expect(advanced).toContain('shareMoment?.type === "gig_result"');
+    expect(advanced).toContain('{shareMoment && <AvatarShareStudio');
     expect(advanced).toContain('<AvatarShareStudio moment={shareMoment}');
-    expect(advanced).toContain('<ShareMomentSheet moment={shareMoment}');
     expect(schedule).toContain('to="/gigs/advanced/upcoming?shareCreate=gig"');
   });
 
@@ -99,13 +98,40 @@ describe("Shareable Moments migrated entrypoint contracts", () => {
     expect(releases).toContain("{shareMoment && <AvatarShareStudio");
   });
 
-  it("keeps release manual and milestone sharing on the shared sheet", () => {
+  it("uses the real player avatar in musician-owned milestone and festival share images", () => {
+    const ownedEntrypoints = [
+      "src/components/crafting/CraftedItemReveal.tsx",
+      "src/components/SkillTree.tsx",
+      "src/components/streaming/StreamingMyReleasesTab.tsx",
+      "src/components/band/BandOverview.tsx",
+      "src/pages/AdvancedGigSystem.tsx",
+    ];
+    for (const sourceFile of ownedEntrypoints) {
+      const source = read(sourceFile);
+      expect(source, sourceFile).toContain('from "@/features/shareable-moments/CharacterShareStudio"'.replaceAll('"', sourceFile.includes('BandOverview') ? "'" : '"'));
+      expect(source, sourceFile).toContain("<AvatarShareStudio");
+      expect(source, sourceFile).not.toContain("<ShareMomentSheet");
+    }
+    // Public spectator graphics should not silently display the viewer's character.
+    const publicFestival = read("src/features/festival-company/ui/PublicFestivalPage.tsx");
+    expect(publicFestival).toContain("<ShareMomentSheet");
+  });
+
+  it("defers automatic avatar capture until prompt acceptance", () => {
+    const avatar = read("src/features/shareable-moments/CharacterShareStudio.tsx");
+    const sheet = read("src/features/shareable-moments/ShareMomentSheet.tsx");
+    expect(avatar).toContain('const captureEnabled = !moment.promptOnly || promptAccepted');
+    expect(avatar).toContain('onPromptAccepted={() => setPromptAccepted(true)}');
+    expect(sheet).toContain('onPromptAccepted?.()');
+  });
+
+  it("keeps release milestones button-first and avatar-aware", () => {
     const source = read("src/components/releases/MyReleasesTab.tsx");
-    expect(source).toContain('from "@/features/shareable-moments/ShareMomentSheet"');
+    expect(source).toContain('from "@/features/shareable-moments/CharacterShareStudio"');
     expect(source).toContain('promptOnly: true');
     expect(source).toContain('promptKind: "release-revenue-milestone"');
     expect(source).toContain('promptLabel: "Share release milestone"');
     expect(source).toContain('type: "release"');
-    expect(source).toContain("<ShareMomentSheet");
+    expect(source).toContain("{milestoneMoment && <AvatarShareStudio");
   });
 });
