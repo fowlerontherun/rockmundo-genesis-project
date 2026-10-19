@@ -51,7 +51,18 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
     setCapture({ key: captureKey, avatar: null, status: 'loading' });
 
     if (!profileId || !appearance) {
-      if (model.query.isError) setCapture({ key: captureKey, avatar: null, status: 'unavailable' });
+      // Without a selected character the model query remains disabled and
+      // 'loading' would otherwise continue forever.
+      if (model.query.isError || (!profileId && !model.isLoading)) {
+        setCapture({ key: captureKey, avatar: null, status: 'unavailable' });
+      }
+      return;
+    }
+    // Never publish a current-player portrait without its equipped clothes
+    // or tattoos just because one of those requests failed. Retry refetches
+    // the failed layer instead of silently drawing the default outfit.
+    if (clothing.isError || tattoos.isError) {
+      setCapture({ key: captureKey, avatar: null, status: 'unavailable' });
       return;
     }
     // Wait for equipped appearance layers so the saved picture represents the
@@ -79,8 +90,8 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
     });
 
     return () => { cancelled = true; };
-  }, [open, captureEnabled, storedAvatar, captureKey, profileId, appearance, model.query.isError,
-    clothing.isPending, clothing.isFetching, clothing.data, tattoos.isPending, tattoos.isFetching, tattoos.data,
+  }, [open, captureEnabled, storedAvatar, captureKey, profileId, appearance, model.query.isError, model.isLoading,
+    clothing.isPending, clothing.isFetching, clothing.isError, clothing.data, tattoos.isPending, tattoos.isFetching, tattoos.isError, tattoos.data,
     merch.query.isPending, merch.query.isFetching, merch.query.data, luthiery.isPending, luthiery.isFetching, craftedInstrument,
     role, instrument, retry]);
 
@@ -95,10 +106,15 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
     onPromptAccepted={() => setPromptAccepted(true)}
     moment={shareMoment}
     avatarStatus={captureStatus}
-    onAvatarRetry={() => setRecapture(previous => ({
-      key: captureKey,
-      attempt: previous?.key === captureKey ? previous.attempt + 1 : 1,
-    }))}
+    onAvatarRetry={() => {
+      if (model.query.isError) void model.query.refetch();
+      if (clothing.isError) void clothing.refetch();
+      if (tattoos.isError) void tattoos.refetch();
+      setRecapture(previous => ({
+        key: captureKey,
+        attempt: previous?.key === captureKey ? previous.attempt + 1 : 1,
+      }));
+    }}
   />;
 }
 
