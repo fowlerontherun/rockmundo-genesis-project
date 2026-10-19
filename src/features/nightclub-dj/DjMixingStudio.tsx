@@ -324,12 +324,12 @@ export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
   if (liveBookingId && liveError) return (
     <p className="text-sm text-destructive" role="alert">
       Could not verify your live DJ session. Reconnect or reopen the club before mixing.
-      No mixer activity has been credited from this screen.
+      New mixer activity cannot be verified until your session reconnects.
     </p>
   );
   if (liveBookingId && (!liveBooking || liveBooking.status !== "live")) return (
     <p className="text-sm text-destructive" role="alert">
-      Live DJ session unavailable. Start the booked set before mixing for credit.
+      This DJ booking is {liveBooking?.status ?? "unavailable"}. Only a live booked set can record mixer activity. Return to your bookings for its current result.
     </p>
   );
   if (isError) return <p className="text-sm text-destructive" role="alert">Unable to load DJ tracks: {error instanceof Error ? error.message : "Unknown error"}. The catalogue migration may still need deploying.</p>;
@@ -337,7 +337,7 @@ export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
     <p className="text-sm text-destructive" role="alert">
       None of the songs in this booked DJ set are currently playable. Audio access or music rights
       may have changed since booking. Reopen the club or contact an administrator;
-      practice tracks cannot substitute for the locked setlist and no mixer credit is recorded here.
+      practice tracks cannot substitute for the locked setlist or produce new verified mixer evidence.
     </p>
   );
   if (!tracks.length) return (
