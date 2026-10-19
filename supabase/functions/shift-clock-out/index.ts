@@ -18,13 +18,33 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req);
-  const triggeredBy = payload?.triggeredBy ?? req.headers.get('x-triggered-by') ?? undefined;
+  // The only supported caller is the internal pg_cron job. A browser JWT,
+  // anon API key, or arbitrary JSON request must not start economy-wide payroll.
+  // Validate before parsing untrusted input or starting any job/settlement.
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
 
   const supabaseClient = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
   );
+  const cronSecret = req.headers.get('x-cron-secret');
+  const { data: isAuthorized, error: authError } = await supabaseClient.rpc(
+    'verify_internal_cron_secret',
+    { p_secret: cronSecret },
+  );
+  if (authError || isAuthorized !== true) {
+    console.warn('[shift-clock-out] Rejected untrusted invocation');
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req);
+  const triggeredBy = payload?.triggeredBy ?? req.headers.get('x-triggered-by') ?? undefined;
 
   let runId: string | null = null;
   const startedAt = Date.now();
