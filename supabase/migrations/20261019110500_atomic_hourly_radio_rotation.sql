@@ -1,6 +1,26 @@
 -- #4242. Historical plays keep NULL simulation_hour and are untouched.
 -- Only the internal hourly settlement worker creates new simulated plays.
 ALTER TABLE public.radio_plays ADD COLUMN IF NOT EXISTS simulation_hour timestamptz;
+-- Cutover guard: if the legacy HTTP job already made one or more plays
+-- during the current hour, recognize ONE of them as that playlist's claim.
+-- Never mutate historical rewards, listeners or cash in the backfill.
+WITH newest_existing_hour AS (
+  SELECT DISTINCT ON (playlist_id)
+    id, date_trunc('hour',played_at) AS simulated_hour
+  FROM public.radio_plays
+  WHERE played_at >= date_trunc('hour',now())
+    AND played_at < date_trunc('hour',now())+interval '1 hour'
+    AND simulation_hour IS NULL
+  ORDER BY playlist_id,played_at DESC,id DESC
+)
+UPDATE public.radio_plays rp
+ SET simulation_hour=claim.simulated_hour
+FROM newest_existing_hour claim
+WHERE rp.id=claim.id AND NOT EXISTS (
+ SELECT 1 FROM public.radio_plays existing
+ WHERE existing.playlist_id=rp.playlist_id
+   AND existing.simulation_hour=claim.simulated_hour
+);
 CREATE UNIQUE INDEX IF NOT EXISTS radio_plays_playlist_hour_unique
   ON public.radio_plays(playlist_id, simulation_hour)
   WHERE simulation_hour IS NOT NULL;
