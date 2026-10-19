@@ -329,7 +329,10 @@ const NightClubDetail = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">Play your recorded songs and admin-curated club music on two DJ decks. Cue tracks, adjust tempo and crossfade your own live mix.</p>
-          <Button variant="outline" type="button" onClick={() => setShowDjStudio((value) => !value)}>
+          <Button variant="outline" type="button" onClick={() => {
+            if (showDjStudio) setShowDjStage(false);
+            setShowDjStudio(!showDjStudio);
+          }}>
             {showDjStudio ? "Close mixing studio" : "Open mixing studio"}
           </Button>
           {showDjStudio && <DjMixingStudio key={liveDjBookingId ?? "practice"} liveBookingId={liveDjBookingId ?? undefined} />}
@@ -356,6 +359,7 @@ const NightClubDetail = () => {
         <section id="dj-bookings" aria-label="Scheduled DJ bookings">
           <DjBookingPanel profileId={profileId} clubId={clubId}
             onLiveBooking={(bookingId) => {
+              if (bookingId !== liveDjBookingId) setShowDjStage(false);
               setLiveDjBookingId(bookingId);
               if (bookingId) setShowDjStudio(true);
             }} />
