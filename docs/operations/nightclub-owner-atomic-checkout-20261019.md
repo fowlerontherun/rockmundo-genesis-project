@@ -32,3 +32,8 @@ After rollback: **0** live purchase receipts, **4** historical owner rows, **0**
 - DJ release flags stay off pending #4265 and CI gate #4334.
 
 Security advisor reference: https://supabase.com/docs/guides/observability/advisors?queryGroups=lint&lint=0028_anon_security_definer_function_executable
+
+## Subsequent verified-owner DJ roster preview (20261019074244)
+The live follow-up migration `20261019074244_verified_nightclub_owner_dj_roster_preview_20261019.sql` adds authenticated `get_owned_nightclub_dj_roster(owned_club_id)`. It returns only upcoming/live booked DJ names, set names, status and schedule at a club when the caller is the **active character** and the ownership record joins a matching immutable purchase receipt. Anonymous users, foreign owners and legacy unreceipted claimants are denied; it is read-only and awards nothing.
+
+The Nightclub Management screen now shows a read-only DJ roster. Owner approval, residency contracts and payout budgets are still disabled. The rollback-only harness also verifies the roster and foreign-owner denial, leaving zero permanent receipts or bookings.
