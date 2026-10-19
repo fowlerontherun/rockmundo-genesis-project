@@ -58,7 +58,17 @@ describe("authoritative music-award ballots (#4237)", () => {
     expect(hook).toContain('.rpc("cast_award_vote"');
     expect(hook).toContain("p_profile_id: userId");
     expect(hook).toContain("p_nomination_id: params.nomination_id");
-    expect(hook).toContain('.eq("voter_account_id", user.id)');
+    expect(hook).toContain('.rpc("award_show_account_vote_count"');
+    const privacy = readFileSync(
+      "supabase/migrations/20261019165720_restrict_award_ballot_account_identifiers.sql",
+      "utf8",
+    );
+    expect(privacy).toContain("REVOKE ALL ON TABLE public.award_votes FROM PUBLIC,anon,authenticated");
+    expect(privacy).toContain("GRANT SELECT (id,nomination_id,voter_type,voter_id,weight,created_at)");
+    expect(privacy).not.toContain("GRANT SELECT (voter_account_id");
+    expect(privacy).toContain("v.voter_account_id=v_user");
+    expect(privacy).toContain("GRANT EXECUTE ON FUNCTION public.award_show_account_vote_count(uuid)");
+
     const cast = hook.slice(hook.indexOf("  // Cast vote"), hook.indexOf("  const respondToInvite"));
     expect(cast).not.toContain('.insert({');
     expect(cast).not.toContain("params.weight");
