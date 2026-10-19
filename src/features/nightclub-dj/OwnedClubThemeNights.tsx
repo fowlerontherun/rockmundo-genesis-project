@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, Loader2, Music2 } from "lucide-react";
 import { toast } from "sonner";
@@ -39,7 +39,7 @@ export function OwnedClubThemeNights({ club }: { club: OwnedNightclub }) {
   const [genre, setGenre] = useState("Electronic");
   const pendingAttempt = useRef<ThemeNightAttempt | null>(null);
 
-  const { data: nights = [], isLoading, isError } = useQuery<OwnerThemeNight[]>({
+  const { data: nightsData, isLoading, isError } = useQuery<OwnerThemeNight[]>({
     queryKey: ["owned-nightclub-theme-nights", club.id],
     enabled: verified,
     queryFn: async () => {
@@ -52,6 +52,16 @@ export function OwnedClubThemeNights({ club }: { club: OwnedNightclub }) {
       return (data ?? []) as OwnerThemeNight[];
     },
   });
+
+  const nights = nightsData ?? [];
+  // Sync the form to the selected stored night once the verified-owner query resolves.
+  // Changes to draft fields themselves do not trigger a reset.
+  useEffect(() => {
+    if (!nightsData || isError) return;
+    const saved = nightsData.find((night) => night.day_of_week === Number(weekday));
+    setTitle(saved?.event_name ?? `${getDayName(Number(weekday))} Night Beats`);
+    setGenre(saved?.genre_focus ?? "Electronic");
+  }, [nightsData, weekday, isError]);
 
   const mutation = useMutation({
     mutationFn: async ({ action, day, name, focus }: {
@@ -135,12 +145,7 @@ export function OwnedClubThemeNights({ club }: { club: OwnedNightclub }) {
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor={`genre-day-${club.id}`}>RockMundo game weekday</Label>
-                <Select value={weekday} onValueChange={(value) => {
-                  setWeekday(value);
-                  const night = nights.find((item) => item.day_of_week === Number(value));
-                  setTitle(night?.event_name ?? `${getDayName(Number(value))} Night Beats`);
-                  setGenre(night?.genre_focus ?? "Electronic");
-                }}>
+                <Select value={weekday} onValueChange={setWeekday}>
                   <SelectTrigger id={`genre-day-${club.id}`}><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {Array.from({ length: 7 }, (_, day) => (
@@ -163,14 +168,14 @@ export function OwnedClubThemeNights({ club }: { club: OwnedNightclub }) {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button disabled={mutation.isPending || Boolean(noChanges)}
+              <Button disabled={mutation.isPending || isLoading || isError || Boolean(noChanges)}
                 onClick={() => mutation.mutate({ action: "set", day: selectedDay, name: title, focus: genre })}>
                 {mutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> :
                   <CalendarDays className="mr-2 h-4 w-4" />}
                 {existing ? "Save game-weekly night" : "Create game-weekly night"}
               </Button>
               {existing?.is_active && (
-                <Button variant="outline" disabled={mutation.isPending}
+                <Button variant="outline" disabled={mutation.isPending || isLoading || isError}
                   onClick={() => mutation.mutate({ action: "disable", day: selectedDay })}>
                   Disable {getDayName(selectedDay)} night
                 </Button>
