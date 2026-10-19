@@ -793,6 +793,126 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_song_dispatch_gate: {
+        Row: {
+          enabled: boolean
+          id: boolean
+          max_in_flight: number
+          next_allowed_at: string
+          submission_interval_seconds: number
+          updated_at: string
+        }
+        Insert: {
+          enabled?: boolean
+          id?: boolean
+          max_in_flight?: number
+          next_allowed_at?: string
+          submission_interval_seconds?: number
+          updated_at?: string
+        }
+        Update: {
+          enabled?: boolean
+          id?: boolean
+          max_in_flight?: number
+          next_allowed_at?: string
+          submission_interval_seconds?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_song_generation_queue: {
+        Row: {
+          attempt_id: string
+          available_at: string
+          claimed_at: string | null
+          created_at: string
+          dispatch_count: number
+          finished_at: string | null
+          last_error: string | null
+          lease_until: string | null
+          lyrics: string
+          model: string
+          prediction_id: string | null
+          song_id: string
+          state: string
+          style_prompt: string
+          submitted_at: string | null
+          user_id: string
+        }
+        Insert: {
+          attempt_id: string
+          available_at?: string
+          claimed_at?: string | null
+          created_at?: string
+          dispatch_count?: number
+          finished_at?: string | null
+          last_error?: string | null
+          lease_until?: string | null
+          lyrics: string
+          model: string
+          prediction_id?: string | null
+          song_id: string
+          state?: string
+          style_prompt: string
+          submitted_at?: string | null
+          user_id: string
+        }
+        Update: {
+          attempt_id?: string
+          available_at?: string
+          claimed_at?: string | null
+          created_at?: string
+          dispatch_count?: number
+          finished_at?: string | null
+          last_error?: string | null
+          lease_until?: string | null
+          lyrics?: string
+          model?: string
+          prediction_id?: string | null
+          song_id?: string
+          state?: string
+          style_prompt?: string
+          submitted_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_song_generation_queue_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: true
+            referencedRelation: "song_generation_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_song_generation_queue_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "ai_song_generation_queue_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "ai_song_generation_queue_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_song_generation_queue_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       animation_sets: {
         Row: {
           clip_big_chorus: string | null
@@ -2078,6 +2198,7 @@ export type Database = {
           created_at: string | null
           id: string
           nomination_id: string
+          voter_account_id: string | null
           voter_id: string
           voter_type: string
           weight: number
@@ -2086,6 +2207,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           nomination_id: string
+          voter_account_id?: string | null
           voter_id: string
           voter_type?: string
           weight?: number
@@ -2094,6 +2216,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           nomination_id?: string
+          voter_account_id?: string | null
           voter_id?: string
           voter_type?: string
           weight?: number
@@ -6545,6 +6668,74 @@ export type Database = {
           },
         ]
       }
+      botb_city_settings: {
+        Row: {
+          city_id: string
+          frequency_weeks: number
+          prize_money: number
+          updated_at: string
+          updated_by: string | null
+          weekday: number
+        }
+        Insert: {
+          city_id: string
+          frequency_weeks?: number
+          prize_money?: number
+          updated_at?: string
+          updated_by?: string | null
+          weekday?: number
+        }
+        Update: {
+          city_id?: string
+          frequency_weeks?: number
+          prize_money?: number
+          updated_at?: string
+          updated_by?: string | null
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "botb_city_settings_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: true
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      botb_cycle_health: {
+        Row: {
+          attempted_events: number
+          cancelled_events: number
+          completed_events: number
+          failed_events: number
+          generated_events: number
+          generator_error: string | null
+          last_run_at: string
+          singleton: boolean
+        }
+        Insert: {
+          attempted_events?: number
+          cancelled_events?: number
+          completed_events?: number
+          failed_events?: number
+          generated_events?: number
+          generator_error?: string | null
+          last_run_at?: string
+          singleton?: boolean
+        }
+        Update: {
+          attempted_events?: number
+          cancelled_events?: number
+          completed_events?: number
+          failed_events?: number
+          generated_events?: number
+          generator_error?: string | null
+          last_run_at?: string
+          singleton?: boolean
+        }
+        Relationships: []
+      }
       botb_entries: {
         Row: {
           band_id: string
@@ -6686,37 +6877,55 @@ export type Database = {
       }
       botb_events: {
         Row: {
+          attendance: number
           city_id: string
+          city_profit: number
           created_at: string
           id: string
           max_entries: number
+          prize_money: number
+          production_cost: number
           resolved_at: string | null
           scheduled_date: string
+          sponsorship_revenue: number
           status: string
+          ticket_revenue: number
           updated_at: string
           winner_band_id: string | null
           winner_rating: number | null
         }
         Insert: {
+          attendance?: number
           city_id: string
+          city_profit?: number
           created_at?: string
           id?: string
           max_entries?: number
+          prize_money?: number
+          production_cost?: number
           resolved_at?: string | null
           scheduled_date: string
+          sponsorship_revenue?: number
           status?: string
+          ticket_revenue?: number
           updated_at?: string
           winner_band_id?: string | null
           winner_rating?: number | null
         }
         Update: {
+          attendance?: number
           city_id?: string
+          city_profit?: number
           created_at?: string
           id?: string
           max_entries?: number
+          prize_money?: number
+          production_cost?: number
           resolved_at?: string | null
           scheduled_date?: string
+          sponsorship_revenue?: number
           status?: string
+          ticket_revenue?: number
           updated_at?: string
           winner_band_id?: string | null
           winner_rating?: number | null
@@ -6734,6 +6943,44 @@ export type Database = {
             columns: ["winner_band_id"]
             isOneToOne: false
             referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      botb_resolution_failures: {
+        Row: {
+          attempt_count: number
+          event_id: string
+          first_failed_at: string
+          last_failed_at: string
+          last_message: string
+          last_sqlstate: string
+          recovered_at: string | null
+        }
+        Insert: {
+          attempt_count?: number
+          event_id: string
+          first_failed_at?: string
+          last_failed_at?: string
+          last_message: string
+          last_sqlstate: string
+          recovered_at?: string | null
+        }
+        Update: {
+          attempt_count?: number
+          event_id?: string
+          first_failed_at?: string
+          last_failed_at?: string
+          last_message?: string
+          last_sqlstate?: string
+          recovered_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "botb_resolution_failures_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "botb_events"
             referencedColumns: ["id"]
           },
         ]
@@ -6980,7 +7227,22 @@ export type Database = {
           payout?: number
           profile_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "casino_transactions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "casino_transactions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       casting_call_roles: {
         Row: {
@@ -14712,6 +14974,446 @@ export type Database = {
         }
         Relationships: []
       }
+      dj_booking_audiences: {
+        Row: {
+          attendance: number
+          booking_id: string
+          city_id: string
+          club_id: string
+          model_inputs: Json
+          new_local_fans: number
+          profile_id: string
+          returning_fans: number
+          satisfaction: number
+          settled_at: string
+          user_id: string
+          venue_capacity: number
+        }
+        Insert: {
+          attendance: number
+          booking_id: string
+          city_id: string
+          club_id: string
+          model_inputs?: Json
+          new_local_fans: number
+          profile_id: string
+          returning_fans: number
+          satisfaction: number
+          settled_at?: string
+          user_id: string
+          venue_capacity: number
+        }
+        Update: {
+          attendance?: number
+          booking_id?: string
+          city_id?: string
+          club_id?: string
+          model_inputs?: Json
+          new_local_fans?: number
+          profile_id?: string
+          returning_fans?: number
+          satisfaction?: number
+          settled_at?: string
+          user_id?: string
+          venue_capacity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dj_booking_audiences_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "dj_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dj_booking_audiences_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dj_booking_audiences_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "city_night_clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dj_booking_audiences_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dj_booking_audiences_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dj_bookings: {
+        Row: {
+          club_id: string
+          created_at: string
+          ends_at: string
+          id: string
+          profile_id: string
+          request_id: string
+          setlist_id: string
+          setlist_snapshot: Json
+          setlist_version: number
+          starts_at: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          club_id: string
+          created_at?: string
+          ends_at: string
+          id?: string
+          profile_id: string
+          request_id: string
+          setlist_id: string
+          setlist_snapshot: Json
+          setlist_version: number
+          starts_at: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          club_id?: string
+          created_at?: string
+          ends_at?: string
+          id?: string
+          profile_id?: string
+          request_id?: string
+          setlist_id?: string
+          setlist_snapshot?: Json
+          setlist_version?: number
+          starts_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dj_bookings_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "city_night_clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dj_bookings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dj_bookings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dj_bookings_setlist_id_fkey"
+            columns: ["setlist_id"]
+            isOneToOne: false
+            referencedRelation: "dj_setlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dj_club_applications: {
+        Row: {
+          club_id: string
+          created_at: string
+          dj_display_name: string
+          ends_at: string
+          id: string
+          owned_club_id: string
+          profile_id: string
+          request_id: string
+          review_decision: string | null
+          review_request_id: string | null
+          reviewed_at: string | null
+          reviewer_profile_id: string | null
+          reviewer_user_id: string | null
+          setlist_id: string
+          setlist_name: string
+          starts_at: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          club_id: string
+          created_at?: string
+          dj_display_name: string
+          ends_at: string
+          id?: string
+          owned_club_id: string
+          profile_id: string
+          request_id: string
+          review_decision?: string | null
+          review_request_id?: string | null
+          reviewed_at?: string | null
+          reviewer_profile_id?: string | null
+          reviewer_user_id?: string | null
+          setlist_id: string
+          setlist_name: string
+          starts_at: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          club_id?: string
+          created_at?: string
+          dj_display_name?: string
+          ends_at?: string
+          id?: string
+          owned_club_id?: string
+          profile_id?: string
+          request_id?: string
+          review_decision?: string | null
+          review_request_id?: string | null
+          reviewed_at?: string | null
+          reviewer_profile_id?: string | null
+          reviewer_user_id?: string | null
+          setlist_id?: string
+          setlist_name?: string
+          starts_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dj_club_applications_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "city_night_clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dj_club_applications_owned_club_id_fkey"
+            columns: ["owned_club_id"]
+            isOneToOne: false
+            referencedRelation: "player_owned_nightclubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dj_club_applications_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dj_club_applications_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dj_club_applications_reviewer_profile_id_fkey"
+            columns: ["reviewer_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dj_club_applications_reviewer_profile_id_fkey"
+            columns: ["reviewer_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dj_club_applications_setlist_id_fkey"
+            columns: ["setlist_id"]
+            isOneToOne: false
+            referencedRelation: "dj_setlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dj_live_mix_events: {
+        Row: {
+          booking_id: string
+          client_event_id: string | null
+          control_value: number | null
+          deck: string | null
+          event_no: number
+          id: string
+          kind: string
+          profile_id: string
+          recorded_at: string
+          session_id: string
+          track_id: string | null
+          track_source: string | null
+          user_id: string
+        }
+        Insert: {
+          booking_id: string
+          client_event_id?: string | null
+          control_value?: number | null
+          deck?: string | null
+          event_no: number
+          id?: string
+          kind: string
+          profile_id: string
+          recorded_at: string
+          session_id: string
+          track_id?: string | null
+          track_source?: string | null
+          user_id: string
+        }
+        Update: {
+          booking_id?: string
+          client_event_id?: string | null
+          control_value?: number | null
+          deck?: string | null
+          event_no?: number
+          id?: string
+          kind?: string
+          profile_id?: string
+          recorded_at?: string
+          session_id?: string
+          track_id?: string | null
+          track_source?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dj_live_mix_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "dj_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dj_live_mix_events_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dj_live_mix_events_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dj_live_mix_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "dj_performance_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dj_performance_sessions: {
+        Row: {
+          abandoned_at: string | null
+          booking_id: string
+          charisma: number
+          club_id: string
+          club_quality: number
+          completed_at: string | null
+          created_at: string
+          dj_skill_level: number
+          id: string
+          profile_id: string
+          promised_payout: number
+          setlist_snapshot: Json
+          skill_slug: string
+          stage_presence: number
+          started_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          abandoned_at?: string | null
+          booking_id: string
+          charisma: number
+          club_id: string
+          club_quality: number
+          completed_at?: string | null
+          created_at?: string
+          dj_skill_level: number
+          id?: string
+          profile_id: string
+          promised_payout: number
+          setlist_snapshot: Json
+          skill_slug: string
+          stage_presence: number
+          started_at: string
+          status: string
+          user_id: string
+        }
+        Update: {
+          abandoned_at?: string | null
+          booking_id?: string
+          charisma?: number
+          club_id?: string
+          club_quality?: number
+          completed_at?: string | null
+          created_at?: string
+          dj_skill_level?: number
+          id?: string
+          profile_id?: string
+          promised_payout?: number
+          setlist_snapshot?: Json
+          skill_slug?: string
+          stage_presence?: number
+          started_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dj_performance_sessions_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "dj_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dj_performance_sessions_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "city_night_clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dj_performance_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dj_performance_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dj_setlists: {
         Row: {
           created_at: string
@@ -14756,6 +15458,93 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dj_settlement_ledger: {
+        Row: {
+          booking_id: string
+          cash_amount: number
+          energy_amount: number
+          fame_amount: number
+          id: string
+          metadata: Json
+          performance_id: string
+          profile_id: string
+          score: number
+          session_id: string
+          settled_at: string
+          skill_slug: string
+          skill_xp_amount: number
+          user_id: string
+        }
+        Insert: {
+          booking_id: string
+          cash_amount: number
+          energy_amount?: number
+          fame_amount: number
+          id?: string
+          metadata?: Json
+          performance_id: string
+          profile_id: string
+          score: number
+          session_id: string
+          settled_at?: string
+          skill_slug: string
+          skill_xp_amount: number
+          user_id: string
+        }
+        Update: {
+          booking_id?: string
+          cash_amount?: number
+          energy_amount?: number
+          fame_amount?: number
+          id?: string
+          metadata?: Json
+          performance_id?: string
+          profile_id?: string
+          score?: number
+          session_id?: string
+          settled_at?: string
+          skill_slug?: string
+          skill_xp_amount?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dj_settlement_ledger_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "dj_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dj_settlement_ledger_performance_id_fkey"
+            columns: ["performance_id"]
+            isOneToOne: true
+            referencedRelation: "player_dj_performances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dj_settlement_ledger_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dj_settlement_ledger_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dj_settlement_ledger_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: true
+            referencedRelation: "dj_performance_sessions"
             referencedColumns: ["id"]
           },
         ]
@@ -14969,6 +15758,7 @@ export type Database = {
           tags: string[] | null
           title: string
           updated_at: string
+          verified_video: boolean
           video_url: string
         }
         Insert: {
@@ -14984,6 +15774,7 @@ export type Database = {
           tags?: string[] | null
           title: string
           updated_at?: string
+          verified_video?: boolean
           video_url: string
         }
         Update: {
@@ -14999,6 +15790,7 @@ export type Database = {
           tags?: string[] | null
           title?: string
           updated_at?: string
+          verified_video?: boolean
           video_url?: string
         }
         Relationships: [
@@ -29198,6 +29990,65 @@ export type Database = {
           },
         ]
       }
+      film_contract_settlements: {
+        Row: {
+          activity_id: string
+          compensation_amount: number
+          contract_id: string
+          fame_amount: number
+          profile_id: string
+          settled_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_id: string
+          compensation_amount: number
+          contract_id: string
+          fame_amount: number
+          profile_id: string
+          settled_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_id?: string
+          compensation_amount?: number
+          contract_id?: string
+          fame_amount?: number
+          profile_id?: string
+          settled_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "film_contract_settlements_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: true
+            referencedRelation: "player_scheduled_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "film_contract_settlements_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: true
+            referencedRelation: "player_film_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "film_contract_settlements_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "film_contract_settlements_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       film_performance_weekly: {
         Row: {
           box_office_week_cents: number
@@ -38849,6 +39700,7 @@ export type Database = {
         Row: {
           bid_amount: number
           bid_status: string
+          bidder_profile_id: string | null
           bidder_user_id: string
           created_at: string
           id: string
@@ -38857,6 +39709,7 @@ export type Database = {
         Insert: {
           bid_amount: number
           bid_status?: string
+          bidder_profile_id?: string | null
           bidder_user_id: string
           created_at?: string
           id?: string
@@ -38865,12 +39718,27 @@ export type Database = {
         Update: {
           bid_amount?: number
           bid_status?: string
+          bidder_profile_id?: string | null
           bidder_user_id?: string
           created_at?: string
           id?: string
           listing_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "marketplace_bids_bidder_profile_id_fkey"
+            columns: ["bidder_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_bids_bidder_profile_id_fkey"
+            columns: ["bidder_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "marketplace_bids_listing_id_fkey"
             columns: ["listing_id"]
@@ -40517,6 +41385,82 @@ export type Database = {
           },
         ]
       }
+      merch_sales_simulation_runs: {
+        Row: {
+          completed_at: string | null
+          failure_note: string | null
+          orders_recorded: number
+          run_id: string
+          sales_day: string
+          started_at: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          failure_note?: string | null
+          orders_recorded?: number
+          run_id?: string
+          sales_day: string
+          started_at?: string
+          status: string
+        }
+        Update: {
+          completed_at?: string | null
+          failure_note?: string | null
+          orders_recorded?: number
+          run_id?: string
+          sales_day?: string
+          started_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      merch_simulation_sale_receipts: {
+        Row: {
+          band_id: string
+          order_id: string
+          recorded_at: string
+          run_id: string
+          sale_sequence: number
+        }
+        Insert: {
+          band_id: string
+          order_id: string
+          recorded_at?: string
+          run_id: string
+          sale_sequence: number
+        }
+        Update: {
+          band_id?: string
+          order_id?: string
+          recorded_at?: string
+          run_id?: string
+          sale_sequence?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merch_simulation_sale_receipts_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merch_simulation_sale_receipts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "merch_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merch_simulation_sale_receipts_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "merch_sales_simulation_runs"
+            referencedColumns: ["run_id"]
+          },
+        ]
+      }
       merch_stock_transfers: {
         Row: {
           band_id: string
@@ -41278,6 +42222,157 @@ export type Database = {
           },
         ]
       }
+      music_video_generation_attempts: {
+        Row: {
+          charge_amount: number
+          created_at: string
+          error: string | null
+          id: string
+          prediction_id: string | null
+          profile_id: string
+          refunded_at: string | null
+          registered_at: string | null
+          settled_at: string | null
+          state: string
+          user_id: string
+          video_id: string
+        }
+        Insert: {
+          charge_amount: number
+          created_at?: string
+          error?: string | null
+          id: string
+          prediction_id?: string | null
+          profile_id: string
+          refunded_at?: string | null
+          registered_at?: string | null
+          settled_at?: string | null
+          state?: string
+          user_id: string
+          video_id: string
+        }
+        Update: {
+          charge_amount?: number
+          created_at?: string
+          error?: string | null
+          id?: string
+          prediction_id?: string | null
+          profile_id?: string
+          refunded_at?: string | null
+          registered_at?: string | null
+          settled_at?: string | null
+          state?: string
+          user_id?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "music_video_generation_attempts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "music_video_generation_attempts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "music_video_generation_attempts_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: true
+            referencedRelation: "music_videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      music_video_production_awards: {
+        Row: {
+          awarded_at: string
+          band_id: string | null
+          hype_awarded: number
+          profile_id: string | null
+          song_id: string
+          video_id: string
+        }
+        Insert: {
+          awarded_at?: string
+          band_id?: string | null
+          hype_awarded: number
+          profile_id?: string | null
+          song_id: string
+          video_id: string
+        }
+        Update: {
+          awarded_at?: string
+          band_id?: string | null
+          hype_awarded?: number
+          profile_id?: string | null
+          song_id?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "music_video_production_awards_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "music_video_production_awards_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "music_video_production_awards_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "music_video_production_awards_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "band_gift_notifications"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "music_video_production_awards_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "chart_singles"
+            referencedColumns: ["song_id"]
+          },
+          {
+            foreignKeyName: "music_video_production_awards_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "released_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "music_video_production_awards_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "music_video_production_awards_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: true
+            referencedRelation: "music_videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       music_videos: {
         Row: {
           budget: number
@@ -41559,6 +42654,541 @@ export type Database = {
           },
         ]
       }
+      nightclub_dj_escrow_movements: {
+        Row: {
+          amount: number
+          id: string
+          kind: string
+          offer_id: string
+          owner_profile_id: string
+          performed_at: string
+        }
+        Insert: {
+          amount: number
+          id?: string
+          kind: string
+          offer_id: string
+          owner_profile_id: string
+          performed_at?: string
+        }
+        Update: {
+          amount?: number
+          id?: string
+          kind?: string
+          offer_id?: string
+          owner_profile_id?: string
+          performed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nightclub_dj_escrow_movements_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "nightclub_dj_funded_offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_dj_escrow_movements_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_dj_escrow_movements_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nightclub_dj_funded_offers: {
+        Row: {
+          application_id: string
+          booked_at: string | null
+          booking_id: string | null
+          booking_request_id: string | null
+          created_at: string
+          dj_profile_id: string
+          dj_user_id: string
+          expires_at: string
+          fee: number
+          funding_request_id: string
+          id: string
+          owned_club_id: string
+          owner_profile_id: string
+          owner_user_id: string
+          resolved_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          application_id: string
+          booked_at?: string | null
+          booking_id?: string | null
+          booking_request_id?: string | null
+          created_at?: string
+          dj_profile_id: string
+          dj_user_id: string
+          expires_at: string
+          fee: number
+          funding_request_id: string
+          id?: string
+          owned_club_id: string
+          owner_profile_id: string
+          owner_user_id: string
+          resolved_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          application_id?: string
+          booked_at?: string | null
+          booking_id?: string | null
+          booking_request_id?: string | null
+          created_at?: string
+          dj_profile_id?: string
+          dj_user_id?: string
+          expires_at?: string
+          fee?: number
+          funding_request_id?: string
+          id?: string
+          owned_club_id?: string
+          owner_profile_id?: string
+          owner_user_id?: string
+          resolved_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nightclub_dj_funded_offers_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: true
+            referencedRelation: "dj_club_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_dj_funded_offers_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "dj_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_dj_funded_offers_dj_profile_id_fkey"
+            columns: ["dj_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_dj_funded_offers_dj_profile_id_fkey"
+            columns: ["dj_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_dj_funded_offers_owned_club_id_fkey"
+            columns: ["owned_club_id"]
+            isOneToOne: false
+            referencedRelation: "player_owned_nightclubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_dj_funded_offers_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_dj_funded_offers_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nightclub_dj_offer_actions: {
+        Row: {
+          action: string
+          actor_user_id: string
+          id: string
+          offer_id: string
+          performed_at: string
+          request_id: string
+        }
+        Insert: {
+          action: string
+          actor_user_id: string
+          id?: string
+          offer_id: string
+          performed_at?: string
+          request_id: string
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string
+          id?: string
+          offer_id?: string
+          performed_at?: string
+          request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nightclub_dj_offer_actions_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "nightclub_dj_funded_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nightclub_dj_paid_promotions: {
+        Row: {
+          attendance_boost_percent: number
+          booking_id: string
+          budget: number
+          created_at: string
+          id: string
+          owned_club_id: string
+          owner_profile_id: string
+          owner_user_id: string
+          request_id: string
+        }
+        Insert: {
+          attendance_boost_percent: number
+          booking_id: string
+          budget: number
+          created_at?: string
+          id?: string
+          owned_club_id: string
+          owner_profile_id: string
+          owner_user_id: string
+          request_id: string
+        }
+        Update: {
+          attendance_boost_percent?: number
+          booking_id?: string
+          budget?: number
+          created_at?: string
+          id?: string
+          owned_club_id?: string
+          owner_profile_id?: string
+          owner_user_id?: string
+          request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nightclub_dj_paid_promotions_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "dj_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_dj_paid_promotions_owned_club_id_fkey"
+            columns: ["owned_club_id"]
+            isOneToOne: false
+            referencedRelation: "player_owned_nightclubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_dj_paid_promotions_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_dj_paid_promotions_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nightclub_dj_residencies: {
+        Row: {
+          agreed_at: string | null
+          club_id: string
+          created_at: string
+          dj_display_name: string
+          dj_profile_id: string
+          dj_user_id: string
+          ended_at: string | null
+          expires_at: string
+          id: string
+          occurrence_count: number
+          owned_club_id: string
+          owner_profile_id: string
+          owner_request_id: string
+          owner_user_id: string
+          planned_starts_at: string[]
+          proposed_fee: number
+          setlist_id: string
+          setlist_name: string
+          source_application_id: string
+          status: string
+          updated_at: string
+          venue_timezone: string
+        }
+        Insert: {
+          agreed_at?: string | null
+          club_id: string
+          created_at?: string
+          dj_display_name: string
+          dj_profile_id: string
+          dj_user_id: string
+          ended_at?: string | null
+          expires_at: string
+          id?: string
+          occurrence_count: number
+          owned_club_id: string
+          owner_profile_id: string
+          owner_request_id: string
+          owner_user_id: string
+          planned_starts_at: string[]
+          proposed_fee: number
+          setlist_id: string
+          setlist_name: string
+          source_application_id: string
+          status?: string
+          updated_at?: string
+          venue_timezone: string
+        }
+        Update: {
+          agreed_at?: string | null
+          club_id?: string
+          created_at?: string
+          dj_display_name?: string
+          dj_profile_id?: string
+          dj_user_id?: string
+          ended_at?: string | null
+          expires_at?: string
+          id?: string
+          occurrence_count?: number
+          owned_club_id?: string
+          owner_profile_id?: string
+          owner_request_id?: string
+          owner_user_id?: string
+          planned_starts_at?: string[]
+          proposed_fee?: number
+          setlist_id?: string
+          setlist_name?: string
+          source_application_id?: string
+          status?: string
+          updated_at?: string
+          venue_timezone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nightclub_dj_residencies_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "city_night_clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_dj_residencies_dj_profile_id_fkey"
+            columns: ["dj_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_dj_residencies_dj_profile_id_fkey"
+            columns: ["dj_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_dj_residencies_owned_club_id_fkey"
+            columns: ["owned_club_id"]
+            isOneToOne: false
+            referencedRelation: "player_owned_nightclubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_dj_residencies_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_dj_residencies_owner_profile_id_fkey"
+            columns: ["owner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_dj_residencies_setlist_id_fkey"
+            columns: ["setlist_id"]
+            isOneToOne: false
+            referencedRelation: "dj_setlists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_dj_residencies_source_application_id_fkey"
+            columns: ["source_application_id"]
+            isOneToOne: true
+            referencedRelation: "dj_club_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nightclub_dj_residency_actions: {
+        Row: {
+          action: string
+          actor_user_id: string
+          created_at: string
+          id: string
+          request_id: string
+          residency_id: string
+        }
+        Insert: {
+          action: string
+          actor_user_id: string
+          created_at?: string
+          id?: string
+          request_id: string
+          residency_id: string
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string
+          created_at?: string
+          id?: string
+          request_id?: string
+          residency_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nightclub_dj_residency_actions_residency_id_fkey"
+            columns: ["residency_id"]
+            isOneToOne: false
+            referencedRelation: "nightclub_dj_residencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nightclub_dj_residency_occurrences: {
+        Row: {
+          application_id: string
+          id: string
+          occurrence_number: number
+          prepared_at: string
+          prepared_by_user_id: string
+          request_id: string
+          residency_id: string
+        }
+        Insert: {
+          application_id: string
+          id?: string
+          occurrence_number: number
+          prepared_at?: string
+          prepared_by_user_id: string
+          request_id: string
+          residency_id: string
+        }
+        Update: {
+          application_id?: string
+          id?: string
+          occurrence_number?: number
+          prepared_at?: string
+          prepared_by_user_id?: string
+          request_id?: string
+          residency_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nightclub_dj_residency_occurrences_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: true
+            referencedRelation: "dj_club_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_dj_residency_occurrences_residency_id_fkey"
+            columns: ["residency_id"]
+            isOneToOne: false
+            referencedRelation: "nightclub_dj_residencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nightclub_drink_purchases: {
+        Row: {
+          cash_spent: number
+          club_id: string
+          created_at: string
+          drink_id: string
+          drink_name: string
+          energy_gained: number
+          id: string
+          profile_id: string
+          request_id: string
+          result: Json
+          user_id: string
+        }
+        Insert: {
+          cash_spent: number
+          club_id: string
+          created_at?: string
+          drink_id: string
+          drink_name: string
+          energy_gained: number
+          id?: string
+          profile_id: string
+          request_id: string
+          result: Json
+          user_id: string
+        }
+        Update: {
+          cash_spent?: number
+          club_id?: string
+          created_at?: string
+          drink_id?: string
+          drink_name?: string
+          energy_gained?: number
+          id?: string
+          profile_id?: string
+          request_id?: string
+          result?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nightclub_drink_purchases_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "city_night_clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_drink_purchases_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_drink_purchases_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       nightclub_events: {
         Row: {
           club_id: string
@@ -41573,6 +43203,7 @@ export type Database = {
           id: string
           is_active: boolean
           is_recurring: boolean
+          managed_by_owned_club_id: string | null
           scheduled_date: string | null
           special_guest_name: string | null
           updated_at: string
@@ -41591,6 +43222,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_recurring?: boolean
+          managed_by_owned_club_id?: string | null
           scheduled_date?: string | null
           special_guest_name?: string | null
           updated_at?: string
@@ -41609,6 +43241,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_recurring?: boolean
+          managed_by_owned_club_id?: string | null
           scheduled_date?: string | null
           special_guest_name?: string | null
           updated_at?: string
@@ -41620,6 +43253,130 @@ export type Database = {
             columns: ["club_id"]
             isOneToOne: false
             referencedRelation: "city_night_clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_events_managed_by_owned_club_id_fkey"
+            columns: ["managed_by_owned_club_id"]
+            isOneToOne: false
+            referencedRelation: "player_owned_nightclubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nightclub_owner_theme_night_actions: {
+        Row: {
+          action_type: string
+          created_at: string
+          event_id: string
+          id: string
+          intent: Json
+          owned_club_id: string
+          profile_id: string
+          request_id: string
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          event_id: string
+          id?: string
+          intent: Json
+          owned_club_id: string
+          profile_id: string
+          request_id: string
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          intent?: Json
+          owned_club_id?: string
+          profile_id?: string
+          request_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nightclub_owner_theme_night_actions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "nightclub_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_owner_theme_night_actions_owned_club_id_fkey"
+            columns: ["owned_club_id"]
+            isOneToOne: false
+            referencedRelation: "player_owned_nightclubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_owner_theme_night_actions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_owner_theme_night_actions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nightclub_purchase_receipts: {
+        Row: {
+          cash_spent: number
+          club_id: string
+          id: string
+          profile_id: string
+          purchased_at: string
+          request_id: string
+          user_id: string
+        }
+        Insert: {
+          cash_spent: number
+          club_id: string
+          id?: string
+          profile_id: string
+          purchased_at?: string
+          request_id: string
+          user_id: string
+        }
+        Update: {
+          cash_spent?: number
+          club_id?: string
+          id?: string
+          profile_id?: string
+          purchased_at?: string
+          request_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nightclub_purchase_receipts_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: true
+            referencedRelation: "city_night_clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_purchase_receipts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_purchase_receipts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -41758,6 +43515,67 @@ export type Database = {
             columns: ["owned_club_id"]
             isOneToOne: false
             referencedRelation: "player_owned_nightclubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nightclub_staff_action_receipts: {
+        Row: {
+          action_type: string
+          actor_user_id: string
+          id: string
+          intent: Json
+          owned_club_id: string
+          performed_at: string
+          profile_id: string
+          request_id: string
+          salary_weekly: number
+          staff_id: string
+        }
+        Insert: {
+          action_type: string
+          actor_user_id: string
+          id?: string
+          intent: Json
+          owned_club_id: string
+          performed_at?: string
+          profile_id: string
+          request_id: string
+          salary_weekly: number
+          staff_id: string
+        }
+        Update: {
+          action_type?: string
+          actor_user_id?: string
+          id?: string
+          intent?: Json
+          owned_club_id?: string
+          performed_at?: string
+          profile_id?: string
+          request_id?: string
+          salary_weekly?: number
+          staff_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nightclub_staff_action_receipts_owned_club_id_fkey"
+            columns: ["owned_club_id"]
+            isOneToOne: false
+            referencedRelation: "player_owned_nightclubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_staff_action_receipts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightclub_staff_action_receipts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -44645,6 +46463,7 @@ export type Database = {
       }
       player_dj_performances: {
         Row: {
+          booking_id: string | null
           cash_earned: number
           club_id: string | null
           created_at: string
@@ -44659,6 +46478,7 @@ export type Database = {
           xp_gained: number
         }
         Insert: {
+          booking_id?: string | null
           cash_earned?: number
           club_id?: string | null
           created_at?: string
@@ -44673,6 +46493,7 @@ export type Database = {
           xp_gained?: number
         }
         Update: {
+          booking_id?: string | null
           cash_earned?: number
           club_id?: string | null
           created_at?: string
@@ -44687,6 +46508,13 @@ export type Database = {
           xp_gained?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "player_dj_performances_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "dj_bookings"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "player_dj_performances_club_id_fkey"
             columns: ["club_id"]
@@ -46478,6 +48306,7 @@ export type Database = {
           id: string
           looks_boost: number | null
           offer_reason: string | null
+          profile_id: string
           scheduled_end: string | null
           scheduled_start: string | null
           shoot_date: string | null
@@ -46496,6 +48325,7 @@ export type Database = {
           id?: string
           looks_boost?: number | null
           offer_reason?: string | null
+          profile_id: string
           scheduled_end?: string | null
           scheduled_start?: string | null
           shoot_date?: string | null
@@ -46514,6 +48344,7 @@ export type Database = {
           id?: string
           looks_boost?: number | null
           offer_reason?: string | null
+          profile_id?: string
           scheduled_end?: string | null
           scheduled_start?: string | null
           shoot_date?: string | null
@@ -46533,6 +48364,20 @@ export type Database = {
             columns: ["gig_id"]
             isOneToOne: false
             referencedRelation: "modeling_gigs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_modeling_contracts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_modeling_contracts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -46613,6 +48458,7 @@ export type Database = {
           reputation_score: number
           staff_count: number
           updated_at: string
+          verified_purchase_id: string | null
           weekly_expenses: number
           weekly_revenue: number
         }
@@ -46633,6 +48479,7 @@ export type Database = {
           reputation_score?: number
           staff_count?: number
           updated_at?: string
+          verified_purchase_id?: string | null
           weekly_expenses?: number
           weekly_revenue?: number
         }
@@ -46653,6 +48500,7 @@ export type Database = {
           reputation_score?: number
           staff_count?: number
           updated_at?: string
+          verified_purchase_id?: string | null
           weekly_expenses?: number
           weekly_revenue?: number
         }
@@ -46683,6 +48531,13 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_owned_nightclubs_verified_purchase_id_fkey"
+            columns: ["verified_purchase_id"]
+            isOneToOne: true
+            referencedRelation: "nightclub_purchase_receipts"
             referencedColumns: ["id"]
           },
         ]
@@ -47854,6 +49709,7 @@ export type Database = {
           description: string | null
           duration_minutes: number | null
           id: string
+          linked_dj_booking_id: string | null
           linked_gig_id: string | null
           linked_jam_session_id: string | null
           linked_job_shift_id: string | null
@@ -47879,6 +49735,7 @@ export type Database = {
           description?: string | null
           duration_minutes?: number | null
           id?: string
+          linked_dj_booking_id?: string | null
           linked_gig_id?: string | null
           linked_jam_session_id?: string | null
           linked_job_shift_id?: string | null
@@ -47904,6 +49761,7 @@ export type Database = {
           description?: string | null
           duration_minutes?: number | null
           id?: string
+          linked_dj_booking_id?: string | null
           linked_gig_id?: string | null
           linked_jam_session_id?: string | null
           linked_job_shift_id?: string | null
@@ -47923,6 +49781,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "player_scheduled_activities_linked_dj_booking_id_fkey"
+            columns: ["linked_dj_booking_id"]
+            isOneToOne: false
+            referencedRelation: "dj_bookings"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "player_scheduled_activities_linked_gig_id_fkey"
             columns: ["linked_gig_id"]
@@ -50248,6 +52113,24 @@ export type Database = {
           },
         ]
       }
+      privileged_job_window_claims: {
+        Row: {
+          claimed_at: string
+          job_name: string
+          window_started_at: string
+        }
+        Insert: {
+          claimed_at?: string
+          job_name: string
+          window_started_at: string
+        }
+        Update: {
+          claimed_at?: string
+          job_name?: string
+          window_started_at?: string
+        }
+        Relationships: []
+      }
       producer_session_reviews: {
         Row: {
           comment: string | null
@@ -50467,6 +52350,64 @@ export type Database = {
           },
           {
             foreignKeyName: "profile_activity_xp_bonuses_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profile_city_dj_fans: {
+        Row: {
+          city_id: string
+          created_at: string
+          last_set_at: string | null
+          profile_id: string
+          sets_played: number
+          total_attendance: number
+          total_fans: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          city_id: string
+          created_at?: string
+          last_set_at?: string | null
+          profile_id: string
+          sets_played?: number
+          total_attendance?: number
+          total_fans?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          city_id?: string
+          created_at?: string
+          last_set_at?: string | null
+          profile_id?: string
+          sets_played?: number
+          total_attendance?: number
+          total_fans?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_city_dj_fans_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_city_dj_fans_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_city_dj_fans_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "public_player_cards"
@@ -51327,6 +53268,7 @@ export type Database = {
           playlist_id: string
           sales_boost: number | null
           show_id: string
+          simulation_hour: string | null
           song_id: string
           station_id: string
           streams_boost: number | null
@@ -51340,6 +53282,7 @@ export type Database = {
           playlist_id: string
           sales_boost?: number | null
           show_id: string
+          simulation_hour?: string | null
           song_id: string
           station_id: string
           streams_boost?: number | null
@@ -51353,6 +53296,7 @@ export type Database = {
           playlist_id?: string
           sales_boost?: number | null
           show_id?: string
+          simulation_hour?: string | null
           song_id?: string
           station_id?: string
           streams_boost?: number | null
@@ -51555,6 +53499,8 @@ export type Database = {
           projected_weekly_reach: number | null
           rejection_reason: string | null
           release_id: string | null
+          review_claim_id: string | null
+          review_claimed_at: string | null
           reviewed_at: string | null
           score: number | null
           song_id: string
@@ -51575,6 +53521,8 @@ export type Database = {
           projected_weekly_reach?: number | null
           rejection_reason?: string | null
           release_id?: string | null
+          review_claim_id?: string | null
+          review_claimed_at?: string | null
           reviewed_at?: string | null
           score?: number | null
           song_id: string
@@ -51595,6 +53543,8 @@ export type Database = {
           projected_weekly_reach?: number | null
           rejection_reason?: string | null
           release_id?: string | null
+          review_claim_id?: string | null
+          review_claimed_at?: string | null
           reviewed_at?: string | null
           score?: number | null
           song_id?: string
@@ -67893,6 +69843,67 @@ export type Database = {
           },
         ]
       }
+      work_shift_settlements: {
+        Row: {
+          activity_id: string
+          city_tax: number
+          created_at: string
+          fame_change: number
+          gross_earnings: number
+          net_earnings: number
+          profile_id: string
+          shift_id: string
+          user_id: string
+          xp_earned: number
+        }
+        Insert: {
+          activity_id: string
+          city_tax: number
+          created_at?: string
+          fame_change: number
+          gross_earnings: number
+          net_earnings: number
+          profile_id: string
+          shift_id: string
+          user_id: string
+          xp_earned: number
+        }
+        Update: {
+          activity_id?: string
+          city_tax?: number
+          created_at?: string
+          fame_change?: number
+          gross_earnings?: number
+          net_earnings?: number
+          profile_id?: string
+          shift_id?: string
+          user_id?: string
+          xp_earned?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_shift_settlements_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_shift_settlements_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_player_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_shift_settlements_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: true
+            referencedRelation: "shift_history"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       world_parliament_motions: {
         Row: {
           abstain_votes: number
@@ -68673,6 +70684,36 @@ export type Database = {
           p_profile_id: string
         }
         Returns: Json
+      }
+      _dj_assert_course_timetable_clear: {
+        Args: {
+          p_end_date: string
+          p_end_hour: number
+          p_enrolled_at: string
+          p_profile_id: string
+          p_start_hour: number
+          p_timezone: string
+        }
+        Returns: undefined
+      }
+      _dj_assert_no_reserved_slot: {
+        Args: {
+          p_end: string
+          p_kind: string
+          p_profile_id: string
+          p_start: string
+        }
+        Returns: undefined
+      }
+      _dj_assert_university_enrolment_clear: {
+        Args: {
+          p_course_id: string
+          p_end_date: string
+          p_enrolled_at: string
+          p_profile_id: string
+          p_university_id: string
+        }
+        Returns: undefined
       }
       _enforce_social_rate_limit: {
         Args: {
@@ -70334,6 +72375,16 @@ export type Database = {
         }
         Returns: Json
       }
+      apply_for_nightclub_dj_slot: {
+        Args: {
+          p_owned_club_id: string
+          p_profile_id: string
+          p_request_id: string
+          p_setlist_id: string
+          p_starts_at: string
+        }
+        Returns: string
+      }
       apply_missed_gig_consequences: {
         Args: { p_gig_id: string; p_reason?: string }
         Returns: Json
@@ -70432,6 +72483,29 @@ export type Database = {
         Args: { p_addiction_id: string; p_profile_id: string }
         Returns: Json
       }
+      attend_award_red_carpet_atomic: {
+        Args: {
+          p_award_show_id: string
+          p_outfit_choice: string
+          p_profile_id: string
+        }
+        Returns: {
+          award_show_id: string
+          created_at: string | null
+          fame_gain: number
+          id: string
+          media_interactions: number
+          outfit_choice: string
+          participant_id: string
+          participant_type: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "award_red_carpet_events"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       auto_build_release_hype: { Args: never; Returns: undefined }
       auto_complete_manufacturing: { Args: never; Returns: number }
       auto_complete_songwriting_polish_sessions: {
@@ -70475,6 +72549,10 @@ export type Database = {
       award_recording_xp_atomic: {
         Args: { p_session_id: string }
         Returns: Json
+      }
+      award_show_account_vote_count: {
+        Args: { p_show_id: string }
+        Returns: number
       }
       award_show_invite_band: {
         Args: {
@@ -70819,6 +72897,18 @@ export type Database = {
       botb_check_eligibility: {
         Args: { p_band_id: string; p_event_id: string }
         Returns: Json
+      }
+      botb_estimate_event_finances: {
+        Args: { p_event_id: string }
+        Returns: {
+          attendance: number
+          band_count: number
+          city_profit: number
+          prize_money: number
+          production_cost: number
+          sponsorship_revenue: number
+          ticket_revenue: number
+        }[]
       }
       browse_luthiery_shop_listings: { Args: never; Returns: Json }
       buy_lottery_ticket_atomic: {
@@ -71218,6 +73308,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      cancel_dj_booking_internal: {
+        Args: { p_booking_id: string }
+        Returns: string
+      }
       cancel_festival_artist_booking: {
         Args: {
           p_booking_id: string
@@ -71395,6 +73489,10 @@ export type Database = {
         Args: { p_contract_id: string; p_idempotency_key: string }
         Returns: Json
       }
+      cancel_owned_funded_dj_booking: {
+        Args: { p_offer_id: string; p_request_id: string }
+        Returns: Json
+      }
       cancel_player_education_class: {
         Args: { p_class_id: string; p_teacher_profile_id: string }
         Returns: Json
@@ -71427,6 +73525,10 @@ export type Database = {
         Args: { p_contract_id: string; p_reason?: string }
         Returns: Json
       }
+      cancel_song_marketplace_listing: {
+        Args: { p_listing_id: string }
+        Returns: Json
+      }
       cancel_time_away: {
         Args: { p_booking_id: string; p_profile_id: string }
         Returns: Json
@@ -71447,6 +73549,31 @@ export type Database = {
       capture_contributions_for_rehearsal: {
         Args: { p_rehearsal_id: string }
         Returns: number
+      }
+      casino_secure_index: { Args: { p_range: number }; Returns: number }
+      cast_award_vote: {
+        Args: {
+          p_band_id?: string
+          p_nomination_id: string
+          p_profile_id?: string
+          p_show_id: string
+          p_voter_type?: string
+        }
+        Returns: {
+          created_at: string | null
+          id: string
+          nomination_id: string
+          voter_account_id: string | null
+          voter_id: string
+          voter_type: string
+          weight: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "award_votes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       catch_up_to_tour: {
         Args: { p_profile_id: string; p_request_id?: string; p_tour_id: string }
@@ -71567,6 +73694,7 @@ export type Database = {
         Args: { p_profile_id: string; p_slug: string }
         Returns: number
       }
+      claim_ai_song_generation: { Args: never; Returns: Json }
       claim_character_birthday_reward: {
         Args: {
           _game_day: number
@@ -71587,6 +73715,7 @@ export type Database = {
         }[]
       }
       claim_company_shift: { Args: { p_shift_id: string }; Returns: string }
+      claim_daily_merch_simulation: { Args: never; Returns: Json }
       claim_daily_stipend_atomic: {
         Args: { p_profile_id: string }
         Returns: Json
@@ -71632,6 +73761,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      claim_music_video_generation: {
+        Args: { p_attempt_id: string; p_video_id: string }
+        Returns: Json
+      }
       claim_next_clothing_preview_job: {
         Args: never
         Returns: {
@@ -71641,6 +73774,10 @@ export type Database = {
           job_type: string
           requested_views: Json
         }[]
+      }
+      claim_privileged_job_window: {
+        Args: { p_job_name: string }
+        Returns: Json
       }
       claim_recording_completion: {
         Args: { p_session_id: string }
@@ -71770,6 +73907,10 @@ export type Database = {
       complete_company_shift: { Args: { p_claim_id: string }; Returns: Json }
       complete_due_city_projects: { Args: never; Returns: number }
       complete_due_merch_production: { Args: never; Returns: number }
+      complete_due_music_video_productions_atomic: {
+        Args: { p_limit?: number }
+        Returns: Json
+      }
       complete_expired_festival_attendance: { Args: never; Returns: Json }
       complete_festival_performance: {
         Args: { p_idempotency_key?: string; p_session_id: string }
@@ -71961,6 +74102,15 @@ export type Database = {
         Returns: Json
       }
       complete_wellness_habit: { Args: { _habit_id: string }; Returns: Json }
+      configure_city_botb: {
+        Args: {
+          p_city_id: string
+          p_frequency_weeks: number
+          p_prize_money: number
+          p_weekday: number
+        }
+        Returns: Json
+      }
       configure_jam_session_v2: {
         Args: {
           p_challenge_id?: string
@@ -71969,6 +74119,10 @@ export type Database = {
           p_setlist?: Json
         }
         Returns: Json
+      }
+      confirm_accepted_nightclub_dj_offer_internal: {
+        Args: { p_offer_id: string; p_request_id: string }
+        Returns: string
       }
       confirm_recording_session_atomic: {
         Args: {
@@ -72761,6 +74915,10 @@ export type Database = {
       current_profile_id_safe: { Args: never; Returns: string }
       current_user_is_platform_admin: { Args: never; Returns: boolean }
       decay_unreleased_song_hype: { Args: never; Returns: undefined }
+      decide_nightclub_dj_offer: {
+        Args: { p_action: string; p_offer_id: string; p_request_id: string }
+        Returns: Json
+      }
       decide_time_away: {
         Args: { p_approve: boolean; p_booking_id: string }
         Returns: Json
@@ -72887,6 +75045,63 @@ export type Database = {
         Args: { p_employee_id: string; p_reason?: string }
         Returns: undefined
       }
+      dj_booking_inside_club_hours: {
+        Args: { p_club_id: string; p_ends_at: string; p_starts_at: string }
+        Returns: boolean
+      }
+      dj_clock_minutes: { Args: { p_clock: string }; Returns: number }
+      dj_external_schedule_conflict: {
+        Args: { p_end: string; p_profile_id: string; p_start: string }
+        Returns: string
+      }
+      dj_finance_release_health: { Args: never; Returns: Json }
+      dj_live_mix_readiness: { Args: { p_booking_id: string }; Returns: Json }
+      dj_verified_funded_offer_booking_service: {
+        Args: {
+          p_actor_user_id: string
+          p_offer_id: string
+          p_request_id: string
+        }
+        Returns: string
+      }
+      dj_verified_mix_event_once_service: {
+        Args: {
+          p_actor_user_id: string
+          p_booking_id: string
+          p_deck: string
+          p_event_id: string
+          p_kind: string
+          p_source: string
+          p_track_id: string
+          p_value: number
+        }
+        Returns: string
+      }
+      dj_verified_mix_event_service: {
+        Args: {
+          p_actor_user_id: string
+          p_booking_id: string
+          p_deck?: string
+          p_kind: string
+          p_source?: string
+          p_track_id?: string
+          p_value?: number
+        }
+        Returns: string
+      }
+      dj_verified_player_action_service: {
+        Args: {
+          p_action: string
+          p_actor_user_id: string
+          p_booking_id?: string
+          p_club_id?: string
+          p_profile_id?: string
+          p_request_id?: string
+          p_setlist_id?: string
+          p_starts_at?: string
+        }
+        Returns: string
+      }
       donate_to_party: {
         Args: { p_amount: number; p_note?: string; p_party_id: string }
         Returns: string
@@ -72907,6 +75122,17 @@ export type Database = {
           p_target_profile_id: string
         }
         Returns: string
+      }
+      enqueue_ai_song_generation: {
+        Args: {
+          p_attempt_id: string
+          p_lyrics: string
+          p_model: string
+          p_song_id: string
+          p_style: string
+          p_user_id: string
+        }
+        Returns: Json
       }
       enrol_player_education_class: {
         Args: { p_class_id: string; p_student_profile_id: string }
@@ -73043,6 +75269,7 @@ export type Database = {
       }
       expire_band_recruitment_records: { Args: never; Returns: number }
       expire_old_gig_offers: { Args: never; Returns: undefined }
+      expire_stale_music_video_preparations: { Args: never; Returns: Json }
       expire_stale_pr_offers: { Args: never; Returns: number }
       fail_clothing_preview_job: {
         Args: { p_error: string; p_job_id: string; p_retry?: boolean }
@@ -73756,6 +75983,15 @@ export type Database = {
           venue_id: string
         }[]
       }
+      finish_daily_merch_simulation: {
+        Args: {
+          p_failure_note?: string
+          p_orders?: number
+          p_run_id: string
+          p_status: string
+        }
+        Returns: boolean
+      }
       finish_song_generation_atomic: {
         Args: {
           p_attempt_id: string
@@ -73776,6 +76012,11 @@ export type Database = {
         Returns: undefined
       }
       fix_null_manufacturing_dates: { Args: never; Returns: number }
+      flag_ai_song_dispatch_uncertain: {
+        Args: { p_attempt: string; p_reason?: string }
+        Returns: boolean
+      }
+      flag_stale_ai_song_predictions: { Args: never; Returns: number }
       found_festival_company: {
         Args: {
           p_company_name: string
@@ -73796,9 +76037,22 @@ export type Database = {
         }
         Returns: Json
       }
+      fund_nightclub_dj_offer: {
+        Args: {
+          p_application_id: string
+          p_fee: number
+          p_owned_club_id: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
       fund_social_contract_escrow: {
         Args: { p_escrow_id: string; p_idempotency_key: string }
         Returns: string
+      }
+      generate_botb_city_events: {
+        Args: { p_city_id: string; p_horizon_events?: number }
+        Returns: number
       }
       generate_botb_events: {
         Args: { p_horizon_events?: number }
@@ -74589,6 +76843,17 @@ export type Database = {
           subcategory: string
         }[]
       }
+      get_owned_nightclub_dj_roster: {
+        Args: { p_owned_club_id: string }
+        Returns: {
+          booking_id: string
+          dj_name: string
+          ends_at: string
+          set_name: string
+          starts_at: string
+          status: string
+        }[]
+      }
       get_player_discovery_filter_options: { Args: never; Returns: Json }
       get_player_education_classes: {
         Args: { p_profile_id: string }
@@ -74973,6 +77238,10 @@ export type Database = {
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      get_verified_nightclub_application_club: {
+        Args: { p_club_id: string }
+        Returns: string
       }
       get_verified_relationship_affinity: {
         Args: { p_other_profile_id: string; p_profile_id: string }
@@ -75650,6 +77919,21 @@ export type Database = {
         }
         Returns: string
       }
+      manage_owned_nightclub_theme_night: {
+        Args: {
+          p_action: string
+          p_game_weekday: number
+          p_genre?: string
+          p_owned_club_id: string
+          p_request_id: string
+          p_title?: string
+        }
+        Returns: Json
+      }
+      mark_ai_song_submitted: {
+        Args: { p_attempt: string; p_prediction: string }
+        Returns: boolean
+      }
       mark_community_verified: {
         Args: {
           p_external_account_id: string
@@ -75662,6 +77946,10 @@ export type Database = {
       mark_conversation_read: {
         Args: { conversation_id: string; read_message_id?: string }
         Returns: boolean
+      }
+      mark_dj_booking_missed_internal: {
+        Args: { p_booking_id: string }
+        Returns: string
       }
       mark_gig_position_processed: {
         Args: { p_gig_id: string; p_position: number }
@@ -75748,6 +78036,18 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      nightclub_staff_action_atomic: {
+        Args: {
+          p_action: string
+          p_name?: string
+          p_owned_club_id: string
+          p_request_id: string
+          p_skill_level?: number
+          p_staff_id?: string
+          p_staff_type?: string
+        }
+        Returns: Json
       }
       normalize_gig_viewer_crowd_settings: {
         Args: { p_settings: Json }
@@ -75888,6 +78188,14 @@ export type Database = {
         }
         Returns: Json
       }
+      place_song_bid_authorized: {
+        Args: {
+          p_bid_amount: number
+          p_bidder_profile_id: string
+          p_listing_id: string
+        }
+        Returns: Json
+      }
       plan_next_festival_edition: {
         Args: { p_festival_company_id: string; p_idempotency_key: string }
         Returns: Json
@@ -75898,6 +78206,15 @@ export type Database = {
           p_game_type: string
           p_metadata?: Json
           p_payout: number
+        }
+        Returns: Json
+      }
+      play_casino_round_authoritative: {
+        Args: {
+          p_bet_amount: number
+          p_choices: Json
+          p_game_type: string
+          p_request_id: string
         }
         Returns: Json
       }
@@ -75995,6 +78312,14 @@ export type Database = {
             }
             Returns: Json
           }
+      prepare_nightclub_dj_residency_occurrence: {
+        Args: {
+          p_occurrence_number: number
+          p_request_id: string
+          p_residency_id: string
+        }
+        Returns: string
+      }
       preserve_final_gig_forecast_snapshot: {
         Args: { p_forecast: Json; p_gig_id: string; p_version?: number }
         Returns: Json
@@ -76066,6 +78391,11 @@ export type Database = {
         Returns: Json
       }
       process_due_jam_slots: { Args: never; Returns: number }
+      process_due_radio_submissions: {
+        Args: { p_limit?: number }
+        Returns: Json
+      }
+      process_due_self_promotions: { Args: { p_limit?: number }; Returns: Json }
       process_gear_sale: {
         Args: {
           p_buyer_user_id: string
@@ -76079,6 +78409,7 @@ export type Database = {
         Args: { p_gig_id: string }
         Returns: Json
       }
+      process_hourly_radio_plays: { Args: never; Returns: Json }
       process_inactive_character_comas: { Args: never; Returns: Json }
       process_jam_session_v2: { Args: { p_session_id: string }; Returns: Json }
       process_label_daily_finance: { Args: never; Returns: Json }
@@ -76087,6 +78418,10 @@ export type Database = {
       process_media_submission_reviews: {
         Args: { p_limit?: number }
         Returns: Json
+      }
+      process_missed_dj_bookings_internal: {
+        Args: { p_max?: number }
+        Returns: number
       }
       process_offline_health_decay: { Args: never; Returns: Json }
       process_pending_gig_consequences: {
@@ -76197,6 +78532,16 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      propose_nightclub_dj_residency: {
+        Args: {
+          p_application_id: string
+          p_fee: number
+          p_occurrences: number
+          p_owned_club_id: string
+          p_request_id: string
+        }
+        Returns: string
       }
       public_festival_editions_read: {
         Args: never
@@ -76443,6 +78788,28 @@ export type Database = {
         Args: { p_listing_id: string; p_profile_id: string }
         Returns: Json
       }
+      purchase_nightclub_atomic: {
+        Args: { p_club_id: string; p_profile_id: string; p_request_id: string }
+        Returns: Json
+      }
+      purchase_nightclub_dj_promotion: {
+        Args: {
+          p_booking_id: string
+          p_budget: number
+          p_owned_club_id: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      purchase_nightclub_drink: {
+        Args: {
+          p_club_id: string
+          p_drink_id: string
+          p_profile_id: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
       purchase_release_format: {
         Args: {
           p_format_type: string
@@ -76553,6 +78920,7 @@ export type Database = {
         Args: { p_candidate_id: string }
         Returns: undefined
       }
+      reconcile_expired_ai_song_dispatches: { Args: never; Returns: number }
       reconcile_failed_release_inventory: {
         Args: { p_limit?: number }
         Returns: Json
@@ -76595,6 +78963,17 @@ export type Database = {
           p_source_id?: string
         }
         Returns: Json
+      }
+      record_dj_mix_event_internal: {
+        Args: {
+          p_booking_id: string
+          p_deck?: string
+          p_kind: string
+          p_source?: string
+          p_track_id?: string
+          p_value?: number
+        }
+        Returns: string
       }
       record_festival_soundcheck_issue: {
         Args: {
@@ -76686,6 +79065,26 @@ export type Database = {
         }
         Returns: boolean
       }
+      record_simulated_merch_sale_atomic: {
+        Args: {
+          p_band_id: string
+          p_country: string
+          p_customer_type: string
+          p_discount_pct?: number
+          p_merchandise_id: string
+          p_net_revenue: number
+          p_order_type: string
+          p_quantity: number
+          p_run_id: string
+          p_sale_sequence: number
+          p_sales_tax: number
+          p_total_price: number
+          p_unit_price: number
+          p_variant_id: string
+          p_vat: number
+        }
+        Returns: Json
+      }
       record_support_band_history: { Args: { p_gig_id: string }; Returns: Json }
       record_tour_logistics_event: {
         Args: {
@@ -76705,6 +79104,19 @@ export type Database = {
           p_remote: boolean
           p_xp: number
         }
+        Returns: Json
+      }
+      record_university_auto_attendance_reward: {
+        Args: {
+          p_connection_failed: boolean
+          p_enrollment_id: string
+          p_remote: boolean
+          p_xp: number
+        }
+        Returns: Json
+      }
+      record_verified_club_visit: {
+        Args: { p_club_id: string; p_profile_id: string }
         Returns: Json
       }
       redeem_paid_character_slot: {
@@ -76740,6 +79152,14 @@ export type Database = {
         Args: { p_payment_intent: string }
         Returns: Json
       }
+      register_music_video_prediction: {
+        Args: {
+          p_attempt_id: string
+          p_prediction_id: string
+          p_video_id: string
+        }
+        Returns: Json
+      }
       register_twaater_share_publication_receipt: {
         Args: { p_cooldown_key: string; p_twaat_id: string }
         Returns: boolean
@@ -76747,6 +79167,10 @@ export type Database = {
       release_band_crew: {
         Args: { p_crew_member_id: string }
         Returns: undefined
+      }
+      release_due_prisoner_atomic: {
+        Args: { p_at?: string; p_imprisonment_id: string }
+        Returns: Json
       }
       release_merch_variant_stock: {
         Args: { p_quantity: number; p_variant_id: string }
@@ -76962,6 +79386,29 @@ export type Database = {
           p_message?: string
           p_purpose?: string
           p_song_id: string
+        }
+        Returns: Json
+      }
+      requeue_ai_song_throttled: {
+        Args: { p_attempt: string; p_delay_seconds: number; p_error: string }
+        Returns: boolean
+      }
+      reserve_dj_booking_internal: {
+        Args: {
+          p_club_id: string
+          p_profile_id: string
+          p_request_id: string
+          p_setlist_id: string
+          p_starts_at: string
+        }
+        Returns: string
+      }
+      reserve_music_video_generation: {
+        Args: {
+          p_description: Json
+          p_request_id: string
+          p_song_id: string
+          p_title: string
         }
         Returns: Json
       }
@@ -77219,6 +79666,10 @@ export type Database = {
       }
       respond_community_mentorship: {
         Args: { p_accept: boolean; p_match_id: string }
+        Returns: Json
+      }
+      respond_nightclub_dj_residency: {
+        Args: { p_action: string; p_request_id: string; p_residency_id: string }
         Returns: Json
       }
       respond_social_activity_invitation: {
@@ -77573,6 +80024,15 @@ export type Database = {
               isSetofReturn: false
             }
           }
+      review_nightclub_dj_application: {
+        Args: {
+          p_application_id: string
+          p_decision: string
+          p_owned_club_id: string
+          p_request_id: string
+        }
+        Returns: string
+      }
       review_radio_submission: {
         Args: { p_submission_id: string }
         Returns: Json
@@ -77652,8 +80112,13 @@ export type Database = {
         Returns: number
       }
       rotate_weekly_challenges: { Args: never; Returns: undefined }
+      run_auto_start_gigs_scheduled: { Args: never; Returns: Json }
       run_botb_cycle: { Args: never; Returns: Json }
       run_merch_manager_auto_restock: { Args: never; Returns: number }
+      run_music_video_production_completion_scheduled: {
+        Args: never
+        Returns: Json
+      }
       run_simplified_festival_edition: {
         Args: {
           p_expected_edition_version: number
@@ -77904,6 +80369,10 @@ export type Database = {
         }
         Returns: Json
       }
+      schedule_tour_rejoin_atomic: {
+        Args: { p_profile_id: string; p_tour_leg_id: string; p_user_id: string }
+        Returns: Json
+      }
       search_festival_artist_candidates: {
         Args: {
           p_artist_type?: string
@@ -78140,6 +80609,33 @@ export type Database = {
           p_offer_id: string
         }
         Returns: Json
+      }
+      send_friend_gift_atomic: {
+        Args: {
+          p_gift_type: string
+          p_message: string
+          p_recipient_profile_id: string
+          p_request_id: string
+          p_sender_profile_id: string
+        }
+        Returns: {
+          affection_bonus: number | null
+          cost_cents: number
+          created_at: string
+          gift_name: string
+          gift_type: string
+          id: string
+          message: string | null
+          metadata: Json | null
+          recipient_profile_id: string
+          sender_profile_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "friend_gifts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       send_friend_request: {
         Args: { requestor_profile_id?: string; target_profile_id: string }
@@ -78434,6 +80930,10 @@ export type Database = {
         }
         Returns: Json
       }
+      settle_dj_booking_internal: {
+        Args: { p_booking_id: string }
+        Returns: string
+      }
       settle_festival_edition: {
         Args: {
           p_admin_override_reason?: string
@@ -78441,6 +80941,10 @@ export type Database = {
           p_expected_readiness_hash: string
           p_idempotency_key: string
         }
+        Returns: Json
+      }
+      settle_film_contract_atomic: {
+        Args: { p_activity_id: string; p_contract_id: string }
         Returns: Json
       }
       settle_gig_audience_polls: { Args: { p_gig_id: string }; Returns: number }
@@ -78476,7 +80980,37 @@ export type Database = {
         Args: { p_contract_id: string; p_idempotency_key: string }
         Returns: Json
       }
+      settle_music_video_generation: {
+        Args: {
+          p_error: string
+          p_prediction_id: string
+          p_status: string
+          p_video_id: string
+          p_video_url: string
+        }
+        Returns: Json
+      }
+      settle_release_party_atomic: {
+        Args: { p_answers: Json; p_release_id: string }
+        Returns: Json
+      }
+      settle_self_promotion_atomic: {
+        Args: { p_activity_id: string }
+        Returns: Json
+      }
+      settle_song_marketplace_sale_atomic: {
+        Args: {
+          p_action: string
+          p_actor_profile_id: string
+          p_listing_id: string
+        }
+        Returns: Json
+      }
       settle_support_band_gig: { Args: { p_gig_id: string }; Returns: Json }
+      settle_work_shift_atomic: {
+        Args: { p_activity_id: string; p_shift_id: string }
+        Returns: Json
+      }
       sign_festival_contract: {
         Args: {
           p_acknowledgement?: Json
@@ -78644,6 +81178,10 @@ export type Database = {
       start_direct_conversation: {
         Args: { recipient_profile_id: string }
         Returns: Json
+      }
+      start_dj_booking_internal: {
+        Args: { p_booking_id: string }
+        Returns: string
       }
       start_festival_edition_settlement_posting: {
         Args: {
@@ -80407,6 +82945,10 @@ export type Database = {
         Args: { p_effects: Json }
         Returns: boolean
       }
+      university_auto_attendance_due: {
+        Args: { p_enrollment_id: string }
+        Returns: Json
+      }
       university_visiting_professor_bonus: {
         Args: { p_at?: string; p_skill_slug: string; p_university_id: string }
         Returns: number
@@ -80670,6 +83212,15 @@ export type Database = {
         }
         Returns: Json
       }
+      update_nightclub_settings: {
+        Args: {
+          p_cover_charge?: number
+          p_drink_markup_pct?: number
+          p_is_open?: boolean
+          p_owned_club_id: string
+        }
+        Returns: Json
+      }
       update_player_health: {
         Args: { p_health_change: number; p_user_id: string }
         Returns: number
@@ -80810,6 +83361,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      withdraw_battle_of_the_bands_entry: {
+        Args: { p_entry_id: string }
+        Returns: Json
+      }
       withdraw_company_application: {
         Args: { p_application_id: string }
         Returns: undefined
@@ -80909,6 +83464,10 @@ export type Database = {
           p_idempotency_key: string
         }
         Returns: Json
+      }
+      withdraw_nightclub_dj_application: {
+        Args: { p_application_id: string }
+        Returns: string
       }
       write_off_festival_settlement_receivable: {
         Args: { p_idempotency_key: string; p_line_id: string }
