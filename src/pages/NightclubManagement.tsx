@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { Building2, Users, DollarSign, Settings, Plus, Trash2, Loader2, ToggleLeft, ToggleRight, TrendingUp, TrendingDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -78,7 +79,7 @@ const NightclubManagement = () => {
         </div>
       )}
 
-      {selectedClub && <ClubDashboard club={selectedClub} />}
+      {selectedClub && <ClubDashboard key={selectedClub.id} club={selectedClub} />}
     </FMPageScaffold>
   );
 };
@@ -153,26 +154,7 @@ const ClubDashboard = ({ club }: { club: OwnedNightclub }) => {
             </Button>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs text-muted-foreground">Cover Charge ($)</label>
-              <Input
-                type="number"
-                value={club.cover_charge}
-                onChange={(e) => updateClub.mutate({ clubId: club.id, updates: { cover_charge: Number(e.target.value) } })}
-                className="h-8 text-sm"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground">Drink Markup (%)</label>
-              <Input
-                type="number"
-                value={club.drink_markup_pct}
-                onChange={(e) => updateClub.mutate({ clubId: club.id, updates: { drink_markup_pct: Number(e.target.value) } })}
-                className="h-8 text-sm"
-              />
-            </div>
-          </div>
+          <NightclubPricingFields club={club} />
         </CardContent>
       </Card>
 
@@ -202,6 +184,52 @@ const ClubDashboard = ({ club }: { club: OwnedNightclub }) => {
       </Card>
 
       <HireStaffDialog open={showHire} onOpenChange={setShowHire} ownedClubId={club.id} />
+    </div>
+  );
+};
+
+// Edit drafts locally, then commit on blur: never charge/write on every keystroke.
+const NightclubPricingFields = ({ club }: { club: OwnedNightclub }) => {
+  const updateClub = useUpdateOwnedClub();
+  const [cover, setCover] = useState(String(club.cover_charge));
+  const [markup, setMarkup] = useState(String(club.drink_markup_pct));
+  const submit = (kind: "cover" | "markup") => {
+    const raw = kind === "cover" ? cover : markup;
+    const value = Number(raw);
+    const min = 0;
+    const max = kind === "cover" ? 500 : 200;
+    if (!raw.trim() || !Number.isInteger(value) || value < min || value > max) {
+      toast.error(kind === "cover" ? "Cover must be a whole dollar amount from 0 to 500" :
+        "Drink markup must be a whole percentage from 0 to 200");
+      if (kind === "cover") setCover(String(club.cover_charge));
+      else setMarkup(String(club.drink_markup_pct));
+      return;
+    }
+    if (value === (kind === "cover" ? club.cover_charge : club.drink_markup_pct)) return;
+    updateClub.mutate({ clubId: club.id, updates: kind === "cover"
+      ? { cover_charge: value } : { drink_markup_pct: value } });
+  };
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <div>
+        <label htmlFor={`nightclub-cover-${club.id}`} className="text-xs text-muted-foreground">Cover Charge ($)</label>
+        <Input id={`nightclub-cover-${club.id}`} type="number" min={0} max={500} step={1}
+          value={cover} onChange={(event) => setCover(event.target.value)}
+          onBlur={() => submit("cover")}
+          onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }}
+          disabled={updateClub.isPending} className="h-8 text-sm" />
+      </div>
+      <div>
+        <label htmlFor={`nightclub-markup-${club.id}`} className="text-xs text-muted-foreground">Drink Markup (%)</label>
+        <Input id={`nightclub-markup-${club.id}`} type="number" min={0} max={200} step={1}
+          value={markup} onChange={(event) => setMarkup(event.target.value)}
+          onBlur={() => submit("markup")}
+          onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }}
+          disabled={updateClub.isPending} className="h-8 text-sm" />
+      </div>
+      <p className="col-span-2 text-xs text-muted-foreground">
+        Changes save when you leave a field; prices and markup are validated by the server.
+      </p>
     </div>
   );
 };
