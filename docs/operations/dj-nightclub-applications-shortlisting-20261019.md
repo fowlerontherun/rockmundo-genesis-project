@@ -35,3 +35,7 @@ Both tests use `BEGIN/ROLLBACK`, leave no synthetic clubs, audio tracks, setlist
 ## Remaining work
 
 The owner-funded performer contract, DJ residency repeat schedule, reliable held slot/calendar event, cancellation/refund, and settlement of nightclub owner funds versus performer earnings require a dedicated server ledger before a shortlist may become a confirmed gig. #4264, #4246 and #4265 should remain open. Historical duplicate/unreceipted club owners (#4399) cannot use the verified-owner shortlisting controls until purchase history is reconciled.
+
+## Multiple applicants for one proposed slot
+
+Follow-up production migration **`20261019092152_dj_multiple_applicants_same_club_time_20261019`** refines the pending proposal conflict predicate: multiple **different** DJs may apply for the same club/time so the owner can choose whom to shortlist, while any one DJ cannot submit overlapping proposals. Existing actual `dj_bookings` still prevent conflicting proposals. The live rollback-only two-player test `supabase/tests/dj_club_multiple_applicants_same_slot.sql` passed and is part of the Phase 5 gate.
