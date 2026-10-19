@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   canCancelDjBooking, canStartDjBooking, djReservationFingerprint,
-  parseDjReservationAttempt, resolveDjReservationAttempt,
+  parseDjReservationAttempt, resolveDjReservationAttempt, runConfirmedDjAction,
 } from "./bookingClient";
 
 const firstId = "77777777-7777-4777-8777-777777777777";
@@ -64,5 +64,36 @@ describe("DJ booking action availability", () => {
     expect(canCancelDjBooking("ready", "not-a-time", start)).toBe(false);
     expect(canStartDjBooking("booked", "not-a-time", start)).toBe(false);
     expect(canStartDjBooking("booked", iso, Number.NaN)).toBe(false);
+  });
+});
+
+describe("confirmed DJ server action acknowledgement", () => {
+  it("preserves confirmed server success when cache refresh fails", async () => {
+    const calls: string[] = [];
+    const result = await runConfirmedDjAction(
+      async () => { calls.push("server"); return "booking-id"; },
+      async (id) => { calls.push(id); throw new Error("React Query network error"); },
+    );
+    expect(result).toBe("booking-id");
+    expect(calls).toEqual(["server", "booking-id"]);
+  });
+
+  it("does not show a confirmation for a failed or ambiguous server action", async () => {
+    let followUpCount = 0;
+    await expect(runConfirmedDjAction(
+      async () => { throw new Error("server request failed"); },
+      async () => { followUpCount++; },
+    )).rejects.toThrow("server request failed");
+    expect(followUpCount).toBe(0);
+  });
+
+  it("runs successful follow-up exactly once", async () => {
+    let followUpCount = 0;
+    const completed = await runConfirmedDjAction(
+      async () => ({ id: "booking-id", status: "completed" }),
+      async (result) => { expect(result.status).toBe("completed"); followUpCount++; },
+    );
+    expect(completed.id).toBe("booking-id");
+    expect(followUpCount).toBe(1);
   });
 });
