@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
       // Work-shift payout is owned by the dedicated, secret-authorised cron
       // and its atomic settlement RPC. Do not call that global worker here or
       // mark the scheduled work activity complete before wages actually post.
-      if (activity.activity_type === 'work') continue;
+      if (activity.activity_type === 'work' || activity.activity_type === 'university') continue;
       try {
         await processActivityCompletion(supabase, activity);
         await supabase
@@ -275,7 +275,8 @@ async function processActivityCompletion(supabase: any, activity: ScheduledActiv
       // The scheduler loop deliberately skips work until atomic settlement.
       break;
     case 'university':
-      await supabase.functions.invoke('university-attendance');
+      // Trusted hourly attendance + atomic XP RPC own this completion,
+      // rather than prematurely marking a course before the local class ends.
       break;
     case 'reading': {
       // The attendance endpoint requires a trusted service-role bearer for

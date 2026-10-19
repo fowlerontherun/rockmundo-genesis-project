@@ -1,48 +1,24 @@
 import { useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "./use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
+// Global university XP is awarded only by the trusted hourly server worker.
+// The browser may refresh its own display; it must never invoke the
+// privileged university-attendance function for everyone (#4228).
 export const useAutoUniversityAttendance = (profileId: string | null) => {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!profileId) return;
 
-    const checkAttendance = async () => {
-      try {
-        const { data: activeEnrollments, error } = await supabase
-          .from('player_university_enrollments')
-          .select('id, university_courses(name)')
-          .eq('profile_id', profileId)
-          .eq('status', 'enrolled')
-          .not('next_class_at', 'is', null)
-          .lte('next_class_at', new Date().toISOString());
-
-        if (error) throw error;
-
-        if (activeEnrollments && activeEnrollments.length > 0) {
-          await supabase.functions.invoke('university-attendance');
-          
-          queryClient.invalidateQueries({ queryKey: ["university-enrollments"] });
-          queryClient.invalidateQueries({ queryKey: ["player-skills"] });
-          queryClient.invalidateQueries({ queryKey: ["current_enrollment", profileId] });
-          queryClient.invalidateQueries({ queryKey: ["current_enrollment_full", profileId] });
-
-          toast({
-            title: "Class Attended!",
-            description: `You've completed ${activeEnrollments.length} class session(s). Progress updated!`,
-          });
-        }
-      } catch (error) {
-        console.error('Error checking university attendance:', error);
-      }
+    const refreshLearning = () => {
+      void queryClient.invalidateQueries({ queryKey: ["university-enrollments"] });
+      void queryClient.invalidateQueries({ queryKey: ["player-skills"] });
+      void queryClient.invalidateQueries({ queryKey: ["current_enrollment", profileId] });
+      void queryClient.invalidateQueries({ queryKey: ["current_enrollment_full", profileId] });
     };
 
-    checkAttendance();
-    const interval = setInterval(checkAttendance, 10 * 60 * 1000);
-
+    refreshLearning();
+    const interval = setInterval(refreshLearning, 10 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [profileId, toast, queryClient]);
+  }, [profileId, queryClient]);
 };

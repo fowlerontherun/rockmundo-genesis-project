@@ -11,7 +11,7 @@ const daily = readFileSync(
 
 describe("XP reliability integration contracts", () => {
   it("university worker uses one atomic RPC and no separate reward writes", () => {
-    expect(worker).toContain('client.rpc(\n          "record_university_attendance_reward"');
+    expect(worker).toContain('client.rpc(\n          "record_university_auto_attendance_reward"');
     expect(worker).not.toContain('.from("player_university_attendance")\n          .insert(');
     expect(worker).not.toContain('await awardSkillXp(');
     expect(worker).not.toContain('.from("experience_ledger").insert(');

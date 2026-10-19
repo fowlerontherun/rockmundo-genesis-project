@@ -68,13 +68,30 @@ function calculateLearningMultiplier(skillSlug: string, attributes: Record<strin
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req);
-  const triggeredBy = payload?.triggeredBy ?? req.headers.get("x-triggered-by") ?? undefined;
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
   const client = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     { auth: { persistSession: false } },
   );
+  // Only the Vault-authorised scheduler may run global attendance.
+  // Authenticate before parsing any client data or processing XP.
+  const { data: authorized, error: authError } = await client.rpc(
+    "verify_internal_cron_secret",
+    { p_secret: req.headers.get("x-cron-secret") },
+  );
+  if (authError || authorized !== true) {
+    console.warn("[university-attendance] Rejected unauthorized scheduler invocation");
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req);
+  const triggeredBy = payload?.triggeredBy ?? req.headers.get("x-triggered-by") ?? undefined;
 
   let runId: string | null = null;
   const startedAt = Date.now();
@@ -95,7 +112,6 @@ serve(async (req) => {
     });
 
     const now = new Date();
-    const today = now.toISOString().split("T")[0];
     const { data: enrollments, error: enrollError } = await client
       .from("player_university_enrollments")
       .select("id, profile_id, course_id, university_id, scheduled_end_date, status, days_attended, total_xp_earned")
@@ -107,11 +123,22 @@ serve(async (req) => {
 
     for (const enrollment of enrollments ?? []) {
       try {
+        // PostgreSQL resolves the university-local day and class end, including
+        // DST. Award only after the actual course session has finished.
+        const { data: due, error: dueError } = await client.rpc(
+          "university_auto_attendance_due", { p_enrollment_id: enrollment.id },
+        );
+        if (dueError) throw dueError;
+        if (!due?.due) {
+          skippedCount++;
+          continue;
+        }
+        const attendanceDate: string = due.attendance_date;
         const { data: existingAttendance } = await client
           .from("player_university_attendance")
           .select("id")
           .eq("enrollment_id", enrollment.id)
-          .eq("attendance_date", today)
+          .eq("attendance_date", attendanceDate)
           .maybeSingle();
         if (existingAttendance) {
           skippedCount += 1;
@@ -194,10 +221,9 @@ serve(async (req) => {
         // The RPC atomically records attendance, skill progression, profile XP,
         // enrollment totals and the experience ledger. Retrying is safe.
         const { data: award, error: awardError } = await client.rpc(
-          "record_university_attendance_reward",
+          "record_university_auto_attendance_reward",
           {
             p_enrollment_id: enrollment.id,
-            p_attendance_date: today,
             p_xp: xpEarned,
             p_remote: isRemote,
             p_connection_failed: connectionFailed,
@@ -210,20 +236,16 @@ serve(async (req) => {
         }
         const isCompleted = Boolean(award.completed);
 
-        const classStart = new Date(now);
-        classStart.setHours(course.class_start_hour || 10, 0, 0, 0);
-        const classEnd = new Date(now);
-        classEnd.setHours(course.class_end_hour || 14, 0, 0, 0);
-        const dayStart = new Date(classStart);
-        dayStart.setHours(0, 0, 0, 0);
-        const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+        const classStart = new Date(due.class_starts_at);
+        const classEnd = new Date(due.class_ends_at);
         const { data: existingSchedule } = await client
           .from("player_scheduled_activities")
           .select("id")
           .eq("profile_id", enrollment.profile_id)
           .eq("activity_type", "university")
-          .gte("scheduled_start", dayStart.toISOString())
-          .lt("scheduled_start", dayEnd.toISOString())
+          .contains("metadata", { enrollment_id: enrollment.id })
+          .gte("scheduled_start", classStart.toISOString())
+          .lt("scheduled_start", classEnd.toISOString())
           .maybeSingle();
 
         if (!existingSchedule) {
