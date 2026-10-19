@@ -28,7 +28,8 @@ describe("authoritative tour rejoin and no early teleport (#4219)", () => {
     expect(sql).toContain("another_journey_active");
     expect(sql).toContain("not_tour_band_member");
     expect(sql).toContain("p_user_id AND is_active IS TRUE");
-    expect(sql).toContain("p_profile_id FOR UPDATE");
+    expect(sql).toContain("WHERE id=p_profile_id AND user_id=p_user_id AND is_active IS TRUE");
+    expect(sql).toContain("FOR UPDATE;");
     expect(sql).toContain("v_state='in_progress'");
     expect(sql).not.toMatch(/SET\s+current_city_id\s*=/i);
   });
