@@ -24,6 +24,21 @@ describe("assignable instrument contracts", () => {
     }
   });
 
+  it("covers vocal and rap roles with their own canonical skill tracks", () => {
+    for (const [instrumentId, instrument] of Object.entries(STAGE_INSTRUMENTS)) {
+      if (instrument.role !== "vocals") continue;
+      const slugs = getBandRoleSkillSlugs(instrument.label);
+      expect(BAND_PERFORMANCE_ROLES).toContain(instrument.label);
+      expect(slugs).toEqual([
+        `instruments_basic_${instrumentId}`,
+        `instruments_professional_${instrumentId}`,
+        `instruments_mastery_${instrumentId}`,
+      ]);
+      for (const slug of slugs) expect(knownSkills.has(slug)).toBe(true);
+    }
+    expect(getBandRoleSkillSlugs("DJ Scratching")).toContain("instruments_basic_turntablism");
+  });
+
   it("every jam and songwriting selection points at a real trainable skill", () => {
     const jamSlugs = JAM_INSTRUMENTS.map(item => item.value);
     const songwritingSlugs = SONGWRITING_INSTRUMENTS.map(item => item.slug);
