@@ -86,7 +86,7 @@ export function DjFundedOffers({ clubId, profileId }: { clubId: string; profileI
       {isError && <p className="text-sm text-destructive" role="alert">Offer details could not be loaded.</p>}
       {offers.map(o => <div key={o.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border p-3">
         <div>
-          <p className="font-medium">${o.fee} proposed DJ fee</p>
+          <p className="font-medium">{"$"}{o.fee} proposed DJ fee</p>
           <p className="text-xs text-muted-foreground">Offer expires {new Date(o.expires_at).toLocaleString()}</p>
           <Badge variant="outline">{o.status === "accepted" ? "Terms accepted · not booked" : o.status}</Badge>
         </div>
