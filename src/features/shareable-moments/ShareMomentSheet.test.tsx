@@ -28,7 +28,9 @@ vi.mock("./avatarCapture", () => ({
 }));
 
 vi.mock("./gallery", () => ({
-  saveShareMomentSnapshot: vi.fn(),
+  // The real gallery writer is async and ShareMomentSheet attaches .catch().
+  // Returning undefined from this mock creates a post-test unhandled error.
+  saveShareMomentSnapshot: vi.fn(async () => undefined),
 }));
 
 vi.mock("./share", async importOriginal => ({
