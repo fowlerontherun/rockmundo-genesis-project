@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { STAGE_INSTRUMENTS } from "@/features/gig-demo-3d/instrumentCatalog";
 import {
   getCanonicalEquipmentType,
   getLuthieryPerformanceBonusPercent,
@@ -101,4 +102,21 @@ describe("personal gear role fit", () => {
     expect(getPersonalGearRoleBonusPercent(item, "Drums")).toBe(0);
     expect(getPersonalGearFitLabel(item, "Drums")).toBe("Not used for Drums");
   });
+  it("matches every selectable specialist to the exact buyable instrument type", () => {
+    for (const [subcategory, instrument] of Object.entries(STAGE_INSTRUMENTS)) {
+      if (instrument.role === "vocals") continue;
+      expect(personalGearMatchesRole("instrument", subcategory, instrument.label)).toBe(true);
+    }
+    expect(personalGearMatchesRole("instrument", "violin", "Cello")).toBe(false);
+    expect(personalGearMatchesRole("instrument", "alto_sax", "Tenor Saxophone")).toBe(false);
+    expect(personalGearMatchesRole("instrument", "turntablism", "DJ Scratching")).toBe(true);
+  });
+
+  it("matches microphones to assigned singing and rap roles", () => {
+    for (const role of ["Vocal & Performance Skills", "Rapping", "Freestyle", "Battle Rap", "Flow & Cadence", "Rap Songwriting", "Ad-Libs & Vocal FX"]) {
+      expect(personalGearMatchesRole("recording", "dynamic_mic", role)).toBe(true);
+      expect(personalGearMatchesRole("instrument", "flute", role)).toBe(false);
+    }
+  });
+
 });
