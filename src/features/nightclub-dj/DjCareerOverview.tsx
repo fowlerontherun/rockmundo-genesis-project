@@ -9,6 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { summarizeDjCareer, type DjCareerPerformance } from "./djCareer";
 
 type ClubLabel = { id: string; name: string; cityName: string };
+type DjCityFanPopulation = { city_id: string; total_fans: number; total_attendance: number; sets_played: number };
+type DjBookingAudience = { booking_id: string; attendance: number; venue_capacity: number; new_local_fans: number; satisfaction: number };
+
 type DjCareerBooking = {
   id: string;
   club_id: string;
@@ -84,6 +87,37 @@ export function DjCareerOverview({
     refetchInterval: 60_000,
   });
 
+  const { data: localFans = [], isError: localFansError } = useQuery<DjCityFanPopulation[]>({
+    queryKey: ["dj-city-fans", profileId],
+    queryFn: async () => {
+      // New RLS-protected character-city table is not yet in generated DB types.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any).from("profile_city_dj_fans")
+        .select("city_id,total_fans,total_attendance,sets_played")
+        .eq("profile_id", profileId).limit(250);
+      if (error) throw error;
+      return (data ?? []) as DjCityFanPopulation[];
+    },
+    staleTime: 30_000,
+  });
+  const { data: audiences = [], isError: audiencesError } = useQuery<DjBookingAudience[]>({
+    queryKey: ["dj-booking-audiences", profileId],
+    queryFn: async () => {
+      // Immutable audience data is written only at server-verified settlement.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any).from("dj_booking_audiences")
+        .select("booking_id,attendance,venue_capacity,new_local_fans,satisfaction")
+        .eq("profile_id", profileId)
+        .order("settled_at", { ascending: false }).limit(10);
+      if (error) throw error;
+      return (data ?? []) as DjBookingAudience[];
+    },
+    staleTime: 30_000,
+  });
+  const totalLocalFans = localFans.reduce((total, city) => total + city.total_fans, 0);
+  const totalDjAttendance = localFans.reduce((total, city) => total + city.total_attendance, 0);
+  const firstCrowd = audiences[0];
+
   const summary = useMemo(
     () => summarizeDjCareer(history?.rows ?? [], history?.count ?? null),
     [history],
@@ -128,6 +162,37 @@ export function DjCareerOverview({
             )}
           </>
         )}
+        <div className="border-t pt-3 space-y-2" data-testid="dj-local-fans-and-crowds">
+          <h3 className="text-sm font-medium">My DJ audience and local following</h3>
+          {(localFansError || audiencesError) ? (
+            <p className="text-xs text-destructive" role="alert">
+              Could not load verified DJ crowd or city follower totals.
+            </p>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <div><p className="text-xs text-muted-foreground">Local DJ fans</p>
+                  <p className="text-lg font-semibold tabular-nums">{integer.format(totalLocalFans)}</p>
+                </div>
+                <div><p className="text-xs text-muted-foreground">Total DJ attendance</p>
+                  <p className="text-lg font-semibold tabular-nums">{integer.format(totalDjAttendance)}</p>
+                </div>
+                <div><p className="text-xs text-muted-foreground">Latest verified crowd</p>
+                  <p className="text-lg font-semibold tabular-nums">
+                    {firstCrowd
+                      ? `${integer.format(firstCrowd.attendance)} / ${integer.format(firstCrowd.venue_capacity)}`
+                      : "—"}
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Followers are tracked separately for each city and grow only from settled,
+                server-verified DJ performances. Crowds never exceed club capacity.
+                Legacy practice and missed sets do not create followers.
+              </p>
+            </>
+          )}
+        </div>
         {typeof legacyCount === "number" && legacyCount > 0 && (
           <p className="text-xs text-muted-foreground">
             {integer.format(legacyCount)} older instant DJ set{legacyCount === 1 ? "" : "s"} recorded separately;
