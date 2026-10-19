@@ -92,6 +92,29 @@ Deno.serve(async (req) => {
     if (completeError) throw completeError;
 
     for (const activity of toComplete || []) {
+      // Film schedules must be settled entirely in one SQL transaction,
+      // including their activity status. No generic status UPDATE may follow.
+      if (activity.activity_type === 'film_production') {
+        try {
+          const contractId = activity.metadata?.contract_id;
+          if (!contractId) throw new Error('Film activity is missing its contract');
+          const { data: settlement, error: settlementError } = await supabase.rpc(
+            'settle_film_contract_atomic',
+            { p_activity_id: activity.id, p_contract_id: contractId },
+          );
+          if (settlementError) throw settlementError;
+          if (settlement?.settled === true) {
+            completedCount++;
+          } else if (settlement?.reason !== 'already_settled' &&
+                     settlement?.reason !== 'schedule_not_due' &&
+                     settlement?.reason !== 'filming_not_finished') {
+            throw new Error(`Film settlement rejected: ${settlement?.reason ?? 'unknown'}`);
+          }
+        } catch (filmError) {
+          console.error(`[process-scheduled-activities] Film settlement failed for ${activity.id}`, filmError);
+        }
+        continue;
+      }
       // Work-shift payout is owned by the dedicated, secret-authorised cron
       // and its atomic settlement RPC. Do not call that global worker here or
       // mark the scheduled work activity complete before wages actually post.
@@ -332,28 +355,9 @@ async function processActivityCompletion(supabase: any, activity: ScheduledActiv
       }
       break;
     case 'film_production':
-      if (activity.metadata?.contract_id) {
-        await supabase
-          .from('player_film_contracts')
-          .update({ status: 'completed' })
-          .eq('id', activity.metadata.contract_id);
-        const { data: contract } = await supabase
-          .from('player_film_contracts')
-          .select('*, film_productions(*)')
-          .eq('id', activity.metadata.contract_id)
-          .single();
-        if (contract?.film_productions) {
-          const film = contract.film_productions;
-          await supabase.rpc('increment_user_cash', {
-            p_user_id: activity.user_id,
-            p_amount: film.compensation || 0,
-          });
-          await supabase.rpc('increment_user_fame', {
-            p_user_id: activity.user_id,
-            p_amount: film.fame_boost || 0,
-          });
-        }
-      }
+      // Intentionally settled by settle_film_contract_atomic() in the main
+      // completion loop. That single SQL transaction owns cash, fame,
+      // receipt, contract and schedule status (#4227).
       break;
     default:
       console.log(`No specific processing for activity type: ${activity.activity_type}`);
