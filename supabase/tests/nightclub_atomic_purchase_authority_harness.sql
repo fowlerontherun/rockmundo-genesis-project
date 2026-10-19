@@ -10,6 +10,8 @@ BEGIN
  OR has_table_privilege('authenticated','public.player_owned_nightclubs','UPDATE')
  OR has_table_privilege('authenticated','public.player_owned_nightclubs','DELETE')
  OR has_function_privilege('anon','public.purchase_nightclub_atomic(uuid,uuid,uuid)','EXECUTE')
+ OR has_function_privilege('anon','public.get_owned_nightclub_dj_roster(uuid)','EXECUTE')
+ OR NOT has_function_privilege('authenticated','public.get_owned_nightclub_dj_roster(uuid)','EXECUTE')
  OR NOT has_function_privilege('authenticated','public.purchase_nightclub_atomic(uuid,uuid,uuid)','EXECUTE')
  THEN RAISE EXCEPTION 'Nightclub purchase grants allow client bypass'; END IF;
  SELECT p.user_id,p.id,c.id,
@@ -41,6 +43,10 @@ BEGIN
  SELECT count(*) INTO v_count FROM public.nightclub_purchase_receipts WHERE request_id=v_request;
  IF v_count<>1 THEN RAISE EXCEPTION 'Multiple purchase receipts on retry'; END IF;
  v_owned:=(v_first->>'owned_club_id')::uuid;
+ -- The secure preview must work for a valid receipt-backed owner, without
+ -- exposing other clubs or manufacturing an artificial booking.
+ SELECT count(*) INTO v_count FROM public.get_owned_nightclub_dj_roster(v_owned);
+ IF v_count<>0 THEN RAISE EXCEPTION 'Synthetic purchase unexpectedly has DJ bookings'; END IF;
  IF NOT EXISTS(SELECT 1 FROM public.player_owned_nightclubs o
    WHERE o.id=v_owned AND o.profile_id=v_profile AND o.club_id=v_club
    AND o.verified_purchase_id=(v_first->>'receipt_id')::uuid)
@@ -58,6 +64,10 @@ BEGIN
   AND cover_charge=27 AND drink_markup_pct=12 AND is_open=false)
  THEN RAISE EXCEPTION 'Safe settings update failed'; END IF;
  PERFORM set_config('request.jwt.claim.sub',gen_random_uuid()::text,true);
+ BEGIN
+  PERFORM 1 FROM public.get_owned_nightclub_dj_roster(v_owned);
+  RAISE EXCEPTION 'Foreign user read private club roster';
+ EXCEPTION WHEN insufficient_privilege THEN NULL; END;
  BEGIN
    PERFORM public.update_nightclub_settings(v_owned,45,NULL,NULL);
    RAISE EXCEPTION 'Other user changed nightclub settings';
