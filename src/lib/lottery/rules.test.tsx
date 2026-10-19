@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { readFileSync } from "node:fs";
 import { NumberPicker } from "@/components/lottery/NumberPicker";
@@ -67,7 +67,7 @@ describe("weekly lottery shared contract (#4223)", () => {
     render(<NumberPicker onSubmit={onSubmit} />);
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /Quick Pick/ }));
-    fireEvent.doubleClick(screen.getByRole("button", { name: "Buy Ticket ($2)" }));
+    await user.dblClick(screen.getByRole("button", { name: "Buy Ticket ($2)" }));
     expect(onSubmit).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("button", { name: "Buying..." })).toBeDisabled();
     reject(new Error("server rejected purchase"));
