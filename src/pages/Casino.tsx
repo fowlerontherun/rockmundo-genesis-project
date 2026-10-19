@@ -15,7 +15,7 @@ const GAMES = [
   {
     key: "blackjack",
     title: "Blackjack",
-    description: "Beat the dealer to 21. Hit, Stand, or Double Down.",
+    description: "Temporarily unavailable while server-verified blackjack is prepared.",
     icon: Club,
     path: "/casino/blackjack",
     color: "from-emerald-900/60 to-emerald-700/30",
@@ -139,8 +139,8 @@ export default function Casino() {
             transition={{ delay: i * 0.1 }}
           >
             <Card
-              className="cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all overflow-hidden"
-              onClick={() => navigate(game.path)}
+              className={game.key === "blackjack" ? "opacity-65 overflow-hidden" : "cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all overflow-hidden"}
+              onClick={() => { if (game.key !== "blackjack") navigate(game.path); }}
             >
               <div className={`bg-gradient-to-r ${game.color} p-4 flex items-center gap-4`}>
                 <div className="text-4xl">{game.emoji}</div>
@@ -148,7 +148,7 @@ export default function Casino() {
                   <CardTitle className="text-lg">{game.title}</CardTitle>
                   <CardDescription className="text-muted-foreground/80">{game.description}</CardDescription>
                 </div>
-                <Button variant="secondary" size="sm">Play</Button>
+                <Button variant="secondary" size="sm" disabled={game.key === "blackjack"}>{game.key === "blackjack" ? "Unavailable" : "Play"}</Button>
               </div>
             </Card>
           </motion.div>
