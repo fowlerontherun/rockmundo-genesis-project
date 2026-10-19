@@ -4,8 +4,11 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useGameData } from "@/hooks/useGameData";
 import { getUtcWeekStart, formatUtcDate } from "@/utils/week";
 import { toast } from "@/hooks/use-toast";
-
-const TICKET_COST = 2;
+import {
+  LOTTERY_MAX_TICKETS_PER_DRAW as MAX_TICKETS_PER_DRAW,
+  LOTTERY_TICKET_COST as TICKET_COST,
+  lotterySelectionError,
+} from "@/lib/lottery/rules";
 
 export function useCurrentDraw() {
   const weekStart = formatUtcDate(getUtcWeekStart(new Date(), 1));
@@ -43,8 +46,6 @@ export function useCurrentDraw() {
     },
   });
 }
-
-const MAX_TICKETS_PER_DRAW = 10;
 
 export function useMyTicketsForDraw(drawId: string | undefined) {
   const { profileId } = useActiveProfile();
@@ -103,8 +104,8 @@ export function useBuyTicket() {
     }) => {
       if (!profileId || !profile?.id) throw new Error("Not authenticated");
       if ((profile as any).cash < TICKET_COST) throw new Error("Not enough cash");
-      if (selectedNumbers.length !== 5) throw new Error("Select 5 numbers");
-      if (selectedNumbers.some((n) => n < 1 || n > 30) || new Set(selectedNumbers).size !== 5) throw new Error("Select 5 unique numbers from 1 to 30");
+      const selectionError = lotterySelectionError(selectedNumbers, bonusNumber);
+      if (selectionError) throw new Error(selectionError);
 
       const { data, error } = await (supabase as any).rpc("buy_lottery_ticket_atomic", {
         p_profile_id: profileId,
@@ -113,6 +114,7 @@ export function useBuyTicket() {
         p_bonus_number: bonusNumber,
       });
       if (error) throw error;
+      if (!data?.id) throw new Error("Lottery purchase was not confirmed");
       return data;
     },
     onSuccess: () => {
