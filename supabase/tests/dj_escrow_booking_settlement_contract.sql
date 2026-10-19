@@ -46,6 +46,12 @@ BEGIN
  RETURNING id INTO setid;
  app1:=public.apply_for_nightclub_dj_slot(dp,owned,setid,t1,gen_random_uuid());
  app2:=public.apply_for_nightclub_dj_slot(dp,owned,setid,t2,gen_random_uuid());
+ -- Before owner approval/fee escrow, the *ordinary* DJ reservation route
+ -- must be denied at the same verified player-owned club.
+ BEGIN
+  PERFORM public.reserve_dj_booking_internal(dp,cid,setid,t1,gen_random_uuid());
+  RAISE EXCEPTION 'DJ bypassed verified club owner by ordinary reserve path';
+ EXCEPTION WHEN insufficient_privilege THEN NULL;END;
  PERFORM set_config('request.jwt.claim.sub',ou::text,true);
  PERFORM public.review_nightclub_dj_application(owned,app1,'shortlist',gen_random_uuid());
  PERFORM public.review_nightclub_dj_application(owned,app2,'shortlist',gen_random_uuid());
