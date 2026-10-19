@@ -15,6 +15,7 @@ WHERE p.is_vip=true AND p.cash>=300000 AND p.is_active=true AND p.died_at IS NUL
    AND (s.profile_id IS NULL OR s.profile_id=p.id))
 ORDER BY p.id LIMIT 1;
 
+GRANT SELECT ON video_test_player TO authenticated;
 SELECT set_config('request.jwt.claim.sub',(SELECT user_id::text FROM video_test_player),true);
 SET LOCAL ROLE authenticated;
 CREATE TEMP TABLE video_first AS
