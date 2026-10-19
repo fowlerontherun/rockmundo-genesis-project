@@ -46,11 +46,49 @@ function weightedRandomSelect<T extends { weight: number }>(items: T[]): T {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, supabaseKey);
 
+  // Reject untrusted callers BEFORE job logging, parsing or stock/revenue IO.
+  const cronSecret = req.headers.get("x-cron-secret");
+  const { data: authorised, error: authError } = await supabase.rpc(
+    "verify_internal_cron_secret", { p_secret: cronSecret },
+  );
+  if (authError || authorised !== true) {
+    console.warn("[simulate-merch-sales] Unauthorized scheduler invocation");
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // Unique SQL primary-key claim serializes concurrent/replayed requests,
+  // including after an incomplete/error run (requires manual reconciliation).
+  const { data: claim, error: claimError } = await supabase.rpc(
+    "claim_daily_merch_simulation",
+  );
+  if (claimError) {
+    console.error("[simulate-merch-sales] Daily claim failed", claimError);
+    return new Response(JSON.stringify({ error: "Cannot claim merchandise simulation" }), {
+      status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  if (!claim?.claimed || !claim?.run_id) {
+    return new Response(JSON.stringify({ success: true, skipped: true, reason: claim?.reason ?? "already_claimed" }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const simulationRunId: string = claim.run_id;
+
   const startTime = Date.now();
+  let processedOrders = 0;
+  let failedOrders = 0;
   const runId = await startJobRun({
     jobName: JOB_NAME,
     functionName: "simulate-merch-sales",
@@ -197,6 +235,7 @@ Deno.serve(async (req) => {
 
         if (saleError) {
           console.error(`[${JOB_NAME}] Atomic sale failed for ${selected.id}:`, saleError);
+          failedOrders++;
           continue;
         }
 
@@ -236,6 +275,7 @@ Deno.serve(async (req) => {
         };
         successfulOrders.push(order);
         totalOrders++;
+        processedOrders++;
         totalRevenue += totalPrice;
         totalTaxes += salesTax + vat;
         totalNetRevenue += netRevenue;
@@ -257,7 +297,7 @@ Deno.serve(async (req) => {
           p_description: `Merch sales tax for ${(band as any).name} (${successfulOrders.length} orders)`,
           p_reference_id: (band as any).id,
         });
-        if (treasuryError) console.error(`[${JOB_NAME}] Failed to credit merch tax:`, treasuryError);
+        if (treasuryError) throw new Error(`Merch tax settlement failed: ${treasuryError.message}`);
       }
 
       let labelMerchCut = 0;
@@ -269,7 +309,7 @@ Deno.serve(async (req) => {
         .eq("status", "active")
         .limit(1)
         .maybeSingle();
-      if (contractError) console.error(`[${JOB_NAME}] 360 contract lookup failed:`, contractError);
+      if (contractError) throw new Error(`360 contract lookup failed: ${contractError.message}`);
 
       if (active360 && (active360 as any).label_deal_types?.name === "360 Deal" && bandNetRevenue > 0) {
         const labelPct = (((active360 as any).royalty_label_pct ?? 20) as number) / 100;
@@ -283,7 +323,7 @@ Deno.serve(async (req) => {
             p_related_band_id: (band as any).id,
           });
           if (labelCreditError) {
-            console.error(`[${JOB_NAME}] 360 label credit failed; retaining revenue with band:`, labelCreditError);
+            throw new Error(`360 label settlement failed: ${labelCreditError.message}`);
           } else {
             labelMerchCut = proposedCut;
             finalBandRevenue -= labelMerchCut;
@@ -328,8 +368,21 @@ Deno.serve(async (req) => {
             stock_reduced: successfulOrders.reduce((sum, o) => sum + o.quantity, 0),
           },
         });
-        if (earningsError) console.error(`[${JOB_NAME}] Failed to record band merch earnings:`, earningsError);
+        if (earningsError) throw new Error(`Merch band earnings failed: ${earningsError.message}`);
       }
+    }
+
+    if (failedOrders > 0) {
+      throw new Error(`Merch simulation had ${failedOrders} failed sale writes; manual settlement reconciliation required`);
+    }
+    const { data: finished, error: finishError } = await supabase.rpc("finish_daily_merch_simulation", {
+      p_run_id: simulationRunId,
+      p_status: "completed",
+      p_orders: processedOrders,
+      p_failure_note: null,
+    });
+    if (finishError || finished !== true) {
+      throw new Error(`Merch daily completion receipt missing: ${finishError?.message ?? "not running"}`);
     }
 
     await completeJobRun({
@@ -360,6 +413,15 @@ Deno.serve(async (req) => {
       rejectedForStock,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
+    // Mark a partially processed day failed and NEVER re-issue synthetic
+    // orders. The operator must reconcile paid orders/earnings explicitly.
+    const { error: failMarkError } = await supabase.rpc("finish_daily_merch_simulation", {
+      p_run_id: simulationRunId,
+      p_status: "failed",
+      p_orders: processedOrders,
+      p_failure_note: error instanceof Error ? error.message : String(error),
+    });
+    if (failMarkError) console.error("[simulate-merch-sales] Cannot mark failed daily run", failMarkError);
     console.error(`[${JOB_NAME}] Error:`, error);
     await failJobRun({
       jobName: JOB_NAME,
