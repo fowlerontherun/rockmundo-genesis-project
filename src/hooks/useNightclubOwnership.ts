@@ -114,55 +114,62 @@ export function useNightclubStaff(ownedClubId: string | undefined) {
   });
 }
 
+type VerifiedNightclubPurchase = {
+  receipt_id: string;
+  owned_club_id: string;
+  club_id: string;
+  cash_spent: number;
+  replayed: boolean;
+};
+
+// Also retain the request ID when sessionStorage is unavailable in a WebView.
+const pendingClubPurchases = new Map<string, string>();
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export function usePurchaseNightclub() {
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: async ({ clubId, clubName, cityId, qualityLevel, capacity, coverCharge }: {
-      clubId: string;
-      clubName: string;
-      cityId: string;
-      qualityLevel: number;
-      capacity: number;
-      coverCharge: number;
-    }) => {
-      if (!profileId) throw new Error("Not authenticated");
-      const price = getPurchasePrice(qualityLevel);
+    mutationFn: async ({ clubId }: { clubId: string }) => {
+      if (!profileId) throw new Error("Choose your active character to buy a nightclub");
+      const key = `nightclub-purchase:${profileId}:${clubId}`;
+      let requestId = pendingClubPurchases.get(key);
+      if (!requestId) {
+        try {
+          const stored = sessionStorage.getItem(key);
+          if (stored && uuidPattern.test(stored)) requestId = stored;
+        } catch { /* Mobile private sessions may block session storage. */ }
+      }
+      requestId ??= crypto.randomUUID();
+      pendingClubPurchases.set(key, requestId);
+      try { sessionStorage.setItem(key, requestId); } catch { /* Map provides retry safety. */ }
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("cash")
-        .eq("id", profileId)
-        .single();
-      if (!profile) throw new Error("Profile not found");
-      if ((profile.cash ?? 0) < price) throw new Error(`Need $${price.toLocaleString()} to purchase this club`);
-
-      await supabase
-        .from("profiles")
-        .update({ cash: Math.max(0, (profile.cash ?? 0) - price) })
-        .eq("id", profileId);
-
-      const { error } = await supabase
-        .from("player_owned_nightclubs")
-        .insert({
-          profile_id: profileId,
-          club_id: clubId,
-          club_name: clubName,
-          city_id: cityId,
-          quality_level: qualityLevel,
-          capacity,
-          cover_charge: coverCharge,
-          purchase_price: price,
-        });
+      // Never debit cash or mint club ownership from the browser.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any).rpc("purchase_nightclub_atomic", {
+        p_profile_id: profileId, p_club_id: clubId, p_request_id: requestId,
+      });
       if (error) throw error;
+      const receipt = data as VerifiedNightclubPurchase | null;
+      if (!receipt || receipt.club_id !== clubId ||
+          !uuidPattern.test(receipt.receipt_id ?? "") ||
+          !uuidPattern.test(receipt.owned_club_id ?? "") ||
+          !Number.isInteger(receipt.cash_spent) || receipt.cash_spent <= 0) {
+        throw new Error("Nightclub checkout was not confirmed by the server");
+      }
+      pendingClubPurchases.delete(key);
+      try { sessionStorage.removeItem(key); } catch { /* Best effort. */ }
+      return receipt;
     },
-    onSuccess: (_, { clubName }) => {
-      toast.success(`🏢 Purchased ${clubName}!`);
-      queryClient.invalidateQueries({ queryKey: ["owned-nightclubs"] });
-      queryClient.invalidateQueries({ queryKey: ["game-data"] });
+    onSuccess: (receipt) => {
+      toast.success(`Nightclub purchased for $${receipt.cash_spent.toLocaleString()}!`);
+      void queryClient.invalidateQueries({ queryKey: ["owned-nightclubs"] });
+      void queryClient.invalidateQueries({ queryKey: ["active-profile"] });
+      void queryClient.invalidateQueries({ queryKey: ["profile"] });
+      void queryClient.invalidateQueries({ queryKey: ["game-data"] });
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Nightclub purchase could not be verified"),
   });
 }
 
@@ -215,20 +222,33 @@ export function useFireStaff() {
   });
 }
 
+type EditableNightclubSettings = Partial<Pick<OwnedNightclub,
+  "cover_charge" | "drink_markup_pct" | "is_open">>;
+
 export function useUpdateOwnedClub() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ clubId, updates }: { clubId: string; updates: Partial<OwnedNightclub> }) => {
-      const { error } = await supabase
-        .from("player_owned_nightclubs")
-        .update(updates)
-        .eq("id", clubId);
+    mutationFn: async ({ clubId, updates }: { clubId: string; updates: EditableNightclubSettings }) => {
+      const keys = Object.keys(updates);
+      if (!keys.length || keys.some((field) =>
+        !["cover_charge", "drink_markup_pct", "is_open"].includes(field))) {
+        throw new Error("Only cover, markup and open status can be edited");
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any).rpc("update_nightclub_settings", {
+        p_owned_club_id: clubId,
+        p_cover_charge: updates.cover_charge ?? null,
+        p_drink_markup_pct: updates.drink_markup_pct ?? null,
+        p_is_open: updates.is_open ?? null,
+      });
       if (error) throw error;
+      if ((data as { owned_club_id?: string } | null)?.owned_club_id !== clubId) {
+        throw new Error("Club settings were not confirmed by the server");
+      }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["owned-nightclubs"] });
-    },
-    onError: (err: any) => toast.error(err.message),
+    onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ["owned-nightclubs"] }); },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Unable to save nightclub settings"),
   });
 }
