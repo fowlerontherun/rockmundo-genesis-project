@@ -12,6 +12,7 @@ import { singerGesture, smoothMotion, vocalPhrase } from './performanceMotion';
 import { createVocalMouth } from './vocalFace';
 import { applyInstrumentFingerPose, fingerEnvelopeBones, handContactPoint } from './instrumentHandPose';
 import { seededRandom } from './config';
+import { djBoothGripTargets } from './djBoothMotion';
 import { visibleTattoosForPresentation } from '@/features/player-model/tattoos';
 import { assemblePlayerModel, disposeModel, loadModelLibrary, requiredModelFiles } from '@/features/player-model/model';
 import type { ModelLibrary } from '@/features/player-model/model';
@@ -439,6 +440,22 @@ export class Musician {
         if (rig && (!this.walking || !rig.stationary)) {
             const releaseHold = this.performanceSection === 'release' ? 1 - smoothMotion(this.sectionProgress) : 0;
             rig.animate(t + (reduced ? 0 : this.phase * .13), performing ? energy * (1 - releaseHold * .72) : 0, reduced || !performing);
+            // Only the opt-in DJ booth sends dj_* presentation actions. Reset
+            // the grips each frame before applying the bounded visual pulse, so
+            // a replay seek or a paused tab never leaves a hand stuck on a knob.
+            // Normal gig rigs and audio playback are completely unaffected.
+            if (rig.family === 'decks' && this.role === 'dj' && this.action?.startsWith('dj_')) {
+                rig.left.position.set(.26, 1.04, .44);
+                rig.right.position.set(-.25, 1.04, .44);
+                const pose = !reduced && performing
+                    ? djBoothGripTargets(this.action, this.actionProgress)
+                    : null;
+                if (pose) {
+                    rig.left.position.lerp(new T.Vector3(...pose.left), pose.influence);
+                    rig.right.position.lerp(new T.Vector3(...pose.right), pose.influence);
+                }
+                rig.root.updateWorldMatrix(true, true);
+            }
             if (rig.family === 'strum' && releaseHold > .02) {
                 // Hold the final fretted note/chord while the picking hand relaxes
                 // instead of continuing to strum through the applause gap.
