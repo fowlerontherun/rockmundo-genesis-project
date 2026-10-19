@@ -16,6 +16,7 @@ import { clampDeckRate, deckAudioSourceKey, changedDjTempoPercent, equalPowerCro
 import { DjSetlistPlanner } from "./DjSetlistPlanner";
 import { djReadinessSteps, useDjMixReadiness } from "./djReadiness";
 import { bindDjDeckLifecycle } from "./deckAudioLifecycle";
+import { deliverDjMixEvent } from "./mixerEventDelivery";
 
 function AudioDeck({
   deck, tracks, selectedId, onSelect, level, rate, onRateChange, onDeckPlay, onRateCommit,
@@ -192,7 +193,7 @@ export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
   const { profileId } = useActiveProfile();
   const client = useQueryClient();
   const { data: libraryTracks = [], isLoading, isError, error } = useDjTrackLibrary(profileId);
-  const { data: liveBooking, isLoading: liveLoading } = useQuery({
+  const { data: liveBooking, isLoading: liveLoading, isError: liveError } = useQuery({
     queryKey: ["dj-live-booking", profileId, liveBookingId],
     enabled: Boolean(liveBookingId && profileId),
     queryFn: async () => {
@@ -217,64 +218,54 @@ export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
   const [pendingEvents, setPendingEvents] = useState(0);
   const lastAttempt = useRef(0);
   const queue = useRef<Promise<void>>(Promise.resolve());
-  const activeBooking = useRef(liveBookingId);
+  const activeBooking = useRef<string | undefined>(liveBookingId);
   activeBooking.current = liveBookingId;
+  const mounted = useRef(true);
 
-  // Queue sends in user-action order, while preserving the same idempotency
-  // key across network retries. No browser-supplied timestamp is trusted.
+  // Drop actions still queued behind the spacing/backoff timer when the
+  // mixing screen closes. A request already sent may be accepted server-side
+  // but can never create a *new* event after this component is abandoned.
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      activeBooking.current = undefined;
+    };
+  }, []);
+
+  // A single event UUID is generated per actual player action. Retries only
+  // repeat that UUID, never mint new performance evidence or rewards.
   const sendLiveEvent = (event: Record<string, unknown>) => {
-    if (!liveBookingId) return;
+    if (!liveBookingId || !mounted.current || liveBooking?.status !== "live") return;
     const bookingId = liveBookingId;
     const eventId = crypto.randomUUID();
     setPendingEvents((count) => count + 1);
     queue.current = queue.current.catch(() => undefined).then(async () => {
       try {
-        if (activeBooking.current !== bookingId) return;
+        if (!mounted.current || activeBooking.current !== bookingId) return;
         const remaining = 2200 - (Date.now() - lastAttempt.current);
         if (remaining > 0) {
           await new Promise<void>((resolve) => setTimeout(resolve, remaining));
         }
-        if (activeBooking.current !== bookingId) return;
-        for (let attempt = 0; attempt < 3; attempt += 1) {
-          lastAttempt.current = Date.now();
-          try {
-            const { data, error } = await supabase.functions.invoke("dj-booking-action", {
+        await deliverDjMixEvent({
+          isActive: () => mounted.current && activeBooking.current === bookingId,
+          invoke: async () => {
+            lastAttempt.current = Date.now();
+            return supabase.functions.invoke("dj-booking-action", {
               body: { action: "mix_event", bookingId, eventId, ...event },
             });
-            if (error) {
-              const context = (error as { context?: Response }).context;
-              const status = context?.status ?? 0;
-              if (status >= 400 && status < 500) {
-                let message = error.message;
-                try {
-                  const payload = await context?.clone().json() as { error?: string } | undefined;
-                  message = payload?.error || message;
-                } catch { /* Preserve SDK validation message. */ }
-                throw new Error(message);
-              }
-              if (attempt < 2) {
-                await new Promise<void>((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
-                continue;
-              }
-              throw error;
-            }
-            if (data?.error || typeof data?.id !== "string") {
-              throw new Error(data?.error || "DJ mixer event was not acknowledged");
-            }
-            await client.invalidateQueries({ queryKey: ["dj-live-readiness", profileId, bookingId] });
-            return;
-          } catch (error) {
-            if (attempt >= 2 || !(error instanceof Error) ||
-                !/network|fetch|timeout/i.test(error.message)) {
-              throw error;
-            }
-            await new Promise<void>((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
-          }
-        }
+          },
+          onAcknowledged: () => client.invalidateQueries({
+            queryKey: ["dj-live-readiness", profileId, bookingId],
+          }),
+          delay: (ms) => new Promise<void>((resolve) => setTimeout(resolve, ms)),
+        });
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Mixer interaction could not be recorded");
+        if (mounted.current && activeBooking.current === bookingId) {
+          toast.error(error instanceof Error ? error.message : "Mixer interaction could not be recorded");
+        }
       } finally {
-        setPendingEvents((count) => Math.max(0, count - 1));
+        if (mounted.current) setPendingEvents((count) => Math.max(0, count - 1));
       }
     });
   };
@@ -326,6 +317,12 @@ export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
   };
 
   if (isLoading || (liveBookingId && liveLoading)) return <p className="text-sm text-muted-foreground">Loading playable DJ tracks...</p>;
+  if (liveBookingId && liveError) return (
+    <p className="text-sm text-destructive" role="alert">
+      Could not verify your live DJ session. Reconnect or reopen the club before mixing.
+      No mixer activity has been credited from this screen.
+    </p>
+  );
   if (liveBookingId && (!liveBooking || liveBooking.status !== "live")) return (
     <p className="text-sm text-destructive" role="alert">
       Live DJ session unavailable. Start the booked set before mixing for credit.
