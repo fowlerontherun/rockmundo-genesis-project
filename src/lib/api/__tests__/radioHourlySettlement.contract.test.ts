@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const migration = readFileSync("supabase/migrations/20261019110500_atomic_hourly_radio_rotation.sql", "utf8");
+const scheduler = readFileSync("supabase/migrations/20261019110530_retire_legacy_radio_manual_job.sql", "utf8");
 const harness = readFileSync("supabase/tests/radio_hourly_atomic_4242.sql", "utf8");
 const edge = readFileSync("supabase/functions/simulate-radio-plays/index.ts", "utf8");
 const config = readFileSync("supabase/config.toml", "utf8");
@@ -21,6 +22,14 @@ describe("hourly radio airplay job authority (#4242)", () => {
     expect(migration).not.toContain("net.http_post");
     expect(migration).not.toContain("eyJhbGci");
     expect(migration).toContain("simulate-radio-plays-cron");
+  });
+
+  it("disables stale admin/manual routes without disabling the active hourly job", () => {
+    expect(scheduler).toContain("allow_manual_trigger=false");
+    expect(scheduler).toContain("is_active=false");
+    expect(scheduler).toContain("schedule='0 * * * *'");
+    expect(scheduler).toContain("simulate-radio-plays");
+    expect(scheduler).not.toContain("cron.unschedule");
   });
 
   it("settles only one playlist and hour, preserving historical records", () => {
