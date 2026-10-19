@@ -45,23 +45,50 @@ let dataByTable: Record<string, unknown[]>;
 let errorsByTable: Record<string, { message: string } | null>;
 
 function query(table: string) {
-  const result = () => ({ data: dataByTable[table] || [], error: errorsByTable[table] || null });
+  // Reproduce the PostgREST filters used by the invitation loader. Without
+  // neq/not, a newly-added resolved-invitations query fails before rendering.
+  const filters: Array<(row: Record<string, unknown>) => boolean> = [];
+  const result = () => ({
+    // Some test fixtures omit unrelated filter columns, such as band_id.
+    data: (dataByTable[table] || []).filter(value => filters.every(filter => filter(value as Record<string, unknown>))),
+    error: errorsByTable[table] || null,
+  });
   const chain = {
     select: vi.fn(),
     eq: vi.fn(),
+    neq: vi.fn(),
+    not: vi.fn(),
     or: vi.fn(),
     order: vi.fn(),
     in: vi.fn(),
     limit: vi.fn(),
+    range: vi.fn(),
     then: (resolve: (value: ReturnType<typeof result>) => unknown, reject?: (error: unknown) => unknown) =>
       Promise.resolve(result()).then(resolve, reject),
   };
   chain.select.mockReturnValue(chain);
-  chain.eq.mockReturnValue(chain);
+  chain.eq.mockImplementation((column: string, expected: unknown) => {
+    filters.push(row => !(column in row) || row[column] === expected);
+    return chain;
+  });
+  chain.neq.mockImplementation((column: string, excluded: unknown) => {
+    filters.push(row => !(column in row) || row[column] !== excluded);
+    return chain;
+  });
+  chain.not.mockImplementation((column: string, operator: string, value: unknown) => {
+    if (operator === 'is' && value === null) {
+      filters.push(row => !(column in row) || (row[column] !== null && row[column] !== undefined));
+    }
+    return chain;
+  });
   chain.or.mockReturnValue(chain);
   chain.order.mockReturnValue(chain);
-  chain.in.mockReturnValue(chain);
+  chain.in.mockImplementation((column: string, permitted: unknown[]) => {
+    filters.push(row => !(column in row) || permitted.includes(row[column]));
+    return chain;
+  });
   chain.limit.mockReturnValue(chain);
+  chain.range.mockReturnValue(chain);
   return chain;
 }
 
