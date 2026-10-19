@@ -53,7 +53,7 @@ export async function generateModelingOffersForUser(
   if (!isOfferCooldownExpired(profileId)) return 0;
 
   // Check existing pending offers
-  const { data: pending } = await supabase
+  const { data: pending, error: pendingError } = await supabase
     .from('player_modeling_contracts')
     .select('id')
     .eq('user_id', userId)
@@ -61,10 +61,11 @@ export async function generateModelingOffersForUser(
     .eq('status', 'pending')
     .gt('expires_at', new Date().toISOString());
 
+  if (pendingError) throw pendingError;
   if (pending && pending.length > 0) return 0;
 
   // Find eligible gigs
-  const { data: gigs } = await supabase
+  const { data: gigs, error: gigsError } = await supabase
     .from('modeling_gigs')
     .select('*, agency:modeling_agencies(name, tier)')
     .eq('is_available', true)
@@ -72,6 +73,7 @@ export async function generateModelingOffersForUser(
     .lte('min_fame_required', fame)
     .limit(20);
 
+  if (gigsError) throw gigsError;
   if (!gigs || gigs.length === 0) {
     setCooldown(profileId);
     return 0;
@@ -121,10 +123,7 @@ export async function generateModelingOffersForUser(
 
   const { error } = await supabase.from('player_modeling_contracts').insert(offers);
 
-  if (error) {
-    console.error('Failed to generate modeling offers:', error);
-    return 0;
-  }
+  if (error) throw error;
 
   setCooldown(profileId);
   return offers.length;
