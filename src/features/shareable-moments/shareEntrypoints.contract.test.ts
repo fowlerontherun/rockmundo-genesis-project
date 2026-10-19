@@ -142,4 +142,14 @@ describe("Shareable Moments migrated entrypoint contracts", () => {
     expect(source).toContain('type: "release"');
     expect(source).toContain("{milestoneMoment && <AvatarShareStudio");
   });
+  it("rejects cross-character writes through the saved gallery RLS migration", () => {
+    const migration = read("supabase/migrations/20261019112749_share_moment_snapshot_profile_ownership_20261019.sql");
+    expect(migration).toContain('ALTER POLICY "share snapshots insert own"');
+    expect(migration).toContain('ALTER POLICY "share snapshots update own"');
+    expect(migration.match(/profile_id IS NOT NULL/g)).toHaveLength(2);
+    expect(migration.match(/own_profile\.id = share_moment_snapshots\.profile_id/g)).toHaveLength(2);
+    expect(migration.match(/own_profile\.user_id = \(SELECT auth\.uid\(\)\)/g)).toHaveLength(2);
+    expect(migration).not.toContain("SECURITY DEFINER");
+  });
+
 });
