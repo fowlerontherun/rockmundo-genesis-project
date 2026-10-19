@@ -3,6 +3,8 @@ import { Musician } from "@/features/gig-demo-3d/performers";
 import type { InstrumentId } from "@/features/gig-demo-3d/instrumentCatalog";
 import type { StageRole } from "@/features/gig-demo-3d/liveTypes";
 import type { ResolvedEquippedClothing } from "@/features/clothing-preview/equippedClothing";
+import { loadOptionalCuratedGarments, requiredCuratedGarmentFiles } from "@/features/clothing-preview/curatedGarmentAssets";
+import { requiredCuratedDonorModelFiles } from "@/features/clothing-preview/curatedDonorGarments";
 import { STYLES, modelFile, type PlayerAppearance } from "@/features/player-model/appearance";
 import { assemblePlayerModel, disposeModel, loadModelLibrary } from "@/features/player-model/model";
 import { visibleTattoosForPresentation, type ResolvedTattooVisual } from "@/features/player-model/tattoos";
@@ -41,10 +43,19 @@ export async function captureAvatarV1ForShare(visual:AvatarShareVisual):Promise<
  scene.add(new T.HemisphereLight("#e8f0ff","#253044",2));const key=new T.DirectionalLight("#fff0dc",4);key.position.set(-2,4,4);scene.add(key);const rim=new T.DirectionalLight("#8b5cf6",2);rim.position.set(3,2,-2);scene.add(rim);
  let actor:Musician|null=null;let equipment:T.Group|null=null;let library:Awaited<ReturnType<typeof loadModelLibrary>>|null=null;
  try{
-  const files=(["masculine","feminine"] as const).flatMap(frame=>STYLES.map(style=>modelFile(frame,style)));library=await loadModelLibrary(files);
-  const clothing=visual.richClothing??[];const tattoos=visibleTattoosForPresentation(visual.tattoos??[],{appearance:visual.appearance,clothing,presentation:"stage"});
+  const clothing=visual.richClothing??[];
+  const frame=visual.appearance.body.frame;
+  // Match the stage renderer: donor and uploaded curated garment assets must
+  // be present before the musician is assembled, or equipped clothes disappear
+  // from saved share images even though they appear correctly at gigs.
+  const donorFiles=requiredCuratedDonorModelFiles(clothing,frame);
+  const curatedFiles=requiredCuratedGarmentFiles(clothing,frame);
+  const files=[...(["masculine","feminine"] as const).flatMap(f=>STYLES.map(style=>modelFile(f,style))),...donorFiles];
+  library=await loadModelLibrary([...new Set(files)]);
+  await loadOptionalCuratedGarments(library,curatedFiles);
+  const tattoos=visibleTattoosForPresentation(visual.tattoos??[],{appearance:visual.appearance,clothing,presentation:"stage"});
   const assembled=assemblePlayerModel(library,visual.appearance,tattoos,clothing,"high","stage",visual.merchWearable??null);
-  actor=new Musician(assembled,visual.role??"other",[0,0,0],0,undefined,visual.appearance,visual.instrument,undefined,clothing,undefined,undefined,visual.luthieryInstrument??null);disposeModel(assembled);scene.add(actor.root);equipment=actor.equipment;if(equipment)scene.add(equipment);
+  actor=new Musician(assembled,visual.role??"other",[0,0,0],0,undefined,visual.appearance,visual.instrument,undefined,clothing,undefined,library,visual.luthieryInstrument??null);disposeModel(assembled);scene.add(actor.root);equipment=actor.equipment;if(equipment)scene.add(equipment);
   actor.update(0,.55,true);
   renderer.render(scene,camera);
   // Copy the complete WebGL frame to a 2D canvas while the context is still
