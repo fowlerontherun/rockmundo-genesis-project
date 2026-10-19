@@ -11,6 +11,7 @@ import type { CharacterProfileShareMoment } from "@/features/shareable-moments/c
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { deleteShareMomentSnapshot, listShareMomentSnapshots, type ShareMomentSnapshot } from "@/features/shareable-moments/gallery";
+import { shouldCaptureGalleryAvatar } from "@/features/shareable-moments/galleryAvatar";
 import type { ShareMoment } from "@/features/shareable-moments/types";
 import { trackShareAnalyticsEvent } from "@/features/shareable-moments/analytics";
 
@@ -123,7 +124,7 @@ export default function ShareStudio() {
         ))}
       </div>
       <Card>
-        <CardHeader><CardTitle className="text-base">Share Gallery</CardTitle><CardDescription>Your saved moments retain their original details and captured avatar. Older cards without an avatar use your current character look when reopened.</CardDescription></CardHeader>
+        <CardHeader><CardTitle className="text-base">Share Gallery</CardTitle><CardDescription>Saved cards retain their captured avatars. Older character and your own band cards can use your current look; public posters remain unchanged.</CardDescription></CardHeader>
         <CardContent>
           {galleryError && <div role="alert" className="mb-3 text-sm text-destructive">{galleryError} <Button size="sm" variant="outline" onClick={() => void reloadGallery()}>Retry</Button></div>}
           {galleryLoading ? <p className="text-sm text-muted-foreground">Loading saved shares…</p> : galleryError && gallery.length === 0 ? null : gallery.length === 0 ? <p className="text-sm text-muted-foreground">Share a RockMundo card and it will appear here.</p> : (
@@ -137,7 +138,7 @@ export default function ShareStudio() {
         </CardContent>
       </Card>
       {characterPromo && <AvatarShareStudio moment={characterPromo} open={true} onOpenChange={(open) => { if (!open) setCharacterPromo(null); }} />}
-      {selected && ["character_profile", "band_profile", "gig_result", "achievement", "tour", "release", "chart"].includes(selected.type)
+      {selected && shouldCaptureGalleryAvatar(selected, primaryBand?.bands?.id)
         ? <AvatarShareStudio moment={selected} open={true} onOpenChange={(open) => { if (!open) setSelected(null); }} />
         : <ShareMomentSheet moment={selected} open={!!selected} onOpenChange={(open) => { if (!open) setSelected(null); }} />}
     </FMPageScaffold>
