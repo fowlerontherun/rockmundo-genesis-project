@@ -39,7 +39,9 @@ export function DjCareerOverview({
   const { data: history, isLoading: historyLoading, isError: historyError } = useQuery({
     queryKey: ["dj-performances", profileId, "career"],
     queryFn: async () => {
-      const { data, count, error } = await supabase.from("player_dj_performances")
+      // The booked-set booking_id column is newer than the generated database types.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, count, error } = await (supabase as any).from("player_dj_performances")
         .select("id,booking_id,performance_score,cash_earned,fame_gained,xp_gained", { count: "exact" })
         .eq("profile_id", profileId)
         .not("booking_id", "is", null)
@@ -54,7 +56,8 @@ export function DjCareerOverview({
   const { data: legacyCount, isError: legacyError } = useQuery({
     queryKey: ["dj-legacy-performances", profileId],
     queryFn: async () => {
-      const { count, error } = await supabase.from("player_dj_performances")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { count, error } = await (supabase as any).from("player_dj_performances")
         .select("id", { count: "exact", head: true })
         .eq("profile_id", profileId).is("booking_id", null);
       if (error) throw error;
