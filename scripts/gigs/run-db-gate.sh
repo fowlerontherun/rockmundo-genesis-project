@@ -21,3 +21,4 @@ psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/mentor_discovery_pootube_
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/mentor_rpc_only_write_access.sql
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/pootube_future_skill_autoseed.sql
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/weekly_experience_cron_signature.sql
+psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/nightclub_atomic_purchase_authority_harness.sql
