@@ -291,7 +291,7 @@ export default function BattleOfTheBands() {
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {event.city?.name} • {format(new Date(event.scheduled_date), "MMM d, yyyy")} •{" "}
-                        {event.entry_count ?? 0} bands · ${"{"}event.attendance > 0 ? `${"{"}event.attendance.toLocaleString()} attending` : "Attendance not recorded"} · Prize ${"{"}event.prize_money.toLocaleString()}
+                        {event.entry_count ?? 0} bands · {event.attendance > 0 ? `${event.attendance.toLocaleString()} attending` : "Attendance not recorded"} · Prize ${event.prize_money.toLocaleString()}
                       </p>
                     </div>
                     <div className="text-2xl font-bold text-primary">
