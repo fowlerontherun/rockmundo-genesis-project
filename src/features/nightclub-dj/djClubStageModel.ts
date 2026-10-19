@@ -2,7 +2,7 @@ import type { ConcertFrame, ConcertOptions } from "@/features/gig-demo-3d/liveTy
 import { resolveVenueProfile, stagePosition } from "@/features/gig-demo-3d/venueProfile";
 import { defaultAppearance } from "@/features/player-model/appearance";
 import type { GigPlayerModelsData } from "@/features/player-model/usePlayerModel";
-import type { DjBoothAction } from "@/features/gig-demo-3d/djBoothMotion";
+import { DJ_BOOTH_CUE_WINDOW_MS, type DjBoothAction } from "@/features/gig-demo-3d/djBoothMotion";
 
 /**
  * Read-only visualization of a canonical DJ booking.
@@ -39,7 +39,7 @@ export function djBoothActionAt(
   const recent = events.filter(event => {
     const at = Date.parse(event.recorded_at);
     return Number.isInteger(event.event_no) && event.event_no > 0 &&
-      Number.isFinite(at) && at <= nowMs && nowMs - at <= 2000;
+      Number.isFinite(at) && at <= nowMs && nowMs - at <= DJ_BOOTH_CUE_WINDOW_MS;
   }).sort((a, b) => a.event_no - b.event_no);
   const event = recent[recent.length - 1];
   if (!event) return null;
@@ -50,7 +50,7 @@ export function djBoothActionAt(
           : event.kind === "tempo" && event.deck === "B" ? "dj_tempo_b"
             : null;
   if (!action) return null;
-  return { action, actionProgress: (nowMs - Date.parse(event.recorded_at)) / 2000 };
+  return { action, actionProgress: (nowMs - Date.parse(event.recorded_at)) / DJ_BOOTH_CUE_WINDOW_MS };
 }
 
 /** No replay without the original booked show AND its immutable settlement receipt. */
