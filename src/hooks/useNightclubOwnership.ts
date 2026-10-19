@@ -97,7 +97,10 @@ export function useOwnedNightclubs() {
         .eq("profile_id", profileId)
         .order("purchased_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as OwnedNightclub[];
+      // This column exists in the live DB (2026-10-19 ownership cutover),
+      // but the checked-in generated Supabase types can lag the migration.
+      // Keep the UI type aligned with the verified live table projection.
+      return (data ?? []) as unknown as OwnedNightclub[];
     },
     enabled: !!profileId,
   });
