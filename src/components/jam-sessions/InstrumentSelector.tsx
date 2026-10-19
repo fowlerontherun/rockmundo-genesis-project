@@ -14,26 +14,25 @@ export const JAM_INSTRUMENTS = [
   { value: "instruments_basic_ukulele", label: "Ukulele", icon: "strings" },
   { value: "instruments_basic_banjo", label: "Banjo", icon: "strings" },
   // Keys
-  { value: "instruments_basic_keyboard", label: "Keyboard", icon: "keys" },
-  { value: "instruments_basic_piano", label: "Piano", icon: "keys" },
-  { value: "instruments_basic_synthesizer", label: "Synthesizer", icon: "keys" },
-  { value: "instruments_basic_organ", label: "Organ", icon: "keys" },
+  { value: "instruments_basic_keytar", label: "Keytar", icon: "keys" },
+  { value: "instruments_basic_classical_piano", label: "Classical Piano", icon: "keys" },
+  { value: "instruments_basic_analog_synth", label: "Analog Synthesizer", icon: "keys" },
+  { value: "instruments_basic_hammond_organ", label: "Hammond Organ", icon: "keys" },
   // Drums & Percussion
-  { value: "instruments_basic_drums", label: "Drums", icon: "drums" },
-  { value: "instruments_basic_percussion", label: "Percussion", icon: "drums" },
+  { value: "instruments_basic_rock_drums", label: "Rock Drums", icon: "drums" },
+  { value: "instruments_basic_latin_percussion", label: "Latin Percussion", icon: "drums" },
   { value: "instruments_basic_cajon", label: "Cajon", icon: "drums" },
-  { value: "instruments_basic_congas", label: "Congas", icon: "drums" },
+  { value: "instruments_basic_african_drums", label: "African Drumming", icon: "drums" },
   // Vocals
-  { value: "instruments_basic_vocals", label: "Lead Vocals", icon: "vocals" },
-  { value: "instruments_basic_backup_vocals", label: "Backup Vocals", icon: "vocals" },
+  { value: "instruments_basic_vocal_performance", label: "Vocals", icon: "vocals" },
   // Winds
-  { value: "instruments_basic_saxophone", label: "Saxophone", icon: "winds" },
+  { value: "instruments_basic_alto_sax", label: "Alto Saxophone", icon: "winds" },
   { value: "instruments_basic_trumpet", label: "Trumpet", icon: "winds" },
   { value: "instruments_basic_trombone", label: "Trombone", icon: "winds" },
   { value: "instruments_basic_clarinet", label: "Clarinet", icon: "winds" },
   { value: "instruments_basic_flute", label: "Flute", icon: "winds" },
   // DJ
-  { value: "instruments_basic_turntables", label: "DJ / Turntables", icon: "dj" },
+  { value: "instruments_basic_turntablism", label: "Turntablism", icon: "dj" },
 ];
 
 interface InstrumentSelectorProps {
