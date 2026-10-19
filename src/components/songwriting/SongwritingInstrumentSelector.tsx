@@ -25,18 +25,17 @@ const SONGWRITING_INSTRUMENTS = [
   { slug: "instruments_basic_jazz_piano", label: "Jazz Piano", icon: "keys", alsoMatch: ["piano", "basic_keyboard"] },
   { slug: "instruments_basic_hammond_organ", label: "Hammond Organ", icon: "keys", alsoMatch: ["basic_keyboard"] },
   { slug: "instruments_basic_rhodes", label: "Rhodes", icon: "keys", alsoMatch: ["basic_keyboard"] },
-  { slug: "instruments_basic_synthesizer", label: "Synthesizer", icon: "keys", alsoMatch: ["basic_electronic_instruments"] },
+  { slug: "instruments_basic_analog_synth", label: "Analog Synthesizer", icon: "keys", alsoMatch: ["basic_electronic_instruments"] },
   // Drums & Percussion
   { slug: "instruments_basic_rock_drums", label: "Rock Drums", icon: "drums", alsoMatch: ["drums", "instruments_basic_drum_kit"] },
   { slug: "instruments_basic_jazz_drums", label: "Jazz Drums", icon: "drums", alsoMatch: ["drums", "instruments_basic_drum_kit"] },
-  { slug: "instruments_basic_percussion", label: "Percussion", icon: "drums", alsoMatch: ["drums", "basic_percussions"] },
+  { slug: "instruments_basic_latin_percussion", label: "Latin Percussion", icon: "drums", alsoMatch: ["drums", "basic_percussions"] },
   { slug: "instruments_basic_cajon", label: "Cajon", icon: "drums", alsoMatch: ["drums", "basic_percussions"] },
   // Vocals
-  { slug: "instruments_basic_lead_vocals", label: "Lead Vocals", icon: "vocals", alsoMatch: ["vocals", "basic_singing", "lead_vocals_mastery"] },
-  { slug: "instruments_basic_backup_vocals", label: "Backup Vocals", icon: "vocals", alsoMatch: ["vocals", "basic_singing"] },
-  { slug: "instruments_basic_rap_vocals", label: "Rap Vocals", icon: "vocals", alsoMatch: ["vocals", "rapping"] },
+  { slug: "instruments_basic_vocal_performance", label: "Vocals", icon: "vocals", alsoMatch: ["vocals", "basic_singing", "lead_vocals_mastery"] },
+  { slug: "instruments_basic_rapping", label: "Rapping", icon: "vocals", alsoMatch: ["vocals", "rapping"] },
   // Winds & Brass
-  { slug: "instruments_basic_saxophone", label: "Saxophone", icon: "winds", alsoMatch: ["basic_woodwinds"] },
+  { slug: "instruments_basic_alto_sax", label: "Alto Saxophone", icon: "winds", alsoMatch: ["basic_woodwinds"] },
   { slug: "instruments_basic_trumpet", label: "Trumpet", icon: "winds", alsoMatch: ["basic_brass"] },
   { slug: "instruments_basic_trombone", label: "Trombone", icon: "winds", alsoMatch: ["basic_brass"] },
   { slug: "instruments_basic_flute", label: "Flute", icon: "winds", alsoMatch: ["basic_woodwinds"] },
