@@ -75,6 +75,9 @@ export function OwnedClubDjFundedOffers({ club }: { club: OwnedNightclub }) {
     void queryClient.invalidateQueries({ queryKey: ["dj-funded-offers-for-club"] });
     void queryClient.invalidateQueries({ queryKey: ["profile"] });
     void queryClient.invalidateQueries({ queryKey: ["player-financial-accounts"] });
+    void queryClient.invalidateQueries({ queryKey: ["owned-club-dj-roster"] });
+    void queryClient.invalidateQueries({ queryKey: ["dj-bookings"] });
+    void queryClient.invalidateQueries({ queryKey: ["player-schedule"] });
   }
   const fund = useMutation({
     mutationFn: async ({ appId, amount }: { appId: string; amount: number }) => {
@@ -107,10 +110,18 @@ export function OwnedClubDjFundedOffers({ club }: { club: OwnedNightclub }) {
     mutationFn: async (offerId: string) => {
       const key = `dj-fee-cancel:${club.id}:${offerId}`;
       const id = requestId(key);
+      const booked = offers.some(offer => offer.id === offerId && offer.status === "booked");
+      // Booked sets use the DJ booking status bridge: it updates Schedule and
+      // refunds the original owner through the single booking terminal trigger.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any).rpc("decide_nightclub_dj_offer", {
-        p_offer_id: offerId, p_action: "cancel", p_request_id: id,
-      });
+      const { data, error } = booked
+        ? await (supabase as any).rpc("cancel_owned_funded_dj_booking", {
+            p_offer_id: offerId, p_request_id: id,
+          })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        : await (supabase as any).rpc("decide_nightclub_dj_offer", {
+            p_offer_id: offerId, p_action: "cancel", p_request_id: id,
+          });
       if (error) throw error;
       if (!data || data.offer_id !== offerId || data.status !== "cancelled") {
         throw new Error("Escrow refund was not confirmed");
@@ -168,10 +179,12 @@ export function OwnedClubDjFundedOffers({ club }: { club: OwnedNightclub }) {
                 <p className="text-xs text-muted-foreground">
                   {o.status === "offered" || o.status === "accepted"
                     ? `Held until ${new Date(o.expires_at).toLocaleString()} unless cancelled`
-                    : "Offer closed and original fee returned to owner"}
+                    : o.status === "booked" ? "Scheduled: fee held for verified performance; owner may cancel before start"
+                    : o.status === "settled" ? "Set completed: DJ paid from held fee; unearned surplus refunded"
+                    : "Offer closed and the original fee returned to its owner"}
                 </p>
               </div>
-              {["offered", "accepted"].includes(o.status) &&
+              {["offered", "accepted", "booked"].includes(o.status) &&
                 <Button size="sm" variant="outline" disabled={cancel.isPending}
                   onClick={() => cancel.mutate(o.id)}>Cancel & refund</Button>}
             </div>)}

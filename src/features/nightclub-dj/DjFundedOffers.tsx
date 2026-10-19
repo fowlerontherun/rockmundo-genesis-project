@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 
 type Offer = { id: string; application_id: string; fee: number; status: string; expires_at: string };
 const isUuid = /^[a-f0-9-]{36}$/i;
+const fundedBookingReleased = import.meta.env.VITE_DJ_SCHEDULED_BOOKINGS_ENABLED === "true" &&
+  import.meta.env.VITE_DJ_FUNDED_OWNER_BOOKINGS_ENABLED === "true";
 
 /** DJ can agree to a funded *proposal*. This does not confirm a booking or pay a DJ. */
 export function DjFundedOffers({ clubId, profileId }: { clubId: string; profileId: string }) {
@@ -71,6 +73,47 @@ export function DjFundedOffers({ clubId, profileId }: { clubId: string; profileI
     onError: (error: unknown) =>
       toast.error(error instanceof Error ? error.message : "Could not respond to DJ offer"),
   });
+  const confirm = useMutation({
+    mutationFn: async (offerId: string) => {
+      if (!fundedBookingReleased) throw new Error("Funded DJ booking release is not yet enabled");
+      const key = `dj-funded-confirm:${profileId}:${offerId}`;
+      let id = retries.current.get(key);
+      if (!id) {
+        try { const prior = sessionStorage.getItem(key); if (prior && isUuid.test(prior)) id = prior; }
+        catch { /* Keep the request ID in memory if storage is unavailable. */ }
+      }
+      id ??= crypto.randomUUID();
+      retries.current.set(key, id);
+      try { sessionStorage.setItem(key, id); } catch { /* Best effort. */ }
+      const { data, error } = await supabase.functions.invoke("dj-booking-action", {
+        body: { action: "confirm_funded", offerId, requestId: id },
+      });
+      if (error || data?.error) {
+        let detail = typeof data?.error === "string" ? data.error : error?.message ?? "Booking failed";
+        const response = (error as { context?: Response } | undefined)?.context;
+        if (response?.json) {
+          try {
+            const payload = await response.json() as { error?: string };
+            detail = payload.error ?? detail;
+          } catch { /* The SDK error still has the failure details. */ }
+        }
+        throw new Error(detail);
+      }
+      if (!isUuid.test(data?.id ?? "")) throw new Error("Funded DJ booking confirmation was not verified");
+      retries.current.delete(key);
+      try { sessionStorage.removeItem(key); } catch { /* Best effort. */ }
+      return data.id as string;
+    },
+    onSuccess: () => {
+      toast.success("Funded DJ gig confirmed. Check your Schedule.");
+      void queryClient.invalidateQueries({ queryKey: ["dj-funded-offers-for-club", clubId, profileId] });
+      void queryClient.invalidateQueries({ queryKey: ["dj-bookings", profileId] });
+      void queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] });
+      void queryClient.invalidateQueries({ queryKey: ["player-schedule"] });
+    },
+    onError: (error: unknown) => toast.error(error instanceof Error ? error.message : "Could not confirm funded DJ set"),
+  });
+
   if (applications.length === 0 || (offers.length === 0 && !isError)) return null;
 
   return <Card data-testid="dj-escrow-offers">
@@ -81,7 +124,7 @@ export function DjFundedOffers({ clubId, profileId }: { clubId: string; profileI
       <p className="text-xs text-muted-foreground">
         The nightclub owner has set cash aside for your proposed set. Accepting means you agree to the
         proposed terms, <strong>not</strong> that a gig is booked, wages are paid, or an event is added
-        to your schedule. Unconverted offers expire and return the fee to the owner.
+        to your schedule. Until confirmed as a booking, offers expire and return the fee to the owner. Funded gig confirmation is available only when both server release checks are enabled.
       </p>
       {isError && <p className="text-sm text-destructive" role="alert">Offer details could not be loaded.</p>}
       {offers.map(o => <div key={o.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border p-3">
@@ -90,6 +133,13 @@ export function DjFundedOffers({ clubId, profileId }: { clubId: string; profileI
           <p className="text-xs text-muted-foreground">Offer expires {new Date(o.expires_at).toLocaleString()}</p>
           <Badge variant="outline">{o.status === "accepted" ? "Terms accepted · not booked" : o.status}</Badge>
         </div>
+        {o.status === "accepted" && fundedBookingReleased &&
+          new Date(o.expires_at).getTime() > Date.now() &&
+          <Button size="sm" disabled={confirm.isPending}
+            onClick={() => confirm.mutate(o.id)}>Confirm funded DJ gig</Button>}
+        {o.status === "booked" && <p className="text-xs text-muted-foreground">
+          Scheduled and funded. Start your set from the Scheduled DJ bookings panel when due.
+        </p>}
         {o.status === "offered" && new Date(o.expires_at).getTime() > Date.now() &&
           <div className="flex gap-2">
             <Button size="sm" disabled={decide.isPending}

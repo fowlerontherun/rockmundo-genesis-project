@@ -9,7 +9,7 @@ const headers = {
   "Cache-Control": "no-store",
 };
 
-type Action = "reserve" | "cancel" | "start" | "settle" | "missed" | "mix_event";
+type Action = "reserve" | "cancel" | "start" | "settle" | "missed" | "mix_event" | "confirm_funded";
 type Input = {
   action?: Action;
   profileId?: string;
@@ -24,6 +24,7 @@ type Input = {
   trackId?: string;
   value?: number;
   eventId?: string;
+  offerId?: string;
 };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const json = (body: Record<string, unknown>, status = 200) =>
@@ -51,6 +52,8 @@ Deno.serve(async (req: Request) => {
   // The feature flag defaults CLOSED on the server, including if env is absent.
   // The client UI flag alone is never an authorization or availability gate.
   const enabled = Deno.env.get("DJ_SCHEDULED_BOOKINGS_ENABLED") === "true";
+  // Funded-owner conversion is a separate, default-closed release dependency.
+  const fundedEnabled = Deno.env.get("DJ_FUNDED_OWNER_BOOKINGS_ENABLED") === "true";
 
   let body: Input;
   try {
@@ -61,7 +64,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const action = body?.action;
-  if (!action || !["reserve", "cancel", "start", "settle", "missed", "mix_event"].includes(action)) {
+  if (!action || !["reserve", "cancel", "start", "settle", "missed", "mix_event", "confirm_funded"].includes(action)) {
     return json({ error: "Unknown DJ booking action" }, 400);
   }
 
@@ -71,6 +74,10 @@ Deno.serve(async (req: Request) => {
     return json({ error: "Scheduled DJ booking is not yet available" }, 503);
   }
 
+  if (action === "confirm_funded" && !fundedEnabled) {
+    return json({ error: "Funded DJ booking conversion is not yet available" }, 503);
+  }
+
   if (action === "reserve") {
     if (!body.profileId || !uuid.test(body.profileId) ||
         !body.clubId || !uuid.test(body.clubId) ||
@@ -78,6 +85,11 @@ Deno.serve(async (req: Request) => {
         !body.requestId || !uuid.test(body.requestId) ||
         !body.startsAt || !Number.isFinite(Date.parse(body.startsAt))) {
       return json({ error: "Choose a valid club, saved DJ set and booking time" }, 400);
+    }
+  } else if (action === "confirm_funded") {
+    if (!body.offerId || !uuid.test(body.offerId) ||
+        !body.requestId || !uuid.test(body.requestId)) {
+      return json({ error: "Valid funded offer and unique booking request required" }, 400);
     }
   } else if (!body.bookingId || !uuid.test(body.bookingId)) {
     return json({ error: "Valid DJ booking ID required" }, 400);
@@ -122,6 +134,29 @@ Deno.serve(async (req: Request) => {
         : json({ error: "DJ mixer returned an invalid response" }, 500);
     } catch {
       return json({ error: "DJ mixer service failed" }, 500);
+    }
+  }
+
+  // The caller's identity comes only from auth.getUser(JWT), never the offer payload.
+  // The protected RPC re-checks selected character, existing escrow, saved music
+  // rights, venue hours and Schedule conflicts before creating a canonical booking.
+  if (action === "confirm_funded") {
+    try {
+      const { data, error } = await admin.rpc("dj_verified_funded_offer_booking_service", {
+        p_actor_user_id: auth.user.id,
+        p_offer_id: body.offerId,
+        p_request_id: body.requestId,
+      });
+      if (error) {
+        const expected = ["23P01", "22023", "42501", "23505", "23503"].includes(error.code || "");
+        return json({ error: expected ? error.message : "Unable to confirm funded DJ booking" },
+          expected ? 409 : 500);
+      }
+      return typeof data === "string" && uuid.test(data)
+        ? json({ id: data, action })
+        : json({ error: "Funded DJ booking returned an invalid ID" }, 500);
+    } catch {
+      return json({ error: "Funded DJ booking service failed" }, 500);
     }
   }
 
