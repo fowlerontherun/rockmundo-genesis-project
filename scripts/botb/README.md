@@ -21,3 +21,15 @@ Before reconciling, each deployed migration's stored SQL text was compared again
 Run `verify-migration-history.sql` to confirm those twelve identities still align. The history repair itself is intentionally **not** a replayable schema migration: a migration must not mutate history this way on fresh deployments.
 
 The first genuine post-upgrade battles are currently scheduled for 23 October 2026. The rollback-only smoke tests prove the deployed settlement path works against registered player data; the first natural settlement still needs operational review.
+
+## Retry queue and authenticated client checks (19 October)
+
+The settlement cycle now waits **at least 30 minutes** before retrying a failed event and prioritizes events with no previous failed attempts. Healthy battles are no longer at risk of being crowded out by a backlog of repeatedly failing old events. The maximum batch size remains 500, and the settlement function remains service-only.
+
+- Run `verify-fair-retry-rollback.sql` to inject a duplicate payout into one registered battle, let another battle complete, verify the immediate retry is deferred and a retry resumes after aging the failure timestamp. Every simulated payout, date change and failure record rolls back.
+- Run `verify-authenticated-rpcs-rollback.sql` to exercise actual `authenticated` database-role registration and withdrawal RPCs with an eligible player's JWT subject. This verifies the recent table-privilege lockdown did not accidentally break gameplay. Both changes roll back.
+- Both scripts have been executed **verbatim against the production database** and returned PASS.
+
+The production migration `20261019145000_botb_fair_retry_queue.sql` was applied directly and its recorded version was reconciled to the filename after verifying identical stored SQL and no version collision.
+
+**Legacy withdrawal:** The current Lovable source uses `withdraw_battle_of_the_bands_entry`; nevertheless, the exact published client revision and users' cached older clients have not been verified. Leave the temporary authenticated `DELETE` grant on `botb_entries` until the release transition is confirmed. Its row-level security limits it to active band members and events before the scheduled cutoff.
