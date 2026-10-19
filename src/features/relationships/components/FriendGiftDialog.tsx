@@ -30,7 +30,7 @@ export function FriendGiftDialog({ open, onOpenChange, senderProfileId, recipien
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><Gift className="h-5 w-5 text-social-loyalty" /> Send a gift to {recipientName}</DialogTitle>
-          <DialogDescription>Boost affection. Gifts cost cash and can only be sent so often.</DialogDescription>
+          <DialogDescription>Boost affection with a gift. Its cost is deducted from your cash when the server confirms it.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div>
