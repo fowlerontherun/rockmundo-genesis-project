@@ -218,7 +218,7 @@ export function ReleasePartyModal({ open, onOpenChange, releaseId, releaseTitle,
                 <div className="grid grid-cols-4 gap-3">
                   <div className="text-center">
                     <Flame className="h-4 w-4 mx-auto mb-1 text-orange-400" />
-                    <p className="text-xs text-muted-foreground">Hype</p>
+                    <p className="text-xs text-muted-foreground">Projected Hype</p>
                     <p className="text-sm font-bold text-orange-400">+{hypeAwarded}</p>
                   </div>
                   <div className="text-center">
@@ -258,7 +258,7 @@ export function ReleasePartyModal({ open, onOpenChange, releaseId, releaseTitle,
               </CardContent>
             </Card>
 
-            <Button onClick={async () => { await finishParty(); handleClose(); }} disabled={loading} className="w-full">
+            <Button onClick={async () => { const saved = await finishParty(); if (saved) handleClose(); }} disabled={loading} className="w-full">
               {loading ? "Saving Results..." : "🎉 Done!"}
             </Button>
           </div>
