@@ -65,7 +65,7 @@ SELECT
   NOT has_function_privilege('authenticated','public.process_due_self_promotions(integer)','EXECUTE') AS batch_player_denied,
   (SELECT command='SELECT public.process_due_self_promotions();'
    FROM cron.job WHERE jobname='complete-self-promotions-every-10-min') AS cron_internal,
-  (SELECT schedule='*/10 * * *' FROM cron.job
+  (SELECT schedule='*/10 * * * *' FROM cron.job
    WHERE jobname='complete-self-promotions-every-10-min') AS cadence_unchanged,
   NOT has_table_privilege('authenticated','public.self_promotion_activities','INSERT') AS forged_client_insert_denied,
   NOT has_table_privilege('authenticated','public.self_promotion_activities','UPDATE') AS client_reward_mutations_denied,
