@@ -17,9 +17,11 @@ import {
   useUpdateOwnedClub,
   getStaffTypes,
   getStaffBaseSalary,
+  getNightclubStaffCap,
   calculateWeeklyRevenue,
   calculateWeeklyExpenses,
   type OwnedNightclub,
+  type NightclubStaff,
 } from "@/hooks/useNightclubOwnership";
 
 const QUALITY_LABELS: Record<number, string> = {
@@ -90,6 +92,7 @@ const ClubDashboard = ({ club }: { club: OwnedNightclub }) => {
   const updateClub = useUpdateOwnedClub();
   const [showHire, setShowHire] = useState(false);
 
+  const staffCap = getNightclubStaffCap(club.capacity);
   const projectedRevenue = calculateWeeklyRevenue(club);
   const projectedExpenses = calculateWeeklyExpenses(club, staff);
   const projectedProfit = projectedRevenue - projectedExpenses;
@@ -171,9 +174,9 @@ const ClubDashboard = ({ club }: { club: OwnedNightclub }) => {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Users className="h-5 w-5 text-primary" /> Staff ({staff.length})
+              <Users className="h-5 w-5 text-primary" /> Staff ({staff.length}/{staffCap})
             </CardTitle>
-            <Button size="sm" variant="outline" onClick={() => setShowHire(true)}>
+            <Button size="sm" variant="outline" onClick={() => setShowHire(true)} disabled={staff.length >= staffCap}>
               <Plus className="h-3 w-3 mr-1" /> Hire
             </Button>
           </div>
@@ -184,7 +187,7 @@ const ClubDashboard = ({ club }: { club: OwnedNightclub }) => {
           ) : (
             <div className="space-y-2">
               {staff.map((s) => (
-                <StaffRow key={s.id} staff={s} />
+                <StaffRow key={s.id} staff={s} ownedClubId={club.id} />
               ))}
             </div>
           )}
@@ -192,6 +195,7 @@ const ClubDashboard = ({ club }: { club: OwnedNightclub }) => {
       </Card>
 
       <HireStaffDialog open={showHire} onOpenChange={setShowHire} ownedClubId={club.id} />
+      {staff.length >= staffCap && <p className="text-xs text-muted-foreground">This club has reached its staffing limit. Dismiss an employee before hiring another.</p>}
     </div>
   );
 };
@@ -242,7 +246,7 @@ const NightclubPricingFields = ({ club }: { club: OwnedNightclub }) => {
   );
 };
 
-const StaffRow = ({ staff }: { staff: any }) => {
+const StaffRow = ({ staff, ownedClubId }: { staff: NightclubStaff; ownedClubId: string }) => {
   const fireStaff = useFireStaff();
 
   return (
@@ -258,7 +262,7 @@ const StaffRow = ({ staff }: { staff: any }) => {
           size="sm"
           variant="ghost"
           className="h-7 w-7 p-0 text-destructive"
-          onClick={() => fireStaff.mutate(staff.id)}
+          onClick={() => fireStaff.mutate({ ownedClubId, staffId: staff.id })}
           disabled={fireStaff.isPending}
         >
           <Trash2 className="h-3 w-3" />
@@ -274,7 +278,7 @@ const HireStaffDialog = ({ open, onOpenChange, ownedClubId }: { open: boolean; o
   const [name, setName] = useState("");
   const [skillLevel, setSkillLevel] = useState(1);
 
-  const salary = getStaffBaseSalary(staffType) * (1 + (skillLevel - 1) * 0.25);
+  const salary = Math.round(getStaffBaseSalary(staffType) * (1 + (skillLevel - 1) * 0.25));
 
   const handleHire = () => {
     if (!name.trim()) return;
@@ -318,9 +322,9 @@ const HireStaffDialog = ({ open, onOpenChange, ownedClubId }: { open: boolean; o
             </Select>
           </div>
           <div className="text-sm text-muted-foreground">
-            Weekly salary: <span className="font-medium text-foreground">${Math.round(salary)}</span>
+            Weekly salary: <span className="font-medium text-foreground">${salary}</span>
           </div>
-          <Button className="w-full" onClick={handleHire} disabled={!name.trim() || hireStaff.isPending}>
+          <Button className="w-full" onClick={handleHire} disabled={name.trim().length < 2 || hireStaff.isPending}>
             {hireStaff.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
             Hire {STAFF_LABELS[staffType]}
           </Button>
