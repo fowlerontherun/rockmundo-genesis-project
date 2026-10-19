@@ -28,7 +28,8 @@ vi.mock("./avatarCapture", () => ({
 }));
 
 vi.mock("./gallery", () => ({
-  saveShareMomentSnapshot: vi.fn(),
+  // The real gallery writer returns a Promise; mirror it so .catch() is valid.
+  saveShareMomentSnapshot: vi.fn(async () => undefined),
 }));
 
 vi.mock("./share", async importOriginal => ({
