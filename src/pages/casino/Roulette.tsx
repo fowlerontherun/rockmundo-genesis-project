@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BetControls } from "@/components/casino/BetControls";
 import { GameResult } from "@/components/casino/GameResult";
 import { useCasino } from "@/hooks/useCasino";
-import { spinWheel, calculateRoulettePayout, getNumberColor, getBetLabel } from "@/lib/casino/roulette";
+import { isWinningBet, getNumberColor, getBetLabel } from "@/lib/casino/roulette";
 import type { RouletteBet, RouletteBetType } from "@/lib/casino/types";
 import { ROULETTE_PAYOUTS } from "@/lib/casino/types";
 import { motion } from "framer-motion";
@@ -33,42 +33,62 @@ export default function Roulette() {
   const [betAmount, setBetAmount] = useState(100);
   const [bets, setBets] = useState<RouletteBet[]>([]);
   const [spinning, setSpinning] = useState(false);
+  const pendingRef = useRef<{ requestId: string; totalBet: number; bets: RouletteBet[] } | null>(null);
+  const inFlightRef = useRef(false);
+  const [settlementError, setSettlementError] = useState(false);
   const [result, setResult] = useState<number | null>(null);
   const [lastPayout, setLastPayout] = useState<{ totalBet: number; totalPayout: number; winningBets: RouletteBet[] } | null>(null);
 
   const totalBetPlaced = bets.reduce((s, b) => s + b.amount, 0);
 
   const addBet = (type: RouletteBetType, number?: number) => {
-    if (totalBetPlaced + betAmount > cash) return;
+    if (pendingRef.current || spinning || totalBetPlaced + betAmount > cash) return;
     setBets(prev => [...prev, { type, amount: betAmount, number }]);
   };
 
   const removeBet = (index: number) => {
+    if (pendingRef.current) return;
     setBets(prev => prev.filter((_, i) => i !== index));
   };
 
   const spin = async () => {
+    if (inFlightRef.current) return;
+    const pending = pendingRef.current ?? {
+      requestId: crypto.randomUUID(),
+      totalBet: totalBetPlaced,
+      bets: bets.map(b => ({ ...b })),
+    };
+    if (!pendingRef.current && (pending.totalBet < 10 || pending.totalBet > cash)) return;
+    pendingRef.current = pending;
+    inFlightRef.current = true;
     setSpinning(true);
+    setSettlementError(false);
     setResult(null);
     setLastPayout(null);
-
-    // Simulate spin delay
-    await new Promise(r => setTimeout(r, 2000));
-
-    const num = spinWheel();
-    setResult(num);
-
-    const payoutResult = calculateRoulettePayout(bets, num);
-    setLastPayout(payoutResult);
-    setSpinning(false);
-
-    await recordTransaction("roulette", payoutResult.totalBet, payoutResult.totalPayout, {
-      result: num,
-      color: getNumberColor(num),
-      bets: bets.map(b => ({ type: b.type, number: b.number, amount: b.amount })),
-    });
-
-    setBets([]);
+    try {
+      const [receipt] = await Promise.all([
+        recordTransaction("roulette", pending.totalBet, { bets: pending.bets }, pending.requestId),
+        new Promise<void>(resolve => setTimeout(resolve, 900)),
+      ]);
+      const num = Number(receipt.outcome.result);
+      if (!Number.isInteger(num) || num < 0 || num > 36) {
+        throw new Error("Server wheel result missing. Retry this same round.");
+      }
+      setResult(num);
+      setLastPayout({
+        totalBet: pending.totalBet,
+        totalPayout: receipt.payout,
+        winningBets: pending.bets.filter(b => isWinningBet(b, num)),
+      });
+      pendingRef.current = null;
+      setBets([]);
+    } catch {
+      // Network ambiguity cannot create a second wager; retry same requestId.
+      setSettlementError(true);
+    } finally {
+      inFlightRef.current = false;
+      setSpinning(false);
+    }
   };
 
   const numberColor = (n: number) => {
@@ -125,6 +145,13 @@ export default function Roulette() {
         </CardContent>
       </Card>
 
+      {settlementError && (
+        <div role="alert" className="space-y-2 text-center text-sm text-destructive">
+          <p>Could not confirm this spin. Retry the same round to recover its server result without another charge.</p>
+          <Button variant="outline" disabled={spinning || isRecording} onClick={() => { void spin(); }}>Retry this spin</Button>
+        </div>
+      )}
+
       {/* Current bets */}
       {bets.length > 0 && (
         <Card>
@@ -133,7 +160,7 @@ export default function Roulette() {
           </CardHeader>
           <CardContent className="flex flex-wrap gap-1.5 pb-3">
             {bets.map((bet, i) => (
-              <Badge key={i} variant="secondary" className="gap-1 cursor-pointer" onClick={() => removeBet(i)}>
+              <Badge key={i} variant="secondary" className="gap-1 cursor-pointer" onClick={() => { if (!pendingRef.current) removeBet(i); }}>
                 {getBetLabel(bet.type, bet.number)} ${bet.amount}
                 <X className="h-3 w-3" />
               </Badge>
@@ -145,7 +172,7 @@ export default function Roulette() {
       {/* Bet controls */}
       {!spinning && result === null && (
         <>
-          <BetControls bet={betAmount} onBetChange={setBetAmount} maxCash={cash - totalBetPlaced} />
+          <BetControls bet={betAmount} onBetChange={setBetAmount} maxCash={cash - totalBetPlaced} disabled={!!pendingRef.current} />
 
           {/* Number grid */}
           <Card>
@@ -202,7 +229,7 @@ export default function Roulette() {
             className="w-full"
             size="lg"
             onClick={spin}
-            disabled={bets.length === 0 || isRecording}
+            disabled={bets.length === 0 || isRecording || !!pendingRef.current}
           >
             Spin — ${totalBetPlaced.toLocaleString()}
           </Button>
