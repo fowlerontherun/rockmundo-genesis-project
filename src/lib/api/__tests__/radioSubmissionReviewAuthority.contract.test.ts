@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 const migration = readFileSync("supabase/migrations/20261019111000_atomic_radio_submission_review.sql","utf8");
 const harness = readFileSync("supabase/tests/radio_submission_atomic_review_4243.sql","utf8");
+const roleHarness = readFileSync("supabase/tests/radio_submission_role_access_4243.sql","utf8");
 const retired = readFileSync("supabase/functions/process-radio-submissions/index.ts","utf8");
 const config = readFileSync("supabase/config.toml","utf8");
 
@@ -48,6 +49,13 @@ describe("Radio submission review is an internal, atomic, due-only operation (#4
     expect(migration).toContain("REVOKE ALL ON FUNCTION public.process_due_radio_submissions(integer)");
     expect(migration).toContain("FROM PUBLIC,anon,authenticated");
     expect(migration).toContain("TO service_role");
+  });
+
+  it("verifies normal players cannot forge reviews and legitimate admin access survives", () => {
+    expect(roleHarness).toContain("SET LOCAL ROLE authenticated");
+    expect(roleHarness).toContain("RADIO_PLAYER_CAN_FORGE_REVIEW");
+    expect(roleHarness).toContain("RADIO_ADMIN_REVIEW_MUTATION_BLOCKED");
+    expect(roleHarness).toContain("ROLLBACK;");
   });
 
   it("retains a live rollback harness covering early, crash, retry and duplicate award paths", () => {
