@@ -155,7 +155,7 @@ export const ROLE_SKILL_MAP: Record<string, string[]> = {
 const SPECIALIST_ROLE_TO_ID = new Map<string, string>(
   Object.entries(STAGE_INSTRUMENTS)
     .filter(([, instrument]) => instrument.role !== "vocals")
-    .map(([id, instrument]) => [instrument.label.toLowerCase(), id]),
+    .map(([id, instrument]) => [instrument.label.toLowerCase(), id] as const),
 );
 const VOCAL_ROLE_SKILL_IDS: Record<string, string> = {
   "vocal & performance skills": "vocal_performance",
