@@ -37,5 +37,6 @@ psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/dj_residency_authenticate
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/dj_residency_per_occurrence_escrow_contract.sql
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/dj_residency_occurrence_authenticated_role.sql
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/dj_residency_ended_escrow_refund_contract.sql
+psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/university_trigger_migration_replay_contract.sql
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/dj_funded_booking_release_permissions.sql
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/nightclub_revenue_log_server_only.sql
