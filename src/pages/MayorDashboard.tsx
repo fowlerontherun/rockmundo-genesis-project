@@ -11,6 +11,7 @@ import { useCityMayor, useIsCurrentMayor } from "@/hooks/useMayorDashboard";
 import { useCityLaws } from "@/hooks/useCityLaws";
 import { useMayorPolitics } from "@/hooks/useMayorPolitics";
 import { MayorBudgetTab } from "@/components/city/MayorBudgetTab";
+import { MayorBattleOfBandsTab } from "@/components/city/MayorBattleOfBandsTab";
 import { MayorProjectsTab } from "@/components/city/MayorProjectsTab";
 import { MayorUniversitiesTab } from "@/components/city/MayorUniversitiesTab";
 import { MayorPublicRelationsTab } from "@/components/city/MayorPublicRelationsTab";
@@ -127,6 +128,8 @@ export default function MayorDashboard() {
       )}
 
       {section === "projects" && <MayorProjectsTab cityId={cityId} politics={politics} />}
+
+      {section === "events" && <MayorBattleOfBandsTab cityId={cityId} />}
 
       {section === "universities" && <MayorUniversitiesTab cityId={cityId} />}
 
