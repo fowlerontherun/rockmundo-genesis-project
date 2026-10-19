@@ -2,8 +2,8 @@
 BEGIN;
 DO $test$
 DECLARE ou uuid;op uuid;du uuid;dp uuid;cid uuid;city uuid;owned uuid;track uuid;setid uuid;
- app1 uuid;app2 uuid;offer1 uuid;offer2 uuid;booking1 uuid;booking2 uuid;
- t1 timestamptz;t2 timestamptz;len integer;initial_cash bigint;dj_cash bigint;
+ app1 uuid;app2 uuid;app3 uuid;offer1 uuid;offer2 uuid;offer3 uuid;booking1 uuid;booking2 uuid;booking3 uuid;
+ t1 timestamptz;t2 timestamptz;t3 timestamptz;len integer;initial_cash bigint;dj_cash bigint;
  earned integer;result_id uuid;replay_id uuid;
 BEGIN
  IF has_function_privilege('authenticated','public.confirm_accepted_nightclub_dj_offer_internal(uuid,uuid)','EXECUTE')
@@ -88,6 +88,30 @@ BEGIN
  OR (SELECT count(*) FROM public.nightclub_dj_escrow_movements
  WHERE offer_id=offer2 AND kind='refund' AND amount=125)<>1 THEN
   RAISE EXCEPTION 'Cancel did not conserve all owner/DJ cash';END IF;
- RAISE NOTICE 'Funds -> booking + Schedule -> licensed live mix -> exactly-once pay; cancelled DJ set refunded';
+ -- The missed-set worker must return the ENTIRE fee, with no payout or reward.
+ SELECT times.ts INTO t3 FROM generate_series(t2+interval '4 hours',t2+interval '2 days',
+  interval '30 minutes') times(ts)
+ WHERE public.dj_booking_inside_club_hours(cid,times.ts,times.ts+make_interval(mins=>len))
+ AND public.dj_external_schedule_conflict(dp,times.ts,times.ts+make_interval(mins=>len)) IS NULL
+ ORDER BY times.ts LIMIT 1;
+ IF t3 IS NULL THEN RAISE EXCEPTION 'No third fixture set for missed show';END IF;
+ PERFORM set_config('request.jwt.claim.sub',du::text,true);
+ app3:=public.apply_for_nightclub_dj_slot(dp,owned,setid,t3,gen_random_uuid());
+ PERFORM set_config('request.jwt.claim.sub',ou::text,true);
+ PERFORM public.review_nightclub_dj_application(owned,app3,'shortlist',gen_random_uuid());
+ offer3:=(public.fund_nightclub_dj_offer(owned,app3,90,gen_random_uuid())->>'offer_id')::uuid;
+ PERFORM set_config('request.jwt.claim.sub',du::text,true);
+ PERFORM public.decide_nightclub_dj_offer(offer3,'accept',gen_random_uuid());
+ booking3:=public.confirm_accepted_nightclub_dj_offer_internal(offer3,gen_random_uuid());
+ PERFORM private.dj_mark_missed_at(booking3,t3+make_interval(mins=>len)+interval '11 minutes');
+ IF (SELECT status FROM public.nightclub_dj_funded_offers WHERE id=offer3)<>'missed'
+ OR (SELECT cash FROM public.profiles WHERE id=op)<>initial_cash-earned
+ OR (SELECT count(*) FROM public.nightclub_dj_escrow_movements m
+  WHERE m.offer_id=offer3 AND m.kind='refund' AND m.amount=90)<>1
+ OR (SELECT status FROM public.player_scheduled_activities
+  WHERE linked_dj_booking_id=booking3)<>'missed' THEN
+  RAISE EXCEPTION 'Missed funded booking did not refund once and update Schedule';END IF;
+ RAISE NOTICE 'Funded set completed, cancellation and missed-show refunds all preserve escrow and calendar';
+
 END $test$;
 ROLLBACK;
