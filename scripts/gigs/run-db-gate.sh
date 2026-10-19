@@ -24,3 +24,5 @@ psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/weekly_experience_cron_si
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/nightclub_atomic_purchase_authority_harness.sql
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/nightclub_staff_atomic_hire_fire_contract.sql
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/nightclub_staff_real_role_contract.sql
+psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/nightclub_verified_owner_theme_night_contract.sql
+psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/nightclub_owner_theme_night_authenticated_role.sql

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { OwnedClubDjRoster } from "@/features/nightclub-dj/OwnedClubDjRoster";
+import { OwnedClubThemeNights } from "@/features/nightclub-dj/OwnedClubThemeNights";
 import { Building2, Users, DollarSign, Settings, Plus, Trash2, Loader2, ToggleLeft, ToggleRight, TrendingUp, TrendingDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -131,6 +132,7 @@ const ClubDashboard = ({ club }: { club: OwnedNightclub }) => {
       </Card>
 
       <OwnedClubDjRoster club={club} />
+      <OwnedClubThemeNights club={club} />
 
       {/* Club Settings */}
       <Card>
