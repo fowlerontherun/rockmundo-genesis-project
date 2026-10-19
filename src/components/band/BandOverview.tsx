@@ -19,7 +19,7 @@ import { BandOverviewTabs } from './BandOverviewTabs';
 import { BandSongGifts } from './BandSongGifts';
 import { useMyBandFestivalAppearances } from '@/features/festivals/appearances/useMyBandFestivalAppearances';
 import { appearanceDetailHref } from '@/features/festivals/appearances/bandFestivalAppearances';
-import { ShareMomentSheet } from '@/features/shareable-moments/ShareMomentSheet';
+import { AvatarShareStudio } from '@/features/shareable-moments/CharacterShareStudio';
 import type { ShareMoment } from '@/features/shareable-moments/types';
 import { shouldOfferSharePrompt } from '@/features/shareable-moments/prompts';
 import { referralAwareDestination } from '@/features/shareable-moments/referralDestination';
@@ -284,7 +284,7 @@ export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, band
       {/* Gifted Songs - after tabs */}
       <BandSongGifts bandId={bandId} />
 
-      <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(open) => { if (!open) setShareMoment(null); }} />
+      {shareMoment && <AvatarShareStudio moment={shareMoment} open={true} onOpenChange={(open) => { if (!open) setShareMoment(null); }} />}
 
       {/* Profile Edit Section (Leaders Only) - Moved to bottom */}
       {isLeader && (
