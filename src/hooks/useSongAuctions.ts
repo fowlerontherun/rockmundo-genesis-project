@@ -237,11 +237,11 @@ export const useSongAuctions = (userId?: string) => {
   // Place a bid using RPC
   const placeBid = useMutation({
     mutationFn: async ({ listingId, bidAmount }: { listingId: string; bidAmount: number }) => {
-      if (!userId) throw new Error("Not authenticated");
+      if (!userId || !profileId) throw new Error("Choose an active character before bidding");
 
-      const { data, error } = await supabase.rpc("place_song_bid", {
+      const { data, error } = await supabase.rpc("place_song_bid_authorized", {
         p_listing_id: listingId,
-        p_bidder_user_id: userId,
+        p_bidder_profile_id: profileId,
         p_bid_amount: bidAmount,
       });
 
@@ -262,13 +262,15 @@ export const useSongAuctions = (userId?: string) => {
 
   // Buy now (fixed price) or accept winning bid
   const completeSale = useMutation({
-    mutationFn: async ({ listingId, salePrice }: { listingId: string; salePrice: number }) => {
-      if (!userId) throw new Error("Not authenticated");
+    mutationFn: async ({ listingId }: { listingId: string; salePrice: number }) => {
+      if (!userId || !profileId) throw new Error("Choose an active character before buying");
 
-      const { data, error } = await supabase.rpc("complete_song_sale", {
+      // The SQL transaction derives the price from the locked listing
+      // (asking price or auction buyout), never from the browser.
+      const { data, error } = await supabase.rpc("settle_song_marketplace_sale_atomic", {
         p_listing_id: listingId,
-        p_buyer_user_id: userId,
-        p_sale_price: salePrice,
+        p_actor_profile_id: profileId,
+        p_action: "buy",
       });
 
       if (error) throw error;
@@ -308,23 +310,14 @@ export const useSongAuctions = (userId?: string) => {
   // Accept highest bid (seller completes auction manually)
   const acceptBid = useMutation({
     mutationFn: async ({ listingId }: { listingId: string }) => {
-      // Fetch the listing to get current bid info
-      const { data: listing, error: listingError } = await supabase
-        .from("marketplace_listings")
-        .select("current_bid, current_bidder_user_id")
-        .eq("id", listingId)
-        .single();
+      if (!userId || !profileId) throw new Error("Choose an active character to accept bids");
 
-      if (listingError) throw listingError;
-      if (!listing?.current_bid || !listing?.current_bidder_user_id) {
-        throw new Error("No bids to accept");
-      }
-
-      // Use the complete_song_sale RPC with the winning bidder
-      const { data, error } = await supabase.rpc("complete_song_sale", {
+      // Seller-only action: SQL locks the listing, verifies the active
+      // winning bid and recorded bidding character, then settles once.
+      const { data, error } = await supabase.rpc("settle_song_marketplace_sale_atomic", {
         p_listing_id: listingId,
-        p_buyer_user_id: listing.current_bidder_user_id,
-        p_sale_price: listing.current_bid,
+        p_actor_profile_id: profileId,
+        p_action: "accept_bid",
       });
 
       if (error) throw error;
