@@ -329,6 +329,13 @@ export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
     </p>
   );
   if (isError) return <p className="text-sm text-destructive" role="alert">Unable to load DJ tracks: {error instanceof Error ? error.message : "Unknown error"}. The catalogue migration may still need deploying.</p>;
+  if (liveBookingId && !tracks.length) return (
+    <p className="text-sm text-destructive" role="alert">
+      None of the songs in this booked DJ set are currently playable. Audio access or music rights
+      may have changed since booking. Reopen the club or contact an administrator;
+      practice tracks cannot substitute for the locked setlist and no mixer credit is recorded here.
+    </p>
+  );
   if (!tracks.length) return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
@@ -421,9 +428,16 @@ export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
           {matches.length > 40 && <p className="text-xs text-muted-foreground">Showing the first 40 matches. Refine your search to find more.</p>}
         </CardContent>
       </Card>
-      <DjSetlistPlanner key={profileId ?? "none"} profileId={profileId} tracks={tracks}
-        onRehearse={(first, second) => { setDeckA(first); setDeckB(second); }}
-        onLoadTrack={(id, deck) => { if (deck === "A") setDeckA(id); else setDeckB(id); }} />
+      {!liveBookingId ? (
+        <DjSetlistPlanner key={profileId ?? "none"} profileId={profileId} tracks={tracks}
+          onRehearse={(first, second) => { setDeckA(first); setDeckB(second); }}
+          onLoadTrack={(id, deck) => { if (deck === "A") setDeckA(id); else setDeckB(id); }} />
+      ) : (
+        <p className="text-xs text-muted-foreground" role="status">
+          This performance uses the setlist snapshot locked when you booked it. Setlist edits
+          are available in practice mode and do not modify the active show.
+        </p>
+      )}
       <div className="grid gap-4 md:grid-cols-2">
         <AudioDeck deck="A" tracks={tracks} selectedId={deckA} onSelect={setDeckA} level={levels.a}
           rate={rateA} onRateChange={setRateA}
@@ -448,7 +462,7 @@ export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
           <p className="text-xs text-muted-foreground">Tempo adjustment changes playback speed and pitch. True key-locked beatmatching and timed drops will follow in the DJ minigame.</p>
         </CardContent>
       </Card>
-      {tracks.some((track) => track.mine) && (
+      {!liveBookingId && tracks.some((track) => track.mine) && (
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Music className="h-4 w-4" /> Share my tracks with other DJs</CardTitle></CardHeader>
           <CardContent className="space-y-3">
