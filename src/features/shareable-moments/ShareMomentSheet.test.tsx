@@ -1,10 +1,11 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 
 const mocks = vi.hoisted(() => ({
   markSharePromptSeen: vi.fn(),
   trackShareAnalyticsEvent: vi.fn(),
+  loadCaptureImage: vi.fn(),
 }));
 
 vi.mock("./prompts", () => ({
@@ -22,7 +23,7 @@ vi.mock("./canvas", () => ({
 }));
 
 vi.mock("./avatarCapture", () => ({
-  loadCaptureImage: vi.fn(() => Promise.resolve(new Image())),
+  loadCaptureImage: mocks.loadCaptureImage,
 }));
 
 vi.mock("./gallery", () => ({
@@ -109,6 +110,72 @@ describe("ShareMomentSheet contextual prompt gate", () => {
 });
 
 describe("ShareMomentSheet avatar exports", () => {
+  beforeEach(() => {
+    mocks.loadCaptureImage.mockReset();
+    mocks.loadCaptureImage.mockImplementation(() => Promise.resolve(new Image()));
+  });
+  it("blocks generic saved-card image exports until their historical avatar decodes", async () => {
+    let resolveDecode: ((image: HTMLImageElement) => void) | undefined;
+    mocks.loadCaptureImage.mockImplementationOnce(
+      () => new Promise<HTMLImageElement>(resolve => { resolveDecode = resolve; }),
+    );
+    const saved = {
+      ...moment,
+      promptOnly: false,
+      avatar: { dataUrl: "data:image/png;base64,saved-avatar", width: 720, height: 1080 },
+    };
+    render(
+      <MemoryRouter>
+        <ShareMomentSheet moment={saved} open onOpenChange={vi.fn()} />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Rendering your player avatar for the image…")).toBeInTheDocument();
+    for (const name of ["Share now", "Post to Twaater", "Download PNG", "Copy image"]) {
+      expect(screen.getByRole("button", { name })).toBeDisabled();
+    }
+    expect(screen.getByRole("button", { name: "Copy link" })).toBeEnabled();
+
+    await act(async () => { resolveDecode?.(new Image()); });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Download PNG" })).toBeEnabled());
+    expect(mocks.loadCaptureImage).toHaveBeenCalledTimes(1);
+  });
+
+  it("blocks exports when switching saved cards until the next avatar decodes", async () => {
+    let resolveSecond: ((image: HTMLImageElement) => void) | undefined;
+    mocks.loadCaptureImage
+      .mockResolvedValueOnce(new Image())
+      .mockImplementationOnce(() => new Promise<HTMLImageElement>(resolve => { resolveSecond = resolve; }));
+    const first = { ...moment, id: "saved-first", promptOnly: false,
+      avatar: { dataUrl: "data:image/png;base64,first", width: 720, height: 1080 } };
+    const second = { ...first, id: "saved-second",
+      avatar: { dataUrl: "data:image/png;base64,second", width: 720, height: 1080 } };
+    const view = render(
+      <MemoryRouter><ShareMomentSheet moment={first} open onOpenChange={vi.fn()} /></MemoryRouter>,
+    );
+    await waitFor(() => expect(screen.getByRole("button", { name: "Download PNG" })).toBeEnabled());
+    view.rerender(
+      <MemoryRouter><ShareMomentSheet moment={second} open onOpenChange={vi.fn()} /></MemoryRouter>,
+    );
+    expect(screen.getByRole("button", { name: "Download PNG" })).toBeDisabled();
+    await act(async () => { resolveSecond?.(new Image()); });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Download PNG" })).toBeEnabled());
+  });
+
+  it("blocks corrupted generic saved-card portraits without recapturing another player's avatar", async () => {
+    mocks.loadCaptureImage.mockRejectedValueOnce(new Error("invalid stored PNG"));
+    render(
+      <MemoryRouter>
+        <ShareMomentSheet moment={{ ...moment, promptOnly: false,
+          avatar: { dataUrl: "data:image/png;base64,broken", width: 720, height: 1080 } }}
+          open onOpenChange={vi.fn()} />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Image export is paused"));
+    expect(screen.getByRole("button", { name: "Download PNG" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Copy link" })).toBeEnabled();
+  });
+
   it("does not allow exporting an incomplete avatar image", () => {
     render(
       <MemoryRouter>
