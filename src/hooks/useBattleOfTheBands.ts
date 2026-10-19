@@ -187,6 +187,7 @@ export function useEnterBotb() {
         description: "Your band is entered into the Battle of the Bands.",
       });
       queryClient.invalidateQueries({ queryKey: ["botb-upcoming"] });
+      queryClient.invalidateQueries({ queryKey: ["botb-event-finance-preview"] });
       queryClient.invalidateQueries({ queryKey: ["botb-my-entries"] });
       queryClient.invalidateQueries({ queryKey: ["botb-eligibility"] });
     },
@@ -208,6 +209,7 @@ export function useWithdrawBotbEntry() {
     onSuccess: () => {
       toast({ title: "Withdrawn", description: "Your band has been removed from that battle." });
       queryClient.invalidateQueries({ queryKey: ["botb-upcoming"] });
+      queryClient.invalidateQueries({ queryKey: ["botb-event-finance-preview"] });
       queryClient.invalidateQueries({ queryKey: ["botb-my-entries"] });
     },
     onError: (error: Error) => {
