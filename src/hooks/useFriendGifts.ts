@@ -50,37 +50,32 @@ export function useSendFriendGift() {
       recipientProfileId: string;
       giftType: string;
       message?: string;
+      requestId?: string;
     }) => {
       const cfg = GIFT_CATALOG.find((g) => g.value === params.giftType);
       if (!cfg) throw new Error("Unknown gift");
-      const { data, error } = await supabase
-        .from(asAny("friend_gifts"))
-        .insert(asAny({
-          sender_profile_id: params.senderProfileId,
-          recipient_profile_id: params.recipientProfileId,
-          gift_type: params.giftType,
-          gift_name: cfg.label,
-          cost_cents: cfg.costCents,
-          affection_bonus: cfg.affection,
-          message: params.message ?? null,
-        }))
-        .select().single();
+      // Charge cash and grant affection in one authenticated server
+      // transaction. Price and reward are derived from the trusted catalogue.
+      // A request ID prevents double debit on network retries.
+      const { data, error } = await (supabase as any).rpc(
+        "send_friend_gift_atomic",
+        {
+          p_sender_profile_id: params.senderProfileId,
+          p_recipient_profile_id: params.recipientProfileId,
+          p_gift_type: params.giftType,
+          p_message: params.message ?? null,
+          p_request_id: params.requestId ?? crypto.randomUUID(),
+        },
+      );
       if (error) throw error;
-      // Best-effort affection bump via RPC if available
-      try {
-        await (supabase as any).rpc('increment_relationship_score', {
-          p_entity_a_id: params.senderProfileId,
-          p_entity_b_id: params.recipientProfileId,
-          p_field: 'affection_score',
-          p_delta: cfg.affection,
-        });
-      } catch { /* RPC may not exist */ }
+      if (!data?.id) throw new Error("Gift purchase was not confirmed");
       return data;
     },
     onSuccess: () => {
       toast.success("Gift sent! 🎁");
       qc.invalidateQueries({ queryKey: ["friend-gifts"] });
       qc.invalidateQueries({ queryKey: ["character-relationships"] });
+      qc.invalidateQueries({ queryKey: ["game-data"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
