@@ -175,7 +175,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.lottery-draw]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-housing-image]
 verify_jwt = false
