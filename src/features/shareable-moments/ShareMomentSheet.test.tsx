@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   trackShareAnalyticsEvent: vi.fn(),
   loadCaptureImage: vi.fn(),
   copyText: vi.fn(),
+  downloadBlob: vi.fn(),
 }));
 
 vi.mock("./prompts", () => ({
@@ -36,6 +37,7 @@ vi.mock("./gallery", () => ({
 vi.mock("./share", async importOriginal => ({
   ...(await importOriginal<typeof import("./share")>()),
   copyText: mocks.copyText,
+  downloadBlob: mocks.downloadBlob,
 }));
 
 vi.mock("./twaater", () => ({
@@ -48,6 +50,7 @@ vi.mock("@/hooks/use-toast", () => ({
 }));
 
 import { ShareMomentSheet } from "./ShareMomentSheet";
+import { canvasBlob, renderShareMoment } from "./canvas";
 import { saveShareMomentSnapshot } from "./gallery";
 import type { ShareMoment } from "./types";
 
@@ -311,5 +314,75 @@ describe("ShareMomentSheet preserves frozen gallery portraits", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
     await waitFor(() => expect(vi.mocked(saveShareMomentSnapshot)).toHaveBeenCalledOnce());
+  });
+});
+
+
+describe("ShareMomentSheet exports the active canvas frame", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.loadCaptureImage.mockImplementation(() => Promise.resolve(new Image()));
+    vi.mocked(canvasBlob).mockResolvedValue(new Blob(["png"], { type: "image/png" }));
+  });
+
+  it.each(["square", "story", "landscape"] as const)(
+    "draws the decoded player avatar into the latest %s export before reading the PNG",
+    async format => {
+      const avatar = { dataUrl: "data:image/png;base64,frame", width: 720, height: 1080 };
+      const decoded = new Image();
+      mocks.loadCaptureImage.mockResolvedValueOnce(decoded);
+      render(
+        <MemoryRouter>
+          <ShareMomentSheet moment={{ ...moment, promptOnly: false, avatar }}
+            avatarStatus="ready" open onOpenChange={vi.fn()} />
+        </MemoryRouter>,
+      );
+
+      await waitFor(() => expect(screen.getByRole("button", { name: "Download PNG" })).toBeEnabled());
+      fireEvent.click(screen.getByRole("button", { name: format }));
+      vi.mocked(renderShareMoment).mockClear();
+      fireEvent.click(screen.getByRole("button", { name: "Download PNG" }));
+
+      await waitFor(() => expect(vi.mocked(canvasBlob)).toHaveBeenCalledOnce());
+      expect(vi.mocked(renderShareMoment).mock.lastCall?.slice(0,5)).toEqual([
+        expect.any(HTMLCanvasElement),
+        expect.objectContaining({ id: moment.id, avatar }),
+        format,
+        decoded,
+        null,
+      ]);
+      expect(mocks.downloadBlob).toHaveBeenCalledOnce();
+    },
+  );
+
+  it("does not carry a previous saved player's avatar into a public image-free card", async () => {
+    const decoded = new Image();
+    mocks.loadCaptureImage.mockResolvedValueOnce(decoded);
+    const avatar = { dataUrl: "data:image/png;base64,old", width: 720, height: 1080 };
+    const first = { ...moment, id: "old-player", promptOnly: false, avatar };
+    const second = { ...moment, id: "public-poster", type: "festival" as const, promptOnly: false, avatar: null };
+    const view = render(
+      <MemoryRouter>
+        <ShareMomentSheet moment={first} open onOpenChange={vi.fn()} />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(screen.getByRole("button", { name: "Download PNG" })).toBeEnabled());
+    view.rerender(
+      <MemoryRouter>
+        <ShareMomentSheet moment={second} open onOpenChange={vi.fn()} />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Share headline" })).toHaveValue(second.headline));
+
+    vi.mocked(renderShareMoment).mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Download PNG" }));
+    await waitFor(() => expect(vi.mocked(canvasBlob)).toHaveBeenCalledOnce());
+    expect(vi.mocked(renderShareMoment).mock.lastCall?.slice(0,5)).toEqual([
+      expect.any(HTMLCanvasElement),
+      expect.objectContaining({ type: "festival", id: "public-poster" }),
+      "square",
+      null,
+      null,
+    ]);
   });
 });
