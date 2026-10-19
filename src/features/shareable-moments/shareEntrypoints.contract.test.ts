@@ -125,6 +125,14 @@ describe("Shareable Moments migrated entrypoint contracts", () => {
     expect(sheet).toContain('onPromptAccepted?.()');
   });
 
+  it("renders band recruitment invitation art with the recruiter's character avatar", () => {
+    const source = read("src/components/band/InviteFriendToBand.tsx");
+    expect(source).toContain("type: 'band_profile'");
+    expect(source).toContain("BAND RECRUITMENT");
+    expect(source).toContain("<AvatarShareStudio moment={shareMoment}");
+    expect(source).not.toContain("<ShareMomentSheet moment={shareMoment}");
+  });
+
   it("keeps release milestones button-first and avatar-aware", () => {
     const source = read("src/components/releases/MyReleasesTab.tsx");
     expect(source).toContain('from "@/features/shareable-moments/CharacterShareStudio"');
