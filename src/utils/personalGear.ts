@@ -139,7 +139,7 @@ const ROLE_GEAR_TYPES: Record<string, string[]> = {
   Percussion: ["percussion", "latin_percussion", "african_drums", "cajon", "tabla"],
 };
 
-const SPECIALIST_INSTRUMENT_ROLE_TYPES = new Map(
+const SPECIALIST_INSTRUMENT_ROLE_TYPES = new Map<string, string>(
   Object.entries(STAGE_INSTRUMENTS)
     .filter(([, definition]) => definition.role !== "vocals")
     .map(([id, definition]) => [definition.label.toLowerCase(), id]),
