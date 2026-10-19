@@ -20,7 +20,7 @@ export interface BotbEvent {
   winner_band_id: string | null;
   winner_rating: number | null;
   resolved_at: string | null;
-  city?: { id: string; name: string; country: string } | null;
+  city?: { id: string; name: string; country: string; timezone: string | null } | null;
   winner_band?: { id: string; name: string } | null;
   entry_count?: number;
 }
@@ -46,7 +46,7 @@ export interface BotbEntry {
 
 const EVENT_SELECT = `
   *,
-  city:cities(id, name, country),
+  city:cities(id, name, country, timezone),
   winner_band:bands!botb_events_winner_band_id_fkey(id, name),
   botb_entries(id)
 `;
@@ -127,7 +127,7 @@ export function useMyBandBotbEntries(bandId?: string | null) {
            band:bands(id, name),
            song_1:songs!botb_entries_song_1_id_fkey(id, title),
            song_2:songs!botb_entries_song_2_id_fkey(id, title),
-           event:botb_events(*, city:cities(id, name, country))`
+           event:botb_events(*, city:cities(id, name, country, timezone))`
         )
         .eq("band_id", bandId)
         .order("created_at", { ascending: false });
