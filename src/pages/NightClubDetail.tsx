@@ -29,6 +29,7 @@ import { DjMixingStudio } from "@/features/nightclub-dj/DjMixingStudio";
 import { DjBookingPanel } from "@/features/nightclub-dj/DjBookingPanel";
 import { DjClubApplications } from "@/features/nightclub-dj/DjClubApplications";
 import { DjFundedOffers } from "@/features/nightclub-dj/DjFundedOffers";
+import { DjResidencyInvitations } from "@/features/nightclub-dj/DjResidencyAgreements";
 
 const QUALITY_LABELS: Record<number, string> = {
   1: "Underground",
@@ -345,6 +346,7 @@ const NightClubDetail = () => {
 
       {profileId && clubId && <DjClubApplications profileId={profileId} clubId={clubId} />}
       {profileId && clubId && <DjFundedOffers profileId={profileId} clubId={clubId} />}
+      {profileId && clubId && <DjResidencyInvitations profileId={profileId} clubId={clubId} />}
 
       {/* Club Events */}
       {clubId && <ClubEventsSection clubId={clubId} />}

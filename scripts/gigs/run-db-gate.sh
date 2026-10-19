@@ -32,5 +32,7 @@ psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/dj_club_multiple_applican
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/nightclub_dj_funded_offer_escrow_harness.sql
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/nightclub_dj_escrow_authenticated_role.sql
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/dj_escrow_booking_settlement_contract.sql
+psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/dj_residency_mutual_consent_contract.sql
+psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/dj_residency_authenticated_role_contract.sql
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/dj_funded_booking_release_permissions.sql
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/nightclub_revenue_log_server_only.sql

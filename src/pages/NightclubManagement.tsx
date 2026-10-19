@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { OwnedClubDjRoster } from "@/features/nightclub-dj/OwnedClubDjRoster";
 import { OwnedClubDjApplications } from "@/features/nightclub-dj/OwnedClubDjApplications";
 import { OwnedClubDjFundedOffers } from "@/features/nightclub-dj/OwnedClubDjFundedOffers";
+import { OwnedClubDjResidencies } from "@/features/nightclub-dj/DjResidencyAgreements";
 import { OwnedClubThemeNights } from "@/features/nightclub-dj/OwnedClubThemeNights";
 import { Building2, Users, DollarSign, Settings, Plus, Trash2, Loader2, ToggleLeft, ToggleRight, TrendingUp, TrendingDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -136,6 +137,7 @@ const ClubDashboard = ({ club }: { club: OwnedNightclub }) => {
       <OwnedClubDjRoster club={club} />
       <OwnedClubDjApplications club={club} />
       <OwnedClubDjFundedOffers club={club} />
+      <OwnedClubDjResidencies club={club} />
       <OwnedClubThemeNights club={club} />
 
       {/* Club Settings */}
