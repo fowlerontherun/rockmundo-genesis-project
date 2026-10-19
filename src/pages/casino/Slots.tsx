@@ -5,7 +5,7 @@ import { BetControls } from "@/components/casino/BetControls";
 import { GameResult } from "@/components/casino/GameResult";
 import { SlotReel } from "@/components/casino/SlotReel";
 import { useCasino } from "@/hooks/useCasino";
-import { spinReels, calculateSlotPayout, getSymbolEmoji } from "@/lib/casino/slots";
+import { getSymbolEmoji } from "@/lib/casino/slots";
 import type { SlotSymbol } from "@/lib/casino/types";
 import { SLOT_PAYOUTS } from "@/lib/casino/types";
 import { motion } from "framer-motion";
@@ -23,28 +23,51 @@ export default function Slots() {
   const [lastResult, setLastResult] = useState<{ multiplier: number; payout: number; isJackpot: boolean; matchType: string | null } | null>(null);
   const [autoSpins, setAutoSpins] = useState(0);
   const autoRef = useRef(false);
+  const pendingRef = useRef<{ requestId: string; bet: number } | null>(null);
+  const inFlightRef = useRef(false);
+  const [settlementError, setSettlementError] = useState(false);
 
-  const spin = async (currentBet?: number) => {
+  const spin = async (currentBet?: number): Promise<boolean> => {
+    if (inFlightRef.current) return false;
     const b = currentBet ?? bet;
-    if (b > cash) return;
-
+    if (!pendingRef.current && (b > cash || b < 10)) return false;
+    const attempt = pendingRef.current ?? { requestId: crypto.randomUUID(), bet: b };
+    pendingRef.current = attempt;
+    inFlightRef.current = true;
     setSpinning(true);
+    setSettlementError(false);
     setLastResult(null);
-
-    await new Promise(r => setTimeout(r, 1200));
-
-    const result = spinReels();
-    setReels(result);
-    setSpinning(false);
-
-    const payoutResult = calculateSlotPayout(result, b);
-    setLastResult(payoutResult);
-
-    await recordTransaction("slots", b, payoutResult.payout, {
-      reels: result,
-      multiplier: payoutResult.multiplier,
-      isJackpot: payoutResult.isJackpot,
-    });
+    try {
+      // The DB draws the reels and settles the payout atomically.
+      // Never pre-draw a client result, including for auto-spin.
+      const [receipt] = await Promise.all([
+        recordTransaction("slots", attempt.bet, {}, attempt.requestId),
+        new Promise<void>(resolve => setTimeout(resolve, 900)),
+      ]);
+      const outcome = receipt.outcome;
+      if (!Array.isArray(outcome.reels) || outcome.reels.length !== 3 ||
+          !Number.isFinite(Number(outcome.multiplier))) {
+        throw new Error("Server result is missing. Retry this same round.");
+      }
+      setReels(outcome.reels as [SlotSymbol, SlotSymbol, SlotSymbol]);
+      setLastResult({
+        multiplier: Number(outcome.multiplier),
+        payout: receipt.payout,
+        isJackpot: outcome.isJackpot === true,
+        matchType: typeof outcome.matchType === "string" ? outcome.matchType : null,
+      });
+      pendingRef.current = null;
+      return true;
+    } catch {
+      // A response may have been lost after commit; use this SAME requestId
+      // for the retry so the wallet cannot be credited or debited twice.
+      setSettlementError(true);
+      autoRef.current = false;
+      return false;
+    } finally {
+      inFlightRef.current = false;
+      setSpinning(false);
+    }
   };
 
   const startAutoSpin = async (count: number) => {
@@ -54,7 +77,7 @@ export default function Slots() {
       if (!autoRef.current) break;
       if (bet > cash) break;
       setAutoSpins(count - i);
-      await spin(bet);
+      if (!await spin(bet)) break;
       await new Promise(r => setTimeout(r, 800));
     }
     autoRef.current = false;
@@ -99,17 +122,24 @@ export default function Slots() {
         </CardContent>
       </Card>
 
+      {settlementError && (
+        <div role="alert" className="space-y-2 text-center text-sm text-destructive">
+          <p>Round confirmation was interrupted. Retry the same round to recover its result without another charge.</p>
+          <Button variant="outline" disabled={spinning || isRecording} onClick={() => { void spin(); }}>Retry this round</Button>
+        </div>
+      )}
+
       {/* Bet & Spin */}
       <Card>
         <CardContent className="py-4 space-y-4">
-          <BetControls bet={bet} onBetChange={setBet} maxCash={cash} disabled={spinning || autoSpins > 0} />
+          <BetControls bet={bet} onBetChange={setBet} maxCash={cash} disabled={spinning || autoSpins > 0 || !!pendingRef.current} />
 
           <div className="grid grid-cols-2 gap-2">
             <Button
               className="w-full"
               size="lg"
               onClick={() => spin()}
-              disabled={spinning || bet > cash || isRecording || autoSpins > 0}
+              disabled={spinning || bet > cash || isRecording || autoSpins > 0 || !!pendingRef.current}
             >
               <RotateCw className="h-4 w-4 mr-2" />
               Spin — ${bet.toLocaleString()}
@@ -123,7 +153,7 @@ export default function Slots() {
                 variant="outline"
                 size="lg"
                 onClick={() => startAutoSpin(10)}
-                disabled={spinning || bet > cash || isRecording}
+                disabled={spinning || bet > cash || isRecording || !!pendingRef.current}
               >
                 Auto ×10
               </Button>
