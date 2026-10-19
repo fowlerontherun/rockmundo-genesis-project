@@ -75,7 +75,9 @@ export function OpenMicSongSelector({
           .sort((a, b) => b.quality_score - a.quality_score);
       }
 
-      if (!profileId) return [] as Song[];
+      // Battle entries must always be attached to a verified band.
+      // Never fall through to the solo-song branch after switching characters.
+      if (performanceType === "battle" || !profileId) return [] as Song[];
 
       // Solo performers can use their own unarchived songs without requiring a
       // recording. Keep this character-scoped so songs from another character
@@ -91,7 +93,7 @@ export function OpenMicSongSelector({
       if (error) throw error;
       return (data || []).map(normalizeSong);
     },
-    enabled: open && (!!bandId || !!profileId),
+    enabled: open && (performanceType === 'battle' ? !!bandId && !!profileId : !!bandId || !!profileId),
   });
 
   // An open dialog can outlive a band or character switch. Clear its local
@@ -162,7 +164,7 @@ export function OpenMicSongSelector({
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               {performanceType === 'battle'
-                ? 'No eligible band-assigned songs were found. Assign at least two unarchived songs to this band before entering a battle.'
+                ? 'No eligible band-assigned songs were found. Select a band and assign at least two unarchived songs to it before entering a battle.'
                 : 'No eligible songs were found. Open-mic band entries can use active members\' unassigned songs; solo entries use your own songs.'}
             </AlertDescription>
           </Alert>
