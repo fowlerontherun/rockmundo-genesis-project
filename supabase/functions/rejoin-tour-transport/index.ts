@@ -5,22 +5,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371
-  const dLat = (lat2 - lat1) * Math.PI / 180
-  const dLon = (lon2 - lon1) * Math.PI / 180
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
-
-function calculateTravelDuration(distanceKm: number, mode: string): number {
-  const speeds: Record<string, number> = { bus: 95, train: 320, plane: 1250, ship: 65, tour_bus: 115, private_jet: 1350 }
-  const buffers: Record<string, number> = { bus: 0.1, train: 0.15, plane: 0.75, ship: 0.3, tour_bus: 0.1, private_jet: 0.25 }
-  const speed = speeds[mode] || speeds.bus
-  const buffer = buffers[mode] || 0.3
-  return Math.max(0.5, Math.round((distanceKm / speed + buffer - 0.5) * 10) / 10)
-}
-
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
 
@@ -143,185 +127,51 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'You are not an active member of this tour\'s band' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    // Recalc duration/arrival if missing
-    let durationHours = leg.travel_duration_hours
-    let arrivalDate = leg.arrival_date
-    const storedSpanHours = arrivalDate ? (new Date(arrivalDate).getTime() - new Date(leg.departure_date).getTime()) / 3600000 : 0
-    if (!durationHours || durationHours <= 0 || !arrivalDate || storedSpanHours >= 20) {
-      const [fromRes, toRes] = await Promise.all([
-        supabase.from('cities').select('latitude, longitude').eq('id', leg.from_city_id).maybeSingle(),
-        supabase.from('cities').select('latitude, longitude').eq('id', leg.to_city_id).maybeSingle(),
-      ])
-      if (fromRes.data?.latitude && toRes.data?.latitude) {
-        const dist = calculateDistance(fromRes.data.latitude, fromRes.data.longitude, toRes.data.latitude, toRes.data.longitude)
-        durationHours = calculateTravelDuration(dist, leg.travel_mode || 'tour_bus')
-      } else {
-        durationHours = 3.5
+    if (requestedTourId && requestedTourId !== leg.tour_id) {
+      return new Response(JSON.stringify({ error: 'Requested leg is not part of the selected tour' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    // ALL history/calendar/travel-state updates are serialized in one
+    // service-role-only DB transaction, which rechecks the active character,
+    // tour membership, true departure city, overlapping trips and leg timing.
+    // In particular a future leg NEVER changes profiles.current_city_id.
+    const { data: settlement, error: settlementError } = await supabase.rpc(
+      'schedule_tour_rejoin_atomic',
+      { p_user_id: userId, p_profile_id: profileId, p_tour_leg_id: leg.id },
+    )
+    if (settlementError) throw settlementError
+    if (settlement?.success !== true) {
+      const messages: Record<string, string> = {
+        not_in_departure_city: 'Travel to the tour departure city using normal transport before rejoining.',
+        another_journey_active: 'Finish your current journey before rejoining this tour leg.',
+        leg_already_finished: 'This leg has already arrived. Choose an upcoming journey or catch up through normal travel.',
+        travel_already_finalized: 'This tour journey is already completed or cancelled.',
+        invalid_tour_leg: 'This tour leg is not available for rejoining.',
+        tour_not_active: 'This tour is no longer active.',
+        not_tour_band_member: 'You are not an active member of this tour’s band.',
+        character_not_found: 'The selected character is no longer available.',
       }
-      arrivalDate = new Date(new Date(leg.departure_date).getTime() + durationHours * 3600 * 1000).toISOString()
+      const reason = String(settlement?.reason ?? 'rejoin_not_allowed')
+      return new Response(JSON.stringify({ error: messages[reason] ?? 'Tour rejoin is not currently permitted.', reason }),
+        { status: ['not_tour_band_member', 'character_not_found'].includes(reason) ? 403 : 409,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    const now = new Date()
-    const nowISO = now.toISOString()
-    const arrivalTime = new Date(arrivalDate)
-    const departureTime = new Date(leg.departure_date)
-    const status = arrivalTime <= now ? 'completed' : departureTime > now ? 'scheduled' : 'in_progress'
-
-    // City names for messaging
-    const [fromCityRes, toCityRes] = await Promise.all([
-      supabase.from('cities').select('name, country').eq('id', leg.from_city_id).maybeSingle(),
-      supabase.from('cities').select('name, country').eq('id', leg.to_city_id).maybeSingle(),
-    ])
-    const fromCityName = fromCityRes.data ? `${fromCityRes.data.name}, ${fromCityRes.data.country}` : 'Unknown'
-    const toCityName = toCityRes.data ? `${toCityRes.data.name}, ${toCityRes.data.country}` : 'Unknown'
-
-    // Upsert player_travel_history for this leg
-    const { data: existing } = await supabase
-      .from('player_travel_history')
-      .select('id, status')
-      .eq('tour_leg_id', leg.id)
-      .eq('profile_id', profileId)
-      .maybeSingle()
-
-    let travelHistoryId: string | null = existing?.id ?? null
-    if (existing) {
-      await supabase
-        .from('player_travel_history')
-        .update({
-          user_id: userId,
-          from_city_id: leg.from_city_id,
-          to_city_id: leg.to_city_id,
-          transport_type: leg.travel_mode || 'tour_bus',
-          departure_time: leg.departure_date,
-          scheduled_departure_time: leg.departure_date,
-          arrival_time: arrivalDate,
-          travel_duration_hours: durationHours,
-          status,
-        })
-        .eq('id', existing.id)
-    } else {
-      const { data: created, error: insErr } = await supabase
-        .from('player_travel_history')
-        .insert({
-          user_id: userId,
-          profile_id: profileId,
-          from_city_id: leg.from_city_id,
-          to_city_id: leg.to_city_id,
-          transport_type: leg.travel_mode || 'tour_bus',
-          cost_paid: 0,
-          departure_time: leg.departure_date,
-          scheduled_departure_time: leg.departure_date,
-          arrival_time: arrivalDate,
-          travel_duration_hours: durationHours,
-          status,
-          tour_leg_id: leg.id,
-        })
-        .select('id')
-        .single()
-      if (insErr) throw insErr
-      travelHistoryId = created?.id ?? null
-    }
-
-    // Upsert scheduled activity
-    const { data: existingActivity } = await supabase
-      .from('player_scheduled_activities')
-      .select('id')
-      .eq('profile_id', profileId)
-      .eq('activity_type', 'travel')
-      .contains('metadata', { tour_leg_id: leg.id })
-      .maybeSingle()
-
-    const activityPayload = {
-      user_id: userId,
-      profile_id: profileId,
-      activity_type: 'travel',
-      status,
-      scheduled_start: leg.departure_date,
-      scheduled_end: arrivalDate,
-      title: `Tour Travel: ${fromCityName} → ${toCityName}`,
-      description: `${leg.travel_mode || 'tour_bus'} journey (${durationHours}h) — Rejoined`,
-      location: toCityName,
-      metadata: {
-        travel_history_id: travelHistoryId,
-        tour_leg_id: leg.id,
-        tour_id: leg.tour_id,
-        from_city_id: leg.from_city_id,
-        to_city_id: leg.to_city_id,
-        transport_type: leg.travel_mode,
-        rejoined: true,
-      },
-    }
-
-    if (existingActivity) {
-      await supabase.from('player_scheduled_activities').update(activityPayload).eq('id', existingActivity.id)
-    } else {
-      await supabase.from('player_scheduled_activities').insert(activityPayload)
-    }
-
-    // Sync profile location/travel state
-    if (status === 'completed') {
-      await supabase.from('profiles').update({
-        current_city_id: leg.to_city_id,
-        is_traveling: false,
-        travel_arrives_at: null,
-      }).eq('id', profileId)
-    } else if (status === 'in_progress') {
-      await supabase.from('profiles').update({
-        current_city_id: leg.from_city_id,
-        is_traveling: true,
-        travel_arrives_at: arrivalDate,
-      }).eq('id', profileId)
-    } else {
-      // A future leg is only scheduled. Clear any stale state left by an older
-      // rejoin attempt so the character remains usable until departure.
-      await supabase.from('profiles').update({
-        current_city_id: leg.from_city_id,
-        is_traveling: false,
-        travel_arrives_at: null,
-      }).eq('id', profileId)
-    }
-
-    // Log an explicit "rejoin" timeline event (the trigger covers leg-state changes; this captures the catch-up action itself)
-    try {
-      await supabase.from('travel_timeline_events').insert({
-        profile_id: profileId,
-        user_id: userId,
-        band_id: tour.band_id,
-        tour_id: leg.tour_id,
-        tour_leg_id: leg.id,
-        travel_history_id: travelHistoryId,
-        from_city_id: leg.from_city_id,
-        to_city_id: leg.to_city_id,
-        event_type: 'rejoined',
-        message: status === 'completed'
-          ? `Caught up with the tour in ${toCityName}`
-          : status === 'scheduled'
-            ? `Scheduled tour transport to ${toCityName}`
-            : `Rejoined tour transport — heading to ${toCityName}`,
-        new_eta: arrivalDate,
-        metadata: {
-          transport_type: leg.travel_mode,
-          duration_hours: durationHours,
-          status,
-          source: 'rejoin-tour-transport',
-        },
-      })
-    } catch (e) {
-      console.warn('[rejoin-tour-transport] Failed to log timeline event', e)
-    }
-
+    const status = settlement.status as 'scheduled' | 'in_progress'
     return new Response(JSON.stringify({
       success: true,
       status,
-      tour_leg_id: leg.id,
-      from_city: fromCityName,
-      to_city: toCityName,
-      arrival_time: arrivalDate,
-      message: status === 'completed'
-        ? `Caught up with the tour in ${toCityName}.`
-        : status === 'scheduled'
-          ? `Tour transport scheduled for ${toCityName}.`
-          : `Rejoined tour transport — arriving in ${toCityName}.`,
+      tour_leg_id: settlement.tour_leg_id,
+      from_city: settlement.from_city,
+      to_city: settlement.to_city,
+      arrival_time: settlement.arrival_time,
+      travel_history_id: settlement.travel_history_id,
+      schedule_id: settlement.schedule_id,
+      already_booked: settlement.already_booked,
+      message: status === 'scheduled'
+        ? `Tour transport scheduled. Be in ${settlement.from_city} by departure; your current location has not changed.`
+        : `Rejoined tour transport — arriving in ${settlement.to_city}.`,
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   } catch (err: any) {
     console.error('[rejoin-tour-transport] Error:', err)
