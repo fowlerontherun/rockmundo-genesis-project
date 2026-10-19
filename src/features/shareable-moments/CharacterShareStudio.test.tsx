@@ -26,14 +26,16 @@ vi.mock('./avatarCapture', () => ({
   captureAvatarCanvas: mocks.captureAvatar,
 }));
 vi.mock('./ShareMomentSheet', () => ({
-  ShareMomentSheet: ({ moment, avatarStatus, onAvatarRetry }: {
-    moment: { avatar?: { dataUrl: string } | null };
+  ShareMomentSheet: ({ moment, avatarStatus, onAvatarRetry, onPromptAccepted }: {
+    moment: { avatar?: { dataUrl: string } | null; promptOnly?: boolean };
     avatarStatus: string;
     onAvatarRetry: () => void;
+    onPromptAccepted?: () => void;
   }) => <div>
     <span data-testid="avatar-status">{avatarStatus}</span>
     <span data-testid="avatar-url">{moment.avatar?.dataUrl ?? 'none'}</span>
     <button onClick={onAvatarRetry}>Retry avatar</button>
+    {moment.promptOnly && <button onClick={onPromptAccepted}>Accept share prompt</button>}
   </div>,
 }));
 
@@ -79,6 +81,14 @@ describe('AvatarShareStudio image capture', () => {
     render(<AvatarShareStudio open moment={moment} onOpenChange={vi.fn()} />);
     expect(screen.getByTestId('avatar-status')).toHaveTextContent('loading');
     expect(mocks.renderAvatar).not.toHaveBeenCalled();
+  });
+
+  it('defers milestone avatar capture until the player accepts the share prompt', async () => {
+    render(<AvatarShareStudio open moment={{ ...moment, type: 'achievement', promptOnly: true }} onOpenChange={vi.fn()} />);
+    expect(mocks.renderAvatar).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Accept share prompt' }));
+    await waitFor(() => expect(screen.getByTestId('avatar-status')).toHaveTextContent('ready'));
+    expect(mocks.renderAvatar).toHaveBeenCalledTimes(1);
   });
 
   it('allows a failed capture to be retried', async () => {
