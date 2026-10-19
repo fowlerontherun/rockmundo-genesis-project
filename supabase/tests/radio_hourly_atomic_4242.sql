@@ -10,6 +10,9 @@ SELECT count(*) AS played,
          WHERE coalesce(pl.is_active,true) AND coalesce(sh.is_active,true)
            AND coalesce(st.is_active,true)) AS eligible
 FROM public.radio_plays;
+CREATE TEMP TABLE radio_hour_before AS
+SELECT count(*) already_claimed FROM public.radio_plays
+WHERE simulation_hour=date_trunc('hour',now());
 CREATE TEMP TABLE radio_first AS
 SELECT public.process_hourly_radio_plays() AS receipt;
 CREATE TEMP TABLE radio_after_first AS
@@ -23,11 +26,8 @@ SELECT
  (SELECT eligible>100 FROM radio_before) AS all_playlist_pages_present,
  (SELECT (receipt->>'failed')::int=0 FROM radio_first) AS first_no_failures,
  (SELECT (receipt->>'plays_created')::int+
-    (SELECT count(*) FROM public.radio_plays
-      WHERE simulation_hour=date_trunc('hour',now()) AND
-        created_at <= (SELECT coalesce(min(created_at),now())
-          FROM public.radio_plays WHERE simulation_hour=date_trunc('hour',now())))
-   >= 0 FROM radio_first) AS rewards_audited,
+   (SELECT already_claimed FROM radio_hour_before)=
+   (SELECT eligible FROM radio_before) FROM radio_first) AS complete_hourly_coverage,
  (SELECT (receipt->>'plays_created')::int=0 FROM radio_second) AS replay_zero_new_plays,
  (SELECT (receipt->>'failed')::int=0 FROM radio_second) AS replay_zero_errors,
  (SELECT count(*)=0 FROM (
