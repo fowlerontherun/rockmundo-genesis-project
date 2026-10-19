@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
-import { acceptLoanOffer, createLoanApplication, estimateEqualPrincipalSchedule, formatCurrencyMinor, getLoanApplicationResult, listEligibleLoanProducts, listPlayerBankAccounts, type BankingProduct, type PlayerBankAccount } from "@/services/banking/bankingService";
+import { acceptLoanOffer, createLoanApplication, estimateEqualPrincipalSchedule, formatCurrencyMinor, getLoanApplicationResult, getLoanDetails, listEligibleLoanProducts, listPlayerBankAccounts, type BankingProduct, type PlayerBankAccount } from "@/services/banking/bankingService";
 
 export default function BankingApply() {
   const { profileId: activeProfileId, userId, isLoading: profileLoading } = useActiveProfile();
