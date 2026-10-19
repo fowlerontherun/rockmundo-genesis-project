@@ -18,6 +18,10 @@ describe('share portrait outfit parity with live stage performers', () => {
     expect(source).toContain('requiredCuratedDonorModelFiles(clothing,frame)');
     expect(source).toContain('requiredCuratedGarmentFiles(clothing,frame)');
     expect(source).toContain('await loadOptionalCuratedGarments(library,curatedFiles)');
+    // When a published garment is unavailable, the editor must show Retry,
+    // never silently export a character wearing different clothing.
+    expect(source).toContain('if (curatedFiles.some(file=>!library!.has(file)))');
+    expect(source).toContain('Equipped curated clothing could not load.');
     const garmentsReady = source.indexOf('await loadOptionalCuratedGarments(library,curatedFiles)');
     const actorConstructed = source.indexOf('actor=new Musician(');
     expect(garmentsReady).toBeGreaterThan(-1);
