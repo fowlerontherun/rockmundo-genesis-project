@@ -43,7 +43,7 @@ export function ShareMomentSheet({moment,open,onOpenChange,avatarStatus,onAvatar
   void loadCaptureImage(embedded).then(avatar=>{if(!cancelled){avatarRef.current=avatar;setDecodedAvatarUrl(embedded.dataUrl);setAvatarVersion(v=>v+1)}}).catch(()=>{if(!cancelled){setAvatarDecodeFailed(true);setAvatarVersion(v=>v+1)}});
   return()=>{cancelled=true};
  },[sheetOpen,moment?.avatar?.dataUrl]);
- useEffect(()=>{let cancelled=false;artworkRef.current=null;setDecodedArtworkUrl(null);if(!sheetOpen||!moment?.artworkUrl){setAvatarVersion(v=>v+1);return;}const image=new Image();image.crossOrigin="anonymous";image.onload=()=>{if(!cancelled){artworkRef.current=image;setDecodedArtworkUrl(image.src);setAvatarVersion(v=>v+1)}};image.onerror=()=>{if(!cancelled)setAvatarVersion(v=>v+1)};image.src=moment.artworkUrl;return()=>{cancelled=true};},[sheetOpen,moment?.artworkUrl]);
+ useEffect(()=>{let cancelled=false;artworkRef.current=null;setDecodedArtworkUrl(null);if(!sheetOpen||!moment?.artworkUrl){setAvatarVersion(v=>v+1);return;}const image=new Image();image.crossOrigin="anonymous";image.onload=()=>{if(!cancelled){artworkRef.current=image;setDecodedArtworkUrl(moment.artworkUrl);setAvatarVersion(v=>v+1)}};image.onerror=()=>{if(!cancelled)setAvatarVersion(v=>v+1)};image.src=moment.artworkUrl;return()=>{cancelled=true};},[sheetOpen,moment?.artworkUrl]);
  useEffect(()=>{let cancelled=false;const image=new Image();image.onload=()=>{if(!cancelled){logoRef.current=image;setAvatarVersion(v=>v+1)}};image.onerror=()=>{if(!cancelled)setAvatarVersion(v=>v+1)};image.src=rockmundoLogo;return()=>{cancelled=true};},[]);
  // Bind decoded media to the selected card. React effects may lag a card
  // switch, so never re-use the previous card's image for the next preview.
