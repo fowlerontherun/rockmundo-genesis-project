@@ -1,17 +1,18 @@
 import { supabase } from '@/integrations/supabase/client';
 
 const OFFER_COOLDOWN_KEY = 'modeling_offer_cooldown';
+const cooldownKey = (profileId: string) => `${OFFER_COOLDOWN_KEY}:${profileId}`;
 const COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
 
 /** Check if cooldown has expired */
-export function isOfferCooldownExpired(): boolean {
-  const last = sessionStorage.getItem(OFFER_COOLDOWN_KEY);
+export function isOfferCooldownExpired(profileId: string): boolean {
+  const last = sessionStorage.getItem(cooldownKey(profileId));
   if (!last) return true;
   return Date.now() - parseInt(last, 10) > COOLDOWN_MS;
 }
 
-function setCooldown() {
-  sessionStorage.setItem(OFFER_COOLDOWN_KEY, Date.now().toString());
+function setCooldown(profileId: string) {
+  sessionStorage.setItem(cooldownKey(profileId), Date.now().toString());
 }
 
 const OFFER_REASONS = [
@@ -43,18 +44,20 @@ const GIG_TYPE_SKILL_REQUIREMENTS: Record<string, { slug: string; minValue: numb
  */
 export async function generateModelingOffersForUser(
   userId: string,
+  profileId: string,
   looks: number,
   fame: number,
   skillLevels: Record<string, number> = {},
 ): Promise<number> {
   // Don't generate if cooldown hasn't expired
-  if (!isOfferCooldownExpired()) return 0;
+  if (!isOfferCooldownExpired(profileId)) return 0;
 
   // Check existing pending offers
   const { data: pending } = await supabase
     .from('player_modeling_contracts')
     .select('id')
     .eq('user_id', userId)
+    .eq('profile_id', profileId)
     .eq('status', 'pending')
     .gt('expires_at', new Date().toISOString());
 
@@ -70,7 +73,7 @@ export async function generateModelingOffersForUser(
     .limit(20);
 
   if (!gigs || gigs.length === 0) {
-    setCooldown();
+    setCooldown(profileId);
     return 0;
   }
 
@@ -82,7 +85,7 @@ export async function generateModelingOffersForUser(
   });
 
   if (qualifiedGigs.length === 0) {
-    setCooldown();
+    setCooldown(profileId);
     return 0;
   }
 
@@ -105,6 +108,7 @@ export async function generateModelingOffersForUser(
 
     return {
       user_id: userId,
+      profile_id: profileId,
       gig_id: gig.id,
       status: 'pending',
       gig_type: gig.gig_type,
@@ -122,7 +126,7 @@ export async function generateModelingOffersForUser(
     return 0;
   }
 
-  setCooldown();
+  setCooldown(profileId);
   return offers.length;
 }
 
