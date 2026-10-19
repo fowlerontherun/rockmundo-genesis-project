@@ -75,7 +75,7 @@ export function buildDjClubStageOptions(
       richClothing: model?.richClothing?.[profileId] ?? [],
       tattoos: model?.tattoos?.[profileId] ?? [],
       instrumentSkin: model?.instrumentSkins?.[profileId]?.find(
-        (visual) => visual.instrument_id === "turntablism",
+        (visual) => visual.instrumentId === "turntablism",
       ) ?? null,
       merchWearable: model?.merchWearables?.[profileId] ?? null,
       phase: 0,
@@ -91,6 +91,7 @@ export function buildDjClubStageFrame(
   capacity: number | null | undefined,
   nowMs: number,
   reducedMotion = false,
+  performerPosition: [number, number, number] = [0, 0, 0],
 ): ConcertFrame {
   const start = Date.parse(booking.starts_at);
   const end = Date.parse(booking.ends_at);
@@ -126,7 +127,7 @@ export function buildDjClubStageFrame(
     effect: null,
     performers: [{
       id: profileId,
-      position: [0, 0, 0], // replaced with the actual rig's stage position by the caller
+      position: performerPosition,
       visible: isLive,
       walking: false,
       action: isLive ? "dj_mix" : null,
