@@ -125,6 +125,7 @@ export function buildDjClubStageOptions(
   return {
     venue,
     externalClock: false,
+    djClub: true,
     performers: [{
       id: profileId,
       displayName: "DJ",
