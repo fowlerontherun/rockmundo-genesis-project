@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Music, TrendingUp, DollarSign, Trash2, Play, Pause, Flame, Star, RotateCcw, ChevronDown, ChevronsDownUp, ChevronsUpDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
+import { AvatarShareStudio } from "@/features/shareable-moments/CharacterShareStudio";
 import type { ShareMoment } from "@/features/shareable-moments/types";
 import { shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
 import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
@@ -289,7 +289,7 @@ export const StreamingMyReleasesTab = ({ userId, profileId }: StreamingMyRelease
 
   return (
     <>
-      <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(open) => { if (!open) setShareMoment(null); }} />
+      {shareMoment && <AvatarShareStudio moment={shareMoment} open={true} onOpenChange={(open) => { if (!open) setShareMoment(null); }} />}
       <div className="flex items-center justify-between mb-2">
         <p className="text-sm text-muted-foreground">
           {songEntries.length} song{songEntries.length !== 1 ? "s" : ""} on streaming
