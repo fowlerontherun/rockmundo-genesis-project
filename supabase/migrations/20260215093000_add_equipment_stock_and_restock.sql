@@ -80,7 +80,8 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION public.purchase_equipment_item IS 'Handles purchasing equipment with stock tracking and activity logging.';
+-- Exact function identity is mandatory: later migrations add an overloaded 4-argument variant.
+COMMENT ON FUNCTION public.purchase_equipment_item(uuid) IS 'Handles purchasing equipment with stock tracking and activity logging.';
 
 -- Function to restock equipment items
 CREATE OR REPLACE FUNCTION public.restock_equipment_items(restock_amount integer DEFAULT 5)
