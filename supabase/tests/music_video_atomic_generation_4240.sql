@@ -139,7 +139,7 @@ SELECT public.expire_stale_music_video_preparations() result;
 
 SELECT
  (SELECT count(*)=1 FROM video_test_player) fixture_selected,
- (SELECT result->>'video_id'=r.result->>'video_id' FROM video_first f
+ (SELECT f.result->>'video_id'=r.result->>'video_id' FROM video_first f
    CROSS JOIN video_reserve_replay r) reservation_reuses_video,
  (SELECT result->>'already_reserved'='true' FROM video_reserve_replay) reservation_idempotent,
  (SELECT result->>'claimed'='true' FROM video_claim) generation_claimed_once,
