@@ -22,10 +22,15 @@ begin
   where deleted_at is null and user_id is distinct from seller_uid limit 1;
  if seller_uid is null or buyer_uid is null then
    raise exception 'marketplace_fixture_requires_two_accounts'; end if;
+ -- The game enforces only one active character per account. Deactivate
+ -- the existing selected accounts only inside this rollback-only transaction;
+ -- the subsequent test fixtures become their sole active characters.
+ update public.profiles set is_active=false
+   where user_id in (seller_uid,buyer_uid) and is_active is true;
  insert into public.profiles(id,user_id,username,cash,is_active)
  values (seller_profile,seller_uid,'test4229s'||left(replace(seller_profile::text,'-',''),20),100,true),
         (buyer_profile,buyer_uid,'test4229b'||left(replace(buyer_profile::text,'-',''),20),1000,true),
-        (other_buyer_profile,buyer_uid,'test4229x'||left(replace(other_buyer_profile::text,'-',''),20),555,true);
+        (other_buyer_profile,buyer_uid,'test4229x'||left(replace(other_buyer_profile::text,'-',''),20),555,false);
  insert into public.songs (id,user_id,profile_id,title,genre,status)
  values (song_one,seller_uid,seller_profile,'Test 4229 fixed','Rock','draft'),
         (song_two,seller_uid,seller_profile,'Test 4229 auction','Rock','draft');
