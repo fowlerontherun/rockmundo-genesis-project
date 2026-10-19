@@ -152,7 +152,7 @@ export const ROLE_SKILL_MAP: Record<string, string[]> = {
   ]
 };
 
-const SPECIALIST_ROLE_TO_ID = new Map(
+const SPECIALIST_ROLE_TO_ID = new Map<string, string>(
   Object.entries(STAGE_INSTRUMENTS)
     .filter(([, instrument]) => instrument.role !== "vocals")
     .map(([id, instrument]) => [instrument.label.toLowerCase(), id]),
