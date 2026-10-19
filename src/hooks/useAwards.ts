@@ -482,39 +482,28 @@ export const useAwards = (userId?: string, bandId?: string) => {
     }) => {
       if (!userId) throw new Error("User not authenticated");
 
-      // Calculate fame gain based on outfit choice
-      const fameGain = attendance.outfit_choice === "designer" ? 50 : 
-                       attendance.outfit_choice === "custom" ? 75 : 25;
-
-      const { data, error } = await (supabase as any)
-        .from("award_red_carpet_events")
-        .insert({
-          award_show_id: attendance.award_show_id,
-          participant_id: userId,
-          participant_type: attendance.participant_type,
-          outfit_choice: attendance.outfit_choice,
-          fame_gain: fameGain,
-          media_interactions: Math.floor(Math.random() * 10) + 5,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Update user fame (skip if function doesn't exist yet)
-      try {
-        await (supabase as any).rpc("increment_user_fame", {
-          p_user_id: userId,
-          p_amount: fameGain,
-        });
-      } catch (e) {
-        console.warn("Fame increment function not available");
+      if (!userId || attendance.participant_type !== "user") {
+        throw new Error("Choose your active character to attend the red carpet");
       }
 
+      // The server verifies the active character, live ceremony, outfit,
+      // once-per-show limit and derives the fame award. Never pass a
+      // client-calculated fame amount to a privileged helper RPC.
+      const { data, error } = await (supabase as any).rpc(
+        "attend_award_red_carpet_atomic",
+        {
+          p_profile_id: userId,
+          p_award_show_id: attendance.award_show_id,
+          p_outfit_choice: attendance.outfit_choice,
+        },
+      );
+      if (error) throw error;
+      if (!data?.id) throw new Error("Red carpet attendance was not confirmed");
       return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["award-red-carpet"] });
+      queryClient.invalidateQueries({ queryKey: ["game-data"] });
       toast.success(`Red carpet appearance complete! +${data.fame_gain} fame`);
     },
     onError: (error: any) => {
