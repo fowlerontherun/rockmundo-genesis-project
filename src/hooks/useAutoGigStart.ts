@@ -1,44 +1,27 @@
 import { useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 
 /**
- * Periodically asks the server-side auto-start job to advance eligible gigs.
- * The underlying RPC is service-role only, so browser clients must invoke the
- * edge function rather than calling auto_start_scheduled_gigs directly.
+ * Gig start is now exclusively owned by PostgreSQL pg_cron and the
+ * service-only run_auto_start_gigs_scheduled() worker. The browser should
+ * refresh cached gig state, not invoke the global economy/lifecycle job.
  */
 export const useAutoGigStart = () => {
+  const queryClient = useQueryClient();
+
   useEffect(() => {
-    let disposed = false;
-
-    const checkGigs = async () => {
-      if (disposed) return;
-
-      try {
-        const { error } = await supabase.functions.invoke('auto-start-gigs', {
-          body: { triggeredBy: 'gig-page' },
-        });
-
-        if (error) {
-          console.warn('Unable to run auto-start gig check:', error);
-        }
-      } catch (error) {
-        console.warn('Unable to run auto-start gig check:', error);
-      }
+    const refreshGigs = () => {
+      void queryClient.invalidateQueries({ queryKey: ['gigs'] });
+      void queryClient.invalidateQueries({ queryKey: ['upcoming-gigs'] });
+      void queryClient.invalidateQueries({ queryKey: ['gig'] });
     };
 
-    // Do not compete with the page's initial band/gig reads on mount.
-    const initialTimeout = window.setTimeout(() => {
-      void checkGigs();
-    }, 5000);
-
-    const interval = window.setInterval(() => {
-      void checkGigs();
-    }, 60000);
-
+    // Let the initial queries load naturally, then observe cron changes.
+    const initialTimeout = window.setTimeout(refreshGigs, 5000);
+    const interval = window.setInterval(refreshGigs, 60000);
     return () => {
-      disposed = true;
       window.clearTimeout(initialTimeout);
       window.clearInterval(interval);
     };
-  }, []);
+  }, [queryClient]);
 };
