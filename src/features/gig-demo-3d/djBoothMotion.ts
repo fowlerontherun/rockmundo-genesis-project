@@ -1,4 +1,6 @@
 /** Presentation-only DJ arm poses. Never changes audio, beat grid or game scoring. */
+export const DJ_BOOTH_CUE_WINDOW_MS = 8000;
+
 export type DjBoothAction =
   | "dj_cue_a" | "dj_cue_b"
   | "dj_tempo_a" | "dj_tempo_b"
@@ -12,7 +14,7 @@ export type DjBoothGripTargets = {
 
 /**
  * Fixed station targets in the shared turntablism rig's local space.
- * A bounded 2-second pulse follows each *server-recorded* mixer event.
+ * A bounded eight-second pulse follows each *server-recorded* mixer event.
  * Deterministic from action/progress, so seeking backwards reconstructs it.
  */
 export function djBoothGripTargets(
