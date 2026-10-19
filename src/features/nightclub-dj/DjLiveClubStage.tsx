@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ConcertScene } from "@/features/gig-demo-3d/ConcertScene";
 import { DEFAULT_SETTINGS, type CameraShot, type DemoSettings } from "@/features/gig-demo-3d/config";
 import { useGigPlayerModels } from "@/features/player-model/usePlayerModel";
+import { djStageEvidencePageSize, djStageEvidenceQueryKey } from "./djStageEvidenceQuery";
 import {
   buildDjClubStageOptions, buildDjClubStageFrame, djStageOccupancy,
   djReplayDurationMs, djReplayEventsThrough, hasVerifiedDjReplay, djMixerActivityLabel,
@@ -64,7 +65,7 @@ export function DjLiveClubStage({
   });
 
   const mixer = useQuery<DjStageMixEvent[]>({
-    queryKey: ["dj-stage-mix-evidence", profileId, bookingId, mode],
+    queryKey: djStageEvidenceQueryKey(profileId, bookingId, mode),
     enabled: booking.data?.club_id === clubId &&
       (mode === "replay" ? booking.data?.status === "completed" : booking.data?.status === "live"),
     queryFn: async () => {
@@ -73,7 +74,7 @@ export function DjLiveClubStage({
       const { data, error } = await (supabase as any).from("dj_live_mix_events")
         .select("event_no,kind,deck,recorded_at").eq("booking_id", bookingId)
         .eq("profile_id", profileId)
-        .order("event_no", { ascending: mode === "replay" }).limit(mode === "replay" ? 120 : 24);
+        .order("event_no", { ascending: mode === "replay" }).limit(djStageEvidencePageSize(mode));
       if (error) throw error;
       return (data ?? []) as DjStageMixEvent[];
     },
