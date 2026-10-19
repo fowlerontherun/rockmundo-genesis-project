@@ -2,6 +2,7 @@
 set -euo pipefail
 if ! command -v supabase >/dev/null; then echo "Supabase CLI is required for the Phase 5 DB gate" >&2; exit 127; fi
 if ! command -v psql >/dev/null; then echo "psql is required for the Phase 5 DB gate" >&2; exit 127; fi
+node --test scripts/supabase/skills-seed-migration.contract.test.mjs
 supabase start
 supabase db reset
 supabase migration list
