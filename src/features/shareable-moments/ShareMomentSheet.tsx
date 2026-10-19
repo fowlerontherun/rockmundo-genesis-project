@@ -21,7 +21,7 @@ export function ShareMomentSheet({moment,open,onOpenChange,avatarStatus,onAvatar
  const [promptAccepted,setPromptAccepted]=useState(false);
  const promptOnly=Boolean(moment?.promptOnly);
  const sheetOpen=open&&(!promptOnly||promptAccepted);
- const canvasRef=useRef<HTMLCanvasElement|null>(null); const avatarRef=useRef<CanvasImageSource|null>(null); const artworkRef=useRef<CanvasImageSource|null>(null); const logoRef=useRef<CanvasImageSource|null>(null); const [format,setFormat]=useState<ShareFormat>("square"); const [done,setDone]=useState<string|null>(null); const [busy,setBusy]=useState<string|null>(null); const [status,setStatus]=useState(""); const [avatarVersion,setAvatarVersion]=useState(0); const [avatarDecodeFailed,setAvatarDecodeFailed]=useState(false); const [draft,setDraft]=useState<ShareMoment|null>(moment);
+ const canvasRef=useRef<HTMLCanvasElement|null>(null); const avatarRef=useRef<CanvasImageSource|null>(null); const artworkRef=useRef<CanvasImageSource|null>(null); const logoRef=useRef<CanvasImageSource|null>(null); const [format,setFormat]=useState<ShareFormat>("square"); const [done,setDone]=useState<string|null>(null); const [busy,setBusy]=useState<string|null>(null); const [status,setStatus]=useState(""); const [avatarVersion,setAvatarVersion]=useState(0); const [avatarDecodeFailed,setAvatarDecodeFailed]=useState(false); const [decodedAvatarUrl,setDecodedAvatarUrl]=useState<string|null>(null); const [draft,setDraft]=useState<ShareMoment|null>(moment);
  const momentKey = moment ? `${moment.type}:${moment.id ?? moment.createdAt}` : '';
  useEffect(()=>{if(open&&moment){setDraft(previous => {
    // Avatar capture arrives after the sheet opens. Do not reset a player's
@@ -38,11 +38,10 @@ export function ShareMomentSheet({moment,open,onOpenChange,avatarStatus,onAvatar
      trackShareAnalyticsEvent("share_prompt_viewed",{momentType:moment.type,channel:"prompt"});
    }
  },[open,promptOnly,moment?.id]);
- useEffect(()=>{let cancelled=false;avatarRef.current=null;setAvatarDecodeFailed(false);if(!sheetOpen||!moment)return;const embedded=(moment as CharacterProfileShareMoment).avatar;
-  if(!embedded){setAvatarVersion(v=>v+1);return;}
-  void loadCaptureImage(embedded).then(avatar=>{if(!cancelled){avatarRef.current=avatar;setAvatarVersion(v=>v+1)}}).catch(()=>{if(!cancelled){setAvatarDecodeFailed(true);setAvatarVersion(v=>v+1)}});
+ useEffect(()=>{let cancelled=false;avatarRef.current=null;setDecodedAvatarUrl(null);setAvatarDecodeFailed(false);if(!sheetOpen||!moment?.avatar)return;const embedded=moment.avatar;
+  void loadCaptureImage(embedded).then(avatar=>{if(!cancelled){avatarRef.current=avatar;setDecodedAvatarUrl(embedded.dataUrl);setAvatarVersion(v=>v+1)}}).catch(()=>{if(!cancelled){setAvatarDecodeFailed(true);setAvatarVersion(v=>v+1)}});
   return()=>{cancelled=true};
- },[sheetOpen,moment]);
+ },[sheetOpen,moment?.avatar?.dataUrl]);
  useEffect(()=>{let cancelled=false;artworkRef.current=null;if(!sheetOpen||!moment?.artworkUrl){setAvatarVersion(v=>v+1);return;}const image=new Image();image.crossOrigin="anonymous";image.onload=()=>{if(!cancelled){artworkRef.current=image;setAvatarVersion(v=>v+1)}};image.onerror=()=>{if(!cancelled)setAvatarVersion(v=>v+1)};image.src=moment.artworkUrl;return()=>{cancelled=true};},[sheetOpen,moment?.artworkUrl]);
  useEffect(()=>{let cancelled=false;const image=new Image();image.onload=()=>{if(!cancelled){logoRef.current=image;setAvatarVersion(v=>v+1)}};image.onerror=()=>{if(!cancelled)setAvatarVersion(v=>v+1)};image.src=rockmundoLogo;return()=>{cancelled=true};},[]);
  useEffect(()=>{if(sheetOpen&&draft&&canvasRef.current){renderShareMoment(canvasRef.current,draft,format,avatarRef.current,artworkRef.current,logoRef.current);trackShareAnalyticsEvent("share_rendered",{momentType:draft.type,format,template:draft.referralTemplate||draft.visualTheme||null,channel:"render"});}},[sheetOpen,draft,format,avatarVersion]);
@@ -96,7 +95,11 @@ export function ShareMomentSheet({moment,open,onOpenChange,avatarStatus,onAvatar
  const applyReferralPreset=(preset:"short-video"|"feed"|"community")=>{if(preset==="short-video"){setFormat("story");setDraft({...draft,headline:"Start your music career",subheadline:"Create your character. Form a band. Play the world.",callToAction:"Join me on RockMundo",referralTemplate:"creator",visualTheme:"neon",visualLayout:"hero",referralCreative:"short_video"});}else if(preset==="feed"){setFormat("landscape");setDraft({...draft,headline:"Build your music career on RockMundo",subheadline:"Write songs, form a band, play gigs and grow your fame.",callToAction:"Start your career",referralTemplate:"world-tour",visualTheme:"spotlight",visualLayout:"right",referralCreative:"feed"});}else{setFormat("square");setDraft({...draft,headline:"Join our RockMundo community",subheadline:"Create a musician, meet players and build a band together.",callToAction:"Join the community",referralTemplate:"backstage",visualTheme:"moment",visualLayout:"right",referralCreative:"community"});}};
  const duplicateVariant=()=>{const variants=[{headline:"Think you can make it in music?",subheadline:"Start from nothing, build your skills and take your band around the world.",callToAction:"Prove it on RockMundo"},{headline:"Your music career starts here",subheadline:"Create your character, write songs, recruit a band and chase the charts.",callToAction:"Start playing"},{headline:"Form a band. Build a legacy.",subheadline:"Join RockMundo and turn your character into a global music star.",callToAction:"Join RockMundo"}];const current=variants.findIndex(v=>v.headline===draft.headline);const nextIndex=(current+1)%variants.length;const next=variants[nextIndex];const base=(draft.referralCreative||"custom").replace(/_hook[1-3]$/,"");setDraft({...draft,...next,referralCreative:`${base}_hook${nextIndex+1}`});toast({title:"Creative variant generated",description:"Attribution stays on the same referral campaign."});};
  const avatarCapable=["character_profile","gig_result","achievement","tour"].includes(draft.type);
- const avatarPreparing=avatarStatus==='loading'||(avatarStatus==='ready'&&!!moment.avatar&&!avatarRef.current&&!avatarDecodeFailed);
+ // Even a historical snapshot opened through the generic sheet must finish
+ // decoding before its avatar can be included in any exported image.
+ // Compare the decoded URL to the current card so fast gallery switches
+ // cannot accidentally export the previous character's portrait.
+ const avatarPreparing=avatarStatus==='loading'||(!!moment.avatar&&(decodedAvatarUrl!==moment.avatar.dataUrl||!avatarRef.current)&&!avatarDecodeFailed);
  const avatarFailed=avatarStatus==='unavailable'||avatarDecodeFailed;
  // An avatar-aware share must never produce a characterless image when
  // capture or decoding fails. Text links remain shareable independently.
