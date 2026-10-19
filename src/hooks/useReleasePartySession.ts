@@ -50,6 +50,8 @@ export const useReleasePartySession = (
   const [loading, setLoading] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const finishPendingRef = useRef(false);
+  const activeReleaseRef = useRef(releaseId);
+  activeReleaseRef.current = releaseId;
 
   const startParty = useCallback(async () => {
     if (!releaseId) return;
@@ -183,7 +185,7 @@ export const useReleasePartySession = (
 
       // If the selected release changed while awaiting the server, do not
       // attribute the completed reward to the new release's UI state.
-      if (releaseId !== requestReleaseId) return false;
+      if (activeReleaseRef.current !== requestReleaseId) return false;
 
       setHypeAwarded(result.hype_awarded);
       await queryClient.invalidateQueries({ queryKey: ["releases"] });
@@ -205,7 +207,6 @@ export const useReleasePartySession = (
 
   const reset = useCallback(() => {
     setPhase("intro");
-    finishPendingRef.current = false;
     setQuestions([]);
     setCurrentIndex(0);
     setAnswers([]);
