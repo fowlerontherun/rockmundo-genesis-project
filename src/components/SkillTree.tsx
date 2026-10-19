@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
+import { AvatarShareStudio } from "@/features/shareable-moments/CharacterShareStudio";
 import type { ShareMoment } from "@/features/shareable-moments/types";
 import { shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
 import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
@@ -796,7 +796,7 @@ export const SkillTree: React.FC<SkillTreeProps> = ({
         )}
       </ScrollArea>
 
-      <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(open) => { if (!open) setShareMoment(null); }} />
+      {shareMoment && <AvatarShareStudio moment={shareMoment} open={true} onOpenChange={(open) => { if (!open) setShareMoment(null); }} />}
 
       {/* Skills Not Started Section */}
       {filterMode !== "unlearned" &&
