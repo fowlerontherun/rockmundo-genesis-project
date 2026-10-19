@@ -49,6 +49,7 @@ export const useReleasePartySession = (
   const [hypeAwarded, setHypeAwarded] = useState(0);
   const [loading, setLoading] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const finishPendingRef = useRef(false);
 
   const startParty = useCallback(async () => {
     if (!releaseId) return;
@@ -153,48 +154,58 @@ export const useReleasePartySession = (
     };
   };
 
-  const finishParty = useCallback(async () => {
-    if (!releaseId || !totalEffects || !userId) return;
+  const finishParty = useCallback(async (): Promise<boolean> => {
+    if (!releaseId || !totalEffects || !userId || answers.length !== 5 ||
+      finishPendingRef.current) return false;
+
+    const requestReleaseId = releaseId;
+    finishPendingRef.current = true;
     setLoading(true);
-
     try {
-      // Save party results
-      await (supabase.from("release_party_results" as any) as any).insert({
-        release_id: releaseId,
-        user_id: userId,
-        band_id: bandId,
-        questions: answers,
-        total_effects: totalEffects,
-        hype_awarded: hypeAwarded,
-      });
+      // The RPC validates owner/active band membership and derives ALL effects
+      // from trusted question records. Its transaction atomically writes the
+      // one-per-release result and updates hype_score, or rolls back both.
+      const { data, error } = await supabase.rpc(
+        "settle_release_party_atomic" as any,
+        { p_release_id: releaseId, p_answers: answers } as any,
+      );
 
-      // Update release hype_score
-      const { data: release } = await supabase
-        .from("releases")
-        .select("hype_score")
-        .eq("id", releaseId)
-        .single();
+      if (error) throw error;
+      const result = data as unknown as {
+        success?: boolean;
+        already_completed?: boolean;
+        hype_awarded?: number;
+        hype_score?: number;
+      } | null;
+      if (result?.success !== true || typeof result.hype_awarded !== "number") {
+        throw new Error("Release party settlement could not be confirmed.");
+      }
 
-      const currentHype = (release as any)?.hype_score || 0;
-      const newHype = Math.min(1000, currentHype + hypeAwarded);
+      // If the selected release changed while awaiting the server, do not
+      // attribute the completed reward to the new release's UI state.
+      if (releaseId !== requestReleaseId) return false;
 
-      await supabase
-        .from("releases")
-        .update({ hype_score: newHype, release_party_done: true } as any)
-        .eq("id", releaseId);
-
-      queryClient.invalidateQueries({ queryKey: ["releases"] });
-      toast.success(`Release party added ${hypeAwarded} hype!`);
+      setHypeAwarded(result.hype_awarded);
+      await queryClient.invalidateQueries({ queryKey: ["releases"] });
+      toast.success(result.already_completed
+        ? "This release party was already completed; no additional hype was awarded."
+        : `Release party added ${result.hype_awarded} hype!`);
+      return true;
     } catch (err) {
       console.error("Error finishing party:", err);
-      toast.error("Failed to save party results");
+      toast.error(err instanceof Error
+        ? `Failed to save party results: ${err.message}`
+        : "Failed to save party results. Please retry.");
+      return false;
+    } finally {
+      finishPendingRef.current = false;
+      setLoading(false);
     }
-
-    setLoading(false);
-  }, [releaseId, totalEffects, userId, bandId, answers, hypeAwarded, queryClient]);
+  }, [releaseId, totalEffects, userId, answers, queryClient]);
 
   const reset = useCallback(() => {
     setPhase("intro");
+    finishPendingRef.current = false;
     setQuestions([]);
     setCurrentIndex(0);
     setAnswers([]);
