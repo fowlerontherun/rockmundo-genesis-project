@@ -6,182 +6,69 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const json = (payload: unknown, status: number) =>
+  new Response(JSON.stringify(payload), {
+    status, headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+
+/**
+ * Internal scheduler-only adapter. The service-role JWT is never supplied by
+ * players; all game state changes now happen inside the single locked RPC.
+ */
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+
+  // Authenticate before initializing a privileged client or reading an ID.
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const authorization = req.headers.get("authorization") ?? "";
+  if (!serviceKey || authorization !== `Bearer ${serviceKey}`) {
+    return json({ error: "Scheduler authorization required" }, 403);
   }
 
+  let activityId: unknown;
   try {
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
-
-    const { activityId } = await req.json();
-
-    if (!activityId) {
-      return new Response(
-        JSON.stringify({ error: "activityId is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Fetch the activity
-    const { data: activity, error: activityError } = await supabaseClient
-      .from("self_promotion_activities")
-      .select("*, bands:band_id(id, fame, total_fans)")
-      .eq("id", activityId)
-      .single();
-
-    if (activityError || !activity) {
-      return new Response(
-        JSON.stringify({ error: "Activity not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (activity.status === "completed") {
-      return new Response(
-        JSON.stringify({ error: "Activity already completed" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Check if activity should be completed (scheduled_end has passed)
-    const now = new Date();
-    const scheduledEnd = new Date(activity.scheduled_end);
-    
-    if (now < scheduledEnd) {
-      return new Response(
-        JSON.stringify({ error: "Activity not yet finished", finishesAt: activity.scheduled_end }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Fetch the catalog entry for this activity type
-    const { data: catalogEntry, error: catalogError } = await supabaseClient
-      .from("self_promotion_catalog")
-      .select("*")
-      .eq("activity_type", activity.activity_type)
-      .single();
-
-    if (catalogError || !catalogEntry) {
-      return new Response(
-        JSON.stringify({ error: "Activity type not found in catalog" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Calculate rewards based on band fame (higher fame = slightly better results)
-    const bandFame = activity.bands?.fame || 0;
-    const fameMultiplier = 1 + Math.min(bandFame / 1000, 0.5); // Max 50% bonus
-    
-    // === MORALE → SELF-PROMOTION EFFECTIVENESS (v1.0.985) ===
-    let promoMoraleMod = 1.0;
-    try {
-      const { data: bMorale } = await supabaseClient.from('bands').select('morale').eq('id', activity.band_id).single();
-      const mVal = (bMorale as any)?.morale ?? 50;
-      promoMoraleMod = parseFloat((0.7 + (Math.max(0, Math.min(100, mVal)) / 100) * 0.6).toFixed(2));
-    } catch (_e) { /* non-critical */ }
-    
-    const fameGained = Math.floor(
-      (Math.random() * (catalogEntry.base_fame_max - catalogEntry.base_fame_min) + catalogEntry.base_fame_min) * fameMultiplier * promoMoraleMod
-    );
-    
-    const fansGained = Math.floor(
-      (Math.random() * (catalogEntry.base_fan_max - catalogEntry.base_fan_min) + catalogEntry.base_fan_min) * fameMultiplier * promoMoraleMod
-    );
-
-    // Update the activity with results
-    const { error: updateActivityError } = await supabaseClient
-      .from("self_promotion_activities")
-      .update({
-        status: "completed",
-        fame_gained: fameGained,
-        fans_gained: fansGained,
-      })
-      .eq("id", activityId);
-
-    if (updateActivityError) {
-      console.error("Failed to update activity:", updateActivityError);
-      return new Response(
-        JSON.stringify({ error: "Failed to update activity" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Update band's fame, fans, and morale
-    const { data: currentBand } = await supabaseClient
-      .from("bands")
-      .select("fame, total_fans, morale")
-      .eq("id", activity.band_id)
-      .single();
-
-    if (currentBand) {
-      // === SELF-PROMOTION → MORALE (v1.0.979) ===
-      const curMorale = (currentBand as any).morale ?? 50;
-      const moraleBoost = fansGained >= 50 ? 3 : fansGained >= 20 ? 2 : 1;
-
-      const { error: updateBandError } = await supabaseClient
-        .from("bands")
-        .update({
-          fame: (currentBand.fame || 0) + fameGained,
-          total_fans: (currentBand.total_fans || 0) + fansGained,
-          morale: Math.min(100, curMorale + moraleBoost),
-        } as any)
-        .eq("id", activity.band_id);
-
-      if (updateBandError) {
-        console.error("Failed to update band:", updateBandError);
-      } else {
-        console.log(`Self-promotion morale: +${fansGained} fans → morale +${moraleBoost}`);
-      }
-    }
-
-    // Record fame event
-    await supabaseClient.from("band_fame_events").insert({
-      band_id: activity.band_id,
-      event_type: "self_promotion",
-      fame_gained: fameGained,
-      event_data: {
-        activity_type: activity.activity_type,
-        activity_name: catalogEntry.name,
-        fans_gained: fansGained,
-      },
-    });
-
-    // Set cooldown for this activity type
-    const cooldownExpires = new Date();
-    cooldownExpires.setDate(cooldownExpires.getDate() + catalogEntry.cooldown_days);
-
-    await supabaseClient
-      .from("self_promotion_cooldowns")
-      .upsert({
-        band_id: activity.band_id,
-        activity_type: activity.activity_type,
-        cooldown_expires_at: cooldownExpires.toISOString(),
-      }, { onConflict: "band_id,activity_type" });
-
-    const newFame = (currentBand?.fame || 0) + fameGained;
-    const newFans = (currentBand?.total_fans || 0) + fansGained;
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        activityId,
-        fameGained,
-        fansGained,
-        newTotalFame: newFame,
-        newTotalFans: newFans,
-        cooldownExpiresAt: cooldownExpires.toISOString(),
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (error) {
-    console.error("Error processing self-promotion:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    const input = await req.json();
+    activityId = input?.activityId;
+  } catch {
+    return json({ error: "Invalid JSON" }, 400);
   }
+  if (typeof activityId !== "string" ||
+      !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(activityId)) {
+    return json({ error: "Valid activityId is required" }, 400);
+  }
+
+  const client = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    serviceKey,
+  );
+  const { data, error } = await client.rpc("settle_self_promotion_atomic", {
+    p_activity_id: activityId,
+  });
+  if (error) {
+    console.error("[process-self-promotion] Atomic settlement failed:", error.code);
+    return json({ error: "Promotion settlement could not be completed" }, 500);
+  }
+
+  const result = data as {
+    settled?: boolean;
+    reason?: string;
+    fame_gained?: number;
+    fans_gained?: number;
+    new_total_fame?: number;
+    new_total_fans?: number;
+    cooldown_expires_at?: string;
+  } | null;
+  if (result?.settled === true) {
+    return json({
+      success: true, activityId, fameGained: result.fame_gained,
+      fansGained: result.fans_gained, newTotalFame: result.new_total_fame,
+      newTotalFans: result.new_total_fans,
+      cooldownExpiresAt: result.cooldown_expires_at,
+    }, 200);
+  }
+  if (result?.reason === "already_completed") {
+    return json({ success: true, alreadyCompleted: true, activityId }, 200);
+  }
+  return json({ success: false, reason: result?.reason ?? "not_processed" }, 409);
 });
