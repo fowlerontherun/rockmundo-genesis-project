@@ -35,6 +35,10 @@ const CAMERAS = {
   side_pit: { position: [-3.5, 1.1, 2.7], target: [0, 1.85, -1.55], fov: 46 },
   side_stage: { position: [-4.1, 2.6, -2.65], target: [0, 1.75, -1.6], fov: 48 },
   crane: { position: [4.3, 6.8, 6.5], target: [0, 1.65, -1.75], fov: 52 },
+  dj_booth: { position: [.7, 2.1, 2.65], target: [0, 1.2, -1.65], fov: 38 },
+  dj_overhead: { position: [0, 5.5, .5], target: [0, 1.2, -1.65], fov: 53 },
+  dj_dancefloor: { position: [-2.5, 1.5, 5], target: [0, 1.3, -1.65], fov: 58 },
+  dj_reverse: { position: [-.7, 2.3, -3], target: [0, 1.3, 4.5], fov: 57 },
   tv_presenter_wide: { position: [-5.1, 2.8, 4.8], target: [-3.2, 1.75, -0.4], fov: 46 },
   tv_presenter_close: { position: [-4.25, 2.15, 2.05], target: [-3.2, 1.72, -0.45], fov: 34 },
   tv_crane: { position: [6.8, 6.6, 6.5], target: [0, 1.75, -1.2], fov: 50 },
@@ -323,6 +327,35 @@ export class ConcertScene {
       if (selected === 'stage') {
         this.cameraPos.set(-p.stageWidth * .32, p.stageHeight + 1.9, .65 - p.stageDepth * .85);
         this.targetPos.set(0, 1.5, Math.min(p.crowdDepth * .55, 20));
+      }
+      if (this.options?.djClub && (
+        selected === 'dj_booth' || selected === 'dj_overhead' ||
+        selected === 'dj_dancefloor' || selected === 'dj_reverse'
+      )) {
+        const dj = this.actors.find(actor => actor.role === 'dj' && actor.root.visible);
+        const booth = dj?.root.position.clone() ?? new T.Vector3(...stagePosition(p, .5, .43));
+        if (selected === 'dj_booth') {
+          this.targetPos.copy(booth).add(new T.Vector3(0, 1.03, .12));
+          this.cameraPos.copy(this.targetPos).add(new T.Vector3(
+            .8, .5, 2.4 / Math.max(.55, Math.min(1, this.camera.aspect)),
+          ));
+        } else if (selected === 'dj_overhead') {
+          this.targetPos.copy(booth).add(new T.Vector3(0, .9, .4));
+          this.cameraPos.set(
+            .2, Math.min(p.roofHeight - .4, Math.max(p.stageHeight + 3.1, p.rigHeight * .8)),
+            booth.z + 1.5,
+          );
+        } else if (selected === 'dj_dancefloor') {
+          this.targetPos.copy(booth).add(new T.Vector3(0, 1.27, .1));
+          const floorDistance = Math.min(7.5, Math.max(3.2, p.crowdDepth * .35));
+          this.cameraPos.set(-Math.min(2.1, p.stageWidth * .22), p.stageHeight + 1.15,
+            booth.z + floorDistance);
+        } else {
+          // Behind the booth toward the audience. Never present band members
+          // or generate attendance: all crowd meshes remain cosmetic.
+          this.cameraPos.copy(booth).add(new T.Vector3(-.45, 1.7, -.65));
+          this.targetPos.set(0, p.stageHeight + .6, Math.min(p.crowdDepth * .45, 10));
+        }
       }
       if (p.kind === 'tv_studio') {
         const sx = p.stageWidth / 12, sz = p.stageDepth / 7.2;
