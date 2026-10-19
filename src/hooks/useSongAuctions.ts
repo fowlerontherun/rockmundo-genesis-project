@@ -136,6 +136,8 @@ export const useSongAuctions = (userId?: string) => {
         .select("id, title, genre, quality_score, duration_display, status, market_listing_id, ownership_type, acquisition_source")
         .or(`profile_id.eq.${profileId ?? "00000000-0000-0000-0000-000000000000"},user_id.eq.${userId ?? "00000000-0000-0000-0000-000000000000"}`)
         .neq("ownership_type", "purchased")
+        // The authoritative sale RPC refuses songs assigned to a band.
+        .is("band_id", null)
         .eq("status", "draft")
         .neq("archived", true)
         .order("title");
