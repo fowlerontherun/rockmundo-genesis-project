@@ -7,6 +7,7 @@ The following migrations are applied to live Supabase project `yztogmdixmchsmimt
 - `20261019103858_dj_escrow_backed_session_and_exact_settlement_20261019`
 - `20261019104328_dj_verified_funded_booking_service_and_owner_cancel_20261019`
 - `20261019104733_dj_booked_escrow_retry_after_terminal_status_20261019`
+- `20261019105319_dj_verified_owned_club_require_escrow_reservation_20261019`
 
 There were no existing live DJ offers/bookings when these migrations were applied. Existing unowned DJ booking settlement logic continues to use its existing server-defined payment formula.
 
@@ -40,3 +41,9 @@ Both files are wired into `scripts/gigs/run-db-gate.sh`, with `psql -v ON_ERROR_
 
 ## Release conditions and remaining work
 **Keep the scheduled and funded owner booking release flags OFF until the wider CI/release gate succeeds**, including 3D/mixer audio, mobile Schedule display, real-world local-clock timing, production edge deployment, refresh/double-request tests and economy reconciliation at concurrency. This PR does not implement ongoing resident DJ contracts, recurring payroll, local fan outcomes or venue attendance modelling. Keep DJ epic #4264, scheduled DJ rollout #4246, financial/3D certification #4265 and historical club title reconciliation #4399 open.
+
+## Closing the ordinary-reservation owner-approval bypass
+
+The fifth production migration changes **`reserve_dj_booking_internal`** so a receipt-verified, player-owned nightclub **cannot be booked through the ordinary DJ reservation endpoint**. That endpoint now requires a trusted, transaction-local escrow conversion context referencing the *exact* accepted, fully-funded DJ offer and matching DJ, club, saved set, and proposed start. Only `confirm_accepted_nightclub_dj_offer_internal` sets that context during the validated reservation call and immediately restores the previous value. Public/anon/authenticated users cannot call that conversion function; only the separately dual-gated JWT-verified service route can invoke it. Ordinary bookings at nonverified/unowned clubs retain their previous behavior.
+
+The live rollback test now explicitly attempts ordinary DJ reservation at a receipt-verified club before any owner payment and requires rejection with SQLSTATE 42501, then confirms the same club via a real escrow-funded booking. This protects owner autonomy and prevents minting DJ rewards while leaving the owner's escrow to expire/refund.
