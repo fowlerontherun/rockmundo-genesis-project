@@ -203,14 +203,18 @@ export function useWithdrawBotbEntry() {
 
   return useMutation({
     mutationFn: async (entryId: string) => {
-      const { error } = await db.from("botb_entries").delete().eq("id", entryId);
-      if (error) throw error;
+      const { data, error } = await db.rpc("withdraw_battle_of_the_bands_entry", {
+        p_entry_id: entryId,
+      });
+      if (error) throw new Error(cleanError(error.message));
+      if (!data?.success) throw new Error("Could not withdraw this battle entry");
     },
     onSuccess: () => {
       toast({ title: "Withdrawn", description: "Your band has been removed from that battle." });
       queryClient.invalidateQueries({ queryKey: ["botb-upcoming"] });
       queryClient.invalidateQueries({ queryKey: ["botb-event-finance-preview"] });
       queryClient.invalidateQueries({ queryKey: ["botb-my-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["botb-eligibility"] });
     },
     onError: (error: Error) => {
       toast({ title: "Withdraw failed", description: error.message, variant: "destructive" });
@@ -225,6 +229,9 @@ function cleanError(message: string): string {
   if (message.includes("BOTB_SONG_NOT_OWNED")) return "Those songs don't belong to your band";
   if (message.includes("BOTB_INVALID_SONGS")) return "Pick two different songs";
   if (message.includes("BOTB_INVALID_PROFILE")) return "Select your active character before entering";
+  if (message.includes("BOTB_ENTRY_CLOSED") || message.includes("BOTB_EVENT_CLOSED")) return "This battle is no longer open for changes";
+  if (message.includes("BOTB_ENTRY_NOT_FOUND")) return "That battle entry no longer exists";
+  if (message.includes("BOTB_EVENT_NOT_FOUND")) return "That battle no longer exists";
   if (message.includes("BOTB_UNAUTHENTICATED")) return "You must be signed in";
   return message;
 }
