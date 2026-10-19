@@ -64,7 +64,7 @@ export function DjLiveClubStage({
   });
 
   const mixer = useQuery<DjStageMixEvent[]>({
-    queryKey: ["dj-stage-mix-evidence", profileId, bookingId],
+    queryKey: ["dj-stage-mix-evidence", profileId, bookingId, mode],
     enabled: booking.data?.club_id === clubId &&
       (mode === "replay" ? booking.data?.status === "completed" : booking.data?.status === "live"),
     queryFn: async () => {
@@ -77,8 +77,10 @@ export function DjLiveClubStage({
       if (error) throw error;
       return (data ?? []) as DjStageMixEvent[];
     },
-    refetchInterval: 5000,
-    refetchOnWindowFocus: true,
+    // Completed bookings cannot accept more actions. Keep the full replay
+    // sequence stable; poll only the live viewer.
+    refetchInterval: mode === "live" ? 5000 : false,
+    refetchOnWindowFocus: mode === "live",
   });
 
   const audience = useQuery<DjStageAudience | null>({
@@ -214,7 +216,7 @@ export function DjLiveClubStage({
               aria-pressed={camera === shot} onClick={() => setCamera(shot)}>
               {label}
             </Button>
-          ))
+          ))}
           <Button size="sm" type="button" variant="outline" aria-pressed={lowGraphics} onClick={() => setLowGraphics(x => !x)}>
             {lowGraphics ? "Standard graphics" : "Low graphics"}
           </Button>
