@@ -1,7 +1,10 @@
 import { webcrypto } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { verifyReplicateWebhookSignature as verify } from
   "../../../../supabase/functions/_shared/replicate-signature";
+
+beforeAll(() => vi.stubGlobal("crypto", webcrypto));
+afterAll(() => vi.unstubAllGlobals());
 
 const keyBytes = new Uint8Array(Array.from({ length: 32 }, (_, i) => i + 10));
 const secret = `whsec_${Buffer.from(keyBytes).toString("base64")}`;
