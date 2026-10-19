@@ -177,7 +177,7 @@ const NightclubHub = () => {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {canBuy && (
-                        <Button size="sm" variant="outline" className="text-xs" disabled={purchaseClub.isPending} onClick={(e) => { e.stopPropagation(); purchaseClub.mutate({ clubId: club.id, clubName: club.name, cityId: club.cityId!, qualityLevel: club.qualityLevel, capacity: club.capacity ?? 100, coverCharge: club.coverCharge ?? 10 }); }}>
+                        <Button size="sm" variant="outline" className="text-xs" disabled={purchaseClub.isPending} onClick={(e) => { e.stopPropagation(); purchaseClub.mutate({ clubId: club.id }); }}>
                           <ShoppingCart className="h-3 w-3 mr-1" /> Buy {currencyFormatter.format(price)}
                         </Button>
                       )}
