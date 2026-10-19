@@ -142,7 +142,7 @@ const ROLE_GEAR_TYPES: Record<string, string[]> = {
 const SPECIALIST_INSTRUMENT_ROLE_TYPES = new Map<string, string>(
   Object.entries(STAGE_INSTRUMENTS)
     .filter(([, definition]) => definition.role !== "vocals")
-    .map(([id, definition]) => [definition.label.toLowerCase(), id]),
+    .map(([id, definition]) => [definition.label.toLowerCase(), id] as const),
 );
 
 const VOCAL_PERFORMANCE_ROLES = new Set([
