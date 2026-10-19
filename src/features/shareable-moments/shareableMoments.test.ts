@@ -144,11 +144,11 @@ describe('gallery avatar ownership', () => {
     expect(shouldCaptureGalleryAvatar(bandCard, null)).toBe(false);
   });
 
-  it('keeps valid captured historical band portraits even after a band switch', () => {
+  it('keeps non-member historical band portraits in the generic saved-image sheet', () => {
     expect(shouldCaptureGalleryAvatar({
       ...bandCard,
       avatar: { dataUrl: 'data:image/png;base64,old', width: 720, height: 1080 },
-    }, 'another-band')).toBe(true);
+    }, 'another-band')).toBe(false);
   });
 
   it('never inserts an unrelated viewer avatar into public festival artwork', () => {
