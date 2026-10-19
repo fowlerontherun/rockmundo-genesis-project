@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -84,6 +84,8 @@ export function VipVideoCreationDialog({
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const creatingRef = useRef(false);
+  const requestIdRef = useRef<string | null>(null);
 
   // Form state
   const [selectedSong, setSelectedSong] = useState("");
@@ -156,72 +158,68 @@ export function VipVideoCreationDialog({
       return;
     }
 
+    if (creatingRef.current) return;
+    creatingRef.current = true;
     setIsCreating(true);
 
     try {
       const song = songs.find((s) => s.id === selectedSong);
 
-      // Get current session for auth
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error("Not authenticated");
-      }
-
-      // Deduct cost first
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id, cash")
-        .eq("user_id", session.user.id)
-        .single();
-
-      if (!profile) throw new Error("Profile not found");
-
-      await supabase
-        .from("profiles")
-        .update({ cash: profile.cash - VIP_VIDEO_COST })
-        .eq("id", profile.id);
-
-      // Create the video record
-      const { data: video, error: videoError } = await supabase
-        .from("music_videos")
-        .insert({
-          song_id: selectedSong,
-          title: videoTitle,
-          budget: VIP_VIDEO_COST,
-          production_quality: 95, // AI videos are high quality
-          status: "planning",
-          views_count: 0,
-          earnings: 0,
-          hype_score: 0,
-          description: JSON.stringify({
+      // Charge, song ownership, VIP status, video creation and the unique
+      // paid reservation are ONE atomic, character-scoped SQL transaction.
+      // Retry an ambiguous network response using the SAME request ID.
+      const requestId = requestIdRef.current ?? crypto.randomUUID();
+      requestIdRef.current = requestId;
+      const { data: reservation, error: reserveError } = await (supabase as any)
+        .rpc("reserve_music_video_generation", {
+          p_song_id: selectedSong,
+          p_title: videoTitle,
+          p_description: {
             visual_theme: visualTheme,
             art_style: artStyle,
             mood,
-            scene_descriptions: sceneDescriptions.filter((s) => s.trim()),
+            scene_descriptions: sceneDescriptions.filter((scene) => scene.trim()),
             ai_generated: true,
-          }),
-        })
-        .select()
-        .single();
-
-      if (videoError) throw videoError;
-
-      // Trigger AI video generation
-      const { error: genError } = await supabase.functions.invoke("generate-music-video", {
-        body: {
-          videoId: video.id,
-          songTitle: song?.title || videoTitle,
-          songGenre: song?.genre,
-          visualTheme,
-          artStyle,
-          sceneDescriptions: sceneDescriptions.filter((s) => s.trim()),
-          mood,
-        },
-      });
-
-      if (genError) {
-        console.error("Video generation error:", genError);
-        // Don't fail the whole operation, video is still created
+          },
+          p_request_id: requestId,
+        });
+      if (reserveError) throw reserveError;
+      if (typeof reservation?.video_id !== "string") {
+        throw new Error("Payment reservation could not be confirmed.");
+      }
+      // From this point the reserved video is durable. Do not reserve a
+      // second charge if provider startup or the response fails later.
+      requestIdRef.current = null;
+      if (reservation.state === "reserved") {
+        const { error: genError } = await supabase.functions.invoke("generate-music-video", {
+          body: {
+            videoId: reservation.video_id,
+            songTitle: song?.title || videoTitle,
+            songGenre: song?.genre,
+            visualTheme,
+            artStyle,
+            sceneDescriptions: sceneDescriptions.filter((scene) => scene.trim()),
+            mood,
+          },
+        });
+        if (genError) {
+          toast({
+            title: "Video reservation saved",
+            description: "Generation could not be confirmed. A failed or unstarted job is refunded automatically; check your video list before starting another.",
+            variant: "destructive",
+          });
+          queryClient.invalidateQueries({ queryKey: ["music-videos"] });
+          queryClient.invalidateQueries({ queryKey: ["game-data"] });
+          resetForm();
+          setOpen(false);
+          onVideoCreated?.();
+          return;
+        }
+      } else {
+        toast({
+          title: "Existing generation found",
+          description: "This generation is already underway or finished. No additional charge was taken.",
+        });
       }
 
       toast({
@@ -244,6 +242,7 @@ export function VipVideoCreationDialog({
       });
     } finally {
       setIsCreating(false);
+      creatingRef.current = false;
     }
   };
 
