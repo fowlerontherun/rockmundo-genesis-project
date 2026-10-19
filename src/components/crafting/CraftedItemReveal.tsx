@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Share2, Sparkles, Star } from "lucide-react";
 import { getQualityLabel } from "@/data/craftingMaterials";
 import { useEffect, useState } from "react";
-import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
+import { AvatarShareStudio } from "@/features/shareable-moments/CharacterShareStudio";
 import type { ShareMoment } from "@/features/shareable-moments/types";
 import { shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
 import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
@@ -82,7 +82,7 @@ export const CraftedItemReveal = ({
         <div className="grid gap-2"><Button onClick={onClose} className="w-full">Awesome!</Button>{isMasterwork && <Button variant="outline" onClick={async () => { const destinationUrl = await referralAwareDestination(profileId, window.location.href, "craft_share"); setShareMoment({ version: 1, type: "achievement", id: sourceId || `${recipeName}:${Math.round(qualityRoll)}`, eyebrow: "MASTERWORK", headline: recipeName, subheadline: "Crafted an exceptional item in RockMundo", metrics: [{ label: "Quality", value: `${Math.round(qualityRoll)}%` }, { label: "Grade", value: quality.label }], destinationUrl, referralCode: null, createdAt: new Date().toISOString() }); }}><Share2 className="mr-2 h-4 w-4" />Share masterwork</Button>}</div>
       </DialogContent>
     </Dialog>
-    <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(next) => { if (!next) setShareMoment(null); }} />
+    {shareMoment && <AvatarShareStudio moment={shareMoment} open={true} onOpenChange={(next) => { if (!next) setShareMoment(null); }} />}
     </>
   );
 };
