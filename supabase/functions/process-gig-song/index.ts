@@ -240,6 +240,105 @@ const ROLE_GEAR_TYPES: Record<string, string[]> = {
   'Percussion': ['percussion', 'latin_percussion', 'african_drums', 'cajon', 'tabla'],
 };
 
+const SPECIALIST_INSTRUMENT_ROLE_TYPES: Readonly<Record<string, string>> = {
+  "acoustic guitar": "acoustic_guitar",
+  "classical guitar": "classical_guitar",
+  "electric guitar": "electric_guitar",
+  "bass guitar": "bass_guitar",
+  "upright bass": "upright_bass",
+  "violin": "violin",
+  "viola": "viola",
+  "cello": "cello",
+  "banjo": "banjo",
+  "mandolin": "mandolin",
+  "ukulele": "ukulele",
+  "harp": "harp",
+  "12-string guitar": "12_string_guitar",
+  "pedal steel guitar": "pedal_steel",
+  "lap steel guitar": "lap_steel",
+  "dobro/resonator": "dobro",
+  "classical piano": "classical_piano",
+  "jazz piano": "jazz_piano",
+  "hammond organ": "hammond_organ",
+  "pipe organ": "pipe_organ",
+  "rhodes piano": "rhodes",
+  "wurlitzer": "wurlitzer",
+  "accordion": "accordion",
+  "harpsichord": "harpsichord",
+  "clavinet": "clavinet",
+  "mellotron": "mellotron",
+  "celesta": "celesta",
+  "rock drums": "rock_drums",
+  "jazz drums": "jazz_drums",
+  "latin percussion": "latin_percussion",
+  "african drumming": "african_drums",
+  "tabla": "tabla",
+  "marimba": "marimba",
+  "vibraphone": "vibraphone",
+  "timpani": "timpani",
+  "snare drum": "snare",
+  "steelpan": "steelpan",
+  "taiko": "taiko",
+  "cajon": "cajon",
+  "xylophone": "xylophone",
+  "glockenspiel": "glockenspiel",
+  "frame drum": "frame_drum",
+  "flute": "flute",
+  "clarinet": "clarinet",
+  "oboe": "oboe",
+  "bassoon": "bassoon",
+  "alto saxophone": "alto_sax",
+  "tenor saxophone": "tenor_sax",
+  "soprano saxophone": "soprano_sax",
+  "baritone saxophone": "bari_sax",
+  "recorder": "recorder",
+  "harmonica": "harmonica",
+  "pan flute": "pan_flute",
+  "bagpipes": "bagpipes",
+  "didgeridoo": "didgeridoo",
+  "piccolo": "piccolo",
+  "trumpet": "trumpet",
+  "trombone": "trombone",
+  "french horn": "french_horn",
+  "tuba": "tuba",
+  "euphonium": "euphonium",
+  "flugelhorn": "flugelhorn",
+  "cornet": "cornet",
+  "sousaphone": "sousaphone",
+  "turntablism": "turntablism",
+  "push/launchpad": "push_launchpad",
+  "eurorack modular": "eurorack",
+  "theremin": "theremin",
+  "ewi": "ewi",
+  "keytar": "keytar",
+  "mpc/maschine": "mpc",
+  "loop station": "loop_station",
+  "analog synthesizer": "analog_synth",
+  "digital synthesizer": "digital_synth",
+  "electronic drums": "electronic_drums",
+  "vocoder": "vocoder",
+  "sitar": "sitar",
+  "oud": "oud",
+  "kora": "kora",
+  "erhu": "erhu",
+  "shamisen": "shamisen",
+  "bouzouki": "bouzouki",
+  "balalaika": "balalaika",
+  "charango": "charango",
+  "kalimba/mbira": "kalimba",
+  "gamelan": "gamelan",
+  "uilleann pipes": "uilleann",
+  "guzheng": "guzheng",
+  "biwa": "biwa",
+  "tin whistle": "tin_whistle",
+  "concertina": "concertina",
+};
+
+const VOCAL_PERFORMANCE_ROLES = new Set([
+  'vocal & performance skills', 'rapping', 'freestyle', 'battle rap',
+  'flow & cadence', 'rap songwriting', 'ad-libs & vocal fx',
+]);
+
 function resolveRoleKey(role: string): string | null {
   if (ROLE_GEAR_TYPES[role]) return role;
   const normalized = role.trim().toLowerCase();
@@ -258,9 +357,16 @@ function resolveRoleKey(role: string): string | null {
 }
 
 function doesCategoryMatchRole(category: string, subcategory: string | null, role: string): boolean {
-  const roleKey = resolveRoleKey(role);
   const equipmentType = canonicalEquipmentType(category, subcategory);
-  return !!roleKey && !!equipmentType && (ROLE_GEAR_TYPES[roleKey]?.includes(equipmentType) ?? false);
+  if (!equipmentType) return false;
+  const roleKey = resolveRoleKey(role);
+  if (roleKey && ROLE_GEAR_TYPES[roleKey]?.includes(equipmentType)) return true;
+  const normalizedRole = role.trim().toLowerCase();
+  if (VOCAL_PERFORMANCE_ROLES.has(normalizedRole)) return equipmentType === 'microphone';
+  const specialistId = SPECIALIST_INSTRUMENT_ROLE_TYPES[normalizedRole]
+    ?? (normalizedRole === 'dj scratching' ? 'turntablism' : null);
+  return normalizeEquipmentKey(category) === 'instrument'
+    && !!specialistId && normalizeEquipmentKey(subcategory) === specialistId;
 }
 
 // ── Stage Behavior Modifiers (mirrored from client stageBehaviors.ts) ──
