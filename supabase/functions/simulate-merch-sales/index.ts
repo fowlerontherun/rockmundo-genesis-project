@@ -98,29 +98,47 @@ Deno.serve(async (req) => {
   });
 
   try {
-    const { data: bandsWithMerch, error: bandsError } = await supabase
-      .from("bands")
-      .select(`
-        id, name, fame, total_fans, casual_fans, dedicated_fans, superfans, home_city_id,
-        fan_sentiment_score, reputation_score,
-        player_merchandise(id, item_type, design_name, selling_price, stock_quantity, quality_tier, cost_to_produce, superfan_only, drop_starts_at, available_until, is_limited_edition, limited_quantity, tour_exclusive_tour_id)
-      `)
-      .gt("total_fans", 0);
-    if (bandsError) throw bandsError;
+    // PostgREST caps responses (typically 1,000 rows). Process all bands
+    // deterministically instead of silently omitting the later pages.
+    const bandsWithMerch: any[] = [];
+    for (let offset = 0; ; offset += 500) {
+      const { data: batch, error: bandsError } = await supabase
+        .from("bands")
+        .select(`
+          id, name, fame, total_fans, casual_fans, dedicated_fans, superfans, home_city_id,
+          fan_sentiment_score, reputation_score,
+          player_merchandise(id, item_type, design_name, selling_price, stock_quantity, quality_tier, cost_to_produce, superfan_only, drop_starts_at, available_until, is_limited_edition, limited_quantity, tour_exclusive_tour_id)
+        `)
+        .gt("total_fans", 0)
+        .order("id")
+        .range(offset, offset + 499);
+      if (bandsError) throw bandsError;
+      bandsWithMerch.push(...(batch ?? []));
+      if ((batch ?? []).length < 500) break;
+    }
 
     const variantMap = new Map<string, Array<{ id: string; merchandise_id: string; stock_quantity: number; selling_price_override: number | null; cost_to_produce_override: number | null; is_active: boolean }>>();
     const merchIds = (bandsWithMerch || []).flatMap((b: any) => (b.player_merchandise || []).map((m: any) => m.id));
     if (merchIds.length > 0) {
-      const { data: variants, error: variantError } = await supabase
-        .from("merch_variants")
-        .select("id, merchandise_id, stock_quantity, selling_price_override, cost_to_produce_override, is_active")
-        .in("merchandise_id", merchIds)
-        .eq("is_active", true);
-      if (variantError) throw variantError;
-      for (const variant of variants || []) {
+      // Chunk large merch catalogues and paginate variants within each chunk.
+      for (let from = 0; from < merchIds.length; from += 150) {
+        const chunk = merchIds.slice(from, from + 150);
+        for (let offset = 0; ; offset += 500) {
+          const { data: variants, error: variantError } = await supabase
+            .from("merch_variants")
+            .select("id, merchandise_id, stock_quantity, selling_price_override, cost_to_produce_override, is_active")
+            .in("merchandise_id", chunk)
+            .eq("is_active", true)
+            .order("id")
+            .range(offset, offset + 499);
+          if (variantError) throw variantError;
+          for (const variant of variants || []) {
         const list = variantMap.get((variant as any).merchandise_id) || [];
         list.push(variant as any);
         variantMap.set((variant as any).merchandise_id, list);
+          }
+          if ((variants ?? []).length < 500) break;
+        }
       }
     }
 
