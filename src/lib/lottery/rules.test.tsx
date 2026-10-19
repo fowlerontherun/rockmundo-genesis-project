@@ -42,9 +42,9 @@ describe("weekly lottery shared contract (#4223)", () => {
     const user = userEvent.setup();
     expect(screen.getByRole("button", { name: "Buy Ticket ($2)" })).toBeDisabled();
     for (const n of [49, 2, 3, 4, 5, 6, 1]) {
-      await user.click(screen.getByRole("button", { name: String(n) }));
+      await user.click(screen.getAllByRole("button", { name: String(n) })[0]);
     }
-    await user.click(screen.getByRole("button", { name: "10" }));
+    await user.click(screen.getAllByRole("button", { name: "10" })[1]);
     await user.click(screen.getByRole("button", { name: "Buy Ticket ($2)" }));
     await waitFor(() => expect(onSubmit).toHaveBeenCalledWith([1, 2, 3, 4, 5, 6, 49], 10));
     await waitFor(() => expect(screen.getByText("0/7")).toBeInTheDocument());
