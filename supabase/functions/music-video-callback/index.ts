@@ -36,6 +36,10 @@ async function getReplicateSigningSecret(): Promise<string> {
 }
 
 async function signedByReplicate(req: Request, rawBody: string): Promise<boolean> {
+  // Reject obviously unsigned requests before fetching the provider's secret.
+  // This prevents arbitrary internet clients from exhausting the signing-key API.
+  if (!req.headers.get("webhook-id") || !req.headers.get("webhook-timestamp") ||
+      !req.headers.get("webhook-signature")) return false;
   return verifyReplicateWebhookSignature({
     webhookId: req.headers.get("webhook-id"),
     timestamp: req.headers.get("webhook-timestamp"),
@@ -64,6 +68,9 @@ serve(async (req) => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
   try {
     // Authenticate the RAW request before creating any privileged client.
+    if (Number(req.headers.get("content-length") ?? 0) > 100_000) {
+      return json({ error: "Webhook body too large" }, 413);
+    }
     const rawBody = await req.text();
     if (rawBody.length > 100_000 || !await signedByReplicate(req, rawBody)) {
       return json({ error: "Unverified Replicate callback" }, 401);
