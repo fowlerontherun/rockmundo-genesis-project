@@ -314,9 +314,16 @@ async function processActivityCompletion(supabase: any, activity: ScheduledActiv
       break;
     case 'self_promotion':
       if (activity.metadata?.self_promotion_id) {
-        await supabase.functions.invoke('process-self-promotion', {
-          body: { activityId: activity.metadata.self_promotion_id },
-        });
+        // Same atomic settlement used by pg_cron. Never rely on a
+        // browser-accessible Edge worker or ignore its HTTP error.
+        const { data: outcome, error: promotionError } = await supabase.rpc(
+          'settle_self_promotion_atomic',
+          { p_activity_id: activity.metadata.self_promotion_id },
+        );
+        if (promotionError) throw promotionError;
+        if (outcome?.settled !== true && outcome?.reason !== 'already_completed') {
+          throw new Error(`Promotion not settled: ${outcome?.reason ?? 'unknown'}`);
+        }
       }
       break;
     case 'film_production':
