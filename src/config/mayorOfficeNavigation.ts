@@ -20,6 +20,7 @@ export type MayorOfficeSection =
   | "overview"
   | "treasury"
   | "projects"
+  | "events"
   | "universities"
   | "laws"
   | "services"
@@ -41,6 +42,7 @@ export const MAYOR_OFFICE_TABS: MayorOfficeNavItem[] = [
   { label: "Overview", section: "overview", icon: Landmark },
   { label: "Treasury", section: "treasury", icon: CircleDollarSign },
   { label: "Projects", section: "projects", icon: Hammer },
+  { label: "Live Events", section: "events", icon: CalendarDays },
   { label: "Universities", section: "universities", icon: GraduationCap },
   { label: "Laws", section: "laws", icon: Gavel },
   { label: "Opinion", section: "opinion", icon: BarChart3 },
@@ -57,6 +59,7 @@ export const MAYOR_OFFICE_SIDEBAR: Array<{
       { label: "Command Centre", section: "overview", icon: Crown },
       { label: "Treasury & Budget", section: "treasury", icon: CircleDollarSign },
       { label: "Projects & Upgrades", section: "projects", icon: Hammer },
+      { label: "Live Events", section: "events", icon: CalendarDays },
       { label: "Universities", section: "universities", icon: GraduationCap },
     ],
   },
@@ -109,6 +112,7 @@ export const MAYOR_OFFICE_SECTION_TITLES: Record<MayorOfficeSection, string> = {
   overview: "Command Centre",
   treasury: "Treasury & Budget",
   projects: "Projects & Upgrades",
+  events: "Live Events",
   universities: "Universities",
   laws: "Laws & Taxes",
   services: "City Services",
@@ -123,6 +127,7 @@ export const MAYOR_OFFICE_SECTION_DESCRIPTIONS: Record<MayorOfficeSection, strin
   overview: "A live view of your term, city finances, development and political pressure.",
   treasury: "Track the treasury, committed spending, tax receipts and mayoral expenditure.",
   projects: "Plan and monitor the upgrades that permanently change the city.",
+  events: "Manage Battle of the Bands dates, frequency, prizes and event earnings.",
   universities: "Invest city funds in local university quality and prestige, and set tuition policy.",
   laws: "Set taxes, permits, nightlife rules and music policy for the city.",
   services: "Review the city attributes and services influenced by laws and investment.",
