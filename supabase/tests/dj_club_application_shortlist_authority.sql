@@ -60,6 +60,10 @@ BEGIN
  SELECT a.status INTO v_status FROM public.dj_club_applications a WHERE a.id=v_app;
  IF v_withdraw IS DISTINCT FROM v_app OR v_status<>'withdrawn'
  THEN RAISE EXCEPTION 'Withdraw after shortlist failed';END IF;
+ v_replay:=public.review_nightclub_dj_application(v_owner,v_app,'shortlist',v_review_req);
+ IF v_replay IS DISTINCT FROM v_app
+ OR (SELECT a.review_decision FROM public.dj_club_applications a WHERE a.id=v_app)<>'shortlist'
+ THEN RAISE EXCEPTION 'Review replay after withdrawal lost the original decision';END IF;
  IF EXISTS(SELECT 1 FROM public.dj_bookings b WHERE b.club_id=v_club)
  THEN RAISE EXCEPTION 'Application minted a DJ booking';END IF;
  RAISE NOTICE 'DJ application/shortlist/foreign denial/retry/withdraw tests passed';
