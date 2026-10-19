@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Disc3, Mic2, Users, Sparkles, Loader2, Trophy, MessageCircle, Crown, History, UserPlus, Building2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +26,8 @@ import { ClubEventsSection } from "@/components/nightclub/ClubEventsSection";
 import { VipLoungeSection } from "@/components/nightclub/VipLoungeSection";
 import { useOwnedNightclubs } from "@/hooks/useNightclubOwnership";
 import { DjMixingStudio } from "@/features/nightclub-dj/DjMixingStudio";
-import { DjLiveClubStage } from "@/features/nightclub-dj/DjLiveClubStage";
+// The 3D stage is opt-in: do not bundle WebGL/avatars into ordinary nightclub visits.
+const DjLiveClubStage = lazy(() => import("@/features/nightclub-dj/DjLiveClubStage").then(m => ({ default: m.DjLiveClubStage })));
 import { DjBookingPanel } from "@/features/nightclub-dj/DjBookingPanel";
 import { DjClubApplications } from "@/features/nightclub-dj/DjClubApplications";
 import { DjFundedOffers } from "@/features/nightclub-dj/DjFundedOffers";
@@ -339,9 +340,11 @@ const NightClubDetail = () => {
                 {showDjStage ? "Hide 3D nightclub stage" : "View my live DJ in 3D"}
               </Button>
               {showDjStage && (
-                <DjLiveClubStage key={liveDjBookingId} bookingId={liveDjBookingId}
-                  profileId={profileId} clubId={clubId} clubName={club.name}
-                  capacity={club.capacity} />
+                <Suspense fallback={<p role="status" className="text-sm text-muted-foreground">Preparing 3D nightclub view…</p>}>
+                  <DjLiveClubStage key={liveDjBookingId} bookingId={liveDjBookingId}
+                    profileId={profileId} clubId={clubId} clubName={club.name}
+                    capacity={club.capacity} />
+                </Suspense>
               )}
             </div>
           )}
