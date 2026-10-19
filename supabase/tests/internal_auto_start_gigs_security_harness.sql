@@ -24,7 +24,7 @@ BEGIN
 
   SELECT pg_get_functiondef('public.run_auto_start_gigs_scheduled()'::regprocedure)
   INTO v_def;
-  IF v_def NOT ILIKE '%pg_try_advisory_xact_lock(4221, 44)%'
+  IF v_def NOT ILIKE '%pg_try_advisory_xact_lock(4221,44)%'
      OR v_def NOT ILIKE '%public.auto_start_scheduled_gigs()%'
      OR v_def NOT ILIKE '%public.cron_job_runs%'
      OR v_def NOT ILIKE '%previous_gig_start_still_running%'
