@@ -28,7 +28,7 @@ import {
   CheckCircle,
   Lock,
 } from "lucide-react";
-import { format, formatDistanceToNow, parseISO, addMinutes, addDays, isBefore } from "date-fns";
+import { format, formatDistanceToNow, parseISO, isBefore } from "date-fns";
 
 interface SelfPromotionPanelProps {
   bandId: string;
@@ -91,6 +91,23 @@ export function SelfPromotionPanel({ bandId, bandFame, bandBalance, userId, prof
   const queryClient = useQueryClient();
   const [selectedActivity, setSelectedActivity] = useState<string | null>(null);
   const [promoFocus, setPromoFocus] = useState<string>("general");
+  // The canonical start_self_promotion RPC charges the selected character,
+  // not the band's treasury. Match its account balance and never debit cash
+  // from an unrelated band's client-side snapshot.
+  const { data: profileCash = 0, isLoading: cashLoading } = useQuery({
+    queryKey: ["self-promotion-character-cash", profileId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("cash")
+        .eq("id", profileId)
+        .single();
+      if (error) throw error;
+      return Number(data?.cash ?? 0);
+    },
+    enabled: !!profileId,
+  });
+
 
   // Fetch available promotion activities from catalog
   const { data: activities, isLoading: activitiesLoading } = useQuery({
@@ -150,93 +167,26 @@ export function SelfPromotionPanel({ bandId, bandFame, bandBalance, userId, prof
       const activity = activities?.find(a => a.activity_type === activityType);
       if (!activity) throw new Error("Activity not found");
 
-      // Check balance
-      if (bandBalance < activity.base_cost) {
-        throw new Error(`Insufficient funds. Need $${activity.base_cost.toLocaleString()}`);
-      }
-
-      // Check fame requirement
-      if (bandFame < activity.min_fame_required) {
-        throw new Error(`Need ${activity.min_fame_required.toLocaleString()} fame for this activity`);
-      }
-
-      // Check cooldown
-      const cooldown = cooldowns?.find(c => c.activity_type === activityType);
-      if (cooldown && isBefore(new Date(), parseISO(cooldown.cooldown_expires_at))) {
-        throw new Error(`This activity is on cooldown until ${format(parseISO(cooldown.cooldown_expires_at), "MMM d, h:mm a")}`);
-      }
-
-      // Create the scheduled activity
-      const startTime = new Date();
-      const endTime = addMinutes(startTime, activity.duration_minutes);
-
       if (!profileId) throw new Error("No active character profile");
 
-      // Deduct cost from band
-      const { error: deductError } = await supabase
-        .from("bands")
-        .update({ band_balance: bandBalance - activity.base_cost })
-        .eq("id", bandId);
-
-      if (deductError) throw deductError;
-
-      // Create self-promotion activity
-      const { data, error } = await (supabase as any)
-        .from("self_promotion_activities")
-        .insert({
-          user_id: userId,
-          band_id: bandId,
-          activity_type: activityType,
-          promo_focus: promoFocus,
-          status: "in_progress",
-          scheduled_start: startTime.toISOString(),
-          scheduled_end: endTime.toISOString(),
-          cost_paid: activity.base_cost,
-          fame_gained: 0,
-          fans_gained: 0,
-        })
-        .select()
-        .single();
-
+      // One trusted transaction checks active account/band ownership,
+      // catalogue constraints/cooldown, debits character cash and creates
+      // both the promotion and its calendar activity.
+      const { data, error } = await (supabase as any).rpc("start_self_promotion", {
+        p_profile_id: profileId,
+        p_band_id: bandId,
+        p_activity_type: activityType,
+        p_promo_focus: promoFocus,
+      });
       if (error) throw error;
-
-      // Create scheduled activity for the player
-      await supabase
-        .from("player_scheduled_activities")
-        .insert({
-          user_id: userId,
-          profile_id: profileId,
-          activity_type: "self_promotion",
-          title: `Self Promo: ${activity.name}`,
-          scheduled_start: startTime.toISOString(),
-          scheduled_end: endTime.toISOString(),
-          status: "in_progress",
-          metadata: {
-            self_promotion_id: data.id,
-            activity_type: activityType,
-            band_id: bandId,
-            promo_focus: promoFocus,
-          },
-        });
-
-      // Set cooldown
-      const cooldownExpires = addDays(new Date(), activity.cooldown_days);
-      await (supabase as any)
-        .from("self_promotion_cooldowns")
-        .upsert({
-          band_id: bandId,
-          activity_type: activityType,
-          cooldown_expires_at: cooldownExpires.toISOString(),
-        }, {
-          onConflict: "band_id,activity_type",
-        });
-
       return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["self-promotions-active", bandId] });
       queryClient.invalidateQueries({ queryKey: ["self-promotion-cooldowns", bandId] });
       queryClient.invalidateQueries({ queryKey: ["user-band-pr"] });
+      queryClient.invalidateQueries({ queryKey: ["self-promotion-character-cash", profileId] });
+      queryClient.invalidateQueries({ queryKey: ["game-data"] });
       
       toast.success("Promotion started!", {
         description: `Your self-promotion activity is now in progress.`,
@@ -256,10 +206,10 @@ export function SelfPromotionPanel({ bandId, bandFame, bandBalance, userId, prof
     return null;
   };
 
-  const canAfford = (cost: number) => bandBalance >= cost;
+  const canAfford = (cost: number) => profileCash >= cost;
   const hasRequiredFame = (minFame: number) => bandFame >= minFame;
 
-  if (activitiesLoading || activeLoading || cooldownsLoading) {
+  if (activitiesLoading || activeLoading || cooldownsLoading || cashLoading) {
     return (
       <div className="space-y-4">
         {[...Array(3)].map((_, i) => (

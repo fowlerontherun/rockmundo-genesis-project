@@ -148,7 +148,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.process-self-promotion]
-verify_jwt = false
+verify_jwt = true
 
 [functions.process-tour-travel]
 verify_jwt = false
@@ -237,4 +237,7 @@ verify_jwt = false
 
 # Default-off, JWT-verified scheduled DJ booking bridge.
 [functions.dj-booking-action]
+verify_jwt = true
+
+[functions.complete-self-promotions]
 verify_jwt = true
