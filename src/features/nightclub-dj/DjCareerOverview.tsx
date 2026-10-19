@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { summarizeDjCareer, type DjCareerPerformance } from "./djCareer";
+import { djCareerUpcomingOrActiveFilter, summarizeDjCareer, type DjCareerPerformance } from "./djCareer";
 
 type ClubLabel = { id: string; name: string; cityName: string };
 type DjCityFanPopulation = { city_id: string; total_fans: number; total_attendance: number; sets_played: number };
@@ -78,7 +78,9 @@ export function DjCareerOverview({
         .select("id,club_id,starts_at,ends_at,status")
         .eq("profile_id", profileId)
         .in("status", ["booked", "ready", "live", "resolving"])
-        .gte("ends_at", new Date().toISOString())
+        // Live/resolving sessions can be settled after their advertised end.
+        // Keep them discoverable instead of hiding the only route back to the decks.
+        .or(djCareerUpcomingOrActiveFilter(new Date().toISOString()))
         .order("starts_at", { ascending: true })
         .limit(5);
       if (error) throw error;
@@ -87,7 +89,7 @@ export function DjCareerOverview({
     refetchInterval: 60_000,
   });
 
-  const { data: localFans = [], isError: localFansError } = useQuery<DjCityFanPopulation[]>({
+  const { data: localFans = [], isLoading: localFansLoading, isError: localFansError } = useQuery<DjCityFanPopulation[]>({
     queryKey: ["dj-city-fans", profileId],
     queryFn: async () => {
       // New RLS-protected character-city table is not yet in generated DB types.
@@ -100,7 +102,7 @@ export function DjCareerOverview({
     },
     staleTime: 30_000,
   });
-  const { data: audiences = [], isError: audiencesError } = useQuery<DjBookingAudience[]>({
+  const { data: audiences = [], isLoading: audiencesLoading, isError: audiencesError } = useQuery<DjBookingAudience[]>({
     queryKey: ["dj-booking-audiences", profileId],
     queryFn: async () => {
       // Immutable audience data is written only at server-verified settlement.
@@ -168,6 +170,8 @@ export function DjCareerOverview({
             <p className="text-xs text-destructive" role="alert">
               Could not load verified DJ crowd or city follower totals.
             </p>
+          ) : (localFansLoading || audiencesLoading) ? (
+            <p className="text-xs text-muted-foreground" role="status">Loading verified DJ crowds and followers…</p>
           ) : (
             <>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

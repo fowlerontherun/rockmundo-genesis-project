@@ -53,3 +53,29 @@ export function canCancelDjBooking(status: string, startsAt: string, nowMs: numb
   return (status === "booked" || status === "ready") &&
     Number.isFinite(startMs) && Number.isFinite(nowMs) && startMs > nowMs;
 }
+
+/** A live set can outlast its booking window; never restore a missed or settled one. */
+export function findUnrestoredLiveDjBooking<T extends { id: string; status: string }>(
+  bookings: readonly T[],
+  restoredIds: ReadonlySet<string>,
+): T | null {
+  return bookings.find((booking) => booking.status === "live" && !restoredIds.has(booking.id)) ?? null;
+}
+
+/**
+ * A verified server acknowledgement must not be turned into a false failure by a
+ * stale React Query cache, a failed follow-up request or a UI callback.
+ * A failed/ambiguous server action still rejects and must never show success.
+ */
+export async function runConfirmedDjAction<T>(
+  perform: () => Promise<T>,
+  afterConfirmation: (result: T) => Promise<unknown> | unknown,
+): Promise<T> {
+  const result = await perform();
+  try {
+    await afterConfirmation(result);
+  } catch {
+    // Only follow-up presentation work is best-effort; the DB action succeeded.
+  }
+  return result;
+}

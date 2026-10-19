@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useDjMixReadiness } from "./djReadiness";
 import {
   djReservationFingerprint, parseDjReservationAttempt, resolveDjReservationAttempt,
-  canStartDjBooking, canCancelDjBooking, type DjReservationAttempt,
+  canStartDjBooking, canCancelDjBooking, findUnrestoredLiveDjBooking, runConfirmedDjAction, type DjReservationAttempt,
 } from "./bookingClient";
 
 type SavedSet = { id: string; name: string; items: unknown[] };
@@ -97,6 +97,8 @@ export function DjBookingPanel({ profileId, clubId, venueTimezone, onLiveBooking
   const [localStart, setLocalStart] = useState(localDefault);
   const [pending, setPending] = useState<string | null>(null);
   const pendingReservationRef = useRef<DjReservationAttempt | null>(null);
+  // Keep a live session from being repeatedly reopened by the 30-second poll.
+  const restoredLiveBookingIdsRef = useRef(new Set<string>());
   const [clockMs, setClockMs] = useState(() => Date.now());
 
   // The start/cancel actions must appear as the booking window opens without
@@ -111,7 +113,7 @@ export function DjBookingPanel({ profileId, clubId, venueTimezone, onLiveBooking
     };
   }, []);
 
-  const { data: sets = [], isLoading: setsLoading } = useQuery<SavedSet[]>({
+  const { data: sets = [], isLoading: setsLoading, isError: setsError } = useQuery<SavedSet[]>({
     queryKey: ["dj-saved-setlists", profileId],
     enabled: isEnabled && Boolean(profileId),
     queryFn: async () => {
@@ -126,9 +128,12 @@ export function DjBookingPanel({ profileId, clubId, venueTimezone, onLiveBooking
     },
   });
 
-  const { data: bookings = [], isLoading: bookingsLoading } = useQuery<BookedSlot[]>({
+  const { data: bookings = [], isLoading: bookingsLoading, isError: bookingsError } = useQuery<BookedSlot[]>({
     queryKey: ["dj-bookings", profileId, clubId],
     enabled: isEnabled && Boolean(profileId) && Boolean(clubId),
+    // Refresh after remote owner actions, missed-slot finalizers and second-device changes.
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       // Newly applied DJ bookings are not yet part of generated TS types.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -141,6 +146,17 @@ export function DjBookingPanel({ profileId, clubId, venueTimezone, onLiveBooking
       return (data || []) as BookedSlot[];
     },
   });
+
+  // After a refresh, an already-live booking must reopen its server-locked decks
+  // instead of silently presenting a reward-free practice session. Only once
+  // per live booking, so background polling does not restart ongoing audio.
+  useEffect(() => {
+    if (bookingsLoading || bookingsError || !onLiveBooking) return;
+    const live = findUnrestoredLiveDjBooking(bookings, restoredLiveBookingIdsRef.current);
+    if (!live) return;
+    restoredLiveBookingIdsRef.current.add(live.id);
+    onLiveBooking(live.id);
+  }, [bookings, bookingsLoading, bookingsError, onLiveBooking]);
 
   const refresh = async () => {
     await Promise.all([
@@ -196,9 +212,17 @@ export function DjBookingPanel({ profileId, clubId, venueTimezone, onLiveBooking
     if (pending) return;
     setPending(bookingId);
     try {
-      await actionRequest({ action: "start", bookingId });
-      onLiveBooking?.(bookingId);
-      await refresh();
+      await runConfirmedDjAction(
+        () => actionRequest({ action: "start", bookingId }),
+        async () => {
+          restoredLiveBookingIdsRef.current.add(bookingId);
+          // A failing presentation callback must not suppress the refresh.
+          await Promise.allSettled([
+            Promise.resolve().then(() => onLiveBooking?.(bookingId)),
+            refresh(),
+          ]);
+        },
+      );
       toast.success("Your booked DJ set is live. Mix with both decks to record performance activity.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to start DJ set");
@@ -211,13 +235,19 @@ export function DjBookingPanel({ profileId, clubId, venueTimezone, onLiveBooking
     if (pending) return;
     setPending(bookingId);
     try {
-      await actionRequest({ action: "settle", bookingId });
-      onLiveBooking?.(null);
-      await Promise.all([
-        refresh(),
-        queryClient.invalidateQueries({ queryKey: ["profile"] }),
-        queryClient.invalidateQueries({ queryKey: ["dj-performances"] }),
-      ]);
+      await runConfirmedDjAction(
+        () => actionRequest({ action: "settle", bookingId }),
+        async () => {
+          onLiveBooking?.(null);
+          await Promise.all([
+            refresh(),
+            queryClient.invalidateQueries({ queryKey: ["profile"] }),
+            queryClient.invalidateQueries({ queryKey: ["dj-performances"] }),
+            queryClient.invalidateQueries({ queryKey: ["dj-city-fans", profileId] }),
+            queryClient.invalidateQueries({ queryKey: ["dj-booking-audiences", profileId] }),
+          ]);
+        },
+      );
       toast.success("DJ set completed and your results have been recorded.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "DJ set cannot be completed yet");
@@ -230,8 +260,10 @@ export function DjBookingPanel({ profileId, clubId, venueTimezone, onLiveBooking
     if (pending || !window.confirm("Cancel this scheduled DJ set?")) return;
     setPending(bookingId);
     try {
-      await actionRequest({ action: "cancel", bookingId });
-      await refresh();
+      await runConfirmedDjAction(
+        () => actionRequest({ action: "cancel", bookingId }),
+        refresh,
+      );
       toast.success("DJ booking cancelled");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to cancel DJ set");
@@ -278,12 +310,17 @@ export function DjBookingPanel({ profileId, clubId, venueTimezone, onLiveBooking
               value={localStart} onChange={(event) => setLocalStart(event.target.value)} />
           </div>
         </div>
-        <Button disabled={pending !== null || !setlistId} onClick={reserve}>
+        <Button disabled={pending !== null || !setlistId || setsError} onClick={reserve}>
           {pending === "reserve" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> :
             <CalendarClock className="mr-2 h-4 w-4" />}
           Reserve nightclub DJ slot
         </Button>
-        {sets.length === 0 && !setsLoading && (
+        {setsError && (
+          <p role="alert" className="text-sm text-destructive">
+            Could not load saved DJ sets. Refresh before reserving a slot.
+          </p>
+        )}
+        {sets.length === 0 && !setsLoading && !setsError && (
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
             <Music2 className="h-4 w-4" /> Create a setlist in the DJ Mixing Studio to book.
           </p>
@@ -291,7 +328,12 @@ export function DjBookingPanel({ profileId, clubId, venueTimezone, onLiveBooking
         <div className="space-y-2 border-t pt-3">
           <p className="font-medium text-sm">My nightclub bookings</p>
           {bookingsLoading && <p className="text-sm text-muted-foreground">Loading bookings…</p>}
-          {!bookingsLoading && bookings.length === 0 && (
+          {bookingsError && (
+            <p role="alert" className="text-sm text-destructive">
+              Booking status is temporarily unavailable. Reconnect to see current results.
+            </p>
+          )}
+          {!bookingsLoading && !bookingsError && bookings.length === 0 && (
             <p className="text-sm text-muted-foreground">No DJ sets booked at this club yet.</p>
           )}
           {bookings.map((booking) => (

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   canCancelDjBooking, canStartDjBooking, djReservationFingerprint,
-  parseDjReservationAttempt, resolveDjReservationAttempt,
+  parseDjReservationAttempt, resolveDjReservationAttempt, findUnrestoredLiveDjBooking, runConfirmedDjAction,
 } from "./bookingClient";
 
 const firstId = "77777777-7777-4777-8777-777777777777";
@@ -64,5 +64,57 @@ describe("DJ booking action availability", () => {
     expect(canCancelDjBooking("ready", "not-a-time", start)).toBe(false);
     expect(canStartDjBooking("booked", "not-a-time", start)).toBe(false);
     expect(canStartDjBooking("booked", iso, Number.NaN)).toBe(false);
+  });
+});
+
+describe("confirmed DJ server action acknowledgement", () => {
+  it("preserves confirmed server success when cache refresh fails", async () => {
+    const calls: string[] = [];
+    const result = await runConfirmedDjAction(
+      async () => { calls.push("server"); return "booking-id"; },
+      async (id) => { calls.push(id); throw new Error("React Query network error"); },
+    );
+    expect(result).toBe("booking-id");
+    expect(calls).toEqual(["server", "booking-id"]);
+  });
+
+  it("does not show a confirmation for a failed or ambiguous server action", async () => {
+    let followUpCount = 0;
+    await expect(runConfirmedDjAction(
+      async () => { throw new Error("server request failed"); },
+      async () => { followUpCount++; },
+    )).rejects.toThrow("server request failed");
+    expect(followUpCount).toBe(0);
+  });
+
+  it("runs successful follow-up exactly once", async () => {
+    let followUpCount = 0;
+    const completed = await runConfirmedDjAction(
+      async () => ({ id: "booking-id", status: "completed" }),
+      async (result) => { expect(result.status).toBe("completed"); followUpCount++; },
+    );
+    expect(completed.id).toBe("booking-id");
+    expect(followUpCount).toBe(1);
+  });
+});
+
+describe("DJ live session recovery", () => {
+  const bookings = [
+    { id: "settled", status: "completed" },
+    { id: "missed", status: "missed" },
+    { id: "live-first", status: "live" },
+    { id: "live-second", status: "live" },
+    { id: "future", status: "booked" },
+  ];
+  it("restores an existing live booking, never practice or a terminal booking", () => {
+    expect(findUnrestoredLiveDjBooking(bookings, new Set())?.id).toBe("live-first");
+    expect(findUnrestoredLiveDjBooking(bookings, new Set(["live-first"]))?.id).toBe("live-second");
+    expect(findUnrestoredLiveDjBooking(bookings, new Set(["live-first", "live-second"]))).toBeNull();
+    expect(findUnrestoredLiveDjBooking(bookings.filter((b) => b.status !== "live"), new Set())).toBeNull();
+  });
+  it("preserves caller booking objects without mutating polling results", () => {
+    const frozen = Object.freeze([{ id: "live", status: "live" }]);
+    expect(findUnrestoredLiveDjBooking(frozen, new Set(["live"]))).toBeNull();
+    expect(frozen).toHaveLength(1);
   });
 });

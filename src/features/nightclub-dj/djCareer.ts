@@ -47,3 +47,12 @@ export function summarizeDjCareer(
     isPartial: verifiedRowCount !== null && verifiedRowCount > verified.length,
   };
 }
+
+/**
+ * PostgREST filter for the career's upcoming/live DJ bookings.
+ * Time cutoff applies to future ready/booked shows only; a live or resolving
+ * show remains actionable even if its advertised slot has ended.
+ */
+export function djCareerUpcomingOrActiveFilter(nowIso: string): string {
+  return `ends_at.gte.${nowIso},status.eq.live,status.eq.resolving`;
+}
