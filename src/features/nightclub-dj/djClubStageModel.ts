@@ -20,9 +20,42 @@ export interface DjStageAudience {
 
 export interface DjStageBooking {
   id: string;
+  club_id?: string;
   status: string;
   starts_at: string;
   ends_at: string;
+}
+
+/** No replay without the original booked show AND its immutable settlement receipt. */
+export function hasVerifiedDjReplay(
+  booking: DjStageBooking | null | undefined,
+  clubId: string,
+  receipt: DjStageAudience | null | undefined,
+  events: readonly DjStageMixEvent[] | null | undefined,
+  hasReadError = false,
+): boolean {
+  return !hasReadError && booking?.club_id === clubId &&
+    booking.status === "completed" && djReplayDurationMs(booking) > 0 &&
+    receipt !== null && receipt !== undefined && events !== null && events !== undefined;
+}
+
+/** An exact, read-only replay lasts as long as the canonical booked slot. */
+export function djReplayDurationMs(booking: DjStageBooking): number {
+  const start = Date.parse(booking.starts_at);
+  const end = Date.parse(booking.ends_at);
+  return Number.isFinite(start) && Number.isFinite(end) && end > start
+    ? end - start : 0;
+}
+
+/** Never preview mixer activity before its server-recorded timestamp. */
+export function djReplayEventsThrough(
+  events: readonly DjStageMixEvent[], atMs: number,
+): DjStageMixEvent[] {
+  return events.filter(event =>
+    Number.isInteger(event.event_no) && event.event_no > 0 &&
+    Number.isFinite(Date.parse(event.recorded_at)) &&
+    Date.parse(event.recorded_at) <= atMs,
+  ).sort((a, b) => a.event_no - b.event_no);
 }
 
 function unit(value: number): number {
@@ -92,6 +125,7 @@ export function buildDjClubStageFrame(
   nowMs: number,
   reducedMotion = false,
   performerPosition: [number, number, number] = [0, 0, 0],
+  verifiedCompletedReplay = false,
 ): ConcertFrame {
   const start = Date.parse(booking.starts_at);
   const end = Date.parse(booking.ends_at);
@@ -111,7 +145,7 @@ export function buildDjClubStageFrame(
     : last?.kind === "crossfade" ? "cheer"
       : last?.kind === "deck_play" ? "bounce"
         : last?.kind === "tempo" ? "sway" : "sway";
-  const isLive = booking.status === "live";
+  const isLive = booking.status === "live" || (verifiedCompletedReplay && booking.status === "completed");
   return {
     positionMs: elapsed,
     section: last?.kind === "crossfade" ? "chorus" : "verse",

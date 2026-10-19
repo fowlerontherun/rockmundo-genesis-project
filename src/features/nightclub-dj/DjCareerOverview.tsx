@@ -1,12 +1,13 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarClock, Disc3, ExternalLink, Music2 } from "lucide-react";
+import { CalendarClock, Disc3, ExternalLink, Music2, Play } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { djCareerUpcomingOrActiveFilter, summarizeDjCareer, type DjCareerPerformance } from "./djCareer";
+import { DjCompletedSetReplay } from "./DjCompletedSetReplay";
 
 type ClubLabel = { id: string; name: string; cityName: string };
 type DjCityFanPopulation = { city_id: string; total_fans: number; total_attendance: number; sets_played: number };
@@ -36,6 +37,7 @@ export function DjCareerOverview({
   clubs: ClubLabel[];
 }) {
   const navigate = useNavigate();
+  const [replayBookingId, setReplayBookingId] = useState<string | null>(null);
   const clubNames = useMemo(() => new Map(clubs.map((club) =>
     [club.id, `${club.name} · ${club.cityName}`])), [clubs]);
 
@@ -205,6 +207,35 @@ export function DjCareerOverview({
         )}
         {legacyError && <p className="text-xs text-muted-foreground">Older DJ history could not be checked.</p>}
 
+        {!historyError && !historyLoading && (history?.rows.some(row => !!row.booking_id) ?? false) && (
+          <div className="border-t pt-3 space-y-2" data-testid="dj-completed-set-replays">
+            <h3 className="text-sm font-medium">Recent verified sets · 3D replays</h3>
+            <p className="text-xs text-muted-foreground">
+              Watch a silent, read-only reconstruction from saved DJ mixer actions after the
+              venue attendance receipt is verified. This is not a recording of the music.
+            </p>
+            {history!.rows.filter(row => !!row.booking_id).slice(0, 5).map((row, index) => (
+              <div key={row.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2">
+                <div>
+                  <p className="text-sm font-medium">Recent verified set {index + 1}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {typeof row.performance_score === "number" ? `Score ${row.performance_score}/100` : "Score unavailable"}
+                    {" · "}{money.format(row.cash_earned ?? 0)} paid
+                  </p>
+                </div>
+                <Button type="button" size="sm" variant="outline"
+                  aria-expanded={replayBookingId === row.booking_id}
+                  onClick={() => setReplayBookingId(current => current === row.booking_id ? null : row.booking_id)}>
+                  <Play className="h-3 w-3 mr-1" /> {replayBookingId === row.booking_id ? "Hide replay" : "View replay"}
+                </Button>
+              </div>
+            ))}
+            {replayBookingId && (
+              <DjCompletedSetReplay key={replayBookingId} bookingId={replayBookingId}
+                profileId={profileId} clubs={clubs} onClose={() => setReplayBookingId(null)} />
+            )}
+          </div>
+        )}
         <div className="border-t pt-3 space-y-2">
           <div className="flex items-center gap-2">
             <CalendarClock className="h-4 w-4 text-primary" />
