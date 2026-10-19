@@ -87,6 +87,24 @@ describe('AvatarShareStudio image capture', () => {
     expect(mocks.renderAvatar).not.toHaveBeenCalled();
   });
 
+  it('does not publish a cached avatar appearance after its refresh failed', async () => {
+    const refetch = vi.fn().mockResolvedValue(undefined);
+    mocks.model.mockReturnValue({
+      profileId: 'profile-1',
+      isLoading: false,
+      query: {
+        data: { appearance: { body: { height: 1 } }, revision: 1 },
+        isError: true,
+        refetch,
+      },
+    });
+    render(<AvatarShareStudio open moment={moment} onOpenChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByTestId('avatar-status')).toHaveTextContent('unavailable'));
+    expect(mocks.renderAvatar).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry avatar' }));
+    expect(refetch).toHaveBeenCalledOnce();
+  });
+
   it('keeps the equipped outfit intact when wardrobe loading fails', async () => {
     const refetch = vi.fn().mockResolvedValue(undefined);
     mocks.clothing.mockReturnValue({ data: undefined, isPending: false, isFetching: false, isError: true, refetch });
