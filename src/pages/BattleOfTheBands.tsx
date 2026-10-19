@@ -29,7 +29,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Swords, MapPin, Calendar, Users, Trophy, Info, Music, X } from "lucide-react";
-import { format } from "date-fns";
+import { formatBotbCityDate } from "@/lib/botbDates";
 
 export default function BattleOfTheBands() {
   const { profileId } = useActiveProfile();
@@ -159,7 +159,7 @@ export default function BattleOfTheBands() {
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <Calendar className="h-4 w-4" />
-                          {format(new Date(event.scheduled_date), "MMM d, yyyy")}
+                          {formatBotbCityDate(event.scheduled_date, event.city?.timezone)}
                         </span>
                         <span className="flex items-center gap-1">
                           <Users className="h-4 w-4" />
@@ -228,7 +228,7 @@ export default function BattleOfTheBands() {
                           </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {ev?.scheduled_date ? format(new Date(ev.scheduled_date), "EEEE, MMM d yyyy") : ""}
+                          {ev?.scheduled_date ? formatBotbCityDate(ev.scheduled_date, ev.city?.timezone, "long") : ""}
                           {ev?.prize_money ? ` · Prize ${ev.prize_money.toLocaleString()}` : ""}
                         </p>
                         <div className="flex items-center gap-2 text-sm">
@@ -290,7 +290,7 @@ export default function BattleOfTheBands() {
                         <h3 className="font-semibold">{event.winner_band?.name ?? "No winner"}</h3>
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        {event.city?.name} • {format(new Date(event.scheduled_date), "MMM d, yyyy")} •{" "}
+                        {event.city?.name} • {formatBotbCityDate(event.scheduled_date, event.city?.timezone)} •{" "}
                         {event.entry_count ?? 0} bands · {event.attendance > 0 ? `${event.attendance.toLocaleString()} attending` : "Attendance not recorded"} · Prize ${event.prize_money.toLocaleString()}
                       </p>
                     </div>
@@ -312,7 +312,7 @@ export default function BattleOfTheBands() {
             <DialogTitle className="flex items-center gap-2">
               <Swords className="h-5 w-5 text-primary" />
               {detailEvent?.city?.name} —{" "}
-              {detailEvent ? format(new Date(detailEvent.scheduled_date), "MMM d, yyyy") : ""}
+              {detailEvent ? formatBotbCityDate(detailEvent.scheduled_date, detailEvent.city?.timezone) : ""}
             </DialogTitle>
             <DialogDescription>
               {detailEvent?.status === "completed" ? "Final results" : "Bands entered so far"}
