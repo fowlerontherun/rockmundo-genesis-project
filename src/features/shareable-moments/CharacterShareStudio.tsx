@@ -38,11 +38,15 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
   const [recapture, setRecapture] = useState<{ key: string; attempt: number } | null>(null);
   const retry = recapture?.key === captureKey ? recapture.attempt : 0;
   const storedAvatar = retry > 0 ? null : moment.avatar ?? null;
+  // Automatic milestone prompts should not initialise WebGL until the
+  // player actually chooses to create the image.
+  const [promptAccepted, setPromptAccepted] = useState(false);
+  const captureEnabled = !moment.promptOnly || promptAccepted;
   const avatar = storedAvatar ?? (capture?.key === captureKey ? capture.avatar : null);
   const captureStatus: CaptureStatus = storedAvatar ? 'ready' : capture?.key === captureKey ? capture.status : 'loading';
 
   useEffect(() => {
-    if (!open || storedAvatar) return;
+    if (!open || !captureEnabled || storedAvatar) return;
     let cancelled = false;
     setCapture({ key: captureKey, avatar: null, status: 'loading' });
 
@@ -75,7 +79,7 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
     });
 
     return () => { cancelled = true; };
-  }, [open, storedAvatar, captureKey, profileId, appearance, model.query.isError,
+  }, [open, captureEnabled, storedAvatar, captureKey, profileId, appearance, model.query.isError,
     clothing.isPending, clothing.isFetching, clothing.data, tattoos.isPending, tattoos.isFetching, tattoos.data,
     merch.query.isPending, merch.query.isFetching, merch.query.data, luthiery.isPending, luthiery.isFetching, craftedInstrument,
     role, instrument, retry]);
@@ -84,7 +88,11 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
 
   return <ShareMomentSheet
     open={open}
-    onOpenChange={onOpenChange}
+    onOpenChange={(nextOpen) => {
+      if (!nextOpen) setPromptAccepted(false);
+      onOpenChange(nextOpen);
+    }}
+    onPromptAccepted={() => setPromptAccepted(true)}
     moment={shareMoment}
     avatarStatus={captureStatus}
     onAvatarRetry={() => setRecapture(previous => ({

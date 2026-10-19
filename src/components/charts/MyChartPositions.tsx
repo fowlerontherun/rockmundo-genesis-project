@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { referralShareOnCooldown } from "@/lib/referralShare";
 import { referralUrlWithParams } from "@/features/shareable-moments/share";
-import { ShareMomentSheet } from "@/features/shareable-moments/ShareMomentSheet";
+import { AvatarShareStudio } from "@/features/shareable-moments/CharacterShareStudio";
 import type { ShareMoment } from "@/features/shareable-moments/types";
 import { shouldOfferSharePrompt } from "@/features/shareable-moments/prompts";
 import { referralAwareDestination } from "@/features/shareable-moments/referralDestination";
@@ -274,7 +274,7 @@ export function MyChartPositions({ userId }: MyChartPositionsProps) {
           </Card>
         );
       })}
-      <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(open) => { if (!open) setShareMoment(null); }} />
+      {shareMoment && <AvatarShareStudio moment={shareMoment} open={true} onOpenChange={(open) => { if (!open) setShareMoment(null); }} />}
     </div>
   );
 }
