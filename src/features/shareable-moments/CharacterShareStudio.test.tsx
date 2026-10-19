@@ -87,6 +87,31 @@ describe('AvatarShareStudio image capture', () => {
     expect(mocks.renderAvatar).not.toHaveBeenCalled();
   });
 
+  it('waits for a cached appearance refresh to finish before capturing the share PNG', async () => {
+    const cachedAppearance = { body: { height: 1 } };
+    const model = (isFetching: boolean) => ({
+      profileId: 'profile-1',
+      isLoading: false,
+      query: {
+        data: { appearance: cachedAppearance, revision: 2 },
+        isError: false,
+        isFetching,
+      },
+    });
+    mocks.model.mockReturnValue(model(true));
+    const view = render(<AvatarShareStudio open moment={moment} onOpenChange={vi.fn()} />);
+    expect(screen.getByTestId('avatar-status')).toHaveTextContent('loading');
+    expect(mocks.renderAvatar).not.toHaveBeenCalled();
+
+    mocks.model.mockReturnValue(model(false));
+    view.rerender(<AvatarShareStudio open moment={moment} onOpenChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByTestId('avatar-status')).toHaveTextContent('ready'));
+    expect(mocks.renderAvatar).toHaveBeenCalledTimes(1);
+    expect(mocks.renderAvatar).toHaveBeenCalledWith(expect.objectContaining({
+      appearance: cachedAppearance,
+    }));
+  });
+
   it('does not publish a cached avatar appearance after its refresh failed', async () => {
     const refetch = vi.fn().mockResolvedValue(undefined);
     mocks.model.mockReturnValue({
