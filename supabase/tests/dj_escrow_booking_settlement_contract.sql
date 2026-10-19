@@ -65,6 +65,10 @@ BEGIN
  SELECT cash INTO dj_cash FROM public.profiles WHERE id=dp;
  booking1:=public.dj_verified_funded_offer_booking_service(du,offer1,key1);
  booking2:=public.confirm_accepted_nightclub_dj_offer_internal(offer2,key2);
+ BEGIN
+  PERFORM public.withdraw_nightclub_dj_application(app1);
+  RAISE EXCEPTION 'DJ withdrew a booked funded interest application';
+ EXCEPTION WHEN invalid_parameter_value THEN NULL;END;
  IF booking1=booking2 OR (SELECT count(*) FROM public.player_scheduled_activities a
  WHERE a.linked_dj_booking_id IN (booking1,booking2) AND a.status='scheduled')<>2
  THEN RAISE EXCEPTION 'Canonical DJ booking Schedule projection missing';END IF;
