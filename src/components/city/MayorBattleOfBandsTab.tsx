@@ -21,6 +21,54 @@ type CityBattleSettings = {
   prize_money: number;
 };
 
+type BattleFinanceEstimate = {
+  prize_money: number;
+  band_count: number;
+  attendance: number;
+  ticket_revenue: number;
+  sponsorship_revenue: number;
+  production_cost: number;
+  city_profit: number;
+};
+
+// Each row owns its query, so public battle browsing does not launch forecasts
+// for every city's events. Only the mayor's visible local events are queried.
+function BattleForecast({ eventId }: { eventId: string }) {
+  const forecast = useQuery({
+    queryKey: ["botb-event-finance-preview", eventId],
+    queryFn: async (): Promise<BattleFinanceEstimate | null> => {
+      const { data, error } = await db.rpc("botb_estimate_event_finances", {
+        p_event_id: eventId,
+      });
+      if (error) throw error;
+      const report = Array.isArray(data) ? data[0] : data;
+      return report ?? null;
+    },
+    staleTime: 60_000,
+  });
+
+  if (forecast.isError) {
+    return <p role="alert" className="text-xs text-destructive">
+      Forecast unavailable. <button type="button" className="underline" onClick={() => void forecast.refetch()}>Retry</button>
+    </p>;
+  }
+  if (forecast.isLoading) {
+    return <p className="text-xs text-muted-foreground">Calculating attendance…</p>;
+  }
+  if (!forecast.data || forecast.data.band_count === 0) {
+    return <p className="text-xs text-muted-foreground">Awaiting band entries to forecast attendance.</p>;
+  }
+
+  const f = forecast.data;
+  return <div className="text-xs text-muted-foreground">
+    <strong className="text-foreground">{f.attendance.toLocaleString()} expected attendees</strong>
+    {" · "}Tickets {money(f.ticket_revenue)}
+    {" · "}Sponsorship needed {money(f.sponsorship_revenue)}
+    {" · "}Costs {money(f.production_cost)}
+    {" · "}Expected city net +{money(f.city_profit)}
+  </div>;
+}
+
 export function MayorBattleOfBandsTab({ cityId }: { cityId: string }) {
   const queryClient = useQueryClient();
   const [weekday, setWeekday] = useState(5);
@@ -62,6 +110,7 @@ export function MayorBattleOfBandsTab({ cityId }: { cityId: string }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["botb-city-settings", cityId] });
       queryClient.invalidateQueries({ queryKey: ["botb-upcoming"] });
+      queryClient.invalidateQueries({ queryKey: ["botb-event-finance-preview"] });
       queryClient.invalidateQueries({ queryKey: ["mayor-actions-log"] });
       toast.success("Battle schedule and prize updated");
     },
@@ -124,7 +173,7 @@ export function MayorBattleOfBandsTab({ cityId }: { cityId: string }) {
               <p className="text-sm text-muted-foreground">
                 Attendance depends on entered bands, their local fans and fame, and the prize.
                 Ticket receipts and event sponsorship cover the prize and production costs.
-                The city always earns at least $0 net.
+                The city always earns at least $0 net. Attendance and income below are estimates until each event completes.
               </p>
               <Button disabled={!valid || update.isPending} onClick={() => update.mutate()}>
                 {update.isPending ? "Updating…" : "Save battle settings"}
@@ -140,10 +189,13 @@ export function MayorBattleOfBandsTab({ cityId }: { cityId: string }) {
         <CardContent className="space-y-3">
           {loadingUpcoming ? "Loading upcoming battles…" : upcoming.length === 0 ? "No battles scheduled." :
             upcoming.slice(0, 8).map((event) => (
-              <div key={event.id} className="flex items-center justify-between gap-3 border-b pb-2 text-sm">
-                <span>{formatBotbCityDate(event.scheduled_date, event.city?.timezone)}</span>
-                <span className="flex items-center gap-1 text-muted-foreground"><Users className="h-4 w-4" />{event.entry_count ?? 0}/{event.max_entries}</span>
-                <strong>{money(event.prize_money)}</strong>
+              <div key={event.id} className="space-y-1 border-b pb-3 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <span>{formatBotbCityDate(event.scheduled_date, event.city?.timezone)}</span>
+                  <span className="flex items-center gap-1 text-muted-foreground"><Users className="h-4 w-4" />{event.entry_count ?? 0}/{event.max_entries}</span>
+                  <strong>{money(event.prize_money)}</strong>
+                </div>
+                <BattleForecast eventId={event.id} />
               </div>
             ))}
         </CardContent>
