@@ -35,10 +35,10 @@ begin
  values (song_one,seller_uid,seller_profile,'Test 4229 fixed','Rock','draft'),
         (song_two,seller_uid,seller_profile,'Test 4229 auction','Rock','draft');
  insert into public.marketplace_listings
-   (id,song_id,seller_user_id,profile_id,listing_type,asking_price,expires_at,listing_status)
+   (id,song_id,seller_user_id,profile_id,listing_type,asking_price,buyout_price,expires_at,listing_status)
  values
-   (listing_one,song_one,seller_uid,seller_profile,'fixed_price',200,now()+interval '1 day','active'),
-   (listing_two,song_two,seller_uid,seller_profile,'auction',100,now()+interval '1 day','active');
+   (listing_one,song_one,seller_uid,seller_profile,'fixed_price',200,null,now()+interval '1 day','active'),
+   (listing_two,song_two,seller_uid,seller_profile,'auction',100,300,now()+interval '1 day','active');
 
  perform set_config('request.jwt.claim.sub',seller_uid::text,true);
  begin
@@ -59,7 +59,7 @@ begin
    perform public.settle_song_marketplace_sale_atomic(listing_two,buyer_profile,'accept_bid');
    raise exception 'non_seller_accepted_bid';
  exception when others then
-   if sqlerrm<>'song_sale_only_seller_accepts_bid' then raise; end if;
+   if sqlerrm<>'song_sale_bid_escrow_required' then raise; end if;
  end;
 
  -- Another October migration independently hardened the legacy sale RPC
@@ -120,7 +120,7 @@ begin
    perform public.settle_song_marketplace_sale_atomic(listing_two,seller_profile,'accept_bid');
    raise exception 'auction_accepted_without_bid';
  exception when others then
-   if sqlerrm<>'song_sale_missing_authorized_bid' then raise; end if;
+   if sqlerrm<>'song_sale_bid_escrow_required' then raise; end if;
  end;
 
  perform set_config('request.jwt.claim.sub',buyer_uid::text,true);
@@ -138,15 +138,25 @@ begin
  end;
  result:=public.place_song_bid_authorized(listing_two,buyer_profile,120);
  if result->>'success'<>'true' then raise exception 'valid_bid_failed'; end if;
+ -- Even after a verified bid, seller acceptance without escrow is blocked.
  perform set_config('request.jwt.claim.sub',seller_uid::text,true);
- result:=public.settle_song_marketplace_sale_atomic(listing_two,seller_profile,'accept_bid');
- if result->>'success'<>'true' or (result->>'sale_price')::integer<>120
-   or (select cash from public.profiles where id=buyer_profile)<>680
+ begin
+   perform public.settle_song_marketplace_sale_atomic(listing_two,seller_profile,'accept_bid');
+   raise exception 'unescrowed_seller_acceptance';
+ exception when others then
+   if sqlerrm<>'song_sale_bid_escrow_required' then raise; end if;
+ end;
+ -- The bidder must initiate any buyout; its price is fixed by the listing,
+ -- not client claims. This commits neither a winning-bid charge nor escrow.
+ perform set_config('request.jwt.claim.sub',buyer_uid::text,true);
+ result:=public.settle_song_marketplace_sale_atomic(listing_two,buyer_profile,'buy');
+ if result->>'success'<>'true' or (result->>'sale_price')::integer<>300
+   or (select cash from public.profiles where id=buyer_profile)<>500
    or (select cash from public.profiles where id=other_buyer_profile)<>555
-   or (select cash from public.profiles where id=seller_profile)<>388
+   or (select cash from public.profiles where id=seller_profile)<>550
    or (select count(*) from public.marketplace_transactions where listing_id=listing_two)<>1
-   or (select count(*) from public.marketplace_bids where listing_id=listing_two and bid_status='won')<>1
- then raise exception 'accepted_bid_settlement_incorrect'; end if;
+   or (select count(*) from public.marketplace_bids where listing_id=listing_two and bid_status='lost')<>1
+ then raise exception 'auction_buyout_settlement_incorrect'; end if;
 
  if has_function_privilege('anon','public.complete_song_sale(uuid,uuid,numeric)','execute')
     or has_function_privilege('authenticated','public.place_song_bid(uuid,uuid,numeric)','execute')
