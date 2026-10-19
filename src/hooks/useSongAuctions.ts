@@ -240,11 +240,13 @@ export const useSongAuctions = (userId?: string) => {
   // Place a bid using RPC
   const placeBid = useMutation({
     mutationFn: async ({ listingId, bidAmount }: { listingId: string; bidAmount: number }) => {
-      if (!userId) throw new Error("Not authenticated");
+      if (!userId || !profileId) throw new Error("Choose an active character before bidding");
 
-      const { data, error } = await supabase.rpc("place_song_bid", {
+      // The secured RPC verifies the JWT, active character ownership,
+      // listing/song eligibility, available cash and canonical bid minimum.
+      const { data, error } = await supabase.rpc("place_song_bid_authorized", {
         p_listing_id: listingId,
-        p_bidder_user_id: userId,
+        p_bidder_profile_id: profileId,
         p_bid_amount: bidAmount,
       });
 
