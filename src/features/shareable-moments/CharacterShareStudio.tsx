@@ -70,7 +70,8 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
     // current avatar rather than a partially loaded default outfit.
     // A disabled optional query (e.g. merch without a band) is perpetually
     // isPending in React Query; only wait for requests actually in flight.
-    if ((clothing.isPending && clothing.isFetching)
+    if (model.query.isFetching
+      || (clothing.isPending && clothing.isFetching)
       || (tattoos.isPending && tattoos.isFetching)
       || (merch.query.isPending && merch.query.isFetching)
       || (luthiery.isPending && luthiery.isFetching)) return;
@@ -91,7 +92,7 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
     });
 
     return () => { cancelled = true; };
-  }, [open, captureEnabled, storedAvatar, captureKey, profileId, appearance, model.query.isError, model.isLoading,
+  }, [open, captureEnabled, storedAvatar, captureKey, profileId, appearance, model.query.isError, model.query.isFetching, model.isLoading,
     clothing.isPending, clothing.isFetching, clothing.isError, clothing.data, tattoos.isPending, tattoos.isFetching, tattoos.isError, tattoos.data,
     merch.query.isPending, merch.query.isFetching, merch.query.isError, merch.query.data, luthiery.isPending, luthiery.isFetching, luthiery.isError, craftedInstrument,
     role, instrument, retry]);
