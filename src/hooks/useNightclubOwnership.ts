@@ -20,6 +20,7 @@ export interface OwnedNightclub {
   is_open: boolean;
   purchased_at: string;
   purchase_price: number;
+  verified_purchase_id: string | null;
 }
 
 export interface NightclubStaff {
