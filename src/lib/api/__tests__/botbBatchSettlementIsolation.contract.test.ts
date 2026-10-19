@@ -9,6 +9,10 @@ const prizeConstraintSql = readFileSync(
   "supabase/migrations/20261019141500_botb_earnings_one_prize_per_event.sql",
   "utf8",
 );
+const accountingSql = readFileSync(
+  "supabase/migrations/20261019142000_botb_completed_accounting_invariant.sql",
+  "utf8",
+);
 
 describe("Battle of the Bands isolated settlement cycle", () => {
   it("limits batch processing and ignores events already locked by another cycle", () => {
@@ -83,5 +87,24 @@ describe("Battle of the Bands exactly-one payout guard", () => {
       "BOTB_DUPLICATE_HISTORICAL_EARNINGS: manual review required",
     );
     expect(prizeConstraintSql).not.toContain("DELETE FROM public.band_earnings");
+  });
+});
+
+describe("Battle of the Bands completed-city break-even accounting", () => {
+  it("requires tickets plus sponsorship to cover prize and expenses", () => {
+    expect(accountingSql).toContain("ADD CONSTRAINT botb_completed_balanced_accounting");
+    expect(accountingSql).toContain("ticket_revenue+sponsorship_revenue >=");
+    expect(accountingSql).toContain("prize_money::bigint+production_cost");
+  });
+
+  it("enforces exact stored net profit on real completed events", () => {
+    expect(accountingSql).toContain("AND city_profit =");
+    expect(accountingSql).toContain("ticket_revenue+sponsorship_revenue-");
+    expect(accountingSql).toContain("prize_money::bigint-production_cost");
+  });
+
+  it("grandfathers historical results without recorded attendance", () => {
+    expect(accountingSql).toContain("OR attendance = 0");
+    expect(accountingSql).toContain("BOTB_COMPLETED_ECONOMY_DRIFT_REQUIRES_REVIEW");
   });
 });
