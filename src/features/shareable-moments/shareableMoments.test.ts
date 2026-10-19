@@ -90,7 +90,7 @@ describe('avatar image compositing', () => {
     const drawImage = vi.fn();
     const gradient = { addColorStop: vi.fn() };
     const ctx = new Proxy({ drawImage }, {
-      get(target, key: string) {
+      get(target, key) {
         if (key === 'drawImage') return target.drawImage;
         if (key === 'createLinearGradient' || key === 'createRadialGradient') return () => gradient;
         if (key === 'measureText') return (value: string) => ({ width: value.length * 15 });
