@@ -1,82 +1,14 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import {
-  completeJobRun,
-  failJobRun,
-  getErrorMessage,
-  safeJson,
-  startJobRun,
-} from "../_shared/job-logger.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-triggered-by",
-};
-
-serve(async (req) => {
+// #4221: gig starts run exclusively from PostgreSQL's internal pg_cron
+// worker (public.run_auto_start_gigs_scheduled). The former public HTTP
+// endpoint is intentionally retired: never restore its service-role client.
+Deno.serve((req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    } });
   }
-
-  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req);
-  const triggeredBy = payload?.triggeredBy ?? req.headers.get("x-triggered-by") ?? undefined;
-
-  const supabaseClient = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-  );
-
-  let runId: string | null = null;
-  const startedAt = Date.now();
-
-  try {
-    runId = await startJobRun({
-      jobName: "auto-start-gigs",
-      functionName: "auto-start-gigs",
-      supabaseClient,
-      triggeredBy,
-      requestPayload: payload ?? null,
-      requestId: payload?.requestId ?? null,
-    });
-
-    // Call the auto-start function
-    const { data, error } = await supabaseClient.rpc('auto_start_scheduled_gigs');
-
-    if (error) {
-      console.error('Error auto-starting gigs:', error);
-      throw error;
-    }
-
-    const summary = (data ?? {}) as Record<string, unknown>;
-    console.log('[auto-start-gigs] summary:', JSON.stringify(summary));
-
-    await completeJobRun({
-      jobName: "auto-start-gigs",
-      runId,
-      supabaseClient,
-      durationMs: Date.now() - startedAt,
-      resultSummary: { message: "Checked and started scheduled gigs", ...summary },
-    });
-
-    return new Response(
-      JSON.stringify({ success: true, message: 'Checked and started scheduled gigs', ...summary }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-    );
-  } catch (error) {
-    console.error("Error in auto-start-gigs:", error);
-
-    await failJobRun({
-      jobName: "auto-start-gigs",
-      runId,
-      supabaseClient,
-      durationMs: Date.now() - startedAt,
-      error,
-    });
-
-    return new Response(
-      JSON.stringify({ error: getErrorMessage(error) }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
-    );
-  }
+  return new Response(JSON.stringify({
+    error: "Scheduled gig starts run only on the internal minute scheduler",
+  }), { status: 410, headers: { "Content-Type": "application/json" } });
 });
