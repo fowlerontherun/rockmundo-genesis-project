@@ -92,6 +92,10 @@ Deno.serve(async (req) => {
     if (completeError) throw completeError;
 
     for (const activity of toComplete || []) {
+      // Work-shift payout is owned by the dedicated, secret-authorised cron
+      // and its atomic settlement RPC. Do not call that global worker here or
+      // mark the scheduled work activity complete before wages actually post.
+      if (activity.activity_type === 'work') continue;
       try {
         await processActivityCompletion(supabase, activity);
         await supabase
@@ -268,7 +272,7 @@ async function processActivityCompletion(supabase: any, activity: ScheduledActiv
       if (activity.linked_recording_id) await supabase.functions.invoke('complete-recording-sessions');
       break;
     case 'work':
-      if (activity.linked_job_shift_id) await supabase.functions.invoke('shift-clock-out');
+      // The scheduler loop deliberately skips work until atomic settlement.
       break;
     case 'university':
       await supabase.functions.invoke('university-attendance');
