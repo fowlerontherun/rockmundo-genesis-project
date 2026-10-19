@@ -1,9 +1,20 @@
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 import type { CasinoGameType } from "@/lib/casino/types";
+
+export interface CasinoReceipt {
+  roundId: string;
+  netResult: number;
+  newCash: number;
+  payout: number;
+  outcome: Record<string, unknown>;
+  alreadyCompleted: boolean;
+}
+
+type ServerCasinoGame = Exclude<CasinoGameType, "blackjack">;
 
 export function useCasino() {
   const { profileId } = useActiveProfile();
@@ -13,11 +24,12 @@ export function useCasino() {
     queryKey: ["profile-cash", profileId],
     queryFn: async () => {
       if (!profileId) return { cash: 0 };
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("profiles")
         .select("cash")
         .eq("id", profileId)
         .single();
+      if (error) throw error;
       return data ?? { cash: 0 };
     },
     enabled: !!profileId,
@@ -25,46 +37,52 @@ export function useCasino() {
 
   const mutation = useMutation({
     mutationFn: async ({
-      gameType,
-      betAmount,
-      payout,
-      metadata,
+      gameType, betAmount, choices, requestId,
     }: {
-      gameType: CasinoGameType;
+      gameType: ServerCasinoGame;
       betAmount: number;
-      payout: number;
-      metadata: Record<string, unknown>;
-    }) => {
-      if (!profileId) throw new Error("Not authenticated");
+      choices: Record<string, unknown>;
+      requestId: string;
+    }): Promise<CasinoReceipt> => {
+      if (!profileId) throw new Error("Select an active character to play.");
+      if (!requestId) throw new Error("Casino request ID required.");
 
-      // The server resolves the balance change, records the transaction and
-      // rolls addiction risk atomically. The browser never writes cash.
-      const { data, error } = await (supabase as any).rpc("play_casino_round", {
-        p_game_type: gameType,
-        p_bet_amount: betAmount,
-        p_payout: payout,
-        p_metadata: metadata ?? {},
-      });
+      // NEVER pass a chosen payout, reel result or roulette wheel result.
+      // A per-round idempotency UUID is reused after ambiguous network errors.
+      const { data, error } = await (supabase as any).rpc(
+        "play_casino_round_authoritative",
+        {
+          p_game_type: gameType,
+          p_bet_amount: betAmount,
+          p_choices: choices,
+          p_request_id: requestId,
+        },
+      );
       if (error) {
         if (error.message?.includes("insufficient_funds")) throw new Error("Insufficient funds");
-        throw new Error(error.message ?? "Casino round failed");
+        throw new Error(error.message ?? "Casino round could not be confirmed.");
       }
-
-      // An RPC response without a settlement receipt is not a confirmed win,
-      // push or loss. Do not turn missing balance fields into an apparent $0 result.
       if (
-        data?.netResult == null || data?.newCash == null ||
-        !Number.isFinite(Number(data.netResult)) || !Number.isFinite(Number(data.newCash))
+        typeof data?.roundId !== "string" ||
+        !Number.isFinite(Number(data?.netResult)) ||
+        !Number.isFinite(Number(data?.newCash)) ||
+        !Number.isFinite(Number(data?.payout)) ||
+        !data?.outcome || typeof data.outcome !== "object"
       ) {
-        throw new Error("Casino settlement receipt missing or invalid");
+        throw new Error("Casino settlement receipt missing or invalid. Retry with the same request ID.");
       }
       if (data.developedAddiction) {
-        toast.warning("You're developing a gambling habit...", { description: "Be careful at the casino." });
+        toast.warning("You're developing a gambling habit...", {
+          description: "Be careful at the casino.",
+        });
       }
-
       return {
+        roundId: data.roundId,
         netResult: Number(data.netResult),
         newCash: Number(data.newCash),
+        payout: Number(data.payout),
+        outcome: data.outcome as Record<string, unknown>,
+        alreadyCompleted: Boolean(data.alreadyCompleted),
       };
     },
     onSuccess: () => {
@@ -76,10 +94,9 @@ export function useCasino() {
   });
 
   const recordTransaction = useCallback(
-    async (gameType: CasinoGameType, betAmount: number, payout: number, metadata: Record<string, unknown>) => {
-      return mutation.mutateAsync({ gameType, betAmount, payout, metadata });
-    },
-    [mutation]
+    (gameType: ServerCasinoGame, betAmount: number, choices: Record<string, unknown>, requestId: string) =>
+      mutation.mutateAsync({ gameType, betAmount, choices, requestId }),
+    [mutation],
   );
 
   return {
