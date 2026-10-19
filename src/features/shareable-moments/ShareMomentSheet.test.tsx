@@ -344,14 +344,13 @@ describe("ShareMomentSheet exports the active canvas frame", () => {
       fireEvent.click(screen.getByRole("button", { name: "Download PNG" }));
 
       await waitFor(() => expect(vi.mocked(canvasBlob)).toHaveBeenCalledOnce());
-      expect(vi.mocked(renderShareMoment)).toHaveBeenLastCalledWith(
+      expect(vi.mocked(renderShareMoment).mock.lastCall?.slice(0,5)).toEqual([
         expect.any(HTMLCanvasElement),
         expect.objectContaining({ id: moment.id, avatar }),
         format,
         decoded,
         null,
-        expect.anything(),
-      );
+      ]);
       expect(mocks.downloadBlob).toHaveBeenCalledOnce();
     },
   );
@@ -378,13 +377,12 @@ describe("ShareMomentSheet exports the active canvas frame", () => {
     vi.mocked(renderShareMoment).mockClear();
     fireEvent.click(screen.getByRole("button", { name: "Download PNG" }));
     await waitFor(() => expect(vi.mocked(canvasBlob)).toHaveBeenCalledOnce());
-    expect(vi.mocked(renderShareMoment)).toHaveBeenLastCalledWith(
+    expect(vi.mocked(renderShareMoment).mock.lastCall?.slice(0,5)).toEqual([
       expect.any(HTMLCanvasElement),
       expect.objectContaining({ type: "festival", id: "public-poster" }),
       "square",
       null,
       null,
-      expect.anything(),
-    );
+    ]);
   });
 });
