@@ -56,6 +56,11 @@ export function getStaffTypes() {
   return STAFF_TYPES;
 }
 
+// Display guidance only. The DB enforces the actual staffing cap under a club row lock.
+export function getNightclubStaffCap(capacity: number): number {
+  return Math.min(20, Math.max(5, Math.ceil(capacity / 100) + 4));
+}
+
 export function getStaffBaseSalary(type: string): number {
   return STAFF_BASE_SALARY[type] ?? 200;
 }
