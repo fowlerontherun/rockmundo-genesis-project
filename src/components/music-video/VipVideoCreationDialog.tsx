@@ -220,6 +220,12 @@ export function VipVideoCreationDialog({
           title: "Existing generation found",
           description: "This generation is already underway or finished. No additional charge was taken.",
         });
+        queryClient.invalidateQueries({ queryKey: ["music-videos"] });
+        queryClient.invalidateQueries({ queryKey: ["game-data"] });
+        resetForm();
+        setOpen(false);
+        onVideoCreated?.();
+        return;
       }
 
       toast({
