@@ -138,6 +138,29 @@ describe("ShareMomentSheet avatar exports", () => {
     expect(screen.getByRole("textbox", { name: "Share headline" })).toHaveValue("My edited headline");
   });
 
+  it("blocks characterless image exports after capture failure but allows a text link", () => {
+    const retry = vi.fn();
+    render(
+      <MemoryRouter>
+        <ShareMomentSheet
+          moment={{ ...moment, promptOnly: false }}
+          open
+          onOpenChange={vi.fn()}
+          avatarStatus="unavailable"
+          onAvatarRetry={retry}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Image export is paused");
+    for (const button of ["Share now", "Post to Twaater", "Download PNG", "Copy image"]) {
+      expect(screen.getByRole("button", { name: button })).toBeDisabled();
+    }
+    expect(screen.getByRole("button", { name: "Copy link" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Retry avatar" }));
+    expect(retry).toHaveBeenCalledOnce();
+  });
+
   it("shows a retry when an avatar could not be rendered", () => {
     const retry = vi.fn();
     render(
