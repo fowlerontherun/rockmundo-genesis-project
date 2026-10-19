@@ -164,7 +164,7 @@ export function OwnedClubDjFundedOffers({ club }: { club: OwnedNightclub }) {
             <p className="text-sm font-medium">Offer escrow history</p>
             {offers.map(o => <div key={o.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2.5">
               <div>
-                <p className="text-sm font-medium">$​{o.fee} · {o.status}</p>
+                <p className="text-sm font-medium">${"$"}{o.fee} · {o.status}</p>
                 <p className="text-xs text-muted-foreground">
                   {o.status === "offered" || o.status === "accepted"
                     ? `Held until ${new Date(o.expires_at).toLocaleString()} unless cancelled`
