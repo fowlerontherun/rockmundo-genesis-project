@@ -140,6 +140,11 @@ const ClubDashboard = ({ club }: { club: OwnedNightclub }) => {
               <p className="text-xs text-muted-foreground">
                 {QUALITY_LABELS[club.quality_level]} • Capacity {club.capacity} • Rep {club.reputation_score}
               </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {club.verified_purchase_id
+                  ? "Verified purchase · eligible for future club-owner DJ controls"
+                  : "Legacy ownership record · purchase not yet verified for DJ-owner privileges"}
+              </p>
             </div>
             <Button
               size="sm"
