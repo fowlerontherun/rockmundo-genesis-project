@@ -20,9 +20,9 @@ import {
   acceptModelingOffer,
   declineModelingOffer,
 } from "@/utils/modelingOfferGenerator";
-import { useActiveProfile } from "@/hooks/useActiveProfile";
 interface ModelingOffersPanelProps {
   userId: string;
+  profileId: string;
   playerLooks: number;
   playerFame: number;
   skillLevels?: Record<string, number>;
@@ -55,9 +55,8 @@ const TIME_SLOTS = [
   { value: "20:00", label: "08:00 PM" },
 ];
 
-export const ModelingOffersPanel = ({ userId, playerLooks, playerFame, skillLevels = {} }: ModelingOffersPanelProps) => {
+export const ModelingOffersPanel = ({ userId, profileId, playerLooks, playerFame, skillLevels = {} }: ModelingOffersPanelProps) => {
   const queryClient = useQueryClient();
-  const { profileId } = useActiveProfile();
   const [bookingOffer, setBookingOffer] = useState<any | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [selectedTime, setSelectedTime] = useState<string>("");
@@ -122,9 +121,9 @@ export const ModelingOffersPanel = ({ userId, playerLooks, playerFame, skillLeve
   // Auto-generate offers on page visit if none pending
   useEffect(() => {
     // No auto-generation until a successful read proves there are no offers.
-    if (!profileId || !offersLoaded || isLoading || isError || !pendingOffers) return;
-    if (pendingOffers.length === 0 && isOfferCooldownExpired()) {
-      generateModelingOffersForUser(userId, playerLooks, playerFame, skillLevels).then((count) => {
+    if (!userId || !profileId || !offersLoaded || isLoading || isError || !pendingOffers) return;
+    if (pendingOffers.length === 0 && isOfferCooldownExpired(profileId)) {
+      generateModelingOffersForUser(userId, profileId, playerLooks, playerFame, skillLevels).then((count) => {
         if (count > 0) {
           queryClient.invalidateQueries({ queryKey: ["modeling-offers-pending"] });
           toast.info(`${count} new modeling offer${count > 1 ? "s" : ""} arrived!`);

@@ -7,11 +7,11 @@ import { ModelingOffersPanel } from "@/components/modeling/ModelingOffersPanel";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 function ModelingInner() {
-  const { profileId } = useActiveProfile();
+  const { profileId, userId } = useActiveProfile();
   const { profile } = useGameData();
   const { progress } = useSkillSystem();
 
-  if (!profileId || !profile) {
+  if (!profileId || !userId || !profile) {
     return (
       <FMPageScaffold title="Modeling" subtitle="Sign in to access modeling offers." icon={Camera} backTo="/hub/career">
         <p className="text-muted-foreground text-sm">Please log in to access modeling.</p>
@@ -35,7 +35,8 @@ function ModelingInner() {
       backTo="/hub/career"
     >
       <ModelingOffersPanel
-        userId={profileId}
+        userId={userId}
+        profileId={profileId}
         playerLooks={playerLooks}
         playerFame={playerFame}
         skillLevels={skillLevels}

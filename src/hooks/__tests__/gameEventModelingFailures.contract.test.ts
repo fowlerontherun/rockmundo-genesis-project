@@ -25,7 +25,7 @@ describe("game notification delivery and modeling read safety", () => {
   });
 
   it("never generates modeling offers until the pending offer query succeeds", () => {
-    expect(modeling).toContain("if (!profileId || !offersLoaded || isLoading || isError || !pendingOffers) return;");
+    expect(modeling).toContain("if (!userId || !profileId || !offersLoaded || isLoading || isError || !pendingOffers) return;");
     expect(modeling).toContain("Unable to load modeling offers.");
     expect(modeling).toContain("refetchOffers()");
     expect(modeling).toContain("generateModelingOffersForUser(userId");
