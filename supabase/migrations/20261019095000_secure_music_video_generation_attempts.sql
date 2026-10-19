@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS public.music_video_generation_attempts (
  user_id uuid NOT NULL REFERENCES auth.users(id),
  profile_id uuid NOT NULL REFERENCES public.profiles(id),
  charge_amount bigint NOT NULL CHECK (charge_amount=75000),
- state text NOT NULL DEFAULT 'reserved' CHECK (state IN ('reserved','generating','succeeded','failed')),
+ state text NOT NULL DEFAULT 'reserved' CHECK (state IN ('reserved','preparing','generating','succeeded','failed')),
  prediction_id text UNIQUE,
  created_at timestamptz NOT NULL DEFAULT now(),
  registered_at timestamptz,
@@ -100,6 +100,32 @@ REVOKE ALL ON FUNCTION public.reserve_music_video_generation(uuid,text,jsonb,uui
 GRANT EXECUTE ON FUNCTION public.reserve_music_video_generation(uuid,text,jsonb,uuid)
  TO authenticated,service_role;
 
+-- Claim BEFORE generating the first-frame image to block parallel duplicate
+-- provider jobs for one paid reservation.
+CREATE OR REPLACE FUNCTION public.claim_music_video_generation(
+ p_video_id uuid,p_attempt_id uuid
+) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $fn$
+DECLARE v_attempt public.music_video_generation_attempts%ROWTYPE;
+BEGIN
+ SELECT * INTO v_attempt FROM public.music_video_generation_attempts
+ WHERE video_id=p_video_id AND id=p_attempt_id FOR UPDATE;
+ IF NOT FOUND OR v_attempt.state<>'reserved' THEN
+   RAISE EXCEPTION 'VIDEO_RESERVATION_NOT_AVAILABLE';
+ END IF;
+ UPDATE public.music_video_generation_attempts SET state='preparing'
+ WHERE id=v_attempt.id;
+ UPDATE public.music_videos SET status='generating',
+   generation_started_at=now(),generation_error=NULL
+ WHERE id=p_video_id AND status='planning';
+ IF NOT FOUND THEN RAISE EXCEPTION 'VIDEO_NOT_PLANNING'; END IF;
+ RETURN jsonb_build_object('claimed',true);
+END;
+$fn$;
+REVOKE ALL ON FUNCTION public.claim_music_video_generation(uuid,uuid)
+ FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.claim_music_video_generation(uuid,uuid)
+ TO service_role;
+
 CREATE OR REPLACE FUNCTION public.register_music_video_prediction(
  p_video_id uuid,p_attempt_id uuid,p_prediction_id text
 ) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $fn$
@@ -114,15 +140,13 @@ BEGIN
  IF v_attempt.state='generating' AND v_attempt.prediction_id=p_prediction_id THEN
    RETURN jsonb_build_object('registered',true,'already_registered',true);
  END IF;
- IF v_attempt.state<>'reserved' OR v_attempt.prediction_id IS NOT NULL THEN
+ IF v_attempt.state<>'preparing' OR v_attempt.prediction_id IS NOT NULL THEN
    RAISE EXCEPTION 'VIDEO_ATTEMPT_NOT_RESERVABLE';
  END IF;
  UPDATE public.music_video_generation_attempts
  SET state='generating',prediction_id=p_prediction_id,registered_at=now()
  WHERE id=v_attempt.id;
- UPDATE public.music_videos SET status='generating',generation_started_at=now(),
-   generation_error=NULL WHERE id=p_video_id AND status='planning';
- IF NOT FOUND THEN RAISE EXCEPTION 'VIDEO_STATUS_NOT_PLANNING'; END IF;
+ -- The preflight claim already marked the video generating.
  RETURN jsonb_build_object('registered',true,'already_registered',false);
 END;
 $fn$;
@@ -151,7 +175,7 @@ BEGIN
  -- the authenticated, paid generator. Before-provider errors may ONLY fail
  -- an as-yet unregistered reservation with NULL prediction.
  IF p_prediction_id IS NULL THEN
-   IF NOT (v_attempt.state='reserved' AND v_attempt.prediction_id IS NULL
+   IF NOT (v_attempt.state IN ('reserved','preparing') AND v_attempt.prediction_id IS NULL
      AND p_status='failed') THEN RAISE EXCEPTION 'VIDEO_UNREGISTERED_SETTLEMENT'; END IF;
  ELSIF v_attempt.prediction_id IS DISTINCT FROM p_prediction_id THEN
    RAISE EXCEPTION 'VIDEO_PREDICTION_MISMATCH';
@@ -229,3 +253,45 @@ REVOKE ALL ON FUNCTION public.settle_music_video_generation(uuid,text,text,text,
  FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.settle_music_video_generation(uuid,text,text,text,text)
  TO service_role;
+
+-- Stale reservations/preflights where no Replicate prediction was registered
+-- must not trap $75,000 forever. Only unregistered jobs are eligible;
+-- registered predictions are resolved by the signed webhook.
+CREATE OR REPLACE FUNCTION public.expire_stale_music_video_preparations()
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $fn$
+DECLARE v_row record; v_count integer:=0; v_failed integer:=0;
+BEGIN
+ FOR v_row IN SELECT id,video_id
+   FROM public.music_video_generation_attempts
+   WHERE state IN ('reserved','preparing') AND prediction_id IS NULL
+     AND created_at<now()-interval '1 hour'
+   ORDER BY created_at LIMIT 100 FOR UPDATE SKIP LOCKED
+ LOOP
+   BEGIN
+     PERFORM public.settle_music_video_generation(v_row.video_id,NULL,
+       'failed',NULL,'Generation could not start; original charge returned');
+     v_count:=v_count+1;
+   EXCEPTION WHEN OTHERS THEN
+     v_failed:=v_failed+1;
+     RAISE WARNING 'Could not reconcile stale video reservation %: %',
+       v_row.id,SQLERRM;
+   END;
+ END LOOP;
+ RETURN jsonb_build_object('refunded',v_count,'errors',v_failed);
+END;
+$fn$;
+REVOKE ALL ON FUNCTION public.expire_stale_music_video_preparations()
+ FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.expire_stale_music_video_preparations()
+ TO service_role;
+
+DO $schedule$
+BEGIN
+ IF to_regclass('cron.job') IS NOT NULL AND NOT EXISTS (
+   SELECT 1 FROM cron.job WHERE jobname='expire-unstarted-music-video-generations'
+ ) THEN
+   PERFORM cron.schedule('expire-unstarted-music-video-generations',
+      '0 * * * *','SELECT public.expire_stale_music_video_preparations();');
+ END IF;
+END;
+$schedule$;
