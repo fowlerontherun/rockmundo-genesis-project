@@ -15,6 +15,11 @@ describe('avatar share capture', () => {
 describe('share portrait outfit parity with live stage performers', () => {
   it('loads donor and curated wearable assets before assembling the musician', () => {
     const source = fs.readFileSync(path.resolve('src/features/shareable-moments/avatarCapture.ts'), 'utf8');
+    // Model styles not worn by this player (especially the opposite
+    // body frame) should never be a mandatory prerequisite for sharing.
+    expect(source).toContain('requiredModelFiles([visual.appearance])');
+    expect(source).toContain('const files=[...requiredModelFiles([visual.appearance]),...donorFiles]');
+    expect(source).not.toContain('STYLES.map(style=>modelFile');
     expect(source).toContain('requiredCuratedDonorModelFiles(clothing,frame)');
     expect(source).toContain('requiredCuratedGarmentFiles(clothing,frame)');
     expect(source).toContain('await loadOptionalCuratedGarments(library,curatedFiles)');
