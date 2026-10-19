@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { djBoothGripTargets } from "@/features/gig-demo-3d/djBoothMotion";
-import { buildDjClubStageFrame, djBoothActionAt, type DjStageBooking, type DjStageMixEvent } from "./djClubStageModel";
+import { buildDjClubStageFrame, buildDjClubStageOptions, djBoothActionAt, djMixerActivityLabel, type DjStageBooking, type DjStageMixEvent } from "./djClubStageModel";
 
 const booking: DjStageBooking = {
   id: "d1", status: "live", club_id: "c1",
@@ -89,6 +89,21 @@ describe("verified DJ booth movements and cameras", () => {
     expect(a.right).toEqual([-.25, 1.04, .44]);
     expect(b.left).toEqual([.26, 1.04, .44]);
     expect(djBoothGripTargets("dj_crossfade", .5)?.right[0]).toBe(0);
+  });
+
+  it("labels verified activity without claiming scores, song ownership or payments", () => {
+    expect(djMixerActivityLabel(mix("deck_play", "A"))).toBe("Played a track on Deck A");
+    expect(djMixerActivityLabel(mix("tempo", "B"))).toBe("Adjusted tempo on Deck B");
+    expect(djMixerActivityLabel(mix("crossfade", null))).toBe("Moved the crossfader");
+    expect(djMixerActivityLabel(mix("unrecognized", null))).toBe("Recorded mixer action");
+    expect(djMixerActivityLabel(mix("deck_play", null))).toBe("Recorded mixer action");
+  });
+
+  it("opts only the nightclub fixture into DJ-specific camera blocking", () => {
+    const options = buildDjClubStageOptions("p1", "c1", "Night Owl", 180, null);
+    expect(options.djClub).toBe(true);
+    expect(options.performers).toHaveLength(1);
+    expect(options.performers[0].instrument).toBe("turntablism");
   });
 
   it("limits the arm pulse to the bounded eight-second window", () => {
