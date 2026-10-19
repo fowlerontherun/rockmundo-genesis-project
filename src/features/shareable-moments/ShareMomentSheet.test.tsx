@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   markSharePromptSeen: vi.fn(),
   trackShareAnalyticsEvent: vi.fn(),
   loadCaptureImage: vi.fn(),
+  copyText: vi.fn(),
 }));
 
 vi.mock("./prompts", () => ({
@@ -30,6 +31,11 @@ vi.mock("./gallery", () => ({
   saveShareMomentSnapshot: vi.fn(),
 }));
 
+vi.mock("./share", async importOriginal => ({
+  ...(await importOriginal<typeof import("./share")>()),
+  copyText: mocks.copyText,
+}));
+
 vi.mock("./twaater", () => ({
   storeTwaaterShareDraft: vi.fn(),
   uploadShareCardToTwaater: vi.fn(),
@@ -40,6 +46,7 @@ vi.mock("@/hooks/use-toast", () => ({
 }));
 
 import { ShareMomentSheet } from "./ShareMomentSheet";
+import { saveShareMomentSnapshot } from "./gallery";
 import type { ShareMoment } from "./types";
 
 const moment: ShareMoment = {
@@ -238,5 +245,69 @@ describe("ShareMomentSheet avatar exports", () => {
     expect(screen.getByText(/Your avatar could not be rendered/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Retry avatar" }));
     expect(retry).toHaveBeenCalledOnce();
+  });
+});
+
+
+describe("ShareMomentSheet preserves frozen gallery portraits", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.loadCaptureImage.mockImplementation(() => Promise.resolve(new Image()));
+    mocks.copyText.mockResolvedValue(true);
+  });
+
+  it.each(["loading", "unavailable"] as const)(
+    "copies a text link during %s without overwriting an old avatar snapshot",
+    async avatarStatus => {
+      render(
+        <MemoryRouter>
+          <ShareMomentSheet
+            moment={{ ...moment, promptOnly: false, avatar: null }}
+            avatarStatus={avatarStatus}
+            open
+            onOpenChange={vi.fn()}
+          />
+        </MemoryRouter>,
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
+      await waitFor(() => expect(mocks.copyText).toHaveBeenCalledOnce());
+      expect(vi.mocked(saveShareMomentSnapshot)).not.toHaveBeenCalled();
+    },
+  );
+
+  it("saves an avatar-backed moment after its frozen image has decoded", async () => {
+    const avatar = { dataUrl: "data:image/png;base64,valid", width: 720, height: 1080 };
+    render(
+      <MemoryRouter>
+        <ShareMomentSheet
+          moment={{ ...moment, promptOnly: false, avatar }}
+          avatarStatus="ready"
+          open
+          onOpenChange={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Download PNG" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
+    await waitFor(() => expect(vi.mocked(saveShareMomentSnapshot)).toHaveBeenCalledWith(
+      expect.objectContaining({ avatar }),
+    ));
+  });
+
+  it("still saves public image-free shares after copying their text link", async () => {
+    render(
+      <MemoryRouter>
+        <ShareMomentSheet
+          moment={{ ...moment, type: "festival", promptOnly: false, avatar: null }}
+          open
+          onOpenChange={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
+    await waitFor(() => expect(vi.mocked(saveShareMomentSnapshot)).toHaveBeenCalledOnce());
   });
 });
