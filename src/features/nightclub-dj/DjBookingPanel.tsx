@@ -144,7 +144,7 @@ export function DjBookingPanel({ profileId, clubId, venueTimezone, onLiveBooking
 
   const refresh = async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["dj-bookings", profileId, clubId] }),
+      queryClient.invalidateQueries({ queryKey: ["dj-bookings", profileId] }),
       queryClient.invalidateQueries({ queryKey: ["scheduled-activities"] }),
       queryClient.invalidateQueries({ queryKey: ["player-schedule"] }),
     ]);

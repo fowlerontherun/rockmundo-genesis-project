@@ -19,6 +19,7 @@ import { SceneContactsPanel } from "@/features/underground/SceneContactsPanel";
 import { ScandalHeatPanel } from "@/features/underground/ScandalHeatPanel";
 import { RecoveryPanel } from "@/features/underground/RecoveryPanel";
 import { SceneStoriesPanel } from "@/features/underground/SceneStoriesPanel";
+import { DjCareerOverview } from "@/features/nightclub-dj/DjCareerOverview";
 
 const QUALITY_LABELS: Record<number, string> = {
   1: "Underground",
@@ -114,6 +115,8 @@ const NightclubHub = () => {
           </CardContent>
         </Card>
       )}
+
+      {activeProfile?.id && <DjCareerOverview profileId={activeProfile.id} clubs={clubs} />}
 
       <SceneStoriesPanel profileId={activeProfile?.id ?? null} surface="nightclub" />
       <UndergroundScenePanel profileId={activeProfile?.id ?? null} age={Number(activeProfile?.age ?? 0)} />
