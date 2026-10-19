@@ -31,6 +31,9 @@ CREATE POLICY "Service roles can manage universities"
   USING (auth.role() = 'service_role')
   WITH CHECK (auth.role() = 'service_role');
 
+-- Historical university migrations are replayed together in fresh Supabase reset.
+-- Preserve exactly one updated-at trigger without touching existing university rows.
+DROP TRIGGER IF EXISTS set_universities_updated_at ON public.universities;
 CREATE TRIGGER set_universities_updated_at
   BEFORE UPDATE ON public.universities
   FOR EACH ROW
