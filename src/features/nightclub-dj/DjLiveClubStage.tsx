@@ -8,7 +8,7 @@ import { DEFAULT_SETTINGS, type CameraShot, type DemoSettings } from "@/features
 import { useGigPlayerModels } from "@/features/player-model/usePlayerModel";
 import {
   buildDjClubStageOptions, buildDjClubStageFrame, djStageOccupancy,
-  djReplayDurationMs, djReplayEventsThrough, hasVerifiedDjReplay,
+  djReplayDurationMs, djReplayEventsThrough, hasVerifiedDjReplay, djMixerActivityLabel,
   type DjStageAudience, type DjStageBooking, type DjStageMixEvent,
 } from "./djClubStageModel";
 
@@ -173,6 +173,12 @@ export function DjLiveClubStage({
   });
 
   const occupancy = djStageOccupancy(audience.data ?? null, capacity);
+  const recentEvidence = visibleEvents
+    .filter(event => Number.isInteger(event.event_no) && event.event_no > 0 &&
+      Number.isFinite(Date.parse(event.recorded_at)) &&
+      Date.parse(event.recorded_at) <= viewedAtMs)
+    .sort((a, b) => a.event_no - b.event_no)
+    .slice(-10);
 
   if (booking.isLoading) return <p role="status" className="text-sm text-muted-foreground">Checking live DJ booking…</p>;
   if (booking.isError || !booking.data) {
@@ -261,6 +267,34 @@ export function DjLiveClubStage({
         {" "}Animations react only to accepted mixer actions. The 3D viewer never awards cash, XP, fame or fans.
         {isReplay && " This is a silent visual reconstruction from stored events, not recorded video or song playback. Outfits reflect your current avatar."}
       </p>
+      <details className="rounded-md border p-3 text-sm" data-testid="dj-verified-mixer-timeline">
+        <summary className="cursor-pointer font-medium">
+          Verified mixer activity {mixer.data ? `(${visibleEvents.length} actions visible)` : ""}
+        </summary>
+        {mixer.isError
+          ? <p role="alert" className="mt-2 text-xs text-destructive">
+              Verified action history is unavailable. No actions have been simulated.
+            </p>
+          : recentEvidence.length === 0
+            ? <p className="mt-2 text-xs text-muted-foreground">
+                No server-confirmed mixer actions at this point in the set.
+              </p>
+            : (
+              <ol className="mt-2 space-y-1" aria-label="Server-confirmed DJ actions">
+                {recentEvidence.map(event => (
+                  <li key={event.event_no} className="flex flex-wrap items-center justify-between gap-2 border-b py-1 last:border-0">
+                    <span>{djMixerActivityLabel(event)}</span>
+                    <time className="text-xs text-muted-foreground" dateTime={event.recorded_at}>
+                      {new Date(event.recorded_at).toLocaleTimeString()}
+                    </time>
+                  </li>
+                ))}
+              </ol>
+            )}
+        <p className="mt-2 text-xs text-muted-foreground">
+          Read-only event evidence. This timeline is available even when 3D graphics are unavailable.
+        </p>
+      </details>
       {mixer.isError && <p role="alert" className="text-xs text-destructive">Live mixer evidence could not be refreshed; crowd reactions may be out of date.</p>}
       {models.isError && <p role="status" className="text-xs text-muted-foreground">Avatar cosmetics could not be loaded. A basic DJ model is shown.</p>}
     </section>
