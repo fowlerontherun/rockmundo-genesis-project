@@ -25,6 +25,11 @@ BEGIN
 
  IF has_table_privilege('authenticated','public.award_votes','insert')
    OR has_table_privilege('anon','public.award_votes','insert')
+   OR has_table_privilege('authenticated','public.award_votes','truncate')
+   OR has_table_privilege('anon','public.award_votes','truncate')
+   OR has_table_privilege('authenticated','public.award_votes','trigger')
+   OR has_column_privilege('authenticated','public.award_votes','voter_account_id','select')
+   OR NOT has_column_privilege('authenticated','public.award_votes','nomination_id','select')
    OR has_function_privilege('anon','public.cast_award_vote(uuid,uuid,text,uuid,uuid)','execute')
    OR NOT has_function_privilege('authenticated','public.cast_award_vote(uuid,uuid,text,uuid,uuid)','execute')
  THEN RAISE EXCEPTION 'ballot_grants_expose_direct_vote'; END IF;
@@ -59,6 +64,8 @@ BEGIN
  IF vote.weight<>1 OR vote.voter_id<>band OR vote.voter_account_id<>actor
  THEN RAISE EXCEPTION 'band_vote_not_owned_by_account'; END IF;
  PERFORM public.cast_award_vote(ids[3],show_id,'player',chr,NULL);
+ IF public.award_show_account_vote_count(show_id)<>3 THEN
+   RAISE EXCEPTION 'private_account_vote_count_rpc_wrong'; END IF;
  BEGIN
   PERFORM public.cast_award_vote(ids[4],show_id,'band',chr,band);
   RAISE EXCEPTION 'fourth_vote_accepted';
