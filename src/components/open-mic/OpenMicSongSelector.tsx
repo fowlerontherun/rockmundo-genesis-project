@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchBandAvailableSongs } from "@/hooks/useBandAvailableSongs";
+import { filterBattleOfTheBandsSongs } from "@/lib/botbSongEligibility";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,7 @@ interface OpenMicSongSelectorProps {
   bandId?: string | null;
   profileId?: string | null;
   onConfirm: (song1Id: string, song2Id: string) => void;
+  performanceType?: "open-mic" | "battle";
 }
 
 const normalizeSong = (song: {
@@ -53,24 +55,29 @@ export function OpenMicSongSelector({
   bandId,
   profileId,
   onConfirm,
+  performanceType = "open-mic",
 }: OpenMicSongSelectorProps) {
   const [selectedSongs, setSelectedSongs] = useState<string[]>([]);
 
-  const { data: songs = [], isLoading } = useQuery({
-    queryKey: ['songs-for-open-mic', bandId ?? null, profileId ?? null],
+  const { data: songs = [], isLoading, isError, error, refetch } = useQuery({
+    queryKey: ['songs-for-performance', performanceType, bandId ?? null, profileId ?? null],
     queryFn: async () => {
-      // Open mic should use the same repertoire source as rehearsals and
-      // setlists. A band's available songs can include songs owned by active
-      // members even when songs.band_id is null, which is common for songs that
-      // were written before being rehearsed with the band.
+      // Open mic accepts member-owned unassigned songs. Battle of the Bands
+      // does not: the authoritative entry RPC requires songs.band_id=p_band_id.
+      // Do not offer songs the server will always reject.
       if (bandId) {
         const availableSongs = await fetchBandAvailableSongs(bandId);
-        return availableSongs
+        const eligibleSongs = performanceType === "battle"
+          ? filterBattleOfTheBandsSongs(availableSongs, bandId)
+          : availableSongs;
+        return eligibleSongs
           .map(normalizeSong)
           .sort((a, b) => b.quality_score - a.quality_score);
       }
 
-      if (!profileId) return [] as Song[];
+      // Battle entries must always be attached to a verified band.
+      // Never fall through to the solo-song branch after switching characters.
+      if (performanceType === "battle" || !profileId) return [] as Song[];
 
       // Solo performers can use their own unarchived songs without requiring a
       // recording. Keep this character-scoped so songs from another character
@@ -86,10 +93,19 @@ export function OpenMicSongSelector({
       if (error) throw error;
       return (data || []).map(normalizeSong);
     },
-    enabled: open && (!!bandId || !!profileId),
+    enabled: open && (performanceType === 'battle' ? !!bandId && !!profileId : !!bandId || !!profileId),
   });
 
+  // An open dialog can outlive a band or character switch. Clear its local
+  // selection rather than submitting previously selected song IDs.
+  useEffect(() => {
+    setSelectedSongs([]);
+  }, [open, bandId, profileId, performanceType]);
+
+  const eligibleSelectedSongs = selectedSongs.filter((id) => songs.some((song) => song.id === id));
+
   const toggleSong = (songId: string) => {
+    if (!songs.some((song) => song.id === songId) || isLoading || isError) return;
     setSelectedSongs((prev) => {
       if (prev.includes(songId)) {
         return prev.filter((id) => id !== songId);
@@ -102,8 +118,8 @@ export function OpenMicSongSelector({
   };
 
   const handleConfirm = () => {
-    if (selectedSongs.length === 2) {
-      onConfirm(selectedSongs[0], selectedSongs[1]);
+    if (!isLoading && !isError && eligibleSelectedSongs.length === 2 && eligibleSelectedSongs[0] !== eligibleSelectedSongs[1]) {
+      onConfirm(eligibleSelectedSongs[0], eligibleSelectedSongs[1]);
       setSelectedSongs([]);
       onOpenChange(false);
     }
@@ -115,7 +131,7 @@ export function OpenMicSongSelector({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const totalDuration = selectedSongs.reduce((acc, songId) => {
+  const totalDuration = eligibleSelectedSongs.reduce((acc, songId) => {
     const song = songs.find((s) => s.id === songId);
     return acc + (song?.duration_seconds || 0);
   }, 0);
@@ -129,15 +145,27 @@ export function OpenMicSongSelector({
             Choose Your 2 Songs
           </DialogTitle>
           <DialogDescription>
-            Select exactly 2 songs for your open mic performance. Choose wisely - quality matters!
+            {performanceType === 'battle'
+              ? 'Choose exactly 2 songs assigned to this band for the battle. Member-written songs must first be assigned to the band.'
+              : 'Select exactly 2 songs for your open mic performance. Choose wisely - quality matters!'}
           </DialogDescription>
         </DialogHeader>
 
-        {songs.length === 0 && !isLoading ? (
+        {isError ? (
+          <Alert variant="destructive" role="alert">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Unable to load eligible songs: {error instanceof Error ? error.message : 'Please try again.'}
+              <Button variant="outline" size="sm" className="ml-2" onClick={() => { void refetch(); }}>Retry songs</Button>
+            </AlertDescription>
+          </Alert>
+        ) : songs.length === 0 && !isLoading ? (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              No eligible songs were found. Band entries can use songs available to the active band, including songs written by active band members; solo entries use your own songs.
+              {performanceType === 'battle'
+                ? 'No eligible band-assigned songs were found. Select a band and assign at least two unarchived songs to it before entering a battle.'
+                : 'No eligible songs were found. Open-mic band entries can use active members\' unassigned songs; solo entries use your own songs.'}
             </AlertDescription>
           </Alert>
         ) : (
@@ -145,8 +173,8 @@ export function OpenMicSongSelector({
             <ScrollArea className="h-[300px] pr-4">
               <div className="space-y-2">
                 {songs.map((song) => {
-                  const isSelected = selectedSongs.includes(song.id);
-                  const selectionIndex = selectedSongs.indexOf(song.id);
+                  const isSelected = eligibleSelectedSongs.includes(song.id);
+                  const selectionIndex = eligibleSelectedSongs.indexOf(song.id);
 
                   return (
                     <div
@@ -155,13 +183,13 @@ export function OpenMicSongSelector({
                         isSelected
                           ? 'border-primary bg-primary/10'
                           : 'border-border hover:border-primary/50 hover:bg-accent/50'
-                      } ${selectedSongs.length >= 2 && !isSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      } ${eligibleSelectedSongs.length >= 2 && !isSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
                       onClick={() => toggleSong(song.id)}
                     >
                       <div className="flex items-center gap-3">
                         <Checkbox
                           checked={isSelected}
-                          disabled={selectedSongs.length >= 2 && !isSelected}
+                          disabled={eligibleSelectedSongs.length >= 2 && !isSelected}
                           className="pointer-events-none"
                         />
                         <div className="flex-1 min-w-0">
@@ -196,7 +224,7 @@ export function OpenMicSongSelector({
 
             <div className="flex items-center justify-between py-2 px-3 bg-muted/50 rounded-lg">
               <span className="text-sm text-muted-foreground">
-                {selectedSongs.length}/2 songs selected
+                {eligibleSelectedSongs.length}/2 songs selected
               </span>
               <span className="text-sm font-medium flex items-center gap-1">
                 <Clock className="h-4 w-4" />
@@ -212,7 +240,7 @@ export function OpenMicSongSelector({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={selectedSongs.length !== 2}
+            disabled={isLoading || isError || eligibleSelectedSongs.length !== 2}
           >
             Confirm Selection
           </Button>
