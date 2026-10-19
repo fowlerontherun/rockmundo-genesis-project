@@ -27,6 +27,7 @@ import { VipLoungeSection } from "@/components/nightclub/VipLoungeSection";
 import { useOwnedNightclubs } from "@/hooks/useNightclubOwnership";
 import { DjMixingStudio } from "@/features/nightclub-dj/DjMixingStudio";
 import { DjBookingPanel } from "@/features/nightclub-dj/DjBookingPanel";
+import { DjClubApplications } from "@/features/nightclub-dj/DjClubApplications";
 
 const QUALITY_LABELS: Record<number, string> = {
   1: "Underground",
@@ -340,6 +341,8 @@ const NightClubDetail = () => {
             }} />
         </section>
       )}
+
+      {profileId && clubId && <DjClubApplications profileId={profileId} clubId={clubId} />}
 
       {/* Club Events */}
       {clubId && <ClubEventsSection clubId={clubId} />}
