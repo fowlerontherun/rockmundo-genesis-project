@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SHARE_FORMATS, type ShareMoment } from './types';
 import { canShareFile, copyText, nativeShare, referralUrl, withReferral } from './share';
 import { renderShareMoment, shareFilename } from './canvas';
+import { shouldCaptureGalleryAvatar } from './galleryAvatar';
 
 const moment: ShareMoment = { version: 1, type: 'achievement', headline: 'First Stadium!', createdAt: '2026-10-07T00:00:00Z' };
 
@@ -124,5 +125,34 @@ describe('avatar image compositing', () => {
     const { canvas, drawImage } = createCanvas();
     renderShareMoment(canvas, { ...moment, type: 'festival' }, 'square');
     expect(drawImage).not.toHaveBeenCalled();
+  });
+});
+
+
+describe('gallery avatar ownership', () => {
+  const bandCard: ShareMoment = {
+    ...moment,
+    type: 'band_profile',
+    id: 'band-owned',
+    headline: 'Band promo',
+  };
+
+  it('recreates missing portraits only for the current primary band', () => {
+    expect(shouldCaptureGalleryAvatar(bandCard, 'band-owned')).toBe(true);
+    expect(shouldCaptureGalleryAvatar({ ...bandCard, id: 'promo:band-owned' }, 'band-owned')).toBe(true);
+    expect(shouldCaptureGalleryAvatar({ ...bandCard, id: 'another-band' }, 'band-owned')).toBe(false);
+    expect(shouldCaptureGalleryAvatar(bandCard, null)).toBe(false);
+  });
+
+  it('keeps valid captured historical band portraits even after a band switch', () => {
+    expect(shouldCaptureGalleryAvatar({
+      ...bandCard,
+      avatar: { dataUrl: 'data:image/png;base64,old', width: 720, height: 1080 },
+    }, 'another-band')).toBe(true);
+  });
+
+  it('never inserts an unrelated viewer avatar into public festival artwork', () => {
+    expect(shouldCaptureGalleryAvatar({ ...moment, type: 'festival' }, 'band-owned')).toBe(false);
+    expect(shouldCaptureGalleryAvatar({ ...moment, type: 'chart' }, 'band-owned')).toBe(true);
   });
 });
