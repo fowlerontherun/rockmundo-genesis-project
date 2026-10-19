@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { formatBotbCityDate } from "@/lib/botbDates";
 import { toast } from "sonner";
 import { CalendarDays, Ticket, Trophy, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -79,7 +79,7 @@ export function MayorBattleOfBandsTab({ cityId }: { cityId: string }) {
           <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5" /> Battle of the Bands</CardTitle>
           <CardDescription>
             Decide which day your city hosts battles, how frequently they run and the winner's cash prize.
-            Existing entries keep their dates and advertised prizes.
+            Battles start at 7pm local city time. Existing entries keep their dates and advertised prizes.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -141,7 +141,7 @@ export function MayorBattleOfBandsTab({ cityId }: { cityId: string }) {
           {loadingUpcoming ? "Loading upcoming battles…" : upcoming.length === 0 ? "No battles scheduled." :
             upcoming.slice(0, 8).map((event) => (
               <div key={event.id} className="flex items-center justify-between gap-3 border-b pb-2 text-sm">
-                <span>{format(new Date(event.scheduled_date), "EEE, MMM d yyyy")}</span>
+                <span>{formatBotbCityDate(event.scheduled_date, event.city?.timezone)}</span>
                 <span className="flex items-center gap-1 text-muted-foreground"><Users className="h-4 w-4" />{event.entry_count ?? 0}/{event.max_entries}</span>
                 <strong>{money(event.prize_money)}</strong>
               </div>
@@ -158,7 +158,7 @@ export function MayorBattleOfBandsTab({ cityId }: { cityId: string }) {
             history.slice(0, 8).map((event) => (
               <div key={event.id} className="border-b pb-3 text-sm space-y-1">
                 <div className="flex justify-between font-medium">
-                  <span>{format(new Date(event.scheduled_date), "MMM d yyyy")}</span>
+                  <span>{formatBotbCityDate(event.scheduled_date, event.city?.timezone)}</span>
                   <span>Prize {money(event.prize_money)}</span>
                 </div>
                 {event.resolved_at && event.attendance > 0 ? (
