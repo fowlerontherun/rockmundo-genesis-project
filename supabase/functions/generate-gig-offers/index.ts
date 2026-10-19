@@ -1,3 +1,4 @@
+import { authorizeInternalJob } from "../_shared/trusted-scheduler.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
@@ -18,13 +19,15 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req);
-  const triggeredBy = payload?.triggeredBy ?? req.headers.get("x-triggered-by") ?? undefined;
-
   const supabaseClient = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
   );
+  const rejected = await authorizeInternalJob(req, supabaseClient, "generate-gig-offers", corsHeaders);
+  if (rejected) return rejected;
+
+  const payload = await safeJson<{ triggeredBy?: string; requestId?: string | null }>(req);
+  const triggeredBy = payload?.triggeredBy ?? req.headers.get("x-triggered-by") ?? undefined;
 
   let runId: string | null = null;
   const startedAt = Date.now();
