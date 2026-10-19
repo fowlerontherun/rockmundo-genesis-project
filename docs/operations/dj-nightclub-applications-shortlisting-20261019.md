@@ -39,3 +39,7 @@ The owner-funded performer contract, DJ residency repeat schedule, reliable held
 ## Multiple applicants for one proposed slot
 
 Follow-up production migration **`20261019092152_dj_multiple_applicants_same_club_time_20261019`** refines the pending proposal conflict predicate: multiple **different** DJs may apply for the same club/time so the owner can choose whom to shortlist, while any one DJ cannot submit overlapping proposals. Existing actual `dj_bookings` still prevent conflicting proposals. The live rollback-only two-player test `supabase/tests/dj_club_multiple_applicants_same_slot.sql` passed and is part of the Phase 5 gate.
+
+## Durable review replay after withdrawal
+
+Production follow-up migration **`20261019092559_dj_owner_review_decision_durable_replay_20261019`** stores the original owner `review_decision` alongside its immutable review request ID. A lost acknowledgement can be replayed using that same request ID even if the DJ has since withdrawn the application. Changed decisions still fail. The live rollback-only authority test was extended and passed for this sequence, and is included in the existing DB gate.
