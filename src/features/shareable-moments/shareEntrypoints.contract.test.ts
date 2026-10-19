@@ -46,7 +46,7 @@ describe("Shareable Moments migrated entrypoint contracts", () => {
 
   it("reopens avatar-capable gallery cards through the retry-capable renderer", () => {
     const source = read("src/pages/ShareStudio.tsx");
-    expect(source).toContain('{selected && ["character_profile", "band_profile", "gig_result", "achievement", "tour", "release", "chart"].includes(selected.type)');
+    expect(source).toContain('{selected && shouldCaptureGalleryAvatar(selected, primaryBand?.bands?.id)');
     expect(source).not.toContain("selected && !selected.avatar");
   });
 
