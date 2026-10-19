@@ -84,9 +84,8 @@ export function MyReleasesTab({ userId, authUserId }: MyReleasesTabProps) {
         if (updateError) throw updateError;
       }
 
-      const { error } = await supabase.functions.invoke("complete-release-manufacturing");
-      if (error) throw error;
-
+      // The dedicated two-minute internal scheduler owns the manufacturing
+      // completion; a player must not trigger global lifecycle processing.
       const { data, error: checkError } = await supabase
         .from("releases")
         .select("release_status")

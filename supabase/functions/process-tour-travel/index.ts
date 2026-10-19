@@ -1,3 +1,4 @@
+import { authorizeInternalJob } from "../_shared/trusted-scheduler.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4'
 
 const corsHeaders = {
@@ -49,6 +50,10 @@ Deno.serve(async (req) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const supabase = createClient(supabaseUrl, supabaseKey)
+
+  const rejected = await authorizeInternalJob(req, supabase, "process-tour-travel", corsHeaders);
+  if (rejected) return rejected;
+
 
   try {
     console.log('[process-tour-travel] Starting tour travel processing...')

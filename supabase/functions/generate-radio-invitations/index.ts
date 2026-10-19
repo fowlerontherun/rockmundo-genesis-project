@@ -1,3 +1,4 @@
+import { authorizeInternalJob } from "../_shared/trusted-scheduler.ts";
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -34,6 +35,10 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+  const rejected = await authorizeInternalJob(req, supabase, "generate-radio-invitations", corsHeaders);
+  if (rejected) return rejected;
+
 
     console.log("[generate-radio-invitations] Starting invitation generation...");
 
