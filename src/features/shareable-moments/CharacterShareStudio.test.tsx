@@ -99,6 +99,27 @@ describe('AvatarShareStudio image capture', () => {
     expect(mocks.renderAvatar).not.toHaveBeenCalled();
   });
 
+  it('does not render the wrong outfit if an enabled merch request fails', async () => {
+    const refetch = vi.fn().mockResolvedValue(undefined);
+    mocks.merch.mockReturnValue({
+      query: { data: undefined, isPending: false, isFetching: false, isError: true, refetch },
+    });
+    render(<AvatarShareStudio open moment={moment} onOpenChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByTestId('avatar-status')).toHaveTextContent('unavailable'));
+    expect(mocks.renderAvatar).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry avatar' }));
+    expect(refetch).toHaveBeenCalledOnce();
+  });
+
+  it('allows capturing without merch if its query is disabled', async () => {
+    mocks.merch.mockReturnValue({
+      query: { data: undefined, isPending: true, isFetching: false, isError: false },
+    });
+    render(<AvatarShareStudio open moment={moment} onOpenChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByTestId('avatar-status')).toHaveTextContent('ready'));
+    expect(mocks.renderAvatar).toHaveBeenCalledWith(expect.objectContaining({ merchWearable: null }));
+  });
+
   it('does not silently omit tattoos after their request fails', async () => {
     const refetch = vi.fn().mockResolvedValue(undefined);
     mocks.tattoos.mockReturnValue({ data: undefined, isPending: false, isFetching: false, isError: true, refetch });
