@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileText, DollarSign, Clock, X, CheckCircle, Gavel } from "lucide-react";
+import { FileText, DollarSign, Clock, X, Gavel } from "lucide-react";
 import { useSongAuctions } from "@/hooks/useSongAuctions";
 import { formatTimeRemaining } from "@/utils/songMarketplace";
 import { cn } from "@/lib/utils";
@@ -11,7 +11,7 @@ interface MyAuctionListingsTabProps {
 }
 
 export const MyAuctionListingsTab = ({ userId }: MyAuctionListingsTabProps) => {
-  const { myListings, myListingsLoading, cancelListing, acceptBid } = useSongAuctions(userId);
+  const { myListings, myListingsLoading, cancelListing } = useSongAuctions(userId);
 
   if (myListingsLoading) {
     return (
@@ -96,34 +96,11 @@ export const MyAuctionListingsTab = ({ userId }: MyAuctionListingsTabProps) => {
                     )}
 
                     <div className="flex gap-2">
-                      {/* Accept highest bid button (auction with bids, ended) */}
-                      {isAuction && hasBids && isExpired && (
-                        <Button
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => acceptBid.mutate({ listingId: listing.id })}
-                          disabled={acceptBid.isPending}
-                        >
-                          <CheckCircle className="h-4 w-4 mr-1" />
-                          Accept ${listing.current_bid!.toLocaleString()}
-                        </Button>
-                      )}
-
-                      {/* Accept bid even while active */}
-                      {isAuction && hasBids && !isExpired && (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => {
-                            if (!confirm(`Accept current bid of $${listing.current_bid!.toLocaleString()} and end the auction?`)) return;
-                            acceptBid.mutate({ listingId: listing.id });
-                          }}
-                          disabled={acceptBid.isPending}
-                        >
-                          <CheckCircle className="h-4 w-4 mr-1" />
-                          Accept Bid
-                        </Button>
+                      {isAuction && hasBids && (
+                        <p role="status" className="text-xs text-muted-foreground flex-1">
+                          Auction bid acceptance is temporarily unavailable while bidder funds
+                          authorization is secured. Buyers may still use Buyout.
+                        </p>
                       )}
 
                       <Button
