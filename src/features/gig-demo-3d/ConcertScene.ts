@@ -16,6 +16,7 @@ import { loadBand, type Musician, type DemoCrowd } from './performers';
 import { smoothMotion } from './performanceMotion';
 import type { CrowdTuningOptions } from '@/features/gig-experience/viewer/engine/CrowdTuning';
 import { resolveVenueProfile, stagePosition, stageTransform, type VenueProfile } from './venueProfile';
+import { djClubCameraPose, type DjClubCameraShot } from './djClubCamera';
 import type { ConcertOptions, ConcertFrame } from './liveTypes';
 import type { AvatarVisualQuality } from '@/features/player-model/avatarVisualQuality';
 import { DEFAULT_SETTINGS, LOOKS, seededRandom, type DemoSettings, type DemoStats, type CameraShot } from './config';
@@ -333,29 +334,13 @@ export class ConcertScene {
         selected === 'dj_dancefloor' || selected === 'dj_reverse'
       )) {
         const dj = this.actors.find(actor => actor.role === 'dj' && actor.root.visible);
-        const booth = dj?.root.position.clone() ?? new T.Vector3(...stagePosition(p, .5, .43));
-        if (selected === 'dj_booth') {
-          this.targetPos.copy(booth).add(new T.Vector3(0, 1.03, .12));
-          this.cameraPos.copy(this.targetPos).add(new T.Vector3(
-            .8, .5, 2.4 / Math.max(.55, Math.min(1, this.camera.aspect)),
-          ));
-        } else if (selected === 'dj_overhead') {
-          this.targetPos.copy(booth).add(new T.Vector3(0, .9, .4));
-          this.cameraPos.set(
-            .2, Math.min(p.roofHeight - .4, Math.max(p.stageHeight + 3.1, p.rigHeight * .8)),
-            booth.z + 1.5,
-          );
-        } else if (selected === 'dj_dancefloor') {
-          this.targetPos.copy(booth).add(new T.Vector3(0, 1.27, .1));
-          const floorDistance = Math.min(7.5, Math.max(3.2, p.crowdDepth * .35));
-          this.cameraPos.set(-Math.min(2.1, p.stageWidth * .22), p.stageHeight + 1.15,
-            booth.z + floorDistance);
-        } else {
-          // Behind the booth toward the audience. Never present band members
-          // or generate attendance: all crowd meshes remain cosmetic.
-          this.cameraPos.copy(booth).add(new T.Vector3(-.45, 1.7, -.65));
-          this.targetPos.set(0, p.stageHeight + .6, Math.min(p.crowdDepth * .45, 10));
-        }
+        const booth = dj?.root.position ?? new T.Vector3(...stagePosition(p, .5, .43));
+        const pose = djClubCameraPose(
+          selected as DjClubCameraShot, p,
+          booth.toArray() as [number, number, number], this.camera.aspect,
+        );
+        this.cameraPos.fromArray(pose.position);
+        this.targetPos.fromArray(pose.target);
       }
       if (p.kind === 'tv_studio') {
         const sx = p.stageWidth / 12, sz = p.stageDepth / 7.2;
