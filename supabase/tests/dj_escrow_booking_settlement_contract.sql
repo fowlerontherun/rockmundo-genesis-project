@@ -2,9 +2,9 @@
 BEGIN;
 DO $test$
 DECLARE ou uuid;op uuid;du uuid;dp uuid;cid uuid;city uuid;owned uuid;track uuid;setid uuid;
- app1 uuid;app2 uuid;app3 uuid;offer1 uuid;offer2 uuid;offer3 uuid;booking1 uuid;booking2 uuid;booking3 uuid;
- t1 timestamptz;t2 timestamptz;t3 timestamptz;len integer;initial_cash bigint;dj_cash bigint;
- earned integer;result_id uuid;replay_id uuid;
+ app1 uuid;app2 uuid;app3 uuid;app4 uuid;offer1 uuid;offer2 uuid;offer3 uuid;offer4 uuid;booking1 uuid;booking2 uuid;booking3 uuid;booking4 uuid;
+ t1 timestamptz;t2 timestamptz;t3 timestamptz;t4 timestamptz;len integer;initial_cash bigint;dj_cash bigint;
+ earned integer;result_id uuid;replay_id uuid;key1 uuid:=gen_random_uuid();key2 uuid:=gen_random_uuid();owner_cancel_key uuid:=gen_random_uuid();owner_result jsonb;
 BEGIN
  IF has_function_privilege('authenticated','public.confirm_accepted_nightclub_dj_offer_internal(uuid,uuid)','EXECUTE')
  OR NOT has_function_privilege('service_role','public.confirm_accepted_nightclub_dj_offer_internal(uuid,uuid)','EXECUTE')
@@ -57,8 +57,8 @@ BEGIN
  PERFORM public.decide_nightclub_dj_offer(offer1,'accept',gen_random_uuid());
  PERFORM public.decide_nightclub_dj_offer(offer2,'accept',gen_random_uuid());
  SELECT cash INTO dj_cash FROM public.profiles WHERE id=dp;
- booking1:=public.confirm_accepted_nightclub_dj_offer_internal(offer1,gen_random_uuid());
- booking2:=public.confirm_accepted_nightclub_dj_offer_internal(offer2,gen_random_uuid());
+ booking1:=public.dj_verified_funded_offer_booking_service(du,offer1,key1);
+ booking2:=public.confirm_accepted_nightclub_dj_offer_internal(offer2,key2);
  IF booking1=booking2 OR (SELECT count(*) FROM public.player_scheduled_activities a
  WHERE a.linked_dj_booking_id IN (booking1,booking2) AND a.status='scheduled')<>2
  THEN RAISE EXCEPTION 'Canonical DJ booking Schedule projection missing';END IF;
@@ -75,6 +75,8 @@ BEGIN
  result_id:=private.dj_settle_booking_at(booking1,t1+make_interval(mins=>len)+interval '1 minute');
  replay_id:=private.dj_settle_booking_at(booking1,t1+make_interval(mins=>len)+interval '1 minute');
  SELECT cash_amount INTO earned FROM public.dj_settlement_ledger WHERE booking_id=booking1;
+ IF public.confirm_accepted_nightclub_dj_offer_internal(offer1,key1) IS DISTINCT FROM booking1
+ THEN RAISE EXCEPTION 'Settled booking idempotency key no longer replays';END IF;
  IF result_id IS DISTINCT FROM replay_id OR earned NOT BETWEEN 1 AND 100
  OR (SELECT cash FROM public.profiles WHERE id=dp)<>dj_cash+earned
  OR (SELECT status FROM public.nightclub_dj_funded_offers WHERE id=offer1)<>'settled'
@@ -82,7 +84,16 @@ BEGIN
  IF (SELECT coalesce(sum(amount),0) FROM public.nightclub_dj_escrow_movements
  WHERE offer_id=offer1 AND kind IN ('refund','payout'))<>100
  THEN RAISE EXCEPTION 'Payout and surplus do not conserve held fee';END IF;
- PERFORM public.cancel_dj_booking_internal(booking2);
+ PERFORM set_config('request.jwt.claim.sub',ou::text,true);
+ owner_result:=public.cancel_owned_funded_dj_booking(offer2,owner_cancel_key);
+ IF (owner_result->>'status')<>'cancelled' THEN
+  RAISE EXCEPTION 'Verified club owner could not cancel future booked set';END IF;
+ owner_result:=public.cancel_owned_funded_dj_booking(offer2,owner_cancel_key);
+ IF (owner_result->>'replayed')::boolean IS DISTINCT FROM true THEN
+  RAISE EXCEPTION 'Owner cancellation request replay was not idempotent';END IF;
+ PERFORM set_config('request.jwt.claim.sub',du::text,true);
+ IF public.confirm_accepted_nightclub_dj_offer_internal(offer2,key2) IS DISTINCT FROM booking2
+ THEN RAISE EXCEPTION 'Cancelled booking idempotency key no longer replays';END IF;
  IF (SELECT status FROM public.nightclub_dj_funded_offers WHERE id=offer2)<>'cancelled'
  OR (SELECT cash FROM public.profiles WHERE id=op)<>initial_cash-earned
  OR (SELECT count(*) FROM public.nightclub_dj_escrow_movements
@@ -111,7 +122,27 @@ BEGIN
  OR (SELECT status FROM public.player_scheduled_activities
   WHERE linked_dj_booking_id=booking3)<>'missed' THEN
   RAISE EXCEPTION 'Missed funded booking did not refund once and update Schedule';END IF;
- RAISE NOTICE 'Funded set completed, cancellation and missed-show refunds all preserve escrow and calendar';
+ -- The DJ still has their own normal cancellation path for a funded booking.
+ SELECT times.ts INTO t4 FROM generate_series(t3+interval '4 hours',t3+interval '2 days',
+  interval '30 minutes') times(ts)
+ WHERE public.dj_booking_inside_club_hours(cid,times.ts,times.ts+make_interval(mins=>len))
+ AND public.dj_external_schedule_conflict(dp,times.ts,times.ts+make_interval(mins=>len)) IS NULL
+ ORDER BY times.ts LIMIT 1;
+ IF t4 IS NULL THEN RAISE EXCEPTION 'No fourth valid booked fixture slot';END IF;
+ app4:=public.apply_for_nightclub_dj_slot(dp,owned,setid,t4,gen_random_uuid());
+ PERFORM set_config('request.jwt.claim.sub',ou::text,true);
+ PERFORM public.review_nightclub_dj_application(owned,app4,'shortlist',gen_random_uuid());
+ offer4:=(public.fund_nightclub_dj_offer(owned,app4,75,gen_random_uuid())->>'offer_id')::uuid;
+ PERFORM set_config('request.jwt.claim.sub',du::text,true);
+ PERFORM public.decide_nightclub_dj_offer(offer4,'accept',gen_random_uuid());
+ booking4:=public.confirm_accepted_nightclub_dj_offer_internal(offer4,gen_random_uuid());
+ PERFORM public.cancel_dj_booking_internal(booking4);
+ IF (SELECT status FROM public.nightclub_dj_funded_offers WHERE id=offer4)<>'cancelled'
+ OR (SELECT cash FROM public.profiles WHERE id=op)<>initial_cash-earned
+ OR (SELECT count(*) FROM public.nightclub_dj_escrow_movements
+   WHERE offer_id=offer4 AND kind='refund' AND amount=75)<>1
+ THEN RAISE EXCEPTION 'DJ cancellation did not refund the owner';END IF;
+ RAISE NOTICE 'Funded settlement, owner cancellation, DJ cancellation, missed show and terminal retries passed';
 
 END $test$;
 ROLLBACK;
