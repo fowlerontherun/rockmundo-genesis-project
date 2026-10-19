@@ -197,7 +197,7 @@ export const useSongAuctions = (userId?: string) => {
       description?: string;
       bandId?: string | null;
     }) => {
-      if (!userId) throw new Error("Not authenticated");
+      if (!userId || !profileId) throw new Error("Select a character before listing a song");
 
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + params.durationDays);
@@ -207,6 +207,7 @@ export const useSongAuctions = (userId?: string) => {
         .insert({
           song_id: params.songId,
           seller_user_id: userId,
+          profile_id: profileId,
           seller_band_id: params.bandId || null,
           listing_type: params.listingType,
           asking_price: params.askingPrice,
@@ -308,29 +309,11 @@ export const useSongAuctions = (userId?: string) => {
   // Accept highest bid (seller completes auction manually)
   const acceptBid = useMutation({
     mutationFn: async ({ listingId }: { listingId: string }) => {
-      // Fetch the listing to get current bid info
-      const { data: listing, error: listingError } = await supabase
-        .from("marketplace_listings")
-        .select("current_bid, current_bidder_user_id")
-        .eq("id", listingId)
-        .single();
+      // #4230: bids currently do not reserve buyer funds, and their owner
+      // can be impersonated. Seller-triggered debits are intentionally
+      // disabled until verified bid authorization and escrow are available.
+      throw new Error("Accepting auction bids is temporarily unavailable until bidder authorization and funds reservation are secured. Buyers can use Buyout.");
 
-      if (listingError) throw listingError;
-      if (!listing?.current_bid || !listing?.current_bidder_user_id) {
-        throw new Error("No bids to accept");
-      }
-
-      // Use the complete_song_sale RPC with the winning bidder
-      const { data, error } = await supabase.rpc("complete_song_sale", {
-        p_listing_id: listingId,
-        p_buyer_user_id: listing.current_bidder_user_id,
-        p_sale_price: listing.current_bid,
-      });
-
-      if (error) throw error;
-      const result = data as any;
-      if (!result.success) throw new Error(result.error);
-      return result;
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["song-market-my-listings"] });
