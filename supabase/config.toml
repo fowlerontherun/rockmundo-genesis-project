@@ -76,7 +76,7 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.process-radio-submissions]
-verify_jwt = false
+verify_jwt = true
 
 [functions.simulate-radio-plays]
 verify_jwt = true
