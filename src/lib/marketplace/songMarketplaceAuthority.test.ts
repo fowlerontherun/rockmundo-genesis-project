@@ -9,6 +9,14 @@ const containment = readFileSync(
   "supabase/migrations/20261019072647_revoke_unauthorised_song_marketplace_settlement.sql",
   "utf8",
 );
+const guard = readFileSync(
+  "supabase/migrations/20261019074057_suspend_unescrowed_song_marketplace_auction_acceptance.sql",
+  "utf8",
+);
+const songGuard = readFileSync(
+  "supabase/migrations/20261019073828_reject_private_sale_of_band_and_archived_songs.sql",
+  "utf8",
+);
 const harness = readFileSync(
   "supabase/tests/song_marketplace_atomic_authority_harness.sql",
   "utf8",
@@ -25,14 +33,16 @@ describe("marketplace sale authority (#4229)", () => {
     );
     expect(migration).toContain("revoke insert on public.marketplace_transactions");
     expect(migration).toContain("revoke insert on public.marketplace_bids");
-    expect(client).not.toContain('supabase.rpc("complete_song_sale"');
+    // The guarded legacy buyout RPC now authenticates identity/price at source.
+    expect(client).toContain('supabase.rpc("complete_song_sale"');
     expect(client).not.toContain('supabase.rpc("place_song_bid"');
   });
 
   it("derives the buyer character and sale price, and settles under a lock", () => {
-    expect(client).toContain('p_action: "buy"');
-    expect(client).toContain('p_action: "accept_bid"');
-    expect(client).toContain("p_actor_profile_id: profileId");
+    // The new RPC is additive and is used only where server-authorised.
+    // Unescrowed seller-side acceptance is deliberately unavailable in UI.
+    expect(client).not.toContain('p_action: "accept_bid"');
+    expect(migration).toContain("settle_song_marketplace_sale_atomic");
     expect(migration).toContain("v_account:=auth.uid()");
     expect(migration).toContain("v_listing.listing_type='fixed_price'");
     expect(migration).toContain("v_price:=v_listing.asking_price");
@@ -51,6 +61,10 @@ describe("marketplace sale authority (#4229)", () => {
     expect(migration).toContain("song_bid_profile_not_owned");
     expect(migration).toContain("song_bid_insufficient_cash");
     expect(migration).toContain("song_sale_missing_authorized_bid");
+    expect(guard).toContain("song_sale_bid_escrow_required");
+    expect(songGuard).toContain("v_song.band_id is not null");
+    expect(songGuard).toContain("coalesce(v_song.archived,false)");
+
   });
 
   it("keeps a rollback-only transactional fraud and economy integration suite", () => {
@@ -58,7 +72,8 @@ describe("marketplace sale authority (#4229)", () => {
     expect(harness).toContain("ROLLBACK;");
     expect(harness).toContain("borrowed_other_profile");
     expect(harness).toContain("fixed_price_settlement_incorrect");
-    expect(harness).toContain("accepted_bid_settlement_incorrect");
+    expect(harness).toContain("auction_buyout_settlement_incorrect");
+    expect(harness).toContain("unescrowed_seller_acceptance");
     expect(harness).toContain("legacy_sale_accepted_tampered_price");
   });
 });
