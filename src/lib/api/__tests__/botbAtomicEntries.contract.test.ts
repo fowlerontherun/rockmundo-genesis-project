@@ -10,6 +10,10 @@ const entrySql = readFileSync(
   "utf8",
 );
 const entryHook = readFileSync("src/hooks/useBattleOfTheBands.ts", "utf8");
+const legacyPolicy = readFileSync(
+  "supabase/migrations/20261019140500_botb_legacy_withdrawal_cutoff_policy.sql",
+  "utf8",
+);
 
 describe("Battle of the Bands mayor scheduling deadlocks", () => {
   it("regenerates only the city a mayor controls", () => {
@@ -72,5 +76,13 @@ describe("Battle of the Bands atomic registration and withdrawal", () => {
     expect(entrySql).toContain("REVOKE ALL ON FUNCTION public.withdraw_battle_of_the_bands_entry(uuid)");
     expect(entrySql).toContain("TO authenticated,service_role");
     expect(entrySql).toContain("temporarily for existing deployed");
+  });
+
+  it("preserves legacy direct delete only before the event starts", () => {
+    expect(legacyPolicy).toContain('DROP POLICY IF EXISTS "Band members can withdraw their entry"');
+    expect(legacyPolicy).toContain("FOR DELETE TO authenticated");
+    expect(legacyPolicy).toContain("COALESCE(bm.member_status,'active')='active'");
+    expect(legacyPolicy).toContain("e.status='upcoming'");
+    expect(legacyPolicy).toContain("e.scheduled_date>clock_timestamp()");
   });
 });
