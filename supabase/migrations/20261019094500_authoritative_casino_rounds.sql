@@ -1,5 +1,19 @@
 -- #4222: retire browser-selected winnings. All playable outcomes, payouts,
 -- profile debits and receipts are owned by one locked PostgreSQL transaction.
+-- The original schema incorrectly linked profile_id -> auth.users(id).
+-- This table has no production history; preserve character identity with
+-- the real profiles(id) FK and read RLS before enabling new game entries.
+ALTER TABLE public.casino_transactions
+  DROP CONSTRAINT casino_transactions_profile_id_fkey;
+ALTER TABLE public.casino_transactions
+  ADD CONSTRAINT casino_transactions_profile_id_fkey
+  FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+DROP POLICY IF EXISTS "Users can read own casino transactions" ON public.casino_transactions;
+CREATE POLICY "Users can read own casino transactions" ON public.casino_transactions
+ FOR SELECT TO authenticated
+ USING (EXISTS (SELECT 1 FROM public.profiles p
+   WHERE p.id=casino_transactions.profile_id AND p.user_id=auth.uid()));
+
 REVOKE ALL ON FUNCTION public.play_casino_round(text,numeric,numeric,jsonb)
   FROM PUBLIC,anon,authenticated,service_role;
 REVOKE INSERT,UPDATE,DELETE,TRUNCATE ON public.casino_transactions
