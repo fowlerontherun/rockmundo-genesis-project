@@ -56,14 +56,14 @@ function Countdown() {
 }
 
 const PRIZE_TABLE = [
-  { match: "7 + Bonus", prize: "$1,000,000 + 10,000 XP + 5,000 Fame" },
+  { match: "7 + Bonus", prize: "Jackpot + 10,000 XP + 5,000 Fame" },
   { match: "7", prize: "$250,000 + 5,000 XP" },
   { match: "6 + Bonus", prize: "$50,000 + 2,000 XP" },
   { match: "6", prize: "$10,000 + 1,000 XP" },
   { match: "5 + Bonus", prize: "$5,000 + 500 XP" },
   { match: "5", prize: "$1,000 + 200 XP" },
   { match: "4", prize: "$500 + 100 XP" },
-  { match: "3", prize: "Free ticket (refund $500)" },
+  { match: "3", prize: `Ticket refund (${TICKET_COST})` },
 ];
 
 const Lottery = () => {
@@ -82,7 +82,7 @@ const Lottery = () => {
 
   const handleBuyTicket = (numbers: number[], bonus: number) => {
     if (!currentDraw?.id) return;
-    buyTicket.mutate({
+    return buyTicket.mutateAsync({
       drawId: currentDraw.id,
       selectedNumbers: numbers,
       bonusNumber: bonus,
