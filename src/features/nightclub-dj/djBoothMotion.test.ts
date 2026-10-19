@@ -22,7 +22,7 @@ describe("verified DJ booth movements and cameras", () => {
     ["tempo", "A", "dj_tempo_a"],
     ["tempo", "B", "dj_tempo_b"],
     ["crossfade", null, "dj_crossfade"],
-  ])("maps accepted %s on %s to %s", (kind, deck, action) => {
+  ] as const)("maps accepted %s on %s to %s", (kind, deck, action) => {
     expect(djBoothActionAt([mix(kind, deck)], at + 4000)).toEqual({
       action, actionProgress: .5,
     });
