@@ -29,7 +29,7 @@ describe("verified DJ booth movements and cameras", () => {
   });
 
   it("rejects stale or future actions instead of holding a pose", () => {
-    expect(djBoothActionAt([mix("deck_play", "A")], at + 2001)).toBeNull();
+    expect(djBoothActionAt([mix("deck_play", "A")], at + 8001)).toBeNull();
     expect(djBoothActionAt([mix("deck_play", "A")], at - 1)).toBeNull();
     expect(djBoothActionAt([mix("deck_play", "A")], Number.NaN)).toBeNull();
   });
@@ -47,13 +47,13 @@ describe("verified DJ booth movements and cameras", () => {
       mix("tempo", "A", at, 2),
       mix("deck_play", "B", at - 1000, 1),
     ]);
-    expect(djBoothActionAt(events, at + 1000)?.action).toBe("dj_tempo_a");
+    expect(djBoothActionAt(events, at + 4000)?.action).toBe("dj_tempo_a");
     expect(events[0].event_no).toBe(2);
   });
 
   it("drives the 3D performer's action from persisted events for live and replay", () => {
     const evidence = [mix("crossfade", null)];
-    const live = buildDjClubStageFrame(booking, "p1", evidence, null, 100, at + 1000);
+    const live = buildDjClubStageFrame(booking, "p1", evidence, null, 100, at + 4000);
     const completed = buildDjClubStageFrame(
       { ...booking, status: "completed" }, "p1", evidence,
       { attendance: 0, venue_capacity: 100 }, 100, at + 1000,
@@ -74,7 +74,7 @@ describe("verified DJ booth movements and cameras", () => {
       { ...booking, status: "missed" }, "p1", evidence, null, 100, at + 1000,
     );
     const reduced = buildDjClubStageFrame(
-      booking, "p1", evidence, null, 100, at + 1000, true,
+      booking, "p1", evidence, null, 100, at + 4000, true,
     );
     expect(missed.performers[0].action).toBeNull();
     expect(reduced.performers[0].action).toBe("dj_mix");
@@ -91,7 +91,7 @@ describe("verified DJ booth movements and cameras", () => {
     expect(djBoothGripTargets("dj_crossfade", .5)?.right[0]).toBe(0);
   });
 
-  it("limits the arm pulse to the exact 2-second window", () => {
+  it("limits the arm pulse to the bounded eight-second window", () => {
     expect(djBoothGripTargets("dj_tempo_a", 0)?.influence).toBeCloseTo(0);
     expect(djBoothGripTargets("dj_tempo_a", .5)?.influence).toBeCloseTo(1);
     expect(djBoothGripTargets("dj_tempo_a", 1)?.influence).toBeCloseTo(0);
