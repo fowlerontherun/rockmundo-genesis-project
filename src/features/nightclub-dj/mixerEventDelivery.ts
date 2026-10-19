@@ -22,7 +22,7 @@ type RequestError = {
 };
 
 function serverErrorDetails(error: unknown): { status: number; message: string } {
-  const candidate = (error && typeof error === "object") ? error as RequestError : {};
+  const candidate: RequestError = (error && typeof error === "object") ? error as RequestError : {};
   const status = candidate.context?.status;
   return {
     status: typeof status === "number" && Number.isFinite(status) ? status : 0,
@@ -31,7 +31,7 @@ function serverErrorDetails(error: unknown): { status: number; message: string }
 }
 
 async function serviceMessage(error: unknown): Promise<string> {
-  const candidate = (error && typeof error === "object") ? error as RequestError : {};
+  const candidate: RequestError = (error && typeof error === "object") ? error as RequestError : {};
   try {
     const payload: unknown = await candidate.context?.clone?.().json();
     if (payload && typeof payload === "object" && typeof (payload as { error?: unknown }).error === "string") {
