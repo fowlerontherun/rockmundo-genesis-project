@@ -11,6 +11,12 @@ export interface BotbEvent {
   scheduled_date: string;
   status: "upcoming" | "completed" | "cancelled";
   max_entries: number;
+  prize_money: number;
+  attendance: number;
+  ticket_revenue: number;
+  sponsorship_revenue: number;
+  production_cost: number;
+  city_profit: number;
   winner_band_id: string | null;
   winner_rating: number | null;
   resolved_at: string | null;
