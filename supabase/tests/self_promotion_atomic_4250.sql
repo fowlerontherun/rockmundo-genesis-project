@@ -65,7 +65,13 @@ SELECT
   NOT has_function_privilege('authenticated','public.process_due_self_promotions(integer)','EXECUTE') AS batch_player_denied,
   (SELECT command='SELECT public.process_due_self_promotions();'
    FROM cron.job WHERE jobname='complete-self-promotions-every-10-min') AS cron_internal,
-  (SELECT schedule='*/10 * * * *' FROM cron.job
-   WHERE jobname='complete-self-promotions-every-10-min') AS cadence_unchanged;
+  (SELECT schedule='*/10 * * *' FROM cron.job
+   WHERE jobname='complete-self-promotions-every-10-min') AS cadence_unchanged,
+  NOT has_table_privilege('authenticated','public.self_promotion_activities','INSERT') AS forged_client_insert_denied,
+  NOT has_table_privilege('authenticated','public.self_promotion_activities','UPDATE') AS client_reward_mutations_denied,
+  NOT has_function_privilege('anon','public.start_self_promotion(uuid,uuid,text,text)','EXECUTE') AS anon_start_denied,
+  has_function_privilege('authenticated','public.start_self_promotion(uuid,uuid,text,text)','EXECUTE') AS player_start_rpc_allowed,
+  (SELECT prosecdef FROM pg_proc WHERE pronamespace='public'::regnamespace
+    AND proname='start_self_promotion') AS start_rpc_privileged;
 
 ROLLBACK;
