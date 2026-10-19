@@ -53,6 +53,18 @@ export function djBoothActionAt(
   return { action, actionProgress: (nowMs - Date.parse(event.recorded_at)) / DJ_BOOTH_CUE_WINDOW_MS };
 }
 
+/** Accessible, neutral labels; never imply a quality score or award. */
+export function djMixerActivityLabel(event: DjStageMixEvent): string {
+  if (event.kind === "deck_play" && (event.deck === "A" || event.deck === "B")) {
+    return `Played a track on Deck ${event.deck}`;
+  }
+  if (event.kind === "tempo" && (event.deck === "A" || event.deck === "B")) {
+    return `Adjusted tempo on Deck ${event.deck}`;
+  }
+  if (event.kind === "crossfade") return "Moved the crossfader";
+  return "Recorded mixer action";
+}
+
 /** No replay without the original booked show AND its immutable settlement receipt. */
 export function hasVerifiedDjReplay(
   booking: DjStageBooking | null | undefined,
