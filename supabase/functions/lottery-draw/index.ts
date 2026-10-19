@@ -21,7 +21,7 @@ const PRIZE_TIERS: PrizeTier[] = [
   { matches: 5, bonus: true, cash: 5000, xp: 500, fame: 0 },
   { matches: 5, bonus: false, cash: 1000, xp: 200, fame: 0 },
   { matches: 4, bonus: false, cash: 500, xp: 100, fame: 0 },
-  { matches: 3, bonus: false, cash: 500, xp: 0, fame: 0 }, // refund
+  { matches: 3, bonus: false, cash: 2, xp: 0, fame: 0 }, // return $2 ticket stake
 ];
 
 function getPrize(matchCount: number, bonusMatched: boolean): { cash: number; xp: number; fame: number } {
@@ -103,6 +103,7 @@ Deno.serve(async (req) => {
       const bonusMatched = ticket.bonus_number === bonusNumber;
 
       const prize = getPrize(matchCount, bonusMatched);
+      if (matchCount === 7 && bonusMatched) prize.cash = draw.jackpot_amount ?? 1_000_000;
 
       const { data: settled, error: settleError } = await supabase.rpc("settle_lottery_ticket_atomic", {
         p_ticket_id: ticket.id,
