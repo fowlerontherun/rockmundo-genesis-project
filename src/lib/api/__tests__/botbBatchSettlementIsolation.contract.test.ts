@@ -5,6 +5,10 @@ const sql = readFileSync(
   "supabase/migrations/20261019141000_botb_isolated_batch_settlements.sql",
   "utf8",
 );
+const prizeConstraintSql = readFileSync(
+  "supabase/migrations/20261019141500_botb_earnings_one_prize_per_event.sql",
+  "utf8",
+);
 
 describe("Battle of the Bands isolated settlement cycle", () => {
   it("limits batch processing and ignores events already locked by another cycle", () => {
@@ -60,5 +64,24 @@ describe("Battle of the Bands isolated settlement cycle", () => {
     expect(sql).toContain("FROM PUBLIC,anon,authenticated");
     expect(sql).toContain("TO service_role");
     expect(sql).toContain("GRANT EXECUTE ON FUNCTION public.run_botb_cycle() TO service_role");
+  });
+});
+
+describe("Battle of the Bands exactly-one payout guard", () => {
+  it("blocks a second cash earning with the same event_id", () => {
+    expect(prizeConstraintSql).toContain(
+      "CREATE UNIQUE INDEX IF NOT EXISTS botb_one_prize_per_event",
+    );
+    expect(prizeConstraintSql).toContain("(metadata->>'event_id')");
+    expect(prizeConstraintSql).toContain("source='battle_of_the_bands'");
+    expect(prizeConstraintSql).toContain("metadata->>'event_id' IS NOT NULL");
+  });
+
+  it("does not silently erase old duplicate payments before adding the index", () => {
+    expect(prizeConstraintSql).toContain("HAVING COUNT(*)>1");
+    expect(prizeConstraintSql).toContain(
+      "BOTB_DUPLICATE_HISTORICAL_EARNINGS: manual review required",
+    );
+    expect(prizeConstraintSql).not.toContain("DELETE FROM public.band_earnings");
   });
 });
