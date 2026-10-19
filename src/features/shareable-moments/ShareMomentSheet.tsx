@@ -16,7 +16,7 @@ import { useNavigate } from "react-router-dom";
 import { trackShareAnalyticsEvent } from "./analytics";
 import { markSharePromptSeen } from "./prompts";
 
-export function ShareMomentSheet({moment,open,onOpenChange,avatarStatus,onAvatarRetry}:{moment:ShareMoment|null;open:boolean;onOpenChange:(open:boolean)=>void;avatarStatus?:'loading'|'ready'|'unavailable';onAvatarRetry?:()=>void}){
+export function ShareMomentSheet({moment,open,onOpenChange,avatarStatus,onAvatarRetry,onPromptAccepted}:{moment:ShareMoment|null;open:boolean;onOpenChange:(open:boolean)=>void;avatarStatus?:'loading'|'ready'|'unavailable';onAvatarRetry?:()=>void;onPromptAccepted?:()=>void}){
  const {toast}=useToast(); const navigate=useNavigate();
  const [promptAccepted,setPromptAccepted]=useState(false);
  const promptOnly=Boolean(moment?.promptOnly);
@@ -69,6 +69,7 @@ export function ShareMomentSheet({moment,open,onOpenChange,avatarStatus,onAvatar
              onClick={()=>{
                if(moment.promptKind&&moment.promptSourceId) markSharePromptSeen(moment.promptKind,moment.promptSourceId);
                setPromptAccepted(true);
+               onPromptAccepted?.();
              }}
            >
              <Share2 className="h-4 w-4"/>
