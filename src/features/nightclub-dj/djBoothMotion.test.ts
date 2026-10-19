@@ -23,7 +23,7 @@ describe("verified DJ booth movements and cameras", () => {
     ["tempo", "B", "dj_tempo_b"],
     ["crossfade", null, "dj_crossfade"],
   ])("maps accepted %s on %s to %s", (kind, deck, action) => {
-    expect(djBoothActionAt([mix(kind!, deck)], at + 1000)).toEqual({
+    expect(djBoothActionAt([mix(kind, deck)], at + 4000)).toEqual({
       action, actionProgress: .5,
     });
   });
@@ -56,7 +56,7 @@ describe("verified DJ booth movements and cameras", () => {
     const live = buildDjClubStageFrame(booking, "p1", evidence, null, 100, at + 4000);
     const completed = buildDjClubStageFrame(
       { ...booking, status: "completed" }, "p1", evidence,
-      { attendance: 0, venue_capacity: 100 }, 100, at + 1000,
+      { attendance: 0, venue_capacity: 100 }, 100, at + 4000,
       false, [0, 0, 0], true,
     );
     expect(live.performers[0]).toMatchObject({
