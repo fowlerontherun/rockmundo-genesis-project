@@ -20,7 +20,7 @@ BEGIN
  END IF;
  v_limit:=(256/p_range)*p_range;
  LOOP
-   v_byte:=get_byte(gen_random_bytes(1),0);
+   v_byte:=get_byte(extensions.gen_random_bytes(1),0);
    IF v_byte<v_limit THEN RETURN v_byte%p_range; END IF;
  END LOOP;
 END;
@@ -133,7 +133,7 @@ BEGIN
      RAISE EXCEPTION 'CASINO_ROULETTE_BETS_REQUIRED';
    END IF;
    v_num_bets:=jsonb_array_length(v_choices->'bets');
-   IF v_num_bets<1 OR v_num_bets>50 OR jsonb_object_length(v_choices)<>1 THEN
+   IF v_num_bets<1 OR v_num_bets>50 OR (SELECT count(*) FROM jsonb_object_keys(v_choices))<>1 THEN
      RAISE EXCEPTION 'CASINO_ROULETTE_BET_COUNT';
    END IF;
    -- A single cryptographically generated server roll applies to all bets.
