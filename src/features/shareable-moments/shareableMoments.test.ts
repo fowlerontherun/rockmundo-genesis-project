@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SHARE_FORMATS, type ShareMoment } from './types';
 import { canShareFile, copyText, nativeShare, referralUrl, withReferral } from './share';
-import { shareFilename } from './canvas';
+import { renderShareMoment, shareFilename } from './canvas';
 
 const moment: ShareMoment = { version: 1, type: 'achievement', headline: 'First Stadium!', createdAt: '2026-10-07T00:00:00Z' };
 
@@ -81,5 +81,48 @@ describe('desktop sharing fallbacks', () => {
   it('returns false when clipboard access is unavailable', async () => {
     vi.stubGlobal('navigator', {});
     expect(await copyText('fallback')).toBe(false);
+  });
+});
+
+
+describe('avatar image compositing', () => {
+  const createCanvas = () => {
+    const drawImage = vi.fn();
+    const gradient = { addColorStop: vi.fn() };
+    const ctx = new Proxy({ drawImage }, {
+      get(target, key: string) {
+        if (key === 'drawImage') return target.drawImage;
+        if (key === 'createLinearGradient' || key === 'createRadialGradient') return () => gradient;
+        if (key === 'measureText') return (value: string) => ({ width: value.length * 15 });
+        return () => {};
+      },
+      set() { return true; },
+    });
+    const canvas = { width: 0, height: 0, getContext: vi.fn(() => ctx) } as unknown as HTMLCanvasElement;
+    return { canvas, drawImage };
+  };
+
+  it.each(['square', 'story', 'landscape'] as const)(
+    'draws the supplied player avatar into the %s export',
+    (format) => {
+      const { canvas, drawImage } = createCanvas();
+      const avatar = { width: 720, height: 1080 } as HTMLCanvasElement;
+      renderShareMoment(canvas, { ...moment, type: 'band_profile' }, format, avatar);
+      expect(canvas.width).toBe(SHARE_FORMATS[format].width);
+      expect(canvas.height).toBe(SHARE_FORMATS[format].height);
+      expect(drawImage).toHaveBeenCalledWith(
+        avatar,
+        expect.any(Number),
+        expect.any(Number),
+        expect.any(Number),
+        expect.any(Number),
+      );
+    },
+  );
+
+  it('keeps spectator/public cards avatar-free when no avatar is provided', () => {
+    const { canvas, drawImage } = createCanvas();
+    renderShareMoment(canvas, { ...moment, type: 'festival' }, 'square');
+    expect(drawImage).not.toHaveBeenCalled();
   });
 });
