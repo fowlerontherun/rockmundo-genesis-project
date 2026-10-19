@@ -9,7 +9,8 @@ export function shouldCaptureGalleryAvatar(moment: ShareMoment | null, primaryBa
   if (!moment) return false;
 
   if (moment.type === 'band_profile') {
-    if (moment.avatar) return true; // Historical captured portrait stays frozen.
+    // Non-member historical posters still render their stored avatar through
+    // the generic sheet, without offering to regenerate it as another player.
     const savedBandId = moment.id?.replace(/^promo:/, '') ?? null;
     return Boolean(primaryBandId && savedBandId === primaryBandId);
   }
