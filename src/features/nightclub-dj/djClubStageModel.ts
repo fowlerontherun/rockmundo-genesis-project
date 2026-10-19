@@ -2,6 +2,7 @@ import type { ConcertFrame, ConcertOptions } from "@/features/gig-demo-3d/liveTy
 import { resolveVenueProfile, stagePosition } from "@/features/gig-demo-3d/venueProfile";
 import { defaultAppearance } from "@/features/player-model/appearance";
 import type { GigPlayerModelsData } from "@/features/player-model/usePlayerModel";
+import type { DjBoothAction } from "@/features/gig-demo-3d/djBoothMotion";
 
 /**
  * Read-only visualization of a canonical DJ booking.
@@ -11,6 +12,7 @@ export interface DjStageMixEvent {
   event_no: number;
   kind: string;
   recorded_at: string;
+  deck?: string | null;
 }
 
 export interface DjStageAudience {
@@ -24,6 +26,31 @@ export interface DjStageBooking {
   status: string;
   starts_at: string;
   ends_at: string;
+}
+
+/** Only accepted, recently recorded mixer evidence can move the DJ's hands.
+ * Never synthesize an action from local fader/audio state or an older event.
+ */
+export function djBoothActionAt(
+  events: readonly DjStageMixEvent[],
+  nowMs: number,
+): { action: DjBoothAction; actionProgress: number } | null {
+  if (!Number.isFinite(nowMs)) return null;
+  const recent = events.filter(event => {
+    const at = Date.parse(event.recorded_at);
+    return Number.isInteger(event.event_no) && event.event_no > 0 &&
+      Number.isFinite(at) && at <= nowMs && nowMs - at <= 2000;
+  }).sort((a, b) => a.event_no - b.event_no);
+  const event = recent[recent.length - 1];
+  if (!event) return null;
+  const action: DjBoothAction | null = event.kind === "crossfade" ? "dj_crossfade"
+    : event.kind === "deck_play" && event.deck === "A" ? "dj_cue_a"
+      : event.kind === "deck_play" && event.deck === "B" ? "dj_cue_b"
+        : event.kind === "tempo" && event.deck === "A" ? "dj_tempo_a"
+          : event.kind === "tempo" && event.deck === "B" ? "dj_tempo_b"
+            : null;
+  if (!action) return null;
+  return { action, actionProgress: (nowMs - Date.parse(event.recorded_at)) / 2000 };
 }
 
 /** No replay without the original booked show AND its immutable settlement receipt. */
@@ -146,6 +173,7 @@ export function buildDjClubStageFrame(
       : last?.kind === "deck_play" ? "bounce"
         : last?.kind === "tempo" ? "sway" : "sway";
   const isLive = booking.status === "live" || (verifiedCompletedReplay && booking.status === "completed");
+  const booth = isLive && !reducedMotion ? djBoothActionAt(valid, nowMs) : null;
   return {
     positionMs: elapsed,
     section: last?.kind === "crossfade" ? "chorus" : "verse",
@@ -164,8 +192,8 @@ export function buildDjClubStageFrame(
       position: performerPosition,
       visible: isLive,
       walking: false,
-      action: isLive ? "dj_mix" : null,
-      actionProgress: 0,
+      action: booth?.action ?? (isLive ? "dj_mix" : null),
+      actionProgress: booth?.actionProgress ?? 0,
     }],
   };
 }
