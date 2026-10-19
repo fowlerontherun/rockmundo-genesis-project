@@ -178,22 +178,24 @@ export const useAwards = (userId?: string, bandId?: string) => {
   const fetchVoteCountForShow = async (showId: string) => {
     if (!userId) return 0;
 
+    // The allowance is per auth account, NOT per active character or band.
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError) throw authError;
+    if (!user) return 0;
+
     const { data: nominations, error: nominationsError } = await (supabase as any)
       .from("award_nominations")
       .select("id")
       .eq("award_show_id", showId);
-
     if (nominationsError) throw nominationsError;
-
-    const nominationIds = (nominations || []).map((nomination: { id: string }) => nomination.id);
-    if (nominationIds.length === 0) return 0;
+    const ids = (nominations || []).map((n: { id: string }) => n.id);
+    if (!ids.length) return 0;
 
     const { count, error } = await (supabase as any)
       .from("award_votes")
       .select("id", { count: "exact", head: true })
-      .eq("voter_id", userId)
-      .in("nomination_id", nominationIds);
-
+      .eq("voter_account_id", user.id)
+      .in("nomination_id", ids);
     if (error) throw error;
     return count || 0;
   };
@@ -297,63 +299,22 @@ export const useAwards = (userId?: string, bandId?: string) => {
     mutationFn: async (params: {
       nomination_id: string;
       show_id: string;
-      weight?: number;
-      voter_type?: "player" | "npc" | "jury" | "band" | "movement";
+      voter_type?: "player" | "band";
       voter_id?: string;
     }) => {
-      if (!userId) throw new Error("User not authenticated");
+      if (!userId) throw new Error("Player character required");
 
-      const voteId = params.voter_id || userId;
-      const voteType = params.voter_type || "player";
-
-      const { data: showNominations, error: showNominationError } = await (supabase as any)
-        .from("award_nominations")
-        .select("id")
-        .eq("award_show_id", params.show_id);
-
-      if (showNominationError) throw showNominationError;
-
-      const nominationIds = (showNominations || []).map((nomination: { id: string }) => nomination.id);
-
-      if (nominationIds.length > 0) {
-        const { count: showVoteCount, error: showVoteCountError } = await (supabase as any)
-          .from("award_votes")
-          .select("id", { count: "exact", head: true })
-          .eq("voter_id", voteId)
-          .in("nomination_id", nominationIds);
-
-        if (showVoteCountError) throw showVoteCountError;
-        enforceVoteCap(showVoteCount ?? 0, 3);
-      }
-
-      const { count: duplicateCount, error: duplicateError } = await (supabase as any)
-        .from("award_votes")
-        .select("id", { count: "exact", head: true })
-        .eq("nomination_id", params.nomination_id)
-        .eq("voter_id", voteId);
-
-      if (duplicateError) throw duplicateError;
-      if ((duplicateCount ?? 0) > 0) {
-        throw new Error("You already voted for this nominee");
-      }
-
-      const { data, error } = await (supabase as any)
-        .from("award_votes")
-        .insert({
-          nomination_id: params.nomination_id,
-          voter_type: voteType,
-          voter_id: voteId,
-          weight: params.weight || 1.0,
-        })
-        .select()
-        .single();
-
-      if (error) {
-        if (error.code === "23505") {
-          throw new Error("You have already voted for this nomination");
-        }
-        throw error;
-      }
+      // Only the authenticated SQL RPC can cast votes. It resolves account
+      // ownership, verifies player/band representation, fixes weight to 1,
+      // checks the voting window and serializes the account-wide 3-vote cap.
+      const { data, error } = await (supabase as any).rpc("cast_award_vote", {
+        p_nomination_id: params.nomination_id,
+        p_show_id: params.show_id,
+        p_voter_type: params.voter_type ?? "player",
+        p_profile_id: userId,
+        p_band_id: params.voter_type === "band" ? (params.voter_id ?? bandId) : null,
+      });
+      if (error) throw error;
       return data;
     },
     onMutate: async (params) => {
