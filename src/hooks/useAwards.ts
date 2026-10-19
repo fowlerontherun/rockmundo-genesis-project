@@ -178,26 +178,12 @@ export const useAwards = (userId?: string, bandId?: string) => {
   const fetchVoteCountForShow = async (showId: string) => {
     if (!userId) return 0;
 
-    // The allowance is per auth account, NOT per active character or band.
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
-    if (!user) return 0;
-
-    const { data: nominations, error: nominationsError } = await (supabase as any)
-      .from("award_nominations")
-      .select("id")
-      .eq("award_show_id", showId);
-    if (nominationsError) throw nominationsError;
-    const ids = (nominations || []).map((n: { id: string }) => n.id);
-    if (!ids.length) return 0;
-
-    const { count, error } = await (supabase as any)
-      .from("award_votes")
-      .select("id", { count: "exact", head: true })
-      .eq("voter_account_id", user.id)
-      .in("nomination_id", ids);
+    // Only server SQL reads the private voter_account_id mapping. This is
+    // shared across the account's characters and any band representations.
+    const { data: count, error } = await (supabase as any)
+      .rpc("award_show_account_vote_count", { p_show_id: showId });
     if (error) throw error;
-    return count || 0;
+    return Number(count ?? 0);
   };
 
   // Submit nomination
