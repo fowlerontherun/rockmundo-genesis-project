@@ -43,7 +43,7 @@ describe("notification recruitment normalization", () => {
     const display = normalizeNotification(base({ band_id: undefined }, null));
     expect(display.routePath).toBeNull();
     expect(display.actionLabel).toBeNull();
-    expect(display.statusLabel).toBe("Pending");
+    expect(display.statusLabel).toBeNull(); // A missing historical status is unknown, not assumed pending.
   });
 
   it("routes applicant notifications to the band profile and manager notifications to recruitment context", () => {

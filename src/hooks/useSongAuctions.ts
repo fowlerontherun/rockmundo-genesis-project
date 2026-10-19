@@ -244,7 +244,13 @@ export const useSongAuctions = (userId?: string) => {
 
       // The secured RPC verifies the JWT, active character ownership,
       // listing/song eligibility, available cash and canonical bid minimum.
-      const { data, error } = await supabase.rpc("place_song_bid_authorized", {
+      // The secured RPC is deployed in the live DB, but the large checked-in
+      // generated types may not yet include its post-migration signature.
+      const authorizedBidRpc = supabase.rpc as unknown as (
+        name: "place_song_bid_authorized",
+        args: { p_listing_id: string; p_bidder_profile_id: string; p_bid_amount: number }
+      ) => Promise<{ data: unknown; error: { message: string } | null }>;
+      const { data, error } = await authorizedBidRpc("place_song_bid_authorized", {
         p_listing_id: listingId,
         p_bidder_profile_id: profileId,
         p_bid_amount: bidAmount,
