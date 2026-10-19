@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { deliverDjMixEvent } from "./mixerEventDelivery";
 
-const noopDelay = async (_ms: number) => {};
+const noopDelay = (_ms: number) => Promise.resolve();
 
 describe("server-verified DJ mixer delivery", () => {
   it("accepts the immutable receipt once even when React Query refresh fails", async () => {
