@@ -110,7 +110,7 @@ export function DjLiveClubStage({
   };
 
   useEffect(() => {
-    if (booking.data?.status !== "live" || !canvasRef.current || models.isLoading) return;
+    if (booking.isError || booking.data?.status !== "live" || !canvasRef.current || models.isLoading) return;
     let alive = true;
     setStatus("loading"); setError("");
     try {
@@ -126,10 +126,10 @@ export function DjLiveClubStage({
     return () => { alive = false; rendererRef.current?.destroy(); rendererRef.current = null; };
     // Only rebuild the GPU scene on appearance/venue changes or explicit retry.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [booking.data?.status, models.isLoading, options, retry]);
+  }, [booking.isError, booking.data?.status, models.isLoading, options, retry]);
 
   useEffect(() => {
-    if (!rendererRef.current || booking.data?.status !== "live") return;
+    if (!rendererRef.current || booking.isError || booking.data?.status !== "live") return;
     rendererRef.current.setSettings(settings);
     rendererRef.current.setEffects(false, 0);
     if (frame) rendererRef.current.setFrame(frame);
