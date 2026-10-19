@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { summarizeDjCareer, type DjCareerPerformance } from "./djCareer";
+import { djCareerUpcomingOrActiveFilter, summarizeDjCareer, type DjCareerPerformance } from "./djCareer";
 
 type ClubLabel = { id: string; name: string; cityName: string };
 type DjCityFanPopulation = { city_id: string; total_fans: number; total_attendance: number; sets_played: number };
@@ -80,7 +80,7 @@ export function DjCareerOverview({
         .in("status", ["booked", "ready", "live", "resolving"])
         // Live/resolving sessions can be settled after their advertised end.
         // Keep them discoverable instead of hiding the only route back to the decks.
-        .or(`ends_at.gte.${new Date().toISOString()},status.eq.live,status.eq.resolving`)
+        .or(djCareerUpcomingOrActiveFilter(new Date().toISOString()))
         .order("starts_at", { ascending: true })
         .limit(5);
       if (error) throw error;
