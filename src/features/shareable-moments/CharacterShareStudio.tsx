@@ -61,7 +61,9 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
     // Never publish a current-player portrait without its equipped clothes
     // or tattoos just because one of those requests failed. Retry refetches
     // the failed layer instead of silently drawing the default outfit.
-    if (clothing.isError || tattoos.isError) {
+    // A failed, enabled merch query may hide an equipped custom band top.
+    // Disabled merch queries (players without a band) are not errors.
+    if (clothing.isError || tattoos.isError || merch.query.isError) {
       setCapture({ key: captureKey, avatar: null, status: 'unavailable' });
       return;
     }
@@ -92,7 +94,7 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
     return () => { cancelled = true; };
   }, [open, captureEnabled, storedAvatar, captureKey, profileId, appearance, model.query.isError, model.isLoading,
     clothing.isPending, clothing.isFetching, clothing.isError, clothing.data, tattoos.isPending, tattoos.isFetching, tattoos.isError, tattoos.data,
-    merch.query.isPending, merch.query.isFetching, merch.query.data, luthiery.isPending, luthiery.isFetching, craftedInstrument,
+    merch.query.isPending, merch.query.isFetching, merch.query.isError, merch.query.data, luthiery.isPending, luthiery.isFetching, craftedInstrument,
     role, instrument, retry]);
 
   const shareMoment = useMemo(() => ({ ...moment, avatar }), [moment, avatar]);
@@ -110,6 +112,7 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
       if (model.query.isError) void model.query.refetch();
       if (clothing.isError) void clothing.refetch();
       if (tattoos.isError) void tattoos.refetch();
+      if (merch.query.isError) void merch.query.refetch();
       setRecapture(previous => ({
         key: captureKey,
         attempt: previous?.key === captureKey ? previous.attempt + 1 : 1,
