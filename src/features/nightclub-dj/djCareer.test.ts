@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { summarizeDjCareer, type DjCareerPerformance } from "./djCareer";
+import { djCareerUpcomingOrActiveFilter, summarizeDjCareer, type DjCareerPerformance } from "./djCareer";
 
 const row = (patch: Partial<DjCareerPerformance> = {}): DjCareerPerformance => ({
   id: "performance",
@@ -49,5 +49,13 @@ describe("server-verified DJ career projection", () => {
       verifiedTotal: 0, sampled: 0, recentCash: 0, recentFame: 0,
       recentXp: 0, averageScore: null, isPartial: false,
     });
+  });
+});
+
+describe("DJ career live-session navigation filter", () => {
+  it("keeps active and resolving shows reachable even after their scheduled end", () => {
+    const cutoff = "2026-10-20T22:30:00.000Z";
+    expect(djCareerUpcomingOrActiveFilter(cutoff))
+      .toBe("ends_at.gte.2026-10-20T22:30:00.000Z,status.eq.live,status.eq.resolving");
   });
 });
