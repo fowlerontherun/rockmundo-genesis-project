@@ -8,7 +8,7 @@ import { DEFAULT_SETTINGS, type CameraShot, type DemoSettings } from "@/features
 import { useGigPlayerModels } from "@/features/player-model/usePlayerModel";
 import {
   buildDjClubStageOptions, buildDjClubStageFrame, djStageOccupancy,
-  djReplayDurationMs, djReplayEventsThrough,
+  djReplayDurationMs, djReplayEventsThrough, hasVerifiedDjReplay,
   type DjStageAudience, type DjStageBooking, type DjStageMixEvent,
 } from "./djClubStageModel";
 
@@ -99,8 +99,8 @@ export function DjLiveClubStage({
   const durationMs = booking.data ? djReplayDurationMs(booking.data) : 0;
   const isReplay = mode === "replay";
   const isAuthorizedStage = !booking.isError && booking.data?.club_id === clubId &&
-    (isReplay ? booking.data?.status === "completed" && !!audience.data &&
-      !!mixer.data && !mixer.isError && !audience.isError
+    (isReplay ? hasVerifiedDjReplay(booking.data, clubId, audience.data, mixer.data,
+      mixer.isError || audience.isError)
       : booking.data?.status === "live");
 
   useEffect(() => {
