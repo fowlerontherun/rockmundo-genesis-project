@@ -31,10 +31,23 @@ CREATE POLICY "Service roles can manage universities"
   USING (auth.role() = 'service_role')
   WITH CHECK (auth.role() = 'service_role');
 
-CREATE TRIGGER set_universities_updated_at
-  BEFORE UPDATE ON public.universities
-  FOR EACH ROW
-  EXECUTE FUNCTION public.update_updated_at_column();
+-- Some historical migration paths already installed update_universities_updated_at.
+-- Do not install a second BEFORE UPDATE timestamp trigger under an alternate name.
+DO $university_timestamp_trigger$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger t
+    WHERE t.tgrelid = 'public.universities'::regclass
+      AND t.tgname IN ('set_universities_updated_at', 'update_universities_updated_at')
+      AND NOT t.tgisinternal
+  ) THEN
+    CREATE TRIGGER set_universities_updated_at
+      BEFORE UPDATE ON public.universities
+      FOR EACH ROW
+      EXECUTE FUNCTION public.update_updated_at_column();
+  END IF;
+END
+$university_timestamp_trigger$;
 
 -- Seed initial university options used by the Education UI
 INSERT INTO public.universities (name, city, prestige, quality_of_learning, course_cost)
