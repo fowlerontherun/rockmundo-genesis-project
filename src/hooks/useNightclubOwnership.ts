@@ -174,8 +174,41 @@ export function usePurchaseNightclub() {
   });
 }
 
+type StaffActionResult = {
+  action: "hire" | "fire";
+  staff_id: string;
+  owned_club_id: string;
+  salary_weekly: number;
+  still_employed: boolean;
+  replayed: boolean;
+};
+
+const pendingStaffActions = new Map<string, string>();
+const staffActionKey = (profileId: string, clubId: string, intent: string) =>
+  `nightclub-staff-action:${profileId}:${clubId}:${intent}`;
+
+function staffRequestId(key: string): string {
+  let requestId = pendingStaffActions.get(key);
+  if (!requestId) {
+    try {
+      const stored = sessionStorage.getItem(key);
+      if (stored && uuidPattern.test(stored)) requestId = stored;
+    } catch { /* Session storage is optional, in-memory retry remains available. */ }
+  }
+  requestId ??= crypto.randomUUID();
+  pendingStaffActions.set(key, requestId);
+  try { sessionStorage.setItem(key, requestId); } catch { /* Best effort. */ }
+  return requestId;
+}
+
+function completeStaffRequest(key: string) {
+  pendingStaffActions.delete(key);
+  try { sessionStorage.removeItem(key); } catch { /* Best effort. */ }
+}
+
 export function useHireStaff() {
   const queryClient = useQueryClient();
+  const { profileId } = useActiveProfile();
 
   return useMutation({
     mutationFn: async ({ ownedClubId, staffType, name, skillLevel }: {
@@ -184,42 +217,83 @@ export function useHireStaff() {
       name: string;
       skillLevel: number;
     }) => {
-      const salary = getStaffBaseSalary(staffType) * (1 + (skillLevel - 1) * 0.25);
-      const { error } = await supabase
-        .from("nightclub_staff")
-        .insert({
-          owned_club_id: ownedClubId,
-          staff_type: staffType,
-          name,
-          skill_level: skillLevel,
-          salary_weekly: Math.round(salary),
-        });
+      if (!profileId) throw new Error("Select an active character to hire staff");
+      const staffName = name.trim();
+      if (!STAFF_TYPES.includes(staffType as StaffType) ||
+          staffName.length < 2 || staffName.length > 64 ||
+          !Number.isInteger(skillLevel) || skillLevel < 1 || skillLevel > 5) {
+        throw new Error("Enter a valid staff name, role and skill level");
+      }
+      const key = staffActionKey(profileId, ownedClubId,
+        `hire:${staffType}:${staffName}:${skillLevel}`);
+      const requestId = staffRequestId(key);
+      // All salaries and staff caps are determined by the server.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any).rpc("nightclub_staff_action_atomic", {
+        p_owned_club_id: ownedClubId,
+        p_action: "hire",
+        p_request_id: requestId,
+        p_staff_type: staffType,
+        p_name: staffName,
+        p_skill_level: skillLevel,
+      });
       if (error) throw error;
+      const result = data as StaffActionResult | null;
+      if (!result || result.action !== "hire" || result.owned_club_id !== ownedClubId ||
+          !uuidPattern.test(result.staff_id ?? "") ||
+          !Number.isInteger(result.salary_weekly) || result.salary_weekly < 0) {
+        throw new Error("Staff hire could not be verified by the server");
+      }
+      completeStaffRequest(key);
+      return result;
     },
-    onSuccess: () => {
-      toast.success("Staff hired!");
-      queryClient.invalidateQueries({ queryKey: ["nightclub-staff"] });
+    onSuccess: (result) => {
+      toast.success(result.still_employed ?
+        `Staff hired at $${result.salary_weekly}/week` :
+        "The previous staff hire was already processed and the staff member has since left");
+      void queryClient.invalidateQueries({ queryKey: ["nightclub-staff", result.owned_club_id] });
+      void queryClient.invalidateQueries({ queryKey: ["owned-nightclubs"] });
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Unable to hire staff"),
   });
 }
 
 export function useFireStaff() {
   const queryClient = useQueryClient();
+  const { profileId } = useActiveProfile();
 
   return useMutation({
-    mutationFn: async (staffId: string) => {
-      const { error } = await supabase
-        .from("nightclub_staff")
-        .delete()
-        .eq("id", staffId);
+    mutationFn: async ({ ownedClubId, staffId }: {
+      ownedClubId: string;
+      staffId: string;
+    }) => {
+      if (!profileId) throw new Error("Select an active character to manage club staff");
+      const key = staffActionKey(profileId, ownedClubId, `fire:${staffId}`);
+      const requestId = staffRequestId(key);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any).rpc("nightclub_staff_action_atomic", {
+        p_owned_club_id: ownedClubId,
+        p_action: "fire",
+        p_request_id: requestId,
+        p_staff_id: staffId,
+      });
       if (error) throw error;
+      const result = data as StaffActionResult | null;
+      if (!result || result.action !== "fire" || result.owned_club_id !== ownedClubId ||
+          result.staff_id !== staffId || result.still_employed) {
+        throw new Error("Staff dismissal could not be verified by the server");
+      }
+      completeStaffRequest(key);
+      return result;
     },
-    onSuccess: () => {
-      toast.success("Staff fired");
-      queryClient.invalidateQueries({ queryKey: ["nightclub-staff"] });
+    onSuccess: (result) => {
+      toast.success("Staff member dismissed");
+      void queryClient.invalidateQueries({ queryKey: ["nightclub-staff", result.owned_club_id] });
+      void queryClient.invalidateQueries({ queryKey: ["owned-nightclubs"] });
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Unable to dismiss staff"),
   });
 }
 
