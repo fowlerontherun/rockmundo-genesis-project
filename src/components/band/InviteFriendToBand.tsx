@@ -16,7 +16,7 @@ import { searchPublicProfiles, type PublicProfileSearchResult } from '@/services
 import { bandInviteUnavailability } from '@/services/bandInviteEligibility';
 import { cancelBandInvitation, sendBandInvitation, friendlyBandInvitationError } from '@/services/bandInvitations';
 import { referralUrlWithParams } from '@/features/shareable-moments/share';
-import { ShareMomentSheet } from '@/features/shareable-moments/ShareMomentSheet';
+import { AvatarShareStudio } from '@/features/shareable-moments/CharacterShareStudio';
 import type { ShareMoment } from '@/features/shareable-moments/types';
 
 interface InviteFriendToBandProps {
@@ -583,7 +583,7 @@ export function InviteFriendToBand({ bandId, bandName, currentUserId, currentAcc
           <div className="flex justify-end"><Button variant="outline" aria-label="Close invitation dialog" onClick={() => handleDialogOpenChange(false)} disabled={submitting || !!cancellingId}>Close</Button></div>
         </DialogContent>
       </Dialog>
-      <ShareMomentSheet moment={shareMoment} open={!!shareMoment} onOpenChange={(next) => { if (!next) setShareMoment(null); }} />
+      {shareMoment && <AvatarShareStudio moment={shareMoment} open={true} onOpenChange={(next) => { if (!next) setShareMoment(null); }} />}
     </>
   );
 }

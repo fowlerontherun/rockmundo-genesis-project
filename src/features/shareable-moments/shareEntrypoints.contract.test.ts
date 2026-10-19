@@ -46,7 +46,7 @@ describe("Shareable Moments migrated entrypoint contracts", () => {
 
   it("reopens avatar-capable gallery cards through the retry-capable renderer", () => {
     const source = read("src/pages/ShareStudio.tsx");
-    expect(source).toContain('{selected && ["character_profile", "band_profile", "gig_result", "achievement", "tour", "release", "chart"].includes(selected.type)');
+    expect(source).toContain('{selected && shouldCaptureGalleryAvatar(selected, primaryBand?.bands?.id)');
     expect(source).not.toContain("selected && !selected.avatar");
   });
 
@@ -123,6 +123,14 @@ describe("Shareable Moments migrated entrypoint contracts", () => {
     expect(avatar).toContain('const captureEnabled = !moment.promptOnly || promptAccepted');
     expect(avatar).toContain('onPromptAccepted={() => setPromptAccepted(true)}');
     expect(sheet).toContain('onPromptAccepted?.()');
+  });
+
+  it("renders band recruitment invitation art with the recruiter's character avatar", () => {
+    const source = read("src/components/band/InviteFriendToBand.tsx");
+    expect(source).toContain("type: 'band_profile'");
+    expect(source).toContain("BAND RECRUITMENT");
+    expect(source).toContain("<AvatarShareStudio moment={shareMoment}");
+    expect(source).not.toContain("<ShareMomentSheet moment={shareMoment}");
   });
 
   it("keeps release milestones button-first and avatar-aware", () => {
