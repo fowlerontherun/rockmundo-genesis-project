@@ -106,7 +106,8 @@ Deno.serve(async (req) => {
           if (settlement?.settled === true) {
             completedCount++;
           } else if (settlement?.reason !== 'already_settled' &&
-                     settlement?.reason !== 'schedule_not_due') {
+                     settlement?.reason !== 'schedule_not_due' &&
+                     settlement?.reason !== 'filming_not_finished') {
             throw new Error(`Film settlement rejected: ${settlement?.reason ?? 'unknown'}`);
           }
         } catch (filmError) {
