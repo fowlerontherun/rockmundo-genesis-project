@@ -26,6 +26,7 @@ import { ClubEventsSection } from "@/components/nightclub/ClubEventsSection";
 import { VipLoungeSection } from "@/components/nightclub/VipLoungeSection";
 import { useOwnedNightclubs } from "@/hooks/useNightclubOwnership";
 import { DjMixingStudio } from "@/features/nightclub-dj/DjMixingStudio";
+import { DjLiveClubStage } from "@/features/nightclub-dj/DjLiveClubStage";
 import { DjBookingPanel } from "@/features/nightclub-dj/DjBookingPanel";
 import { DjClubApplications } from "@/features/nightclub-dj/DjClubApplications";
 import { DjFundedOffers } from "@/features/nightclub-dj/DjFundedOffers";
@@ -70,6 +71,7 @@ const NightClubDetail = () => {
 
   const { triggerNightlifeEvent, isProcessing, lastOutcomeDetail, lastAddictionWarning, dismissOutcome } = useNightlifeEvents();
   const [showDjStudio, setShowDjStudio] = useState(false);
+  const [showDjStage, setShowDjStage] = useState(false);
   const [liveDjBookingId, setLiveDjBookingId] = useState<string | null>(null);
   const { data: reputation } = useClubReputation(clubId);
   const recordVisit = useRecordClubVisit();
@@ -330,6 +332,19 @@ const NightClubDetail = () => {
             {showDjStudio ? "Close mixing studio" : "Open mixing studio"}
           </Button>
           {showDjStudio && <DjMixingStudio key={liveDjBookingId ?? "practice"} liveBookingId={liveDjBookingId ?? undefined} />}
+          {showDjStudio && liveDjBookingId && profileId && clubId && (
+            <div className="space-y-3 border-t pt-4">
+              <Button type="button" variant="outline" aria-expanded={showDjStage}
+                onClick={() => setShowDjStage(value => !value)}>
+                {showDjStage ? "Hide 3D nightclub stage" : "View my live DJ in 3D"}
+              </Button>
+              {showDjStage && (
+                <DjLiveClubStage key={liveDjBookingId} bookingId={liveDjBookingId}
+                  profileId={profileId} clubId={clubId} clubName={club.name}
+                  capacity={club.capacity} />
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
