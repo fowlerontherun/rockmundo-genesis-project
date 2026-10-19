@@ -125,6 +125,9 @@ Deno.serve(async (req) => {
     }
 
     let totalOrders = 0;
+    // One durable identity per synthetic sale attempt across all bands.
+    // SQL persists a unique run+sequence receipt alongside the stock debit.
+    let saleSequence = 0;
     let totalRevenue = 0;
     let totalTaxes = 0;
     let totalNetRevenue = 0;
@@ -217,7 +220,9 @@ Deno.serve(async (req) => {
         const netRevenue = subtotal;
         const orderType = ORDER_TYPES[Math.floor(Math.random() * ORDER_TYPES.length)];
 
-        const { data: saleResult, error: saleError } = await supabase.rpc("record_merch_sale_atomic", {
+        const { data: saleResult, error: saleError } = await supabase.rpc("record_simulated_merch_sale_atomic", {
+          p_run_id: simulationRunId,
+          p_sale_sequence: ++saleSequence,
           p_band_id: (band as any).id,
           p_merchandise_id: selected.id,
           p_variant_id: variantId,
