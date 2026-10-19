@@ -26,6 +26,19 @@ export interface DjStageBooking {
   ends_at: string;
 }
 
+/** No replay without the original booked show AND its immutable settlement receipt. */
+export function hasVerifiedDjReplay(
+  booking: DjStageBooking | null | undefined,
+  clubId: string,
+  receipt: DjStageAudience | null | undefined,
+  events: readonly DjStageMixEvent[] | null | undefined,
+  hasReadError = false,
+): boolean {
+  return !hasReadError && booking?.club_id === clubId &&
+    booking.status === "completed" && djReplayDurationMs(booking) > 0 &&
+    receipt !== null && receipt !== undefined && events !== null && events !== undefined;
+}
+
 /** An exact, read-only replay lasts as long as the canonical booked slot. */
 export function djReplayDurationMs(booking: DjStageBooking): number {
   const start = Date.parse(booking.starts_at);
