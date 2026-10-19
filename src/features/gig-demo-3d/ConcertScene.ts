@@ -16,6 +16,7 @@ import { loadBand, type Musician, type DemoCrowd } from './performers';
 import { smoothMotion } from './performanceMotion';
 import type { CrowdTuningOptions } from '@/features/gig-experience/viewer/engine/CrowdTuning';
 import { resolveVenueProfile, stagePosition, stageTransform, type VenueProfile } from './venueProfile';
+import { djClubCameraPose, type DjClubCameraShot } from './djClubCamera';
 import type { ConcertOptions, ConcertFrame } from './liveTypes';
 import type { AvatarVisualQuality } from '@/features/player-model/avatarVisualQuality';
 import { DEFAULT_SETTINGS, LOOKS, seededRandom, type DemoSettings, type DemoStats, type CameraShot } from './config';
@@ -35,6 +36,10 @@ const CAMERAS = {
   side_pit: { position: [-3.5, 1.1, 2.7], target: [0, 1.85, -1.55], fov: 46 },
   side_stage: { position: [-4.1, 2.6, -2.65], target: [0, 1.75, -1.6], fov: 48 },
   crane: { position: [4.3, 6.8, 6.5], target: [0, 1.65, -1.75], fov: 52 },
+  dj_booth: { position: [.7, 2.1, 2.65], target: [0, 1.2, -1.65], fov: 38 },
+  dj_overhead: { position: [0, 5.5, .5], target: [0, 1.2, -1.65], fov: 53 },
+  dj_dancefloor: { position: [-2.5, 1.5, 5], target: [0, 1.3, -1.65], fov: 58 },
+  dj_reverse: { position: [-.7, 2.3, -3], target: [0, 1.3, 4.5], fov: 57 },
   tv_presenter_wide: { position: [-5.1, 2.8, 4.8], target: [-3.2, 1.75, -0.4], fov: 46 },
   tv_presenter_close: { position: [-4.25, 2.15, 2.05], target: [-3.2, 1.72, -0.45], fov: 34 },
   tv_crane: { position: [6.8, 6.6, 6.5], target: [0, 1.75, -1.2], fov: 50 },
@@ -323,6 +328,19 @@ export class ConcertScene {
       if (selected === 'stage') {
         this.cameraPos.set(-p.stageWidth * .32, p.stageHeight + 1.9, .65 - p.stageDepth * .85);
         this.targetPos.set(0, 1.5, Math.min(p.crowdDepth * .55, 20));
+      }
+      if (this.options?.djClub && (
+        selected === 'dj_booth' || selected === 'dj_overhead' ||
+        selected === 'dj_dancefloor' || selected === 'dj_reverse'
+      )) {
+        const dj = this.actors.find(actor => actor.role === 'dj' && actor.root.visible);
+        const booth = dj?.root.position ?? new T.Vector3(...stagePosition(p, .5, .43));
+        const pose = djClubCameraPose(
+          selected as DjClubCameraShot, p,
+          booth.toArray() as [number, number, number], this.camera.aspect,
+        );
+        this.cameraPos.fromArray(pose.position);
+        this.targetPos.fromArray(pose.target);
       }
       if (p.kind === 'tv_studio') {
         const sx = p.stageWidth / 12, sz = p.stageDepth / 7.2;

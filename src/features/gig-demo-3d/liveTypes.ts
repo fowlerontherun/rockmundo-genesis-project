@@ -61,6 +61,8 @@ export interface ConcertOptions {
   venue: ConcertVenue;
   /** When true, the replay clock is the only source of scene time. */
   externalClock: boolean;
+  /** Single-performer nightclub DJ presentation; never enables scoring. */
+  djClub?: boolean;
   /** Optional broadcast presentation metadata; ignored by normal gig scenes. */
   television?: {
     presenterKey?: string | null;
