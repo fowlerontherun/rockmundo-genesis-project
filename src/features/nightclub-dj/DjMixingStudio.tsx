@@ -196,6 +196,10 @@ export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
   const { data: liveBooking, isLoading: liveLoading, isError: liveError } = useQuery({
     queryKey: ["dj-live-booking", profileId, liveBookingId],
     enabled: Boolean(liveBookingId && profileId),
+    // The club/owner may close a session from another device. Stop the live
+    // decks promptly rather than relying on the original status forever.
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase as any).from("dj_bookings")
