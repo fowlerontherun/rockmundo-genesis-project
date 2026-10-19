@@ -53,6 +53,11 @@ export async function captureAvatarV1ForShare(visual:AvatarShareVisual):Promise<
   const files=[...(["masculine","feminine"] as const).flatMap(f=>STYLES.map(style=>modelFile(f,style))),...donorFiles];
   library=await loadModelLibrary([...new Set(files)]);
   await loadOptionalCuratedGarments(library,curatedFiles);
+  // Gigs can continue without an optional garment, but a personal portrait
+  // must not silently publish the WRONG outfit when garment storage is down.
+  if (curatedFiles.some(file=>!library!.has(file))) {
+    throw new Error("Equipped curated clothing could not load. Retry the avatar before sharing.");
+  }
   const tattoos=visibleTattoosForPresentation(visual.tattoos??[],{appearance:visual.appearance,clothing,presentation:"stage"});
   const assembled=assemblePlayerModel(library,visual.appearance,tattoos,clothing,"high","stage",visual.merchWearable??null);
   actor=new Musician(assembled,visual.role??"other",[0,0,0],0,undefined,visual.appearance,visual.instrument,undefined,clothing,undefined,library,visual.luthieryInstrument??null);disposeModel(assembled);scene.add(actor.root);equipment=actor.equipment;if(equipment)scene.add(equipment);
