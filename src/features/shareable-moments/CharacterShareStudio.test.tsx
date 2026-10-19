@@ -76,6 +76,39 @@ describe('AvatarShareStudio image capture', () => {
     expect(screen.getByTestId('avatar-url')).toHaveTextContent('data:image/png;base64,avatar');
   });
 
+  it('does not remain loading forever when no active character exists', async () => {
+    mocks.model.mockReturnValue({
+      profileId: null,
+      isLoading: false,
+      query: { data: undefined, isError: false },
+    });
+    render(<AvatarShareStudio open moment={moment} onOpenChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByTestId('avatar-status')).toHaveTextContent('unavailable'));
+    expect(mocks.renderAvatar).not.toHaveBeenCalled();
+  });
+
+  it('keeps the equipped outfit intact when wardrobe loading fails', async () => {
+    const refetch = vi.fn().mockResolvedValue(undefined);
+    mocks.clothing.mockReturnValue({ data: undefined, isPending: false, isFetching: false, isError: true, refetch });
+    render(<AvatarShareStudio open moment={moment} onOpenChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByTestId('avatar-status')).toHaveTextContent('unavailable'));
+    expect(mocks.renderAvatar).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry avatar' }));
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(mocks.renderAvatar).not.toHaveBeenCalled();
+  });
+
+  it('does not silently omit tattoos after their request fails', async () => {
+    const refetch = vi.fn().mockResolvedValue(undefined);
+    mocks.tattoos.mockReturnValue({ data: undefined, isPending: false, isFetching: false, isError: true, refetch });
+    render(<AvatarShareStudio open moment={moment} onOpenChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByTestId('avatar-status')).toHaveTextContent('unavailable'));
+    expect(mocks.renderAvatar).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry avatar' }));
+    expect(refetch).toHaveBeenCalledOnce();
+  });
+
   it('waits while the appearance layers are actually loading', () => {
     mocks.clothing.mockReturnValue({ data: undefined, isPending: true, isFetching: true });
     render(<AvatarShareStudio open moment={moment} onOpenChange={vi.fn()} />);
