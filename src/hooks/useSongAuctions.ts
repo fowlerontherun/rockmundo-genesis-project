@@ -306,28 +306,6 @@ export const useSongAuctions = (userId?: string) => {
     },
   });
 
-  // Accept highest bid (seller completes auction manually)
-  const acceptBid = useMutation({
-    mutationFn: async ({ listingId }: { listingId: string }) => {
-      // #4230: bids currently do not reserve buyer funds, and their owner
-      // can be impersonated. Seller-triggered debits are intentionally
-      // disabled until verified bid authorization and escrow are available.
-      throw new Error("Accepting auction bids is temporarily unavailable until bidder authorization and funds reservation are secured. Buyers can use Buyout.");
-
-    },
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["song-market-my-listings"] });
-      queryClient.invalidateQueries({ queryKey: ["song-market-browse"] });
-      queryClient.invalidateQueries({ queryKey: ["song-market-sellable"] });
-      toast({
-        title: "Sale Completed!",
-        description: `Sold for $${result.sale_price?.toLocaleString()}. You earned $${result.seller_payout?.toLocaleString()}.`,
-      });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Sale Failed", description: error.message, variant: "destructive" });
-    },
-  });
 
   return {
     activeListings,
@@ -343,6 +321,5 @@ export const useSongAuctions = (userId?: string) => {
     placeBid,
     completeSale,
     cancelListing,
-    acceptBid,
   };
 };
