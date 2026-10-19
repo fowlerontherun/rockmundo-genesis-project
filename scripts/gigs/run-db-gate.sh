@@ -28,3 +28,4 @@ psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/nightclub_verified_owner_
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/nightclub_owner_theme_night_authenticated_role.sql
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/dj_club_application_shortlist_authority.sql
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/dj_club_application_real_authenticated_role.sql
+psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/dj_club_multiple_applicants_same_slot.sql
