@@ -111,7 +111,8 @@ describe("Battle of the Bands song eligibility (#4274)", () => {
     expect(screen.getByRole("button", { name: "Confirm Selection" })).toBeDisabled();
     await userEvent.click(screen.getByText("assigned-two"));
     await userEvent.click(screen.getByRole("button", { name: "Confirm Selection" }));
-    expect(onConfirm).toHaveBeenCalledExactlyOnceWith("assigned-one", "assigned-two");
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+    expect(onConfirm).toHaveBeenCalledWith("assigned-one", "assigned-two");
     expect(mock.from).not.toHaveBeenCalled();
   });
 
@@ -154,7 +155,8 @@ describe("Battle of the Bands song eligibility (#4274)", () => {
     await userEvent.click(screen.getByText("second-band-one"));
     await userEvent.click(screen.getByText("second-band-two"));
     await userEvent.click(screen.getByRole("button", { name: "Confirm Selection" }));
-    expect(onConfirm).toHaveBeenCalledExactlyOnceWith("second-band-one", "second-band-two");
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+    expect(onConfirm).toHaveBeenCalledWith("second-band-one", "second-band-two");
   });
 
   it("clears prior selection on character changes without reusing the previous query's selected IDs", async () => {
