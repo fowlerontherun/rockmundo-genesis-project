@@ -36,10 +36,14 @@ describe("work-shift health and readiness regression (#4218)", () => {
     expect(canWork(health, energy)).toBe(expected);
   });
 
-  it("shift-clock-out cannot substitute 100 when health really is zero", () => {
-    const source = edgeFile("shift-clock-out");
-    expect(source).toContain("(profile?.health ?? 100)");
-    expect(source).not.toContain("(profile?.health || 100)");
+  it("atomic work-shift settlement preserves a recorded health of zero", () => {
+    const sql = readFileSync(
+      new URL("../../supabase/migrations/20261018200133_atomic_work_shift_settlement_20261018.sql", import.meta.url),
+      "utf8",
+    );
+    expect(sql).toContain("coalesce(health,100)+coalesce(s.health_impact,0)");
+    expect(sql).toContain("health=least(100,greatest(0");
+    expect(sql).not.toContain("coalesce(nullif(health,0),100)");
   });
 
   it("service-role auto attendance checks minimums before creating any shift", () => {
