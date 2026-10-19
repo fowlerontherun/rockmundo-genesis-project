@@ -50,13 +50,21 @@ export function useCasino() {
         throw new Error(error.message ?? "Casino round failed");
       }
 
-      if (data?.developedAddiction) {
+      // An RPC response without a settlement receipt is not a confirmed win,
+      // push or loss. Do not turn missing balance fields into an apparent $0 result.
+      if (
+        data?.netResult == null || data?.newCash == null ||
+        !Number.isFinite(Number(data.netResult)) || !Number.isFinite(Number(data.newCash))
+      ) {
+        throw new Error("Casino settlement receipt missing or invalid");
+      }
+      if (data.developedAddiction) {
         toast.warning("You're developing a gambling habit...", { description: "Be careful at the casino." });
       }
 
       return {
-        netResult: Number(data?.netResult ?? 0),
-        newCash: Number(data?.newCash ?? 0),
+        netResult: Number(data.netResult),
+        newCash: Number(data.newCash),
       };
     },
     onSuccess: () => {

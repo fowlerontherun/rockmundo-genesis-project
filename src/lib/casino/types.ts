@@ -21,7 +21,7 @@ export interface PlayingCard {
   faceUp: boolean;
 }
 
-export type BlackjackState = "betting" | "playing" | "dealer-turn" | "result";
+export type BlackjackState = "betting" | "playing" | "dealer-turn" | "settling" | "settlement-error" | "result";
 export type BlackjackResult = "win" | "lose" | "push" | "blackjack" | "bust";
 
 export interface BlackjackHand {
