@@ -68,7 +68,7 @@ export default function Awards() {
   const [showCeremonyDialog, setShowCeremonyDialog] = useState(false);
   const [outfitChoice, setOutfitChoice] = useState("standard");
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [voteAs, setVoteAs] = useState<"player" | "band" | "movement">("player");
+  const [voteAs, setVoteAs] = useState<"player" | "band">("player");
   const [bandSearch, setBandSearch] = useState("");
   const [nomineeBand, setNomineeBand] = useState<{ id: string; name: string; fame: number | null; genre: string | null } | null>(null);
   const { data: nominatableBands = [], isLoading: bandsLoading } = useNominatableBands(bandSearch);
@@ -93,7 +93,7 @@ export default function Awards() {
 
   const handleVote = (nominationId: string) => {
     if (!selectedShow) return;
-    const voterId = voteAs === "player" ? profileId : userBand?.id || profileId;
+    const voterId = voteAs === "player" ? profileId : userBand?.id;
     if (!voterId) return;
     castVote({ nomination_id: nominationId, show_id: selectedShow.id, voter_type: voteAs, voter_id: voterId });
   };
@@ -307,14 +307,13 @@ export default function Awards() {
           </DialogHeader>
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">Vote as</p>
-            <Select value={voteAs} onValueChange={(value: "player" | "band" | "movement") => setVoteAs(value)}>
+            <Select value={voteAs} onValueChange={(value: "player" | "band") => setVoteAs(value)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="player">Player</SelectItem>
                 <SelectItem value="band" disabled={!userBand}>Band</SelectItem>
-                <SelectItem value="movement" disabled={!userBand}>Movement</SelectItem>
               </SelectContent>
             </Select>
           </div>
