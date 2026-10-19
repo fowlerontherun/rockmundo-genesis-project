@@ -29,3 +29,5 @@ psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/nightclub_owner_theme_nig
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/dj_club_application_shortlist_authority.sql
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/dj_club_application_real_authenticated_role.sql
 psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/dj_club_multiple_applicants_same_slot.sql
+psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/nightclub_dj_funded_offer_escrow_harness.sql
+psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/tests/nightclub_dj_escrow_authenticated_role.sql
