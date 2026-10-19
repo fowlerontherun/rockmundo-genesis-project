@@ -9,20 +9,28 @@ const backfill = readFileSync(
 );
 
 describe("work shift XP account identity (#4217)", () => {
-  it("resolves shift owner's auth id before any payable side effects", () => {
-    const ownerLookup = shiftWorker.indexOf(".select('user_id')");
-    const cityTax = shiftWorker.indexOf("credit_city_treasury");
-    const payout = shiftWorker.indexOf(".from('shift_history')\n          .update(");
-    expect(ownerLookup).toBeGreaterThan(-1);
-    expect(cityTax).toBeGreaterThan(ownerLookup);
-    expect(payout).toBeGreaterThan(ownerLookup);
-    expect(shiftWorker).toContain("shift.profile_id !== activity.profile_id");
+  it("resolves the true account owner from the locked profile before any reward writes", () => {
+    const workerSql = readFileSync(
+      new URL("../../supabase/migrations/20261018200133_atomic_work_shift_settlement_20261018.sql", import.meta.url), "utf8",
+    );
+    const profileLock = workerSql.indexOf("SELECT * INTO p FROM public.profiles WHERE id=s.profile_id FOR UPDATE");
+    const ledger = workerSql.indexOf("INSERT INTO public.experience_ledger(user_id,profile_id", profileLock);
+    expect(profileLock).toBeGreaterThan(-1);
+    expect(ledger).toBeGreaterThan(profileLock);
+    expect(workerSql).toContain("VALUES(p.user_id,p.id,'work_shift'");
+    expect(workerSql).toContain("a.profile_id IS DISTINCT FROM s.profile_id");
+    expect(shiftWorker).toContain("'settle_work_shift_atomic'");
   });
 
-  it("writes work XP to account id and queries the correct character's band", () => {
-    expect(shiftWorker).toContain("user_id: shiftOwner.user_id");
-    expect(shiftWorker).not.toContain("user_id: activity.profile_id");
-    expect(shiftWorker).toContain(".eq('user_id', shiftOwner.user_id).eq('profile_id', shift.profile_id)");
+  it("settles XP for the precise profile, with single-transaction recipient integrity", () => {
+    const workerSql = readFileSync(
+      new URL("../../supabase/migrations/20261018200133_atomic_work_shift_settlement_20261018.sql", import.meta.url), "utf8",
+    );
+    expect(workerSql).toContain("WHERE bm.profile_id=s.profile_id");
+    expect(workerSql).toContain("INSERT INTO public.experience_ledger(user_id,profile_id");
+    expect(workerSql).toContain("VALUES(p.user_id,p.id,'work_shift'");
+    expect(workerSql).toContain("WHERE id=p.id");
+    expect(workerSql).not.toContain("VALUES(a.profile_id,a.profile_id,'work_shift'");
   });
 
   it("historical correction updates only recipient identity, with no new XP awards", () => {
