@@ -119,6 +119,10 @@ describe("personal gear role fit", () => {
     expect(personalGearMatchesRole("instrument", "bass", "Bass Guitar")).toBe(true);
     expect(personalGearMatchesRole("instrument", "bass", "Upright Bass")).toBe(false);
     expect(personalGearMatchesRole("instrument", "drums", "Rock Drums")).toBe(true);
+    expect(personalGearMatchesRole("instrument", "cymbals", "Rock Drums")).toBe(true);
+    expect(personalGearMatchesRole("instrument", "cymbals", "Jazz Drums")).toBe(true);
+    expect(personalGearMatchesRole("instrument", "cymbals", "Electronic Drums")).toBe(false);
+    expect(personalGearMatchesRole("instrument", "cymbals", "Bass Guitar")).toBe(false);
     expect(personalGearMatchesRole("instrument", "drums", "Jazz Drums")).toBe(false);
     expect(personalGearMatchesRole("instrument", "guitar", "Electric Guitar")).toBe(true);
     expect(personalGearMatchesRole("instrument", "guitar", "12-String Guitar")).toBe(false);
