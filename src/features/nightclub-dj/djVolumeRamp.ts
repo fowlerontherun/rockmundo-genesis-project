@@ -18,6 +18,14 @@ function safeGain(value: number): number {
   return Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0;
 }
 
+/** Retain the controller's separate channel-trim percentage across crossfades.
+ * Unlike audio meter graphics, this actually changes HTMLMediaElement.volume.
+ */
+export function djCombinedDeckVolume(equalPowerGain: number, trimPercent: number): number {
+  if (!Number.isFinite(trimPercent)) return 0;
+  return safeGain(equalPowerGain) * Math.max(0, Math.min(100, trimPercent)) / 100;
+}
+
 /** Returns a cancel function; the next drag starts at the last audible level.
  * No network calls, timers, gains above 1.0 or DOM state outside volume.
  */
