@@ -187,3 +187,8 @@
 @media (prefers-reduced-motion: reduce){
   .rm-dj-console *, .rm-dj-console *::before, .rm-dj-console *::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}
 }
+
+/* Native browser fullscreen preserves real audio elements and their playback state. */
+.rm-dj-console:fullscreen { width:100vw; height:100vh; overflow:auto; padding:clamp(14px,2.5vw,34px); border-radius:0; }
+.rm-dj-console:fullscreen .rm-dj-console-grid { max-width:1700px; margin:0 auto; }
+.rm-dj-console:fullscreen .rm-dj-platter { max-width:330px; }
