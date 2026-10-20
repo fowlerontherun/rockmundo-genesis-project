@@ -66,9 +66,9 @@ BEGIN
       AND table_name = 'skill_books'
       AND column_name = 'xp_reward'
   ) THEN
-    EXECUTE $$UPDATE public.skill_books
+    EXECUTE $legacy_sql$UPDATE public.skill_books
       SET xp_value = COALESCE(xp_reward, xp_value)
-    WHERE xp_value IS NULL$$;
+    WHERE xp_value IS NULL$legacy_sql$;
   END IF;
 END;
 $$;
@@ -92,10 +92,10 @@ BEGIN
     WHERE tgname = 'update_skill_books_updated_at'
       AND tgrelid = 'public.skill_books'::regclass
   ) THEN
-    EXECUTE $$CREATE TRIGGER update_skill_books_updated_at
+    EXECUTE $legacy_sql$CREATE TRIGGER update_skill_books_updated_at
       BEFORE UPDATE ON public.skill_books
       FOR EACH ROW
-      EXECUTE FUNCTION public.update_updated_at_column()$$;
+      EXECUTE FUNCTION public.update_updated_at_column()$legacy_sql$;
   END IF;
 END;
 $$;
