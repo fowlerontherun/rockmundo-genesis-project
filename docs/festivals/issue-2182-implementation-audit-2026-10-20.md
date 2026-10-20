@@ -33,3 +33,21 @@ The direct DB changes were not added to `supabase_migrations.schema_migrations` 
 ## Release decision
 
 **Open / partial implementation.** The direct brand-repair work is verified, but #2182 is a broad multi-phase feature and its own acceptance contract forbids closing it until the remaining schema, finance, staffing, artwork and end-to-end requirements have been certified.
+
+
+## Continuation — edition sponsor identities (20 October 2026)
+
+**Additional source migration:** `20261020214500_festival_edition_npc_sponsor_identity.sql`.
+
+- Directly created `festival_edition_sponsor_assignments` on the connected live database. It references existing `festival_editions_v2` and `sponsorship_brands`, **not** a second brand catalogue or a parallel commercial contract.
+- Unique partial indexes enforce one active main and unique active brand per edition. A transaction-serialized trigger caps supporting sponsors at four and enforces mutual category exclusivity.
+- Name, logo, category and region are snapshotted from the canonical brand at assignment, never trusted from client input. Completed/cancelled/locked/published annual editions cannot be modified.
+- `ensure_festival_edition_npc_main_sponsor` is owner-authorised, deterministic and idempotent. It prefers selected brands and region/vibe affinity, has conservative funding/reputation eligibility, and refuses to allocate if the advanced explicit-contract table is later installed without reconciliation.
+- `get_festival_edition_sponsor_identities` returns an owner-authorised compact 1+4-slot snapshot. These identities **never post cash or in-kind revenue**; the simplified automatic budget remains authoritative.
+- A compact Tickets and budget owner section displays the main logo, four supporting slots, and an explicit option to allocate an NPC identity. A typed model rejects a response that implies extra revenue or duplicates brands.
+- Live schema/readiness verification: table and two unique indexes present; RLS enabled; anon SELECT / authenticated direct INSERT forbidden; both owner RPCs installed; zero pre-existing assignment rows changed and both Shock Festival editions retained their original statuses. Unauthenticated owner-RPC calls were rejected.
+- The rollback-only SQL harness and TypeScript model tests have been committed but **not** run on an isolated restored database, and browser acceptance remains pending.
+
+**Next required integration:** the simplified publication transaction still needs to call the allocator atomically and snapshot the identity with the public projection; otherwise a main sponsor is not yet guaranteed on launch. Advanced explicit player contracts are not deployed, supporting sponsors are not selectable via owner contracts, and staffing/settlement certification is still outstanding. **Keep #2182 open.**
+
+Migration source was deployed directly but not marked as an applied row in Supabase migration history; reconcile schema/migration history before any future replay.
