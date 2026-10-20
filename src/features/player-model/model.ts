@@ -1,3 +1,4 @@
+import { RIPPED_SKINNY_JEANS, fitRippedSkinnyJeans, applyRippedDenimMaterial } from './rippedSkinnyJeans';
 import * as T from 'three';
 import { clothingPatternTexture, twoToneUVs } from './clothingPatterns';
 import { addFittedSkirt, isDress, isVest, isSkirt } from './skirtGeometry';
@@ -1808,6 +1809,9 @@ export function assemblePlayerModel(
             shapedBottomId,
           ));
         }
+        if (choice.part === 'legs' && !skirt && !choice.assetKey && shapedBottomId === RIPPED_SKINNY_JEANS) {
+          fitInBodySpace(clonedNode, original.matrixWorld, () => fitRippedSkinnyJeans(clonedNode, original.matrixWorld));
+        }
         if (choice.fabric !== 'plain' || choice.finish || choice.custom?.pattern) fabricUVs(clonedNode.geometry, choice.part === 'feet', original.matrixWorld);
         if (choice.custom?.pattern === 'two-tone') {
           twoToneUVs(clonedNode.geometry, original.matrixWorld, choice.part === 'feet', patternRange);
@@ -1918,6 +1922,9 @@ export function assemblePlayerModel(
               curatedMaterialProfile(choice.assetKey, choice.finish as CuratedFinish),
               quality,
             );
+          }
+          if (clonedNode.geometry.getAttribute('rippedDenimPosition') && !/skin|earring|metal/.test(name)) {
+            applyRippedDenimMaterial(material, appearance.body.skin);
           }
           return material;
         };
