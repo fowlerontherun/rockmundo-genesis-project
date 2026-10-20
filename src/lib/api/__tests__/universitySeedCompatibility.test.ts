@@ -19,7 +19,7 @@ describe("legacy university migration compatibility", () => {
     expect(modifier).toBeGreaterThan(-1);
     expect(description).toBeGreaterThan(modifier);
     expect(seed).toBeGreaterThan(description);
-    expect(septemberBootstrap).not.toMatch(/(?:DROP TABLE|TRUNCATE TABLE)\\s+public\\.universities/i);
+    expect(septemberBootstrap).not.toMatch(/(?:DROP TABLE|TRUNCATE TABLE)\s+public\.universities/i);
   });
   it("handles both the old modifier and the standalone course-cost schemas", () => {
     expect(migration).toContain("column_name = 'course_cost_modifier'");
