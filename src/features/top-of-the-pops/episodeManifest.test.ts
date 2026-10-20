@@ -84,6 +84,33 @@ function input(overrides: Partial<TotpManifestInput> = {}): TotpManifestInput {
   };
 }
 
+describe("TOTP frozen crowd contract", () => {
+  const cue = {
+    cue_id: "crowd:2:applause:0",
+    item_index: 2,
+    at_ms: 122000,
+    category: "applause" as const,
+    asset_id: "approved-audio-1",
+    audio_url: "https://storage.test/applause.mp3",
+    duration_ms: 4000,
+    loopable: false,
+    gain_db: -12,
+    cue_start_seconds: 0,
+    cue_end_seconds: null,
+  };
+  it("persists ordered asset IDs and absolute times as checksum-covered manifest inputs", () => {
+    const first = buildTotpEpisodeManifest(input({ crowdCues: [cue] }));
+    const second = buildTotpEpisodeManifest(input({ crowdCues: [cue] }));
+    const replaced = buildTotpEpisodeManifest(input({ crowdCues: [{ ...cue, asset_id: "approved-audio-2" }] }));
+    const shifted = buildTotpEpisodeManifest(input({ crowdCues: [{ ...cue, at_ms: cue.at_ms + 300 }] }));
+    expect(first.crowd_cues).toEqual([cue]);
+    expect(first.checksum).toBe(second.checksum);
+    expect(first.checksum).not.toBe(replaced.checksum);
+    expect(first.checksum).not.toBe(shifted.checksum);
+    expect(buildTotpEpisodeManifest(input()).crowd_cues).toBeUndefined();
+  });
+});
+
 describe("TOTP episode manifest", () => {
   it("orders segments by running order and is deterministic", () => {
     const first = buildTotpEpisodeManifest(input());
