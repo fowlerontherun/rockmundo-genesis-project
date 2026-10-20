@@ -1,3 +1,4 @@
+import { ActivityScene } from "@/components/dashboard/ActivityScene";
 import { fetchUnreadCharacterNotifications } from "@/lib/unreadNotifications";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -402,6 +403,7 @@ const Dashboard = () => {
 
         {/* Today — snapshot, briefing and what to do next */}
         <TabsContent value="profile" className="space-y-4">
+          <ActivityScene userId={user?.id} />
           <DashboardHero profile={profile} userId={user?.id} />
           <ReferralWelcomeCard profileId={profile?.id} />
           <GettingStartedPanel profile={profile} userId={user?.id} />

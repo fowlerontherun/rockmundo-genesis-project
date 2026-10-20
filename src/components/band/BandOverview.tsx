@@ -1,3 +1,4 @@
+import { BandPortrait, type PortraitMember } from "./BandPortrait";
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,6 +42,7 @@ export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, band
   const { toast } = useToast();
   const [band, setBand] = useState<BandRow | null>(null);
   const [memberCount, setMemberCount] = useState(0);
+  const [portraitMembers, setPortraitMembers] = useState<PortraitMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [calculatedSkillRating, setCalculatedSkillRating] = useState(0);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -87,11 +89,17 @@ export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, band
 
         const { data: members } = await supabase
           .from('band_members')
-          .select('*')
+          .select('*, profiles!band_members_profile_id_fkey(display_name, username)')
           .eq('band_id', bandId);
 
         setBand((bandData as BandRow) ?? null);
         setMemberCount(members?.length || 0);
+        setPortraitMembers((members ?? []).filter(member => member.member_status === 'active').map(member => ({
+          id: member.id,
+          profileId: member.profile_id,
+          name: member.profiles?.display_name || member.profiles?.username || `${member.instrument_role || 'Band'} member`,
+          instrument: member.instrument_role,
+        })));
 
         // Fetch home city if set
         if (bandData?.home_city_id) {
@@ -209,6 +217,7 @@ export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, band
 
   return (
     <div className="space-y-4">
+      <BandPortrait key={bandId} bandName={bandName || band.name} members={portraitMembers} />
       {/* Home City Card - for leaders who haven't set it yet */}
       {isLeader && !band.home_city_id && (
         <Card className="border-warning/30 bg-warning/5">
