@@ -76,21 +76,29 @@ ALTER TABLE public.chat_participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.player_skills ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.experience_ledger ENABLE ROW LEVEL SECURITY;
 
+-- The 20250918174219 migration already defines friendships around profile
+-- requestor/addressee IDs; a CREATE TABLE IF NOT EXISTS cannot substitute a
+-- later user_id/friend_user_id schema. Keep its canonical production shape and
+-- apply policies through profile ownership rather than nonexistent columns.
 DROP POLICY IF EXISTS "Users can view their own friendships" ON public.friendships;
-CREATE POLICY "Users can view their own friendships"
-  ON public.friendships FOR SELECT
-  USING (auth.uid() = user_id OR auth.uid() = friend_user_id);
+CREATE POLICY "Users can view their own friendships" ON public.friendships FOR SELECT
+  USING (EXISTS (SELECT 1 FROM public.profiles p
+    WHERE p.user_id = auth.uid()
+      AND p.id IN (friendships.requestor_id, friendships.addressee_id)));
 
 DROP POLICY IF EXISTS "Users can create friendships" ON public.friendships;
-CREATE POLICY "Users can create friendships"
-  ON public.friendships FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can create friendships" ON public.friendships FOR INSERT
+  WITH CHECK (EXISTS (SELECT 1 FROM public.profiles p
+    WHERE p.user_id = auth.uid() AND p.id = friendships.requestor_id));
 
 DROP POLICY IF EXISTS "Users can update their friendships" ON public.friendships;
-CREATE POLICY "Users can update their friendships"
-  ON public.friendships FOR UPDATE
-  USING (auth.uid() = user_id OR auth.uid() = friend_user_id)
-  WITH CHECK (auth.uid() = user_id OR auth.uid() = friend_user_id);
+CREATE POLICY "Users can update their friendships" ON public.friendships FOR UPDATE
+  USING (EXISTS (SELECT 1 FROM public.profiles p
+    WHERE p.user_id = auth.uid()
+      AND p.id IN (friendships.requestor_id, friendships.addressee_id)))
+  WITH CHECK (EXISTS (SELECT 1 FROM public.profiles p
+    WHERE p.user_id = auth.uid()
+      AND p.id IN (friendships.requestor_id, friendships.addressee_id)));
 
 DROP POLICY IF EXISTS "Chat participants are viewable by everyone" ON public.chat_participants;
 CREATE POLICY "Chat participants are viewable by everyone"
