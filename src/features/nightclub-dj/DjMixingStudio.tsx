@@ -17,7 +17,7 @@ import { DjSetlistPlanner } from "./DjSetlistPlanner";
 import { djReadinessSteps, useDjMixReadiness } from "./djReadiness";
 import { bindDjDeckLifecycle } from "./deckAudioLifecycle";
 import { deliverDjMixEvent } from "./mixerEventDelivery";
-import { browserDjVolumeClock, rampDjDeckVolume } from "./djVolumeRamp";
+import { browserDjVolumeClock, djCombinedDeckVolume, rampDjDeckVolume } from "./djVolumeRamp";
 import { DjPadBank, DjPlatter, DjTrimMeter, DjWaveform } from "./DjHardwareVisuals";
 import { djHotCueSeek, djJogSeek, emptyDjHotCues, storeDjHotCue, type DjHotCueSlots } from "./djHardwareControls";
 import "./DjConsole.css";
@@ -124,7 +124,7 @@ function AudioDeck({
     // Retain the native HTML audio path for CORS-limited game and signed
     // tracks. Smooth the combined channel trim and equal-power crossfade.
     // Cleanup cancels obsolete frames on fader/trim drag or deck removal.
-    return rampDjDeckVolume(player, level * trim / 100, browserDjVolumeClock());
+    return rampDjDeckVolume(player, djCombinedDeckVolume(level, trim), browserDjVolumeClock());
   }, [level, trim]);
 
   useEffect(() => {
