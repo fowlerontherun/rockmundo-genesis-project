@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { CrowdReactionCooldown } from "@/features/shared-audio/crowdAudioSelection";
+import { CrowdAudioManager, type CrowdPlaybackClip } from "@/features/shared-audio/CrowdAudioManager";
+import { useCrowdVolumePreference } from "@/features/shared-audio/CrowdVolumeControl";
+import { loadCuratedCrowdAssets, selectCuratedCrowdClip, type CuratedCrowdAsset } from "@/features/shared-audio/crowdAudioCatalogue";
+import type { CrowdCategory, CrowdEnvironment, CrowdSize } from "@/features/gig-experience/audio/crowdCueSelection";
 import type { StorySnapshot } from "../engine/StoryEngine";
 import type { ShowSequenceFrame } from "../engine/ShowSequence";
-import {
-  loadGigCrowdSounds,
-  pickGigCrowdSound,
-  type GigCrowdSound,
-  type GigCrowdSoundType,
-} from "./crowdSoundLibrary";
+import { loadGigCrowdSounds, pickGigCrowdSound, type GigCrowdSound, type GigCrowdSoundType } from "./crowdSoundLibrary";
 
 interface CrowdAmbienceOptions {
   enabled: boolean;
@@ -16,278 +14,160 @@ interface CrowdAmbienceOptions {
   isPlaying: boolean;
   snapshot: StorySnapshot | null;
   stageType: string;
-  /** Show lifecycle frame: drives pre-show murmur, entrances, encore and final applause. */
+  replaySeed?: string | number | null;
   showFrame?: ShowSequenceFrame | null;
 }
-
-const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, value));
-
-function crowdSizeIntensity(stageType: string, energy: number) {
-  const base = stageType === "stadium" ? 9 : stageType === "arena" || stageType === "festival" ? 8 : stageType === "theater" ? 6 : stageType === "club" ? 5 : 4;
-  return Math.round(clamp(base + (energy - 0.5) * 4, 1, 10));
+const clamp = (value: number, low = 0, high = 1) => Math.max(low, Math.min(high, value));
+function venueContext(stageType: string): { environment: Exclude<CrowdEnvironment, "any">; crowdSize: Exclude<CrowdSize, "any"> } {
+  const stage = stageType.toLowerCase();
+  if (/stadium|arena/.test(stage)) return { environment: "arena", crowdSize: "large" };
+  if (/festival|outdoor/.test(stage)) return { environment: "festival", crowdSize: "large" };
+  if (/club|nightclub/.test(stage)) return { environment: "club", crowdSize: "medium" };
+  if (/theater|theatre|hall/.test(stage)) return { environment: "indoor", crowdSize: "medium" };
+  return { environment: "pub", crowdSize: "small" };
 }
-
-function reactionTypes(reaction: string | null, energy: number): GigCrowdSoundType[] {
-  const value = (reaction ?? "").toLowerCase();
-  if (/boo|negative|hostile/.test(value)) return ["booing", "ambient_chatter"];
-  if (/mosh|pit|headbang|jump/.test(value)) return ["mosh_pit", "crowd_cheer_large", "crowd_cheer_medium"];
-  if (/sing|chant/.test(value)) return ["crowd_singing", "crowd_cheer_medium"];
-  if (/recogn|favourite|favorite/.test(value)) return ["song_recognition", "crowd_cheer_large", "crowd_cheer_medium"];
-  if (/lighter|phone|quiet|sway/.test(value)) return ["lighter_moment", "crowd_singing", "ambient_chatter"];
-  return energy >= 0.75
-    ? ["crowd_cheer_large", "applause", "crowd_cheer_medium"]
-    : energy >= 0.45
-      ? ["crowd_cheer_medium", "applause", "crowd_cheer_small"]
-      : ["crowd_cheer_small", "ambient_chatter"];
-}
-
-async function playClip(
-  ref: { current: HTMLAudioElement | null }, sound: GigCrowdSound, volume: number,
-): Promise<boolean> {
-  if (typeof Audio === "undefined") return false;
-  const previous = ref.current;
-  previous?.pause();
-  if (previous) {
-    previous.onended = null;
-    previous.removeAttribute("src");
-    previous.load();
-  }
-  const audio = new Audio(sound.audio_url);
-  audio.preload = "auto";
-  audio.volume = clamp(volume, 0.03, 0.9);
-  ref.current = audio;
-  audio.onended = () => { if (ref.current === audio) ref.current = null; };
-  try {
-    await audio.play();
-    // Autoplay may reject or resolve after the viewer has paused or swapped
-    // the clip. Neither case should consume a reaction cooldown.
-    return ref.current === audio && !audio.paused;
-  } catch {
-    if (ref.current === audio) ref.current = null;
-    audio.onended = null;
-    audio.pause();
-    audio.removeAttribute("src");
-    audio.load();
-    return false;
+function legacyTypes(category: CrowdCategory, energy: number): GigCrowdSoundType[] {
+  switch (category) {
+    case "ambient": return ["ambient_chatter"];
+    case "encore": return ["encore_request", "crowd_singing"];
+    case "finale": return ["band_exit", "applause", "crowd_cheer_large"];
+    case "applause": return ["applause", "crowd_cheer_medium"];
+    case "cheer": return energy > .65
+      ? ["crowd_cheer_large", "band_entrance", "crowd_cheer_medium"]
+      : ["crowd_cheer_medium", "crowd_cheer_small", "band_entrance"];
+    case "reaction": return energy < .25
+      ? ["booing", "lighter_moment", "crowd_cheer_small"]
+      : ["song_recognition", "crowd_cheer_medium", "applause"];
   }
 }
+function legacyAsClip(sound: GigCrowdSound, ambient: boolean, level: number): CrowdPlaybackClip {
+  return {
+    id: sound.id, url: sound.audio_url, loopable: ambient,
+    durationSeconds: sound.duration_seconds,
+    gainDb: ambient ? -17 : -12 + 3 * clamp(level),
+    fadeInMs: ambient ? 700 : 80, fadeOutMs: ambient ? 700 : 200,
+  };
+}
 
-/**
- * Recorded crowd-audio mixer for the 3D gig viewer.
- *
- * Every active entry in gig_crowd_sounds is eligible for playback. The viewer
- * chooses deterministic clips from venue size, crowd energy, song changes,
- * crowd reactions and show phases. If the library is unavailable, the visual
- * replay continues silently rather than failing the gig viewer.
- */
+/** Gig cues and TOTP cues now feed the same isolated Web Audio crowd engine. */
 export function useCrowdAmbience({
-  enabled,
-  muted,
-  volume,
-  isPlaying,
-  snapshot,
-  stageType,
-  showFrame = null,
+  enabled, muted, volume, isPlaying, snapshot, stageType, showFrame = null, replaySeed,
 }: CrowdAmbienceOptions) {
-  // A ref-only async library load never retriggered the mixer effect when the
-  // viewer was otherwise static (for example on its pre-show frame).
-  const [library, setLibrary] = useState<GigCrowdSound[]>([]);
-  const [isDocumentHidden, setDocumentHidden] = useState(() =>
-    typeof document !== "undefined" && document.visibilityState === "hidden",
-  );
-  const ambientRef = useRef<HTMLAudioElement | null>(null);
-  const reactionRef = useRef<HTMLAudioElement | null>(null);
+  const [curated, setCurated] = useState<CuratedCrowdAsset[]>([]);
+  const [legacy, setLegacy] = useState<GigCrowdSound[]>([]);
+  const [hidden, setHidden] = useState(() => typeof document !== "undefined" && document.visibilityState === "hidden");
+  const [crowdPreference] = useCrowdVolumePreference();
+  const engineRef = useRef<CrowdAudioManager | null>(null);
+  if (!engineRef.current) engineRef.current = new CrowdAudioManager();
+  const lastSongRef = useRef<string | null>(null);
   const lastReactionRef = useRef<string | null>(null);
   const lastPhaseRef = useRef<string | null>(null);
-  const lastSongIdRef = useRef<string | null>(null);
-  const lastPulseAtRef = useRef(0);
-  const reactionCooldownRef = useRef(new CrowdReactionCooldown());
-  const pendingReactionRef = useRef<string | null>(null);
+  const lastPulseRef = useRef(-1);
+  const lastElapsedRef = useRef(-1);
+  const historyRef = useRef<Array<{ assetId: string; atSeconds: number }>>([]);
 
   useEffect(() => {
-    let cancelled = false;
     if (!enabled) return;
-
-    void loadGigCrowdSounds()
-      .then((sounds) => {
-        if (cancelled) return;
-        setLibrary(sounds);
-      })
-      .catch(() => {
-        if (!cancelled) setLibrary([]);
-      });
-
+    let cancelled = false;
+    void loadCuratedCrowdAssets().then((value) => { if (!cancelled) setCurated(value); }).catch(() => undefined);
+    void loadGigCrowdSounds().then((value) => { if (!cancelled) setLegacy(value); }).catch(() => undefined);
     return () => { cancelled = true; };
   }, [enabled]);
 
   useEffect(() => {
-    const visibility = () => setDocumentHidden(document.visibilityState === "hidden");
-    const pageHide = () => setDocumentHidden(true);
-    document.addEventListener("visibilitychange", visibility);
-    window.addEventListener("pagehide", pageHide);
-    window.addEventListener("pageshow", visibility);
+    const sync = () => setHidden(document.visibilityState === "hidden");
+    const hide = () => setHidden(true);
+    document.addEventListener("visibilitychange", sync);
+    window.addEventListener("pagehide", hide);
+    window.addEventListener("pageshow", sync);
     return () => {
-      document.removeEventListener("visibilitychange", visibility);
-      window.removeEventListener("pagehide", pageHide);
-      window.removeEventListener("pageshow", visibility);
+      document.removeEventListener("visibilitychange", sync);
+      window.removeEventListener("pagehide", hide);
+      window.removeEventListener("pageshow", sync);
     };
   }, []);
 
   useEffect(() => {
-    if (!enabled || !isPlaying || muted || isDocumentHidden || typeof Audio === "undefined") {
-      ambientRef.current?.pause();
-      reactionRef.current?.pause();
-      pendingReactionRef.current = null;
+    const engine = engineRef.current!;
+    if (!enabled || muted || !isPlaying || hidden || crowdPreference === 0) {
+      engine.stop();
       if (!enabled) {
-        // Re-entering the viewer must be able to replay its initial cue.
-        lastReactionRef.current = null;
-        lastPhaseRef.current = null;
-        lastSongIdRef.current = null;
-        lastPulseAtRef.current = 0;
-        reactionCooldownRef.current.reset();
-        pendingReactionRef.current = null;
+        lastSongRef.current = lastReactionRef.current = lastPhaseRef.current = null;
+        lastPulseRef.current = lastElapsedRef.current = -1;
+        historyRef.current = [];
       }
       return;
     }
-
     const energy = clamp((snapshot?.crowdEnergy ?? 30) / 100);
-    const intensity = crowdSizeIntensity(stageType, energy);
+    const intensity = Math.max(1, Math.min(5, Math.round(2 + 3 * energy)));
     const phase = showFrame?.phase ?? null;
-    const sounds = library;
-    const cueTimeMs = Math.max(0, snapshot?.song?.elapsedMs ?? 0);
-    const playReaction = (sound: GigCrowdSound | null, level: number) => {
-      if (!sound || pendingReactionRef.current ||
-          !reactionCooldownRef.current.canPlay(sound.id, cueTimeMs)) return;
-      pendingReactionRef.current = sound.id;
-      void playClip(reactionRef, sound, level).then(started => {
-        if (pendingReactionRef.current !== sound.id) return;
-        pendingReactionRef.current = null;
-        if (started) reactionCooldownRef.current.record(sound.id, cueTimeMs);
-      }).catch(() => {
-        // Audio construction itself can reject on unsupported/malformed URLs.
-        if (pendingReactionRef.current === sound.id) pendingReactionRef.current = null;
+    const elapsedMs = Math.max(0, snapshot?.song?.elapsedMs ?? 0);
+    const songId = snapshot?.song?.id ?? null;
+    const seed = String(replaySeed ?? stageType);
+    const { crowdSize, environment } = venueContext(stageType);
+    if (lastElapsedRef.current >= 0 && elapsedMs + 350 < lastElapsedRef.current && songId === lastSongRef.current) {
+      lastSongRef.current = lastReactionRef.current = lastPhaseRef.current = null;
+      lastPulseRef.current = -1;
+      historyRef.current = [];
+      engine.stop();
+    }
+    lastElapsedRef.current = elapsedMs;
+    engine.setCrowdVolume(clamp(volume) * crowdPreference);
+    engine.setDialogueActive(/banter|talk|dialogue|speech/.test(phase ?? ""));
+
+    const choose = (category: CrowdCategory, cueSeed: string, isBed: boolean): CrowdPlaybackClip | null => {
+      const request = {
+        category, crowdSize, environment, intensity, seed: cueSeed,
+        atSeconds: elapsedMs / 1000, history: historyRef.current, cooldownSeconds: 20,
+      };
+      const curatedClip = selectCuratedCrowdClip(curated, request);
+      if (curatedClip) return curatedClip;
+      const old = pickGigCrowdSound(legacy, legacyTypes(category, energy), intensity * 2, cueSeed);
+      return old ? legacyAsClip(old, isBed, energy) : null;
+    };
+
+    const ambientCategory: CrowdCategory = phase === "encore_break" ? "encore" : "ambient";
+    const ambient = choose(ambientCategory, `${seed}:${stageType}:${phase ?? "performance"}:bed`, true);
+    void engine.setAmbience(ambient);
+
+    const play = (category: CrowdCategory, cueSeed: string) => {
+      const clip = choose(category, cueSeed, false);
+      if (!clip) return;
+      void engine.playReaction(clip, elapsedMs).then((played) => {
+        if (played) historyRef.current.push({ assetId: clip.id, atSeconds: elapsedMs / 1000 });
+        historyRef.current = historyRef.current.filter((item) => elapsedMs / 1000 - item.atSeconds < 120).slice(-20);
       });
     };
 
-    const bedTypes: GigCrowdSoundType[] =
-      phase === "encore_break"
-        ? ["encore_request", "crowd_singing", "ambient_chatter"]
-        : phase === "pre_show" || phase === "load_out"
-          ? ["ambient_chatter", "band_exit"]
-          : energy > 0.7
-            ? ["ambient_chatter", "crowd_singing"]
-            : ["ambient_chatter", "lighter_moment"];
-
-    const bed = pickGigCrowdSound(sounds, bedTypes, Math.max(2, intensity - 2), `${stageType}:${phase ?? "performance"}:bed`);
-    const existingBed = ambientRef.current;
-    const existingUrl = existingBed?.dataset.rockmundoUrl ?? null;
-
-    if (!bed && existingBed) {
-      // An empty or removed catalogue must not keep an obsolete ambience loop.
-      existingBed.pause();
-      existingBed.removeAttribute("src");
-      existingBed.load();
-      ambientRef.current = null;
-    } else if (bed && existingUrl !== bed.audio_url) {
-      if (existingBed) {
-        existingBed.pause();
-        existingBed.removeAttribute("src");
-        existingBed.load();
-      }
-      const audio = new Audio(bed.audio_url);
-      audio.preload = "auto";
-      audio.loop = true;
-      audio.dataset.rockmundoUrl = bed.audio_url;
-      ambientRef.current = audio;
+    if (songId && songId !== lastSongRef.current && (curated.length > 0 || legacy.length > 0)) {
+      lastSongRef.current = songId;
+      lastPulseRef.current = -1;
+      play("cheer", `${seed}:${songId}:recognition`);
     }
-
-    if (ambientRef.current) {
-      ambientRef.current.volume = clamp(volume * (0.10 + energy * 0.12), 0.03, 0.28);
-      if (ambientRef.current.paused) void ambientRef.current.play().catch(() => undefined);
-    }
-
-    const songId = snapshot?.song?.id ?? null;
-    // Never mark the first cue as consumed before the async sound catalogue
-    // has loaded. Otherwise an initial entrance/applause can be lost forever.
-    if (songId && songId !== lastSongIdRef.current && sounds.length > 0) {
-      lastSongIdRef.current = songId;
-      lastPulseAtRef.current = 0;
-      reactionCooldownRef.current.reset();
-      const recognition = pickGigCrowdSound(
-        sounds,
-        ["song_recognition", "crowd_cheer_medium", "crowd_cheer_small"],
-        intensity,
-        `${songId}:recognition`,
-      );
-      playReaction(recognition, volume * (0.25 + energy * 0.2));
-    }
-
     const reaction = snapshot?.reaction ?? null;
-    if (reaction && reaction !== lastReactionRef.current && sounds.length > 0) {
+    if (reaction && reaction !== lastReactionRef.current) {
       lastReactionRef.current = reaction;
-      const clip = pickGigCrowdSound(sounds, reactionTypes(reaction, energy), intensity, `${songId ?? "gig"}:${reaction}`);
-      playReaction(clip, volume * (0.3 + energy * 0.28));
+      play(/applaus|clap/i.test(reaction) ? "applause" : "reaction", `${seed}:${songId ?? "gig"}:${reaction}`);
     }
-
-    if (phase && phase !== lastPhaseRef.current && sounds.length > 0) {
+    if (phase && phase !== lastPhaseRef.current) {
       lastPhaseRef.current = phase;
-      const phaseTypes: GigCrowdSoundType[] | null =
-        phase === "band_entry"
-          ? ["band_entrance", "crowd_cheer_large", "crowd_cheer_medium"]
-          : phase === "encore"
-            ? ["encore_request", "band_entrance", "crowd_cheer_large"]
-            : phase === "bows"
-              ? ["applause", "crowd_cheer_large", "band_exit"]
-              : phase === "load_out"
-                ? ["band_exit", "applause", "ambient_chatter"]
-                : null;
-      if (phaseTypes) {
-        const clip = pickGigCrowdSound(sounds, phaseTypes, phase === "bows" ? 10 : intensity, `${stageType}:${phase}`);
-        playReaction(clip, volume * (phase === "bows" ? 0.65 : 0.5));
-      }
+      if (phase === "band_entry") play("cheer", `${seed}:entrance`);
+      if (phase === "encore") play("encore", `${seed}:encore`);
+      if (phase === "bows") play("finale", `${seed}:finale`);
+      if (phase === "load_out") play("applause", `${seed}:exit`);
     }
-
-    const elapsedMs = snapshot?.song?.elapsedMs ?? 0;
-    if (
-      snapshot?.song
-      && elapsedMs - lastPulseAtRef.current >= 18_000
-      && energy >= 0.45
-    ) {
-      lastPulseAtRef.current = elapsedMs;
-      const pulse = pickGigCrowdSound(
-        sounds,
-        reactionTypes(reaction, energy),
-        intensity,
-        `${songId ?? "song"}:pulse:${Math.floor(elapsedMs / 18_000)}`,
-      );
-      playReaction(pulse, volume * (0.18 + energy * 0.2));
+    if (songId && energy >= .45 && elapsedMs - lastPulseRef.current >= 18000) {
+      lastPulseRef.current = elapsedMs;
+      play("reaction", `${seed}:${songId}:pulse:${Math.floor(elapsedMs / 18000)}`);
     }
   }, [
-    enabled,
-    muted,
-    volume,
-    isPlaying,
-    isDocumentHidden,
-    library,
-    stageType,
-    snapshot?.crowdEnergy,
-    snapshot?.reaction,
-    snapshot?.song?.id,
-    snapshot?.song?.elapsedMs,
-    showFrame?.phase,
+    enabled, muted, volume, isPlaying, hidden, crowdPreference, curated, legacy, stageType,
+    replaySeed, snapshot?.crowdEnergy, snapshot?.reaction,
+    snapshot?.song?.id, snapshot?.song?.elapsedMs, showFrame?.phase,
   ]);
 
   useEffect(() => () => {
-    pendingReactionRef.current = null;
-    reactionCooldownRef.current.reset();
-    for (const audio of [ambientRef.current, reactionRef.current]) {
-      if (!audio) continue;
-      audio.pause();
-      audio.onended = null;
-      audio.removeAttribute("src");
-      audio.load();
-    }
-    ambientRef.current = null;
-    reactionRef.current = null;
+    engineRef.current?.dispose();
+    engineRef.current = null;
   }, []);
 }
