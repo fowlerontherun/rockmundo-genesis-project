@@ -31,7 +31,8 @@ describe("next five open issue fixes", () => {
 
   it("#2182 restricts active new sponsor branding and protects admin/public image previews", () => {
     const admin = read("src/pages/admin/BrandsAdmin.tsx");
-    expect(admin).toContain("if (activating && !logo)");
+    expect(admin).toContain("if (form.active && !logo)");
+    expect(admin).toContain("sponsorLogoNeedsArtworkReview(brand.logo_url)");
     expect(admin).toContain("if (logo && !isSafeSponsorLogoReference(logo))");
     expect(admin).toContain("<SponsorIdentity name={brand.name} logoReference={brand.logo_url} />");
     expect(isSafeSponsorLogoReference("https://cdn.example.com/logo.png")).toBe(true);
