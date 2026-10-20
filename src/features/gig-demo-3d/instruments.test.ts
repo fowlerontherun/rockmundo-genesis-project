@@ -9,8 +9,11 @@ import { disposeModel } from '@/features/player-model/model';
 import { STAGE_INSTRUMENTS, stageAssignment, type InstrumentId } from './instrumentCatalog';
 import { Musician } from './performers';
 import { buildInstrument } from './instruments';
+// Use the two shipped CC0 modular styles used in performers.test.ts for the
+// instrument-contact contract. Feminine avatar assets have a separate asset
+// integrity/wardrobe test; these pose checks should not depend on its export.
 const models: T.Object3D[] = [];
-beforeAll(async () => { for (const name of ['casual', 'female-casual']) {
+beforeAll(async () => { for (const name of ['casual', 'punk']) {
     const file = readFileSync(resolve(`public/gig-demo-3d/${name}.glb`));
     models.push((await new GLTFLoader().parseAsync(file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength) as ArrayBuffer, '')).scene);
 } });
@@ -26,7 +29,7 @@ describe('complete stage instrument coverage', () => {
             expect(stageAssignment(skill.display_name ?? '').instrument).toBe(id);
         }
     });
-    it.each(Object.keys(STAGE_INSTRUMENTS) as InstrumentId[])('%s has a finite stage model, reachable grips and stable replay poses on both frames', id => {
+    it.each(Object.keys(STAGE_INSTRUMENTS) as InstrumentId[])('%s has a finite stage model, reachable grips and stable replay poses on two shipped outfit rigs', id => {
         for (const model of models) {
             const spec = STAGE_INSTRUMENTS[id], actor = new Musician(model, spec.role, [0, 0, 0], 0, undefined, undefined, id);
             const rig = actor.instrumentRig!;
