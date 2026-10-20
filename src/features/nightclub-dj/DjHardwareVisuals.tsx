@@ -87,11 +87,11 @@ export function DjPadBank({
               aria-label={mode === "store"
                 ? `Store Deck ${deck} hot cue ${i + 1} at current position`
                 : active
-                  ? `Jump Deck ${deck} to hot cue ${i + 1}, ${formatDjTime(saved as number)}`
+                  ? `Jump Deck ${deck} to hot cue ${i + 1}, ${formatDjTime(saved ?? 0)}`
                   : `Deck ${deck} hot cue ${i + 1} empty`}
-              title={active ? `Cue ${i + 1} · ${formatDjTime(saved)}` : "Empty · use Set pads"}>
+              title={active ? `Cue ${i + 1} · ${formatDjTime(saved ?? 0)}` : "Empty · use Set pads"}>
               <strong>{i + 1}</strong>
-              <small>{active ? formatDjTime(saved) : "—"}</small>
+              <small>{active ? formatDjTime(saved ?? 0) : "—"}</small>
             </button>
           );
         })}
