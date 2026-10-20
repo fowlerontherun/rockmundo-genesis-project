@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Disc3, Headphones, Music, Pause, Play, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { Expand, Headphones, Minimize2, Music, Pause, Play, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -17,13 +17,16 @@ import { DjSetlistPlanner } from "./DjSetlistPlanner";
 import { djReadinessSteps, useDjMixReadiness } from "./djReadiness";
 import { bindDjDeckLifecycle } from "./deckAudioLifecycle";
 import { deliverDjMixEvent } from "./mixerEventDelivery";
+import { DjPadBank, DjPlatter, DjTrimMeter, DjWaveform } from "./DjHardwareVisuals";
+import { djHotCueSeek, djJogSeek, emptyDjHotCues, storeDjHotCue, type DjHotCueSlots } from "./djHardwareControls";
+import "./DjConsole.css";
 
 function AudioDeck({
-  deck, tracks, selectedId, onSelect, level, rate, onRateChange, onDeckPlay, onRateCommit,
+  deck, tracks, selectedId, onSelect, level, trim, rate, onRateChange, onDeckPlay, onRateCommit,
 }: {
   deck: "A" | "B"; tracks: DjAudioTrack[];
   selectedId: string; onSelect: (id: string) => void;
-  level: number; rate: number; onRateChange: (rate: number) => void;
+  level: number; trim: number; rate: number; onRateChange: (rate: number) => void;
   onDeckPlay?: (deck: "A" | "B", track: DjAudioTrack) => void;
   onRateCommit?: (deck: "A" | "B", speed: number) => void;
 }) {
@@ -40,6 +43,30 @@ function AudioDeck({
   const [duration, setDuration] = useState(0);
   const [cue, setCue] = useState(0);
   const [retryNonce, setRetryNonce] = useState(0);
+  const [hotCues, setHotCues] = useState<DjHotCueSlots>(emptyDjHotCues);
+  const [padMode, setPadMode] = useState<"store" | "play">("play");
+  // Per-track scratch-pad positions are local; never write fake mixer events.
+  useEffect(() => {
+    setHotCues(emptyDjHotCues());
+    setPadMode("play");
+  }, [audioSourceKey]);
+
+  const pressHotCue = (index: number) => {
+    const audio = audioRef.current;
+    if (!audio || !duration) return;
+    if (padMode === "store") {
+      setHotCues(previous => storeDjHotCue(previous, index, audio.currentTime, duration));
+      return;
+    }
+    const next = djHotCueSeek(hotCues, index, duration);
+    if (next !== null) { audio.currentTime = next; setElapsed(next); }
+  };
+  const nudgeJog = (direction: -1 | 1) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const next = djJogSeek(audio.currentTime, direction, duration);
+    if (next !== null) { audio.currentTime = next; setElapsed(next); }
+  };
   const beat = estimatedDjBeatAt(elapsed, track?.bpm ?? null, rate);
   const canJumpBar = Boolean(beat && duration > 0);
   const jumpBar = (direction: -1 | 1) => {
@@ -92,9 +119,9 @@ function AudioDeck({
 
   useEffect(() => {
     if (!audioRef.current) return;
-    audioRef.current.volume = Math.max(0, Math.min(1, level));
+    audioRef.current.volume = Math.max(0, Math.min(1, level * trim / 100));
     audioRef.current.playbackRate = clampDeckRate(rate);
-  }, [level, rate, selectedId]);
+  }, [level, trim, rate, selectedId]);
 
   const togglePlayback = async () => {
     const player = audioRef.current;
@@ -108,14 +135,14 @@ function AudioDeck({
   };
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
+    <Card className={`rm-dj-deck rm-dj-deck--${deck.toLowerCase()}`}>
+      <CardHeader className="rm-dj-deck-head">
         <CardTitle className="flex items-center justify-between gap-2 text-base">
-          <span className="flex items-center gap-2"><Disc3 className="h-4 w-4 text-primary" /> Deck {deck}</span>
+          <span className="flex items-center gap-2"><span className="rm-dj-deck-tag">{deck}</span><span className="rm-dj-small-label">ROCKMUNDO / DIRECT DRIVE</span></span>
           <Badge variant="secondary">{track?.source === "admin" ? "Club library" : "RockMundo"}</Badge>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="rm-dj-deck-content">
         <Select value={selectedId || undefined} onValueChange={onSelect}>
           <SelectTrigger aria-label={`Choose a track for deck ${deck}`}>
             <SelectValue placeholder="Load a track..." />
@@ -126,9 +153,17 @@ function AudioDeck({
             ))}
           </SelectContent>
         </Select>
-        <div className="text-sm min-h-10">
-          <p className="font-medium truncate">{track?.title ?? "Select a track"}</p>
-          <p className="text-xs text-muted-foreground">{track?.genre ?? "—"} · {track?.bpm ? `${track.bpm} BPM` : "BPM unknown"} · {track?.musicalKey ?? "Key unknown"}</p>
+        <div className="rm-dj-deck-display">
+          <div className="rm-dj-track-row">
+            <div className="min-w-0">
+              <p className="rm-dj-track-name">{track?.title ?? "Load a track"}</p>
+              <p className="rm-dj-track-artist">{track?.artist ?? "RockMundo"}</p>
+            </div>
+            <div className="rm-dj-track-bpm">{beat?.audibleBpm ?? track?.bpm ?? "—"}<small>BPM</small></div>
+          </div>
+          <DjWaveform deck={deck} trackId={audioSourceKey} position={duration > 0 ? elapsed / duration : 0} />
+          <div className="rm-dj-display-times"><span>{formatDjTime(elapsed)} / {formatDjTime(duration)}</span><span>{track?.musicalKey ?? "KEY —"}</span></div>
+          <p className="rm-dj-visual-note">Illustrative waveform · seek with the track-position slider below</p>
         </div>
         <audio
           ref={audioRef}
@@ -152,7 +187,7 @@ function AudioDeck({
             }
           }}
         />
-        <div className="space-y-1">
+        <div className="rm-dj-control-box space-y-1">
           <Slider aria-label={`Deck ${deck} seek position`} value={[Math.min(elapsed, duration || 1)]}
             min={0} max={Math.max(1, Math.ceil(duration))} step={1} disabled={!duration}
             onValueChange={([value]) => { if (audioRef.current && duration) audioRef.current.currentTime = value; }} />
@@ -160,7 +195,12 @@ function AudioDeck({
             <span>{formatDjTime(elapsed)}</span><span>{formatDjTime(duration)}</span>
           </div>
         </div>
-        <div className="rounded-md border p-2 space-y-1" data-testid={`dj-beat-guide-${deck}`}>
+        <div className="rm-dj-deck-workbench">
+          <DjPlatter deck={deck} playing={playing} disabled={!duration} onNudge={nudgeJog} />
+          <DjPadBank deck={deck} cues={hotCues} mode={padMode} disabled={!duration}
+            onPress={pressHotCue} onToggleMode={() => setPadMode(value => value === "store" ? "play" : "store")} />
+        </div>
+        <div className="rm-dj-control-box space-y-1" data-testid={`dj-beat-guide-${deck}`}>
           {beat ? (
             <>
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
@@ -178,8 +218,8 @@ function AudioDeck({
             <p className="text-xs text-muted-foreground">Beat guide unavailable: no reliable BPM metadata.</p>
           )}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" onClick={togglePlayback} disabled={!track || loading || !!error}>
+        <div className="rm-dj-transport">
+          <Button type="button" className="rm-dj-play" onClick={togglePlayback} disabled={!track || loading || !!error}>
             {playing ? <Pause className="h-4 w-4 mr-1" /> : <Play className="h-4 w-4 mr-1" />}
             {playing ? "Pause" : "Play"}
           </Button>
@@ -200,7 +240,7 @@ function AudioDeck({
             +4 beats
           </Button>
         </div>
-        <div className="space-y-2">
+        <div className="rm-dj-control-box space-y-2">
           <div className="flex justify-between text-xs">
             <span>Tempo (playback speed)</span><span>{(rate * 100).toFixed(0)}%</span>
           </div>
@@ -225,9 +265,29 @@ function AudioDeck({
 }
 
 /** Practice is reward-free. Booked sessions require server-recorded interactions. */
-export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
+export function DjMixingStudio({ liveBookingId, clubName }: { liveBookingId?: string; clubName?: string }) {
   const { profileId } = useActiveProfile();
   const client = useQueryClient();
+  const boothRef = useRef<HTMLElement>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+  useEffect(() => {
+    const refresh = () => setFullscreen(document.fullscreenElement === boothRef.current);
+    document.addEventListener("fullscreenchange", refresh);
+    return () => document.removeEventListener("fullscreenchange", refresh);
+  }, []);
+  const toggleFullscreen = async () => {
+    try {
+      if (document.fullscreenElement === boothRef.current) {
+        await document.exitFullscreen();
+      } else if (boothRef.current?.requestFullscreen) {
+        await boothRef.current.requestFullscreen();
+      } else {
+        toast.info("Full-screen booth view is unavailable on this device.");
+      }
+    } catch {
+      toast.error("Full-screen mode was blocked by your browser.");
+    }
+  };
   const { data: libraryTracks = [], isLoading, isError, error } = useDjTrackLibrary(profileId);
   const { data: liveBooking, isLoading: liveLoading, isError: liveError } = useQuery({
     queryKey: ["dj-live-booking", profileId, liveBookingId],
@@ -317,6 +377,8 @@ export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
   const [deckB, setDeckB] = useState("");
   const [rateA, setRateA] = useState(1);
   const [rateB, setRateB] = useState(1);
+  const [trimA, setTrimA] = useState(100);
+  const [trimB, setTrimB] = useState(100);
   const [crossfade, setCrossfade] = useState(0);
   const [sharing, setSharing] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -439,6 +501,96 @@ export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
           )}
         </div>
       )}
+      <section ref={boothRef} className="rm-dj-console" aria-label="RockMundo interactive DJ controller"
+        data-testid="rm-dj-hardware-console">
+        <header className="rm-dj-console-head">
+          <div className="min-w-0">
+            <div className="rm-dj-console-kicker">ROCKMUNDO / DJ EXPERIENCE</div>
+            <h3 className="rm-dj-console-title">{clubName ? `${clubName} · DJ BOOTH` : "THE DJ BOOTH"}</h3>
+            <p className="rm-dj-console-sub">
+              Two real audio decks, eight local hot cues per deck and a two-channel output mixer.
+              Play from the cleared RockMundo track library.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="rm-dj-console-status" data-live={liveBookingId ? "true" : "false"}>
+              {liveBookingId ? `LIVE SET · ${readiness?.count ?? 0} verified` : "PRACTICE · NO REWARDS"}
+            </span>
+            <Button type="button" variant="outline" size="sm" onClick={toggleFullscreen}
+              aria-label={fullscreen ? "Leave immersive DJ booth" : "Expand immersive DJ booth"}>
+              {fullscreen ? <Minimize2 className="mr-2 h-4 w-4" /> : <Expand className="mr-2 h-4 w-4" />}
+              {fullscreen ? "Exit booth view" : "Expand booth"}
+            </Button>
+          </div>
+        </header>
+        <div className="rm-dj-console-grid">
+          <AudioDeck deck="A" tracks={tracks} selectedId={deckA} onSelect={setDeckA}
+            level={levels.a} trim={trimA} rate={rateA} onRateChange={setRateA}
+            onDeckPlay={(deck, track) => { sendLiveEvent({ kind: "deck_play", deck, source: track.source, trackId: track.sourceId }); }}
+            onRateCommit={(deck, value) => { sendLiveEvent({ kind: "tempo", deck, value }); }} />
+          <Card className="rm-dj-mixer">
+            <CardHeader className="rm-dj-deck-head">
+              <CardTitle className="flex flex-wrap items-center gap-2 text-sm">
+                <SlidersHorizontal className="h-4 w-4 text-violet-300" /> RM2 / MIXER
+              </CardTitle>
+              <p className="rm-dj-small-label">TWO-CHANNEL OUTPUT</p>
+            </CardHeader>
+            <CardContent className="rm-dj-mixer-body">
+              <div className="rm-dj-mixer-channel-grid">
+                {([
+                  { side: "A" as const, trim: trimA, onTrim: setTrimA, output: levels.a },
+                  { side: "B" as const, trim: trimB, onTrim: setTrimB, output: levels.b },
+                ]).map(channel => (
+                  <div key={channel.side} className={`rm-dj-mixer-channel rm-dj-mixer-channel--${channel.side.toLowerCase()}`}>
+                    <h4>CH {channel.side}</h4>
+                    <div className="rm-dj-eq-fascia" aria-hidden="true">
+                      {["HI", "MID", "LOW"].map(label => (
+                        <span key={label}><i className="rm-dj-knob" />{label}</span>
+                      ))}
+                    </div>
+                    <div className="rm-dj-fader-with-meter">
+                      <div className="rm-dj-mixer-fader">
+                        <label htmlFor={`rm-dj-trim-${channel.side}`}>TRIM {channel.trim}%</label>
+                        <input id={`rm-dj-trim-${channel.side}`} type="range"
+                          aria-label={`Deck ${channel.side} output trim`}
+                          min={0} max={100} step={1} value={channel.trim}
+                          onChange={event => channel.onTrim(Number(event.target.value))} />
+                      </div>
+                      <DjTrimMeter side={channel.side} active={channel.trim > 0}
+                        value={channel.output * channel.trim / 100} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="rm-dj-crossfade space-y-3">
+                <div className="rm-dj-crossfade-scale"><span>A</span><span>CROSSFADE</span><span>B</span></div>
+                <Slider aria-label="DJ crossfader from deck A to B" value={[crossfade]}
+                  min={0} max={100} step={1}
+                  onValueChange={([value]) => setCrossfade(value)}
+                  onValueCommit={([value]) => { sendLiveEvent({ kind: "crossfade", value }); }} />
+                <p className="text-center text-xs text-slate-300">
+                  A {100 - crossfade}% / B {crossfade}%
+                </p>
+              </div>
+              <Button type="button" variant="secondary" onClick={syncB}
+                className="text-xs">SYNC B → A</Button>
+              <p className="rm-dj-mixer-caption">
+                Channel trim and crossfader change real deck volume. EQ knobs are
+                a visual preview and are not active yet; LED strips indicate trim position,
+                not measured audio signal.
+              </p>
+            </CardContent>
+          </Card>
+          <AudioDeck deck="B" tracks={tracks} selectedId={deckB} onSelect={setDeckB}
+            level={levels.b} trim={trimB} rate={rateB} onRateChange={setRateB}
+            onDeckPlay={(deck, track) => { sendLiveEvent({ kind: "deck_play", deck, source: track.source, trackId: track.sourceId }); }}
+            onRateCommit={(deck, value) => { sendLiveEvent({ kind: "tempo", deck, value }); }} />
+        </div>
+        <footer className="rm-dj-console-foot">
+          <span>HOT CUE PADS: tap SET PADS to store · tap numbered pads to jump</span>
+          <span>Estimated BPM guidance · no fabricated audio waveforms or crowd scores</span>
+        </footer>
+      </section>
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Music className="h-4 w-4" /> Track Library ({tracks.length})</CardTitle></CardHeader>
         <CardContent className="space-y-3">
@@ -482,30 +634,6 @@ export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
           are available in practice mode and do not modify the active show.
         </p>
       )}
-      <div className="grid gap-4 md:grid-cols-2">
-        <AudioDeck deck="A" tracks={tracks} selectedId={deckA} onSelect={setDeckA} level={levels.a}
-          rate={rateA} onRateChange={setRateA}
-          onDeckPlay={(deck, track) => { void sendLiveEvent({ kind: "deck_play", deck, source: track.source, trackId: track.sourceId }); }}
-          onRateCommit={(deck, value) => { void sendLiveEvent({ kind: "tempo", deck, value }); }} />
-        <AudioDeck deck="B" tracks={tracks} selectedId={deckB} onSelect={setDeckB} level={levels.b}
-          rate={rateB} onRateChange={setRateB}
-          onDeckPlay={(deck, track) => { void sendLiveEvent({ kind: "deck_play", deck, source: track.source, trackId: track.sourceId }); }}
-          onRateCommit={(deck, value) => { void sendLiveEvent({ kind: "tempo", deck, value }); }} />
-      </div>
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-base"><SlidersHorizontal className="h-4 w-4" /> Mixer</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-center justify-between text-sm"><span>Crossfader</span><span>A {100 - crossfade}% / B {crossfade}%</span></div>
-          <Slider aria-label="DJ crossfader from deck A to B" value={[crossfade]} min={0} max={100} step={1}
-            onValueChange={([value]) => setCrossfade(value)}
-            onValueCommit={([value]) => { void sendLiveEvent({ kind: "crossfade", value }); }} />
-          <div className="flex items-center justify-between text-xs text-muted-foreground"><span>Deck A</span><span>Deck B</span></div>
-          <Button type="button" variant="secondary" onClick={syncB}>Match Deck B tempo to A</Button>
-          <p className="text-xs text-muted-foreground">Tempo adjustment changes playback speed and pitch. The beat display and four-beat jumps are estimated from BPM metadata, not detected downbeats, and do not record or score live mixer interactions. True key-locked beatmatching and timed drops will follow in the DJ minigame.</p>
-        </CardContent>
-      </Card>
       {!liveBookingId && tracks.some((track) => track.mine) && (
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Music className="h-4 w-4" /> Share my tracks with other DJs</CardTitle></CardHeader>

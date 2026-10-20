@@ -1,0 +1,194 @@
+/* RockMundo's original, brand-free two-deck virtual hardware.
+   Scoped: never affects regular nightclub cards or other gig viewers. */
+.rm-dj-console {
+  --dj-blue: #42b5ff;
+  --dj-rose: #ff568f;
+  --dj-metal: #141923;
+  --dj-ink: #090c14;
+  color: #eaf3ff;
+  isolation: isolate;
+  container-type: inline-size;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #44435b;
+  border-radius: 20px;
+  padding: clamp(12px, 2vw, 24px);
+  background:
+    linear-gradient(to bottom, #0b0c18a8 0%, #0b0c18f4 32%, #0b0c18 56%),
+    url("/images/dj/rockmundo-club-atmosphere.svg") center top / 100% auto no-repeat,
+    radial-gradient(ellipse at 53% -5%, #7443a44d, transparent 48%),
+    radial-gradient(ellipse at 5% 5%, #109ddd25, transparent 34%),
+    linear-gradient(170deg, #25223c 0%, #100f1c 33%, #0a0d15 100%);
+  box-shadow: inset 0 2px 2px #ffffff25, 0 12px 48px #0009;
+}
+.rm-dj-console::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  opacity: .20;
+  background: repeating-linear-gradient(90deg, transparent 0 41px, #b38aff20 42px 43px, transparent 44px 91px);
+  mask-image: linear-gradient(to bottom, #000, transparent 38%);
+}
+.rm-dj-console-head {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 10px; margin-bottom: 14px; position: relative; z-index: 1;
+}
+.rm-dj-console-kicker { font-size: 10px; font-weight: 800; color: #b99cff; letter-spacing: .24em; }
+.rm-dj-console-title { font-size: clamp(20px,2.3vw,29px); font-weight: 900; letter-spacing: -.035em; line-height: 1.15; }
+.rm-dj-console-sub { color: #b4bbd5; font-size: 12px; max-width: 540px; }
+.rm-dj-console-status {
+  font-size: 11px; font-weight: 800; letter-spacing: .07em; padding: 8px 11px;
+  color: #d5d8fa; border: 1px solid #57506a; border-radius: 99px;
+  background: #111526d9;
+}
+.rm-dj-console-status[data-live="true"] { color: #9cf2bc; border-color: #42916a; }
+.rm-dj-console-grid {
+  position: relative; z-index: 1;
+  display: grid; gap: 12px; min-width: 0;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  grid-template-areas: "a b" "m m";
+}
+.rm-dj-deck--a { grid-area: a; --dj-channel: var(--dj-blue); }
+.rm-dj-deck--b { grid-area: b; --dj-channel: var(--dj-rose); }
+.rm-dj-mixer { grid-area: m; }
+.rm-dj-console .rm-dj-deck,
+.rm-dj-console .rm-dj-mixer {
+  min-width: 0; overflow: hidden;
+  border: 1px solid #4c5366;
+  background: linear-gradient(145deg,#292f39 0%,#131923 27%,#0a0c14 72%,#252631 100%);
+  color: #e7efff; border-radius: 12px;
+  box-shadow: inset 0 1px 2px #d6e1f220, inset 0 -2px 8px #000d, 0 4px 10px #0008;
+}
+.rm-dj-console .rm-dj-deck-head {
+  padding: 12px 15px 8px;
+  border-bottom: 1px solid #4d586455;
+  background: linear-gradient(90deg,color-mix(in srgb,var(--dj-channel) 16%,transparent), transparent);
+}
+.rm-dj-deck-tag { display: inline-grid; place-items: center; width: 29px; height: 29px; border-radius: 5px;
+  font-size: 19px; font-weight: 900; color: #080d15;
+  background: var(--dj-channel); box-shadow: 0 0 13px color-mix(in srgb,var(--dj-channel) 60%,transparent);
+}
+.rm-dj-small-label { color: #9faec9; font-size: 10px; font-weight: 800; letter-spacing: .11em; }
+.rm-dj-console .rm-dj-deck-content { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+.rm-dj-deck-display {
+  border: 1px solid #495779; border-radius: 8px; padding: 12px;
+  background:
+    linear-gradient(180deg,#050911, #0d2032 80%,#040609);
+  box-shadow: inset 0 1px 14px #000c, 0 1px 0 #b9e8ff22;
+}
+.rm-dj-track-row { display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0; }
+.rm-dj-track-name { font-size: 14px; font-weight: 850; min-width:0; overflow:hidden;text-overflow:ellipsis; white-space:nowrap; }
+.rm-dj-track-artist { font-size: 11px; color: #a8b7d0; overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.rm-dj-track-bpm { white-space:nowrap; font-weight:900;font-size:17px;color:var(--dj-channel); font-variant-numeric:tabular-nums; }
+.rm-dj-track-bpm small { display:block;text-align:right;font-size:9px;color:#abb9c8;letter-spacing:.1em; }
+.rm-dj-wave { height: 74px; position:relative; overflow:hidden; margin:6px 0 0; }
+.rm-dj-wave svg { width:100%;height:100%;fill:var(--dj-channel);filter:drop-shadow(0 0 3px var(--dj-channel)); }
+.rm-dj-wave-playhead { position:absolute;top:0;bottom:0;width:2px;background:white;box-shadow:0 0 7px #fff;pointer-events:none; }
+.rm-dj-visual-note { color:#8f9eb7; font-size:10px; }
+.rm-dj-display-times { display:flex;justify-content:space-between;gap:8px;font-size:10px;color:#b9d5f0;font-variant-numeric:tabular-nums; }
+.rm-dj-deck-workbench { display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:10px;align-items:center; }
+.rm-dj-platter-wrap { min-width:0; }
+.rm-dj-platter {
+  width: min(100%,290px); aspect-ratio:1; margin:0 auto;
+  border-radius:50%;display:grid;place-items:center;
+  background:
+    repeating-conic-gradient(from 0deg,#686f81 0 1.2deg,#222936 1.2deg 3deg,#b4bcc5 3deg 3.4deg,#202636 3.4deg 6deg);
+  box-shadow: 0 0 0 3px #080b10,0 0 0 6px #353943,0 0 19px color-mix(in srgb,var(--dj-channel) 39%,transparent),inset 0 0 6px black;
+}
+.rm-dj-platter-rotor {
+  width:88%;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;
+  background:
+    repeating-radial-gradient(circle at center,#151a24 0 2px,#303546 2.5px 3px,#101520 3.5px 5px),
+    conic-gradient(#191d26,#4e566a,#171b22,#393f50,#171b22);
+  box-shadow: inset 0 0 20px black,0 0 0 3px #70778688;
+}
+.rm-dj-platter[data-playing="true"] .rm-dj-platter-rotor { animation: rm-dj-platter-turn 2s linear infinite; }
+.rm-dj-platter-label {
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  width:46%;aspect-ratio:1;border-radius:50%;border:3px solid var(--dj-channel);
+  color:#fff;background:radial-gradient(circle at 35% 30%,#323348,#090a14);
+  box-shadow:0 0 16px color-mix(in srgb,var(--dj-channel) 50%,transparent),inset 0 0 10px #000a;
+  font-size:clamp(12px,2vw,22px);font-weight:900;line-height:1;
+}
+.rm-dj-platter-label b { color:var(--dj-channel);font-size:1.5em; }
+.rm-dj-platter-label small { font-size:6px;letter-spacing:.07em;white-space:nowrap;margin-top:3px; }
+.rm-dj-jog-row { display:flex;justify-content:space-between;gap:4px;align-items:center;margin-top:10px; }
+.rm-dj-jog-row span {font-size:9px; color:#8e9ebd; font-weight:800;letter-spacing:.1em;text-align:center;}
+.rm-dj-jog-row button,.rm-dj-pad-mode {
+  color:#c2dbf6;background:#1d2739;border:1px solid #4c5777;
+  font-size:10px;border-radius:5px;padding:5px 7px;white-space:nowrap;font-weight:800;
+}
+.rm-dj-jog-row button:hover:not(:disabled),.rm-dj-pad-mode:hover:not(:disabled){background:#344565;}
+.rm-dj-pad-head {display:flex;align-items:center;justify-content:space-between;gap:5px;margin-bottom:7px;}
+.rm-dj-pad-head span {font-size:9px;letter-spacing:.06em;color:#a3b5c9;font-weight:800;}
+.rm-dj-pad-mode[aria-pressed="true"]{background:#6342a2;color:white;border-color:#ad8fff;}
+.rm-dj-pad-grid {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;}
+.rm-dj-pad {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  min-width:0; aspect-ratio:1.1; border-radius:6px;
+  background: linear-gradient(160deg, color-mix(in srgb,var(--pad-glow) 70%,#fff),var(--pad-glow));
+  box-shadow:inset 0 1px 3px #ffffff9a,inset 0 -4px 7px #0006,0 0 8px color-mix(in srgb,var(--pad-glow) 35%,transparent);
+  color:#0a1320;border:1px solid #d8ebff44;
+}
+.rm-dj-pad strong{font-size:clamp(10px,1.3vw,14px);font-weight:900;}
+.rm-dj-pad small{font-size:8px;font-variant-numeric:tabular-nums;}
+.rm-dj-pad--1{--pad-glow:#ff61b1}.rm-dj-pad--2{--pad-glow:#a47cff}.rm-dj-pad--3{--pad-glow:#54b9ff}.rm-dj-pad--4{--pad-glow:#52e4bb}
+.rm-dj-pad[data-saved="false"]{filter:saturate(.37) brightness(.57);box-shadow:inset 0 2px 5px #0009;}
+.rm-dj-pad:disabled{cursor:not-allowed;opacity:.6;}
+.rm-dj-pad:hover:not(:disabled){filter:brightness(1.18);}
+.rm-dj-pad:active:not(:disabled){transform:translateY(1px);}
+.rm-dj-pad-help{font-size:10px;color:#9caac2;margin-top:7px;line-height:1.35;}
+.rm-dj-transport{display:flex;flex-wrap:wrap;gap:5px;}
+.rm-dj-console .rm-dj-transport button {
+  background:#172235;color:#cddbf1;border:1px solid #4f5c76;font-weight:750;
+  box-shadow:inset 0 1px 2px #ffffff15;
+}
+.rm-dj-console .rm-dj-transport .rm-dj-play {background:#093c28;color:#9affcd;border-color:#25875e;box-shadow:0 0 10px #13bb6f55;}
+.rm-dj-console .rm-dj-transport button:hover:not(:disabled){filter:brightness(1.23);}
+.rm-dj-console button:focus-visible,.rm-dj-console [role="slider"]:focus-visible{
+  outline:2px solid #faf4ff;outline-offset:3px;
+}
+.rm-dj-console button:disabled{cursor:not-allowed;opacity:.52;}
+.rm-dj-control-box{background:#111827aa;border:1px solid #333f53;border-radius:8px;padding:10px;}
+.rm-dj-control-box .text-muted-foreground{color:#9caecc;}
+.rm-dj-mixer .rm-dj-deck-head{border-bottom:1px solid #454e64;}
+.rm-dj-mixer-body{padding:12px;display:flex;flex-direction:column;gap:14px;}
+.rm-dj-mixer-channel-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+.rm-dj-mixer-channel{min-width:0; padding:10px 6px;border:1px solid #3a4257;border-radius:8px;background:linear-gradient(150deg,#252a38,#0b0f19);}
+.rm-dj-mixer-channel h4{color:var(--dj-channel);font-size:12px;font-weight:900;letter-spacing:.1em;text-align:center;}
+.rm-dj-mixer-channel--a{--dj-channel:var(--dj-blue);}
+.rm-dj-mixer-channel--b{--dj-channel:var(--dj-rose);}
+.rm-dj-eq-fascia{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:15px 0 10px;text-align:center;}
+.rm-dj-eq-fascia span{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:8px;color:#9baec5;letter-spacing:.02em;}
+.rm-dj-knob{width:clamp(14px,2vw,26px);height:clamp(14px,2vw,26px);border-radius:50%;border:2px solid #677084;
+  background:radial-gradient(circle at 35% 30%,#6b7990,#1b202b 56%,#07080c);box-shadow:0 2px 4px #000c;}
+.rm-dj-knob::after{content:"";display:block;width:2px;height:7px;background:#85d2ff;margin:2px auto 0;transform:rotate(-27deg);}
+.rm-dj-mixer-fader{display:flex;flex-direction:column;gap:7px;margin:13px 4px;min-width:0;}
+.rm-dj-mixer-fader label{font-size:10px;color:#a8bbcf;text-align:center;}
+.rm-dj-trim-meter{display:flex;flex-direction:column-reverse;gap:3px;width:13px;max-height:116px;}
+.rm-dj-trim-meter span{width:100%;height:5px;border-radius:2px;background:#2d3442;}
+.rm-dj-trim-meter span[data-lit="true"]{background:#3ddf85;box-shadow:0 0 5px #29d67a;}
+.rm-dj-trim-meter span[data-lit="true"]:nth-child(n+9){background:#ffc85e;box-shadow:0 0 6px #ffc85e;}
+.rm-dj-trim-meter span[data-lit="true"]:nth-child(n+11){background:#fa687d;}
+.rm-dj-fader-with-meter{display:flex;justify-content:center;gap:10px;align-items:center;}
+.rm-dj-mixer .rm-dj-crossfade{background:#0d1320;border:1px solid #303f5b;border-radius:8px;padding:10px;}
+.rm-dj-mixer .rm-dj-crossfade .rm-dj-crossfade-scale{display:flex;justify-content:space-between;gap:5px;color:#7bbdff;font-size:12px;font-weight:900;}
+.rm-dj-mixer .rm-dj-crossfade-scale span:last-child{color:#ff85ac;}
+.rm-dj-mixer-caption{font-size:10px;color:#a3aec7;line-height:1.45;}
+.rm-dj-console-foot{position:relative;z-index:1; margin-top:11px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;font-size:11px;color:#b6bed6;}
+@keyframes rm-dj-platter-turn{to{transform:rotate(360deg)}}
+@container (min-width: 1000px){
+  .rm-dj-console-grid {grid-template-columns:minmax(0,1fr) minmax(206px,.58fr) minmax(0,1fr);grid-template-areas:"a m b";gap:10px;}
+}
+@container (max-width: 690px){
+  .rm-dj-console-grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"a" "m" "b";}
+  .rm-dj-console{padding:10px;border-radius:12px;}
+  .rm-dj-deck-workbench{grid-template-columns:minmax(0,1fr) minmax(0,1fr);}
+  .rm-dj-platter{max-width:240px;}
+}
+@media (prefers-reduced-motion: reduce){
+  .rm-dj-console *, .rm-dj-console *::before, .rm-dj-console *::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}
+}
+
+/* Native browser fullscreen preserves real audio elements and their playback state. */
+.rm-dj-console:fullscreen { width:100vw; height:100vh; overflow:auto; padding:clamp(14px,2.5vw,34px); border-radius:0; }
+.rm-dj-console:fullscreen .rm-dj-console-grid { max-width:1700px; margin:0 auto; }
+.rm-dj-console:fullscreen .rm-dj-platter { max-width:330px; }

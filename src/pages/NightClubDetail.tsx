@@ -335,7 +335,7 @@ const NightClubDetail = () => {
           }}>
             {showDjStudio ? "Close mixing studio" : "Open mixing studio"}
           </Button>
-          {showDjStudio && <DjMixingStudio key={`${profileId ?? "no-character"}:${liveDjBookingId ?? "practice"}`} liveBookingId={liveDjBookingId ?? undefined} />}
+          {showDjStudio && <DjMixingStudio key={`${profileId ?? "no-character"}:${liveDjBookingId ?? "practice"}`} liveBookingId={liveDjBookingId ?? undefined} clubName={club.name} />}
           {showDjStudio && liveDjBookingId && profileId && clubId && (
             <div className="space-y-3 border-t pt-4">
               <Button type="button" variant="outline" aria-expanded={showDjStage}
