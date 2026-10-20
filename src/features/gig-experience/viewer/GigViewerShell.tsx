@@ -251,6 +251,8 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
     snapshot,
     stageType,
     replaySeed: playbackReplay.simulationSeed,
+    attendance: experience?.headline?.attendance.status === "available" ? experience.headline.attendance.value : null,
+    capacity: experience?.gig?.venue?.capacity ?? null,
     showFrame,
   });
 
