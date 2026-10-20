@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { changedDjTempoPercent, clampDeckRate, deckAudioSourceKey, deckRatePercent, equalPowerCrossfade, formatDjTime, syncDeckRate } from "./mixerMath";
+import { changedDjTempoPercent, clampDeckRate, deckAudioSourceKey, deckRatePercent, djCueSkipBeats, equalPowerCrossfade, estimatedDjBeatAt, formatDjTime, syncDeckRate } from "./mixerMath";
 
 describe("DJ mixer mechanics", () => {
   it("mutes B at the left end and A at the right end", () => {
@@ -60,6 +60,37 @@ describe("DJ mixer mechanics", () => {
     expect(changedDjTempoPercent(1, 1.001)).toBeNull();
     expect(changedDjTempoPercent(1, 1.05)).toBe(105);
     expect(changedDjTempoPercent(1.14, 1.15)).toBe(115);
+  });
+
+  it("derives beat guide from source media time at BPM even when playback rate changes", () => {
+    expect(estimatedDjBeatAt(0, 120, 1)).toEqual({ barBeat: 1, progress: 0, audibleBpm: 120 });
+    expect(estimatedDjBeatAt(.25, 120, 1)).toEqual({ barBeat: 1, progress: .5, audibleBpm: 120 });
+    expect(estimatedDjBeatAt(.5, 120, 1.1)).toEqual({ barBeat: 2, progress: 0, audibleBpm: 132 });
+    expect(estimatedDjBeatAt(2, 120)).toMatchObject({ barBeat: 1, progress: 0 });
+  });
+
+  it("does not invent a beat grid for missing or unusable metadata", () => {
+    for (const bpm of [null, 0, -10, 25, 301, Number.NaN, Infinity]) {
+      expect(estimatedDjBeatAt(1, bpm)).toBeNull();
+    }
+    expect(estimatedDjBeatAt(-1, 120)).toBeNull();
+    expect(estimatedDjBeatAt(Number.NaN, 120)).toBeNull();
+  });
+
+  it("seeks exactly four source-media beats, independent of audible playback speed", () => {
+    expect(djCueSkipBeats(10, 120, -4, 30)).toBe(8);
+    expect(djCueSkipBeats(10, 120, 4, 30)).toBe(12);
+    expect(djCueSkipBeats(1, 120, -4, 30)).toBe(0);
+    expect(djCueSkipBeats(29, 120, 4, 30)).toBe(30);
+    expect(djCueSkipBeats(10, null, 4, 30)).toBeNull();
+  });
+
+  it("guards seek against malformed BPM, duration and unbounded jumps", () => {
+    expect(djCueSkipBeats(10, 120, 33, 30)).toBeNull();
+    expect(djCueSkipBeats(10, 120, 1.5, 30)).toBeNull();
+    expect(djCueSkipBeats(10, 120, 4, Number.NaN)).toBeNull();
+    expect(djCueSkipBeats(10, 120, 4, 0)).toBeNull();
+    expect(djCueSkipBeats(Number.NaN, 120, 4, 30)).toBeNull();
   });
 
   it("formats positions without invalid timestamps", () => {

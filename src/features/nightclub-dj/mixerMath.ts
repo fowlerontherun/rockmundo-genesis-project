@@ -47,3 +47,40 @@ export function changedDjTempoPercent(previousRate: number, nextRate: number): n
   const next = deckRatePercent(nextRate);
   return previous === next ? null : next;
 }
+
+
+/**
+ * A metadata-only, uncalibrated listening guide. The audio element's
+ * currentTime is in source-media seconds even when playbackRate changes.
+ * BPM therefore controls source beats; rate affects *audible* tempo only.
+ * Do not treat the first beat as a detected downbeat or use this for scoring.
+ */
+export function estimatedDjBeatAt(
+  mediaSeconds: number, sourceBpm: number | null, rate = 1,
+): { barBeat: number; progress: number; audibleBpm: number } | null {
+  if (!Number.isFinite(mediaSeconds) || mediaSeconds < 0 ||
+      sourceBpm === null || !Number.isFinite(sourceBpm) ||
+      sourceBpm < 30 || sourceBpm > 300) return null;
+  const sourceBeats = mediaSeconds * sourceBpm / 60;
+  // Keep a harmless display marker even when there is no beat analysis.
+  const wholeBeat = Math.floor(sourceBeats);
+  return {
+    barBeat: (wholeBeat % 4) + 1,
+    progress: Math.min(1, Math.max(0, sourceBeats - wholeBeat)),
+    audibleBpm: Math.round(sourceBpm * clampDeckRate(rate)),
+  };
+}
+
+/** A cue-skip is local player seeking, NEVER a validated live-mixer event. */
+export function djCueSkipBeats(
+  mediaSeconds: number,
+  sourceBpm: number | null,
+  beatDelta: number,
+  durationSeconds: number,
+): number | null {
+  if (!estimatedDjBeatAt(mediaSeconds, sourceBpm) ||
+      !Number.isInteger(beatDelta) || Math.abs(beatDelta) > 32 ||
+      !Number.isFinite(durationSeconds) || durationSeconds <= 0) return null;
+  const moved = mediaSeconds + beatDelta * 60 / (sourceBpm as number);
+  return Math.max(0, Math.min(durationSeconds, moved));
+}
