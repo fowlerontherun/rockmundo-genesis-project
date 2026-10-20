@@ -1,3 +1,4 @@
+import { ReleaseArtworkDesigner } from './artwork/ReleaseArtworkDesigner';
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,8 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
   const [selectedStreamingPlatforms, setSelectedStreamingPlatforms] = useState<string[]>([]);
   const [scheduledReleaseDate, setScheduledReleaseDate] = useState<Date | null>(null);
   const [revenueShareEnabled, setRevenueShareEnabled] = useState(false);
+  const [artworkBusy, setArtworkBusy] = useState(false);
+  const [designerOpen, setDesignerOpen] = useState(false);
   const [artworkFile, setArtworkFile] = useState<File | null>(null);
   const [artworkPreviewUrl, setArtworkPreviewUrl] = useState<string | null>(null);
 
@@ -350,6 +353,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
     setScheduledReleaseDate(null);
     setRevenueShareEnabled(false);
     clearArtwork();
+    setDesignerOpen(false);
   };
 
   const handleNext = () => {
@@ -375,7 +379,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={next => { if (!artworkBusy && !createRelease.isPending) onOpenChange(next); }}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Release - Step {step} of 5</DialogTitle>
@@ -469,7 +473,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
                     type="file"
                     accept="image/*"
                     onChange={handleArtworkChange}
-                    disabled={createRelease.isPending}
+                    disabled={createRelease.isPending || artworkBusy}
                   />
                   <p className="text-xs text-muted-foreground">
                     Add the artwork now or skip it and add/change it later from the release details page. Maximum file size 10 MB.
@@ -481,7 +485,10 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
               </div>
             </div>
 
-            <Button onClick={handleNext} disabled={createRelease.isPending} className="w-full">Next: Select Songs</Button>
+            <Button type="button" variant="outline" disabled={createRelease.isPending || artworkBusy} aria-expanded={designerOpen} onClick={() => setDesignerOpen(v => !v)}>{designerOpen ? 'Hide artwork studio' : 'Design your artwork'}</Button>
+            {designerOpen && <ReleaseArtworkDesigner onBusyChange={setArtworkBusy} title={title} artist={artistName} disabled={createRelease.isPending || artworkBusy} onUse={file => { setArtworkFile(file); setArtworkPreviewUrl(URL.createObjectURL(file)); }} />}
+
+            <Button onClick={handleNext} disabled={createRelease.isPending || artworkBusy} className="w-full">Next: Select Songs</Button>
           </div>
         )}
 
