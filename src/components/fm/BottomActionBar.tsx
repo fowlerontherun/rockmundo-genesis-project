@@ -27,6 +27,7 @@ export const BottomActionBar = () => {
           variant="ghost"
           size="sm"
           className="h-8 gap-1.5"
+          aria-label={`Version history, version ${version}`}
           onClick={() => navigate("/version-history")}
         >
           <History className="h-3.5 w-3.5" />
@@ -37,6 +38,7 @@ export const BottomActionBar = () => {
           variant="ghost"
           size="sm"
           className="h-8 gap-1.5"
+          aria-label={translateFMLabel(language, "Schedule") || "Schedule"}
           onClick={() => navigate("/schedule")}
         >
           <Calendar className="h-3.5 w-3.5" />
@@ -47,6 +49,9 @@ export const BottomActionBar = () => {
           variant="ghost"
           size="sm"
           className="h-8 gap-1.5 relative"
+          aria-label={unread && unread > 0
+            ? `${translateFMLabel(language, "Inbox") || "Inbox"}: ${unread} ${translateFMLabel(language, "Unread messages") || "Unread messages"}`
+            : translateFMLabel(language, "Inbox") || "Inbox"}
           onClick={() => navigate("/inbox")}
         >
           <Bell className="h-3.5 w-3.5" />

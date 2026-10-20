@@ -46,10 +46,23 @@ test('keyboard-only viewer flow remains operable', async ({ page }) => {
   await page.keyboard.press('Enter');
   for (const name of ['Play', 'Pause', 'Mute', 'Unmute', '2×', '1×', 'Next song', 'Next highlight', 'Skip to result', 'View Result', 'Close Viewer']) {
     const button = page.getByRole('button', { name, exact: true }).first();
+    // A control may disappear after the replay reaches the result. Check
+    // presence first and avoid waiting for a stale optional control to reappear.
+    if (await button.count() === 0) continue;
     const actionable = await button.isVisible().catch(() => false)
       && await button.isEnabled().catch(() => false);
     if (!actionable) continue;
-    await button.focus({ timeout: 5_000 });
+    try {
+      await button.focus({ timeout: 1_000 });
+    } catch (error) {
+      // Ignore a replay-state transition only if the control is now absent
+      // or no longer actionable; otherwise a focus regression must fail.
+      if (await button.count() === 0
+        || !(await button.isVisible().catch(() => false))
+        || !(await button.isEnabled().catch(() => false))) continue;
+      throw error;
+    }
+    await expect(button).toBeFocused();
     await page.keyboard.press('Enter');
   }
   await expect(page.locator(':focus')).toBeVisible();
