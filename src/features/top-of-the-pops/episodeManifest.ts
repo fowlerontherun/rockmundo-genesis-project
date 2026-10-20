@@ -73,6 +73,23 @@ export interface TotpManifestSegment {
   rights: TotpTrackRights;
 }
 
+
+/** Frozen crowd recording and absolute cue time used by the master render and archive.
+ * A selected asset is immutable within this manifest checksum. */
+export interface TotpManifestCrowdCue {
+  cue_id: string;
+  item_index: number;
+  at_ms: number;
+  category: "ambient" | "applause" | "cheer" | "encore" | "finale" | "reaction";
+  asset_id: string;
+  audio_url: string;
+  duration_ms: number;
+  loopable: boolean;
+  gain_db: number;
+  cue_start_seconds: number;
+  cue_end_seconds: number | null;
+}
+
 export interface TotpEpisodeManifest {
   manifest_version: 1;
   episode_id: string;
@@ -95,6 +112,8 @@ export interface TotpEpisodeManifest {
   segments: TotpManifestSegment[];
   /** Complete presenter recording sheet, including programme continuity outside act segments. */
   presenter_dialogue?: TotpManifestPresenterDialogue[];
+  /** Frozen crowd cues selected at production time; absent on legacy manifests. */
+  crowd_cues?: TotpManifestCrowdCue[];
   /** Immutable UK chart snapshot used by the browser show and canonical master. */
   chart_rundown?: TotpChartRundown | null;
   total_runtime_ms: number;
@@ -153,6 +172,8 @@ export interface TotpManifestInput {
       script_checksum: string | null;
     } | null;
   }>;
+  /** Approved crowd selection fixed to render-item indices and exact cue times. */
+  crowdCues?: TotpManifestCrowdCue[];
   /** Frozen UK streaming/digital-sales chart snapshot for this episode. */
   chartRundown?: TotpChartRundown | null;
   /** song_id -> rights record */
@@ -225,6 +246,7 @@ export function buildTotpEpisodeManifest(input: TotpManifestInput): TotpEpisodeM
     presenterSequences = {},
     presenterDialogue = [],
     chartRundown = null,
+    crowdCues,
     rights,
   } = input;
 
@@ -319,6 +341,7 @@ export function buildTotpEpisodeManifest(input: TotpManifestInput): TotpEpisodeM
     programme_spec: PROGRAMME_SPEC,
     segments,
     presenter_dialogue: presenterDialogueManifest,
+    ...(crowdCues !== undefined ? { crowd_cues: [...crowdCues].sort((a, b) => a.at_ms - b.at_ms || a.cue_id.localeCompare(b.cue_id)) } : {}),
     chart_rundown: chartRundown
       ? {
           ...chartRundown,
