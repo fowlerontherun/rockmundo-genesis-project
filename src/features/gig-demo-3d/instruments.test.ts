@@ -9,13 +9,13 @@ import { disposeModel } from '@/features/player-model/model';
 import { STAGE_INSTRUMENTS, stageAssignment, type InstrumentId } from './instrumentCatalog';
 import { Musician } from './performers';
 import { buildInstrument } from './instruments';
-// Use the two shipped CC0 modular styles used in performers.test.ts for the
-// instrument-contact contract. Feminine avatar assets have a separate asset
-// integrity/wardrobe test; these pose checks should not depend on its export.
+// Exercise both body frames in a DOM-enabled test environment.
 const models: T.Object3D[] = [];
-beforeAll(async () => { for (const name of ['casual', 'punk']) {
+// Node Buffers and jsdom have different ArrayBuffer realms. Copy into the
+// current test realm before GLTFLoader's instanceof ArrayBuffer check.
+beforeAll(async () => { for (const name of ['casual', 'female-casual']) {
     const file = readFileSync(resolve(`public/gig-demo-3d/${name}.glb`));
-    models.push((await new GLTFLoader().parseAsync(file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength) as ArrayBuffer, '')).scene);
+    models.push((await new GLTFLoader().parseAsync(new Uint8Array(file).buffer as ArrayBuffer, '')).scene);
 } });
 describe('complete stage instrument coverage', () => {
     it('covers every instrument skill, tier, and displayed name', () => {
