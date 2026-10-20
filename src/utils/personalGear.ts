@@ -145,7 +145,7 @@ const SPECIALIST_INSTRUMENT_ROLE_TYPES = new Map<string, string>(
     .map(([id, definition]) => [definition.label.toLowerCase(), id] as const),
 );
 
-/** Only truly legacy generic shop subcategories may alias a specific instrument.
+/** Allow only narrowly defined generic instrument aliases and compatible accessories.
  * Modern subcategories from STAGE_INSTRUMENTS must never cross-match roles.
  */
 const SPECIALIST_LEGACY_INSTRUMENT_ALIASES: Record<string, readonly string[]> = {
@@ -153,7 +153,8 @@ const SPECIALIST_LEGACY_INSTRUMENT_ALIASES: Record<string, readonly string[]> = 
   "acoustic_guitar": ["acoustic"],
   "classical_guitar": ["classical", "nylon_string_guitar"],
   "bass_guitar": ["bass"],
-  "rock_drums": ["drums", "drum_kit", "kit"],
+  "rock_drums": ["drums", "drum_kit", "kit", "cymbals"],
+  "jazz_drums": ["cymbals"],
   "classical_piano": ["keyboard", "piano"],
   "analog_synth": ["synth", "synthesizer"],
 };
