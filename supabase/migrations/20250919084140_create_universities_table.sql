@@ -11,6 +11,16 @@ CREATE TABLE IF NOT EXISTS public.universities (
   CONSTRAINT universities_name_city_unique UNIQUE (name, city)
 );
 
+-- The first September schema used a fixed `course_cost` amount, while
+-- the October education schema and later seeds also require a multiplier and
+-- descriptive copy. CREATE TABLE IF NOT EXISTS in that later migration does
+-- not add missing columns, so reconcile the compatible additive fields here.
+-- Existing university prices and records are preserved.
+ALTER TABLE public.universities
+  ADD COLUMN IF NOT EXISTS course_cost_modifier NUMERIC NOT NULL DEFAULT 1.0
+    CHECK (course_cost_modifier BETWEEN 0.5 AND 2.0),
+  ADD COLUMN IF NOT EXISTS description TEXT;
+
 CREATE INDEX IF NOT EXISTS universities_city_idx ON public.universities (city);
 CREATE INDEX IF NOT EXISTS universities_prestige_idx ON public.universities (prestige DESC);
 
