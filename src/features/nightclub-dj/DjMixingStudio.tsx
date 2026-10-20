@@ -17,13 +17,16 @@ import { DjSetlistPlanner } from "./DjSetlistPlanner";
 import { djReadinessSteps, useDjMixReadiness } from "./djReadiness";
 import { bindDjDeckLifecycle } from "./deckAudioLifecycle";
 import { deliverDjMixEvent } from "./mixerEventDelivery";
+import { DjPadBank, DjPlatter, DjTrimMeter, DjWaveform } from "./DjHardwareVisuals";
+import { djHotCueSeek, djJogSeek, emptyDjHotCues, storeDjHotCue, type DjHotCueSlots } from "./djHardwareControls";
+import "./DjConsole.css";
 
 function AudioDeck({
-  deck, tracks, selectedId, onSelect, level, rate, onRateChange, onDeckPlay, onRateCommit,
+  deck, tracks, selectedId, onSelect, level, trim, rate, onRateChange, onDeckPlay, onRateCommit,
 }: {
   deck: "A" | "B"; tracks: DjAudioTrack[];
   selectedId: string; onSelect: (id: string) => void;
-  level: number; rate: number; onRateChange: (rate: number) => void;
+  level: number; trim: number; rate: number; onRateChange: (rate: number) => void;
   onDeckPlay?: (deck: "A" | "B", track: DjAudioTrack) => void;
   onRateCommit?: (deck: "A" | "B", speed: number) => void;
 }) {
@@ -40,6 +43,30 @@ function AudioDeck({
   const [duration, setDuration] = useState(0);
   const [cue, setCue] = useState(0);
   const [retryNonce, setRetryNonce] = useState(0);
+  const [hotCues, setHotCues] = useState<DjHotCueSlots>(emptyDjHotCues);
+  const [padMode, setPadMode] = useState<"store" | "play">("play");
+  // Per-track scratch-pad positions are local; never write fake mixer events.
+  useEffect(() => {
+    setHotCues(emptyDjHotCues());
+    setPadMode("play");
+  }, [audioSourceKey]);
+
+  const pressHotCue = (index: number) => {
+    const audio = audioRef.current;
+    if (!audio || !duration) return;
+    if (padMode === "store") {
+      setHotCues(previous => storeDjHotCue(previous, index, audio.currentTime, duration));
+      return;
+    }
+    const next = djHotCueSeek(hotCues, index, duration);
+    if (next !== null) { audio.currentTime = next; setElapsed(next); }
+  };
+  const nudgeJog = (direction: -1 | 1) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const next = djJogSeek(audio.currentTime, direction, duration);
+    if (next !== null) { audio.currentTime = next; setElapsed(next); }
+  };
   const beat = estimatedDjBeatAt(elapsed, track?.bpm ?? null, rate);
   const canJumpBar = Boolean(beat && duration > 0);
   const jumpBar = (direction: -1 | 1) => {
@@ -92,9 +119,9 @@ function AudioDeck({
 
   useEffect(() => {
     if (!audioRef.current) return;
-    audioRef.current.volume = Math.max(0, Math.min(1, level));
+    audioRef.current.volume = Math.max(0, Math.min(1, level * trim / 100));
     audioRef.current.playbackRate = clampDeckRate(rate);
-  }, [level, rate, selectedId]);
+  }, [level, trim, rate, selectedId]);
 
   const togglePlayback = async () => {
     const player = audioRef.current;
@@ -108,14 +135,14 @@ function AudioDeck({
   };
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
+    <Card className={`rm-dj-deck rm-dj-deck--${deck.toLowerCase()}`}>
+      <CardHeader className="rm-dj-deck-head">
         <CardTitle className="flex items-center justify-between gap-2 text-base">
-          <span className="flex items-center gap-2"><Disc3 className="h-4 w-4 text-primary" /> Deck {deck}</span>
+          <span className="flex items-center gap-2"><span className="rm-dj-deck-tag">{deck}</span><span className="rm-dj-small-label">ROCKMUNDO / DIRECT DRIVE</span></span>
           <Badge variant="secondary">{track?.source === "admin" ? "Club library" : "RockMundo"}</Badge>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="rm-dj-deck-content">
         <Select value={selectedId || undefined} onValueChange={onSelect}>
           <SelectTrigger aria-label={`Choose a track for deck ${deck}`}>
             <SelectValue placeholder="Load a track..." />
@@ -126,9 +153,17 @@ function AudioDeck({
             ))}
           </SelectContent>
         </Select>
-        <div className="text-sm min-h-10">
-          <p className="font-medium truncate">{track?.title ?? "Select a track"}</p>
-          <p className="text-xs text-muted-foreground">{track?.genre ?? "—"} · {track?.bpm ? `${track.bpm} BPM` : "BPM unknown"} · {track?.musicalKey ?? "Key unknown"}</p>
+        <div className="rm-dj-deck-display">
+          <div className="rm-dj-track-row">
+            <div className="min-w-0">
+              <p className="rm-dj-track-name">{track?.title ?? "Load a track"}</p>
+              <p className="rm-dj-track-artist">{track?.artist ?? "RockMundo"}</p>
+            </div>
+            <div className="rm-dj-track-bpm">{beat?.audibleBpm ?? track?.bpm ?? "—"}<small>BPM</small></div>
+          </div>
+          <DjWaveform deck={deck} trackId={audioSourceKey} position={duration > 0 ? elapsed / duration : 0} />
+          <div className="rm-dj-display-times"><span>{formatDjTime(elapsed)} / {formatDjTime(duration)}</span><span>{track?.musicalKey ?? "KEY —"}</span></div>
+          <p className="rm-dj-visual-note">Illustrative waveform · seek with the track-position slider below</p>
         </div>
         <audio
           ref={audioRef}
@@ -152,7 +187,7 @@ function AudioDeck({
             }
           }}
         />
-        <div className="space-y-1">
+        <div className="rm-dj-control-box space-y-1">
           <Slider aria-label={`Deck ${deck} seek position`} value={[Math.min(elapsed, duration || 1)]}
             min={0} max={Math.max(1, Math.ceil(duration))} step={1} disabled={!duration}
             onValueChange={([value]) => { if (audioRef.current && duration) audioRef.current.currentTime = value; }} />
@@ -160,7 +195,12 @@ function AudioDeck({
             <span>{formatDjTime(elapsed)}</span><span>{formatDjTime(duration)}</span>
           </div>
         </div>
-        <div className="rounded-md border p-2 space-y-1" data-testid={`dj-beat-guide-${deck}`}>
+        <div className="rm-dj-deck-workbench">
+          <DjPlatter deck={deck} playing={playing} disabled={!duration} onNudge={nudgeJog} />
+          <DjPadBank deck={deck} cues={hotCues} mode={padMode} disabled={!duration}
+            onPress={pressHotCue} onToggleMode={() => setPadMode(value => value === "store" ? "play" : "store")} />
+        </div>
+        <div className="rm-dj-control-box space-y-1" data-testid={`dj-beat-guide-${deck}`}>
           {beat ? (
             <>
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
@@ -178,8 +218,8 @@ function AudioDeck({
             <p className="text-xs text-muted-foreground">Beat guide unavailable: no reliable BPM metadata.</p>
           )}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" onClick={togglePlayback} disabled={!track || loading || !!error}>
+        <div className="rm-dj-transport">
+          <Button type="button" className="rm-dj-play" onClick={togglePlayback} disabled={!track || loading || !!error}>
             {playing ? <Pause className="h-4 w-4 mr-1" /> : <Play className="h-4 w-4 mr-1" />}
             {playing ? "Pause" : "Play"}
           </Button>
@@ -200,7 +240,7 @@ function AudioDeck({
             +4 beats
           </Button>
         </div>
-        <div className="space-y-2">
+        <div className="rm-dj-control-box space-y-2">
           <div className="flex justify-between text-xs">
             <span>Tempo (playback speed)</span><span>{(rate * 100).toFixed(0)}%</span>
           </div>
