@@ -34,7 +34,7 @@ describe('legacy 2025 songwriting feature enhancement is compatible with existin
   it('uses PostgreSQL-compatible guard for an existing session estimate constraint', () => {
     const refine = readFileSync(fileURLToPath(new URL('../supabase/migrations/20250929104000_refine_songwriting_schema.sql', import.meta.url)), 'utf8');
     // SQL comments may explain unsupported syntax; only actual statements matter.
-    const executableSql = refine.replace(/--[^\\r\\n]*/g, '');
+    const executableSql = refine.replace(/--[^\r\n]*/g, '');
     assert.doesNotMatch(executableSql, /ADD CONSTRAINT IF NOT EXISTS/i);
     assert.match(refine, /FROM pg_constraint/);
     assert.match(refine, /conrelid = 'public\.songwriting_projects'::regclass/);
