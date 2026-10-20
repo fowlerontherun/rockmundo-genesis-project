@@ -152,6 +152,11 @@ export class CrowdAudioManager {
   }
 
   private release(slot: Slot, fadeOutMs = 0): void {
+    if (slot.stopTimer) {
+      clearTimeout(slot.stopTimer);
+      this.timers.delete(slot.stopTimer);
+      slot.stopTimer = undefined;
+    }
     if (fadeOutMs && this.ctx && this.ctx.state !== "closed") {
       const now = this.ctx.currentTime;
       slot.gain.gain.cancelScheduledValues(now);
@@ -159,10 +164,6 @@ export class CrowdAudioManager {
       slot.gain.gain.linearRampToValueAtTime(0, now + fadeOutMs / 1000);
       slot.stopTimer = this.schedule(() => this.release(slot), fadeOutMs + 20);
       return;
-    }
-    if (slot.stopTimer) {
-      clearTimeout(slot.stopTimer);
-      this.timers.delete(slot.stopTimer);
     }
     slot.audio.onended = null;
     slot.audio.pause();
