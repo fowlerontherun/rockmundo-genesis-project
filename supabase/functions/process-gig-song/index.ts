@@ -1,3 +1,4 @@
+import { gigPositionIsDue } from "../_shared/gig-execution-timing.ts";
 import { authorizeGigRequest } from "../_shared/authorize-gig-request.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -826,6 +827,27 @@ serve(async (req) => {
 
     if (gig.status !== "in_progress") {
       throw new Error(`Cannot process song for gig in status ${gig.status}`);
+    }
+
+    // A band member cannot choose a different setlist item or fast-forward the
+    // server clock by posting arbitrary position/song IDs.
+    const { data: canonicalSetlist, error: setlistError } = await supabaseClient
+      .from('setlist_songs')
+      .select('song_id,performance_item_id,item_type,songs(duration_seconds),performance_items_catalog(duration_seconds)')
+      .eq('setlist_id', gig.setlist_id).order('position');
+    if (setlistError || !Array.isArray(canonicalSetlist) || !Number.isInteger(position)
+        || position < 0 || position >= canonicalSetlist.length) {
+      throw new Error('Invalid canonical setlist position');
+    }
+    const scheduledItem = canonicalSetlist[position];
+    const scheduledItemType = scheduledItem.item_type === 'performance_item'
+      || (!scheduledItem.song_id && !!scheduledItem.performance_item_id) ? 'performance_item' : 'song';
+    if (scheduledItemType !== itemType || (scheduledItem.song_id ?? null) !== (songId ?? null)
+        || (scheduledItem.performance_item_id ?? null) !== (performanceItemId ?? null)) {
+      throw new Error('Setlist item does not match authoritative gig');
+    }
+    if (!gigPositionIsDue(gig.started_at, canonicalSetlist, position, Date.now())) {
+      throw new Error('Gig setlist item is not due yet');
     }
 
     const { data: canonicalOutcome, error: canonicalOutcomeError } = await supabaseClient
