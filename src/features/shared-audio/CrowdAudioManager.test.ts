@@ -36,6 +36,7 @@ class FakeContext {
 }
 class FakeAudio {
   static created: FakeAudio[] = [];
+  static rejectPlay = false;
   paused = true;
   crossOrigin = "";
   preload = "";
@@ -46,7 +47,7 @@ class FakeAudio {
   src: string;
   constructor(url: string) { this.src = url; FakeAudio.created.push(this); }
   addEventListener = vi.fn();
-  play = vi.fn(async () => { this.paused = false; });
+  play = vi.fn(async () => { if (FakeAudio.rejectPlay) throw Error("autoplay blocked"); this.paused = false; });
   pause = vi.fn(() => { this.paused = true; });
   load = vi.fn();
   removeAttribute = vi.fn((attr: string) => { if (attr === "src") this.src = ""; });
@@ -59,6 +60,7 @@ let manager: CrowdAudioManager;
 beforeEach(() => {
   FakeContext.created = [];
   FakeAudio.created = [];
+  FakeAudio.rejectPlay = false;
   vi.stubGlobal("Audio", FakeAudio);
   vi.stubGlobal("AudioContext", FakeContext);
   vi.useFakeTimers();
@@ -137,10 +139,9 @@ describe("shared crowd Web Audio mixer", () => {
   it("does not consume cooldown after autoplay rejection or invalid asset URLs", async () => {
     expect(await manager.playReaction({ id: "unsafe", url: "javascript:alert(1)" }, 100)).toBe(false);
     const failed = clip("failure");
-    const original = FakeAudio.prototype.play;
-    FakeAudio.prototype.play = vi.fn(async () => { throw Error("autoplay blocked"); });
+    FakeAudio.rejectPlay = true;
     expect(await manager.playReaction(failed, 100)).toBe(false);
-    FakeAudio.prototype.play = original;
+    FakeAudio.rejectPlay = false;
     expect(await manager.playReaction(failed, 100)).toBe(true);
   });
 
