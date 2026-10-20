@@ -35,6 +35,19 @@ export class CrowdAudioManager {
   private volume = 0.6;
   private speaking = false;
   private generation = 0;
+  private owner: symbol | null = null;
+
+  claim(owner: symbol): void {
+    if (this.owner === owner) return;
+    this.stop();
+    this.owner = owner;
+  }
+
+  releaseOwner(owner: symbol): void {
+    if (this.owner !== owner) return;
+    this.stop();
+    this.owner = null;
+  }
 
   /** Call on the explicit user Play gesture, before asynchronous cue loading. */
   prime(): void {
@@ -234,3 +247,6 @@ export class CrowdAudioManager {
     this.buses = {};
   }
 }
+
+/** One running crowd graph shared by gigs, studio broadcasts and preview tools. */
+export const sharedCrowdAudioManager = new CrowdAudioManager();
