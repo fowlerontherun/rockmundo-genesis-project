@@ -87,6 +87,8 @@ export class Musician {
     performing = true;
     walking = false;
     action: string | null = null;
+    /** Immutable source-frame progress for DJ deck gestures and deterministic replay. */
+    actionProgress = 0;
     interactionTarget: T.Vector3 | null = null;
     interactionStrength = 0;
     performanceSection: PerformanceSection = 'idle';

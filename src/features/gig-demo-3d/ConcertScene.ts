@@ -593,6 +593,7 @@ export class ConcertScene {
         actor.root.position.copy(nextPosition);
         actor.walking = state.walking;
         actor.action = state.action;
+        actor.actionProgress = state.actionProgress;
         actor.root.rotation.set(0, 0, 0);
 
         // When the television blocking moves a performer, turn them into the
