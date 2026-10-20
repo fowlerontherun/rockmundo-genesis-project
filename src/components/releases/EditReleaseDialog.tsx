@@ -1,5 +1,5 @@
 import { ReleaseArtwork } from '@/components/game-art/ReleaseArtwork';
-import { ReleaseArtworkDesigner } from './artwork/ReleaseArtworkDesigner';
+import { ReleaseArtworkDesigner, type ArtworkDraft } from './artwork/ReleaseArtworkDesigner';
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,7 @@ export function EditReleaseDialog({ open, onOpenChange, release }: EditReleaseDi
   const [artworkUrl, setArtworkUrl] = useState("");
   const [scheduledDate, setScheduledDate] = useState("");
   const [artworkBusy, setArtworkBusy] = useState(false);
+  const [artworkDraft, setArtworkDraft] = useState<ArtworkDraft | null>(null);
   const [designerOpen, setDesignerOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const queryClient = useQueryClient();
@@ -75,6 +76,8 @@ export function EditReleaseDialog({ open, onOpenChange, release }: EditReleaseDi
       setScheduledDate(release.scheduled_release_date || "");
     }
   }, [release]);
+
+  useEffect(() => { setArtworkDraft(null); }, [release?.id]);
 
   const updateRelease = useMutation({
     mutationFn: async () => {
@@ -208,7 +211,7 @@ export function EditReleaseDialog({ open, onOpenChange, release }: EditReleaseDi
           </div>
 
           <Button type="button" variant="outline" disabled={uploading || updateRelease.isPending || artworkBusy} aria-expanded={designerOpen} onClick={() => setDesignerOpen(v => !v)}>{designerOpen ? 'Hide artwork studio' : 'Design your artwork'}</Button>
-          {designerOpen && <ReleaseArtworkDesigner onBusyChange={setArtworkBusy} key={release.id} title={title} artist={artistName} disabled={uploading || updateRelease.isPending || artworkBusy} onUse={uploadArtworkFile} />}
+          {designerOpen && <ReleaseArtworkDesigner draft={artworkDraft ?? undefined} onDraftChange={setArtworkDraft} onBusyChange={setArtworkBusy} key={release.id} title={title} artist={artistName} disabled={uploading || updateRelease.isPending || artworkBusy} onUse={uploadArtworkFile} />}
 
           <div className="flex gap-2 pt-4">
             <Button
