@@ -25,7 +25,7 @@ describe('player artwork studio', () => {
   });
   it('renders vinyl finish changes with the same renderer as the export', () => {
     render(<ReleaseArtworkDesigner title="Night Shift" artist="War Dogs" onUse={vi.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Vinyl', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: /^Vinyl$/ }));
     fireEvent.change(screen.getByLabelText('Vinyl finish'), { target: { value: 'splatter' } });
     expect(drawArtwork).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ vinylStyle: 'splatter' }), 'vinyl');
   });
@@ -40,12 +40,12 @@ it('restores the edited design and selected surface when the parent reopens the 
   const onDraftChange = vi.fn();
   const { unmount } = render(<ReleaseArtworkDesigner title="Original" artist="Band" onUse={vi.fn()} onDraftChange={onDraftChange} />);
   fireEvent.change(screen.getByLabelText('Design title'), { target: { value: 'Keep this title' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Vinyl', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: /^Vinyl$/ }));
   fireEvent.change(screen.getByLabelText('Vinyl finish'), { target: { value: 'splatter' } });
   const draft = onDraftChange.mock.calls.at(-1)![0];
   unmount();
   render(<ReleaseArtworkDesigner title="Original" artist="Band" onUse={vi.fn()} draft={draft} />);
   expect(screen.getByLabelText('Design title')).toHaveValue('Keep this title');
-  expect(screen.getByRole('button', { name: 'Vinyl', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('button', { name: /^Vinyl$/ })).toHaveAttribute('aria-pressed', 'true');
   expect(screen.getByLabelText('Vinyl finish')).toHaveValue('splatter');
 });
