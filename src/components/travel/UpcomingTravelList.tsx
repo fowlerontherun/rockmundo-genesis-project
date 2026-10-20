@@ -1,3 +1,4 @@
+import { TravelRouteArtwork } from '@/components/game-art/TravelArtwork';
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Calendar, Clock, MapPin, Plane, Train, Bus, Ship, ArrowRight, AlertCircle, X, RefreshCw } from "lucide-react";
@@ -335,21 +336,9 @@ export const UpcomingTravelList = ({ userId }: UpcomingTravelListProps) => {
           <Card key={travel.id} className="relative overflow-hidden">
             <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
             <CardContent className="p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 space-y-2">
-                  {/* Route */}
-                  <div className="flex items-center gap-2 font-semibold">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    {travel.from_city ? (
-                      <>
-                        <span>{travel.from_city.name}</span>
-                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                        <span>{travel.to_city.name}</span>
-                      </>
-                    ) : (
-                      <span>{travel.to_city.name}</span>
-                    )}
-                  </div>
+              <div className="flex flex-col items-stretch justify-between gap-4 sm:flex-row sm:items-start">
+                <div className="min-w-0 flex-1 space-y-2">
+                  <TravelRouteArtwork from={travel.from_city?.name} to={travel.to_city.name} transport={travel.transport_type} />
 
                   {/* Details Row */}
                   <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
