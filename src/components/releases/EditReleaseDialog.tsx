@@ -1,3 +1,4 @@
+import { ReleaseArtwork } from '@/components/game-art/ReleaseArtwork';
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -194,20 +195,12 @@ export function EditReleaseDialog({ open, onOpenChange, release }: EditReleaseDi
 
           <div className="space-y-2">
             <Label>Artwork</Label>
+            <p className="text-xs text-muted-foreground">A default sleeve appears when no artwork is available. Upload your own cover to replace it.</p>
             <div className="flex gap-2 items-center">
-              {artworkUrl ? (
-                <img
-                  src={artworkUrl}
-                  alt="Release artwork"
-                  className="w-20 h-20 object-cover rounded-md border"
-                />
-              ) : (
-                <div className="w-20 h-20 bg-muted rounded-md flex items-center justify-center text-muted-foreground text-xs">
-                  No artwork
-                </div>
-              )}
-              <div className="flex-1">
+              <ReleaseArtwork id={release.id} title={title} artist={artistName} artworkUrl={artworkUrl} releaseType={release.release_type} />
+              <div className="min-w-0 flex-1">
                 <Input
+                  aria-label="Upload release artwork"
                   type="file"
                   accept="image/*"
                   onChange={handleArtworkUpload}
