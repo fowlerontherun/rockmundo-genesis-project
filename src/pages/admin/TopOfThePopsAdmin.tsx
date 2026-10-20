@@ -1,3 +1,4 @@
+import { CrowdMixPreview } from "@/features/shared-audio/CrowdMixPreview";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "react-router-dom";
@@ -176,9 +177,11 @@ export default function TopOfThePopsAdmin() {
           </TabsContent>
           <TabsContent value="audio" className="space-y-4">
             <TotpAudioStudio episode={null} />
+            <CrowdMixPreview />
             <TotpMediaManager presenterKey="alex_rayne" />
           </TabsContent>
           <TabsContent value="demo" className="space-y-4" id="demo">
+            <CrowdMixPreview />
             <TotpTestEpisodeCard />
           </TabsContent>
           <TabsContent value="broadcast" className="space-y-4" id="broadcast">
@@ -268,10 +271,12 @@ export default function TopOfThePopsAdmin() {
 
         <TabsContent value="audio" className="space-y-4">
           <TotpAudioStudio episode={current} />
-          <TotpMediaManager presenterKey={current.presenter_key ?? "alex_rayne"} />
+          <CrowdMixPreview />
+            <TotpMediaManager presenterKey={current.presenter_key ?? "alex_rayne"} />
         </TabsContent>
 
         <TabsContent value="demo" className="space-y-4" id="demo">
+            <CrowdMixPreview />
           <TotpTestEpisodeCard />
         </TabsContent>
 
