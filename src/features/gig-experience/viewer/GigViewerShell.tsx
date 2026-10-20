@@ -424,6 +424,7 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
   }
 
   const analysisControls = (
+    <>
     <CrowdVolumeControl />
     <GigViewerControls
       playing={state.isPlaying}
@@ -456,6 +457,7 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
       onPerformancePreference={setPerformancePreference}
       onFullscreen={toggleFullscreen}
     />
+    </>
   );
   const compactControls = (
     <GigViewerControls
