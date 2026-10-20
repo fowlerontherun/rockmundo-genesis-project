@@ -1,3 +1,4 @@
+import { NewsArtwork } from "@/components/game-art/GameArtwork";
 import { useQuery } from "@tanstack/react-query";
 import { format, formatDistanceToNow } from "date-fns";
 import { AlertTriangle, Globe2, Loader2, Newspaper } from "lucide-react";
@@ -23,8 +24,9 @@ const categoryVariant: Record<WorldNewsItem["category"], "default" | "secondary"
 
 const NewsRow = ({ item }: { item: WorldNewsItem }) => {
   const content = (
-    <article className="rounded-lg border bg-card/60 p-3 transition-colors hover:bg-muted/40">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+    <article className="flex gap-3 rounded-lg border bg-card/60 p-3 transition-colors hover:bg-muted/40">
+      <NewsArtwork category={item.category} />
+      <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant={categoryVariant[item.category]} className="text-[10px] uppercase tracking-wide">

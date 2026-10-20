@@ -1,0 +1,26 @@
+.learning-art { position: relative; isolation: isolate; overflow: hidden; height: 132px; margin: 12px 12px 0; border-radius: 8px; background: var(--art-bg); color: #fff; }
+.learning-art__lines { position: absolute; inset: 0; z-index: -1; opacity: .14; background: repeating-linear-gradient(135deg, transparent 0 16px, var(--art-accent) 17px 18px); }
+.learning-art__imprint { display: block; font-size: 9px; font-weight: 700; letter-spacing: .16em; color: var(--art-accent); }
+.learning-art__title { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: 17px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
+.learning-art__book { position: absolute; inset: 8px 12% -12px; padding: 12px 15px 12px 22px; border-radius: 3px 8px 0 0; border-left: 8px solid var(--art-accent); background: var(--art-bg); box-shadow: 8px 4px 0 #ffffff28, 12px 10px 24px #0008; transform: rotate(-3deg); }
+.learning-art__book .learning-art__title { margin-top: 7px; }
+.learning-art__wave { width: 110px; height: 24px; color: var(--art-highlight); margin: 6px 0; }
+.learning-art__subject { font-size: 9px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--art-accent); }
+.learning-art__video-copy { position: absolute; inset: 22px 82px 15px 18px; display: flex; flex-direction: column; gap: 12px; }
+.learning-art__play { position: absolute; right: 18px; top: 40px; width: 48px; height: 48px; border-radius: 50%; background: var(--art-accent); color: var(--art-bg); display: grid; place-items: center; }
+.learning-art__play svg { width: 32px; height: 32px; }
+.learning-art--mentor { height: 112px; }
+.learning-art__portrait { position: absolute; height: 112px; width: 112px; left: 10px; bottom: 0; }
+.learning-art__mentor-copy { position: absolute; inset: 24px 15px 12px 138px; display: flex; flex-direction: column; gap: 10px; }
+.festival-poster { position: relative; isolation: isolate; overflow: hidden; min-height: 220px; border-radius: 11px 11px 0 0; color: #fff; background: var(--art-bg); }
+.festival-poster__image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .5; }
+.festival-poster__shade { position: absolute; inset: 0; background: linear-gradient(0deg, var(--art-bg) 0%, #09051266 100%); }
+.festival-poster__content { position: relative; display: flex; flex-direction: column; justify-content: space-between; gap: 18px; padding: 20px; min-height: 220px; }
+.festival-poster__eyebrow { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; color: var(--art-accent); font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.festival-poster__title { font-size: clamp(22px, 3vw, 32px); line-height: 1.04; font-weight: 900; letter-spacing: -.035em; overflow-wrap: anywhere; }
+.festival-poster__details { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; color: #f5eefb; border-top: 1px solid #ffffff40; padding-top: 12px; }
+.news-art { width: 64px; height: 64px; flex-shrink: 0; border-radius: 7px; overflow: hidden; background: var(--art-bg); }
+.city-art { position: absolute; inset: 0; pointer-events: none; background: #171324; }
+.city-art img { width: 100%; height: 100%; object-fit: cover; object-position: center 40%; opacity: .36; }
+.city-art::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, #0d0a18ed, #0d0a18ad 60%, #0d0a1866); }
+@media (min-width: 640px) { .learning-art { height: 152px; } .learning-art--mentor { height: 120px; } .learning-art__book { inset: 12px 16% -8px; padding-top: 15px; } .learning-art__title { font-size: 19px; } .learning-art__wave { margin: 10px 0; } .learning-art__play { top: 50px; } .news-art { width: 80px; height: 80px; } }

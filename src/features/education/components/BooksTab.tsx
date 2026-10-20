@@ -1,3 +1,4 @@
+import { LearningArtwork } from "@/components/game-art/GameArtwork";
 import { useMemo, useRef, useState } from "react";
 import { Loader2, Lock, Search, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -304,6 +305,7 @@ export const BooksTab = () => {
                     className="cursor-pointer transition-all hover:border-primary/50 hover:shadow-md"
                     onClick={() => setSelectedBook(book)}
                   >
+                    <LearningArtwork kind="book" id={book.id} title={book.title} subject={book.skill_display_name || book.skill_slug} />
                     <CardHeader className="pb-3">
                       <CardTitle className="line-clamp-2 text-base leading-snug">{book.title}</CardTitle>
                       <CardDescription className="text-sm">by {book.author}</CardDescription>

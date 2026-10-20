@@ -1,3 +1,4 @@
+import { LearningArtwork } from "@/components/game-art/GameArtwork";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -128,6 +129,7 @@ export const MentorsTab = () => {
 
               return (
                 <Card key={mentor.id} className="flex flex-col">
+                    <LearningArtwork kind="mentor" id={mentor.id} title={mentor.name} subject={mentor.specialty} />
                   <CardHeader className="space-y-2">
                     <div className="flex items-start justify-between gap-2">
                       <CardTitle className="text-lg">{mentor.name}</CardTitle>

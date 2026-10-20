@@ -1,3 +1,4 @@
+import { LearningArtwork } from "@/components/game-art/GameArtwork";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -488,6 +489,7 @@ export const VideosTab = () => {
             const locked = !isEducationSkillVisible(video.skillSlug, accessBySkill);
             return (
               <Card key={video.id} className="flex h-full flex-col transition-all hover:border-primary/50 hover:shadow-md">
+                    <LearningArtwork kind="video" id={video.id} title={video.name} subject={video.skillName} />
                 <CardHeader className="space-y-3 pb-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex flex-wrap gap-2">
