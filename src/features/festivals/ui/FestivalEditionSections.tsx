@@ -21,6 +21,7 @@ import { FestivalArtistPlanner } from "@/features/festival-company/ui/FestivalAr
 import { FestivalLineupWorkflowManager } from "@/features/festival-company/ui/FestivalLineupWorkflowManager";
 import { FestivalTicketPlanner } from "@/features/festival-company/ui/FestivalTicketPlanner";
 import { FestivalCanonicalBrandPicker } from "@/features/festival-company/ui/FestivalCanonicalBrandPicker";
+import { FestivalEditionSponsorCards } from "@/features/festivals/sponsorship/FestivalEditionSponsorCards";
 import { FestivalAnnualPlan } from "@/features/festivals/annual-plan/FestivalAnnualPlan";
 import {
   getFestivalCompanyEditions,
@@ -332,6 +333,7 @@ export function FestivalEditionFinance({
           festivalCompanyId={festivalCompanyId}
           festivalEditionId={editionId}
         />
+        <FestivalEditionSponsorCards editionId={editionId} />
         <Card>
           <CardHeader>
             <CardTitle>Festival sponsor prospects</CardTitle>
