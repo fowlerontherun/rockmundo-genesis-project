@@ -13,6 +13,8 @@
   border-radius: 20px;
   padding: clamp(12px, 2vw, 24px);
   background:
+    linear-gradient(to bottom, #0b0c18a8 0%, #0b0c18f4 32%, #0b0c18 56%),
+    url("/images/dj/rockmundo-club-atmosphere.svg") center top / 100% auto no-repeat,
     radial-gradient(ellipse at 53% -5%, #7443a44d, transparent 48%),
     radial-gradient(ellipse at 5% 5%, #109ddd25, transparent 34%),
     linear-gradient(170deg, #25223c 0%, #100f1c 33%, #0a0d15 100%);
