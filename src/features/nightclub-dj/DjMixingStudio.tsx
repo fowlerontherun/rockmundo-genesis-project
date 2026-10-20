@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Headphones, Music, Pause, Play, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { Expand, Headphones, Minimize2, Music, Pause, Play, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -268,6 +268,26 @@ function AudioDeck({
 export function DjMixingStudio({ liveBookingId, clubName }: { liveBookingId?: string; clubName?: string }) {
   const { profileId } = useActiveProfile();
   const client = useQueryClient();
+  const boothRef = useRef<HTMLElement>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+  useEffect(() => {
+    const refresh = () => setFullscreen(document.fullscreenElement === boothRef.current);
+    document.addEventListener("fullscreenchange", refresh);
+    return () => document.removeEventListener("fullscreenchange", refresh);
+  }, []);
+  const toggleFullscreen = async () => {
+    try {
+      if (document.fullscreenElement === boothRef.current) {
+        await document.exitFullscreen();
+      } else if (boothRef.current?.requestFullscreen) {
+        await boothRef.current.requestFullscreen();
+      } else {
+        toast.info("Full-screen booth view is unavailable on this device.");
+      }
+    } catch {
+      toast.error("Full-screen mode was blocked by your browser.");
+    }
+  };
   const { data: libraryTracks = [], isLoading, isError, error } = useDjTrackLibrary(profileId);
   const { data: liveBooking, isLoading: liveLoading, isError: liveError } = useQuery({
     queryKey: ["dj-live-booking", profileId, liveBookingId],
@@ -481,7 +501,7 @@ export function DjMixingStudio({ liveBookingId, clubName }: { liveBookingId?: st
           )}
         </div>
       )}
-      <section className="rm-dj-console" aria-label="RockMundo interactive DJ controller"
+      <section ref={boothRef} className="rm-dj-console" aria-label="RockMundo interactive DJ controller"
         data-testid="rm-dj-hardware-console">
         <header className="rm-dj-console-head">
           <div className="min-w-0">
@@ -492,9 +512,16 @@ export function DjMixingStudio({ liveBookingId, clubName }: { liveBookingId?: st
               Play from the cleared RockMundo track library.
             </p>
           </div>
-          <span className="rm-dj-console-status" data-live={liveBookingId ? "true" : "false"}>
-            {liveBookingId ? `LIVE SET · ${readiness?.count ?? 0} verified` : "PRACTICE · NO REWARDS"}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="rm-dj-console-status" data-live={liveBookingId ? "true" : "false"}>
+              {liveBookingId ? `LIVE SET · ${readiness?.count ?? 0} verified` : "PRACTICE · NO REWARDS"}
+            </span>
+            <Button type="button" variant="outline" size="sm" onClick={toggleFullscreen}
+              aria-label={fullscreen ? "Leave immersive DJ booth" : "Expand immersive DJ booth"}>
+              {fullscreen ? <Minimize2 className="mr-2 h-4 w-4" /> : <Expand className="mr-2 h-4 w-4" />}
+              {fullscreen ? "Exit booth view" : "Expand booth"}
+            </Button>
+          </div>
         </header>
         <div className="rm-dj-console-grid">
           <AudioDeck deck="A" tracks={tracks} selectedId={deckA} onSelect={setDeckA}
