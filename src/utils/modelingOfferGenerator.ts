@@ -53,7 +53,11 @@ export async function generateModelingOffersForUser(
   if (!isOfferCooldownExpired(profileId)) return 0;
 
   // Check existing pending offers
-  const { data: pending, error: pendingError } = await supabase
+  // Narrow this boundary: the full generated Supabase union exceeds TS's
+  // recursive instantiation limit on this modelling table, even for id-only reads.
+  // RLS and all server-side filters remain enforced by the same client.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: pending, error: pendingError } = await (supabase as any)
     .from('player_modeling_contracts')
     .select('id')
     .eq('user_id', userId)
