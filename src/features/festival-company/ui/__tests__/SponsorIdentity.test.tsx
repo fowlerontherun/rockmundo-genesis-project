@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { SponsorIdentity } from "../SponsorIdentity";
+import { SponsorIdentity, sponsorLogoNeedsArtworkReview } from "../SponsorIdentity";
 
 describe("festival sponsor identity", () => {
   it("shows a name after image failure, then loads the replacement URL", () => {
@@ -32,6 +32,15 @@ describe("festival sponsor identity", () => {
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
     rerender(<SponsorIdentity name="Seeded Brand" logoReference="javascript:alert(1)" />);
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  });
+
+  it("#2182 flags missing, unsafe and seeded data logos for artwork review", () => {
+    expect(sponsorLogoNeedsArtworkReview(null)).toBe(true);
+    expect(sponsorLogoNeedsArtworkReview("")).toBe(true);
+    expect(sponsorLogoNeedsArtworkReview("javascript:alert(1)")).toBe(true);
+    expect(sponsorLogoNeedsArtworkReview("data:image/svg+xml;base64,PHN2Z48L3N2Zz4=")).toBe(true);
+    expect(sponsorLogoNeedsArtworkReview("/assets/approved-sponsor.svg")).toBe(false);
+    expect(sponsorLogoNeedsArtworkReview("https://assets.example/approved.png")).toBe(false);
   });
 
   it("falls back to the sponsor name for non-HTTPS and missing references", () => {
