@@ -97,20 +97,23 @@ BEGIN
     IF v_supporting >= 4 THEN
       RAISE EXCEPTION 'festival_supporting_sponsor_slots_full' USING ERRCODE='23514';
     END IF;
-    IF EXISTS (
-      SELECT 1
-      FROM public.festival_edition_sponsor_assignments a
-      WHERE a.festival_edition_id = NEW.festival_edition_id
-        AND a.status = 'active'
-        AND a.id IS DISTINCT FROM NEW.id
-        AND a.category_snapshot = NEW.category_snapshot
-        AND EXISTS (
-          SELECT 1 FROM public.sponsorship_brands b
-          WHERE b.id = NEW.sponsorship_brand_id AND b.exclusivity_pref
-        )
-    ) THEN
-      RAISE EXCEPTION 'festival_sponsor_category_exclusive' USING ERRCODE='23514';
-    END IF;
+  END IF;
+
+  -- Exclusivity is symmetrical: either the incoming brand OR an existing
+  -- edition sponsor can require category exclusivity (main or supporting).
+  IF NEW.status = 'active' AND EXISTS (
+    SELECT 1
+    FROM public.festival_edition_sponsor_assignments a
+    JOIN public.sponsorship_brands existing ON existing.id = a.sponsorship_brand_id
+    JOIN public.sponsorship_brands incoming ON incoming.id = NEW.sponsorship_brand_id
+    WHERE a.festival_edition_id = NEW.festival_edition_id
+      AND a.status = 'active'
+      AND a.id IS DISTINCT FROM NEW.id
+      AND a.category_snapshot = NEW.category_snapshot
+      AND (coalesce(incoming.exclusivity_pref,false)
+           OR coalesce(existing.exclusivity_pref,false))
+  ) THEN
+    RAISE EXCEPTION 'festival_sponsor_category_exclusive' USING ERRCODE='23514';
   END IF;
 
   RETURN NEW;
