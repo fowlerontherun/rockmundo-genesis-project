@@ -35,6 +35,10 @@ export class CrowdAudioManager {
   private volume = 0.6;
   private speaking = false;
   private generation = 0;
+  private ambienceEpoch = 0;
+  private reactionEpoch = 0;
+  private pendingAmbienceId: string | null = null;
+  private pendingReactionId: string | null = null;
   private owner: symbol | null = null;
 
   claim(owner: symbol): void {
@@ -171,24 +175,30 @@ export class CrowdAudioManager {
   /** Crossfade one loop into another; never leave two sustained ambience sources. */
   async setAmbience(clip: CrowdPlaybackClip | null): Promise<boolean> {
     if (!clip) {
+      this.ambienceEpoch += 1;
+      this.pendingAmbienceId = null;
       const previous = this.ambient;
       this.ambient = null;
       if (previous) this.release(previous, clamp(previous.clip.fadeOutMs ?? 250, 0, 10000));
       return false;
     }
-    if (this.ambient?.clip.id === clip.id) return true;
+    if (this.ambient?.clip.id === clip.id || this.pendingAmbienceId === clip.id) return true;
+    const epoch = ++this.ambienceEpoch;
+    this.pendingAmbienceId = clip.id;
     const slot = this.createSlot({ ...clip, loopable: true }, "ambience");
-    if (!slot) return false;
+    if (!slot) { this.pendingAmbienceId = null; return false; }
     const generation = this.generation;
     try {
       await slot.audio.play();
-      if (generation !== this.generation) { this.release(slot); return false; }
+      if (generation !== this.generation || epoch !== this.ambienceEpoch) { this.release(slot); return false; }
+      this.pendingAmbienceId = null;
       const previous = this.ambient;
       this.ambient = slot;
       this.fadeIn(slot);
       if (previous) this.release(previous, clamp(previous.clip.fadeOutMs ?? 250, 0, 10000));
       return true;
     } catch {
+      if (epoch === this.ambienceEpoch) this.pendingAmbienceId = null;
       this.release(slot);
       return false;
     }
@@ -196,13 +206,16 @@ export class CrowdAudioManager {
 
   /** At most one foreground reaction. History uses replay cue time, never wall-clock. */
   async playReaction(clip: CrowdPlaybackClip | null, cueTimeMs: number, cooldownMs = 15000): Promise<boolean> {
-    if (!clip || !this.cooldown.canPlay(clip.id, cueTimeMs, cooldownMs)) return false;
+    if (!clip || this.pendingReactionId === clip.id || !this.cooldown.canPlay(clip.id, cueTimeMs, cooldownMs)) return false;
+    const epoch = ++this.reactionEpoch;
+    this.pendingReactionId = clip.id;
     const slot = this.createSlot({ ...clip, loopable: false }, "reaction");
-    if (!slot) return false;
+    if (!slot) { this.pendingReactionId = null; return false; }
     const generation = this.generation;
     try {
       await slot.audio.play();
-      if (generation !== this.generation) { this.release(slot); return false; }
+      if (generation !== this.generation || epoch !== this.reactionEpoch) { this.release(slot); return false; }
+      this.pendingReactionId = null;
       const previous = this.reaction;
       this.reaction = slot;
       this.fadeIn(slot);
@@ -221,6 +234,7 @@ export class CrowdAudioManager {
       }
       return true;
     } catch {
+      if (epoch === this.reactionEpoch) this.pendingReactionId = null;
       this.release(slot);
       return false;
     }
@@ -229,6 +243,10 @@ export class CrowdAudioManager {
   /** Pausing, seeking out, switching viewers or navigating away kills all active sources. */
   stop(): void {
     this.generation += 1;
+    this.ambienceEpoch += 1;
+    this.reactionEpoch += 1;
+    this.pendingAmbienceId = null;
+    this.pendingReactionId = null;
     for (const timer of this.timers) clearTimeout(timer);
     this.timers.clear();
     if (this.ambient) this.release(this.ambient);
