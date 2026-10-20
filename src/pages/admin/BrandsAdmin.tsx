@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { isSafeSponsorLogoReference, SponsorIdentity } from "@/features/festival-company/ui/SponsorIdentity";
+import { isSafeSponsorLogoReference, sponsorLogoNeedsArtworkReview, SponsorIdentity } from "@/features/festival-company/ui/SponsorIdentity";
 import { Loader2, Plus, RefreshCw, Save, Trash2 } from "lucide-react";
 
 interface BrandRecord {
@@ -137,11 +137,10 @@ const BrandsAdmin = () => {
       toast.error("Logo must be a safe HTTPS image, a same-site path or a canonical seeded logo.");
       return;
     }
-    const activating = form.active && (!editingId || !brands.find(brand => brand.id === editingId)?.is_active);
-    if (activating && !logo) {
-      // Existing active legacy records can still be edited. Newly activated
-      // brands must supply an identifiable image before receiving offers.
-      toast.error("Add an approved brand logo before activating a sponsor.");
+    if (form.active && !logo) {
+      // Active records must retain their identity on edit as well as creation.
+      // The database enforces this independently of the admin UI.
+      toast.error("An active sponsor requires a logo. Deactivate it before clearing the logo.");
       return;
     }
 
@@ -249,15 +248,17 @@ const BrandsAdmin = () => {
         filters.active === "all" ||
         (filters.active === "active" ? brand.is_active : !brand.is_active);
       const safeLogo = !!brand.logo_url && isSafeSponsorLogoReference(brand.logo_url);
+      const needsArtworkReview = sponsorLogoNeedsArtworkReview(brand.logo_url);
       const matchesLogo = filters.logo === "all" ||
-        (filters.logo === "missing" ? !safeLogo : safeLogo);
+        (filters.logo === "missing" ? !safeLogo :
+          filters.logo === "placeholder" ? safeLogo && needsArtworkReview : safeLogo);
       return matchesSearch && matchesCategory && matchesRegion && matchesActive && matchesLogo;
     });
   }, [brands, filters]);
 
   const activeCount = brands.filter((brand) => brand.is_active).length;
-  const missingLogoCount = brands.filter((brand) =>
-    !brand.logo_url || !isSafeSponsorLogoReference(brand.logo_url)).length;
+  const artworkReviewCount = brands.filter((brand) =>
+    sponsorLogoNeedsArtworkReview(brand.logo_url)).length;
   const totalBudget = brands.reduce((sum, brand) => sum + Number(brand.available_budget ?? 0), 0);
 
   return (
@@ -286,8 +287,8 @@ const BrandsAdmin = () => {
             <CardContent><p className="text-3xl font-bold">{activeCount}</p></CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2"><CardDescription>Brand logos to review</CardDescription></CardHeader>
-            <CardContent><p className="text-3xl font-bold">{missingLogoCount}</p></CardContent>
+            <CardHeader className="pb-2"><CardDescription>Logos needing artwork review</CardDescription></CardHeader>
+            <CardContent><p className="text-3xl font-bold">{artworkReviewCount}</p></CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2"><CardDescription>Available sponsorship budget</CardDescription></CardHeader>
@@ -340,6 +341,7 @@ const BrandsAdmin = () => {
                   <SelectContent>
                     <SelectItem value="all">All logos</SelectItem>
                     <SelectItem value="missing">Missing or unsafe logos</SelectItem>
+                    <SelectItem value="placeholder">Generated SVG placeholders</SelectItem>
                     <SelectItem value="present">Valid logo references</SelectItem>
                   </SelectContent>
                 </Select>
@@ -375,7 +377,16 @@ const BrandsAdmin = () => {
                       <TableBody>
                         {filteredBrands.map((brand) => (
                           <TableRow key={brand.id}>
-                            <TableCell><div className="w-24"><SponsorIdentity name={brand.name} logoReference={brand.logo_url} /></div></TableCell>
+                            <TableCell>
+                              <div className="w-24"><SponsorIdentity name={brand.name} logoReference={brand.logo_url} /></div>
+                              {sponsorLogoNeedsArtworkReview(brand.logo_url) && (
+                                <span className="mt-1 block text-xs text-muted-foreground">
+                                  {brand.logo_url && isSafeSponsorLogoReference(brand.logo_url)
+                                    ? "Placeholder — replace with approved artwork"
+                                    : "Missing or unsafe logo"}
+                                </span>
+                              )}
+                            </TableCell>
                             <TableCell className="font-semibold">{brand.name}</TableCell>
                             <TableCell>{brand.size}</TableCell>
                             <TableCell>{brand.category}</TableCell>
