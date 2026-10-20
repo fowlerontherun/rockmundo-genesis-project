@@ -1,3 +1,5 @@
+import { gigCompletionIsDue } from "../_shared/gig-execution-timing.ts";
+import { authorizeGigRequest } from "../_shared/authorize-gig-request.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { allocateFanTiers } from "../_shared/live-performance-progression.ts";
@@ -36,6 +38,10 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
+    const denied = await authorizeGigRequest(
+      req, supabaseClient, gigId, corsHeaders, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
+    );
+    if (denied) return denied;
 
     console.log(`Completing gig ${gigId}${idempotencyKey ? ` (idempotency key ${idempotencyKey})` : ''}`);
 
@@ -60,7 +66,7 @@ serve(async (req) => {
       throw new Error('Gig outcome not found');
     }
 
-    if (gig.status === 'cancelled' || gig.status === 'failed') {
+    if (gig.status !== 'in_progress' && gig.status !== 'completed') {
       throw new Error(`Cannot complete gig in status ${gig.status}`);
     }
 
@@ -90,6 +96,17 @@ serve(async (req) => {
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
+    }
+
+    // A browser caller with a valid band membership must still wait for the
+    // actual set to finish; idempotent already-completed retries above are safe.
+    const { data: completionSetlist, error: completionSetlistError } = await supabaseClient
+      .from('setlist_songs')
+      .select('songs(duration_seconds),performance_items_catalog(duration_seconds)')
+      .eq('setlist_id', gig.setlist_id).order('position');
+    if (completionSetlistError || !Array.isArray(completionSetlist)
+        || !gigCompletionIsDue(gig.started_at, completionSetlist, Date.now())) {
+      throw new Error('Gig has not reached its scheduled completion time');
     }
 
     const { data: claim, error: claimError } = await supabaseClient.rpc('claim_gig_completion', { p_gig_id: gigId });

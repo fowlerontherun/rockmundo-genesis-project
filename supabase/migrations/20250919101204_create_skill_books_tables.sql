@@ -84,11 +84,36 @@ CREATE POLICY "Players can manage their skill books"
     )
   );
 
+-- The earlier 20250919100056 migration already created the legacy versions
+-- of these tables. Reconcile them here before newer constraints and seed data.
+-- Keep account-level columns for compatibility, while supporting the
+-- profile-owned reading model expected by the application.
+ALTER TABLE public.skill_books
+  ADD COLUMN IF NOT EXISTS slug text,
+  ADD COLUMN IF NOT EXISTS author text,
+  ADD COLUMN IF NOT EXISTS xp_reward integer NOT NULL DEFAULT 10;
+ALTER TABLE public.skill_books DROP CONSTRAINT IF EXISTS skill_books_skill_slug_unique;
+ALTER TABLE public.skill_books DROP CONSTRAINT IF EXISTS skill_books_skill_slug_fkey;
+CREATE UNIQUE INDEX IF NOT EXISTS skill_books_slug_unique_idx ON public.skill_books(slug);
+
+ALTER TABLE public.player_skill_books
+  ADD COLUMN IF NOT EXISTS acquired_at timestamptz NOT NULL DEFAULT timezone('utc',now()),
+  ADD COLUMN IF NOT EXISTS xp_awarded_at timestamptz,
+  ADD COLUMN IF NOT EXISTS notes text,
+  ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT timezone('utc',now());
+ALTER TABLE public.player_skill_books ALTER COLUMN user_id DROP NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS player_skill_books_profile_skill_unique_idx
+  ON public.player_skill_books(profile_id,skill_book_id);
+
+-- Both historic migrations install this trigger. Prefer an explicit replacement
+-- to prevent clean Supabase migration resets from failing with SQLSTATE 42710.
+DROP TRIGGER IF EXISTS set_skill_books_updated_at ON public.skill_books;
 CREATE TRIGGER set_skill_books_updated_at
   BEFORE UPDATE ON public.skill_books
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS set_player_skill_books_updated_at ON public.player_skill_books;
 CREATE TRIGGER set_player_skill_books_updated_at
   BEFORE UPDATE ON public.player_skill_books
   FOR EACH ROW

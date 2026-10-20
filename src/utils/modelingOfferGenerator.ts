@@ -69,7 +69,11 @@ export async function generateModelingOffersForUser(
   if (pending && pending.length > 0) return 0;
 
   // Find eligible gigs
-  const { data: gigs, error: gigsError } = await supabase
+  // Narrow the generated Supabase typing boundary. Deep relationship
+  // inference here triggers TS2589 and blocks CI; the database still enforces
+  // every query filter and the returned shape is checked by the consumer.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: gigs, error: gigsError } = await (supabase as any)
     .from('modeling_gigs')
     .select('*, agency:modeling_agencies(name, tier)')
     .eq('is_available', true)
