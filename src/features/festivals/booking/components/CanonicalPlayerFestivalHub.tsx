@@ -1,3 +1,4 @@
+import { FestivalPoster } from "@/components/game-art/GameArtwork";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -5,9 +6,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { listPublicFestivalEditions } from "@/features/festivals/service";
@@ -89,18 +87,14 @@ export function CanonicalPlayerFestivalHub({ bandId }: { bandId?: string }) {
           ) : visibleEditions.length ? (
             visibleEditions.map((edition) => (
               <Card key={edition.id}>
-                <CardHeader>
-                  <CardTitle>
-                    {edition.title ??
-                      edition.festival_name ??
-                      "Festival edition"}
-                  </CardTitle>
-                  <CardDescription>
-                    {edition.city_name ?? edition.city?.name ?? "City TBA"} ·{" "}
-                    {formatBookingDateTime(edition.start_at)}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
+                <FestivalPoster
+                  id={edition.id}
+                  title={edition.title ?? edition.festival_name ?? "Festival edition"}
+                  location={edition.city_name ?? edition.city?.name ?? "City TBA"}
+                  date={formatBookingDateTime(edition.start_at)}
+                  status={edition.status}
+                />
+                <CardContent className="space-y-2 pt-4 text-sm">
                   <p>
                     Capacity{" "}
                     {edition.capacity ?? edition.expected_attendance ?? "TBD"} ·

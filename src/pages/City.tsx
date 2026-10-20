@@ -1,3 +1,4 @@
+import { CityArtwork } from "@/components/game-art/CityArtwork";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
@@ -218,7 +219,8 @@ export const CityContent = ({
         </Button>
       }
     >
-      <header className="relative rounded-xl border border-border/60 p-6 overflow-hidden">
+      <header className="dark text-foreground relative rounded-xl border border-border/60 p-6 overflow-hidden">
+        <CityArtwork cityId={city.id} />
         <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between relative z-10">
           <div className="space-y-4">
             <div className="space-y-2">
