@@ -1,3 +1,4 @@
+import { RecordingProgressScene } from '@/components/game-art/RecordingProgressScene';
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
@@ -25,6 +26,11 @@ export default function RecordingStudio() {
   const { profileId } = useActiveProfile();
   const { currentCity } = useGameData();
   const { t } = useTranslation();
+  const [progressNow, setProgressNow] = useState(Date.now);
+  useEffect(() => {
+    const timer = window.setInterval(() => setProgressNow(Date.now()), 30000);
+    return () => window.clearInterval(timer);
+  }, []);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<any>(null);
@@ -285,6 +291,8 @@ export default function RecordingStudio() {
                               <div>{t('recording.duration')}: {recordingSession.duration_hours} {t('time.hours')}</div>
                               <div>{t('releases.cost')}: ${Number(recordingSession.total_cost || 0).toLocaleString()}</div>
                             </div>
+
+                            <RecordingProgressScene status={recordingSession.status} start={recordingSession.scheduled_start} end={recordingSession.scheduled_end} now={progressNow} />
 
                             {recordingSession.status === 'completed' && recordingSession.quality_improvement > 0 && (
                               <div className="mt-2 text-sm">
