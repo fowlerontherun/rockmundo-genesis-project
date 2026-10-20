@@ -12,6 +12,17 @@ CREATE TABLE IF NOT EXISTS public.universities (
   UNIQUE(name, city)
 );
 
+-- The September 2025 Education migrations already created universities with
+-- course_cost (currency amount), not the later cost *multiplier*. CREATE TABLE
+-- IF NOT EXISTS above does not merge these schemas. Introduce only the new
+-- additive fields before the October catalogue INSERT and tuition workflows;
+-- retain existing course_cost values, names, IDs, RLS, and price history.
+ALTER TABLE public.universities
+  ADD COLUMN IF NOT EXISTS course_cost_modifier NUMERIC NOT NULL DEFAULT 1.0
+    CHECK (course_cost_modifier >= 0.5 AND course_cost_modifier <= 2.0),
+  ADD COLUMN IF NOT EXISTS description TEXT,
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT now();
+
 -- Create university_courses table with its class schedule fields.
 CREATE TABLE IF NOT EXISTS public.university_courses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
