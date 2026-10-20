@@ -1,3 +1,4 @@
+import { authorizeGigRequest } from "../_shared/authorize-gig-request.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { allocateFanTiers } from "../_shared/live-performance-progression.ts";
@@ -36,6 +37,10 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
+    const denied = await authorizeGigRequest(
+      req, supabaseClient, gigId, corsHeaders, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
+    );
+    if (denied) return denied;
 
     console.log(`Completing gig ${gigId}${idempotencyKey ? ` (idempotency key ${idempotencyKey})` : ''}`);
 
@@ -60,7 +65,7 @@ serve(async (req) => {
       throw new Error('Gig outcome not found');
     }
 
-    if (gig.status === 'cancelled' || gig.status === 'failed') {
+    if (gig.status !== 'in_progress' && gig.status !== 'completed') {
       throw new Error(`Cannot complete gig in status ${gig.status}`);
     }
 
