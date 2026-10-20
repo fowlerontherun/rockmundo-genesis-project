@@ -16,6 +16,13 @@ export function isSafeSponsorLogoReference(reference: string): boolean {
   }
 }
 
+/** A seeded SVG data logo is a useful fallback, not approved brand artwork.
+ * Keep it visible while flagging it for the administrator to replace. */
+export function sponsorLogoNeedsArtworkReview(reference: string | null | undefined): boolean {
+  return !reference || !isSafeSponsorLogoReference(reference) ||
+    /^data:image\/svg\+xml;base64,/i.test(reference);
+}
+
 /**
  * A failed logo should only hide the *failed URL*. When an organiser corrects
  * the asset, React reuses the same sponsor card and must retry the new URL.
