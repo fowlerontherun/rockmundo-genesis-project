@@ -75,7 +75,7 @@ BEGIN
   PERFORM cron.schedule(
     'daily_login_attribute_bonus',
     '0 4 * * *',
-    $$SELECT public.process_daily_login_attribute_bonus();$$
+    $cron_sql$SELECT public.process_daily_login_attribute_bonus();$cron_sql$
   );
 END;
 $$;
