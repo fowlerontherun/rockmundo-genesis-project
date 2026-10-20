@@ -11,9 +11,23 @@ WHERE estimated_completion_sessions IS NULL;
 
 ALTER TABLE public.songwriting_projects
   ALTER COLUMN estimated_completion_sessions SET DEFAULT 3,
-  ALTER COLUMN estimated_completion_sessions SET NOT NULL,
-  ADD CONSTRAINT IF NOT EXISTS songwriting_projects_estimated_completion_sessions_check
-    CHECK (estimated_completion_sessions >= 1);
+  ALTER COLUMN estimated_completion_sessions SET NOT NULL;
+
+-- PostgreSQL does not support ADD CONSTRAINT IF NOT EXISTS; inspect the
+-- canonical table and constraint name instead, preserving existing data.
+DO $check_estimated_sessions$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.songwriting_projects'::regclass
+      AND conname = 'songwriting_projects_estimated_completion_sessions_check'
+  ) THEN
+    ALTER TABLE public.songwriting_projects
+      ADD CONSTRAINT songwriting_projects_estimated_completion_sessions_check
+      CHECK (estimated_completion_sessions >= 1);
+  END IF;
+END;
+$check_estimated_sessions$;
 
 ALTER TABLE public.songwriting_projects
   ALTER COLUMN music_progress SET DEFAULT 0,
