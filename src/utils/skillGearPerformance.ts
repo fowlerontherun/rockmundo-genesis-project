@@ -6,6 +6,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getTieredBonusPercent } from "./tieredSkillBonus";
 import { getPersonalGearRoleBonusPercent } from "./personalGear";
+import { STAGE_INSTRUMENTS } from "@/features/gig-demo-3d/instrumentCatalog";
 
 const normalizeInstrumentSkillKey = (slug: string) => slug.replace(/^instruments_(basic|professional|mastery)_/, "");
 
@@ -151,6 +152,37 @@ export const ROLE_SKILL_MAP: Record<string, string[]> = {
   ]
 };
 
+const SPECIALIST_ROLE_TO_ID = new Map<string, string>(
+  Object.entries(STAGE_INSTRUMENTS)
+    .filter(([, instrument]) => instrument.role !== "vocals")
+    .map(([id, instrument]) => [instrument.label.toLowerCase(), id] as const),
+);
+const VOCAL_ROLE_SKILL_IDS: Record<string, string> = {
+  "vocal & performance skills": "vocal_performance",
+  "rapping": "rapping",
+  "freestyle": "freestyle_rap",
+  "battle rap": "battle_rap",
+  "flow & cadence": "flow_and_cadence",
+  "rap songwriting": "rap_songwriting",
+  "ad-libs & vocal fx": "ad_libs_and_vocal_fx",
+};
+
+/** Resolve specific selectable roles before falling back to historic family roles. */
+export function getBandRoleSkillSlugs(role: string): string[] {
+  const name = role.trim().toLowerCase();
+  const instrumentId = SPECIALIST_ROLE_TO_ID.get(name)
+    ?? (name === "dj scratching" ? "turntablism" : VOCAL_ROLE_SKILL_IDS[name]);
+  if (instrumentId) return (["basic", "professional", "mastery"] as const)
+    .map(tier => `instruments_${tier}_${instrumentId}`);
+  const known = ROLE_SKILL_MAP[role];
+  if (known) return known;
+  const alias = Object.keys(ROLE_SKILL_MAP).find(key =>
+    name.includes(key.toLowerCase()) || key.toLowerCase().includes(name)
+  );
+  return alias ? ROLE_SKILL_MAP[alias] : [];
+}
+
+
 // Equipment categories that map to skill types
 export const EQUIPMENT_SKILL_CATEGORIES: Record<string, string[]> = {
   "guitar": ["acoustic_guitar", "electric_guitar", "classical_guitar"],
@@ -252,20 +284,7 @@ export async function calculatePerformanceModifiers(
 
   try {
     // Get relevant skills for this role
-    const relevantSkills: string[] = [];
-    const baseSkills = ROLE_SKILL_MAP[role] || [];
-    relevantSkills.push(...baseSkills);
-    
-    if (relevantSkills.length === 0) {
-      // Try to find partial match
-      const roleKey = Object.keys(ROLE_SKILL_MAP).find(k => 
-        role.toLowerCase().includes(k.toLowerCase()) || 
-        k.toLowerCase().includes(role.toLowerCase())
-      );
-      if (roleKey) {
-        relevantSkills.push(...ROLE_SKILL_MAP[roleKey]);
-      }
-    }
+    const relevantSkills = getBandRoleSkillSlugs(role);
 
     // Fetch skill progress - use explicit typing to avoid TS2589
     const skillQuery = supabase
