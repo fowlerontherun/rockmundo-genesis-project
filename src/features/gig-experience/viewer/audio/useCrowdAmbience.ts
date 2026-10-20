@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { CrowdAudioManager, type CrowdPlaybackClip } from "@/features/shared-audio/CrowdAudioManager";
+import { sharedCrowdAudioManager, type CrowdPlaybackClip } from "@/features/shared-audio/CrowdAudioManager";
 import { useCrowdVolumePreference } from "@/features/shared-audio/CrowdVolumeControl";
 import { loadCuratedCrowdAssets, selectCuratedCrowdClip, type CuratedCrowdAsset } from "@/features/shared-audio/crowdAudioCatalogue";
 import type { CrowdCategory, CrowdEnvironment, CrowdSize } from "@/features/gig-experience/audio/crowdCueSelection";
@@ -57,8 +57,7 @@ export function useCrowdAmbience({
   const [legacy, setLegacy] = useState<GigCrowdSound[]>([]);
   const [hidden, setHidden] = useState(() => typeof document !== "undefined" && document.visibilityState === "hidden");
   const [crowdPreference] = useCrowdVolumePreference();
-  const engineRef = useRef<CrowdAudioManager | null>(null);
-  if (!engineRef.current) engineRef.current = new CrowdAudioManager();
+  const ownerRef = useRef(Symbol("gig-crowd"));
   const lastSongRef = useRef<string | null>(null);
   const lastReactionRef = useRef<string | null>(null);
   const lastPhaseRef = useRef<string | null>(null);
@@ -88,9 +87,9 @@ export function useCrowdAmbience({
   }, []);
 
   useEffect(() => {
-    const engine = engineRef.current!;
+    const engine = sharedCrowdAudioManager;
     if (!enabled || muted || !isPlaying || hidden || crowdPreference === 0) {
-      engine.stop();
+      engine.releaseOwner(ownerRef.current);
       if (!enabled) {
         lastSongRef.current = lastReactionRef.current = lastPhaseRef.current = null;
         lastPulseRef.current = lastElapsedRef.current = -1;
@@ -98,6 +97,7 @@ export function useCrowdAmbience({
       }
       return;
     }
+    engine.claim(ownerRef.current);
     const energy = clamp((snapshot?.crowdEnergy ?? 30) / 100);
     const intensity = Math.max(1, Math.min(5, Math.round(2 + 3 * energy)));
     const phase = showFrame?.phase ?? null;
@@ -167,7 +167,6 @@ export function useCrowdAmbience({
   ]);
 
   useEffect(() => () => {
-    engineRef.current?.dispose();
-    engineRef.current = null;
+    sharedCrowdAudioManager.releaseOwner(ownerRef.current);
   }, []);
 }
