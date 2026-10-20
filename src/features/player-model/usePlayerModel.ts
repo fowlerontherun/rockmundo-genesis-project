@@ -202,10 +202,10 @@ export function useEquippedRichClothing(profileId: string | null | undefined) {
 
 /** Cosmetic data only; lineup appearance and equipped rich clothing are loaded in
  * batches when the stage is built, never during animation frames. */
-export function useGigPlayerModels(profileIds: string[]) {
+export function useGigPlayerModels(profileIds: string[], requireCompleteVisuals = false) {
   const ids = [...new Set(profileIds.filter(id => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)))].sort();
   return useQuery({
-    queryKey: ['gig-player-appearances', ...ids],
+    queryKey: [requireCompleteVisuals ? 'portrait-player-appearances' : 'gig-player-appearances', ...ids],
     enabled: ids.length > 0,
     staleTime: 60_000,
     queryFn: async (): Promise<GigPlayerModelsData> => {
@@ -242,6 +242,7 @@ export function useGigPlayerModels(profileIds: string[]) {
       try {
         luthieryResult = optionalStageResult('player-crafted instruments', luthierySettled);
       } catch (error) {
+        if (requireCompleteVisuals) throw error;
         console.warn('[gig-player-models] continuing without optional crafted-instrument visuals', error);
       }
 

@@ -33,7 +33,7 @@ describe('share portrait outfit parity with live stage performers', () => {
     expect(actorConstructed).toBeGreaterThan(garmentsReady);
     // The Musician constructor uses this library to attach standalone,
     // skinned GLB garments; undefined here silently skips curated clothes.
-    expect(source).toContain('clothing,undefined,library,visual.luthieryInstrument');
+    expect(source).toContain('clothing,visual.instrumentSkin,library,visual.luthieryInstrument');
     expect(source).not.toContain('clothing,undefined,undefined,visual.luthieryInstrument');
   });
 

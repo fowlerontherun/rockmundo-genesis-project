@@ -1,3 +1,4 @@
+import type { ResolvedInstrumentSkinVisual } from '@/features/instrument-skins/instrumentSkin';
 import * as T from "three";
 import { Musician } from "@/features/gig-demo-3d/performers";
 import type { InstrumentId } from "@/features/gig-demo-3d/instrumentCatalog";
@@ -33,7 +34,7 @@ export function loadCaptureImage(capture: AvatarCapture): Promise<HTMLImageEleme
   });
 }
 
-export interface AvatarShareVisual {appearance:PlayerAppearance;role?:StageRole;instrument?:InstrumentId;richClothing?:ResolvedEquippedClothing[];tattoos?:ResolvedTattooVisual[];merchWearable?:ResolvedMerchWearable|null;luthieryInstrument?:LuthieryInstrumentVisual|null}
+export interface AvatarShareVisual {instrumentSkin?:ResolvedInstrumentSkinVisual|null;appearance:PlayerAppearance;role?:StageRole;instrument?:InstrumentId;richClothing?:ResolvedEquippedClothing[];tattoos?:ResolvedTattooVisual[];merchWearable?:ResolvedMerchWearable|null;luthieryInstrument?:LuthieryInstrumentVisual|null}
 export const AVATAR_SHARE_PRESET={width:720,height:1080,camera:[2.05,1.55,4.65] as const,target:[0,.9,0] as const,fov:34};
 
 export async function captureAvatarV1ForShare(visual:AvatarShareVisual):Promise<HTMLCanvasElement>{
@@ -63,7 +64,7 @@ export async function captureAvatarV1ForShare(visual:AvatarShareVisual):Promise<
   }
   const tattoos=visibleTattoosForPresentation(visual.tattoos??[],{appearance:visual.appearance,clothing,presentation:"stage"});
   const assembled=assemblePlayerModel(library,visual.appearance,tattoos,clothing,"high","stage",visual.merchWearable??null);
-  actor=new Musician(assembled,visual.role??"other",[0,0,0],0,undefined,visual.appearance,visual.instrument,undefined,clothing,undefined,library,visual.luthieryInstrument??null);disposeModel(assembled);scene.add(actor.root);equipment=actor.equipment;if(equipment)scene.add(equipment);
+  actor=new Musician(assembled,visual.role??"other",[0,0,0],0,undefined,visual.appearance,visual.instrument,undefined,clothing,visual.instrumentSkin,library,visual.luthieryInstrument??null);disposeModel(assembled);scene.add(actor.root);equipment=actor.equipment;if(equipment)scene.add(equipment);
   actor.update(0,.55,true);
   renderer.render(scene,camera);
   // Copy the complete WebGL frame to a 2D canvas while the context is still
