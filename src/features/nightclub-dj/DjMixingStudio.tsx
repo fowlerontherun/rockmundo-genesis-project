@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { filterDjTracks, getDjPlaybackUrl, type DjAudioTrack, useDjTrackLibrary } from "./library";
-import { clampDeckRate, deckAudioSourceKey, changedDjTempoPercent, equalPowerCrossfade, formatDjTime, syncDeckRate } from "./mixerMath";
+import { clampDeckRate, deckAudioSourceKey, changedDjTempoPercent, djCueSkipBeats, equalPowerCrossfade, estimatedDjBeatAt, formatDjTime, syncDeckRate } from "./mixerMath";
 import { DjSetlistPlanner } from "./DjSetlistPlanner";
 import { djReadinessSteps, useDjMixReadiness } from "./djReadiness";
 import { bindDjDeckLifecycle } from "./deckAudioLifecycle";
@@ -40,6 +40,16 @@ function AudioDeck({
   const [duration, setDuration] = useState(0);
   const [cue, setCue] = useState(0);
   const [retryNonce, setRetryNonce] = useState(0);
+  const beat = estimatedDjBeatAt(elapsed, track?.bpm ?? null, rate);
+  const canJumpBar = Boolean(beat && duration > 0);
+  const jumpBar = (direction: -1 | 1) => {
+    const player = audioRef.current;
+    if (!player) return;
+    const next = djCueSkipBeats(player.currentTime, track?.bpm ?? null, 4 * direction, duration);
+    if (next === null) return;
+    player.currentTime = next;
+    setElapsed(next);
+  };
 
   useEffect(() => {
     const player = audioRef.current;
@@ -150,6 +160,24 @@ function AudioDeck({
             <span>{formatDjTime(elapsed)}</span><span>{formatDjTime(duration)}</span>
           </div>
         </div>
+        <div className="rounded-md border p-2 space-y-1" data-testid={`dj-beat-guide-${deck}`}>
+          {beat ? (
+            <>
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span>Estimated beat {beat.barBeat} / 4 · {beat.audibleBpm} BPM audible</span>
+                <span className="text-muted-foreground">Metadata estimate, not beat detection</span>
+              </div>
+              <div className="grid grid-cols-4 gap-1" aria-label={`Estimated four-beat bar on deck ${deck}`}>
+                {[1, 2, 3, 4].map(number => (
+                  <div key={number} className={`h-2 rounded-full ${number === beat.barBeat ? "bg-primary" : "bg-muted"}`}
+                    aria-hidden="true" />
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="text-xs text-muted-foreground">Beat guide unavailable: no reliable BPM metadata.</p>
+          )}
+        </div>
         <div className="flex flex-wrap gap-2">
           <Button type="button" onClick={togglePlayback} disabled={!track || loading || !!error}>
             {playing ? <Pause className="h-4 w-4 mr-1" /> : <Play className="h-4 w-4 mr-1" />}
@@ -162,6 +190,14 @@ function AudioDeck({
           <Button type="button" variant="outline" disabled={!track || !duration}
             onClick={() => { if (audioRef.current) audioRef.current.currentTime = cue; }}>
             <RotateCcw className="h-4 w-4 mr-1" /> Cue {formatDjTime(cue)}
+          </Button>
+          <Button type="button" variant="outline" disabled={!canJumpBar}
+            aria-label={`Jump deck ${deck} back four estimated beats`} onClick={() => jumpBar(-1)}>
+            -4 beats
+          </Button>
+          <Button type="button" variant="outline" disabled={!canJumpBar}
+            aria-label={`Jump deck ${deck} forward four estimated beats`} onClick={() => jumpBar(1)}>
+            +4 beats
           </Button>
         </div>
         <div className="space-y-2">
@@ -467,7 +503,7 @@ export function DjMixingStudio({ liveBookingId }: { liveBookingId?: string }) {
             onValueCommit={([value]) => { void sendLiveEvent({ kind: "crossfade", value }); }} />
           <div className="flex items-center justify-between text-xs text-muted-foreground"><span>Deck A</span><span>Deck B</span></div>
           <Button type="button" variant="secondary" onClick={syncB}>Match Deck B tempo to A</Button>
-          <p className="text-xs text-muted-foreground">Tempo adjustment changes playback speed and pitch. True key-locked beatmatching and timed drops will follow in the DJ minigame.</p>
+          <p className="text-xs text-muted-foreground">Tempo adjustment changes playback speed and pitch. The beat display and four-beat jumps are estimated from BPM metadata, not detected downbeats, and do not record or score live mixer interactions. True key-locked beatmatching and timed drops will follow in the DJ minigame.</p>
         </CardContent>
       </Card>
       {!liveBookingId && tracks.some((track) => track.mine) && (
