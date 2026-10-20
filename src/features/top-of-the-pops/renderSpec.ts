@@ -1,4 +1,4 @@
-import type { TotpEpisodeManifest } from "./episodeManifest";
+import type { TotpEpisodeManifest, TotpManifestCrowdCue } from "./episodeManifest";
 import type { TotpBroadcastReplay } from "./api";
 import { TOTP_MIX_TARGET } from "./broadcastAudioMix";
 import { toTotpWebVtt, type TotpCaptionCue } from "./broadcastCaptions";
@@ -129,6 +129,8 @@ export interface TotpRenderPlan {
   programme_spec: TotpEpisodeManifest["programme_spec"];
   audio_sample_rate: typeof TOTP_RENDER_AUDIO_SAMPLE_RATE;
   items: TotpRenderItem[];
+  /** Frozen selection, checked against the manifest checksum. */
+  crowd_cues?: TotpManifestCrowdCue[];
   chapters: TotpRenderChapter[];
   total_duration_ms: number;
   expected_frame_count: number;
@@ -448,6 +450,7 @@ export function buildTotpRenderPlan(manifest: TotpEpisodeManifest): TotpRenderPl
     programme_spec: manifest.programme_spec,
     audio_sample_rate: TOTP_RENDER_AUDIO_SAMPLE_RATE,
     items,
+    ...(manifest.crowd_cues !== undefined ? { crowd_cues: manifest.crowd_cues } : {}),
     chapters,
     total_duration_ms: cursor,
     expected_frame_count: Math.round((cursor / 1_000) * manifest.programme_spec.frame_rate),
@@ -519,13 +522,30 @@ export function buildTotpSegmentPreviewRenderPlan(
     });
   if (!items.length) throw new Error("That performance has no renderable programme items.");
 
-  const performance = items.find((item) => item.kind === "performance") ?? items[0];
+  const originalItems = master.items.filter((item) =>
+    item.performance_id === performanceId &&
+    ["presenter_link", "performance", "applause"].includes(item.kind),
+  );
+  const frozenPreviewCues = master.crowd_cues?.flatMap((cue) => {
+    const originalPosition = originalItems.findIndex((item) => item.index === cue.item_index);
+    if (originalPosition < 0) return [];
+    const original = originalItems[originalPosition];
+    const preview = items[originalPosition];
+    return [{
+      ...cue,
+      item_index: preview.index,
+      at_ms: preview.start_ms + (cue.at_ms - original.start_ms),
+      cue_id: `${cue.cue_id}:preview`,
+    }];
+  });
+    const performance = items.find((item) => item.kind === "performance") ?? items[0];
   const thumbnailAt = [performance.start_ms + Math.floor(performance.duration_ms / 3)];
   const previewBase: TotpRenderPlan = {
     ...master,
     purpose: "segment_preview",
     source_performance_id: performanceId,
     items,
+    ...(frozenPreviewCues !== undefined ? { crowd_cues: frozenPreviewCues } : {}),
     chapters: [{
       title: `${segment.band_name} — ${segment.song_title}`,
       start_ms: 0,
