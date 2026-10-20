@@ -63,23 +63,21 @@ supabase db reset
 
 The historical `20250919064642_create_skills_table.sql` migration contains a frozen, parent-safe snapshot of 168 skill rows. It no longer uses a `psql` `\\i` include, which the Supabase migration runner cannot execute. Regenerating `supabase/seed/skills_seed.sql` does **not** retroactively change that immutable migration; future skill additions require an explicit forward migration. Run `node --test scripts/supabase/skills-seed-migration.contract.test.mjs` to check the replay contract.
 
-## Profile data reset for the new flow
+## Historical profile reset safety
 
-Deployments that introduce the refreshed profile flow must run the `20270431150000_reset_profile_data.sql` migration before
-serving traffic. The migration truncates all profile-linked XP, attribute, skill, wallet, and progression tables (using
-`TRUNCATE ... RESTART IDENTITY CASCADE`) and then clears `public.profiles`. This guarantees dependent sequences are reset and no
-stale profile data survives the reset.
+The retired migration `20250920191743_reset_profile_data.sql` originally
+truncated progression tables and all profiles whenever a migration history
+was rebuilt. **Normal deployments, `supabase db push`, and local
+`supabase db reset` now skip this destructive operation by default.**
 
-Run the Supabase migrations in your target environment prior to rollout:
+Never enable `rockmundo.allow_profile_data_reset` during an ordinary
+deployment or fresh CI reset. Any intentional deletion of existing player
+data requires an explicit approved and audited operational runbook, backups,
+and verification of the historic table dependencies. The migration refuses
+to reset when any required legacy table is absent.
 
-```sh
-supabase db push
-# or for a full local refresh
-supabase db reset
-```
-
-This data-only migration does not change the schema, so the generated Supabase TypeScript definitions stay in sync without any
-additional regeneration.
+This historical safety correction changes no current profile schema or
+database API types. It does not delete or reinitialise production profiles.
 
 ## Pull request workflow & field reference
 
