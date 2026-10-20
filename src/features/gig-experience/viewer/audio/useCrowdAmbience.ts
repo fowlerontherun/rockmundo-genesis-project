@@ -15,16 +15,20 @@ interface CrowdAmbienceOptions {
   snapshot: StorySnapshot | null;
   stageType: string;
   replaySeed?: string | number | null;
+  attendance?: number | null;
+  capacity?: number | null;
   showFrame?: ShowSequenceFrame | null;
 }
 const clamp = (value: number, low = 0, high = 1) => Math.max(low, Math.min(high, value));
-function venueContext(stageType: string): { environment: Exclude<CrowdEnvironment, "any">; crowdSize: Exclude<CrowdSize, "any"> } {
+function venueContext(stageType: string, attendance?: number | null, capacity?: number | null): { environment: Exclude<CrowdEnvironment, "any">; crowdSize: Exclude<CrowdSize, "any"> } {
   const stage = stageType.toLowerCase();
-  if (/stadium|arena/.test(stage)) return { environment: "arena", crowdSize: "large" };
-  if (/festival|outdoor/.test(stage)) return { environment: "festival", crowdSize: "large" };
-  if (/club|nightclub/.test(stage)) return { environment: "club", crowdSize: "medium" };
-  if (/theater|theatre|hall/.test(stage)) return { environment: "indoor", crowdSize: "medium" };
-  return { environment: "pub", crowdSize: "small" };
+  const people = Math.max(0, attendance ?? capacity ?? 0);
+  const crowdSize = people <= 250 ? "small" : people < 4000 ? "medium" : "large";
+  if (/stadium|arena/.test(stage)) return { environment: "arena", crowdSize };
+  if (/festival|outdoor/.test(stage)) return { environment: "festival", crowdSize };
+  if (/club|nightclub/.test(stage)) return { environment: "club", crowdSize };
+  if (/theater|theatre|hall/.test(stage)) return { environment: "indoor", crowdSize };
+  return { environment: "pub", crowdSize };
 }
 function legacyTypes(category: CrowdCategory, energy: number): GigCrowdSoundType[] {
   switch (category) {
@@ -51,7 +55,7 @@ function legacyAsClip(sound: GigCrowdSound, ambient: boolean, level: number): Cr
 
 /** Gig cues and TOTP cues now feed the same isolated Web Audio crowd engine. */
 export function useCrowdAmbience({
-  enabled, muted, volume, isPlaying, snapshot, stageType, showFrame = null, replaySeed,
+  enabled, muted, volume, isPlaying, snapshot, stageType, showFrame = null, replaySeed, attendance, capacity,
 }: CrowdAmbienceOptions) {
   const [curated, setCurated] = useState<CuratedCrowdAsset[]>([]);
   const [legacy, setLegacy] = useState<GigCrowdSound[]>([]);
@@ -99,12 +103,14 @@ export function useCrowdAmbience({
     }
     engine.claim(ownerRef.current);
     const energy = clamp((snapshot?.crowdEnergy ?? 30) / 100);
-    const intensity = Math.max(1, Math.min(5, Math.round(2 + 3 * energy)));
+    const fill = capacity && attendance !== null && attendance !== undefined
+      ? clamp(attendance / capacity) : 1;
+    const intensity = Math.max(1, Math.min(5, Math.round(1 + 4 * energy * (0.4 + fill * 0.6))));
     const phase = showFrame?.phase ?? null;
     const elapsedMs = Math.max(0, snapshot?.song?.elapsedMs ?? 0);
     const songId = snapshot?.song?.id ?? null;
     const seed = String(replaySeed ?? stageType);
-    const { crowdSize, environment } = venueContext(stageType);
+    const { crowdSize, environment } = venueContext(stageType, attendance, capacity);
     if (lastElapsedRef.current >= 0 && elapsedMs + 350 < lastElapsedRef.current && songId === lastSongRef.current) {
       lastSongRef.current = lastReactionRef.current = lastPhaseRef.current = null;
       lastPulseRef.current = -1;
@@ -161,7 +167,7 @@ export function useCrowdAmbience({
       play("reaction", `${seed}:${songId}:pulse:${Math.floor(elapsedMs / 18000)}`);
     }
   }, [
-    enabled, muted, volume, isPlaying, hidden, crowdPreference, curated, legacy, stageType,
+    enabled, muted, volume, isPlaying, hidden, crowdPreference, curated, legacy, stageType, attendance, capacity,
     replaySeed, snapshot?.crowdEnergy, snapshot?.reaction,
     snapshot?.song?.id, snapshot?.song?.elapsedMs, showFrame?.phase,
   ]);
