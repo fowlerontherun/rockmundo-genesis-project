@@ -107,7 +107,9 @@ export function DjTrimMeter({
   // Output-position feedback only, not a measured VU/RMS signal.
   const normalized = Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
   return (
-    <div className="rm-dj-trim-meter" aria-label={`Deck ${side} estimated output trim ${Math.round(normalized * 100)} percent`}>
+    <div className="rm-dj-trim-meter" role="meter" aria-valuemin={0} aria-valuemax={100}
+      aria-valuenow={Math.round(normalized * 100)}
+      aria-label={`Deck ${side} estimated output trim ${Math.round(normalized * 100)} percent`}>
       {Array.from({ length: 12 }, (_, index) => (
         <span key={index} data-lit={active && normalized >= (index + 1) / 12 ? "true" : "false"} />
       ))}
