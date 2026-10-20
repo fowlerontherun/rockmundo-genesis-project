@@ -1,5 +1,5 @@
 -- Create song themes table
-CREATE TABLE public.song_themes (
+CREATE TABLE IF NOT EXISTS public.song_themes (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   name VARCHAR NOT NULL,
   description TEXT,
@@ -8,7 +8,7 @@ CREATE TABLE public.song_themes (
 );
 
 -- Create chord progressions table
-CREATE TABLE public.chord_progressions (
+CREATE TABLE IF NOT EXISTS public.chord_progressions (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   name VARCHAR NOT NULL,
   progression VARCHAR NOT NULL,
@@ -17,7 +17,7 @@ CREATE TABLE public.chord_progressions (
 );
 
 -- Create songwriting projects table
-CREATE TABLE public.songwriting_projects (
+CREATE TABLE IF NOT EXISTS public.songwriting_projects (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL,
   title VARCHAR NOT NULL,
@@ -37,7 +37,7 @@ CREATE TABLE public.songwriting_projects (
 );
 
 -- Create songwriting sessions table
-CREATE TABLE public.songwriting_sessions (
+CREATE TABLE IF NOT EXISTS public.songwriting_sessions (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   project_id UUID NOT NULL REFERENCES public.songwriting_projects(id) ON DELETE CASCADE,
   user_id UUID NOT NULL,
@@ -49,6 +49,33 @@ CREATE TABLE public.songwriting_sessions (
   notes TEXT,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
+
+-- Earlier canonical 2025 songwriting tables already exist. Preserve rows and
+-- reconcile their original columns to the enhanced schema before RLS/policies.
+ALTER TABLE public.songwriting_projects
+ ADD COLUMN IF NOT EXISTS theme_id uuid REFERENCES public.song_themes(id),
+ ADD COLUMN IF NOT EXISTS chord_progression_id uuid REFERENCES public.chord_progressions(id),
+ ADD COLUMN IF NOT EXISTS initial_lyrics text,
+ ADD COLUMN IF NOT EXISTS music_progress integer DEFAULT 0,
+ ADD COLUMN IF NOT EXISTS lyrics_progress integer DEFAULT 0,
+ ADD COLUMN IF NOT EXISTS total_sessions integer DEFAULT 0,
+ ADD COLUMN IF NOT EXISTS estimated_sessions integer DEFAULT 3,
+ ADD COLUMN IF NOT EXISTS quality_score integer DEFAULT 0,
+ ADD COLUMN IF NOT EXISTS is_locked boolean DEFAULT false;
+
+ALTER TABLE public.songwriting_sessions
+ ADD COLUMN IF NOT EXISTS session_start timestamptz,
+ ADD COLUMN IF NOT EXISTS session_end timestamptz,
+ ADD COLUMN IF NOT EXISTS music_progress_gained integer DEFAULT 0,
+ ADD COLUMN IF NOT EXISTS lyrics_progress_gained integer DEFAULT 0,
+ ADD COLUMN IF NOT EXISTS xp_earned integer DEFAULT 0;
+
+-- Match the actual earlier session timestamp; avoid replacing it with now().
+UPDATE public.songwriting_sessions
+ SET session_start = started_at
+ WHERE session_start IS NULL AND started_at IS NOT NULL;
+ALTER TABLE public.songwriting_sessions
+ ALTER COLUMN session_start SET DEFAULT now();
 
 -- Enable RLS
 ALTER TABLE public.song_themes ENABLE ROW LEVEL SECURITY;
