@@ -1,5 +1,10 @@
 BEGIN;
 
+-- Earlier clean-room schemas do not yet carry the character gender field;
+-- the public view below requires it. Preserve the canonical production type.
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS gender text;
+
 ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS city_of_birth uuid REFERENCES public.cities(id);
 
