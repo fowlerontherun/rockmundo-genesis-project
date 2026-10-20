@@ -334,6 +334,19 @@ const SPECIALIST_INSTRUMENT_ROLE_TYPES: Readonly<Record<string, string>> = {
   "concertina": "concertina",
 };
 
+// Mirrors the exact instrument compatibility logic in src/utils/personalGear.ts.
+// Includes legacy generic instrument types and shared physical drum accessories.
+const SPECIALIST_LEGACY_INSTRUMENT_ALIASES: Readonly<Record<string, readonly string[]>> = {
+  'electric_guitar': ['guitar', 'electric', 'lead_guitar'],
+  'acoustic_guitar': ['acoustic'],
+  'classical_guitar': ['classical', 'nylon_string_guitar'],
+  'bass_guitar': ['bass'],
+  'rock_drums': ['drums', 'drum_kit', 'kit', 'cymbals'],
+  'jazz_drums': ['cymbals'],
+  'classical_piano': ['keyboard', 'piano'],
+  'analog_synth': ['synth', 'synthesizer'],
+};
+
 const VOCAL_PERFORMANCE_ROLES = new Set([
   'vocal & performance skills', 'rapping', 'freestyle', 'battle rap',
   'flow & cadence', 'rap songwriting', 'ad-libs & vocal fx',
@@ -359,14 +372,19 @@ function resolveRoleKey(role: string): string | null {
 function doesCategoryMatchRole(category: string, subcategory: string | null, role: string): boolean {
   const equipmentType = canonicalEquipmentType(category, subcategory);
   if (!equipmentType) return false;
-  const roleKey = resolveRoleKey(role);
-  if (roleKey && ROLE_GEAR_TYPES[roleKey]?.includes(equipmentType)) return true;
   const normalizedRole = role.trim().toLowerCase();
   if (VOCAL_PERFORMANCE_ROLES.has(normalizedRole)) return equipmentType === 'microphone';
   const specialistId = SPECIALIST_INSTRUMENT_ROLE_TYPES[normalizedRole]
     ?? (normalizedRole === 'dj scratching' ? 'turntablism' : null);
-  return normalizeEquipmentKey(category) === 'instrument'
-    && !!specialistId && normalizeEquipmentKey(subcategory) === specialistId;
+  // Match modern specialist instruments by exact identity before resolving
+  // broad legacy role aliases; keep explicit historical generic subcategories.
+  if (specialistId && normalizeEquipmentKey(category) === 'instrument') {
+    const itemId = normalizeEquipmentKey(subcategory);
+    return itemId === specialistId
+      || (SPECIALIST_LEGACY_INSTRUMENT_ALIASES[specialistId]?.includes(itemId) ?? false);
+  }
+  const roleKey = resolveRoleKey(role);
+  return !!roleKey && (ROLE_GEAR_TYPES[roleKey]?.includes(equipmentType) ?? false);
 }
 
 // ── Stage Behavior Modifiers (mirrored from client stageBehaviors.ts) ──

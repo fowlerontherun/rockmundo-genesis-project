@@ -102,6 +102,40 @@ describe("personal gear role fit", () => {
     expect(getPersonalGearRoleBonusPercent(item, "Drums")).toBe(0);
     expect(getPersonalGearFitLabel(item, "Drums")).toBe("Not used for Drums");
   });
+
+  it("rejects cross-instrument bonuses for every other specialist instrument", () => {
+    const physical = Object.entries(STAGE_INSTRUMENTS)
+      .filter(([, definition]) => definition.role !== "vocals");
+    for (const [roleInstrumentId, roleInstrument] of physical) {
+      for (const [equipmentInstrumentId] of physical) {
+        expect(personalGearMatchesRole("instrument", equipmentInstrumentId, roleInstrument.label),
+          `${roleInstrument.label} must only match its own ${roleInstrumentId} instrument (got ${equipmentInstrumentId})`,
+        ).toBe(equipmentInstrumentId === roleInstrumentId);
+      }
+    }
+  });
+
+  it("keeps only explicit legacy generic instrument aliases for specific roles", () => {
+    expect(personalGearMatchesRole("instrument", "bass", "Bass Guitar")).toBe(true);
+    expect(personalGearMatchesRole("instrument", "bass", "Upright Bass")).toBe(false);
+    expect(personalGearMatchesRole("instrument", "drums", "Rock Drums")).toBe(true);
+    expect(personalGearMatchesRole("instrument", "cymbals", "Rock Drums")).toBe(true);
+    expect(personalGearMatchesRole("instrument", "cymbals", "Jazz Drums")).toBe(true);
+    expect(personalGearMatchesRole("instrument", "cymbals", "Electronic Drums")).toBe(false);
+    expect(personalGearMatchesRole("instrument", "cymbals", "Bass Guitar")).toBe(false);
+    expect(personalGearMatchesRole("instrument", "drums", "Jazz Drums")).toBe(false);
+    expect(personalGearMatchesRole("instrument", "guitar", "Electric Guitar")).toBe(true);
+    expect(personalGearMatchesRole("instrument", "guitar", "12-String Guitar")).toBe(false);
+    expect(personalGearMatchesRole("instrument", "synthesizer", "Analog Synthesizer")).toBe(true);
+    expect(personalGearMatchesRole("instrument", "synthesizer", "Digital Synthesizer")).toBe(false);
+    expect(personalGearMatchesRole("instrument", "alto_sax", "Tenor Saxophone")).toBe(false);
+    expect(personalGearMatchesRole("instrument", "jazz_piano", "Classical Piano")).toBe(false);
+    expect(personalGearMatchesRole("instrument", "upright_bass", "Bass Guitar")).toBe(false);
+    expect(personalGearMatchesRole("instrument", "jazz_drums", "Rock Drums")).toBe(false);
+    expect(personalGearMatchesRole("amplifier", "guitar_amp", "Electric Guitar")).toBe(true);
+    expect(personalGearMatchesRole("guitar", "custom_luthiery", "Lead Guitar")).toBe(true);
+  });
+
   it("matches every selectable specialist to the exact buyable instrument type", () => {
     for (const [subcategory, instrument] of Object.entries(STAGE_INSTRUMENTS)) {
       if (instrument.role === "vocals") continue;

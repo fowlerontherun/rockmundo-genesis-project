@@ -145,6 +145,20 @@ const SPECIALIST_INSTRUMENT_ROLE_TYPES = new Map<string, string>(
     .map(([id, definition]) => [definition.label.toLowerCase(), id] as const),
 );
 
+/** Allow only narrowly defined generic instrument aliases and compatible accessories.
+ * Modern subcategories from STAGE_INSTRUMENTS must never cross-match roles.
+ */
+const SPECIALIST_LEGACY_INSTRUMENT_ALIASES: Record<string, readonly string[]> = {
+  "electric_guitar": ["guitar", "electric", "lead_guitar"],
+  "acoustic_guitar": ["acoustic"],
+  "classical_guitar": ["classical", "nylon_string_guitar"],
+  "bass_guitar": ["bass"],
+  "rock_drums": ["drums", "drum_kit", "kit", "cymbals"],
+  "jazz_drums": ["cymbals"],
+  "classical_piano": ["keyboard", "piano"],
+  "analog_synth": ["synth", "synthesizer"],
+};
+
 const VOCAL_PERFORMANCE_ROLES = new Set([
   "vocal & performance skills", "rapping", "freestyle", "battle rap",
   "flow & cadence", "rap songwriting", "ad-libs & vocal fx",
@@ -221,19 +235,25 @@ export function personalGearMatchesRole(
   const equipmentType = getCanonicalEquipmentType(category, subcategory);
   if (!equipmentType) return false;
 
-  // Preserve older shared-band aliases (amps, effects, generic guitars, etc.).
-  const roleKey = ROLE_GEAR_TYPES[role] ? role : resolveRoleKey(role);
-  if (roleKey && ROLE_GEAR_TYPES[roleKey]?.includes(equipmentType)) return true;
-
   const normalizedRole = role.trim().toLowerCase();
   if (VOCAL_PERFORMANCE_ROLES.has(normalizedRole)) return equipmentType === "microphone";
 
-  // Every selectable specialist has its own shop subcategory. Compare the raw
-  // subcategory because generic type canonicalisation collapses some keyboards.
   const specialistId = SPECIALIST_INSTRUMENT_ROLE_TYPES.get(normalizedRole)
     ?? (normalizedRole === "dj scratching" ? "turntablism" : null);
-  return normalizeEquipmentKey(category) === "instrument"
-    && Boolean(specialistId && normalizeEquipmentKey(subcategory) === specialistId);
+
+  // Physical specialist roles use exact instrument identity. Broad family
+  // aliases (Bass/Saxophone/Drums/Keys) must not match a *different* instrument
+  // when a player owns a modern instrument catalogue item.
+  if (specialistId && normalizeEquipmentKey(category) === "instrument") {
+    const itemId = normalizeEquipmentKey(subcategory);
+    return itemId === specialistId
+      || (SPECIALIST_LEGACY_INSTRUMENT_ALIASES[specialistId]?.includes(itemId) ?? false);
+  }
+
+  // Preserve historic band-family roles, legacy crafted gear and accessories
+  // (guitar amps, pedals, microphones) outside the instrument catalogue.
+  const roleKey = ROLE_GEAR_TYPES[role] ? role : resolveRoleKey(role);
+  return Boolean(roleKey && ROLE_GEAR_TYPES[roleKey]?.includes(equipmentType));
 }
 
 /**
