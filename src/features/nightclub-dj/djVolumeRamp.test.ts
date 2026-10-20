@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { equalPowerCrossfade } from "./mixerMath";
-import { DJ_CROSSFADE_RAMP_MS, rampDjDeckVolume, type DjVolumeFrameScheduler } from "./djVolumeRamp";
+import { DJ_CROSSFADE_RAMP_MS, djCombinedDeckVolume, rampDjDeckVolume, type DjVolumeFrameScheduler } from "./djVolumeRamp";
 
 function fakeFrames() {
   let ms = 0;
@@ -28,6 +28,17 @@ function fakeFrames() {
 }
 
 describe("DJ native-audio crossfader gain smoothing", () => {
+  it("preserves realistic controller channel trims alongside equal-power fader levels", () => {
+    const center = equalPowerCrossfade(50);
+    expect(djCombinedDeckVolume(center.a, 100)).toBeCloseTo(center.a);
+    expect(djCombinedDeckVolume(center.b, 50)).toBeCloseTo(center.b / 2);
+    expect(djCombinedDeckVolume(.7, 0)).toBe(0);
+    expect(djCombinedDeckVolume(.7, 150)).toBeCloseTo(.7);
+    expect(djCombinedDeckVolume(.7, -1)).toBe(0);
+    expect(djCombinedDeckVolume(.7, Number.NaN)).toBe(0);
+    expect(djCombinedDeckVolume(Number.NaN, 90)).toBe(0);
+  });
+
   it("ramps each deck smoothly with zero-slope endpoints and no amplification", () => {
     const f = fakeFrames();
     const a = { volume: .7, paused: false };
