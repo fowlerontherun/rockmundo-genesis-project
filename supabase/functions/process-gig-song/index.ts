@@ -1,3 +1,4 @@
+import { authorizeGigRequest } from "../_shared/authorize-gig-request.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveBandEquipment } from "../_shared/live-setup.ts";
@@ -806,6 +807,10 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
+    const denied = await authorizeGigRequest(
+      req, supabaseClient, gigId, corsHeaders, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
+    );
+    if (denied) return denied;
 
     // Get gig details with proper relationship hint
     const { data: gig, error: gigError } = await supabaseClient
@@ -819,7 +824,7 @@ serve(async (req) => {
       throw new Error('Gig not found');
     }
 
-    if (["cancelled", "completed", "failed"].includes(gig.status)) {
+    if (gig.status !== "in_progress") {
       throw new Error(`Cannot process song for gig in status ${gig.status}`);
     }
 
