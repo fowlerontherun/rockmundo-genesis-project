@@ -11,6 +11,7 @@ const ITEM_DEFAULT_COLOURS: Record<string, string> = {
   'starter.top.vintage-charcoal': '#657386',
   'starter.bottom.blue-jeans': '#426baa',
   'starter.bottom.black-jeans': '#20232b',
+  'starter.bottom.black-ripped-skinny-jeans': '#17181b',
   'starter.bottom.dark-slim-jeans': '#283954',
   'starter.footwear.black-boots': '#20232b',
   'starter.footwear.brown-boots': '#ad6241',

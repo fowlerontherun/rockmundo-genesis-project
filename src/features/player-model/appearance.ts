@@ -25,7 +25,7 @@ export const STARTER_ITEMS: Record<EquipmentSlot, StarterItem[]> = {
   ]),
   bottom: wardrobe('bottom', [
     ['casual', 'casual', 'Everyday trousers', 'plain'], ['punk', 'punk', 'Punk trousers', 'plain'], ['suit', 'suit', 'Tailored trousers', 'plain'],
-    ['denim', 'casual', 'Denim trousers', 'denim'], ['blue-jeans', 'casual', 'Blue straight jeans', 'denim'], ['black-jeans', 'punk', 'Black straight jeans', 'denim'], ['dark-slim-jeans', 'punk', 'Dark slim jeans', 'denim'], ['plaid', 'suit', 'Checked trousers', 'plaid'], ['pinstripe', 'suit', 'Pinstripe trousers', 'pinstripe'],
+    ['denim', 'casual', 'Denim trousers', 'denim'], ['blue-jeans', 'casual', 'Blue straight jeans', 'denim'], ['black-jeans', 'punk', 'Black straight jeans', 'denim'], ['dark-slim-jeans', 'punk', 'Dark slim jeans', 'denim'], ['black-ripped-skinny-jeans', 'punk', 'Black ripped skinny jeans', 'denim'], ['plaid', 'suit', 'Checked trousers', 'plaid'], ['pinstripe', 'suit', 'Pinstripe trousers', 'pinstripe'],
     ['denim-shorts', 'casual', 'Denim shorts', 'denim'], ['cargo-shorts', 'casual', 'Cargo shorts', 'plain'], ['athletic-shorts', 'punk', 'Athletic shorts', 'plain'],
     ['boxer-briefs', 'casual', 'Boxer briefs', 'plain'], ['briefs', 'casual', 'Briefs', 'plain'],
     ['chinos', 'casual', 'Chinos', 'plain'], ['wide-leg', 'casual', 'Wide-leg trousers', 'plain'],
@@ -46,6 +46,7 @@ export const LIVE_STARTER_ITEM_IDS = new Set([
   // Bottoms backed by the three donor trouser families plus proven cropped variants.
   'starter.bottom.casual','starter.bottom.punk','starter.bottom.suit','starter.bottom.denim',
   'starter.bottom.blue-jeans','starter.bottom.black-jeans','starter.bottom.dark-slim-jeans',
+  'starter.bottom.black-ripped-skinny-jeans',
   'starter.bottom.plaid','starter.bottom.pinstripe','starter.bottom.denim-shorts',
   'starter.bottom.boxer-briefs','starter.bottom.briefs','starter.bottom.chinos',
   // All current footwear choices are donor-backed.
@@ -218,10 +219,12 @@ const STARTER_VISUAL_STYLE_OVERRIDES: Partial<Record<string, Style>> = {
   'starter.bottom.punk': 'casual',
   'starter.bottom.black-jeans': 'casual',
   'starter.bottom.dark-slim-jeans': 'casual',
+  'starter.bottom.black-ripped-skinny-jeans': 'casual',
 };
 
 export function equipmentStyle(appearance: PlayerAppearance, slot: EquipmentSlot): Style {
   const item = visualEquipmentItem(appearance, slot);
+  if (item.id === 'starter.bottom.black-ripped-skinny-jeans') return appearance.body.frame === 'masculine' ? 'suit' : 'casual';
   // The masculine casual donor wears knee-length shorts, not trousers.
   // Respect the selected garment's visual style; only suit garments use the suit donor.
   if (slot === 'footwear' && /boots$/.test(item.id)) return 'punk';
