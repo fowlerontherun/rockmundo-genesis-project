@@ -1,3 +1,4 @@
+import { CrowdVolumeControl } from "@/features/shared-audio/CrowdVolumeControl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -249,6 +250,7 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
     isPlaying: !!state?.isPlaying,
     snapshot,
     stageType,
+    replaySeed: playbackReplay.simulationSeed,
     showFrame,
   });
 
@@ -422,6 +424,7 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
   }
 
   const analysisControls = (
+    <CrowdVolumeControl />
     <GigViewerControls
       playing={state.isPlaying}
       complete={state.isComplete}
