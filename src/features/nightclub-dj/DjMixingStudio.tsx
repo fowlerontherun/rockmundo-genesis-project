@@ -17,6 +17,7 @@ import { DjSetlistPlanner } from "./DjSetlistPlanner";
 import { djReadinessSteps, useDjMixReadiness } from "./djReadiness";
 import { bindDjDeckLifecycle } from "./deckAudioLifecycle";
 import { deliverDjMixEvent } from "./mixerEventDelivery";
+import { browserDjVolumeClock, djCombinedDeckVolume, rampDjDeckVolume } from "./djVolumeRamp";
 import { DjPadBank, DjPlatter, DjTrimMeter, DjWaveform } from "./DjHardwareVisuals";
 import { djHotCueSeek, djJogSeek, emptyDjHotCues, storeDjHotCue, type DjHotCueSlots } from "./djHardwareControls";
 import "./DjConsole.css";
@@ -118,10 +119,17 @@ function AudioDeck({
   }, [audioSourceKey, retryNonce]);
 
   useEffect(() => {
-    if (!audioRef.current) return;
-    audioRef.current.volume = Math.max(0, Math.min(1, level * trim / 100));
-    audioRef.current.playbackRate = clampDeckRate(rate);
-  }, [level, trim, rate, selectedId]);
+    const player = audioRef.current;
+    if (!player) return;
+    // Retain the native HTML audio path for CORS-limited game and signed
+    // tracks. Smooth the combined channel trim and equal-power crossfade.
+    // Cleanup cancels obsolete frames on fader/trim drag or deck removal.
+    return rampDjDeckVolume(player, djCombinedDeckVolume(level, trim), browserDjVolumeClock());
+  }, [level, trim]);
+
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.playbackRate = clampDeckRate(rate);
+  }, [rate]);
 
   const togglePlayback = async () => {
     const player = audioRef.current;
@@ -575,9 +583,10 @@ export function DjMixingStudio({ liveBookingId, clubName }: { liveBookingId?: st
               <Button type="button" variant="secondary" onClick={syncB}
                 className="text-xs">SYNC B → A</Button>
               <p className="rm-dj-mixer-caption">
-                Channel trim and crossfader change real deck volume. EQ knobs are
-                a visual preview and are not active yet; LED strips indicate trim position,
-                not measured audio signal.
+                Channel trim and equal-power crossfader smoothly ramp real deck volume
+                over 90 ms to avoid abrupt steps. Native audio works with signed and
+                cross-origin tracks. EQ knobs are a visual preview and are not active;
+                LEDs indicate trim position, not measured audio signal.
               </p>
             </CardContent>
           </Card>
