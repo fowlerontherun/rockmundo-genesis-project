@@ -1,4 +1,5 @@
 import { ReleaseArtwork } from '@/components/game-art/ReleaseArtwork';
+import { ReleaseArtworkDesigner, type ArtworkDraft } from './artwork/ReleaseArtworkDesigner';
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,9 @@ export function EditReleaseDialog({ open, onOpenChange, release }: EditReleaseDi
   const [artistName, setArtistName] = useState("");
   const [artworkUrl, setArtworkUrl] = useState("");
   const [scheduledDate, setScheduledDate] = useState("");
+  const [artworkBusy, setArtworkBusy] = useState(false);
+  const [artworkDraft, setArtworkDraft] = useState<ArtworkDraft | null>(null);
+  const [designerOpen, setDesignerOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const queryClient = useQueryClient();
 
@@ -65,12 +69,15 @@ export function EditReleaseDialog({ open, onOpenChange, release }: EditReleaseDi
 
   useEffect(() => {
     if (release) {
+      setDesignerOpen(false);
       setTitle(release.title);
       setArtistName(release.artist_name);
       setArtworkUrl(release.artwork_url || "");
       setScheduledDate(release.scheduled_release_date || "");
     }
   }, [release]);
+
+  useEffect(() => { setArtworkDraft(null); }, [release?.id]);
 
   const updateRelease = useMutation({
     mutationFn: async () => {
@@ -84,7 +91,7 @@ export function EditReleaseDialog({ open, onOpenChange, release }: EditReleaseDi
           artwork_url: artworkUrl || null,
           scheduled_release_date: scheduledDate || null,
         })
-        .eq("id", release.id);
+        .eq("id", release.id).select("id").single();
 
       if (error) throw error;
     },
@@ -103,37 +110,24 @@ export function EditReleaseDialog({ open, onOpenChange, release }: EditReleaseDi
     }
   });
 
-  const handleArtworkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !release) return;
-
+  const uploadArtworkFile = async (file: File) => {
+    if (!release) throw new Error("No release selected");
     setUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${release.id}-${Date.now()}.${fileExt}`;
-      const filePath = `release-artwork/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("music")
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from("music")
-        .getPublicUrl(filePath);
-
+      const fileExt = file.name.split('.').pop() || 'png';
+      const filePath = `release-artwork/${release.id}-${crypto.randomUUID()}.${fileExt}`;
+      const { error } = await supabase.storage.from("music").upload(filePath, file, { contentType: file.type, upsert: false });
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from("music").getPublicUrl(filePath);
       setArtworkUrl(publicUrl);
-      toast({ title: "Artwork uploaded" });
-    } catch (error: any) {
-      toast({
-        title: "Upload failed",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setUploading(false);
-    }
+    } finally { setUploading(false); }
+  };
+
+  const handleArtworkUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try { await uploadArtworkFile(file); toast({ title: "Artwork uploaded" }); }
+    catch (error: any) { toast({ title: "Upload failed", description: error.message, variant: "destructive" }); }
   };
 
   if (!release) return null;
@@ -141,8 +135,8 @@ export function EditReleaseDialog({ open, onOpenChange, release }: EditReleaseDi
   const canEditDate = release.release_status !== "released";
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+    <Dialog open={open} onOpenChange={next => { if (!uploading && !artworkBusy && !updateRelease.isPending) onOpenChange(next); }}>
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Release</DialogTitle>
         </DialogHeader>
@@ -216,9 +210,13 @@ export function EditReleaseDialog({ open, onOpenChange, release }: EditReleaseDi
             </div>
           </div>
 
+          <Button type="button" variant="outline" disabled={uploading || updateRelease.isPending || artworkBusy} aria-expanded={designerOpen} onClick={() => setDesignerOpen(v => !v)}>{designerOpen ? 'Hide artwork studio' : 'Design your artwork'}</Button>
+          {designerOpen && <ReleaseArtworkDesigner draft={artworkDraft ?? undefined} onDraftChange={setArtworkDraft} onBusyChange={setArtworkBusy} key={release.id} title={title} artist={artistName} disabled={uploading || updateRelease.isPending || artworkBusy} onUse={uploadArtworkFile} />}
+
           <div className="flex gap-2 pt-4">
             <Button
               variant="outline"
+              disabled={uploading || artworkBusy || updateRelease.isPending}
               onClick={() => onOpenChange(false)}
               className="flex-1"
             >
@@ -226,7 +224,7 @@ export function EditReleaseDialog({ open, onOpenChange, release }: EditReleaseDi
             </Button>
             <Button
               onClick={() => updateRelease.mutate()}
-              disabled={updateRelease.isPending || !title || !artistName}
+              disabled={uploading || artworkBusy || updateRelease.isPending || !title || !artistName}
               className="flex-1"
             >
               {updateRelease.isPending ? (

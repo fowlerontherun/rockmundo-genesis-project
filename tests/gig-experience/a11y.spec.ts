@@ -52,8 +52,17 @@ test('keyboard-only viewer flow remains operable', async ({ page }) => {
     const actionable = await button.isVisible().catch(() => false)
       && await button.isEnabled().catch(() => false);
     if (!actionable) continue;
-    const focused = await button.focus({ timeout: 1_000 }).then(() => true).catch(() => false);
-    if (!focused) continue;
+    try {
+      await button.focus({ timeout: 1_000 });
+    } catch (error) {
+      // Ignore a replay-state transition only if the control is now absent
+      // or no longer actionable; otherwise a focus regression must fail.
+      if (await button.count() === 0
+        || !(await button.isVisible().catch(() => false))
+        || !(await button.isEnabled().catch(() => false))) continue;
+      throw error;
+    }
+    await expect(button).toBeFocused();
     await page.keyboard.press('Enter');
   }
   await expect(page.locator(':focus')).toBeVisible();

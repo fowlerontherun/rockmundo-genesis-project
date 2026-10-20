@@ -1,3 +1,6 @@
+import { createArtworkAttachment, getCreatedReleaseSummary } from './artwork/attachArtwork';
+import { ArtworkRecovery, type ArtworkRecoveryState } from './artwork/ArtworkRecovery';
+import { ReleaseArtworkDesigner, type ArtworkDraft } from './artwork/ReleaseArtworkDesigner';
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -37,6 +40,7 @@ const MANUFACTURING_DAYS: Record<string, number> = {
 const MAX_ARTWORK_SIZE_BYTES = 10 * 1024 * 1024;
 
 export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleaseDialogProps) {
+  const [artworkRecovery, setArtworkRecovery] = useState<ArtworkRecoveryState | null>(null);
   const [step, setStep] = useState(1);
   const [releaseType, setReleaseType] = useState<ReleaseType>("single");
   const [title, setTitle] = useState("");
@@ -47,6 +51,9 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
   const [selectedStreamingPlatforms, setSelectedStreamingPlatforms] = useState<string[]>([]);
   const [scheduledReleaseDate, setScheduledReleaseDate] = useState<Date | null>(null);
   const [revenueShareEnabled, setRevenueShareEnabled] = useState(false);
+  const [artworkBusy, setArtworkBusy] = useState(false);
+  const [artworkDraft, setArtworkDraft] = useState<ArtworkDraft | null>(null);
+  const [designerOpen, setDesignerOpen] = useState(false);
   const [artworkFile, setArtworkFile] = useState<File | null>(null);
   const [artworkPreviewUrl, setArtworkPreviewUrl] = useState<string | null>(null);
 
@@ -256,43 +263,22 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
       if (createError) throw createError;
 
       let artworkWarning: string | null = null;
-      if (artworkFile) {
-        try {
-          const fileExt = artworkFile.name.split(".").pop() || "jpg";
-          const fileName = `${releaseId}-${Date.now()}.${fileExt}`;
-          const filePath = `release-artwork/${fileName}`;
-
-          const { error: uploadError } = await supabase.storage
-            .from("music")
-            .upload(filePath, artworkFile, {
-              contentType: artworkFile.type,
-              upsert: false,
-            });
-          if (uploadError) throw uploadError;
-
-          const { data: { publicUrl } } = supabase.storage
-            .from("music")
-            .getPublicUrl(filePath);
-
-          const { error: artworkUpdateError } = await supabase
-            .from("releases")
-            .update({ artwork_url: publicUrl })
-            .eq("id", releaseId);
-          if (artworkUpdateError) throw artworkUpdateError;
-        } catch (error: any) {
-          artworkWarning = error?.message || "The artwork could not be uploaded.";
-        }
+      const retryArtwork = artworkFile ? createArtworkAttachment(releaseId, artworkFile) : null;
+      if (retryArtwork) {
+        try { await retryArtwork(); }
+        catch (error: any) { artworkWarning = error?.message || "The artwork could not be uploaded."; }
       }
 
-      const { data: release, error: fetchError } = await supabase.from("releases").select("*").eq("id", releaseId).single();
-      if (fetchError) throw fetchError;
+      // The financing transaction has committed. A failed read must not make
+      // the player submit (and pay for) another release.
+      const release = await getCreatedReleaseSummary(releaseId);
 
       logGameActivity({ userId, bandId: userBand?.id, activityType: "release_created", activityCategory: "release",
         description: `Created ${releaseType} release "${title}" - Manufacturing in progress`, amount: -minorToMajor(bandPaysMinor),
         metadata: { releaseId, manufacturingDays, territoryCostMinor, labelCoveredCostMinor: labelPaysMinor } });
-      return { release, artworkWarning };
+      return { release, artworkWarning, retryArtwork };
     },
-    onSuccess: ({ release, artworkWarning }) => {
+    onSuccess: ({ release, artworkWarning, retryArtwork }) => {
       queryClient.invalidateQueries({ queryKey: ["releases"] });
       if (userBand) {
         queryClient.invalidateQueries({ queryKey: ["band", userBand.id] });
@@ -303,13 +289,13 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
         queryClient.invalidateQueries({ queryKey: ["my-labels"] });
       }
       
-      const manufacturingDays = Math.ceil(
+      const manufacturingDays = release.manufacturing_complete_at ? Math.ceil(
         (new Date(release.manufacturing_complete_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-      );
+      ) : null;
       
       toast({ 
         title: "Release Created!", 
-        description: `Manufacturing will complete in ${manufacturingDays} days. Distributing to ${selectedTerritories.length} territories.${
+        description: `${manufacturingDays === null ? "Refresh your releases to see the manufacturing schedule." : `Manufacturing will complete in ${manufacturingDays} days.`} Distributing to ${selectedTerritories.length} territories.${
           activeContract ? ` Released under ${labelName}.` : ''
         }${
           release.scheduled_release_date 
@@ -318,12 +304,10 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
         }`
       });
 
-      if (artworkWarning) {
-        toast({
-          title: "Release created, artwork not added",
-          description: `${artworkWarning} You can still add cover art from the release details page.`,
-          variant: "destructive",
-        });
+      if (artworkWarning && artworkFile && retryArtwork) {
+        setArtworkRecovery({ releaseId: release.id, title, profileId, file: artworkFile, draft: artworkDraft, error: artworkWarning, retry: retryArtwork });
+        resetForm();
+        return;
       }
 
       onOpenChange(false);
@@ -350,6 +334,8 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
     setScheduledReleaseDate(null);
     setRevenueShareEnabled(false);
     clearArtwork();
+    setArtworkDraft(null);
+    setDesignerOpen(false);
   };
 
   const handleNext = () => {
@@ -374,8 +360,23 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
     }
   };
 
+  if (artworkRecovery) {
+    const finish = () => { setArtworkRecovery(null); onOpenChange(false); };
+    return <Dialog open={open} onOpenChange={next => { if (!artworkBusy) onOpenChange(next); }}>
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader><DialogTitle>Release created — recover artwork</DialogTitle></DialogHeader>
+        <ArtworkRecovery recovery={artworkRecovery} disabled={profileId !== artworkRecovery.profileId} onBusyChange={setArtworkBusy} onFinish={finish} onSaved={() => {
+          void queryClient.invalidateQueries({ queryKey: ["releases"] });
+          void queryClient.invalidateQueries({ queryKey: ["release-detail"] });
+          toast({ title: "Artwork attached successfully" });
+          finish();
+        }} />
+      </DialogContent>
+    </Dialog>;
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={next => { if (!artworkBusy && !createRelease.isPending) onOpenChange(next); }}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Release - Step {step} of 5</DialogTitle>
@@ -469,7 +470,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
                     type="file"
                     accept="image/*"
                     onChange={handleArtworkChange}
-                    disabled={createRelease.isPending}
+                    disabled={createRelease.isPending || artworkBusy}
                   />
                   <p className="text-xs text-muted-foreground">
                     Add the artwork now or skip it and add/change it later from the release details page. Maximum file size 10 MB.
@@ -481,7 +482,10 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
               </div>
             </div>
 
-            <Button onClick={handleNext} disabled={createRelease.isPending} className="w-full">Next: Select Songs</Button>
+            <Button type="button" variant="outline" disabled={createRelease.isPending || artworkBusy} aria-expanded={designerOpen} onClick={() => setDesignerOpen(v => !v)}>{designerOpen ? 'Hide artwork studio' : 'Design your artwork'}</Button>
+            {designerOpen && <ReleaseArtworkDesigner draft={artworkDraft ?? undefined} onDraftChange={setArtworkDraft} onBusyChange={setArtworkBusy} title={title} artist={artistName} disabled={createRelease.isPending || artworkBusy} onUse={file => { setArtworkFile(file); setArtworkPreviewUrl(URL.createObjectURL(file)); }} />}
+
+            <Button onClick={handleNext} disabled={createRelease.isPending || artworkBusy} className="w-full">Next: Select Songs</Button>
           </div>
         )}
 

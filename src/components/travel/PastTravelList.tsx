@@ -1,3 +1,4 @@
+import { TravelPassport } from '@/components/game-art/TravelArtwork';
 import { useQuery } from "@tanstack/react-query";
 import { History, Plane, Train, Bus, Ship, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +15,7 @@ interface PastTravelListProps {
 
 interface TravelHistoryEntry {
   id: string;
+  to_city_id: string | null;
   from_city: { name: string; country: string } | null;
   to_city: { name: string; country: string };
   transport_type: string;
@@ -34,7 +36,7 @@ const TRANSPORT_ICONS = {
 export const PastTravelList = ({ profileId }: PastTravelListProps) => {
   const { t } = useTranslation();
 
-  const { data: travelHistory, isLoading } = useQuery({
+  const { data: travelHistory, isLoading, isError, refetch } = useQuery({
     queryKey: ["past-travel", profileId],
     queryFn: async () => {
       const data: Array<{ id: string; from_city_id: string | null; to_city_id: string | null; transport_type: string; cost_paid: number; travel_duration_hours: number; departure_time: string; arrival_time: string; status: string; }> = [];
@@ -70,15 +72,17 @@ export const PastTravelList = ({ profileId }: PastTravelListProps) => {
       ])].filter(Boolean) as string[];
 
       // Fetch city data
-      const { data: cities } = await supabase
+      const { data: cities, error: citiesError } = await supabase
         .from("cities")
         .select("id, name, country")
         .in("id", cityIds);
       
+      if (citiesError) throw citiesError;
       const cityMap = new Map(cities?.map(c => [c.id, { name: c.name, country: c.country }]) || []);
 
       return data.map(t => ({
         id: t.id,
+        to_city_id: t.to_city_id,
         from_city: t.from_city_id ? cityMap.get(t.from_city_id) || null : null,
         to_city: cityMap.get(t.to_city_id) || { name: "Unknown", country: "" },
         transport_type: t.transport_type,
@@ -122,6 +126,8 @@ export const PastTravelList = ({ profileId }: PastTravelListProps) => {
     );
   }
 
+  if (isError) return <Alert variant="destructive"><AlertDescription>Travel history is unavailable. <button type="button" className="underline" onClick={() => void refetch()}>Try again</button></AlertDescription></Alert>;
+
   if (!travelHistory || travelHistory.length === 0) {
     return (
       <Alert>
@@ -137,7 +143,7 @@ export const PastTravelList = ({ profileId }: PastTravelListProps) => {
   const completedTrips = travelHistory.filter(t => t.status === "completed");
   const totalSpent = completedTrips.reduce((sum, t) => sum + t.cost_paid, 0);
   const totalHours = completedTrips.reduce((sum, t) => sum + t.travel_duration_hours, 0);
-  const citiesVisited = new Set(completedTrips.map(t => t.to_city.name)).size;
+  const citiesVisited = new Set(completedTrips.map(t => t.to_city_id).filter(Boolean)).size;
 
   return (
     <div className="space-y-6">
@@ -168,6 +174,8 @@ export const PastTravelList = ({ profileId }: PastTravelListProps) => {
           </CardContent>
         </Card>
       </div>
+
+      <TravelPassport journeys={travelHistory} />
 
       {/* History Table */}
       <Card>

@@ -34,7 +34,7 @@ jobs:
       - name: Verify Top of the Pops migration timestamps
         run: npm run verify:totp-migration-timestamps
       - name: Verify legacy songwriting migration reconciliation
-        run: node --test tests/legacy-songwriting-table-reconciliation.test.mjs
+        run: node --test tests/legacy-songwriting-table-reconciliation.test.mjs tests/legacy-university-schema-reconciliation.test.mjs
       - name: Typecheck
         run: npm run typecheck
       - name: Lint
