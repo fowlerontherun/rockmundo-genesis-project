@@ -1,3 +1,4 @@
+import { ReleaseArtwork } from '@/components/game-art/ReleaseArtwork';
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -335,7 +336,7 @@ export function MyReleasesTab({ userId, authUserId }: MyReleasesTabProps) {
         ...(candidate.release.artist_name ? [{ label: "Artist", value: candidate.release.artist_name }] : []),
         ...(candidate.release.release_type ? [{ label: "Format", value: String(candidate.release.release_type).toUpperCase() }] : []),
       ].slice(0, 4),
-      artworkUrl: candidate.release.cover_art_url || candidate.release.cover_image_url || null,
+      artworkUrl: candidate.release.artwork_url || null,
       destinationUrl,
       referralCode: null,
       createdAt: new Date().toISOString(),
@@ -356,7 +357,7 @@ export function MyReleasesTab({ userId, authUserId }: MyReleasesTabProps) {
         ...(releaseDate ? [{ label: release.release_status === "released" ? "Released" : "Release date", value: formatDate(new Date(releaseDate), "MMM d, yyyy") }] : []),
         ...(release.release_songs?.length ? [{ label: "Tracks", value: String(release.release_songs.length) }] : []),
       ],
-      artworkUrl: release.cover_art_url || release.cover_image_url || null,
+      artworkUrl: release.artwork_url || null,
       destinationUrl: `${window.location.origin}/release/${release.id}`,
       referralCode: null,
       visualTheme: "spotlight",
@@ -703,13 +704,7 @@ function ReleaseCard({ release, financials, financeAvailable = false, labelCutPc
     <>
     <Card className="overflow-hidden">
       <div className="flex gap-3 p-3">
-        {release.artwork_url ? (
-          <img src={release.artwork_url} alt={release.title} className="w-14 h-14 object-cover rounded-md shadow-sm flex-shrink-0" />
-        ) : (
-          <div className="w-14 h-14 bg-gradient-to-br from-muted to-muted/50 rounded-md flex items-center justify-center shadow-inner flex-shrink-0">
-            <Disc className="h-6 w-6 text-muted-foreground" />
-          </div>
-        )}
+        <ReleaseArtwork id={release.id} title={release.title} artist={release.artist_name || release.bands?.name} artworkUrl={release.artwork_url} releaseType={release.release_type} />
         <div className="flex-1 min-w-0 space-y-1.5">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="font-semibold text-sm truncate">{release.title}</h3>

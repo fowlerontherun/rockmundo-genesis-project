@@ -1,0 +1,10 @@
+.release-sleeve { position: relative; isolation: isolate; width: 6rem; aspect-ratio: 1; flex-shrink: 0; overflow: hidden; border-radius: .45rem; background: var(--art-bg); box-shadow: 0 3px 10px #0003, inset 0 0 0 1px #ffffff20; }
+.release-sleeve__fallback { position: absolute; inset: 0; overflow: hidden; background: linear-gradient(145deg, transparent 25%, #0006); }
+.release-sleeve__grain { position: absolute; inset: 0; opacity: .2; background: repeating-linear-gradient(100deg, transparent 0 3px, var(--art-accent) 3px 4px); }
+.release-sleeve__type { position: absolute; top: 8%; left: 9%; font-size: .45rem; font-weight: 800; letter-spacing: .18em; color: var(--art-highlight); }
+.release-sleeve__record { position: absolute; width: 92%; height: 92%; right: -23%; top: -7%; }
+.release-sleeve__copy { position: absolute; inset: auto 0 0; display: flex; flex-direction: column; gap: .15rem; padding: 22% 9% 9%; background: linear-gradient(transparent, #000d); color: #fff; }
+.release-sleeve__copy span { font-size: .45rem; letter-spacing: .08em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.release-sleeve__copy strong { font-size: .65rem; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.release-sleeve__image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+@media (min-width: 640px) { .release-sleeve { width: 7rem; } }
