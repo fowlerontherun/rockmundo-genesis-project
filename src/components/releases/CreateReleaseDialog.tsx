@@ -1,4 +1,4 @@
-import { ReleaseArtworkDesigner } from './artwork/ReleaseArtworkDesigner';
+import { ReleaseArtworkDesigner, type ArtworkDraft } from './artwork/ReleaseArtworkDesigner';
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -49,6 +49,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
   const [scheduledReleaseDate, setScheduledReleaseDate] = useState<Date | null>(null);
   const [revenueShareEnabled, setRevenueShareEnabled] = useState(false);
   const [artworkBusy, setArtworkBusy] = useState(false);
+  const [artworkDraft, setArtworkDraft] = useState<ArtworkDraft | null>(null);
   const [designerOpen, setDesignerOpen] = useState(false);
   const [artworkFile, setArtworkFile] = useState<File | null>(null);
   const [artworkPreviewUrl, setArtworkPreviewUrl] = useState<string | null>(null);
@@ -280,7 +281,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
           const { error: artworkUpdateError } = await supabase
             .from("releases")
             .update({ artwork_url: publicUrl })
-            .eq("id", releaseId);
+            .eq("id", releaseId).select("id").single();
           if (artworkUpdateError) throw artworkUpdateError;
         } catch (error: any) {
           artworkWarning = error?.message || "The artwork could not be uploaded.";
@@ -353,6 +354,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
     setScheduledReleaseDate(null);
     setRevenueShareEnabled(false);
     clearArtwork();
+    setArtworkDraft(null);
     setDesignerOpen(false);
   };
 
@@ -486,7 +488,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
             </div>
 
             <Button type="button" variant="outline" disabled={createRelease.isPending || artworkBusy} aria-expanded={designerOpen} onClick={() => setDesignerOpen(v => !v)}>{designerOpen ? 'Hide artwork studio' : 'Design your artwork'}</Button>
-            {designerOpen && <ReleaseArtworkDesigner onBusyChange={setArtworkBusy} title={title} artist={artistName} disabled={createRelease.isPending || artworkBusy} onUse={file => { setArtworkFile(file); setArtworkPreviewUrl(URL.createObjectURL(file)); }} />}
+            {designerOpen && <ReleaseArtworkDesigner draft={artworkDraft ?? undefined} onDraftChange={setArtworkDraft} onBusyChange={setArtworkBusy} title={title} artist={artistName} disabled={createRelease.isPending || artworkBusy} onUse={file => { setArtworkFile(file); setArtworkPreviewUrl(URL.createObjectURL(file)); }} />}
 
             <Button onClick={handleNext} disabled={createRelease.isPending || artworkBusy} className="w-full">Next: Select Songs</Button>
           </div>

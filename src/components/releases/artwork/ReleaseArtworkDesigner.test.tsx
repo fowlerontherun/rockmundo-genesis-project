@@ -35,3 +35,17 @@ describe('player artwork studio', () => {
     expect(screen.getByLabelText('Design title')).toBeDisabled();
   });
 });
+
+it('restores the edited design and selected surface when the parent reopens the studio', () => {
+  const onDraftChange = vi.fn();
+  const { unmount } = render(<ReleaseArtworkDesigner title="Original" artist="Band" onUse={vi.fn()} onDraftChange={onDraftChange} />);
+  fireEvent.change(screen.getByLabelText('Design title'), { target: { value: 'Keep this title' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Vinyl', exact: true }));
+  fireEvent.change(screen.getByLabelText('Vinyl finish'), { target: { value: 'splatter' } });
+  const draft = onDraftChange.mock.calls.at(-1)![0];
+  unmount();
+  render(<ReleaseArtworkDesigner title="Original" artist="Band" onUse={vi.fn()} draft={draft} />);
+  expect(screen.getByLabelText('Design title')).toHaveValue('Keep this title');
+  expect(screen.getByRole('button', { name: 'Vinyl', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByLabelText('Vinyl finish')).toHaveValue('splatter');
+});

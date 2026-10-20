@@ -3,14 +3,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { artworkFile, downloadArtworkFile, drawArtwork, newArtworkDesign, parseArtworkDesign, type ArtworkDesign, type ArtworkSurface } from './design';
 
-export function ReleaseArtworkDesigner({ title, artist, onUse, onBusyChange, disabled = false }: { title: string; artist: string; onUse: (file: File) => void | Promise<void>; disabled?: boolean; onBusyChange?: (busy: boolean) => void }) {
-  const [design, setDesign] = useState(() => newArtworkDesign(title, artist));
-  const [surface, setSurface] = useState<ArtworkSurface>('cover');
+export interface ArtworkDraft { design: ArtworkDesign; surface: ArtworkSurface }
+
+export function ReleaseArtworkDesigner({ title, artist, onUse, onBusyChange, disabled = false, draft, onDraftChange }: { title: string; artist: string; onUse: (file: File) => void | Promise<void>; disabled?: boolean; onBusyChange?: (busy: boolean) => void; draft?: ArtworkDraft; onDraftChange?: (draft: ArtworkDraft) => void }) {
+  const [localDraft, setLocalDraft] = useState<ArtworkDraft>(() => ({ design: newArtworkDesign(title, artist), surface: 'cover' }));
+  const { design, surface } = draft ?? localDraft;
+  const updateDraft = (next: ArtworkDraft) => { setLocalDraft(next); onDraftChange?.(next); };
+  const setDesign = (next: ArtworkDesign) => updateDraft({ design: next, surface });
+  const setSurface = (next: ArtworkSurface) => updateDraft({ design, surface: next });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
-  const patch = (value: Partial<ArtworkDesign>) => { setDesign(d => ({ ...d, ...value })); setNotice(null); };
+  const patch = (value: Partial<ArtworkDesign>) => { setDesign({ ...design, ...value }); setNotice(null); };
   useEffect(() => {
     try { if (canvas.current) drawArtwork(canvas.current, design, surface); setError(null); }
     catch (e) { setError((e as Error).message); }
