@@ -31,6 +31,14 @@ describe('legacy 2025 songwriting feature enhancement is compatible with existin
     assert.doesNotMatch(enhanced, /(?:DROP TABLE|TRUNCATE TABLE|DELETE FROM public\.songwriting_)/i);
   });
 
+  it('uses PostgreSQL-compatible guard for an existing session estimate constraint', () => {
+    const refine = readFileSync(fileURLToPath(new URL('../supabase/migrations/20250929104000_refine_songwriting_schema.sql', import.meta.url)), 'utf8');
+    assert.doesNotMatch(refine, /ADD CONSTRAINT IF NOT EXISTS/i);
+    assert.match(refine, /FROM pg_constraint/);
+    assert.match(refine, /conrelid = 'public\.songwriting_projects'::regclass/);
+    assert.match(refine, /ADD CONSTRAINT songwriting_projects_estimated_completion_sessions_check/);
+  });
+
   it('preserves actual historic session starts instead of backfilling now()', () => {
     assert.match(enhanced, /SET session_start = started_at\s+WHERE session_start IS NULL AND started_at IS NOT NULL/i);
     assert.ok(enhanced.indexOf('ALTER TABLE public.songwriting_sessions\n ADD COLUMN IF NOT EXISTS session_start')
