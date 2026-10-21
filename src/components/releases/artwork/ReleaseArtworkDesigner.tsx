@@ -8,7 +8,7 @@ import { artworkFile, downloadArtworkFile, drawArtwork, newArtworkDesign, type A
 
 export interface ArtworkDraft { design: ArtworkDesign; surface: ArtworkSurface }
 
-export function ReleaseArtworkDesigner({ title, artist, onUse, onBusyChange, disabled = false, draft, onDraftChange }: { title: string; artist: string; onUse: (file: File) => void | Promise<void>; disabled?: boolean; onBusyChange?: (busy: boolean) => void; draft?: ArtworkDraft; onDraftChange?: (draft: ArtworkDraft) => void }) {
+export function ReleaseArtworkDesigner({ title, artist, onUse, onBusyChange, disabled = false, draft, onDraftChange }: { title: string; artist: string; onUse: (file: File, draft: ArtworkDraft) => void | Promise<void>; disabled?: boolean; onBusyChange?: (busy: boolean) => void; draft?: ArtworkDraft; onDraftChange?: (draft: ArtworkDraft) => void }) {
   const [localDraft, setLocalDraft] = useState<ArtworkDraft>(() => ({ design: newArtworkDesign(title, artist), surface: 'cover' }));
   const { design, surface } = draft ?? localDraft;
   const updateDraft = (next: ArtworkDraft) => { setLocalDraft(next); onDraftChange?.(next); };
@@ -45,8 +45,9 @@ export function ReleaseArtworkDesigner({ title, artist, onUse, onBusyChange, dis
   const run = async (use: boolean) => {
     setBusy(true); onBusyChange?.(true); setError(null); setNotice(null);
     try {
-      const file = await artworkFile(design, surface);
-      if (use) { await onUse(file); setNotice('Artwork selected. Save the release to apply it.'); }
+      const snapshot: ArtworkDraft = { design: { ...design, ...(design.image ? { image: { ...design.image } } : {}) }, surface };
+      const file = await artworkFile(snapshot.design, snapshot.surface);
+      if (use) { await onUse(file, snapshot); setNotice('Artwork selected. Save the release to apply it.'); }
       else downloadArtworkFile(file, file.name);
     } catch (e) { setError((e as Error).message || 'Could not create artwork.'); }
     finally { setBusy(false); onBusyChange?.(false); }
