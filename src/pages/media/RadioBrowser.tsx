@@ -1,3 +1,4 @@
+import { RadioStationArtwork } from '@/components/game-art/RadioStationArtwork';
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -335,13 +336,14 @@ const RadioBrowser = () => {
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {filteredStations.map((station) => (
-                <Card key={station.id} className="hover:shadow-lg transition-shadow">
+                <Card key={station.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                  <RadioStationArtwork id={station.id} name={station.name} frequency={station.frequency} />
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2">
                         <Radio className="h-5 w-5 text-primary" />
                         <div>
-                          <CardTitle className="text-lg">{station.name}</CardTitle>
+                          <CardTitle className="text-lg break-words [overflow-wrap:anywhere]">{station.name}</CardTitle>
                           <CardDescription className="flex items-center gap-1 capitalize">
                             {station.station_type}
                             {station.city_id === currentCity?.id && (

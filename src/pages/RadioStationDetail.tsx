@@ -1,3 +1,4 @@
+import { RadioStationArtwork } from '@/components/game-art/RadioStationArtwork';
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -83,7 +84,8 @@ const RadioStationDetail = () => {
 
 
       {/* Station Info */}
-      <Card>
+      <Card className="overflow-hidden">
+        <RadioStationArtwork id={station.id} name={station.name} frequency={station.frequency} />
         <CardHeader>
           <div className="flex items-start justify-between">
             <div>
