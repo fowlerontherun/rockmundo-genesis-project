@@ -2,7 +2,7 @@ import { importArtworkImage, loadArtworkImage } from './imageLayer';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ReleaseArtworkDesigner } from './ReleaseArtworkDesigner';
-import { artworkFile, drawArtwork } from './design';
+import { newArtworkDesign, artworkFile, drawArtwork } from './design';
 vi.mock('./imageLayer', async original => ({ ...await original<typeof import('./imageLayer')>(), importArtworkImage: vi.fn(), loadArtworkImage: vi.fn() }));
 vi.mock('./design', async importOriginal => ({ ...await importOriginal<typeof import('./design')>(), drawArtwork: vi.fn(), artworkFile: vi.fn(), downloadArtworkFile: vi.fn() }));
 
@@ -35,6 +35,7 @@ describe('player artwork studio', () => {
     render(<ReleaseArtworkDesigner title="Night Shift" artist="War Dogs" onUse={vi.fn()} disabled />);
     expect(screen.getByRole('button', { name: 'Use as release artwork' })).toBeDisabled();
     expect(screen.getByLabelText('Design title')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Neon nights' })).toBeDisabled();
   });
 });
 
@@ -100,4 +101,21 @@ it('keeps the current design when an imported project image cannot decode', asyn
   expect(await screen.findByRole('alert')).toHaveTextContent('Image could not decode');
   expect(screen.getByLabelText('Design title')).toHaveValue('Keep my work');
   expect(screen.getByRole('button', { name: 'Cover', exact: true })).toHaveAttribute('aria-pressed', 'true');
+});
+
+it('applies a style without losing player content or surface, and reflects custom edits', async () => {
+  const image = { dataUrl: 'data:image/png;base64,test', zoom: 2, x: 0.4, y: -0.3 };
+  vi.mocked(loadArtworkImage).mockResolvedValue({ naturalWidth: 100, naturalHeight: 100 } as HTMLImageElement);
+  const changed = vi.fn();
+  const design = { ...newArtworkDesign('My album', 'My band'), subtitle: 'SIDE B', image };
+  const view = render(<ReleaseArtworkDesigner title="" artist="" onUse={vi.fn()} draft={{ design, surface: 'vinyl' }} onDraftChange={changed} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Golden soul' }));
+  const next = changed.mock.calls.at(-1)![0];
+  expect(next).toMatchObject({ surface: 'vinyl', design: { title: 'My album', artist: 'My band', subtitle: 'SIDE B', image, font: 'serif', vinylStyle: 'colour' } });
+  view.rerender(<ReleaseArtworkDesigner title="" artist="" onUse={vi.fn()} draft={next} onDraftChange={changed} />);
+  expect(screen.getByRole('button', { name: 'Golden soul' })).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.change(screen.getByLabelText('Design accent'), { target: { value: '#123456' } });
+  view.rerender(<ReleaseArtworkDesigner title="" artist="" onUse={vi.fn()} draft={changed.mock.calls.at(-1)![0]} />);
+  expect(screen.getByRole('button', { name: 'Golden soul' })).toHaveAttribute('aria-pressed', 'false');
+  await waitFor(() => expect(screen.queryByText('Loading image preview…')).toBeNull());
 });

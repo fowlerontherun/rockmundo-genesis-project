@@ -1,3 +1,4 @@
+import { artworkPresets, matchesArtworkPreset } from './presets';
 import { parseArtworkProject, serializeArtworkProject } from './project';
 import { importArtworkImage, loadArtworkImage, MAX_DESIGN_BYTES } from './imageLayer';
 import { useEffect, useRef, useState } from 'react';
@@ -54,6 +55,14 @@ export function ReleaseArtworkDesigner({ title, artist, onUse, onBusyChange, dis
     <div><h3 className="font-semibold">Artwork studio</h3><p className="text-xs text-muted-foreground">Create a cover, CD ring or vinyl label using patterns or your own image. Export each design as a 1200px PNG, or use it as your release artwork.</p></div>
     <fieldset disabled={busy || disabled} className="space-y-4">
       <div className="flex flex-wrap gap-2" aria-label="Artwork surface">{(['cover', 'cd', 'vinyl'] as const).map(s => <Button key={s} type="button" size="sm" variant={surface === s ? 'default' : 'outline'} aria-pressed={surface === s} onClick={() => { setSurface(s); setNotice(null); }}>{s === 'cover' ? 'Cover' : s === 'cd' ? 'CD ring' : 'Vinyl'}</Button>)}</div>
+      <div className="space-y-2" role="group" aria-label="Artwork styles">
+        <p className="text-xs font-medium">Start with a style</p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{artworkPresets.map(preset => <Button key={preset.id} type="button" variant={matchesArtworkPreset(design, preset) ? 'default' : 'outline'} aria-pressed={matchesArtworkPreset(design, preset)} className="h-auto justify-start gap-2 whitespace-normal py-2 text-left text-xs" onClick={() => patch(preset.style)}>
+          <span aria-hidden="true" className="flex h-7 w-7 shrink-0 overflow-hidden rounded border"><span className="w-1/2" style={{ backgroundColor: preset.style.background }} /><span className="w-1/4" style={{ backgroundColor: preset.style.accent }} /><span className="w-1/4" style={{ backgroundColor: preset.style.ink }} /></span>
+          {preset.name}
+        </Button>)}</div>
+        <p className="text-xs text-muted-foreground">Styles change colours, pattern, typeface and vinyl finish. Your text, image and crop stay in place. Adjust any setting below.</p>
+      </div>
       <canvas ref={canvas} role="img" aria-label={`${surface} artwork preview: ${design.title}`} className="mx-auto aspect-square w-full max-w-80 rounded-lg border bg-slate-200" />
       <div className="space-y-2 rounded-lg border p-3">
         <label className="text-xs">Your photo or illustration<Input aria-label="Add artwork image" type="file" accept="image/png,image/jpeg,image/webp" onChange={e => { const file = e.target.files?.[0]; e.target.value = ''; if (file) void importImage(file); }} /></label>
