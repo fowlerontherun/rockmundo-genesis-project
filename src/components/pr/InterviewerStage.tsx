@@ -54,7 +54,7 @@ const Portrait = ({ presenter, mood }: { presenter: InterviewPresenter; mood: In
 
   return (
     <svg viewBox="0 0 200 200" role="img" aria-label={`Illustrated portrait of ${presenter.name}`}
-      className="h-24 w-24 shrink-0 sm:h-36 sm:w-36 drop-shadow-xl">
+      className="h-24 w-full max-w-24 sm:h-36 sm:max-w-36 drop-shadow-xl">
       <defs>
         <linearGradient id={backgroundId} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor={accent} stopOpacity="0.52" />
@@ -174,7 +174,7 @@ export const InterviewerStage = ({
             transition={{ duration: .2 }}
             className={`relative flex min-w-0 flex-col items-center justify-center rounded-xl border bg-black/20 p-2 text-center ${shot === "guest" ? "border-violet-300/80 ring-1 ring-violet-300/35" : "border-white/15"}`}
           >
-            <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-xl border border-violet-300/30 bg-[#171b30] sm:h-36 sm:w-36">
+            <div className="relative flex h-24 w-full max-w-24 items-center justify-center overflow-hidden rounded-xl border border-violet-300/30 bg-[#171b30] sm:h-36 sm:max-w-36">
               {guestAvatarSrc && guestStatus === "ready" ? (
                 <img src={guestAvatarSrc} alt={`Saved Avatar V1 for ${guestName}`} className="h-full w-full object-contain" />
               ) : (
