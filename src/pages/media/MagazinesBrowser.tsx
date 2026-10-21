@@ -1,3 +1,4 @@
+import { MediaOutletArtwork } from '@/components/game-art/MediaOutletArtwork';
 import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -237,14 +238,15 @@ const MagazinesBrowser = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredMagazines.map(({ mag, gate }) => (
-            <Card key={mag.id} className={`hover:shadow-lg transition-shadow flex flex-col ${!gate.inReach ? 'opacity-60' : ''}`}>
+            <Card key={mag.id} className={`hover:shadow-lg transition-shadow flex flex-col overflow-hidden ${!gate.inReach ? 'opacity-60' : ''}`}>
               <Link
                 to={`/media/magazines/${mag.id}`}
                 className="flex-1 block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-t-lg"
               >
+                <MediaOutletArtwork id={mag.id} name={mag.name} kind="magazine" />
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
-                    <CardTitle className="text-lg">{mag.name}</CardTitle>
+                    <CardTitle className="text-lg break-words [overflow-wrap:anywhere]">{mag.name}</CardTitle>
                     <div className="flex gap-1 flex-wrap justify-end">
                       <Badge
                         variant="outline"

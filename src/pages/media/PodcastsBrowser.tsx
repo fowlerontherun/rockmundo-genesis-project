@@ -1,3 +1,4 @@
+import { MediaOutletArtwork } from '@/components/game-art/MediaOutletArtwork';
 import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -252,9 +253,10 @@ const PodcastsBrowser = () => {
                 aria-label={`View details for ${pod.podcast_name}`}
                 className="flex-1 flex flex-col cursor-pointer rounded-t-lg outline-none transition-colors hover:bg-accent/40 focus-visible:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background group-hover:[&_h3]:text-primary [&_h3]:transition-colors"
               >
+                <MediaOutletArtwork id={pod.id} name={pod.podcast_name} kind="podcast" />
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
-                    <CardTitle className="text-lg">{pod.podcast_name}</CardTitle>
+                    <CardTitle className="text-lg break-words [overflow-wrap:anywhere]">{pod.podcast_name}</CardTitle>
                     <div className="flex gap-1 flex-wrap justify-end">
                       <Badge
                         variant="outline"
