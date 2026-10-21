@@ -17,6 +17,7 @@ import { DjSetlistPlanner } from "./DjSetlistPlanner";
 import { djReadinessSteps, useDjMixReadiness } from "./djReadiness";
 import { bindDjDeckLifecycle } from "./deckAudioLifecycle";
 import { watchDjDeckMediaTime } from "./deckMediaClock";
+import { createDjBeatLoop, djBeatLoopSeekExits, wrapDjBeatLoopTime, type DjBeatLoop } from "./djBeatLoop";
 import { deliverDjMixEvent } from "./mixerEventDelivery";
 import { browserDjVolumeClock, djCombinedDeckVolume, rampDjDeckVolume } from "./djVolumeRamp";
 import { DjPadBank, DjPlatter, DjTrimMeter, DjWaveform } from "./DjHardwareVisuals";
@@ -47,10 +48,28 @@ function AudioDeck({
   const [retryNonce, setRetryNonce] = useState(0);
   const [hotCues, setHotCues] = useState<DjHotCueSlots>(emptyDjHotCues);
   const [padMode, setPadMode] = useState<"store" | "play">("play");
-  // Per-track scratch-pad positions are local; never write fake mixer events.
+  const [activeLoop, setActiveLoop] = useState<DjBeatLoop | null>(null);
+  // Clock callbacks read the current loop without restarting audio or polling.
+  const loopRef = useRef<DjBeatLoop | null>(null);
+  const setDeckLoop = (next: DjBeatLoop | null) => {
+    loopRef.current = next;
+    setActiveLoop(next);
+  };
+  const updateDeckTime = (seconds: number) => {
+    const wrapped = wrapDjBeatLoopTime(seconds, loopRef.current);
+    if (wrapped !== null && audioRef.current) {
+      audioRef.current.currentTime = wrapped;
+      setElapsed(wrapped);
+    } else {
+      setElapsed(seconds);
+    }
+  };
+  // Loops and hot cues are local to one media source; never create
+  // fictitious server mixer events or preserve loops after a track switch.
   useEffect(() => {
     setHotCues(emptyDjHotCues());
     setPadMode("play");
+    setDeckLoop(null);
   }, [audioSourceKey]);
 
   const pressHotCue = (index: number) => {
@@ -71,6 +90,20 @@ function AudioDeck({
   };
   const beat = estimatedDjBeatAt(elapsed, track?.bpm ?? null, rate);
   const canJumpBar = Boolean(beat && duration > 0);
+  const toggleBeatLoop = (beats: 4 | 8) => {
+    const player = audioRef.current;
+    if (!player || !track || !duration) return;
+    if (loopRef.current?.beats === beats) {
+      setDeckLoop(null);
+      return;
+    }
+    const next = createDjBeatLoop(player.currentTime, track.bpm, beats, duration);
+    if (!next) {
+      toast.info("Move earlier in the track to loop this many beats.");
+      return;
+    }
+    setDeckLoop(next);
+  };
   const jumpBar = (direction: -1 | 1) => {
     const player = audioRef.current;
     if (!player) return;
@@ -92,7 +125,7 @@ function AudioDeck({
   useEffect(() => {
     const player = audioRef.current;
     if (!player || !playing) return;
-    return watchDjDeckMediaTime(player, browserDjVolumeClock(), setElapsed);
+    return watchDjDeckMediaTime(player, browserDjVolumeClock(), updateDeckTime);
   }, [playing, audioSourceKey]);
 
   useEffect(() => {
@@ -192,7 +225,14 @@ function AudioDeck({
           }}
           onPause={() => setPlaying(false)}
           onEnded={() => setPlaying(false)}
-          onTimeUpdate={(event) => setElapsed(event.currentTarget.currentTime)}
+          onTimeUpdate={(event) => updateDeckTime(event.currentTarget.currentTime)}
+          onSeeking={(event) => {
+            // Seeking to a different phrase should leave the old loop,
+            // rather than snapping unexpectedly back to its old position.
+            if (djBeatLoopSeekExits(event.currentTarget.currentTime, loopRef.current)) {
+              setDeckLoop(null);
+            }
+          }}
           onLoadedMetadata={(event) => setDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0)}
           onError={(event) => {
             // Media can fail while loading metadata. Ignore src-less cleanup
@@ -235,6 +275,28 @@ function AudioDeck({
           ) : (
             <p className="text-xs text-muted-foreground">Beat guide unavailable: no reliable BPM metadata.</p>
           )}
+        </div>
+        <div className="rm-dj-control-box space-y-2" data-testid={`dj-beat-loops-${deck}`}>
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+            <span className="font-semibold">LOOP / SOURCE BPM</span>
+            <span className="text-muted-foreground" role="status">
+              {activeLoop ? `${activeLoop.beats} beats active · ${formatDjTime(activeLoop.start)}` : "Loop off"}
+            </span>
+          </div>
+          <div className="rm-dj-transport" role="group" aria-label={`Deck ${deck} beat looping controls`}>
+            <Button type="button" variant="outline" aria-pressed={activeLoop?.beats === 4}
+              disabled={!canJumpBar}
+              onClick={() => toggleBeatLoop(4)}>4-beat loop</Button>
+            <Button type="button" variant="outline" aria-pressed={activeLoop?.beats === 8}
+              disabled={!canJumpBar}
+              onClick={() => toggleBeatLoop(8)}>8-beat loop</Button>
+            <Button type="button" variant="outline" disabled={!activeLoop}
+              onClick={() => setDeckLoop(null)}>Exit loop</Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Repeats real audio from the current position using catalogue BPM.
+            The start is not an analysed downbeat; loops do not affect scores or rewards.
+          </p>
         </div>
         <div className="rm-dj-transport">
           <Button type="button" className="rm-dj-play" onClick={togglePlayback} disabled={!track || loading || !!error}>
