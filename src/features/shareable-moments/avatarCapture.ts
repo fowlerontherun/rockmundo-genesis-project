@@ -83,7 +83,7 @@ async function renderAvatarV1ForShare(visual:AvatarShareVisual):Promise<HTMLCanv
   }
   if (visibleSamples <= 64) throw new Error("Avatar share render was blank");
   return captured;
- } finally {if(actor)disposeModel(actor.root);if(equipment)disposeModel(equipment);library?.forEach(disposeModel);renderer.dispose();}
+ } finally {if(actor)disposeModel(actor.root);if(equipment)disposeModel(equipment);library?.forEach(disposeModel);renderer.dispose();renderer.forceContextLoss();}
 }
 
 /** Public capture entry point: serialize offscreen GL contexts across all callers. */
