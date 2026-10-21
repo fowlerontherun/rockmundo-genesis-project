@@ -98,6 +98,7 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
 
     void captureAvatarV1ForShare({
       appearance,
+      portrait: true,
       role,
       instrument,
       richClothing: clothing.data ?? [],

@@ -35,13 +35,16 @@ export function loadCaptureImage(capture: AvatarCapture): Promise<HTMLImageEleme
   });
 }
 
-export interface AvatarShareVisual {instrumentSkin?:ResolvedInstrumentSkinVisual|null;appearance:PlayerAppearance;role?:StageRole;instrument?:InstrumentId;richClothing?:ResolvedEquippedClothing[];tattoos?:ResolvedTattooVisual[];merchWearable?:ResolvedMerchWearable|null;luthieryInstrument?:LuthieryInstrumentVisual|null}
+export interface AvatarShareVisual {portrait?: boolean;instrumentSkin?:ResolvedInstrumentSkinVisual|null;appearance:PlayerAppearance;role?:StageRole;instrument?:InstrumentId;richClothing?:ResolvedEquippedClothing[];tattoos?:ResolvedTattooVisual[];merchWearable?:ResolvedMerchWearable|null;luthieryInstrument?:LuthieryInstrumentVisual|null}
 export const AVATAR_SHARE_PRESET={width:720,height:1080,camera:[2.05,1.55,4.65] as const,target:[0,.9,0] as const,fov:34};
+/** Shared bust framing for interviews, player graphics and share cards. */
+export const AVATAR_HEAD_SHOULDERS_PRESET={width:720,height:720,camera:[0,1.58,2.4] as const,target:[0,1.48,0] as const,fov:34};
 
 async function renderAvatarV1ForShare(visual:AvatarShareVisual):Promise<HTMLCanvasElement>{
- const canvas=document.createElement("canvas");canvas.width=AVATAR_SHARE_PRESET.width;canvas.height=AVATAR_SHARE_PRESET.height;
+ const preset=visual.portrait ? AVATAR_HEAD_SHOULDERS_PRESET : AVATAR_SHARE_PRESET;
+ const canvas=document.createElement("canvas");canvas.width=preset.width;canvas.height=preset.height;
  const renderer=new T.WebGLRenderer({canvas,antialias:true,alpha:true,preserveDrawingBuffer:true,powerPreference:"high-performance"});renderer.setSize(canvas.width,canvas.height,false);renderer.setPixelRatio(1);renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.25;renderer.setClearColor(0x000000,0);
- const scene=new T.Scene();const camera=new T.PerspectiveCamera(AVATAR_SHARE_PRESET.fov,canvas.width/canvas.height,.05,30);camera.position.set(...AVATAR_SHARE_PRESET.camera);camera.lookAt(...AVATAR_SHARE_PRESET.target);
+ const scene=new T.Scene();const camera=new T.PerspectiveCamera(preset.fov,canvas.width/canvas.height,.05,30);camera.position.set(...preset.camera);camera.lookAt(...preset.target);
  scene.add(new T.HemisphereLight("#e8f0ff","#253044",2));const key=new T.DirectionalLight("#fff0dc",4);key.position.set(-2,4,4);scene.add(key);const rim=new T.DirectionalLight("#8b5cf6",2);rim.position.set(3,2,-2);scene.add(rim);
  let actor:Musician|null=null;let equipment:T.Group|null=null;let library:Awaited<ReturnType<typeof loadModelLibrary>>|null=null;
  try{
