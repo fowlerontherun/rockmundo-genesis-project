@@ -1,0 +1,6 @@
+.company-identity { display: flex; align-items: center; gap: .75rem; min-width: 0; }
+.company-identity__illustration { flex: 0 0 3.5rem; width: 3.5rem; height: 3.5rem; overflow: hidden; border-radius: .65rem; background: var(--art-bg, #24163f); border: 1px solid var(--art-accent, #c6a0ff); }
+.company-identity__illustration svg { display: block; width: 100%; height: 100%; }
+.company-identity__copy { min-width: 0; overflow-wrap: anywhere; }
+.company-identity__name { font-size: .85rem; font-weight: 600; line-height: 1.3; color: hsl(var(--foreground)); }
+.company-identity__type { margin-top: .2rem; font-size: .7rem; text-transform: capitalize; color: hsl(var(--muted-foreground)); }
