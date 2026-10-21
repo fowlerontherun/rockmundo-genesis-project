@@ -4,7 +4,7 @@ export const CORE_PROJECT_COLUMNS = "id, profile_id, user_id, title, initial_lyr
 export const OPTIONAL_PROJECT_COLUMNS = "id, arrangement_progress, polish_progress, consistency_score, songwriting_breakdown, calculation_version, completed_at";
 export const COMPLETION_PROJECT_COLUMNS = "id, writing_completed_at, writing_quality_score, completion_quality_breakdown, completion_notified_at, polish_success_chance, polish_attempted, polish_skipped, polish_succeeded, polish_resolved_at, polish_session_id";
 export const STABLE_SESSION_COLUMNS = "id, project_id, user_id, session_start, session_end, music_progress_gained, lyrics_progress_gained, xp_earned, notes, locked_until";
-export const OPTIONAL_SESSION_COLUMNS = "id, completed_at, progress_breakdown, session_type, effort_hours";
+export const OPTIONAL_SESSION_COLUMNS = "id, completed_at, progress_breakdown, session_type, effort_hours, polish_gained, consistency_gained";
 
 export type QueryFailure = {
   queryName: string;
