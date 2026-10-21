@@ -13,7 +13,7 @@ export async function captureProfilePhotoForShare(url: string): Promise<AvatarCa
   const response = await fetch(parsed.href, { mode: "cors", credentials: "omit" });
   if (!response.ok) throw new Error("Profile photo could not be fetched");
   const blob = await response.blob();
-  if (!blob.type.startsWith("image/") || !blob.size || blob.size > PROFILE_PHOTO_MAX_BYTES) {
+  if (!/^image\/(png|jpeg|webp|gif)$/i.test(blob.type) || !blob.size || blob.size > PROFILE_PHOTO_MAX_BYTES) {
     throw new Error("Profile picture must be a valid image under 8 MB");
   }
   const bitmap = await createImageBitmap(blob);
