@@ -42,6 +42,10 @@ Applied a migration to Supabase project `rockmundo`, and committed an idempotent
 
 **Integration gate:** no cooking rewards, purchasing, food consumption, recipe unlocks, trading or mayor spending until explicit atomic, idempotent, server-authorized transactions are added and tested. A future session/ledger must validate original ingredient expiry and compute new batch expiry on the server, not trust the browser. Do not mistake these storage tables for a complete economy.
 
+## Server-owned cooking recipe definitions — 21 October 2026
+
+Applied and committed `20261021235000_cooking_recipe_catalogue.sql`. The live database now contains 12 inactive starter recipes and 39 ingredient requirements with server-controlled quantities, method, yield and shelf life. Recipe tables have RLS, owner-independent read policies for active recipes, and no direct authenticated writes. Verification returned 12 recipes, 39 requirements, zero active and authenticated INSERT denied. Recipes remain deliberately inactive pending atomic crafting and ingredient supply.
+
 ## Next slices
 
 1. Validate the practice interaction and timing on desktop, touch and keyboard; refine ingredient visuals and recipe steps from playtesting.
