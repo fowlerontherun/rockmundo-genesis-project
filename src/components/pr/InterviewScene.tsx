@@ -27,7 +27,7 @@ export function InterviewScene(props: Props) {
   const tattoos = usePlayerStageTattoos(profileId);
   const merch = useAvatarMerchWearables(profileId);
   const appearance = model.query.data?.appearance;
-  const guestName = model.profile?.stage_name || model.profile?.display_name || "You";
+  const guestName = model.profile?.display_name || "You";
 
   const waitingForLayers = model.query.isPending || model.query.isFetching
     || clothing.isFetching || tattoos.isFetching || merch.query.isFetching;
