@@ -4,6 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useInterviewSession } from "@/hooks/useInterviewSession";
+import { InterviewerStage } from "@/components/pr/InterviewerStage";
+import { getInterviewPresenter } from "@/data/interviewPresenters";
 import { Mic, Tv, Radio, Newspaper, Globe, BookOpen, Clock, Users, DollarSign, Star, AlertTriangle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -28,6 +30,8 @@ export const InterviewModal = () => {
     currentQuestion,
     currentIndex,
     timeLeft,
+    reacting,
+    interviewerReaction,
     totalEffects,
     loading,
     startInterview,
@@ -42,6 +46,12 @@ export const InterviewModal = () => {
   if (!pending) return null;
 
   const MediaIcon = mediaIcons[pending.mediaType] || Globe;
+  const presenter = getInterviewPresenter(pending.mediaType, pending.outletName);
+  const stagePhase = phase === "question" && reacting ? "reaction" : phase;
+  const dialogue = phase === "intro" ? presenter.introduction
+    : phase === "results" ? presenter.farewell
+    : reacting ? interviewerReaction?.text || "That is an interesting response."
+    : currentQuestion?.question_text || "Ready for the next question?";
 
   return (
     <Dialog open onOpenChange={() => {}}>
