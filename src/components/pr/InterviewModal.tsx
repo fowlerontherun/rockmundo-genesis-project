@@ -70,6 +70,16 @@ export const InterviewModal = () => {
           </DialogDescription>
         </DialogHeader>
 
+        <InterviewerStage
+          presenter={presenter}
+          mediaType={pending.mediaType}
+          outletName={pending.outletName}
+          showName={pending.showName}
+          phase={stagePhase}
+          dialogue={dialogue}
+          mood={reacting ? interviewerReaction?.mood : phase === "results" ? "warm" : "curious"}
+        />
+
         {phase === "intro" && (
           <div className="space-y-4">
             <Card className="bg-card/50">
@@ -78,6 +88,9 @@ export const InterviewModal = () => {
                   <Badge variant="outline" className="capitalize">{pending.mediaType}</Badge>
                   {pending.showName && <span className="text-sm text-muted-foreground">{pending.showName}</span>}
                 </div>
+                <p className="text-sm text-muted-foreground">
+                  You will be speaking with <strong>{presenter.name}</strong>, the familiar presenter from {pending.outletName}.
+                </p>
                 <p className="text-sm text-muted-foreground">
                   This appearance has <strong>{questionCount} questions</strong>, with <strong>{questionTimeSeconds} seconds</strong> to answer each one.
                   Your choices shape fame, fans, earnings and your public reputation.
