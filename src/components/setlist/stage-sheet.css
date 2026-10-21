@@ -1,0 +1,18 @@
+.stage-sheet-card { overflow: hidden; }
+.stage-sheet-card__header {
+  position: relative;
+  margin: 1rem .75rem;
+  padding: 1.6rem 1rem 1rem;
+  border: 1px solid hsl(var(--border));
+  border-bottom: 2px dashed hsl(var(--muted-foreground) / .35);
+  border-radius: .25rem;
+  background: repeating-linear-gradient(transparent 0, transparent 25px, hsl(var(--primary) / .06) 25px, hsl(var(--primary) / .06) 26px), hsl(var(--muted) / .25);
+}
+.stage-sheet-card__tape { position: absolute; top: -.45rem; left: calc(50% - 2rem); width: 4rem; height: .9rem; background: hsl(var(--primary) / .2); border: 1px solid hsl(var(--primary) / .15); transform: rotate(-4deg); pointer-events: none; }
+.stage-sheet-row { border-left: 3px solid hsl(var(--primary) / .6); }
+.stage-sheet-row__number { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .15rem; width: 2.25rem; min-height: 2.8rem; flex-shrink: 0; border-radius: .4rem; background: hsl(var(--primary) / .1); color: hsl(var(--primary)); font-size: 1.1rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stage-sheet-encore { padding: 1rem; border: 1px dashed hsl(var(--primary) / .5); border-radius: .75rem; background: hsl(var(--primary) / .04); }
+.stage-sheet-row--encore { border-left-style: double; border-left-width: 5px; }
+@media (max-width: 640px) {
+  .stage-sheet-row__actions { width: 100%; justify-content: flex-end; border-top: 1px solid hsl(var(--border)); padding-top: .5rem; }
+}

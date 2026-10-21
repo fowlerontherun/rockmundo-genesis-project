@@ -1,3 +1,4 @@
+import "./stage-sheet.css";
 import React, { useState, useMemo, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -102,25 +103,30 @@ const SortableItem = ({
 
   const isPerformanceItem = item.item_type === 'performance_item';
   const songVersion = item.songs?.version;
+  const itemTitle = isPerformanceItem ? item.performance_items_catalog?.name || "Performance item" : item.songs?.title || "Unknown";
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent transition-colors"
+      className={`stage-sheet-row ${section === "encore" ? "stage-sheet-row--encore" : ""} flex flex-wrap items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent transition-colors`}
     >
       <div 
         {...attributes} 
         {...listeners}
+        aria-label={`Reorder ${itemTitle}`}
         className="cursor-grab active:cursor-grabbing touch-none"
       >
         <GripVertical className="h-5 w-5 text-muted-foreground" />
       </div>
-      <div className="flex-1 min-w-0">
+      <div className="stage-sheet-row__number" aria-label={`Position ${index + 1}`}>
+        <span>{String(index + 1).padStart(2, "0")}</span>
+        {isPerformanceItem ? <Sparkles aria-hidden="true" className="h-3 w-3" /> : <Music aria-hidden="true" className="h-3 w-3" />}
+      </div>
+      <div className="flex-1 min-w-0 basis-32">
         <div className="flex items-baseline gap-2 flex-wrap">
-          <span className="font-medium">{index + 1}.</span>
-          <span className="font-medium truncate">
-            {isPerformanceItem ? item.performance_items_catalog?.name : item.songs?.title || "Unknown"}
+          <span className="font-medium break-words [overflow-wrap:anywhere]">
+            {itemTitle}
           </span>
           {isPerformanceItem && (
             <Badge variant="secondary" className="text-xs shrink-0">
@@ -142,13 +148,14 @@ const SortableItem = ({
           }
         </div>
       </div>
-      <div className="flex items-center gap-1 shrink-0">
+      <div className="stage-sheet-row__actions flex items-center gap-1 shrink-0">
         {/* Manual move buttons for mobile/accessibility */}
         <div className="flex flex-col gap-0.5">
           <Button
             variant="ghost"
             size="icon"
             className="h-6 w-6"
+            aria-label={`Move ${itemTitle} up`}
             onClick={() => onMoveUp(index)}
             disabled={isFirst}
           >
@@ -158,6 +165,7 @@ const SortableItem = ({
             variant="ghost"
             size="icon"
             className="h-6 w-6"
+            aria-label={`Move ${itemTitle} down`}
             onClick={() => onMoveDown(index)}
             disabled={isLast}
           >
@@ -170,6 +178,7 @@ const SortableItem = ({
             size="sm"
             onClick={() => onMoveToEncore(item.id, item.item_type)}
             title="Move to encore"
+            aria-label={`Move ${itemTitle} to encore`}
           >
             <Star className="h-4 w-4" />
           </Button>
@@ -186,6 +195,7 @@ const SortableItem = ({
         <Button
           variant="ghost"
           size="sm"
+          aria-label={`Remove ${itemTitle}`}
           onClick={() => onRemove(item.id)}
           disabled={isRemoving}
         >
@@ -663,7 +673,7 @@ export const EnhancedSetlistSongManager = ({
                   </div>
 
                   {/* Encore Section */}
-                  <div className="pt-4 border-t">
+                  <div className="stage-sheet-encore">
                     <h3 className="font-semibold mb-3 flex items-center gap-2">
                       <Star className="h-4 w-4 fill-current" />
                       Encore ({encoreSetlist.length}/2 items)
