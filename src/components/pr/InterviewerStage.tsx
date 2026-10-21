@@ -18,6 +18,7 @@ interface InterviewerStageProps {
   guestName: string;
   guestAvatarSrc?: string | null;
   guestStatus: "loading" | "ready" | "unavailable";
+  onAvatarRetry?: () => void;
   playerLine?: string;
 }
 
@@ -101,7 +102,7 @@ const Portrait = ({ presenter, mood }: { presenter: InterviewPresenter; mood: In
 
 export const InterviewerStage = ({
   presenter, mediaType, outletName, showName, phase, dialogue, mood = "curious",
-  questionIndex, guestName, guestAvatarSrc, guestStatus, playerLine,
+  questionIndex, guestName, guestAvatarSrc, guestStatus, onAvatarRetry, playerLine,
 }: InterviewerStageProps) => {
   const sceneKey = `${phase}:${questionIndex}`;
   const [manualShot, setManualShot] = useState<{ sceneKey: string; value: InterviewCameraShot } | null>(null);
@@ -154,7 +155,7 @@ export const InterviewerStage = ({
             })}
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className={`grid gap-3 transition-[grid-template-columns] duration-200 ${shot === "host" ? "grid-cols-[minmax(0,1.35fr)_minmax(0,0.65fr)]" : shot === "guest" ? "grid-cols-[minmax(0,0.65fr)_minmax(0,1.35fr)]" : "grid-cols-2"}`}>
           <motion.div
             key={`host:${shot}:${phase}`}
             initial={{ opacity: .7, scale: .97 }}
@@ -180,6 +181,12 @@ export const InterviewerStage = ({
                 <div className="flex flex-col items-center gap-1 p-1 text-slate-300">
                   <UserRound className="h-8 w-8" aria-hidden />
                   <span className="text-center text-[10px]">{guestStatus === "loading" ? "Preparing avatar…" : "Avatar unavailable"}</span>
+                  {guestStatus === "unavailable" && onAvatarRetry && (
+                    <button type="button" onClick={onAvatarRetry}
+                      className="rounded border border-white/25 px-2 py-0.5 text-[10px] text-white hover:bg-white/10">
+                      Retry
+                    </button>
+                  )}
                 </div>
               )}
             </div>
