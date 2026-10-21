@@ -19,6 +19,12 @@ This is the first part of phase 1. It does **not** complete phase 0's live datab
 
 The review above is of repository callers, not a claim about the live schema. Before adding production inventory or SQL, inspect current database objects, ownership/RLS rules, schedule/job infrastructure, mayor treasury transactions and every intended buff integration point.
 
+## Follow-up implementation: recipe-book preview
+
+The Cooking Career page now displays a browsable 12-recipe legal starter catalogue with regional ingredient lists, food families, portions, base shelf life and **proposed** temporary effects. Category filters are client-only; the catalogue does not authorize cooking, grant recipe ownership, consume ingredients or confer buffs. A separate unit test checks unique recipe IDs and bounded yields/expiry.
+
+The practice reducer also enforces a two-group pan capacity, requires tray-to-pan before plating and rejects invalid movement. Additional tests cover these cases. Live database work remains blocked on auditing profile ownership, food and treasury schema, and reward idempotency; no migrations were applied.
+
 ## Next slices
 
 1. Validate the practice interaction and timing on desktop, touch and keyboard; refine ingredient visuals and recipe steps from playtesting.
