@@ -4,7 +4,7 @@ import { ChefHat, Flame, Utensils } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FoodArt } from "./FoodArt";
-import { doneness, initialPractice, PRACTICE_INGREDIENTS, practiceReducer, practiceResult, SESSION_MS,
+import { doneness, initialPractice, PRACTICE_INGREDIENTS, practiceReducer, practiceResult, PAN_CAPACITY, SESSION_MS,
   type Heat, type IngredientId, type Position, type PracticeItem } from "./practiceModel";
 import "./cooking.css";
 
@@ -58,6 +58,7 @@ export function CookingPractice() {
     setSelected(null);
   };
   const selectedItem = state.items.find(({ id }) => id === selected);
+  const panFull = state.items.filter((item) => item.position === "pan").length >= PAN_CAPACITY;
   const remaining = Math.max(0, Math.ceil((SESSION_MS * (state.slower ? 2 : 1) - (state.updatedAt - state.startedAt)) / 1000));
   const result = practiceResult(state);
   const stageSummary = state.items.map((item) => `${item.id}: ${doneness(item)}`).join(". ");
@@ -68,7 +69,7 @@ export function CookingPractice() {
         <CardDescription>Free tutorial ingredients. No money, inventory, boosts or XP are awarded or spent.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm">Drag food into the pan, turn on the heat, then drag it onto the plate when it says Ready. Leave it too long and it will burn. You can also select an ingredient, then use the pan or plate button with touch or keyboard.</p>
+        <p className="text-sm">Drag food into the pan, turn on the heat, then drag it onto the plate when it says Ready. The pan holds two ingredient groups at a time. Leave food too long and it will burn. You can also select an ingredient, then use the pan or plate button with touch or keyboard.</p>
         <div className="flex flex-wrap items-center gap-4">
           <Button disabled={running} onClick={() => { setSelected(null); dispatch({ type: "start", slower, now: Date.now() }); }}>
             {state.status === "idle" ? "Start practice" : "Practise again"}
@@ -92,7 +93,7 @@ export function CookingPractice() {
         {(["tray", "pan", "plate"] as const).map((position) => <Zone key={position} id={position}
           title={position === "tray" ? "Ingredients" : position === "pan" ? "Cooking pan" : "Serving plate"}
           action={position === "pan" ? "Add selected ingredient to pan" : "Plate selected ingredient"}
-          disabled={!running} actionDisabled={!selectedItem || selectedItem.position === position}
+          disabled={!running} actionDisabled={!selectedItem || selectedItem.position === position || (position === "plate" && selectedItem.position === "tray") || (position === "pan" && panFull)}
           onMove={position === "tray" ? undefined : () => selected && move(selected, position)}>
           {state.items.filter((item) => item.position === position).map((item) =>
             <Ingredient key={item.id} item={item} selected={selected === item.id} disabled={!running} onSelect={() => setSelected(item.id)} />)}
