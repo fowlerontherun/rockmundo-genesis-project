@@ -1,6 +1,8 @@
+import { imageCrop, loadArtworkImage, validateImageLayer, MAX_DESIGN_BYTES, type ArtworkImageLayer } from './imageLayer';
 export type ArtworkSurface = 'cover' | 'cd' | 'vinyl';
 export interface ArtworkDesign {
   version: 1;
+  image?: ArtworkImageLayer;
   title: string;
   artist: string;
   subtitle: string;
@@ -14,16 +16,18 @@ export interface ArtworkDesign {
 }
 export const newArtworkDesign = (title = '', artist = ''): ArtworkDesign => ({ version: 1, title: title.slice(0, 100), artist: artist.slice(0, 100), subtitle: 'SIDE A', background: '#201431', accent: '#bf84ee', ink: '#ffffff', pattern: 'rays', vinylStyle: 'black', vinylColour: '#7c3aed', font: 'sans-serif' });
 export function parseArtworkDesign(text: string): ArtworkDesign {
+  if (text.length > MAX_DESIGN_BYTES) throw new Error('Design file is too large.');
   const d = JSON.parse(text);
+
   if (!d || d.version !== 1 || !['rays', 'stripes', 'circles'].includes(d.pattern) || !['sans-serif', 'serif', 'monospace'].includes(d.font)) throw new Error('Choose a Rockmundo artwork design file.');
   if (!['black', 'colour', 'splatter'].includes(d.vinylStyle)) throw new Error('Invalid vinyl style.');
   for (const k of ['background', 'accent', 'ink', 'vinylColour']) if (typeof d[k] !== 'string' || !/^#[0-9a-f]{6}$/i.test(d[k])) throw new Error('Invalid design colour.');
   for (const k of ['title', 'artist', 'subtitle']) if (typeof d[k] !== 'string' || d[k].length > 100) throw new Error('Design text must be 100 characters or fewer.');
-  return { version: 1, title: d.title, artist: d.artist, subtitle: d.subtitle, background: d.background, accent: d.accent, ink: d.ink, pattern: d.pattern, font: d.font, vinylStyle: d.vinylStyle, vinylColour: d.vinylColour };
+  return { version: 1, title: d.title, artist: d.artist, subtitle: d.subtitle, background: d.background, accent: d.accent, ink: d.ink, pattern: d.pattern, font: d.font, vinylStyle: d.vinylStyle, vinylColour: d.vinylColour, ...(d.image === undefined ? {} : { image: validateImageLayer(d.image) }) };
 }
 
 /** One renderer for both live previews and 1200px PNG exports. No remote assets. */
-export function drawArtwork(canvas: HTMLCanvasElement, design: ArtworkDesign, surface: ArtworkSurface) {
+export function drawArtwork(canvas: HTMLCanvasElement, design: ArtworkDesign, surface: ArtworkSurface, image?: HTMLImageElement) {
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Your browser could not create an artwork canvas.');
   const size = 1200;
@@ -41,6 +45,12 @@ export function drawArtwork(canvas: HTMLCanvasElement, design: ArtworkDesign, su
     for (let y = 0; y < 1200; y += 200) for (let x = 0; x < 1200; x += 200) { ctx.beginPath(); ctx.arc(x + 70, y + 70, 60, 0, Math.PI * 2); ctx.fill(); }
   } else {
     for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8; ctx.beginPath(); ctx.moveTo(600, 600); ctx.lineTo(600 + Math.cos(a) * 1800, 600 + Math.sin(a) * 1800); ctx.lineTo(600 + Math.cos(a + .1) * 1800, 600 + Math.sin(a + .1) * 1800); ctx.fill(); }
+  }
+  if (design.image && image) {
+    const crop = imageCrop(image.naturalWidth, image.naturalHeight, design.image);
+    const offset = surface === 'vinyl' ? 360 : 0;
+    const target = surface === 'vinyl' ? 480 : size;
+    ctx.drawImage(image, crop.sx, crop.sy, crop.size, crop.size, offset, offset, target, target);
   }
   if (surface === 'vinyl') {
     ctx.save();
@@ -86,7 +96,8 @@ export function drawArtwork(canvas: HTMLCanvasElement, design: ArtworkDesign, su
 
 export async function artworkFile(design: ArtworkDesign, surface: ArtworkSurface): Promise<File> {
   const canvas = document.createElement('canvas');
-  drawArtwork(canvas, design, surface);
+  const image = design.image ? await loadArtworkImage(design.image) : undefined;
+  drawArtwork(canvas, design, surface, image);
   const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(b => b ? resolve(b) : reject(new Error('Could not export artwork.')), 'image/png'));
   return new File([blob], `rockmundo-${surface}.png`, { type: 'image/png' });
 }
