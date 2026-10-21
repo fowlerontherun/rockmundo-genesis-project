@@ -16,6 +16,7 @@ import { clampDeckRate, deckAudioSourceKey, changedDjTempoPercent, djCueSkipBeat
 import { DjSetlistPlanner } from "./DjSetlistPlanner";
 import { djReadinessSteps, useDjMixReadiness } from "./djReadiness";
 import { bindDjDeckLifecycle } from "./deckAudioLifecycle";
+import { watchDjDeckMediaTime } from "./deckMediaClock";
 import { deliverDjMixEvent } from "./mixerEventDelivery";
 import { browserDjVolumeClock, djCombinedDeckVolume, rampDjDeckVolume } from "./djVolumeRamp";
 import { DjPadBank, DjPlatter, DjTrimMeter, DjWaveform } from "./DjHardwareVisuals";
@@ -84,6 +85,15 @@ function AudioDeck({
     if (!player) return;
     return bindDjDeckLifecycle(player, document, window);
   }, []);
+
+  // Native timeupdate can skip whole beats on some Android browsers.
+  // While playing, paint from the real media currentTime at a modest frame
+  // cadence; keep onTimeUpdate as the browser/paused fallback.
+  useEffect(() => {
+    const player = audioRef.current;
+    if (!player || !playing) return;
+    return watchDjDeckMediaTime(player, browserDjVolumeClock(), setElapsed);
+  }, [playing, audioSourceKey]);
 
   useEffect(() => {
     let cancelled = false;
