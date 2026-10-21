@@ -1,3 +1,5 @@
+import { LearningArtwork, artworkPalette } from '@/components/game-art/GameArtwork';
+import { HousingArtwork } from '@/components/game-art/HousingArtwork';
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -398,6 +400,12 @@ const InventoryManager = () => {
                         className={`overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] border-2 ${rarityClass}`}
                         onClick={() => handleItemClick(item)}
                       >
+                        <div className="relative grid h-28 place-items-center overflow-hidden border-b" style={{ ...artworkPalette(product.id), backgroundColor: 'var(--art-bg)', color: 'var(--art-accent)' }} aria-hidden="true">
+                          <div className="absolute h-40 w-40 rounded-full border border-current opacity-20" />
+                          <div className="absolute h-24 w-24 rounded-full border border-current opacity-20" />
+                          <CategoryIcon className="h-12 w-12" strokeWidth={1.3} />
+                          <span className="absolute bottom-2 right-3 rounded bg-black/30 px-2 py-0.5 text-[10px] capitalize">{product.category.replace(/_/g, " ")}</span>
+                        </div>
                         <CardHeader className="pb-3">
                           <div className="flex items-start justify-between">
                             <div className="flex items-center gap-2">
@@ -513,6 +521,7 @@ const InventoryManager = () => {
 
                     return (
                       <Card key={session.id} className={`overflow-hidden border-2 ${isCompleted ? 'border-green-500/30' : isReading ? 'border-primary/30' : 'border-muted'}`}>
+                        <LearningArtwork kind="book" id={book.id ?? session.book_id ?? session.id} title={book.title} subject={book.skill_slug?.replace(/_/g, " ")} />
                         <CardHeader className="pb-3">
                           <div className="flex items-start justify-between">
                             <div className="flex items-center gap-2">
@@ -603,11 +612,7 @@ const InventoryManager = () => {
 
                     return (
                       <Card key={purchase.id} className="overflow-hidden border-2 border-primary/20">
-                        {prop.image_url && (
-                          <div className="h-32 overflow-hidden">
-                            <img src={prop.image_url} alt={prop.name} className="w-full h-full object-cover" />
-                          </div>
-                        )}
+                        <HousingArtwork id={purchase.housing_type_id ?? purchase.id} name={prop.name} imageUrl={prop.image_url} />
                         <CardHeader className="pb-3">
                           <div className="flex items-start justify-between">
                             <div className="flex items-center gap-2">
