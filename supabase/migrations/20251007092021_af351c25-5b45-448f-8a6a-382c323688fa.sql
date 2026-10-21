@@ -1,8 +1,10 @@
 -- Create enum for reading session status
 CREATE TYPE public.book_reading_status AS ENUM ('reading', 'completed', 'abandoned');
 
--- Create skill_books table
-CREATE TABLE public.skill_books (
+-- The September education migrations already created skill_books and
+-- player_skill_books (with cost/xp_value and ownership history). Preserve
+-- those rows and reconcile the later reading model in place.
+CREATE TABLE IF NOT EXISTS public.skill_books (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   skill_slug TEXT NOT NULL REFERENCES public.skill_definitions(slug),
   title TEXT NOT NULL,
@@ -19,6 +21,29 @@ CREATE TABLE public.skill_books (
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
+
+-- CREATE TABLE IF NOT EXISTS does not merge the old September schema.
+-- Populate the October price from the *existing* legacy cost, preserving
+-- previously seeded book prices and all player ownership/reading records.
+-- Keep the legacy cost column for earlier consumers; the October seeds
+-- explicitly provide both values, rather than silently creating free books.
+ALTER TABLE public.skill_books
+  ADD COLUMN IF NOT EXISTS price INTEGER,
+  ADD COLUMN IF NOT EXISTS cost NUMERIC(12,2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS base_reading_days INTEGER NOT NULL DEFAULT 3
+    CHECK (base_reading_days BETWEEN 2 AND 4),
+  ADD COLUMN IF NOT EXISTS skill_percentage_gain NUMERIC NOT NULL DEFAULT 0.25
+    CHECK (skill_percentage_gain BETWEEN 0 AND 1),
+  ADD COLUMN IF NOT EXISTS required_skill_level INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS daily_reading_time INTEGER NOT NULL DEFAULT 60,
+  ADD COLUMN IF NOT EXISTS reading_hour INTEGER NOT NULL DEFAULT 23
+    CHECK (reading_hour BETWEEN 0 AND 23),
+  ADD COLUMN IF NOT EXISTS category TEXT;
+
+UPDATE public.skill_books
+   SET price = cost::INTEGER
+ WHERE price IS NULL;
+ALTER TABLE public.skill_books ALTER COLUMN price SET NOT NULL;
 
 -- Create player_book_purchases table
 CREATE TABLE public.player_book_purchases (
@@ -118,6 +143,10 @@ CREATE POLICY "Users can view their own reading attendance"
   ));
 
 -- Triggers for updated_at
+-- September already supplied this update trigger under another name.
+-- Replace it so the table has one updated_at hook during clean replay.
+DROP TRIGGER IF EXISTS set_skill_books_updated_at ON public.skill_books;
+DROP TRIGGER IF EXISTS update_skill_books_updated_at ON public.skill_books;
 CREATE TRIGGER update_skill_books_updated_at
   BEFORE UPDATE ON public.skill_books
   FOR EACH ROW
@@ -129,13 +158,13 @@ CREATE TRIGGER update_reading_sessions_updated_at
   EXECUTE FUNCTION public.update_updated_at_column();
 
 -- Seed initial books (using existing skill slugs)
-INSERT INTO public.skill_books (skill_slug, title, author, description, price, base_reading_days, category) VALUES
-  ('basic_showmanship', 'The Musician''s Handbook', 'Bobby Borg', 'Establish a rock-solid foundation for navigating the industry and building sustainable habits.', 500, 3, 'Foundational Musicianship'),
-  ('guitar_mastery', 'Music Theory for Guitarists', 'Tom Kolb', 'Translate theory concepts directly onto the fretboard with modern practice drills.', 450, 3, 'Foundational Musicianship'),
-  ('professional_crowd_engagement', 'Effortless Mastery', 'Kenny Werner', 'Unlock flow-state practicing with techniques that balance discipline and creativity.', 400, 2, 'Foundational Musicianship'),
-  ('professional_composing', 'Writing Better Lyrics', 'Pat Pattison', 'A semester-style guide to turning song ideas into compelling narratives.', 600, 4, 'Songwriting & Creativity'),
-  ('composing_mastery', 'Tunesmith', 'Jimmy Webb', 'Legendary songwriting lessons from a Grammy-winning composer with exercises you can apply immediately.', 650, 4, 'Songwriting & Creativity'),
-  ('basic_composing', 'Songwriters On Songwriting', 'Paul Zollo', 'Dozens of interviews with iconic writers that reveal breakthrough moments and creative systems.', 500, 3, 'Songwriting & Creativity'),
-  ('crowd_engagement_mastery', 'All You Need to Know About the Music Business', 'Donald Passman', 'Understand contracts, royalties, and negotiation tactics before your next big opportunity.', 700, 4, 'Music Business & Branding'),
-  ('professional_composing', 'Creative Quest', 'Questlove', 'Blend artistry and entrepreneurship through stories from one of music''s most inventive minds.', 550, 3, 'Music Business & Branding'),
-  ('basic_social_media_performance', 'How to Make It in the New Music Business', 'Ari Herstand', 'A modern blueprint for self-managed releases, touring, and audience growth.', 600, 3, 'Music Business & Branding');
+INSERT INTO public.skill_books (skill_slug, title, author, description, price, cost, base_reading_days, category) VALUES
+  ('basic_showmanship', 'The Musician''s Handbook', 'Bobby Borg', 'Establish a rock-solid foundation for navigating the industry and building sustainable habits.', 500, 500, 3, 'Foundational Musicianship'),
+  ('guitar_mastery', 'Music Theory for Guitarists', 'Tom Kolb', 'Translate theory concepts directly onto the fretboard with modern practice drills.', 450, 450, 3, 'Foundational Musicianship'),
+  ('professional_crowd_engagement', 'Effortless Mastery', 'Kenny Werner', 'Unlock flow-state practicing with techniques that balance discipline and creativity.', 400, 400, 2, 'Foundational Musicianship'),
+  ('professional_composing', 'Writing Better Lyrics', 'Pat Pattison', 'A semester-style guide to turning song ideas into compelling narratives.', 600, 600, 4, 'Songwriting & Creativity'),
+  ('composing_mastery', 'Tunesmith', 'Jimmy Webb', 'Legendary songwriting lessons from a Grammy-winning composer with exercises you can apply immediately.', 650, 650, 4, 'Songwriting & Creativity'),
+  ('basic_composing', 'Songwriters On Songwriting', 'Paul Zollo', 'Dozens of interviews with iconic writers that reveal breakthrough moments and creative systems.', 500, 500, 3, 'Songwriting & Creativity'),
+  ('crowd_engagement_mastery', 'All You Need to Know About the Music Business', 'Donald Passman', 'Understand contracts, royalties, and negotiation tactics before your next big opportunity.', 700, 700, 4, 'Music Business & Branding'),
+  ('professional_composing', 'Creative Quest', 'Questlove', 'Blend artistry and entrepreneurship through stories from one of music''s most inventive minds.', 550, 550, 3, 'Music Business & Branding'),
+  ('basic_social_media_performance', 'How to Make It in the New Music Business', 'Ari Herstand', 'A modern blueprint for self-managed releases, touring, and audience growth.', 600, 600, 3, 'Music Business & Branding');

@@ -16,14 +16,19 @@ CREATE TABLE IF NOT EXISTS public.city_night_clubs (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- The Oct 7 migration already created this table, SELECT policy and
+-- updated_at trigger. Replace only the repeated objects during clean replay;
+-- retain the original table rows, grants and earlier service/admin policy.
 -- RLS Policies
 ALTER TABLE public.city_night_clubs ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Night clubs are viewable by everyone" ON public.city_night_clubs;
 CREATE POLICY "Night clubs are viewable by everyone"
   ON public.city_night_clubs
   FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Admins can manage night clubs" ON public.city_night_clubs;
 CREATE POLICY "Admins can manage night clubs"
   ON public.city_night_clubs
   FOR ALL
@@ -33,7 +38,8 @@ CREATE POLICY "Admins can manage night clubs"
 CREATE INDEX IF NOT EXISTS idx_city_night_clubs_city_id ON public.city_night_clubs(city_id);
 CREATE INDEX IF NOT EXISTS idx_city_night_clubs_quality_level ON public.city_night_clubs(quality_level);
 
--- Trigger for updated_at
+-- Trigger for updated_at: already supplied by the October 7 migration.
+DROP TRIGGER IF EXISTS update_city_night_clubs_updated_at ON public.city_night_clubs;
 CREATE TRIGGER update_city_night_clubs_updated_at
   BEFORE UPDATE ON public.city_night_clubs
   FOR EACH ROW
