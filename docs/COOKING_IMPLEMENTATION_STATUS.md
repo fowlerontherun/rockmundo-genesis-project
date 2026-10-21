@@ -25,6 +25,12 @@ The Cooking Career page now displays a browsable 12-recipe legal starter catalog
 
 The practice reducer also enforces a two-group pan capacity, requires tray-to-pan before plating and rejects invalid movement. Additional tests cover these cases. Live database work remains blocked on auditing profile ownership, food and treasury schema, and reward idempotency; no migrations were applied.
 
+## Perishable food domain slice (21 October 2026)
+
+Added pure TypeScript `foodBatchRules.ts` and focused tests. A future server transaction can use the same invariants, but only the database may authorize supply and rewards. Finished batch expiry is capped by **both** the recipe's configured shelf life and the earliest consumed ingredient lot expiry; expired ingredient lots invalidate production. Expiry is inclusive (food becomes unusable at the exact timestamp). Portion use requires fresh stock and a positive integer amount no larger than the remaining portions. Sorting for inventory presentation does not alter batch ownership, identity or expiry.
+
+This does not create inventory tables, RLS, RPCs, background spoilage processing or live consumable foods. Do not use browser-evaluated eligibility as an authorization check. Before production, add transactional lot reservation, audited batch output, idempotent consumption and concurrent purchase coverage at the database layer.
+
 ## Live database inventory foundation — 21 October 2026
 
 Applied a migration to Supabase project `rockmundo`, and committed an idempotent counterpart to `supabase/migrations/20261021233500_cooking_inventory_foundation.sql`.
