@@ -73,6 +73,7 @@ export function ReleaseArtworkDesigner({ title, artist, onUse, onBusyChange, dis
         </>}
         {imageLoading && <p role="status" className="text-xs">Loading image preview…</p>}
       </div>
+      <p className="text-xs text-muted-foreground">For image-only artwork, clear the title, artist and subtitle fields.</p>
       <div className="grid gap-3 sm:grid-cols-2">
         {(['title', 'artist', 'subtitle'] as const).map(key => <label key={key} className="space-y-1 text-xs capitalize">{key}<Input aria-label={`Design ${key}`} value={design[key]} maxLength={100} onChange={e => patch({ [key]: e.target.value })} /></label>)}
         <label className="space-y-1 text-xs">Pattern<select aria-label="Design pattern" className="block w-full rounded border bg-background p-2" value={design.pattern} onChange={e => patch({ pattern: e.target.value as ArtworkDesign['pattern'] })}><option value="rays">Sunburst</option><option value="stripes">Diagonal stripes</option><option value="circles">Polka dots</option></select></label>

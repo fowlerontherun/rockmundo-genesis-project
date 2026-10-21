@@ -73,17 +73,21 @@ export function drawArtwork(canvas: HTMLCanvasElement, design: ArtworkDesign, su
   const small = surface === 'vinyl';
   const width = small ? 390 : 900;
   const top = small ? 445 : 210;
-  ctx.fillRect(600 - width / 2, top - 50, width, small ? 125 : 260);
-  ctx.fillRect(600 - width / 2, small ? 660 : 830, width, small ? 65 : 105);
+  const hasArtist = design.artist.trim().length > 0;
+  const hasTitle = design.title.trim().length > 0;
+  const hasSubtitle = design.subtitle.trim().length > 0;
+  // Leave image-only areas unobstructed, including whitespace-only fields.
+  if (hasArtist || hasTitle) ctx.fillRect(600 - width / 2, top - 50, width, small ? 125 : 260);
+  if (hasSubtitle) ctx.fillRect(600 - width / 2, small ? 660 : 830, width, small ? 65 : 105);
   const text = (value: string, y: number, fontSize: number, weight = '400') => {
     ctx.fillStyle = design.ink;
     ctx.font = `${weight} ${fontSize}px ${design.font}`;
     while (ctx.measureText(value).width > width - 30 && fontSize > 12) { fontSize -= 1; ctx.font = `${weight} ${fontSize}px ${design.font}`; }
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(value, 600, y, width - 30);
   };
-  text(design.artist, top, small ? 26 : 42);
-  text(design.title, top + (small ? 55 : 110), small ? 38 : 78, '700');
-  text(design.subtitle, small ? 692 : 882, small ? 22 : 32);
+  if (hasArtist) text(design.artist, top, small ? 26 : 42);
+  if (hasTitle) text(design.title, top + (small ? 55 : 110), small ? 38 : 78, '700');
+  if (hasSubtitle) text(design.subtitle, small ? 692 : 882, small ? 22 : 32);
   if (surface === 'cd') {
     ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 25; ctx.beginPath(); ctx.arc(600, 600, 135, 0, Math.PI * 2); ctx.stroke();
     ctx.strokeStyle = '#ffffff88'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(600, 600, 560, 0, Math.PI * 2); ctx.stroke();
