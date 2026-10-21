@@ -26,15 +26,19 @@ vi.mock('./avatarCapture', () => ({
   captureAvatarCanvas: mocks.captureAvatar,
 }));
 vi.mock('./ShareMomentSheet', () => ({
-  ShareMomentSheet: ({ moment, avatarStatus, onAvatarRetry, onPromptAccepted }: {
+  ShareMomentSheet: ({ moment, avatarStatus, onAvatarRetry, onAvatarFallback, avatarWarning, onPromptAccepted }: {
     moment: { avatar?: { dataUrl: string } | null; promptOnly?: boolean };
     avatarStatus: string;
     onAvatarRetry: () => void;
+    onAvatarFallback?: () => void;
+    avatarWarning?: string;
     onPromptAccepted?: () => void;
   }) => <div>
     <span data-testid="avatar-status">{avatarStatus}</span>
     <span data-testid="avatar-url">{moment.avatar?.dataUrl ?? 'none'}</span>
     <button onClick={onAvatarRetry}>Retry avatar</button>
+    {onAvatarFallback && <button onClick={onAvatarFallback}>Share without crafted instrument</button>}
+    {avatarWarning && <span role="status">{avatarWarning}</span>}
     {moment.promptOnly && <button onClick={onPromptAccepted}>Accept share prompt</button>}
   </div>,
 }));
@@ -175,6 +179,24 @@ describe('AvatarShareStudio image capture', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Retry avatar' }));
     expect(refetch).toHaveBeenCalledOnce();
     expect(mocks.renderAvatar).not.toHaveBeenCalled();
+  });
+
+  it('only omits a broken optional crafted instrument after explicit user consent', async () => {
+    mocks.luthiery.mockReturnValue({
+      data: undefined, isPending: false, isFetching: false, isError: true,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
+    render(<AvatarShareStudio open moment={moment} onOpenChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByTestId('avatar-status')).toHaveTextContent('unavailable'));
+    expect(mocks.renderAvatar).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Share without crafted instrument' }));
+    await waitFor(() => expect(screen.getByTestId('avatar-status')).toHaveTextContent('ready'));
+    expect(mocks.renderAvatar).toHaveBeenCalledWith(expect.objectContaining({
+      luthieryInstrument: null,
+      richClothing: [{ item_id: 'coat' }],
+    }));
+    expect(screen.getByRole('status')).toHaveTextContent('deliberately omits any crafted instrument');
   });
 
   it('captures normally when no crafted instrument is equipped', async () => {
