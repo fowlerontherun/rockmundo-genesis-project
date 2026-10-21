@@ -34,7 +34,7 @@ jobs:
       - name: Verify Top of the Pops migration timestamps
         run: npm run verify:totp-migration-timestamps
       - name: Verify legacy songwriting and education migration reconciliation
-        run: node --test tests/legacy-songwriting-table-reconciliation.test.mjs tests/legacy-university-schema-reconciliation.test.mjs tests/legacy-skill-books-schema-reconciliation.test.mjs
+        run: node --test tests/legacy-songwriting-table-reconciliation.test.mjs tests/legacy-university-schema-reconciliation.test.mjs tests/legacy-skill-books-schema-reconciliation.test.mjs tests/legacy-nightclub-schema-reconciliation.test.mjs
       # Run the focused DJ deck tests before typecheck and lint so failures in
       # unrelated systems do not mask the actual audio regression status.
       - name: DJ native deck regression tests
