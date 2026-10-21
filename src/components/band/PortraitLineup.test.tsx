@@ -1,4 +1,4 @@
-import { render, screen, waitFor, cleanup } from '@testing-library/react';
+import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defaultAppearance } from '@/features/player-model/appearance';
 const mocks = vi.hoisted(() => ({ models: vi.fn(), capture: vi.fn() }));
@@ -33,6 +33,14 @@ describe('band portrait saved identity', () => {
     await screen.findByAltText('Alex profile photo (saved 3D avatar unavailable)');
     expect(screen.getByText(/Profile photo · saved 3D avatar unavailable/)).toBeTruthy();
     expect(mocks.capture).not.toHaveBeenCalled();
+  });
+  it('renders a readable fallback when an existing profile image URL is broken', () => {
+    mocks.models.mockReturnValue({
+      data: { appearances: {}, richClothing: {} }, isError: false, isFetching: false,
+    });
+    render(<PortraitLineup members={[{ ...members[0], photoUrl: 'https://example.test/missing-image.png' }]} />);
+    fireEvent.error(screen.getByAltText('Alex profile photo (saved 3D avatar unavailable)'));
+    expect(screen.getByText('Image unavailable')).toBeTruthy();
   });
   it('keeps a labelled profile photo visible even if band stage data fails to load', () => {
     mocks.models.mockReturnValue({ data: undefined, isError: true, isFetching: false, refetch: vi.fn() });
