@@ -5,6 +5,14 @@ import { Button } from '@/components/ui/button';
 import { portraitCapture } from './portraitCaptureCache';
 import type { PortraitMember } from './BandPortrait';
 
+function PortraitImage({ src, alt }: { src: string; alt: string }) {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  if (failedUrl === src) {
+    return <div role="status" className="flex aspect-[2/3] items-center justify-center p-3 text-center text-xs text-white/60">Image unavailable</div>;
+  }
+  return <img src={src} alt={alt} className="aspect-[2/3] w-full object-contain" onError={() => setFailedUrl(src)} />;
+}
+
 export default function PortraitLineup({ members }: { members: PortraitMember[] }) {
   const models = useGigPlayerModels(members.flatMap(m => m.profileId ? [m.profileId] : []), true);
   const [attempt, setAttempt] = useState(0);
@@ -54,10 +62,8 @@ export default function PortraitLineup({ members }: { members: PortraitMember[] 
         const displayUrl = capturedAvatar || photoUrl;
         const usingPhoto = !capturedAvatar && !!photoUrl;
         return <figure key={member.id} className="w-32 shrink-0 snap-start rounded-lg border border-white/15 bg-black/20 p-2 sm:w-40">
-          {displayUrl ? <img src={displayUrl}
+          {displayUrl ? <PortraitImage src={displayUrl}
             alt={usingPhoto ? `${member.name} profile photo (saved 3D avatar unavailable)` : `${member.name} in their saved outfit`}
-            className="aspect-[2/3] w-full object-contain"
-            onError={event => { event.currentTarget.style.visibility = 'hidden'; }}
           /> : <div className="flex aspect-[2/3] items-center justify-center p-3 text-center text-xs text-white/60">{member.profileId && loading ? 'Loading avatar' : 'No portrait available'}</div>}
           <figcaption className="mt-2 break-words text-center text-sm font-semibold">{member.name}
             <span className="block text-xs font-normal text-white/70">{member.instrument || 'Band member'}</span>
