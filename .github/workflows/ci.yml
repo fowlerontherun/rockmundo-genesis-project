@@ -35,12 +35,12 @@ jobs:
         run: npm run verify:totp-migration-timestamps
       - name: Verify legacy songwriting migration reconciliation
         run: node --test tests/legacy-songwriting-table-reconciliation.test.mjs tests/legacy-university-schema-reconciliation.test.mjs
-      - name: Typecheck
-        run: npm run typecheck
-      # Keep DJ audio correctness independently visible even while the
-      # repository-wide legacy lint baseline prevents later unit suites.
+      # Run the focused DJ deck tests before typecheck and lint so failures in
+      # unrelated systems do not mask the actual audio regression status.
       - name: DJ native deck regression tests
         run: npx vitest run src/features/nightclub-dj/djBeatLoop.test.ts src/features/nightclub-dj/djTapTempo.test.ts src/features/nightclub-dj/deckMediaClock.test.ts src/features/nightclub-dj/deckAudioLifecycle.test.ts src/features/nightclub-dj/djVolumeRamp.test.ts src/features/nightclub-dj/djHardwareControls.test.ts src/features/nightclub-dj/mixerMath.test.ts
+      - name: Typecheck
+        run: npm run typecheck
       - name: Lint
         run: npm run lint:ci
       - name: Critical Live V1 journeys
