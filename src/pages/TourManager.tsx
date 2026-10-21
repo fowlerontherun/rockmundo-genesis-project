@@ -1,3 +1,4 @@
+import { TourPoster } from '@/components/game-art/TourPoster';
 import WorldAtlas from "@/components/map/WorldAtlas";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -681,35 +682,21 @@ const TourManager = () => {
             "opacity-70 border-destructive/40 bg-destructive/[0.02]",
         )}
       >
-        <CardHeader className="pb-2">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0 flex-1">
-              <CardTitle
-                className={cn(
-                  "text-lg flex items-center gap-2",
-                  isCancelled && "line-through text-muted-foreground",
-                )}
-              >
-                {tour.name}
-              </CardTitle>
-              <CardDescription className="flex items-center gap-1 mt-1 flex-wrap">
-                <Music className="h-3 w-3" />
-                {tour.band?.name || "Unknown Band"}
-                {showBandInfo &&
-                  tour.band?.fame !== null &&
-                  tour.band?.fame !== undefined && (
-                    <Badge variant="outline" className="ml-2 text-xs">
-                      <TrendingUp className="h-3 w-3 mr-1" />
-                      {getBandFameTitle(tour.band.fame)}
-                    </Badge>
-                  )}
-              </CardDescription>
-            </div>
-            <div className="flex flex-col items-end gap-1 shrink-0">
-              {getStatusBadge(tour.status)}
-              {getRescheduleBadge(tour)}
-            </div>
-          </div>
+        <CardHeader className="p-3 pb-4">
+          <TourPoster
+            id={tour.id}
+            name={tour.name}
+            band={tour.band?.name || "Unknown Band"}
+            logo={tour.band?.logo_url}
+            dates={`${safeTourDateLabel(tour.start_date, "MMM d, yyyy")} – ${safeTourDateLabel(tour.end_date, "MMM d, yyyy")}`}
+            cancelled={isCancelled}
+            badges={<>{getStatusBadge(tour.status)}{getRescheduleBadge(tour)}</>}
+          />
+          {showBandInfo && tour.band?.fame !== null && tour.band?.fame !== undefined && (
+            <div className="pt-2"><Badge variant="outline" className="text-xs">
+              <TrendingUp className="h-3 w-3 mr-1" />{getBandFameTitle(tour.band.fame)}
+            </Badge></div>
+          )}
         </CardHeader>
         <CardContent className="space-y-3">
           {isCancelled && (
@@ -733,13 +720,6 @@ const TourManager = () => {
               .
             </div>
           )}
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Calendar className="h-4 w-4" />
-              {safeTourDateLabel(tour.start_date, "MMM d")} –{" "}
-              {format(new Date(tour.end_date), "MMM d, yyyy")}
-            </span>
-          </div>
           <div className="flex items-center gap-3 flex-wrap">
             {showBandInfo && tour.band?.genre && (
               <Badge variant="secondary">{tour.band.genre}</Badge>
