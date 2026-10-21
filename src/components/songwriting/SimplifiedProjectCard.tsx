@@ -1,3 +1,4 @@
+import "./songwriting-notebook.css";
 import { useState } from "react";
 import { formatDistanceToNowStrict } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { SongwritingSessionType } from "@/utils/songwritingOutcomeCalculator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Play, Edit, Trash2, History, CheckCircle2, Clock, Users, UserPlus, Sparkles } from "lucide-react";
+import { Play, Edit, Trash2, History, CheckCircle2, Clock, Users, UserPlus, Sparkles, Music2, PenLine } from "lucide-react";
 import type { SongwritingProject } from "@/hooks/useSongwritingData";
 import { CompleteSongDialog } from "./CompleteSongDialog";
 import { songwritingProgressPercent } from "./songwritingProgress";
@@ -158,11 +159,12 @@ export const SimplifiedProjectCard = ({
   
   return (
     <>
-      <Card className="hover:shadow-md transition-shadow">
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between gap-2">
+      <Card className="songwriting-notebook hover:shadow-md transition-shadow">
+        <CardHeader className="songwriting-notebook__header">
+          <div className="songwriting-notebook__binding" aria-hidden="true">{Array.from({ length: 5 }, (_, i) => <span key={i} />)}</div>
+          <div className="relative flex flex-wrap items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <CardTitle className="text-lg truncate">{project.title}</CardTitle>
+              <CardTitle className="text-lg break-words [overflow-wrap:anywhere]">{project.title}</CardTitle>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 {project.genres?.[0] && <Badge variant="secondary" className="text-xs">{project.genres[0]}</Badge>}
                 {project.song_themes?.name && <Badge variant="outline" className="text-xs">{project.song_themes.name}</Badge>}
@@ -176,14 +178,14 @@ export const SimplifiedProjectCard = ({
         </CardHeader>
         
         <CardContent className="space-y-4">
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Music</span><span className="font-medium">{musicPercent}%</span></div>
-              <Progress value={musicPercent} className="h-2" />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="songwriting-notebook__track songwriting-notebook__track--music">
+              <div className="flex items-center justify-between gap-2 text-sm"><span className="flex items-center gap-2 font-medium"><Music2 aria-hidden="true" className="h-4 w-4" />Music</span><span className="font-semibold tabular-nums">{musicPercent}%</span></div>
+              <Progress aria-label="Music progress" value={musicPercent} className="mt-3 h-2" />
             </div>
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Lyrics</span><span className="font-medium">{lyricsPercent}%</span></div>
-              <Progress value={lyricsPercent} className="h-2" />
+            <div className="songwriting-notebook__track songwriting-notebook__track--lyrics">
+              <div className="flex items-center justify-between gap-2 text-sm"><span className="flex items-center gap-2 font-medium"><PenLine aria-hidden="true" className="h-4 w-4" />Lyrics</span><span className="font-semibold tabular-nums">{lyricsPercent}%</span></div>
+              <Progress aria-label="Lyrics progress" value={lyricsPercent} className="mt-3 h-2" />
             </div>
           </div>
 
@@ -196,8 +198,8 @@ export const SimplifiedProjectCard = ({
               <span>Craft: {progressBreakdown.craft ?? "estimated after session"}</span>
               <span>Attributes: {progressBreakdown.attributes ?? "estimated after session"}</span>
               <span>Genre: {progressBreakdown.genreKnowledge ?? progressBreakdown.genre ?? "pending"}</span>
-              <span title="Refinement earned through writing. Adds up to 35 points to a newly completed song.">Polish: {project.polish_progress ?? 0}/500</span>
-              <span title="Song cohesion and structure. Adds up to 35 points to a newly completed song.">Consistency: {project.consistency_score ?? 0}/500</span>
+              <div title="Refinement earned through writing. Adds up to 35 points to a newly completed song.">Polish: {project.polish_progress ?? 0}/500<Progress aria-label="Polish progress" value={songwritingProgressPercent(project.polish_progress, 500)} className="mt-1.5 h-1.5" /></div>
+              <div title="Song cohesion and structure. Adds up to 35 points to a newly completed song.">Consistency: {project.consistency_score ?? 0}/500<Progress aria-label="Consistency progress" value={songwritingProgressPercent(project.consistency_score, 500)} className="mt-1.5 h-1.5" /></div>
               <span>Duration: {progressBreakdown.durationModifier ? `${progressBreakdown.durationModifier}×` : "choose 1/2/4h"}</span>
             </div>
             {latestFactorSession && <p className="text-foreground">Last session: +{latestFactorSession.polish_gained} Polish · +{latestFactorSession.consistency_gained} Consistency</p>}
@@ -303,12 +305,12 @@ export const SimplifiedProjectCard = ({
                 )}
               </>
             )}
-            <Button onClick={onViewHistory} variant="outline" size="sm"><History className="w-3 h-3" /></Button>
+            <Button onClick={onViewHistory} aria-label="View writing history" title="View writing history" variant="outline" size="sm"><History className="w-3 h-3" /></Button>
             <Button onClick={() => setInviteDialogOpen(true)} variant="outline" size="sm" disabled={isLocked || isCompleted} title="Invite Collaborator">
               <UserPlus className="w-3 h-3 mr-1" />Invite
             </Button>
-            <Button onClick={onEdit} variant="outline" size="sm" disabled={isLocked}><Edit className="w-3 h-3" /></Button>
-            <Button onClick={onDelete} variant="outline" size="sm" disabled={isLocked}><Trash2 className="w-3 h-3" /></Button>
+            <Button onClick={onEdit} aria-label="Edit songwriting project" title="Edit songwriting project" variant="outline" size="sm" disabled={isLocked}><Edit className="w-3 h-3" /></Button>
+            <Button onClick={onDelete} aria-label="Delete songwriting project" title="Delete songwriting project" variant="outline" size="sm" disabled={isLocked}><Trash2 className="w-3 h-3" /></Button>
           </div>
         </CardContent>
       </Card>

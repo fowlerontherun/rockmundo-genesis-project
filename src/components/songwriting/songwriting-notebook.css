@@ -1,0 +1,18 @@
+.songwriting-notebook { overflow: hidden; }
+.songwriting-notebook__header {
+  position: relative;
+  margin: .75rem .75rem 1rem;
+  padding: 1.25rem 1rem 1.25rem 2rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: .5rem;
+  background-color: hsl(var(--muted) / .3);
+  background-image: repeating-linear-gradient(transparent 0, transparent 27px, hsl(var(--primary) / .08) 27px, hsl(var(--primary) / .08) 28px);
+  box-shadow: 2px 3px 0 hsl(var(--muted) / .6);
+}
+.songwriting-notebook__header::before { content: ''; position: absolute; top: 0; bottom: 0; left: 1.35rem; width: 1px; background: hsl(var(--primary) / .25); }
+.songwriting-notebook__binding { position: absolute; top: .75rem; bottom: .75rem; left: -.35rem; display: flex; flex-direction: column; justify-content: space-between; }
+.songwriting-notebook__binding span { width: .85rem; height: .3rem; border: 1px solid hsl(var(--muted-foreground) / .55); border-radius: 1rem; background: hsl(var(--background)); }
+.songwriting-notebook__track { padding: .85rem; border: 1px solid hsl(var(--border)); border-radius: .65rem; background: hsl(var(--muted) / .2); }
+.songwriting-notebook__track--music { border-top: 3px solid hsl(var(--primary)); }
+.songwriting-notebook__track--lyrics { border-top: 3px solid #0d9488; }
+.songwriting-notebook__track--lyrics [role="progressbar"] > div { background-color: #0d9488; }
