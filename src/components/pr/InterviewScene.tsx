@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { InterviewerStage } from "@/components/pr/InterviewerStage";
 import { usePlayerModel, useEquippedRichClothing, usePlayerStageTattoos } from "@/features/player-model/usePlayerModel";
 import { useAvatarMerchWearables } from "@/features/player-model/useAvatarMerchWearables";
-import { captureAvatarV1ForShare, captureAvatarCanvas } from "@/features/shareable-moments/avatarCapture";
+// Avatar V1's WebGL renderer is loaded only when an interview portrait is needed.
 import type { InterviewPresenter, InterviewerMood } from "@/data/interviewPresenters";
 
 type StagePhase = "intro" | "question" | "reaction" | "results";
@@ -36,7 +36,7 @@ export function InterviewScene(props: Props) {
 
   // A failed cosmetic layer must not be silently replaced with an incorrect outfit.
   const portrait = useQuery({
-    queryKey: ["interview-avatar-v1", model.userId, profileId, model.query.data?.revision,
+    queryKey: ["interview-avatar-v1", model.userId, profileId, model.query.data?.revision, appearance,
       clothing.data, tattoos.data, merch.query.data?.equipped],
     enabled: !!profileId && !!appearance && !waitingForLayers && !missingLayers,
     staleTime: 60_000,
@@ -44,6 +44,7 @@ export function InterviewScene(props: Props) {
     retry: false,
     queryFn: async () => {
       if (!appearance) throw new Error("No player appearance available");
+      const { captureAvatarV1ForShare, captureAvatarCanvas } = await import("@/features/shareable-moments/avatarCapture");
       const canvas = await captureAvatarV1ForShare({
         appearance,
         role: "other",
@@ -55,8 +56,8 @@ export function InterviewScene(props: Props) {
     },
   });
 
-  const guestStatus = missingLayers || !profileId || portrait.isError
-    ? "unavailable" : portrait.data ? "ready" : "loading";
+  const guestStatus = missingLayers || portrait.isError || (!profileId && !model.isLoading)
+    ? "unavailable" : portrait.data && !waitingForLayers ? "ready" : "loading";
 
   return (
     <InterviewerStage
@@ -64,6 +65,13 @@ export function InterviewScene(props: Props) {
       guestName={guestName}
       guestAvatarSrc={guestStatus === "ready" ? portrait.data : null}
       guestStatus={guestStatus}
+      onAvatarRetry={() => {
+        if (model.query.isError) void model.query.refetch();
+        if (clothing.isError) void clothing.refetch();
+        if (tattoos.isError) void tattoos.refetch();
+        if (merch.query.isError) void merch.query.refetch();
+        if (portrait.isError) void portrait.refetch();
+      }}
     />
   );
 }
