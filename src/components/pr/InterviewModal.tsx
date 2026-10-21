@@ -4,6 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useInterviewSession } from "@/hooks/useInterviewSession";
+import { InterviewerStage } from "@/components/pr/InterviewerStage";
+import { getInterviewPresenter } from "@/data/interviewPresenters";
 import { Mic, Tv, Radio, Newspaper, Globe, BookOpen, Clock, Users, DollarSign, Star, AlertTriangle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -28,6 +30,8 @@ export const InterviewModal = () => {
     currentQuestion,
     currentIndex,
     timeLeft,
+    reacting,
+    interviewerReaction,
     totalEffects,
     loading,
     startInterview,
@@ -42,6 +46,12 @@ export const InterviewModal = () => {
   if (!pending) return null;
 
   const MediaIcon = mediaIcons[pending.mediaType] || Globe;
+  const presenter = getInterviewPresenter(pending.mediaType, pending.outletName);
+  const stagePhase = phase === "question" && reacting ? "reaction" : phase;
+  const dialogue = phase === "intro" ? presenter.introduction
+    : phase === "results" ? presenter.farewell
+    : reacting ? interviewerReaction?.text || "That is an interesting response."
+    : currentQuestion?.question_text || "Ready for the next question?";
 
   return (
     <Dialog open onOpenChange={() => {}}>
@@ -60,6 +70,16 @@ export const InterviewModal = () => {
           </DialogDescription>
         </DialogHeader>
 
+        <InterviewerStage
+          presenter={presenter}
+          mediaType={pending.mediaType}
+          outletName={pending.outletName}
+          showName={pending.showName}
+          phase={stagePhase}
+          dialogue={dialogue}
+          mood={reacting ? interviewerReaction?.mood : phase === "results" ? "warm" : "curious"}
+        />
+
         {phase === "intro" && (
           <div className="space-y-4">
             <Card className="bg-card/50">
@@ -68,6 +88,9 @@ export const InterviewModal = () => {
                   <Badge variant="outline" className="capitalize">{pending.mediaType}</Badge>
                   {pending.showName && <span className="text-sm text-muted-foreground">{pending.showName}</span>}
                 </div>
+                <p className="text-sm text-muted-foreground">
+                  You will be speaking with <strong>{presenter.name}</strong>, the familiar presenter from {pending.outletName}.
+                </p>
                 <p className="text-sm text-muted-foreground">
                   This appearance has <strong>{questionCount} questions</strong>, with <strong>{questionTimeSeconds} seconds</strong> to answer each one.
                   Your choices shape fame, fans, earnings and your public reputation.
@@ -91,8 +114,8 @@ export const InterviewModal = () => {
           <div className="space-y-4">
             <div className="space-y-1">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> Live — answer quickly</span>
-                <span className={cn("font-mono font-bold", timeLeft <= 3 ? "text-destructive animate-pulse" : "")}>{Math.ceil(timeLeft)}s</span>
+                <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {reacting ? "Interviewer responding — clock paused" : "Live — answer quickly"}</span>
+                <span className={cn("font-mono font-bold", !reacting && timeLeft <= 3 ? "text-destructive animate-pulse" : "")}>{reacting ? "PAUSED" : Math.ceil(timeLeft) + "s"}</span>
               </div>
               <Progress value={(timeLeft / questionTimeSeconds) * 100} className={cn("h-2", timeLeft <= 3 ? "[&>div]:bg-destructive" : "[&>div]:bg-primary")} />
             </div>
@@ -110,15 +133,15 @@ export const InterviewModal = () => {
                 exit={{ opacity: 0, x: -20 }}
                 className="space-y-3"
               >
-                <p className="text-base font-medium leading-relaxed">“{currentQuestion.question_text}”</p>
-                <div className="grid gap-2">
+                <div className={cn("grid gap-2 transition-opacity", reacting && "opacity-50")}>
                   {optionKeys.map((key, index) => {
                     const textKey = `option_${key}_text` as keyof typeof currentQuestion;
                     return (
                       <button
                         key={key}
                         onClick={() => handleAnswer(key)}
-                        className="text-left p-3 rounded-lg border border-border hover:border-primary/60 hover:bg-primary/5 transition-all hover:scale-[1.01] active:scale-[0.99]"
+                        disabled={reacting}
+                        className="text-left p-3 rounded-lg border border-border hover:border-primary/60 hover:bg-primary/5 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:border-border"
                       >
                         <div className="flex items-start gap-3">
                           <span className="text-xs font-bold px-2 py-1 rounded bg-muted text-muted-foreground">{optionLabels[index]}</span>

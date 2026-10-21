@@ -5,6 +5,7 @@ import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { useToast } from "@/hooks/use-toast";
 import type { InterviewQuestion, InterviewAnswer, InterviewPhase } from "@/data/interviewQuestions";
 import { selectInterviewQuestions } from "@/utils/interviewSelection";
+import { getInterviewPresenter, getInterviewerResponse, type InterviewerMood } from "@/data/interviewPresenters";
 
 interface PendingInterview {
   offerId: string;
@@ -54,8 +55,17 @@ export const useInterviewSession = () => {
   const [timeLeft, setTimeLeft] = useState(QUESTION_TIME_SECONDS);
   const [totalEffects, setTotalEffects] = useState<InterviewEffects | null>(null);
   const [loading, setLoading] = useState(false);
+  const [reacting, setReacting] = useState(false);
+  const [interviewerReaction, setInterviewerReaction] = useState<{ text: string; mood: InterviewerMood } | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const reactionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const answerLockRef = useRef(false);
   const checkedRef = useRef(false);
+
+  useEffect(() => () => {
+    if (reactionTimeoutRef.current) clearTimeout(reactionTimeoutRef.current);
+    if (timerRef.current) clearInterval(timerRef.current);
+  }, []);
 
   useEffect(() => {
     if (!profileId || !bandId || checkedRef.current) return;
@@ -134,13 +144,19 @@ export const useInterviewSession = () => {
       setQuestions(selected);
       setCurrentIndex(0);
       setAnswers([]);
+      setInterviewerReaction(null);
+      setReacting(false);
+      answerLockRef.current = false;
       setTotalEffects(null);
       setTimeLeft(QUESTION_TIME_SECONDS);
       setPhase("question");
+    } catch (error) {
+      console.error("Could not prepare media interview", error);
+      toast({ title: "Couldn\u0027t start interview", description: "The questions could not be loaded. Please try again.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, [pending, userId, bandId]);
+  }, [pending, userId, bandId, toast]);
 
   const calculateTotalEffects = useCallback((qs: InterviewQuestion[], ans: InterviewAnswer[]): InterviewEffects => {
     let fameMult = 0;
@@ -174,36 +190,56 @@ export const useInterviewSession = () => {
   }, []);
 
   const handleAnswer = useCallback((option: "a" | "b" | "c" | "d", timedOut = false) => {
-    if (timerRef.current) clearInterval(timerRef.current);
+    if (answerLockRef.current || reacting || phase !== "question") return;
     const question = questions[currentIndex];
     if (!question) return;
+    answerLockRef.current = true;
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
 
     const newAnswers = [...answers, { question_id: question.id, chosen_option: option, timed_out: timedOut }];
     setAnswers(newAnswers);
+    const presenter = getInterviewPresenter(pending?.mediaType || "podcast", pending?.outletName || "");
+    setInterviewerReaction(getInterviewerResponse(presenter, question.id, option, timedOut));
+    setReacting(true);
 
-    if (currentIndex < questions.length - 1) {
-      setCurrentIndex((index) => index + 1);
-      setTimeLeft(QUESTION_TIME_SECONDS);
-    } else {
-      setTotalEffects(calculateTotalEffects(questions, newAnswers));
-      setPhase("results");
-    }
-  }, [questions, currentIndex, answers, calculateTotalEffects]);
+    // Briefly let the interviewer react before the next timed question.
+    // Timers never tick while a player is reading a reaction.
+    if (reactionTimeoutRef.current) clearTimeout(reactionTimeoutRef.current);
+    reactionTimeoutRef.current = setTimeout(() => {
+      reactionTimeoutRef.current = null;
+      if (currentIndex < questions.length - 1) {
+        setCurrentIndex((index) => index + 1);
+        setTimeLeft(QUESTION_TIME_SECONDS);
+      } else {
+        setTotalEffects(calculateTotalEffects(questions, newAnswers));
+        setPhase("results");
+      }
+      setReacting(false);
+      answerLockRef.current = false;
+    }, 1250);
+  }, [questions, currentIndex, answers, calculateTotalEffects, pending, reacting, phase]);
 
   useEffect(() => {
-    if (phase !== "question") return;
+    if (phase !== "question" || reacting) return;
+    const deadline = Date.now() + Math.max(0, timeLeft) * 1000;
     timerRef.current = setInterval(() => {
-      setTimeLeft((previous) => {
-        if (previous <= 0.1) {
-          const fallback = (["a", "b", "c", "d"] as const)[Math.floor(Math.random() * 4)];
-          handleAnswer(fallback, true);
-          return QUESTION_TIME_SECONDS;
-        }
-        return previous - 0.1;
-      });
+      const remaining = Math.max(0, (deadline - Date.now()) / 1000);
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        if (timerRef.current) clearInterval(timerRef.current);
+        timerRef.current = null;
+        const fallback = (["a", "b", "c", "d"] as const)[Math.floor(Math.random() * 4)];
+        handleAnswer(fallback, true);
+      }
     }, 100);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [phase, currentIndex, handleAnswer]);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = null;
+    };
+  }, [phase, currentIndex, reacting, handleAnswer]);
 
   const finishInterview = useCallback(async () => {
     if (!pending || !totalEffects || !userId || !bandId) return;
@@ -271,6 +307,8 @@ export const useInterviewSession = () => {
     currentQuestion: questions[currentIndex] || null,
     answers,
     timeLeft,
+    reacting,
+    interviewerReaction,
     totalEffects,
     loading,
     startInterview,
