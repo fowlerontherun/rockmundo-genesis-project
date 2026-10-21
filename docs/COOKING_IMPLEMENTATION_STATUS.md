@@ -58,6 +58,12 @@ Applied `20261022000500_cooking_sessions_foundation.sql` to live Supabase. `cook
 
 This is a storage and audit foundation, **not** a completed server session processor. The backend must validate each action, enforce monotonic server timestamps/sequence and expiry, reserve lots transactionally and transition each session to a final state exactly once. Recipes remain inactive; no production crafting, offline completion or buff rewards are available.
 
+## Backend cooking session expiry — 22 October 2026
+
+The live database now contains `expire_cooking_sessions(limit)`, a service-role-only idempotent cleanup function. It locks and marks overdue pending/running cooking sessions `timed_out` without minting food or awarding rewards. A capped batch size and `SKIP LOCKED` permit concurrent cleanup workers. Access verification confirmed authenticated/anonymous execution denied and service-role execution allowed. No expired active sessions existed at inspection time.
+
+**Not yet scheduled:** no cron job has been installed in this slice. A trusted worker must invoke the sweep on a cadence. Server-authoritative session creation and action timing/replay are still required before recipes can be activated.
+
 ## Next slices
 
 1. Validate the practice interaction and timing on desktop, touch and keyboard; refine ingredient visuals and recipe steps from playtesting.
