@@ -23,7 +23,7 @@ export default function PortraitLineup({ members }: { members: PortraitMember[] 
         const id = member.profileId;
         if (!id) { images[member.id] = null; continue; }
         // A profile photo is truthful historical data, never a fabricated 3D outfit.
-        if (!data.appearances[id]) { images[member.id] = data.profilePhotos?.[id] ?? null; continue; }
+        if (!data.appearances[id]) { images[member.id] = null; continue; }
         const assignment = stageAssignment(member.instrument);
         const instrument = assignment.instrument;
         const crafted = data.luthieryInstruments?.[id]?.find(item => (item.instrumentKind === 'electric_bass' && instrument === 'bass_guitar') || (item.instrumentKind === 'electric_guitar' && instrument === 'electric_guitar')) ?? null;
@@ -47,20 +47,24 @@ export default function PortraitLineup({ members }: { members: PortraitMember[] 
   return <div className="space-y-3">
     {loading && <p role="status" className="text-sm text-white/80">Preparing your saved avatars…</p>}
     <div className="flex snap-x gap-3 overflow-x-auto pb-2">
-      {members.map(member => <figure key={member.id} className="w-32 shrink-0 snap-start rounded-lg border border-white/15 bg-black/20 p-2 sm:w-40">
-        {current?.images[member.id] ? (
-          <img src={current.images[member.id]!}
-            alt={data?.appearances[member.profileId ?? ''] ? `${member.name} in their saved outfit` : `${member.name} profile photo (no saved 3D avatar)`}
+      {members.map(member => {
+        const savedStage = !!member.profileId && !!data?.appearances[member.profileId] && !models.isError;
+        const capturedAvatar = savedStage ? current?.images[member.id] : null;
+        const photoUrl = member.photoUrl && /^https:\/\//i.test(member.photoUrl) ? member.photoUrl : null;
+        const displayUrl = capturedAvatar || photoUrl;
+        const usingPhoto = !capturedAvatar && !!photoUrl;
+        return <figure key={member.id} className="w-32 shrink-0 snap-start rounded-lg border border-white/15 bg-black/20 p-2 sm:w-40">
+          {displayUrl ? <img src={displayUrl}
+            alt={usingPhoto ? `${member.name} profile photo (saved 3D avatar unavailable)` : `${member.name} in their saved outfit`}
             className="aspect-[2/3] w-full object-contain"
-            onError={event => { event.currentTarget.style.display = 'none'; }}
-          />
-        ) : <div className="flex aspect-[2/3] items-center justify-center p-3 text-center text-xs text-white/60">{member.profileId && loading ? 'Loading avatar' : 'No portrait available'}</div>}
-        <figcaption className="mt-2 break-words text-center text-sm font-semibold">{member.name}
-          <span className="block text-xs font-normal text-white/70">{member.instrument || 'Band member'}</span>
-          {member.profileId && !data?.appearances[member.profileId] && data?.profilePhotos?.[member.profileId] &&
-            <span className="block text-[10px] font-normal text-amber-100">Profile photo · 3D avatar not saved</span>}
-        </figcaption>
-      </figure>)}
+            onError={event => { event.currentTarget.style.visibility = 'hidden'; }}
+          /> : <div className="flex aspect-[2/3] items-center justify-center p-3 text-center text-xs text-white/60">{member.profileId && loading ? 'Loading avatar' : 'No portrait available'}</div>}
+          <figcaption className="mt-2 break-words text-center text-sm font-semibold">{member.name}
+            <span className="block text-xs font-normal text-white/70">{member.instrument || 'Band member'}</span>
+            {usingPhoto && <span className="block text-[10px] font-normal text-amber-100">Profile photo · saved 3D avatar unavailable</span>}
+          </figcaption>
+        </figure>;
+      })}
     </div>
     {missingStage && <p role="status" className="text-xs text-amber-100/90">
       Some members have not saved an Avatar V1 appearance. Their existing profile photo is shown when available; otherwise ask them to save a character in the Avatar Editor.
