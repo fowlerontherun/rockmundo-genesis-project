@@ -2,6 +2,7 @@ import { ChefHat } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { CookingPractice } from "@/features/cooking/CookingPractice";
 import { CookingRecipeBook } from "@/features/cooking/CookingRecipeBook";
+import { CookingInventory } from "@/features/cooking/CookingInventory";
 
 export default function CookingCareer() {
   return <FMPageScaffold title="Cooking" eyebrow="Practice kitchen" icon={ChefHat}
@@ -9,5 +10,6 @@ export default function CookingCareer() {
     backTo="/career" backLabel="Back to Career">
     <CookingPractice />
     <CookingRecipeBook />
+    <CookingInventory />
   </FMPageScaffold>;
 }
