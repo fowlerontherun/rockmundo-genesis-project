@@ -8,7 +8,6 @@ import type { InterviewPresenter, InterviewerMood } from "@/data/interviewPresen
 type StagePhase = "intro" | "question" | "reaction" | "results";
 
 interface Props {
-  offerId: string;
   presenter: InterviewPresenter;
   mediaType: string;
   outletName: string;
