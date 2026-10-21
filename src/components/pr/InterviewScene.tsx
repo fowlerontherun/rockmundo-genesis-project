@@ -46,6 +46,7 @@ export function InterviewScene(props: Props) {
       const { captureAvatarV1ForShare, captureAvatarCanvas } = await import("@/features/shareable-moments/avatarCapture");
       const canvas = await captureAvatarV1ForShare({
         appearance,
+        portrait: true,
         role: "other",
         richClothing: clothing.data ?? [],
         tattoos: tattoos.data ?? [],
