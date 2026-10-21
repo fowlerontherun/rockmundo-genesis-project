@@ -83,7 +83,7 @@ export const getInterviewerResponse = (
     a: ["warm", ["I can hear the conviction in that.", "That's an answer from the heart.", "I appreciate the sincerity.", "That clearly means something to you."]],
     b: ["curious", ["You've thought that through.", "A considered answer. Interesting.", "That sounds like a carefully made choice.", "There's a lot of thought behind that."]],
     c: ["challenging", ["You're not afraid to take a stand!", "That's certainly a bold position.", "I can see that causing a debate.", "You're giving me a headline there!"]],
-    d: ["amused", ["You weren't going to give me an ordinary answer!", "Well, I wasn't expecting that.", "Ha! That's one way to put it.", "You're keeping this interview interesting."]],
+    d: ["amused", ["Well, that's one way of seeing it.", "You've surprised me there.", "That is an answer I wasn't expecting.", "I suspect our audience will have thoughts on that."]],
   };
   const [mood, lines] = responses[option];
   const offset = presenter.personality === "playful" ? 1 : presenter.personality === "direct" ? 2 : 0;
