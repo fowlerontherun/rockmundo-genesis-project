@@ -99,10 +99,16 @@ export const InterviewerStage = ({
   const StudioIcon = studioIcons[mediaType as keyof typeof studioIcons] || Mic2;
   const broadcast = ["tv", "film", "internet"].includes(mediaType);
   const audio = ["radio", "podcast"].includes(mediaType);
+  const print = ["newspaper", "magazine"].includes(mediaType);
   const label = studioLabels[mediaType] || "IN CONVERSATION";
+  const stageColour = audio
+    ? "from-[#111b31] via-[#184552] to-[#24213b]"
+    : print ? "from-[#302333] via-[#403344] to-[#1a3744]"
+      : mediaType === "internet" ? "from-[#111a36] via-[#283b70] to-[#361a4b]"
+        : "from-[#181225] via-[#2a193e] to-[#112f3d]";
 
   return (
-    <div className="relative overflow-hidden rounded-xl border border-primary/25 bg-gradient-to-br from-[#181225] via-[#2a193e] to-[#112f3d] p-3 text-white sm:p-4">
+    <div className={`relative overflow-hidden rounded-xl border border-primary/25 bg-gradient-to-br ${stageColour} p-3 text-white sm:p-4`}>
       {/* Vector studio lights and print/audio motifs: no remote art to load. */}
       <div aria-hidden className="pointer-events-none absolute -top-20 left-1/4 h-44 w-40 rotate-12 rounded-full bg-fuchsia-400/10 blur-3xl" />
       <div aria-hidden className="pointer-events-none absolute -right-10 -bottom-24 h-56 w-56 rounded-full bg-cyan-400/10 blur-3xl" />
@@ -144,12 +150,21 @@ export const InterviewerStage = ({
           </motion.div>
         </div>
       </div>
-      <div aria-hidden className="relative mt-3 flex h-4 items-end justify-between gap-0.5 border-t border-white/10 pt-2">
-        {Array.from({ length: audio ? 30 : 18 }, (_, i) => (
-          <span key={i} className="flex-1 rounded-sm bg-cyan-300/40"
-            style={{ height: `${20 + ((i * 17 + presenter.id.length * 7) % 75)}%` }} />
-        ))}
-      </div>
+      {print ? (
+        <div aria-hidden className="relative mt-3 flex items-center gap-2 border-t border-white/10 pt-2">
+          <Newspaper className="h-3.5 w-3.5 text-slate-300/70" />
+          {[64, 42, 78, 36].map((width, i) => (
+            <span key={i} className="h-0.5 rounded-full bg-slate-200/30" style={{ width: `${width}%`, maxWidth: "3.5rem" }} />
+          ))}
+        </div>
+      ) : (
+        <div aria-hidden className="relative mt-3 flex h-4 items-end justify-between gap-0.5 border-t border-white/10 pt-2">
+          {Array.from({ length: audio ? 30 : 18 }, (_, i) => (
+            <span key={i} className="flex-1 rounded-sm bg-cyan-300/40"
+              style={{ height: `${20 + ((i * 17 + presenter.id.length * 7) % 75)}%` }} />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
