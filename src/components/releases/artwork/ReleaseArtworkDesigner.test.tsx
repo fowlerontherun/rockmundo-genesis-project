@@ -86,7 +86,7 @@ it('reopens a saved vinyl project with its selected format', async () => {
   render(<ReleaseArtworkDesigner title="Original" artist="Band" onUse={vi.fn()} />);
   fireEvent.change(screen.getByLabelText('Open artwork design'), { target: { files: [file] } });
   await waitFor(() => expect(screen.getByLabelText('Design title')).toHaveValue('Restored'));
-  expect(screen.getByRole('button', { name: 'Vinyl', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('button', { name: /^Vinyl$/ })).toHaveAttribute('aria-pressed', 'true');
 });
 
 it('keeps the current design when an imported project image cannot decode', async () => {
@@ -100,7 +100,7 @@ it('keeps the current design when an imported project image cannot decode', asyn
   fireEvent.change(screen.getByLabelText('Open artwork design'), { target: { files: [file] } });
   expect(await screen.findByRole('alert')).toHaveTextContent('Image could not decode');
   expect(screen.getByLabelText('Design title')).toHaveValue('Keep my work');
-  expect(screen.getByRole('button', { name: 'Cover', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('button', { name: /^Cover$/ })).toHaveAttribute('aria-pressed', 'true');
 });
 
 it('applies a style without losing player content or surface, and reflects custom edits', async () => {
@@ -130,7 +130,7 @@ it('pairs an untouched default export with its editable snapshot and keeps it st
   expect(selectedDraft).toEqual({ design: newArtworkDesign('Original album', 'Original band'), surface: 'cover' });
   expect(artworkFile).toHaveBeenCalledWith(selectedDraft.design, selectedDraft.surface);
   fireEvent.change(screen.getByLabelText('Design title'), { target: { value: 'Later draft' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Vinyl', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: /^Vinyl$/ }));
   expect(selectedDraft.design.title).toBe('Original album');
   expect(selectedDraft.surface).toBe('cover');
   expect(onUse).toHaveBeenCalledTimes(1);
