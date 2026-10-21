@@ -52,6 +52,12 @@ Deployed `complete_cooking_batch(profile_id, recipe_slug, session_id)` on the li
 
 Live verification: authenticated EXECUTE denied, anonymous EXECUTE denied, service_role EXECUTE allowed, zero enabled recipes and zero finished food batches. **No player-facing cooking endpoint is enabled**: authenticated manual sessions, server timestamped game actions, server-certified execution grade, inventory purchasing and rewards are not implemented. Before activating recipes, an audited trusted backend must validate a real session and call this function. Do not pass arbitrary client-generated session IDs directly through a privileged backend.
 
+## Persistent cooking session tables — 21 October 2026
+
+Applied `20261022000500_cooking_sessions_foundation.sql` to live Supabase. `cooking_sessions` stores owner, recipe, mode, lifecycle timestamps, optional execution score and linked result. `cooking_session_actions` stores ordered, timestamped pan actions, with per-session unique sequence. A partial unique index permits only one pending/running session per profile. Tables are owner-readable under RLS; ordinary authenticated and anonymous clients have no write privileges. Verified RLS enabled, one read policy per table, authenticated SELECT enabled and INSERT/UPDATE denied.
+
+This is a storage and audit foundation, **not** a completed server session processor. The backend must validate each action, enforce monotonic server timestamps/sequence and expiry, reserve lots transactionally and transition each session to a final state exactly once. Recipes remain inactive; no production crafting, offline completion or buff rewards are available.
+
 ## Next slices
 
 1. Validate the practice interaction and timing on desktop, touch and keyboard; refine ingredient visuals and recipe steps from playtesting.
