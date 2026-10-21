@@ -83,6 +83,8 @@ export interface SongwritingSession {
   progress_breakdown?: any;
   session_type?: string | null;
   effort_hours?: number;
+  polish_gained?: number | null;
+  consistency_gained?: number | null;
 }
 
 type CreateProjectInput = {
@@ -114,6 +116,7 @@ type UpdateProjectInput = {
 type StartSessionInput = {
   projectId: string;
   effortHours?: number;
+  sessionType?: "balanced" | "music" | "lyrics" | "arrangement" | "polish";
 };
 
 type PostgrestErrorLike = {
@@ -327,7 +330,7 @@ export const useSongwritingData = (profileId?: string | null, userId?: string | 
 
   // Start session through server-authoritative RPC with validated duration and activity blocking
   const startSession = useMutation({
-    mutationFn: async ({ projectId, effortHours = 1 }: StartSessionInput) => {
+    mutationFn: async ({ projectId, effortHours = 1, sessionType = "balanced" }: StartSessionInput) => {
       if (!profileId) throw new Error("Profile ID required");
       
       const { data: { user } } = await supabase.auth.getUser();
@@ -337,6 +340,7 @@ export const useSongwritingData = (profileId?: string | null, userId?: string | 
         p_profile_id: profileId,
         p_project_id: projectId,
         p_effort_hours: effortHours,
+        p_session_type: sessionType,
         p_idempotency_key: `start-${profileId}-${projectId}-${Date.now()}`,
       });
       if (error) {

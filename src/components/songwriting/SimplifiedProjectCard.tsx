@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { SongwritingSessionType } from "@/utils/songwritingOutcomeCalculator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Play, Edit, Trash2, History, CheckCircle2, Clock, Users, UserPlus, Sparkles } from "lucide-react";
 import type { SongwritingProject } from "@/hooks/useSongwritingData";
@@ -19,7 +21,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 interface SimplifiedProjectCardProps {
   project: SongwritingProject;
-  onStartSession: () => void;
+  onStartSession: (focus: SongwritingSessionType) => void;
   onEdit: () => void;
   onDelete: () => void;
   onViewHistory: () => void;
@@ -43,6 +45,7 @@ export const SimplifiedProjectCard = ({
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [activeWritingOpen, setActiveWritingOpen] = useState(false);
+  const [sessionFocus, setSessionFocus] = useState<SongwritingSessionType>("balanced");
   const { collaborators } = useCollaborationInvites(project.id);
   const { profileId } = useActiveProfile();
   const queryClient = useQueryClient();
@@ -127,6 +130,7 @@ export const SimplifiedProjectCard = ({
   const estimatedSessionsLeft = Math.ceil(totalRemaining / avgProgressPerSession);
   const totalSessions = (project.sessions_completed || 0) + estimatedSessionsLeft;
   const breakdown = project.songwriting_breakdown || {};
+  const latestFactorSession = project.songwriting_sessions?.find((s) => s.completed_at && s.polish_gained != null && s.consistency_gained != null);
   const progressBreakdown = project.songwriting_sessions?.find((session) => session.progress_breakdown)?.progress_breakdown || breakdown;
   
   const getStatusText = () => {
@@ -192,10 +196,11 @@ export const SimplifiedProjectCard = ({
               <span>Craft: {progressBreakdown.craft ?? "estimated after session"}</span>
               <span>Attributes: {progressBreakdown.attributes ?? "estimated after session"}</span>
               <span>Genre: {progressBreakdown.genreKnowledge ?? progressBreakdown.genre ?? "pending"}</span>
-              <span>Polish: {project.polish_progress ?? 0}/500</span>
-              <span>Consistency: {project.consistency_score ?? 0}/500</span>
+              <span title="Refinement earned through writing. Adds up to 35 points to a newly completed song.">Polish: {project.polish_progress ?? 0}/500</span>
+              <span title="Song cohesion and structure. Adds up to 35 points to a newly completed song.">Consistency: {project.consistency_score ?? 0}/500</span>
               <span>Duration: {progressBreakdown.durationModifier ? `${progressBreakdown.durationModifier}×` : "choose 1/2/4h"}</span>
             </div>
+            {latestFactorSession && <p className="text-foreground">Last session: +{latestFactorSession.polish_gained} Polish · +{latestFactorSession.consistency_gained} Consistency</p>}
             {project.song_rating != null && <p className="text-foreground">Final songwriting score: {project.song_rating}/1000</p>}
           </div>
 
@@ -260,6 +265,22 @@ export const SimplifiedProjectCard = ({
             </Button>
           )}
           
+          {!isCompleted && !isLocked && (
+            <div className="space-y-1">
+              <label htmlFor={`songwriting-focus-${project.id}`} className="text-xs font-medium">Writing focus</label>
+              <Select value={sessionFocus} onValueChange={(value) => setSessionFocus(value as SongwritingSessionType)}>
+                <SelectTrigger id={`songwriting-focus-${project.id}`} aria-label="Writing focus"><SelectValue placeholder="Choose a focus" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="balanced">Balanced — improve everything</SelectItem>
+                  <SelectItem value="music">Music — composition focus</SelectItem>
+                  <SelectItem value="lyrics">Lyrics — writing focus</SelectItem>
+                  <SelectItem value="arrangement">Arrangement — more Consistency</SelectItem>
+                  <SelectItem value="polish">Polish — more refinement</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Each completed session improves both factors; focus boosts one faster. Rewards diminish near 500.</p>
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-2 pt-2">
             {canReviewCompletion ? (
               <Button
@@ -272,7 +293,7 @@ export const SimplifiedProjectCard = ({
               </Button>
             ) : (
               <>
-                <Button onClick={onStartSession} disabled={isLocked || isCompleted} size="sm" className="flex-1 min-w-[180px]">
+                <Button onClick={() => onStartSession(sessionFocus)} disabled={isLocked || isCompleted} size="sm" className="flex-1 min-w-[180px]">
                   <Play className="w-3 h-3 mr-1" />Start Session
                 </Button>
                 {onSchedule && !isCompleted && (
