@@ -71,7 +71,6 @@ export const InterviewModal = () => {
         </DialogHeader>
 
         <InterviewScene
-          offerId={pending.offerId}
           presenter={presenter}
           mediaType={pending.mediaType}
           outletName={pending.outletName}
