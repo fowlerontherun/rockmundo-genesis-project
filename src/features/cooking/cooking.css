@@ -1,0 +1,18 @@
+.cooking-worktop { display: grid; gap: 1rem; padding: 1rem; border: 1px solid hsl(var(--border)); border-radius: 1rem; background: repeating-linear-gradient(2deg, #33271f, #33271f 14px, #392d24 16px, #33271f 18px); }
+.cooking-zone { min-width: 0; padding: 1rem; border-radius: 1rem; border: 2px solid #74685c; color: #fff8e9; }
+.cooking-zone-items { min-height: 9rem; display: flex; flex-wrap: wrap; align-content: start; justify-content: center; gap: .5rem; }
+.cooking-tray { background: linear-gradient(130deg, #735a3c, #4c3826); }
+.cooking-pan { background: radial-gradient(ellipse at 50% 45%, #383b3e 20%, #24272b 65%, #141619 75%, #66686a 77%, #26282b 81%); box-shadow: inset 0 0 0 3px #858584, 0 6px 12px #0007; }
+.cooking-heated .cooking-pan { box-shadow: inset 0 0 0 3px #858584, 0 5px 14px #ef802077; }
+.cooking-plate { background: radial-gradient(ellipse, #f2e9d8 40%, #c5bcae 70%, #f2e9d8 73%); color: #28201a; border-color: #d2c9b9; }
+.cooking-ingredient { display: flex; flex-direction: column; align-items: center; border: 2px solid transparent; border-radius: .75rem; padding: .35rem; min-width: 5.5rem; background: #0004; color: #fff8e9; touch-action: none; cursor: grab; }
+.cooking-ingredient:disabled { cursor: default; opacity: .8; }
+.cooking-ingredient:focus-visible, .cooking-heat:focus-within { outline: 3px solid #c4a1ff; outline-offset: 3px; }
+.cooking-selected { border-color: #c4a1ff !important; }
+.cooking-over { outline: 3px dashed #c4a1ff; outline-offset: 3px; }
+.cooking-meter { display: block; width: 4rem; height: .25rem; background: #ffffff40; margin-top: .4rem; overflow: hidden; border-radius: 1rem; }
+.cooking-meter > span { display: block; height: 100%; background: #efb857; }
+.cooking-heat { display: flex; align-items: center; gap: .4rem; padding: .65rem 1rem; border: 2px solid hsl(var(--border)); border-radius: .6rem; }
+.cooking-drag-preview { width: fit-content; border-radius: 1rem; background: #211c18dd; padding: .5rem; pointer-events: none; }
+@media (min-width: 1000px) { .cooking-worktop { grid-template-columns: 1fr 1.5fr 1fr; } }
+@media (prefers-reduced-motion: no-preference) { .cooking-ingredient svg * { transition: fill .4s, stroke .4s; } }
