@@ -25,6 +25,17 @@ The Cooking Career page now displays a browsable 12-recipe legal starter catalog
 
 The practice reducer also enforces a two-group pan capacity, requires tray-to-pan before plating and rejects invalid movement. Additional tests cover these cases. Live database work remains blocked on auditing profile ownership, food and treasury schema, and reward idempotency; no migrations were applied.
 
+## Live database inventory foundation — 21 October 2026
+
+Applied a migration to Supabase project `rockmundo`, and committed an idempotent counterpart to `supabase/migrations/20261021233500_cooking_inventory_foundation.sql`.
+
+- `cooking_ingredient_lots` stores owner profile, ingredient identity, source city, quantity, quality, acquisition and fixed expiry timestamps.
+- `cooking_food_batches` stores owner profile, recipe, source city, remaining portions, quality, preparation and expiry, with a unique future crafting session reference.
+- Both tables are RLS-enabled. Only the owning signed-in profile may select rows; `authenticated` has **no** direct insert, update or delete privileges. These tables are initially empty and do not create food or XP.
+- The migration succeeded on the live database. A verification query confirmed both SELECT policies and no authenticated write privileges.
+
+**Integration gate:** no cooking rewards, purchasing, food consumption, recipe unlocks, trading or mayor spending until explicit atomic, idempotent, server-authorized transactions are added and tested. A future session/ledger must validate original ingredient expiry and compute new batch expiry on the server, not trust the browser. Do not mistake these storage tables for a complete economy.
+
 ## Next slices
 
 1. Validate the practice interaction and timing on desktop, touch and keyboard; refine ingredient visuals and recipe steps from playtesting.
