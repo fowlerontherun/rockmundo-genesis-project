@@ -41,8 +41,8 @@ jobs:
         run: npx vitest run src/features/nightclub-dj/djBeatLoop.test.ts src/features/nightclub-dj/djTapTempo.test.ts src/features/nightclub-dj/deckMediaClock.test.ts src/features/nightclub-dj/deckAudioLifecycle.test.ts src/features/nightclub-dj/djVolumeRamp.test.ts src/features/nightclub-dj/djHardwareControls.test.ts src/features/nightclub-dj/mixerMath.test.ts
       # Keep the interview interaction regression suite visible even when
       # unrelated global lint baselines fail later in the job.
-      - name: Media interview visual regression tests
-        run: npx vitest run src/data/interviewPresenters.test.ts src/data/interviewCamera.test.ts src/components/pr/InterviewerStage.test.tsx src/utils/interviewSelection.test.ts
+      - name: Media interview and avatar capture regression tests
+        run: npx vitest run src/data/interviewPresenters.test.ts src/data/interviewCamera.test.ts src/components/pr/InterviewerStage.test.tsx src/utils/interviewSelection.test.ts src/features/shareable-moments/avatarCaptureQueue.test.ts src/features/shareable-moments/CharacterShareStudio.test.tsx src/components/band/portraitCaptureCache.test.ts src/components/band/PortraitLineup.test.tsx
       - name: Typecheck
         run: npm run typecheck
       - name: Lint
