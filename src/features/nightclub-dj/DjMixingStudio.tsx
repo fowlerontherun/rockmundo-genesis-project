@@ -106,6 +106,8 @@ function AudioDeck({
   const tapBeat = () => {
     const player = audioRef.current;
     if (!player || player.paused || !track) return;
+    // A new tempo estimate invalidates an old fixed-length loop.
+    if (loopRef.current) setDeckLoop(null);
     setTapPositions(previous => addDjSourceTempoTap(previous, player.currentTime));
   };
   const toggleBeatLoop = (beats: 4 | 8) => {
