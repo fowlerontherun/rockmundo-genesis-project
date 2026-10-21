@@ -24,8 +24,6 @@ export interface GigPlayerModelsData {
   merchWearables?: Record<string, ResolvedMerchWearable>;
   /** Current equipped player-crafted guitar/bass. Historical replays override this with their immutable snapshot. */
   luthieryInstruments?: Record<string, LuthieryInstrumentVisual[]>;
-  /** Existing user-uploaded profile photos for band members without a saved 3D avatar. */
-  profilePhotos?: Record<string, string>;
 }
 
 interface EquippedClothingRow {
@@ -211,7 +209,7 @@ export function useGigPlayerModels(profileIds: string[], requireCompleteVisuals 
     enabled: ids.length > 0,
     staleTime: 60_000,
     queryFn: async (): Promise<GigPlayerModelsData> => {
-      const [appearanceSettled, legacySettled, clothingSettled, tattooSettled, instrumentSettled, merchSettled, luthierySettled, photoSettled] = await Promise.allSettled([
+      const [appearanceSettled, legacySettled, clothingSettled, tattooSettled, instrumentSettled, merchSettled, luthierySettled] = await Promise.allSettled([
         supabase.from('player_stage_appearances').select('profile_id,appearance').in('profile_id', ids),
         supabase.from('player_avatar_config').select('profile_id,gender,skin_tone,hair_color,height,shirt_color,pants_color,shoes_color').in('profile_id', ids),
         callStageRpc('get_equipped_stage_clothing', { p_profile_ids: ids }),
@@ -219,8 +217,6 @@ export function useGigPlayerModels(profileIds: string[], requireCompleteVisuals 
         callStageRpc('get_equipped_stage_instrument_skins', { p_profile_ids: ids }),
         callStageRpc('get_stage_merch_wearables', { p_profile_ids: ids }),
         callStageRpc('get_equipped_stage_luthiery_instruments', { p_profile_ids: ids }),
-        // This read is optional; it must never block valid saved Avatar V1 models.
-        supabase.from('profiles').select('id,avatar_url').in('id', ids),
       ]);
 
       if (appearanceSettled.status === 'rejected') throw appearanceSettled.reason;
@@ -289,13 +285,7 @@ export function useGigPlayerModels(profileIds: string[], requireCompleteVisuals 
         }
       }
 
-      const profilePhotos: Record<string, string> = {};
-      if (photoSettled.status === 'fulfilled' && !photoSettled.value.error) {
-        for (const row of photoSettled.value.data ?? []) {
-          if (row.avatar_url && /^https:\/\//i.test(row.avatar_url)) profilePhotos[row.id] = row.avatar_url;
-        }
-      }
-      return { appearances, richClothing, tattoos, instrumentSkins, merchWearables, luthieryInstruments, profilePhotos };
+      return { appearances, richClothing, tattoos, instrumentSkins, merchWearables, luthieryInstruments };
     },
   });
 }
