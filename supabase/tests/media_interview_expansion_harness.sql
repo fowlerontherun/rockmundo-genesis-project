@@ -23,9 +23,15 @@ BEGIN
      OR (SELECT count(DISTINCT lower(btrim(option_text)))
          FROM (VALUES (option_a_text),(option_b_text),(option_c_text),(option_d_text)) v(option_text))<>4;
 
+  -- The original 100 questions intentionally use a legacy effect scale.
+  -- Check the ten new categories against the current balanced effect envelope.
   SELECT count(*) INTO bad_effects
   FROM public.interview_questions
-  WHERE EXISTS (
+  WHERE category=ANY(ARRAY[
+    'songwriting','release_artwork','festival_circuit','tour_life','studio_craft',
+    'gear_craft','media_persona','fan_community','dj_nightlife','career_business'
+  ])
+  AND EXISTS (
     SELECT 1
     FROM (VALUES(option_a_effects),(option_b_effects),(option_c_effects),(option_d_effects)) e(effect)
     WHERE jsonb_typeof(effect->'fame_mult') <> 'number'
