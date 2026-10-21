@@ -55,7 +55,11 @@ export default function PortraitLineup({ members }: { members: PortraitMember[] 
             onError={event => { event.currentTarget.style.display = 'none'; }}
           />
         ) : <div className="flex aspect-[2/3] items-center justify-center p-3 text-center text-xs text-white/60">{member.profileId && loading ? 'Loading avatar' : 'No portrait available'}</div>}
-        <figcaption className="mt-2 break-words text-center text-sm font-semibold">{member.name}<span className="block text-xs font-normal text-white/70">{member.instrument || 'Band member'}</span></figcaption>
+        <figcaption className="mt-2 break-words text-center text-sm font-semibold">{member.name}
+          <span className="block text-xs font-normal text-white/70">{member.instrument || 'Band member'}</span>
+          {member.profileId && !data?.appearances[member.profileId] && data?.profilePhotos?.[member.profileId] &&
+            <span className="block text-[10px] font-normal text-amber-100">Profile photo · 3D avatar not saved</span>}
+        </figcaption>
       </figure>)}
     </div>
     {missingStage && <p role="status" className="text-xs text-amber-100/90">
