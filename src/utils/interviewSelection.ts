@@ -31,7 +31,7 @@ export const selectInterviewQuestions = (
 ): InterviewQuestion[] => {
   const seenTexts = new Set<string>();
   const valid = pool.filter((question) => {
-    const textKey = question.question_text?.trim().toLowerCase();
+    const textKey = question.question_text?.trim().toLowerCase() ?? "";
     if (!usableQuestion(question) || seenTexts.has(textKey)) return false;
     seenTexts.add(textKey);
     return true;
