@@ -1,3 +1,4 @@
+import { BuskingLocationArtwork } from '@/components/game-art/BuskingLocationArtwork';
 import React from "react";
 import { Coins, History, Loader2, Music, Music2, Scale } from "lucide-react";
 import { formatDistanceToNowStrict } from "date-fns";
@@ -312,6 +313,7 @@ export default function Busking() {
                     const isSelected = location.id === activeLocation?.id;
                     return (
                       <button
+                        aria-pressed={isSelected}
                         key={location.id}
                         type="button"
                         onClick={() => setSelectedLocationId(location.id)}
@@ -323,7 +325,9 @@ export default function Busking() {
                         )}
                       >
                         <div className="space-y-3">
-                          <div className="flex items-start justify-between gap-2">
+                          <BuskingLocationArtwork id={location.id} />
+                          {isSelected && <span className="inline-flex rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">Selected location</span>}
+                          <div className="flex flex-wrap items-start justify-between gap-2">
                             <div>
                               <h4 className="text-lg font-semibold leading-tight">{location.name}</h4>
                               <p className="text-sm text-muted-foreground">{location.description}</p>
