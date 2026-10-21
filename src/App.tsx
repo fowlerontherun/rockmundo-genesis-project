@@ -49,6 +49,7 @@ const AdminRouteBoundary = () => (
 import WorldPulsePage from "./pages/WorldPulse";
 import BandManager from "./pages/BandManager";
 const Modeling = lazyWithRetry(() => import("./pages/Modeling"));
+const CookingCareer = lazyWithRetry(() => import("./pages/CookingCareer"));
 const LuthierCareer = lazyWithRetry(() => import("./pages/LuthierCareer"));
 import InventoryManager from "./pages/InventoryManager";
 import Sponsorships from "./pages/Sponsorships";
@@ -891,6 +892,7 @@ function App() {
                     <Route path="hub/commerce" element={<PreserveQueryRedirect to="/business" />} />
                     <Route path="modeling" element={<Modeling />} />
                     <Route path="luthier" element={<LuthierCareer />} />
+                    <Route path="cooking" element={<CookingCareer />} />
                     <Route path="producer-career" element={<ProducerCareer />} />
                     <Route path="clothing-designer" element={<ClothingDesigner />} />
                     <Route path="clothing-shop" element={<ClothingShop />} />

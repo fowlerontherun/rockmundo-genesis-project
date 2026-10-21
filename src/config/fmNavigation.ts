@@ -6,7 +6,7 @@ import {
   Newspaper, Tv, Hammer, GraduationCap, Award, Mic, Video, Film,
   Star, ShoppingBag, Package, Home, Car, Palette, Scissors, Dices,
   Ticket, Skull, Vote, Flag, Handshake, Megaphone, Headphones, HandHeart,
-  Crown, Store, Inbox as InboxIcon, Share2, type LucideIcon,
+  Crown, Store, ChefHat, Inbox as InboxIcon, Share2, type LucideIcon,
 } from "lucide-react";
 
 export type FMSubLink = { label: string; path: string; icon?: LucideIcon };
@@ -278,7 +278,7 @@ export const FM_MODULES: FMModule[] = [
       "/education", "/offers-dashboard", "/finance", "/jobs", "/university",
       "/progression", "/achievements",
       "/public-relations", "/pr",
-      "/producer-career", "/modeling", "/luthier", "/acting", "/clothing-designer",
+      "/producer-career", "/modeling", "/luthier", "/cooking", "/acting", "/clothing-designer",
     ],
     subTabs: [
       { label: "Overview", path: "/career", icon: Trophy },
@@ -314,6 +314,7 @@ export const FM_MODULES: FMModule[] = [
           { label: "Producer Career", path: "/producer-career", icon: Headphones },
           { label: "Modeling", path: "/modeling", icon: Sparkles },
           { label: "Luthier", path: "/luthier", icon: Hammer },
+          { label: "Cooking", path: "/cooking", icon: ChefHat },
           { label: "Acting", path: "/acting", icon: Film },
           { label: "Clothing Designer", path: "/clothing-designer", icon: Scissors },
         ],

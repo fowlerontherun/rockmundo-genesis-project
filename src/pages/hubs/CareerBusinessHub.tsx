@@ -1,7 +1,7 @@
 import { CategoryHub } from "@/components/CategoryHub";
 import {
   Briefcase, DollarSign, Building2, Handshake, Disc, Sparkles, Megaphone,
-  Building, Headphones, Scissors, ShoppingCart, BookOpen, Film, Heart, Landmark,
+  Building, Headphones, Scissors, ShoppingCart, BookOpen, Film, Heart, Landmark, ChefHat,
 } from "lucide-react";
 
 export default function CareerBusinessHub() {
@@ -33,6 +33,7 @@ export default function CareerBusinessHub() {
             { icon: Megaphone, labelKey: "nav.pr", path: "/pr", imagePrompt: "A PR agency office with press releases, magazine covers, and a megaphone" },
             { icon: Headphones, labelKey: "nav.producerCareer", path: "/producer-career", imagePrompt: "A music producer at a mixing console with headphones, creating beats" },
             { icon: Sparkles, labelKey: "nav.modeling", path: "/modeling", imagePrompt: "A fashion runway with a musician posing for cameras and flashbulbs" },
+            { icon: ChefHat, labelKey: "Cooking", path: "/cooking", imagePrompt: "A cooking pan with golden vegetables and a wooden ingredient tray" },
             { icon: Film, labelKey: "Acting", path: "/acting", imagePrompt: "A film set with a musician acting in a scene, cameras and crew around" },
             { icon: Scissors, labelKey: "nav.clothingDesigner", path: "/clothing-designer", imagePrompt: "A fashion design studio with clothing sketches, fabric swatches, sewing machines" },
           ],
