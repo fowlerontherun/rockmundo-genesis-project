@@ -116,6 +116,7 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
       ? () => { setOmitUnloadedCrafted(captureKey); setRecapture(previous => ({ key: captureKey, attempt: (previous?.key === captureKey ? previous.attempt : 0) + 1 })); }
       : undefined}
     onAvatarRetry={() => {
+      setOmitUnloadedCrafted(null);
       if (model.query.isError) void model.query.refetch();
       if (clothing.isError) void clothing.refetch();
       if (tattoos.isError) void tattoos.refetch();
