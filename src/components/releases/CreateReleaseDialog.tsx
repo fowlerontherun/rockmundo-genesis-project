@@ -54,7 +54,8 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
   const [artworkBusy, setArtworkBusy] = useState(false);
   const [artworkDraft, setArtworkDraft] = useState<ArtworkDraft | null>(null);
   const [designerOpen, setDesignerOpen] = useState(false);
-  const [artworkFile, setArtworkFile] = useState<File | null>(null);
+  const [artworkSelection, setArtworkSelection] = useState<{ file: File; draft: ArtworkDraft | null } | null>(null);
+  const artworkFile = artworkSelection?.file ?? null;
   const [artworkPreviewUrl, setArtworkPreviewUrl] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
@@ -197,7 +198,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
   const labelCutPct = activeContract ? (activeContract.royalty_label_pct ?? (100 - activeContract.royalty_artist_pct)) : 0;
 
   const clearArtwork = () => {
-    setArtworkFile(null);
+    setArtworkSelection(null);
     setArtworkPreviewUrl(null);
   };
 
@@ -217,7 +218,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
       return;
     }
 
-    setArtworkFile(file);
+    setArtworkSelection({ file, draft: null });
     setArtworkPreviewUrl(URL.createObjectURL(file));
   };
 
@@ -305,7 +306,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
       });
 
       if (artworkWarning && artworkFile && retryArtwork) {
-        setArtworkRecovery({ releaseId: release.id, title, profileId, file: artworkFile, draft: artworkDraft, error: artworkWarning, retry: retryArtwork });
+        setArtworkRecovery({ releaseId: release.id, title, profileId, file: artworkFile, draft: artworkSelection?.draft ?? null, error: artworkWarning, retry: retryArtwork });
         resetForm();
         return;
       }
@@ -483,7 +484,7 @@ export function CreateReleaseDialog({ open, onOpenChange, userId }: CreateReleas
             </div>
 
             <Button type="button" variant="outline" disabled={createRelease.isPending || artworkBusy} aria-expanded={designerOpen} onClick={() => setDesignerOpen(v => !v)}>{designerOpen ? 'Hide artwork studio' : 'Design your artwork'}</Button>
-            {designerOpen && <ReleaseArtworkDesigner draft={artworkDraft ?? undefined} onDraftChange={setArtworkDraft} onBusyChange={setArtworkBusy} title={title} artist={artistName} disabled={createRelease.isPending || artworkBusy} onUse={file => { setArtworkFile(file); setArtworkPreviewUrl(URL.createObjectURL(file)); }} />}
+            {designerOpen && <ReleaseArtworkDesigner draft={artworkDraft ?? undefined} onDraftChange={setArtworkDraft} onBusyChange={setArtworkBusy} title={title} artist={artistName} disabled={createRelease.isPending || artworkBusy} onUse={(file, draft) => { setArtworkSelection({ file, draft }); setArtworkPreviewUrl(URL.createObjectURL(file)); }} />}
 
             <Button onClick={handleNext} disabled={createRelease.isPending || artworkBusy} className="w-full">Next: Select Songs</Button>
           </div>

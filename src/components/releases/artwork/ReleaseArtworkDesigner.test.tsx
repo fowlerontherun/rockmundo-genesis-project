@@ -119,3 +119,22 @@ it('applies a style without losing player content or surface, and reflects custo
   expect(screen.getByRole('button', { name: 'Golden soul' })).toHaveAttribute('aria-pressed', 'false');
   await waitFor(() => expect(screen.queryByText('Loading image preview…')).toBeNull());
 });
+
+it('pairs an untouched default export with its editable snapshot and keeps it stable after later edits', async () => {
+  const onUse = vi.fn();
+  render(<ReleaseArtworkDesigner title="Original album" artist="Original band" onUse={onUse} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Use as release artwork' }));
+  await waitFor(() => expect(onUse).toHaveBeenCalledTimes(1));
+  const [file, selectedDraft] = onUse.mock.calls[0];
+  expect(file).toBeInstanceOf(File);
+  expect(selectedDraft).toEqual({ design: newArtworkDesign('Original album', 'Original band'), surface: 'cover' });
+  expect(artworkFile).toHaveBeenCalledWith(selectedDraft.design, selectedDraft.surface);
+  fireEvent.change(screen.getByLabelText('Design title'), { target: { value: 'Later draft' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Vinyl', exact: true }));
+  expect(selectedDraft.design.title).toBe('Original album');
+  expect(selectedDraft.surface).toBe('cover');
+  expect(onUse).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByRole('button', { name: 'Use as release artwork' }));
+  await waitFor(() => expect(onUse).toHaveBeenCalledTimes(2));
+  expect(onUse.mock.calls[1][1]).toMatchObject({ design: { title: 'Later draft' }, surface: 'vinyl' });
+});
