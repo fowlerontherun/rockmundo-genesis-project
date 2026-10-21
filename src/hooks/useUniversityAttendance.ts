@@ -56,6 +56,7 @@ export function useUniversityAttendance(profileId: string | undefined, enrollmen
       return data as UniversityEnrollment | null;
     },
     enabled: !!profileId,
+    refetchInterval: 5 * 60_000,
   });
 
   const { data: activityStatus, isPending: activityPending, isError: activityError } = useQuery({
@@ -100,6 +101,7 @@ export function useUniversityAttendance(profileId: string | undefined, enrollmen
       return data;
     },
     enabled: !!enrollment?.id,
+    refetchInterval: 5 * 60_000,
   });
 
   const attendClassMutation = useMutation({
@@ -162,7 +164,7 @@ export function useUniversityAttendance(profileId: string | undefined, enrollmen
       toast({
         title: data.auto_attend ? "Auto-attend enabled" : "Auto-attend disabled",
         description: data.auto_attend
-          ? "We'll automatically mark you present at 10 AM daily."
+          ? "Attendance is recorded after each class finishes in the university's local time."
           : "Automatic attendance has been turned off.",
       });
     },

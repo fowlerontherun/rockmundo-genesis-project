@@ -97,6 +97,7 @@ serve(async (req) => {
   const startedAt = Date.now();
   let processedCount = 0;
   let skippedCount = 0;
+  let failedCount = 0;
   let remoteCount = 0;
   let connectionFailedCount = 0;
   let totalXpAwarded = 0;
@@ -302,8 +303,36 @@ serve(async (req) => {
         totalXpAwarded += xpEarned;
       } catch (enrollmentError) {
         console.error(`[university-attendance] Failed enrollment ${enrollment.id}`, enrollmentError);
-        skippedCount += 1;
+        failedCount += 1;
       }
+    }
+
+    const resultSummary = {
+      processedCount,
+      skippedCount,
+      failedCount,
+      remoteCount,
+      connectionFailedCount,
+      totalXpAwarded,
+    };
+
+    // A successfully dispatched cron call is not a successful university run.
+    // Make failed settlements visible in the run log and HTTP response.
+    if (failedCount > 0) {
+      await failJobRun({
+        jobName: "university-attendance",
+        runId,
+        supabaseClient: client,
+        durationMs: Date.now() - startedAt,
+        processedCount,
+        errorCount: failedCount,
+        error: new Error(`${failedCount} university enrollment settlement(s) failed`),
+        resultSummary,
+      });
+      return new Response(JSON.stringify({ success: false, ...resultSummary }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     await completeJobRun({
@@ -312,19 +341,15 @@ serve(async (req) => {
       supabaseClient: client,
       durationMs: Date.now() - startedAt,
       processedCount,
-      resultSummary: {
-        processedCount,
-        skippedCount,
-        remoteCount,
-        connectionFailedCount,
-        totalXpAwarded,
-      },
+      errorCount: 0,
+      resultSummary,
     });
 
     return new Response(JSON.stringify({
       success: true,
       processed: processedCount,
       skipped: skippedCount,
+      failed: failedCount,
       remote: remoteCount,
       connectionFailed: connectionFailedCount,
       totalXpAwarded,
@@ -340,6 +365,7 @@ serve(async (req) => {
       resultSummary: {
         processedCount,
         skippedCount,
+        failedCount,
         remoteCount,
         connectionFailedCount,
         totalXpAwarded,
