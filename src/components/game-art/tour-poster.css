@@ -1,0 +1,17 @@
+.tour-poster { position: relative; isolation: isolate; overflow: hidden; border-radius: .6rem; color: white; background: var(--art-bg, #24163f); }
+.tour-poster__art { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.tour-poster__photo { width: 100%; height: 100%; object-fit: cover; opacity: .5; }
+.tour-poster__shade { position: absolute; inset: 0; background: linear-gradient(120deg, #090611f5, #090611c9 65%, #09061199); }
+.tour-poster__rings { position: absolute; right: -3rem; bottom: -5rem; width: 14rem; height: 14rem; border: 1px solid var(--art-accent); border-radius: 50%; box-shadow: 0 0 0 18px #ffffff08, 0 0 0 36px #ffffff05; opacity: .4; }
+.tour-poster__content { padding: 1.1rem; overflow-wrap: anywhere; }
+.tour-poster__top { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: .65rem; }
+.tour-poster__eyebrow { font-size: .6rem; letter-spacing: .16em; font-weight: 700; color: var(--art-accent); padding-top: .35rem; }
+.tour-poster__badges { display: flex; flex-wrap: wrap; gap: .25rem; padding: .2rem; border-radius: .5rem; background: hsl(var(--background)); color: hsl(var(--foreground)); max-width: 100%; }
+.tour-poster__identity { display: flex; align-items: center; gap: .65rem; margin-top: 1.2rem; }
+.tour-poster__logo { position: relative; flex: 0 0 3rem; width: 3rem; height: 3rem; display: grid; place-items: center; overflow: hidden; border-radius: .5rem; background: var(--art-bg); color: var(--art-accent); border: 1px solid #ffffff30; }
+.tour-poster__logo-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: var(--art-bg); }
+.tour-poster__band { font-size: .85rem; font-weight: 600; min-width: 0; }
+.tour-poster__title { margin-top: .8rem; font-size: clamp(1.3rem, 3vw, 1.8rem); line-height: 1.15; font-weight: 800; letter-spacing: -.025em; }
+.tour-poster__dates { margin-top: 1rem; padding-top: .65rem; border-top: 1px solid #ffffff30; font-size: .75rem; color: #e2e8f0; }
+.tour-poster--cancelled .tour-poster__art { filter: grayscale(1); }
+.tour-poster--cancelled .tour-poster__title { text-decoration: line-through; }
