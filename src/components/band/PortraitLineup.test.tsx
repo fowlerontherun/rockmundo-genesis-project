@@ -24,6 +24,23 @@ describe('band portrait saved identity', () => {
     await screen.findByText('No portrait available');
     expect(mocks.capture).not.toHaveBeenCalled();
   });
+  it('shows an existing profile photo when a bandmate never saved Avatar V1', async () => {
+    mocks.models.mockReturnValue({
+      data: { appearances: {}, richClothing: {}, profilePhotos: { p: 'https://example.test/profile-photo.png' } },
+      isError: false, isFetching: false,
+    });
+    render(<PortraitLineup members={members} />);
+    await screen.findByAltText('Alex profile photo (no saved 3D avatar)');
+    expect(screen.getByText(/3D avatar not saved/)).toBeTruthy();
+    expect(mocks.capture).not.toHaveBeenCalled();
+  });
+  it('does not mistake missing saved data for a failed WebGL capture', async () => {
+    mocks.models.mockReturnValue({ data: { appearances: {}, richClothing: {}, profilePhotos: {} }, isError: false, isFetching: false });
+    render(<PortraitLineup members={members} />);
+    await screen.findByText('No portrait available');
+    expect(screen.getByText(/Some members have not saved an Avatar V1 appearance/)).toBeTruthy();
+    expect(screen.queryByText('Some saved visuals could not load.')).toBeNull();
+  });
   it('hides cached portraits when a visual refresh fails', async () => {
     mocks.models.mockReturnValue({ data: { appearances: { p: defaultAppearance() }, richClothing: {} }, isError: false, isFetching: false });
     const { rerender } = render(<PortraitLineup members={members} />);
