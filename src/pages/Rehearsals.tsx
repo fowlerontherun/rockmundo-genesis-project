@@ -1,3 +1,4 @@
+import { RehearsalSessionHeading } from '@/components/game-art/RehearsalSessionHeading';
 import { useState } from "react";
 import { useGameData } from "@/hooks/useGameData";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -438,14 +439,14 @@ const Rehearsals = () => {
             <div className="space-y-4">
               {displayRehearsals.map((rehearsal) => (
                 <Card key={rehearsal.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <CardTitle className="text-lg">{rehearsal.bands?.name || "Unknown Band"}</CardTitle>
-                        <CardDescription>{rehearsal.rehearsal_rooms?.name || "Unknown Venue"} - {rehearsal.rehearsal_rooms?.location}</CardDescription>
-                      </div>
-                      {getStatusBadge(rehearsal.status)}
-                    </div>
+                  <CardHeader className="p-3 pb-4">
+                    <RehearsalSessionHeading
+                      seed={rehearsal.band_id}
+                      band={rehearsal.bands?.name || "Unknown Band"}
+                      title={rehearsal.rehearsal_rooms?.name || "Unknown Venue"}
+                      location={rehearsal.rehearsal_rooms?.location}
+                      status={getStatusBadge(rehearsal.status)}
+                    />
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">

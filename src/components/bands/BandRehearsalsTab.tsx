@@ -1,3 +1,4 @@
+import { RehearsalSessionHeading } from '@/components/game-art/RehearsalSessionHeading';
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -241,17 +242,12 @@ export function BandRehearsalsTab({ bandId }: BandRehearsalsTabProps) {
                 key={session.id}
                 className="rounded-lg border border-border bg-card p-4 shadow-sm transition hover:border-primary"
               >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium">
-                      {session.rehearsal_rooms?.name ?? "Rehearsal room"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {session.rehearsal_rooms?.location ?? "Location TBC"}
-                    </p>
-                  </div>
-                  {getStatusBadge(session.status)}
-                </div>
+                <RehearsalSessionHeading
+                  seed={bandId}
+                  title={session.rehearsal_rooms?.name ?? "Rehearsal room"}
+                  location={session.rehearsal_rooms?.location ?? "Location TBC"}
+                  status={getStatusBadge(session.status)}
+                />
                 <Separator className="my-3" />
                 <div className="grid gap-2 md:grid-cols-3">
                   <div>
@@ -299,17 +295,12 @@ export function BandRehearsalsTab({ bandId }: BandRehearsalsTabProps) {
                 key={session.id}
                 className="rounded-lg border border-dashed border-muted bg-muted/40 p-4"
               >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium">
-                      {session.rehearsal_rooms?.name ?? "Rehearsal room"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {session.rehearsal_rooms?.location ?? "Location TBC"}
-                    </p>
-                  </div>
-                  {getStatusBadge(session.status)}
-                </div>
+                <RehearsalSessionHeading
+                  seed={bandId}
+                  title={session.rehearsal_rooms?.name ?? "Rehearsal room"}
+                  location={session.rehearsal_rooms?.location ?? "Location TBC"}
+                  status={getStatusBadge(session.status)}
+                />
                 <div className="mt-3 grid gap-2 md:grid-cols-4">
                   <div>
                     <p className="text-xs text-muted-foreground">Started</p>
