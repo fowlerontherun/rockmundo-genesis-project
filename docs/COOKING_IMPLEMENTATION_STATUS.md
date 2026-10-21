@@ -46,6 +46,12 @@ Applied a migration to Supabase project `rockmundo`, and committed an idempotent
 
 Applied and committed `20261021235000_cooking_recipe_catalogue.sql`. The live database now contains 12 inactive starter recipes and 39 ingredient requirements with server-controlled quantities, method, yield and shelf life. Recipe tables have RLS, owner-independent read policies for active recipes, and no direct authenticated writes. Verification returned 12 recipes, 39 requirements, zero active and authenticated INSERT denied. Recipes remain deliberately inactive pending atomic crafting and ingredient supply.
 
+## Atomic server-only completion — 21 October 2026
+
+Deployed `complete_cooking_batch(profile_id, recipe_slug, session_id)` on the live database. It is deliberately callable only by `service_role` (not `anon` or `authenticated`). It locks a profile before checking the idempotency key; selects the active recipe and its server-controlled requirements; locks available fresh ingredient lots in expiry order; deducts quantities; calculates weighted ingredient quality and an expiry capped to the earliest consumed ingredient; and inserts a unique finished batch in one transaction. Missing ingredients cause a full transaction rollback. Reusing the same session key returns the prior batch and refuses a different owner/recipe.
+
+Live verification: authenticated EXECUTE denied, anonymous EXECUTE denied, service_role EXECUTE allowed, zero enabled recipes and zero finished food batches. **No player-facing cooking endpoint is enabled**: authenticated manual sessions, server timestamped game actions, server-certified execution grade, inventory purchasing and rewards are not implemented. Before activating recipes, an audited trusted backend must validate a real session and call this function. Do not pass arbitrary client-generated session IDs directly through a privileged backend.
+
 ## Next slices
 
 1. Validate the practice interaction and timing on desktop, touch and keyboard; refine ingredient visuals and recipe steps from playtesting.
