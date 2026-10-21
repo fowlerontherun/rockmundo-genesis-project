@@ -1,6 +1,7 @@
-import { useId } from "react";
+import { useId, useState } from "react";
 import { motion } from "framer-motion";
-import { BookOpen, Clapperboard, Headphones, Mic2, Newspaper, Radio, Video, Waves } from "lucide-react";
+import { BookOpen, Camera, Clapperboard, Headphones, Mic2, Newspaper, Radio, UserRound, UsersRound, Video, Waves } from "lucide-react";
+import { chooseInterviewShot, type InterviewCameraShot } from "@/data/interviewCamera";
 import type { InterviewPresenter, InterviewerMood } from "@/data/interviewPresenters";
 
 type StagePhase = "intro" | "question" | "reaction" | "results";
@@ -13,6 +14,11 @@ interface InterviewerStageProps {
   phase: StagePhase;
   dialogue: string;
   mood?: InterviewerMood;
+  questionIndex: number;
+  guestName: string;
+  guestAvatarSrc?: string | null;
+  guestStatus: "loading" | "ready" | "unavailable";
+  playerLine?: string;
 }
 
 const studioIcons = {
@@ -95,7 +101,12 @@ const Portrait = ({ presenter, mood }: { presenter: InterviewPresenter; mood: In
 
 export const InterviewerStage = ({
   presenter, mediaType, outletName, showName, phase, dialogue, mood = "curious",
+  questionIndex, guestName, guestAvatarSrc, guestStatus, playerLine,
 }: InterviewerStageProps) => {
+  const sceneKey = `${phase}:${questionIndex}`;
+  const [manualShot, setManualShot] = useState<{ sceneKey: string; value: InterviewCameraShot } | null>(null);
+  const shot = manualShot?.sceneKey === sceneKey ? manualShot.value : chooseInterviewShot(phase, questionIndex);
+
   const StudioIcon = studioIcons[mediaType as keyof typeof studioIcons] || Mic2;
   const broadcast = ["tv", "film", "internet"].includes(mediaType);
   const audio = ["radio", "podcast"].includes(mediaType);
@@ -123,32 +134,76 @@ export const InterviewerStage = ({
           {label}
         </div>
       </div>
-      <div className="relative flex items-start gap-3 sm:gap-5">
-        <motion.div
-          key={`${presenter.id}:${phase === "reaction" ? mood : "idle"}`}
-          initial={{ opacity: 0.7, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25 }}
-          className="shrink-0"
-        >
-          <Portrait presenter={presenter} mood={mood} />
-        </motion.div>
-        <div className="min-w-0 flex-1 space-y-2">
-          <div className="leading-tight">
-            <p className="font-oswald text-base font-bold sm:text-lg">{presenter.name}</p>
-            <p className="text-xs text-slate-300">{presenter.role}</p>
+
+      <div className="relative space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-300">
+            {shot === "wide" ? "Two-shot" : shot === "host" ? "Presenter camera" : "Artist camera"}
+          </span>
+          <div className="flex items-center gap-1" role="group" aria-label="Interview camera angle">
+            {(["wide", "host", "guest"] as const).map((view) => {
+              const Icon = view === "wide" ? UsersRound : view === "host" ? Camera : UserRound;
+              return <button
+                key={view}
+                type="button"
+                onClick={() => setManualShot({ sceneKey, value: view })}
+                aria-label={view === "wide" ? "Two-person view" : view === "host" ? "Focus interviewer" : "Focus my avatar"}
+                aria-pressed={shot === view}
+                className={`rounded-md border px-2.5 py-1 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300 ${shot === view ? "border-cyan-300/80 bg-cyan-300/20 text-white" : "border-white/20 bg-black/20 text-slate-300 hover:bg-white/15"}`}
+              ><Icon className="h-3.5 w-3.5" aria-hidden /></button>;
+            })}
           </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
           <motion.div
-            key={`${phase}:${dialogue}`}
-            initial={{ opacity: 0, x: 7 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.2 }}
-            className="relative rounded-xl rounded-tl-sm border border-white/15 bg-white/10 px-3 py-3 shadow-inner backdrop-blur-sm"
-            aria-live={phase === "reaction" ? "polite" : "off"}
+            key={`host:${shot}:${phase}`}
+            initial={{ opacity: .7, scale: .97 }}
+            animate={{ opacity: shot === "guest" ? .65 : 1, scale: shot === "host" ? 1.02 : 1 }}
+            transition={{ duration: .2 }}
+            className={`relative flex min-w-0 flex-col items-center justify-center rounded-xl border bg-black/20 p-2 text-center ${shot === "host" ? "border-cyan-300/80 ring-1 ring-cyan-300/35" : "border-white/15"}`}
           >
-            <p className="text-sm font-medium leading-relaxed sm:text-base">“{dialogue}”</p>
+            <Portrait presenter={presenter} mood={mood} />
+            <p className="mt-1 truncate w-full font-oswald text-sm font-semibold sm:text-base">{presenter.name}</p>
+            <p className="max-w-full truncate text-[10px] text-slate-300 sm:text-xs">{presenter.role}</p>
+          </motion.div>
+          <motion.div
+            key={`guest:${shot}:${phase}`}
+            initial={{ opacity: .7, scale: .97 }}
+            animate={{ opacity: shot === "host" ? .75 : 1, scale: shot === "guest" ? 1.02 : 1 }}
+            transition={{ duration: .2 }}
+            className={`relative flex min-w-0 flex-col items-center justify-center rounded-xl border bg-black/20 p-2 text-center ${shot === "guest" ? "border-violet-300/80 ring-1 ring-violet-300/35" : "border-white/15"}`}
+          >
+            <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-xl border border-violet-300/30 bg-[#171b30] sm:h-36 sm:w-36">
+              {guestAvatarSrc && guestStatus === "ready" ? (
+                <img src={guestAvatarSrc} alt={`Saved Avatar V1 for ${guestName}`} className="h-full w-full object-contain" />
+              ) : (
+                <div className="flex flex-col items-center gap-1 p-1 text-slate-300">
+                  <UserRound className="h-8 w-8" aria-hidden />
+                  <span className="text-center text-[10px]">{guestStatus === "loading" ? "Preparing avatar…" : "Avatar unavailable"}</span>
+                </div>
+              )}
+            </div>
+            <p className="mt-1 max-w-full truncate font-oswald text-sm font-semibold sm:text-base">{guestName}</p>
+            <p className="text-[10px] text-slate-300 sm:text-xs">{guestStatus === "ready" ? "Your saved outfit" : "Guest musician"}</p>
           </motion.div>
         </div>
+        {phase === "reaction" && playerLine && (
+          <div className="rounded-lg border border-violet-300/25 bg-violet-200/10 p-2 text-xs text-violet-100">
+            <span className="mr-2 font-bold uppercase tracking-wider">You said</span>
+            <span>“{playerLine}”</span>
+          </div>
+        )}
+        <motion.div
+          key={`${phase}:${dialogue}`}
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: .2 }}
+          aria-live={phase === "reaction" ? "polite" : "off"}
+          className="relative rounded-xl border border-white/15 bg-white/10 px-3 py-3 shadow-inner backdrop-blur-sm"
+        >
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-cyan-200">{presenter.name}</p>
+          <p className="text-sm font-medium leading-relaxed sm:text-base">“{dialogue}”</p>
+        </motion.div>
       </div>
       {print ? (
         <div aria-hidden className="relative mt-3 flex items-center gap-2 border-t border-white/10 pt-2">
