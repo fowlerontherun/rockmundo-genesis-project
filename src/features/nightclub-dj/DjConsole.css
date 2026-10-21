@@ -142,6 +142,12 @@
   box-shadow:inset 0 1px 2px #ffffff15;
 }
 .rm-dj-console .rm-dj-transport .rm-dj-play {background:#093c28;color:#9affcd;border-color:#25875e;box-shadow:0 0 10px #13bb6f55;}
+.rm-dj-console .rm-dj-transport button[aria-pressed="true"] {
+  background:color-mix(in srgb,var(--dj-channel,#aa82ef) 22%,#141d2f);
+  color:#fff;
+  border-color:var(--dj-channel,#aa82ef);
+  box-shadow:0 0 9px color-mix(in srgb,var(--dj-channel,#aa82ef) 30%,transparent);
+}
 .rm-dj-console .rm-dj-transport button:hover:not(:disabled){filter:brightness(1.23);}
 .rm-dj-console button:focus-visible,.rm-dj-console [role="slider"]:focus-visible{
   outline:2px solid #faf4ff;outline-offset:3px;
