@@ -8,9 +8,9 @@ import type { PortraitMember } from './BandPortrait';
 function PortraitImage({ src, alt }: { src: string; alt: string }) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   if (failedUrl === src) {
-    return <div role="status" className="flex aspect-[2/3] items-center justify-center p-3 text-center text-xs text-white/60">Image unavailable</div>;
+    return <div role="status" className="flex aspect-square items-center justify-center p-3 text-center text-xs text-white/60">Image unavailable</div>;
   }
-  return <img src={src} alt={alt} className="aspect-[2/3] w-full object-contain" onError={() => setFailedUrl(src)} />;
+  return <img src={src} alt={alt} className="aspect-square w-full object-contain" onError={() => setFailedUrl(src)} />;
 }
 
 export default function PortraitLineup({ members }: { members: PortraitMember[] }) {
@@ -37,7 +37,7 @@ export default function PortraitLineup({ members }: { members: PortraitMember[] 
         const crafted = data.luthieryInstruments?.[id]?.find(item => (item.instrumentKind === 'electric_bass' && instrument === 'bass_guitar') || (item.instrumentKind === 'electric_guitar' && instrument === 'electric_guitar')) ?? null;
         try {
           images[member.id] = await portraitCapture({
-            appearance: data.appearances[id], role: assignment.role, instrument: instrument ?? undefined,
+            appearance: data.appearances[id], portrait: true, role: assignment.role, instrument: instrument ?? undefined,
             richClothing: data.richClothing[id] ?? [], tattoos: data.tattoos?.[id] ?? [],
             merchWearable: data.merchWearables?.[id] ?? null, luthieryInstrument: crafted,
             instrumentSkin: data.instrumentSkins?.[id]?.find(skin => skin.instrumentId === instrument) ?? null,
