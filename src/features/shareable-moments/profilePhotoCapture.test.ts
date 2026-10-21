@@ -35,7 +35,7 @@ describe("profile photo fallback without WebGL", () => {
       blob: async () => ({ type: "image/jpeg", size: 4096 }),
     }));
     vi.stubGlobal("createImageBitmap", vi.fn().mockResolvedValue({ width: 900, height: 900, close }));
-    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({ drawImage: draw } as unknown as CanvasRenderingContext2D);
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({ drawImage: draw } as never);
     vi.spyOn(HTMLCanvasElement.prototype, "toDataURL").mockReturnValue("data:image/png;base64,photo");
     const result = await captureProfilePhotoForShare("https://example.test/avatar.jpg");
     expect(result).toEqual({ dataUrl: "data:image/png;base64,photo", width: 720, height: 1080 });

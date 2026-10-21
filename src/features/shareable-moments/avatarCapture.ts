@@ -44,7 +44,7 @@ async function renderAvatarV1ForShare(visual:AvatarShareVisual):Promise<HTMLCanv
  const preset=visual.portrait ? AVATAR_HEAD_SHOULDERS_PRESET : AVATAR_SHARE_PRESET;
  const canvas=document.createElement("canvas");canvas.width=preset.width;canvas.height=preset.height;
  const renderer=new T.WebGLRenderer({canvas,antialias:true,alpha:true,preserveDrawingBuffer:true,powerPreference:"high-performance"});renderer.setSize(canvas.width,canvas.height,false);renderer.setPixelRatio(1);renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.25;renderer.setClearColor(0x000000,0);
- const scene=new T.Scene();const camera=new T.PerspectiveCamera(preset.fov,canvas.width/canvas.height,.05,30);camera.position.set(...preset.camera);camera.lookAt(...preset.target);
+ const scene=new T.Scene();const camera=new T.PerspectiveCamera(preset.fov,canvas.width/canvas.height,.05,30);camera.position.set(preset.camera[0],preset.camera[1],preset.camera[2]);camera.lookAt(preset.target[0],preset.target[1],preset.target[2]);
  scene.add(new T.HemisphereLight("#e8f0ff","#253044",2));const key=new T.DirectionalLight("#fff0dc",4);key.position.set(-2,4,4);scene.add(key);const rim=new T.DirectionalLight("#8b5cf6",2);rim.position.set(3,2,-2);scene.add(rim);
  let actor:Musician|null=null;let equipment:T.Group|null=null;let library:Awaited<ReturnType<typeof loadModelLibrary>>|null=null;
  try{
