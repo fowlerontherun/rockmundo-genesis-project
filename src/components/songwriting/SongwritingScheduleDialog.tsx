@@ -30,6 +30,7 @@ export function SongwritingScheduleDialog({
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [hour, setHour] = useState("9");
   const [duration, setDuration] = useState("1");
+  const [focus, setFocus] = useState("balanced");
   const [isSaving, setIsSaving] = useState(false);
   const queryClient = useQueryClient();
   useEffect(() => {
@@ -37,6 +38,7 @@ export function SongwritingScheduleDialog({
     setDate(new Date());
     setHour("9");
     setDuration("1");
+    setFocus("balanced");
   }, [open, projectId]);
 
   const handleSchedule = async () => {
@@ -78,7 +80,7 @@ export function SongwritingScheduleDialog({
         p_project_id: projectId,
         p_scheduled_start: scheduledStart.toISOString(),
         p_effort_hours: Number(duration),
-        p_session_type: "balanced",
+        p_session_type: focus,
         p_idempotency_key: `schedule-${profileId}-${projectId}-${scheduledStart.toISOString()}-${duration}`,
       });
       if (error) {
@@ -163,6 +165,19 @@ export function SongwritingScheduleDialog({
             </Select>
           </div>
 
+          <div>
+            <Label>Writing focus</Label>
+            <Select value={focus} onValueChange={setFocus}>
+              <SelectTrigger aria-label="Scheduled writing focus"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="balanced">Balanced</SelectItem>
+                <SelectItem value="music">Music</SelectItem>
+                <SelectItem value="lyrics">Lyrics</SelectItem>
+                <SelectItem value="arrangement">Arrangement — Consistency</SelectItem>
+                <SelectItem value="polish">Polish — refinement</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex gap-2">
             <Button onClick={handleSchedule} className="flex-1" disabled={isSaving || !projectId || projectStatus === "completed" || projectStatus === "converted"}>
               {isSaving ? "Scheduling..." : "Schedule Session"}
