@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { doneness, initialPractice, practiceReducer, practiceResult, SESSION_MS, type PracticeState } from "./practiceModel";
+import { doneness, initialPractice, practiceReducer, practiceResult, PAN_CAPACITY, SESSION_MS, type PracticeState } from "./practiceModel";
 
 const started = (slower = false) => practiceReducer(initialPractice(), { type: "start", now: 0, slower });
 const inPan = () => practiceReducer(started(), { type: "move", id: "onion", to: "pan", now: 0 });
@@ -71,6 +71,22 @@ describe("cooking practice timing", () => {
     expect(practiceReducer(state, { type: "start", now: 12_000, slower: true })).toEqual(state);
     expect(tick(state, Number.NaN)).toEqual(state);
     expect(tick(state, 1000)).toEqual(state);
+  });
+  it("rejects plating straight from the tray and unknown ingredients", () => {
+    const state = started();
+    expect(practiceReducer(state, { type: "move", id: "onion", to: "plate", now: 0 })).toEqual(state);
+    expect(practiceReducer(state, { type: "move", id: "unknown" as "onion", to: "pan", now: 0 })).toEqual(state);
+    const pan = practiceReducer(state, { type: "move", id: "onion", to: "pan", now: 0 });
+    expect(practiceReducer(pan, { type: "move", id: "onion", to: "plate", now: 0 }).items[0].position).toBe("plate");
+  });
+  it("limits the pan to two groups and permits another after plating", () => {
+    expect(PAN_CAPACITY).toBe(2);
+    let state = started();
+    state = practiceReducer(state, { type: "move", id: "onion", to: "pan", now: 0 });
+    state = practiceReducer(state, { type: "move", id: "mushroom", to: "pan", now: 0 });
+    expect(practiceReducer(state, { type: "move", id: "pepper", to: "pan", now: 0 }).items[2].position).toBe("tray");
+    state = practiceReducer(state, { type: "move", id: "onion", to: "plate", now: 0 });
+    expect(practiceReducer(state, { type: "move", id: "pepper", to: "pan", now: 0 }).items[2].position).toBe("pan");
   });
   it("scores plated ingredients and fails raw, missing or burnt components", () => {
     const state = { ...started(), status: "finished" as const, items: [
