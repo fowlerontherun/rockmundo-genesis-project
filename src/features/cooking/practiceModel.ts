@@ -11,6 +11,7 @@ export const PRACTICE_INGREDIENTS = [
   { id: "pepper", name: "Pepper", ready: 9, overdone: 13, burnt: 18 },
 ] as const;
 export const SESSION_MS = 120_000;
+export const PAN_CAPACITY = 2;
 const HEAT_RATE: Record<Heat, number> = { off: 0, low: 0.65, medium: 1, high: 1.5 };
 
 export interface PracticeItem {
@@ -78,8 +79,11 @@ export function practiceReducer(state: PracticeState, action: PracticeAction): P
   if (next.status !== "cooking") return next;
   if (action.type === "heat") return { ...next, heat: action.heat };
   if (action.type === "move") {
-    // No return to the tray: a used ingredient cannot become a fresh ingredient.
-    if (action.to === "tray") return next;
+    // Ingredients must be cooked before plating; plated food cannot become fresh.
+    const current = next.items.find((item) => item.id === action.id);
+    if (!current || current.position === action.to || action.to === "tray") return next;
+    if (current.position === "tray" && action.to !== "pan") return next;
+    if (action.to === "pan" && next.items.filter((item) => item.position === "pan").length >= PAN_CAPACITY) return next;
     return { ...next, items: next.items.map((item) => item.id === action.id
       ? { ...item, position: action.to } : item) };
   }
