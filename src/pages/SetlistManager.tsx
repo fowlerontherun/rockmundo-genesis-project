@@ -1,3 +1,4 @@
+import "@/components/setlist/stage-sheet.css";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
@@ -231,11 +232,12 @@ const SetlistManager = () => {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {setlists?.map((setlist) => (
-            <Card key={setlist.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <CardTitle className="text-xl mb-1">{setlist.name}</CardTitle>
+            <Card key={setlist.id} className="stage-sheet-card hover:shadow-lg transition-shadow">
+              <CardHeader className="stage-sheet-card__header">
+                <div aria-hidden="true" className="stage-sheet-card__tape" />
+                <div className="flex flex-wrap justify-between items-start gap-2">
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="text-xl mb-1 break-words [overflow-wrap:anywhere]">{setlist.name}</CardTitle>
                     <CardDescription className="capitalize">
                       {setlist.setlist_type} setlist
                     </CardDescription>
@@ -259,7 +261,7 @@ const SetlistManager = () => {
                     {6 - (setlist.song_count || 0)} more songs to book gigs
                   </div>
                 )}
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
                     variant="outline"
                     size="sm"
@@ -272,6 +274,8 @@ const SetlistManager = () => {
                   <Button
                     variant="outline"
                     size="sm"
+                    aria-label={`Edit ${setlist.name}`}
+                    title="Edit setlist"
                     onClick={() => setEditingSetlistId(setlist.id)}
                   >
                     <Edit className="h-4 w-4" />
@@ -279,6 +283,8 @@ const SetlistManager = () => {
                   <Button
                     variant="outline"
                     size="sm"
+                    aria-label={`Delete ${setlist.name}`}
+                    title="Delete setlist"
                     onClick={() => setDeletingSetlistId(setlist.id)}
                   >
                     <Trash2 className="h-4 w-4" />
