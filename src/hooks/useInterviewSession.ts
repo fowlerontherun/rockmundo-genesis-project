@@ -4,6 +4,7 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePrimaryBand } from "@/hooks/usePrimaryBand";
 import { useToast } from "@/hooks/use-toast";
 import type { InterviewQuestion, InterviewAnswer, InterviewPhase } from "@/data/interviewQuestions";
+import { selectInterviewQuestions } from "@/utils/interviewSelection";
 
 interface PendingInterview {
   offerId: string;
@@ -38,8 +39,6 @@ const questionCountForMedia = (mediaType: string) => {
     default: return 5;
   }
 };
-
-const shuffled = <T,>(items: T[]) => [...items].sort(() => Math.random() - 0.5);
 
 export const useInterviewSession = () => {
   const { profileId, userId } = useActiveProfile();
@@ -102,33 +101,37 @@ export const useInterviewSession = () => {
     setLoading(true);
     try {
       const targetCount = questionCountForMedia(pending.mediaType);
-      const { data, error } = await supabase
-        .from("interview_questions")
-        .select("*")
-        .or(`media_types.cs.{${pending.mediaType}},media_types.cs.{all}`);
-      if (error) throw error;
-
-      const pool = (data || []) as unknown as InterviewQuestion[];
-      if (pool.length < targetCount) throw new Error("Not enough interview questions are available for this media type.");
-
-      const byCategory = new Map<string, InterviewQuestion[]>();
-      shuffled(pool).forEach((question) => {
-        const category = question.category || "general";
-        byCategory.set(category, [...(byCategory.get(category) || []), question]);
-      });
-
-      const selected: InterviewQuestion[] = [];
-      const categories = shuffled([...byCategory.keys()]);
-      for (const category of categories) {
-        const categoryPool = byCategory.get(category) || [];
-        if (categoryPool.length && selected.length < targetCount) selected.push(categoryPool[0]);
-      }
-      if (selected.length < targetCount) {
-        const used = new Set(selected.map((q) => q.id));
-        selected.push(...shuffled(pool.filter((q) => !used.has(q.id))).slice(0, targetCount - selected.length));
+      // A history lookup is advisory: an RLS or network failure must not
+      // prevent an otherwise valid scheduled media appearance.
+      const [catalogue, history] = await Promise.all([
+        supabase
+          .from("interview_questions")
+          .select("*")
+          .or(`media_types.cs.{${pending.mediaType}},media_types.cs.{all}`),
+        (supabase as any)
+          .from("interview_results")
+          .select("questions")
+          .eq("user_id", userId)
+          .eq("band_id", bandId)
+          .order("created_at", { ascending: false })
+          .limit(8),
+      ]);
+      if (catalogue.error) throw catalogue.error;
+      if (history.error) {
+        console.warn("Could not retrieve recent interview history; continuing without repeat protection", history.error);
       }
 
-      setQuestions(selected.slice(0, targetCount));
+      const recentlyAsked = new Set<string>();
+      for (const previous of history.error ? [] : (history.data || [])) {
+        const pastAnswers = Array.isArray(previous.questions) ? previous.questions : [];
+        for (const answer of pastAnswers) {
+          if (typeof answer?.question_id === "string") recentlyAsked.add(answer.question_id);
+        }
+      }
+
+      const pool = (catalogue.data || []) as unknown as InterviewQuestion[];
+      const selected = selectInterviewQuestions(pool, targetCount, recentlyAsked);
+      setQuestions(selected);
       setCurrentIndex(0);
       setAnswers([]);
       setTotalEffects(null);
@@ -137,7 +140,7 @@ export const useInterviewSession = () => {
     } finally {
       setLoading(false);
     }
-  }, [pending]);
+  }, [pending, userId, bandId]);
 
   const calculateTotalEffects = useCallback((qs: InterviewQuestion[], ans: InterviewAnswer[]): InterviewEffects => {
     let fameMult = 0;
