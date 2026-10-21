@@ -68,7 +68,7 @@ describe("songwriting consistency and polish progression", () => {
 
   it("stores capped server-side awards and applies quality bonuses once", () => {
     expect(factorsMigration).toContain("BEFORE UPDATE OF sessions_completed");
-    expect(factorsMigration).toContain("v_session.polish_gained IS NULL");
+    expect(factorsMigration).toContain("AND polish_gained IS NULL");
     expect(factorsMigration).toContain("GREATEST(0, 500 - COALESCE(OLD.polish_progress,0))");
     expect(factorsMigration).toContain("v_bonus_polish");
     expect(factorsMigration).toContain("NEW.status = 'completed' AND OLD.status IS DISTINCT FROM 'completed'");
