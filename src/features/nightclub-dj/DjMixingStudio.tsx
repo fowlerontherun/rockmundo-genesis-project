@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Expand, Headphones, Minimize2, Music, Pause, Play, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
@@ -55,7 +55,7 @@ function AudioDeck({
     loopRef.current = next;
     setActiveLoop(next);
   };
-  const updateDeckTime = (seconds: number) => {
+  const updateDeckTime = useCallback((seconds: number) => {
     const wrapped = wrapDjBeatLoopTime(seconds, loopRef.current);
     if (wrapped !== null && audioRef.current) {
       audioRef.current.currentTime = wrapped;
@@ -63,13 +63,14 @@ function AudioDeck({
     } else {
       setElapsed(seconds);
     }
-  };
+  }, []);
   // Loops and hot cues are local to one media source; never create
   // fictitious server mixer events or preserve loops after a track switch.
   useEffect(() => {
     setHotCues(emptyDjHotCues());
     setPadMode("play");
-    setDeckLoop(null);
+    loopRef.current = null;
+    setActiveLoop(null);
   }, [audioSourceKey]);
 
   const pressHotCue = (index: number) => {
@@ -126,7 +127,7 @@ function AudioDeck({
     const player = audioRef.current;
     if (!player || !playing) return;
     return watchDjDeckMediaTime(player, browserDjVolumeClock(), updateDeckTime);
-  }, [playing, audioSourceKey]);
+  }, [playing, audioSourceKey, updateDeckTime]);
 
   useEffect(() => {
     let cancelled = false;
