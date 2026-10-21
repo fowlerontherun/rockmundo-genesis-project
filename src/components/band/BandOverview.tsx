@@ -89,7 +89,7 @@ export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, band
 
         const { data: members } = await supabase
           .from('band_members')
-          .select('*, profiles!band_members_profile_id_fkey(display_name, username)')
+          .select('*, profiles!band_members_profile_id_fkey(display_name, username, avatar_url)')
           .eq('band_id', bandId);
 
         setBand((bandData as BandRow) ?? null);
@@ -99,6 +99,7 @@ export function BandOverview({ bandId, isLeader, logoUrl, soundDescription, band
           profileId: member.profile_id,
           name: member.profiles?.display_name || member.profiles?.username || `${member.instrument_role || 'Band'} member`,
           instrument: member.instrument_role,
+          photoUrl: member.profiles?.avatar_url ?? null,
         })));
 
         // Fetch home city if set
