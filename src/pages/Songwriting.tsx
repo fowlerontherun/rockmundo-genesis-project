@@ -1692,7 +1692,7 @@ const Songwriting = () => {
     }
   };
 
-  const handleStartSession = async (project: SongwritingProject) => {
+  const handleStartSession = async (project: SongwritingProject, sessionType: "balanced" | "music" | "lyrics" | "arrangement" | "polish" = "balanced") => {
     const effortId = effortSelections[project.id] ?? DEFAULT_EFFORT_OPTION.id;
     const effortOption =
       SESSION_EFFORT_OPTIONS.find((option) => option.id === effortId) ??
@@ -1701,6 +1701,7 @@ const Songwriting = () => {
       await startSession.mutateAsync({
         projectId: project.id,
         effortHours: effortOption.hours,
+        sessionType,
       });
       await refreshActivityStatus();
     } catch (error) {
@@ -2901,7 +2902,7 @@ const Songwriting = () => {
                 project={project}
                 isLocked={!!isLocked}
                 userBandId={primaryBand?.band_id}
-                onStartSession={() => handleStartSession(project)}
+                onStartSession={(focus) => handleStartSession(project, focus)}
                 onEdit={() => handleEdit(project)}
                 onDelete={() => handleDelete(project)}
                 onViewHistory={() => {
