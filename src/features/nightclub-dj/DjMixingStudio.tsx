@@ -18,6 +18,7 @@ import { djReadinessSteps, useDjMixReadiness } from "./djReadiness";
 import { bindDjDeckLifecycle } from "./deckAudioLifecycle";
 import { watchDjDeckMediaTime } from "./deckMediaClock";
 import { createDjBeatLoop, djBeatLoopSeekExits, wrapDjBeatLoopTime, type DjBeatLoop } from "./djBeatLoop";
+import { addDjSourceTempoTap, estimateDjSourceBpmFromTaps } from "./djTapTempo";
 import { deliverDjMixEvent } from "./mixerEventDelivery";
 import { browserDjVolumeClock, djCombinedDeckVolume, rampDjDeckVolume } from "./djVolumeRamp";
 import { DjPadBank, DjPlatter, DjTrimMeter, DjWaveform } from "./DjHardwareVisuals";
@@ -49,6 +50,7 @@ function AudioDeck({
   const [hotCues, setHotCues] = useState<DjHotCueSlots>(emptyDjHotCues);
   const [padMode, setPadMode] = useState<"store" | "play">("play");
   const [activeLoop, setActiveLoop] = useState<DjBeatLoop | null>(null);
+  const [tapPositions, setTapPositions] = useState<number[]>([]);
   // Clock callbacks read the current loop without restarting audio or polling.
   const loopRef = useRef<DjBeatLoop | null>(null);
   const setDeckLoop = (next: DjBeatLoop | null) => {
@@ -69,6 +71,7 @@ function AudioDeck({
   useEffect(() => {
     setHotCues(emptyDjHotCues());
     setPadMode("play");
+    setTapPositions([]);
     loopRef.current = null;
     setActiveLoop(null);
   }, [audioSourceKey]);
@@ -89,8 +92,22 @@ function AudioDeck({
     const next = djJogSeek(audio.currentTime, direction, duration);
     if (next !== null) { audio.currentTime = next; setElapsed(next); }
   };
-  const beat = estimatedDjBeatAt(elapsed, track?.bpm ?? null, rate);
+  // Most player-recorded songs lack curated BPM metadata. Manual tapping
+  // measures source-media seconds, so changing playback speed cannot cause
+  // an incorrect source beat length. No beat analysis or DB write occurs.
+  const catalogueBpm = track?.bpm;
+  const usableCatalogueBpm = typeof catalogueBpm === "number" &&
+    Number.isFinite(catalogueBpm) && catalogueBpm >= 30 && catalogueBpm <= 300
+    ? catalogueBpm : null;
+  const tappedBpm = estimateDjSourceBpmFromTaps(tapPositions);
+  const sourceBpm = usableCatalogueBpm ?? tappedBpm;
+  const beat = estimatedDjBeatAt(elapsed, sourceBpm, rate);
   const canJumpBar = Boolean(beat && duration > 0);
+  const tapBeat = () => {
+    const player = audioRef.current;
+    if (!player || player.paused || !track) return;
+    setTapPositions(previous => addDjSourceTempoTap(previous, player.currentTime));
+  };
   const toggleBeatLoop = (beats: 4 | 8) => {
     const player = audioRef.current;
     if (!player || !track || !duration) return;
@@ -98,7 +115,7 @@ function AudioDeck({
       setDeckLoop(null);
       return;
     }
-    const next = createDjBeatLoop(player.currentTime, track.bpm, beats, duration);
+    const next = createDjBeatLoop(player.currentTime, sourceBpm, beats, duration);
     if (!next) {
       toast.info("Move earlier in the track to loop this many beats.");
       return;
@@ -108,7 +125,7 @@ function AudioDeck({
   const jumpBar = (direction: -1 | 1) => {
     const player = audioRef.current;
     if (!player) return;
-    const next = djCueSkipBeats(player.currentTime, track?.bpm ?? null, 4 * direction, duration);
+    const next = djCueSkipBeats(player.currentTime, sourceBpm, 4 * direction, duration);
     if (next === null) return;
     player.currentTime = next;
     setElapsed(next);
@@ -211,7 +228,7 @@ function AudioDeck({
               <p className="rm-dj-track-name">{track?.title ?? "Load a track"}</p>
               <p className="rm-dj-track-artist">{track?.artist ?? "RockMundo"}</p>
             </div>
-            <div className="rm-dj-track-bpm">{beat?.audibleBpm ?? track?.bpm ?? "—"}<small>BPM</small></div>
+            <div className="rm-dj-track-bpm">{beat?.audibleBpm ?? "—"}<small>{usableCatalogueBpm !== null ? "BPM" : tappedBpm !== null ? "BPM · TAP" : "BPM"}</small></div>
           </div>
           <DjWaveform deck={deck} trackId={audioSourceKey} position={duration > 0 ? elapsed / duration : 0} />
           <div className="rm-dj-display-times"><span>{formatDjTime(elapsed)} / {formatDjTime(duration)}</span><span>{track?.musicalKey ?? "KEY —"}</span></div>
@@ -264,7 +281,7 @@ function AudioDeck({
             <>
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                 <span>Estimated beat {beat.barBeat} / 4 · {beat.audibleBpm} BPM audible</span>
-                <span className="text-muted-foreground">Metadata estimate, not beat detection</span>
+                <span className="text-muted-foreground">{usableCatalogueBpm !== null ? "Catalogue estimate" : "Tapped estimate"}, not beat detection</span>
               </div>
               <div className="grid grid-cols-4 gap-1" aria-label={`Estimated four-beat bar on deck ${deck}`}>
                 {[1, 2, 3, 4].map(number => (
@@ -274,9 +291,33 @@ function AudioDeck({
               </div>
             </>
           ) : (
-            <p className="text-xs text-muted-foreground">Beat guide unavailable: no reliable BPM metadata.</p>
+            <p className="text-xs text-muted-foreground">Beat guide unavailable: no BPM yet. Tap along four times while this deck plays.</p>
           )}
         </div>
+        {usableCatalogueBpm === null && (
+          <div className="rm-dj-control-box space-y-2" data-testid={`dj-tap-tempo-${deck}`}>
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+              <span className="font-semibold">TAP TEMPO / SOURCE BPM</span>
+              <span className="text-muted-foreground" role="status">
+                {tappedBpm !== null ? `Approx. ${tappedBpm} BPM` : `${Math.min(tapPositions.length, 4)}/4 taps`}
+              </span>
+            </div>
+            <div className="rm-dj-transport" role="group" aria-label={`Deck ${deck} manual tempo controls`}>
+              <Button type="button" variant="outline" disabled={!track || !playing}
+                onClick={tapBeat} aria-label={`Tap deck ${deck} tempo to the playing audio`}>
+                Tap BPM
+              </Button>
+              <Button type="button" variant="outline" disabled={tapPositions.length === 0}
+                onClick={() => { setTapPositions([]); setDeckLoop(null); }}>
+                Reset taps
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Tap four times to the beat while music plays. This estimates tempo from
+              your timing, not from audio analysis; looping remains unscored.
+            </p>
+          </div>
+        )}
         <div className="rm-dj-control-box space-y-2" data-testid={`dj-beat-loops-${deck}`}>
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
             <span className="font-semibold">LOOP / SOURCE BPM</span>
