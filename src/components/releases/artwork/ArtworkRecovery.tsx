@@ -1,3 +1,4 @@
+import { serializeArtworkProject } from './project';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { downloadArtworkFile } from './design';
@@ -35,7 +36,7 @@ export function ArtworkRecovery({ recovery, disabled = false, onBusyChange, onSa
     <div className="flex flex-wrap gap-2">
       <Button type="button" disabled={busy || disabled} onClick={() => void retry()}>{busy ? 'Attaching artwork…' : 'Retry artwork attachment'}</Button>
       <Button type="button" variant="outline" onClick={() => downloadArtworkFile(recovery.file, recovery.file.name)}>Download artwork</Button>
-      {recovery.draft && <Button type="button" variant="outline" onClick={() => downloadArtworkFile(new Blob([JSON.stringify(recovery.draft!.design)], { type: 'application/json' }), 'rockmundo-artwork-design.json')}>Download editable design</Button>}
+      {recovery.draft && <Button type="button" variant="outline" onClick={() => downloadArtworkFile(new Blob([serializeArtworkProject(recovery.draft!)], { type: 'application/json' }), 'rockmundo-artwork-design.json')}>Download editable design</Button>}
       <Button type="button" variant="ghost" disabled={busy} onClick={onFinish}>Finish without artwork</Button>
     </div>
   </div>;

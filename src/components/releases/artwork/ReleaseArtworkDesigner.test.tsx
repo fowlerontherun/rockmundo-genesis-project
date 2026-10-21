@@ -76,3 +76,28 @@ it('shows an image import failure without discarding the existing design', async
   expect(screen.getByLabelText('Design title')).toHaveValue('Keep my title');
   expect(busy.mock.calls).toEqual([[true], [false]]);
 });
+
+it('reopens a saved vinyl project with its selected format', async () => {
+  const { serializeArtworkProject } = await import('./project');
+  const { newArtworkDesign } = await import('./design');
+  const file = new File([], 'design.json', { type: 'application/json' });
+  Object.defineProperty(file, 'text', { value: async () => serializeArtworkProject({ design: newArtworkDesign('Restored'), surface: 'vinyl' }) });
+  render(<ReleaseArtworkDesigner title="Original" artist="Band" onUse={vi.fn()} />);
+  fireEvent.change(screen.getByLabelText('Open artwork design'), { target: { files: [file] } });
+  await waitFor(() => expect(screen.getByLabelText('Design title')).toHaveValue('Restored'));
+  expect(screen.getByRole('button', { name: 'Vinyl', exact: true })).toHaveAttribute('aria-pressed', 'true');
+});
+
+it('keeps the current design when an imported project image cannot decode', async () => {
+  const { serializeArtworkProject } = await import('./project');
+  const { newArtworkDesign } = await import('./design');
+  const file = new File([], 'design.json', { type: 'application/json' });
+  const design = { ...newArtworkDesign('Broken project'), image: { dataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aHosAAAAASUVORK5CYII=', zoom: 1, x: 0, y: 0 } };
+  Object.defineProperty(file, 'text', { value: async () => serializeArtworkProject({ design, surface: 'cd' }) });
+  vi.mocked(loadArtworkImage).mockRejectedValueOnce(new Error('Image could not decode'));
+  render(<ReleaseArtworkDesigner title="Keep my work" artist="Band" onUse={vi.fn()} />);
+  fireEvent.change(screen.getByLabelText('Open artwork design'), { target: { files: [file] } });
+  expect(await screen.findByRole('alert')).toHaveTextContent('Image could not decode');
+  expect(screen.getByLabelText('Design title')).toHaveValue('Keep my work');
+  expect(screen.getByRole('button', { name: 'Cover', exact: true })).toHaveAttribute('aria-pressed', 'true');
+});
