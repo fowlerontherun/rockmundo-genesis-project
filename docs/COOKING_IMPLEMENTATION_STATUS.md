@@ -64,6 +64,12 @@ The live database now contains `expire_cooking_sessions(limit)`, a service-role-
 
 **Not yet scheduled:** no cron job has been installed in this slice. A trusted worker must invoke the sweep on a cadence. Server-authoritative session creation and action timing/replay are still required before recipes can be activated.
 
+## Server-validated manual cooking actions — 22 October 2026
+
+Applied `20261022010000_record_cooking_action.sql` to live Supabase. The `record_cooking_action(session_id, action_type, ingredient_slug, heat)` function is service-role-only. It locks each session, rejects expired/inactive/non-manual attempts, validates action shapes, confirms required recipe ingredients, prevents removal before addition, prevents duplicate consecutive additions, caps the pan at two ingredient groups, appends a unique ordered action sequence with a **server timestamp**, and updates the running session in a single transaction.
+
+Verified that anonymous and authenticated clients cannot invoke this function; only the service role can. There were no actual session/action records to exercise a complete run. The function does not calculate doneness, validate player identity itself, create an ingredient reservation, finalize a batch or issue rewards. A trusted API must authenticate the player, verify their active profile and session ownership, enforce accepted action replays, and call this function only after that authorization. No recipes are enabled yet.
+
 ## Next slices
 
 1. Validate the practice interaction and timing on desktop, touch and keyboard; refine ingredient visuals and recipe steps from playtesting.
