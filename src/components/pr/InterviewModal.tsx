@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useInterviewSession } from "@/hooks/useInterviewSession";
-import { InterviewerStage } from "@/components/pr/InterviewerStage";
+import { InterviewScene } from "@/components/pr/InterviewScene";
 import { getInterviewPresenter } from "@/data/interviewPresenters";
 import { Mic, Tv, Radio, Newspaper, Globe, BookOpen, Clock, Users, DollarSign, Star, AlertTriangle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -70,13 +70,18 @@ export const InterviewModal = () => {
           </DialogDescription>
         </DialogHeader>
 
-        <InterviewerStage
+        <InterviewScene
+          offerId={pending.offerId}
           presenter={presenter}
           mediaType={pending.mediaType}
           outletName={pending.outletName}
           showName={pending.showName}
           phase={stagePhase}
+          questionIndex={currentIndex}
           dialogue={dialogue}
+          playerLine={reacting && currentQuestion && answers.length
+            ? String(currentQuestion[`option_${answers[answers.length - 1].chosen_option}_text` as keyof typeof currentQuestion] ?? "")
+            : undefined}
           mood={reacting ? interviewerReaction?.mood : phase === "results" ? "warm" : "curious"}
         />
 
