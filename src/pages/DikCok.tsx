@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Video, TrendingUp, Music, BarChart3, Loader2, Users, Flame, DollarSign, Sparkles, Trophy } from "lucide-react";
+import { PhoneFrame } from "@/components/device/PhoneFrame";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { useGameData } from "@/hooks/useGameData";
 import { useDikCokVideos } from "@/hooks/useDikCokVideos";
@@ -136,6 +137,7 @@ export default function DikCok() {
         </div>
       }
     >
+      <PhoneFrame label="DikCok app">
       {/* Stats Overview */}
       <div className="grid gap-4 md:grid-cols-5">
         <Card>
@@ -291,6 +293,7 @@ export default function DikCok() {
           {selectedBand && <DikCokCreatorDashboard band={selectedBand} videos={myBandVideos} />}
         </TabsContent>
       </Tabs>
+      </PhoneFrame>
     </FMPageScaffold>
   );
 }
