@@ -1,0 +1,10 @@
+.crew-pass { position: relative; isolation: isolate; aspect-ratio: 16/9; min-height: 8.5rem; width: 100%; overflow: hidden; background: var(--art-bg, #24163f); color: #fff; border-bottom: 3px solid var(--art-accent, #c6a0ff); }
+.crew-pass__fallback { position: absolute; inset: 0; display: grid; place-items: center; color: var(--art-accent); background: radial-gradient(ellipse at 70% 20%, #ffffff18, transparent 70%); }
+.crew-pass__fallback svg { width: 5rem; height: 5rem; opacity: .6; }
+.crew-pass__image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.crew-pass__shade { position: absolute; inset: 0; background: linear-gradient(transparent 30%, #08061166 55%, #080611f2 100%); }
+.crew-pass__label { position: absolute; bottom: .75rem; left: 1rem; right: 1rem; overflow-wrap: anywhere; }
+.crew-pass__eyebrow { display: block; color: var(--art-accent); font-size: .55rem; font-weight: 700; letter-spacing: .15em; margin-bottom: .2rem; }
+.crew-pass__label strong { display: block; font-size: .9rem; line-height: 1.3; }
+.crew-pass__lanyard { position: absolute; top: .5rem; left: calc(50% - 1.3rem); width: 2.6rem; padding: .2rem .45rem; border: 1px solid #ffffff55; border-radius: .5rem; background: #08061199; }
+.crew-pass__lanyard span { display: block; height: .2rem; border-radius: .2rem; background: #ffffff55; }

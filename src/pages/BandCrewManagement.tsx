@@ -1,3 +1,4 @@
+import { CrewPassPortrait } from '@/components/game-art/CrewPassPortrait';
 import { Link } from "react-router-dom";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -176,16 +177,7 @@ const RosterCrewCard = ({
 
   return (
     <Card className="relative overflow-hidden">
-      <div className="aspect-[16/9] w-full overflow-hidden bg-muted">
-        <img
-          src={getCrewImage(crew.crew_type)}
-          alt={`${crew.crew_type} portrait`}
-          loading="lazy"
-          width={512}
-          height={288}
-          className="h-full w-full object-cover"
-        />
-      </div>
+      <CrewPassPortrait role={crew.crew_type} src={getCrewImage(crew.crew_type)} />
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <div>
@@ -773,16 +765,7 @@ const BandCrewManagement = () => {
                               </div>
                             </div>
                           )}
-                          <div className="aspect-[16/9] w-full overflow-hidden bg-muted">
-                            <img
-                              src={getCrewImage(crew.role, crew.image_url)}
-                              alt={`${crew.role} portrait`}
-                              loading="lazy"
-                              width={512}
-                              height={288}
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
+                          <CrewPassPortrait role={crew.role} src={getCrewImage(crew.role, crew.image_url)} />
                           <CardHeader className="pb-2">
                             <div className="flex items-start justify-between gap-2">
                               <div>
@@ -863,16 +846,7 @@ const BandCrewManagement = () => {
           </DialogHeader>
           {selectedCrewMember && (
             <div className="space-y-4">
-              <div className="aspect-[16/9] w-full overflow-hidden rounded-lg bg-muted">
-                <img
-                  src={getCrewImage(selectedCrewMember.role, selectedCrewMember.image_url)}
-                  alt={`${selectedCrewMember.role} portrait`}
-                  loading="lazy"
-                  width={512}
-                  height={288}
-                  className="h-full w-full object-cover"
-                />
-              </div>
+              <CrewPassPortrait role={selectedCrewMember.role} src={getCrewImage(selectedCrewMember.role, selectedCrewMember.image_url)} />
               <div className="flex items-center gap-4">
                 <div className="flex-1">
                   <div className="text-lg font-semibold">{selectedCrewMember.name}</div>
