@@ -24,7 +24,7 @@ describe("DJ source-media beat loops (no analysis and no rewards)", () => {
     }
     expect(createDjBeatLoop(-1, 120, 4, 60)).toBeNull();
     expect(createDjBeatLoop(Number.NaN, 120, 4, 60)).toBeNull();
-    expect(createDjBeatLoop(5, 120, 5 as 4, 60)).toBeNull();
+    expect(createDjBeatLoop(5, 120, 5 as unknown as 4 | 8, 60)).toBeNull();
     expect(createDjBeatLoop(5, 120, 4, Number.POSITIVE_INFINITY)).toBeNull();
     expect(createDjBeatLoop(5, 120, 4, 0)).toBeNull();
   });
