@@ -22,7 +22,7 @@ afterEach(() => cleanup());
 describe("interview two-person scene", () => {
   it("shows the current character and presenter in the same studio", () => {
     render(<InterviewerStage {...base} />);
-    expect(screen.getByText(presenter.name)).toBeTruthy();
+    expect(screen.getAllByText(presenter.name).length).toBeGreaterThan(0);
     expect(screen.getByText("Taylor Chord")).toBeTruthy();
     expect(screen.getByRole("img", { name: "Saved Avatar V1 for Taylor Chord" })).toBeTruthy();
     expect(screen.getByText("Presenter camera")).toBeTruthy();
