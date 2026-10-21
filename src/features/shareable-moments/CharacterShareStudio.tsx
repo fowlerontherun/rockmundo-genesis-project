@@ -37,6 +37,12 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
   // Scope retry state to the specific moment so other saved portraits survive.
   const [recapture, setRecapture] = useState<{ key: string; attempt: number } | null>(null);
   const retry = recapture?.key === captureKey ? recapture.attempt : 0;
+  // Explicit user choice only. Never silently hide a crafted instrument when its query fails.
+  const [omitUnloadedCrafted, setOmitUnloadedCrafted] = useState<string | null>(null);
+  const useNoCraftedInstrument = omitUnloadedCrafted === captureKey && luthiery.isError;
+  const [profilePhotoFallbackKey, setProfilePhotoFallbackKey] = useState<string | null>(null);
+  const useProfilePhoto = profilePhotoFallbackKey === captureKey;
+  const profilePhotoUrl = model.profile?.avatar_url ?? null;
   const storedAvatar = retry > 0 ? null : moment.avatar ?? null;
   // Automatic milestone prompts should not initialise WebGL until the
   // player actually chooses to create the image.
@@ -49,6 +55,20 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
     if (!open || !captureEnabled || storedAvatar) return;
     let cancelled = false;
     setCapture({ key: captureKey, avatar: null, status: 'loading' });
+    if (useProfilePhoto) {
+      if (!profilePhotoUrl || !/^https:\/\//i.test(profilePhotoUrl)) {
+        setCapture({ key: captureKey, avatar: null, status: 'unavailable' });
+        return;
+      }
+      // 2D photo capture does not need Avatar V1 model assets or WebGL.
+      void import('./profilePhotoCapture').then(module => module.captureProfilePhotoForShare(profilePhotoUrl))
+        .then(snapshot => { if (!cancelled) setCapture({ key: captureKey, avatar: snapshot, status: 'ready' }); })
+        .catch(error => {
+          console.warn('[share-studio] profile photo capture failed', error);
+          if (!cancelled) setCapture({ key: captureKey, avatar: null, status: 'unavailable' });
+        });
+      return () => { cancelled = true; };
+    }
 
     if (!profileId || !appearance) {
       // Without a selected character the model query remains disabled and
@@ -62,7 +82,7 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
     // Never publish a stale model or omit equipment after an errored request:
     // all required appearance layers must have healthy query results.
     // Disabled merch queries (players without a band) are not errors.
-    if (model.query.isError || clothing.isError || tattoos.isError || merch.query.isError || luthiery.isError) {
+    if (model.query.isError || clothing.isError || tattoos.isError || merch.query.isError || (luthiery.isError && !useNoCraftedInstrument)) {
       setCapture({ key: captureKey, avatar: null, status: 'unavailable' });
       return;
     }
@@ -83,7 +103,7 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
       richClothing: clothing.data ?? [],
       tattoos: tattoos.data ?? [],
       merchWearable: merch.query.data?.equipped ?? null,
-      luthieryInstrument: craftedInstrument,
+      luthieryInstrument: useNoCraftedInstrument ? null : craftedInstrument,
     }).then(captureAvatarCanvas).then(snapshot => {
       if (!cancelled) setCapture({ key: captureKey, avatar: snapshot, status: 'ready' });
     }).catch(error => {
@@ -95,7 +115,7 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
   }, [open, captureEnabled, storedAvatar, captureKey, profileId, appearance, model.query.isError, model.query.isFetching, model.isLoading,
     clothing.isPending, clothing.isFetching, clothing.isError, clothing.data, tattoos.isPending, tattoos.isFetching, tattoos.isError, tattoos.data,
     merch.query.isPending, merch.query.isFetching, merch.query.isError, merch.query.data, luthiery.isPending, luthiery.isFetching, luthiery.isError, craftedInstrument,
-    role, instrument, retry]);
+    role, instrument, retry, useNoCraftedInstrument, useProfilePhoto, profilePhotoUrl]);
 
   const shareMoment = useMemo(() => ({ ...moment, avatar }), [moment, avatar]);
 
@@ -108,7 +128,20 @@ export function AvatarShareStudio({ open, onOpenChange, moment }: Props) {
     onPromptAccepted={() => setPromptAccepted(true)}
     moment={shareMoment}
     avatarStatus={captureStatus}
+    avatarWarning={useProfilePhoto
+      ? "Using your existing profile photo, not your saved 3D avatar or outfit. This is an explicit fallback for graphics-rendering problems."
+      : useNoCraftedInstrument
+        ? "The crafted-instrument service is unavailable, so this image deliberately omits any crafted instrument. Your appearance and clothing remain unchanged."
+        : undefined}
+    onAvatarPhotoFallback={profilePhotoUrl && /^https:\/\//i.test(profilePhotoUrl) && !useProfilePhoto
+      ? () => { setProfilePhotoFallbackKey(captureKey); setRecapture(previous => ({ key: captureKey, attempt: (previous?.key === captureKey ? previous.attempt : 0) + 1 })); }
+      : undefined}
+    onAvatarFallback={luthiery.isError && !useNoCraftedInstrument && !model.query.isError && !clothing.isError && !tattoos.isError && !merch.query.isError
+      ? () => { setOmitUnloadedCrafted(captureKey); setRecapture(previous => ({ key: captureKey, attempt: (previous?.key === captureKey ? previous.attempt : 0) + 1 })); }
+      : undefined}
     onAvatarRetry={() => {
+      setOmitUnloadedCrafted(null);
+      setProfilePhotoFallbackKey(null);
       if (model.query.isError) void model.query.refetch();
       if (clothing.isError) void clothing.refetch();
       if (tattoos.isError) void tattoos.refetch();

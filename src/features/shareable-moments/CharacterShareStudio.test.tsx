@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   luthiery: vi.fn(),
   renderAvatar: vi.fn(),
   captureAvatar: vi.fn(),
+  profilePhoto: vi.fn(),
 }));
 
 vi.mock('@/features/player-model/usePlayerModel', () => ({
@@ -25,16 +26,23 @@ vi.mock('./avatarCapture', () => ({
   captureAvatarV1ForShare: mocks.renderAvatar,
   captureAvatarCanvas: mocks.captureAvatar,
 }));
+vi.mock('./profilePhotoCapture', () => ({ captureProfilePhotoForShare: mocks.profilePhoto }));
 vi.mock('./ShareMomentSheet', () => ({
-  ShareMomentSheet: ({ moment, avatarStatus, onAvatarRetry, onPromptAccepted }: {
+  ShareMomentSheet: ({ moment, avatarStatus, onAvatarRetry, onAvatarFallback, onAvatarPhotoFallback, avatarWarning, onPromptAccepted }: {
     moment: { avatar?: { dataUrl: string } | null; promptOnly?: boolean };
     avatarStatus: string;
     onAvatarRetry: () => void;
+    onAvatarFallback?: () => void;
+    onAvatarPhotoFallback?: () => void;
+    avatarWarning?: string;
     onPromptAccepted?: () => void;
   }) => <div>
     <span data-testid="avatar-status">{avatarStatus}</span>
     <span data-testid="avatar-url">{moment.avatar?.dataUrl ?? 'none'}</span>
     <button onClick={onAvatarRetry}>Retry avatar</button>
+    {onAvatarFallback && <button onClick={onAvatarFallback}>Share without crafted instrument</button>}
+    {onAvatarPhotoFallback && <button onClick={onAvatarPhotoFallback}>Use profile photo instead</button>}
+    {avatarWarning && <span role="status">{avatarWarning}</span>}
     {moment.promptOnly && <button onClick={onPromptAccepted}>Accept share prompt</button>}
   </div>,
 }));
@@ -62,6 +70,7 @@ describe('AvatarShareStudio image capture', () => {
     mocks.luthiery.mockReturnValue({ data: [], isPending: false, isFetching: false });
     mocks.renderAvatar.mockResolvedValue({} as HTMLCanvasElement);
     mocks.captureAvatar.mockReturnValue({ dataUrl: 'data:image/png;base64,avatar', width: 720, height: 1080 });
+    mocks.profilePhoto.mockResolvedValue({ dataUrl: 'data:image/png;base64,profile-photo', width: 720, height: 1080 });
   });
 
   it('captures the current character even without a band/merch query', async () => {
@@ -177,6 +186,24 @@ describe('AvatarShareStudio image capture', () => {
     expect(mocks.renderAvatar).not.toHaveBeenCalled();
   });
 
+  it('only omits a broken optional crafted instrument after explicit user consent', async () => {
+    mocks.luthiery.mockReturnValue({
+      data: undefined, isPending: false, isFetching: false, isError: true,
+      refetch: vi.fn().mockResolvedValue(undefined),
+    });
+    render(<AvatarShareStudio open moment={moment} onOpenChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByTestId('avatar-status')).toHaveTextContent('unavailable'));
+    expect(mocks.renderAvatar).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Share without crafted instrument' }));
+    await waitFor(() => expect(screen.getByTestId('avatar-status')).toHaveTextContent('ready'));
+    expect(mocks.renderAvatar).toHaveBeenCalledWith(expect.objectContaining({
+      luthieryInstrument: null,
+      richClothing: [{ item_id: 'coat' }],
+    }));
+    expect(screen.getByRole('status')).toHaveTextContent('deliberately omits any crafted instrument');
+  });
+
   it('captures normally when no crafted instrument is equipped', async () => {
     mocks.luthiery.mockReturnValue({ data: [], isPending: false, isFetching: false, isError: false });
     render(<AvatarShareStudio open moment={moment} onOpenChange={vi.fn()} />);
@@ -210,6 +237,27 @@ describe('AvatarShareStudio image capture', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Accept share prompt' }));
     await waitFor(() => expect(screen.getByTestId('avatar-status')).toHaveTextContent('ready'));
     expect(mocks.renderAvatar).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses a profile photo only after opting in to an accurate 2D fallback', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mocks.model.mockReturnValue({
+      profileId: 'profile-1',
+      profile: { avatar_url: 'https://example.test/real-profile.jpg' },
+      isLoading: false,
+      query: { data: { appearance: { body: { height: 1 } }, revision: 1 }, isError: false },
+    });
+    mocks.renderAvatar.mockRejectedValueOnce(new Error('no WebGL support'));
+    render(<AvatarShareStudio open moment={moment} onOpenChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByTestId('avatar-status')).toHaveTextContent('unavailable'));
+    expect(mocks.profilePhoto).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use profile photo instead' }));
+    await waitFor(() => expect(screen.getByTestId('avatar-status')).toHaveTextContent('ready'));
+    expect(mocks.profilePhoto).toHaveBeenCalledWith('https://example.test/real-profile.jpg');
+    expect(screen.getByTestId('avatar-url')).toHaveTextContent('data:image/png;base64,profile-photo');
+    expect(screen.getByRole('status')).toHaveTextContent('existing profile photo');
+    warn.mockRestore();
   });
 
   it('allows a failed capture to be retried', async () => {

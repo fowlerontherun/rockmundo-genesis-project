@@ -1,3 +1,4 @@
+import { enqueueAvatarCapture } from './avatarCaptureQueue';
 import type { ResolvedInstrumentSkinVisual } from '@/features/instrument-skins/instrumentSkin';
 import * as T from "three";
 import { Musician } from "@/features/gig-demo-3d/performers";
@@ -37,7 +38,7 @@ export function loadCaptureImage(capture: AvatarCapture): Promise<HTMLImageEleme
 export interface AvatarShareVisual {instrumentSkin?:ResolvedInstrumentSkinVisual|null;appearance:PlayerAppearance;role?:StageRole;instrument?:InstrumentId;richClothing?:ResolvedEquippedClothing[];tattoos?:ResolvedTattooVisual[];merchWearable?:ResolvedMerchWearable|null;luthieryInstrument?:LuthieryInstrumentVisual|null}
 export const AVATAR_SHARE_PRESET={width:720,height:1080,camera:[2.05,1.55,4.65] as const,target:[0,.9,0] as const,fov:34};
 
-export async function captureAvatarV1ForShare(visual:AvatarShareVisual):Promise<HTMLCanvasElement>{
+async function renderAvatarV1ForShare(visual:AvatarShareVisual):Promise<HTMLCanvasElement>{
  const canvas=document.createElement("canvas");canvas.width=AVATAR_SHARE_PRESET.width;canvas.height=AVATAR_SHARE_PRESET.height;
  const renderer=new T.WebGLRenderer({canvas,antialias:true,alpha:true,preserveDrawingBuffer:true,powerPreference:"high-performance"});renderer.setSize(canvas.width,canvas.height,false);renderer.setPixelRatio(1);renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.25;renderer.setClearColor(0x000000,0);
  const scene=new T.Scene();const camera=new T.PerspectiveCamera(AVATAR_SHARE_PRESET.fov,canvas.width/canvas.height,.05,30);camera.position.set(...AVATAR_SHARE_PRESET.camera);camera.lookAt(...AVATAR_SHARE_PRESET.target);
@@ -82,5 +83,10 @@ export async function captureAvatarV1ForShare(visual:AvatarShareVisual):Promise<
   }
   if (visibleSamples <= 64) throw new Error("Avatar share render was blank");
   return captured;
- } finally {if(actor)disposeModel(actor.root);if(equipment)disposeModel(equipment);library?.forEach(disposeModel);renderer.dispose();}
+ } finally {if(actor)disposeModel(actor.root);if(equipment)disposeModel(equipment);library?.forEach(disposeModel);renderer.dispose();renderer.forceContextLoss();}
+}
+
+/** Public capture entry point: serialize offscreen GL contexts across all callers. */
+export function captureAvatarV1ForShare(visual: AvatarShareVisual): Promise<HTMLCanvasElement> {
+  return enqueueAvatarCapture(() => renderAvatarV1ForShare(visual));
 }

@@ -1,4 +1,4 @@
-import { render, screen, waitFor, cleanup } from '@testing-library/react';
+import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defaultAppearance } from '@/features/player-model/appearance';
 const mocks = vi.hoisted(() => ({ models: vi.fn(), capture: vi.fn() }));
@@ -23,6 +23,37 @@ describe('band portrait saved identity', () => {
     render(<PortraitLineup members={members} />);
     await screen.findByText('No portrait available');
     expect(mocks.capture).not.toHaveBeenCalled();
+  });
+  it('shows an existing profile photo when a bandmate never saved Avatar V1', async () => {
+    mocks.models.mockReturnValue({
+      data: { appearances: {}, richClothing: {} },
+      isError: false, isFetching: false,
+    });
+    render(<PortraitLineup members={[{ ...members[0], photoUrl: 'https://example.test/profile-photo.png' }]} />);
+    await screen.findByAltText('Alex profile photo (saved 3D avatar unavailable)');
+    expect(screen.getByText(/Profile photo · saved 3D avatar unavailable/)).toBeTruthy();
+    expect(mocks.capture).not.toHaveBeenCalled();
+  });
+  it('renders a readable fallback when an existing profile image URL is broken', () => {
+    mocks.models.mockReturnValue({
+      data: { appearances: {}, richClothing: {} }, isError: false, isFetching: false,
+    });
+    render(<PortraitLineup members={[{ ...members[0], photoUrl: 'https://example.test/missing-image.png' }]} />);
+    fireEvent.error(screen.getByAltText('Alex profile photo (saved 3D avatar unavailable)'));
+    expect(screen.getByText('Image unavailable')).toBeTruthy();
+  });
+  it('keeps a labelled profile photo visible even if band stage data fails to load', () => {
+    mocks.models.mockReturnValue({ data: undefined, isError: true, isFetching: false, refetch: vi.fn() });
+    render(<PortraitLineup members={[{ ...members[0], photoUrl: 'https://example.test/profile-photo.png' }]} />);
+    expect(screen.getByAltText('Alex profile photo (saved 3D avatar unavailable)')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Retry portraits' })).toBeTruthy();
+  });
+  it('does not mistake missing saved data for a failed WebGL capture', async () => {
+    mocks.models.mockReturnValue({ data: { appearances: {}, richClothing: {}, profilePhotos: {} }, isError: false, isFetching: false });
+    render(<PortraitLineup members={members} />);
+    await screen.findByText('No portrait available');
+    expect(screen.getByText(/Some members have not saved an Avatar V1 appearance/)).toBeTruthy();
+    expect(screen.queryByText('Some saved visuals could not load.')).toBeNull();
   });
   it('hides cached portraits when a visual refresh fails', async () => {
     mocks.models.mockReturnValue({ data: { appearances: { p: defaultAppearance() }, richClothing: {} }, isError: false, isFetching: false });
