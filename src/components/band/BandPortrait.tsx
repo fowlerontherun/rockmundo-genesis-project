@@ -2,7 +2,7 @@ import { lazy, Suspense, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArtworkImage } from '@/components/game-art/GameArtwork';
 const PortraitLineup = lazy(() => import('./PortraitLineup'));
-export interface PortraitMember { id: string; profileId: string | null; name: string; instrument: string | null }
+export interface PortraitMember { id: string; profileId: string | null; name: string; instrument: string | null; photoUrl?: string | null }
 
 export function BandPortrait({ bandName, members }: { bandName: string; members: PortraitMember[] }) {
   const [enabled, setEnabled] = useState(false);
