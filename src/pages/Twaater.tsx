@@ -20,6 +20,7 @@ import { TwaaterSearch } from "@/components/twaater/TwaaterSearch";
 import { Home, TrendingUp, AtSign, Bookmark, Search, Users, Compass, BarChart3 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTwaaterRouteAccount } from "@/hooks/useTwaaterRouteAccount";
+import { PhoneFrame } from "@/components/device/PhoneFrame";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 
 const TwaaterBookmarksTab = ({ accountId }: { accountId?: string }) => {
@@ -130,7 +131,8 @@ export default function Twaater() {
 
   return (
     <FMPageScaffold title="Twaater" icon={Home} backTo="/hub/world-social">
-      <div className="rounded-sm border border-fm-border overflow-hidden" style={{ backgroundColor: "hsl(var(--twaater-bg))" }}>
+      <PhoneFrame label="Twaater app">
+      <div className="rounded-sm border border-fm-border md:border-0" style={{ backgroundColor: "hsl(var(--twaater-bg))" }}>
         <div className="flex gap-6">
           <div className="flex-1 min-w-0">
             <div className="sticky top-0 z-50 border-b px-4 py-3 flex items-center justify-between" style={{ backgroundColor: "hsl(var(--twaater-bg))", borderColor: "hsl(var(--twaater-border))" }}>
@@ -220,13 +222,14 @@ export default function Twaater() {
           </div>
 
           {showDesktopSidebar && (
-            <div className="hidden lg:block w-80 space-y-4 sticky top-0 h-fit pt-4">
+            <div className="hidden">
               <TrendingHashtags currentAccountId={currentAccountId} />
               {currentAccountId && <WhoToFollow currentAccountId={currentAccountId} />}
             </div>
           )}
         </div>
       </div>
+      </PhoneFrame>
     </FMPageScaffold>
   );
 }

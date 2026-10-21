@@ -17,6 +17,13 @@ interface VersionEntry {
 
 const versionHistory: VersionEntry[] = [
   {
+    version: "1.1.797",
+    date: "2026-10-21",
+    changes: [
+      { type: "improvement", description: "Twaater and DikCok now appear inside a realistic smartphone on desktop (bezel, camera island, home bar, scrolling screen); on real phones they fill the screen as before." },
+    ],
+  },
+  {
     version: "1.1.796",
     date: "2026-10-17",
     changes: [
