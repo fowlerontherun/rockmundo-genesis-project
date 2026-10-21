@@ -1,3 +1,4 @@
+import { CompanyIdentity } from '@/components/game-art/CompanyIdentity';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -133,9 +134,9 @@ export function CompanyShiftMarketplace() {
             const myClaim = (myClaims as any[]).find((c) => c.shift_id === s.id);
             const pay = Number(s.wage_per_hour) * s.duration_hours;
             return (
-              <div key={s.id} className="flex items-center justify-between gap-3 rounded-lg border p-2.5">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{s.companies?.name ?? "Company"}</p>
+              <div key={s.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/10 p-3">
+                <div className="min-w-0 flex-1 basis-48 space-y-2">
+                  <CompanyIdentity id={s.company_id} name={s.companies?.name} type={s.companies?.company_type} />
                   <p className="text-[11px] capitalize text-muted-foreground">
                     {s.role.replace(/_/g, " ")} • {s.duration_hours}h • ${pay.toLocaleString()}
                     {s.starts_at ? ` • ${format(new Date(s.starts_at), "d MMM HH:mm")}` : ""}

@@ -1,3 +1,4 @@
+import { CompanyIdentity } from '@/components/game-art/CompanyIdentity';
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -636,13 +637,16 @@ export default function Employment() {
                     return (
                       <Card key={vacancy.id} className={`flex flex-col ${isAdvertised ? "border-primary/60 shadow-md shadow-primary/10" : ""}`}>
                         <CardHeader className="pb-2">
-                          <div className="flex items-start justify-between gap-2">
+                          <div className="mb-3 rounded-lg border bg-muted/20 p-3">
+                            <CompanyIdentity id={vacancy.company_id || vacancy.id} name={vacancy.companies?.name} type={vacancy.companies?.company_type} />
+                          </div>
+                          <div className="flex flex-wrap items-start justify-between gap-2">
                             <div>
                               <div className="flex items-center gap-2 flex-wrap">
                                 <CardTitle className="text-lg">{vacancy.job_title}</CardTitle>
                                 {isAdvertised && <Badge className="text-[10px] gap-1"><Megaphone className="h-3 w-3" />Featured</Badge>}
                               </div>
-                              <CardDescription>{vacancy.companies?.name} • {vacancy.companies?.company_type}</CardDescription>
+
                             </div>
                             <StandardStatusBadge tone={mine ? "info" : "muted"}>{mine ? mine.status : rating}</StandardStatusBadge>
                           </div>
