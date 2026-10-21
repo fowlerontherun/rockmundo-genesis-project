@@ -1,3 +1,5 @@
+import { CrowdVolumeControl } from "@/features/shared-audio/CrowdVolumeControl";
+import { sharedCrowdAudioManager } from "@/features/shared-audio/CrowdAudioManager";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -249,6 +251,9 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
     isPlaying: !!state?.isPlaying,
     snapshot,
     stageType,
+    replaySeed: playbackReplay.simulationSeed,
+    attendance: experience?.headline?.attendance.status === "available" ? experience.headline.attendance.value : null,
+    capacity: experience?.gig?.venue?.capacity ?? null,
     showFrame,
   });
 
@@ -399,12 +404,18 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
   const previousSong = [...story.songs].reverse().find((song) => song.startMs < state.positionMs - 1000);
   const nextHighlight = story.highlights.find((highlight) => highlight.offsetMs > state.positionMs);
   const firstSong = story.songs[0];
+  const playWithCrowd = () => {
+    sharedCrowdAudioManager.prime();
+    playback.play();
+  };
   const playPlayerShow = () => {
+    sharedCrowdAudioManager.prime();
     void audio.enable();
     if (state.isComplete && firstSong) playback.seekMs(firstSong.startMs);
     playback.play();
   };
   const restartPlayerShow = () => {
+    sharedCrowdAudioManager.prime();
     void audio.enable();
     if (firstSong) playback.seekMs(firstSong.startMs);
     else playback.restart();
@@ -422,6 +433,8 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
   }
 
   const analysisControls = (
+    <>
+    <CrowdVolumeControl />
     <GigViewerControls
       playing={state.isPlaying}
       complete={state.isComplete}
@@ -434,7 +447,7 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
       canNextSong={!!nextSong}
       canNextHighlight={!!nextHighlight}
       canResult={story.resultOffsetMs !== null && state.positionMs < story.resultOffsetMs}
-      onPlay={playback.play}
+      onPlay={playWithCrowd}
       onPause={playback.pause}
       onRestart={playback.restart}
       onSpeed={playback.setSpeed}
@@ -453,6 +466,7 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
       onPerformancePreference={setPerformancePreference}
       onFullscreen={toggleFullscreen}
     />
+    </>
   );
   const compactControls = (
     <GigViewerControls
@@ -468,7 +482,7 @@ function ReadyReplay({ replay, experience, open, prefs, mode, onViewResult, onCl
       canNextSong={!!nextSong}
       canNextHighlight={!!nextHighlight}
       canResult={story.resultOffsetMs !== null && state.positionMs < story.resultOffsetMs}
-      onPlay={playback.play}
+      onPlay={playWithCrowd}
       onPause={playback.pause}
       onRestart={playback.restart}
       onSpeed={playback.setSpeed}

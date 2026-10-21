@@ -1,18 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import type { DerivedPlaybackState } from "@/features/gig-experience/viewer/engine/PlaybackController";
+import { sharedCrowdAudioManager, type CrowdPlaybackClip } from "@/features/shared-audio/CrowdAudioManager";
+import { useCrowdVolumePreference } from "@/features/shared-audio/CrowdVolumeControl";
+import { loadCuratedCrowdAssets, selectCuratedCrowdClip, type CuratedCrowdAsset } from "@/features/shared-audio/crowdAudioCatalogue";
+import type { CrowdCategory } from "@/features/gig-experience/audio/crowdCueSelection";
+import { loadTotpCrowdSounds, pickTotpCrowdSound, type TotpCrowdSound, type TotpCrowdSoundType } from "./crowdSoundLibrary";
 import type { TotpBroadcastCue } from "./broadcastTimeline";
-import { loadTotpCrowdSounds, pickTotpCrowdSound, type TotpCrowdSound } from "./crowdSoundLibrary";
-import { clampTotpGain, totpMixLevels } from "./broadcastAudioMix";
-import { CrowdReactionCooldown } from "@/features/shared-audio/crowdAudioSelection";
 
-/**
- * Broadcast audio is never allowed to continue in background tabs or a
- * page being placed into the back-forward cache.
- */
 function useBroadcastPageVisible(): boolean {
-  const [visible, setVisible] = useState(() =>
-    typeof document === "undefined" || document.visibilityState !== "hidden",
-  );
+  const [visible, setVisible] = useState(() => typeof document === "undefined" || document.visibilityState !== "hidden");
   useEffect(() => {
     const sync = () => setVisible(document.visibilityState !== "hidden");
     const hide = () => setVisible(false);
@@ -28,23 +24,19 @@ function useBroadcastPageVisible(): boolean {
   return visible;
 }
 
-let sharedTotpAudioContext: AudioContext | null = null;
-
-function totpAudioContext(): AudioContext | null {
+let broadcastVoiceContext: AudioContext | null = null;
+function voiceContext(): AudioContext | null {
   if (typeof window === "undefined") return null;
   const AC = window.AudioContext ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!AC) return null;
-  if (!sharedTotpAudioContext || sharedTotpAudioContext.state === "closed") sharedTotpAudioContext = new AC();
-  return sharedTotpAudioContext;
+  if (!broadcastVoiceContext || broadcastVoiceContext.state === "closed") broadcastVoiceContext = new AC();
+  return broadcastVoiceContext;
 }
 
-/**
- * Call directly from the user's Play gesture. Keeping one shared running
- * context prevents later presenter/crowd cues from being muted when browsers
- * revoke transient user activation before those segments begin.
- */
+/** Unlock both voice and crowd graphs inside the user's click gesture. */
 export function primeTotpAudioPlayback(): void {
-  const ctx = totpAudioContext();
+  sharedCrowdAudioManager.prime();
+  const ctx = voiceContext();
   if (!ctx) return;
   void ctx.resume().catch(() => undefined);
   const source = ctx.createBufferSource();
@@ -57,381 +49,163 @@ export function primeTotpAudioPlayback(): void {
   source.stop(ctx.currentTime + 0.001);
 }
 
+const legacyTypes: Record<CrowdCategory, TotpCrowdSoundType[]> = {
+  ambient: ["ambient_chatter"],
+  applause: ["applause", "crowd_cheer_medium"],
+  cheer: ["crowd_cheer_medium", "crowd_cheer_large", "band_entrance", "crowd_cheer_small"],
+  encore: ["encore_request", "applause", "crowd_cheer_large"],
+  finale: ["applause", "band_exit", "crowd_cheer_large"],
+  reaction: ["crowd_cheer_medium", "crowd_cheer_small", "crowd_singing"],
+};
+function legacyClip(sound: TotpCrowdSound, ambient: boolean): CrowdPlaybackClip {
+  return {
+    id: sound.id, url: sound.audio_url, loopable: ambient,
+    gainDb: ambient ? -19 : -11, fadeInMs: ambient ? 600 : 80, fadeOutMs: ambient ? 600 : 180,
+    durationSeconds: sound.duration_seconds,
+  };
+}
+function chooseClip(
+  curated: CuratedCrowdAsset[], legacy: TotpCrowdSound[], category: CrowdCategory,
+  intensity: number, seed: string, atSeconds: number,
+  history: ReadonlyArray<{ assetId: string; atSeconds: number }>,
+): CrowdPlaybackClip | null {
+  const chosen = selectCuratedCrowdClip(curated, {
+    category, crowdSize: "medium", environment: "studio",
+    intensity, seed, atSeconds, history, cooldownSeconds: 20,
+  });
+  if (chosen) return chosen;
+  const old = pickTotpCrowdSound(legacy, legacyTypes[category], intensity * 2, seed);
+  return old ? legacyClip(old, category === "ambient") : null;
+}
+
 export function useTotpAudienceAudio({
-  playbackState,
-  cue,
-  audienceReaction,
-  enabled = true,
+  playbackState, cue, audienceReaction, enabled = true,
 }: {
   playbackState: DerivedPlaybackState;
   cue?: TotpBroadcastCue | null;
   audienceReaction: number;
   enabled?: boolean;
 }) {
-  const ctxRef = useRef<AudioContext | null>(null);
-  const masterRef = useRef<GainNode | null>(null);
-  const ambienceRef = useRef<GainNode | null>(null);
+  const [legacy, setLegacy] = useState<TotpCrowdSound[]>([]);
+  const [curated, setCurated] = useState<CuratedCrowdAsset[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const visible = useBroadcastPageVisible();
+  const [volume] = useCrowdVolumePreference();
+  const ownerRef = useRef(Symbol("totp-episode"));
   const lastCueRef = useRef<string | null>(null);
-  const lastPulseRef = useRef(0);
+  const lastPulseRef = useRef(-1);
   const lastPositionRef = useRef(-1);
-  const [library, setLibrary] = useState<TotpCrowdSound[]>([]);
-  const [libraryLoaded, setLibraryLoaded] = useState(false);
-  const pageVisible = useBroadcastPageVisible();
-  const cooldownRef = useRef(new CrowdReactionCooldown());
-  const noiseSourceRef = useRef<AudioBufferSourceNode | null>(null);
-  const clipRef = useRef<HTMLAudioElement | null>(null);
-  const ambienceClipRef = useRef<HTMLAudioElement | null>(null);
+  const historyRef = useRef<Array<{ assetId: string; atSeconds: number }>>([]);
 
   useEffect(() => {
-    if (!enabled || typeof window === "undefined") return;
+    if (!enabled) return;
     let cancelled = false;
-    setLibraryLoaded(false);
-    void loadTotpCrowdSounds()
-      .then((sounds) => {
-        if (cancelled) return;
-        setLibrary(sounds);
-        setLibraryLoaded(true);
-        const bed = pickTotpCrowdSound(
-          sounds,
-          ["ambient_chatter", "band_entrance"],
-          4,
-          "totp:studio-bed",
-        );
-        if (bed && typeof Audio !== "undefined") {
-          const previous = ambienceClipRef.current;
-          previous?.pause();
-          if (previous) {
-            previous.removeAttribute("src");
-            previous.load();
-          }
-          const audio = new Audio(bed.audio_url);
-          audio.preload = "auto";
-          audio.loop = true;
-          audio.volume = 0.14;
-          ambienceClipRef.current = audio;
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setLibrary([]);
-          setLibraryLoaded(true); // Empty catalogue: use synthetic fallback.
-        }
-      });
-    return () => {
-      cancelled = true;
-      ambienceClipRef.current?.pause();
-      if (ambienceClipRef.current) {
-        ambienceClipRef.current.removeAttribute("src");
-        ambienceClipRef.current.load();
-        ambienceClipRef.current = null;
-      }
-    };
+    setLoaded(false);
+    void Promise.all([
+      loadTotpCrowdSounds().catch(() => [] as TotpCrowdSound[]),
+      loadCuratedCrowdAssets().catch(() => [] as CuratedCrowdAsset[]),
+    ]).then(([oldSounds, newSounds]) => {
+      if (cancelled) return;
+      setLegacy(oldSounds);
+      setCurated(newSounds);
+      setLoaded(true);
+    });
+    return () => { cancelled = true; };
   }, [enabled]);
 
   useEffect(() => {
-    if (!enabled || !playbackState.isPlaying || !pageVisible || typeof window === "undefined") {
-      clipRef.current?.pause();
-      ambienceClipRef.current?.pause();
-      if (ctxRef.current && ambienceRef.current && ctxRef.current.state !== "closed") {
-        ambienceRef.current.gain.setTargetAtTime(0, ctxRef.current.currentTime, 0.05);
+    const manager = sharedCrowdAudioManager;
+    const owner = ownerRef.current;
+    if (!enabled || !visible || !playbackState.isPlaying || volume === 0) {
+      manager.releaseOwner(owner);
+      if (!enabled) {
+        lastCueRef.current = null;
+        lastPulseRef.current = lastPositionRef.current = -1;
+        historyRef.current = [];
       }
       return;
     }
-    let ctx = ctxRef.current ?? totpAudioContext();
-    if (!ctx) return;
-    let master = masterRef.current;
-    let ambience = ambienceRef.current;
-
-    if (ctx.state === "closed" || !master || !ambience) {
-      ctx = totpAudioContext();
-      if (!ctx) return;
-      master = ctx.createGain();
-      master.gain.value = 0.24;
-      ambience = ctx.createGain();
-      ambience.gain.value = 0;
-      master.connect(ctx.destination);
-      ambience.connect(master);
-
-      const buffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < data.length; i += 1) {
-        const white = Math.random() * 2 - 1;
-        data[i] = white * 0.16;
-      }
-      const src = ctx.createBufferSource();
-      src.buffer = buffer;
-      src.loop = true;
-      const filter = ctx.createBiquadFilter();
-      filter.type = "bandpass";
-      filter.frequency.value = 520;
-      filter.Q.value = 0.75;
-      src.connect(filter);
-      filter.connect(ambience);
-      src.start();
-      noiseSourceRef.current = src;
-      ctxRef.current = ctx;
-      masterRef.current = master;
-      ambienceRef.current = ambience;
-    }
-
-    void ctx.resume().catch(() => undefined);
-    const reaction = Math.max(-10, Math.min(10, audienceReaction));
-    const performing = cue?.type === "performance" || playbackState.activePhase.includes("performance");
-    const mix = totpMixLevels(cue?.type, reaction);
-    ambience.gain.setTargetAtTime(Math.max(0.10, mix.audienceAmbience * 2.4), ctx.currentTime, 0.25);
-
-    const recordedBed = ambienceClipRef.current;
-    if (recordedBed) {
-      recordedBed.volume = cue?.type === "presenter" ? 0.11 : performing ? 0.18 : 0.14;
-      if (recordedBed.paused) void recordedBed.play().catch(() => undefined);
-    }
-
-    // Rewind creates a new deterministic cue pass. Do not replay every
-    // 100ms jitter but permit exact repeat after a genuine backwards seek.
-    if (lastPositionRef.current >= 0 &&
-        playbackState.positionMs < lastPositionRef.current - 250) {
+    manager.claim(owner);
+    manager.setCrowdVolume(volume);
+    manager.setDialogueActive(cue?.type === "presenter");
+    const pos = Math.max(0, playbackState.positionMs);
+    if (lastPositionRef.current >= 0 && pos < lastPositionRef.current - 250) {
+      manager.stop();
       lastCueRef.current = null;
-      lastPulseRef.current = 0;
-      cooldownRef.current.reset();
+      lastPulseRef.current = -1;
+      historyRef.current = [];
     }
-    lastPositionRef.current = playbackState.positionMs;
+    lastPositionRef.current = pos;
+    if (!loaded) return;
+    const intensity = Math.max(1, Math.min(5, Math.round((audienceReaction + 10) / 5) + 1));
+    const key = cue?.id ?? playbackState.activePhase;
+    const pick = (category: CrowdCategory, suffix: string) =>
+      chooseClip(curated, legacy, category, intensity, `${key}:${suffix}`, pos / 1000, historyRef.current);
+    const bed = pick("ambient", "studio-bed");
+    void manager.setAmbience(bed);
 
-    // A render before the asynchronous library arrives must not consume
-    // the presenter/performance cue. On load it can play the real sample;
-    // an empty approved catalogue still permits the existing fallback.
-    if (!libraryLoaded) return;
-    const cueId = cue?.id ?? null;
-    if (cueId && cueId !== lastCueRef.current) {
-      lastCueRef.current = cueId;
+    const react = (category: CrowdCategory, suffix: string) => {
+      const clip = pick(category, suffix);
+      if (!clip) return;
+      void manager.playReaction(clip, pos).then((played) => {
+        if (played) historyRef.current.push({ assetId: clip.id, atSeconds: pos / 1000 });
+        historyRef.current = historyRef.current.filter((hit) => pos / 1000 - hit.atSeconds < 120).slice(-20);
+      });
+    };
 
-      if (cue?.type === "presenter" || cue?.type === "graphic" || cue?.type === "audience") {
-        playBroadcastSting(ctx, master, clampTotpGain(mix.transitionSting), cue.type);
-      }
-
-      if (cue?.type === "performance") {
-        const intensity = reaction >= 6 ? 9 : reaction >= 2 ? 7 : 5;
-        const clip = pickTotpCrowdSound(
-          library,
-          reaction >= 6 ? ["crowd_cheer_large", "crowd_cheer_medium", "band_entrance"] : ["crowd_cheer_medium", "crowd_cheer_small", "band_entrance"],
-          intensity,
-          `${cueId}:entrance`,
-        );
-        const hit = clampTotpGain(mix.audienceHit);
-        playApprovedClip(clipRef, clip, hit, cooldownRef.current, playbackState.positionMs)
-          .catch(() => playStudioCheer(ctx!, master!, hit, 1.1));
-        if (!clip) playStudioCheer(ctx, master, hit, 1.1);
-      }
-
-      if (cue?.type === "audience") {
-        const clip = pickTotpCrowdSound(
-          library,
-          reaction >= 7
-            ? ["encore_request", "applause", "crowd_cheer_large", "band_exit", "band_entrance"]
-            : ["applause", "crowd_cheer_medium", "band_exit", "band_entrance"],
-          reaction >= 7 ? 9 : 7,
-          `${cueId}:applause`,
-        );
-        const hit = clampTotpGain(mix.audienceHit);
-        playApprovedClip(clipRef, clip, hit, cooldownRef.current, playbackState.positionMs)
-          .catch(() => playStudioCheer(ctx!, master!, hit, 1.8));
-        if (!clip) playStudioCheer(ctx, master, hit, 1.8);
+    if (cue?.id && cue.id !== lastCueRef.current) {
+      lastCueRef.current = cue.id;
+      if (cue.type === "presenter") react("cheer", "presenter-entrance");
+      if (cue.type === "performance") react("cheer", "act-entrance");
+      if (cue.type === "audience") react(audienceReaction >= 7 ? "finale" : "applause", "audience-reaction");
+      if (cue.type === "graphic" && /number.?one|number.?1|chart.?milestone/i.test(JSON.stringify(cue.graphic ?? {}))) {
+        react("reaction", "chart-milestone");
       }
     }
-
-    if (performing && playbackState.positionMs - lastPulseRef.current > 18_000) {
-      lastPulseRef.current = playbackState.positionMs;
-      const clip = pickTotpCrowdSound(
-        library,
-        reaction >= 5 ? ["crowd_cheer_medium", "crowd_singing", "band_entrance"] : ["crowd_cheer_small", "crowd_cheer_medium", "band_entrance"],
-        reaction >= 5 ? 7 : 4,
-        `${cueId ?? "performance"}:${Math.floor(playbackState.positionMs / 18_000)}`,
-      );
-      playApprovedClip(clipRef, clip, .32 + Math.max(0, reaction) * .018, cooldownRef.current, playbackState.positionMs)
-        .catch(() => playStudioCheer(ctx!, master!, 0.38 + Math.max(0, reaction) * 0.018, 0.65));
-      if (!clip) playStudioCheer(ctx, master, 0.38 + Math.max(0, reaction) * 0.018, 0.65);
+    if (cue?.type === "performance" && pos - lastPulseRef.current >= 18000) {
+      lastPulseRef.current = pos;
+      react("reaction", `performance-pulse-${Math.floor(pos / 18000)}`);
     }
-  }, [audienceReaction, cue?.id, cue?.type, enabled, pageVisible, library, libraryLoaded, playbackState.activePhase, playbackState.isPlaying, playbackState.positionMs]);
-
-  useEffect(() => () => {
-    cooldownRef.current.reset();
-    noiseSourceRef.current?.stop();
-    noiseSourceRef.current?.disconnect();
-    noiseSourceRef.current = null;
-    ambienceRef.current?.disconnect();
-    masterRef.current?.disconnect();
-    for (const audio of [clipRef.current, ambienceClipRef.current]) {
-      if (!audio) continue;
-      audio.pause();
-      audio.onended = null;
-      audio.removeAttribute("src");
-      audio.load();
-    }
-    clipRef.current = null;
-    ambienceClipRef.current = null;
-    ctxRef.current = null;
-    masterRef.current = null;
-    ambienceRef.current = null;
-  }, []);
+  }, [
+    enabled, visible, volume, loaded, curated, legacy, audienceReaction,
+    cue?.id, cue?.type, cue?.graphic, playbackState.positionMs,
+    playbackState.isPlaying, playbackState.activePhase,
+  ]);
+  useEffect(() => () => { sharedCrowdAudioManager.releaseOwner(ownerRef.current); }, []);
 }
 
-function playStudioCheer(ctx: AudioContext, out: AudioNode, intensity: number, duration: number) {
-  const length = Math.max(1, Math.floor(ctx.sampleRate * duration));
-  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < length; i += 1) {
-    const p = i / length;
-    const envelope = Math.sin(Math.min(1, p * 5) * Math.PI / 2) * Math.pow(1 - p, .55);
-    const clap = Math.random() < .055 ? (Math.random() * 2 - 1) * 1.4 : 0;
-    const roar = (Math.random() * 2 - 1) * .45;
-    data[i] = (clap + roar) * envelope;
-  }
-  const src = ctx.createBufferSource();
-  src.buffer = buffer;
-  const hp = ctx.createBiquadFilter();
-  hp.type = "highpass";
-  hp.frequency.value = 280;
-  const lp = ctx.createBiquadFilter();
-  lp.type = "lowpass";
-  lp.frequency.value = 4200;
-  const gain = ctx.createGain();
-  gain.gain.value = Math.max(.08, Math.min(.9, intensity));
-  src.connect(hp);
-  hp.connect(lp);
-  lp.connect(gain);
-  gain.connect(out);
-  src.start();
-}
-
-
-async function playApprovedClip(
-  clipRef: { current: HTMLAudioElement | null },
-  sound: TotpCrowdSound | null,
-  volume: number,
-  cooldown?: CrowdReactionCooldown,
-  cueTimeMs = 0,
-) {
-  if (!sound || typeof Audio === "undefined") return;
-  if (cooldown && !cooldown.canPlay(sound.id, cueTimeMs)) return;
-  const previous = clipRef.current;
-  if (previous) {
-    previous.pause();
-    previous.onended = null;
-    previous.removeAttribute("src");
-    previous.load();
-  }
-  const audio = new Audio(sound.audio_url);
-  audio.preload = "auto";
-  audio.volume = Math.max(.08, Math.min(.9, volume));
-  clipRef.current = audio;
-  audio.onended = () => { if (clipRef.current === audio) clipRef.current = null; };
-  await audio.play();
-  cooldown?.record(sound.id, cueTimeMs);
-}
-
-
-function playBroadcastSting(
-  ctx: AudioContext,
-  out: AudioNode,
-  intensity: number,
-  kind: "presenter" | "graphic" | "audience",
-) {
-  const now = ctx.currentTime;
-  const gain = ctx.createGain();
-  const filter = ctx.createBiquadFilter();
-  filter.type = "lowpass";
-  filter.frequency.value = kind === "audience" ? 1600 : 2400;
-  gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.exponentialRampToValueAtTime(Math.max(0.02, intensity), now + 0.025);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.34);
-  filter.connect(gain);
-  gain.connect(out);
-
-  const frequencies = kind === "graphic" ? [440, 660] : kind === "audience" ? [220, 330] : [330, 495];
-  frequencies.forEach((frequency, index) => {
-    const oscillator = ctx.createOscillator();
-    oscillator.type = index === 0 ? "sine" : "triangle";
-    oscillator.frequency.setValueAtTime(frequency, now);
-    oscillator.frequency.exponentialRampToValueAtTime(frequency * 1.08, now + 0.28);
-    oscillator.connect(filter);
-    oscillator.start(now + index * 0.018);
-    oscillator.stop(now + 0.36);
-  });
-}
-
+/** Presenter interstitials, chart rundowns and credits share the same crowd graph. */
 export function useTotpContinuityAudienceAudio({
-  active,
-  seed,
-  intensity = 5,
-}: {
-  active: boolean;
-  seed: string;
-  intensity?: number;
-}) {
-  const ambientRef = useRef<HTMLAudioElement | null>(null);
-  const reactionRef = useRef<HTMLAudioElement | null>(null);
-  const pageVisible = useBroadcastPageVisible();
+  active, seed, intensity = 5,
+}: { active: boolean; seed: string; intensity?: number }) {
+  const [volume] = useCrowdVolumePreference();
+  const visible = useBroadcastPageVisible();
+  const ownerRef = useRef(Symbol("totp-continuity"));
 
   useEffect(() => {
-    for (const audio of [ambientRef.current, reactionRef.current]) {
-      if (!audio) continue;
-      audio.pause();
-      audio.removeAttribute("src");
-      audio.load();
+    const manager = sharedCrowdAudioManager;
+    const owner = ownerRef.current;
+    if (!active || !visible || volume === 0) {
+      manager.releaseOwner(owner);
+      return;
     }
-    ambientRef.current = null;
-    reactionRef.current = null;
-    if (!active || !pageVisible || typeof Audio === "undefined") return;
-
+    manager.claim(owner);
+    manager.setCrowdVolume(volume);
+    manager.setDialogueActive(true);
     let cancelled = false;
-    let pendingReaction: number | null = null;
-    void loadTotpCrowdSounds().then((sounds) => {
+    void Promise.all([
+      loadTotpCrowdSounds().catch(() => [] as TotpCrowdSound[]),
+      loadCuratedCrowdAssets().catch(() => [] as CuratedCrowdAsset[]),
+    ]).then(([legacy, curated]) => {
       if (cancelled) return;
-
-      const ambient = pickTotpCrowdSound(
-        sounds,
-        ["ambient_chatter", "band_entrance"],
-        Math.max(2, intensity - 2),
-        `${seed}:presenter-bed`,
-      );
-      if (ambient) {
-        const audio = new Audio(ambient.audio_url);
-        audio.preload = "auto";
-        audio.loop = true;
-        audio.volume = 0.14;
-        ambientRef.current = audio;
-        void audio.play().catch(() => undefined);
-      }
-
-      const reaction = pickTotpCrowdSound(
-        sounds,
-        intensity >= 8 ? ["applause", "crowd_cheer_large", "crowd_cheer_medium", "band_entrance"] : ["applause", "crowd_cheer_medium", "crowd_cheer_small", "band_entrance"],
-        intensity,
-        `${seed}:presenter-reaction`,
-      );
-      if (reaction) {
-        const audio = new Audio(reaction.audio_url);
-        audio.preload = "auto";
-        audio.volume = Math.min(0.42, 0.22 + intensity * 0.02);
-        reactionRef.current = audio;
-        pendingReaction = window.setTimeout(() => {
-          if (!cancelled && document.visibilityState !== "hidden") {
-            void audio.play().catch(() => undefined);
-          }
-        }, 250);
-      }
-    }).catch(() => undefined);
-
+      const bed = chooseClip(curated, legacy, "ambient", Math.max(1, Math.min(5, Math.round(intensity / 2))), `${seed}:bed`, 0, []);
+      const cheer = chooseClip(curated, legacy, "applause", Math.max(1, Math.min(5, Math.round(intensity / 2))), `${seed}:audience`, 1, []);
+      void manager.setAmbience(bed);
+      if (cheer) void manager.playReaction(cheer, 1000);
+    });
     return () => {
       cancelled = true;
-      if (pendingReaction !== null) window.clearTimeout(pendingReaction);
-      for (const audio of [ambientRef.current, reactionRef.current]) {
-        if (!audio) continue;
-        audio.pause();
-        audio.removeAttribute("src");
-        audio.load();
-      }
-      ambientRef.current = null;
-      reactionRef.current = null;
+      manager.releaseOwner(owner);
     };
-  }, [active, intensity, seed, pageVisible]);
+  }, [active, visible, volume, seed, intensity]);
 }

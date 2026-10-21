@@ -220,8 +220,31 @@ async function buildAudio({ plan, replays, crowdSounds, workDir }) {
     const replay = item.performance_id ? byPerformance.get(item.performance_id) : null;
     const reaction = Math.max(-10, Math.min(10, Number(replay?.payload?.liveTv?.audienceReaction ?? 0)));
 
+    // New frozen manifests carry exact asset IDs and absolute cue times.
+    // Legacy manifests retain their previous deterministic fallback selection.
+    const lockedCrowd = (plan.crowd_cues ?? []).filter((cue) => cue.item_index === item.index);
+    const lockedCategories = new Set(lockedCrowd.map((cue) => cue.category));
+    for (const cue of lockedCrowd) {
+      const durationMs = Number(cue.duration_ms);
+      const gainDb = Math.max(-60, Math.min(6, Number(cue.gain_db ?? -9)));
+      const startMs = Number(cue.at_ms);
+      if (!Number.isFinite(durationMs) || durationMs <= 0 ||
+          !Number.isFinite(startMs) || startMs < 0 ||
+          startMs + durationMs > plan.total_duration_ms + 1) {
+        throw new Error(`Invalid frozen crowd cue at item ${item.index}`);
+      }
+      tracks.push({
+        file: await source(cue.audio_url),
+        startMs, durationMs, gain: Math.pow(10, gainDb / 20),
+        loop: !!cue.loopable,
+        cueStartSeconds: Math.max(0, Number(cue.cue_start_seconds) || 0),
+        cueEndSeconds: cue.cue_end_seconds == null ? null : Number(cue.cue_end_seconds),
+        frozenAssetId: cue.asset_id,
+      });
+    }
+
     if (["opening_titles", "programme_continuity", "studio_transition", "chart_rundown", "end_credits"].includes(item.kind)) {
-      const ambient = pickSound(crowdSounds, ["ambient_chatter"], 3, `${item.kind}:${item.index}:studio-bed`);
+      const ambient = lockedCategories.has("ambient") ? null : pickSound(crowdSounds, ["ambient_chatter"], 3, `${item.kind}:${item.index}:studio-bed`);
       if (ambient) {
         const gain = item.kind === "studio_transition" ? 0.045 : item.kind === "chart_rundown" ? 0.035 : 0.025;
         tracks.push({
@@ -238,7 +261,7 @@ async function buildAudio({ plan, replays, crowdSounds, workDir }) {
       const file = await source(item.audio_url ?? replay?.payload?.song?.audioUrl ?? null);
       if (!file) throw new Error(`Performance ${item.performance_id} has no canonical song audio.`);
       tracks.push({ file, startMs: item.start_ms, durationMs: item.duration_ms, gain: 0.9, loop: false });
-      const ambient = pickSound(crowdSounds, ["ambient_chatter"], 4 + Math.max(0, reaction / 2), `${item.performance_id}:ambient`);
+      const ambient = lockedCategories.has("ambient") ? null : pickSound(crowdSounds, ["ambient_chatter"], 4 + Math.max(0, reaction / 2), `${item.performance_id}:ambient`);
       if (ambient) {
         tracks.push({ file: await source(ambient.audio_url), startMs: item.start_ms, durationMs: item.duration_ms, gain: 0.055 + Math.max(0, reaction) * 0.003, loop: true });
       }
@@ -278,9 +301,11 @@ async function buildAudio({ plan, replays, crowdSounds, workDir }) {
     }
 
     if (item.kind === "applause") {
-      const applause = pickSound(crowdSounds, ["applause", "crowd_cheer_large", "crowd_cheer_medium"], 9, `${item.performance_id}:applause`);
-      if (!applause) throw new Error("No approved applause/crowd audio is available for the broadcast master.");
-      tracks.push({ file: await source(applause.audio_url), startMs: item.start_ms, durationMs: item.duration_ms, gain: Math.min(0.92, 0.82 + Math.max(0, reaction) * 0.018), loop: false });
+      if (!lockedCategories.has("applause")) {
+        const applause = pickSound(crowdSounds, ["applause", "crowd_cheer_large", "crowd_cheer_medium"], 9, `${item.performance_id}:applause`);
+        if (!applause) throw new Error("No approved applause/crowd audio is available for the broadcast master.");
+        tracks.push({ file: await source(applause.audio_url), startMs: item.start_ms, durationMs: item.duration_ms, gain: Math.min(0.92, 0.82 + Math.max(0, reaction) * 0.018), loop: false });
+      }
     }
   }
 
@@ -293,7 +318,12 @@ async function buildAudio({ plan, replays, crowdSounds, workDir }) {
   tracks.forEach((track, index) => {
     const label = `a${index}`;
     const loop = track.loop ? "aloop=loop=-1:size=2147483647," : "";
-    filters.push(`[${index}:a]${loop}atrim=0:${(track.durationMs / 1000).toFixed(3)},asetpts=PTS-STARTPTS,volume=${track.gain.toFixed(4)},adelay=${Math.round(track.startMs)}|${Math.round(track.startMs)}[${label}]`);
+    const trimStart = Math.max(0, Number(track.cueStartSeconds ?? 0));
+    const trimEnd = track.cueEndSeconds == null ? null : Number(track.cueEndSeconds);
+    const sourceTrim = trimStart > 0 || trimEnd !== null
+      ? `atrim=start=${trimStart.toFixed(3)}${trimEnd !== null && trimEnd > trimStart ? `:end=${trimEnd.toFixed(3)}` : ""},asetpts=PTS-STARTPTS,`
+      : "";
+    filters.push(`[${index}:a]${sourceTrim}${loop}atrim=0:${(track.durationMs / 1000).toFixed(3)},asetpts=PTS-STARTPTS,volume=${track.gain.toFixed(4)},adelay=${Math.round(track.startMs)}|${Math.round(track.startMs)}[${label}]`);
     labels.push(`[${label}]`);
   });
   filters.push(`${labels.join("")}amix=inputs=${labels.length}:duration=longest:dropout_transition=0,atrim=0:${durationSeconds.toFixed(3)},aresample=48000[aout]`);

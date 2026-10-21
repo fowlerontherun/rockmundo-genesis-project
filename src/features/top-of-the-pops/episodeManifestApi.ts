@@ -1,3 +1,6 @@
+import { freezeTotpCrowdCues } from "./freezeCrowdCues";
+import { buildTotpRenderPlan } from "./renderSpec";
+import { loadCuratedCrowdAssets } from "@/features/shared-audio/crowdAudioCatalogue";
 import { getTotpEpisodePresenterFragments, getTotpPerformanceAudio, type TotpEpisode, type TotpPresenterFragmentBundle } from "./api";
 import {
   buildTotpEpisodeManifest,
@@ -205,7 +208,7 @@ export async function buildTotpEpisodeManifestFromEpisode(
     };
   });
 
-  const manifest = buildTotpEpisodeManifest({
+  const manifestInput = {
     episode: broadcastEpisode,
     songAudio,
     presenterAudio,
@@ -213,7 +216,15 @@ export async function buildTotpEpisodeManifestFromEpisode(
     presenterDialogue,
     chartRundown,
     rights,
-  });
+  };
+  const provisional = buildTotpEpisodeManifest(manifestInput);
+  // Only an approved rights-cleared catalogue can be frozen into a new master.
+  // Older manifests without crowd_cues retain their existing render behaviour.
+  const curated = await loadCuratedCrowdAssets().catch(() => []);
+  const crowdCues = curated.length
+    ? freezeTotpCrowdCues(buildTotpRenderPlan(provisional).items, curated, provisional.episode_id)
+    : [];
+  const manifest = buildTotpEpisodeManifest({ ...manifestInput, crowdCues });
   return { manifest, issues: validateTotpEpisodeManifest(manifest) };
 }
 

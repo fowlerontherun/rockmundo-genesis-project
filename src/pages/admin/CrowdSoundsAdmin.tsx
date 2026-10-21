@@ -1,3 +1,4 @@
+import { CrowdAudioCatalogueAdmin } from "@/features/shared-audio/CrowdAudioCatalogueAdmin";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -454,6 +455,7 @@ export default function CrowdSoundsAdmin() {
         </div>
       </div>
       
+      <CrowdAudioCatalogueAdmin />
       <Card>
         <CardHeader>
           <div className="rounded-lg border border-dashed bg-muted/20 p-3 text-sm">
