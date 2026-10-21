@@ -1,3 +1,4 @@
+import { HousingArtwork } from '@/components/game-art/HousingArtwork';
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,7 @@ import {
   calculateDailyUpkeep,
   getMarketPrice,
 } from "@/hooks/useHousing";
-import { Home, Building2, Key, DollarSign, Bed, MapPin, Loader2, ImageIcon, Globe, TrendingDown, TrendingUp, Banknote, BarChart3 } from "lucide-react";
+import { Home, Building2, Key, DollarSign, Bed, MapPin, Loader2, Globe, TrendingDown, TrendingUp, Banknote, BarChart3 } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
@@ -265,13 +266,7 @@ const Housing = () => {
                       <CardDescription className="text-xs">{ht.description}</CardDescription>
                     </CardHeader>
                     <CardContent className="pb-2">
-                      {ht.image_url ? (
-                        <img src={ht.image_url} alt={ht.name} className="w-full h-32 object-cover rounded-md" />
-                      ) : (
-                        <div className="w-full h-32 bg-muted rounded-md flex items-center justify-center">
-                          <ImageIcon className="h-6 w-6 text-muted-foreground/40" />
-                        </div>
-                      )}
+                      <HousingArtwork id={ht.id} name={ht.name} imageUrl={ht.image_url} />
                       <div className="flex items-center justify-between mt-2">
                         <div className="flex items-center gap-2">
                           <span className="text-lg font-bold text-primary">{formatPrice(currentPrice)}</span>
@@ -363,6 +358,7 @@ const Housing = () => {
                         <CardDescription className="text-xs">{rt.description}</CardDescription>
                       </CardHeader>
                       <CardContent>
+                        <div className="mb-3"><HousingArtwork id={rt.id} name={rt.name} /></div>
                         <div className="flex items-center justify-between">
                           <span className="text-lg font-bold text-primary">{formatPrice(weeklyCost)}/week</span>
                           <span className="text-xs text-muted-foreground">Base: {formatPrice(rt.base_weekly_cost)}</span>
@@ -459,11 +455,9 @@ const Housing = () => {
                           )}
                         </CardDescription>
                       </CardHeader>
-                      {pp.housing_types?.image_url && (
-                        <CardContent className="pb-2">
-                          <img src={pp.housing_types.image_url} alt={pp.housing_types.name} className="w-full h-32 object-cover rounded-md" />
-                        </CardContent>
-                      )}
+                      <CardContent className="pb-2">
+                        <HousingArtwork id={pp.housing_type_id} name={pp.housing_types?.name ?? "Property"} imageUrl={pp.housing_types?.image_url} />
+                      </CardContent>
                       <CardContent className="pb-2 space-y-1">
                         <div className="flex justify-between text-xs">
                           <span className="text-muted-foreground flex items-center gap-1"><TrendingDown className="h-3 w-3" /> Upkeep/day</span>
