@@ -253,3 +253,17 @@ The reusable visual catalogue enumerates the **26 starter market ingredients** a
 
 The food-art contract has Vitest coverage for all 26 ingredient entries, all 12 recipes, stage colours and labels, each illustrated workstation, empty vessels and local SVG rendering. The authoritative database mechanics still accept only pan-method manual recipes; oven, simmer and mixing artwork is **practice-only** until their separate backends and staging tests are implemented.
 
+
+
+## Server-certified oven, simmer and drinks — 22 October 2026
+
+Migration 20261022155500_cooking_oven_simmer_mix_authoritative_actions.sql is deployed, **without activating recipes or markets**. Its service-role-only database procedures record and validate ingredient loading, oven/pot heat settings, timed stirring for drinks, one-way plating and replay-scored completion. They use server event timestamps and the existing transactional ingredient reservations and idempotent food completion.
+
+Oven ideal/overdone/burnt thresholds are 15/23/31 seconds of equivalent exposure; simmer thresholds are 12/20/30. Drinks need three to five stir actions for a full score; six to eight lower the score. Raw, burnt and unplated ingredients fail the server-validated batch. No frontend-controlled score can mint food.
+
+The JWT-verified cooking-session Edge Function v5 resolves recipe method from the backend recipe record and routes each action to its dedicated pan or technique processor, after verifying active character and session ownership. The CookingLiveTechniques component adds illustrated live oven, soup pot and drinks jug, ingredient drag/drop and accessible add controls, heat/stir, serve and finish buttons, and server-anchored cooking visuals with reconnect. Displayed colours and times are estimates, never reward authority.
+
+Rollback-only SQL integration testing has **passed on the connected database**: three successful oven/simmer/mix food batches, one burnt oven attempt generating no food, idempotent finishing, invalid action rejections, and privileges denying anonymous/authenticated RPCs. The test intentionally rolled back every fixture and left zero production cooking recipes, offers and food batches active.
+
+**Release gate unchanged:** A real signed-in staging browser journey against a separate staging app/database and disposable account must pass before production activation. These new method recipes remain off.
+
