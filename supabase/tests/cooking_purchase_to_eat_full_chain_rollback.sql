@@ -8,6 +8,7 @@
 DO $full$
 DECLARE
  v_player public.profiles%rowtype;
+ v_other_user uuid;
  v_city uuid;
  v_slug text;
  v_offer uuid;
@@ -90,6 +91,29 @@ BEGIN
     -- Do not use a transaction-start timestamp to count multiple clock-time
     -- test purchases: the real cash/stock/lot receipts are checked per SKU.
 
+    -- Switching to a different JWT identity must never buy another
+    -- person's ingredients, even if their character and offer IDs are known.
+    SELECT p.user_id INTO v_other_user FROM public.profiles p
+    WHERE p.user_id IS NOT NULL AND p.user_id<>v_player.user_id LIMIT 1;
+    IF v_other_user IS NULL THEN
+      RAISE EXCEPTION 'SECOND_USER_REQUIRED_FOR_AUTH_BOUNDARY_TEST';
+    END IF;
+    PERFORM set_config('request.jwt.claim.sub',v_other_user::text,true);
+    PERFORM set_config('request.jwt.claims',pg_catalog.jsonb_build_object(
+      'sub',v_other_user::text,'role','authenticated',
+      'is_anonymous',false)::text,true);
+    BEGIN
+      PERFORM public.purchase_cooking_market_ingredient(
+        v_player.id,v_offer,1,gen_random_uuid());
+      RAISE EXCEPTION 'OTHER_USER_PURCHASED_PLAYER_STOCK';
+    EXCEPTION WHEN OTHERS THEN
+      IF SQLERRM<>'COOKING_MARKET_CHARACTER_UNAVAILABLE' THEN RAISE; END IF;
+    END;
+    PERFORM set_config('request.jwt.claim.sub',v_player.user_id::text,true);
+    PERFORM set_config('request.jwt.claims',pg_catalog.jsonb_build_object(
+      'sub',v_player.user_id::text,'role','authenticated',
+      'is_anonymous',false)::text,true);
+
     IF public.begin_cooking_session(v_player.id,'rice-bowl',v_session_id)
        IS DISTINCT FROM v_session_id THEN
        RAISE EXCEPTION 'COOKING_SESSION_START_FAILED';
@@ -149,6 +173,23 @@ BEGIN
     IF (SELECT portions FROM public.cooking_food_batches WHERE id=v_food_id)<>2 THEN
       RAISE EXCEPTION 'RICE_BOWL_WRONG_PORTIONS';
     END IF;
+
+    -- The same ownership check must protect eating a completed dish.
+    PERFORM set_config('request.jwt.claim.sub',v_other_user::text,true);
+    PERFORM set_config('request.jwt.claims',pg_catalog.jsonb_build_object(
+      'sub',v_other_user::text,'role','authenticated',
+      'is_anonymous',false)::text,true);
+    BEGIN
+      PERFORM public.consume_cooking_food_atomic(
+        v_player.id,v_food_id,gen_random_uuid());
+      RAISE EXCEPTION 'OTHER_USER_ATE_PLAYER_FOOD';
+    EXCEPTION WHEN OTHERS THEN
+      IF SQLERRM<>'COOKING_FOOD_PROFILE_NOT_OWNED' THEN RAISE; END IF;
+    END;
+    PERFORM set_config('request.jwt.claim.sub',v_player.user_id::text,true);
+    PERFORM set_config('request.jwt.claims',pg_catalog.jsonb_build_object(
+      'sub',v_player.user_id::text,'role','authenticated',
+      'is_anonymous',false)::text,true);
 
     v_meal:=public.consume_cooking_food_atomic(
       v_player.id,v_food_id,v_consume_key);
