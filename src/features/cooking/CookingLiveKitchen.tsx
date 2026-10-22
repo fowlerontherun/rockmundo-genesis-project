@@ -19,6 +19,7 @@ interface SessionRow {
   status: string;
   started_at: string;
   expires_at: string;
+  finished_at: string | null;
   execution_score: number | null;
   result_batch_id: string | null;
 }
@@ -202,7 +203,7 @@ export function CookingLiveKitchen() {
   const view = session && recipeData.data
     ? projectKitchen(session.started_at, session.expires_at,
       recipeData.data.ingredients, recipeData.data.windows,
-      snapshot.data?.actions ?? [], now)
+      snapshot.data?.actions ?? [], session.finished_at ? Math.min(now, Date.parse(session.finished_at)) : now)
     : null;
   const canAct = running && !mutation.isPending && Boolean(view?.remainingSeconds);
   const selectedItem = view?.items.find((item) => item.slug === selected);
@@ -245,7 +246,7 @@ export function CookingLiveKitchen() {
       {(recipes.isLoading || active.isLoading) && <p role="status">Checking available recipes and saved cooking sessions…</p>}
       {(recipes.isError || active.isError || recipeData.isError || snapshot.isError) &&
         <p role="alert" className="text-sm text-destructive">Could not retrieve the live kitchen. Practice mode is still available.</p>}
-      {!running && !session && !active.data?.id && !recipes.isLoading && available.length === 0 &&
+      {!running && !session && !active.data?.id && !recipes.isLoading && !recipes.isError && available.length === 0 &&
         <p className="text-sm text-muted-foreground" role="status">
           No production pan recipes are enabled yet. You can use the free practice kitchen below without spending ingredients.
         </p>}
@@ -264,7 +265,7 @@ export function CookingLiveKitchen() {
       {session && <div className="space-y-4">
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <span className="font-medium">{prettify(session.recipe_slug)}</span>
-          <span className="tabular-nums">{view?.remainingSeconds ?? "…"} seconds remaining</span>
+          <span className="tabular-nums">{running ? `${view?.remainingSeconds ?? "…"} seconds remaining` : "Session ended"}</span>
           <span>{session.status}</span>
           <Button size="sm" variant="outline" disabled={snapshot.isFetching}
             onClick={() => void snapshot.refetch()}><RotateCcw className="mr-2 h-4 w-4" />Sync</Button>
