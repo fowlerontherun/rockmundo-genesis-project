@@ -149,13 +149,21 @@ function CookingLiveKitchenForProfile({ profileId }: { profileId: string | null 
         .eq("profile_id", profileId).in("status", ["pending", "running"])
         .order("started_at", { ascending: false }).limit(1).maybeSingle();
       if (error) throw error;
-      return data as { id: string; recipe_slug: string } | null;
+      if (!data) return null;
+      const { data: recipe, error: recipeError } = await (supabase as any)
+        .from("cooking_recipes").select("method")
+        .eq("slug", data.recipe_slug).maybeSingle();
+      if (recipeError) throw recipeError;
+      return { ...(data as { id: string; recipe_slug: string }),
+        method: (recipe?.method ?? null) as string | null };
     },
     refetchOnMount: "always",
   });
   useEffect(() => {
-    if (active.data?.id && !sessionId) setSessionId(active.data.id);
-  }, [active.data?.id, sessionId]);
+    if (active.data?.id && active.data.method === "pan" && !sessionId) {
+      setSessionId(active.data.id);
+    }
+  }, [active.data?.id, active.data?.method, sessionId]);
 
   const snapshot = useQuery({
     queryKey: ["cooking-session-snapshot", sessionId],
@@ -167,7 +175,8 @@ function CookingLiveKitchenForProfile({ profileId }: { profileId: string | null 
     },
     refetchOnWindowFocus: true,
   });
-  const chosenSlug = snapshot.data?.session.recipe_slug ?? active.data?.recipe_slug ?? recipeSlug;
+  const chosenSlug = snapshot.data?.session.recipe_slug ??
+    (active.data?.method === "pan" ? active.data.recipe_slug : null) ?? recipeSlug;
   const recipeData = useQuery({
     queryKey: ["cooking-recipe-components", chosenSlug],
     enabled: Boolean(chosenSlug),
@@ -276,7 +285,11 @@ function CookingLiveKitchenForProfile({ profileId }: { profileId: string | null 
           Start cooking with ingredients
         </Button>
       </div>}
-      {active.data?.id && !session && <p role="status">Restoring your active cooking session…</p>}
+      {active.data?.id && active.data.method !== "pan" && !session &&
+        <p role="status">A {active.data.method ?? "different"} cooking session is already active.
+          Use its workstation below; the pan screen will not take it over.</p>}
+      {active.data?.id && active.data.method === "pan" && !session &&
+        <p role="status">Restoring your active cooking session…</p>}
       {session && <div className="space-y-4">
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <span className="font-medium">{prettify(session.recipe_slug)}</span>
