@@ -7,7 +7,7 @@ declare
   p public.profiles%rowtype;
   c uuid;
   mayor_id uuid;
-  request_id uuid := gen_random_uuid();
+  test_request_id uuid := gen_random_uuid();
   second_id uuid := gen_random_uuid();
   offer_id uuid;
   original_offers integer;
@@ -53,12 +53,12 @@ begin
       set balance=1000000,pending_commitments=0;
     select balance into old_treasury from public.city_treasury where city_id=c;
 
-    result := public.upgrade_cooking_city_market(c,p.id,request_id);
+    result := public.upgrade_cooking_city_market(c,p.id,test_request_id);
     if result->>'status'<>'completed' or (result->>'newLevel')::integer<>2
       or (result->>'cost')::bigint<>20000 then
       raise exception 'Market upgrade returned incorrect result: %',result;
     end if;
-    replayed := public.upgrade_cooking_city_market(c,p.id,request_id);
+    replayed := public.upgrade_cooking_city_market(c,p.id,test_request_id);
     if replayed->>'status'<>'already_completed' then
       raise exception 'Duplicate mayor investment was charged again';
     end if;
@@ -70,7 +70,7 @@ begin
       from public.cooking_city_market_offers where city_id=c;
     if current_offers<>original_offers+2 then
       raise exception 'Mayor upgrade did not add 2 new varieties'; end if;
-    if (select count(*) from public.cooking_city_market_investments where cooking_city_market_investments.request_id=request_id)<>1
+    if (select count(*) from public.cooking_city_market_investments where cooking_city_market_investments.request_id=test_request_id)<>1
       then raise exception 'Investment ledger missing'; end if;
     if (select count(*) from public.city_treasury_ledger
       where reference_id=(result->>'investmentId')::uuid
