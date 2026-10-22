@@ -65,7 +65,42 @@ test.describe("staging-only signed-in cooking release gate", () => {
     }
 
     await page.locator("#cooking-live-recipe").selectOption("rice-bowl");
+    const startRequest = page.waitForRequest(request => {
+      if (!request.url().startsWith(stagingSupabase + "/functions/v1/cooking-session")
+        || request.method() !== "POST") return false;
+      try { return request.postDataJSON()?.action === "start"; }
+      catch { return false; }
+    });
     await page.getByRole("button", { name: "Start cooking with ingredients" }).click();
+    const startedBy = await startRequest;
+    const startBody = startedBy.postDataJSON();
+    const auth = startedBy.headers()["authorization"] ?? "";
+    const apiKey = startedBy.headers()["apikey"] ?? "";
+    expect(auth?.startsWith("Bearer "), "The gateway must receive the user's real JWT").toBe(true);
+    expect(startBody.profileId, "Every action must identify the selected character").toBeTruthy();
+    expect(startBody.sessionId).toMatch(/^[a-f\d-]{36}$/i);
+
+    // Exercise the real Edge auth boundary using the SAME signed-in identity.
+    // Do not log the bearer token or use any production Supabase credentials.
+    const badProfile = "99999999-9999-4999-8999-999999999999";
+    const requestHeaders = {
+      Authorization: auth,
+      apikey: apiKey,
+      "Content-Type": "application/json",
+    };
+    const stolenCharacter = await page.request.post(startedBy.url(), {
+      headers: requestHeaders,
+      data: { action: "status", sessionId: startBody.sessionId, profileId: badProfile },
+    });
+    expect(stolenCharacter.status(), "A valid JWT must not authorize another character ID").toBe(403);
+    expect((await stolenCharacter.json()).error).toBe("active_character_mismatch");
+    const missingCharacter = await page.request.post(startedBy.url(), {
+      headers: requestHeaders,
+      data: { action: "status", sessionId: startBody.sessionId },
+    });
+    expect(missingCharacter.status(), "A missing character claim must fail closed").toBe(400);
+    expect((await missingCharacter.json()).error).toBe("character_id_required");
+
     await expect(page.getByRole("button", { name: /Mushrooms, tray, Raw/ })).toBeVisible();
     await page.getByRole("radio", { name: "Medium" }).check();
 
