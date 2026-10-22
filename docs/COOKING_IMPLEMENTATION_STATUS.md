@@ -114,6 +114,20 @@ A new `CookingCityMarket` panel in Career → Cooking shows the character's curr
 
 **Still gated:** market availability activation, first pan recipe activation, real authenticated browser purchase/cook E2E, sustainable restocking, mayor-controlled market upgrades, player trading, food consumption and timed buffs. Do not turn on payment buttons until these are verified. No production cash or ingredient purchases were recorded in this slice.
 
+## Mayor market improvements and daily replenishment — 22 October 2026
+
+**Live migrations:** `20261022121500_cooking_mayor_market_upgrades.sql`, `20261022122500_cooking_market_restock.sql`, `20261022123500_private_mayor_market_upgrade.sql` and `20261022124500_private_cooking_market_purchase.sql` are deployed in Rockmundo Supabase.
+
+Every city has a `cooking_city_market_levels` record (180 cities, initially level 1). Once market offers are activated in a city, its current elected mayor can invest **the city treasury** in the market. Each upgrade is validated against the authenticated active character and current mayoral term, serialized with a city row lock, capped at level 5, and restricted to one upgrade every seven days. Server-priced tier costs are $20,000, $40,000, $80,000 and $160,000. The transaction adjusts stock capacity and produce quality, adds two otherwise unavailable varieties, and records an immutable investment, treasury ledger debit and mayor action log. Retries use a UUID request key to avoid duplicate charges. The Cooking City Market UI now displays levels, upgrade costs, available treasury budget, cooldown and mayor-only upgrade controls. No upgrades can charge a city whose market has not yet opened.
+
+`restock_cooking_city_markets` is restricted to the backend and replenishes only **active** market offers with depleted stock, in bounded batches, without opening closed offers or minting character inventory. The database cron `rockmundo_cooking_market_daily_restock` runs at **04:15 UTC**. With all offers closed, a direct restock verification returned zero replenishments.
+
+**Privileges and security:** The public purchase and mayor-upgrade RPCs are now `SECURITY INVOKER` wrappers into a private `cooking_internal` schema. Their privileged implementations retain existing server-side ownership, mayoral-term, location, funds, stock and idempotency checks. The Supabase security adviser reported no cooking-specific findings following the refactor. Frontend clients have no direct permission to update market levels, treasury, purchases or stock.
+
+**Verified:** The rollback-only mayor SQL test passed for a level-one-to-two upgrade, exact single $20,000 treasury deduction, same-key retry, seven-day cooldown, two new varieties, treasury ledger and stock restock, with **zero fixture changes retained**. It was repeated successfully after moving the mayor function to the private schema. All 180 markets remained at level 1, with zero investments and zero activated offers. The market purchase function was moved without changing its business logic, but its separate authenticated purchase smoke test **was not rerun** after the schema refactor because the execution environment blocked that test. The stored SQL test remains available for controlled CI. Frontend compilation, unit tests and CI are not yet independently verified for this branch.
+
+**Remaining before launch:** Market activation and first pan-recipe launch decisions, trusted authenticated purchase/cook end-to-end certification, rolling stock observability and food consumption/buff balance. Do not open markets merely because daily restock is scheduled.
+
 ## Next slices
 
 1. Validate the practice interaction and timing on desktop, touch and keyboard; refine ingredient visuals and recipe steps from playtesting.
