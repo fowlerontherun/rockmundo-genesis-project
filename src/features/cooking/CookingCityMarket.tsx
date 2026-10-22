@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Button } from "@/components/ui/button";
 import { CookingMarketMayorUpgrade } from "./CookingMarketMayorUpgrade";
+import { IngredientIllustration } from "./CookingIllustrations";
+import "./cooking.css";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface CityInfo { name: string; country: string }
@@ -121,6 +123,16 @@ export function CookingCityMarket() {
       {market.isLoading && <p role="status">Loading local produce and ingredient prices…</p>}
       {market.isError && <p role="alert" className="text-sm text-destructive">Could not load this city's market.</p>}
       {market.data && <>
+        <div className="cooking-market-banner" aria-label="Illustrated regional produce stall">
+          <div className="flex items-center gap-1" aria-hidden="true">
+            <IngredientIllustration slug="apples" size="small" />
+            <IngredientIllustration slug="rice" size="small" />
+            <IngredientIllustration slug="tea" size="small" />
+          </div>
+          <div><strong>Market day in {market.data.city.name}</strong>
+            <p className="text-xs">Local favourites, imported produce and perishable goods</p>
+          </div>
+        </div>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h3 className="font-semibold">{market.data.city.name}, {market.data.city.country}</h3>
@@ -158,7 +170,15 @@ export function CookingCityMarket() {
                 <h4 className="font-semibold">{ingredient.display_name}</h4>
                 {offer.local_speciality && <span className="text-xs font-medium">Local produce</span>}
               </div>
-              <p className="text-sm">${offer.unit_price} per unit · Quality {offer.quality}/100</p>
+              <div className="flex items-center gap-3">
+                <div className="cooking-market-product-art"><IngredientIllustration slug={ingredient.slug} size="large" /></div>
+                <div className="flex-1 space-y-2">
+                  <p className="text-sm">${offer.unit_price} per unit · Quality {offer.quality}/100</p>
+                  <div className="h-2 overflow-hidden rounded-full bg-secondary" role="img" aria-label={"Ingredient quality " + offer.quality + " out of 100"}>
+                    <div className="h-full rounded-full bg-amber-600" style={{ width: `${Math.max(0, Math.min(100, offer.quality))}%` }} />
+                  </div>
+                </div>
+              </div>
               <p className="text-xs text-muted-foreground">Stock: {offer.stock} · Shelf life: {ingredient.shelf_life_hours} hours</p>
               <Button size="sm" disabled={!canBuy || !profileId} onClick={() => purchasing.mutate(offer)}>
                 {!offer.is_active ? "Not on sale yet" : offer.stock < quantity ? "Out of stock" :
