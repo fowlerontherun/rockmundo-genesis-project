@@ -16,6 +16,7 @@ export async function getActiveProfile(userId: string): Promise<ProfileRow | nul
     .eq("user_id", userId)
     .eq("is_active", true)
     .is("died_at", null)
+    .is("deleted_at", null)
     // Match current_active_player_profile_id(). Older accounts can contain more
     // than one active row; maybeSingle() would otherwise reject the response and
     // leave every active-character query (including Finances) disabled.
