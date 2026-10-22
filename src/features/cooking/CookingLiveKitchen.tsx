@@ -286,7 +286,7 @@ function CookingLiveKitchenForProfile({ profileId }: { profileId: string | null 
         </Button>
       </div>}
       {active.data?.id && active.data.method !== "pan" && !session &&
-        <p role="status">A {active.data.method ?? "different"} cooking session is already active.
+        <p role="status">{active.data.method === "oven" ? "An" : "A"} {active.data.method ?? "different"} cooking session is already active.
           Use its workstation below; the pan screen will not take it over.</p>}
       {active.data?.id && active.data.method === "pan" && !session &&
         <p role="status">Restoring your active cooking session…</p>}
