@@ -7,7 +7,7 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { FoodArt } from "./FoodArt";
-import { projectKitchen, type CookingActionEvent, type CookingHeat, type CookingIngredient,
+import { projectKitchen, serverAnchoredCookingNow, type CookingActionEvent, type CookingHeat, type CookingIngredient,
   type CookingPosition, type CookingWindow, type KitchenItem } from "./liveCookingView";
 import "./cooking.css";
 
@@ -23,11 +23,12 @@ interface SessionRow {
   execution_score: number | null;
   result_batch_id: string | null;
 }
-interface GatewaySnapshot { session: SessionRow; actions: CookingActionEvent[] }
+interface GatewaySnapshot { session: SessionRow; actions: CookingActionEvent[]; serverNow?: string }
 type GatewayAction = "start" | "status" | "heat" | "add" | "remove" | "finish";
 interface GatewayRequest {
   action: GatewayAction;
   sessionId: string;
+  profileId?: string;
   recipeSlug?: string;
   heat?: CookingHeat;
   ingredientSlug?: string;
@@ -109,6 +110,12 @@ function LiveZone({ position, children, disabled, selectedItem, panFull, onMove 
  */
 export function CookingLiveKitchen() {
   const { profileId } = useActiveProfile();
+  // Keying by the selected character destroys the previous character's
+  // session/action/mutation state on a switch, including pending start UUIDs.
+  return <CookingLiveKitchenForProfile key={profileId ?? "no-character"} profileId={profileId} />;
+}
+
+function CookingLiveKitchenForProfile({ profileId }: { profileId: string | null }) {
   const queryClient = useQueryClient();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [recipeSlug, setRecipeSlug] = useState("");
@@ -149,7 +156,7 @@ export function CookingLiveKitchen() {
   const snapshot = useQuery({
     queryKey: ["cooking-session-snapshot", sessionId],
     enabled: Boolean(sessionId),
-    queryFn: () => callGateway<GatewaySnapshot>({ action: "status", sessionId: sessionId! }),
+    queryFn: () => callGateway<GatewaySnapshot>({ action: "status", sessionId: sessionId!, profileId: profileId! }),
     refetchInterval: (query) => {
       const status = query.state.data?.session.status;
       return !status || ["pending", "running"].includes(status) ? 2000 : false;
@@ -177,7 +184,7 @@ export function CookingLiveKitchen() {
     },
   });
   const mutation = useMutation({
-    mutationFn: (request: GatewayRequest) => callGateway<GatewayReply>(request),
+    mutationFn: (request: GatewayRequest) => callGateway<GatewayReply>({ ...request, profileId: profileId! }),
     onSuccess: async () => {
       setMessage(null);
       setSelected(null);
@@ -200,10 +207,14 @@ export function CookingLiveKitchen() {
     return () => window.clearInterval(timer);
   }, [running]);
 
+  const serverNow = serverAnchoredCookingNow(now, snapshot.data?.serverNow, snapshot.dataUpdatedAt);
+  const projectionTime = session?.finished_at
+    ? Math.min(serverNow, Date.parse(session.finished_at))
+    : serverNow;
   const view = session && recipeData.data
     ? projectKitchen(session.started_at, session.expires_at,
       recipeData.data.ingredients, recipeData.data.windows,
-      snapshot.data?.actions ?? [], session.finished_at ? Math.min(now, Date.parse(session.finished_at)) : now)
+      snapshot.data?.actions ?? [], projectionTime)
     : null;
   const canAct = running && !mutation.isPending && Boolean(view?.remainingSeconds);
   const selectedItem = view?.items.find((item) => item.slug === selected);
