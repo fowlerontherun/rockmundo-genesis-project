@@ -1,0 +1,38 @@
+name: Cooking Gateway Authentication Contract
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/functions/cooking-session/**'
+      - 'src/features/cooking/**'
+      - 'tests/cooking-staging/**'
+      - '.github/workflows/cooking-gateway-auth.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/cooking-session/**'
+      - 'src/features/cooking/**'
+      - 'tests/cooking-staging/**'
+      - '.github/workflows/cooking-gateway-auth.yml'
+
+jobs:
+  cooking-gateway-contract:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Use Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Use repository npm
+        run: npm install --global npm@10.9.2
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: Validate cooking gateway contract and UI
+        run: npm run test:cooking
+      - name: Typecheck
+        run: npm run typecheck
