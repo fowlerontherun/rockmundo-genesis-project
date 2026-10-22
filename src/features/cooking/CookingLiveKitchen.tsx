@@ -273,6 +273,11 @@ export function CookingLiveKitchen() {
         {session.status === "failed" && <p role="status">This dish was spoiled. Reserved ingredients were consumed; no food was awarded.</p>}
         {session.status === "timed_out" && <p role="status">Time ran out. This attempt cannot be resumed.</p>}
         {session.status === "cancelled" && <p role="status">This cooking session was cancelled.</p>}
+        {!running && <Button type="button" variant="outline"
+          onClick={() => { setSessionId(null); setSelected(null); setMessage(null); pendingStartKey.current = null;
+            void queryClient.invalidateQueries({ queryKey: ["cooking-active-session", profileId] }); }}>
+          Return to recipe selection
+        </Button>}
         {view && <DndContext sensors={sensors} accessibility={{ screenReaderInstructions: {
           draggable: "Select an ingredient, then choose Add selected to pan or Plate selected ingredient. You can also drag ingredients into the pan or onto the plate.",
         } }} onDragEnd={({ active: drag, over }) => {
