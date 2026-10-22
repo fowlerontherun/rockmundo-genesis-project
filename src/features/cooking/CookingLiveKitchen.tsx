@@ -7,6 +7,8 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { FoodArt } from "./FoodArt";
+import { DishIllustration, IngredientIllustration } from "./CookingIllustrations";
+import { CookingStageGuide } from "./CookingEquipmentScene";
 import { projectKitchen, serverAnchoredCookingNow, type CookingActionEvent, type CookingHeat, type CookingIngredient,
   type CookingPosition, type CookingWindow, type KitchenItem } from "./liveCookingView";
 import "./cooking.css";
@@ -74,7 +76,7 @@ function LiveIngredient({ item, selected, disabled, onSelect }: {
     style={{ opacity: isDragging ? 0.35 : 1,
       transform: transform ? `translate3d(${transform.x}px,${transform.y}px,0)` : undefined }}>
     {artId ? <FoodArt id={artId} stage={item.stage} /> :
-      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-900/15 text-xl" aria-hidden="true">🥘</span>}
+      <IngredientIllustration slug={item.slug} />}
     <span className="text-sm font-medium">{prettify(item.slug)}</span>
     <span className="text-xs">{item.stage}</span>
     {item.window && <span className="text-xs tabular-nums">{item.seconds.toFixed(1)}s</span>}
@@ -283,7 +285,10 @@ function CookingLiveKitchenForProfile({ profileId }: { profileId: string | null 
           <Button size="sm" variant="outline" disabled={snapshot.isFetching}
             onClick={() => void snapshot.refetch()}><RotateCcw className="mr-2 h-4 w-4" />Sync</Button>
         </div>
-        {session.status === "completed" && <p role="status">Finished food saved to your inventory. Server score: {session.execution_score}/100.</p>}
+        {session.status === "completed" && <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-secondary/30 p-2">
+          <DishIllustration recipeSlug={session.recipe_slug} className="h-24 w-36 rounded-lg" />
+          <p role="status">Finished food saved to your inventory. Server score: {session.execution_score}/100.</p>
+        </div>}
         {session.status === "failed" && <p role="status">This dish was spoiled. Reserved ingredients were consumed; no food was awarded.</p>}
         {session.status === "timed_out" && <p role="status">Time ran out. This attempt cannot be resumed.</p>}
         {session.status === "cancelled" && <p role="status">This cooking session was cancelled.</p>}
@@ -310,6 +315,7 @@ function CookingLiveKitchenForProfile({ profileId }: { profileId: string | null 
               </LiveZone>)}
           </div>
         </DndContext>}
+        {selectedItem && <CookingStageGuide stage={selectedItem.stage} compact />}
         {view && <fieldset disabled={!canAct} className="space-y-2">
           <legend className="flex items-center gap-2 font-medium"><Flame className="h-4 w-4" />Pan heat</legend>
           <div className="flex flex-wrap gap-2">{heatChoices.map((heat) =>

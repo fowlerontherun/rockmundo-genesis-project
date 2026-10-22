@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { foodAvailability, type FoodBatch } from "./foodBatchRules";
+import { DishIllustration, IngredientIllustration } from "./CookingIllustrations";
 
 interface IngredientRow {
   id: string;
@@ -124,6 +125,14 @@ export function CookingInventory() {
       <CardDescription>Ingredients and prepared meals are perishable. Eating consumes one portion; identical food effects never stack. Gameplay XP and recovery integrations are still being completed.</CardDescription>
     </CardHeader>
     <CardContent className="space-y-4">
+      <div className="flex items-center gap-3 rounded-xl border bg-secondary/30 p-3">
+        <div className="flex shrink-0 items-center gap-0.5" aria-hidden="true">
+          <IngredientIllustration slug="apples" size="small" />
+          <IngredientIllustration slug="rice" size="small" />
+          <IngredientIllustration slug="basil" size="small" />
+        </div>
+        <p className="text-sm text-muted-foreground">Keep an eye on freshness: pantry ingredients and prepared meals expire on the dates shown below.</p>
+      </div>
       {!profileId && <p role="status">Select a character to see your inventory.</p>}
       {inventory.isLoading && <p role="status">Loading kitchen inventory…</p>}
       {inventory.isError && <p role="alert">Could not load kitchen inventory. Please try again later.</p>}
@@ -133,9 +142,12 @@ export function CookingInventory() {
           {inventory.data.ingredients.filter(lot => lot.quantity > 0).length === 0
             ? <p className="text-sm text-muted-foreground">No ingredients owned yet.</p>
             : <ul className="space-y-1">{inventory.data.ingredients.filter(lot => lot.quantity > 0).map(lot =>
-              <li key={lot.id} className="text-sm">
-                {prettyName(lot.ingredient_slug)} · {lot.quantity} units · Quality {lot.quality}/100 ·
-                {" "}{Date.parse(lot.expires_at) <= now ? "Expired" : `Expires ${formatExpiry(lot.expires_at)}`}
+              <li key={lot.id} className="flex items-center gap-3 rounded-lg border p-2 text-sm">
+                <div className="cooking-market-product-art"><IngredientIllustration slug={lot.ingredient_slug} size="small" /></div>
+                <div><strong>{prettyName(lot.ingredient_slug)}</strong>
+                  <p>{lot.quantity} units · Quality {lot.quality}/100 ·{" "}
+                    {Date.parse(lot.expires_at) <= now ? "Expired" : `Expires ${formatExpiry(lot.expires_at)}`}</p>
+                </div>
               </li>)}</ul>}
         </section>
         <section aria-label="Prepared food">
@@ -150,11 +162,14 @@ export function CookingInventory() {
               const status = foodAvailability(batch, now);
               const canEat = status === "fresh" && food.portions > 0 && !consumeFood.isPending;
               return <li key={food.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2 text-sm">
-                <div>
-                  <strong>{prettyName(food.recipe_slug)}</strong>
+                <div className="flex items-center gap-3">
+                  <div className="w-24 shrink-0 overflow-hidden rounded-lg border">
+                    <DishIllustration recipeSlug={food.recipe_slug} className="h-16 w-24" />
+                  </div>
+                  <div><strong>{prettyName(food.recipe_slug)}</strong>
                   <p>{food.portions} portions · Quality {food.quality}/100 ·
                     {" "}{status === "fresh" ? `Expires ${formatExpiry(food.expires_at)}` : status}
-                  </p>
+                  </p></div>
                 </div>
                 <Button type="button" size="sm" variant="secondary" disabled={!canEat || !profileId}
                   onClick={() => consumeFood.mutate(food)}>

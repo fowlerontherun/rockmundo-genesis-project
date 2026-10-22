@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { COOKING_RECIPES, getCookingRecipes, type RecipeCategory } from "./recipeCatalogue";
+import { DishIllustration, IngredientIllustration } from "./CookingIllustrations";
+import "./cooking.css";
 
 const categories: Array<RecipeCategory | "All"> = ["All", "Soups & stews", "Pies & baking", "Meals", "Drinks"];
 
@@ -21,8 +23,14 @@ export function CookingRecipeBook() {
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {getCookingRecipes(category).map((recipe) => <article key={recipe.slug} className="rounded-lg border p-4 space-y-2">
+          <div className="cooking-recipe-art"><DishIllustration recipeSlug={recipe.slug} className="h-36 w-full" /></div>
           <h3 className="font-semibold">{recipe.name}</h3>
           <p className="text-sm text-muted-foreground">{recipe.region} · {recipe.method} · {recipe.portions} portions</p>
+          <div className="flex flex-wrap items-center gap-2" aria-label={"Illustrated ingredients for " + recipe.name}>
+            {recipe.ingredients.map(name => <div key={name} className="flex flex-col items-center gap-0.5 rounded-lg border bg-secondary/30 p-1" title={name}>
+              <IngredientIllustration slug={name} size="small" /><span className="text-[10px]">{name}</span>
+            </div>)}
+          </div>
           <p className="text-sm"><strong>Ingredients:</strong> {recipe.ingredients.join(", ")}</p>
           <p className="text-sm"><strong>Proposed effect:</strong> {recipe.buff} for {recipe.buffHours} hours</p>
           <p className="text-sm"><strong>Base shelf life:</strong> {recipe.shelfLifeHours / 24} day(s), subject to ingredient freshness</p>

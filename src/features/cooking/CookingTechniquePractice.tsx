@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { allTechniqueIngredientsAdded, initialTechniquePractice, techniquePracticeResult,
   techniqueReducer, techniqueStage, TECHNIQUE_PRACTICE_RECIPES, TECHNIQUE_SESSION_MS,
   type TechniqueHeat, type TechniqueMethod } from "./techniquePracticeModel";
+import { IngredientIllustration } from "./CookingIllustrations";
+import { CookingEquipmentScene, CookingStageGuide } from "./CookingEquipmentScene";
 import "./cooking.css";
 
 const LABELS: Record<TechniqueMethod, { label: string; vessel: string; action: string; emoji: string }> = {
@@ -30,23 +32,22 @@ function PracticeIngredient({ name, disabled, selected, onSelect }: {
       opacity: isDragging ? 0.3 : 1,
       transform: transform ? `translate3d(${transform.x}px,${transform.y}px,0)` : undefined,
     }}>
-    <span className="text-3xl" aria-hidden="true">🥕</span>
+    <IngredientIllustration slug={name} />
     <span className="text-sm font-medium">{name}</span>
   </button>;
 }
-function TechniqueVessel({ method, items, stage, heating }: {
-  method: TechniqueMethod; items: string[]; stage: string; heating: boolean;
+function TechniqueVessel({ method, recipeSlug, items, stage, heating, stirCount }: {
+  method: TechniqueMethod; recipeSlug: string; items: string[];
+  stage: ReturnType<typeof techniqueStage>; heating: boolean; stirCount: number;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: "technique-vessel" });
   const spec = LABELS[method];
   return <section ref={setNodeRef} aria-label={spec.vessel}
     className={`cooking-technique-vessel cooking-technique-${method} ${isOver ? "cooking-over" : ""}`}>
     <h4 className="font-semibold">{heating ? (method === "oven" ? "Baking in oven" : "Simmering in pot") : spec.vessel}</h4>
-    <div className={`cooking-technique-preview cooking-technique-stage-${stage.toLowerCase()}`}
-      aria-label={`Current state: ${stage}`}>
-      <span aria-hidden="true" className="text-5xl">{spec.emoji}</span>
-      <span className="font-medium">{stage}</span>
-    </div>
+    <CookingEquipmentScene method={method} recipeSlug={recipeSlug} stage={stage}
+      heating={heating} hasIngredients={items.length > 0} stirring={method === "mix" && stirCount > 0} />
+    <p className="text-sm font-semibold">Current stage: {stage}</p>
     <p className="text-sm">{items.length ? items.join(" · ") : "Drop recipe ingredients here"}</p>
   </section>;
 }
@@ -161,11 +162,12 @@ export function CookingTechniquePractice() {
               Add selected to {spec.vessel.toLowerCase()}
             </Button>
           </section>
-          <TechniqueVessel method={state.method}
+          <TechniqueVessel method={state.method} recipeSlug={state.recipeSlug}
             items={state.ingredients.filter(item => item.inVessel).map(item => item.name)}
-            stage={stage} heating={state.vessel === "heating"} />
+            stage={stage} heating={state.vessel === "heating"} stirCount={state.stirCount} />
         </div>
       </DndContext>
+      {state.method !== "mix" && <CookingStageGuide stage={stage} />}
       {state.method !== "mix" && <div className="space-y-3">
         <Button type="button" disabled={!running || !allAdded || state.vessel !== "preparing"}
           onClick={() => dispatch({ type: "begin", now: Date.now() })}>
