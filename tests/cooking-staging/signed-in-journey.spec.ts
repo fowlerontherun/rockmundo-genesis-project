@@ -74,8 +74,8 @@ test.describe("staging-only signed-in cooking release gate", () => {
     await page.getByRole("button", { name: "Start cooking with ingredients" }).click();
     const startedBy = await startRequest;
     const startBody = startedBy.postDataJSON();
-    const auth = startedBy.headers()["authorization"];
-    const apiKey = startedBy.headers()["apikey"];
+    const auth = startedBy.headers()["authorization"] ?? "";
+    const apiKey = startedBy.headers()["apikey"] ?? "";
     expect(auth?.startsWith("Bearer "), "The gateway must receive the user's real JWT").toBe(true);
     expect(startBody.profileId, "Every action must identify the selected character").toBeTruthy();
     expect(startBody.sessionId).toMatch(/^[a-f\d-]{36}$/i);
