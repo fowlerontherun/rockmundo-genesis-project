@@ -188,6 +188,19 @@ Added targeted unit/component tests for signed request character IDs, switching 
 
 **Release limit:** This hardening is live only for the compatible Edge gateway; the frontend changes require merging this PR. Unit tests and typecheck should be confirmed by CI. There remains no true authenticated browser → Edge network end-to-end test using a staging user, and all production recipes and market offers remain inactive. See [COOKING_RELEASE_GATE.md](COOKING_RELEASE_GATE.md) for certification requirements.
 
+
+## Japan pilot release gate and shopping-list readiness — 22 October 2026
+
+Regional city markets, atomic authenticated ingredient purchasing, mayor upgrades, daily restock, food consumption and several food XP/rehearsal/songwriting effects already exist on `main`. Do not introduce parallel `cooking_market_stock` or `cooking_city_markets` tables: the canonical market tables are `cooking_city_market_offers`, `cooking_market_ingredients` and `cooking_market_purchases`. A previous experimental branch `feat/cooking-regional-markets-20261022` is obsolete and **must not be merged**.
+
+Live database verification found 2,526 market offers for 180 cities, zero enabled offers and zero active recipes. The complete rollback-only `cooking_purchase_to_eat_full_chain_rollback.sql` harness passed on the live schema: authenticate, buy three ingredients, idempotent retry, prevent cross-user purchase, reserve/cook/serve the rice bowl and consume one portion. The test persisted no purchases, meals or food batches.
+
+The trusted-invoker, service-role-only `set_japan_rice_bowl_pilot(p_enable,p_reason)` release controller was deployed with `20261022131500_cooking_japan_pilot_release_control.sql`. **Deployment does not activate the pilot.** Before enabling, it checks exactly two Japanese cities, the `rice-bowl` pan recipe, all three matching cook windows, valid stock and prices for each of the six Tokyo/Osaka offers, and no unrelated live release. Enabling or pausing toggles only `rice-bowl` and those six ingredient offers within one database transaction; audit entries retain the reason. Calls are denied to `anon` and `authenticated`, with explicit `service_role` grant. The rollback-only pilot test proved activation scope, repeated-call idempotence, emergency pause, unchanged player balances/market stock and no persistent changes.
+
+The player-facing `CookingRecipeShoppingList` panel computes shortages from owned **non-expired** ingredient lots, compares shortages against active local-city market offers, and presents per-recipe purchase requirements and actual available city price. It is read-only and uses the already-authenticated market RPC for purchases in the existing market panel. The existing market invalidates its stock and shopping-list queries after a successful order. Unit tests cover spoilage, ownership quantities, closed offers, out-of-stock products and prices. When there are no enabled recipes, the panel clearly explains why it cannot yet build a production shopping list.
+
+**Still not authorised for release:** authenticated real-browser start/action/finish/purchase/reconnect tests under a test user and verified CI are still required. Until these are green, leave all stock and recipes closed. Once tests pass, a privileged operator may deliberately enable the single pilot with a documented reason, and can pause it using the same RPC with `false`. Broader countries/recipes, oven/simmer/drink recipes and city-by-city market expansion need separate rollout tests.
+
 ## Next slices
 
 1. Validate the practice interaction and timing on desktop, touch and keyboard; refine ingredient visuals and recipe steps from playtesting.
