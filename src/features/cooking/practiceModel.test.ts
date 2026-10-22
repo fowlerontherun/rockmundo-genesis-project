@@ -38,12 +38,13 @@ describe("cooking practice timing", () => {
     state = practiceReducer(state, { type: "heat", heat: "high", now: 20_000 });
     expect(tick(state, 30_000).items[0].cooked).toBe(12);
   });
-  it("never resets exposure when food is removed and re-added", () => {
+  it("forbids moving plated food back to the pan and preserves its cooked state", () => {
     let state = practiceReducer(heated(), { type: "move", id: "onion", to: "plate", now: 12_000 });
     state = practiceReducer(state, { type: "move", id: "onion", to: "tray", now: 13_000 });
     expect(state.items[0].position).toBe("plate");
     state = practiceReducer(state, { type: "move", id: "onion", to: "pan", now: 14_000 });
-    expect(tick(state, 23_000).items[0].cooked).toBe(21);
+    expect(state.items[0].position).toBe("plate");
+    expect(tick(state, 23_000).items[0].cooked).toBe(12);
   });
   it("gives later additions their own start time", () => {
     const state = practiceReducer(heated(), { type: "move", id: "pepper", to: "pan", now: 10_000 });

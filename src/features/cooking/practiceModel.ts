@@ -81,7 +81,8 @@ export function practiceReducer(state: PracticeState, action: PracticeAction): P
   if (action.type === "move") {
     // Ingredients must be cooked before plating; plated food cannot become fresh.
     const current = next.items.find((item) => item.id === action.id);
-    if (!current || current.position === action.to || action.to === "tray") return next;
+    if (!current || current.position === action.to || action.to === "tray" || current.position === "plate") return next;
+    if (action.to === "pan" && current.position !== "tray") return next;
     if (current.position === "tray" && action.to !== "pan") return next;
     if (action.to === "pan" && next.items.filter((item) => item.position === "pan").length >= PAN_CAPACITY) return next;
     return { ...next, items: next.items.map((item) => item.id === action.id
