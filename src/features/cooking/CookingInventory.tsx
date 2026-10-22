@@ -171,7 +171,7 @@ export function CookingInventory() {
                     {" "}{status === "fresh" ? `Expires ${formatExpiry(food.expires_at)}` : status}
                   </p></div>
                 </div>
-                <Button type="button" size="sm" variant="secondary" disabled={!canEat || !profileId>
+                <Button type="button" size="sm" variant="secondary" disabled={!canEat || !profileId}>
                   onClick={() => consumeFood.mutate(food)}>
                   {consumeFood.isPending ? "Confirming…" : food.portions < 1 ? "Finished" :
                     status !== "fresh" ? "Spoiled" : "Eat 1 portion"}
