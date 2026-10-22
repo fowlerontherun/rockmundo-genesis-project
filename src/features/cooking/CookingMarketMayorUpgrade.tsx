@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Landmark } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { marketUpgradeCost, marketUpgradeCooldownUntil } from "./marketUpgradeModel";
 
 interface MarketLevel {
   city_id: string;
@@ -18,9 +19,6 @@ interface UpgradeResponse {
   cost: number;
   newVarieties?: number;
 }
-export const marketUpgradeCost = (currentLevel: number) =>
-  currentLevel >= 1 && currentLevel < 5 ? 20000 * 2 ** (currentLevel - 1) : null;
-
 export function CookingMarketMayorUpgrade({ cityId, profileId, marketOpen }: {
   cityId: string;
   profileId: string | null;
@@ -85,8 +83,7 @@ export function CookingMarketMayorUpgrade({ cityId, profileId, marketOpen }: {
 
   const currentLevel = level.data?.level ?? 1;
   const nextCost = marketUpgradeCost(currentLevel);
-  const deadline = level.data?.last_upgraded_at
-    ? Date.parse(level.data.last_upgraded_at) + 7 * 24 * 60 * 60 * 1000 : null;
+  const deadline = marketUpgradeCooldownUntil(level.data?.last_upgraded_at ?? null);
   const cooldown = deadline !== null && Date.now() < deadline;
   const availableBudget = treasury.data
     ? Math.max(0, Number(treasury.data.balance) - Number(treasury.data.pending_commitments)) : null;
