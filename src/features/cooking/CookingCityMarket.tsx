@@ -96,6 +96,7 @@ export function CookingCityMarket() {
       void Promise.all([
         queryClient.invalidateQueries({ queryKey: ["cooking-city-market", cityId] }),
         queryClient.invalidateQueries({ queryKey: ["cooking-inventory", profileId] }),
+        queryClient.invalidateQueries({ queryKey: ["cooking-shopping-list", profileId, cityId] }),
         queryClient.invalidateQueries({ queryKey: ["active-profile"] }),
         queryClient.invalidateQueries({ queryKey: ["profiles"] }),
       ]);
@@ -107,7 +108,7 @@ export function CookingCityMarket() {
   });
 
   const marketOpen = Boolean(market.data?.offers.some((offer) => offer.is_active));
-  return <Card>
+  return <Card id="cooking-city-market">
     <CardHeader>
       <CardTitle className="flex items-center gap-2"><Store className="h-5 w-5" />City food market</CardTitle>
       <CardDescription>
