@@ -172,7 +172,7 @@ export function CookingInventory() {
           {prettyName(effect.effect_slug)} · +{effect.effect_percent}% ·
           {" "}Expires {formatExpiry(effect.expires_at)}
         </li>)}</ul>
-        <p className="text-xs text-muted-foreground">These are server-recorded effect windows. Gameplay application will be enabled after skill and recovery settlement integration passes testing.</p>
+        <p className="text-xs text-muted-foreground">Practice XP food effects apply to scheduled practice covered for the full hour; rehearsal food effects apply to active rehearsal familiarity while the effect is active. Recovery, songwriting and focus still await settlement integration.</p>
       </section>}
       {feedback && <p role="status" className="text-sm">{feedback}</p>}
     </CardContent>
