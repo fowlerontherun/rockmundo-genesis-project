@@ -70,6 +70,16 @@ Applied `20261022010000_record_cooking_action.sql` to live Supabase. The `record
 
 Verified that anonymous and authenticated clients cannot invoke this function; only the service role can. There were no actual session/action records to exercise a complete run. The function does not calculate doneness, validate player identity itself, create an ingredient reservation, finalize a batch or issue rewards. A trusted API must authenticate the player, verify their active profile and session ownership, enforce accepted action replays, and call this function only after that authorization. No recipes are enabled yet.
 
+## Transactional ingredient reservations and guarded completion — 22 October 2026
+
+Live migrations `20261022070000_cooking_ingredient_reservations.sql` and `20261022071000_guard_cooking_completion.sql` are deployed. `begin_cooking_session(profile_id, recipe_slug, session_id)` is service-role-only: it serializes starts on the profile, rejects other active sessions, expires stale sessions, checks the **server-owned active recipe**, deducts fresh ingredient stock in FIFO expiry order, and persists immutable per-session reservations inside a single transaction. Retrying the same key returns the same session and does not deduct ingredients again. Aborted or timed-out manual sessions do not refund ingredients, in line with the disclosed plan. Each 120-second attempt is initially manual only.
+
+`complete_cooking_batch` is now fail-closed: it checks the session's owner/recipe, status, freshness, non-null authoritative execution score, terminal validated finish event and fully plated recipe components. It validates the exact reserved input amounts and uses those snapshots instead of deducting inventory for a second time. It writes a unique batch and finalizes its session together; repeated calls return the same batch. Ingredient quality and score currently use a conservative provisional blend and must be balanced with the wider skill/equipment system before recipes are enabled.
+
+**Verification:** Live privileges confirmed authenticated clients cannot execute either function or insert reservations; service role can execute; RLS is enabled for the reservation table. A rollback-only SQL smoke test successfully exercised first reservation, idempotent retry, a second-session rejection and fail-closed completion, leaving zero test recipe/ingredient rows. Supabase security advisers reported no new cooking-specific findings.
+
+**Still blocked:** the trusted HTTP/Edge Function that validates logged-in active character ownership is absent. Manual action replay/quality scoring and a validated terminal finish event are absent. Recipes are intentionally inactive, so the player UI must not expose production cooking or grant food yet. Add trusted backend and end-to-end tests before enabling real crafting.
+
 ## Next slices
 
 1. Validate the practice interaction and timing on desktop, touch and keyboard; refine ingredient visuals and recipe steps from playtesting.
