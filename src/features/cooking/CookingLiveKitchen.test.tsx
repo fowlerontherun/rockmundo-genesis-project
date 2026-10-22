@@ -6,6 +6,7 @@ import { CookingLiveKitchen } from "./CookingLiveKitchen";
 const state = vi.hoisted(() => ({
   profileId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
   requests: [] as Array<Record<string, unknown>>,
+  activeMethod: "pan" as string,
 }));
 
 vi.mock("@/hooks/useActiveProfile", () => ({
@@ -20,9 +21,11 @@ vi.mock("@/integrations/supabase/client", () => ({
         query[method] = () => query;
       }
       query.maybeSingle = async () => ({
-        data: table === "cooking_sessions" && state.profileId.startsWith("aaaa")
-          ? { id: "11111111-1111-4111-8111-111111111111", recipe_slug: "rice-bowl" }
-          : null,
+        data: table === "cooking_recipes"
+          ? { method: state.activeMethod }
+          : table === "cooking_sessions" && state.profileId.startsWith("aaaa")
+            ? { id: "11111111-1111-4111-8111-111111111111", recipe_slug: "rice-bowl" }
+            : null,
         error: null,
       });
       const rows = Promise.resolve({ data: [], error: null });
@@ -58,6 +61,7 @@ vi.mock("@/integrations/supabase/client", () => ({
 afterEach(() => {
   cleanup();
   state.requests.length = 0;
+  state.activeMethod = "pan";
   state.profileId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 });
 
@@ -75,6 +79,16 @@ describe("live kitchen character isolation", () => {
       action: "status",
       sessionId: "11111111-1111-4111-8111-111111111111",
     });
+    client.clear();
+  });
+
+  it("does not restore an oven, soup or drink session in the pan workstation", async () => {
+    state.activeMethod = "oven";
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><CookingLiveKitchen /></QueryClientProvider>);
+    await screen.findByText(/An oven cooking session is already active/);
+    expect(state.requests).toHaveLength(0);
+    expect(screen.queryByText("Cooking pan")).not.toBeInTheDocument();
     client.clear();
   });
 
