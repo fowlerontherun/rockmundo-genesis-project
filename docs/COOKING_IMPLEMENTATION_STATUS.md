@@ -229,3 +229,24 @@ Added a free, distinct visual preparation workshop to Cooking Career for **all 1
 - **No rewards**: this workshop uses the local `techniquePracticeModel` only. It **never invokes paid recipe/purchase/finish APIs**, changes player inventory, creates food batches, grants XP or applies boosts. Component and reducer tests cover all three techniques, complete manual flows, correct stage thresholds, deadlines, slow mode, invalid actions and no-reward outcomes.
 
 These are preparation/tutorial additions **only**. The authoritative Supabase cooking replay currently validates manual `pan` method recipes; oven/simmer/mix must receive their own trusted server-scored workflows and separate signed-in staging tests before any corresponding production recipes or city offers can be activated. Existing pilot release gates remain unchanged.
+
+
+## Visual cooking overhaul — 22 October 2026
+
+The cooking screens now share self-contained, hand-authored SVG artwork. These are **real visuals embedded in the game**, not external stock photos or placeholder links, and do not require image hosting or third-party network requests:
+
+| Player surface | Art and feedback added |
+| --- | --- |
+| City food market | Illustrated stall awning, produce artwork on every offer, category-aware shape and colour, numeric quality + coloured quality gauge; local-speciality labels and purchase availability remain intact |
+| Recipe book | 12 individually named dish illustrations in six families (pie, cake, soup, stew, drink and rice/meal bowl), plus miniature illustrations for the ingredients in every recipe |
+| Oven mini-game | Illustrated oven housing, baking tray, golden/overdone/burnt dish image, oven heat lights, optional rising steam |
+| Soup/stew mini-game | Large decorated simmer pot, soup contents, visual heat/steam and a stage progression |
+| Drinks mini-game | Glass mixing jug with visible drink liquid, ingredients and stirring animation; no inappropriate heating animation |
+| Live pan kitchen | Ingredient illustration fallback for unrecognised live ingredient slugs, labelled selected-ingredient stage guide, plated dish art on successful server completion |
+| Free pan tutorial | Same stage progression guide, with colours plus text so timing is not colour-only |
+| Player pantry | Illustrated purchased ingredients, finished dish thumbnails and a small pantry banner |
+
+The reusable visual catalogue enumerates the **26 starter market ingredients** and has a sensible fallback for future ingredients. SVG and CSS animations respect \`prefers-reduced-motion\`; text always communicates Raw, Warming/Cooking, Ready, Overdone and Burnt regardless of colour. Graphics remain present when production recipes and offers are inactive; no art component can confer food, cash, boosts, unlocks or XP.
+
+The food-art contract has Vitest coverage for all 26 ingredient entries, all 12 recipes, stage colours and labels, each illustrated workstation, empty vessels and local SVG rendering. The authoritative database mechanics still accept only pan-method manual recipes; oven, simmer and mixing artwork is **practice-only** until their separate backends and staging tests are implemented.
+
