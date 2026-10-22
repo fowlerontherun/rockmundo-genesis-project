@@ -103,3 +103,12 @@ In Actions → **Cooking Staging Release Certification** → **Run workflow**, e
 
 **This is a certification harness, not evidence of successful staging E2E.** Until a separate Supabase staging database, staged frontend and disposable user exist, the workflow cannot pass and production recipe/offers remain disabled.
 
+
+
+## Additional method certification — oven, simmer and drinks
+
+The signed-in staging suite now includes an **opt-in** second Playwright test for the live illustrated techniques. In the manual GitHub Actions workflow, select `certify_nonpan_techniques` only after all three recipe slugs `apple-pie`, `vegetable-soup` and `spiced-tea` are enabled **in staging only**, and the disposable current character has enough fresh ingredients for each recipe.
+
+The extra test signs in with the real staging test account, verifies the configured Supabase backend is not production, selects each recipe, loads ingredients using the player-facing controls, reloads the page to restore server actions, bakes or simmers to the Ready stage (or stirs a cold drink), plates components and checks server-certified completion. It requires both the standard `acknowledge_staging_writes` and the additional `certify_nonpan_techniques` boolean; otherwise the extra test is skipped. The existing rice-bowl purchase/cook/eat test still runs independently.
+
+Passing a rollback-only SQL integration test **does not certify a real browser**. No staging project or disposable credentials were available from the connected tools at implementation time; neither suite was run. Do not activate any production oven/simmer/drink recipe or market on the basis of these code changes alone.
