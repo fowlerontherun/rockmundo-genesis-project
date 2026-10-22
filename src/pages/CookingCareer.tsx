@@ -1,6 +1,7 @@
 import { ChefHat } from "lucide-react";
 import { FMPageScaffold } from "@/components/fm/FMPageScaffold";
 import { CookingPractice } from "@/features/cooking/CookingPractice";
+import { CookingTechniquePractice } from "@/features/cooking/CookingTechniquePractice";
 import { CookingRecipeBook } from "@/features/cooking/CookingRecipeBook";
 import { CookingInventory } from "@/features/cooking/CookingInventory";
 import { CookingLiveKitchen } from "@/features/cooking/CookingLiveKitchen";
@@ -15,6 +16,7 @@ export default function CookingCareer() {
     <CookingRecipeShoppingList />
     <CookingLiveKitchen />
     <CookingPractice />
+    <CookingTechniquePractice />
     <CookingRecipeBook />
     <CookingInventory />
   </FMPageScaffold>;
