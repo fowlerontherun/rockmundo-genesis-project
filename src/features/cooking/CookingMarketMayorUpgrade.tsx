@@ -4,6 +4,7 @@ import { Landmark } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { marketUpgradeCost, marketUpgradeCooldownUntil } from "./marketUpgradeModel";
+import { CookingMarketExpansionArt } from "./CookingMarketExpansionArt";
 
 interface MarketLevel {
   city_id: string;
@@ -94,9 +95,14 @@ export function CookingMarketMayorUpgrade({ cityId, profileId, marketOpen }: {
     <h4 className="flex items-center gap-2 font-semibold"><Landmark className="h-4 w-4" />Market improvements</h4>
     {level.isLoading && <p className="text-sm">Loading market improvements…</p>}
     {level.isError && <p role="alert" className="text-sm">Market upgrade information is unavailable.</p>}
-    {level.data && <p className="text-sm">
-      Current level: {currentLevel}/5. Higher levels improve produce quality, stock capacity and ingredient variety.
-    </p>}
+    {level.data && <div className="space-y-2">
+      <CookingMarketExpansionArt level={currentLevel} />
+      <div className="flex items-center gap-1.5" aria-label={"Market upgrade progress: level " + currentLevel + " of 5"}>
+        {Array.from({ length: 5 }, (_, index) => <span key={index}
+          className={"h-2 flex-1 rounded-full " + (index < currentLevel ? "bg-amber-600" : "bg-secondary")} />)}
+      </div>
+      <p className="text-sm">Current level: {currentLevel}/5. Higher levels improve produce quality, stock capacity and ingredient variety.</p>
+    </div>}
     {!marketOpen && <p className="text-xs text-muted-foreground">
       Improvements will unlock when this city's ingredient market opens. No treasury money will be spent before then.
     </p>}
