@@ -140,6 +140,16 @@ The Cooking inventory UI now has `Eat 1 portion` controls on unexpired prepared 
 
 **Next:** Verify the consumption harness and browser handling in CI. Integrate the effect lookup into real XP, rest, rehearsal and songwriting settlement paths (server-authoritative, bounded, tested) before describing timed buffs as active gameplay. Activate markets/recipes only after fully authenticated purchase → cook → eat certification.
 
+## Timed-food practice XP settlement — 22 October 2026
+
+Deployed `20261022141000_cooking_food_practice_xp_settlement.sql` directly to live Supabase. The existing **service-role-only** `complete_skill_practice(activity_id)` reward path now checks immutable `cooking_food_consumptions` receipts for a legitimate, non-stacking `practice_xp` benefit that covered **the whole scheduled practice hour**. Checking the original receipt, rather than currently active timers, makes delayed cron processing deterministic; eating during or after the practice hour cannot retroactively increase that session's reward. The entire existing unlock/level cap, scheduled-activity status and idempotent reward ledger logic is otherwise retained.
+
+Fractional bonuses are accumulated in `cooking_practice_xp_carry` by character. Because base practice rewards are only 5 XP, an eligible +5% bonus is 0.25 XP; exactly four such practices now accumulate +1 extra whole XP instead of yielding nothing due to rounding. The carry is serialized transactionally with the ledger and skill update, and the reward ledger records `food_bonus_percent`, `food_bonus_xp` and the total actual XP. Replaying the same completed activity returns its **recorded actual award** without applying the food effect or carry twice.
+
+**Live verification:** Migration applied. An isolated read-only SQL smoke test passed the four-practice rounding invariant, whole-slot eligibility and role-access checks; verified the installed reward function now reads immutable food receipts, uses fractional carry and awards `v_total_reward`. Authenticated clients cannot call `complete_skill_practice` directly or update XP carry; service role can. Supabase security adviser reported no new cooking-specific findings. No player carry or bonus reward rows existed at inspection. A deeper rollback-only seeded integration fixture is in `supabase/tests/cooking_practice_xp_settlement_integration.sql`, but it has not been executed on a disposable authenticated test database.
+
+**Scope limit:** This activates the *practice XP settlement calculation* only when an authentic consumed meal receipt covers the practice. Food markets and recipes are still disabled, so ordinary players cannot acquire these food bonuses yet. Rehearsal, songwriting, recovery and focus settlement paths do not yet consume the food-effect catalogue. Full purchase → cook → eat → practice end-to-end, migration regression, and browser tests must pass before production recipe activation.
+
 ## Next slices
 
 1. Validate the practice interaction and timing on desktop, touch and keyboard; refine ingredient visuals and recipe steps from playtesting.
