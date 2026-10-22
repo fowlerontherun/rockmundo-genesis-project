@@ -11,8 +11,8 @@ export function serverAnchoredCookingNow(
   const serverNowMs = Date.parse(serverNowISO ?? "");
   if (!Number.isFinite(serverNowMs) || !Number.isFinite(statusReceivedAtMs)
       || statusReceivedAtMs <= 0) return localNowMs;
-  // Only use the server anchor while the status payload is reasonably recent;
-  // if a tab was suspended, local elapsed time is still added below.
+  // The anchor captures the remote/local clock offset at receipt time;
+  // local elapsed time still advances correctly if the tab was suspended.
   return localNowMs + serverNowMs - statusReceivedAtMs;
 }
 
