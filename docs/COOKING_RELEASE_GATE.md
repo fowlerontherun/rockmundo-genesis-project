@@ -69,3 +69,15 @@ These are **placeholders**, not real credentials or a configured staging host. T
 
 Migration `20261022173500_schedule_cooking_session_expiry.sql` schedules the existing backend-only, row-locking `expire_cooking_sessions(500)` once **every minute**. This releases active-session uniqueness for attempts that run beyond their 120-second deadline without producing food or refunding reserved ingredients. The cron record was confirmed active. The rollback-only `supabase/tests/cooking_timeout_scheduler_smoke.sql` passed for expired pending and running sessions, a second attempt after expiry, an idempotent sweep and no minted food; no fixture rows remained.
 
+
+
+## Pilot emergency shutdown — depletion-safe
+
+The previous release switch validated ingredient stock and recipe readiness on *both* enable and disable. That meant a sold-out ingredient or accidental recipe drift could block a necessary emergency pause after launch.
+
+Migration `20261022162000_cooking_pilot_shutdown_without_stock_preflight.sql` changes the release controller so **enable retains all strict preflight checks**, while **disable always closes the Japan rice-bowl offers and recipe**, even when stock is depleted, the recipe method is changed or the city-count check would otherwise fail. It remains a trusted service-role-only operation, requires a 12–500 character reason, records each real transition and never refunds or changes purchased ingredient lots.
+
+The rollback-only `supabase/tests/cooking_pilot_depleted_stock_emergency_stop.sql` passed against the production database in an isolated subtransaction: enabled the temporary pilot, simulated exhausted rice stock and invalidated the recipe method, verified re-enable was denied, and verified pause closed all offers without changing balances or stock. **Zero recipes, offers or audit records remained enabled/persisted** afterwards. This test does not authorise production activation.
+
+CI now runs `npm run test:cooking` in a distinct step before TypeScript checking and global lint. A real signed-in staging E2E test is still required; the only connected Supabase project is production, so no paid browser test was run against real users.
+
