@@ -170,6 +170,14 @@ The new server-only function `cooking_internal.food_effect_percent_for_window(pr
 
 **Remaining:** Recovery and focus are presently *stored food effect windows only*; much existing recovery handling is a UI forecast, not a trusted server-award path. Do not display them as applied until such a path is verified and tested. Market offers and recipes remain intentionally inactive.
 
+## Rollback-only full cooking purchase → eat certification — 22 October 2026
+
+PR adds `supabase/tests/cooking_purchase_to_eat_full_chain_rollback.sql` and the explicit [Cooking release gate](COOKING_RELEASE_GATE.md). The integrated test was executed successfully against the live schema using a **synthetic database-local authenticated identity**, with recipe and city-offer activation isolated to a nested subtransaction that always rolls back. The result exposed `full_chain_passed=passed` and verified persistent totals of **zero** purchases, food batches, consumption receipts, active market offers and active recipes.
+
+It exercised three player-wallet purchases, purchase retries, cross-player purchase denial, exact ingredient reservation, the accepted pan action sequence, deterministic server replay scoring at **100/100**, one finished two-portion batch, duplicate finalization, cross-player food-consumption denial, one-portion eating, persistent rehearsal effect calculation and consumption retry idempotency. It includes no changes to the production gameplay functions or release flags.
+
+**Not a public release signoff:** Edited cooking timestamps and synthetic auth claims do not exercise a real signed JWT, Edge gateway, physical elapsed time, browser drag/drop, network retries or player workflow. Gate B requires those staging/browser tests before any production market offer or recipe activation. The database continues to have **zero** enabled offers and recipes.
+
 ## Next slices
 
 1. Validate the practice interaction and timing on desktop, touch and keyboard; refine ingredient visuals and recipe steps from playtesting.
