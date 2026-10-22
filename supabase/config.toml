@@ -241,3 +241,6 @@ verify_jwt = true
 
 [functions.complete-self-promotions]
 verify_jwt = true
+
+[functions.cooking-session]
+verify_jwt = true
