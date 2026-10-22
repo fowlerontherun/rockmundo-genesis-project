@@ -36,7 +36,7 @@ function Ingredient({slug,onSelect,selected,disabled}:{
     onClick={onSelect} disabled={disabled} aria-pressed={selected}
     aria-label={"Select "+nice(slug)}
     className={"cooking-ingredient "+(selected?"cooking-selected":"")}
-    style={{opacity:isDragging?.35:1,transform:transform
+    style={{opacity:isDragging ? 0.35 : 1,transform:transform
       ?"translate3d("+transform.x+"px,"+transform.y+"px,0)":undefined}}>
     <IngredientIllustration slug={slug}/>
     <span className="text-xs">{nice(slug)}</span>
