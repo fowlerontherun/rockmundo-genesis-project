@@ -95,7 +95,7 @@ Deno.serve(async (request) => {
     // No profileId supplied by a browser is trusted.
     const { data: session, error: sessionError } = await publicClient
       .from("cooking_sessions")
-      .select("id,status,mode,recipe_slug,started_at,expires_at,execution_score,result_batch_id")
+      .select("id,status,mode,recipe_slug,started_at,expires_at,finished_at,execution_score,result_batch_id")
       .eq("id", sessionId).eq("profile_id", profileId).maybeSingle();
     if (sessionError) return json({ error: "session_lookup_failed" }, 503);
     if (!session) return json({ error: "session_not_found" }, 404);
