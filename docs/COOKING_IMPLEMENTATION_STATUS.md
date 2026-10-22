@@ -178,6 +178,16 @@ It exercised three player-wallet purchases, purchase retries, cross-player purch
 
 **Not a public release signoff:** Edited cooking timestamps and synthetic auth claims do not exercise a real signed JWT, Edge gateway, physical elapsed time, browser drag/drop, network retries or player workflow. Gate B requires those staging/browser tests before any production market offer or recipe activation. The database continues to have **zero** enabled offers and recipes.
 
+## Live kitchen identity and reconnect hardening — 22 October 2026
+
+Deployed **Cooking Edge Function v3** with JWT verification enabled. Status responses now include a server-clock anchor, and requests that include an explicit character ID are checked against the **server-resolved active, living and non-deleted profile**, rejecting mismatches before any privileged cooking RPC. The optional claim remains backward-compatible with previously installed clients during the rollout. The client selection service also excludes soft-deleted active characters.
+
+The live kitchen React component now keys its state by the active profile, automatically discarding the prior character's session ID, event projection, selected ingredient and in-flight start idempotency key when the player switches characters. The new client includes `profileId` on all signed cooking gateway requests. It projects pan readiness and time-left from `serverNow` rather than relying on an accurately set device clock; it still does **not** mint client-side food or XP. Food artwork now includes colour-changing rice and soy seasoning (alongside mushrooms), so every ingredient in the initial mushroom rice bowl has visible cooking stages.
+
+Added targeted unit/component tests for signed request character IDs, switching between two active characters, skewed device clocks, and visual colour shifts for the first live recipe ingredients. The free practice kitchen and its separate Playwright fixture remain unchanged.
+
+**Release limit:** This hardening is live only for the compatible Edge gateway; the frontend changes require merging this PR. Unit tests and typecheck should be confirmed by CI. There remains no true authenticated browser → Edge network end-to-end test using a staging user, and all production recipes and market offers remain inactive. See [COOKING_RELEASE_GATE.md](COOKING_RELEASE_GATE.md) for certification requirements.
+
 ## Next slices
 
 1. Validate the practice interaction and timing on desktop, touch and keyboard; refine ingredient visuals and recipe steps from playtesting.

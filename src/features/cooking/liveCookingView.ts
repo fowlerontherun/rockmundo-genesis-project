@@ -1,4 +1,22 @@
 /**
+ * The kitchen is display-only, but users with skewed device clocks should
+ * still see an accurate session deadline after a server status refresh.
+ * dataUpdatedAt is the locally observed arrival time of that status payload.
+ */
+export function serverAnchoredCookingNow(
+  localNowMs: number,
+  serverNowISO: string | undefined,
+  statusReceivedAtMs: number,
+): number {
+  const serverNowMs = Date.parse(serverNowISO ?? "");
+  if (!Number.isFinite(serverNowMs) || !Number.isFinite(statusReceivedAtMs)
+      || statusReceivedAtMs <= 0) return localNowMs;
+  // The anchor captures the remote/local clock offset at receipt time;
+  // local elapsed time still advances correctly if the tab was suspended.
+  return localNowMs + serverNowMs - statusReceivedAtMs;
+}
+
+/**
  * Read-only kitchen animation derived from server-timestamped accepted actions.
  * This is a DISPLAY PROJECTION, never the authority for food quality or rewards.
  */
