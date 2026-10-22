@@ -91,14 +91,20 @@ function TechniquesForProfile({profileId}:{profileId:string|null}){
         .in("status",["pending","running"])
         .order("started_at",{ascending:false}).limit(1).maybeSingle();
       if(error)throw error;
-      return data as {id:string;recipe_slug:string}|null;
+      if(!data)return null;
+      const {data:recipe,error:recipeError}=await (supabase as any)
+        .from("cooking_recipes").select("method")
+        .eq("slug",data.recipe_slug).maybeSingle();
+      if(recipeError)throw recipeError;
+      return {id:data.id as string,recipe_slug:data.recipe_slug as string,
+        method:(recipe?.method??null) as string|null};
     },refetchOnMount:"always",
   });
   useEffect(()=>{
-    if(!sessionId&&active.data&&available.some(r=>r.slug===active.data.recipe_slug)){
+    if(!sessionId&&active.data&&["oven","simmer","mix"].includes(active.data.method??"")){
       setSessionId(active.data.id);
     }
-  },[sessionId,active.data,available]);
+  },[sessionId,active.data]);
   const snapshot=useQuery({
     queryKey:["cooking-session-snapshot",sessionId],
     enabled:Boolean(profileId&&sessionId),
@@ -109,7 +115,22 @@ function TechniquesForProfile({profileId}:{profileId:string|null}){
     },refetchOnWindowFocus:true,
   });
   const session=snapshot.data?.session;
-  const recipe=available.find(r=>r.slug===session?.recipe_slug)??selectedRecipe;
+  // A session keeps its canonical method and recipe identity even if
+  // administrators close new starts during an emergency release pause.
+  const sessionRecipe=useQuery({
+    queryKey:["cooking-technique-session-recipe",session?.recipe_slug],
+    enabled:Boolean(session?.recipe_slug),
+    queryFn:async()=>{
+      const {data,error}=await (supabase as any).from("cooking_recipes")
+        .select("slug,name,method,portions").eq("slug",session!.recipe_slug).maybeSingle();
+      if(error)throw error;
+      if(!data||!["oven","simmer","mix"].includes(data.method)) {
+        throw new Error("The saved session recipe is unavailable");
+      }
+      return data as Recipe;
+    },staleTime:30_000,
+  });
+  const recipe=session ? sessionRecipe.data : selectedRecipe;
   const ingredientSlug=session?.recipe_slug??recipe?.slug??"";
   const ingredients=useQuery({
     queryKey:["cooking-technique-recipe-parts",ingredientSlug],
@@ -166,7 +187,7 @@ function TechniquesForProfile({profileId}:{profileId:string|null}){
     mutation.mutate({action:"start",profileId,sessionId:startKey.current,
       recipeSlug:selectedRecipe.slug});
   };
-  const panBusy=Boolean(active.data&&!available.some(r=>r.slug===active.data?.recipe_slug));
+  const panBusy=active.data?.method==="pan";
   const method=recipe?.method??"oven";
   const stage=view?.stage??(method==="mix"?"Unmixed":"Raw");
   const busy=mutation.isPending;
@@ -185,7 +206,9 @@ function TechniquesForProfile({profileId}:{profileId:string|null}){
       {!profileId&&<p role="status">Select your character to cook.</p>}
       {recipes.isLoading&&<p role="status">Checking enabled baking, soup and drink recipes…</p>}
       {recipes.isError&&<p role="alert">Unable to load enabled recipe methods.</p>}
-      {!recipes.isLoading&&!available.length&&<div className="flex items-center gap-3 rounded-lg border p-3">
+      {sessionRecipe.isError&&<p role="alert">The saved recipe could not be verified.
+        Cooking actions are disabled until it can be restored.</p>}
+      {!recipes.isLoading&&!available.length&&!sessionId&&<div className="flex items-center gap-3 rounded-lg border p-3">
         <DishIllustration recipeSlug="apple-pie" className="h-24 w-36 rounded-lg"/>
         <p role="status" className="text-sm">
           Live baking, soups and drinks are not released yet. The illustrated
