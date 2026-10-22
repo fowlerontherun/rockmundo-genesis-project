@@ -4,6 +4,7 @@ import { ChefHat, Flame, Utensils } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FoodArt } from "./FoodArt";
+import { CookingStageGuide } from "./CookingEquipmentScene";
 import { doneness, initialPractice, PRACTICE_INGREDIENTS, practiceReducer, practiceResult, PAN_CAPACITY, SESSION_MS,
   type Heat, type IngredientId, type Position, type PracticeItem } from "./practiceModel";
 import "./cooking.css";
@@ -113,6 +114,7 @@ export function CookingPractice() {
               {heat === "off" ? "Heat off" : `${heat.charAt(0).toUpperCase()}${heat.slice(1)}`}
             </label>)}</div>
         </fieldset>
+        {selectedItem && <CookingStageGuide stage={doneness(selectedItem)} compact />}
         <p className="text-sm" role="status" aria-live="polite" aria-atomic="true">{stageSummary}</p>
         <Button disabled={!running || state.items.some((item) => item.position !== "plate")}
           onClick={() => dispatch({ type: "finish", now: Date.now() })}><Utensils className="mr-2 h-4 w-4" />Finish plating</Button>
