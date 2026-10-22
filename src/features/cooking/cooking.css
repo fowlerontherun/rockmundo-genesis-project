@@ -16,3 +16,51 @@
 .cooking-drag-preview { width: fit-content; border-radius: 1rem; background: #211c18dd; padding: .5rem; pointer-events: none; }
 @media (min-width: 1000px) { .cooking-worktop { grid-template-columns: 1fr 1.5fr 1fr; } }
 @media (prefers-reduced-motion: no-preference) { .cooking-ingredient svg * { transition: fill .4s, stroke .4s; } }
+
+/* Visual-only cooking technique workshop — no authoritative food or effects. */
+.cooking-technique-vessel {
+  display: flex;
+  min-height: 15rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 2px solid #74685c;
+  border-radius: 1rem;
+  padding: 1rem;
+  color: #fff8e9;
+  text-align: center;
+  background: radial-gradient(ellipse at center, #32343b 15%, #1b2029 75%, #5b5f69 90%);
+}
+.cooking-technique-oven {
+  background: radial-gradient(ellipse at center, #564032, #292626 62%, #737576 79%, #242629 90%);
+}
+.cooking-technique-simmer {
+  background: radial-gradient(ellipse at center, #365a53, #243136 64%, #b4bac0 76%, #272b30 88%);
+}
+.cooking-technique-mix {
+  background: radial-gradient(ellipse at center, #4b6b8b, #22394c 66%, #8aacc0 78%, #273841 92%);
+}
+.cooking-technique-preview {
+  display: flex;
+  width: min(100%, 15rem);
+  min-height: 7rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  border: 3px solid #e3dbcc;
+  border-radius: 40% 40% 46% 46%;
+  background: radial-gradient(ellipse, #ead8a3, #a38054);
+  color: #251d15;
+  box-shadow: 0 5px 15px #0005;
+}
+.cooking-technique-stage-warming,
+.cooking-technique-stage-mixing { background: radial-gradient(ellipse, #e6c679, #98702d); }
+.cooking-technique-stage-ready { background: radial-gradient(ellipse, #e6ad49, #9e5c24); }
+.cooking-technique-stage-overdone { background: radial-gradient(ellipse, #9c5c37, #52301a); color: #fff8e9; }
+.cooking-technique-stage-burnt { background: radial-gradient(ellipse, #39302d, #171413); color: #fff8e9; border-style: dashed; }
+.cooking-technique-stage-unmixed { background: radial-gradient(ellipse, #b8d7e2, #608aad); }
+@media (prefers-reduced-motion: no-preference) {
+  .cooking-technique-preview { transition: background-color .35s, color .35s; }
+}
