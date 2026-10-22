@@ -80,7 +80,7 @@ Deno.serve(async (request) => {
   }
   const action = payload.action;
   const sessionId = payload.sessionId;
-  if (!isUuid(sessionId) || !["start", "status", "heat", "add", "remove", "stir", "finish"].includes(String(action))) {
+  if (!isUuid(sessionId) || !["start", "status", "heat", "add", "remove", "stir", "serve", "finish"].includes(String(action))) {
     return json({ error: "invalid_cooking_request" }, 400);
   }
 
@@ -147,6 +147,18 @@ Deno.serve(async (request) => {
     }
     if ((action === "add" || action === "remove") && !isSlug(payload.ingredientSlug)) {
       return json({ error: "invalid_ingredient" }, 400);
+    }
+    if (action === "serve") {
+      if (recipe.method === "pan") {
+        return json({ error: "nonpan_serving_required" }, 400);
+      }
+      // The server plates all loaded recipe ingredients in one locked,
+      // idempotent transaction, rather than many browser-issued requests.
+      const { data, error } = await admin.rpc("serve_cooking_technique", {
+        _session_id: sessionId,
+      });
+      if (error) return json({ error: "cooking_serve_rejected", detail: error.message }, 409);
+      return json(data);
     }
     if (action === "stir" && recipe.method !== "mix") {
       return json({ error: "stir_requires_drink_recipe" }, 400);
