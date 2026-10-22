@@ -80,6 +80,18 @@ Live migrations `20261022070000_cooking_ingredient_reservations.sql` and `202610
 
 **Still blocked:** the trusted HTTP/Edge Function that validates logged-in active character ownership is absent. Manual action replay/quality scoring and a validated terminal finish event are absent. Recipes are intentionally inactive, so the player UI must not expose production cooking or grant food yet. Add trusted backend and end-to-end tests before enabling real crafting.
 
+## Server-authoritative manual pan replay and authenticated gateway — 22 October 2026
+
+Deployed `20261022084500_cooking_manual_replay.sql`, `20261022085500_cap_cooking_actions.sql`, and `20261022090500_cooking_window_read_policy.sql` to live Supabase. A fixed timing catalogue covers 26 currently seeded ingredient identifiers. The manual scorer reconstructs heat exposure from **server-recorded action timestamps** and each ingredient's pan/plate transitions; raw, missing or burnt essential components fail. It validates ordered action sequences, two-group pan capacity, server session lifetime and configurable ready/overdone/burnt windows. Only pan-method recipes are supported by this live scorer; oven, simmer and drink workflows remain unimplemented.
+
+`finalize_manual_cooking(session_id)` locks the profile and session, scores from the stored server actions, appends exactly one finish event, marks failed/expired sessions appropriately and invokes the idempotent reserved-batch completion only for a valid edible result. A rollback-only SQL integration test exercised a perfect 100-point batch, repeat finalization returning the same batch and burnt food producing no batch. Fixture records were removed automatically; production recipes remain inactive.
+
+Deployed JWT-verified Supabase Edge Function `cooking-session`, with request actions `start`, `status`, `heat`, `add`, `remove` and `finish`. It authenticates the user, resolves their active living character and validates session ownership **before** using server-side privileged RPCs. The browser never receives the service key. The gateway and SQL function limits reject malformed or excessive action requests; the action log remains read-only to players.
+
+**Verification:** Function deployment is active with `verify_jwt=true`. Anonymous/authenticated roles cannot execute replay or finalization; service-role access is allowed. The recipe catalogue has zero enabled recipes and zero production batches, and the Supabase security advisers currently flag no cooking-specific findings. The timing-table read policy exposes only active-recipe guidance without allowing writes.
+
+**Not yet complete:** No real authenticated browser-to-Edge integration test or UI wiring has been performed. Players cannot yet purchase ingredients, enable recipes, receive cooking rewards/XP, consume cooked food or trade items. Manual timing tests used controlled timestamps in rollback-only SQL fixtures, not physical real-time cooking or concurrent real-user sessions. Connect and validate the frontend against the authenticated gateway, then implement a safe ingredient supply economy and method-specific recipe interaction before activation.
+
 ## Next slices
 
 1. Validate the practice interaction and timing on desktop, touch and keyboard; refine ingredient visuals and recipe steps from playtesting.
