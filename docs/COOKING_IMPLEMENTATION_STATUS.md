@@ -102,6 +102,18 @@ Deployed `20261022094500_prevent_plated_reentry.sql`: once an ingredient has bee
 
 **Verification outstanding:** the frontend branch requires TypeScript, unit-test, browser drag-drop and authenticated Edge integration CI. No enabled production recipe, market ingredient purchase, food consumption or buffs exist. Manual production should not be activated before these tests and a trusted actor audit of the Edge gateway.
 
+## Regional ingredient markets and atomic purchases — 22 October 2026
+
+Deployed `20261022113000_cooking_city_markets.sql`, `20261022114500_purchase_cooking_market_ingredient.sql`, and `20261022120000_cooking_city_specialities.sql` to live Supabase. The new ingredient catalogue covers all 26 server-recipe ingredients; city market stock is seeded differently by local country specialities and deterministic city-level variations. Verified **2,526 offers across all 180 cities**, including 550 local-speciality offers. Prices, source cities, quality and stock are database-owned and immutable to direct clients. All market offers are **closed by default**, so no player has spent game currency on the unreleased cooking economy.
+
+`purchase_cooking_market_ingredient(profile_id, offer_id, quantity, request_id)` is an authenticated, carefully restricted `SECURITY DEFINER` RPC that checks an active living character owned by the JWT user, verifies the character's **current** city, server-owned offer price/quality and stock, and locks their cash and offer stock in one transaction. It decrements stock and cash, creates one expiring ingredient lot, and saves a purchase receipt. It tags the existing profile-cash double-entry journal with an idempotency key; replays return the original receipt without additional stock or cash changes. The RPC permits 1–20 units per request, while anonymous access and client INSERT/UPDATE on stock, lots and receipts are denied.
+
+The rollback-only live SQL purchase test covered closed offers, exact cash and stock deductions, idempotent duplicate calls, conflicting request reuse and out-of-city rejection. It left **zero purchases and zero open market offers**. Existing finance journaling was exercised inside the rolled-back transaction. Security advisor flags the authenticated `SECURITY DEFINER` RPC as privileged; this is intentional and subject to continued security review before opening offers. Other cooking tables are RLS-protected.
+
+A new `CookingCityMarket` panel in Career → Cooking shows the character's current city, local products, quantities, quality, unit prices, specialities and spoilage times, plus a disabled purchase button while offers are closed. Once an offer is authorised for sale, purchases use a stable request ID through the authenticated RPC and refresh profile cash and inventory.
+
+**Still gated:** market availability activation, first pan recipe activation, real authenticated browser purchase/cook E2E, sustainable restocking, mayor-controlled market upgrades, player trading, food consumption and timed buffs. Do not turn on payment buttons until these are verified. No production cash or ingredient purchases were recorded in this slice.
+
 ## Next slices
 
 1. Validate the practice interaction and timing on desktop, touch and keyboard; refine ingredient visuals and recipe steps from playtesting.
