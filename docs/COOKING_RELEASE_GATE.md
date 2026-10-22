@@ -81,3 +81,12 @@ The rollback-only `supabase/tests/cooking_pilot_depleted_stock_emergency_stop.sq
 
 CI now runs `npm run test:cooking` in a distinct step before TypeScript checking and global lint. A real signed-in staging E2E test is still required; the only connected Supabase project is production, so no paid browser test was run against real users.
 
+
+## Character-bound cooking gateway — 22 October 2026
+
+The JWT-verified `cooking-session` Edge Function now **requires** `profileId` for every `start`, `status`, `heat`, `add`, `remove` and `finish` request. Previously a legacy caller could omit the selected character ID, which could silently act on the server's current character even if the caller intended a different one. Now missing/malformed profile claims receive `400 character_id_required` and a UUID that does not equal the canonical server-selected active character receives `403 active_character_mismatch`. The provided UUID is never used to authorise or construct a privileged RPC: the gateway verifies the user JWT, reads the deterministic current active profile through that user's scoped client, and compares the claim before any service-role operation.
+
+Added `supabase/functions/cooking-session/requestContract.ts` with direct regression coverage in `src/features/cooking/cookingGatewayCharacterContract.test.ts`, plus a separate GitHub CI workflow `Cooking Gateway Authentication Contract` that runs the cooking suite and TypeScript checks without requiring staging credentials. The staging Playwright journey now sends an intentionally wrong and a missing character claim using the **real captured authenticated gateway request**, expecting explicit 403 and 400 errors respectively; the JWT is not logged or committed.
+
+The production Edge Function was deployed with its imported contract module and `verify_jwt=true`. **Deploying this API does not activate any recipe or market offers.** The real browser E2E test still requires an isolated staging environment and must not be run against production player purchases. Previous clients that do not send `profileId` will now get an explicit error rather than silently cooking on a possibly unintended character.
+
