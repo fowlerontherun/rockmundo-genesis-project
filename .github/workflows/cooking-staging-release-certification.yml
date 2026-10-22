@@ -10,6 +10,11 @@ on:
         required: true
         default: false
         type: boolean
+      certify_nonpan_techniques:
+        description: 'Also test staging-only oven, soup and drink recipes (requires ingredient lots seeded)'
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -30,6 +35,7 @@ jobs:
       COOKING_STAGING_EMAIL: ${{ secrets.COOKING_STAGING_EMAIL }}
       COOKING_STAGING_PASSWORD: ${{ secrets.COOKING_STAGING_PASSWORD }}
       COOKING_STAGING_ALLOW_WRITES: YES_STAGING_ONLY
+      COOKING_STAGING_TECHNIQUES: ${{ inputs.certify_nonpan_techniques && 'YES_STAGING_ONLY' || 'NO' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
