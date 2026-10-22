@@ -14,7 +14,7 @@ interface Recipe { slug:string; name:string; method:LiveTechniqueMethod; portion
 interface Session { id:string; recipe_slug:string; status:string; started_at:string;
   expires_at:string; execution_score:number|null }
 interface Snapshot { session:Session; actions:TechniqueServerAction[]; serverNow?:string }
-type Action = "start"|"status"|"add"|"heat"|"remove"|"stir"|"finish";
+type Action = "start"|"status"|"add"|"heat"|"remove"|"stir"|"serve"|"finish";
 type Request = { action:Action; sessionId:string; profileId:string; recipeSlug?:string;
   ingredientSlug?:string; heat?:string };
 const nice=(slug:string)=>slug.replace(/[-_]/g," ").replace(/\b\w/g,v=>v.toUpperCase());
@@ -69,7 +69,6 @@ function TechniquesForProfile({profileId}:{profileId:string|null}){
   const [notice,setNotice]=useState<string|null>(null);
   const [now,setNow]=useState(()=>Date.now());
   const startKey=useRef<string|null>(null);
-  const [serving,setServing]=useState(false);
   const sensors=useSensors(useSensor(PointerSensor,{activationConstraint:{distance:8}}));
 
   const recipes=useQuery({
@@ -85,21 +84,27 @@ function TechniquesForProfile({profileId}:{profileId:string|null}){
   const available=recipes.data??[];
   const selectedRecipe=available.find(r=>r.slug===slug)??available[0];
   const active=useQuery({
-    queryKey:["cooking-active-session",profileId],enabled:Boolean(profileId),
+    queryKey:["cooking-techniques-active-session",profileId],enabled:Boolean(profileId),
     queryFn:async()=>{
       const {data,error}=await (supabase as any).from("cooking_sessions")
         .select("id,recipe_slug").eq("profile_id",profileId)
         .in("status",["pending","running"])
         .order("started_at",{ascending:false}).limit(1).maybeSingle();
       if(error)throw error;
-      return data as {id:string;recipe_slug:string}|null;
+      if(!data)return null;
+      const {data:recipe,error:recipeError}=await (supabase as any)
+        .from("cooking_recipes").select("method")
+        .eq("slug",data.recipe_slug).maybeSingle();
+      if(recipeError)throw recipeError;
+      return {id:data.id as string,recipe_slug:data.recipe_slug as string,
+        method:(recipe?.method??null) as string|null};
     },refetchOnMount:"always",
   });
   useEffect(()=>{
-    if(!sessionId&&active.data&&available.some(r=>r.slug===active.data.recipe_slug)){
+    if(!sessionId&&active.data&&["oven","simmer","mix"].includes(active.data.method??"")){
       setSessionId(active.data.id);
     }
-  },[sessionId,active.data,available]);
+  },[sessionId,active.data]);
   const snapshot=useQuery({
     queryKey:["cooking-session-snapshot",sessionId],
     enabled:Boolean(profileId&&sessionId),
@@ -110,7 +115,22 @@ function TechniquesForProfile({profileId}:{profileId:string|null}){
     },refetchOnWindowFocus:true,
   });
   const session=snapshot.data?.session;
-  const recipe=available.find(r=>r.slug===session?.recipe_slug)??selectedRecipe;
+  // A session keeps its canonical method and recipe identity even if
+  // administrators close new starts during an emergency release pause.
+  const sessionRecipe=useQuery({
+    queryKey:["cooking-technique-session-recipe",session?.recipe_slug],
+    enabled:Boolean(session?.recipe_slug),
+    queryFn:async()=>{
+      const {data,error}=await (supabase as any).from("cooking_recipes")
+        .select("slug,name,method,portions").eq("slug",session!.recipe_slug).maybeSingle();
+      if(error)throw error;
+      if(!data||!["oven","simmer","mix"].includes(data.method)) {
+        throw new Error("The saved session recipe is unavailable");
+      }
+      return data as Recipe;
+    },staleTime:30_000,
+  });
+  const recipe=session ? sessionRecipe.data : selectedRecipe;
   const ingredientSlug=session?.recipe_slug??recipe?.slug??"";
   const ingredients=useQuery({
     queryKey:["cooking-technique-recipe-parts",ingredientSlug],
@@ -151,6 +171,7 @@ function TechniquesForProfile({profileId}:{profileId:string|null}){
       void Promise.all([
         qc.invalidateQueries({queryKey:["cooking-session-snapshot",request.sessionId]}),
         qc.invalidateQueries({queryKey:["cooking-active-session",profileId]}),
+        qc.invalidateQueries({queryKey:["cooking-techniques-active-session",profileId]}),
         qc.invalidateQueries({queryKey:["cooking-inventory",profileId]}),
       ]);
     },
@@ -166,25 +187,10 @@ function TechniquesForProfile({profileId}:{profileId:string|null}){
     mutation.mutate({action:"start",profileId,sessionId:startKey.current,
       recipeSlug:selectedRecipe.slug});
   };
-  const serve=async()=>{
-    if(!profileId||!sessionId)return;
-    setServing(true);
-    try{
-      for(const ingredientSlug of plated){
-        await callGateway({action:"remove",profileId,sessionId,ingredientSlug});
-      }
-      setNotice(null);
-    }catch(error){
-      setNotice(error instanceof Error?error.message:"Unable to plate these ingredients");
-    }finally{
-      setServing(false);
-      void qc.invalidateQueries({queryKey:["cooking-session-snapshot",sessionId]});
-    }
-  };
-  const panBusy=Boolean(active.data&&!available.some(r=>r.slug===active.data?.recipe_slug));
+  const panBusy=active.data?.method==="pan";
   const method=recipe?.method??"oven";
   const stage=view?.stage??(method==="mix"?"Unmixed":"Raw");
-  const busy=mutation.isPending||serving;
+  const busy=mutation.isPending;
 
   return <Card>
     <CardHeader>
@@ -200,7 +206,9 @@ function TechniquesForProfile({profileId}:{profileId:string|null}){
       {!profileId&&<p role="status">Select your character to cook.</p>}
       {recipes.isLoading&&<p role="status">Checking enabled baking, soup and drink recipes…</p>}
       {recipes.isError&&<p role="alert">Unable to load enabled recipe methods.</p>}
-      {!recipes.isLoading&&!available.length&&<div className="flex items-center gap-3 rounded-lg border p-3">
+      {sessionRecipe.isError&&<p role="alert">The saved recipe could not be verified.
+        Cooking actions are disabled until it can be restored.</p>}
+      {!recipes.isLoading&&!available.length&&!sessionId&&<div className="flex items-center gap-3 rounded-lg border p-3">
         <DishIllustration recipeSlug="apple-pie" className="h-24 w-36 rounded-lg"/>
         <p role="status" className="text-sm">
           Live baking, soups and drinks are not released yet. The illustrated
@@ -251,7 +259,7 @@ function TechniquesForProfile({profileId}:{profileId:string|null}){
           Cooking session expired and cannot be resumed.</p>}
         {!running&&<Button variant="outline" onClick={()=>{
           setSessionId(null);setSelected(null);startKey.current=null;
-          void qc.invalidateQueries({queryKey:["cooking-active-session",profileId]});
+          void qc.invalidateQueries({queryKey:["cooking-techniques-active-session",profileId]});
         }}>Return to recipe selection</Button>}
         {view&&recipe&&<DndContext sensors={sensors}
           onDragEnd={({active:drag,over})=>{
@@ -303,7 +311,7 @@ function TechniquesForProfile({profileId}:{profileId:string|null}){
           <Button variant="outline"
             disabled={!canAct||busy||!fullyLoaded||!plated.length||
               (method==="mix"?view.stirs<3:view.exposure===0)}
-            onClick={()=>void serve()}>
+            onClick={()=>send("serve")}>
             <Utensils className="mr-2 h-4 w-4"/>Plate all ingredients
           </Button>
           <Button disabled={!canAct||busy||!fullyLoaded||

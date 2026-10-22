@@ -112,3 +112,17 @@ The signed-in staging suite now includes an **opt-in** second Playwright test fo
 The extra test signs in with the real staging test account, verifies the configured Supabase backend is not production, selects each recipe, loads ingredients using the player-facing controls, reloads the page to restore server actions, bakes or simmers to the Ready stage (or stirs a cold drink), plates components and checks server-certified completion. It requires both the standard `acknowledge_staging_writes` and the additional `certify_nonpan_techniques` boolean; otherwise the extra test is skipped. The existing rice-bowl purchase/cook/eat test still runs independently.
 
 Passing a rollback-only SQL integration test **does not certify a real browser**. No staging project or disposable credentials were available from the connected tools at implementation time; neither suite was run. Do not activate any production oven/simmer/drink recipe or market on the basis of these code changes alone.
+
+
+## Atomic serving and session isolation — 22 October 2026
+
+The non-pan cooking release received a resilience hardening patch:
+
+- **One serving request:** `serve_cooking_technique(session_id)` records all oven/simmer/drink ingredient plating events inside a single service-role-only database transaction, preserving the authoritative event log and existing food completion scorer. The new `serve` gateway action requires the same JWT, selected-character check and session ownership guard as every other cooking command.
+- **Idempotent retries:** serving a previously plated dish writes no extra actions. If a failure occurs midway through plating (including the 255-action safety limit), *all* writes in that request roll back. No browser-driven multi-call partial serving remains.
+- **Separated character session caches:** the pan and non-pan UI no longer publish different response shapes under the same React Query key. Mutation invalidations update both caches.
+- **Disabled-recipe recovery:** a non-pan session reload now resolves its canonical recipe method independently from the list of *currently active* recipes. Administrators closing the market or a recipe cannot silently switch its oven session to another recipe or strand the player in the pan UI. Server-side finishing still decides the outcome.
+
+Production deployed migration: `20261022221500_cooking_atomic_nonpan_serving.sql`. Gateway `cooking-session` **v6**, JWT verification enabled. A direct rollback-only SQL test `supabase/tests/cooking_atomic_serving_rollback.sql` passed, confirming normal serving, idempotency, failed partial-serve rollback, restricted privileges and zero persistent test batches. Vitest tests cover the disabled-recipe recovery and single gateway serving call; dedicated CI must pass.
+
+The separate signed-in non-production staging test was updated to capture a real `serve` request. It remains unexecuted because a disposable staging backend/account is not yet connected. **Do not activate any production recipe or city market offer.**
