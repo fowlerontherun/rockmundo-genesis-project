@@ -216,3 +216,16 @@ The player-facing `CookingRecipeShoppingList` panel computes shortages from owne
 - `npm run build`: production build passes.
 - Targeted ESLint passes for the cooking implementation and changed navigation/page files.
 - Broader repository checks have unrelated blockers: the navigation-polish test expects `/world` while the current base route is `/world-map`; the full typecheck reports a canvas-context mock type error in `src/features/shareable-moments/profilePhotoCapture.test.ts`. These files/behaviors were not changed by this slice.
+
+
+## Baking, soup and drinks technique workshops — 22 October 2026
+
+Added a free, distinct visual preparation workshop to Cooking Career for **all 11 seeded non-pan recipes**, extending the original golden-vegetable-pan practice. Players select cakes/pies (oven), soups/stews (simmer pot) or drinks (mixing jug), then drag the named recipe ingredients onto the preparation surface or select-and-add them using accessible buttons.
+
+- **Baking**: combine all ingredients in a bowl; start the oven; adjust heat; watch the dough move through Raw/Warming/Ready/Overdone/Burnt; take it out and finish the dish. Leaving a cake or pie too long burns it.
+- **Soup/stew**: combine ingredients in a pot; simmer with adjustable heat; serve at the Ready stage. Excess cooking makes the soup overdone or burnt.
+- **Drinks**: add ingredients to the mixing jug and stir three to five times. Drinks are not incorrectly forced onto a hot pan; extra stirring can reduce the practice score, not burn a cold drink.
+- **Accessibility**: large drag targets, tap/select alternative, labelled stage/heat progress, optional slower timing (twice as long), and browser wall-clock catch-up after backgrounding. Resetting or switching recipes during an active practice attempt is blocked.
+- **No rewards**: this workshop uses the local `techniquePracticeModel` only. It **never invokes paid recipe/purchase/finish APIs**, changes player inventory, creates food batches, grants XP or applies boosts. Component and reducer tests cover all three techniques, complete manual flows, correct stage thresholds, deadlines, slow mode, invalid actions and no-reward outcomes.
+
+These are preparation/tutorial additions **only**. The authoritative Supabase cooking replay currently validates manual `pan` method recipes; oven/simmer/mix must receive their own trusted server-scored workflows and separate signed-in staging tests before any corresponding production recipes or city offers can be activated. Existing pilot release gates remain unchanged.
