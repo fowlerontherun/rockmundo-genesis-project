@@ -48,6 +48,7 @@ Deno.serve(async (request) => {
     .eq("user_id", identity.user.id)
     .eq("is_active", true)
     .is("died_at", null)
+    .is("deleted_at", null)
     .order("updated_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false, nullsFirst: false })
     .order("id", { ascending: true })
@@ -67,6 +68,13 @@ Deno.serve(async (request) => {
     payload = data as Record<string, unknown>;
   } catch {
     return json({ error: "invalid_json" }, 400);
+  }
+  // During rollout the profile claim is optional for older installed clients,
+  // but when supplied it MUST match the server-selected current character.
+  // A browser-provided profile ID is never used as the source of authority.
+  if (payload.profileId !== undefined &&
+      (!isUuid(payload.profileId) || payload.profileId !== profile.id)) {
+    return json({ error: "active_character_mismatch" }, 403);
   }
   const action = payload.action;
   const sessionId = payload.sessionId;
@@ -107,7 +115,9 @@ Deno.serve(async (request) => {
         .eq("session_id", sessionId).order("action_sequence", { ascending: true })
         .limit(257);
       if (error) return json({ error: "session_actions_unavailable" }, 503);
-      return json({ session, actions });
+      // A server wall-clock anchor lets reconnecting clients render the
+      // remaining cooking time correctly even when their device clock is off.
+      return json({ session, actions, serverNow: new Date().toISOString() });
     }
 
     if (action === "finish") {
