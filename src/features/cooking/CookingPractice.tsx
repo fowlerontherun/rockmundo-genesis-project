@@ -93,7 +93,7 @@ export function CookingPractice() {
         {(["tray", "pan", "plate"] as const).map((position) => <Zone key={position} id={position}
           title={position === "tray" ? "Ingredients" : position === "pan" ? "Cooking pan" : "Serving plate"}
           action={position === "pan" ? "Add selected ingredient to pan" : "Plate selected ingredient"}
-          disabled={!running} actionDisabled={!selectedItem || selectedItem.position === position || (position === "plate" && selectedItem.position === "tray") || (position === "pan" && panFull)}
+          disabled={!running} actionDisabled={!selectedItem || selectedItem.position === position || (position === "plate" && selectedItem.position === "tray") || (position === "pan" && (panFull || selectedItem.position !== "tray"))}
           onMove={position === "tray" ? undefined : () => selected && move(selected, position)}>
           {state.items.filter((item) => item.position === position).map((item) =>
             <Ingredient key={item.id} item={item} selected={selected === item.id} disabled={!running} onSelect={() => setSelected(item.id)} />)}
