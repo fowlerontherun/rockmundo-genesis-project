@@ -86,7 +86,9 @@ describe("live kitchen character isolation", () => {
     state.activeMethod = "oven";
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(<QueryClientProvider client={client}><CookingLiveKitchen /></QueryClientProvider>);
-    await screen.findByText(/An oven cooking session is already active/);
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(
+      "An oven cooking session is already active",
+    ));
     expect(state.requests).toHaveLength(0);
     expect(screen.queryByText("Cooking pan")).not.toBeInTheDocument();
     client.clear();
