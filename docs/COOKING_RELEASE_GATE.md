@@ -44,3 +44,28 @@ Use a dedicated staging project, a disposable authenticated user/character, and 
 **Do not activate production cooking markets or recipes until Gate B passes.** For a pilot, open explicitly chosen cities with all three `rice-bowl` ingredients in stock. Audit price and spoilage balance, including ingredient origins and realistic shelf lives. Record the enablement change as a reviewed migration/administrative change; do not blanket-enable 2,526 market offers. Monitor purchase/lot/food-batch receipts, retries, Edge Function errors, timeout cleanup and food bonus outcome ledgers. Provide a rollback procedure that prevents *new* purchases and cooking sessions without undoing legitimate purchases.
 
 The recipe is currently offered as a *preview* only. Other recipe methods (oven baking, simmering, drinks) need their own server-scored cooking mechanics and acceptance tests. Recovery and focus effects are stored but not yet linked to authoritative gameplay settlements.
+
+
+## Automated signed-in staging certification (added 22 October 2026)
+
+A new Playwright test, `tests/cooking-staging/signed-in-journey.spec.ts`, uses the real game login and API, purchases the three mushroom rice bowl ingredients, drags an ingredient into the pan, verifies touch/keyboard-style placement, reloads and reconstructs a timed pan, plates, finishes and consumes one portion.
+
+It is **intentionally not part of regular CI and has not yet been run**: it requires a separately deployed staging game connected to a separately seeded staging Supabase project. Set these as protected environment variables in the staging runner (do not check secrets into Git):
+
+```bash
+COOKING_STAGING_BASE_URL=https://staging.example.invalid
+COOKING_STAGING_SUPABASE_URL=https://YOUR-STAGING-PROJECT.supabase.co
+COOKING_STAGING_EMAIL=dedicated-staging-account@example.invalid
+COOKING_STAGING_PASSWORD='<from-protected-secret-store>'
+COOKING_STAGING_ALLOW_WRITES=YES_STAGING_ONLY
+npm run test:cooking:staging
+```
+
+These are **placeholders**, not real credentials or a configured staging host. The test configuration refuses production `rockmundo.uk` and the live Supabase project ID, and the browser intercepts unexpected Supabase project requests before any mutating call. The staging account must have one active character in a city with active `mushrooms`, `rice` and `soy-seasoning` offers; the `rice-bowl` recipe must be enabled only in staging. The test account needs enough in-game cash, no currently running cooking session and no pre-existing state that interferes with the test. Use a disposable character and clear staging output after test completion.
+
+**Do not run this against production**, because unlike the rollback-only database test, this is a real transaction: it purchases and consumes inventory. Browser test failures must be diagnosed and corrected before enabling any live recipes.
+
+## Abandoned-session release blocker resolved
+
+Migration `20261022173500_schedule_cooking_session_expiry.sql` schedules the existing backend-only, row-locking `expire_cooking_sessions(500)` once **every minute**. This releases active-session uniqueness for attempts that run beyond their 120-second deadline without producing food or refunding reserved ingredients. The cron record was confirmed active. The rollback-only `supabase/tests/cooking_timeout_scheduler_smoke.sql` passed for expired pending and running sessions, a second attempt after expiry, an idempotent sweep and no minted food; no fixture rows remained.
+
