@@ -245,6 +245,9 @@ The cooking screens now share self-contained, hand-authored SVG artwork. These a
 | Live pan kitchen | Ingredient illustration fallback for unrecognised live ingredient slugs, labelled selected-ingredient stage guide, plated dish art on successful server completion |
 | Free pan tutorial | Same stage progression guide, with colours plus text so timing is not colour-only |
 | Player pantry | Illustrated purchased ingredients, finished dish thumbnails and a small pantry banner |
+| Mayor market upgrades | Marketplace panorama scales from 2 to 6 illustrated produce stalls with the server-read market level; 5-step visual progression and higher-level festive lights |
+
+Recipe shopping lists also illustrate the featured dish and ingredient shortfalls, including an explicitly labelled preview when production recipes remain inactive. Mayor market artwork reads the existing `cooking_city_market_levels.level` query and cannot grant upgrades or change treasury balances.
 
 The reusable visual catalogue enumerates the **26 starter market ingredients** and has a sensible fallback for future ingredients. SVG and CSS animations respect \`prefers-reduced-motion\`; text always communicates Raw, Warming/Cooking, Ready, Overdone and Burnt regardless of colour. Graphics remain present when production recipes and offers are inactive; no art component can confer food, cash, boosts, unlocks or XP.
 
