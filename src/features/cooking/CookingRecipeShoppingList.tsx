@@ -4,6 +4,7 @@ import { ShoppingBasket, CheckCircle2, MapPin } from "lucide-react";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { DishIllustration, IngredientIllustration } from "./CookingIllustrations";
 import { calculateCookingShoppingList, type ShoppingRequirement,
   type OwnedIngredientLot, type ShoppingCityOffer } from "./recipeShoppingList";
 
@@ -93,9 +94,12 @@ export function CookingRecipeShoppingList() {
         : recipes.isError
         ? <p role="alert" className="text-sm text-destructive">Could not load your available recipes.</p>
         : !enabledRecipes.length
-        ? <p role="status" className="text-sm text-muted-foreground">
-            No production cooking recipes are enabled yet. The free kitchen and recipe previews remain available.
-          </p>
+        ? <div className="flex flex-wrap items-center gap-3 rounded-xl border p-3">
+            <DishIllustration recipeSlug="rice-bowl" className="h-24 w-36 rounded-lg" />
+            <p role="status" className="max-w-md text-sm text-muted-foreground">
+              No production cooking recipes are enabled yet. This is a preview of the mushroom rice bowl; the free kitchen and recipe previews remain available.
+            </p>
+          </div>
         : <>
             <label className="block space-y-1 text-sm font-medium" htmlFor="cooking-shopping-recipe">
               Recipe
@@ -106,6 +110,10 @@ export function CookingRecipeShoppingList() {
                   <option key={recipe.slug} value={recipe.slug}>{recipe.name} — {recipe.portions} portions</option>)}
               </select>
             </label>
+            <div className="flex items-center gap-3 rounded-lg border bg-secondary/20 p-2">
+              <DishIllustration recipeSlug={recipeSlug} className="h-20 w-28 rounded-lg" />
+              <p className="text-sm">Illustrated recipe · Your fresh ingredient checklist</p>
+            </div>
             {(requirements.isLoading || availableStock.isLoading) &&
               <p role="status" className="text-sm">Checking ingredients and city market…</p>}
             {(requirements.isError || availableStock.isError) &&
@@ -114,12 +122,13 @@ export function CookingRecipeShoppingList() {
               <div className="space-y-2">
                 {summary.lines.map(line =>
                   <div key={line.slug} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3 text-sm">
-                    <div>
-                      <strong>{formatIngredient(line.slug)}</strong>
+                    <div className="flex items-center gap-2">
+                      <IngredientIllustration slug={line.slug} size="small" />
+                      <div><strong>{formatIngredient(line.slug)}</strong>
                       <p className="text-muted-foreground">
                         Need {line.required} · Fresh owned {line.owned}
                         {line.localSpeciality ? " · Local speciality" : ""}
-                      </p>
+                      </p></div>
                     </div>
                     <div className="text-right">
                       {line.missing === 0
